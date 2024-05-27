@@ -14,7 +14,6 @@ from india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta import get_perio
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr_1 import (
     JSON_CATEGORY_EXCEL_CATEGORY_MAPPING,
-    SUB_CATEGORY_GOV_CATEGORY_MAPPING,
     GovExcelField,
     GovExcelSheetName,
     GovJsonKey,
@@ -63,9 +62,7 @@ class DataProcessor:
         2. Format/Transform the data to match the Gov Excel format
         """
 
-        category_wise_data = get_category_wise_data(
-            input_data, SUB_CATEGORY_GOV_CATEGORY_MAPPING
-        )
+        category_wise_data = get_category_wise_data(input_data)
         processed_data = {}
 
         for category, data in category_wise_data.items():
@@ -1053,7 +1050,7 @@ class ReconcileExcel:
 
         self.summary = gstr1_log.load_data("reconcile_summary")["reconcile_summary"]
         data = gstr1_log.load_data("reconcile")["reconcile"]
-        self.data = get_category_wise_data(data, SUB_CATEGORY_GOV_CATEGORY_MAPPING)
+        self.data = get_category_wise_data(data)
 
     def export_data(self):
         excel = ExcelExporter()

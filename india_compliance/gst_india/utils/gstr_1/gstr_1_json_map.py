@@ -276,58 +276,29 @@ class B2B(GovDataMapper):
                     'inv': [
                         {
                             'inum': 'S008400',
-                            'idt': '24-11-2016',
-                            'val': 729248.16,
-                            'pos': '06',
-                            'rchrg': 'N',
-                            'inv_typ': 'R',
-                            'diff_percent': 0.65,
                             'itms': [
-                                {
-                                    'num': 1,
-                                    'itm_det': {
-                                        'rt': 5,
-                                        'txval': 10000,
-                                        'iamt': 325,
-                                        'camt': 0,
-                                        'samt': 0,
-                                        'csamt': 500
-                                    }
-                                }
+                                {'num': 1, 'itm_det': {'txval': 10000,
+                                    ...
+                                }}
                             ]
                         }
+                        ...
                     ]
                 }
             ]
 
             output = {
-                'B2B Regular': {
-                    'S008400': {
+                'B2B Regular': {'S008400': {
                         'customer_gstin': '24AANFA2641L1ZF',
                         'document_number': 'S008400',
-                        'document_date': '2016-11-24',
-                        'document_value': 729248.16,
-                        'place_of_supply': '06-Haryana',
-                        'reverse_charge': 'N',
-                        'document_type': 'Regular B2B',
-                        'diff_percentage': 0.65,
                         'items': [
                             {
                                 'taxable_value': 10000,
-                                'igst_amount': 325,
-                                'cgst_amount': 0,
-                                'sgst_amount': 0,
-                                'cess_amount': 500,
-                                'tax_rate': 5
+                                ...
                             }
                         ],
-                        'total_taxable_value': 10000,
-                        'total_igst_amount': 325,
-                        'total_cgst_amount': 0,
-                        'total_sgst_amount': 0,
-                        'total_cess_amount': 500
-                    }
-                }
+                        ...
+                }}
             }
         """
 
@@ -422,6 +393,11 @@ class B2B(GovDataMapper):
             ]
         }
         """
+        input_data = [
+            document
+            for documents in input_data.values()
+            for document in documents.values()
+        ]
 
         customer_data = {}
 
@@ -616,6 +592,11 @@ class B2CL(GovDataMapper):
                 ]
             }
         """
+        input_data = [
+            document
+            for documents in input_data.values()
+            for document in documents.values()
+        ]
         pos_data = {}
 
         for invoice in input_data:
@@ -800,6 +781,11 @@ class Exports(GovDataMapper):
                 ]
             }
         """
+        input_data = [
+            document
+            for documents in input_data.values()
+            for document in documents.values()
+        ]
         export_category_wise_data = {}
 
         for invoice in input_data:
@@ -948,10 +934,8 @@ class B2CS(GovDataMapper):
                 }
             ]
         """
-
-        input_data = self.regroup_data(input_data)
         input_data = self.aggregate_invoices(
-            input_data, list(self.TOTAL_DEFAULTS.keys())
+            input_data[self.SUBCATEGORY], list(self.TOTAL_DEFAULTS.keys())
         )
 
         return [self.format_data(invoice, for_gov=True) for invoice in input_data]
@@ -965,20 +949,6 @@ class B2CS(GovDataMapper):
             "INTER" if data[GovDataField.IGST.value] > 0 else "INTRA"
         )
         return data
-
-    def regroup_data(self, input_data):
-        output = {}
-
-        for invoice in input_data:
-            key = " - ".join(
-                (
-                    invoice.get(GSTR1_DataField.POS.value, ""),
-                    str(flt(invoice.get(GSTR1_DataField.TAX_RATE.value, ""))),
-                )
-            )
-            output.setdefault(key, []).append(invoice)
-
-        return output
 
 
 class NilRated(GovDataMapper):
@@ -1075,9 +1045,8 @@ class NilRated(GovDataMapper):
             }
         """
 
-        input_data = self.regroup_data(input_data)
         input_data = self.aggregate_invoices(
-            input_data,
+            input_data[self.SUBCATEGORY],
             [
                 GSTR1_DataField.EXEMPTED_AMOUNT.value,
                 GSTR1_DataField.NIL_RATED_AMOUNT.value,
@@ -1110,15 +1079,6 @@ class NilRated(GovDataMapper):
 
         invoice_data[GSTR1_DataField.TAXABLE_VALUE.value] = sum(amounts)
         return invoice_data
-
-    def regroup_data(self, input_data):
-        output = {}
-
-        for invoice in input_data:
-            key = invoice.get(GSTR1_DataField.DOC_TYPE.value)
-            output.setdefault(key, []).append(invoice)
-
-        return output
 
     # value formatters
     def document_category_mapping(self, doc_category, data):
@@ -1336,7 +1296,7 @@ class CDNR(GovDataMapper):
                 }
             ]
         """
-
+        input_data = list(input_data[self.SUBCATEGORY].values())
         customer_data = {}
 
         self.DOCUMENT_CATEGORIES = self.reverse_dict(self.DOCUMENT_CATEGORIES)
@@ -1556,7 +1516,7 @@ class CDNUR(GovDataMapper):
         """
 
         self.DOCUMENT_TYPES = self.reverse_dict(self.DOCUMENT_TYPES)
-
+        input_data = list(input_data[self.SUBCATEGORY].values())
         return [self.format_data(invoice, for_gov=True) for invoice in input_data]
 
     def format_item_for_internal(self, items, *args):
@@ -1703,7 +1663,7 @@ class HSNSUM(GovDataMapper):
                 ]
             }
         """
-
+        input_data = list(input_data[self.SUBCATEGORY].values())
         return {
             GovDataField.HSN_DATA.value: [
                 self.format_data(
@@ -1856,9 +1816,7 @@ class AT(GovDataMapper):
                 }
             ]
         """
-
-        input_data = self.regroup_data(input_data)
-        input_data = self.aggregate_invoices(input_data)
+        input_data = self.aggregate_invoices(input_data[self.SUBCATEGORY])
 
         pos_wise_data = {}
 
@@ -1905,20 +1863,6 @@ class AT(GovDataMapper):
             "INTER" if data[GovDataField.IGST.value] > 0 else "INTRA"
         )
         return data
-
-    def regroup_data(self, input_data):
-        output = {}
-
-        for invoice in input_data:
-            key = " - ".join(
-                (
-                    invoice.get(GSTR1_DataField.POS.value, ""),
-                    str(flt(invoice.get(GSTR1_DataField.TAX_RATE.value, ""))),
-                )
-            )
-            output.setdefault(key, []).append(invoice)
-
-        return output
 
     def format_item_for_internal(self, items, *args):
         return [
@@ -2050,12 +1994,13 @@ class DOC_ISSUE(GovDataMapper):
                 ]
             }
         """
+        input_data = input_data[GSTR1_SubCategory.DOC_ISSUE.value]
         self.DOCUMENT_NATURE = self.reverse_dict(self.DOCUMENT_NATURE)
 
         output = {GovDataField.DOC_ISSUE_DETAILS.value: []}
         doc_nature_wise_data = {}
 
-        for invoice in input_data:
+        for invoice in input_data.values():
             doc_nature_wise_data.setdefault(
                 invoice[GSTR1_DataField.DOC_TYPE.value], []
             ).append(invoice)
@@ -2193,11 +2138,10 @@ class SUPECOM(GovDataMapper):
         output = {}
         self.DOCUMENT_CATEGORIES = self.reverse_dict(self.DOCUMENT_CATEGORIES)
 
-        for invoice in input_data:
-            section = invoice[GSTR1_DataField.DOC_TYPE.value]
-            output.setdefault(
-                self.DOCUMENT_CATEGORIES.get(section, section), []
-            ).append(self.format_data(invoice, for_gov=True))
+        for section, invoices in input_data.items():
+            output[self.DOCUMENT_CATEGORIES.get(section, section)] = [
+                self.format_data(invoice, for_gov=True) for invoice in invoices.values()
+            ]
 
         return output
 
@@ -2381,22 +2325,51 @@ def convert_to_internal_data_format(gov_data):
     return output
 
 
-def get_category_wise_data(subcategory_wise_data: dict, mapping: dict) -> dict:
+def get_category_wise_data(
+    subcategory_wise_data: dict,
+    mapping: dict = SUB_CATEGORY_GOV_CATEGORY_MAPPING,
+    with_subcategory: bool = False,
+) -> dict:
     """
     returns category wise data from subcategory wise data
 
     Args:
         subcategory_wise_data (dict): subcategory wise data
         mapping (dict): subcategory to category mapping
+        with_subcategory (bool): include subcategory level data
+
+    Returns:
+        dict: category wise data
+
+    Example (with_subcategory=True):
+        {
+            "B2B, SEZ, DE": {
+                "B2B": data,
+                ...
+            }
+            ...
+        }
+
+    Example (with_subcategory=False):
+        {
+            "B2B, SEZ, DE": data,
+            ...
+        }
     """
     category_wise_data = {}
     for subcategory, category in mapping.items():
         if not subcategory_wise_data.get(subcategory.value):
             continue
 
-        category_wise_data.setdefault(category.value, []).extend(
-            subcategory_wise_data.get(subcategory.value, [])
-        )
+        if with_subcategory:
+            category_wise_data.setdefault(category.value, {})[subcategory.value] = (
+                subcategory_wise_data.get(subcategory.value, {})
+            )
+
+        else:
+            category_wise_data.setdefault(category.value, []).extend(
+                subcategory_wise_data.get(subcategory.value, [])
+            )
 
     return category_wise_data
 
@@ -2406,9 +2379,7 @@ def convert_to_gov_data_format(internal_data: dict) -> dict:
     converts internal data format to Gov data format for all categories
     """
 
-    category_wise_data = get_category_wise_data(
-        internal_data, SUB_CATEGORY_GOV_CATEGORY_MAPPING
-    )
+    category_wise_data = get_category_wise_data(internal_data, with_subcategory=True)
 
     output = {}
     for category, mapper_class in CLASS_MAP.items():
