@@ -96,10 +96,13 @@ class GSTR1Beta(Document):
 
         # files are already present
         if gstr1_log.has_all_files(settings):
-            self.data = gstr1_log.load_data()
-            self.data["status"] = gstr1_log.filing_status or "Not Filed"
-            gstr1_log.update_status("Generated")
-            return
+            data = gstr1_log.load_data()
+
+            if data:
+                self.data = data
+                self.data["status"] = gstr1_log.filing_status or "Not Filed"
+                gstr1_log.update_status("Generated")
+                return
 
         # request OTP
         if gstr1_log.is_sek_needed(settings) and not gstr1_log.is_sek_valid(settings):

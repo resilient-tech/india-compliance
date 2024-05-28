@@ -206,7 +206,10 @@ class ReconcileGSTR1:
             - For each row in Gov Data (if not in Books Data)
         """
         if self.is_latest_data and self.reconcile:
-            return self.get_json_for("reconcile")
+            reconcile_data = self.get_json_for("reconcile")
+
+            if reconcile_data:
+                return reconcile_data
 
         reconciled_data = {}
         if self.filing_status == "Filed":
@@ -477,6 +480,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1):
         # data exists
         if self.get(data_field):
             mapped_data = self.get_json_for(data_field)
+
             if mapped_data:
                 return mapped_data, False
 
@@ -536,8 +540,11 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1):
                 continue
 
             if self.is_latest_data and self.get(field):
-                data[field] = self.get_json_for(field)
-                continue
+                _data = self.get_json_for(field)
+
+                if _data:
+                    data[field] = _data
+                    continue
 
             summary_data = self.get_summarized_data(data[key], key == "filed")
 
@@ -599,8 +606,13 @@ class GSTR1FiledLog(GenerateGSTR1, Document):
         return data
 
     def get_json_for(self, file_field):
-        if file := get_file_doc(self.doctype, self.name, file_field):
-            return get_decompressed_data(file.get_content())
+        try:
+            if file := get_file_doc(self.doctype, self.name, file_field):
+                return get_decompressed_data(file.get_content())
+
+        except FileNotFoundError:
+            self.db_set(file_field, None)
+            return
 
     def update_json_for(self, file_field, json_data, overwrite=True):
         if "summary" not in file_field:
@@ -648,7 +660,10 @@ class GSTR1FiledLog(GenerateGSTR1, Document):
         if not self.get(file_field):
             return
 
-        get_file_doc(self.doctype, self.name, file_field).delete()
+        file = get_file_doc(self.doctype, self.name, file_field)
+        if file:
+            file.delete()
+
         self.db_set(file_field, None)
 
         if "summary" not in file_field:
