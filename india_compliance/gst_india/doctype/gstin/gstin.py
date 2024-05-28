@@ -310,8 +310,4 @@ def get_gstr_1_filed_upto(gstin):
     if not gstin:
         return
 
-    doc = frappe.get_cached_doc("GSTIN", gstin)
-    if not doc:
-        return
-
-    return doc.gstr_1_filed_upto
+    return frappe.db.get_value("GSTIN", gstin, "gstr_1_filed_upto")
