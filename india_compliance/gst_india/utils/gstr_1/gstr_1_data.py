@@ -473,7 +473,18 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
         final_summary = []
         sub_category_summary = self.get_sub_category_summary()
 
+        IGNORED_CATEGORIES = (
+            GSTR1_Category.AT,
+            GSTR1_Category.TXP,
+            GSTR1_Category.DOC_ISSUE,
+            GSTR1_Category.HSN,
+            GSTR1_Category.SUPECOM,
+        )
+
         for category, sub_categories in CATEGORY_SUB_CATEGORY_MAPPING.items():
+            if category in IGNORED_CATEGORIES:
+                continue
+
             category_summary = {
                 "description": category.value,
                 "no_of_records": 0,
