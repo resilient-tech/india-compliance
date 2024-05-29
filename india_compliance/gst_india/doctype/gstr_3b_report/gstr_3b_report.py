@@ -125,6 +125,11 @@ class GSTR3BReport(Document):
             self.company, self.gst_details.get("gstin"), self.month_no, self.year
         ).get_for_purchase_invoice(group_by="ineligibility_reason")
 
+        updated_ineligible_credit = IneligibleITC(
+            self.company, self.gst_details.get("gstin"), self.month_no, self.year
+        ).get_purchase_invoice_available_credit(group_by="ineligibility_reason")
+
+        ineligible_credit.extend(updated_ineligible_credit)
         return self.process_ineligible_credit(ineligible_credit)
 
     def update_itc_reversal_from_bill_of_entry(self):
