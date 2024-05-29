@@ -429,7 +429,7 @@ class IneligibleITC:
         ineligible_transactions = self.get_vouchers_with_gst_expense("Purchase Invoice")
 
         if not ineligible_transactions:
-            return
+            return []
 
         pi = frappe.qb.DocType("Purchase Invoice")
 
@@ -478,7 +478,7 @@ class IneligibleITC:
         ineligible_transactions = self.get_vouchers_with_gst_expense("Purchase Invoice")
 
         if not ineligible_transactions:
-            return
+            return []
 
         pi = frappe.qb.DocType("Purchase Invoice")
         taxes = frappe.qb.DocType("Purchase Taxes and Charges")
