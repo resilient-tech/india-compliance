@@ -32,11 +32,14 @@ def execute():
             continue
 
         if account_type in account_types:
-            # TODO: Add a link to the documentation
+            url = "https://docs.indiacompliance.app/docs/developer-guide/migrating-from-v13#gst-accounts"
             click.secho(
-                "It seems like you have different GST Accounts for different rates. "
-                "This is no longer supported. "
-                "Please merge these accounts and manually update GST Settings.\n",
+                (
+                    "It seems like you have different GST Accounts for different rates. "
+                    "This is no longer supported. "
+                    "Please merge these accounts and manually update GST Settings.\n"
+                    f"For more information, refer to the documentation: {url}"
+                ),
                 fg="yellow",
             )
             return

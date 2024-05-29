@@ -27,7 +27,7 @@ ITEM_VARIANT_FIELDNAMES = frozenset(("gst_hsn_code",))
 def after_install():
     create_custom_fields()
     create_accounting_dimension_fields()
-    create_property_setters()
+    create_property_setters(include_defaults=True)
     create_address_template()
     create_email_template()
     set_default_gst_settings()
@@ -61,9 +61,13 @@ def create_accounting_dimension_fields():
         make_dimension_in_accounting_doctypes(doc, doctypes)
 
 
-def create_property_setters():
-    for property_setter in get_property_setters():
-        frappe.make_property_setter(property_setter, validate_fields_for_doctype=False)
+def create_property_setters(*, include_defaults=False):
+    for property_setter in get_property_setters(include_defaults=include_defaults):
+        frappe.make_property_setter(
+            property_setter,
+            validate_fields_for_doctype=False,
+            is_system_generated=property_setter.get("is_system_generated", True),
+        )
 
 
 def create_address_template():
