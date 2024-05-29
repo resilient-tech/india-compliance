@@ -1162,9 +1162,7 @@ async function update_gst_tranporter_id(dialog) {
 }
 
 function set_gst_transporter_id_status(dialog) {
-    const gst_transporter_id_field = dialog.get_field("gst_transporter_id");
-
-    india_compliance.set_gstin_status(gst_transporter_id_field);
+    india_compliance.validate_gst_transporter_id(dialog.get_value("gst_transporter_id"));
 }
 
 function update_generation_dialog(dialog, doc) {

@@ -115,6 +115,15 @@ Object.assign(india_compliance, {
         return message;
     },
 
+    async validate_gst_transporter_id(transporter_id) {
+        if (!transporter_id || transporter_id.length !== 15) return;
+
+        await frappe.call({
+            method: "india_compliance.gst_india.doctype.gstin.gstin.validate_gst_transporter_id",
+            args: { transporter_id },
+        });
+    },
+
     get_gstin_status_desc(status, datetime) {
         if (!status) return;
         const user_date = frappe.datetime.str_to_user(datetime);
