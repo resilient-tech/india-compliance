@@ -13,8 +13,12 @@
   "column_break_nrjd",
   "last_updated_on",
   "cancelled_date",
+<<<<<<< HEAD
   "section_break_ttzc",
   "gstr_1_filed_upto"
+=======
+  "transporter_id_status"
+>>>>>>> a87d2cbc (fix: gst-transporter-id refactor)
  ],
  "fields": [
   {
@@ -30,8 +34,7 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Status",
-   "reqd": 1
+   "label": "Status"
   },
   {
    "fieldname": "registration_date",
@@ -63,6 +66,7 @@
    "label": "Is Blocked"
   },
   {
+<<<<<<< HEAD
    "fieldname": "section_break_ttzc",
    "fieldtype": "Section Break"
   },
@@ -71,12 +75,23 @@
    "fieldtype": "Date",
    "hidden": 1,
    "label": "GSTR-1 Filed Upto"
+=======
+   "fieldname": "transporter_id_status",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Transporter ID Status"
+>>>>>>> a87d2cbc (fix: gst-transporter-id refactor)
   }
  ],
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
+<<<<<<< HEAD
  "modified": "2024-05-17 15:38:05.867522",
+=======
+ "modified": "2024-05-21 12:59:58.322776",
+>>>>>>> a87d2cbc (fix: gst-transporter-id refactor)
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTIN",
