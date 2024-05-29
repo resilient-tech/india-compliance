@@ -8,7 +8,10 @@ from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Extract, Ifnull, IfNull, LiteralValue, Sum
 from frappe.utils import cint, flt, get_first_day, get_last_day
 
-from india_compliance.gst_india.utils import get_escaped_gst_accounts
+from india_compliance.gst_india.utils import (
+    get_escaped_gst_accounts,
+    get_gst_accounts_by_type,
+)
 
 
 def execute(filters=None):
@@ -436,6 +439,7 @@ class IneligibleITC:
             return
 
         pi = frappe.qb.DocType("Purchase Invoice")
+        taxes = frappe.qb.DocType("Purchase Taxes and Charges")
 
         credit_availed = (
             self.get_gl_entry_query("Purchase Invoice")
@@ -453,25 +457,64 @@ class IneligibleITC:
             .run(as_dict=1)
         )
 
-        credit_available = (
+        gst_accounts = get_gst_accounts_by_type(self.company, "Input")
+        docs = (
             frappe.qb.from_(pi)
+            .inner_join(taxes)
+            .on(pi.name == taxes.parent)
             .select(
-                ConstantColumn("Purchase Invoice").as_("voucher_type"),
-                pi.name.as_("voucher_no"),
+                pi.name,
                 pi.posting_date,
-                pi.ineligibility_reason.as_("itc_classification"),
-                Sum(pi.itc_integrated_tax).as_("iamt"),
-                Sum(pi.itc_central_tax).as_("camt"),
-                Sum(pi.itc_state_tax).as_("samt"),
-                Sum(pi.itc_cess_amount).as_("csamt"),
+                pi.ineligibility_reason,
+                pi.itc_integrated_tax,
+                pi.itc_central_tax,
+                pi.itc_state_tax,
+                pi.itc_cess_amount,
+                taxes.base_tax_amount_after_discount_amount,
+                taxes.account_head,
             )
             .where(IfNull(pi.ineligibility_reason, "") != "")
             .where(pi.name.isin(ineligible_transactions))
             .where(pi.company_gstin != IfNull(pi.supplier_gstin, ""))
-            .groupby(pi[group_by])
             .run(as_dict=1)
         )
 
+        docs_dict = frappe._dict({})
+        for doc in docs:
+            if doc.account_head == gst_accounts.igst_account:
+                doc.itc_integrated_tax += flt(doc.base_tax_amount_after_discount_amount)
+
+            if doc.account_head == gst_accounts.sgst_account:
+                doc.itc_state_tax += flt(doc.base_tax_amount_after_discount_amount)
+
+            if doc.account_head == gst_accounts.cgst_account:
+                doc.itc_central_tax += flt(doc.base_tax_amount_after_discount_amount)
+
+            if doc.account_head == gst_accounts.cess_account:
+                doc.itc_cess_amount += flt(doc.base_tax_amount_after_discount_amount)
+
+            docs_dict.setdefault(
+                doc.name,
+                frappe._dict(
+                    {
+                        "voucher_type": "Purchase Invoice",
+                        "voucher_no": doc.name,
+                        "posting_date": doc.posting_date,
+                        "itc_classification": doc.ineligibility_reason,
+                        "iamt": 0,
+                        "camt": 0,
+                        "samt": 0,
+                        "csamt": 0,
+                    }
+                ),
+            )
+
+            docs_dict[doc.name].iamt += doc.itc_integrated_tax
+            docs_dict[doc.name].camt += doc.itc_central_tax
+            docs_dict[doc.name].samt += doc.itc_state_tax
+            docs_dict[doc.name].csamt += doc.itc_cess_amount
+
+        credit_available = list(docs_dict.values())
         return self.get_ineligible_credit(credit_availed, credit_available, group_by)
 
     def get_for_bill_of_entry(self, group_by="name"):
