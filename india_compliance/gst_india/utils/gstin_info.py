@@ -5,6 +5,7 @@ from string import whitespace
 import frappe
 from frappe import _
 
+from india_compliance.exceptions import GSPServerError
 from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.api_classes.public import PublicAPI
 from india_compliance.gst_india.utils import titlecase, validate_gstin
@@ -42,6 +43,9 @@ def _get_gstin_info(gstin, *, throw_error=True):
 
     if not response:
         try:
+            if frappe.cache.get_value("gst_server_error"):
+                return
+
             response = PublicAPI().get_gstin_info(gstin)
             frappe.enqueue(
                 "india_compliance.gst_india.doctype.gstin.gstin.create_or_update_gstin_status",
@@ -49,6 +53,9 @@ def _get_gstin_info(gstin, *, throw_error=True):
                 response=response,
             )
         except Exception as exc:
+            if isinstance(exc, GSPServerError):
+                frappe.cache.set_value("gst_server_error", True, expires_in_sec=60)
+
             if throw_error:
                 raise exc
 

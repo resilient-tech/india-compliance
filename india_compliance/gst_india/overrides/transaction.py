@@ -13,9 +13,11 @@ from india_compliance.gst_india.constants import (
 )
 from india_compliance.gst_india.constants.custom_fields import E_WAYBILL_INV_FIELDS
 from india_compliance.gst_india.doctype.gstin.gstin import (
-    _validate_gst_transporter_id_info,
     _validate_gstin_info,
     get_gstin_status,
+)
+from india_compliance.gst_india.doctype.gstin.gstin import (
+    validate_gst_transporter_id as _validate_gst_transporter_id,
 )
 from india_compliance.gst_india.utils import (
     get_all_gst_accounts,
@@ -1311,12 +1313,7 @@ def validate_gst_transporter_id(doc):
         doc.gst_transporter_id, label="GST Transporter ID", is_transporter_id=True
     )
 
-    gstin_doc = get_gstin_status(doc.gst_transporter_id)
-
-    if not gstin_doc:
-        return
-
-    _validate_gst_transporter_id_info(gstin_doc, throw=True)
+    _validate_gst_transporter_id(doc.gst_transporter_id)
 
 
 def validate_company_address_field(doc):
