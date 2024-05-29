@@ -87,7 +87,7 @@ def execute():
     companies = frappe.get_all("Company", filters={"country": "India"}, pluck="name")
     for company in companies:
         # skipping if account already exists
-        if frappe.get_all(
+        if frappe.db.exists(
             "Account",
             {
                 "company": company,
@@ -107,7 +107,7 @@ def execute():
 
 def setup_rcm_template(company, output_gst_accounts):
     account_name_map = get_account_name_map(output_gst_accounts)
-    tax_category_map = get_tax_category_make()
+    tax_category_map = get_tax_category_map()
     gst_rate = get_default_gst_rate(output_gst_accounts)
 
     for template in TEMPLATE:
@@ -142,13 +142,11 @@ def get_default_gst_rate(output_gst_accounts):
 def get_account_name_map(output_gst_accounts):
     accounts = frappe.get_all(
         "Account",
-        filters={"name": ["in", output_gst_accounts.values()]},
+        filters={"name": ["in", list(output_gst_accounts.values())]},
         fields=["name", "account_name", "root_type"],
     )
 
-    account_names = {}
-    for account in accounts:
-        account_names[account.name] = account
+    account_names = {account.name: account for account in accounts}
 
     return account_names
 
@@ -179,7 +177,7 @@ def update_tax_rate(gst_rate, taxes):
     taxes["tax_rate"] = rate
 
 
-def get_tax_category_make():
+def get_tax_category_map():
     rcm_tax_categories = {
         "Reverse Charge In-State": "",
         "Reverse Charge Out-State": "",
@@ -208,21 +206,19 @@ def get_or_create_tax_category(rcm_tax_categories, category):
 
 def update_gst_settings(company):
     gst_settings = frappe.get_cached_doc("GST Settings")
-    existing_account_list = []
 
-    for account in gst_settings.get("gst_accounts"):
-        for key in ["cgst_account", "sgst_account", "igst_account"]:
-            existing_account_list.append(account.get(key))
+    existing_account_list = [
+        account.get(key)
+        for account in gst_settings.get("gst_accounts")
+        for key in ["cgst_account", "sgst_account", "igst_account"]
+    ]
 
     gst_accounts = frappe._dict(
         frappe.get_all(
             "Account",
             {
                 "company": company,
-                "account_name": (
-                    "in",
-                    SALES_RCM_ACCOUNTS,
-                ),
+                "account_name": ("in", SALES_RCM_ACCOUNTS),
             },
             ["account_name", "name"],
             as_list=1,
