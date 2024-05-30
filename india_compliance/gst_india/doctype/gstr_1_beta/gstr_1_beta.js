@@ -297,7 +297,7 @@ class GSTR1 {
     }
 
     refresh_view() {
-        // for change in view (Summary/Details)
+        // for change in view (Summary/Detailed)
         this.viewgroup.set_active_view(this.active_view);
         this.TABS.forEach(tab => {
             if (!tab.shown) return;
@@ -312,7 +312,7 @@ class GSTR1 {
         const category_filter = this.filters.filter(row => row[1] === "description");
         this.filter_category = category_filter.length ? category_filter[0][3] : null;
 
-        if (this.filter_category) this.active_view = "Details";
+        if (this.filter_category) this.active_view = "Detailed";
         else this.active_view = "Summary";
 
         this.refresh_view();
@@ -351,7 +351,7 @@ class GSTR1 {
         this.tab_group = new frappe.ui.FieldGroup({
             fields: [
                 {
-                    //hack: for the FieldGroup(Layout) to avoid rendering default "details" tab
+                    //hack: for the FieldGroup(Layout) to avoid rendering default "Detailed" tab
                     fieldtype: "Section Break",
                 },
                 ...tab_fields,
@@ -380,7 +380,7 @@ class GSTR1 {
 
         this.viewgroup = new india_compliance.ViewGroup({
             $wrapper: wrapper,
-            view_names: ["Summary", "Details"],
+            view_names: ["Summary", "Detailed"],
             active_view: this.active_view,
             parent: this,
             callback: this.change_view,
@@ -487,37 +487,13 @@ class GSTR1 {
         const current_view = this.active_view;
 
         if (!this.filter_category && current_view === "Summary")
-            return this.filter_category_dialog(view_group, target_view);
+            return // TODO:
 
         view_group.set_active_view(target_view);
         this.active_view = target_view;
 
         this.refresh_view();
     };
-
-    filter_category_dialog(view_group, target_view) {
-        const dialog = new frappe.ui.Dialog({
-            title: __("Filter by Category"),
-            fields: [
-                {
-                    fieldname: "description",
-                    fieldtype: "Autocomplete",
-                    options: Object.values(GSTR1_SubCategory),
-                    label: __("Category"),
-                },
-            ],
-            primary_action: async () => {
-                const { description } = dialog.get_values();
-                if (!description) return;
-
-                dialog.hide();
-                await this.apply_filters(description);
-                this.change_view(view_group, target_view);
-            },
-        });
-
-        dialog.show();
-    }
 
     async set_output_gst_balances() {
         //Checks if gst-ledger-difference element is there and removes if already present
@@ -602,7 +578,7 @@ class TabManager {
 
     reset_data() {
         this.data = {}; // Raw Data
-        this.filtered_data = {}; // Filtered Data / Details View
+        this.filtered_data = {}; // Filtered Data / Detailed View
         this.summary = {};
     }
 
@@ -618,12 +594,12 @@ class TabManager {
     }
 
     refresh_view(view, category) {
-        if (!category && view === "Details") return;
+        if (!category && view === "Detailed") return;
 
         this.filter_category = category;
         let subtitle = "";
 
-        if (view === "Details") {
+        if (view === "Detailed") {
             const columns_func = this.CATEGORY_COLUMNS[category];
             if (!columns_func) return;
 
@@ -633,22 +609,18 @@ class TabManager {
                 this.data[category],
                 this.category_columns
             );
-        } else if (view === "Summary") {
-            let filtered_summary = this.summary;
-            if (category)
-                filtered_summary = filtered_summary.filter(
-                    row => row.description === category
-                );
+            this.set_title(category);
 
+        } else if (view === "Summary") {
             this.setup_datatable(
                 this.wrapper,
-                filtered_summary,
+                this.summary,
                 this.get_summary_columns()
             );
             subtitle = this.DEFAULT_SUBTITLE;
+            this.set_title(this.DEFAULT_TITLE, subtitle);
         }
 
-        this.set_title(category || this.DEFAULT_TITLE, subtitle);
         this.setup_footer(this.wrapper);
         this.set_creation_time_string();
     }
