@@ -29,7 +29,6 @@ frappe.ui.form.on(DOCTYPE, {
         )
             return;
 
-        gst_transporter_id_field = frm.get_field("gst_transporter_id");
-        india_compliance.validate_gst_transporter_id(gst_transporter_id_field.value);
+        india_compliance.validate_gst_transporter_id(frm.doc.gst_transporter_id);
     },
 });
