@@ -14,6 +14,7 @@ from india_compliance.gst_india.utils import (
     is_api_enabled,
     parse_datetime,
     validate_gstin,
+    validate_gstin_check_digit,
 )
 
 GSTIN_STATUS = {
@@ -343,7 +344,9 @@ def validate_gst_transporter_id(transporter_id):
         gstin = frappe.get_doc("GSTIN", transporter_id)
 
     # Check if transporter_id starts with 88 or is not valid GSTIN and use Transporter ID API
-    elif transporter_id[:2] == "88" or not validate_gstin(transporter_id, throw=False):
+    elif transporter_id[:2] == "88" or not validate_gstin_check_digit(
+        transporter_id, throw=False
+    ):
         gstin = create_or_update_gstin_status(
             transporter_id,
             is_transporter_id=True,
