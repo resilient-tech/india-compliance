@@ -263,12 +263,6 @@ class GSTR1 {
 
         if (data) this.data = data;
 
-        // set data for filing return
-        if (!this.data["filed"]) {
-            this.data["filed"] = this.data["books"];
-            this.data["filed_summary"] = this.data["books_summary"];
-        }
-
         // set idx for reconcile rows (for detail view)
         if (this.data["reconcile"]) {
             Object.values(this.data["reconcile"]).forEach(category => {

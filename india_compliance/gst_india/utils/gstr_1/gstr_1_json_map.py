@@ -149,23 +149,6 @@ class GovDataMapper:
             f"total_{key}": 0 for key in self.DEFAULT_ITEM_AMOUNTS.keys()
         }
 
-    def aggregate_invoices(self, input_data, default_keys=None):
-        if not default_keys:
-            default_keys = list(self.DEFAULT_ITEM_AMOUNTS.keys())
-
-        output = []
-
-        for invoices in input_data.values():
-            aggregated_invoice = invoices[0].copy()
-            aggregated_invoice.update(
-                {
-                    key: sum([invoice.get(key, 0) for invoice in invoices])
-                    for key in default_keys
-                }
-            )
-            output.append(aggregated_invoice)
-        return output
-
     def reverse_dict(self, data):
         return {v: k for k, v in data.items()}
 
@@ -752,10 +735,13 @@ class B2CS(GovDataMapper):
         return {self.SUBCATEGORY: output}
 
     def convert_to_gov_data_format(self, input_data):
-        input_data = self.aggregate_invoices(
-            input_data[self.SUBCATEGORY], list(self.TOTAL_DEFAULTS.keys())
-        )
-
+        # TODO: Use normalised data
+        input_data = [
+            document
+            for documents in input_data.values()
+            for document_list in documents.values()
+            for document in document_list
+        ]
         return [self.format_data(invoice, for_gov=True) for invoice in input_data]
 
     def format_data(self, data, default_data=None, for_gov=False):
@@ -842,14 +828,12 @@ class NilRated(GovDataMapper):
         return {self.SUBCATEGORY: output}
 
     def convert_to_gov_data_format(self, input_data):
-        input_data = self.aggregate_invoices(
-            input_data[self.SUBCATEGORY],
-            [
-                GSTR1_DataField.EXEMPTED_AMOUNT.value,
-                GSTR1_DataField.NIL_RATED_AMOUNT.value,
-                GSTR1_DataField.NON_GST_AMOUNT.value,
-            ],
-        )
+        input_data = [
+            document
+            for documents in input_data.values()
+            for document_list in documents.values()
+            for document in document_list
+        ]
         self.DOCUMENT_CATEGORIES = self.reverse_dict(self.DOCUMENT_CATEGORIES)
 
         return {
@@ -1425,7 +1409,12 @@ class AT(GovDataMapper):
         return {self.SUBCATEGORY: output}
 
     def convert_to_gov_data_format(self, input_data):
-        input_data = self.aggregate_invoices(input_data[self.SUBCATEGORY])
+        input_data = [
+            document
+            for documents in input_data.values()
+            for document_list in documents.values()
+            for document in document_list
+        ]
 
         pos_wise_data = {}
 

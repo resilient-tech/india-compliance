@@ -160,7 +160,7 @@ class GovExcel(DataProcessor):
         self.period = period
         gstr_1_log = frappe.get_doc("GSTR-1 Filed Log", f"{period}-{gstin}")
 
-        self.file_field = "filed" if gstr_1_log.filed else "books"
+        self.file_field = "filed"
         data = gstr_1_log.load_data(self.file_field)[self.file_field]
         data = self.process_data(data)
         self.build_excel(data)
@@ -1921,7 +1921,7 @@ def download_gstr_1_json(
     period = get_period(month_or_quarter, year)
     gstr1_log = frappe.get_doc("GSTR-1 Filed Log", f"{period}-{company_gstin}")
 
-    data = gstr1_log.get_json_for("books")
+    data = gstr1_log.get_json_for("filed")
 
     for subcategory_data in data.values():
         discard_invoices = []

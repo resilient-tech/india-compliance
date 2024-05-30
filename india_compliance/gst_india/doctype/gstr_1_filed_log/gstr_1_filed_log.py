@@ -1,5 +1,6 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
+import copy
 import gzip
 import itertools
 from datetime import datetime
@@ -399,7 +400,60 @@ class ReconcileGSTR1:
         return aggregated_row
 
 
-class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1):
+class AggregateInvoices:
+    def aggregate_data(self, data: dict):
+        """
+        Aggregate invoices for each subcategory where required
+        and updates the data
+        """
+        sub_categories_requiring_aggregation = [
+            GSTR1_SubCategory.B2CS,
+            GSTR1_SubCategory.NIL_EXEMPT,
+            GSTR1_SubCategory.AT,
+            GSTR1_SubCategory.TXP,
+        ]
+
+        for subcategory in sub_categories_requiring_aggregation:
+            subcategory_data = data.get(subcategory.value)
+
+            if not subcategory_data:
+                continue
+
+            self.aggregate_invoices(subcategory_data)
+
+    def aggregate_invoices(self, subcategory_data: dict):
+        value_keys = []
+
+        for _id, invoices in subcategory_data.items():
+            if not value_keys:
+                value_keys = self.get_value_keys(invoices[0])
+
+            aggregated_invoice = invoices[0].copy()
+            aggregated_invoice.update(
+                {
+                    key: sum([invoice.get(key, 0) for invoice in invoices])
+                    for key in value_keys
+                }
+            )
+
+            subcategory_data[_id] = [aggregated_invoice]
+
+    def get_value_keys(self, invoice: dict):
+        keys = []
+
+        for key, value in invoice.items():
+            if not isinstance(value, (int, float)):
+                continue
+
+            if key in {GSTR1_DataField.TAX_RATE.value, GSTR1_DataField.DOC_VALUE.value}:
+                continue
+
+            keys.append(key)
+
+        return keys
+
+
+class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
     def generate_gstr1_data(self, filters, callback=None):
         """
         Generate GSTR-1 Data
@@ -438,7 +492,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1):
             data = "otp_requested"
             return callback and callback(data, filters)
 
-        books_data = self.get_books_gstr1_data(filters)
+        books_data = self.generate_books_data(data, filters, status)
 
         if is_enqueued:
             return
@@ -452,17 +506,34 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1):
         data[gov_data_field] = self.normalize_data(gov_data)
         data["books"] = self.normalize_data(books_data)
 
-        self.summarize_data(data, gov_data_field)
+        self.summarize_data(data)
         return callback and callback(data, filters)
 
     def generate_only_books_data(self, data, filters, callback=None):
-        books_data = self.get_books_gstr1_data(filters)
+        status = "Not Filed"
 
-        data["status"] = "Not Filed"
+        books_data = self.generate_books_data(data, filters, status)
+
         data["books"] = self.normalize_data(books_data)
+        data["status"] = status
 
         self.summarize_data(data)
         return callback and callback(data, filters)
+
+    def generate_books_data(self, data, filters, status):
+        """
+        Gets Books data and aggregates it if not filed
+        """
+        books_data = self.get_books_gstr1_data(filters)
+
+        # Aggregate Books Data
+        if status != "Filed":
+            aggregated_books_data = self.get_aggregated_books_data(
+                copy.deepcopy(books_data)
+            )
+            data["filed"] = self.normalize_data(aggregated_books_data)
+
+        return books_data
 
     # GET DATA
     def get_gov_gstr1_data(self):
@@ -491,10 +562,10 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1):
 
         # data exists
         if self.is_latest_data and self.get(data_field):
-            mapped_data = self.get_json_for(data_field)
+            books_data = self.get_json_for(data_field)
 
-            if mapped_data:
-                return mapped_data
+            if books_data:
+                return books_data
 
         from_date, to_date = get_gstr_1_from_and_to_date(
             filters.month_or_quarter, filters.year
@@ -510,27 +581,45 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1):
         )
 
         # compute data
-        mapped_data = GSTR1BooksData(_filters).prepare_mapped_data()
-        self.update_json_for(data_field, mapped_data)
+        books_data = GSTR1BooksData(_filters).prepare_mapped_data()
+        self.update_json_for(data_field, books_data)
 
-        return mapped_data
+        return books_data
+
+    def get_aggregated_books_data(self, books_data):
+        data_field = "filed"
+
+        if self.is_latest_data and self.get(data_field):
+            aggregated_books_data = self.get_json_for(data_field)
+
+            if aggregated_books_data:
+                return aggregated_books_data
+
+        self.aggregate_data(books_data)
+        self.update_json_for(data_field, books_data)
+
+        return books_data
 
     # DATA MODIFIERS
-    def summarize_data(self, data, gov_data_field=None):
+    def summarize_data(self, data):
         """
-        Summarize data for all fields => reconcile, gov_data_field, books
+        Summarize data for all fields => reconcile, filed, unfiled, books
 
-        If gov data is filed, use summary provided by Govt (usecase: amendments manually updated).
+        If return status is filed, use summary provided by Govt (usecase: amendments manually updated).
         Else, summarize the data and save it.
         """
         summary_fields = {
             "reconcile": "reconcile_summary",
-            f"{gov_data_field}": f"{gov_data_field}_summary",
+            "filed": "filed_summary",
+            "unfiled": "unfiled_summary",
             "books": "books_summary",
         }
 
         for key, field in summary_fields.items():
             if not data.get(key):
+                continue
+
+            if data.get(field):
                 continue
 
             if self.is_latest_data and self.get(field):
@@ -540,7 +629,9 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1):
                     data[field] = _data
                     continue
 
-            summary_data = self.get_summarized_data(data[key], key == "filed")
+            summary_data = self.get_summarized_data(
+                data[key], self.filing_status == "Filed"
+            )
 
             self.update_json_for(field, summary_data)
             data[field] = summary_data
@@ -612,6 +703,10 @@ class GSTR1FiledLog(GenerateGSTR1, Document):
         # reset reconciled data
         if overwrite and file_field in ("books", "filed", "unfiled"):
             self.remove_json_for("reconcile")
+
+        # reset aggregated books data
+        if overwrite and file_field == "books" and self.filing_status != "Filed":
+            self.remove_json_for("filed")
 
         # new file
         if not getattr(self, file_field):
@@ -700,14 +795,13 @@ class GSTR1FiledLog(GenerateGSTR1, Document):
         return status
 
     def get_applicable_file_fields(self, settings=None):
-        fields = ["books", "books_summary"]
+        # Books aggregated data stored in filed (as to file)
+        fields = ["books", "books_summary", "filed", "filed_summary"]
 
         if self.is_gstr1_api_enabled(settings):
             fields.extend(["reconcile", "reconcile_summary"])
 
-            if self.filing_status == "Filed":
-                fields.extend(["filed", "filed_summary"])
-            else:
+            if self.filing_status != "Filed":
                 fields.extend(["unfiled", "unfiled_summary"])
 
         return fields
