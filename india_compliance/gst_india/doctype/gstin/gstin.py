@@ -356,8 +356,11 @@ def validate_gst_transporter_id(transporter_id):
             transporter_id, callback=_validate_gstin_info
         )
 
+    if not gstin:
+        return
+
     # If GSTIN status is not Active and transporter_id_status is None, use Transporter ID API
-    if gstin and gstin.status != "Active" and not gstin.transporter_id_status:
+    if gstin.status != "Active" and not gstin.transporter_id_status:
         gstin = create_or_update_gstin_status(
             transporter_id,
             is_transporter_id=True,
@@ -365,13 +368,11 @@ def validate_gst_transporter_id(transporter_id):
         )
 
     # Return if GSTIN or transporter_id_status is Active
-    if gstin and (gstin.status == "Active" or gstin.transporter_id_status == "Active"):
+    if gstin.status == "Active" or gstin.transporter_id_status == "Active":
         return
 
     frappe.msgprint(
-        _("Transporter ID {0} seems to be {1}").format(
-            transporter_id, gstin.transporter_id_status if gstin else "Inactive"
-        ),
+        _("Transporter ID {0} seems to be Inactive").format(transporter_id),
         indicator="orange",
     )
 >>>>>>> a87d2cbc (fix: gst-transporter-id refactor)
