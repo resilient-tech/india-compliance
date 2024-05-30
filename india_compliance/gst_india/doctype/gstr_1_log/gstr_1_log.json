@@ -181,7 +181,7 @@
  "modified": "2024-05-28 19:49:55.513493",
  "modified_by": "Administrator",
  "module": "GST India",
- "name": "GSTR-1 Filed Log",
+ "name": "GSTR-1 Log",
  "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [

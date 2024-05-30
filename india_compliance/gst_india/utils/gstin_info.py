@@ -8,7 +8,7 @@ from frappe.utils import getdate
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.api_classes.public import PublicAPI
-from india_compliance.gst_india.doctype.gstr_1_filed_log.gstr_1_filed_log import (
+from india_compliance.gst_india.doctype.gstr_1_log.gstr_1_log import (
     process_gstr_1_returns_info,
 )
 from india_compliance.gst_india.utils import titlecase, validate_gstin

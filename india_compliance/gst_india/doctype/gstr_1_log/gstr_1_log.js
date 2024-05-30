@@ -2,7 +2,7 @@
 // For license information, please see license.txt
 
 
-frappe.ui.form.on("GSTR-1 Filed Log", {
+frappe.ui.form.on("GSTR-1 Log", {
     refresh(frm) {
         const [month_or_quarter, year] = india_compliance.get_month_year_from_period(frm.doc.return_period);
 

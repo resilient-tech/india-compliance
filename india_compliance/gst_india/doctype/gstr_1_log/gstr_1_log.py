@@ -659,7 +659,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         return data
 
 
-class GSTR1FiledLog(GenerateGSTR1, Document):
+class GSTR1Log(GenerateGSTR1, Document):
 
     @property
     def status(self):
@@ -815,10 +815,10 @@ def process_gstr_1_returns_info(company, gstin, response):
         if info["rtntype"] == "GSTR1":
             return_info[f"{info['ret_prd']}-{gstin}"] = info
 
-    # existing filed logs
-    filed_logs = frappe._dict(
+    # existing logs
+    gstr1_logs = frappe._dict(
         frappe.get_all(
-            "GSTR-1 Filed Log",
+            "GSTR-1 Log",
             filters={"name": ("in", list(return_info.keys()))},
             fields=["name", "acknowledgement_number"],
             as_list=1,
@@ -849,9 +849,9 @@ def process_gstr_1_returns_info(company, gstin, response):
             getdate(f"{info['ret_prd'][2:]}-{info['ret_prd'][0:2]}-01")
         )
 
-        if key in filed_logs:
-            if filed_logs[key] != info["arn"]:
-                frappe.db.set_value("GSTR-1 Filed Log", key, filing_details)
+        if key in gstr1_logs:
+            if gstr1_logs[key] != info["arn"]:
+                frappe.db.set_value("GSTR-1 Log", key, filing_details)
                 _update_gstr_1_filed_upto(filed_upto)
 
             # No updates if status is same
@@ -859,7 +859,7 @@ def process_gstr_1_returns_info(company, gstin, response):
 
         frappe.get_doc(
             {
-                "doctype": "GSTR-1 Filed Log",
+                "doctype": "GSTR-1 Log",
                 "company": company,
                 "gstin": gstin,
                 "return_period": info["ret_prd"],
