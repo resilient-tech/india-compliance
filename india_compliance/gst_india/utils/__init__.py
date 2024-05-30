@@ -152,7 +152,6 @@ def validate_gstin(
     *,
     is_tcs_gstin=False,
     is_transporter_id=False,
-    throw=True,
 ):
     """
     Validate GSTIN with following checks:
@@ -167,27 +166,21 @@ def validate_gstin(
     gstin = gstin.upper().strip()
 
     if len(gstin) != 15:
-        if throw:
-            frappe.throw(
-                _("{0} {1} must have 15 characters").format(label, frappe.bold(gstin)),
-                title=_("Invalid {0}").format(label),
-            )
-        return False
-
-    is_valid = True
+        frappe.throw(
+            _("{0} {1} must have 15 characters").format(label, frappe.bold(gstin)),
+            title=_("Invalid {0}").format(label),
+        )
 
     if not (is_transporter_id and gstin.startswith("88")):
-        is_valid = validate_gstin_check_digit(gstin, label=label, throw=throw)
+        validate_gstin_check_digit(gstin, label=label)
 
     if is_tcs_gstin and not TCS.match(gstin):
-        if throw:
-            frappe.throw(
-                _("Invalid format for e-Commerce Operator (TCS) GSTIN"),
-                title=_("Invalid GSTIN"),
-            )
-        return False
+        frappe.throw(
+            _("Invalid format for e-Commerce Operator (TCS) GSTIN"),
+            title=_("Invalid GSTIN"),
+        )
 
-    return gstin if is_valid else is_valid
+    return gstin
 
 
 def validate_gst_category(gst_category, gstin):
@@ -345,13 +338,14 @@ def validate_gstin_check_digit(gstin, label="GSTIN", throw=True):
         total += digit
         factor = 2 if factor == 1 else 1
     if gstin[-1] != code_point_chars[((mod - (total % mod)) % mod)]:
-        if throw:
-            frappe.throw(
-                _(
-                    """Invalid {0}! The check digit validation has failed. Please ensure you've typed the {0} correctly."""
-                ).format(label)
-            )
-        return False
+        if not throw:
+            return False
+
+        frappe.throw(
+            _(
+                """Invalid {0}! The check digit validation has failed. Please ensure you've typed the {0} correctly."""
+            ).format(label)
+        )
 
     return True
 
