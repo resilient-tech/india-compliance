@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.functions import IfNull
-from frappe.utils import getdate
+from frappe.utils import add_to_date, getdate
 
 from india_compliance.gst_india.constants import GST_ACCOUNT_FIELDS, GST_PARTY_TYPES
 from india_compliance.gst_india.constants.custom_fields import (
@@ -269,6 +269,27 @@ class GSTSettings(Document):
                 )
 
             company_list.append(row.company)
+
+    def is_sek_valid(self, gstin, throw=True, threshold=30):
+        for credential in self.credentials:
+            if credential.service == "Returns" and credential.gstin == gstin:
+                break
+
+        else:
+            if throw:
+                frappe.throw(
+                    _(
+                        "No credential found for the GSTIN {0} in the GST Settings"
+                    ).format(gstin)
+                )
+
+            # TODO: Handle this
+            return False
+
+        if credential.session_expiry and credential.session_expiry > add_to_date(
+            None, minutes=threshold * -1
+        ):
+            return True
 
 
 @frappe.whitelist()

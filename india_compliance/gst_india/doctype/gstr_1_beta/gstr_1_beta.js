@@ -659,11 +659,6 @@ class TabManager {
         this.set_creation_time_string();
     }
 
-    get_row(data, category) {
-        if (category == "Nil-Rated, Exempted, Non-GST")
-            self.get_data_for_nil_exempted_non_gst(data);
-    }
-
     // SETUP
 
     set_title(title, subtitle) {
@@ -1374,17 +1369,6 @@ class BooksTab extends GSTR1_TabManager {
     recompute_books() {
         render_empty_state(this.instance.frm);
         this.instance.frm.call("recompute_books");
-    }
-
-    // DATA
-
-    get_data_for_nil_exempted_non_gst(data) {
-        const out = [];
-        if (data[GSTR1_SubCategory.NIL_EXEMPT]) {
-            out.concat(data[GSTR1_SubCategory.NIL_EXEMPT]);
-        }
-
-        return out;
     }
 
     // COLUMNS

@@ -74,19 +74,6 @@ class DataProcessor:
 
             processed_data[category] = data
 
-        # TODO: Refactor this
-        # calculate document_value for HSN
-        for row in processed_data.get(GovJsonKey.HSN.value, []):
-            row[GSTR1_DataField.DOC_VALUE.value] = sum(
-                (
-                    row.get(GSTR1_DataField.TAXABLE_VALUE.value, 0),
-                    row.get(GSTR1_DataField.IGST.value, 0),
-                    row.get(GSTR1_DataField.CGST.value, 0),
-                    row.get(GSTR1_DataField.SGST.value, 0),
-                    row.get(GSTR1_DataField.CESS.value, 0),
-                )
-            )
-
         return processed_data
 
     def apply_transformations(self, row):
@@ -959,6 +946,17 @@ class BooksExcel(DataProcessor):
                 "label": _(GovExcelField.QUANTITY.value),
                 "fieldname": GSTR1_DataField.QUANTITY.value,
                 "header_format": {"width": ExcelWidth.QUANTITY.value},
+            },
+            {
+                "label": _(GovExcelField.TOTAL_VALUE.value),
+                "fieldname": GSTR1_DataField.DOC_VALUE.value,
+                "data_format": {"number_format": self.AMOUNT_FORMAT},
+            },
+            {
+                "label": _(GovExcelField.TAX_RATE.value),
+                "fieldname": GSTR1_DataField.TAX_RATE.value,
+                "data_format": {"number_format": self.PERCENT_FORMAT},
+                "header_format": {"width": ExcelWidth.TAX_RATE.value},
             },
             *self.get_amount_headers(),
         ]
@@ -1952,9 +1950,7 @@ def download_gstr_1_json(
 
     return {
         "data": {
-            "version": "GST3.0.4",
             "gstin": company_gstin,
-            "hash": "hash",
             "fp": period,
             **convert_to_gov_data_format(data),
         },

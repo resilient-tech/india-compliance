@@ -105,7 +105,9 @@ class GSTR1Beta(Document):
                 return
 
         # request OTP
-        if gstr1_log.is_sek_needed(settings) and not gstr1_log.is_sek_valid(settings):
+        if gstr1_log.is_sek_needed(settings) and not settings.is_sek_valid(
+            self.company_gstin
+        ):
             request_otp(self.company_gstin)
             self.data = "otp_requested"
             return

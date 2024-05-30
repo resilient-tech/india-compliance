@@ -5,16 +5,9 @@ import itertools
 from datetime import datetime
 
 import frappe
-from frappe import _, unscrub
+from frappe import unscrub
 from frappe.model.document import Document
-from frappe.utils import (
-    add_to_date,
-    flt,
-    get_datetime,
-    get_datetime_str,
-    get_last_day,
-    getdate,
-)
+from frappe.utils import flt, get_datetime, get_datetime_str, get_last_day, getdate
 
 from india_compliance.gst_india.utils import is_production_api_enabled
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategory
@@ -239,6 +232,7 @@ class ReconcileGSTR1:
                     is_list = isinstance(books_value, list)
 
                 gov_value = gov_subdata.get(key)
+
                 reconcile_row = self.get_reconciled_row(books_value, gov_value)
 
                 if reconcile_row:
@@ -583,10 +577,6 @@ class GSTR1FiledLog(GenerateGSTR1, Document):
     def update_status(self, status, commit=False):
         self.db_set("generation_status", status, commit=commit)
 
-    def show_report(self):
-        # TODO: Implement
-        pass
-
     # FILE UTILITY
     def load_data(self, file_field=None):
         data = {}
@@ -608,7 +598,7 @@ class GSTR1FiledLog(GenerateGSTR1, Document):
     def get_json_for(self, file_field):
         try:
             if file := get_file_doc(self.doctype, self.name, file_field):
-                return get_decompressed_data(file.get_content())
+                return get_decompressed_data(file.get_content(encodings=[]))
 
         except FileNotFoundError:
             self.db_set(file_field, None)
@@ -648,7 +638,7 @@ class GSTR1FiledLog(GenerateGSTR1, Document):
             new_json = json_data
 
         else:
-            new_json = get_decompressed_data(file.get_content())
+            new_json = get_decompressed_data(file.get_content(encodings=[]))
             new_json.update(json_data)
 
         content = get_compressed_data(new_json)
@@ -687,26 +677,6 @@ class GSTR1FiledLog(GenerateGSTR1, Document):
             return True
 
         return False
-
-    def is_sek_valid(self, settings=None):
-        if not settings:
-            settings = frappe.get_cached_doc("GST Settings")
-
-        for credential in settings.credentials:
-            if credential.service == "Returns" and credential.gstin == self.gstin:
-                break
-
-        else:
-            frappe.throw(
-                _("No credential found for the GSTIN {0} in the GST Settings").format(
-                    self.gstin
-                )
-            )
-
-        if credential.session_expiry and credential.session_expiry > add_to_date(
-            None, minutes=-30
-        ):
-            return True
 
     def has_all_files(self, settings=None):
         if not self.is_latest_data:

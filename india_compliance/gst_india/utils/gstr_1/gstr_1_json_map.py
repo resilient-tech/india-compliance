@@ -1255,7 +1255,6 @@ class HSNSUM(GovDataMapper):
         GovDataField.DESCRIPTION.value: GSTR1_DataField.DESCRIPTION.value,
         GovDataField.UOM.value: GSTR1_DataField.UOM.value,
         GovDataField.QUANTITY.value: GSTR1_DataField.QUANTITY.value,
-        GovDataField.DOC_VALUE.value: GSTR1_DataField.TAXABLE_VALUE.value,
         GovDataField.TAXABLE_VALUE.value: GSTR1_DataField.TAXABLE_VALUE.value,
         GovDataField.IGST.value: GSTR1_DataField.IGST.value,
         GovDataField.CGST.value: GSTR1_DataField.CGST.value,
@@ -1298,6 +1297,24 @@ class HSNSUM(GovDataMapper):
                 for index, invoice in enumerate(input_data)
             ]
         }
+
+    def format_data(self, data, default_data=None, for_gov=False):
+        data = super().format_data(data, default_data, for_gov)
+
+        if for_gov:
+            return data
+
+        data[GSTR1_DataField.DOC_VALUE.value] = sum(
+            (
+                data.get(GSTR1_DataField.TAXABLE_VALUE.value, 0),
+                data.get(GSTR1_DataField.IGST.value, 0),
+                data.get(GSTR1_DataField.CGST.value, 0),
+                data.get(GSTR1_DataField.SGST.value, 0),
+                data.get(GSTR1_DataField.CESS.value, 0),
+            )
+        )
+
+        return data
 
     def map_uom(self, uom, data=None):
         uom = uom.upper()
@@ -2157,6 +2174,16 @@ class BooksDataMapper:
             mapped_dict = prepared_data[key]
 
         self.update_totals(mapped_dict, invoice, for_qty=True)
+
+        mapped_dict[GSTR1_DataField.DOC_VALUE.value] = sum(
+            (
+                mapped_dict.get(GSTR1_DataField.TAXABLE_VALUE.value, 0),
+                mapped_dict.get(GSTR1_DataField.IGST.value, 0),
+                mapped_dict.get(GSTR1_DataField.CGST.value, 0),
+                mapped_dict.get(GSTR1_DataField.SGST.value, 0),
+                mapped_dict.get(GSTR1_DataField.CESS.value, 0),
+            )
+        )
 
     def process_data_for_document_issued_summary(self, row, prepared_data):
         key = f"{row['nature_of_document']} - {row['from_serial_no']}"
