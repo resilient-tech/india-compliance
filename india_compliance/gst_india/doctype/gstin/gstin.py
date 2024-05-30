@@ -357,7 +357,7 @@ def validate_gst_transporter_id(transporter_id):
         )
 
     # If GSTIN status is not Active and transporter_id_status is None, use Transporter ID API
-    if gstin.status and gstin.status != "Active" and not gstin.transporter_id_status:
+    if gstin and gstin.status != "Active" and not gstin.transporter_id_status:
         gstin = create_or_update_gstin_status(
             transporter_id,
             is_transporter_id=True,
