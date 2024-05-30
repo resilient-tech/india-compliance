@@ -1921,9 +1921,9 @@ def download_gstr_1_json(
     period = get_period(month_or_quarter, year)
     gstr1_log = frappe.get_doc("GSTR-1 Log", f"{period}-{company_gstin}")
 
-    data = gstr1_log.get_json_for("filed")
+    data = gstr1_log.load_data("filed").get("filed")
 
-    for subcategory_data in data.values():
+    for subcategory_data in data:
         discard_invoices = []
 
         if isinstance(subcategory_data, str):

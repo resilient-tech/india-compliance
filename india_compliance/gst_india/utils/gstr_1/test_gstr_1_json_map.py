@@ -2,8 +2,10 @@ import copy
 
 from frappe.tests.utils import FrappeTestCase
 
+from india_compliance.gst_india.doctype.gstr_1_log.gstr_1_log import GenerateGSTR1
 from india_compliance.gst_india.utils import get_party_for_gstin as _get_party_for_gstin
 from india_compliance.gst_india.utils.gstr_1 import (
+    SUB_CATEGORY_GOV_CATEGORY_MAPPING,
     GovDataField,
     GSTR1_B2B_InvoiceType,
     GSTR1_DataField,
@@ -22,11 +24,24 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     SUPECOM,
     Exports,
     NilRated,
+    get_category_wise_data,
 )
 
 
 def get_party_for_gstin(gstin):
     return _get_party_for_gstin(gstin, "Customer") or "Unknown"
+
+
+def normalize_data(data):
+    return GenerateGSTR1().normalize_data(data)
+
+
+def process_mapped_data(data):
+    return list(
+        get_category_wise_data(
+            normalize_data(copy.deepcopy(data)), SUB_CATEGORY_GOV_CATEGORY_MAPPING
+        ).values()
+    )[0]
 
 
 class TestB2B(FrappeTestCase):
@@ -280,7 +295,7 @@ class TestB2B(FrappeTestCase):
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = B2B().convert_to_gov_data_format(self.mapped_data)
+        output = B2B().convert_to_gov_data_format(process_mapped_data(self.mapped_data))
         self.assertListEqual(self.json_data, output)
 
 
@@ -484,7 +499,9 @@ class TestB2CL(FrappeTestCase):
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = B2CL().convert_to_gov_data_format(self.mapped_data)
+        output = B2CL().convert_to_gov_data_format(
+            process_mapped_data(self.mapped_data)
+        )
         self.assertListEqual(self.json_data, output)
 
 
@@ -588,7 +605,9 @@ class TestExports(FrappeTestCase):
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = Exports().convert_to_gov_data_format(self.mapped_data)
+        output = Exports().convert_to_gov_data_format(
+            process_mapped_data(self.mapped_data)
+        )
         self.assertListEqual(self.json_data, output)
 
 
@@ -658,7 +677,9 @@ class TestB2CS(FrappeTestCase):
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = B2CS().convert_to_gov_data_format(self.mapped_data)
+        output = B2CS().convert_to_gov_data_format(
+            process_mapped_data(self.mapped_data)
+        )
         self.assertListEqual(self.json_data, output)
 
 
@@ -711,7 +732,9 @@ class TestNilRated(FrappeTestCase):
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = NilRated().convert_to_gov_data_format(self.mapped_data)
+        output = NilRated().convert_to_gov_data_format(
+            process_mapped_data(self.mapped_data)
+        )
         self.assertDictEqual(self.json_data, output)
 
 
@@ -807,7 +830,9 @@ class TestCDNR(FrappeTestCase):
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = CDNR().convert_to_gov_data_format(copy.deepcopy(self.mapped_data))
+        output = CDNR().convert_to_gov_data_format(
+            process_mapped_data(copy.deepcopy(self.mapped_data))
+        )
         self.assertListEqual(self.json_data, output)
 
 
@@ -869,7 +894,9 @@ class TestCDNUR(FrappeTestCase):
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = CDNUR().convert_to_gov_data_format(copy.deepcopy(self.mapped_data))
+        output = CDNUR().convert_to_gov_data_format(
+            process_mapped_data(copy.deepcopy(self.mapped_data))
+        )
         self.assertListEqual(self.json_data, output)
 
 
@@ -916,6 +943,7 @@ class TestHSNSUM(FrappeTestCase):
                     GSTR1_DataField.IGST.value: 14.52,
                     GSTR1_DataField.CESS.value: 500,
                     GSTR1_DataField.TAX_RATE.value: 0.1,
+                    GSTR1_DataField.DOC_VALUE.value: 524.75,
                 },
                 "1011 - NOS-NUMBERS - 5.0": {
                     GSTR1_DataField.HSN_CODE.value: "1011",
@@ -926,6 +954,7 @@ class TestHSNSUM(FrappeTestCase):
                     GSTR1_DataField.IGST.value: 14.52,
                     GSTR1_DataField.CESS.value: 500,
                     GSTR1_DataField.TAX_RATE.value: 5,
+                    GSTR1_DataField.DOC_VALUE.value: 524.75,
                 },
             }
         }
@@ -935,7 +964,9 @@ class TestHSNSUM(FrappeTestCase):
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = HSNSUM().convert_to_gov_data_format(self.mapped_data)
+        output = HSNSUM().convert_to_gov_data_format(
+            process_mapped_data(self.mapped_data)
+        )
         self.assertDictEqual(self.json_data, output)
 
 
@@ -1051,7 +1082,7 @@ class TestAT(FrappeTestCase):
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = AT().convert_to_gov_data_format(self.mapped_data)
+        output = AT().convert_to_gov_data_format(process_mapped_data(self.mapped_data))
         self.assertListEqual(self.json_data, output)
 
 
@@ -1113,6 +1144,7 @@ class TestDOC_ISSUE(FrappeTestCase):
                     GSTR1_DataField.TO_SR.value: "10",
                     GSTR1_DataField.TOTAL_COUNT.value: 10,
                     GSTR1_DataField.CANCELLED_COUNT.value: 0,
+                    "net_issue": 10,
                 },
                 "Invoices for outward supply - 11": {
                     GSTR1_DataField.DOC_TYPE.value: "Invoices for outward supply",
@@ -1120,6 +1152,7 @@ class TestDOC_ISSUE(FrappeTestCase):
                     GSTR1_DataField.TO_SR.value: "20",
                     GSTR1_DataField.TOTAL_COUNT.value: 10,
                     GSTR1_DataField.CANCELLED_COUNT.value: 0,
+                    "net_issue": 10,
                 },
                 "Invoices for inward supply from unregistered person - 1": {
                     GSTR1_DataField.DOC_TYPE.value: "Invoices for inward supply from unregistered person",
@@ -1127,6 +1160,7 @@ class TestDOC_ISSUE(FrappeTestCase):
                     GSTR1_DataField.TO_SR.value: "10",
                     GSTR1_DataField.TOTAL_COUNT.value: 10,
                     GSTR1_DataField.CANCELLED_COUNT.value: 0,
+                    "net_issue": 10,
                 },
                 "Invoices for inward supply from unregistered person - 11": {
                     GSTR1_DataField.DOC_TYPE.value: "Invoices for inward supply from unregistered person",
@@ -1134,6 +1168,7 @@ class TestDOC_ISSUE(FrappeTestCase):
                     GSTR1_DataField.TO_SR.value: "20",
                     GSTR1_DataField.TOTAL_COUNT.value: 10,
                     GSTR1_DataField.CANCELLED_COUNT.value: 0,
+                    "net_issue": 10,
                 },
             }
         }
@@ -1143,7 +1178,9 @@ class TestDOC_ISSUE(FrappeTestCase):
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = DOC_ISSUE().convert_to_gov_data_format(self.mapped_data)
+        output = DOC_ISSUE().convert_to_gov_data_format(
+            process_mapped_data(self.mapped_data)
+        )
         self.assertDictEqual(self.json_data, output)
 
 
@@ -1204,5 +1241,7 @@ class TestSUPECOM(FrappeTestCase):
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = SUPECOM().convert_to_gov_data_format(self.mapped_data)
+        output = SUPECOM().convert_to_gov_data_format(
+            process_mapped_data(self.mapped_data)
+        )
         self.assertDictEqual(self.json_data, output)
