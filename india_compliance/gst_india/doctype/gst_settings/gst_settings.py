@@ -467,6 +467,9 @@ def restrict_gstr_1_transaction_for(posting_date, company_gstin, gst_settings=No
     if restrict:
         return gstr_1_filed_upto
 
+    if restrict is False:
+        return None
+
     frappe.msgprint(
         _("You are modifying transaction after the GSTR-1 is filed for the period."),
         indicator="yellow",

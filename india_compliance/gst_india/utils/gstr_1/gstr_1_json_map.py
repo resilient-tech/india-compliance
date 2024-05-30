@@ -2100,27 +2100,46 @@ class BooksDataMapper:
 
         self.update_totals(mapped_dict, invoice)
 
-    def process_data_for_document_category_key(self, invoice, prepared_data):
+    def process_data_for_nil_exempt(self, invoice, prepared_data):
         key = invoice.invoice_category
-        mapped_dict = prepared_data.setdefault(key, {}).setdefault(
+        invoices_by_type = prepared_data.setdefault(key, {}).setdefault(
             invoice.invoice_type, []
         )
 
-        for row in mapped_dict:
-            if row[GSTR1_DataField.DOC_NUMBER.value] == invoice.invoice_no:
-                self.update_totals(row, invoice)
-                return
+        for mapped_dict in invoices_by_type:
+            if mapped_dict[GSTR1_DataField.DOC_NUMBER.value] == invoice.invoice_no:
+                break
 
-        mapped_dict.append(
-            {
+        else:
+            mapped_dict = {
                 GSTR1_DataField.TRANSACTION_TYPE.value: self.get_transaction_type(
                     invoice
                 ),
+                GSTR1_DataField.CUST_GSTIN.value: invoice.billing_address_gstin,
+                GSTR1_DataField.CUST_NAME.value: invoice.customer_name,
                 GSTR1_DataField.DOC_NUMBER.value: invoice.invoice_no,
                 GSTR1_DataField.DOC_DATE.value: invoice.posting_date,
-                **self.get_invoice_values(invoice),
+                GSTR1_DataField.DOC_VALUE.value: invoice.invoice_total,
+                GSTR1_DataField.POS.value: invoice.place_of_supply,
+                GSTR1_DataField.REVERSE_CHARGE.value: (
+                    "Y" if invoice.is_reverse_charge else "N"
+                ),
+                GSTR1_DataField.DOC_TYPE.value: invoice.invoice_type,
+                GSTR1_DataField.TAXABLE_VALUE.value: 0,
+                GSTR1_DataField.NIL_RATED_AMOUNT.value: 0,
+                GSTR1_DataField.EXEMPTED_AMOUNT.value: 0,
+                GSTR1_DataField.NON_GST_AMOUNT.value: 0,
             }
-        )
+            invoices_by_type.append(mapped_dict)
+
+        mapped_dict[GSTR1_DataField.TAXABLE_VALUE.value] += invoice.taxable_value
+
+        if invoice.gst_treatment == "Nil-Rated":
+            mapped_dict[GSTR1_DataField.NIL_RATED_AMOUNT.value] += invoice.taxable_value
+        elif invoice.gst_treatment == "Exempted":
+            mapped_dict[GSTR1_DataField.EXEMPTED_AMOUNT.value] += invoice.taxable_value
+        elif invoice.gst_treatment == "Non-GST":
+            mapped_dict[GSTR1_DataField.NON_GST_AMOUNT.value] += invoice.taxable_value
 
     def process_data_for_b2cs(self, invoice, prepared_data):
         key = f"{invoice.place_of_supply} - {flt(invoice.gst_rate)}"
@@ -2277,7 +2296,7 @@ class GSTR1BooksData(BooksDataMapper):
             ):
                 self.process_data_for_invoice_no_key(invoice, prepared_data)
             elif invoice["invoice_category"] == GSTR1_Category.NIL_EXEMPT.value:
-                self.process_data_for_document_category_key(invoice, prepared_data)
+                self.process_data_for_nil_exempt(invoice, prepared_data)
             elif invoice["invoice_category"] == GSTR1_Category.B2CS.value:
                 self.process_data_for_b2cs(invoice, prepared_data)
 
