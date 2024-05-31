@@ -270,7 +270,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
     def get_ineligible_itc_from_purchase(self):
         ineligible_itc = IneligibleITC(
             self.company, self.company_gstin, self.filters.month, self.filters.year
-        ).get_for_purchase_invoice_us_17_5()
+        ).get_ineligible_itc_us_17_5_for_purchase()
 
         return self.process_ineligible_itc(ineligible_itc)
 
@@ -425,7 +425,11 @@ class IneligibleITC:
         self.year = year
         self.gst_accounts = get_escaped_gst_accounts(company, "Input")
 
-    def get_for_purchase_invoice_us_17_5(self, group_by="name"):
+    def get_ineligible_itc_us_17_5_for_purchase(self, group_by="name"):
+        """
+        - Ineligible As Per Section 17(5)
+        - ITC restricted due to ineligible items in purchase invoice
+        """
         ineligible_transactions = self.get_vouchers_with_gst_expense("Purchase Invoice")
 
         if not ineligible_transactions:
@@ -474,7 +478,10 @@ class IneligibleITC:
 
         return self.get_ineligible_credit(credit_availed, credit_available, group_by)
 
-    def get_for_purchase_invoice_us_pos(self, group_by="name"):
+    def get_ineligible_itc_due_to_pos_for_purchase(self, group_by="name"):
+        """
+        - ITC restricted due to PoS rules
+        """
         ineligible_transactions = self.get_vouchers_with_gst_expense("Purchase Invoice")
 
         if not ineligible_transactions:
@@ -496,7 +503,7 @@ class IneligibleITC:
 
         # Credit availed is not required as it will be always 0 for pos
 
-        credit_available = (
+        ineligible_credit = (
             frappe.qb.from_(pi)
             .inner_join(taxes)
             .on(pi.name == taxes.parent)
@@ -525,7 +532,7 @@ class IneligibleITC:
             .run(as_dict=True)
         )
 
-        return credit_available
+        return ineligible_credit
 
     def get_for_bill_of_entry(self, group_by="name"):
         ineligible_transactions = self.get_vouchers_with_gst_expense("Bill of Entry")

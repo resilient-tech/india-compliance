@@ -123,11 +123,11 @@ class GSTR3BReport(Document):
     def update_itc_reversal_from_purchase_invoice(self):
         ineligible_credit = IneligibleITC(
             self.company, self.gst_details.get("gstin"), self.month_no, self.year
-        ).get_for_purchase_invoice_us_17_5(group_by="ineligibility_reason")
+        ).get_ineligible_itc_us_17_5_for_purchase(group_by="ineligibility_reason")
 
         ineligible_credit_due_to_pos = IneligibleITC(
             self.company, self.gst_details.get("gstin"), self.month_no, self.year
-        ).get_for_purchase_invoice_us_pos(group_by="ineligibility_reason")
+        ).get_ineligible_itc_due_to_pos_for_purchase(group_by="ineligibility_reason")
 
         ineligible_credit.extend(ineligible_credit_due_to_pos)
 
