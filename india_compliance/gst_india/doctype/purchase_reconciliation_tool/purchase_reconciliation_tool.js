@@ -746,8 +746,8 @@ class PurchaseReconciliationTool {
             {
                 label: "Purchase <br>Invoice",
                 fieldname: "purchase_invoice_name",
-                fieldtype: "Link",
-                doctype: "Purchase Invoice",
+                fieldtype: "Dynamic Link",
+                options: "purchase_doctype",
                 align: "center",
                 width: 120,
             },
