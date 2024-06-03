@@ -267,6 +267,7 @@ class GSTR3BReport(Document):
             and (i.gst_treatment != 'Taxable' or p.gst_category = 'Registered Composition') and
             month(p.posting_date) = %s and year(p.posting_date) = %s
             and p.company = %s and p.company_gstin = %s
+            and p.gst_category != "Overseas"
             """,
             (self.month_no, self.year, self.company, self.gst_details.get("gstin")),
             as_dict=1,
