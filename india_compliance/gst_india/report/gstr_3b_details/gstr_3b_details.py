@@ -450,7 +450,6 @@ class IneligibleITC:
                 IfNull(pi.ineligibility_reason, "") == "Ineligible As Per Section 17(5)"
             )
             .where(pi.name.isin(ineligible_transactions))
-            .where(pi.company_gstin != IfNull(pi.supplier_gstin, ""))
             .groupby(pi[group_by])
             .run(as_dict=1)
         )
@@ -471,7 +470,6 @@ class IneligibleITC:
                 IfNull(pi.ineligibility_reason, "") == "Ineligible As Per Section 17(5)"
             )
             .where(pi.name.isin(ineligible_transactions))
-            .where(pi.company_gstin != IfNull(pi.supplier_gstin, ""))
             .groupby(pi[group_by])
             .run(as_dict=1)
         )
@@ -527,7 +525,6 @@ class IneligibleITC:
                 IfNull(pi.ineligibility_reason, "") == "ITC restricted due to PoS rules"
             )
             .where(pi.name.isin(ineligible_transactions))
-            .where(pi.company_gstin != IfNull(pi.supplier_gstin, ""))
             .groupby(pi[group_by])
             .run(as_dict=True)
         )
