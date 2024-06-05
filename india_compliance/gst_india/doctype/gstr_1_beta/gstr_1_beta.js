@@ -258,7 +258,8 @@ class GSTR1 {
     refresh_data(data) {
         this.render_indicator();
 
-        // clear filters if any
+        // clear filters if any and set default view
+        this.active_view = "Summary";
         this.filter_group.filter_x_button.click();
 
         if (data) this.data = data;
@@ -296,26 +297,26 @@ class GSTR1 {
         });
     }
 
-    refresh_view() {
+    async refresh_view() {
         // for change in view (Summary/Detailed)
         this.viewgroup.set_active_view(this.active_view);
+
+        this.toggle_filter_selector();
+
+        let detailed_view_filters = [];
+        if (this.active_view === "Detailed") {
+            detailed_view_filters = this.filter_group.get_filters();
+        }
+
+        // refresh tabs
         this.TABS.forEach(tab => {
             if (!tab.shown) return;
             this.tabs[`${tab.name}_tab`].tabmanager.refresh_view(
                 this.active_view,
-                this.filter_category
+                this.filter_category,
+                detailed_view_filters
             );
         });
-    }
-
-    refresh_filter() {
-        const category_filter = this.filters.filter(row => row[1] === "description");
-        this.filter_category = category_filter.length ? category_filter[0][3] : null;
-
-        if (this.filter_category) this.active_view = "Detailed";
-        else this.active_view = "Summary";
-
-        this.refresh_view();
     }
 
     // RENDER
@@ -393,7 +394,8 @@ class GSTR1 {
             this.tabs[`${tab.name}_tab`].tabmanager = new tab._TabManager(
                 this,
                 wrapper,
-                this.apply_filters
+                this.show_filtered_category,
+                this.filter_detailed_view
             );
         });
     }
@@ -420,13 +422,19 @@ class GSTR1 {
             parent: this.$wrapper.find(".tab-actions"),
             filter_options: {
                 fieldname: "description",
-                filter_fields: this.get_filter_fields(),
+                filter_fields: this.get_category_filter_fields(),
             },
             on_change: () => {
-                this.filters = this.filter_group.get_filters();
-                this.refresh_filter();
+                if (this.is_category_changed) {
+                    this.is_category_changed = false;
+                    return;
+                }
+
+                this.refresh_view();
             },
         });
+
+        this.toggle_filter_selector();
     }
 
     setup_detail_view_listener() {
@@ -447,39 +455,127 @@ class GSTR1 {
 
     // UTILS
 
-    get_filter_fields() {
-        const fields = [
-            {
-                label: "Description",
-                fieldname: "description",
-                fieldtype: "Autocomplete",
-                options: Object.values(GSTR1_SubCategory),
-            },
-        ];
+    show_filtered_category = category => {
+        category = category.trim();
+
+        if (category != this.filter_category) {
+            this.is_category_changed = true;
+        }
+
+        this.filter_category = category;
+
+        if (this.filter_category) this.active_view = "Detailed";
+        else this.active_view = "Summary";
+
+        this.refresh_filter_options();
+        this.refresh_view();
+    };
+
+    refresh_filter_options() {
+        const filter_options = this.filter_group.filter_options;
+        this.filter_fields = this.get_category_filter_fields();
+
+        if (!this.filter_fields.length) return;
+
+        filter_options.fieldname = this.filter_fields[0].fieldname;
+        filter_options.filter_fields = this.filter_fields;
+
+        if (this.is_category_changed) {
+            this.filter_group.filter_x_button.click();
+        }
+    }
+
+    get_category_filter_fields() {
+        let fields = [];
+
+        if (
+            [
+                GSTR1_SubCategory.B2B_REGULAR,
+                GSTR1_SubCategory.B2B_REVERSE_CHARGE,
+                GSTR1_SubCategory.SEZWOP,
+                GSTR1_SubCategory.SEZWP,
+                GSTR1_SubCategory.DE,
+                GSTR1_SubCategory.CDNR,
+            ].includes(this.filter_category)
+        ) {
+            fields = [
+                {
+                    label: "Customer GSTIN",
+                    fieldname: GSTR1_DataField.CUST_GSTIN,
+                    fieldtype: "Data",
+                },
+                {
+                    label: "Reverse Charge",
+                    fieldname: GSTR1_DataField.REVERSE_CHARGE,
+                    fieldtype: "Data",
+                },
+                {
+                    label: "Place of Supply",
+                    fieldname: GSTR1_DataField.POS,
+                    fieldtype: "Data",
+                },
+            ];
+        } else if (
+            [GSTR1_SubCategory.EXPWP, GSTR1_SubCategory.EXPWOP].includes(
+                this.filter_category
+            )
+        ) {
+            fields = [
+                {
+                    label: "Port Code",
+                    fieldname: GSTR1_DataField.SHIPPING_PORT_CODE,
+                    fieldtype: "Data",
+                },
+            ];
+        } else if (
+            [
+                GSTR1_SubCategory.B2CL,
+                GSTR1_SubCategory.B2CS,
+                GSTR1_SubCategory.AT,
+                GSTR1_SubCategory.TXP,
+                GSTR1_SubCategory.CDNUR,
+            ].includes(this.filter_category)
+        ) {
+            fields = [
+                {
+                    label: "Place of Supply",
+                    fieldname: GSTR1_DataField.POS,
+                    fieldtype: "Data",
+                },
+            ];
+        } else if (
+            [GSTR1_SubCategory.NIL_EXEMPT, GSTR1_SubCategory.DOC_ISSUE].includes(
+                this.filter_category
+            )
+        ) {
+            fields = [
+                {
+                    label: "Document Type",
+                    fieldname: GSTR1_DataField.DOC_TYPE,
+                    fieldtype: "Data",
+                },
+            ];
+        } else if (this.filter_category === GSTR1_SubCategory.HSN) {
+            fields = [
+                {
+                    label: "HSN Code",
+                    fieldname: GSTR1_DataField.HSN_CODE,
+                    fieldtype: "Data",
+                },
+                {
+                    label: "UOM",
+                    fieldname: GSTR1_DataField.UOM,
+                    fieldtype: "Data",
+                },
+            ];
+        }
 
         fields.forEach(field => (field.parent = DOCTYPE));
         return fields;
     }
 
-    refresh_filter_fields() {
-        this.filter_group.filter_options.filter_fields = this.get_filter_fields();
-    }
-
-    get_autocomplete_options(field) {
-        const options = [];
-        this.data.forEach(row => {
-            if (row[field] && !options.includes(row[field])) options.push(row[field]);
-        });
-        return options;
-    }
-
-    apply_filters = async category => {
-        await this.filter_group.push_new_filter([
-            DOCTYPE,
-            "description",
-            "=",
-            category,
-        ]);
+    filter_detailed_view = async (fieldname, value) => {
+        await this.filter_group.push_new_filter([DOCTYPE, fieldname, "=", value]);
         this.filter_group.apply();
     };
 
@@ -487,13 +583,21 @@ class GSTR1 {
         const current_view = this.active_view;
 
         if (!this.filter_category && current_view === "Summary")
-            return // TODO:
+            return frappe.msgprint(
+                __("Please select a category from summary to view details")
+            );
 
         view_group.set_active_view(target_view);
         this.active_view = target_view;
 
         this.refresh_view();
     };
+
+    toggle_filter_selector() {
+        if (this.active_view === "Detailed" && this.filter_fields.length)
+            this.$wrapper.find(".filter-selector").show();
+        else this.$wrapper.find(".filter-selector").hide();
+    }
 
     async set_output_gst_balances() {
         //Checks if gst-ledger-difference element is there and removes if already present
@@ -561,14 +665,15 @@ class TabManager {
         total_cess_amount: 0,
     };
 
-    constructor(instance, wrapper, callback) {
+    constructor(instance, wrapper, summary_view_callback, detailed_view_callback) {
         this.DEFAULT_TITLE = "";
         this.DEFAULT_SUBTITLE = "";
         this.creation_time_string = "";
 
         this.instance = instance;
         this.wrapper = wrapper;
-        this.callback = callback;
+        this.summary_view_callback = summary_view_callback;
+        this.detailed_view_callback = detailed_view_callback;
 
         this.reset_data();
         this.setup_wrapper();
@@ -593,24 +698,25 @@ class TabManager {
         this.set_creation_time_string();
     }
 
-    refresh_view(view, category) {
+    refresh_view(view, category, filters) {
         if (!category && view === "Detailed") return;
 
         this.filter_category = category;
         let subtitle = "";
 
         if (view === "Detailed") {
+            this.filter_fieldnames = this.instance.filter_fields.map(filter => filter.fieldname);
+
             const columns_func = this.CATEGORY_COLUMNS[category];
             if (!columns_func) return;
 
             this.category_columns = columns_func.call(this);
             this.setup_datatable(
                 this.wrapper,
-                this.data[category],
+                this.filter_data(this.data[category], filters),
                 this.category_columns
             );
             this.set_title(category);
-
         } else if (view === "Summary") {
             this.setup_datatable(
                 this.wrapper,
@@ -623,6 +729,17 @@ class TabManager {
 
         this.setup_footer(this.wrapper);
         this.set_creation_time_string();
+    }
+
+    filter_data(data, filters) {
+        return data.filter(row => {
+            return filters.every(filter =>
+                india_compliance.FILTER_OPERATORS[filter[2]](
+                    filter[3] || "",
+                    row[filter[1]] || ""
+                )
+            );
+        });
     }
 
     // SETUP
@@ -716,21 +833,35 @@ class TabManager {
             no_data_message: __("No data found"),
         });
 
-        this.setup_datatable_listeners();
+        this.setup_datatable_listeners(treeView);
     }
 
-    setup_datatable_listeners() {
+    setup_datatable_listeners(isSummaryView) {
         const me = this;
-        this.datatable.$datatable.on(
-            "click",
-            ".summary-description",
-            async function (e) {
+
+        // Summary View
+        if (isSummaryView) {
+            this.datatable.$datatable.on("click", ".description", async function (e) {
                 e.preventDefault();
 
                 const summary_description = $(this).text();
-                me.callback && me.callback(summary_description);
-            }
-        );
+                me.summary_view_callback &&
+                    me.summary_view_callback(summary_description);
+            });
+            return;
+        }
+
+        // Detailed View
+        this.instance.filter_fields.forEach(field => {
+            this.datatable.$datatable.on("click", `.${field.fieldname}`, function (e) {
+                e.preventDefault();
+
+                const fieldname = field.fieldname;
+                const value = $(this).text();
+                me.detailed_view_callback &&
+                    me.detailed_view_callback(fieldname, value);
+            });
+        });
     }
 
     setup_footer(wrapper) {
@@ -816,10 +947,28 @@ class TabManager {
             args[2]?.indent == 0
                 ? `<strong>${value}</strong>`
                 : isDescriptionCell
-                ? `<a href="#" class="summary-description">
+                ? `<a href="#" class="description">
                     <p style="padding-left: 15px">${value}</p>
                     </a>`
                     : value;
+
+        return value;
+    }
+
+    format_detailed_table_cell(args) {
+        /**
+         * Update fieldname as a class to the cell
+         * and make it clickable.
+         *
+         * This is used to simplify filtering of data
+         */
+        let value = frappe.format(...args);
+
+        if (this.filter_fieldnames.includes(args[1]?.id))
+            value = `
+                <a href="#" class="${args[1]?.id}">
+                    ${value}
+                </a>`;
 
         return value;
     }
@@ -917,6 +1066,7 @@ class GSTR1_TabManager extends TabManager {
                 name: "Customer GSTIN",
                 fieldname: GSTR1_DataField.CUST_GSTIN,
                 width: 160,
+                _value: (...args) => this.format_detailed_table_cell(args),
             },
             {
                 name: "Customer Name",
@@ -931,8 +1081,8 @@ class GSTR1_TabManager extends TabManager {
             {
                 name: "Reverse Charge",
                 fieldname: GSTR1_DataField.REVERSE_CHARGE,
-
                 width: 120,
+                _value: (...args) => this.format_detailed_table_cell(args),
             },
             ...this.get_match_columns(),
             ...this.get_tax_columns(),
@@ -980,8 +1130,8 @@ class GSTR1_TabManager extends TabManager {
                 name: "Port Code",
                 fieldname: GSTR1_DataField.SHIPPING_PORT_CODE,
                 width: 100,
+                _value: (...args) => this.format_detailed_table_cell(args),
             },
-            ...this.get_tax_columns(),
             ...this.get_igst_tax_columns(),
             {
                 name: "Invoice Value",
@@ -1026,6 +1176,7 @@ class GSTR1_TabManager extends TabManager {
                 name: "Customer GSTIN",
                 fieldname: GSTR1_DataField.CUST_GSTIN,
                 width: 160,
+                _value: (...args) => this.format_detailed_table_cell(args),
             },
             {
                 name: "Customer Name",
@@ -1040,8 +1191,8 @@ class GSTR1_TabManager extends TabManager {
             {
                 name: "Reverse Charge",
                 fieldname: GSTR1_DataField.REVERSE_CHARGE,
-
                 width: 120,
+                _value: (...args) => this.format_detailed_table_cell(args),
             },
             ...match_columns,
             ...this.get_tax_columns(),
@@ -1061,6 +1212,7 @@ class GSTR1_TabManager extends TabManager {
                 name: "HSN Code",
                 fieldname: GSTR1_DataField.HSN_CODE,
                 width: 150,
+                _value: (...args) => this.format_detailed_table_cell(args),
             },
             {
                 name: "Description",
@@ -1071,6 +1223,7 @@ class GSTR1_TabManager extends TabManager {
                 name: "UOM",
                 fieldname: GSTR1_DataField.UOM,
                 width: 100,
+                _value: (...args) => this.format_detailed_table_cell(args),
             },
             ...this.get_match_columns(),
             {
@@ -1125,6 +1278,7 @@ class GSTR1_TabManager extends TabManager {
                 name: "Document Type",
                 fieldname: GSTR1_DataField.DOC_TYPE,
                 width: 200,
+                _value: (...args) => this.format_detailed_table_cell(args),
             },
             {
                 name: "Sr No From",
@@ -1191,6 +1345,7 @@ class GSTR1_TabManager extends TabManager {
                 name: "Place of Supply",
                 fieldname: GSTR1_DataField.POS,
                 width: 150,
+                _value: (...args) => this.format_detailed_table_cell(args),
             },
             {
                 name: "Tax Rate",
@@ -1229,6 +1384,8 @@ class GSTR1_TabManager extends TabManager {
                 width: 100,
             },
         ];
+
+        return without_pos ? tax_columns : [pos_column, ...tax_columns];
     }
 
     get_igst_tax_columns(with_pos) {
@@ -1239,6 +1396,7 @@ class GSTR1_TabManager extends TabManager {
                 name: "Place of Supply",
                 fieldname: GSTR1_DataField.POS,
                 width: 150,
+                _value: (...args) => this.format_detailed_table_cell(args),
             });
 
         columns.push(
@@ -1614,6 +1772,7 @@ class FiledTab extends GSTR1_TabManager {
                 name: "Description",
                 fieldname: GSTR1_DataField.DOC_TYPE,
                 width: 200,
+                _value: (...args) => this.format_detailed_table_cell(args),
             },
             ...this.get_match_columns(),
             {
