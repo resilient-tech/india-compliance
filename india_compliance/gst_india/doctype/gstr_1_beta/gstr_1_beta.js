@@ -386,6 +386,11 @@ class GSTR1 {
             parent: this,
             callback: this.change_view,
         });
+
+        this.viewgroup.disable_view(
+            "Detailed",
+            "Select a category from summary to view details"
+        );
     }
 
     render_tabs() {
@@ -466,6 +471,8 @@ class GSTR1 {
 
         if (this.filter_category) this.active_view = "Detailed";
         else this.active_view = "Summary";
+
+        this.viewgroup.enable_view("Detailed");
 
         this.refresh_filter_options();
         this.refresh_view();
@@ -582,10 +589,7 @@ class GSTR1 {
     change_view = (view_group, target_view) => {
         const current_view = this.active_view;
 
-        if (!this.filter_category && current_view === "Summary")
-            return frappe.msgprint(
-                __("Please select a category from summary to view details")
-            );
+        if (!this.filter_category && current_view === "Summary") return;
 
         view_group.set_active_view(target_view);
         this.active_view = target_view;
@@ -705,7 +709,9 @@ class TabManager {
         let subtitle = "";
 
         if (view === "Detailed") {
-            this.filter_fieldnames = this.instance.filter_fields.map(filter => filter.fieldname);
+            this.filter_fieldnames = this.instance.filter_fields.map(
+                filter => filter.fieldname
+            );
 
             const columns_func = this.CATEGORY_COLUMNS[category];
             if (!columns_func) return;
@@ -732,6 +738,9 @@ class TabManager {
     }
 
     filter_data(data, filters) {
+        if (!data) return [];
+        if (!filters || !filters.length) return data;
+
         return data.filter(row => {
             return filters.every(filter =>
                 india_compliance.FILTER_OPERATORS[filter[2]](

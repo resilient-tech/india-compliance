@@ -66,4 +66,14 @@ india_compliance.ViewGroup = class ViewGroup {
             this.callback && this.callback(this, target_view);
         });
     }
+
+    disable_view(view, title) {
+        this.views[`${view}_view`].attr("title", title);
+        this.views[`${view}_view`].find(".nav-link").addClass("disabled");
+    }
+
+    enable_view(view) {
+        this.views[`${view}_view`].removeAttr("title");
+        this.views[`${view}_view`].find(".nav-link").removeClass("disabled");
+    }
 }
