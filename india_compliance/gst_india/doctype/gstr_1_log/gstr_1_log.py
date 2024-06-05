@@ -188,6 +188,8 @@ class SummarizeGSTR1:
 
 
 class ReconcileGSTR1:
+    IGNORED_FIELDS = {"tax_rate"}
+
     def get_reconcile_gstr1_data(self, gov_data, books_data):
         """
         This function reconciles the data between Books and Gov Data
@@ -333,7 +335,7 @@ class ReconcileGSTR1:
 
         # Compute Differences
         for key, value in reconcile_row.items():
-            if isinstance(value, (int, float)) and key not in ("tax_rate"):
+            if isinstance(value, (int, float)) and key not in self.IGNORED_FIELDS:
                 reconcile_row[key] = flt(
                     (books_row.get(key) or 0) - (gov_row.get(key) or 0), 2
                 )
@@ -372,6 +374,9 @@ class ReconcileGSTR1:
         empty_row = row.copy()
 
         for key, value in empty_row.items():
+            if key in ReconcileGSTR1.IGNORED_FIELDS:
+                continue
+
             if isinstance(value, (int, float)):
                 empty_row[key] = 0
 
