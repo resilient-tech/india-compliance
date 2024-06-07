@@ -5,14 +5,14 @@
  "doctype": "Web Template",
  "fields": [
   {
-   "fieldname": "upi_qr",
+   "fieldname": "upi_qr_text",
    "fieldtype": "Text",
    "label": "UPI Code",
    "reqd": 0
   }
  ],
  "idx": 0,
- "modified": "2024-05-11 17:49:25.574742",
+ "modified": "2024-06-03 13:19:21.517387",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "UPI QR",

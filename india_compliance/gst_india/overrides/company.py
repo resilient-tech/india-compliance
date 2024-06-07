@@ -226,3 +226,11 @@ def create_default_company_account(
         frappe.db.set_value(
             "Company", company, default_fieldname, account.name, update_modified=False
         )
+
+
+@frappe.whitelist()
+def get_print_options(type):
+    if type == "bank":
+        return ["Account No.", "Bank Name", "Branch", "IFSC Code", "UPI ID"]
+    else:
+        return ["MSME No.", "MSME Type", "LLPIN", "LUT No."]

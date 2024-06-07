@@ -11,7 +11,8 @@ set_gstin_options_and_status(DOCTYPE);
 frappe.ui.form.off(DOCTYPE, "make_default_tax_template");
 frappe.ui.form.on(DOCTYPE, {
     onload(frm){
-        frm.fields_dict.print_table.grid.fields_map.autofield.ignore_validation =1
+        frm.fields_dict.bank_details.grid.fields_map.autofield.ignore_validation = 1
+        frm.fields_dict.regestration_details.grid.fields_map.autofield.ignore_validation = 1
     },
     setup(frm) {
         erpnext.company.set_custom_query(frm, [
@@ -22,6 +23,19 @@ frappe.ui.form.on(DOCTYPE, {
             "default_customs_payable_account",
             { root_type: "Liability" },
         ]);
+
+        frm.set_query("autofield", "bank_details", (_, cdt, cdn) => {
+            return  {
+                query: "india_compliance.gst_india.overrides.company.get_print_options",
+                params : {type : "bank"}
+            }
+        });
+        frm.set_query("autofield", "regestration_details", (_, cdt, cdn) => {
+            return {
+                query: "india_compliance.gst_india.overrides.company.get_print_options",
+                params : {type : "regestration"}
+            }
+        });
     },
 
     make_default_tax_template: function (frm) {

@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class CompanyDynamicInfo(Document):
+class CompanyPrintOptions(Document):
     pass

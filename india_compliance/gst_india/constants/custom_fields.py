@@ -86,6 +86,32 @@ CUSTOM_FIELDS = {
             "options": "Account",
             "insert_after": "default_customs_expense_account",
         },
+        {
+            "fieldname": "print_options",
+            "label": "Print Options",
+            "fieldtype": "Tab Break",
+            "insert_after": "dashboard_tab",
+        },
+        {
+            "label": "Enable Physical Signature",
+            "fieldname": "enable_signature",
+            "insert_after": "print_options",
+            "fieldtype": "Check",
+        },
+        {
+            "label": "Bank Details",
+            "fieldname": "bank_details",
+            "insert_after": "enable_signature",
+            "fieldtype": "Table",
+            "options": "Company Print Options",
+        },
+        {
+            "label": "Regestration Details",
+            "fieldname": "regestration_details",
+            "insert_after": "bank_details",
+            "fieldtype": "Table",
+            "options": "Company Print Options",
+        },
     ],
     ("Customer", "Supplier"): party_fields,
     # Purchase Fields
