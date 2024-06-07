@@ -1,6 +1,5 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
-import copy
 import gzip
 import itertools
 from datetime import datetime
@@ -407,7 +406,8 @@ class ReconcileGSTR1:
 
 
 class AggregateInvoices:
-    def aggregate_data(self, data: dict):
+
+    def get_aggregate_data(self, data: dict):
         """
         Aggregate invoices for each subcategory where required
         and updates the data
@@ -419,16 +419,23 @@ class AggregateInvoices:
             GSTR1_SubCategory.TXP,
         ]
 
+        aggregate_data = {}
+
         for subcategory in sub_categories_requiring_aggregation:
             subcategory_data = data.get(subcategory.value)
 
             if not subcategory_data:
                 continue
 
-            self.aggregate_invoices(subcategory_data)
+            aggregate_data[subcategory.value] = self.get_aggregate_invoices(
+                subcategory_data
+            )
 
-    def aggregate_invoices(self, subcategory_data: dict):
+        return aggregate_data
+
+    def get_aggregate_invoices(self, subcategory_data: dict):
         value_keys = []
+        aggregate_invoices = {}
 
         for _id, invoices in subcategory_data.items():
             if not value_keys:
@@ -442,7 +449,9 @@ class AggregateInvoices:
                 }
             )
 
-            subcategory_data[_id] = [aggregated_invoice]
+            aggregate_invoices[_id] = [aggregated_invoice]
+
+        return aggregate_invoices
 
     def get_value_keys(self, invoice: dict):
         keys = []
@@ -534,10 +543,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
 
         # Aggregate Books Data
         if status != "Filed":
-            aggregated_books_data = self.get_aggregated_books_data(
-                copy.deepcopy(books_data)
-            )
-            data["filed"] = self.normalize_data(aggregated_books_data)
+            books_data.update({"aggregate_data": self.get_aggregate_data(books_data)})
 
         return books_data
 
@@ -592,20 +598,6 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
 
         return books_data
 
-    def get_aggregated_books_data(self, books_data):
-        data_field = "filed"
-
-        if self.is_latest_data and self.get(data_field):
-            aggregated_books_data = self.get_json_for(data_field)
-
-            if aggregated_books_data:
-                return aggregated_books_data
-
-        self.aggregate_data(books_data)
-        self.update_json_for(data_field, books_data)
-
-        return books_data
-
     # DATA MODIFIERS
     def summarize_data(self, data):
         """
@@ -648,8 +640,11 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         Returns object list of rows for each sub-category
         """
         for subcategory, subcategory_data in data.items():
+            if subcategory == "aggregate_data":
+                data[subcategory] = self.normalize_data(subcategory_data)
+                continue
+
             if isinstance(subcategory_data, list | tuple | str):
-                data[subcategory] = subcategory_data
                 continue
 
             # get first key and value from subcategory_data
@@ -709,10 +704,6 @@ class GSTR1Log(GenerateGSTR1, Document):
         # reset reconciled data
         if overwrite and file_field in ("books", "filed", "unfiled"):
             self.remove_json_for("reconcile")
-
-        # reset aggregated books data
-        if overwrite and file_field == "books" and self.filing_status != "Filed":
-            self.remove_json_for("filed")
 
         # new file
         if not getattr(self, file_field):
@@ -802,12 +793,14 @@ class GSTR1Log(GenerateGSTR1, Document):
 
     def get_applicable_file_fields(self, settings=None):
         # Books aggregated data stored in filed (as to file)
-        fields = ["books", "books_summary", "filed", "filed_summary"]
+        fields = ["books", "books_summary"]
 
         if self.is_gstr1_api_enabled(settings):
             fields.extend(["reconcile", "reconcile_summary"])
 
-            if self.filing_status != "Filed":
+            if self.filing_status == "Filed":
+                fields.extend(["filed", "filed_summary"])
+            else:
                 fields.extend(["unfiled", "unfiled_summary"])
 
         return fields

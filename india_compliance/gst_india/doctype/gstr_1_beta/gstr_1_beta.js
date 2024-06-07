@@ -264,6 +264,16 @@ class GSTR1 {
 
         if (data) this.data = data;
 
+        // set data for filing return
+        if (!this.data["filed"]) {
+            // deepcopy
+            const filed = JSON.parse(JSON.stringify(this.data["books"]));
+            Object.assign(filed, filed.aggregate_data);
+
+            this.data["filed"] = filed;
+            this.data["filed_summary"] = this.data["books_summary"];
+        }
+
         // set idx for reconcile rows (for detail view)
         if (this.data["reconcile"]) {
             Object.values(this.data["reconcile"]).forEach(category => {
