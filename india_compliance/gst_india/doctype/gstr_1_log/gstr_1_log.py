@@ -507,12 +507,16 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
             data = "otp_requested"
             return callback and callback(data, filters)
 
-        books_data = self.generate_books_data(data, filters, status)
+        books_data = self.get_books_gstr1_data(filters)
 
         if is_enqueued:
             return
 
         reconcile_data = self.get_reconcile_gstr1_data(gov_data, books_data)
+
+        if status != "Filed" and not books_data.get("aggregate_data"):
+            books_data.update({"aggregate_data": self.get_aggregate_data(books_data)})
+            self.update_json_for("books", books_data)
 
         # Compile Data
         data["status"] = status
@@ -527,25 +531,17 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
     def generate_only_books_data(self, data, filters, callback=None):
         status = "Not Filed"
 
-        books_data = self.generate_books_data(data, filters, status)
+        books_data = self.get_books_gstr1_data(filters)
+
+        if not books_data.get("aggregate_data"):
+            books_data.update({"aggregate_data": self.get_aggregate_data(books_data)})
+            self.update_json_for("books", books_data)
 
         data["books"] = self.normalize_data(books_data)
         data["status"] = status
 
         self.summarize_data(data)
         return callback and callback(data, filters)
-
-    def generate_books_data(self, data, filters, status):
-        """
-        Gets Books data and aggregates it if not filed
-        """
-        books_data = self.get_books_gstr1_data(filters)
-
-        # Aggregate Books Data
-        if status != "Filed":
-            books_data.update({"aggregate_data": self.get_aggregate_data(books_data)})
-
-        return books_data
 
     # GET DATA
     def get_gov_gstr1_data(self):
@@ -593,10 +589,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         )
 
         # compute data
-        books_data = GSTR1BooksData(_filters).prepare_mapped_data()
-        self.update_json_for(data_field, books_data)
-
-        return books_data
+        return GSTR1BooksData(_filters).prepare_mapped_data()
 
     # DATA MODIFIERS
     def summarize_data(self, data):

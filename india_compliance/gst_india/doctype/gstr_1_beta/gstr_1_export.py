@@ -1988,6 +1988,7 @@ def download_gstr_1_json(
     gstr1_log = frappe.get_doc("GSTR-1 Log", f"{period}-{company_gstin}")
 
     data = gstr1_log.load_data("books").get("books")
+    data = data.update(data.get("aggregate_data", {}))
 
     for subcategory_data in data:
         discard_invoices = []
@@ -2020,7 +2021,7 @@ def download_gstr_1_json(
             "fp": period,
             **convert_to_gov_data_format(data),
         },
-        "filename": f"GSTR-1-gov-{company_gstin}-{period}.json",
+        "filename": f"GSTR-1-Gov-{company_gstin}-{period}.json",
     }
 
 
