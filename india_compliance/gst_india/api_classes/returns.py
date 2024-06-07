@@ -22,8 +22,12 @@ from india_compliance.gst_india.utils.cryptography import (
 class PublicCertificate(BaseAPI):
     BASE_PATH = "static"
 
-    def get_gstn_public_certificate(self) -> str:
+    def get_gstn_public_certificate(self, error_message=None) -> str:
         response = self.get(endpoint="gstn_g2b_prod_public")
+
+        if response.certificate == self.settings.gstn_public_certificate:
+            frappe.throw(error_message or _("Public Certificate is already up to date"))
+
         self.settings.db_set("gstn_public_certificate", response.certificate)
 
         return response.certificate
@@ -232,6 +236,7 @@ class ReturnsAPI(ReturnsAuthenticate):
         "AUTH4038": "authorization_failed",  # Session Expired
         "RET11402": "authorization_failed",  # API Authorization Failed for 2A
         "RET2B1010": "authorization_failed",  # API Authorization Failed for 2B
+        "TEC4002": "invalid_public_key",
     }
 
     def setup(self, company_gstin):
@@ -334,6 +339,14 @@ class ReturnsAPI(ReturnsAuthenticate):
                 # Fallback to response body if message is not present
                 or frappe.as_json(response, indent=4),
                 title=_("API Request Failed"),
+            )
+
+        # Handle invalid public key
+        if response.error_type == "invalid_public_key":
+            PublicCertificate().get_gstn_public_certificate(
+                error_message=_(
+                    "Looks like Public Key of GSTN used for encryption is Invalid"
+                )
             )
 
     def is_ignored_error(self, response):
