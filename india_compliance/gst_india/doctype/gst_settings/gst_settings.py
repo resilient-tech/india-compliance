@@ -283,7 +283,6 @@ class GSTSettings(Document):
                     ).format(gstin)
                 )
 
-            # TODO: Handle this
             return False
 
         if credential.session_expiry and credential.session_expiry > add_to_date(
@@ -466,14 +465,6 @@ def restrict_gstr_1_transaction_for(posting_date, company_gstin, gst_settings=No
 
     if restrict:
         return gstr_1_filed_upto
-
-    if restrict is False:
-        return None
-
-    frappe.msgprint(
-        _("You are modifying transaction after the GSTR-1 is filed for the period."),
-        indicator="yellow",
-    )
 
     update_is_not_latest_gstr1_data(posting_date, company_gstin)
 

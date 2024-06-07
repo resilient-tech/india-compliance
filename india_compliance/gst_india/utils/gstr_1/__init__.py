@@ -163,7 +163,7 @@ class GovDataField(Enum):
     DESCRIPTION = "desc"
     UOM = "uqc"
     QUANTITY = "qty"
-    ADDITIONAL_AMOUNT = "ad_amt"
+    ADVANCE_AMOUNT = "ad_amt"
 
     INDEX = "num"
     FROM_SR = "from"

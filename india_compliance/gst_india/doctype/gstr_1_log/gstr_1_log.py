@@ -221,10 +221,6 @@ class ReconcileGSTR1:
             if not books_subdata and not gov_subdata:
                 continue
 
-            ignore_upload_status = subcategory in [
-                GSTR1_SubCategory.HSN.value,
-                GSTR1_SubCategory.DOC_ISSUE.value,
-            ]
             is_list = False  # Object Type for the subdata_value
 
             reconcile_subdata = {}
@@ -241,22 +237,24 @@ class ReconcileGSTR1:
                 if reconcile_row:
                     reconcile_subdata[key] = reconcile_row
 
-                if not update_books_match or ignore_upload_status:
+                if not update_books_match:
                     continue
 
-                books_value = books_value[0] if is_list else books_value
+                books_values = books_value if is_list else [books_value]
 
-                if books_value.get("upload_status"):
-                    update_books_match = False
+                # Update each row in Books Data
+                for row in books_values:
+                    if row.get("upload_status"):
+                        update_books_match = False
 
-                # Update Books Data
-                if not gov_value:
-                    books_value["upload_status"] = "Not Uploaded"
+                    # Update Books Data
+                    if not gov_value:
+                        row["upload_status"] = "Not Uploaded"
 
-                if reconcile_row:
-                    books_value["upload_status"] = "Mismatch"
-                else:
-                    books_value["upload_status"] = "Uploaded"
+                    if reconcile_row:
+                        row["upload_status"] = "Mismatch"
+                    else:
+                        row["upload_status"] = "Uploaded"
 
             # In Gov but not in Books
             for key, gov_value in gov_subdata.items():
@@ -268,7 +266,7 @@ class ReconcileGSTR1:
 
                 reconcile_subdata[key] = self.get_reconciled_row(None, gov_value)
 
-                if not update_books_match or ignore_upload_status:
+                if not update_books_match:
                     continue
 
                 books_empty_row = self.get_empty_row(
@@ -399,6 +397,9 @@ class ReconcileGSTR1:
                 continue
 
             for key, value in row.items():
+                if key in ReconcileGSTR1.IGNORED_FIELDS:
+                    continue
+
                 if isinstance(value, (int, float)):
                     aggregated_row[key] += value
 

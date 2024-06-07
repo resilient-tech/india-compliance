@@ -320,7 +320,7 @@ class GSTR1Subcategory(GSTR1CategoryConditions):
         gst_registration = "registered" if is_registered else "unregistered"
         supply_type = "Inter-State" if is_interstate else "Intra-State"
 
-        invoice.invoice_type = f"{supply_type} to {gst_registration} persons"
+        invoice.invoice_type = f"{supply_type} supplies to {gst_registration} persons"
         invoice.invoice_sub_category = GSTR1_SubCategory.NIL_EXEMPT.value
 
     def set_for_cdnr(self, invoice):

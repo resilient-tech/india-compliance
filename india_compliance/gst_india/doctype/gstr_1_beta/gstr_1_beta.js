@@ -389,7 +389,7 @@ class GSTR1 {
 
         this.viewgroup.disable_view(
             "Detailed",
-            "Select a category from summary to view details"
+            "Click on a category from summary to view details"
         );
     }
 
@@ -613,6 +613,7 @@ class GSTR1 {
 
         $(function () {
             $('[data-toggle="tooltip"]').tooltip();
+
         });
 
         const net_transactions = {
@@ -626,15 +627,7 @@ class GSTR1 {
             .map(
                 ([type, net_amount]) => `
             <div>
-                <h5>${type} Account&nbsp;
-                    <i
-                        class="fa fa-info-circle info-icon"
-                        style="font-size: small;"
-                        data-toggle="tooltip"
-                        data-placement="top"
-                        title="Net Transactions (Credit - Debit) during the selected period in ${type} Account"
-                    ></i>
-                </h5>
+                <h5>${type} Account</h5>
                 <h4 class="text-center">
                     ${format_currency(net_amount)}</h4>
             </div>`
@@ -646,6 +639,9 @@ class GSTR1 {
             class="gst-ledger-difference w-100"
             style="border-bottom: 1px solid var(--border-color);"
         >
+            <div class="m-2 text-center" style="font-size: 13px">
+                <span>Net Output GST Liability (Credit - Debit)</span>
+            </div>
             <div class="m-3 d-flex justify-content-around align-items-center">
                 ${ledger_balance_cards}
             </div>
@@ -820,6 +816,8 @@ class TabManager {
                             return (row.content = "Total Liability");
 
                         const column_field = row.column.fieldname;
+                        if (!this.summary) return null;
+
                         const total = this.summary.reduce((acc, row) => {
                             if (row.indent !== 1) return acc;
                             if (
@@ -1141,6 +1139,7 @@ class GSTR1_TabManager extends TabManager {
                 width: 100,
                 _value: (...args) => this.format_detailed_table_cell(args),
             },
+            ...this.get_match_columns(),
             ...this.get_igst_tax_columns(),
             {
                 name: "Invoice Value",
@@ -1153,14 +1152,6 @@ class GSTR1_TabManager extends TabManager {
 
     get_document_columns() {
         // `Transaction Type` + Invoice Columns with `Document` as title instead of `Invoice`
-        let match_columns = this.get_match_columns();
-        if (
-            [GSTR1_SubCategory.NIL_EXEMPT, GSTR1_SubCategory.B2CS].includes(
-                this.filter_category
-            )
-        )
-            match_columns = [];
-
         return [
             ...this.get_detail_view_column(),
             {
@@ -1203,7 +1194,7 @@ class GSTR1_TabManager extends TabManager {
                 width: 120,
                 _value: (...args) => this.format_detailed_table_cell(args),
             },
-            ...match_columns,
+            ...this.get_match_columns(),
             ...this.get_tax_columns(),
             {
                 name: "Document Value",
@@ -1289,6 +1280,7 @@ class GSTR1_TabManager extends TabManager {
                 width: 200,
                 _value: (...args) => this.format_detailed_table_cell(args),
             },
+            ...this.get_match_columns(),
             {
                 name: "Sr No From",
                 fieldname: GSTR1_DataField.FROM_SR,
@@ -1299,7 +1291,6 @@ class GSTR1_TabManager extends TabManager {
                 fieldname: GSTR1_DataField.TO_SR,
                 width: 150,
             },
-            ...this.get_match_columns(),
             {
                 name: "Total Count",
                 fieldname: GSTR1_DataField.TOTAL_COUNT,
@@ -1323,12 +1314,6 @@ class GSTR1_TabManager extends TabManager {
             ...this.get_detail_view_column(),
             ...this.get_match_columns(),
             ...this.get_tax_columns(),
-            {
-                name: "Amount Received",
-                fieldname: GSTR1_DataField.DOC_VALUE,
-                fieldtype: "Currency",
-                width: 150,
-            },
         ];
     }
 
@@ -1337,12 +1322,6 @@ class GSTR1_TabManager extends TabManager {
             ...this.get_detail_view_column(),
             ...this.get_match_columns(),
             ...this.get_tax_columns(),
-            {
-                name: "Amount Adjusted",
-                fieldname: GSTR1_DataField.DOC_VALUE,
-                fieldtype: "Currency",
-                width: 150,
-            },
         ];
     }
 
@@ -1483,7 +1462,12 @@ class BooksTab extends GSTR1_TabManager {
         this.add_tab_custom_button("Download Excel", () =>
             this.download_books_as_excel()
         );
-        this.add_tab_custom_button("Re-compute", () => this.recompute_books());
+        this.add_tab_custom_button("Recompute", () => this.recompute_books());
+    }
+
+    filter_data(data, filters) {
+        data = super.filter_data(data, filters);
+        return data.filter(row => row.upload_status !== "Missing in Books");
     }
 
     // ACTIONS
@@ -1864,7 +1848,7 @@ class UnfiledTab extends FiledTab {
     }
 
     set_default_title() {
-        this.DEFAULT_TITLE = "Summary of Invoices as on Portal";
+        this.DEFAULT_TITLE = "Summary of Invoices Uploaded on GST Portal";
         TabManager.prototype.set_default_title.call(this);
     }
 }

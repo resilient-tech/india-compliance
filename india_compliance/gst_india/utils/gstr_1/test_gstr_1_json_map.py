@@ -22,6 +22,7 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     DOC_ISSUE,
     HSNSUM,
     SUPECOM,
+    TXPD,
     Exports,
     NilRated,
     get_category_wise_data,
@@ -983,7 +984,7 @@ class TestAT(FrappeTestCase):
                 GovDataField.ITEMS.value: [
                     {
                         GovDataField.TAX_RATE.value: 5,
-                        GovDataField.ADDITIONAL_AMOUNT.value: 100,
+                        GovDataField.ADVANCE_AMOUNT.value: 100,
                         GovDataField.IGST.value: 9400,
                         GovDataField.CGST.value: 0,
                         GovDataField.SGST.value: 0,
@@ -991,7 +992,7 @@ class TestAT(FrappeTestCase):
                     },
                     {
                         GovDataField.TAX_RATE.value: 6,
-                        GovDataField.ADDITIONAL_AMOUNT.value: 100,
+                        GovDataField.ADVANCE_AMOUNT.value: 100,
                         GovDataField.IGST.value: 9400,
                         GovDataField.CGST.value: 0,
                         GovDataField.SGST.value: 0,
@@ -1006,7 +1007,7 @@ class TestAT(FrappeTestCase):
                 GovDataField.ITEMS.value: [
                     {
                         GovDataField.TAX_RATE.value: 5,
-                        GovDataField.ADDITIONAL_AMOUNT.value: 100,
+                        GovDataField.ADVANCE_AMOUNT.value: 100,
                         GovDataField.IGST.value: 9400,
                         GovDataField.CGST.value: 0,
                         GovDataField.SGST.value: 0,
@@ -1014,7 +1015,7 @@ class TestAT(FrappeTestCase):
                     },
                     {
                         GovDataField.TAX_RATE.value: 6,
-                        GovDataField.ADDITIONAL_AMOUNT.value: 100,
+                        GovDataField.ADVANCE_AMOUNT.value: 100,
                         GovDataField.IGST.value: 9400,
                         GovDataField.CGST.value: 0,
                         GovDataField.SGST.value: 0,
@@ -1083,6 +1084,124 @@ class TestAT(FrappeTestCase):
 
     def test_convert_to_gov_data_format(self):
         output = AT().convert_to_gov_data_format(process_mapped_data(self.mapped_data))
+        self.assertListEqual(self.json_data, output)
+
+
+class TestTXPD(FrappeTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+        cls.json_data = [
+            {
+                GovDataField.POS.value: "05",
+                GovDataField.SUPPLY_TYPE.value: "INTER",
+                GovDataField.DIFF_PERCENTAGE.value: 0.65,
+                GovDataField.ITEMS.value: [
+                    {
+                        GovDataField.TAX_RATE.value: 5,
+                        GovDataField.ADVANCE_AMOUNT.value: 100,
+                        GovDataField.IGST.value: 9400,
+                        GovDataField.CGST.value: 0,
+                        GovDataField.SGST.value: 0,
+                        GovDataField.CESS.value: 500,
+                    },
+                    {
+                        GovDataField.TAX_RATE.value: 6,
+                        GovDataField.ADVANCE_AMOUNT.value: 100,
+                        GovDataField.IGST.value: 9400,
+                        GovDataField.CGST.value: 0,
+                        GovDataField.SGST.value: 0,
+                        GovDataField.CESS.value: 500,
+                    },
+                ],
+            },
+            {
+                GovDataField.POS.value: "24",
+                GovDataField.SUPPLY_TYPE.value: "INTER",
+                GovDataField.DIFF_PERCENTAGE.value: 0.65,
+                GovDataField.ITEMS.value: [
+                    {
+                        GovDataField.TAX_RATE.value: 5,
+                        GovDataField.ADVANCE_AMOUNT.value: 100,
+                        GovDataField.IGST.value: 9400,
+                        GovDataField.CGST.value: 0,
+                        GovDataField.SGST.value: 0,
+                        GovDataField.CESS.value: 500,
+                    },
+                    {
+                        GovDataField.TAX_RATE.value: 6,
+                        GovDataField.ADVANCE_AMOUNT.value: 100,
+                        GovDataField.IGST.value: 9400,
+                        GovDataField.CGST.value: 0,
+                        GovDataField.SGST.value: 0,
+                        GovDataField.CESS.value: 500,
+                    },
+                ],
+            },
+        ]
+
+        cls.mapped_data = {
+            GSTR1_SubCategory.TXP.value: {
+                "05-Uttarakhand - 5.0": [
+                    {
+                        GSTR1_DataField.POS.value: "05-Uttarakhand",
+                        GSTR1_DataField.DIFF_PERCENTAGE.value: 0.65,
+                        GSTR1_DataField.IGST.value: -9400,
+                        GSTR1_DataField.CESS.value: -500,
+                        GSTR1_DataField.CGST.value: 0,
+                        GSTR1_DataField.SGST.value: 0,
+                        GSTR1_DataField.TAXABLE_VALUE.value: -100,
+                        GSTR1_DataField.TAX_RATE.value: 5,
+                    },
+                ],
+                "05-Uttarakhand - 6.0": [
+                    {
+                        GSTR1_DataField.POS.value: "05-Uttarakhand",
+                        GSTR1_DataField.DIFF_PERCENTAGE.value: 0.65,
+                        GSTR1_DataField.IGST.value: -9400,
+                        GSTR1_DataField.CESS.value: -500,
+                        GSTR1_DataField.CGST.value: 0,
+                        GSTR1_DataField.SGST.value: 0,
+                        GSTR1_DataField.TAXABLE_VALUE.value: -100,
+                        GSTR1_DataField.TAX_RATE.value: 6,
+                    }
+                ],
+                "24-Gujarat - 5.0": [
+                    {
+                        GSTR1_DataField.POS.value: "24-Gujarat",
+                        GSTR1_DataField.DIFF_PERCENTAGE.value: 0.65,
+                        GSTR1_DataField.IGST.value: -9400,
+                        GSTR1_DataField.CESS.value: -500,
+                        GSTR1_DataField.CGST.value: 0,
+                        GSTR1_DataField.SGST.value: 0,
+                        GSTR1_DataField.TAXABLE_VALUE.value: -100,
+                        GSTR1_DataField.TAX_RATE.value: 5,
+                    }
+                ],
+                "24-Gujarat - 6.0": [
+                    {
+                        GSTR1_DataField.POS.value: "24-Gujarat",
+                        GSTR1_DataField.DIFF_PERCENTAGE.value: 0.65,
+                        GSTR1_DataField.IGST.value: -9400,
+                        GSTR1_DataField.CESS.value: -500,
+                        GSTR1_DataField.CGST.value: 0,
+                        GSTR1_DataField.SGST.value: 0,
+                        GSTR1_DataField.TAXABLE_VALUE.value: -100,
+                        GSTR1_DataField.TAX_RATE.value: 6,
+                    }
+                ],
+            }
+        }
+
+    def test_convert_to_internal_data_format(self):
+        output = TXPD().convert_to_internal_data_format(self.json_data)
+        self.assertDictEqual(self.mapped_data, output)
+
+    def test_convert_to_gov_data_format(self):
+        output = TXPD().convert_to_gov_data_format(
+            process_mapped_data(self.mapped_data)
+        )
         self.assertListEqual(self.json_data, output)
 
 

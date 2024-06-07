@@ -48,6 +48,10 @@ div[data-page-route="GSTR-1 Beta"] .tab-subtitle-text {
     font-size: 0.8rem;
 }
 
+div[data-page-route="GSTR-1 Beta"] .datatable .dt-scrollable {
+    overflow-y: auto !important;
+}
+
 div[data-page-route="GSTR-1 Beta"] .datatable .dt-row {
     height: unset;
 }

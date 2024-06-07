@@ -21,9 +21,11 @@ UNFILED_ACTIONS = [
     "AT",
     "TXP",
     # "SUPECO", # 403 Forbidden TODO: Check when this is active
+    "HSNSUM",
+    "DOCISS",
 ]
 
-FILED_ACTIONS = [*UNFILED_ACTIONS, "HSNSUM", "DOCISS", "RETSUM"]
+FILED_ACTIONS = [*UNFILED_ACTIONS, "RETSUM"]
 
 
 def download_gstr1_json_data(gstr1_log):

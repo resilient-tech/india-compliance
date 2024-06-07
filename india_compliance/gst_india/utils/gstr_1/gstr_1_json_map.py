@@ -108,6 +108,9 @@ class GovDataMapper:
         for old_key, new_key in key_mapping.items():
             invoice_data_value = data.get(old_key, "")
 
+            if not for_gov and old_key == "flag":
+                continue
+
             if new_key in self.DISCARD_IF_ZERO_FIELDS and not invoice_data_value:
                 continue
 
@@ -1328,7 +1331,7 @@ class AT(GovDataMapper):
         GovDataField.DIFF_PERCENTAGE.value: GSTR1_DataField.DIFF_PERCENTAGE.value,
         GovDataField.ITEMS.value: GSTR1_DataField.ITEMS.value,
         GovDataField.TAX_RATE.value: GSTR1_ItemField.TAX_RATE.value,
-        GovDataField.ADDITIONAL_AMOUNT.value: GSTR1_DataField.TAXABLE_VALUE.value,
+        GovDataField.ADVANCE_AMOUNT.value: GSTR1_DataField.TAXABLE_VALUE.value,
         GovDataField.IGST.value: GSTR1_DataField.IGST.value,
         GovDataField.CGST.value: GSTR1_DataField.CGST.value,
         GovDataField.SGST.value: GSTR1_DataField.SGST.value,
@@ -1341,6 +1344,7 @@ class AT(GovDataMapper):
         GSTR1_DataField.SGST.value: 0,
         GSTR1_DataField.TAXABLE_VALUE.value: 0,
     }
+    MULTIPLIER = 1
 
     def __init__(self):
         super().__init__()
@@ -1363,6 +1367,15 @@ class AT(GovDataMapper):
             items = invoice_data.pop(GSTR1_DataField.ITEMS.value)
 
             for item in items:
+                if self.MULTIPLIER != 1:
+                    item.update(
+                        {
+                            key: value * self.MULTIPLIER
+                            for key, value in item.items()
+                            if key in self.DEFAULT_ITEM_AMOUNTS
+                        }
+                    )
+
                 item_data = invoice_data.copy()
                 item_data.update(item)
                 output[
@@ -1406,7 +1419,7 @@ class AT(GovDataMapper):
                         GovDataField.CESS.value,
                         GovDataField.CGST.value,
                         GovDataField.SGST.value,
-                        GovDataField.ADDITIONAL_AMOUNT.value,
+                        GovDataField.ADVANCE_AMOUNT.value,
                         GovDataField.TAX_RATE.value,
                     ]
                 }
@@ -1414,7 +1427,17 @@ class AT(GovDataMapper):
         }
 
     def format_data(self, data, default_data=None, for_gov=False):
+        if self.MULTIPLIER != 1 and for_gov:
+            data.update(
+                {
+                    key: value * self.MULTIPLIER
+                    for key, value in data.items()
+                    if key in self.DEFAULT_ITEM_AMOUNTS
+                }
+            )
+
         data = super().format_data(data, default_data, for_gov)
+
         if not for_gov:
             return data
 
@@ -1438,6 +1461,7 @@ class AT(GovDataMapper):
 
 class TXPD(AT):
     SUBCATEGORY = GSTR1_SubCategory.TXP.value
+    MULTIPLIER = -1
 
 
 class DOC_ISSUE(GovDataMapper):
@@ -2160,7 +2184,9 @@ class BooksDataMapper:
             },
         )
 
-    def process_data_for_advances_received_or_adjusted(self, row, prepared_data):
+    def process_data_for_advances_received_or_adjusted(
+        self, row, prepared_data, multiplier=1
+    ):
         advances = {}
         tax_rate = round(((row["tax_amount"] / row["taxable_value"]) * 100))
         key = f"{row['place_of_supply']} - {flt(tax_rate)}"
@@ -2171,20 +2197,22 @@ class BooksDataMapper:
         advances[GSTR1_DataField.DOC_NUMBER.value] = row["name"]
         advances[GSTR1_DataField.DOC_DATE.value] = row["posting_date"]
         advances[GSTR1_DataField.POS.value] = row["place_of_supply"]
-        advances[GSTR1_DataField.TAXABLE_VALUE.value] = row["taxable_value"]
+        advances[GSTR1_DataField.TAXABLE_VALUE.value] = (
+            row["taxable_value"] * multiplier
+        )
         advances[GSTR1_DataField.TAX_RATE.value] = tax_rate
-        advances[GSTR1_DataField.CESS.value] = row["cess_amount"]
+        advances[GSTR1_DataField.CESS.value] = row["cess_amount"] * multiplier
 
         if row.get("reference_name"):
             advances["against_voucher"] = row["reference_name"]
 
         if row["place_of_supply"][0:2] == row["company_gstin"][0:2]:
-            advances[GSTR1_DataField.CGST.value] = row["tax_amount"] / 2
-            advances[GSTR1_DataField.SGST.value] = row["tax_amount"] / 2
+            advances[GSTR1_DataField.CGST.value] = row["tax_amount"] / 2 * multiplier
+            advances[GSTR1_DataField.SGST.value] = row["tax_amount"] / 2 * multiplier
             advances[GSTR1_DataField.IGST.value] = 0
 
         else:
-            advances[GSTR1_DataField.IGST.value] = row["tax_amount"]
+            advances[GSTR1_DataField.IGST.value] = row["tax_amount"] * multiplier
             advances[GSTR1_DataField.CGST.value] = 0
             advances[GSTR1_DataField.SGST.value] = 0
 
@@ -2292,6 +2320,8 @@ class GSTR1BooksData(BooksDataMapper):
                 _class.pe.posting_date,
                 _class.pe.company_gstin,
             )
+            multipler = 1
+
         elif type_of_business == "Adjustment":
             query = _class.get_11B_query()
             fields = (
@@ -2301,11 +2331,14 @@ class GSTR1BooksData(BooksDataMapper):
                 _class.pe.company_gstin,
                 _class.pe_ref.reference_name,
             )
+            multipler = -1
 
         query = query.select(*fields)
         data = query.run(as_dict=True)
 
         for row in data:
-            self.process_data_for_advances_received_or_adjusted(row, advances_data)
+            self.process_data_for_advances_received_or_adjusted(
+                row, advances_data, multipler
+            )
 
         return advances_data
