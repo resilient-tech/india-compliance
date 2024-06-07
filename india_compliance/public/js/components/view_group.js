@@ -63,7 +63,9 @@ india_compliance.ViewGroup = class ViewGroup {
 
             this.target = $(e.currentTarget);
             const target_view = this.target.attr("data-fieldname");
-            this.callback && this.callback(this, target_view);
+
+            this.set_active_view(target_view);
+            this.callback && this.callback(target_view);
         });
     }
 

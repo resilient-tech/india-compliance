@@ -596,14 +596,17 @@ class GSTR1 {
         this.filter_group.apply();
     };
 
-    change_view = (view_group, target_view) => {
+    show_summary_view = () => {
+        this.viewgroup.set_active_view("Summary");
+        this.change_view("Summary");
+    }
+
+    change_view = (target_view) => {
         const current_view = this.active_view;
 
         if (!this.filter_category && current_view === "Summary") return;
 
-        view_group.set_active_view(target_view);
         this.active_view = target_view;
-
         this.refresh_view();
     };
 
@@ -728,7 +731,7 @@ class TabManager {
                 this.filter_data(this.data[category], filters),
                 this.category_columns
             );
-            this.set_title(category);
+            this.set_title(category, null, true);
         } else if (view === "Summary") {
             this.setup_datatable(
                 this.wrapper,
@@ -759,12 +762,15 @@ class TabManager {
 
     // SETUP
 
-    set_title(title, subtitle) {
+    set_title(title, subtitle, with_back_button = false) {
         if (title) this.wrapper.find(".tab-title-text").text(title);
         else this.wrapper.find(".tab-title-text").html("&nbsp");
 
         if (subtitle) this.wrapper.find(".tab-subtitle-text").text(subtitle);
         else this.wrapper.find(".tab-subtitle-text").html("");
+
+        if (with_back_button) this.wrapper.find(".tab-back-button").show();
+        else this.wrapper.find(".tab-back-button").hide();
     }
 
     set_default_title() {
@@ -773,10 +779,15 @@ class TabManager {
 
     setup_wrapper() {
         this.wrapper.append(`
-            <div class="tab-title m-3 d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="tab-title-text">&nbsp</div>
-                    <div class="tab-subtitle-text"></div>
+            <div class="m-3 d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                    <div class="tab-back-button mr-4">
+                        <a><i class="fa fa-arrow-left"></i></a>
+                    </div>
+                    <div>
+                        <div class="tab-title-text">&nbsp</div>
+                        <div class="tab-subtitle-text"></div>
+                    </div>
                 </div>
                 <div class="custom-button-group page-actions custom-actions hidden-xs hidden-md"></div>
             </div>
@@ -788,6 +799,14 @@ class TabManager {
                     ${__("Collapse All")}</button>
             </div>
         `);
+
+        this.setup_back_button_listener();
+    }
+
+    setup_back_button_listener() {
+        this.wrapper.find(".tab-back-button").on("click", () => {
+            this.instance.show_summary_view();
+        });
     }
 
     setup_datatable(wrapper, data, columns) {
