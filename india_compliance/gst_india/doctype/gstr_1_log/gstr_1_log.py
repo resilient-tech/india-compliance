@@ -751,6 +751,9 @@ class GSTR1Log(GenerateGSTR1, Document):
         if "summary" not in file_field:
             self.remove_json_for(f"{file_field}_summary")
 
+        if file_field == "filed":
+            self.remove_json_for("unfiled")
+
     # GSTR 1 UTILITY
     def is_gstr1_api_enabled(self, settings=None):
         if not settings:
