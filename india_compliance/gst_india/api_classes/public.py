@@ -28,3 +28,8 @@ class PublicAPI(BaseAPI):
             )
 
         return response
+
+    def get_returns_info(self, gstin, fy):
+        return self.get(
+            "returns", params={"action": "RETTRACK", "gstin": gstin, "fy": fy}
+        )

@@ -33,7 +33,7 @@ EXPECTED_SUMMARY_BY_HSN = [
         "total_amount": -300000.0,
         "total_tax_amount": 0.0,
         "invoice_category": "Credit/Debit Notes (Unregistered)",
-        "invoice_sub_category": "CDNUR",
+        "invoice_sub_category": "Credit/Debit Notes (Unregistered)",
         "invoice_type": "EXPWOP",
     },
     {
@@ -52,7 +52,7 @@ EXPECTED_SUMMARY_BY_HSN = [
         "total_amount": -5000.0,
         "total_tax_amount": 0.0,
         "invoice_category": "Credit/Debit Notes (Unregistered)",
-        "invoice_sub_category": "CDNUR",
+        "invoice_sub_category": "Credit/Debit Notes (Unregistered)",
         "invoice_type": "EXPWOP",
     },
     {
@@ -71,7 +71,7 @@ EXPECTED_SUMMARY_BY_HSN = [
         "total_amount": 500000.0,
         "total_tax_amount": 0.0,
         "invoice_category": "Exports",
-        "invoice_sub_category": "EXPWP",
+        "invoice_sub_category": "Export With Payment of Tax",
         "invoice_type": "WPAY",
     },
     {
@@ -90,7 +90,7 @@ EXPECTED_SUMMARY_BY_HSN = [
         "total_amount": 45000.0,
         "total_tax_amount": 0.0,
         "invoice_category": "Exports",
-        "invoice_sub_category": "EXPWP",
+        "invoice_sub_category": "Export With Payment of Tax",
         "invoice_type": "WPAY",
     },
     {
@@ -109,7 +109,7 @@ EXPECTED_SUMMARY_BY_HSN = [
         "total_amount": 140000.0,
         "total_tax_amount": 0.0,
         "invoice_category": "Exports",
-        "invoice_sub_category": "EXPWOP",
+        "invoice_sub_category": "Export Without Payment of Tax",
         "invoice_type": "WOPAY",
     },
     {
@@ -128,7 +128,7 @@ EXPECTED_SUMMARY_BY_HSN = [
         "total_amount": 5000.0,
         "total_tax_amount": 0.0,
         "invoice_category": "Exports",
-        "invoice_sub_category": "EXPWOP",
+        "invoice_sub_category": "Export Without Payment of Tax",
         "invoice_type": "WOPAY",
     },
     {
@@ -148,7 +148,7 @@ EXPECTED_SUMMARY_BY_HSN = [
         "total_tax_amount": -40500.0,
         "invoice_category": "Credit/Debit Notes (Registered)",
         "invoice_type": "Regular B2B",
-        "invoice_sub_category": "CDNR",
+        "invoice_sub_category": "Credit/Debit Notes (Registered)",
     },
     {
         "item_code": "_Test Nil Rated Item",
@@ -166,8 +166,8 @@ EXPECTED_SUMMARY_BY_HSN = [
         "total_amount": -30000.0,
         "total_tax_amount": 0.0,
         "invoice_category": "Nil-Rated, Exempted, Non-GST",
-        "invoice_type": "Inter-State to registered persons",
-        "invoice_sub_category": "Nil-Rated",
+        "invoice_type": "Inter-State supplies to registered persons",
+        "invoice_sub_category": "Nil-Rated, Exempted, Non-GST",
     },
     {
         "item_code": "_Test Service Item",
@@ -204,8 +204,8 @@ EXPECTED_SUMMARY_BY_HSN = [
         "total_amount": 60000.0,
         "total_tax_amount": 0.0,
         "invoice_category": "Nil-Rated, Exempted, Non-GST",
-        "invoice_type": "Inter-State to registered persons",
-        "invoice_sub_category": "Nil-Rated",
+        "invoice_type": "Inter-State supplies to registered persons",
+        "invoice_sub_category": "Nil-Rated, Exempted, Non-GST",
     },
     {
         "item_code": "_Test Service Item",
@@ -241,8 +241,8 @@ EXPECTED_SUMMARY_BY_HSN = [
         "total_amount": 5000.0,
         "total_tax_amount": 0.0,
         "invoice_category": "Nil-Rated, Exempted, Non-GST",
-        "invoice_type": "Intra-State to unregistered persons",
-        "invoice_sub_category": "Nil-Rated",
+        "invoice_type": "Intra-State supplies to unregistered persons",
+        "invoice_sub_category": "Nil-Rated, Exempted, Non-GST",
     },
     {
         "item_code": "_Test Service Item",
@@ -278,8 +278,8 @@ EXPECTED_SUMMARY_BY_HSN = [
         "total_amount": 5000.0,
         "total_tax_amount": 0.0,
         "invoice_category": "Nil-Rated, Exempted, Non-GST",
-        "invoice_type": "Intra-State to unregistered persons",
-        "invoice_sub_category": "Nil-Rated",
+        "invoice_type": "Intra-State supplies to unregistered persons",
+        "invoice_sub_category": "Nil-Rated, Exempted, Non-GST",
     },
     {
         "item_code": "_Test Service Item",
@@ -315,8 +315,8 @@ EXPECTED_SUMMARY_BY_HSN = [
         "total_amount": 5000.0,
         "total_tax_amount": 0.0,
         "invoice_category": "Nil-Rated, Exempted, Non-GST",
-        "invoice_type": "Inter-State to unregistered persons",
-        "invoice_sub_category": "Nil-Rated",
+        "invoice_type": "Inter-State supplies to unregistered persons",
+        "invoice_sub_category": "Nil-Rated, Exempted, Non-GST",
     },
 ]
 
@@ -349,7 +349,7 @@ EXPECTED_OVERVIEW = [
         "total_cess_amount": 0,
     },
     {
-        "description": "SEZ with payment",
+        "description": "SEZ With Payment of Tax",
         "indent": 1,
         "taxable_value": 0,
         "igst_amount": 0,
@@ -358,7 +358,7 @@ EXPECTED_OVERVIEW = [
         "total_cess_amount": 0,
     },
     {
-        "description": "SEZ without payment",
+        "description": "SEZ Without Payment of Tax",
         "indent": 1,
         "taxable_value": 0,
         "igst_amount": 0,
@@ -403,7 +403,7 @@ EXPECTED_OVERVIEW = [
         "total_cess_amount": 0.0,
     },
     {
-        "description": "Exports with payment",
+        "description": "Export With Payment of Tax",
         "indent": 1,
         "taxable_value": 545000.0,
         "igst_amount": 0.0,
@@ -412,7 +412,7 @@ EXPECTED_OVERVIEW = [
         "total_cess_amount": 0.0,
     },
     {
-        "description": "Exports without payment",
+        "description": "Export Without Payment of Tax",
         "indent": 1,
         "taxable_value": 145000.0,
         "igst_amount": 0.0,
@@ -448,31 +448,13 @@ EXPECTED_OVERVIEW = [
         "total_cess_amount": 0.0,
     },
     {
-        "description": "Nil-Rated",
+        "description": "Nil-Rated, Exempted, Non-GST",
         "indent": 1,
         "taxable_value": 45000.0,
         "igst_amount": 0.0,
         "cgst_amount": 0.0,
         "sgst_amount": 0.0,
         "total_cess_amount": 0.0,
-    },
-    {
-        "description": "Exempted",
-        "indent": 1,
-        "taxable_value": 0,
-        "igst_amount": 0,
-        "cgst_amount": 0,
-        "sgst_amount": 0,
-        "total_cess_amount": 0,
-    },
-    {
-        "description": "Non-GST",
-        "indent": 1,
-        "taxable_value": 0,
-        "igst_amount": 0,
-        "cgst_amount": 0,
-        "sgst_amount": 0,
-        "total_cess_amount": 0,
     },
     {
         "description": "Credit/Debit Notes (Registered)",
