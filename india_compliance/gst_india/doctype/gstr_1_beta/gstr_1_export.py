@@ -143,9 +143,42 @@ class GovExcel(DataProcessor):
 
         self.file_field = "filed" if gstr_1_log.filed else "books"
         data = gstr_1_log.load_data(self.file_field)[self.file_field]
-        data = data.update(data.get("aggregate_data", {}))
         data = self.process_data(data)
         self.build_excel(data)
+
+    def process_data(self, data):
+        data = data.update(data.pop("aggregate_data", {}))
+        category_wise_data = super().process_data(data)
+
+        for category, category_data in category_wise_data.items():
+            # filter missing in books
+            category_wise_data[category] = [
+                row
+                for row in category_data
+                if row.get("upload_status") != "Missing in Books"
+            ]
+
+            if category not in [
+                GovJsonKey.CDNR.value,
+                GovJsonKey.CDNUR.value,
+                GovJsonKey.TXP.value,
+            ]:
+                continue
+
+            # convert to positive values
+            for doc in category_wise_data.get(category, []):
+                if doc.get(GSTR1_DataField.DOC_TYPE.value) == "D":
+                    continue
+
+                doc.update(
+                    {
+                        key: abs(value)
+                        for key, value in doc.items()
+                        if isinstance(value, (int, float))
+                    }
+                )
+
+        return category_wise_data
 
     def build_excel(self, data):
         excel = ExcelExporter()

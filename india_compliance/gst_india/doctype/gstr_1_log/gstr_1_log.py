@@ -243,6 +243,9 @@ class ReconcileGSTR1:
 
                 # Update each row in Books Data
                 for row in books_values:
+                    if row.get("upload_status") == "Missing in Books":
+                        continue
+
                     if not gov_value:
                         row["upload_status"] = "Not Uploaded"
 
