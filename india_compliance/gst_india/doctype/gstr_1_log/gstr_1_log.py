@@ -177,17 +177,19 @@ class SummarizeGSTR1:
             **self.AMOUNT_FIELDS,
         }
 
-    def count_doc_issue_summary(self, summary_row, data_row):
+    @staticmethod
+    def count_doc_issue_summary(summary_row, data_row):
         summary_row["no_of_records"] += data_row.get(
             GSTR1_DataField.TOTAL_COUNT.value, 0
         ) - data_row.get(GSTR1_DataField.CANCELLED_COUNT.value, 0)
 
-    def count_hsn_summary(self, summary_row):
+    @staticmethod
+    def count_hsn_summary(summary_row):
         summary_row["no_of_records"] += 1
 
 
 class ReconcileGSTR1:
-    IGNORED_FIELDS = {"tax_rate"}
+    IGNORED_FIELDS = {GSTR1_DataField.TAX_RATE.value, GSTR1_DataField.DOC_VALUE.value}
 
     def get_reconcile_gstr1_data(self, gov_data, books_data):
         """
@@ -287,7 +289,8 @@ class ReconcileGSTR1:
 
         return reconciled_data
 
-    def get_reconciled_row(self, books_row, gov_row):
+    @staticmethod
+    def get_reconciled_row(books_row, gov_row):
         """
         Compare books_row with gov_row and return the difference
 
@@ -310,12 +313,16 @@ class ReconcileGSTR1:
 
         # Get Empty Row
         if is_list:
-            reconcile_row = self.get_empty_row(gov_row[0] if gov_row else books_row[0])
+            reconcile_row = ReconcileGSTR1.get_empty_row(
+                gov_row[0] if gov_row else books_row[0]
+            )
             gov_row = gov_row[0] if gov_row else {}
-            books_row = self.get_aggregated_row(books_row) if books_row else {}
+            books_row = (
+                AggregateInvoices.get_aggregate_invoices(books_row) if books_row else {}
+            )
 
         else:
-            reconcile_row = self.get_empty_row(gov_row or books_row)
+            reconcile_row = ReconcileGSTR1.get_empty_row(gov_row or books_row)
             gov_row = gov_row or {}
             books_row = books_row or {}
 
@@ -331,7 +338,10 @@ class ReconcileGSTR1:
 
         # Compute Differences
         for key, value in reconcile_row.items():
-            if isinstance(value, (int, float)) and key not in self.IGNORED_FIELDS:
+            if (
+                isinstance(value, (int, float))
+                and key not in AggregateInvoices.IGNORED_FIELDS
+            ):
                 reconcile_row[key] = flt(
                     (books_row.get(key) or 0) - (gov_row.get(key) or 0), 2
                 )
@@ -349,6 +359,8 @@ class ReconcileGSTR1:
             if "Missing" not in reconcile_row["match_status"]:
                 reconcile_row["match_status"] = "Mismatch"
                 reconcile_row["differences"].append(unscrub(key))
+
+        reconcile_row["differences"] = ", ".join(reconcile_row["differences"])
 
         # Return
         if reconcile_row["match_status"] == "Matched":
@@ -370,7 +382,7 @@ class ReconcileGSTR1:
         empty_row = row.copy()
 
         for key, value in empty_row.items():
-            if key in ReconcileGSTR1.IGNORED_FIELDS:
+            if key in AggregateInvoices.IGNORED_FIELDS:
                 continue
 
             if isinstance(value, (int, float)):
@@ -381,32 +393,12 @@ class ReconcileGSTR1:
 
         return empty_row
 
-    @staticmethod
-    def get_aggregated_row(books_rows: list) -> dict:
-        """
-        There can be multiple rows in books data for a single row in gov data
-        Aggregate all the rows to a single row
-        """
-        aggregated_row = {}
-
-        for row in books_rows:
-            if not aggregated_row:
-                aggregated_row = row.copy()
-                continue
-
-            for key, value in row.items():
-                if key in ReconcileGSTR1.IGNORED_FIELDS:
-                    continue
-
-                if isinstance(value, (int, float)):
-                    aggregated_row[key] += value
-
-        return aggregated_row
-
 
 class AggregateInvoices:
+    IGNORED_FIELDS = {GSTR1_DataField.TAX_RATE.value, GSTR1_DataField.DOC_VALUE.value}
 
-    def get_aggregate_data(self, data: dict):
+    @staticmethod
+    def get_aggregate_data(data: dict):
         """
         Aggregate invoices for each subcategory where required
         and updates the data
@@ -426,40 +418,55 @@ class AggregateInvoices:
             if not subcategory_data:
                 continue
 
-            aggregate_data[subcategory.value] = self.get_aggregate_invoices(
-                subcategory_data
+            aggregate_data[subcategory.value] = (
+                AggregateInvoices.get_aggregate_subcategory(subcategory_data)
             )
 
         return aggregate_data
 
-    def get_aggregate_invoices(self, subcategory_data: dict):
+    @staticmethod
+    def get_aggregate_subcategory(subcategory_data: dict):
         value_keys = []
         aggregate_invoices = {}
 
         for _id, invoices in subcategory_data.items():
             if not value_keys:
-                value_keys = self.get_value_keys(invoices[0])
+                value_keys = AggregateInvoices.get_value_keys(invoices[0])
 
-            aggregated_invoice = invoices[0].copy()
-            aggregated_invoice.update(
-                {
-                    key: sum([invoice.get(key, 0) for invoice in invoices])
-                    for key in value_keys
-                }
-            )
-
-            aggregate_invoices[_id] = [aggregated_invoice]
+            aggregate_invoices[_id] = [
+                AggregateInvoices.get_aggregate_invoices(invoices, value_keys)
+            ]
 
         return aggregate_invoices
 
-    def get_value_keys(self, invoice: dict):
+    @staticmethod
+    def get_aggregate_invoices(invoices: list, value_keys: list = None) -> dict:
+        """
+        There can be multiple rows in books data for a single row in gov data
+        Aggregate all the rows to a single row
+        """
+        if not value_keys:
+            value_keys = AggregateInvoices.get_value_keys(invoices[0])
+
+        aggregated_invoice = invoices[0].copy()
+        aggregated_invoice.update(
+            {
+                key: sum([invoice.get(key, 0) for invoice in invoices])
+                for key in value_keys
+            }
+        )
+
+        return aggregated_invoice
+
+    @staticmethod
+    def get_value_keys(invoice: dict):
         keys = []
 
         for key, value in invoice.items():
             if not isinstance(value, (int, float)):
                 continue
 
-            if key in {GSTR1_DataField.TAX_RATE.value, GSTR1_DataField.DOC_VALUE.value}:
+            if key in AggregateInvoices.IGNORED_FIELDS:
                 continue
 
             keys.append(key)
@@ -588,7 +595,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         if aggregate:
             books_data.update({"aggregate_data": self.get_aggregate_data(books_data)})
 
-        self.update_json_for(data_field, books_data)
+        self.update_json_for(data_field, books_data, reset_reconcile=True)
 
         return books_data
 
@@ -688,17 +695,20 @@ class GSTR1Log(GenerateGSTR1, Document):
                 return get_decompressed_data(file.get_content(encodings=[]))
 
         except FileNotFoundError:
+            # say File not restored
             self.db_set(file_field, None)
             return
 
-    def update_json_for(self, file_field, json_data, overwrite=True):
+    def update_json_for(
+        self, file_field, json_data, overwrite=True, reset_reconcile=False
+    ):
         if "summary" not in file_field:
             json_data["creation"] = get_datetime_str(get_datetime())
             self.remove_json_for(f"{file_field}_summary")
 
-        # reset reconciled data
-        if overwrite and file_field in ("books", "filed", "unfiled"):
-            self.remove_json_for("reconcile")
+            # reset reconciled data
+            if reset_reconcile:
+                self.remove_json_for("reconcile")
 
         # new file
         if not getattr(self, file_field):

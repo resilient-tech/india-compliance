@@ -599,9 +599,9 @@ class GSTR1 {
     show_summary_view = () => {
         this.viewgroup.set_active_view("Summary");
         this.change_view("Summary");
-    }
+    };
 
-    change_view = (target_view) => {
+    change_view = target_view => {
         const current_view = this.active_view;
 
         if (!this.filter_category && current_view === "Summary") return;
@@ -626,7 +626,6 @@ class GSTR1 {
 
         $(function () {
             $('[data-toggle="tooltip"]').tooltip();
-
         });
 
         const net_transactions = {
@@ -1401,8 +1400,6 @@ class GSTR1_TabManager extends TabManager {
                 width: 100,
             },
         ];
-
-        return without_pos ? tax_columns : [pos_column, ...tax_columns];
     }
 
     get_igst_tax_columns(with_pos) {
@@ -1472,7 +1469,7 @@ class BooksTab extends GSTR1_TabManager {
         [GSTR1_SubCategory.B2CL]: this.get_invoice_columns,
         [GSTR1_SubCategory.B2CS]: this.get_b2cs_columns,
 
-        [GSTR1_SubCategory.NIL_EXEMPT]: this.get_document_columns,
+        [GSTR1_SubCategory.NIL_EXEMPT]: this.get_nil_exempt_columns,
 
         [GSTR1_SubCategory.CDNR]: this.get_document_columns,
         [GSTR1_SubCategory.CDNUR]: this.get_document_columns,
@@ -1540,6 +1537,77 @@ class BooksTab extends GSTR1_TabManager {
         );
 
         return columns;
+    }
+
+    get_nil_exempt_columns() {
+        return [
+            ...this.get_detail_view_column(),
+            {
+                name: "Transaction Type",
+                fieldname: GSTR1_DataField.TRANSACTION_TYPE,
+                width: 100,
+            },
+            {
+                name: "Document Date",
+                fieldname: GSTR1_DataField.DOC_DATE,
+                fieldtype: "Date",
+                width: 120,
+            },
+            {
+                name: "Document Number",
+                fieldname: GSTR1_DataField.DOC_NUMBER,
+                fieldtype: "Link",
+                options: "Sales Invoice",
+                width: 160,
+            },
+            {
+                name: "Customer GSTIN",
+                fieldname: GSTR1_DataField.CUST_GSTIN,
+                width: 160,
+                _value: (...args) => this.format_detailed_table_cell(args),
+            },
+            {
+                name: "Customer Name",
+                fieldname: GSTR1_DataField.CUST_NAME,
+                width: 200,
+            },
+            {
+                name: "Document Type",
+                fieldname: GSTR1_DataField.DOC_TYPE,
+                width: 150,
+            },
+            {
+                name: "Reverse Charge",
+                fieldname: GSTR1_DataField.REVERSE_CHARGE,
+                width: 120,
+                _value: (...args) => this.format_detailed_table_cell(args),
+            },
+            ...this.get_match_columns(),
+            {
+                name: "Nil-Rated Supplies",
+                fieldname: GSTR1_DataField.NIL_RATED_AMOUNT,
+                fieldtype: "Float",
+                width: 150,
+            },
+            {
+                name: "Exempted Supplies",
+                fieldname: GSTR1_DataField.EXEMPTED_AMOUNT,
+                fieldtype: "Float",
+                width: 150,
+            },
+            {
+                name: "Non-GST Supplies",
+                fieldname: GSTR1_DataField.NON_GST_AMOUNT,
+                fieldtype: "Float",
+                width: 150,
+            },
+            {
+                name: "Document Value",
+                fieldname: GSTR1_DataField.DOC_VALUE,
+                fieldtype: "Currency",
+                width: 150,
+            },
+        ];
     }
 
     get_advances_received_columns() {

@@ -1514,7 +1514,7 @@ class DOC_ISSUE(GovDataMapper):
         GovDataField.TO_SR.value: GSTR1_DataField.TO_SR.value,
         GovDataField.TOTAL_COUNT.value: GSTR1_DataField.TOTAL_COUNT.value,
         GovDataField.CANCELLED_COUNT.value: GSTR1_DataField.CANCELLED_COUNT.value,
-        GovDataField.NET_ISSUE.value: "net_issue",
+        GovDataField.NET_ISSUE.value: GSTR1_DataField.NET_ISSUE.value,
     }
     DOCUMENT_NATURE = {
         1: "Invoices for outward supply",
@@ -2188,6 +2188,7 @@ class BooksDataMapper:
                 GSTR1_DataField.TOTAL_COUNT.value: row["total_issued"],
                 GSTR1_DataField.DRAFT_COUNT.value: row["total_draft"],
                 GSTR1_DataField.CANCELLED_COUNT.value: row["cancelled"],
+                GSTR1_DataField.NET_ISSUE.value: row["total_submitted"],
             },
         )
 

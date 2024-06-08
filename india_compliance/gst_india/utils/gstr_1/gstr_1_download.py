@@ -78,7 +78,7 @@ def download_gstr1_json_data(gstr1_log):
         json_data.update(response)
 
     mapped_data = convert_to_internal_data_format(json_data)
-    gstr1_log.update_json_for(data_field, mapped_data)
+    gstr1_log.update_json_for(data_field, mapped_data, reset_reconcile=True)
 
     if is_queued:
         gstr1_log.update_status("Queued")

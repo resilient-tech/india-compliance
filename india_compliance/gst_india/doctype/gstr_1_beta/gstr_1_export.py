@@ -19,6 +19,7 @@ from india_compliance.gst_india.utils.gstr_1 import (
     GovJsonKey,
     GSTR1_DataField,
     GSTR1_ItemField,
+    GSTR1_SubCategory,
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     convert_to_gov_data_format,
@@ -2041,7 +2042,13 @@ def download_gstr_1_json(
     data = gstr1_log.get_json_for("books")
     data = data.update(data.pop("aggregate_data", {}))
 
-    for subcategory_data in data.values():
+    for subcategory, subcategory_data in data.items():
+        if subcategory in {
+            GSTR1_SubCategory.NIL_EXEMPT.value,
+            GSTR1_SubCategory.HSN.value,
+        }:
+            continue
+
         discard_invoices = []
 
         if isinstance(subcategory_data, str):
