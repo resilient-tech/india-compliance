@@ -62,7 +62,7 @@ def create_test_records():
     )
 
     for doctype, data in test_records.items():
-        make_test_objects(doctype, data, reset=True)
+        make_test_objects(doctype, data)
         if doctype == "Company":
             add_companies_to_fiscal_year(data)
 
