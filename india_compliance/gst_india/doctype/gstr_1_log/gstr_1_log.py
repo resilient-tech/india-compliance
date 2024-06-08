@@ -190,6 +190,14 @@ class SummarizeGSTR1:
 
 class ReconcileGSTR1:
     IGNORED_FIELDS = {GSTR1_DataField.TAX_RATE.value, GSTR1_DataField.DOC_VALUE.value}
+    UNREQUIRED_KEYS = {
+        GSTR1_DataField.TRANSACTION_TYPE.value,
+        GSTR1_DataField.DOC_NUMBER.value,
+        GSTR1_DataField.DOC_DATE.value,
+        GSTR1_DataField.CUST_GSTIN.value,
+        GSTR1_DataField.CUST_NAME.value,
+        GSTR1_DataField.REVERSE_CHARGE.value,
+    }
 
     def get_reconcile_gstr1_data(self, gov_data, books_data):
         """
@@ -314,7 +322,7 @@ class ReconcileGSTR1:
         # Get Empty Row
         if is_list:
             reconcile_row = ReconcileGSTR1.get_empty_row(
-                gov_row[0] if gov_row else books_row[0]
+                gov_row[0] if gov_row else books_row[0], ReconcileGSTR1.UNREQUIRED_KEYS
             )
             gov_row = gov_row[0] if gov_row else {}
             books_row = (
@@ -375,7 +383,7 @@ class ReconcileGSTR1:
         return reconcile_row
 
     @staticmethod
-    def get_empty_row(row: dict):
+    def get_empty_row(row: dict, unrequired_keys=None):
         """
         Row with all values as 0
         """
@@ -383,6 +391,10 @@ class ReconcileGSTR1:
 
         for key, value in empty_row.items():
             if key in AggregateInvoices.IGNORED_FIELDS:
+                continue
+
+            if unrequired_keys and key in unrequired_keys:
+                empty_row[key] = None
                 continue
 
             if isinstance(value, (int, float)):

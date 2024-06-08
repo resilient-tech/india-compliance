@@ -1576,12 +1576,6 @@ class BooksTab extends GSTR1_TabManager {
                 fieldname: GSTR1_DataField.DOC_TYPE,
                 width: 150,
             },
-            {
-                name: "Reverse Charge",
-                fieldname: GSTR1_DataField.REVERSE_CHARGE,
-                width: 120,
-                _value: (...args) => this.format_detailed_table_cell(args),
-            },
             ...this.get_match_columns(),
             {
                 name: "Nil-Rated Supplies",
