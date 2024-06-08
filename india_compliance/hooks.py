@@ -129,6 +129,7 @@ doc_events = {
         "validate": "india_compliance.gst_india.overrides.payment_entry.validate",
         "on_submit": "india_compliance.gst_india.overrides.payment_entry.on_submit",
         "on_update_after_submit": "india_compliance.gst_india.overrides.payment_entry.on_update_after_submit",
+        "before_cancel": "india_compliance.gst_india.overrides.payment_entry.before_cancel",
     },
     "Purchase Invoice": {
         "onload": [
