@@ -3,12 +3,8 @@ from collections import defaultdict
 
 import frappe
 from frappe import _, bold
-<<<<<<< HEAD
 from frappe.model import delete_doc
-from frappe.utils import cint, flt
-=======
 from frappe.utils import cint, flt, format_date
->>>>>>> 90202d64 (feat: GSTR-1 Beta for filing (#2112))
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 from erpnext.controllers.taxes_and_totals import (
     get_itemised_tax,
