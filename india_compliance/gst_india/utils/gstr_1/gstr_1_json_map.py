@@ -326,7 +326,7 @@ class B2B(GovDataMapper):
 
         return output
 
-    def convert_to_gov_data_format(self, input_data):
+    def convert_to_gov_data_format(self, input_data, **kwargs):
         """
         Objective: Convert Internal Data Structure to Govt JSON
         Args:
@@ -475,7 +475,7 @@ class B2CL(GovDataMapper):
 
         return {self.SUBCATEGORY: output}
 
-    def convert_to_gov_data_format(self, input_data):
+    def convert_to_gov_data_format(self, input_data, **kwargs):
         pos_data = {}
 
         for invoice in input_data:
@@ -609,7 +609,7 @@ class Exports(GovDataMapper):
 
         return output
 
-    def convert_to_gov_data_format(self, input_data):
+    def convert_to_gov_data_format(self, input_data, **kwargs):
         export_category_wise_data = {}
 
         for invoice in input_data:
@@ -721,7 +721,8 @@ class B2CS(GovDataMapper):
 
         return {self.SUBCATEGORY: output}
 
-    def convert_to_gov_data_format(self, input_data):
+    def convert_to_gov_data_format(self, input_data, **kwargs):
+        self.company_gstin = kwargs.get("company_gstin", "")
         return [self.format_data(invoice, for_gov=True) for invoice in input_data]
 
     def format_data(self, data, default_data=None, for_gov=False):
@@ -730,7 +731,9 @@ class B2CS(GovDataMapper):
             return data
 
         data[GovDataField.SUPPLY_TYPE.value] = (
-            "INTER" if data[GovDataField.IGST.value] > 0 else "INTRA"
+            "INTRA"
+            if data[GovDataField.POS.value] == self.company_gstin[:2]
+            else "INTER"
         )
         return data
 
@@ -807,7 +810,7 @@ class NilRated(GovDataMapper):
 
         return {self.SUBCATEGORY: output}
 
-    def convert_to_gov_data_format(self, input_data):
+    def convert_to_gov_data_format(self, input_data, **kwargs):
         self.DOCUMENT_CATEGORIES = self.reverse_dict(self.DOCUMENT_CATEGORIES)
 
         return {
@@ -968,7 +971,7 @@ class CDNR(GovDataMapper):
 
         return {self.SUBCATEGORY: output}
 
-    def convert_to_gov_data_format(self, input_data):
+    def convert_to_gov_data_format(self, input_data, **kwargs):
         customer_data = {}
 
         self.DOCUMENT_CATEGORIES = self.reverse_dict(self.DOCUMENT_CATEGORIES)
@@ -1125,7 +1128,7 @@ class CDNUR(GovDataMapper):
 
         return {self.SUBCATEGORY: output}
 
-    def convert_to_gov_data_format(self, input_data):
+    def convert_to_gov_data_format(self, input_data, **kwargs):
         self.DOCUMENT_TYPES = self.reverse_dict(self.DOCUMENT_TYPES)
         return [self.format_data(invoice, for_gov=True) for invoice in input_data]
 
@@ -1243,7 +1246,7 @@ class HSNSUM(GovDataMapper):
 
         return {self.SUBCATEGORY: output}
 
-    def convert_to_gov_data_format(self, input_data):
+    def convert_to_gov_data_format(self, input_data, **kwargs):
         return {
             GovDataField.HSN_DATA.value: [
                 self.format_data(
@@ -1389,7 +1392,8 @@ class AT(GovDataMapper):
 
         return {self.SUBCATEGORY: output}
 
-    def convert_to_gov_data_format(self, input_data):
+    def convert_to_gov_data_format(self, input_data, **kwargs):
+        self.company_gstin = kwargs.get("company_gstin", "")
         pos_wise_data = {}
 
         for invoice in input_data:
@@ -1442,7 +1446,9 @@ class AT(GovDataMapper):
             return data
 
         data[GovDataField.SUPPLY_TYPE.value] = (
-            "INTER" if data[GovDataField.IGST.value] > 0 else "INTRA"
+            "INTRA"
+            if data[GovDataField.POS.value] == self.company_gstin[:2]
+            else "INTER"
         )
         return data
 
@@ -1548,7 +1554,7 @@ class DOC_ISSUE(GovDataMapper):
 
         return {GSTR1_SubCategory.DOC_ISSUE.value: output}
 
-    def convert_to_gov_data_format(self, input_data):
+    def convert_to_gov_data_format(self, input_data, **kwargs):
         self.DOCUMENT_NATURE = self.reverse_dict(self.DOCUMENT_NATURE)
 
         output = {GovDataField.DOC_ISSUE_DETAILS.value: []}
@@ -1665,7 +1671,7 @@ class SUPECOM(GovDataMapper):
 
         return output
 
-    def convert_to_gov_data_format(self, input_data):
+    def convert_to_gov_data_format(self, input_data, **kwargs):
         output = {}
         self.DOCUMENT_CATEGORIES = self.reverse_dict(self.DOCUMENT_CATEGORIES)
 
@@ -1898,7 +1904,7 @@ def get_category_wise_data(
     return category_wise_data
 
 
-def convert_to_gov_data_format(internal_data: dict) -> dict:
+def convert_to_gov_data_format(internal_data: dict, company_gstin: str) -> dict:
     """
     converts internal data format to Gov data format for all categories
     """
@@ -1911,7 +1917,7 @@ def convert_to_gov_data_format(internal_data: dict) -> dict:
             continue
 
         output[category] = mapper_class().convert_to_gov_data_format(
-            category_wise_data.get(category)
+            category_wise_data.get(category), company_gstin=company_gstin
         )
 
     return output

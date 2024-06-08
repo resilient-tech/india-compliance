@@ -243,10 +243,6 @@ class ReconcileGSTR1:
 
                 # Update each row in Books Data
                 for row in books_values:
-                    if row.get("upload_status"):
-                        update_books_match = False
-
-                    # Update Books Data
                     if not gov_value:
                         row["upload_status"] = "Not Uploaded"
 
@@ -514,7 +510,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
 
         reconcile_data = self.get_reconcile_gstr1_data(gov_data, books_data)
 
-        if status != "Filed" and not books_data.get("aggregate_data"):
+        if status != "Filed":
             books_data.update({"aggregate_data": self.get_aggregate_data(books_data)})
             self.update_json_for("books", books_data)
 
@@ -531,11 +527,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
     def generate_only_books_data(self, data, filters, callback=None):
         status = "Not Filed"
 
-        books_data = self.get_books_gstr1_data(filters)
-
-        if not books_data.get("aggregate_data"):
-            books_data.update({"aggregate_data": self.get_aggregate_data(books_data)})
-            self.update_json_for("books", books_data)
+        books_data = self.get_books_gstr1_data(filters, aggregate=True)
 
         data["books"] = self.normalize_data(books_data)
         data["status"] = status
@@ -560,7 +552,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         # download data
         return download_gstr1_json_data(self)
 
-    def get_books_gstr1_data(self, filters):
+    def get_books_gstr1_data(self, filters, aggregate=False):
         from india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta import (
             get_gstr_1_from_and_to_date,
         )
@@ -589,7 +581,13 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         )
 
         # compute data
-        return GSTR1BooksData(_filters).prepare_mapped_data()
+        books_data = GSTR1BooksData(_filters).prepare_mapped_data()
+        if aggregate:
+            books_data.update({"aggregate_data": self.get_aggregate_data(books_data)})
+
+        self.update_json_for(data_field, books_data)
+
+        return books_data
 
     # DATA MODIFIERS
     def summarize_data(self, data):
@@ -627,14 +625,15 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
             self.update_json_for(field, summary_data)
             data[field] = summary_data
 
-    def normalize_data(self, data):
+    @staticmethod
+    def normalize_data(data):
         """
         Helper function to convert complex objects to simple objects
         Returns object list of rows for each sub-category
         """
         for subcategory, subcategory_data in data.items():
             if subcategory == "aggregate_data":
-                data[subcategory] = self.normalize_data(subcategory_data)
+                data[subcategory] = GenerateGSTR1.normalize_data(subcategory_data)
                 continue
 
             if isinstance(subcategory_data, list | tuple | str):
