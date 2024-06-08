@@ -40,6 +40,12 @@
   "column_break_17",
   "e_invoice_applicable_from",
   "e_invoice_applicable_companies",
+  "gstr_1_section_break",
+  "analyze_filed_data",
+  "filing_frequency",
+  "column_break_cxmn",
+  "restrict_changes_after_gstr_1",
+  "role_allowed_to_modify",
   "other_apis_section",
   "autofill_party_info",
   "archive_party_info_days",
@@ -560,12 +566,49 @@
    "fieldtype": "Check",
    "hidden": 1,
    "label": "Is Retry e-Invoice/e-Waybill Pending"
+  },
+  {
+   "fieldname": "gstr_1_section_break",
+   "fieldtype": "Section Break",
+   "label": "GSTR-1"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval: india_compliance.is_api_enabled(doc)",
+   "description": "Compare Books with GSTR 1 Filed or Invoice data before filing",
+   "fieldname": "analyze_filed_data",
+   "fieldtype": "Check",
+   "label": "Analyze Filed Data"
+  },
+  {
+   "fieldname": "column_break_cxmn",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "filing_frequency",
+   "fieldtype": "Select",
+   "label": "Filing Frequency",
+   "options": "Monthly\nQuarterly"
+  },
+  {
+   "fieldname": "role_allowed_to_modify",
+   "fieldtype": "Link",
+   "label": "Role Allowed to Modify Transactions",
+   "options": "Role"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval: india_compliance.is_api_enabled(doc)",
+   "description": "Ensures restrictions to cancel or create transactions after return is marked as filed",
+   "fieldname": "restrict_changes_after_gstr_1",
+   "fieldtype": "Check",
+   "label": "Restrict changes after GSTR 1 is filed"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-03-29 11:54:42.957295",
+ "modified": "2024-05-17 15:46:11.169920",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
