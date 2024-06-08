@@ -3,8 +3,12 @@ from collections import defaultdict
 
 import frappe
 from frappe import _, bold
+<<<<<<< HEAD
 from frappe.model import delete_doc
 from frappe.utils import cint, flt
+=======
+from frappe.utils import cint, flt, format_date
+>>>>>>> e2f1f3e2 (feat: GSTR-1 Beta for filing (#2112))
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 from erpnext.controllers.taxes_and_totals import (
     get_itemised_tax,
@@ -17,6 +21,9 @@ from india_compliance.gst_india.constants import (
     STATE_NUMBERS,
 )
 from india_compliance.gst_india.constants.custom_fields import E_WAYBILL_INV_FIELDS
+from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
+    restrict_gstr_1_transaction_for,
+)
 from india_compliance.gst_india.doctype.gstin.gstin import (
     _validate_gst_transporter_id_info,
     _validate_gstin_info,
@@ -655,6 +662,18 @@ def get_source_state_code(doc):
         )
 
     return (doc.supplier_gstin or doc.company_gstin)[:2]
+
+
+def validate_backdated_transaction(doc, gst_settings=None, action="create"):
+    if gstr_1_filed_upto := restrict_gstr_1_transaction_for(
+        doc.posting_date, doc.company_gstin, gst_settings
+    ):
+        frappe.throw(
+            _(
+                "You are not allowed to {0} {1} as GSTR-1 has been filed upto {2}"
+            ).format(action, doc.doctype, frappe.bold(format_date(gstr_1_filed_upto))),
+            title=_("Restricted Changes"),
+        )
 
 
 def validate_hsn_codes(doc):
