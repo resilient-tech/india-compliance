@@ -166,7 +166,7 @@ EXPECTED_SUMMARY_BY_HSN = [
         "total_amount": -30000.0,
         "total_tax_amount": 0.0,
         "invoice_category": "Nil-Rated, Exempted, Non-GST",
-        "invoice_type": "Inter-State to registered persons",
+        "invoice_type": "Inter-State supplies to registered persons",
         "invoice_sub_category": "Nil-Rated, Exempted, Non-GST",
     },
     {
@@ -204,7 +204,7 @@ EXPECTED_SUMMARY_BY_HSN = [
         "total_amount": 60000.0,
         "total_tax_amount": 0.0,
         "invoice_category": "Nil-Rated, Exempted, Non-GST",
-        "invoice_type": "Inter-State to registered persons",
+        "invoice_type": "Inter-State supplies to registered persons",
         "invoice_sub_category": "Nil-Rated, Exempted, Non-GST",
     },
     {
@@ -241,7 +241,7 @@ EXPECTED_SUMMARY_BY_HSN = [
         "total_amount": 5000.0,
         "total_tax_amount": 0.0,
         "invoice_category": "Nil-Rated, Exempted, Non-GST",
-        "invoice_type": "Intra-State to unregistered persons",
+        "invoice_type": "Intra-State supplies to unregistered persons",
         "invoice_sub_category": "Nil-Rated, Exempted, Non-GST",
     },
     {
@@ -278,7 +278,7 @@ EXPECTED_SUMMARY_BY_HSN = [
         "total_amount": 5000.0,
         "total_tax_amount": 0.0,
         "invoice_category": "Nil-Rated, Exempted, Non-GST",
-        "invoice_type": "Intra-State to unregistered persons",
+        "invoice_type": "Intra-State supplies to unregistered persons",
         "invoice_sub_category": "Nil-Rated, Exempted, Non-GST",
     },
     {
@@ -315,7 +315,7 @@ EXPECTED_SUMMARY_BY_HSN = [
         "total_amount": 5000.0,
         "total_tax_amount": 0.0,
         "invoice_category": "Nil-Rated, Exempted, Non-GST",
-        "invoice_type": "Inter-State to unregistered persons",
+        "invoice_type": "Inter-State supplies to unregistered persons",
         "invoice_sub_category": "Nil-Rated, Exempted, Non-GST",
     },
 ]
