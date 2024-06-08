@@ -229,8 +229,10 @@ class ReturnsAPI(ReturnsAuthenticate):
         "RET2B1023": "not_generated",
         "RET2B1016": "no_docs_found",
         "RT-3BAS1009": "no_docs_found",
+        "RET11417": "no_docs_found",  # GSTR-1 Exports
         "RET2B1018": "requested_before_cutoff_date",
         "RTN_24": "queued",
+        "AUTH158": "invalid_otp",  # Invalid OTP
         "AUTH4033": "invalid_otp",  # Invalid Session
         # "AUTH4034": "invalid_otp",  # Invalid OTP
         "AUTH4038": "authorization_failed",  # Session Expired
@@ -407,5 +409,27 @@ class GSTR2aAPI(ReturnsAPI):
             return_period,
             params={"ret_period": return_period},
             endpoint="returns/gstr2a",
+            otp=otp,
+        )
+
+
+class GSTR1API(ReturnsAPI):
+    API_NAME = "GSTR-1"
+
+    def get_gstr_1_data(self, action, return_period, otp=None):
+        return self.get(
+            action,
+            return_period,
+            params={"ret_period": return_period},
+            endpoint="returns/gstr1",
+            otp=otp,
+        )
+
+    def get_einvoice_data(self, section, return_period, otp=None):
+        return self.get(
+            "EINV",
+            return_period,
+            params={"ret_period": return_period, "sec": section},
+            endpoint="returns/einvoice",
             otp=otp,
         )
