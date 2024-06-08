@@ -2007,7 +2007,6 @@ def download_gstr_1_json(
     delete_missing=False,
 ):
     frappe.has_permission("GSTR-1 Beta", "export", throw=True)
-    print(include_uploaded, delete_missing, "exporting json\n\n")
 
     if isinstance(include_uploaded, str):
         include_uploaded = json.loads(include_uploaded)
