@@ -5,22 +5,13 @@ from frappe import _
 from frappe.query_builder.terms import Criterion
 from frappe.utils import cint
 
-from india_compliance.gst_india.api_classes.returns import (
-    GSTR2aAPI,
-    GSTR2bAPI,
-    ReturnsAPI,
-)
+from india_compliance.gst_india.api_classes.returns import GSTR2aAPI, GSTR2bAPI
 from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
     create_import_log,
-    toggle_scheduled_jobs,
 )
 from india_compliance.gst_india.utils import get_party_for_gstin
-from india_compliance.gst_india.utils.gstr import gstr_2a, gstr_2b
-
-
-class ReturnType(Enum):
-    GSTR2A = "GSTR2a"
-    GSTR2B = "GSTR2b"
+from india_compliance.gst_india.utils.gstr_2 import gstr_2a, gstr_2b
+from india_compliance.gst_india.utils.gstr_utils import ReturnType
 
 
 class GSTRCategory(Enum):
@@ -332,68 +323,6 @@ def _download_gstr_2a(gstin, return_period, json_data):
     json_data.gstin = gstin
     json_data.fp = return_period
     save_gstr_2a(gstin, return_period, json_data)
-
-
-GSTR_FUNCTIONS = {
-    ReturnType.GSTR2A.value: _download_gstr_2a,
-    ReturnType.GSTR2B.value: save_gstr_2b,
-}
-
-
-def download_queued_request():
-    queued_requests = frappe.get_all(
-        "GSTR Import Log",
-        filters={"request_id": ["is", "set"]},
-        fields=[
-            "name",
-            "gstin",
-            "return_type",
-            "classification",
-            "return_period",
-            "request_id",
-            "request_time",
-        ],
-    )
-
-    if not queued_requests:
-        return toggle_scheduled_jobs(stopped=True)
-
-    for doc in queued_requests:
-        frappe.enqueue(_download_queued_request, queue="long", doc=doc)
-
-
-def _download_queued_request(doc):
-    try:
-        api = ReturnsAPI(doc.gstin)
-        response = api.download_files(
-            doc.return_period,
-            doc.request_id,
-        )
-
-    except Exception as e:
-        frappe.db.delete("GSTR Import Log", {"name": doc.name})
-        raise e
-
-    if response.error_type in ["otp_requested", "invalid_otp"]:
-        return toggle_scheduled_jobs(stopped=True)
-
-    if response.error_type == "no_docs_found":
-        return create_import_log(
-            doc.gstin,
-            doc.return_type,
-            doc.return_period,
-            doc.classification,
-            data_not_found=True,
-        )
-
-    if response.error_type == "queued":
-        return
-
-    if response.error_type:
-        return frappe.db.delete("GSTR Import Log", {"name": doc.name})
-
-    frappe.db.set_value("GSTR Import Log", doc.name, "request_id", None)
-    GSTR_FUNCTIONS[doc.return_type](doc.gstin, doc.return_period, response)
 
 
 def show_queued_message():
