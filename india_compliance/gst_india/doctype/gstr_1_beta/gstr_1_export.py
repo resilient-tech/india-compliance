@@ -726,6 +726,35 @@ class BooksExcel(DataProcessor):
 
         self.data = self.process_data(gstr1_log.load_data("books")["books"])
 
+    def process_data(self, data):
+        category_wise_data = super().process_data(data)
+
+        DOC_ITEM_FIELD_MAP = {
+            GSTR1_DataField.TAXABLE_VALUE.value: GSTR1_ItemField.TAXABLE_VALUE.value,
+            GSTR1_DataField.IGST.value: GSTR1_ItemField.IGST.value,
+            GSTR1_DataField.CGST.value: GSTR1_ItemField.CGST.value,
+            GSTR1_DataField.SGST.value: GSTR1_ItemField.SGST.value,
+            GSTR1_DataField.CESS.value: GSTR1_ItemField.CESS.value,
+        }
+
+        for category, category_data in category_wise_data.items():
+            # filter missing in books
+            category_wise_data[category] = [
+                doc
+                for doc in category_data
+                if doc.get("upload_status") != "Missing in Books"
+            ]
+
+            # copy doc value to item fields
+            if category != GovJsonKey.B2CS.value:
+                continue
+
+            for doc in category_wise_data[category]:
+                for doc_field, item_field in DOC_ITEM_FIELD_MAP.items():
+                    doc[item_field] = doc.get(doc_field, 0)
+
+        return category_wise_data
+
     def export_data(self):
         excel = ExcelExporter()
         excel.remove_sheet("Sheet")
@@ -745,10 +774,6 @@ class BooksExcel(DataProcessor):
         for category in ("NIL_EXEMPT", "HSN", "AT", "TXP", "DOC_ISSUE"):
             data = self.data.get(GovJsonKey[category].value)
 
-            data = list(
-                filter(lambda row: row.get("upload_status") != "Missing in Books", data)
-            )
-
             if not data:
                 continue
 
@@ -761,7 +786,7 @@ class BooksExcel(DataProcessor):
             )
 
     def get_document_data(self):
-        category = [
+        taxable_inv_categories = [
             GovJsonKey.B2B.value,
             GovJsonKey.EXP.value,
             GovJsonKey.B2CL.value,
@@ -772,16 +797,12 @@ class BooksExcel(DataProcessor):
 
         category_data = []
         for key, values in self.data.items():
-            if key not in category:
+            if key not in taxable_inv_categories:
                 continue
 
-            values = list(
-                filter(
-                    lambda row: row.get("upload_status") != "Missing in Books", values
-                )
-            )
-
             category_data.extend(values)
+
+        return category_data
 
     def get_document_headers(self):
         return [

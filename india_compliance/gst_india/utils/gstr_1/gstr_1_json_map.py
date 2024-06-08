@@ -2126,6 +2126,7 @@ class BooksDataMapper:
             {
                 GSTR1_DataField.DOC_DATE.value: invoice.posting_date,
                 GSTR1_DataField.DOC_NUMBER.value: invoice.invoice_no,
+                GSTR1_DataField.DOC_VALUE.value: invoice.invoice_total,
                 GSTR1_DataField.CUST_NAME.value: invoice.customer_name,
                 # currently other value is not supported in GSTR-1
                 GSTR1_DataField.DOC_TYPE.value: "OE",
