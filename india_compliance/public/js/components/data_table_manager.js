@@ -78,12 +78,7 @@ india_compliance.DataTableManager = class DataTableManager {
                 value = column._value(value, column, data);
             }
 
-            return frappe.form.get_formatter(column.docfield.fieldtype)(
-                value,
-                column.docfield,
-                { always_show_decimals: true },
-                data
-            );
+            return frappe.format(value, column, { always_show_decimals: true }, data);
         };
 
         return {
@@ -125,7 +120,7 @@ india_compliance.DataTableManager = class DataTableManager {
             dynamicRowHeight: true,
             checkboxColumn: true,
             inlineFilters: true,
-            noDataMessage: "No Matching Data Found!",
+            noDataMessage: __("No Matching Data Found!"),
             // clusterize: false,
             events: {
                 onCheckRow: () => {

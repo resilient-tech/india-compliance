@@ -1,0 +1,83 @@
+{% var gov = data.gov;
+var books = data.books%}
+<div class="container">
+    {%if data.customer_name%}
+    <div class="row m-2">
+        <div class="col font-weight-bold">Customer Name:</div>
+        <div class="col">{{ data.customer_name}}</div>
+    </div>
+    {% endif %}
+
+    {%if data.document_number%}
+    <div class="row m-2">
+        <div class="col font-weight-bold">Invoice Number:</div>
+        <div class="col"> {{ frappe.utils.get_form_link("Sales Invoice",data.document_number, true)
+            }}</div>
+    </div>
+    {% endif %}
+    {%if data.document_type%}
+    <div class="row m-2">
+        <div class="col font-weight-bold">Invoice Type:</div>
+        <div class="col">{{ data.document_type }}</div>
+    </div>
+    {% endif %}
+    {%if data.match_status%}
+    <div class="row m-2">
+        <div class="col font-weight-bold">Match Status:</div>
+        <div class="col">{{ data.match_status }}</div>
+    </div>
+    {% endif %}
+    <table class="table table-bordered table-hover">
+        <thead>
+            <tr class="text-center">
+                <th></th>
+                <th>Books</th>
+                <th>GSTR-1</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% var gov_keys=Object.keys(data.gov);
+            var books_keys=Object.keys(data.books);
+            var field_keys = gov_keys.length ? gov_keys : books_keys
+            %}
+            {% for fieldmap in fieldname_map %}
+
+            {% var column_title = fieldmap[1];
+            var fieldname = fieldmap[0];
+
+            var is_currency_field = currency_map[fieldname] || false;
+
+            if(is_currency_field){
+            if(data.books[fieldname])
+            var book_value=format_currency(data.books[fieldname]);
+            else
+            var book_value = "-"
+            }
+            else{
+            var book_value=data.books[fieldname] || "-"
+            }
+
+            if(is_currency_field){
+            if(data.gov[fieldname])
+            var gov_value=format_currency(data.gov[fieldname]);
+            else
+            var gov_value = "-"
+            }
+            else{
+            var gov_value=data.gov[fieldname] || "-"
+            }
+
+            var gov_value = is_currency_field ? format_currency(data.gov[fieldname] || 0) :
+            (data.gov[fieldname] || "-");
+
+            %}
+
+            <tr class="text-center">
+                <td style="width: 30%"><b>{{ column_title }}</b></td>
+                <td style="width: 35%" data-label={{fieldname}}>{{ book_value }}</td>
+                <td style="width: 35%"  data-label={{fieldname}}>{{ gov_value }} </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
