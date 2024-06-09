@@ -777,7 +777,11 @@ class GSTR1Log(GenerateGSTR1, Document):
         if not settings:
             settings = frappe.get_cached_doc("GST Settings")
 
-        return is_production_api_enabled(settings) and settings.analyze_filed_data
+        return (
+            is_production_api_enabled(settings)
+            and settings.compare_gstr_1_data
+            and settings.has_valid_credentials(self.gstin, "Returns")
+        )
 
     def is_sek_needed(self, settings=None):
         if not self.is_gstr1_api_enabled(settings):
