@@ -216,7 +216,7 @@ def set_default_gst_settings():
         "reconcile_for_b2b": 1,
         "reconcile_for_cdnr": 1,
         # GSTR-1
-        "analyze_filed_data": 1,
+        "compare_gstr_1_data": 1,
         "freeze_transactions": 1,
         "filing_frequency": "Monthly",
     }

@@ -270,7 +270,7 @@ class GSTSettings(Document):
 
             company_list.append(row.company)
 
-    def is_sek_valid(self, gstin, throw=True, threshold=30):
+    def is_sek_valid(self, gstin, throw=False, threshold=30):
         for credential in self.credentials:
             if credential.service == "Returns" and credential.gstin == gstin:
                 break
@@ -289,6 +289,22 @@ class GSTSettings(Document):
             None, minutes=threshold * -1
         ):
             return True
+
+    def has_valid_credentials(self, gstin, service, throw=False):
+        for credential in self.credentials:
+            if credential.gstin == gstin and credential.service == service:
+                break
+        else:
+            message = _(
+                "No credential found for the GSTIN {0} in the GST Settings"
+            ).format(gstin)
+
+            if throw:
+                frappe.throw(message)
+
+            return False
+
+        return True
 
 
 @frappe.whitelist()
