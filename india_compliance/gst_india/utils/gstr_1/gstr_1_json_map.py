@@ -55,6 +55,12 @@ class GovDataMapper:
         GovDataField.CGST.value,
         GovDataField.SGST.value,
         GovDataField.CESS.value,
+        GovDataField.NET_TAXABLE_VALUE.value,
+        GovDataField.EXEMPTED_AMOUNT.value,
+        GovDataField.NIL_RATED_AMOUNT.value,
+        GovDataField.NON_GST_AMOUNT.value,
+        GovDataField.QUANTITY.value,
+        GovDataField.ADVANCE_AMOUNT.value,
     }
 
     DISCARD_IF_ZERO_FIELDS = {
