@@ -2082,7 +2082,7 @@ function is_gstr1_api_enabled() {
     return (
         india_compliance.is_api_enabled() &&
         !gst_settings.sandbox_mode &&
-        gst_settings.analyze_filed_data
+        gst_settings.compare_gstr_1_data
     );
 }
 
