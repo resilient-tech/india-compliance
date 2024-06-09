@@ -258,6 +258,7 @@ class ReconcileGSTR1:
 
                     if not gov_value:
                         row["upload_status"] = "Not Uploaded"
+                        continue
 
                     if reconcile_row:
                         row["upload_status"] = "Mismatch"
