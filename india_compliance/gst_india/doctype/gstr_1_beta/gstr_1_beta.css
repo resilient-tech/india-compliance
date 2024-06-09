@@ -93,27 +93,32 @@ div[data-page-route="GSTR-1 Beta"] .frappe-control [data-fieldtype="HTML"] {
 
 div[data-page-route="GSTR-1 Beta"] .custom-tabs > .nav-item > .nav-link {
     padding: 4px 8px;
+    outline: 1px solid var(--dark-border-color);
+}
+
+div[data-page-route="GSTR-1 Beta"] .custom-tabs > .nav-item > .nav-link.focus {
+    outline: 1px solid var(--dark-border-color);
 }
 
 div[data-page-route="GSTR-1 Beta"] .custom-tabs > .nav-item > .nav-link.active {
-    background-color: #e2e2e2;
     color: var(--primary);
+    background-color: #ecf5fe;
+    outline: 1px solid var(--dark-border-color);
+    box-shadow: none;
 }
 
 div[data-page-route="GSTR-1 Beta"] .custom-tabs > .nav-item:first-child:not(:has(.disabled)):hover {
-    background-color: var(--btn-default-hover-bg);
-    border-radius: 0.4rem 0 0 0.4rem;
+    background-color: var(--fg-hover-color);
     color: var(--text-color);
 }
 
 div[data-page-route="GSTR-1 Beta"] .custom-tabs > .nav-item:last-child:not(:has(.disabled)):hover {
-    background-color: var(--btn-default-hover-bg);
-    border-radius: 0 0.4rem 0.4rem 0;
+    background-color: var(--fg-hover-color);
     color: var(--text-color);
 }
 
 div[data-page-route="GSTR-1 Beta"] .custom-tabs > .nav-item > .nav-link.active:hover {
-    background-color: #ededed;
+    background-color: var(--fg-hover-color);
     color: var(--primary);
 }
 

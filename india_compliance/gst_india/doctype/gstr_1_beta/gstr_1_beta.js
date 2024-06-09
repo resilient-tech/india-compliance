@@ -659,8 +659,8 @@ class GSTR1 {
             </div>
         </div>`;
 
-        let element = $('[data-fieldname="data_section"]');
-        element.prepend(gst_liability_html);
+        let element = $('[data-fieldname="tabs_html"]');
+        element.closest(".row.form-section").prepend(gst_liability_html);
     }
 }
 

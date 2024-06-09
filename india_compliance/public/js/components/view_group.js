@@ -18,7 +18,7 @@ india_compliance.ViewGroup = class ViewGroup {
 
         this.view_group_container = $(`
             <ul
-                class= "nav custom-tabs rounded-sm border d-inline-flex"
+                class= "nav custom-tabs"
                 id = "custom-tabs"
                 role = "tablist"
             ></ul>
@@ -39,7 +39,7 @@ india_compliance.ViewGroup = class ViewGroup {
                 `
                 <li class="nav-item show">
                     <a
-                        class="nav-link ${this.active_view === view ? "active" : ""}"
+                        class="nav-link btn btn-group btn-default ${this.active_view === view ? "active" : ""}"
                         id = "gstr-1-__${view}-view"
                         data-toggle="tab"
                         data-fieldname="${view}"
