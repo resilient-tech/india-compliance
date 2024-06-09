@@ -154,6 +154,10 @@ class BaseAPI:
                     )
 
             response_json = self.process_response(response_json)
+
+            if response_json.get("error_type") == "invalid_public_key":
+                return self._make_request(method, endpoint, params, headers, json)
+
             return response_json.get("result", response_json)
 
         except Exception as e:
