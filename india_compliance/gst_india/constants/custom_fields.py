@@ -49,6 +49,7 @@ party_fields = [
 ]
 
 CUSTOM_FIELDS = {
+    # Subcontracting Receipt: Tax Fields
     "Subcontracting Receipt": [
         {
             "fieldname": "section_break_taxes",
@@ -124,6 +125,83 @@ CUSTOM_FIELDS = {
             "fetch_from": "",
         },
     ],
+    # Subcontracting Order: Tax Fields
+    "Subcontracting Order": [
+        {
+            "fieldname": "section_break_taxes",
+            "label": "Taxes",
+            "fieldtype": "Section Break",
+            "insert_after": "total",
+        },
+        {
+            "fieldname": "taxes_and_charges",
+            "label": "Taxes and Charges Template",
+            "fieldtype": "Link",
+            "insert_after": "section_break_taxes",
+            "options": "Sales Taxes and Charges Template",
+            "print_hide": 1,
+        },
+        {
+            "fieldname": "taxes",
+            "label": "Estimated Taxes",
+            "fieldtype": "Table",
+            "options": "Stock Entry Taxes",
+            "insert_after": "taxes_and_charges",
+        },
+        {
+            "fieldname": "total_taxes",
+            "label": "Total Estimated Taxes",
+            "fieldtype": "Currency",
+            "insert_after": "taxes",
+            "read_only": 1,
+        },
+        {
+            "fieldname": "shipping_gstin",
+            "label": "Shipping GSTIN",
+            "fieldtype": "Data",
+            "insert_after": "shipping_address_display",
+            "fetch_from": "shipping_address.gstin",
+            "print_hide": 1,
+            "read_only": 1,
+            "translatable": 0,
+        },
+        {
+            "fieldname": "billing_gstin",
+            "label": "Billing GSTIN",
+            "fieldtype": "Data",
+            "insert_after": "billing_address_display",
+            "fetch_from": "billing_address.gstin",
+            "print_hide": 1,
+            "read_only": 1,
+            "translatable": 0,
+        },
+        {
+            "fieldname": "gst_category",
+            "label": "GST Category",
+            "fieldtype": "Data",
+            "insert_after": "address_display",
+            "read_only": 1,
+            "print_hide": 1,
+            # values set to None to remove them from earlier installations
+            "options": None,
+            "default": None,
+            "fetch_from": "billing_address.gst_category",
+            "translatable": 0,
+            "fetch_if_empty": 0,
+        },
+        {
+            "fieldname": "place_of_supply",
+            "label": "Place of Supply",
+            "fieldtype": "Autocomplete",
+            "options": get_place_of_supply_options(),
+            "insert_after": "gst_category",
+            "print_hide": 1,
+            "read_only": 0,
+            "translatable": 0,
+            "fetch_from": "",
+        },
+    ],
+    # Stock Entry: Tax Fields
     "Stock Entry": [
         {
             "fieldname": "section_break_taxes",
@@ -1343,16 +1421,6 @@ E_WAYBILL_PURCHASE_RECEIPT_FIELDS = [
 
 E_WAYBILL_SE_FIELDS = [
     {
-        "fieldname": "transporter_info",
-        "label": "Transporter Info",
-        "fieldtype": "Section Break",
-        "insert_after": "letter_head",
-        "collapsible": 1,
-        "collapsible_depends_on": "transporter",
-        "print_hide": 1,
-        "depends_on": "eval:doc.purpose === 'Send to Subcontractor'",
-    },
-    {
         "fieldname": "transporter",
         "label": "Transporter",
         "fieldtype": "Link",
@@ -1458,17 +1526,43 @@ e_waybill_status_field = {
     "read_only_depends_on": "eval:doc.ewaybill",
 }
 
+transporter_info_field = {
+    "fieldname": "transporter_info",
+    "label": "Transporter Info",
+    "fieldtype": "Section Break",
+    "insert_after": "letter_head",
+    "collapsible": 1,
+    "collapsible_depends_on": "transporter",
+    "print_hide": 1,
+}
+
 purchase_e_waybill_field = {**sales_e_waybill_field, "insert_after": "supplier_name"}
 
-stock_entry_e_way_bill_field = {
-    **sales_e_waybill_field,
-    "insert_after": "posting_time",
-}
+stock_entry_e_way_bill_field = [
+    {
+        **sales_e_waybill_field,
+        "insert_after": "posting_time",
+    },
+    {
+        **transporter_info_field,
+        "depends_on": "eval:doc.purpose === 'Send to Subcontractor'",
+    },
+]
 
 subcontracting_receipt_e_way_bill_field = {
     **sales_e_waybill_field,
     "insert_after": "supplier_name",
 }
+
+subcontracting_order_e_way_bill_field = [
+    {
+        **sales_e_waybill_field,
+        "insert_after": "schedule_date",
+    },
+    {
+        **transporter_info_field,
+    },
+]
 
 E_WAYBILL_FIELDS = {
     "Sales Invoice": E_WAYBILL_INV_FIELDS
@@ -1477,7 +1571,9 @@ E_WAYBILL_FIELDS = {
     "Purchase Invoice": E_WAYBILL_INV_FIELDS + [purchase_e_waybill_field],
     "Purchase Receipt": E_WAYBILL_PURCHASE_RECEIPT_FIELDS + [purchase_e_waybill_field],
     "Stock Entry": E_WAYBILL_SE_FIELDS
-    + [e_waybill_status_field, stock_entry_e_way_bill_field],
+    + [e_waybill_status_field, *stock_entry_e_way_bill_field],
     "Subcontracting Receipt": E_WAYBILL_SCR_FIELDS
     + [e_waybill_status_field, subcontracting_receipt_e_way_bill_field],
+    "Subcontracting Order": E_WAYBILL_SE_FIELDS
+    + [e_waybill_status_field, *subcontracting_order_e_way_bill_field],
 }
