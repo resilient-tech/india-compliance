@@ -58,6 +58,7 @@ doctype_js = {
         "gst_india/client_scripts/sales_invoice.js",
     ],
     "Stock Entry": "gst_india/client_scripts/stock_entry.js",
+    "Subcontracting Receipt": "gst_india/client_scripts/subcontracting_receipt.js",
     "Supplier": "gst_india/client_scripts/supplier.js",
     "Accounts Settings": "audit_trail/client_scripts/accounts_settings.js",
     "Customize Form": "audit_trail/client_scripts/customize_form.js",
@@ -212,6 +213,11 @@ doc_events = {
         "validate": "india_compliance.gst_india.overrides.stock_entry.validate",
         "before_save": "india_compliance.gst_india.overrides.stock_entry.before_save",
         "before_submit": "india_compliance.gst_india.overrides.stock_entry.before_submit",
+    },
+    "Subcontracting Receipt": {
+        "validate": "india_compliance.gst_india.overrides.subcontracting_receipt.validate",
+        "before_save": "india_compliance.gst_india.overrides.subcontracting_receipt.before_save",
+        "before_submit": "india_compliance.gst_india.overrides.subcontracting_receipt.before_submit",
     },
     "Supplier": {
         "validate": [
