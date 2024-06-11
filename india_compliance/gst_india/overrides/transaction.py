@@ -733,7 +733,12 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
      - taxes in the tax template
     """
 
-    is_sales_transaction = doctype in SALES_DOCTYPES or doctype == "Payment Entry"
+    is_sales_transaction = doctype in SALES_DOCTYPES or doctype in [
+        "Payment Entry",
+        "Stock Entry",
+        "Subcontracting Order",
+        "Subcontracting Receipt",
+    ]
     party_details = frappe.parse_json(party_details)
     gst_details = frappe._dict()
 
