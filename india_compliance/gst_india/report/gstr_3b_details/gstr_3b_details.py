@@ -6,7 +6,7 @@ from frappe import _
 from frappe.query_builder import Case, DatePart
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Extract, Ifnull, IfNull, LiteralValue, Sum
-from frappe.utils import cint, flt, get_first_day, get_last_day
+from frappe.utils import cint, get_first_day, get_last_day
 
 from india_compliance.gst_india.utils import get_escaped_gst_accounts
 
@@ -418,274 +418,79 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
 
 class IneligibleITC:
     def __init__(self, company, gstin, month, year) -> None:
-        self.gl_entry = frappe.qb.DocType("GL Entry")
         self.company = company
         self.gstin = gstin
         self.month = month
         self.year = year
-        self.gst_accounts = get_escaped_gst_accounts(company, "Input")
 
     def get_ineligible_itc_us_17_5_for_purchase(self, group_by="name"):
         """
-        - Ineligible As Per Section 17(5)
         - ITC restricted due to ineligible items in purchase invoice
         """
-        ineligible_transactions = self.get_vouchers_with_gst_expense("Purchase Invoice")
 
-        if not ineligible_transactions:
-            return []
-
-        pi = frappe.qb.DocType("Purchase Invoice")
-
-        credit_availed = (
-            self.get_gl_entry_query("Purchase Invoice")
-            .inner_join(pi)
-            .on(pi.name == self.gl_entry.voucher_no)
-            .select(*self.select_net_gst_amount_from_gl_entry())
-            .select(
-                pi.name.as_("voucher_no"),
-                pi.ineligibility_reason.as_("itc_classification"),
-            )
-            .where(
-                IfNull(pi.ineligibility_reason, "") == "Ineligible As Per Section 17(5)"
-            )
-            .where(pi.name.isin(ineligible_transactions))
-            .groupby(pi[group_by])
-            .run(as_dict=1)
+        return self.get_ineligible_pi_data_by_category(
+            "Ineligible As Per Section 17(5)", group_by
         )
-
-        credit_available = (
-            frappe.qb.from_(pi)
-            .select(
-                ConstantColumn("Purchase Invoice").as_("voucher_type"),
-                pi.name.as_("voucher_no"),
-                pi.posting_date,
-                pi.ineligibility_reason.as_("itc_classification"),
-                Sum(pi.itc_integrated_tax).as_("iamt"),
-                Sum(pi.itc_central_tax).as_("camt"),
-                Sum(pi.itc_state_tax).as_("samt"),
-                Sum(pi.itc_cess_amount).as_("csamt"),
-            )
-            .where(
-                IfNull(pi.ineligibility_reason, "") == "Ineligible As Per Section 17(5)"
-            )
-            .where(pi.name.isin(ineligible_transactions))
-            .groupby(pi[group_by])
-            .run(as_dict=1)
-        )
-
-        return self.get_ineligible_credit(credit_availed, credit_available, group_by)
 
     def get_ineligible_itc_due_to_pos_for_purchase(self, group_by="name"):
         """
-        - ITC restricted due to PoS rules
+        - ITC restricted due to ineligible items in purchase invoice
         """
-        ineligible_transactions = self.get_vouchers_with_gst_expense("Purchase Invoice")
 
-        if not ineligible_transactions:
-            return []
-
-        pi = frappe.qb.DocType("Purchase Invoice")
-        taxes = frappe.qb.DocType("Purchase Taxes and Charges")
-
-        # utility function
-        def get_tax_case_statement(account, alias):
-            return Sum(
-                Case()
-                .when(
-                    taxes.account_head.isin(account),
-                    taxes.base_tax_amount_after_discount_amount,
-                )
-                .else_(0)
-            ).as_(alias)
-
-        # Credit availed is not required as it will be always 0 for pos
-
-        ineligible_credit = (
-            frappe.qb.from_(pi)
-            .inner_join(taxes)
-            .on(pi.name == taxes.parent)
-            .select(
-                pi.name.as_("voucher_no"),
-                pi.posting_date,
-                pi.ineligibility_reason.as_("itc_classification"),
-                get_tax_case_statement([self.gst_accounts.igst_account], "iamt"),
-                get_tax_case_statement([self.gst_accounts.cgst_account], "camt"),
-                get_tax_case_statement([self.gst_accounts.sgst_account], "camt"),
-                get_tax_case_statement(
-                    [
-                        self.gst_accounts.cess_account,
-                        self.gst_accounts.cess_non_advol_account,
-                    ],
-                    "csamt",
-                ),
-            )
-            .where(taxes.account_head.isin(list(self.gst_accounts.values())))
-            .where(
-                IfNull(pi.ineligibility_reason, "") == "ITC restricted due to PoS rules"
-            )
-            .where(pi.name.isin(ineligible_transactions))
-            .groupby(pi[group_by])
-            .run(as_dict=True)
+        return self.get_ineligible_pi_data_by_category(
+            "ITC restricted due to PoS rules", group_by
         )
 
-        return ineligible_credit
+    def get_ineligible_pi_data_by_category(self, ineligibility_reason, group_by):
+        doctype = "Purchase Invoice"
+        dt = frappe.qb.DocType(doctype)
+        dt_item = frappe.qb.DocType(f"{doctype} Item")
+
+        query = (
+            self.get_common_query(doctype, dt, dt_item)
+            .select((dt.ineligibility_reason).as_("itc_classification"))
+            .where((dt.is_opening == "No"))
+            .where(IfNull(dt.ineligibility_reason, "") == ineligibility_reason)
+        )
+
+        if ineligibility_reason == "Ineligible As Per Section 17(5)":
+            query = query.where(dt_item.is_ineligible_for_itc == 1)
+
+        return query.groupby(dt[group_by]).run(as_dict=True)
 
     def get_for_bill_of_entry(self, group_by="name"):
-        ineligible_transactions = self.get_vouchers_with_gst_expense("Bill of Entry")
-
-        if not ineligible_transactions:
-            return
-
-        boe = frappe.qb.DocType("Bill of Entry")
-        boe_taxes = frappe.qb.DocType("Bill of Entry Taxes")
-
-        credit_availed = (
-            self.get_gl_entry_query("Bill of Entry")
-            .inner_join(boe)
-            .on(boe.name == self.gl_entry.voucher_no)
-            .select(*self.select_net_gst_amount_from_gl_entry())
-            .select(
-                boe.name.as_("voucher_no"),
-                ConstantColumn("Ineligible As Per Section 17(5)").as_(
-                    "itc_classification"
-                ),
-            )
-            .where(boe.name.isin(ineligible_transactions))
-            .groupby(boe[group_by])
-            .run(as_dict=1)
-        )
-
-        credit_available = (
-            frappe.qb.from_(boe)
-            .join(boe_taxes)
-            .on(boe_taxes.parent == boe.name)
-            .select(
-                ConstantColumn("Bill of Entry").as_("voucher_type"),
-                boe.name.as_("voucher_no"),
-                boe.posting_date,
-                Sum(
-                    Case()
-                    .when(
-                        boe_taxes.account_head == self.gst_accounts.igst_account,
-                        boe_taxes.tax_amount,
-                    )
-                    .else_(0)
-                ).as_("iamt"),
-                Sum(
-                    Case()
-                    .when(
-                        boe_taxes.account_head == self.gst_accounts.cess_account,
-                        boe_taxes.tax_amount,
-                    )
-                    .else_(0)
-                ).as_("csamt"),
-                LiteralValue(0).as_("camt"),
-                LiteralValue(0).as_("samt"),
-                ConstantColumn("Ineligible As Per Section 17(5)").as_(
-                    "itc_classification"
-                ),
-            )
-            .where(boe.name.isin(ineligible_transactions))
-            .groupby(boe[group_by])
-            .run(as_dict=1)
-        )
-
-        return self.get_ineligible_credit(credit_availed, credit_available, group_by)
-
-    def get_ineligible_credit(self, credit_availed, credit_available, group_by):
-        if group_by == "name":
-            group_by_field = "voucher_no"
-        elif group_by == "ineligibility_reason":
-            group_by_field = "itc_classification"
-        else:
-            group_by_field = group_by
-
-        credit_availed_dict = frappe._dict(
-            {d[group_by_field]: d for d in credit_availed}
-        )
-        ineligible_credit = []
-        tax_amounts = ["camt", "samt", "iamt", "csamt"]
-
-        for row in credit_available:
-            credit_availed = credit_availed_dict.get(row[group_by_field])
-            if not credit_availed:
-                ineligible_credit.append(row)
-                continue
-
-            for key in tax_amounts:
-                if key not in row:
-                    continue
-
-                row[key] -= flt(credit_availed.get(key, 0))
-
-            ineligible_credit.append(row)
-
-        return ineligible_credit
-
-    def get_vouchers_with_gst_expense(self, voucher_type):
-        gst_expense_account = frappe.get_cached_value(
-            "Company", self.company, "default_gst_expense_account"
-        )
-
-        data = (
-            self.get_gl_entry_query(voucher_type)
-            .select(self.gl_entry.voucher_no)
-            .where(self.gl_entry.account == gst_expense_account)
-            .run(as_dict=1)
-        )
-
-        return set([d.voucher_no for d in data])
-
-    def select_net_gst_amount_from_gl_entry(self):
-        account_field_map = {
-            "cgst_account": "camt",
-            "sgst_account": "samt",
-            "igst_account": "iamt",
-            "cess_account": "csamt",
-        }
-        fields = []
-
-        for account_field, key in account_field_map.items():
-            if (
-                account_field not in self.gst_accounts
-                or not self.gst_accounts[account_field]
-            ):
-                continue
-
-            fields.append(
-                (
-                    Sum(
-                        Case()
-                        .when(
-                            self.gl_entry.account.eq(self.gst_accounts[account_field]),
-                            self.gl_entry.debit_in_account_currency,
-                        )
-                        .else_(0)
-                    )
-                    - Sum(
-                        Case()
-                        .when(
-                            self.gl_entry.account.eq(self.gst_accounts[account_field]),
-                            self.gl_entry.credit_in_account_currency,
-                        )
-                        .else_(0)
-                    )
-                ).as_(key)
-            )
-
-        return fields
-
-    def get_gl_entry_query(self, voucher_type):
+        doctype = "Bill of Entry"
+        dt = frappe.qb.DocType(doctype)
+        dt_item = frappe.qb.DocType(f"{doctype} Item")
         query = (
-            frappe.qb.from_(self.gl_entry)
-            .where(self.gl_entry.docstatus == 1)
-            .where(self.gl_entry.is_opening == "No")
-            .where(self.gl_entry.voucher_type == voucher_type)
-            .where(self.gl_entry.is_cancelled == 0)
-            .where(self.gl_entry.company_gstin == self.gstin)
-            .where(Extract(DatePart.month, self.gl_entry.posting_date).eq(self.month))
-            .where(Extract(DatePart.year, self.gl_entry.posting_date).eq(self.year))
+            self.get_common_query(doctype, dt, dt_item)
+            .select(
+                ConstantColumn("Ineligible As Per Section 17(5)").as_(
+                    "itc_classification"
+                )
+            )
+            .where(dt_item.is_ineligible_for_itc == 1)
         )
 
-        return query
+        return query.groupby(dt[group_by]).run(as_dict=True)
+
+    def get_common_query(self, doctype, dt, dt_item):
+        return (
+            frappe.qb.from_(dt)
+            .join(dt_item)
+            .on(dt.name == dt_item.parent)
+            .select(
+                ConstantColumn(doctype).as_("voucher_type"),
+                dt.name.as_("voucher_no"),
+                dt.posting_date,
+                Sum(dt_item.igst_amount).as_("iamt"),
+                Sum(dt_item.cgst_amount).as_("camt"),
+                Sum(dt_item.sgst_amount).as_("samt"),
+                Sum(dt_item.cess_amount + dt_item.cess_non_advol_amount).as_("csamt"),
+            )
+            .where(dt.docstatus == 1)
+            .where(dt.company_gstin == self.gstin)
+            .where(dt.company == self.company)
+            .where(Extract(DatePart.month, dt.posting_date).eq(self.month))
+            .where(Extract(DatePart.year, dt.posting_date).eq(self.year))
+        )

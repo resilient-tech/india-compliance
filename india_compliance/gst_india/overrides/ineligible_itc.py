@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import frappe
 from frappe import _
 from frappe.utils import flt, get_link_to_form
@@ -280,8 +282,10 @@ class IneligibleITC:
             "Input SGST - FC": 50,
         }
         """
-        ineligible_taxes = frappe._dict()
+        ineligible_taxes = defaultdict(float)
+        ineligible_tax_amount = 0
 
+        # TODO: GST Accounts from taxes table
         for type in GST_TAX_TYPES:
             tax_amount = item.get(f"{type}_amount")
             tax_account = self.gst_accounts.get(f"{type}_account")
@@ -289,11 +293,11 @@ class IneligibleITC:
             if not tax_amount:
                 continue
 
-            ineligible_taxes.setdefault(tax_account, 0)
             ineligible_taxes[tax_account] += tax_amount
+            ineligible_tax_amount += tax_amount
 
         item._ineligible_taxes = ineligible_taxes
-        item._ineligible_tax_amount = sum(ineligible_taxes.values())
+        item._ineligible_tax_amount = ineligible_tax_amount
 
     def update_item_valuation_rate(self, item, ineligible_tax_amount):
         item.valuation_rate += flt(ineligible_tax_amount / item.stock_qty, 2)
