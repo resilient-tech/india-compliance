@@ -4,7 +4,6 @@ frappe.ui.form.on("Subcontracting Receipt", {
     },
 
     onload(frm) {
-        frm.fields_dict.items.grid.cannot_add_rows = true;
         frm.subcontracting_receipt_controller = new SubcontractingReceiptController(frm);
     },
 
@@ -72,31 +71,6 @@ class SubcontractingReceiptController {
         this.frm.taxes_controller = new TaxesController(frm);
     }
 
-    setup() {
-        this.set_account_query();
-    }
-
-    set_account_query() {
-        [
-            {
-                name: "customs_payable_account",
-                filters: { root_type: "Liability", account_type: ["!=", "Payable"] },
-            },
-            { name: "customs_expense_account", filters: { root_type: "Expense" } },
-            { name: "cost_center" },
-        ].forEach(row => {
-            this.frm.set_query(row.name, () => {
-                return {
-                    filters: {
-                        ...row.filters,
-                        company: this.frm.doc.company,
-                        is_group: 0,
-                    },
-                };
-            });
-        });
-    }
-
     update_total_taxes() {
         const total_taxes = this.frm.doc.taxes.reduce(
             (total, row) => total + row.tax_amount,
@@ -113,26 +87,8 @@ class TaxesController {
     }
 
     setup() {
-        this.fetch_round_off_accounts();
         this.set_item_tax_template_query();
         this.set_account_head_query();
-    }
-
-    fetch_round_off_accounts() {
-        if (this.frm.doc.docstatus !== 0 || !this.frm.doc.company) return;
-
-        frappe.call({
-            method: "erpnext.controllers.taxes_and_totals.get_round_off_applicable_accounts",
-            args: {
-                company: this.frm.doc.company,
-                account_list: [],
-            },
-            callback(r) {
-                if (r.message) {
-                    frappe.flags.round_off_applicable_accounts = r.message;
-                }
-            },
-        });
     }
 
     set_item_tax_template_query() {
