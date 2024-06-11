@@ -271,7 +271,7 @@ regional_overrides = {
         "erpnext.controllers.accounts_controller.get_advance_payment_entries_for_regional": (
             "india_compliance.gst_india.overrides.payment_entry.get_advance_payment_entries_for_regional"
         ),
-        "erpnext.controllers.buying_controller.update_regional_item_valution": (
+        "erpnext.controllers.buying_controller.update_regional_item_valuation_rate": (
             "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate"
         ),
         "erpnext.accounts.doctype.payment_reconciliation.payment_reconciliation.adjust_allocations_for_taxes": (
