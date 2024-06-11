@@ -257,6 +257,14 @@ class Gstr1Report:
         Value mapping from books to GSTR-1 Excel.
         """
         row = {}
+        # For CDNR values should be positive
+        item_detail.update(
+            {
+                "taxable_value": abs(flt(item_detail.get("taxable_value", 0), 2)),
+                "cess_amount": abs(flt(item_detail.get("cess_amount", 0), 2)),
+            }
+        )
+
         for fieldname in self.invoice_fields:
             if (
                 self.filters.get("type_of_business") in ("CDNR-REG", "CDNR-UNREG")
