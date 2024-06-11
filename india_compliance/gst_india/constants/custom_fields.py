@@ -99,6 +99,13 @@ CUSTOM_FIELDS = {
             "fieldtype": "Check",
         },
         {
+            "label": "Image URL",
+            "fieldname": "image_url",
+            "insert_after": "enable_signature",
+            "fieldtype": "Data",
+            "translatable": 0,
+        },
+        {
             "label": "Bank Details",
             "fieldname": "bank_details",
             "insert_after": "enable_signature",
