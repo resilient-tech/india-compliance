@@ -437,6 +437,27 @@
                     "link_name": "_Test Indian Registered Company"
                 }
             ]
+        },
+        {
+            "name": "_Test Indian Unregistered Company-Shipping",
+            "address_type": "Billing",
+            "address_line1": "Test Address - 5",
+            "city": "Test City",
+            "state": "Gujarat",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "24AAQCA8719H1ZC",
+            "gst_category": "Registered Regular",
+            "links": [
+                {
+                    "link_doctype": "Warehouse",
+                    "link_name": "Finished Goods - _TIUC"
+                },
+                {
+                    "link_doctype": "Warehouse",
+                    "link_name": "Goods In Transit - _TIUC"
+                }
+            ]
         }
     ],
     "POS Profile": [
