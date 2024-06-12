@@ -547,6 +547,21 @@ CUSTOM_FIELDS = {
             "translatable": 0,
         },
     ],
+    "Sales Taxes and Charges": [
+        {
+            "fieldname": "gst_tax_type_column_break",
+            "fieldtype": "Column Break",
+            "insert_after": "rate",
+        },
+        {
+            "fieldname": "gst_tax_type",
+            "label": "GST Tax Type",
+            "fieldtype": "Data",
+            "insert_after": "gst_tax_type_column_break",
+            "read_only": 1,
+            "translatable": 0,
+        },
+    ],
     "Purchase Invoice": [
         {
             "fieldname": "gst_section",
@@ -632,6 +647,21 @@ CUSTOM_FIELDS = {
             "options": "Company:company:default_currency",
             "read_only": 1,
             "print_hide": 1,
+        },
+    ],
+    "Purchase Taxes and Charges": [
+        {
+            "fieldname": "gst_tax_type_column_break",
+            "fieldtype": "Column Break",
+            "insert_after": "rate",
+        },
+        {
+            "fieldname": "gst_tax_type",
+            "label": "GST Tax Type",
+            "fieldtype": "Data",
+            "insert_after": "gst_tax_type_column_break",
+            "read_only": 1,
+            "translatable": 0,
         },
     ],
     "Purchase Receipt": [
@@ -796,6 +826,16 @@ CUSTOM_FIELDS = {
             "translatable": 0,
             "fetch_if_empty": 0,
             "depends_on": 'eval:doc.party_type === "Customer"',
+        },
+    ],
+    "Advance Taxes and Charges": [
+        {
+            "fieldname": "gst_tax_type",
+            "label": "GST Tax Type",
+            "fieldtype": "Data",
+            "insert_after": "account_head",
+            "read_only": 1,
+            "translatable": 0,
         },
     ],
     "Journal Entry": [

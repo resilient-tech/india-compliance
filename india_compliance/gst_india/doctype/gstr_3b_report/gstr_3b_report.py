@@ -17,7 +17,6 @@ from india_compliance.gst_india.overrides.transaction import is_inter_state_supp
 from india_compliance.gst_india.report.gstr_3b_details.gstr_3b_details import (
     IneligibleITC,
 )
-from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 VALUES_TO_UPDATE = ["iamt", "camt", "samt", "csamt"]
 
@@ -230,7 +229,6 @@ class GSTR3BReport(Document):
     def update_imports_from_bill_of_entry(self, itc_details):
         boe = frappe.qb.DocType("Bill of Entry")
         boe_taxes = frappe.qb.DocType("Bill of Entry Taxes")
-        gst_accounts = get_gst_accounts_by_type(self.company, "Input")
 
         def _get_tax_amount(account_type):
             return (
@@ -245,7 +243,7 @@ class GSTR3BReport(Document):
                     )
                     & boe.company_gstin.eq(self.gst_details.get("gstin"))
                     & boe.docstatus.eq(1)
-                    & boe_taxes.account_head.eq(gst_accounts[account_type])
+                    & boe_taxes.gst_tax_type.eq(account_type[:-8])
                 )
                 .run()
             )[0][0] or 0

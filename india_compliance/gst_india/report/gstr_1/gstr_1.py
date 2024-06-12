@@ -11,6 +11,7 @@ from frappe.query_builder import Criterion
 from frappe.query_builder.functions import IfNull, Sum
 from frappe.utils import cint, flt, formatdate, getdate
 
+from india_compliance.gst_india.constants.__init__ import GST_TAX_TYPES
 from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies import (
     get_columns as get_hsn_columns,
 )
@@ -497,7 +498,7 @@ class Gstr1Report:
         invoice_tax_details = frappe.db.sql(
             """
             select
-                parent, account_head, item_wise_tax_detail
+                parent, account_head, item_wise_tax_detail,gst_tax_type
             from `tab%s`
             where
                 parenttype = %s and docstatus = 1
@@ -509,11 +510,11 @@ class Gstr1Report:
         )
         invoice_item_wise_tax_details = frappe._dict()
 
-        for parent, account, item_wise_tax_detail in invoice_tax_details:
+        for parent, account, item_wise_tax_detail, gst_tax_type in invoice_tax_details:
             if not item_wise_tax_detail:
                 continue
 
-            if account not in self.gst_accounts.values():
+            if gst_tax_type not in GST_TAX_TYPES:
                 if "gst" in account.lower():
                     unidentified_gst_accounts.add(account)
                 continue
@@ -523,14 +524,8 @@ class Gstr1Report:
             except ValueError:
                 continue
 
-            is_cess = account in (
-                self.gst_accounts.cess_account,
-                self.gst_accounts.cess_non_advol_account,
-            )
-            is_cgst_or_sgst = (
-                account == self.gst_accounts.cgst_account
-                or account == self.gst_accounts.sgst_account
-            )
+            is_cess = gst_tax_type in ("cess", "cess_non_advol")
+            is_cgst_or_sgst = gst_tax_type == "cgst" or gst_tax_type == "sgst"
 
             parent_dict = invoice_item_wise_tax_details.setdefault(parent, {})
             for item_code, invoice_tax_details in item_wise_tax_detail.items():

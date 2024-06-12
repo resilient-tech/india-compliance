@@ -13,6 +13,13 @@ GST_ACCOUNT_FIELDS = (
     "cess_account",
     "cess_non_advol_account",
 )
+GST_REVERSE_CHARGE = (
+    "cgst_rcm",
+    "sgst_rcm",
+    "igst_rcm",
+    "cess_rcm",
+    "cess_non_advol_rcm",
+)
 
 GST_TAX_TYPES = tuple(field[:-8] for field in GST_ACCOUNT_FIELDS)
 

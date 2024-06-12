@@ -21,6 +21,7 @@ from india_compliance.gst_india.overrides.ineligible_itc import (
 from india_compliance.gst_india.overrides.transaction import (
     ItemGSTDetails,
     ItemGSTTreatment,
+    set_gst_account_type,
     validate_charge_type_for_cess_non_advol_accounts,
 )
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
@@ -113,6 +114,7 @@ class BillofEntry(Document):
 
     def before_validate(self):
         self.set_taxes_and_totals()
+        set_gst_account_type(self)
 
     def before_save(self):
         update_gst_details(self)
@@ -263,7 +265,6 @@ class BillofEntry(Document):
                 )
 
     def validate_taxes(self):
-        input_accounts = get_gst_accounts_by_type(self.company, "Input", throw=True)
         taxable_value_map = {}
         item_qty_map = {}
 
@@ -275,10 +276,10 @@ class BillofEntry(Document):
             if not tax.tax_amount:
                 continue
 
-            if tax.account_head not in (
-                input_accounts.igst_account,
-                input_accounts.cess_account,
-                input_accounts.cess_non_advol_account,
+            if tax.gst_tax_type not in (
+                "igst",
+                "cess",
+                "cess_non_advol",
             ):
                 frappe.throw(
                     _(
@@ -287,9 +288,7 @@ class BillofEntry(Document):
                     ).format(tax.idx)
                 )
 
-            validate_charge_type_for_cess_non_advol_accounts(
-                [input_accounts.cess_non_advol_account], tax
-            )
+            validate_charge_type_for_cess_non_advol_accounts(tax)
 
             if tax.charge_type != "Actual":
                 continue
@@ -306,9 +305,7 @@ class BillofEntry(Document):
 
             # validating total tax
             total_tax = 0
-            is_non_cess_advol = (
-                tax.account_head == input_accounts.cess_non_advol_account
-            )
+            is_non_cess_advol = tax.gst_tax_type == "cess_non_advol"
 
             for item, rate in item_wise_tax_rates.items():
                 multiplier = (
@@ -506,6 +503,7 @@ def make_bill_of_entry(source_name, target_doc=None):
             {
                 "parenttype": "Purchase Taxes and Charges Template",
                 "account_head": input_igst_account,
+                "gst_tax_type": "igst",
             },
             ("rate", "description"),
         ) or (0, input_igst_account)
@@ -517,6 +515,7 @@ def make_bill_of_entry(source_name, target_doc=None):
                 "account_head": input_igst_account,
                 "rate": rate,
                 "description": description,
+                "gst_tax_type": "igst",
             },
         )
 

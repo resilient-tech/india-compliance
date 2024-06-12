@@ -127,7 +127,7 @@ class GSTTransactionData:
             ):
                 continue
 
-            tax = self.gst_accounts[row.account_head][:-8]
+            tax = row.gst_tax_type
             self.transaction_details[f"total_{tax}_amount"] = abs(
                 self.rounded(row.base_tax_amount_after_discount_amount)
             )
@@ -336,7 +336,7 @@ class GSTTransactionData:
                 continue
 
             # Remove '_account' from 'cgst_account'
-            tax = self.gst_accounts[row.account_head][:-8]
+            tax = row.gst_tax_type
             tax_rate = self.rounded(
                 frappe.parse_json(row.item_wise_tax_detail).get(
                     item.item_code or item.item_name
