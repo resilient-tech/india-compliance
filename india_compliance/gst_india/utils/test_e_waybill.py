@@ -471,7 +471,7 @@ class TestEWaybill(FrappeTestCase):
 
     @responses.activate
     def test_validate_if_e_waybill_is_set(self):
-        """Test validdation if e-waybill not found"""
+        """Test validation if e-waybill not found"""
         si = self.create_sales_invoice_for("goods_item_with_ewaybill")
         self._generate_e_waybill(si.name)
 
@@ -647,7 +647,7 @@ class TestEWaybill(FrappeTestCase):
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             re.compile(
-                r"^(Only Sales Invoice, Purchase Invoice, Delivery Note, Purchase Receipt are supported.*)$"
+                r"^(Only Sales Invoice, Purchase Invoice, Delivery Note, Purchase Receipt, Stock Entry, Subcontracting Receipt, Subcontracting Order are supported.*)$"
             ),
             EWaybillData,
             purchase_order,
