@@ -159,7 +159,6 @@ class GSTTransactionData:
                 self.transaction_details.rounding_adjustment + other_charges
             )
         else:
-            print(other_charges)
             self.transaction_details.other_charges = self.rounded(other_charges)
 
     def validate_mode_of_transport(self, throw=True):
