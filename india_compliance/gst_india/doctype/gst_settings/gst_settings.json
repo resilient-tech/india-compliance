@@ -27,6 +27,7 @@
   "enable_e_waybill_from_dn",
   "enable_e_waybill_from_pi",
   "enable_e_waybill_from_pr",
+  "enable_e_waybill_for_sc",
   "fetch_e_waybill_data",
   "attach_e_waybill_print",
   "column_break_10",
@@ -604,6 +605,13 @@
    "fieldname": "compare_gstr_1_data",
    "fieldtype": "Check",
    "label": "Compare Data with GST Portal"
+  },
+  {
+    "default": "0",
+    "depends_on": "eval: doc.enable_e_waybill",
+    "fieldname": "enable_e_waybill_for_sc",
+    "fieldtype": "Check",
+    "label": "Enable e-Waybill Generation for Subcontracting"
   }
  ],
  "index_web_pages_for_search": 1,

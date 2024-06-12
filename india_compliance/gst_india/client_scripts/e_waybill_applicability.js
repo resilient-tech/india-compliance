@@ -231,3 +231,55 @@ class DeliveryNoteEwaybill extends EwaybillApplicability {
         );
     }
 }
+
+class StockEntryEwaybill extends EwaybillApplicability {
+    is_e_waybill_applicable(show_message = false) {
+        return (
+            super.is_e_waybill_applicable(show_message) &&
+            gst_settings.enable_e_waybill_for_sc
+        );
+    }
+
+    is_e_waybill_generatable(show_message = false) {
+        let is_ewb_generatable = this.is_e_waybill_applicable(show_message);
+
+        let message_list = [];
+        if (
+            this.frm.doc.stock_entry_type === "Send to Subcontractor" &&
+            !this.frm.doc.subcontracting_order
+        ) {
+            is_ewb_generatable = false;
+            message_list.push(
+                "Subcontracting order mandatory for e-waybill generation."
+            );
+        }
+
+        let source = null;
+        let target = null;
+        this.frm.doc.items.forEach(item => {
+            if (!(source && target)) {
+                source = item.s_warehouse;
+                target = item.t_warehouse;
+            } else if (item.s_warehouse !== source || item.t_warehouse !== target) {
+                is_ewb_generatable = false;
+                message_list.push(
+                    "Source and target warehouse has to be same for all items."
+                );
+            }
+        });
+
+        if (show_message) {
+            this.frm._ewb_message += message_list
+                .map(message => `<li>${message}</li>`)
+                .join("");
+        }
+
+        return is_ewb_generatable;
+    }
+
+    is_e_waybill_api_enabled() {
+        return (
+            super.is_e_waybill_api_enabled() && gst_settings.enable_e_waybill_for_sc
+        );
+    }
+}

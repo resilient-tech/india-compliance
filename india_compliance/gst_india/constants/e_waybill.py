@@ -24,11 +24,19 @@ buying_address = {
     "ship_to": "shipping_address",
 }
 
+warehouse_address = {
+    "bill_from": "source_warehouse_address",
+    "bill_to": "target_warehouse_address",
+    "ship_from": "supplier_address",
+    "ship_to": "target_warehouse_address",
+}
+
 ADDRESS_FIELDS = {
     "Sales Invoice": selling_address,
     "Purchase Invoice": buying_address,
     "Delivery Note": selling_address,
     "Purchase Receipt": buying_address,
+    "Stock Entry": warehouse_address,
 }
 PERMITTED_DOCTYPES = list(ADDRESS_FIELDS.keys())
 

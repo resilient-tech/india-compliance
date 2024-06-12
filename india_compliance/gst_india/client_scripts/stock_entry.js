@@ -1,7 +1,26 @@
+setup_e_waybill_actions("Stock Entry");
+
 frappe.ui.form.on("Stock Entry", {
     setup(frm) {
         frm.set_query("company_address", erpnext.queries.company_address_query);
         fetch_gst_details(frm.doc.doctype);
+    },
+
+    refresh(frm) {
+        if (!gst_settings.enable_e_waybill || !gst_settings.enable_e_waybill_for_sc)
+            return;
+        show_sandbox_mode_indicator();
+    },
+
+    after_save(frm) {
+        if (is_e_waybill_applicable(frm) && !is_e_waybill_generatable(frm))
+            frappe.show_alert(
+                {
+                    message: __("E-Way Bill is not generatable for this transaction"),
+                    indicator: "yellow",
+                },
+                10
+            );
     },
 
     onload(frm) {

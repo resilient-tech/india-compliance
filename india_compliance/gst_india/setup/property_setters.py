@@ -35,6 +35,11 @@ def get_property_setters(*, include_defaults=False):
             ["Bill of Entry"],
             prepend=False,
         ),
+        get_options_property_setter(
+            "Stock Entry",
+            "naming_series",
+            ["MAT-STE-.YY.-", "STERET-.YY.-", ""],
+        ),
         {
             "doctype": "Purchase Invoice",
             "fieldname": "bill_no",
