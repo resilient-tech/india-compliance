@@ -40,6 +40,11 @@ def get_property_setters(*, include_defaults=False):
             "naming_series",
             ["MAT-STE-.YY.-", "STERET-.YY.-", ""],
         ),
+        get_options_property_setter(
+            "Subcontracting Receipt",
+            "naming_series",
+            ["MAT-SCR-.YY.-", "SCRRET-.YY.-", ""],
+        ),
         {
             "doctype": "Purchase Invoice",
             "fieldname": "bill_no",

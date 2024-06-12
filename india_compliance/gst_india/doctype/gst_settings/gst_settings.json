@@ -612,7 +612,7 @@
     "fieldname": "enable_e_waybill_for_sc",
     "fieldtype": "Check",
     "label": "Enable e-Waybill Generation for Subcontracting"
-  }
+   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,

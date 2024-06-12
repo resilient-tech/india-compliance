@@ -124,6 +124,16 @@ CUSTOM_FIELDS = {
             "translatable": 0,
             "fetch_from": "",
         },
+        {
+            "fieldname": "company_gstin",
+            "label": "Company GSTIN",
+            "fieldtype": "Data",
+            "insert_after": "place_of_supply",
+            "fetch_from": "shipping_address.gstin",
+            "print_hide": 1,
+            "read_only": 1,
+            "translatable": 0,
+        },
     ],
     # Subcontracting Order: Tax Fields
     "Subcontracting Order": [

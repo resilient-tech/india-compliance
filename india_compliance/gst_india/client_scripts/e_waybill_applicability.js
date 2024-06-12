@@ -283,3 +283,56 @@ class StockEntryEwaybill extends EwaybillApplicability {
         );
     }
 }
+
+class SubcontractingReceiptEwaybill extends EwaybillApplicability {
+    is_e_waybill_applicable(show_message = false) {
+        return (
+            super.is_e_waybill_applicable(show_message) &&
+            gst_settings.enable_e_waybill_for_sc
+        );
+    }
+
+    is_e_waybill_generatable(show_message = false) {
+        let is_ewb_generatable = this.is_e_waybill_applicable(show_message);
+
+        let message_list = [];
+        if (
+            !this.frm.doc.shipping_address
+        ) {
+            is_ewb_generatable = false;
+            message_list.push(
+                "Shipping addresss is mandatory for e-waybill generation."
+            );
+        }
+        if (
+            !this.frm.doc.billing_address
+        ) {
+            is_ewb_generatable = false;
+            message_list.push(
+                "Billing addresss is mandatory for e-waybill generation."
+            );
+        }
+        if (
+            !this.frm.doc.supplier_address
+        ) {
+            is_ewb_generatable = false;
+            message_list.push(
+                "Supplier addresss is mandatory for e-waybill generation."
+            );
+        }
+
+        if (show_message) {
+            this.frm._ewb_message += message_list
+                .map(message => `<li>${message}</li>`)
+                .join("");
+        }
+
+        return is_ewb_generatable;
+    }
+
+    is_e_waybill_api_enabled() {
+        return (
+            super.is_e_waybill_api_enabled() && gst_settings.enable_e_waybill_for_sc
+        );
+    }
+}
