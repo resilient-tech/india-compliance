@@ -61,6 +61,10 @@ doctype_js = {
         "gst_india/client_scripts/stock_entry.js",
         "gst_india/client_scripts/e_waybill_actions.js",
     ],
+    "Subcontracting Order": [
+        "gst_india/client_scripts/subcontracting_order.js",
+        "gst_india/client_scripts/e_waybill_actions.js",
+    ],
     "Subcontracting Receipt": [
         "gst_india/client_scripts/subcontracting_receipt.js",
         "gst_india/client_scripts/e_waybill_actions.js",
@@ -222,6 +226,7 @@ doc_events = {
         "before_submit": "india_compliance.gst_india.overrides.stock_entry.before_submit",
     },
     "Subcontracting Order": {
+        "onload": "india_compliance.gst_india.overrides.subcontracting_order.onload",
         "validate": "india_compliance.gst_india.overrides.subcontracting_order.validate",
         "before_save": "india_compliance.gst_india.overrides.subcontracting_order.before_save",
         "before_submit": "india_compliance.gst_india.overrides.subcontracting_order.before_submit",
