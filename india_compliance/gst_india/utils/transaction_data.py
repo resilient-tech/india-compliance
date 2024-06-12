@@ -2,7 +2,7 @@ import re
 
 import frappe
 from frappe import _
-from frappe.utils import format_date, get_link_to_form, getdate, rounded
+from frappe.utils import flt, format_date, get_link_to_form, getdate, rounded
 
 from india_compliance.gst_india.constants import (
     E_INVOICE_MASTER_CODES_URL,
@@ -40,9 +40,14 @@ class GSTTransactionData:
         gst_type = "Output"
         self.party_name_field = "customer_name"
 
-        if self.doc.doctype == "Purchase Invoice":
+        if self.doc.doctype in [
+            "Purchase Invoice",
+            "Stock Entry",
+            "Subcontracting Order",
+            "Subcontracting Receipt",
+        ]:
             self.party_name_field = "supplier_name"
-            if self.doc.is_reverse_charge != 1:
+            if self.doc.get("is_reverse_charge") != 1:
                 # for with reverse charge, gst_type is Output
                 # this will ensure zero taxes in transaction details
                 gst_type = "Input"
@@ -56,13 +61,15 @@ class GSTTransactionData:
         }
 
     def set_transaction_details(self):
-        rounding_adjustment = self.rounded(self.doc.base_rounding_adjustment)
-        if self.doc.is_return:
+        rounding_adjustment = self.rounded(
+            flt(self.doc.get("base_rounding_adjustment"))
+        )
+        if self.doc.get("is_return"):
             rounding_adjustment = -rounding_adjustment
 
         grand_total_fieldname = (
             "base_grand_total"
-            if self.doc.disable_rounded_total
+            if self.doc.get("disable_rounded_total")
             else "base_rounded_total"
         )
 
@@ -84,21 +91,26 @@ class GSTTransactionData:
                         self.doc.doctype, self.party_name, self.party_name_field
                     )
                 ),
-                "date": format_date(self.doc.posting_date, self.DATE_FORMAT),
+                "date": format_date(
+                    self.doc.get("posting_date") or self.doc.get("transaction_date"),
+                    self.DATE_FORMAT,
+                ),
                 "total": abs(self.rounded(total)),
                 "total_taxable_value": abs(self.rounded(total_taxable_value)),
                 "total_non_taxable_value": abs(
                     self.rounded(total - total_taxable_value)
                 ),
                 "rounding_adjustment": rounding_adjustment,
-                "grand_total": abs(self.rounded(self.doc.get(grand_total_fieldname))),
+                "grand_total": abs(
+                    self.rounded(flt(self.doc.get(grand_total_fieldname)))
+                ),
                 "grand_total_in_foreign_currency": (
-                    abs(self.rounded(self.doc.grand_total))
-                    if self.doc.currency != "INR"
+                    abs(self.rounded(flt(self.doc.get("grand_total"))))
+                    if self.doc.get("currency") != "INR"
                     else ""
                 ),
                 "discount_amount": (
-                    abs(self.rounded(self.doc.base_discount_amount))
+                    abs(self.rounded(flt(self.doc.get("base_discount_amount"))))
                     if self.doc.get("is_cash_or_non_trade_discount")
                     else 0
                 ),
@@ -122,7 +134,7 @@ class GSTTransactionData:
 
         for row in self.doc.taxes:
             if (
-                not row.base_tax_amount_after_discount_amount
+                not row.get("base_tax_amount_after_discount_amount")
                 or row.account_head not in self.gst_accounts
             ):
                 continue
@@ -147,6 +159,7 @@ class GSTTransactionData:
                 self.transaction_details.rounding_adjustment + other_charges
             )
         else:
+            print(other_charges)
             self.transaction_details.other_charges = self.rounded(other_charges)
 
     def validate_mode_of_transport(self, throw=True):
@@ -243,7 +256,9 @@ class GSTTransactionData:
             )
 
         validate_invoice_number(self.doc)
-        posting_date = getdate(self.doc.posting_date)
+        posting_date = getdate(
+            self.doc.get("posting_date") or self.doc.get("transaction_date")
+        )
 
         if posting_date > getdate():
             frappe.throw(
@@ -269,7 +284,7 @@ class GSTTransactionData:
         self.rounding_errors = {f"{tax}_rounding_error": 0 for tax in GST_TAX_TYPES}
 
         items = self.doc.items
-        if self.doc.group_same_items:
+        if self.doc.get("group_same_items"):
             items = self.group_same_items()
 
         for row in items:
@@ -282,7 +297,9 @@ class GSTTransactionData:
                     "item_name": self.sanitize_value(
                         row.item_name, regex=3, max_length=300
                     ),
-                    "uom": get_gst_uom(row.uom, self.settings),
+                    "uom": get_gst_uom(
+                        row.get("uom") or row.get("stock_uom"), self.settings
+                    ),
                     "gst_treatment": row.gst_treatment,
                 }
             )
@@ -330,7 +347,7 @@ class GSTTransactionData:
 
         for row in self.doc.taxes:
             if (
-                not row.base_tax_amount_after_discount_amount
+                not row.get("base_tax_amount_after_discount_amount")
                 or row.account_head not in self.gst_accounts
             ):
                 continue
@@ -628,7 +645,9 @@ def validate_unique_hsn_and_uom(doc):
     item_wise_hsn = {}
 
     for item in doc.items:
-        _validate_unique(item_wise_uom, item.get("uom"), _("UOM"))
+        _validate_unique(
+            item_wise_uom, item.get("uom") or item.get("stock_uom"), _("UOM")
+        )
         _validate_unique(item_wise_hsn, item.get("gst_hsn_code"), _("HSN Code"))
 
 
