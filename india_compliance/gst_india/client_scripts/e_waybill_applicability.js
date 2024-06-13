@@ -235,6 +235,7 @@ class DeliveryNoteEwaybill extends EwaybillApplicability {
 class StockEntryEwaybill extends EwaybillApplicability {
     is_e_waybill_applicable(show_message = false) {
         return (
+            this.frm.doc.purpose == "Send to Subcontractor" &&
             super.is_e_waybill_applicable(show_message) &&
             gst_settings.enable_e_waybill_for_sc
         );
@@ -244,18 +245,20 @@ class StockEntryEwaybill extends EwaybillApplicability {
         let is_ewb_generatable = this.is_e_waybill_applicable(show_message);
 
         let message_list = [];
-        if (
-            this.frm.doc.stock_entry_type === "Send to Subcontractor" &&
-            !this.frm.doc.subcontracting_order
-        ) {
+
+        if (!this.frm.doc.supplier_address) {
             is_ewb_generatable = false;
-            message_list.push(
-                "Subcontracting order mandatory for e-waybill generation."
-            );
+            message_list.push("Supplier Address is mandatory to generate e-Waybill.");
+        }
+
+        if (this.frm.doc.company_gstin === this.frm.doc.supplier_gstin) {
+            is_ewb_generatable = false;
+            message_list.push("Company GSTIN and Supplier GSTIN are same.");
         }
 
         let source = null;
         let target = null;
+
         this.frm.doc.items.forEach(item => {
             if (!(source && target)) {
                 source = item.s_warehouse;
@@ -279,7 +282,9 @@ class StockEntryEwaybill extends EwaybillApplicability {
 
     is_e_waybill_api_enabled() {
         return (
-            super.is_e_waybill_api_enabled() && gst_settings.enable_e_waybill_for_sc
+            this.frm.doc.purpose == "Send to Subcontractor" &&
+            super.is_e_waybill_api_enabled() &&
+            gst_settings.enable_e_waybill_for_sc
         );
     }
 }
@@ -296,25 +301,14 @@ class SubcontractingReceiptEwaybill extends EwaybillApplicability {
         let is_ewb_generatable = this.is_e_waybill_applicable(show_message);
 
         let message_list = [];
-        if (
-            !this.frm.doc.shipping_address
-        ) {
-            is_ewb_generatable = false;
-            message_list.push(
-                "Shipping addresss is mandatory for e-waybill generation."
-            );
-        }
-        if (
-            !this.frm.doc.billing_address
-        ) {
+
+        if (!this.frm.doc.billing_address) {
             is_ewb_generatable = false;
             message_list.push(
                 "Billing addresss is mandatory for e-waybill generation."
             );
         }
-        if (
-            !this.frm.doc.supplier_address
-        ) {
+        if (!this.frm.doc.supplier_address) {
             is_ewb_generatable = false;
             message_list.push(
                 "Supplier addresss is mandatory for e-waybill generation."
@@ -331,8 +325,6 @@ class SubcontractingReceiptEwaybill extends EwaybillApplicability {
     }
 
     is_e_waybill_api_enabled() {
-        return (
-            super.is_e_waybill_api_enabled() && gst_settings.enable_e_waybill_for_sc
-        );
+        return super.is_e_waybill_api_enabled() && gst_settings.enable_e_waybill_for_sc;
     }
 }

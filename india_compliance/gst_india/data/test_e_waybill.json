@@ -1079,7 +1079,7 @@
     },
     "stock_entry_with_same_address": {
         "kwargs": {
-            "stock_entry_type": "Send to Subcontractor",
+            "purpose": "Send to Subcontractor",
             "source_warehouse_address": "_Test Indian Registered Company-Shipping",
             "target_warehouse_address": "_Test Indian Registered Company-Shipping",
             "items":
