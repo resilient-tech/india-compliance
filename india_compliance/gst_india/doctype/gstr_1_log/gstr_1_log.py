@@ -850,8 +850,9 @@ def process_gstr_1_returns_info(company, gstin, response):
     )
 
     # update gstr-1 filed upto
-    gstin_doc = frappe.get_doc("GSTIN", gstin)
-    if not gstin_doc:
+    if frappe.db.exists("GSTIN", gstin):
+        gstin_doc = frappe.get_doc("GSTIN", gstin)
+    else:
         gstin_doc = frappe.new_doc("GSTIN", gstin=gstin, status="Active")
 
     def _update_gstr_1_filed_upto(filing_date):
