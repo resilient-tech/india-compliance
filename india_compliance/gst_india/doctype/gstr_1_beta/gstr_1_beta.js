@@ -424,7 +424,7 @@ class GSTR1 {
         const tab_name = this.status === "Filed" ? "Filed" : "File";
         const color = this.status === "Filed" ? "green" : "orange";
 
-        this.$wrapper.find(`[data-fieldname="filed_tab"]`).html(tab_name);
+        this.$wrapper.find(`[id="gstr-1-beta-filed_tab-tab"]`).html(tab_name);
         this.frm.page.set_indicator(this.status, color);
         this.frm.refresh();
     }
