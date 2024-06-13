@@ -15,7 +15,7 @@
   "rate",
   "column_break_pipk",
   "tax_amount",
-  "total",
+  "base_tax_amount_after_discount_amount",
   "item_wise_tax_rates"
  ],
  "fields": [
@@ -74,8 +74,14 @@
    "options": "INR"
   },
   {
+   "fieldname": "item_wise_tax_rates",
+   "fieldtype": "Code",
+   "hidden": 1,
+   "label": "Item Wise Tax Rates"
+  },
+  {
    "columns": 2,
-   "fieldname": "total",
+   "fieldname": "base_tax_amount_after_discount_amount",
    "fieldtype": "Currency",
    "in_list_view": 1,
    "label": "Total",
@@ -83,17 +89,11 @@
    "oldfieldtype": "Currency",
    "options": "INR",
    "read_only": 1
-  },
-  {
-   "fieldname": "item_wise_tax_rates",
-   "fieldtype": "Code",
-   "hidden": 1,
-   "label": "Item Wise Tax Rates"
   }
  ],
  "istable": 1,
  "links": [],
- "modified": "2024-06-04 17:40:35.622579",
+ "modified": "2024-06-13 10:44:32.051872",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Stock Entry Taxes",

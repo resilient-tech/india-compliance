@@ -90,7 +90,7 @@ def set_total_taxes(doc):
             tax.tax_amount = round(tax.tax_amount, 0)
 
         total_taxes += tax.tax_amount
-        tax.total = total_taxes
+        tax.base_tax_amount_after_discount_amount = total_taxes
 
     doc.total_taxes = total_taxes
 

@@ -228,7 +228,7 @@ class TaxesController {
     update_total_amount() {
         this.frm.doc.taxes.reduce((total, row) => {
             const total_amount = total + row.tax_amount;
-            row.total = total_amount;
+            row.base_tax_amount_after_discount_amount = total_amount;
 
             return total_amount;
         }, 0);
