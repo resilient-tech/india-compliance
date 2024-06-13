@@ -304,3 +304,10 @@ def get_transporter_id_info(transporter_id):
             "status": "Active" if response.transin else "Invalid",
         }
     )
+
+
+def get_gstr_1_filed_upto(gstin):
+    if not gstin:
+        return
+
+    return frappe.db.get_value("GSTIN", gstin, "gstr_1_filed_upto")

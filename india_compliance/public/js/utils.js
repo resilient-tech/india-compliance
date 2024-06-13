@@ -13,6 +13,40 @@ frappe.provide("india_compliance");
 window.gst_settings = frappe.boot.gst_settings;
 
 Object.assign(india_compliance, {
+    MONTH: [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+    ],
+
+    QUARTER: ["Jan-Mar", "Apr-Jun", "Jul-Sep", "Oct-Dec"],
+
+    get_month_year_from_period(period) {
+        /**
+         * Returns month or quarter and year from the period
+         * Month or quarter depends on the filing frequency set in GST Settings
+         *
+         * @param {String} period - period in format MMYYYY
+         * @returns {Array} - [month_or_quarter, year]
+         */
+
+        const { filing_frequency } = gst_settings;
+        const month_number = period.slice(0, 2);
+        const year = period.slice(2);
+
+        if (filing_frequency === "Monthly") return [this.MONTH[month_number - 1], year];
+        else return [this.QUARTER[Math.floor(month_number / 3)], year];
+    },
+
     get_gstin_query(party, party_type = "Company") {
         if (!party) {
             frappe.show_alert({
@@ -148,7 +182,7 @@ Object.assign(india_compliance, {
 
     validate_gstin(gstin) {
         if (!gstin || gstin.length !== 15) {
-            frappe.msgprint(__("GSTIN must be 15 characters long"))
+            frappe.msgprint(__("GSTIN must be 15 characters long"));
             return;
         }
 
@@ -162,8 +196,7 @@ Object.assign(india_compliance, {
     },
 
     get_gstin_otp(error_type, company_gstin) {
-        let description =
-            `An OTP has been sent to the registered mobile/email for GSTIN ${company_gstin} for further authentication. Please provide OTP.`;
+        let description = `An OTP has been sent to the registered mobile/email for GSTIN ${company_gstin} for further authentication. Please provide OTP.`;
         if (error_type === "invalid_otp")
             description = `Invalid OTP was provided for GSTIN ${company_gstin}. Please try again.`;
 
@@ -236,6 +269,7 @@ Object.assign(india_compliance, {
             Unreconciled: "red",
             Ignored: "grey",
             "Not Applicable": "grey",
+            "Match Found": "yellow",
         };
         const color = STATUS_COLORS[frm.doc.reconciliation_status];
 
@@ -337,18 +371,23 @@ Object.assign(india_compliance, {
         for (let gstin of Object.keys(gstin_authentication_status)) {
             if (gstin_authentication_status[gstin]) continue;
 
-            gstin_authentication_status[gstin] = await this.authenticate_otp(gstin);
+            gstin_authentication_status[gstin] =
+                await this.request_and_authenticate_otp(gstin);
         }
 
         return Object.keys(gstin_authentication_status);
     },
 
-    async authenticate_otp(gstin) {
+    async request_and_authenticate_otp(gstin) {
         await frappe.call({
             method: "india_compliance.gst_india.utils.gstr_utils.request_otp",
             args: { company_gstin: gstin },
         });
 
+        this.authenticate_otp(gstin);
+    },
+
+    async authenticate_otp(gstin) {
         let error_type = "otp_requested";
         let is_authenticated = false;
 
@@ -360,7 +399,10 @@ Object.assign(india_compliance, {
                 args: { company_gstin: gstin, otp: otp },
             });
 
-            if (message && ["otp_requested", "invalid_otp"].includes(message.error_type)) {
+            if (
+                message &&
+                ["otp_requested", "invalid_otp"].includes(message.error_type)
+            ) {
                 error_type = message.error_type;
                 continue;
             }
@@ -368,7 +410,35 @@ Object.assign(india_compliance, {
             is_authenticated = true;
             return true;
         }
-    }
+    },
+
+    show_dismissable_alert(wrapper, message, alert_type = "primary", on_close = null) {
+        const alert = $(`
+            <div class="container">
+            <div
+                class="alert alert-${alert_type} alert-dismissable fade show d-flex justify-content-between border-0"
+                role="alert"
+            >
+                <div>${message}</div>
+                <button
+                    type="button"
+                    class="close"
+                    data-dismiss="alert"
+                    aria-label="Close"
+                    style="outline: 0px solid black !important"
+                >
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            </div>
+        `).prependTo(wrapper);
+
+        alert.on("closed.bs.alert", () => {
+            if (on_close) on_close();
+        });
+
+        return alert;
+    },
 });
 
 function is_gstin_check_digit_valid(gstin) {

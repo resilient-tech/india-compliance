@@ -155,6 +155,10 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                 & (purchase_invoice.posting_date[self.from_date : self.to_date])
                 & (purchase_invoice.company == self.company)
                 & (purchase_invoice.company_gstin == self.company_gstin)
+                & (
+                    purchase_invoice.company_gstin
+                    != IfNull(purchase_invoice.supplier_gstin, "")
+                )
                 & (Ifnull(purchase_invoice.itc_classification, "") != "")
             )
             .groupby(purchase_invoice.name)
@@ -266,7 +270,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
     def get_ineligible_itc_from_purchase(self):
         ineligible_itc = IneligibleITC(
             self.company, self.company_gstin, self.filters.month, self.filters.year
-        ).get_for_purchase_invoice()
+        ).get_ineligible_itc_us_17_5_for_purchase()
 
         return self.process_ineligible_itc(ineligible_itc)
 
@@ -282,10 +286,6 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
             return []
 
         for row in ineligible_itc.copy():
-            if row.itc_classification == "ITC restricted due to PoS rules":
-                ineligible_itc.remove(row)
-                continue
-
             for key in ["iamt", "camt", "samt", "csamt"]:
                 row[key] = row[key] * -1
 
@@ -405,6 +405,11 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
                 & (purchase_invoice.posting_date[self.from_date : self.to_date])
                 & (purchase_invoice.company == self.company)
                 & (purchase_invoice.company_gstin == self.company_gstin)
+                & (
+                    purchase_invoice.company_gstin
+                    != IfNull(purchase_invoice.supplier_gstin, "")
+                )
+                & (purchase_invoice.gst_category != "Overseas")
             )
             .groupby(purchase_invoice.name)
         )
@@ -421,11 +426,15 @@ class IneligibleITC:
         self.year = year
         self.gst_accounts = get_escaped_gst_accounts(company, "Input")
 
-    def get_for_purchase_invoice(self, group_by="name"):
+    def get_ineligible_itc_us_17_5_for_purchase(self, group_by="name"):
+        """
+        - Ineligible As Per Section 17(5)
+        - ITC restricted due to ineligible items in purchase invoice
+        """
         ineligible_transactions = self.get_vouchers_with_gst_expense("Purchase Invoice")
 
         if not ineligible_transactions:
-            return
+            return []
 
         pi = frappe.qb.DocType("Purchase Invoice")
 
@@ -438,7 +447,9 @@ class IneligibleITC:
                 pi.name.as_("voucher_no"),
                 pi.ineligibility_reason.as_("itc_classification"),
             )
-            .where(IfNull(pi.ineligibility_reason, "") != "")
+            .where(
+                IfNull(pi.ineligibility_reason, "") == "Ineligible As Per Section 17(5)"
+            )
             .where(pi.name.isin(ineligible_transactions))
             .groupby(pi[group_by])
             .run(as_dict=1)
@@ -456,13 +467,70 @@ class IneligibleITC:
                 Sum(pi.itc_state_tax).as_("samt"),
                 Sum(pi.itc_cess_amount).as_("csamt"),
             )
-            .where(IfNull(pi.ineligibility_reason, "") != "")
+            .where(
+                IfNull(pi.ineligibility_reason, "") == "Ineligible As Per Section 17(5)"
+            )
             .where(pi.name.isin(ineligible_transactions))
             .groupby(pi[group_by])
             .run(as_dict=1)
         )
 
         return self.get_ineligible_credit(credit_availed, credit_available, group_by)
+
+    def get_ineligible_itc_due_to_pos_for_purchase(self, group_by="name"):
+        """
+        - ITC restricted due to PoS rules
+        """
+        ineligible_transactions = self.get_vouchers_with_gst_expense("Purchase Invoice")
+
+        if not ineligible_transactions:
+            return []
+
+        pi = frappe.qb.DocType("Purchase Invoice")
+        taxes = frappe.qb.DocType("Purchase Taxes and Charges")
+
+        # utility function
+        def get_tax_case_statement(account, alias):
+            return Sum(
+                Case()
+                .when(
+                    taxes.account_head.isin(account),
+                    taxes.base_tax_amount_after_discount_amount,
+                )
+                .else_(0)
+            ).as_(alias)
+
+        # Credit availed is not required as it will be always 0 for pos
+
+        ineligible_credit = (
+            frappe.qb.from_(pi)
+            .inner_join(taxes)
+            .on(pi.name == taxes.parent)
+            .select(
+                pi.name.as_("voucher_no"),
+                pi.posting_date,
+                pi.ineligibility_reason.as_("itc_classification"),
+                get_tax_case_statement([self.gst_accounts.igst_account], "iamt"),
+                get_tax_case_statement([self.gst_accounts.cgst_account], "camt"),
+                get_tax_case_statement([self.gst_accounts.sgst_account], "camt"),
+                get_tax_case_statement(
+                    [
+                        self.gst_accounts.cess_account,
+                        self.gst_accounts.cess_non_advol_account,
+                    ],
+                    "csamt",
+                ),
+            )
+            .where(taxes.account_head.isin(list(self.gst_accounts.values())))
+            .where(
+                IfNull(pi.ineligibility_reason, "") == "ITC restricted due to PoS rules"
+            )
+            .where(pi.name.isin(ineligible_transactions))
+            .groupby(pi[group_by])
+            .run(as_dict=True)
+        )
+
+        return ineligible_credit
 
     def get_for_bill_of_entry(self, group_by="name"):
         ineligible_transactions = self.get_vouchers_with_gst_expense("Bill of Entry")
