@@ -5,7 +5,7 @@ import itertools
 from datetime import datetime
 
 import frappe
-from frappe import unscrub
+from frappe import _, unscrub
 from frappe.model.document import Document
 from frappe.utils import flt, get_datetime, get_datetime_str, get_last_day, getdate
 
@@ -503,7 +503,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         data = {}
 
         # APIs Disabled
-        if not self.is_gstr1_api_enabled():
+        if not self.is_gstr1_api_enabled(warn_for_missing_credentials=True):
             return self.generate_only_books_data(data, filters, callback)
 
         # APIs Enabled
@@ -773,15 +773,33 @@ class GSTR1Log(GenerateGSTR1, Document):
             self.remove_json_for("unfiled")
 
     # GSTR 1 UTILITY
-    def is_gstr1_api_enabled(self, settings=None):
+    def is_gstr1_api_enabled(self, settings=None, warn_for_missing_credentials=False):
         if not settings:
             settings = frappe.get_cached_doc("GST Settings")
 
-        return (
-            is_production_api_enabled(settings)
-            and settings.compare_gstr_1_data
-            and settings.has_valid_credentials(self.gstin, "Returns")
-        )
+        if not is_production_api_enabled(settings):
+            return False
+
+        if not settings.compare_gstr_1_data:
+            return False
+
+        if not settings.has_valid_credentials(self.gstin, "Returns"):
+            if warn_for_missing_credentials:
+                frappe.publish_realtime(
+                    "show_message",
+                    dict(
+                        message=_(
+                            "Credentials are missing for GSTIN {0} for service"
+                            " Returns in GST Settings"
+                        ).format(self.gstin),
+                        title=_("Missing Credentials"),
+                    ),
+                    user=frappe.session.user,
+                )
+
+            return False
+
+        return True
 
     def is_sek_needed(self, settings=None):
         if not self.is_gstr1_api_enabled(settings):
@@ -850,8 +868,9 @@ def process_gstr_1_returns_info(company, gstin, response):
     )
 
     # update gstr-1 filed upto
-    gstin_doc = frappe.get_doc("GSTIN", gstin)
-    if not gstin_doc:
+    if frappe.db.exists("GSTIN", gstin):
+        gstin_doc = frappe.get_doc("GSTIN", gstin)
+    else:
         gstin_doc = frappe.new_doc("GSTIN", gstin=gstin, status="Active")
 
     def _update_gstr_1_filed_upto(filing_date):

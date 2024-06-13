@@ -141,6 +141,10 @@ frappe.ui.form.on(DOCTYPE, {
             );
         });
 
+        frappe.realtime.on("show_message", message => {
+            frappe.msgprint(message);
+        });
+
         frappe.realtime.on("gstr1_generation_failed", message => {
             const { error, filters } = message;
             let alert = `GSTR-1 Generation Failed for ${filters.company_gstin} - ${filters.month_or_quarter} - ${filters.year}.<br/><br/>${error}`;
