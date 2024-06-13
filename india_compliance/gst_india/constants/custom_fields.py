@@ -2,7 +2,6 @@ import frappe
 
 from india_compliance.gst_india.constants import (
     GST_CATEGORIES,
-    GST_DETAILS_FIELDS,
     GST_TAX_RATES,
     PORT_CODES,
     STATE_NUMBERS,
@@ -16,6 +15,115 @@ port_code_options = frappe.as_json(
     [{"label": f"{code} - {name}", "value": code} for code, name in PORT_CODES.items()]
 )
 
+GST_DETAILS_FIELDS = [
+    {
+        "fieldtype": "Section Break",
+        "label": "GST Details",
+        "insert_after": "taxable_value",
+        "fieldname": "gst_details_section",
+        "collapsible": 1,
+    },
+    {
+        "fieldname": "igst_rate",
+        "label": "IGST Rate",
+        "fieldtype": "Float",
+        "insert_after": "gst_details_section",
+        "read_only": 1,
+        "translatable": 0,
+        "no_copy": 1,
+    },
+    {
+        "fieldname": "cgst_rate",
+        "label": "CGST Rate",
+        "fieldtype": "Float",
+        "insert_after": "igst_rate",
+        "read_only": 1,
+        "translatable": 0,
+        "no_copy": 1,
+    },
+    {
+        "fieldname": "sgst_rate",
+        "label": "SGST Rate",
+        "fieldtype": "Float",
+        "insert_after": "cgst_rate",
+        "read_only": 1,
+        "translatable": 0,
+        "no_copy": 1,
+    },
+    {
+        "fieldname": "cess_rate",
+        "label": "CESS Rate",
+        "fieldtype": "Float",
+        "insert_after": "sgst_rate",
+        "read_only": 1,
+        "translatable": 0,
+        "no_copy": 1,
+    },
+    {
+        "fieldname": "cess_non_advol_rate",
+        "label": "CESS Non Advol Rate",
+        "fieldtype": "Float",
+        "insert_after": "cess_rate",
+        "read_only": 1,
+        "translatable": 0,
+        "no_copy": 1,
+    },
+    {
+        "fieldtype": "Column Break",
+        "insert_after": "cess_non_advol_rate",
+        "fieldname": "cb_gst_details",
+    },
+    {
+        "fieldname": "igst_amount",
+        "label": "IGST Amount",
+        "fieldtype": "Currency",
+        "options": "Company:company:default_currency",
+        "insert_after": "cb_gst_details",
+        "read_only": 1,
+        "translatable": 0,
+        "no_copy": 1,
+    },
+    {
+        "fieldname": "cgst_amount",
+        "label": "CGST Amount",
+        "fieldtype": "Currency",
+        "options": "Company:company:default_currency",
+        "insert_after": "igst_amount",
+        "read_only": 1,
+        "translatable": 0,
+        "no_copy": 1,
+    },
+    {
+        "fieldname": "sgst_amount",
+        "label": "SGST Amount",
+        "fieldtype": "Currency",
+        "options": "Company:company:default_currency",
+        "insert_after": "cgst_amount",
+        "read_only": 1,
+        "translatable": 0,
+        "no_copy": 1,
+    },
+    {
+        "fieldname": "cess_amount",
+        "label": "CESS Amount",
+        "fieldtype": "Currency",
+        "options": "Company:company:default_currency",
+        "insert_after": "sgst_amount",
+        "read_only": 1,
+        "translatable": 0,
+        "no_copy": 1,
+    },
+    {
+        "fieldname": "cess_non_advol_amount",
+        "label": "CESS Non Advol Amount",
+        "fieldtype": "Currency",
+        "options": "Company:company:default_currency",
+        "insert_after": "cess_amount",
+        "read_only": 1,
+        "translatable": 0,
+        "no_copy": 1,
+    },
+]
 
 party_fields = [
     {
