@@ -31,10 +31,6 @@ GST_CATEGORIES = {
     "Tax Collector": "B2B",
 }
 
-SUBCONTRACTING_DOCTYPES = (
-    "Stock Entry",
-    "Subcontracting Receipt",
-)
 
 EXPORT_TYPES = (
     "WOP",  # Without Payment of Tax [0]
@@ -1424,6 +1420,11 @@ DISTANCE_REGEX = re.compile(r"\d+")
 
 INVOICE_DOCTYPES = {"Sales Invoice", "Purchase Invoice"}
 SALES_DOCTYPES = set(sales_doctypes)
+SUBCONTRACTING_DOCTYPES = (
+    "Subcontracting Order",
+    "Subcontracting Receipt",
+    "Stock Entry",
+)
 
 BUG_REPORT_URL = "https://github.com/resilient-tech/india-compliance/issues/new"
 
