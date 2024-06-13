@@ -302,7 +302,11 @@ class GSTTransactionData:
                 }
             )
             self.update_item_details(item_details, row)
-            self.update_item_tax_details(item_details, row)
+            if self.doc.doctype in SUBCONTRACTING_DOCTYPES:
+                self.update_item_tax_details_for_subcontracting(item_details, row)
+            else:
+                self.update_item_tax_details(item_details, row)
+
             all_item_details.append(item_details)
 
         return all_item_details
@@ -338,6 +342,37 @@ class GSTTransactionData:
     def update_item_details(self, item_details, item):
         # to be overridden
         pass
+
+    def update_item_tax_details_for_subcontracting(self, item_details, item):
+        for tax in GST_TAX_TYPES:
+            item_details.update(
+                {
+                    f"{tax}_amount": item.get(f"{tax}_amount"),
+                    f"{tax}_rate": item.get(f"{tax}_rate"),
+                }
+            )
+
+        tax_rate = sum(
+            self.rounded(item_details.get(f"{tax}_rate", 0), 3)
+            for tax in GST_TAX_TYPES[:3]
+        )
+
+        validate_gst_tax_rate(tax_rate, item)
+
+        item_details.update(
+            {
+                "tax_rate": tax_rate,
+                "total_value": abs(
+                    self.rounded(
+                        item_details.taxable_value
+                        + sum(
+                            self.rounded(item_details.get(f"{tax}_amount", 0))
+                            for tax in GST_TAX_TYPES
+                        )
+                    ),
+                ),
+            }
+        )
 
     def update_item_tax_details(self, item_details, item):
         for tax in GST_TAX_TYPES:

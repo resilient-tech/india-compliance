@@ -1000,7 +1000,7 @@ class ItemGSTDetails:
         self.update_item_tax_details()
 
     def set_gst_accounts_and_item_defaults(self, doctype, company):
-        if doctype in SALES_DOCTYPES:
+        if doctype in SALES_DOCTYPES or SUBCONTRACTING_DOCTYPES:
             account_type = "Output"
         else:
             account_type = "Input"
