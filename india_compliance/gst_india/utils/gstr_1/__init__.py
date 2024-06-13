@@ -53,6 +53,11 @@ class GSTR1_SubCategory(Enum):
     SUPECOM_9_5 = "GST Payable on RCM by E-commerce Operator u/s 9(5)"
 
 
+class SUPECOM(Enum):
+    US_9_5 = "Liable to pay tax u/s 9(5)"
+    US_52 = "Liable to collect tax u/s 52(TCS)"
+
+
 CATEGORY_SUB_CATEGORY_MAPPING = {
     GSTR1_Category.B2B: (
         GSTR1_SubCategory.B2B_REGULAR,
