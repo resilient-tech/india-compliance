@@ -1590,8 +1590,6 @@ class EWaybillData(GSTTransactionData):
                 ("Stock Entry", 1): (OTHER_GSTIN, REGISTERED_GSTIN),
                 ("Subcontracting Receipt", 0): (REGISTERED_GSTIN, OTHER_GSTIN),
                 ("Subcontracting Receipt", 1): (OTHER_GSTIN, REGISTERED_GSTIN),
-                ("Subcontracting Order", 0): (REGISTERED_GSTIN, OTHER_GSTIN),
-                ("Subcontracting Order", 1): (OTHER_GSTIN, REGISTERED_GSTIN),
             }
 
             if self.bill_from.gstin == self.bill_to.gstin:
