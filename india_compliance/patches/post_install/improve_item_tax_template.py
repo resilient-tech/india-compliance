@@ -275,38 +275,48 @@ def update_gst_treatment_for_transactions():
 
         table = frappe.qb.DocType(item_doctype)
         query = frappe.qb.update(table)
-
-        (
-            query.set(
-                table.gst_treatment,
-                Case()
-                .when(table.is_nil_exempt == 1, "Nil-Rated")
-                .when(table.is_non_gst == 1, "Non-GST")
-                .else_("Taxable"),
-            )
-            .where(IfNull(table.gst_treatment, "") == "")
-            .run()
-        )
-
         doctype = item_doctype.replace(" Item", "")
-        if doctype not in SALES_DOCTYPES:
-            continue
 
-        doc = frappe.qb.DocType(doctype)
+        update_gst_treatment_for_nil_exempt_and_non_gst(table, query, item_doctype)
+        update_gst_treatment_for_zero_rated(table, query, doctype)
 
-        (
-            query.join(doc)
-            .on(doc.name == table.parent)
-            .set(table.gst_treatment, "Zero-Rated")
-            .where(
-                (doc.gst_category == "SEZ")
-                | (
-                    (doc.gst_category == "Overseas")
-                    & (doc.place_of_supply == "96-Other Countries")
-                )
-            )
-            .run()
+
+def update_gst_treatment_for_nil_exempt_and_non_gst(table, query, item_doctype):
+    if not frappe.db.has_column(item_doctype, "is_nil_exempt"):
+        return
+
+    (
+        query.set(
+            table.gst_treatment,
+            Case()
+            .when(table.is_nil_exempt == 1, "Nil-Rated")
+            .when(table.is_non_gst == 1, "Non-GST")
+            .else_("Taxable"),
         )
+        .where(IfNull(table.gst_treatment, "") == "")
+        .run()
+    )
+
+
+def update_gst_treatment_for_zero_rated(table, query, doctype):
+    if doctype not in SALES_DOCTYPES:
+        return
+
+    doc = frappe.qb.DocType(doctype)
+
+    (
+        query.join(doc)
+        .on(doc.name == table.parent)
+        .set(table.gst_treatment, "Zero-Rated")
+        .where(
+            (doc.gst_category == "SEZ")
+            | (
+                (doc.gst_category == "Overseas")
+                & (doc.place_of_supply == "96-Other Countries")
+            )
+        )
+        .run()
+    )
 
 
 def update_gst_details_for_transactions(companies):
@@ -378,7 +388,7 @@ def get_taxes_for_docs(docs, doctype, is_sales_doctype):
     return (
         frappe.qb.from_(taxes)
         .select(
-            taxes.tax_amount,
+            taxes.base_tax_amount_after_discount_amount,
             taxes.account_head,
             taxes.parent,
             taxes.item_wise_tax_detail,

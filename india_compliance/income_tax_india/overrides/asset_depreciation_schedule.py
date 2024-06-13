@@ -27,6 +27,7 @@ def get_wdv_or_dd_depr_amount(
     prev_depreciation_amount,
     has_wdv_or_dd_non_yearly_pro_rata,
     asset_depr_schedule,
+    prev_per_day_depr=0,
 ):
     # As per IT act, if the asset is purchased in the 2nd half of fiscal year, then rate is divided by 2 for the first year
 
@@ -41,6 +42,7 @@ def get_wdv_or_dd_depr_amount(
             prev_depreciation_amount,
             has_wdv_or_dd_non_yearly_pro_rata,
             asset_depr_schedule,
+            prev_per_day_depr=prev_per_day_depr,
         )
 
     asset_depr_schedule.flags.wdv_it_act_applied = True
@@ -122,7 +124,7 @@ def get_wdv_or_dd_depr_amount(
     else:
         frappe.throw(_("Only monthly and yearly depreciations allowed yet."))
 
-    return depreciation_amount
+    return depreciation_amount, None
 
 
 def cancel_depreciation_entries(asset_doc, date):

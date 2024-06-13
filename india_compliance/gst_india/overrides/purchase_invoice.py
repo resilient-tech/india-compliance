@@ -51,8 +51,6 @@ def validate(doc, method=None):
 
 
 def on_cancel(doc, method=None):
-    if doc.reconciliation_status != "Reconciled":
-        return
 
     frappe.db.set_value(
         "GST Inward Supply",

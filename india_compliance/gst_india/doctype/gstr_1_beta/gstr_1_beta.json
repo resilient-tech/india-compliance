@@ -1,0 +1,128 @@
+{
+ "actions": [],
+ "beta": 1,
+ "creation": "2024-03-27 17:59:36.078726",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "form",
+  "company",
+  "column_break_ejve",
+  "company_gstin",
+  "column_break_ldkv",
+  "year",
+  "column_break_qcor",
+  "month_or_quarter",
+  "data_section",
+  "tabs_html",
+  "tabs_empty_state",
+  "tabs_no_data"
+ ],
+ "fields": [
+  {
+   "fieldname": "form",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "company_gstin",
+   "fieldtype": "Autocomplete",
+   "label": "Company GSTIN",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_ejve",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_ldkv",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_qcor",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "year",
+   "fieldtype": "Autocomplete",
+   "label": "Year",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval: doc.__onload?.data && Object.keys(doc.__onload.data).length",
+   "fieldname": "tabs_html",
+   "fieldtype": "HTML"
+  },
+  {
+   "depends_on": "eval: !doc.__onload?.data",
+   "fieldname": "tabs_empty_state",
+   "fieldtype": "HTML",
+   "options": "<img alt=\"No Data\" src=\"/assets/frappe/images/ui-states/list-empty-state.svg\">\n\t<p class=\"text-muted\">{{ __(\"Generate to view the data\") }}</p>"
+  },
+  {
+   "depends_on": "eval: doc.__onload?.data && Object.keys(doc.__onload.data).length === 0",
+   "fieldname": "tabs_no_data",
+   "fieldtype": "HTML",
+   "options": "<img alt=\"No Data\" src=\"/assets/frappe/images/ui-states/list-empty-state.svg\">\n\t<p class=\"text-muted\">{{ __(\"No data available for selected filters\") }}</p>"
+  },
+  {
+   "fieldname": "data_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "month_or_quarter",
+   "fieldtype": "Select",
+   "label": "Month/Quarter",
+   "reqd": 1
+  }
+ ],
+ "hide_toolbar": 1,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2024-05-27 19:30:01.074149",
+ "modified_by": "Administrator",
+ "module": "GST India",
+ "name": "GSTR-1 Beta",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "export": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "export": 1,
+   "read": 1,
+   "role": "Accounts Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "export": 1,
+   "read": 1,
+   "role": "Accounts User",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "export": 1,
+   "read": 1,
+   "role": "Auditor",
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

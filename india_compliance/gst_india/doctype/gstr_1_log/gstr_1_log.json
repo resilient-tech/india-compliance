@@ -1,0 +1,238 @@
+{
+ "actions": [],
+ "autoname": "format:{return_period}-{gstin}",
+ "creation": "2024-03-11 11:59:06.887429",
+ "description": "Keeps the log of GSTR-1 filed by GSTIN and Period",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "filing_summary_section",
+  "filing_status",
+  "return_period",
+  "company",
+  "column_break_sqwh",
+  "filing_date",
+  "acknowledgement_number",
+  "gstin",
+  "generation_status",
+  "section_break_oisv",
+  "unfiled",
+  "filed",
+  "column_break_hxfu",
+  "unfiled_summary",
+  "filed_summary",
+  "computed_data_section",
+  "is_latest_data",
+  "section_break_emlz",
+  "books",
+  "column_break_ehcm",
+  "books_summary",
+  "reconciled_data_section",
+  "reconcile",
+  "column_break_ndup",
+  "reconcile_summary"
+ ],
+ "fields": [
+  {
+   "fieldname": "filing_summary_section",
+   "fieldtype": "Section Break",
+   "label": "Filing Summary"
+  },
+  {
+   "fieldname": "filing_status",
+   "fieldtype": "Data",
+   "label": "Filing Status",
+   "read_only": 1
+  },
+  {
+   "fieldname": "return_period",
+   "fieldtype": "Data",
+   "label": "Return Period",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_sqwh",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "filing_date",
+   "fieldtype": "Date",
+   "label": "Filing Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "acknowledgement_number",
+   "fieldtype": "Data",
+   "label": "Acknowledgement Number",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_oisv",
+   "fieldtype": "Section Break",
+   "label": "Government Data"
+  },
+  {
+   "fieldname": "gstin",
+   "fieldtype": "Data",
+   "label": "GSTIN",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_hxfu",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "computed_data_section",
+   "fieldtype": "Section Break",
+   "hide_border": 1,
+   "label": "Computed Data"
+  },
+  {
+   "fieldname": "reconciled_data_section",
+   "fieldtype": "Section Break",
+   "label": "Reconciled Data"
+  },
+  {
+   "fieldname": "column_break_ndup",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_latest_data",
+   "fieldtype": "Check",
+   "label": "Is Latest Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "generation_status",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Generation Status",
+   "options": "\nIn Progress\nGenerated\nFailed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "filed",
+   "fieldtype": "Attach",
+   "label": "Filed Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "filed_summary",
+   "fieldtype": "Attach",
+   "label": "Filed Summary",
+   "read_only": 1
+  },
+  {
+   "fieldname": "books",
+   "fieldtype": "Attach",
+   "label": "Books Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "books_summary",
+   "fieldtype": "Attach",
+   "label": "Books Summary",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reconcile",
+   "fieldtype": "Attach",
+   "label": "Reconcile GSTR-1",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reconcile_summary",
+   "fieldtype": "Attach",
+   "label": "Reconcile Summary",
+   "read_only": 1
+  },
+  {
+   "fieldname": "unfiled",
+   "fieldtype": "Attach",
+   "label": "Unfiled Invoices",
+   "read_only": 1
+  },
+  {
+   "fieldname": "unfiled_summary",
+   "fieldtype": "Attach",
+   "label": "Unfiled Summary",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_emlz",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_ehcm",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1
+  }
+ ],
+ "in_create": 1,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-05-28 19:49:55.513493",
+ "modified_by": "Administrator",
+ "module": "GST India",
+ "name": "GSTR-1 Log",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Auditor",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

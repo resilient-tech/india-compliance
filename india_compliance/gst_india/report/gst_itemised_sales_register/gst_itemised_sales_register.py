@@ -39,10 +39,8 @@ def get_additional_table_columns():
 
 
 def get_additional_conditions(filters):
-    additional_conditions = ""
+    additional_conditions = {}
     if filters.get("company_gstin"):
-        additional_conditions += (
-            " AND `tabSales Invoice`.company_gstin = %(company_gstin)s"
-        )
+        additional_conditions.update({"company_gstin": filters.get("company_gstin")})
 
     return additional_conditions
