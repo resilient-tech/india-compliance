@@ -110,7 +110,7 @@ class Gstr1Report:
         elif self.filters.get("type_of_business") == "HSN":
             self.data = get_hsn_data(self.filters, self.columns, self.gst_accounts)
         elif self.filters.get("type_of_business") == "Section 14":
-            self.data = self.get_section_14_data()
+            self.data = self.get_data_for_supplies_through_ecommerce_operators()
         elif self.invoices:
             for inv, items_based_on_rate in self.invoice_tax_rate_info.items():
                 invoice_details = self.invoices.get(inv)
@@ -570,7 +570,7 @@ class Gstr1Report:
 
         return invoice_item_wise_tax_details
 
-    def get_section_14_data(self):
+    def get_data_for_supplies_through_ecommerce_operators(self):
         si = frappe.qb.DocType("Sales Invoice")
         si_item = frappe.qb.DocType("Sales Invoice Item")
         taxes = frappe.qb.DocType("Sales Taxes and Charges")
@@ -580,6 +580,7 @@ class Gstr1Report:
         cess_account = get_escaped_name(self.gst_accounts.cess_account)
         cess_non_advol = get_escaped_name(self.gst_accounts.cess_non_advol_account)
 
+        # subquery to get total taxable value
         taxable_value_query = (
             frappe.qb.from_(si_item)
             .select(
@@ -589,6 +590,7 @@ class Gstr1Report:
             .groupby(si_item.parent)
         )
 
+        # subquery to get total taxes
         taxes_query = (
             frappe.qb.from_(taxes)
             .select(
