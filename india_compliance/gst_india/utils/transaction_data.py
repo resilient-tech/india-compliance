@@ -8,6 +8,7 @@ from india_compliance.gst_india.constants import (
     E_INVOICE_MASTER_CODES_URL,
     GST_TAX_RATES,
     GST_TAX_TYPES,
+    SUBCONTRACTING_DOCTYPES,
 )
 from india_compliance.gst_india.constants.e_waybill import (
     TRANSPORT_MODES,
@@ -40,17 +41,15 @@ class GSTTransactionData:
         gst_type = "Output"
         self.party_name_field = "customer_name"
 
-        if self.doc.doctype in [
-            "Purchase Invoice",
-            "Stock Entry",
-            "Subcontracting Order",
-            "Subcontracting Receipt",
-        ]:
+        if self.doc.doctype == "Purchase Invoice":
             self.party_name_field = "supplier_name"
             if self.doc.get("is_reverse_charge") != 1:
                 # for with reverse charge, gst_type is Output
                 # this will ensure zero taxes in transaction details
                 gst_type = "Input"
+
+        if self.doc.doctype in SUBCONTRACTING_DOCTYPES:
+            self.party_name_field = "supplier_name"
 
         self.party_name = self.doc.get(self.party_name_field)
 

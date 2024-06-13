@@ -31,6 +31,11 @@ GST_CATEGORIES = {
     "Tax Collector": "B2B",
 }
 
+SUBCONTRACTING_DOCTYPES = (
+    "Stock Entry",
+    "Subcontracting Receipt",
+)
+
 EXPORT_TYPES = (
     "WOP",  # Without Payment of Tax [0]
     "WP",  # With Payment of Tax [1]

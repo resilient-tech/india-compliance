@@ -10,6 +10,7 @@ from india_compliance.gst_india.constants import (
     GST_TAX_TYPES,
     SALES_DOCTYPES,
     STATE_NUMBERS,
+    SUBCONTRACTING_DOCTYPES,
 )
 from india_compliance.gst_india.constants.custom_fields import E_WAYBILL_INV_FIELDS
 from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
@@ -733,12 +734,10 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
      - taxes in the tax template
     """
 
-    is_sales_transaction = doctype in SALES_DOCTYPES or doctype in [
-        "Payment Entry",
-        "Stock Entry",
-        "Subcontracting Order",
-        "Subcontracting Receipt",
-    ]
+    is_sales_transaction = (
+        doctype in SALES_DOCTYPES
+        or doctype in ("Payment Entry",) + SUBCONTRACTING_DOCTYPES
+    )
     party_details = frappe.parse_json(party_details)
     gst_details = frappe._dict()
 
