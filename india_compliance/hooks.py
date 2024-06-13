@@ -226,7 +226,6 @@ doc_events = {
         "before_submit": "india_compliance.gst_india.overrides.stock_entry.before_submit",
     },
     "Subcontracting Order": {
-        "onload": "india_compliance.gst_india.overrides.subcontracting_order.onload",
         "validate": "india_compliance.gst_india.overrides.subcontracting_order.validate",
         "before_save": "india_compliance.gst_india.overrides.subcontracting_order.before_save",
         "before_submit": "india_compliance.gst_india.overrides.subcontracting_order.before_submit",
