@@ -13,7 +13,7 @@ from india_compliance.gst_india.constants import (
 )
 from india_compliance.gst_india.constants.custom_fields import E_WAYBILL_INV_FIELDS
 from india_compliance.gst_india.doctype.gstin.gstin import (
-    _validate_gstin_info,
+    _validate_gstin_status,
     get_gstin_status,
 )
 from india_compliance.gst_india.doctype.gstin.gstin import (
@@ -1298,7 +1298,7 @@ def validate_gstin_status(gstin, transaction_date):
     if not gstin_doc:
         return
 
-    _validate_gstin_info(gstin_doc, transaction_date, throw=True)
+    _validate_gstin_status(gstin_doc, transaction_date, throw=True)
 
 
 def validate_gst_transporter_id(doc):

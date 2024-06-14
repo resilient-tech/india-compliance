@@ -87,7 +87,7 @@ def get_updated_gstin(
         queue="short",
         gstin=gstin,
         transaction_date=transaction_date,
-        callback=_validate_gstin_info,
+        callback=_validate_gstin_status,
     )
 
 
@@ -102,9 +102,9 @@ def create_or_update_gstin_status(
     doctype = "GSTIN"
 
     if is_transporter_id:
-        response = get_transporter_id_info(gstin)
+        response = get_transporter_id_status(gstin)
     else:
-        response = _get_gstin_info(
+        response = _get_gstin_status(
             gstin=gstin, response=response, use_public_api=use_public_api
         )
 
@@ -125,7 +125,7 @@ def create_or_update_gstin_status(
     return doc
 
 
-def _get_gstin_info(*, gstin=None, response=None, use_public_api=False):
+def _get_gstin_status(*, gstin=None, response=None, use_public_api=False):
     if response:
         return get_formatted_response(response)
 
@@ -166,7 +166,7 @@ def _get_gstin_info(*, gstin=None, response=None, use_public_api=False):
         frappe.cache.set_value(gstin, True, expires_in_sec=180)
 
 
-def _validate_gstin_info(gstin_doc, transaction_date=None, throw=False):
+def _validate_gstin_status(gstin_doc, transaction_date=None, throw=False):
     if not (gstin_doc and transaction_date):
         return
 
@@ -215,7 +215,7 @@ def _validate_gstin_info(gstin_doc, transaction_date=None, throw=False):
         )
 
 
-def _validate_gst_transporter_id_info(transporter_id_info, *args, **kwargs):
+def _validate_gst_transporter_id_status(transporter_id_info, *args, **kwargs):
     if not transporter_id_info:
         return
 
@@ -296,7 +296,7 @@ def get_formatted_response(response):
     )
 
 
-def get_transporter_id_info(transporter_id):
+def get_transporter_id_status(transporter_id):
     if not frappe.get_cached_value("GST Settings", None, "enable_e_waybill"):
         return
 
@@ -337,19 +337,17 @@ def validate_gst_transporter_id(transporter_id):
         gstin = frappe.get_doc("GSTIN", transporter_id)
 
     # Check if transporter_id starts with 88 or is not valid GSTIN and use Transporter ID API
-    elif transporter_id[:2] == "88" or not validate_gstin_check_digit(
-        transporter_id, throw=False
-    ):
+    elif transporter_id[:2] == "88" or has_gstin_check_digit_failed(transporter_id):
         gstin = create_or_update_gstin_status(
             transporter_id,
             is_transporter_id=True,
-            callback=_validate_gst_transporter_id_info,
+            callback=_validate_gst_transporter_id_status,
         )
 
     # Use GSTIN API
     else:
         gstin = create_or_update_gstin_status(
-            transporter_id, callback=_validate_gstin_info
+            transporter_id, callback=_validate_gstin_status
         )
 
     if not gstin:
@@ -360,7 +358,7 @@ def validate_gst_transporter_id(transporter_id):
         gstin = create_or_update_gstin_status(
             transporter_id,
             is_transporter_id=True,
-            callback=_validate_gst_transporter_id_info,
+            callback=_validate_gst_transporter_id_status,
         )
 
     # Return if GSTIN or transporter_id_status is Active
@@ -371,3 +369,13 @@ def validate_gst_transporter_id(transporter_id):
         _("Transporter ID {0} seems to be Inactive").format(transporter_id),
         indicator="orange",
     )
+
+
+def has_gstin_check_digit_failed(gstin):
+    try:
+        validate_gstin_check_digit(gstin)
+
+    except frappe.ValidationError:
+        return True
+
+    return False

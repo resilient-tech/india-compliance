@@ -171,7 +171,8 @@ def validate_gstin(
             title=_("Invalid {0}").format(label),
         )
 
-    if not (is_transporter_id and gstin.startswith("88")):
+    # eg: 29AAFCA7488L1Z0 invalid check digit for valid transporter id
+    if not is_transporter_id:
         validate_gstin_check_digit(gstin, label=label)
 
     if is_tcs_gstin and not TCS.match(gstin):
@@ -323,7 +324,7 @@ def get_data_file_path(file_name):
     return frappe.get_app_path("india_compliance", "gst_india", "data", file_name)
 
 
-def validate_gstin_check_digit(gstin, label="GSTIN", throw=True):
+def validate_gstin_check_digit(gstin, label="GSTIN"):
     """
     Function to validate the check digit of the GSTIN.
     """
@@ -338,16 +339,11 @@ def validate_gstin_check_digit(gstin, label="GSTIN", throw=True):
         total += digit
         factor = 2 if factor == 1 else 1
     if gstin[-1] != code_point_chars[((mod - (total % mod)) % mod)]:
-        if not throw:
-            return False
-
         frappe.throw(
             _(
                 """Invalid {0}! The check digit validation has failed. Please ensure you've typed the {0} correctly."""
             ).format(label)
         )
-
-    return True
 
 
 def is_overseas_doc(doc):
