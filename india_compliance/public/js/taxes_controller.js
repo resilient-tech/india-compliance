@@ -1,6 +1,8 @@
 frappe.provide("india_compliance");
 
-india_compliance.taxes_controller = class TaxesController {
+const SUBCONTRACTING_DOCTYPE_ITEMS = ["Stock Entry Detail", "Subcontracting Order Item", "Subcontracting Receipt Item"];
+
+india_compliance.taxes_controller =  class TaxesController {
     constructor(frm) {
         this.frm = frm;
         this.setup();
@@ -174,3 +176,62 @@ india_compliance.taxes_controller = class TaxesController {
         this.frm.set_value("total_taxes", total_taxes);
     }
 };
+
+for (const doctype of SUBCONTRACTING_DOCTYPE_ITEMS) {
+    frappe.ui.form.on(doctype, {
+        async item_tax_template(frm, cdt, cdn) {
+            const row = locals[cdt][cdn];
+            if (!row.item_tax_template) frm.taxes_controller.update_item_wise_tax_rates();
+            else await frm.taxes_controller.set_item_wise_tax_rates(cdn);
+            frm.taxes_controller.update_tax_amount();
+        },
+    });
+}
+
+frappe.ui.form.on("Stock Entry Taxes", {
+    rate(frm, cdt, cdn) {
+        frm.taxes_controller.update_tax_rate(cdt, cdn);
+    },
+
+    tax_amount(frm, cdt, cdn) {
+        frm.taxes_controller.update_tax_amount(cdt, cdn);
+    },
+
+    async account_head(frm, cdt, cdn) {
+        await frm.taxes_controller.set_item_wise_tax_rates(null, cdn);
+        frm.taxes_controller.update_tax_amount(cdt, cdn);
+    },
+
+    async charge_type(frm, cdt, cdn) {
+        const row = locals[cdt][cdn];
+        if (!row.charge_type) {
+            row.rate = 0;
+            row.item_wise_tax_rates = "{}";
+            frm.refresh_field("taxes");
+        } else {
+            await frm.taxes_controller.set_item_wise_tax_rates(null, cdn);
+            frm.taxes_controller.update_tax_amount(cdt, cdn);
+        }
+    },
+});
+
+india_compliance.update_taxes = function (frm) {
+    if (frm.doc.taxes_and_charges) {
+        return frm.call({
+            method: "erpnext.controllers.accounts_controller.get_taxes_and_charges",
+            args: {
+                master_doctype: frappe.meta.get_docfield(
+                    frm.doc.doctype,
+                    "taxes_and_charges",
+                    frm.doc.name
+                ).options,
+                master_name: frm.doc.taxes_and_charges,
+            },
+            callback: function (r) {
+                if (!r.exc) {
+                    frm.set_value("taxes", r.message);
+                }
+            },
+        });
+    }
+}

@@ -12,10 +12,16 @@ const TRANSACTION_DOCTYPES = [
     "Purchase Invoice",
 ];
 
+const SUBCONTRACTING_DOCTYPES = ["Stock Entry", "Subcontracting Order", "Subcontracting Receipt"];
+
 for (const doctype of TRANSACTION_DOCTYPES) {
     fetch_gst_details(doctype);
     validate_overseas_gst_category(doctype);
     set_and_validate_gstin_status(doctype);
+}
+
+for (const doctype of SUBCONTRACTING_DOCTYPES) {
+    fetch_gst_details_for_subcontracting(doctype);
 }
 
 for (const doctype of ["Sales Invoice", "Delivery Note"]) {
@@ -24,6 +30,49 @@ for (const doctype of ["Sales Invoice", "Delivery Note"]) {
 
 for (const doctype of ["Sales Invoice", "Sales Order", "Delivery Note"]) {
     set_e_commerce_ecommerce_supply_type(doctype);
+}
+
+function fetch_gst_details_for_subcontracting(doctype) {
+    const event_fields = [
+        "company_gstin",
+        "place_of_supply",
+        "supplier_address",
+        "supplier",
+    ];
+
+    const events = Object.fromEntries(
+        event_fields.map(field => [
+            field,
+            frm =>
+                update_gst_details_for_subcontracting(
+                    frm,
+                    "india_compliance.gst_india.overrides.stock_entry.update_party_details"
+                ),
+        ])
+    );
+
+    frappe.ui.form.on(doctype, events);
+}
+
+async function update_gst_details_for_subcontracting(frm, method) {
+    if (!frm.doc.supplier || frm.__updating_gst_details) return;
+
+    // wait for GSTINs to get fetched
+    await frappe.after_ajax();
+
+    const args = {
+        doctype: frm.doc.doctype,
+        party_details: {
+            customer: frm.doc.supplier,
+            customer_address: frm.doc.supplier_address,
+            billing_address_gstin: frm.doc.supplier_gstin,
+            gst_category: frm.doc.gst_category,
+            company_gstin: frm.doc.company_gstin,
+        },
+        company: frm.doc.company,
+    };
+
+    india_compliance.fetch_and_update_gst_details(frm, args, method);
 }
 
 function fetch_gst_details(doctype) {
