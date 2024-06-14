@@ -48,8 +48,8 @@ party_fields = [
 ]
 
 CUSTOM_FIELDS = {
-    # Subcontracting Receipt: Tax Fields
-    ("Subcontracting Order", "Subcontracting Receipt"): [
+    # Subcontracting: Tax Fields
+    "Subcontracting Order": [
         {
             "fieldname": "section_break_taxes",
             "label": "Taxes",
@@ -57,6 +57,16 @@ CUSTOM_FIELDS = {
             "insert_after": "total",
             "depends_on": "purchase_order",
         },
+    ],
+    "Subcontracting Receipt": [
+        {
+            "fieldname": "section_break_taxes",
+            "label": "Taxes",
+            "fieldtype": "Section Break",
+            "insert_after": "total",
+        },
+    ],
+    ("Subcontracting Order", "Subcontracting Receipt"): [
         {
             "fieldname": "taxes_and_charges",
             "label": "Taxes and Charges Template",
