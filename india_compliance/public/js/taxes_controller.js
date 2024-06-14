@@ -1,6 +1,6 @@
-frappe.provide('india_compliance');
+frappe.provide("india_compliance");
 
-india_compliance.taxes_controller =  class TaxesController {
+india_compliance.taxes_controller = class TaxesController {
     constructor(frm) {
         this.frm = frm;
         this.setup();
@@ -43,8 +43,9 @@ india_compliance.taxes_controller =  class TaxesController {
 
         if (!this.frm.taxes || !this.frm.taxes.length) return;
 
+        //TODO:
         await this.frm.call(
-            "india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry.BillofEntry.set_item_wise_tax_rates",
+            "india_compliance.gst_india.utils.taxes_controller.TaxesController.set_item_wise_tax_rates",
             {
                 item_name: item_name,
                 tax_name: tax_name,

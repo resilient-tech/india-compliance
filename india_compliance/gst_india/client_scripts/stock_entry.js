@@ -1,16 +1,29 @@
-frappe.provide('india_compliance');
+frappe.provide("india_compliance");
 
 setup_e_waybill_actions("Stock Entry");
 
 frappe.ui.form.on("Stock Entry", {
     setup(frm) {
         frm.set_query("company_address", erpnext.queries.company_address_query);
+        frm.set_query("taxes_and_charges", function () {
+            return {
+                filters: [
+                    ["company", "=", me.frm.doc.company],
+                    ["docstatus", "!=", 2],
+                ],
+            };
+        });
         fetch_gst_details(frm.doc.doctype);
+    },
+
+    onload(frm) {
+        frm.taxes_controller = new india_compliance.taxes_controller(frm);
     },
 
     refresh(frm) {
         if (!gst_settings.enable_e_waybill || !gst_settings.enable_e_waybill_for_sc)
             return;
+
         show_sandbox_mode_indicator();
     },
 
@@ -23,10 +36,6 @@ frappe.ui.form.on("Stock Entry", {
                 },
                 10
             );
-    },
-
-    onload(frm) {
-        frm.taxes_controller = new india_compliance.taxes_controller(frm);
     },
 
     company_address(frm) {

@@ -1,6 +1,7 @@
 import json
 
 import frappe
+from frappe import _
 from frappe.contacts.doctype.address.address import get_default_address
 from erpnext.controllers.taxes_and_totals import get_round_off_applicable_accounts
 
@@ -125,7 +126,7 @@ def update_party_details(party_details, doctype, company):
 
 
 def validate_taxes(doc):
-    input_accounts = get_gst_accounts_by_type(doc.company, "Input", throw=True)
+    output_accounts = get_gst_accounts_by_type(doc.company, "Output", throw=True)
     taxable_value_map = {}
     item_qty_map = {}
 
@@ -137,8 +138,15 @@ def validate_taxes(doc):
         if not tax.tax_amount:
             continue
 
+        if tax.account_head not in (output_accounts):
+            frappe.throw(
+                _("Row #{0}: Only Output accounts are allowed in {1}").format(
+                    tax.idx, doc.doctype
+                )
+            )
+
         validate_charge_type_for_cess_non_advol_accounts(
-            [input_accounts.cess_non_advol_account], tax
+            [output_accounts.cess_non_advol_account], tax
         )
 
 
