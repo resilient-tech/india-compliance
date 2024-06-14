@@ -1467,9 +1467,9 @@ E_WAYBILL_SCR_FIELDS = [
     },
     {
         "fieldname": "vehicle_no",
-        "label": "Vehicle No (Custom)",
+        "label": "Vehicle No",
         "fieldtype": "Data",
-        "insert_after": "gst_transporter_id",
+        "insert_after": "column_break5",
         "print_hide": 1,
         "no_copy": 1,
         "translatable": 0,
