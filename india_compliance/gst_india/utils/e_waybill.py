@@ -994,7 +994,7 @@ def update_transaction(doc, values):
 
     doc.db_set(data)
 
-    if doc.doctype == "Delivery Note":
+    if doc.doctype in ("Delivery Note", "Stock Entry", "Subcontracting Receipt"):
         doc._sub_supply_type = SUB_SUPPLY_TYPES[values.sub_supply_type]
 
 
@@ -1254,10 +1254,16 @@ class EWaybillData(GSTTransactionData):
         if not self.doc.gst_transporter_id:
             self.validate_mode_of_transport()
 
-        if (
-            self.doc.doctype == "Sales Invoice"
-            and self.doc.company_gstin == self.doc.billing_address_gstin
+        self.validate_same_gstin(address)
+
+    def validate_same_gstin(self, address_fields):
+        if self.doc.doctype == "Delivery Note":
+            return
+
+        if self.doc.get(address_fields["bill_from"]) == self.doc.get(
+            address_fields["bill_to"]
         ):
+
             frappe.throw(
                 _(
                     "e-Waybill cannot be generated because billing GSTIN is same as"
@@ -1269,7 +1275,7 @@ class EWaybillData(GSTTransactionData):
     def validate_bill_no_for_purchase(self):
         if (
             self.doc.doctype == "Purchase Invoice"
-            and not self.doc.get("is_return")
+            and not self.doc.is_return
             and not self.doc.bill_no
             and self.doc.gst_category != "Unregistered"
         ):
@@ -1457,10 +1463,25 @@ class EWaybillData(GSTTransactionData):
                 "document_type": "CHL",
                 "sub_supply_desc": "Purchase Return",
             },
+            ("Stock Entry", 0): {
+                "supply_type": "O",
+                "sub_supply_type": doc.get("_sub_supply_type", ""),
+                "document_type": "CHL",
+            },
+            ("Subcontracting Receipt", 0): {
+                "supply_type": "I",
+                "sub_supply_type": doc.get("_sub_supply_type", ""),
+                "document_type": "CHL",
+            },
+            ("Subcontracting Receipt", 1): {
+                "supply_type": "O",
+                "sub_supply_type": doc.get("_sub_supply_type", ""),
+                "document_type": "CHL",
+            },
         }
 
         self.transaction_details.update(
-            default_supply_types.get((doc.doctype, doc.get("is_return")), {})
+            default_supply_types.get((doc.doctype, doc.get("is_return", 0)), {})
         )
 
         if is_foreign_doc(self.doc):
@@ -1470,7 +1491,7 @@ class EWaybillData(GSTTransactionData):
 
         if (
             doc.doctype in ("Sales Invoice", "Purchase Invoice")
-            and not doc.get("is_return")
+            and not doc.is_return
             and all(
                 item.gst_treatment in ("Nil-Rated", "Exempted", "Non-GST")
                 for item in doc.items
@@ -1587,9 +1608,8 @@ class EWaybillData(GSTTransactionData):
                 ("Delivery Note", 0): (REGISTERED_GSTIN, OTHER_GSTIN),
                 ("Delivery Note", 1): (OTHER_GSTIN, REGISTERED_GSTIN),
                 ("Stock Entry", 0): (REGISTERED_GSTIN, OTHER_GSTIN),
-                ("Stock Entry", 1): (OTHER_GSTIN, REGISTERED_GSTIN),
-                ("Subcontracting Receipt", 0): (REGISTERED_GSTIN, OTHER_GSTIN),
-                ("Subcontracting Receipt", 1): (OTHER_GSTIN, REGISTERED_GSTIN),
+                ("Subcontracting Receipt", 0): (OTHER_GSTIN, REGISTERED_GSTIN),
+                ("Subcontracting Receipt", 1): (REGISTERED_GSTIN, OTHER_GSTIN),
             }
 
             if self.bill_from.gstin == self.bill_to.gstin:
@@ -1604,9 +1624,9 @@ class EWaybillData(GSTTransactionData):
                 if address.gstin == "URP":
                     return address.gstin
 
-                return sandbox_gstin.get((self.doc.doctype, self.doc.get("is_return")))[
-                    key
-                ]
+                return sandbox_gstin.get(
+                    (self.doc.doctype, self.doc.get("is_return", 0))
+                )[key]
 
             self.bill_from.gstin = _get_sandbox_gstin(self.bill_from, 0)
             self.bill_to.gstin = _get_sandbox_gstin(self.bill_to, 1)
@@ -1642,9 +1662,9 @@ class EWaybillData(GSTTransactionData):
             "cessValue": self.transaction_details.total_cess_amount,
             "TotNonAdvolVal": self.transaction_details.total_cess_non_advol_amount,
             "OthValue": (
-                self.transaction_details.get("rounding_adjustment")
-                + self.transaction_details.get("other_charges")
-                - self.transaction_details.get("discount_amount")
+                self.transaction_details.get("rounding_adjustment", 0)
+                + self.transaction_details.get("other_charges", 0)
+                - self.transaction_details.get("discount_amount", 0)
             ),
             "totInvValue": self.transaction_details.grand_total,
             "transMode": self.transaction_details.mode_of_transport,

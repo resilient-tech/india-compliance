@@ -433,9 +433,10 @@ function get_generate_e_waybill_dialog(opts, frm) {
         },
     ];
 
+    let options;
     if (frm.doctype === "Delivery Note") {
         const same_gstin = frm.doc.billing_address_gstin == frm.doc.company_gstin;
-        let options;
+
 
         if (frm.doc.is_return) {
             if (same_gstin) {
@@ -455,6 +456,21 @@ function get_generate_e_waybill_dialog(opts, frm) {
                 options = ["Job Work", "SKD/CKD"];
             }
         }
+
+    }
+
+    if (["Stock Entry","Subcontracting Receipt"].includes(frm.doctype)) {
+
+        if (frm.doc.is_return) {
+            options = ["Job Work Returns"];
+            }
+        else {
+                options = ["Job Work"];
+            }
+        }
+
+
+    if (options){
 
         // Inserted at the end of Part A section
         fields.splice(5, 0, {

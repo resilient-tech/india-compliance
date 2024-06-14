@@ -24,10 +24,10 @@ buying_address = {
     "ship_to": "shipping_address",
 }
 
-warehouse_address = {
-    "bill_from": "source_warehouse_address",
-    "bill_to": "target_warehouse_address",
-    "ship_from": "supplier_address",
+stock_entry_address = {
+    "bill_from": "company_address",
+    "bill_to": "supplier_address",
+    "ship_from": "source_warehouse_address",
     "ship_to": "target_warehouse_address",
 }
 
@@ -36,7 +36,7 @@ ADDRESS_FIELDS = {
     "Purchase Invoice": buying_address,
     "Delivery Note": selling_address,
     "Purchase Receipt": buying_address,
-    "Stock Entry": warehouse_address,
+    "Stock Entry": stock_entry_address,
     "Subcontracting Receipt": buying_address,
     "Subcontracting Order": buying_address,
 }

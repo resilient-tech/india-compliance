@@ -302,12 +302,6 @@ class SubcontractingReceiptEwaybill extends EwaybillApplicability {
 
         let message_list = [];
 
-        if (!this.frm.doc.billing_address) {
-            is_ewb_generatable = false;
-            message_list.push(
-                "Billing addresss is mandatory for e-waybill generation."
-            );
-        }
         if (!this.frm.doc.supplier_address) {
             is_ewb_generatable = false;
             message_list.push(

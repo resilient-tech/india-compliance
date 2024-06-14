@@ -8,6 +8,7 @@ from india_compliance.gst_india.constants import (
     E_INVOICE_MASTER_CODES_URL,
     GST_TAX_RATES,
     GST_TAX_TYPES,
+    SALES_DOCTYPES,
     SUBCONTRACTING_DOCTYPES,
 )
 from india_compliance.gst_india.constants.e_waybill import (
@@ -41,15 +42,14 @@ class GSTTransactionData:
         gst_type = "Output"
         self.party_name_field = "customer_name"
 
-        if self.doc.doctype == "Purchase Invoice":
+        if self.doc.doctype not in SALES_DOCTYPES:
             self.party_name_field = "supplier_name"
+
+        if self.doc.doctype in ("Purchase Invoice", "Purchase Receipt"):
             if self.doc.get("is_reverse_charge") != 1:
                 # for with reverse charge, gst_type is Output
                 # this will ensure zero taxes in transaction details
                 gst_type = "Input"
-
-        if self.doc.doctype in SUBCONTRACTING_DOCTYPES:
-            self.party_name_field = "supplier_name"
 
         self.party_name = self.doc.get(self.party_name_field)
 
@@ -63,6 +63,7 @@ class GSTTransactionData:
         rounding_adjustment = self.rounded(
             flt(self.doc.get("base_rounding_adjustment"))
         )
+
         if self.doc.get("is_return"):
             rounding_adjustment = -rounding_adjustment
 
@@ -302,10 +303,8 @@ class GSTTransactionData:
                 }
             )
             self.update_item_details(item_details, row)
-            if self.doc.doctype in SUBCONTRACTING_DOCTYPES:
-                self.update_item_tax_details_for_subcontracting(item_details, row)
-            else:
-                self.update_item_tax_details(item_details, row)
+
+            self.update_item_tax_details(item_details, row)
 
             all_item_details.append(item_details)
 
@@ -343,14 +342,12 @@ class GSTTransactionData:
         # to be overridden
         pass
 
-    def update_item_tax_details_for_subcontracting(self, item_details, item):
-        for tax in GST_TAX_TYPES:
-            item_details.update(
-                {
-                    f"{tax}_amount": item.get(f"{tax}_amount"),
-                    f"{tax}_rate": item.get(f"{tax}_rate"),
-                }
-            )
+    def update_item_tax_details(self, item_details, item):
+        if self.doc.doctype in SUBCONTRACTING_DOCTYPES:
+            self.update_item_tax_details_using_item_gst_details(item_details, item)
+
+        else:
+            self.update_item_tax_details_using_taxes(item_details, item)
 
         tax_rate = sum(
             self.rounded(item_details.get(f"{tax}_rate", 0), 3)
@@ -374,7 +371,7 @@ class GSTTransactionData:
             }
         )
 
-    def update_item_tax_details(self, item_details, item):
+    def update_item_tax_details_using_taxes(self, item_details, item):
         for tax in GST_TAX_TYPES:
             item_details.update({f"{tax}_amount": 0, f"{tax}_rate": 0})
 
@@ -411,27 +408,21 @@ class GSTTransactionData:
                 }
             )
 
+    def update_item_tax_details_using_item_gst_details(self, item_details, item):
+        for tax in GST_TAX_TYPES:
+            item_details.update(
+                {
+                    f"{tax}_amount": item.get(f"{tax}_amount"),
+                    f"{tax}_rate": item.get(f"{tax}_rate"),
+                }
+            )
+
         tax_rate = sum(
             self.rounded(item_details.get(f"{tax}_rate", 0), 3)
             for tax in GST_TAX_TYPES[:3]
         )
 
         validate_gst_tax_rate(tax_rate, item)
-
-        item_details.update(
-            {
-                "tax_rate": tax_rate,
-                "total_value": abs(
-                    self.rounded(
-                        item_details.taxable_value
-                        + sum(
-                            self.rounded(item_details.get(f"{tax}_amount", 0))
-                            for tax in GST_TAX_TYPES
-                        )
-                    ),
-                ),
-            }
-        )
 
     def get_progressive_item_tax_amount(self, amount, tax_type):
         """
