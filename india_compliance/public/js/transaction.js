@@ -181,7 +181,7 @@ function set_and_validate_gstin_status(doctype) {
         },
 
         gst_transporter_id(frm) {
-            india_compliance.validate_gst_transporter_id(frm.get_field("gst_transporter_id").value);
+            india_compliance.validate_gst_transporter_id(frm.doc.gst_transporter_id);
         },
 
         posting_date(frm) {
