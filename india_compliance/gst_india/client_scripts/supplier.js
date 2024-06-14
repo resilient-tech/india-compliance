@@ -23,12 +23,6 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     gst_transporter_id(frm) {
-        if (
-            !frm.doc.gst_transporter_id ||
-            frm.doc.gst_transporter_id.length < 15
-        )
-            return;
-
         india_compliance.validate_gst_transporter_id(frm.doc.gst_transporter_id);
     },
 });

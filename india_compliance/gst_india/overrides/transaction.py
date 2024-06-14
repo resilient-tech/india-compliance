@@ -20,7 +20,7 @@ from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
     restrict_gstr_1_transaction_for,
 )
 from india_compliance.gst_india.doctype.gstin.gstin import (
-    _validate_gstin_info,
+    _validate_gstin_status,
     get_gstin_status,
 )
 from india_compliance.gst_india.doctype.gstin.gstin import (
@@ -1433,7 +1433,7 @@ def validate_gstin_status(gstin, transaction_date):
     if not gstin_doc:
         return
 
-    _validate_gstin_info(gstin_doc, transaction_date, throw=True)
+    _validate_gstin_status(gstin_doc, transaction_date, throw=True)
 
 
 def validate_gst_transporter_id(doc):
