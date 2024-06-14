@@ -55,6 +55,7 @@ CUSTOM_FIELDS = {
             "label": "Taxes",
             "fieldtype": "Section Break",
             "insert_after": "total",
+            "depends_on": "purchase_order",
         },
         {
             "fieldname": "taxes_and_charges",
