@@ -1,19 +1,17 @@
 import frappe
-from frappe.contacts.doctype.address.address import get_default_address
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     update_gst_details,
 )
 from india_compliance.gst_india.overrides.ineligible_itc import update_valuation_rate
-from india_compliance.gst_india.overrides.stock_entry import (
+from india_compliance.gst_india.utils import is_api_enabled
+from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
+from india_compliance.gst_india.utils.taxes_controller import (
     set_item_wise_tax_rates,
     set_taxable_value,
     set_total_taxes,
     validate_taxes,
 )
-from india_compliance.gst_india.overrides.transaction import get_gst_details
-from india_compliance.gst_india.utils import is_api_enabled
-from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 
 
 def onload(doc, method=None):
@@ -52,32 +50,3 @@ def validate(doc, method=None):
 def set_taxes_and_totals(doc):
     set_item_wise_tax_rates(doc)
     set_total_taxes(doc)
-
-
-@frappe.whitelist()
-def update_party_details(party_details, doctype, company):
-    party_details = frappe.parse_json(party_details)
-
-    address = party_details.customer_address
-    if not address:
-        address = get_default_address("Supplier", party_details.get("supplier"))
-        party_details.update(customer_address=address)
-
-    # update gst details
-    if address:
-        party_details.update(
-            frappe.db.get_value(
-                "Address",
-                address,
-                ["gstin as billing_address_gstin"],
-                as_dict=1,
-            )
-        )
-
-    # Update address for update
-    response = {
-        "billing_address": address,  # should be set first as gst_category and gstin is fetched from address
-        **get_gst_details(party_details, doctype, company, update_place_of_supply=True),
-    }
-
-    return response

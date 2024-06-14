@@ -2,7 +2,7 @@ from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     update_gst_details,
 )
 from india_compliance.gst_india.overrides.ineligible_itc import update_valuation_rate
-from india_compliance.gst_india.overrides.stock_entry import (
+from india_compliance.gst_india.utils.taxes_controller import (
     set_item_wise_tax_rates,
     set_taxable_value,
     set_total_taxes,
