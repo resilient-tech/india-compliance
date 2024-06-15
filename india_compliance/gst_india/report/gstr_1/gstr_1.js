@@ -12,6 +12,7 @@ const TYPES_OF_BUSINESS = {
     "NIL Rated": __("NIL RATED/EXEMPTED Invoices"),
     "Document Issued Summary": __("Document Issued Summary"),
     HSN: __("HSN-wise-summary of outward supplies"),
+    "Section 14": __("Supplies through E-Commerce Operators"),
 };
 
 const url = "india_compliance.gst_india.report.gstr_1.gstr_1";
@@ -89,7 +90,10 @@ frappe.query_reports["GSTR-1"] = {
             },
         },
     ],
-    onload: create_download_buttons,
+    onload(report) {
+        create_download_buttons(report);
+        show_gstr_1_beta_alert(report);
+    },
 };
 
 function create_download_buttons(report) {
@@ -165,4 +169,20 @@ function download_full_report_excel(report) {
     open_url_post(`/api/method/${url}.get_gstr1_excel`, {
         filters: JSON.stringify(report.get_values()),
     });
+}
+
+function show_gstr_1_beta_alert(report) {
+    if (report.page.wrapper.find(".alert").length) return;
+
+    const alert_message = `
+        <a href="/app/gstr-1-beta" class="alert-link">
+            GSTR-1 Beta
+        </a>
+        is released with improved features and user experience. Try it out now!
+        `;
+
+    india_compliance.show_dismissable_alert(
+        report.page.wrapper.find(".container.page-body"),
+        alert_message
+    );
 }

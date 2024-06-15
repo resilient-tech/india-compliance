@@ -9,9 +9,15 @@ from erpnext.controllers.accounts_controller import get_advance_payment_entries
 
 from india_compliance.gst_india.overrides.transaction import get_gst_details
 from india_compliance.gst_india.overrides.transaction import (
+    validate_backdated_transaction as _validate_backdated_transaction,
+)
+from india_compliance.gst_india.overrides.transaction import (
     validate_transaction as validate_transaction_for_advance_payment,
 )
-from india_compliance.gst_india.utils import get_all_gst_accounts
+from india_compliance.gst_india.utils import (
+    get_all_gst_accounts,
+    get_gst_accounts_by_type,
+)
 
 
 @frappe.whitelist()
@@ -79,6 +85,8 @@ def validate(doc, method=None):
         return
 
     if doc.party_type == "Customer":
+        validate_backdated_transaction(doc)
+
         # Presume is export with GST if GST accounts are present
         doc.is_export_with_gst = 1
         validate_transaction_for_advance_payment(doc, method)
@@ -98,6 +106,21 @@ def on_submit(doc, method=None):
 
 def on_update_after_submit(doc, method=None):
     make_gst_revesal_entry_from_advance_payment(doc)
+
+
+def before_cancel(doc, method=None):
+    if not doc.taxes:
+        return
+
+    validate_backdated_transaction(doc, action="cancel")
+
+
+def validate_backdated_transaction(doc, action="create"):
+    gst_accounts = get_gst_accounts_by_type(doc.company, "Output").values()
+    for row in doc.taxes:
+        if row.account_head in gst_accounts and row.tax_amount != 0:
+            _validate_backdated_transaction(doc, action=action)
+            break
 
 
 @frappe.whitelist()

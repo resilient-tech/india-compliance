@@ -48,6 +48,13 @@ class GSTIN(Document):
         create_or_update_gstin_status(self.gstin, is_transporter_id=True)
 
 
+def get_gstr_1_filed_upto(gstin):
+    if not gstin:
+        return
+
+    return frappe.db.get_value("GSTIN", gstin, "gstr_1_filed_upto")
+
+
 def create_or_update_gstin_status(
     gstin=None,
     response=None,

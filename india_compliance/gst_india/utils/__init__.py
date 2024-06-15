@@ -649,6 +649,13 @@ def get_titlecase_version(word, all_caps=False, **kwargs):
         return word
 
 
+def is_production_api_enabled(settings=None):
+    if not settings:
+        settings = frappe.get_cached_doc("GST Settings")
+
+    return is_api_enabled(settings) and not settings.sandbox_mode
+
+
 def is_api_enabled(settings=None):
     if not settings:
         settings = frappe.get_cached_value(
@@ -663,11 +670,7 @@ def is_api_enabled(settings=None):
 
 def is_autofill_party_info_enabled():
     settings = frappe.get_cached_doc("GST Settings")
-    return (
-        is_api_enabled(settings)
-        and settings.autofill_party_info
-        and not settings.sandbox_mode
-    )
+    return is_production_api_enabled(settings) and settings.autofill_party_info
 
 
 def can_enable_api(settings):

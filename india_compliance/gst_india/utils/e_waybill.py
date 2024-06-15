@@ -720,7 +720,6 @@ def attach_e_waybill_pdf(doc, log=None):
     pdf_content = frappe.get_print(
         "e-Waybill Log",
         doc.ewaybill,
-        "e-Waybill",
         doc=log,
         no_letterhead=True,
         as_pdf=True,

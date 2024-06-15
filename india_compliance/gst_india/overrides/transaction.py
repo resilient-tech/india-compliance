@@ -3,7 +3,7 @@ from collections import defaultdict
 
 import frappe
 from frappe import _, bold
-from frappe.utils import cint, flt
+from frappe.utils import cint, flt, format_date
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 
 from india_compliance.gst_india.constants import (
@@ -12,6 +12,9 @@ from india_compliance.gst_india.constants import (
     STATE_NUMBERS,
 )
 from india_compliance.gst_india.constants.custom_fields import E_WAYBILL_INV_FIELDS
+from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
+    restrict_gstr_1_transaction_for,
+)
 from india_compliance.gst_india.doctype.gstin.gstin import get_and_validate_gstin_status
 from india_compliance.gst_india.utils import (
     get_all_gst_accounts,
@@ -25,6 +28,7 @@ from india_compliance.gst_india.utils import (
     validate_gst_category,
     validate_gstin,
 )
+from india_compliance.gst_india.utils.gstr_1 import SUPECOM
 from india_compliance.income_tax_india.overrides.tax_withholding_category import (
     get_tax_withholding_accounts,
 )
@@ -64,13 +68,14 @@ def update_taxable_values(doc, valid_accounts):
         if any(
             row
             for row in doc.taxes
-            if row.tax_amount and row.account_head in valid_accounts
+            if row.base_tax_amount_after_discount_amount
+            and row.account_head in valid_accounts
         ):
             reference_row_index = next(
                 (
                     cint(row.row_id) - 1
                     for row in doc.taxes
-                    if row.tax_amount
+                    if row.base_tax_amount_after_discount_amount
                     and row.charge_type == "On Previous Row Total"
                     and row.account_head in valid_accounts
                 ),
@@ -180,10 +185,10 @@ def get_tds_amount(doc):
             continue
 
         if row.get("add_deduct_tax") and row.add_deduct_tax == "Deduct":
-            tds_amount -= row.tax_amount
+            tds_amount -= row.base_tax_amount_after_discount_amount
 
         else:
-            tds_amount += row.tax_amount
+            tds_amount += row.base_tax_amount_after_discount_amount
 
     return tds_amount
 
@@ -600,6 +605,18 @@ def get_source_state_code(doc):
         )
 
     return (doc.supplier_gstin or doc.company_gstin)[:2]
+
+
+def validate_backdated_transaction(doc, gst_settings=None, action="create"):
+    if gstr_1_filed_upto := restrict_gstr_1_transaction_for(
+        doc.posting_date, doc.company_gstin, gst_settings
+    ):
+        frappe.throw(
+            _(
+                "You are not allowed to {0} {1} as GSTR-1 has been filed upto {2}"
+            ).format(action, doc.doctype, frappe.bold(format_date(gstr_1_filed_upto))),
+            title=_("Restricted Changes"),
+        )
 
 
 def validate_hsn_codes(doc):
@@ -1024,7 +1041,7 @@ class ItemGSTDetails:
 
         for row in self.doc.taxes:
             if (
-                not row.tax_amount
+                not row.base_tax_amount_after_discount_amount
                 or not row.item_wise_tax_detail
                 or row.account_head not in self.gst_account_map
             ):
@@ -1037,7 +1054,7 @@ class ItemGSTDetails:
 
             old = json.loads(row.item_wise_tax_detail)
 
-            tax_difference = row.tax_amount
+            tax_difference = row.base_tax_amount_after_discount_amount
 
             # update item taxes
             for item_name in old:
@@ -1382,7 +1399,6 @@ def validate_transaction(doc, method=None):
     validate_ecommerce_gstin(doc)
 
     validate_gst_category(doc.gst_category, gstin)
-
     valid_accounts = validate_gst_accounts(doc, is_sales_transaction) or ()
     update_taxable_values(doc, valid_accounts)
     validate_item_wise_tax_detail(doc, valid_accounts)
@@ -1392,13 +1408,16 @@ def before_print(doc, method=None, print_settings=None):
     if ignore_gst_validations(doc) or not doc.place_of_supply or not doc.company_gstin:
         return
 
+    set_ecommerce_supply_type(doc)
     set_gst_breakup(doc)
 
 
 def onload(doc, method=None):
+
     if ignore_gst_validations(doc) or not doc.place_of_supply or not doc.company_gstin:
         return
 
+    set_ecommerce_supply_type(doc)
     set_gst_breakup(doc)
 
 
@@ -1512,3 +1531,19 @@ def before_update_after_submit(doc, method=None):
     update_taxable_values(doc, valid_accounts)
     validate_item_wise_tax_detail(doc, valid_accounts)
     update_gst_details(doc)
+
+
+def set_ecommerce_supply_type(doc):
+    """
+    - Set GSTR-1 E-commerce section for virtual field ecommerce_supply_type
+    """
+    if doc.doctype not in ("Sales Order", "Sales Invoice", "Delivery Note"):
+        return
+
+    if not doc.ecommerce_gstin:
+        return
+
+    if doc.is_reverse_charge:
+        doc.ecommerce_supply_type = SUPECOM.US_9_5.value
+    else:
+        doc.ecommerce_supply_type = SUPECOM.US_52.value
