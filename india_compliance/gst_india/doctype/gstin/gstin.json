@@ -13,7 +13,9 @@
   "column_break_nrjd",
   "last_updated_on",
   "cancelled_date",
-  "is_blocked"
+  "is_blocked",
+  "section_break_ttzc",
+  "gstr_1_filed_upto"
  ],
  "fields": [
   {
@@ -65,6 +67,16 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Transporter ID Status"
+  },
+  {
+   "fieldname": "section_break_ttzc",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "gstr_1_filed_upto",
+   "fieldtype": "Date",
+   "hidden": 1,
+   "label": "GSTR-1 Filed Upto"
   }
  ],
  "in_create": 1,

@@ -27,7 +27,9 @@ def delete_property_setters():
         "fieldname": "field_name",
     }
 
-    for property_setter in get_property_setters():
+    property_setters = get_property_setters(include_defaults=True)
+
+    for property_setter in property_setters:
         for key, fieldname in field_map.items():
             if key in property_setter:
                 property_setter[fieldname] = property_setter.pop(key)

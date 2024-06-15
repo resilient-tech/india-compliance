@@ -51,35 +51,22 @@ function filter_accounts(frm, account_field) {
 
 function show_ic_api_promo(frm) {
     if (!frm.doc.__onload?.can_show_promo) return;
+    const alert_message = `
+    Looking for API Features?
+    <a href="/app/india-compliance-account" class="alert-link">
+        Get started with the India Compliance API!
+    </a>`;
 
-    const alert = $(`
-        <div
-            class="alert alert-primary alert-dismissable fade show d-flex justify-content-between border-0"
-            role="alert"
-        >
-            <div>
-                Looking for API Features?
-                <a href="/app/india-compliance-account" class="alert-link">
-                    Get started with the India Compliance API!
-                </a>
-            </div>
-            <button
-                type="button"
-                class="close"
-                data-dismiss="alert"
-                aria-label="Close"
-                style="outline: 0px solid black !important"
-            >
-                <span aria-hidden="true">&times;</span>
-            </button>
-        </div>
-    `).prependTo(frm.layout.wrapper);
-
-    alert.on("closed.bs.alert", () => {
-        frappe.xcall(
-            "india_compliance.gst_india.doctype.gst_settings.gst_settings.disable_api_promo"
-        );
-    });
+    india_compliance.show_dismissable_alert(
+        frm.layout.wrapper,
+        alert_message,
+        "primary",
+        () => {
+            frappe.xcall(
+                "india_compliance.gst_india.doctype.gst_settings.gst_settings.disable_api_promo"
+            );
+        }
+    );
 }
 
 function show_update_gst_category_button(frm) {

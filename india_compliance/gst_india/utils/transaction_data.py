@@ -121,7 +121,10 @@ class GSTTransactionData:
             self.transaction_details[key] = 0
 
         for row in self.doc.taxes:
-            if not row.tax_amount or row.account_head not in self.gst_accounts:
+            if (
+                not row.base_tax_amount_after_discount_amount
+                or row.account_head not in self.gst_accounts
+            ):
                 continue
 
             tax = self.gst_accounts[row.account_head][:-8]
@@ -326,7 +329,10 @@ class GSTTransactionData:
             item_details.update({f"{tax}_amount": 0, f"{tax}_rate": 0})
 
         for row in self.doc.taxes:
-            if not row.tax_amount or row.account_head not in self.gst_accounts:
+            if (
+                not row.base_tax_amount_after_discount_amount
+                or row.account_head not in self.gst_accounts
+            ):
                 continue
 
             # Remove '_account' from 'cgst_account'

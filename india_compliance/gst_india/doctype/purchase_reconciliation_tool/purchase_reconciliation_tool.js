@@ -73,18 +73,19 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         new india_compliance.quick_info_popover(frm, tooltip_info);
 
         await frappe.require("purchase_reconciliation_tool.bundle.js");
+        frm.trigger("company");
         frm.purchase_reconciliation_tool = new PurchaseReconciliationTool(frm);
     },
 
     onload(frm) {
         if (frm.doc.is_modified) frm.doc.reconciliation_data = null;
-        frm.trigger("company");
         add_gstr2b_alert(frm);
+        set_date_range_description(frm);
     },
 
     async company(frm) {
         if (!frm.doc.company) return;
-        const options = await set_gstin_options(frm);
+        const options = await india_compliance.set_gstin_options(frm);
 
         if (!frm.doc.company_gstin) frm.set_value("company_gstin", options[0]);
     },
@@ -141,8 +142,9 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         frm.doc.reconciliation_data = null;
     },
 
-    purchase_period(frm) {
-        fetch_date_range(frm, "purchase");
+    async purchase_period(frm) {
+        await fetch_date_range(frm, "purchase");
+        set_date_range_description(frm, "purchase");
     },
 
     async inward_supply_period(frm) {
@@ -151,8 +153,8 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
             "inward_supply",
             "get_date_range_and_check_missing_documents"
         );
+        set_date_range_description(frm, "inward_supply");
         add_gstr2b_alert(frm);
-
     },
 
     after_save(frm) {
@@ -744,8 +746,8 @@ class PurchaseReconciliationTool {
             {
                 label: "Purchase <br>Invoice",
                 fieldname: "purchase_invoice_name",
-                fieldtype: "Link",
-                doctype: "Purchase Invoice",
+                fieldtype: "Dynamic Link",
+                options: "purchase_doctype",
                 align: "center",
                 width: 120,
             },
@@ -1173,18 +1175,36 @@ class ImportDialog {
             if (this.return_type === ReturnType.GSTR2A) {
                 this.dialog.$wrapper.find(".btn-secondary").removeClass("hidden");
                 this.dialog.set_primary_action(__("Download All"), () => {
-                    download_gstr(this.frm, this.date_range, this.return_type, this.company_gstin, false);
+                    download_gstr(
+                        this.frm,
+                        this.date_range,
+                        this.return_type,
+                        this.company_gstin,
+                        false
+                    );
                     this.dialog.hide();
                 });
                 this.dialog.set_secondary_action_label(__("Download Missing"));
                 this.dialog.set_secondary_action(() => {
-                    download_gstr(this.frm, this.date_range, this.return_type, this.company_gstin, true);
+                    download_gstr(
+                        this.frm,
+                        this.date_range,
+                        this.return_type,
+                        this.company_gstin,
+                        true
+                    );
                     this.dialog.hide();
                 });
             } else if (this.return_type === ReturnType.GSTR2B) {
                 this.dialog.$wrapper.find(".btn-secondary").addClass("hidden");
                 this.dialog.set_primary_action(__("Download"), () => {
-                    download_gstr(this.frm, this.date_range, this.return_type, this.company_gstin, true);
+                    download_gstr(
+                        this.frm,
+                        this.date_range,
+                        this.return_type,
+                        this.company_gstin,
+                        true
+                    );
                     this.dialog.hide();
                 });
             }
@@ -1214,7 +1234,10 @@ class ImportDialog {
         });
 
         // TODO: modify HTML for case: company_gstin == "All"
-        let html = (!message || this.company_gstin == "All") ? '' : frappe.render_template("gstr_download_history", message)
+        let html =
+            !message || this.company_gstin == "All"
+                ? ""
+                : frappe.render_template("gstr_download_history", message);
         this.dialog.fields_dict.history.html(html);
     }
 
@@ -1260,9 +1283,9 @@ class ImportDialog {
                     { label: "GSTR 2B", value: ReturnType.GSTR2B },
                 ],
                 onchange: () => {
+                    this.return_type = this.dialog.get_value("return_type");
                     this.fetch_import_history();
                     this.setup_dialog_actions();
-                    this.return_type = this.dialog.get_value("return_type");
                 },
             },
             {
@@ -1282,7 +1305,7 @@ class ImportDialog {
                 onchange: () => {
                     this.company_gstin = this.dialog.get_value("company_gstin");
                     this.fetch_import_history();
-                }
+                },
             },
             {
                 fieldtype: "Column Break",
@@ -1430,14 +1453,30 @@ class EmailDialog {
 async function fetch_date_range(frm, field_prefix, method) {
     const from_date_field = field_prefix + "_from_date";
     const to_date_field = field_prefix + "_to_date";
+
     const period = frm.doc[field_prefix + "_period"];
-    if (!period) return;
+    if (!period || period == "Custom") return;
 
     const { message } = await frm.call(method || "get_date_range", { period });
-    if (!message) return;
 
     frm.set_value(from_date_field, message[0]);
     frm.set_value(to_date_field, message[1]);
+}
+
+function set_date_range_description(frm, field_prefixs) {
+    if (!field_prefixs) field_prefixs = ["inward_supply", "purchase"];
+
+    field_prefixs.forEach(prefix => {
+        const period_field = prefix + "_period";
+        const period = frm.doc[period_field];
+
+        if (!period || period == "Custom")
+            return frm.get_field(period_field).set_description("");
+
+        const from_date = frappe.datetime.str_to_user(frm.doc[prefix + "_from_date"]);
+        const to_date = frappe.datetime.str_to_user(frm.doc[prefix + "_to_date"]);
+        frm.get_field(period_field).set_description(`${from_date} to ${to_date}`);
+    });
 }
 
 function get_icon(value, column, data, icon) {
@@ -1701,17 +1740,3 @@ async function create_new_purchase_invoice(row, company, company_gstin) {
     frappe.new_doc("Purchase Invoice");
 }
 
-async function set_gstin_options(frm) {
-    const { query, params } = india_compliance.get_gstin_query(frm.doc.company);
-    const { message } = await frappe.call({
-        method: query,
-        args: params,
-    });
-
-    if (!message) return [];
-    message.unshift("All");
-
-    const gstin_field = frm.get_field("company_gstin");
-    gstin_field.set_data(message);
-    return message;
-}

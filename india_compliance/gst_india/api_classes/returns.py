@@ -22,8 +22,12 @@ from india_compliance.gst_india.utils.cryptography import (
 class PublicCertificate(BaseAPI):
     BASE_PATH = "static"
 
-    def get_gstn_public_certificate(self) -> str:
+    def get_gstn_public_certificate(self, error_message=None) -> str:
         response = self.get(endpoint="gstn_g2b_prod_public")
+
+        if response.certificate == self.settings.gstn_public_certificate:
+            frappe.throw(error_message or _("Public Certificate is already up to date"))
+
         self.settings.db_set("gstn_public_certificate", response.certificate)
 
         return response.certificate
@@ -222,16 +226,19 @@ class ReturnsAPI(ReturnsAuthenticate):
         "RET13508": "no_docs_found",
         "RET13509": "no_docs_found",
         "RET13510": "no_docs_found",
-        "RET2B1023": "no_docs_found",
+        "RET2B1023": "not_generated",
         "RET2B1016": "no_docs_found",
         "RT-3BAS1009": "no_docs_found",
+        "RET11417": "no_docs_found",  # GSTR-1 Exports
         "RET2B1018": "requested_before_cutoff_date",
         "RTN_24": "queued",
+        "AUTH158": "invalid_otp",  # Invalid OTP
         "AUTH4033": "invalid_otp",  # Invalid Session
         # "AUTH4034": "invalid_otp",  # Invalid OTP
         "AUTH4038": "authorization_failed",  # Session Expired
         "RET11402": "authorization_failed",  # API Authorization Failed for 2A
         "RET2B1010": "authorization_failed",  # API Authorization Failed for 2B
+        "TEC4002": "invalid_public_key",
     }
 
     def setup(self, company_gstin):
@@ -336,6 +343,14 @@ class ReturnsAPI(ReturnsAuthenticate):
                 title=_("API Request Failed"),
             )
 
+        # Handle invalid public key
+        if response.error_type == "invalid_public_key":
+            PublicCertificate().get_gstn_public_certificate(
+                error_message=_(
+                    "Looks like Public Key of GSTN used for encryption is Invalid"
+                )
+            )
+
     def is_ignored_error(self, response):
         error_code = response.get("error", {}).get("error_cd")
 
@@ -394,5 +409,27 @@ class GSTR2aAPI(ReturnsAPI):
             return_period,
             params={"ret_period": return_period},
             endpoint="returns/gstr2a",
+            otp=otp,
+        )
+
+
+class GSTR1API(ReturnsAPI):
+    API_NAME = "GSTR-1"
+
+    def get_gstr_1_data(self, action, return_period, otp=None):
+        return self.get(
+            action,
+            return_period,
+            params={"ret_period": return_period},
+            endpoint="returns/gstr1",
+            otp=otp,
+        )
+
+    def get_einvoice_data(self, section, return_period, otp=None):
+        return self.get(
+            "EINV",
+            return_period,
+            params={"ret_period": return_period, "sec": section},
+            endpoint="returns/einvoice",
             otp=otp,
         )

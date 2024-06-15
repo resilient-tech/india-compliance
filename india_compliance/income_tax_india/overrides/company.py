@@ -28,7 +28,9 @@ def create_tds_account(company):
 def create_or_update_tax_withholding_category(company):
     accounts = []
     tds_account = frappe.get_value(
-        "Account", {"account_name": "TDS Payable", "company": company}, "name"
+        "Account",
+        {"account_name": "TDS Payables", "company": company, "is_group": 0},
+        "name",
     )
 
     if company and tds_account:
