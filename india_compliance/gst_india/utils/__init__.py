@@ -173,7 +173,7 @@ def validate_gstin(
 
     # eg: 29AAFCA7488L1Z0 invalid check digit for valid transporter id
     if not is_transporter_id:
-        validate_gstin_check_digit(gstin, label=label)
+        validate_gstin_check_digit(gstin, label)
 
     if is_tcs_gstin and not TCS.match(gstin):
         frappe.throw(

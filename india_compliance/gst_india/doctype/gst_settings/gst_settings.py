@@ -90,6 +90,26 @@ class GSTSettings(Document):
             not self.enable_retry_einv_ewb_generation,
         )
 
+    def get_gstin_with_credentials(self, service=None):
+        if not service:
+            return
+
+        if service == "Returns" and not self:
+            return
+
+        if service == "e-Waybill" and not self.enable_e_waybill:
+            return
+
+        if service == "e-Invoice" and not self.enable_e_invoice:
+            return
+
+        if service in ["e-Invoice", "e-Waybill"]:
+            service = "e-Waybill / e-Invoice"
+
+        for row in self.credentials:
+            if row.service == service:
+                return row.gstin
+
     def validate_gst_accounts(self):
         account_list = []
         company_wise_account_types = {}
