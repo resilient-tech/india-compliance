@@ -53,18 +53,13 @@ Object.assign(india_compliance, {
         return in_list(frappe.boot.sales_doctypes, doctype) ? "Customer" : "Supplier";
     },
 
-    async set_gstin_status(field, transaction_date, force_update = 0) {
+    async set_gstin_status(field, transaction_date, force_update) {
         const gstin = field.value;
         if (!gstin || gstin.length !== 15) return field.set_description("");
 
         const { message } = await frappe.call({
             method: "india_compliance.gst_india.doctype.gstin.gstin.get_gstin_status",
-            args: {
-                gstin,
-                transaction_date,
-                is_request_from_ui: 1,
-                force_update,
-            },
+            args: { gstin, transaction_date, force_update },
         });
 
         if (!message) return field.set_description("");
@@ -122,7 +117,7 @@ Object.assign(india_compliance, {
         `).appendTo(field.$wrapper.find(".gstin-last-updated"));
 
         refresh_btn.on("click", async function () {
-            const force_update = 1;
+            const force_update = true;
             await india_compliance.set_gstin_status(
                 field,
                 transaction_date,

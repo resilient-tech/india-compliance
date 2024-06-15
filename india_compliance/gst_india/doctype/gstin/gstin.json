@@ -9,11 +9,11 @@
   "gstin",
   "registration_date",
   "status",
-  "is_blocked",
+  "transporter_id_status",
   "column_break_nrjd",
   "last_updated_on",
   "cancelled_date",
-  "transporter_id_status"
+  "is_blocked"
  ],
  "fields": [
   {
@@ -29,7 +29,7 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Status"
+   "label": "GSTIN Status"
   },
   {
    "fieldname": "registration_date",
@@ -64,14 +64,13 @@
    "fieldname": "transporter_id_status",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "in_standard_filter": 1,
    "label": "Transporter ID Status"
   }
  ],
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-05-21 12:59:58.322776",
+ "modified": "2024-06-14 13:59:53.998262",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTIN",
@@ -95,6 +94,12 @@
    "report": 1,
    "role": "Accounts Manager",
    "share": 1
+  },
+  {
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User"
   }
  ],
  "sort_field": "creation",
