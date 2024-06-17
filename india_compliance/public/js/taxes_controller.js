@@ -1,8 +1,12 @@
 frappe.provide("india_compliance");
 
-const SUBCONTRACTING_DOCTYPE_ITEMS = ["Stock Entry Detail", "Subcontracting Order Item", "Subcontracting Receipt Item"];
+const SUBCONTRACTING_DOCTYPE_ITEMS = [
+    "Stock Entry Detail",
+    "Subcontracting Order Item",
+    "Subcontracting Receipt Item",
+];
 
-india_compliance.taxes_controller =  class TaxesController {
+india_compliance.taxes_controller = class TaxesController {
     constructor(frm) {
         this.frm = frm;
         this.setup();
@@ -175,14 +179,60 @@ india_compliance.taxes_controller =  class TaxesController {
         );
         this.frm.set_value("total_taxes", total_taxes);
     }
+
+    update_rounded_total_for_stock_entry() {
+        const total = this.frm.doc.items.reduce(
+            (value, item) => value + item.taxable_value,
+            0
+        );
+        const base_rounded_total = total + this.frm.doc.total_taxes;
+
+        this.frm.set_value("base_rounded_total", base_rounded_total);
+    }
+
+    update_rounded_total() {
+        const { total_taxes, total } = this.frm.doc;
+        const base_rounded_total = total_taxes + total;
+        this.frm.set_value("base_rounded_total", base_rounded_total);
+    }
+
+    update_taxable_value(cdt, cdn) {
+        const row = locals[cdt][cdn];
+        let amount;
+
+        // Function to calculate amount
+        const calculateAmount = (qty, rate, precisionType) => {
+            return flt(flt(qty) * flt(rate), precision(precisionType, row));
+        };
+
+        // TODO: rate is not updating before this method is called
+        if (this.frm.doc.doctype === "Subcontracting Receipt") {
+            amount = calculateAmount(row.qty, row.rate, "amount");
+        } else if (this.frm.doc.doctype === "Stock Entry") {
+            amount = calculateAmount(row.qty, row.basic_rate, "basic_amount");
+        }
+
+        row.taxable_value = amount;
+    }
 };
 
 for (const doctype of SUBCONTRACTING_DOCTYPE_ITEMS) {
     frappe.ui.form.on(doctype, {
         async item_tax_template(frm, cdt, cdn) {
             const row = locals[cdt][cdn];
-            if (!row.item_tax_template) frm.taxes_controller.update_item_wise_tax_rates();
+            if (!row.item_tax_template)
+                frm.taxes_controller.update_item_wise_tax_rates();
             else await frm.taxes_controller.set_item_wise_tax_rates(cdn);
+            frm.taxes_controller.update_tax_amount();
+        },
+
+        qty(frm, cdt, cdn) {
+            frm.taxes_controller.update_taxable_value(cdt, cdn);
+            frm.taxes_controller.update_tax_amount();
+        },
+
+        item_code(frm, cdt, cdn) {
+            frm.taxes_controller.update_taxable_value(cdt, cdn);
             frm.taxes_controller.update_tax_amount();
         },
     });
@@ -234,4 +284,4 @@ india_compliance.update_taxes = function (frm) {
             },
         });
     }
-}
+};

@@ -12,6 +12,7 @@ from india_compliance.gst_india.utils.taxes_controller import (
     set_item_wise_tax_rates,
     set_taxable_value,
     set_total_taxes,
+    update_rounded_total_for_stock_entry,
     validate_taxes,
 )
 
@@ -44,6 +45,7 @@ def validate(doc, method=None):
     # This has to be called after `amount` is updated based upon `additional_costs` in erpnext
     set_taxable_value(doc)
     set_taxes_and_totals(doc)
+    update_rounded_total_for_stock_entry(doc)
 
     validate_taxes(doc)
     update_valuation_rate(doc)

@@ -131,6 +131,13 @@ CUSTOM_FIELDS = {
             "translatable": 0,
             "fetch_from": "",
         },
+        {
+            "fieldname": "base_rounded_total",
+            "label": "Base Rounded Total",
+            "fieldtype": "Currency",
+            "insert_after": "total_taxes",
+            "read_only": 1,
+        },
     ],
     # Stock Entry: Tax Fields
     "Stock Entry": [
@@ -235,6 +242,13 @@ CUSTOM_FIELDS = {
             "label": "Company Address",
             "fieldtype": "Text Editor",
             "insert_after": "cb_company_address",
+            "read_only": 1,
+        },
+        {
+            "fieldname": "base_rounded_total",
+            "label": "Base Rounded Total",
+            "fieldtype": "Currency",
+            "insert_after": "total_outgoing_value",
             "read_only": 1,
         },
     ],

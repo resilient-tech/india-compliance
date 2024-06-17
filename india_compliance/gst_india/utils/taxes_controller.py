@@ -51,6 +51,22 @@ def set_total_taxes(doc):
     doc.total_taxes = total_taxes
 
 
+@frappe.whitelist()
+def update_rounded_total(doc):
+    doc.base_rounded_total = doc.total + doc.total_taxes
+
+
+@frappe.whitelist()
+def update_rounded_total_for_stock_entry(doc):
+    total = 0
+    for item in doc.items:
+        total += item.taxable_value
+
+    total += doc.total_taxes
+
+    doc.base_rounded_total = total
+
+
 def get_item_tax_map(tax_templates, tax_accounts):
     """
     Parameters:
