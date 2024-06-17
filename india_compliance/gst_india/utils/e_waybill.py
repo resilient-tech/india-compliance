@@ -1254,16 +1254,13 @@ class EWaybillData(GSTTransactionData):
         if not self.doc.gst_transporter_id:
             self.validate_mode_of_transport()
 
-        self.validate_same_gstin(address)
+        self.validate_same_gstin()
 
-    def validate_same_gstin(self, address_fields):
+    def validate_same_gstin(self):
         if self.doc.doctype == "Delivery Note":
             return
 
-        if self.doc.get(address_fields["bill_from"]) == self.doc.get(
-            address_fields["bill_to"]
-        ):
-
+        if self.bill_from.gstin == self.bill_to.gstin:
             frappe.throw(
                 _(
                     "e-Waybill cannot be generated because billing GSTIN is same as"
