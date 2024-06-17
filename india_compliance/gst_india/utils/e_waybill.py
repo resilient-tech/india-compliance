@@ -19,7 +19,7 @@ from frappe.utils.file_manager import save_file
 from india_compliance.exceptions import GSPServerError
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
-from india_compliance.gst_india.constants import STATE_NUMBERS
+from india_compliance.gst_india.constants import SALES_DOCTYPES, STATE_NUMBERS
 from india_compliance.gst_india.constants.e_waybill import (
     ADDRESS_FIELDS,
     CANCEL_REASON_CODES,
@@ -1260,10 +1260,15 @@ class EWaybillData(GSTTransactionData):
         if self.doc.doctype == "Delivery Note":
             return
 
-        if self.bill_from.gstin == self.bill_to.gstin:
+        party_gstin_fieldname = (
+            "billing_address_gstin"
+            if self.doc.doctype in SALES_DOCTYPES
+            else "supplier_gstin"
+        )
+        if self.doc.get("company_gstin") == self.doc.get(party_gstin_fieldname):
             frappe.throw(
                 _(
-                    "e-Waybill cannot be generated because billing GSTIN is same as"
+                    "e-Waybill cannot be generated because Party GSTIN is same as"
                     " company GSTIN"
                 ),
                 title=_("Invalid Data"),
@@ -1536,7 +1541,11 @@ class EWaybillData(GSTTransactionData):
         to_party = self.transaction_details.party_name
         from_party = self.transaction_details.company_name
 
-        if self.doc.doctype == "Purchase Invoice":
+        if self.doc.doctype in (
+            "Purchase Invoice",
+            "Purchase Receipt",
+            "Subcontracting Receipt",
+        ):
             to_party, from_party = from_party, to_party
 
         if self.doc.get("is_return"):

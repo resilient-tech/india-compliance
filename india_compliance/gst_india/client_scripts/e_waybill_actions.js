@@ -433,38 +433,7 @@ function get_generate_e_waybill_dialog(opts, frm) {
         },
     ];
 
-    let options;
-
-    const isSameGstin = frm.doc.billing_address_gstin === frm.doc.company_gstin;
-
-    const deliveryNoteOptions = {
-        return: {
-            sameGstin: ["For Own Use", "Exhibition or Fairs"],
-            differentGstin: ["Job Work Returns", "SKD/CKD"]
-        },
-        notReturn: {
-            sameGstin: ["For Own Use", "Exhibition or Fairs", "Line Sales", "Recipient Not Known"],
-            differentGstin: ["Job Work", "SKD/CKD"]
-        }
-    };
-
-    const subcontractingOptions = {
-        return: ["Job Work"],
-        notReturn: ["Job Work Returns"]
-    };
-
-    if (frm.doctype === "Delivery Note") {
-        if(frm.doc.is_return){
-            options = isSameGstin ? deliveryNoteOptions.return.sameGstin : deliveryNoteOptions.return.differentGstin;
-        }
-        else{
-            options = isSameGstin ? deliveryNoteOptions.notReturn.sameGstin : deliveryNoteOptions.notReturn.differentGstin;
-        }
-    }
-
-    if (["Stock Entry","Subcontracting Receipt"].includes(frm.doctype)) {
-        options = frm.doc.is_return ? subcontractingOptions.return : subcontractingOptions.notReturn;
-    }
+    options = get_sub_suppy_type_options(frm);
 
     if (options){
 
@@ -510,6 +479,48 @@ function get_generate_e_waybill_dialog(opts, frm) {
     frappe.ui.form.ControlData.trigger_change_on_input_event = true;
 
     return d;
+}
+
+function get_sub_suppy_type_options(frm) {
+    let options =[]
+    const same_gstin = frm.doc.billing_address_gstin == frm.doc.company_gstin;
+
+    if (frm.doctype === "Delivery Note") {
+
+        if (frm.doc.is_return) {
+            if (same_gstin) {
+                options = ["For Own Use", "Exhibition or Fairs"];
+            } else {
+                options = ["Job Work Returns", "SKD/CKD"];
+            }
+        } else {
+            if (same_gstin) {
+                options = [
+                    "For Own Use",
+                    "Exhibition or Fairs",
+                    "Line Sales",
+                    "Recipient Not Known",
+                ];
+            } else {
+                options = ["Job Work", "SKD/CKD"];
+            }
+        }
+    }
+    if (frm.doctype === "Stock Entry") {
+        options = ["Job Work"];
+    }
+
+    if (frm.doctype === "Subcontracting Receipt") {
+
+        if (frm.doc.is_return) {
+            options = ["Job Work"];
+            }
+        else {
+                options = ["Job Work Returns"];
+            }
+        }
+
+    return options;
 }
 
 function show_fetch_if_generated_dialog(frm) {
