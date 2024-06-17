@@ -133,10 +133,11 @@ CUSTOM_FIELDS = {
         },
         {
             "fieldname": "base_rounded_total",
-            "label": "Base Rounded Total",
+            "label": "Rounded Total",
             "fieldtype": "Currency",
             "insert_after": "total_taxes",
             "read_only": 1,
+            "options": "currency",
         },
     ],
     # Stock Entry: Tax Fields
@@ -246,10 +247,11 @@ CUSTOM_FIELDS = {
         },
         {
             "fieldname": "base_rounded_total",
-            "label": "Base Rounded Total",
+            "label": "Rounded Total",
             "fieldtype": "Currency",
             "insert_after": "total_outgoing_value",
             "read_only": 1,
+            "options": "currency",
         },
     ],
     "Company": [
