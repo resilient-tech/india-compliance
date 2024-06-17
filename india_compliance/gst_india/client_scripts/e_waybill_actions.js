@@ -462,10 +462,10 @@ function get_generate_e_waybill_dialog(opts, frm) {
     if (["Stock Entry","Subcontracting Receipt"].includes(frm.doctype)) {
 
         if (frm.doc.is_return) {
-            options = ["Job Work Returns"];
+            options = ["Job Work"];
             }
         else {
-                options = ["Job Work"];
+                options = ["Job Work Returns"];
             }
         }
 

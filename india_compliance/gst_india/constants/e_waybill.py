@@ -38,7 +38,6 @@ ADDRESS_FIELDS = {
     "Purchase Receipt": buying_address,
     "Stock Entry": stock_entry_address,
     "Subcontracting Receipt": buying_address,
-    "Subcontracting Order": buying_address,
 }
 PERMITTED_DOCTYPES = list(ADDRESS_FIELDS.keys())
 
