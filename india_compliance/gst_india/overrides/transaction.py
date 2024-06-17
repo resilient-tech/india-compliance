@@ -492,20 +492,22 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
 
 
 def set_gst_account_type(doc, method=None):
+    if not doc.taxes:
+        return
+
     tax_name_to_tax_type = {}
     is_sales_transaction = (
         True if doc.doctype in (*SALES_DOCTYPES, "Payment Entry") else False
     )
     account_types = ["Output"] if is_sales_transaction else ["Input", "Reverse Charge"]
 
-    all_gst_accounts = get_all_gst_accounts(doc.company)
-    rows_to_validate = [
-        row
+    used_accounts = [
+        row.account_head
         for row in doc.taxes
-        if row.tax_amount and row.account_head in all_gst_accounts
+        if row.tax_amount and row.account_head in get_all_gst_accounts(doc.company)
     ]
-
-    used_accounts = [row.account_head for row in rows_to_validate]
+    if not used_accounts:
+        return
 
     for account_type in account_types:
         gst_accounts = get_gst_accounts_by_type(doc.company, account_type)

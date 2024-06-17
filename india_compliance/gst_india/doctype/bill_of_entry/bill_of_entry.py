@@ -503,7 +503,6 @@ def make_bill_of_entry(source_name, target_doc=None):
             {
                 "parenttype": "Purchase Taxes and Charges Template",
                 "account_head": input_igst_account,
-                "gst_tax_type": "igst",
             },
             ("rate", "description"),
         ) or (0, input_igst_account)
@@ -514,8 +513,8 @@ def make_bill_of_entry(source_name, target_doc=None):
                 "charge_type": "On Net Total",
                 "account_head": input_igst_account,
                 "rate": rate,
-                "description": description,
                 "gst_tax_type": "igst",
+                "description": description,
             },
         )
 
