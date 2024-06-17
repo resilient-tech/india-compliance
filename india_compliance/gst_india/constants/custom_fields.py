@@ -99,10 +99,10 @@ CUSTOM_FIELDS = {
             "fieldtype": "Check",
         },
         {
-            "label": "Image URL",
-            "fieldname": "image_url",
+            "label": "Logo",
+            "fieldname": "logo",
             "insert_after": "enable_signature",
-            "fieldtype": "Data",
+            "fieldtype": "Attach",
             "translatable": 0,
         },
         {
