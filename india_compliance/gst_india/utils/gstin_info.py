@@ -49,7 +49,7 @@ def _get_gstin_info(gstin, *, throw_error=True):
 
     if not response:
         try:
-            if frappe.cache.get_value("gst_server_error"):
+            if frappe.cache().get_value("gst_server_error"):
                 return
 
             response = PublicAPI().get_gstin_info(gstin)
@@ -60,7 +60,7 @@ def _get_gstin_info(gstin, *, throw_error=True):
             )
         except Exception as exc:
             if isinstance(exc, GSPServerError):
-                frappe.cache.set_value("gst_server_error", True, expires_in_sec=60)
+                frappe.cache().set_value("gst_server_error", True, expires_in_sec=60)
 
             if throw_error:
                 raise exc
@@ -189,7 +189,7 @@ def fetch_gstin_status(*, gstin=None, throw=True):
     validate_gstin(gstin)
 
     try:
-        if not throw and frappe.cache.get_value("gst_server_error"):
+        if not throw and frappe.cache().get_value("gst_server_error"):
             return
 
         gst_settings = frappe.get_cached_doc("GST Settings", None)
@@ -215,7 +215,7 @@ def fetch_gstin_status(*, gstin=None, throw=True):
             raise e
 
         if isinstance(e, GSPServerError):
-            frappe.cache.set_value("gst_server_error", True, expires_in_sec=60)
+            frappe.cache().set_value("gst_server_error", True, expires_in_sec=60)
 
         frappe.log_error(
             title=_("Error fetching GSTIN status"),

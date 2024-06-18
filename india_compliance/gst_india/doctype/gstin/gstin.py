@@ -127,10 +127,6 @@ def get_gstin_status(gstin, transaction_date=None, force_update=False):
     if not gstin:
         return
 
-<<<<<<< HEAD
-    finally:
-        frappe.cache().set_value(gstin, True, expires_in_sec=180)
-=======
     if not force_update and not is_status_refresh_required(gstin, transaction_date):
         if not frappe.db.exists("GSTIN", gstin):
             return
@@ -138,7 +134,6 @@ def get_gstin_status(gstin, transaction_date=None, force_update=False):
         return frappe.get_doc("GSTIN", gstin)
 
     return create_or_update_gstin_status(gstin, throw=force_update)
->>>>>>> 574b0160 (fix: changes as per reivew)
 
 
 def validate_gstin_status(gstin_doc, transaction_date=None, throw=False):
@@ -197,10 +192,6 @@ def is_status_refresh_required(gstin, transaction_date):
         not settings.validate_gstin_status
         or not is_api_enabled(settings)
         or settings.sandbox_mode
-<<<<<<< HEAD
-        or frappe.cache().get_value(gstin)
-=======
->>>>>>> 574b0160 (fix: changes as per reivew)
     ):
         return
 
