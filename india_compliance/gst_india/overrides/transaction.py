@@ -495,6 +495,15 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
             title=_("Invalid Reference Row"),
         )
 
+    validate_missing_accounts(doc, used_accounts)
+
+    return all_valid_accounts
+
+
+def validate_missing_accounts(doc, used_accounts):
+    if doc.doctype in SUBCONTRACTING_DOCTYPES:
+        return
+
     for row in doc.get("items") or []:
         if not row.get("item_tax_template"):
             continue
@@ -510,8 +519,6 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
                 title=_("Invalid Item Tax Template"),
                 indicator="orange",
             )
-
-    return all_valid_accounts
 
 
 def validate_charge_type_for_cess_non_advol_accounts(cess_non_advol_accounts, tax_row):
