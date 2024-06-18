@@ -75,9 +75,9 @@ def update_gst_details(doc, method=None):
     ICGSTDetails().update(doc)
 
 
-@frappe.whitelist()
 def set_item_wise_tax_rates(doc, item_name=None, tax_name=None):
     items, taxes = get_rows_to_update(doc, item_name, tax_name)
+
     tax_accounts = {tax.account_head for tax in taxes}
 
     if not tax_accounts:
@@ -92,13 +92,12 @@ def set_item_wise_tax_rates(doc, item_name=None, tax_name=None):
         )
 
         for item in items:
-            key = (item.item_tax_template, tax.account_head)
+            key = f"{item.item_tax_template},{tax.account_head}"
             item_wise_tax_rates[item.name] = item_tax_map.get(key, tax.rate)
 
         tax.item_wise_tax_rates = json.dumps(item_wise_tax_rates)
 
 
-@frappe.whitelist()
 def set_base_tax_amount_and_tax_total(doc):
     total_taxes = 0
     round_off_accounts = get_round_off_applicable_accounts(doc.company, [])
@@ -127,6 +126,7 @@ def set_base_rounded_total(doc):
     doc.base_rounded_total = total
 
 
+@frappe.whitelist()
 def get_item_tax_map(tax_templates, tax_accounts):
     """
     Parameters:
@@ -138,10 +138,12 @@ def get_item_tax_map(tax_templates, tax_accounts):
 
     Sample Output:
         {
-            ('GST 18%', 'IGST - TC'): 18.0
-            ('GST 28%', 'IGST - TC'): 28.0
+            'GST 18%,IGST - TC': 18.0
+            'GST 28%,IGST - TC': 28.0
         }
     """
+    tax_templates = frappe.parse_json(tax_templates)
+    tax_accounts = frappe.parse_json(tax_accounts)
 
     if not tax_templates:
         return {}
@@ -155,7 +157,7 @@ def get_item_tax_map(tax_templates, tax_accounts):
         },
     )
 
-    return {(d.parent, d.tax_type): d.tax_rate for d in tax_rates}
+    return {f"{tax.parent},{tax.tax_type}": tax.tax_rate for tax in tax_rates}
 
 
 def get_rows_to_update(doc, item_name=None, tax_name=None):
@@ -163,7 +165,6 @@ def get_rows_to_update(doc, item_name=None, tax_name=None):
     Returns items and taxes to update based on item_name and tax_name passed.
     If item_name and tax_name are not passed, all items and taxes are returned.
     """
-
     items = doc.get("items", {"name": item_name}) if item_name else doc.items
     taxes = doc.get("taxes", {"name": tax_name}) if tax_name else doc.taxes
 

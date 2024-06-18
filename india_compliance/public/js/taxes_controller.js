@@ -47,16 +47,83 @@ india_compliance.taxes_controller = class TaxesController {
          * @param {string} tax_name - Tax row name for which the tax rates are to be fetched.
          */
 
-        if (!this.frm.taxes || !this.frm.taxes.length) return;
+        if (!this.frm.doc.taxes || !this.frm.doc.taxes.length) return;
 
-        //TODO:
-        await this.frm.call(
-            "india_compliance.gst_india.utils.taxes_controller.TaxesController.set_item_wise_tax_rates",
-            {
-                item_name: item_name,
-                tax_name: tax_name,
+        let [items, taxes] = this.get_rows_to_update(item_name, tax_name);
+        let tax_accounts = new Set(taxes.map(tax => tax.account_head));
+
+        if (!tax_accounts.size) {
+            return;
+        }
+        let tax_templates = new Set(items.map(item => item.item_tax_template));
+        let item_tax_map = await this.get_item_tax_map(tax_templates, tax_accounts);
+
+        let updated_taxes = [];
+        for (let tax of taxes) {
+            let item_wise_tax_rates = tax.item_wise_tax_rates
+                ? JSON.parse(tax.item_wise_tax_rates)
+                : {};
+
+            for (let item of items) {
+                let key = [item.item_tax_template, tax.account_head].toString();
+                item_wise_tax_rates[item.name] = item_tax_map[key] || tax.rate;
             }
-        );
+
+            tax.item_wise_tax_rates = JSON.stringify(item_wise_tax_rates);
+            updated_taxes.push(tax);
+        }
+    }
+
+    get_rows_to_update(item_name = null, tax_name = null) {
+        /*
+        Returns items and taxes to update based on itemName and taxName passed.
+        If itemName and taxName are not passed, all items and taxes are returned.
+        */
+        let items = item_name
+            ? this.frm.doc.items.filter(item => item.name === item_name)
+            : this.frm.doc.items;
+        let taxes = tax_name
+            ? this.frm.doc.taxes.filter(tax => tax.name === tax_name)
+            : this.frm.doc.taxes;
+
+        return [items, taxes];
+    }
+
+    async get_item_tax_map(tax_templates, tax_accounts) {
+        /**
+         * Parameters:
+         *     taxTemplates (Array): List of item tax templates used in the items
+         *     taxAccounts (Array): List of tax accounts used in the taxes
+         *
+         * Returns:
+         *     Object: A map of item_tax_template, tax_account and tax_rate
+         *
+         * Sample Output:
+         *     {
+         *         'GST 18%','IGST - TC': 18.0,
+         *         'GST 28%','IGST - TC': 28.0
+         *     }
+         */
+
+        if (!tax_templates.size) {
+            return {};
+        }
+
+        let tax_rates = {};
+        await frappe.call({
+            method: "india_compliance.gst_india.utils.taxes_controller.get_item_tax_map",
+            args: {
+                tax_templates: Array.from(tax_templates),
+                tax_accounts: Array.from(tax_accounts),
+            },
+            callback: function (r) {
+                if (!r.exc) {
+                    tax_rates = r.message;
+                }
+            },
+        });
+
+        return tax_rates;
     }
 
     update_item_wise_tax_rates(tax_row) {
