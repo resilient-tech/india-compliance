@@ -11,14 +11,10 @@ from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
 from india_compliance.gst_india.api_classes.public import PublicAPI
-<<<<<<< HEAD
 from india_compliance.gst_india.doctype.gstr_1_log.gstr_1_log import (
     process_gstr_1_returns_info,
 )
-from india_compliance.gst_india.utils import titlecase, validate_gstin
-=======
 from india_compliance.gst_india.utils import parse_datetime, titlecase, validate_gstin
->>>>>>> 574b0160 (fix: changes as per reivew)
 
 GST_CATEGORIES = {
     "Regular": "Registered Regular",

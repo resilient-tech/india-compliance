@@ -48,6 +48,13 @@ class GSTIN(Document):
         create_or_update_gstin_status(self.gstin, is_transporter_id=True)
 
 
+def get_gstr_1_filed_upto(gstin):
+    if not gstin:
+        return
+
+    return frappe.db.get_value("GSTIN", gstin, "gstr_1_filed_upto")
+
+
 def create_or_update_gstin_status(
     gstin=None,
     response=None,
@@ -208,13 +215,6 @@ def is_status_refresh_required(gstin, transaction_date):
 ### GST Transporter ID Validation ###
 
 
-<<<<<<< HEAD
-def get_gstr_1_filed_upto(gstin):
-    if not gstin:
-        return
-
-    return frappe.db.get_value("GSTIN", gstin, "gstr_1_filed_upto")
-=======
 @frappe.whitelist()
 def validate_gst_transporter_id(transporter_id):
     """
@@ -264,9 +264,6 @@ def validate_gst_transporter_id(transporter_id):
         _("GST Transporter ID {0} seems to be Invalid").format(transporter_id),
         indicator="orange",
     )
-<<<<<<< HEAD
->>>>>>> a87d2cbc (fix: gst-transporter-id refactor)
-=======
 
 
 def has_gstin_check_digit_failed(gstin):
@@ -277,4 +274,3 @@ def has_gstin_check_digit_failed(gstin):
         return True
 
     return False
->>>>>>> 6f3f5e84 (refactor: naming, usage etc)

@@ -16,20 +16,10 @@ from india_compliance.gst_india.constants import (
     STATE_NUMBERS,
 )
 from india_compliance.gst_india.constants.custom_fields import E_WAYBILL_INV_FIELDS
-<<<<<<< HEAD
 from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
     restrict_gstr_1_transaction_for,
 )
-from india_compliance.gst_india.doctype.gstin.gstin import (
-    _validate_gstin_status,
-    get_gstin_status,
-)
-from india_compliance.gst_india.doctype.gstin.gstin import (
-    validate_gst_transporter_id as _validate_gst_transporter_id,
-)
-=======
 from india_compliance.gst_india.doctype.gstin.gstin import get_and_validate_gstin_status
->>>>>>> 574b0160 (fix: changes as per reivew)
 from india_compliance.gst_india.utils import (
     get_all_gst_accounts,
     get_gst_accounts_by_tax_type,
