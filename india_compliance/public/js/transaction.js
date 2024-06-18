@@ -45,8 +45,7 @@ function fetch_gst_details(doctype) {
             "is_export_with_gst"
         );
     } else if (
-        in_list(
-            ["Stock Entry", "Subcontracting Order", "Subcontracting Receipt"],
+        ["Stock Entry", "Subcontracting Order", "Subcontracting Receipt"].includes(
             doctype
         )
     ) {
