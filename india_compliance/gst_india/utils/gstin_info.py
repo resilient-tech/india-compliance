@@ -6,12 +6,15 @@ import frappe
 from frappe import _
 from frappe.utils import getdate
 
+from india_compliance.exceptions import GSPServerError
 from india_compliance.gst_india.api_classes.base import BASE_URL
+from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
+from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
 from india_compliance.gst_india.api_classes.public import PublicAPI
 from india_compliance.gst_india.doctype.gstr_1_log.gstr_1_log import (
     process_gstr_1_returns_info,
 )
-from india_compliance.gst_india.utils import titlecase, validate_gstin
+from india_compliance.gst_india.utils import parse_datetime, titlecase, validate_gstin
 
 GST_CATEGORIES = {
     "Regular": "Registered Regular",
@@ -46,13 +49,19 @@ def _get_gstin_info(gstin, *, throw_error=True):
 
     if not response:
         try:
+            if frappe.cache.get_value("gst_server_error"):
+                return
+
             response = PublicAPI().get_gstin_info(gstin)
             frappe.enqueue(
                 "india_compliance.gst_india.doctype.gstin.gstin.create_or_update_gstin_status",
                 queue="long",
-                response=response,
+                response=get_formatted_response_for_status(response),
             )
         except Exception as exc:
+            if isinstance(exc, GSPServerError):
+                frappe.cache.set_value("gst_server_error", True, expires_in_sec=60)
+
             if throw_error:
                 raise exc
 
@@ -166,6 +175,111 @@ def _extract_address_lines(address):
         address_line1 = f"{address_line1}, {street}"
 
     return address_line1, address_line2
+
+
+def fetch_gstin_status(*, gstin=None, throw=True):
+    """
+    Fetch GSTIN status from E-Invoice API or Public API
+
+    Uses Public API if credentials are not available or its a user initiated request
+
+    :param gstin: GSTIN to fetch status for
+    :param throw: Raise exception if error occurs (used for user initiated requests)
+    """
+    validate_gstin(gstin)
+
+    try:
+        if not throw and frappe.cache.get_value("gst_server_error"):
+            return
+
+        gst_settings = frappe.get_cached_doc("GST Settings", None)
+        company_gstin = gst_settings.get_gstin_with_credentials(service="e-Invoice")
+
+        if throw or not company_gstin:
+            response = PublicAPI().get_gstin_info(gstin)
+            return get_formatted_response_for_status(response)
+
+        response = EInvoiceAPI(company_gstin=company_gstin).get_gstin_info(gstin)
+        return frappe._dict(
+            {
+                "gstin": gstin,
+                "registration_date": parse_datetime(response.DtReg, throw=False),
+                "cancelled_date": parse_datetime(response.DtDReg, throw=False),
+                "status": response.Status,
+                "is_blocked": response.BlkStatus,
+            }
+        )
+
+    except Exception as e:
+        if throw:
+            raise e
+
+        if isinstance(e, GSPServerError):
+            frappe.cache.set_value("gst_server_error", True, expires_in_sec=60)
+
+        frappe.log_error(
+            title=_("Error fetching GSTIN status"),
+            message=frappe.get_traceback(),
+        )
+        frappe.clear_last_message()
+
+
+def get_formatted_response_for_status(response):
+    """
+    Format response from Public API
+    """
+    return frappe._dict(
+        {
+            "gstin": response.gstin,
+            "registration_date": parse_datetime(
+                response.rgdt, day_first=True, throw=False
+            ),
+            "cancelled_date": parse_datetime(
+                response.cxdt, day_first=True, throw=False
+            ),
+            "status": response.sts,
+        }
+    )
+
+
+def fetch_transporter_id_status(transporter_id, throw=True):
+    """
+    Fetch Transporter ID status from E-Waybill API
+
+    :param transporter_id: GSTIN of the transporter
+    :param throw: Raise exception if error occurs (used for user initiated requests)
+    """
+    if not frappe.get_cached_value("GST Settings", None, "enable_e_waybill"):
+        return
+
+    gst_settings = frappe.get_cached_doc("GST Settings", None)
+    company_gstin = gst_settings.get_gstin_with_credentials(service="e-Waybill")
+
+    if not company_gstin:
+        return
+
+    try:
+        response = EWaybillAPI(company_gstin=company_gstin).get_transporter_details(
+            transporter_id
+        )
+
+    except Exception as e:
+        if throw:
+            raise e
+
+        frappe.log_error(
+            title=_("Error fetching Transporter ID status"),
+            message=frappe.get_traceback(),
+        )
+        frappe.clear_last_message()
+        return
+
+    return frappe._dict(
+        {
+            "gstin": transporter_id,
+            "transporter_id_status": "Active" if response.transin else "Invalid",
+        }
+    )
 
 
 # ####### SAMPLE DATA for GST_CATEGORIES ########

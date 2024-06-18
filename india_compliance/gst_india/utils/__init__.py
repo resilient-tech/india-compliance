@@ -171,6 +171,7 @@ def validate_gstin(
             title=_("Invalid {0}").format(label),
         )
 
+    # eg: 29AAFCA7488L1Z0 invalid check digit for valid transporter id
     if not is_transporter_id:
         validate_gstin_check_digit(gstin, label)
 
