@@ -473,9 +473,9 @@ def restrict_gstr_1_transaction_for(posting_date, company_gstin, gst_settings=No
     gstr_1_filed_upto = get_gstr_1_filed_upto(company_gstin)
 
     if not gstr_1_filed_upto:
-        return False
+        restrict = False
 
-    if posting_date > getdate(gstr_1_filed_upto):
+    elif posting_date > getdate(gstr_1_filed_upto):
         restrict = False
 
     if (
