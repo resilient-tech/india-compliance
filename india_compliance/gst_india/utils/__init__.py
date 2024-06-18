@@ -93,6 +93,8 @@ def get_gstin_list(party, party_type="Company"):
     """
     Returns a list the party's GSTINs.
     """
+    if not party:
+        return
 
     frappe.has_permission(party_type, doc=party, throw=True)
 
@@ -171,6 +173,7 @@ def validate_gstin(
             title=_("Invalid {0}").format(label),
         )
 
+    # eg: 29AAFCA7488L1Z0 invalid check digit for valid transporter id
     if not is_transporter_id:
         validate_gstin_check_digit(gstin, label)
 
