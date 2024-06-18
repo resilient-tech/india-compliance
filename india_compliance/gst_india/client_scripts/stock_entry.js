@@ -63,8 +63,4 @@ frappe.ui.form.on("Stock Entry", {
     taxes_and_charges(frm) {
         india_compliance.update_taxes(frm);
     },
-
-    total_taxes(frm) {
-        frm.taxes_controller.update_rounded_total_for_stock_entry(frm);
-    },
 });

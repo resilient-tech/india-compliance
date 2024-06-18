@@ -79,7 +79,7 @@ CUSTOM_FIELDS = {
             "fieldname": "taxes",
             "label": "Estimated Taxes",
             "fieldtype": "Table",
-            "options": "Stock Entry Taxes",
+            "options": "IC Taxes and Charges",
             "insert_after": "taxes_and_charges",
         },
         {
@@ -137,6 +137,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Currency",
             "insert_after": "total_taxes",
             "read_only": 1,
+            "hidden": 1,
             "options": "currency",
         },
     ],
@@ -161,7 +162,7 @@ CUSTOM_FIELDS = {
             "fieldname": "taxes",
             "label": "Estimated Taxes",
             "fieldtype": "Table",
-            "options": "Stock Entry Taxes",
+            "options": "IC Taxes and Charges",
             "insert_after": "taxes_and_charges",
         },
         {
@@ -251,6 +252,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Currency",
             "insert_after": "total_outgoing_value",
             "read_only": 1,
+            "hidden": 1,
             "options": "currency",
         },
     ],

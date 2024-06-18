@@ -6,9 +6,73 @@ from frappe.utils.data import flt
 from erpnext.controllers.taxes_and_totals import get_round_off_applicable_accounts
 
 from india_compliance.gst_india.overrides.transaction import (
-    validate_charge_type_for_cess_non_advol_accounts,
+    ItemGSTDetails,
+    ItemGSTTreatment,
+    validate_transaction,
 )
-from india_compliance.gst_india.utils import get_gst_accounts_by_type
+from india_compliance.gst_india.utils import get_all_gst_accounts
+
+
+class ICGSTDetails(ItemGSTDetails):
+    def set_item_wise_tax_details(self):
+        tax_details = frappe._dict()
+        item_map = {}
+
+        for row in self.doc.get("items"):
+            key = row.name
+            item_map[key] = row
+            tax_details[key] = self.item_defaults.copy()
+            tax_details[key]["count"] += 1
+
+        for row in self.doc.taxes:
+            if (
+                not row.base_tax_amount_after_discount_amount
+                or not row.item_wise_tax_rates
+                or row.account_head not in self.gst_account_map
+            ):
+                continue
+
+            account_type = self.gst_account_map[row.account_head]
+            tax = account_type[:-8]
+            tax_rate_field = f"{tax}_rate"
+            tax_amount_field = f"{tax}_amount"
+
+            item_wise_tax_rates = json.loads(row.item_wise_tax_rates)
+
+            # update item taxes
+            for row_name in item_wise_tax_rates:
+                if row_name not in tax_details:
+                    # Do not compute if Item is not present in Item table
+                    # There can be difference in Item Table and Item Wise Tax Details
+                    continue
+
+                item_taxes = tax_details[row_name]
+                tax_rate = item_wise_tax_rates.get(row_name)
+                precision = self.precision.get(tax_amount_field)
+                item = item_map.get(row_name)
+
+                multiplier = (
+                    item.qty if tax == "cess_non_advol" else item.taxable_value / 100
+                )
+
+                # cases when charge type == "Actual"
+                if not tax_rate:
+                    continue
+
+                tax_amount = flt(tax_rate * multiplier, precision)
+                item_taxes[tax_rate_field] = tax_rate
+                item_taxes[tax_amount_field] += tax_amount
+
+        self.item_tax_details = tax_details
+
+    def get_item_key(self, item):
+        return item.name
+
+
+def update_gst_details(doc, method=None):
+    # TODO: add item tax template validation post exclude from GST
+    ItemGSTTreatment().set(doc)
+    ICGSTDetails().update(doc)
 
 
 @frappe.whitelist()
@@ -35,29 +99,25 @@ def set_item_wise_tax_rates(doc, item_name=None, tax_name=None):
 
 
 @frappe.whitelist()
-def set_total_taxes(doc):
+def set_base_tax_amount_and_tax_total(doc):
     total_taxes = 0
-
     round_off_accounts = get_round_off_applicable_accounts(doc.company, [])
+
     for tax in doc.taxes:
-        tax.tax_amount = get_tax_amount(doc, tax.item_wise_tax_rates, tax.charge_type)
+        tax_amount = get_tax_amount(doc, tax.item_wise_tax_rates, tax.charge_type)
 
         if tax.account_head in round_off_accounts:
-            tax.tax_amount = round(tax.tax_amount, 0)
+            tax_amount = round(tax_amount, 0)
 
-        total_taxes += tax.tax_amount
-        tax.base_tax_amount_after_discount_amount = total_taxes
+        total_taxes += tax_amount
+
+        tax.base_tax_amount_after_discount_amount = tax_amount
+        tax.base_total = total_taxes
 
     doc.total_taxes = total_taxes
 
 
-@frappe.whitelist()
-def update_rounded_total(doc):
-    doc.base_rounded_total = doc.total + doc.total_taxes
-
-
-@frappe.whitelist()
-def update_rounded_total_for_stock_entry(doc):
+def set_base_rounded_total(doc):
     total = 0
     for item in doc.items:
         total += item.taxable_value
@@ -125,30 +185,39 @@ def get_tax_amount(doc, item_wise_tax_rates, charge_type):
 
 
 def validate_taxes(doc):
-    output_accounts = get_gst_accounts_by_type(doc.company, "Output", throw=True)
-    taxable_value_map = {}
-    item_qty_map = {}
-
-    for row in doc.get("items"):
-        taxable_value_map[row.name] = row.taxable_value
-        item_qty_map[row.name] = row.qty
-
+    gst_accounts = get_all_gst_accounts(doc.company)
     for tax in doc.taxes:
-        if not tax.tax_amount:
+        if not tax.base_tax_amount_after_discount_amount:
             continue
 
-        if tax.account_head not in output_accounts.values():
+        if tax.account_head not in gst_accounts:
             frappe.throw(
-                _("Row #{0}: Only Output accounts are allowed in {1}.").format(
+                _("Row #{0}: Only GST accounts are allowed in {1}.").format(
                     tax.idx, doc.doctype
                 )
             )
-
-        validate_charge_type_for_cess_non_advol_accounts(
-            [output_accounts.cess_non_advol_account], tax
-        )
 
 
 def set_taxable_value(doc):
     for item in doc.items:
         item.taxable_value = item.amount
+
+
+def validate(doc, method=None):
+    validate_taxes(doc)
+    validate_transaction(doc)
+
+
+def before_validate(doc, method=None):
+    set_item_wise_tax_rates(doc)
+    set_taxable_value(doc)
+    set_base_tax_amount_and_tax_total(doc)
+    set_base_rounded_total(doc)
+
+
+def before_save(doc, method=None):
+    update_gst_details(doc)
+
+
+def before_submit(doc, method=None):
+    update_gst_details(doc)

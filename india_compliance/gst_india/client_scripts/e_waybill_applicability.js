@@ -256,18 +256,16 @@ class StockEntryEwaybill extends EwaybillApplicability {
             message_list.push("Company GSTIN and Supplier GSTIN are same.");
         }
 
-        let source = null;
-        let target = null;
+        const source = this.frm.doc.items[0].s_warehouse;
+        const target = this.frm.doc.items[0].t_warehouse;
 
         this.frm.doc.items.forEach(item => {
-            if (!(source && target)) {
-                source = item.s_warehouse;
-                target = item.t_warehouse;
-            } else if (item.s_warehouse !== source || item.t_warehouse !== target) {
+            if (item.s_warehouse !== source || item.t_warehouse !== target) {
                 is_ewb_generatable = false;
                 message_list.push(
-                    "Source and target warehouse has to be same for all items."
+                    "Source and target warehouse have to be the same for all items."
                 );
+                return; // Exit loop early if discrepancy is found
             }
         });
 

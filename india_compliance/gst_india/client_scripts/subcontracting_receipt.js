@@ -25,8 +25,4 @@ frappe.ui.form.on("Subcontracting Receipt", {
     taxes_and_charges(frm) {
         india_compliance.update_taxes(frm);
     },
-
-    total_taxes(frm) {
-        frm.taxes_controller.update_rounded_total(frm);
-    },
 });

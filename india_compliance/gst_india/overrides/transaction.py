@@ -48,6 +48,9 @@ DOCTYPES_WITH_GST_DETAIL = {
     "Delivery Note",
     "Sales Invoice",
     "POS Invoice",
+    "Subcontracting Order",
+    "Subcontracting Receipt",
+    "Stock Entry",
 }
 
 
@@ -63,6 +66,10 @@ def set_gst_breakup(doc):
 
 def update_taxable_values(doc, valid_accounts):
     if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
+        return
+
+    if doc.doctype in SUBCONTRACTING_DOCTYPES:
+        # custom functions
         return
 
     total_charges = 0
@@ -127,6 +134,10 @@ def update_taxable_values(doc, valid_accounts):
 
 def validate_item_wise_tax_detail(doc, gst_accounts):
     if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
+        return
+
+    if doc.doctype in SUBCONTRACTING_DOCTYPES:
+        # custom functions
         return
 
     item_taxable_values = defaultdict(float)
@@ -315,7 +326,11 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
         rows_to_validate := [
             row
             for row in doc.taxes
-            if row.tax_amount and row.account_head in get_all_gst_accounts(doc.company)
+            if (
+                row.get("tax_amount")
+                or row.get("base_tax_amount_after_discount_amount")
+            )
+            and row.account_head in get_all_gst_accounts(doc.company)
         ]
     ):
         return
@@ -340,14 +355,21 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
         for_sales=is_sales_transaction,
         for_purchase=not is_sales_transaction,
     )
+
     cess_non_advol_accounts = get_gst_accounts_by_tax_type(
         doc.company, "cess_non_advol"
     )
 
     # Company GSTIN = Party GSTIN
-    party_gstin = (
-        doc.billing_address_gstin if is_sales_transaction else doc.supplier_gstin
-    )
+    if doc.doctype in SALES_DOCTYPES:
+        party_gstin = doc.billing_address_gstin
+    elif doc.doctype == "Payment Entry":
+        party_gstin = doc.billing_address_gstin
+    elif doc.doctype in SUBCONTRACTING_DOCTYPES:
+        party_gstin = doc.supplier_gstin
+    else:
+        party_gstin = doc.supplier_gstin
+
     if (
         party_gstin
         and doc.company_gstin == party_gstin
@@ -391,7 +413,7 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
             ).format(idx)
         )
 
-    elif not doc.is_reverse_charge:
+    elif not doc.get("is_reverse_charge"):
         if idx := _get_matched_idx(
             rows_to_validate,
             get_gst_accounts_by_type(doc.company, "Reverse Charge").values(),
@@ -735,17 +757,19 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
      - taxes in the tax template
     """
 
-    is_sales_transaction = (
-        doctype in SALES_DOCTYPES
-        or doctype in ("Payment Entry",) + SUBCONTRACTING_DOCTYPES
-    )
+    is_sales_transaction = doctype in SALES_DOCTYPES or doctype == "Payment Entry"
     party_details = frappe.parse_json(party_details)
     gst_details = frappe._dict()
 
     # Party/Address Defaults
-    party_address_field = (
-        "customer_address" if is_sales_transaction else "supplier_address"
-    )
+    if doctype in SUBCONTRACTING_DOCTYPES:
+        party_address_field = "supplier_address"
+        is_sales_transaction = True
+    elif is_sales_transaction:
+        party_address_field = "customer_address"
+    else:
+        party_address_field = "supplier_address"
+
     if not party_details.get(party_address_field):
         party_gst_details = get_party_gst_details(party_details, is_sales_transaction)
 
@@ -915,7 +939,7 @@ def validate_reverse_charge_transaction(doc, method=None):
     base_gst_tax = 0
     base_reverse_charge_booked = 0
 
-    if not doc.is_reverse_charge:
+    if not doc.get("is_reverse_charge"):
         return
 
     reverse_charge_accounts = get_gst_accounts_by_type(
@@ -1345,7 +1369,7 @@ def validate_company_address_field(doc):
         return
 
     company_address_field = "company_address"
-    if doc.doctype not in SALES_DOCTYPES:
+    if doc.doctype not in SALES_DOCTYPES and doc.doctype != "Stock Entry":
         company_address_field = "billing_address"
 
     if (
@@ -1414,6 +1438,9 @@ def validate_transaction(doc, method=None):
     elif doc.doctype == "Payment Entry":
         is_sales_transaction = True
         gstin = doc.billing_address_gstin
+    elif doc.doctype in SUBCONTRACTING_DOCTYPES:
+        is_sales_transaction = True
+        gstin = doc.supplier_gstin
     else:
         validate_reverse_charge_transaction(doc)
         gstin = doc.supplier_gstin

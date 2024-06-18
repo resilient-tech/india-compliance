@@ -1,18 +1,17 @@
 import frappe
 
-from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
-    update_gst_details,
-)
-from india_compliance.gst_india.overrides.ineligible_itc import update_valuation_rate
 from india_compliance.gst_india.utils import is_api_enabled
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 from india_compliance.gst_india.utils.taxes_controller import (
-    set_item_wise_tax_rates,
-    set_taxable_value,
-    set_total_taxes,
-    update_rounded_total,
-    validate_taxes,
+    before_save as _before_save,
 )
+from india_compliance.gst_india.utils.taxes_controller import (
+    before_submit as _before_submit,
+)
+from india_compliance.gst_india.utils.taxes_controller import (
+    before_validate as _before_validate,
+)
+from india_compliance.gst_india.utils.taxes_controller import validate as _validate
 
 
 def onload(doc, method=None):
@@ -32,23 +31,16 @@ def onload(doc, method=None):
 
 
 def before_save(doc, method=None):
-    update_gst_details(doc)
+    _before_save(doc)
 
 
 def before_submit(doc, method=None):
-    update_gst_details(doc)
+    _before_submit(doc)
+
+
+def before_validate(doc, method=None):
+    _before_validate(doc)
 
 
 def validate(doc, method=None):
-    # This has to be called after `amount` is updated based upon `additional_costs` in erpnext
-    set_taxable_value(doc)
-    set_taxes_and_totals(doc)
-    update_rounded_total(doc)
-
-    validate_taxes(doc)
-    update_valuation_rate(doc)
-
-
-def set_taxes_and_totals(doc):
-    set_item_wise_tax_rates(doc)
-    set_total_taxes(doc)
+    _validate(doc)

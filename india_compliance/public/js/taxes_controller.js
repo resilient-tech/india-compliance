@@ -180,22 +180,6 @@ india_compliance.taxes_controller = class TaxesController {
         this.frm.set_value("total_taxes", total_taxes);
     }
 
-    update_rounded_total_for_stock_entry() {
-        const total = this.frm.doc.items.reduce(
-            (value, item) => value + item.taxable_value,
-            0
-        );
-        const base_rounded_total = total + this.frm.doc.total_taxes;
-
-        this.frm.set_value("base_rounded_total", base_rounded_total);
-    }
-
-    update_rounded_total() {
-        const { total_taxes, total } = this.frm.doc;
-        const base_rounded_total = total_taxes + total;
-        this.frm.set_value("base_rounded_total", base_rounded_total);
-    }
-
     update_taxable_value(cdt, cdn) {
         const row = locals[cdt][cdn];
         let amount;
@@ -238,7 +222,7 @@ for (const doctype of SUBCONTRACTING_DOCTYPE_ITEMS) {
     });
 }
 
-frappe.ui.form.on("Stock Entry Taxes", {
+frappe.ui.form.on("IC Taxes and Charges", {
     rate(frm, cdt, cdn) {
         frm.taxes_controller.update_tax_rate(cdt, cdn);
     },

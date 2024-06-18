@@ -10,18 +10,15 @@ const TRANSACTION_DOCTYPES = [
     "Purchase Order",
     "Purchase Receipt",
     "Purchase Invoice",
+    "Stock Entry",
+    "Subcontracting Order",
+    "Subcontracting Receipt",
 ];
-
-const SUBCONTRACTING_DOCTYPES = ["Stock Entry", "Subcontracting Order", "Subcontracting Receipt"];
 
 for (const doctype of TRANSACTION_DOCTYPES) {
     fetch_gst_details(doctype);
     validate_overseas_gst_category(doctype);
     set_and_validate_gstin_status(doctype);
-}
-
-for (const doctype of SUBCONTRACTING_DOCTYPES) {
-    fetch_gst_details_for_subcontracting(doctype);
 }
 
 for (const doctype of ["Sales Invoice", "Delivery Note"]) {
@@ -30,49 +27,6 @@ for (const doctype of ["Sales Invoice", "Delivery Note"]) {
 
 for (const doctype of ["Sales Invoice", "Sales Order", "Delivery Note"]) {
     set_e_commerce_ecommerce_supply_type(doctype);
-}
-
-function fetch_gst_details_for_subcontracting(doctype) {
-    const event_fields = [
-        "company_gstin",
-        "place_of_supply",
-        "supplier_address",
-        "supplier",
-    ];
-
-    const events = Object.fromEntries(
-        event_fields.map(field => [
-            field,
-            frm =>
-                update_gst_details_for_subcontracting(
-                    frm,
-                    "india_compliance.gst_india.overrides.stock_entry.update_party_details"
-                ),
-        ])
-    );
-
-    frappe.ui.form.on(doctype, events);
-}
-
-async function update_gst_details_for_subcontracting(frm, method) {
-    if (!frm.doc.supplier || frm.__updating_gst_details) return;
-
-    // wait for GSTINs to get fetched
-    await frappe.after_ajax();
-
-    const args = {
-        doctype: frm.doc.doctype,
-        party_details: {
-            customer: frm.doc.supplier,
-            customer_address: frm.doc.supplier_address,
-            billing_address_gstin: frm.doc.supplier_gstin,
-            gst_category: frm.doc.gst_category,
-            company_gstin: frm.doc.company_gstin,
-        },
-        company: frm.doc.company,
-    };
-
-    india_compliance.fetch_and_update_gst_details(frm, args, method);
 }
 
 function fetch_gst_details(doctype) {
@@ -85,7 +39,18 @@ function fetch_gst_details(doctype) {
 
     // we are using address below to prevent multiple event triggers
     if (in_list(frappe.boot.sales_doctypes, doctype)) {
-        event_fields.push("customer_address", "shipping_address_name", "is_export_with_gst");
+        event_fields.push(
+            "customer_address",
+            "shipping_address_name",
+            "is_export_with_gst"
+        );
+    } else if (
+        in_list(
+            ["Stock Entry", "Subcontracting Order", "Subcontracting Receipt"],
+            doctype
+        )
+    ) {
+        event_fields.push("supplier", "supplier_address");
     } else {
         event_fields.push("supplier_address");
     }
@@ -110,7 +75,14 @@ async function update_gst_details(frm, event) {
     const party = frm.doc[party_fieldname];
     if (!party) return;
 
-    if (["company_gstin", "customer_address", "shipping_address_name", "supplier_address"].includes(event)) {
+    if (
+        [
+            "company_gstin",
+            "customer_address",
+            "shipping_address_name",
+            "supplier_address",
+        ].includes(event)
+    ) {
         frm.__update_place_of_supply = true;
     }
 
@@ -170,7 +142,9 @@ async function update_gst_details(frm, event) {
 
 india_compliance.fetch_and_update_gst_details = function (frm, args, method) {
     frappe.call({
-        method: method || "india_compliance.gst_india.overrides.transaction.get_gst_details",
+        method:
+            method ||
+            "india_compliance.gst_india.overrides.transaction.get_gst_details",
         args,
         async callback(r) {
             if (!r.message) return;
@@ -180,7 +154,7 @@ india_compliance.fetch_and_update_gst_details = function (frm, args, method) {
             frm.__updating_gst_details = false;
         },
     });
-}
+};
 
 function validate_overseas_gst_category(doctype) {
     frappe.ui.form.on(doctype, {
@@ -225,8 +199,7 @@ function set_and_validate_gstin_status(doctype) {
 
     frappe.ui.form.on(doctype, {
         refresh(frm) {
-            if (frm.doc[gstin_field_name])
-                _set_gstin_status(frm, gstin_field_name);
+            if (frm.doc[gstin_field_name]) _set_gstin_status(frm, gstin_field_name);
         },
 
         [gstin_field_name](frm) {
@@ -262,16 +235,21 @@ async function _set_gstin_status(frm, gstin_field_name) {
     const date_field =
         frm.get_field("posting_date") || frm.get_field("transaction_date");
 
-
     let gstin_doc = frm._gstin_doc?.[gstin];
     if (!gstin_doc) {
-        gstin_doc = await india_compliance.set_gstin_status(gstin_field, date_field.value);
+        gstin_doc = await india_compliance.set_gstin_status(
+            gstin_field,
+            date_field.value
+        );
 
         frm._gstin_doc = frm._gstin_doc || {};
         frm._gstin_doc[gstin] = gstin_doc;
     } else {
         gstin_field.set_description(
-            india_compliance.get_gstin_status_desc(gstin_doc?.status, gstin_doc?.last_updated_on)
+            india_compliance.get_gstin_status_desc(
+                gstin_doc?.status,
+                gstin_doc?.last_updated_on
+            )
         );
     }
 
@@ -356,7 +334,10 @@ function set_e_commerce_ecommerce_supply_type(doctype) {
     const event_fields = ["ecommerce_gstin", "is_reverse_charge"];
 
     const events = Object.fromEntries(
-        event_fields.map(field => [field, frm => _set_e_commerce_ecommerce_supply_type(frm)])
+        event_fields.map(field => [
+            field,
+            frm => _set_e_commerce_ecommerce_supply_type(frm),
+        ])
     );
 
     frappe.ui.form.on(doctype, events);

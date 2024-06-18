@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class StockEntryTaxes(Document):
+class ICTaxesandCharges(Document):
     pass
