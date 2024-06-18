@@ -289,9 +289,9 @@ class IneligibleITC:
         ineligible_tax_amount = 0
 
         # TODO: GST Accounts from taxes table
-        for type in GST_TAX_TYPES:
-            tax_amount = item.get(f"{type}_amount")
-            tax_account = self.gst_accounts.get(f"{type}_account")
+        for tax_type in GST_TAX_TYPES:
+            tax_amount = abs(flt(item.get(f"{tax_type}_amount")))
+            tax_account = self.gst_accounts.get(f"{tax_type}_account")
 
             if not tax_amount:
                 continue
