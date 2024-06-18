@@ -93,6 +93,8 @@ def get_gstin_list(party, party_type="Company"):
     """
     Returns a list the party's GSTINs.
     """
+    if not party:
+        return
 
     frappe.has_permission(party_type, doc=party, throw=True)
 
