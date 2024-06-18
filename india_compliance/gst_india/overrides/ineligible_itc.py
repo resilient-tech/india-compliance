@@ -42,6 +42,9 @@ class IneligibleITC:
             return
 
         for item in self.doc.items:
+            if not item.get("_ineligible_tax_amount"):
+                continue
+
             if item.get("_is_stock_item") or item.get("is_fixed_asset"):
                 ineligible_tax_amount = item._ineligible_tax_amount
                 if self.doc.get("is_return"):
