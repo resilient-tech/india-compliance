@@ -100,7 +100,7 @@ CUSTOM_FIELDS = {
         },
         {
             "label": "Company Logo",
-            "fieldname": "print_logo",
+            "fieldname": "logo_for_printing",
             "insert_after": "show_physical_signature",
             "fieldtype": "Attach",
             "translatable": 0,
@@ -108,7 +108,7 @@ CUSTOM_FIELDS = {
         {
             "label": "Bank Details",
             "fieldname": "bank_details_for_printing",
-            "insert_after": "print_logo",
+            "insert_after": "logo_for_printing",
             "fieldtype": "Table",
             "options": "Company Print Options",
         },
