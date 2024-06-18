@@ -186,9 +186,14 @@ class GSTSettings(Document):
                 _("Missing Required Field"),
             )
 
-        if (self.enable_e_invoice or self.enable_e_waybill) and all(
-            credential.service != "e-Waybill / e-Invoice"
-            for credential in self.credentials
+        if (
+            (self.enable_e_invoice or self.enable_e_waybill)
+            and not self.sandbox_mode
+            and not frappe.flags.in_setup_wizard
+            and all(
+                credential.service != "e-Waybill / e-Invoice"
+                for credential in self.credentials
+            )
         ):
             frappe.msgprint(
                 _(
