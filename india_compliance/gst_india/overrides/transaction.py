@@ -496,11 +496,11 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
         )
 
     for row in doc.get("items") or []:
-        if not row.item_tax_template:
+        if not row.get("item_tax_template"):
             continue
 
         for account in used_accounts:
-            if account in row.item_tax_rate:
+            if account in row.get("item_tax_rate"):
                 continue
 
             frappe.msgprint(
