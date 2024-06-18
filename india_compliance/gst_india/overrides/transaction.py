@@ -1465,6 +1465,9 @@ def validate_item_tax_template(doc):
     taxable_items_with_no_tax = []
 
     for item in doc.items:
+        if item.taxable_value == 0:
+            continue
+
         if item.gst_treatment == "Zero-Rated" and not doc.get("is_export_with_gst"):
             continue
 
