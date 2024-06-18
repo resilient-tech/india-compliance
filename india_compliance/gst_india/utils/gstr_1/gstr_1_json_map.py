@@ -2271,6 +2271,9 @@ class GSTR1BooksData(BooksDataMapper):
         _class.process_invoices(data)
 
         for invoice in data:
+            if invoice.get("taxable_value") == 0:
+                continue
+
             if invoice["invoice_category"] in (
                 GSTR1_Category.B2B.value,
                 GSTR1_Category.EXP.value,
