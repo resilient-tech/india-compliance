@@ -491,11 +491,11 @@ class IneligibleITC:
         taxes = frappe.qb.DocType("Purchase Taxes and Charges")
 
         # utility function
-        def get_tax_case_statement(account, alias):
+        def get_tax_case_statement(gst_tax_types, alias):
             return Sum(
                 Case()
                 .when(
-                    taxes.gst_tax_type.isin(account),
+                    taxes.gst_tax_type.isin(gst_tax_types),
                     taxes.base_tax_amount_after_discount_amount,
                 )
                 .else_(0)

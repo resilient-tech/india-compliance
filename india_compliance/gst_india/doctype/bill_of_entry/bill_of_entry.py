@@ -13,6 +13,7 @@ from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_ent
 from erpnext.controllers.accounts_controller import AccountsController
 from erpnext.controllers.taxes_and_totals import get_round_off_applicable_accounts
 
+from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.overrides.ineligible_itc import (
     update_landed_cost_voucher_for_gst_expense,
     update_regional_gl_entries,
@@ -42,12 +43,11 @@ class BOEGSTDetails(ItemGSTDetails):
             if (
                 not row.tax_amount
                 or not row.item_wise_tax_rates
-                or row.account_head not in self.gst_account_map
+                or row.gst_tax_type not in GST_TAX_TYPES
             ):
                 continue
 
-            account_type = self.gst_account_map[row.account_head]
-            tax = account_type[:-8]
+            tax = row.gst_tax_type
             tax_rate_field = f"{tax}_rate"
             tax_amount_field = f"{tax}_amount"
 

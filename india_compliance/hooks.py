@@ -243,6 +243,7 @@ doc_events = {
     "POS Invoice": {
         "onload": "india_compliance.gst_india.overrides.transaction.onload",
         "before_print": "india_compliance.gst_india.overrides.transaction.before_print",
+        "before_validate": "india_compliance.gst_india.overrides.transaction.set_gst_account_type",
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),

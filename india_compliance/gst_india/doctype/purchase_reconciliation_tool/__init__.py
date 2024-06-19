@@ -483,13 +483,12 @@ class PurchaseInvoice:
 
         return fields
 
-    def query_tax_amount(self, account):
-        account = get_escaped_name(account)
+    def query_tax_amount(self, gst_tax_type):
         return Abs(
             Sum(
                 Case()
                 .when(
-                    self.PI_TAX.gst_tax_type == account,
+                    self.PI_TAX.gst_tax_type == gst_tax_type,
                     self.PI_TAX.base_tax_amount_after_discount_amount,
                 )
                 .else_(0)
@@ -629,13 +628,12 @@ class BillOfEntry:
 
         return fields
 
-    def query_tax_amount(self, account):
-        account = get_escaped_name(account)
+    def query_tax_amount(self, gst_tax_type):
         return Abs(
             Sum(
                 Case()
                 .when(
-                    self.BOE_TAX.gst_tax_type == account,
+                    self.BOE_TAX.gst_tax_type == gst_tax_type,
                     self.BOE_TAX.tax_amount,
                 )
                 .else_(0)
