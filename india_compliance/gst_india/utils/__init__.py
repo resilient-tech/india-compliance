@@ -93,6 +93,8 @@ def get_gstin_list(party, party_type="Company"):
     """
     Returns a list the party's GSTINs.
     """
+    if not party:
+        return
 
     frappe.has_permission(party_type, doc=party, throw=True)
 
@@ -171,6 +173,7 @@ def validate_gstin(
             title=_("Invalid {0}").format(label),
         )
 
+    # eg: 29AAFCA7488L1Z0 invalid check digit for valid transporter id
     if not is_transporter_id:
         validate_gstin_check_digit(gstin, label)
 
@@ -648,6 +651,13 @@ def get_titlecase_version(word, all_caps=False, **kwargs):
         return word
 
 
+def is_production_api_enabled(settings=None):
+    if not settings:
+        settings = frappe.get_cached_doc("GST Settings")
+
+    return is_api_enabled(settings) and not settings.sandbox_mode
+
+
 def is_api_enabled(settings=None):
     if not settings:
         settings = frappe.get_cached_value(
@@ -662,11 +672,7 @@ def is_api_enabled(settings=None):
 
 def is_autofill_party_info_enabled():
     settings = frappe.get_cached_doc("GST Settings")
-    return (
-        is_api_enabled(settings)
-        and settings.autofill_party_info
-        and not settings.sandbox_mode
-    )
+    return is_production_api_enabled(settings) and settings.autofill_party_info
 
 
 def can_enable_api(settings):
