@@ -10,6 +10,7 @@ from frappe.model.meta import get_field_precision
 from frappe.utils import flt, getdate
 import erpnext
 
+from india_compliance.gst_india.constants.__init__ import GST_TAX_TYPES
 from india_compliance.gst_india.utils import get_gst_accounts_by_type, get_gst_uom
 
 
@@ -28,15 +29,8 @@ def execute(filters=None):
 
 
 def get_hsn_data(filters, columns, output_gst_accounts_dict):
-    output_gst_accounts = set()
     non_cess_accounts = ["igst_account", "cgst_account", "sgst_account"]
     tax_columns = non_cess_accounts + ["cess_account"]
-
-    for account_type, account_name in output_gst_accounts_dict.items():
-        if not account_name:
-            continue
-
-        output_gst_accounts.add(account_name)
 
     company_currency = erpnext.get_company_currency(filters.company)
     item_list = get_items(filters)
@@ -44,7 +38,6 @@ def get_hsn_data(filters, columns, output_gst_accounts_dict):
         item_list,
         columns,
         company_currency,
-        output_gst_accounts,
         output_gst_accounts_dict,
     )
 
@@ -235,9 +228,7 @@ def get_items(filters):
     return items
 
 
-def get_item_taxes(
-    item_list, columns, company_currency, output_gst_accounts, output_gst_accounts_dict
-):
+def get_item_taxes(item_list, columns, company_currency, output_gst_accounts_dict):
     if not item_list:
         return []
 
@@ -267,7 +258,7 @@ def get_item_taxes(
         .where(doctype.parenttype == "Sales Invoice")
         .where(doctype.docstatus == 1)
         .where(doctype.parent.isin(invoice_numbers))
-        .where(doctype.account_head.isin(output_gst_accounts))
+        .where(doctype.gst_tax_type.isin(GST_TAX_TYPES))
     ).run()
 
     gst_account_map = {value: key for key, value in output_gst_accounts_dict.items()}

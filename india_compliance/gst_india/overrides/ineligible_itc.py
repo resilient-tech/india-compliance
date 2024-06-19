@@ -7,10 +7,10 @@ from erpnext.assets.doctype.asset.asset import (
 )
 from erpnext.stock import get_warehouse_account_map
 
+from india_compliance.gst_india.constants.__init__ import GST_TAX_TYPES
 from india_compliance.gst_india.overrides.transaction import (
     is_indian_registered_company,
 )
-from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 
 class IneligibleITC:
@@ -272,11 +272,10 @@ class IneligibleITC:
             "Input SGST - FC": 50,
         }
         """
-        gst_accounts = get_gst_accounts_by_type(self.doc.company, "Input").values()
         ineligible_taxes = frappe._dict()
 
         for tax in self.doc.taxes:
-            if tax.account_head not in gst_accounts:
+            if tax.gst_tax_type not in GST_TAX_TYPES:
                 continue
 
             ineligible_taxes[tax.account_head] = self.get_item_tax_amount(item, tax)

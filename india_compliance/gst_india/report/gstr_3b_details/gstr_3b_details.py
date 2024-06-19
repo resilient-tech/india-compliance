@@ -8,6 +8,7 @@ from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Extract, Ifnull, IfNull, LiteralValue, Sum
 from frappe.utils import cint, flt, get_first_day, get_last_day
 
+from india_compliance.gst_india.constants.__init__ import GST_TAX_TYPES
 from india_compliance.gst_india.utils import get_escaped_gst_accounts
 
 
@@ -181,7 +182,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                 Sum(
                     Case()
                     .when(
-                        boe_taxes.account_head == self.gst_accounts.igst_account,
+                        boe_taxes.gst_tax_type == "igst",
                         boe_taxes.tax_amount,
                     )
                     .else_(0)
@@ -189,7 +190,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                 Sum(
                     Case()
                     .when(
-                        boe_taxes.account_head == self.gst_accounts.cess_account,
+                        boe_taxes.gst_tax_type == "cess",
                         boe_taxes.tax_amount,
                     )
                     .else_(0)
@@ -494,7 +495,7 @@ class IneligibleITC:
             return Sum(
                 Case()
                 .when(
-                    taxes.account_head.isin(account),
+                    taxes.gst_tax_type.isin(account),
                     taxes.base_tax_amount_after_discount_amount,
                 )
                 .else_(0)
@@ -510,18 +511,18 @@ class IneligibleITC:
                 pi.name.as_("voucher_no"),
                 pi.posting_date,
                 pi.ineligibility_reason.as_("itc_classification"),
-                get_tax_case_statement([self.gst_accounts.igst_account], "iamt"),
-                get_tax_case_statement([self.gst_accounts.cgst_account], "camt"),
-                get_tax_case_statement([self.gst_accounts.sgst_account], "camt"),
+                get_tax_case_statement(["igst"], "iamt"),
+                get_tax_case_statement(["cgst"], "camt"),
+                get_tax_case_statement(["sgst"], "camt"),
                 get_tax_case_statement(
                     [
-                        self.gst_accounts.cess_account,
-                        self.gst_accounts.cess_non_advol_account,
+                        "cess",
+                        "cess_non_advol",
                     ],
                     "csamt",
                 ),
             )
-            .where(taxes.account_head.isin(list(self.gst_accounts.values())))
+            .where(taxes.gst_tax_type.isin(GST_TAX_TYPES))
             .where(
                 IfNull(pi.ineligibility_reason, "") == "ITC restricted due to PoS rules"
             )
@@ -568,7 +569,7 @@ class IneligibleITC:
                 Sum(
                     Case()
                     .when(
-                        boe_taxes.account_head == self.gst_accounts.igst_account,
+                        boe_taxes.gst_tax_type == "igst",
                         boe_taxes.tax_amount,
                     )
                     .else_(0)
@@ -576,7 +577,7 @@ class IneligibleITC:
                 Sum(
                     Case()
                     .when(
-                        boe_taxes.account_head == self.gst_accounts.cess_account,
+                        boe_taxes.gst_tax_type == "cess",
                         boe_taxes.tax_amount,
                     )
                     .else_(0)

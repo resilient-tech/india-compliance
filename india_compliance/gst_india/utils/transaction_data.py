@@ -14,7 +14,6 @@ from india_compliance.gst_india.constants.e_waybill import (
     VEHICLE_TYPES,
 )
 from india_compliance.gst_india.utils import (
-    get_gst_accounts_by_type,
     get_gst_uom,
     get_validated_country_code,
     validate_invoice_number,
@@ -37,23 +36,12 @@ class GSTTransactionData:
         self.sandbox_mode = self.settings.sandbox_mode
         self.transaction_details = frappe._dict()
 
-        gst_type = "Output"
         self.party_name_field = "customer_name"
 
         if self.doc.doctype == "Purchase Invoice":
             self.party_name_field = "supplier_name"
-            if self.doc.is_reverse_charge != 1:
-                # for with reverse charge, gst_type is Output
-                # this will ensure zero taxes in transaction details
-                gst_type = "Input"
 
         self.party_name = self.doc.get(self.party_name_field)
-
-        # "CGST Account - TC": "cgst_account"
-        self.gst_accounts = {
-            v: k
-            for k, v in get_gst_accounts_by_type(self.doc.company, gst_type).items()
-        }
 
     def set_transaction_details(self):
         rounding_adjustment = self.rounded(self.doc.base_rounding_adjustment)
@@ -123,7 +111,7 @@ class GSTTransactionData:
         for row in self.doc.taxes:
             if (
                 not row.base_tax_amount_after_discount_amount
-                or row.account_head not in self.gst_accounts
+                or row.gst_tax_type not in GST_TAX_TYPES
             ):
                 continue
 
@@ -331,7 +319,7 @@ class GSTTransactionData:
         for row in self.doc.taxes:
             if (
                 not row.base_tax_amount_after_discount_amount
-                or row.account_head not in self.gst_accounts
+                or row.gst_tax_type not in GST_TAX_TYPES
             ):
                 continue
 
