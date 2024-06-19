@@ -526,6 +526,7 @@ class IneligibleITC:
                 IfNull(pi.ineligibility_reason, "") == "ITC restricted due to PoS rules"
             )
             .where(pi.name.isin(ineligible_transactions))
+            .where(taxes.parenttype == "Purchase Invoice")
             .groupby(pi[group_by])
             .run(as_dict=True)
         )

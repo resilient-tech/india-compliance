@@ -434,6 +434,7 @@ class PurchaseInvoice:
             .where(self.PI.docstatus == 1)
             .where(IfNull(self.PI.reconciliation_status, "") != "Not Applicable")
             .where(self.PI.is_opening == "NO")
+            .where(self.PI_TAX.parenttype == "Purchase Invoice")
             .groupby(self.PI.name)
             .select(
                 *fields,
