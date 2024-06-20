@@ -15,7 +15,9 @@ from frappe.utils import (
     cint,
     cstr,
     get_datetime,
+    get_last_day,
     get_link_to_form,
+    get_quarter_start,
     get_system_timezone,
     getdate,
 )
@@ -772,6 +774,15 @@ def get_timespan_date_range(timespan: str, company: str | None = None) -> tuple 
         date = add_to_date(getdate(), years=-1)
         fiscal_year = get_fiscal_year(date, company=company)
         return (fiscal_year[1], fiscal_year[2])
+
+    if timespan == "this fiscal year to last month":
+        date = getdate()
+        fiscal_year = get_fiscal_year(date, company=company)
+        return (fiscal_year[1], get_last_day(add_to_date(date, months=-1)))
+
+    if timespan == "this quarter to last month":
+        date = getdate()
+        return (get_quarter_start(date), get_last_day(add_to_date(date, months=-1)))
 
     return
 
