@@ -542,6 +542,32 @@ def get_gst_accounts_by_tax_type(company, tax_type, throw=True):
     )
 
 
+def get_gst_account_gst_tax_type_map():
+    """
+    - Returns gst_account by tax_type for all the companies
+    - Eg.:  {"Input Tax SGST - _TIRC": "sgst", "Input Tax CGST - _TIRC": "cgst"}
+
+    """
+
+    gst_account_map = frappe._dict()
+    settings = frappe.get_cached_doc("GST Settings", "GST Settings")
+
+    for row in settings.gst_accounts:
+        for account in GST_ACCOUNT_FIELDS:
+            account_value = row.get(account)
+
+            if not account_value:
+                continue
+
+            account_key = account[:-8]
+            if "Reverse Charge" in row.get("account_type"):
+                account_key = account_key + "_rcm"
+
+            gst_account_map.setdefault(account_key, []).append(account_value)
+
+    return gst_account_map
+
+
 @frappe.whitelist()
 def get_all_gst_accounts(company):
     """

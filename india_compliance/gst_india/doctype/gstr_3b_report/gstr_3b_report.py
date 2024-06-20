@@ -243,12 +243,12 @@ class GSTR3BReport(Document):
                     )
                     & boe.company_gstin.eq(self.gst_details.get("gstin"))
                     & boe.docstatus.eq(1)
-                    & boe_taxes.gst_tax_type.eq(account_type[:-8])
+                    & boe_taxes.gst_tax_type.eq(account_type)
                 )
                 .run()
             )[0][0] or 0
 
-        igst, cess = _get_tax_amount("igst_account"), _get_tax_amount("cess_account")
+        igst, cess = _get_tax_amount("igst"), _get_tax_amount("cess")
         itc_details.setdefault("Import Of Goods", {"iamt": 0, "csamt": 0})
         itc_details["Import Of Goods"]["iamt"] += igst
         itc_details["Import Of Goods"]["csamt"] += cess
@@ -315,12 +315,13 @@ class GSTR3BReport(Document):
     def set_item_wise_tax_details(self, docs):
         self.invoice_item_wise_tax_details = {}
         item_wise_details = {}
-        account_head_gst_map = {}
-
-        for key, values in self.account_heads.items():
-            for value in values:
-                if value is not None:
-                    account_head_gst_map[value] = key
+        gst_tax_type_map = {
+            "cgst": "camt",
+            "sgst": "samt",
+            "igst": "iamt",
+            "cess": "csamt",
+            "cess_non_advol": "csamt",
+        }
 
         item_defaults = frappe._dict(
             {
@@ -356,7 +357,7 @@ class GSTR3BReport(Document):
 
             # Process tax details
             for tax in details["taxes"]:
-                gst_tax_type = account_head_gst_map.get(tax.account_head)
+                gst_tax_type = gst_tax_type_map.get(tax.gst_tax_type)
 
                 if not gst_tax_type:
                     continue
@@ -450,7 +451,7 @@ class GSTR3BReport(Document):
         tax_details = frappe.db.sql(
             f"""
             SELECT
-                parent, account_head, item_wise_tax_detail
+                parent, item_wise_tax_detail, gst_tax_type
             FROM `tab{tax_template}`
             WHERE
                 parenttype = %s and docstatus = 1

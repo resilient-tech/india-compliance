@@ -7,7 +7,7 @@ from erpnext.assets.doctype.asset.asset import (
 )
 from erpnext.stock import get_warehouse_account_map
 
-from india_compliance.gst_india.constants.__init__ import GST_TAX_TYPES
+from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.overrides.transaction import (
     is_indian_registered_company,
 )

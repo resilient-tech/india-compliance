@@ -1,7 +1,7 @@
 import frappe
 from frappe.query_builder import Case
 
-from india_compliance.gst_india.constants import GST_ACCOUNT_FIELDS
+from india_compliance.gst_india.utils import get_gst_account_gst_tax_type_map
 
 TAX_DOCTYPES = [
     "Sales Taxes and Charges",
@@ -12,27 +12,13 @@ TAX_DOCTYPES = [
 
 
 def execute():
-    gst_accounts = frappe.get_doc("GST Settings").gst_accounts
-    gst_details = {}
+    gst_account_map = get_gst_account_gst_tax_type_map()
 
-    for row in gst_accounts:
-        for account in GST_ACCOUNT_FIELDS:
-            account_value = row.get(account)
-
-            if not account_value:
-                continue
-
-            account_key = account[:-8]
-            if "Reverse Charge" in row.get("account_type"):
-                account_key = account_key + "_rcm"
-
-            gst_details.setdefault(account_key, []).append(account_value)
-
-    if not gst_details:
+    if not gst_account_map:
         return
 
     for tax_doctype in TAX_DOCTYPES:
-        update_documents(tax_doctype, gst_details)
+        update_documents(tax_doctype, gst_account_map)
 
 
 def update_documents(taxes_doctype, gst_accounts):

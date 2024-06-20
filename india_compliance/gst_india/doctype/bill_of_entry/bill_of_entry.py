@@ -265,6 +265,7 @@ class BillofEntry(Document):
                 )
 
     def validate_taxes(self):
+        input_accounts = get_gst_accounts_by_type(self.company, "Input", throw=True)
         taxable_value_map = {}
         item_qty_map = {}
 
@@ -276,10 +277,10 @@ class BillofEntry(Document):
             if not tax.tax_amount:
                 continue
 
-            if tax.gst_tax_type not in (
-                "igst",
-                "cess",
-                "cess_non_advol",
+            if tax.account_head not in (
+                input_accounts.igst_account,
+                input_accounts.cess_account,
+                input_accounts.cess_non_advol_account,
             ):
                 frappe.throw(
                     _(

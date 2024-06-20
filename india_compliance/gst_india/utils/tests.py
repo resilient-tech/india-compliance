@@ -146,7 +146,6 @@ def _append_taxes(
             "description": account,
             "rate": rate,
             "cost_center": f"Main - {company_abbr}",
-            "gst_tax_type": account.replace(" ", "_").lower(),
             **kwargs,
         }
 

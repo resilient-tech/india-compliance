@@ -20,6 +20,7 @@ from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
 from india_compliance.gst_india.doctype.gstin.gstin import get_and_validate_gstin_status
 from india_compliance.gst_india.utils import (
     get_all_gst_accounts,
+    get_gst_account_gst_tax_type_map,
     get_gst_accounts_by_type,
     get_hsn_settings,
     get_place_of_supply,
@@ -137,6 +138,7 @@ def validate_item_wise_tax_detail(doc):
     for row in doc.taxes:
         if not row.gst_tax_type:
             continue
+
         if row.charge_type != "Actual":
             continue
 
@@ -293,63 +295,19 @@ def get_valid_accounts(company, *, for_sales=False, for_purchase=False, throw=Tr
     return all_valid_accounts, intra_state_accounts, inter_state_accounts
 
 
-def validate_account_and_taxes(doc, is_sales_transaction=False):
+def set_gst_account_type(doc, method=None):
     if not doc.taxes:
         return
 
-    if not (
-        rows_to_validate := [
-            row
-            for row in doc.taxes
-            if row.tax_amount and row.account_head in get_all_gst_accounts(doc.company)
-        ]
-    ):
-        return
+    gst_tax_account_map = get_gst_account_gst_tax_type_map()
 
-    all_valid_accounts, intra_state_accounts, inter_state_accounts = get_valid_accounts(
-        doc.company,
-        for_sales=is_sales_transaction,
-        for_purchase=not is_sales_transaction,
-    )
+    for tax in doc.taxes:
+        gst_tax_type = gst_tax_account_map.get(tax.account_head)
 
-    is_inter_state = is_inter_state_supply(doc)
-    used_accounts = set(row.account_head for row in rows_to_validate)
+        if not gst_tax_type:
+            return
 
-    for row in rows_to_validate:
-        gst_tax_type = row.gst_tax_type if row.gst_tax_type else ""
-        if row.account_head not in all_valid_accounts:
-            frappe.throw(
-                _("{0} is not a valid GST account for this transaction").format(
-                    bold(row.account_head)
-                ),
-            )
-
-        # Inter State supplies should not have CGST or SGST account
-        if is_inter_state:
-            if gst_tax_type in ("cgst", "sgst", "cgst_rcm", "sgst_rcm"):
-                frappe.throw(
-                    _(
-                        "Row #{0}: Cannot charge CGST/SGST for inter-state supplies"
-                    ).format(row.idx),
-                )
-
-        # Intra State supplies should not have IGST account
-        elif gst_tax_type in ("igst", "igst_rcm"):
-            frappe.throw(
-                _("Row #{0}: Cannot charge IGST for intra-state supplies").format(
-                    row.idx
-                ),
-            )
-
-    if not is_inter_state:
-        if used_accounts and not set(intra_state_accounts[:2]).issubset(used_accounts):
-            frappe.throw(
-                _(
-                    "Cannot use only one of CGST or SGST account for intra-state"
-                    " supplies"
-                ),
-                title=_("Invalid GST Accounts"),
-            )
+        tax.gst_tax_type = gst_tax_type
 
 
 def validate_gst_accounts(doc, is_sales_transaction=False):
@@ -456,9 +414,41 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
                 ).format(idx)
             )
 
+    is_inter_state = is_inter_state_supply(doc)
     previous_row_references = set()
 
+    all_valid_accounts, intra_state_accounts, inter_state_accounts = get_valid_accounts(
+        doc.company,
+        for_sales=is_sales_transaction,
+        for_purchase=not is_sales_transaction,
+    )
+
     for row in rows_to_validate:
+        account_head = row.account_head
+        if account_head not in all_valid_accounts:
+            _throw(
+                _("{0} is not a valid GST account for this transaction").format(
+                    bold(account_head)
+                ),
+            )
+
+        # Inter State supplies should not have CGST or SGST account
+        if is_inter_state:
+            if account_head in intra_state_accounts:
+                _throw(
+                    _(
+                        "Row #{0}: Cannot charge CGST/SGST for inter-state supplies"
+                    ).format(row.idx),
+                )
+
+        # Intra State supplies should not have IGST account
+        elif account_head in inter_state_accounts:
+            _throw(
+                _("Row #{0}: Cannot charge IGST for intra-state supplies").format(
+                    row.idx
+                ),
+            )
+
         if row.charge_type == "On Previous Row Amount":
             _throw(
                 _(
@@ -467,7 +457,6 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
                 ).format(row.idx),
                 title=_("Invalid Charge Type"),
             )
-
         if row.charge_type == "On Previous Row Total":
             previous_row_references.add(row.row_id)
 
@@ -475,6 +464,15 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
         validate_charge_type_for_cess_non_advol_accounts(row)
 
     used_accounts = set(row.account_head for row in rows_to_validate)
+    if not is_inter_state:
+        if used_accounts and not set(intra_state_accounts[:2]).issubset(used_accounts):
+            _throw(
+                _(
+                    "Cannot use only one of CGST or SGST account for intra-state"
+                    " supplies"
+                ),
+                title=_("Invalid GST Accounts"),
+            )
 
     if len(previous_row_references) > 1:
         _throw(
@@ -484,15 +482,12 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
             ),
             title=_("Invalid Reference Row"),
         )
-
     for row in doc.get("items") or []:
         if not row.item_tax_template:
             continue
-
         for account in used_accounts:
             if account in row.item_tax_rate:
                 continue
-
             frappe.msgprint(
                 _(
                     "Item Row #{0}: GST Account {1} is missing in Item Tax Template {2}"
@@ -500,43 +495,6 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
                 title=_("Invalid Item Tax Template"),
                 indicator="orange",
             )
-
-
-def set_gst_account_type(doc, method=None):
-    if not doc.taxes:
-        return
-
-    gst_tax_account_map = {}
-    is_sales_transaction = (
-        True if doc.doctype in (*SALES_DOCTYPES, "Payment Entry") else False
-    )
-    account_types = ["Output"] if is_sales_transaction else ["Input", "Reverse Charge"]
-
-    used_accounts = [
-        row.account_head
-        for row in doc.taxes
-        if row.account_head in get_all_gst_accounts(doc.company)
-    ]
-    if not used_accounts:
-        return
-
-    for account_type in account_types:
-        gst_accounts = get_gst_accounts_by_type(doc.company, account_type)
-
-        for account, tax_name in gst_accounts.items():
-            account = (
-                account[:-8]
-                if account_type != "Reverse Charge"
-                else account[:-8] + "_rcm"
-            )
-
-            if tax_name in used_accounts:
-                gst_tax_account_map[tax_name] = account
-
-    for tax_row in doc.taxes:
-        tax_row.update(
-            {"gst_tax_type": gst_tax_account_map.get(tax_row.account_head, "")}
-        )
 
 
 def validate_charge_type_for_cess_non_advol_accounts(tax_row):
@@ -996,13 +954,10 @@ class ItemGSTDetails:
         """
         Return Item GST Details for a list of documents
         """
-        self.set_gst_accounts_and_item_defaults(doctype, company)
+        self.get_item_defaults()
         self.set_tax_amount_precisions(doctype)
 
         response = frappe._dict()
-
-        if not self.gst_account_map:
-            return response
 
         for doc in docs:
             self.doc = doc
@@ -1024,23 +979,12 @@ class ItemGSTDetails:
         if not self.doc.get("items"):
             return
 
-        self.set_gst_accounts_and_item_defaults(doc.doctype, doc.company)
-        if not self.gst_account_map:
-            return
-
+        self.get_item_defaults()
         self.set_tax_amount_precisions(doc.doctype)
         self.set_item_wise_tax_details()
         self.update_item_tax_details()
 
-    def set_gst_accounts_and_item_defaults(self, doctype, company):
-        if doctype in SALES_DOCTYPES:
-            account_type = "Output"
-        else:
-            account_type = "Input"
-
-        gst_account_map = get_gst_accounts_by_type(company, account_type, throw=False)
-        self.gst_account_map = {v: k for k, v in gst_account_map.items()}
-
+    def get_item_defaults(self):
         item_defaults = frappe._dict(count=0)
 
         for row in GST_TAX_TYPES:
@@ -1436,7 +1380,6 @@ def validate_transaction(doc, method=None):
 
     validate_gst_category(doc.gst_category, gstin)
 
-    validate_account_and_taxes(doc, is_sales_transaction)
     validate_gst_accounts(doc, is_sales_transaction)
     update_taxable_values(doc)
     validate_item_wise_tax_detail(doc)
@@ -1568,7 +1511,6 @@ def before_update_after_submit(doc, method=None):
     if is_sales_transaction := doc.doctype in SALES_DOCTYPES:
         validate_hsn_codes(doc)
 
-    validate_account_and_taxes(doc, is_sales_transaction)
     validate_gst_accounts(doc, is_sales_transaction)
     update_taxable_values(doc)
     validate_item_wise_tax_detail(doc)
