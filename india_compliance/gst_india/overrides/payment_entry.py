@@ -90,9 +90,8 @@ def validate(doc, method=None):
         validate_transaction_for_advance_payment(doc, method)
 
     else:
-        gst_accounts = get_all_gst_accounts(doc.company)
         for row in doc.taxes:
-            if row.account_head in gst_accounts and row.tax_amount != 0:
+            if row.gst_tax_type in GST_TAX_TYPES and row.tax_amount != 0:
                 frappe.throw(
                     _("GST Taxes are not allowed for Supplier Advance Payment Entry")
                 )

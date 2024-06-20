@@ -3,19 +3,12 @@ from frappe.query_builder import Case
 
 from india_compliance.gst_india.constants import GST_ACCOUNT_FIELDS
 
-doctype_tax_map = {
-    "Bill of Entry": "Bill of Entry Taxes",
-    "Payment Entry": "Advance Taxes and Charges",
-    "Supplier Quotation": "Purchase Taxes and Charges",
-    "Purchase Order": "Purchase Taxes and Charges",
-    "Purchase Receipt": "Purchase Taxes and Charges",
-    "Purchase Invoice": "Purchase Taxes and Charges",
-    "Quotation": "Sales Taxes and Charges",
-    "Sales Order": "Sales Taxes and Charges",
-    "Delivery Note": "Sales Taxes and Charges",
-    "Sales Invoice": "Sales Taxes and Charges",
-    "POS Invoice": "Sales Taxes and Charges",
-}
+TAX_DOCTYPES = [
+    "Sales Taxes and Charges",
+    "Purchase Taxes and Charges",
+    "Advance Taxes and Charges",
+    "Bill of Entry Taxes",
+]
 
 
 def execute():
@@ -29,32 +22,35 @@ def execute():
             if not account_value:
                 continue
 
-            if row.get("account_type") == "Reverse Charge":
-                gst_details.setdefault(account[:-8] + "_rcm", []).append(account_value)
+            account_key = account[:-8]
+            if "Reverse Charge" in row.get("account_type"):
+                account_key = account_key + "_rcm"
 
-            elif row.get("account_type") != "Reverse Charge":
-                gst_details.setdefault(account[:-8], []).append(account_value)
+            gst_details.setdefault(account_key, []).append(account_value)
 
-    for doctype, tax_doctype in doctype_tax_map.items():
-        update_documents(doctype, tax_doctype, gst_details)
+    if not gst_details:
+        return
+
+    for tax_doctype in TAX_DOCTYPES:
+        update_documents(tax_doctype, gst_details)
 
 
-def update_documents(doctype, child_doctype, gst_accounts):
-    parent_doctype = frappe.qb.DocType(doctype, alias="parent_doctype")
-    child_doctype = frappe.qb.DocType(child_doctype, alias="child_doctype")
+def update_documents(taxes_doctype, gst_accounts):
+    taxes_doctype = frappe.qb.DocType(taxes_doctype)
 
-    update_query = (
-        frappe.qb.update(child_doctype)
-        .join(parent_doctype)
-        .on(child_doctype.parent == parent_doctype.name)
+    update_query = frappe.qb.update(taxes_doctype).where(
+        taxes_doctype.parenttype.notin(
+            ["Sales Taxes and Charges Template", "Purchase Taxes and Charges Template"]
+        )
     )
+
     conditions = Case()
 
     for gst_tax_account, gst_tax_name in gst_accounts.items():
         conditions = conditions.when(
-            child_doctype.account_head.isin(gst_tax_name), gst_tax_account
+            taxes_doctype.account_head.isin(gst_tax_name), gst_tax_account
         )
 
-    update_query = update_query.set(child_doctype.gst_tax_type, conditions).run(
-        as_dict=True
-    )
+    conditions = conditions.else_(None)
+
+    update_query.set(taxes_doctype.gst_tax_type, conditions).run()

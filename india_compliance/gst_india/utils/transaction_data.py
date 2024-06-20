@@ -42,6 +42,7 @@ class GSTTransactionData:
         if self.doc.doctype == "Purchase Invoice":
             self.party_name_field = "supplier_name"
             if self.doc.is_reverse_charge == 1:
+                # for with reverse charge in purchase, do not compute taxes
                 self.is_purchase_rcm = True
 
         self.party_name = self.doc.get(self.party_name_field)
@@ -114,8 +115,8 @@ class GSTTransactionData:
         for row in self.doc.taxes:
             if (
                 not row.base_tax_amount_after_discount_amount
-                or row.gst_tax_type not in GST_TAX_TYPES
                 or self.is_purchase_rcm
+                or row.gst_tax_type not in GST_TAX_TYPES
             ):
                 continue
 
@@ -323,8 +324,8 @@ class GSTTransactionData:
         for row in self.doc.taxes:
             if (
                 not row.base_tax_amount_after_discount_amount
-                or row.gst_tax_type not in GST_TAX_TYPES
                 or self.is_purchase_rcm
+                or row.gst_tax_type not in GST_TAX_TYPES
             ):
                 continue
 

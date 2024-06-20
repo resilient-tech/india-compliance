@@ -536,8 +536,8 @@ class Gstr1Report:
             except ValueError:
                 continue
 
-            is_cess = gst_tax_type in ("cess", "cess_non_advol")
-            is_cgst_or_sgst = gst_tax_type == "cgst" or gst_tax_type == "sgst"
+            is_cess = "cess" in gst_tax_type
+            is_cgst_or_sgst = gst_tax_type in ("cgst", "sgst")
 
             parent_dict = invoice_item_wise_tax_details.setdefault(parent, {})
             for item_code, invoice_tax_details in item_wise_tax_detail.items():
