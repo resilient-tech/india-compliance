@@ -40,7 +40,7 @@ class GSTTransactionData:
         gst_type = "Output"
         self.party_name_field = "customer_name"
 
-        if self.doc.doctype == "Purchase Invoice":
+        if self.doc.doctype in ("Purchase Invoice", "Purchase Receipt"):
             self.party_name_field = "supplier_name"
             if self.doc.is_reverse_charge != 1:
                 # for with reverse charge, gst_type is Output
