@@ -37,9 +37,12 @@ class GSTTransactionData:
         self.transaction_details = frappe._dict()
 
         self.party_name_field = "customer_name"
+        self.is_purchase_rcm = False
 
         if self.doc.doctype == "Purchase Invoice":
             self.party_name_field = "supplier_name"
+            if self.doc.is_reverse_charge == 1:
+                self.is_purchase_rcm = True
 
         self.party_name = self.doc.get(self.party_name_field)
 
@@ -112,6 +115,7 @@ class GSTTransactionData:
             if (
                 not row.base_tax_amount_after_discount_amount
                 or row.gst_tax_type not in GST_TAX_TYPES
+                or self.is_purchase_rcm
             ):
                 continue
 
@@ -320,10 +324,10 @@ class GSTTransactionData:
             if (
                 not row.base_tax_amount_after_discount_amount
                 or row.gst_tax_type not in GST_TAX_TYPES
+                or self.is_purchase_rcm
             ):
                 continue
 
-            # Remove '_account' from 'cgst_account'
             tax = row.gst_tax_type
             tax_rate = self.rounded(
                 frappe.parse_json(row.item_wise_tax_detail).get(

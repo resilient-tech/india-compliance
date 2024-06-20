@@ -16,7 +16,7 @@ GST_ACCOUNT_FIELDS = (
 
 GST_TAX_TYPES = tuple(field[:-8] for field in GST_ACCOUNT_FIELDS)
 
-GST_REVERSE_CHARGE = tuple(field + "_rcm" for field in GST_TAX_TYPES)
+GST_REVERSE_CHARGE = tuple(tax_type + "_rcm" for tax_type in GST_TAX_TYPES)
 
 GST_PARTY_TYPES = ("Customer", "Supplier", "Company")
 
