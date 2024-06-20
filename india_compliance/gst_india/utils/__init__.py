@@ -778,11 +778,22 @@ def get_timespan_date_range(timespan: str, company: str | None = None) -> tuple 
     if timespan == "this fiscal year to last month":
         date = getdate()
         fiscal_year = get_fiscal_year(date, company=company)
-        return (fiscal_year[1], get_last_day(add_to_date(date, months=-1)))
+        last_month = add_to_date(date, months=-1)
+
+        if fiscal_year[1] > last_month:
+            return (fiscal_year[1], fiscal_year[1])
+
+        return (fiscal_year[1], get_last_day(last_month))
 
     if timespan == "this quarter to last month":
         date = getdate()
-        return (get_quarter_start(date), get_last_day(add_to_date(date, months=-1)))
+        quarter_start = get_quarter_start(date)
+        last_month = get_last_day(add_to_date(date, months=-1))
+
+        if quarter_start > last_month:
+            return (quarter_start, quarter_start)
+
+        return (quarter_start, get_last_day(last_month))
 
     return
 
