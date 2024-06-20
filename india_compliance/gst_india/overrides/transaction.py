@@ -1454,7 +1454,7 @@ def validate_transaction(doc, method=None):
     validate_gst_category(doc.gst_category, gstin)
 
     validate_account_and_taxes(doc, is_sales_transaction)
-    validate_gst_accounts(doc, is_sales_transaction) or ()
+    validate_gst_accounts(doc, is_sales_transaction)
     update_taxable_values(doc)
     validate_item_wise_tax_detail(doc)
 
@@ -1586,7 +1586,7 @@ def before_update_after_submit(doc, method=None):
         validate_hsn_codes(doc)
 
     validate_account_and_taxes(doc, is_sales_transaction)
-    validate_gst_accounts(doc, is_sales_transaction) or ()
+    validate_gst_accounts(doc, is_sales_transaction)
     update_taxable_values(doc)
     validate_item_wise_tax_detail(doc)
     update_gst_details(doc)

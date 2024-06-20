@@ -13,7 +13,7 @@ from frappe.query_builder.functions import Abs, IfNull, Sum
 from frappe.utils import add_months, format_date, getdate, rounded
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
-from india_compliance.gst_india.utils import get_escaped_name, get_party_for_gstin
+from india_compliance.gst_india.utils import get_party_for_gstin
 from india_compliance.gst_india.utils.gstr_2 import IMPORT_CATEGORY, ReturnType
 
 
