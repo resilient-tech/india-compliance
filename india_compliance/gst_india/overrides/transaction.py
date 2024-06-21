@@ -295,17 +295,15 @@ def get_valid_accounts(company, *, for_sales=False, for_purchase=False, throw=Tr
     return all_valid_accounts, intra_state_accounts, inter_state_accounts
 
 
-def set_gst_account_type(doc, method=None):
+def set_gst_tax_type(doc, method=None):
     if not doc.taxes:
         return
 
     gst_tax_account_map = get_gst_account_gst_tax_type_map()
 
     for tax in doc.taxes:
-        gst_tax_type = gst_tax_account_map.get(tax.account_head)
-
         # Setting as None if not GST Account
-        tax.gst_tax_type = gst_tax_type
+        tax.gst_tax_type = gst_tax_account_map.get(tax.account_head)
 
 
 def validate_gst_accounts(doc, is_sales_transaction=False):

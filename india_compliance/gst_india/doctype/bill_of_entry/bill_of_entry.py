@@ -22,7 +22,7 @@ from india_compliance.gst_india.overrides.ineligible_itc import (
 from india_compliance.gst_india.overrides.transaction import (
     ItemGSTDetails,
     ItemGSTTreatment,
-    set_gst_account_type,
+    set_gst_tax_type,
     validate_charge_type_for_cess_non_advol_accounts,
 )
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
@@ -114,7 +114,7 @@ class BillofEntry(Document):
 
     def before_validate(self):
         self.set_taxes_and_totals()
-        set_gst_account_type(self)
+        set_gst_tax_type(self)
 
     def before_save(self):
         update_gst_details(self)
