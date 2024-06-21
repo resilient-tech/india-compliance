@@ -150,11 +150,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
-<<<<<<< HEAD
- "modified": "2023-10-12 16:20:03.501277",
-=======
  "modified": "2024-06-20 13:19:57.316043",
->>>>>>> 714fdcf5 (fix(reco-tool): support date to last month for filtered mismatches)
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Purchase Reconciliation Tool",
