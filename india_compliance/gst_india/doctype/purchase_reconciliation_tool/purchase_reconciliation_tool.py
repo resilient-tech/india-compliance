@@ -609,11 +609,11 @@ def parse_params(fun):
 
 
 def auto_refresh_authtoken():
-    is_auto_refresh_enabled = frappe.db.get_single_value(
-        "GST Settings", "auto_refresh_auth_token"
+    enable_auto_reconciliation = frappe.get_cached_value(
+        "GST Settings", "GST Settings", "enable_auto_reconciliation"
     )
 
-    if not is_auto_refresh_enabled:
+    if not enable_auto_reconciliation:
         return
 
     for credential in frappe.get_all(
