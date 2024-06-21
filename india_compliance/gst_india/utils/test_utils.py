@@ -1,11 +1,26 @@
 from datetime import date
 from unittest.mock import patch
 
+import frappe
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import getdate
 
 
 class TestUtils(FrappeTestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+        # create 2023-2024 fiscal year
+        fiscal_year = frappe.new_doc("Fiscal Year")
+        fiscal_year.update(
+            {
+                "year_start_date": "2023-04-01",
+                "year_end_date": "2024-03-31",
+                "year": "2023-2024",
+            }
+        ).insert(ignore_if_duplicate=True)
 
     @patch(
         "india_compliance.gst_india.utils.getdate", return_value=getdate("2023-06-20")
