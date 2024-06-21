@@ -580,6 +580,20 @@ CUSTOM_FIELDS = {
             "translatable": 0,
         },
     ],
+    (
+        "Sales Taxes and Charges",
+        "Purchase Taxes and Charges",
+        "Advance Taxes and Charges",
+    ): [
+        {
+            "fieldname": "gst_tax_type",
+            "label": "GST Tax Type",
+            "fieldtype": "Data",
+            "insert_after": "rate",
+            "read_only": 1,
+            "translatable": 0,
+        },
+    ],
     "Purchase Invoice": [
         {
             "fieldname": "gst_section",
