@@ -5,7 +5,6 @@ from frappe.tests.utils import FrappeTestCase
 from india_compliance.gst_india.doctype.gstr_1_log.gstr_1_log import GenerateGSTR1
 from india_compliance.gst_india.utils import get_party_for_gstin as _get_party_for_gstin
 from india_compliance.gst_india.utils.gstr_1 import (
-    SUB_CATEGORY_GOV_CATEGORY_MAPPING,
     GovDataField,
     GSTR1_B2B_InvoiceType,
     GSTR1_DataField,
@@ -24,8 +23,8 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     SUPECOM,
     TXPD,
     Exports,
+    GSTR1DataMapper,
     NilRated,
-    get_category_wise_data,
 )
 
 
@@ -39,9 +38,9 @@ def normalize_data(data):
 
 def process_mapped_data(data):
     return list(
-        get_category_wise_data(
-            normalize_data(copy.deepcopy(data)), SUB_CATEGORY_GOV_CATEGORY_MAPPING
-        ).values()
+        GSTR1DataMapper()
+        .get_category_wise_data(normalize_data(copy.deepcopy(data)))
+        .values()
     )[0]
 
 
