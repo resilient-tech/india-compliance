@@ -11,6 +11,7 @@ from frappe.query_builder import Criterion
 from frappe.query_builder.functions import IfNull, Sum
 from frappe.utils import cint, flt, formatdate, getdate
 
+from india_compliance.gst_india.constants.__init__ import GST_TAX_TYPES
 from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies import (
     get_columns as get_hsn_columns,
 )
@@ -106,7 +107,13 @@ class Gstr1Report(object):
         elif self.filters.get("type_of_business") == "Document Issued Summary":
             self.get_documents_issued_data()
         elif self.filters.get("type_of_business") == "HSN":
+<<<<<<< HEAD
             self.data = get_hsn_data(self.filters, self.columns, self.gst_accounts)
+=======
+            self.data = get_hsn_data(self.filters, self.columns)
+        elif self.filters.get("type_of_business") == "Section 14":
+            self.data = self.get_data_for_supplies_through_ecommerce_operators()
+>>>>>>> c1d440b3 (fix: add gst_tax_type field (#2241))
         elif self.invoices:
             for inv, items_based_on_rate in self.invoice_tax_rate_info.items():
                 invoice_details = self.invoices.get(inv)
@@ -505,7 +512,7 @@ class Gstr1Report(object):
         invoice_tax_details = frappe.db.sql(
             """
             select
-                parent, account_head, item_wise_tax_detail
+                parent, account_head, item_wise_tax_detail,gst_tax_type
             from `tab%s`
             where
                 parenttype = %s and docstatus = 1
@@ -517,11 +524,11 @@ class Gstr1Report(object):
         )
         invoice_item_wise_tax_details = frappe._dict()
 
-        for parent, account, item_wise_tax_detail in invoice_tax_details:
+        for parent, account, item_wise_tax_detail, gst_tax_type in invoice_tax_details:
             if not item_wise_tax_detail:
                 continue
 
-            if account not in self.gst_accounts.values():
+            if gst_tax_type not in GST_TAX_TYPES:
                 if "gst" in account.lower():
                     unidentified_gst_accounts.add(account)
                 continue
@@ -531,14 +538,8 @@ class Gstr1Report(object):
             except ValueError:
                 continue
 
-            is_cess = account in (
-                self.gst_accounts.cess_account,
-                self.gst_accounts.cess_non_advol_account,
-            )
-            is_cgst_or_sgst = (
-                account == self.gst_accounts.cgst_account
-                or account == self.gst_accounts.sgst_account
-            )
+            is_cess = "cess" in gst_tax_type
+            is_cgst_or_sgst = gst_tax_type in ("cgst", "sgst")
 
             parent_dict = invoice_item_wise_tax_details.setdefault(parent, {})
             for item_code, invoice_tax_details in item_wise_tax_detail.items():
