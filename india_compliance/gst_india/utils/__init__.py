@@ -563,7 +563,7 @@ def get_gst_account_gst_tax_type_map():
             if "Reverse Charge" in row.get("account_type"):
                 account_key = account_key + "_rcm"
 
-            gst_account_map.setdefault(account_key, []).append(account_value)
+            gst_account_map[account_value] = account_key
 
     return gst_account_map
 

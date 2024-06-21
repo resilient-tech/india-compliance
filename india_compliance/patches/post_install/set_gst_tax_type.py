@@ -12,13 +12,17 @@ TAX_DOCTYPES = [
 
 
 def execute():
-    gst_account_map = get_gst_account_gst_tax_type_map()
+    gst_tax_type_account_map = get_gst_account_gst_tax_type_map()
 
-    if not gst_account_map:
+    if not gst_tax_type_account_map:
         return
 
+    gst_accounts = {}
+    for account, tax_type in gst_tax_type_account_map.items():
+        gst_accounts.setdefault(tax_type, []).append(account)
+
     for tax_doctype in TAX_DOCTYPES:
-        update_documents(tax_doctype, gst_account_map)
+        update_documents(tax_doctype, gst_accounts)
 
 
 def update_documents(taxes_doctype, gst_accounts):

@@ -304,9 +304,7 @@ def set_gst_account_type(doc, method=None):
     for tax in doc.taxes:
         gst_tax_type = gst_tax_account_map.get(tax.account_head)
 
-        if not gst_tax_type:
-            return
-
+        # Setting as None if not GST Account
         tax.gst_tax_type = gst_tax_type
 
 
@@ -499,7 +497,7 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
 
 def validate_charge_type_for_cess_non_advol_accounts(tax_row):
     if tax_row.charge_type == "On Item Quantity" and (
-        "cess_non_advol" not in tax_row.gst_tax_type
+        tax_row.gst_tax_type not in ("cess_non_advol", "cess_non_advol_rcm")
     ):
         frappe.throw(
             _(
@@ -1026,8 +1024,8 @@ class ItemGSTDetails:
         for row in self.doc.taxes:
             if (
                 not row.base_tax_amount_after_discount_amount
+                or row.gst_tax_type not in GST_TAX_TYPES
                 or not row.item_wise_tax_detail
-                or not row.gst_tax_type
             ):
                 continue
 
@@ -1201,7 +1199,7 @@ class ItemGSTTreatment:
             if row.charge_type in ("Actual", "On Item Quantity"):
                 continue
 
-            if row.gst_tax_type not in TAX_TYPES:
+            if row.gst_tax_type not in GST_TAX_TYPES:
                 continue
 
             if row.rate == 0:
