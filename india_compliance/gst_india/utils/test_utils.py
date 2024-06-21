@@ -12,13 +12,22 @@ class TestUtils(FrappeTestCase):
     def setUpClass(cls):
         super().setUpClass()
 
-        # create 2023-2024 fiscal year
+        # create old fiscal years
         fiscal_year = frappe.new_doc("Fiscal Year")
         fiscal_year.update(
             {
                 "year_start_date": "2023-04-01",
                 "year_end_date": "2024-03-31",
                 "year": "2023-2024",
+            }
+        ).insert(ignore_if_duplicate=True)
+
+        fiscal_year = frappe.new_doc("Fiscal Year")
+        fiscal_year.update(
+            {
+                "year_start_date": "2022-04-01",
+                "year_end_date": "2023-03-31",
+                "year": "2022-2023",
             }
         ).insert(ignore_if_duplicate=True)
 
