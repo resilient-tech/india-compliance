@@ -17,15 +17,9 @@ const ALERT_HTML = `
         </div>
         ${
             api_enabled
-                ? `<button
-                id="download-gstr2b-button"
-                type="button"
-                class="btn btn-dark btn-xs"
-                aria-label="Download"
-                style="outline: 0px solid black !important"
-            >
-                Download 2B
-            </button>`
+                ? `<a id="download-gstr2b-button" href="#" class="alert-link">
+                    Download 2B
+                </a>`
                 : ""
         }
     </div>
@@ -1465,6 +1459,7 @@ async function fetch_date_range(frm, field_prefix, method) {
 
 function set_date_range_description(frm, field_prefixs) {
     if (!field_prefixs) field_prefixs = ["inward_supply", "purchase"];
+    else field_prefixs = [field_prefixs];
 
     field_prefixs.forEach(prefix => {
         const period_field = prefix + "_period";
