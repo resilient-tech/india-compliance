@@ -6,7 +6,7 @@ from india_compliance.gst_india.overrides.sales_invoice import (
     update_dashboard_with_gst_logs,
 )
 from india_compliance.gst_india.overrides.transaction import validate_transaction
-from india_compliance.gst_india.utils import get_gst_accounts_by_type, is_api_enabled
+from india_compliance.gst_india.utils import is_api_enabled
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 
 
@@ -96,19 +96,17 @@ def update_itc_totals(doc, method=None):
     if doc.ineligibility_reason == "ITC restricted due to PoS rules":
         return
 
-    gst_accounts = get_gst_accounts_by_type(doc.company, "Input")
-
     for tax in doc.get("taxes"):
-        if tax.account_head == gst_accounts.igst_account:
+        if tax.gst_tax_type == "igst":
             doc.itc_integrated_tax += flt(tax.base_tax_amount_after_discount_amount)
 
-        if tax.account_head == gst_accounts.sgst_account:
+        if tax.gst_tax_type == "sgst":
             doc.itc_state_tax += flt(tax.base_tax_amount_after_discount_amount)
 
-        if tax.account_head == gst_accounts.cgst_account:
+        if tax.gst_tax_type == "cgst":
             doc.itc_central_tax += flt(tax.base_tax_amount_after_discount_amount)
 
-        if tax.account_head == gst_accounts.cess_account:
+        if tax.gst_tax_type == "cess":
             doc.itc_cess_amount += flt(tax.base_tax_amount_after_discount_amount)
 
 
@@ -174,11 +172,10 @@ def validate_with_inward_supply(doc):
         mismatch_fields["Taxable Value"] = doc._inward_supply.get("taxable_value")
 
     # mismatch for taxes
-    gst_accounts = get_gst_accounts_by_type(doc.company, "Input")
     for tax in ["cgst", "sgst", "igst", "cess"]:
-        tax_amount = get_tax_amount(doc.taxes, gst_accounts[tax + "_account"])
+        tax_amount = get_tax_amount(doc.taxes, tax)
         if tax == "cess":
-            tax_amount += get_tax_amount(doc.taxes, gst_accounts.cess_non_advol_account)
+            tax_amount += get_tax_amount(doc.taxes, "cess_non_advol")
 
         if tax_amount == doc._inward_supply.get(tax):
             continue
@@ -206,15 +203,15 @@ def validate_with_inward_supply(doc):
         )
 
 
-def get_tax_amount(taxes, account_head):
-    if not (taxes or account_head):
+def get_tax_amount(taxes, gst_tax_type):
+    if not (taxes or gst_tax_type):
         return 0
 
     return sum(
         [
             tax.base_tax_amount_after_discount_amount
             for tax in taxes
-            if tax.account_head == account_head
+            if tax.gst_tax_type == gst_tax_type
         ]
     )
 

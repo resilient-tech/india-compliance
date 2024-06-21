@@ -13,11 +13,7 @@ from frappe.query_builder.functions import Abs, IfNull, Sum
 from frappe.utils import add_months, format_date, getdate, rounded
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
-from india_compliance.gst_india.utils import (
-    get_escaped_name,
-    get_gst_accounts_by_type,
-    get_party_for_gstin,
-)
+from india_compliance.gst_india.utils import get_party_for_gstin
 from india_compliance.gst_india.utils.gstr_2 import IMPORT_CATEGORY, ReturnType
 
 
@@ -454,10 +450,8 @@ class PurchaseInvoice:
         return query
 
     def get_fields(self, additional_fields=None, is_return=False):
-        gst_accounts = get_gst_accounts_by_type(self.company, "Input")
         tax_fields = [
-            self.query_tax_amount(account).as_(tax[:-8])
-            for tax, account in gst_accounts.items()
+            self.query_tax_amount(tax_type).as_(tax_type) for tax_type in GST_TAX_TYPES
         ]
 
         fields = [
@@ -490,13 +484,12 @@ class PurchaseInvoice:
 
         return fields
 
-    def query_tax_amount(self, account):
-        account = get_escaped_name(account)
+    def query_tax_amount(self, gst_tax_type):
         return Abs(
             Sum(
                 Case()
                 .when(
-                    self.PI_TAX.account_head == account,
+                    self.PI_TAX.gst_tax_type == gst_tax_type,
                     self.PI_TAX.base_tax_amount_after_discount_amount,
                 )
                 .else_(0)
@@ -600,10 +593,8 @@ class BillOfEntry:
         return query
 
     def get_fields(self, additional_fields=None):
-        gst_accounts = get_gst_accounts_by_type(self.company, "Input")
         tax_fields = [
-            self.query_tax_amount(account).as_(tax[:-8])
-            for tax, account in gst_accounts.items()
+            self.query_tax_amount(tax_type).as_(tax_type) for tax_type in GST_TAX_TYPES
         ]
 
         fields = [
@@ -638,13 +629,12 @@ class BillOfEntry:
 
         return fields
 
-    def query_tax_amount(self, account):
-        account = get_escaped_name(account)
+    def query_tax_amount(self, gst_tax_type):
         return Abs(
             Sum(
                 Case()
                 .when(
-                    self.BOE_TAX.account_head == account,
+                    self.BOE_TAX.gst_tax_type == gst_tax_type,
                     self.BOE_TAX.tax_amount,
                 )
                 .else_(0)

@@ -7,6 +7,7 @@ from erpnext.accounts.general_ledger import make_gl_entries
 from erpnext.accounts.utils import create_payment_ledger_entry
 from erpnext.controllers.accounts_controller import get_advance_payment_entries
 
+from india_compliance.gst_india.constants import TAX_TYPES
 from india_compliance.gst_india.overrides.transaction import get_gst_details
 from india_compliance.gst_india.overrides.transaction import (
     validate_backdated_transaction as _validate_backdated_transaction,
@@ -14,10 +15,7 @@ from india_compliance.gst_india.overrides.transaction import (
 from india_compliance.gst_india.overrides.transaction import (
     validate_transaction as validate_transaction_for_advance_payment,
 )
-from india_compliance.gst_india.utils import (
-    get_all_gst_accounts,
-    get_gst_accounts_by_type,
-)
+from india_compliance.gst_india.utils import get_all_gst_accounts
 
 
 @frappe.whitelist()
@@ -92,9 +90,8 @@ def validate(doc, method=None):
         validate_transaction_for_advance_payment(doc, method)
 
     else:
-        gst_accounts = get_all_gst_accounts(doc.company)
         for row in doc.taxes:
-            if row.account_head in gst_accounts and row.tax_amount != 0:
+            if row.gst_tax_type in TAX_TYPES and row.tax_amount != 0:
                 frappe.throw(
                     _("GST Taxes are not allowed for Supplier Advance Payment Entry")
                 )
@@ -116,9 +113,8 @@ def before_cancel(doc, method=None):
 
 
 def validate_backdated_transaction(doc, action="create"):
-    gst_accounts = get_gst_accounts_by_type(doc.company, "Output").values()
     for row in doc.taxes:
-        if row.account_head in gst_accounts and row.tax_amount != 0:
+        if row.gst_tax_type in TAX_TYPES and row.tax_amount != 0:
             _validate_backdated_transaction(doc, action=action)
             break
 
