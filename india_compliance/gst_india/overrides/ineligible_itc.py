@@ -35,7 +35,7 @@ class IneligibleITC:
         - No updates for expense items
         """
 
-        self.update_keys_for_item_ineligibility()
+        self.update_item_ineligibility()
 
         if not self.doc.get("_has_ineligible_itc_items"):
             return
@@ -54,7 +54,7 @@ class IneligibleITC:
     def update_gl_entries(self, gl_entries):
         self.gl_entries = gl_entries
 
-        self.update_keys_for_item_ineligibility()
+        self.update_item_ineligibility()
 
         if not self.doc.get("_has_ineligible_itc_items"):
             return gl_entries
@@ -72,7 +72,7 @@ class IneligibleITC:
 
             self.update_item_gl_entries(item)
 
-    def update_keys_for_item_ineligibility(self):
+    def update_item_ineligibility(self):
         self.doc._has_ineligible_itc_items = False
         stock_items = self.doc.get_stock_items()
 
@@ -291,7 +291,6 @@ class IneligibleITC:
         ineligible_taxes = defaultdict(float)
         ineligible_tax_amount = 0
 
-        # TODO: GST Accounts from taxes table
         for tax_type in GST_TAX_TYPES:
             tax_amount = abs(flt(item.get(f"{tax_type}_amount")))
             tax_account = self.tax_account_dict.get(tax_type)
