@@ -32,6 +32,7 @@ def after_install():
     create_email_template()
     set_default_gst_settings()
     set_default_accounts_settings()
+    set_default_print_settings()
     create_hsn_codes()
     add_fields_to_item_variant_settings()
 
@@ -258,6 +259,28 @@ def set_default_accounts_settings():
     )
 
     frappe.db.set_default("add_taxes_from_item_tax_template", 0)
+
+
+def set_default_print_settings():
+    sales_invoice_format = frappe.get_meta("Sales Invoice").default_print_format
+
+    if sales_invoice_format:
+        return
+
+    # print style
+    frappe.db.set_value("Print Settings", None, "print_style", "Modern")
+
+    # print format
+    frappe.make_property_setter(
+        {
+            "doctype": "Sales Invoice",
+            "doctype_or_field": "DocType",
+            "property": "default_print_format",
+            "value": "GST Tax Invoice",
+        },
+        validate_fields_for_doctype=False,
+        is_system_generated=False,
+    )
 
 
 def show_accounts_settings_override_warning():
