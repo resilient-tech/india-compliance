@@ -268,7 +268,7 @@ def set_default_print_settings():
         return
 
     # print style
-    frappe.db.set_value("Print Settings", None, "print_style", "Modern")
+    frappe.db.set_single_value("Print Settings", "print_style", "Modern")
 
     # print format
     frappe.make_property_setter(
