@@ -8,7 +8,7 @@ from pypika.terms import Case
 import frappe
 from frappe import _
 from frappe.query_builder import Criterion
-from frappe.query_builder.functions import IfNull, Sum
+from frappe.query_builder.functions import Date, IfNull, Sum
 from frappe.utils import cint, flt, formatdate, getdate
 
 from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies import (
@@ -23,6 +23,7 @@ from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_
 )
 from india_compliance.gst_india.utils import get_escaped_name, get_gst_accounts_by_type
 from india_compliance.gst_india.utils.exporter import ExcelExporter
+from india_compliance.gst_india.utils.gstr_1 import SUPECOM
 
 B2C_LIMIT = 2_50_000
 
@@ -38,6 +39,7 @@ TYPES_OF_BUSINESS = {
     "NIL Rated": "nil",
     "Document Issued Summary": "doc_issue",
     "HSN": "hsn",
+    "Section 14": "supeco",
 }
 
 INDEX_FOR_NIL_EXEMPT_DICT = {"Nil-Rated": 0, "Exempted": 1, "Non-GST": 2}
@@ -107,6 +109,8 @@ class Gstr1Report(object):
             self.get_documents_issued_data()
         elif self.filters.get("type_of_business") == "HSN":
             self.data = get_hsn_data(self.filters, self.columns, self.gst_accounts)
+        elif self.filters.get("type_of_business") == "Section 14":
+            self.data = self.get_data_for_supplies_through_ecommerce_operators()
         elif self.invoices:
             for inv, items_based_on_rate in self.invoice_tax_rate_info.items():
                 invoice_details = self.invoices.get(inv)
@@ -565,6 +569,106 @@ class Gstr1Report(object):
             )
 
         return invoice_item_wise_tax_details
+
+    def get_data_for_supplies_through_ecommerce_operators(self):
+        si = frappe.qb.DocType("Sales Invoice")
+        si_item = frappe.qb.DocType("Sales Invoice Item")
+        taxes = frappe.qb.DocType("Sales Taxes and Charges")
+        igst_account = get_escaped_name(self.gst_accounts.igst_account)
+        cgst_account = get_escaped_name(self.gst_accounts.cgst_account)
+        sgst_account = get_escaped_name(self.gst_accounts.sgst_account)
+        cess_account = get_escaped_name(self.gst_accounts.cess_account)
+        cess_non_advol = get_escaped_name(self.gst_accounts.cess_non_advol_account)
+
+        # subquery to get total taxable value
+        taxable_value_query = (
+            frappe.qb.from_(si_item)
+            .select(
+                si_item.parent,
+                Sum(si_item.taxable_value).as_("total_taxable_value"),
+            )
+            .groupby(si_item.parent)
+        )
+
+        # subquery to get total taxes
+        taxes_query = (
+            frappe.qb.from_(taxes)
+            .select(
+                taxes.parent,
+                Sum(
+                    Case()
+                    .when(
+                        taxes.account_head == igst_account,
+                        taxes.tax_amount,
+                    )
+                    .else_(0)
+                ).as_("total_igst_amount"),
+                Sum(
+                    Case()
+                    .when(
+                        taxes.account_head == cgst_account,
+                        taxes.tax_amount,
+                    )
+                    .else_(0)
+                ).as_("total_cgst_amount"),
+                Sum(
+                    Case()
+                    .when(
+                        taxes.account_head == sgst_account,
+                        taxes.tax_amount,
+                    )
+                    .else_(0)
+                ).as_("total_sgst_amount"),
+                Sum(
+                    Case()
+                    .when(
+                        taxes.account_head.isin([cess_account, cess_non_advol]),
+                        taxes.tax_amount,
+                    )
+                    .else_(0)
+                ).as_("total_cess_amount"),
+            )
+            .groupby(taxes.parent)
+        )
+
+        query = (
+            frappe.qb.from_(si)
+            .left_join(taxable_value_query)
+            .on(si.name == taxable_value_query.parent)
+            .left_join(taxes_query)
+            .on(si.name == taxes_query.parent)
+            .select(
+                si.ecommerce_gstin,
+                Sum(IfNull(taxable_value_query.total_taxable_value, 0)).as_(
+                    "total_taxable_value"
+                ),
+                Sum(IfNull(taxes_query.total_igst_amount, 0)).as_("total_igst_amount"),
+                Sum(IfNull(taxes_query.total_cgst_amount, 0)).as_("total_cgst_amount"),
+                Sum(IfNull(taxes_query.total_sgst_amount, 0)).as_("total_sgst_amount"),
+                Sum(IfNull(taxes_query.total_cess_amount, 0)).as_("total_cess_amount"),
+                Case()
+                .when(si.is_reverse_charge == 1, SUPECOM.US_9_5.value)
+                .else_(SUPECOM.US_52.value)
+                .as_("ecommerce_supply_type"),
+            )
+            .where(si.is_opening == "No")
+            .where(si.docstatus == 1)
+            .where(IfNull(si.ecommerce_gstin, "") != "")
+            .where(IfNull(si.billing_address_gstin, "") != si.company_gstin)
+            .where(
+                Date(si.posting_date).between(
+                    self.filters.from_date, self.filters.to_date
+                )
+            )
+            .where(si.company == self.filters.company)
+            .groupby(si.is_reverse_charge, si.ecommerce_gstin)
+            .orderby(si.ecommerce_gstin, si.is_reverse_charge)
+        )
+
+        if self.filters.company_gstin:
+            query = query.where(si.company_gstin == self.filters.company_gstin)
+
+        return query.run(as_dict=True)
 
     def get_columns(self):
         self.other_columns = []
@@ -1065,8 +1169,57 @@ class Gstr1Report(object):
         elif self.filters.get("type_of_business") == "HSN":
             self.columns = get_hsn_columns()
             return
+        elif self.filters.get("type_of_business") == "Section 14":
+            self.columns = self.get_section_14_columns()
+            return
 
         self.columns = self.invoice_columns + self.tax_columns + self.other_columns
+
+    def get_section_14_columns(self):
+        return [
+            {
+                "fieldname": "ecommerce_gstin",
+                "label": _("GSTIN of E-Commerce Operator"),
+                "fieldtype": "Data",
+                "width": 180,
+            },
+            {
+                "fieldname": "total_taxable_value",
+                "label": _("Net value of supplies"),
+                "fieldtype": "Currency",
+                "width": 120,
+            },
+            {
+                "fieldname": "total_igst_amount",
+                "label": _("Integrated tax"),
+                "fieldtype": "Currency",
+                "width": 120,
+            },
+            {
+                "fieldname": "total_cgst_amount",
+                "label": _("Central tax"),
+                "fieldtype": "Currency",
+                "width": 120,
+            },
+            {
+                "fieldname": "total_sgst_amount",
+                "label": _("State/UT tax"),
+                "fieldtype": "Currency",
+                "width": 120,
+            },
+            {
+                "fieldname": "total_cess_amount",
+                "label": _("Cess"),
+                "fieldtype": "Currency",
+                "width": 120,
+            },
+            {
+                "fieldname": "ecommerce_supply_type",
+                "label": _("Nature of Supply"),
+                "fieldtype": "Data",
+                "width": 180,
+            },
+        ]
 
 
 class GSTR11A11BData:
@@ -1499,6 +1652,10 @@ def get_json(type_of_business, gstin, data, filters):
     if type_of_business == "HSN":
         return get_hsn_wise_json_data(filters, data)
 
+    if type_of_business == "Section 14":
+        res.setdefault("superco", {})
+        return get_section_14_json(res, data)
+
 
 def set_gst_defaults(filters):
     if isinstance(filters, str):
@@ -1834,6 +1991,26 @@ def get_document_issued_summary_json(data):
         )
 
     return {"doc_det": doc_det}
+
+
+def get_section_14_json(res, data):
+    out = res["superco"]
+    for item in data:
+        key = (
+            "clttx" if item["ecommerce_supply_type"] == SUPECOM.US_52.value else "paytx"
+        )
+        out.setdefault(key, []).append(
+            {
+                "etin": item["ecommerce_gstin"],
+                "suppval": item["total_taxable_value"],
+                "igst": item["total_igst_amount"],
+                "cgst": item["total_cgst_amount"],
+                "sgst": item["total_sgst_amount"],
+                "cess": item["total_cess_amount"],
+            }
+        )
+
+    return out
 
 
 def get_invoice_type(row):
