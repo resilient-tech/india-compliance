@@ -19,6 +19,22 @@ frappe.ui.form.on(DOCTYPE, {
             "default_customs_payable_account",
             { root_type: "Liability" },
         ]);
+<<<<<<< HEAD
+=======
+
+        frm.set_query("autofield", "bank_details_for_printing", (_, cdt, cdn) => {
+            return  {
+                query: "india_compliance.gst_india.overrides.company.get_default_print_options",
+                params : {for_bank : 1}
+            }
+        });
+        frm.set_query("autofield", "registration_details_for_printing", (_, cdt, cdn) => {
+            return {
+                query: "india_compliance.gst_india.overrides.company.get_default_print_options",
+                params : {for_bank : 0}
+            }
+        });
+>>>>>>> dd9d551c (fix: parse param correctly in py)
     },
 
     make_default_tax_template: function (frm) {
