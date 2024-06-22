@@ -41,9 +41,13 @@ def set_gst_category(doc):
 
 
 def fetch_or_guess_gst_category(doc):
+    # High Seas Sales
+    if doc.gst_category == "Overseas":
+        return doc.gst_category
+
     # Any transaction can be treated as deemed export
     if doc.gstin and doc.gst_category == "Deemed Export":
-        return "Deemed Export"
+        return doc.gst_category
 
     if doc.gstin and is_autofill_party_info_enabled():
         gstin_info = _get_gstin_info(doc.gstin, throw_error=False) or {}
