@@ -23,7 +23,7 @@ from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_
 )
 from india_compliance.gst_india.utils import get_escaped_name, get_gst_accounts_by_type
 from india_compliance.gst_india.utils.exporter import ExcelExporter
-from india_compliance.gst_india.utils.gstr_1.gstr_1_data import SUPECOM
+from india_compliance.gst_india.utils.gstr_1 import SUPECOM
 
 B2C_LIMIT = 2_50_000
 
