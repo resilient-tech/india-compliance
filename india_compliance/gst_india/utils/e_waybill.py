@@ -1518,7 +1518,7 @@ class EWaybillData(GSTTransactionData):
         to_party = self.transaction_details.party_name
         from_party = self.transaction_details.company_name
 
-        if self.doc.doctype == "Purchase Invoice":
+        if self.doc.doctype in ("Purchase Invoice", "Purchase Receipt"):
             to_party, from_party = from_party, to_party
 
         if self.doc.is_return:

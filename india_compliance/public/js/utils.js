@@ -388,7 +388,8 @@ Object.assign(india_compliance, {
             args: { company_gstin: gstin },
         });
 
-        this.authenticate_otp(gstin);
+        // wait for OTP to be authenticated to proceed
+        await this.authenticate_otp(gstin);
     },
 
     async authenticate_otp(gstin) {

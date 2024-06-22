@@ -181,7 +181,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                 Sum(
                     Case()
                     .when(
-                        boe_taxes.account_head == self.gst_accounts.igst_account,
+                        boe_taxes.gst_tax_type == "igst",
                         boe_taxes.tax_amount,
                     )
                     .else_(0)
@@ -189,7 +189,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                 Sum(
                     Case()
                     .when(
-                        boe_taxes.account_head == self.gst_accounts.cess_account,
+                        boe_taxes.gst_tax_type == "cess",
                         boe_taxes.tax_amount,
                     )
                     .else_(0)

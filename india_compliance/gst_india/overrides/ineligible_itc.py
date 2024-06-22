@@ -13,7 +13,6 @@ from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.overrides.transaction import (
     is_indian_registered_company,
 )
-from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 
 class IneligibleITC:
@@ -76,10 +75,14 @@ class IneligibleITC:
     def update_keys_for_item_ineligibility(self):
         self.doc._has_ineligible_itc_items = False
         stock_items = self.doc.get_stock_items()
-        self.gst_accounts = get_gst_accounts_by_type(
-            self.doc.company, "Input", throw=False
-        )
-        if not self.gst_accounts:
+
+        self.tax_account_dict = {
+            row.gst_tax_type: row.account_head
+            for row in self.doc.taxes
+            if row.gst_tax_type
+        }
+
+        if not self.tax_account_dict:
             return
 
         for item in self.doc.items:
@@ -291,7 +294,7 @@ class IneligibleITC:
         # TODO: GST Accounts from taxes table
         for tax_type in GST_TAX_TYPES:
             tax_amount = abs(flt(item.get(f"{tax_type}_amount")))
-            tax_account = self.gst_accounts.get(f"{tax_type}_account")
+            tax_account = self.tax_account_dict.get(tax_type)
 
             if not tax_amount:
                 continue
