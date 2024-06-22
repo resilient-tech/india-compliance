@@ -60,11 +60,7 @@ def validate(doc, method=None):
 
 
 def validate_overseas_gst_category(doc):
-    if doc.country == "India" and doc.gst_category == "Overseas":
-        frappe.throw(
-            _("Cannot set GST Category as Overseas for Indian Address"),
-            title=_("Invalid GST Category"),
-        )
+    # High Seas Sales is possible (Indian Address with Overseas GST Category)
 
     if doc.country != "India" and doc.gst_category != "Overseas":
         frappe.throw(
