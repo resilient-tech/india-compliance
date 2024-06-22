@@ -33,6 +33,7 @@ from india_compliance.gst_india.utils import (
     validate_gst_category,
     validate_gstin,
 )
+from india_compliance.gst_india.utils.gstr_1 import SUPECOM
 from india_compliance.income_tax_india.overrides.tax_withholding_category import (
     get_tax_withholding_accounts,
 )
@@ -1516,7 +1517,6 @@ def validate_transaction(doc, method=None):
     validate_ecommerce_gstin(doc)
 
     validate_gst_category(doc.gst_category, gstin)
-
     valid_accounts = validate_gst_accounts(doc, is_sales_transaction) or ()
     update_taxable_values(doc, valid_accounts)
     validate_item_wise_tax_detail(doc, valid_accounts)
@@ -1530,10 +1530,12 @@ def before_print(doc, method=None, print_settings=None):
     ):
         return
 
+    set_ecommerce_supply_type(doc)
     set_gst_breakup(doc)
 
 
 def onload(doc, method=None):
+
     if (
         ignore_gst_validations(doc, throw=False)
         or not doc.place_of_supply
@@ -1541,6 +1543,7 @@ def onload(doc, method=None):
     ):
         return
 
+    set_ecommerce_supply_type(doc)
     set_gst_breakup(doc)
 
 
@@ -1618,6 +1621,7 @@ def before_update_after_submit(doc, method=None):
     update_gst_details(doc)
 
 
+<<<<<<< HEAD
 # Note: This is kept for backwards compatibility with Frappe versions < 14.21.0
 def ignore_logs_on_trash(doc, method=None):
     if (
@@ -1630,3 +1634,19 @@ def ignore_logs_on_trash(doc, method=None):
         "e-Waybill Log",
         "e-Invoice Log",
     )
+=======
+def set_ecommerce_supply_type(doc):
+    """
+    - Set GSTR-1 E-commerce section for virtual field ecommerce_supply_type
+    """
+    if doc.doctype not in ("Sales Order", "Sales Invoice", "Delivery Note"):
+        return
+
+    if not doc.ecommerce_gstin:
+        return
+
+    if doc.is_reverse_charge:
+        doc.ecommerce_supply_type = SUPECOM.US_9_5.value
+    else:
+        doc.ecommerce_supply_type = SUPECOM.US_52.value
+>>>>>>> 7bd55826 (feat: support ecommerce sale from GSTR-1 (backport: #2125) (#2281))
