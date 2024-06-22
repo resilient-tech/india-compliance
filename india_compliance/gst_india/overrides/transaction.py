@@ -1621,20 +1621,6 @@ def before_update_after_submit(doc, method=None):
     update_gst_details(doc)
 
 
-<<<<<<< HEAD
-# Note: This is kept for backwards compatibility with Frappe versions < 14.21.0
-def ignore_logs_on_trash(doc, method=None):
-    if (
-        not hasattr(delete_doc, "doctypes_to_skip")
-        or "e-Waybill Log" in delete_doc.doctypes_to_skip
-    ):
-        return
-
-    delete_doc.doctypes_to_skip += (
-        "e-Waybill Log",
-        "e-Invoice Log",
-    )
-=======
 def set_ecommerce_supply_type(doc):
     """
     - Set GSTR-1 E-commerce section for virtual field ecommerce_supply_type
@@ -1649,4 +1635,17 @@ def set_ecommerce_supply_type(doc):
         doc.ecommerce_supply_type = SUPECOM.US_9_5.value
     else:
         doc.ecommerce_supply_type = SUPECOM.US_52.value
->>>>>>> 7bd55826 (feat: support ecommerce sale from GSTR-1 (backport: #2125) (#2281))
+
+
+# Note: This is kept for backwards compatibility with Frappe versions < 14.21.0
+def ignore_logs_on_trash(doc, method=None):
+    if (
+        not hasattr(delete_doc, "doctypes_to_skip")
+        or "e-Waybill Log" in delete_doc.doctypes_to_skip
+    ):
+        return
+
+    delete_doc.doctypes_to_skip += (
+        "e-Waybill Log",
+        "e-Invoice Log",
+    )
