@@ -513,7 +513,7 @@ class IneligibleITC:
                 pi.ineligibility_reason.as_("itc_classification"),
                 get_tax_case_statement(["igst"], "iamt"),
                 get_tax_case_statement(["cgst"], "camt"),
-                get_tax_case_statement(["sgst"], "camt"),
+                get_tax_case_statement(["sgst"], "samt"),
                 get_tax_case_statement(
                     [
                         "cess",

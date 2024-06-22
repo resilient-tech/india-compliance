@@ -27,13 +27,13 @@ frappe.ui.form.on(DOCTYPE, {
         frm.set_query("autofield", "bank_details_for_printing", (_, cdt, cdn) => {
             return  {
                 query: "india_compliance.gst_india.overrides.company.get_default_print_options",
-                params : {for_bank : true}
+                params : {for_bank : 1}
             }
         });
         frm.set_query("autofield", "registration_details_for_printing", (_, cdt, cdn) => {
             return {
                 query: "india_compliance.gst_india.overrides.company.get_default_print_options",
-                params : {for_bank : false}
+                params : {for_bank : 0}
             }
         });
     },
