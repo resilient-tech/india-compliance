@@ -564,7 +564,7 @@ def validate_items(doc, throw):
             items_with_duplicate_taxes.append(bold(row.item_code))
 
     if not has_gst_items:
-        update_taxable_values(doc, [])
+        update_taxable_values(doc)
         validate_tax_accounts_for_non_gst(doc)
 
         return False
