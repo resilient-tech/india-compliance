@@ -270,7 +270,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
     def get_ineligible_itc_from_purchase(self):
         ineligible_itc = IneligibleITC(
             self.company, self.company_gstin, self.filters.month, self.filters.year
-        ).get_ineligible_itc_us_17_5_for_purchase()
+        ).get_for_purchase("Ineligible As Per Section 17(5)")
 
         return self.process_ineligible_itc(ineligible_itc)
 
@@ -424,25 +424,7 @@ class IneligibleITC:
         self.month = month
         self.year = year
 
-    def get_ineligible_itc_us_17_5_for_purchase(self, group_by="name"):
-        """
-        - ITC restricted due to ineligible items in purchase invoice
-        """
-
-        return self.get_ineligible_pi_data_by_category(
-            "Ineligible As Per Section 17(5)", group_by
-        )
-
-    def get_ineligible_itc_due_to_pos_for_purchase(self, group_by="name"):
-        """
-        - ITC restricted due to ineligible items in purchase invoice
-        """
-
-        return self.get_ineligible_pi_data_by_category(
-            "ITC restricted due to PoS rules", group_by
-        )
-
-    def get_ineligible_pi_data_by_category(self, ineligibility_reason, group_by):
+    def get_for_purchase(self, ineligibility_reason, group_by="name"):
         doctype = "Purchase Invoice"
         dt = frappe.qb.DocType(doctype)
         dt_item = frappe.qb.DocType(f"{doctype} Item")
