@@ -3,7 +3,7 @@ from datetime import datetime
 import frappe
 from frappe.utils import flt
 
-from india_compliance.gst_india.constants import STATE_NUMBERS, UOM_MAP
+from india_compliance.gst_india.constants import UOM_MAP
 from india_compliance.gst_india.report.gstr_1.gstr_1 import (
     GSTR1DocumentIssuedSummary,
     GSTR11A11BData,
@@ -26,21 +26,20 @@ from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_SubCategory,
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
-from india_compliance.gst_india.utils.gstr_mapper_utils import GSTRDataMapper
+from india_compliance.gst_india.utils.gstr_mapper_utils import GovDataMapper
 
 ############################################################################################################
 ### Map Govt JSON to Internal Data Structure ###############################################################
 ############################################################################################################
 
 
-class GovDataMapper:
+class GSTR1DataMapper(GovDataMapper):
     """
     GST Developer API Documentation for Returns - https://developer.gst.gov.in/apiportal/taxpayer/returns
 
     GSTR-1 JSON format - https://developer.gst.gov.in/pages/apiportal/data/Returns/GSTR1%20-%20Save%20GSTR1%20data/v4.0/GSTR1%20-%20Save%20GSTR1%20data%20attributes.xlsx
     """
 
-    KEY_MAPPING = {}
     # default item amounts
     DEFAULT_ITEM_AMOUNTS = {
         GSTR1_ItemField.TAXABLE_VALUE.value: 0,
@@ -71,106 +70,10 @@ class GovDataMapper:
     }
 
     def __init__(self):
-        self.set_total_defaults()
-
-        self.value_formatters_for_internal = {}
-        self.value_formatters_for_gov = {}
+        super().__init__()
         self.gstin_party_map = {}
-        # value formatting constants
-
-        self.STATE_NUMBERS = self.reverse_dict(STATE_NUMBERS)
-
-    def format_data(
-        self, data: dict, default_data: dict = None, for_gov: bool = False
-    ) -> dict:
-        """
-        Objective: Convert Object from one format to another.
-            eg: Govt JSON to Internal Data Structure
-
-        Args:
-            data (dict): Data to be converted
-            default_data (dict, optional): Default Data to be added. Hardcoded values.
-            for_gov (bool, optional): If the data is to be converted to Govt JSON. Defaults to False.
-                else it will be converted to Internal Data Structure.
-
-        Steps:
-            1. Use key mapping to map the keys from one format to another.
-            2. Use value formatters to format the values of the keys.
-            3. Round values
-        """
-        output = {}
-
-        if default_data:
-            output.update(default_data)
-
-        key_mapping = self.KEY_MAPPING.copy()
-
-        if for_gov:
-            key_mapping = self.reverse_dict(key_mapping)
-
-        value_formatters = (
-            self.value_formatters_for_gov
-            if for_gov
-            else self.value_formatters_for_internal
-        )
-
-        for old_key, new_key in key_mapping.items():
-            invoice_data_value = data.get(old_key, "")
-
-            if not for_gov and old_key == "flag":
-                continue
-
-            if new_key in self.DISCARD_IF_ZERO_FIELDS and not invoice_data_value:
-                continue
-
-            if not (invoice_data_value or invoice_data_value == 0):
-                # continue if value is None or empty object
-                continue
-
-            value_formatter = value_formatters.get(old_key)
-
-            if callable(value_formatter):
-                output[new_key] = value_formatter(invoice_data_value, data)
-            else:
-                output[new_key] = invoice_data_value
-
-            if new_key in self.FLOAT_FIELDS:
-                output[new_key] = flt(output[new_key], 2)
-
-        return output
-
-    # common utils
-
-    def update_totals(self, invoice, items):
-        """
-        Update item totals to the invoice row
-        """
-        total_data = self.TOTAL_DEFAULTS.copy()
-
-        for item in items:
-            for field, value in item.items():
-                total_field = f"total_{field}"
-
-                if total_field not in total_data:
-                    continue
-
-                invoice[total_field] = invoice.setdefault(total_field, 0) + value
-
-    def set_total_defaults(self):
-        self.TOTAL_DEFAULTS = {
-            f"total_{key}": 0 for key in self.DEFAULT_ITEM_AMOUNTS.keys()
-        }
-
-    def reverse_dict(self, data):
-        return {v: k for k, v in data.items()}
 
     # common value formatters
-    def map_place_of_supply(self, pos, *args):
-        if pos.isnumeric():
-            return f"{pos}-{self.STATE_NUMBERS.get(pos)}"
-
-        return pos.split("-")[0]
-
     def format_item_for_internal(self, items, *args):
         return [
             {
@@ -204,7 +107,7 @@ class GovDataMapper:
         return datetime.strptime(date, "%Y-%m-%d").strftime("%d-%m-%Y")
 
 
-class B2B(GovDataMapper):
+class B2B(GSTR1DataMapper):
     """
     GST API Version - v4.0
 
@@ -379,7 +282,7 @@ class B2B(GovDataMapper):
         return self.DOCUMENT_CATEGORIES.get(sub_category, sub_category)
 
 
-class B2CL(GovDataMapper):
+class B2CL(GSTR1DataMapper):
     """
     GST API Version - v4.0
 
@@ -505,7 +408,7 @@ class B2CL(GovDataMapper):
         return list(pos_data.values())
 
 
-class Exports(GovDataMapper):
+class Exports(GSTR1DataMapper):
     """
     GST API Version - v4.0
 
@@ -651,7 +554,7 @@ class Exports(GovDataMapper):
         return [self.format_data(item, for_gov=True) for item in items]
 
 
-class B2CS(GovDataMapper):
+class B2CS(GSTR1DataMapper):
     """
     GST API Version - v4.0
 
@@ -747,7 +650,7 @@ class B2CS(GovDataMapper):
         return data
 
 
-class NilRated(GovDataMapper):
+class NilRated(GSTR1DataMapper):
     """
     GST API Version - v4.0
 
@@ -852,7 +755,7 @@ class NilRated(GovDataMapper):
         return self.DOCUMENT_CATEGORIES.get(doc_category, doc_category)
 
 
-class CDNR(GovDataMapper):
+class CDNR(GSTR1DataMapper):
     """
     GST API Version - v4.0
 
@@ -1040,7 +943,7 @@ class CDNR(GovDataMapper):
         return value * -1 if data[GovDataField.NOTE_TYPE.value] == "C" else value
 
 
-class CDNUR(GovDataMapper):
+class CDNUR(GSTR1DataMapper):
     """
     GST API Version - v4.0
 
@@ -1178,7 +1081,7 @@ class CDNUR(GovDataMapper):
         return value * -1 if data[GovDataField.NOTE_TYPE.value] == "C" else value
 
 
-class HSNSUM(GovDataMapper):
+class HSNSUM(GSTR1DataMapper):
     """
     GST API Version - v4.0
 
@@ -1298,7 +1201,7 @@ class HSNSUM(GovDataMapper):
         return f"OTH-{UOM_MAP.get('OTH')}"
 
 
-class AT(GovDataMapper):
+class AT(GSTR1DataMapper):
     """
     GST API Version - v4.0
 
@@ -1479,7 +1382,7 @@ class TXPD(AT):
     MULTIPLIER = -1
 
 
-class DOC_ISSUE(GovDataMapper):
+class DOC_ISSUE(GSTR1DataMapper):
     """
     GST API Version - v4.0
 
@@ -1615,7 +1518,7 @@ class DOC_ISSUE(GovDataMapper):
         return self.DOCUMENT_NATURE.get(doc_nature, doc_nature)
 
 
-class SUPECOM(GovDataMapper):
+class SUPECOM(GSTR1DataMapper):
     """
     GST API Version - v4.0
 
@@ -1692,7 +1595,7 @@ class SUPECOM(GovDataMapper):
         return output
 
 
-class RETSUM(GovDataMapper):
+class RETSUM(GSTR1DataMapper):
     """
     Convert GSTR-1 Summary as returned by the API to the internal format
 
@@ -1837,35 +1740,179 @@ class RETSUM(GovDataMapper):
         return self.SECTION_NAMES.get(doc_type, doc_type)
 
 
-class GSTR1DataMapper(GSTRDataMapper):
-    CLASS_MAP = {
-        GovJsonKey.B2B.value: B2B,
-        GovJsonKey.B2CL.value: B2CL,
-        GovJsonKey.EXP.value: Exports,
-        GovJsonKey.B2CS.value: B2CS,
-        GovJsonKey.NIL_EXEMPT.value: NilRated,
-        GovJsonKey.CDNR.value: CDNR,
-        GovJsonKey.CDNUR.value: CDNUR,
-        GovJsonKey.HSN.value: HSNSUM,
-        GovJsonKey.DOC_ISSUE.value: DOC_ISSUE,
-        GovJsonKey.AT.value: AT,
-        GovJsonKey.TXP.value: TXPD,
-        GovJsonKey.SUPECOM.value: SUPECOM,
-        GovJsonKey.RET_SUM.value: RETSUM,
-    }
+CLASS_MAP = {
+    GovJsonKey.B2B.value: B2B,
+    GovJsonKey.B2CL.value: B2CL,
+    GovJsonKey.EXP.value: Exports,
+    GovJsonKey.B2CS.value: B2CS,
+    GovJsonKey.NIL_EXEMPT.value: NilRated,
+    GovJsonKey.CDNR.value: CDNR,
+    GovJsonKey.CDNUR.value: CDNUR,
+    GovJsonKey.HSN.value: HSNSUM,
+    GovJsonKey.DOC_ISSUE.value: DOC_ISSUE,
+    GovJsonKey.AT.value: AT,
+    GovJsonKey.TXP.value: TXPD,
+    GovJsonKey.SUPECOM.value: SUPECOM,
+    GovJsonKey.RET_SUM.value: RETSUM,
+}
 
-    category_sub_category_mapping = CATEGORY_SUB_CATEGORY_MAPPING
-    subcategories_not_considered_in_total_tax = (
-        SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX
-    )
-    subcategories_not_considered_in_total_taxable_value = (
-        SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE
-    )
-    mapping = SUB_CATEGORY_GOV_CATEGORY_MAPPING
 
-    def convert_to_gov_data_format(self, internal_data, company_gstin):
-        category_wise_data = self.get_category_wise_data(internal_data)
-        return super().convert_to_gov_data_format(category_wise_data, company_gstin)
+def convert_to_internal_data_format(gov_data):
+    """
+    Converts Gov data format to internal data format for all categories
+    """
+    output = {}
+
+    for category, mapper_class in CLASS_MAP.items():
+        if not gov_data.get(category):
+            continue
+
+        output.update(
+            mapper_class().convert_to_internal_data_format(gov_data.get(category))
+        )
+
+    return output
+
+
+def get_category_wise_data(
+    subcategory_wise_data: dict,
+    mapping: dict = SUB_CATEGORY_GOV_CATEGORY_MAPPING,
+) -> dict:
+    """
+    returns category wise data from subcategory wise data
+
+    Args:
+        subcategory_wise_data (dict): subcategory wise data
+        mapping (dict): subcategory to category mapping
+        with_subcategory (bool): include subcategory level data
+
+    Returns:
+        dict: category wise data
+
+    Example (with_subcategory=True):
+        {
+            "B2B, SEZ, DE": {
+                "B2B": data,
+                ...
+            }
+            ...
+        }
+
+    Example (with_subcategory=False):
+        {
+            "B2B, SEZ, DE": data,
+            ...
+        }
+    """
+    category_wise_data = {}
+    for subcategory, category in mapping.items():
+        if not subcategory_wise_data.get(subcategory.value):
+            continue
+
+        category_wise_data.setdefault(category.value, []).extend(
+            subcategory_wise_data.get(subcategory.value, [])
+        )
+
+    return category_wise_data
+
+
+def convert_to_gov_data_format(internal_data: dict, company_gstin: str) -> dict:
+    """
+    converts internal data format to Gov data format for all categories
+    """
+
+    category_wise_data = get_category_wise_data(internal_data)
+
+    output = {}
+    for category, mapper_class in CLASS_MAP.items():
+        if not category_wise_data.get(category):
+            continue
+
+        output[category] = mapper_class().convert_to_gov_data_format(
+            category_wise_data.get(category), company_gstin=company_gstin
+        )
+
+    return output
+
+
+def summarize_retsum_data(input_data):
+    if not input_data:
+        return []
+
+    summarized_data = []
+    total_values_keys = [
+        "total_igst_amount",
+        "total_cgst_amount",
+        "total_sgst_amount",
+        "total_cess_amount",
+        "total_taxable_value",
+    ]
+    amended_data = {key: 0 for key in total_values_keys}
+
+    input_data = {row.get("description"): row for row in input_data}
+
+    def _sum(row):
+        return flt(sum([row.get(key, 0) for key in total_values_keys]), 2)
+
+    for category, sub_categories in CATEGORY_SUB_CATEGORY_MAPPING.items():
+        category = category.value
+        if category not in input_data:
+            continue
+
+        # compute total liability and total amended data
+        amended_category_data = input_data.get(f"{category} (Amended)", {})
+        for key in total_values_keys:
+            amended_data[key] += amended_category_data.get(key, 0)
+
+        # add category data
+        if _sum(input_data[category]) == 0:
+            continue
+
+        summarized_data.append({**input_data.get(category), "indent": 0})
+
+        # add subcategory data
+        for sub_category in sub_categories:
+            sub_category = sub_category.value
+            if sub_category not in input_data:
+                continue
+
+            if _sum(input_data[sub_category]) == 0:
+                continue
+
+            summarized_data.append(
+                {
+                    **input_data.get(sub_category),
+                    "indent": 1,
+                    "consider_in_total_taxable_value": (
+                        False
+                        if sub_category
+                        in SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE
+                        else True
+                    ),
+                    "consider_in_total_tax": (
+                        False
+                        if sub_category in SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX
+                        else True
+                    ),
+                }
+            )
+
+    # add total amendment liability
+    if _sum(amended_data) != 0:
+        summarized_data.extend(
+            [
+                {
+                    "description": "Net Liability from Amendments",
+                    **amended_data,
+                    "indent": 0,
+                    "consider_in_total_taxable_value": True,
+                    "consider_in_total_tax": True,
+                    "no_of_records": 0,
+                }
+            ]
+        )
+
+    return summarized_data
 
 
 ####################################################################################################
