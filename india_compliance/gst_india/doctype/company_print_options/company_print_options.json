@@ -1,0 +1,40 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-05-24 10:38:39.591721",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "autofield",
+  "autofield_value"
+ ],
+ "fields": [
+  {
+   "allow_in_quick_entry": 1,
+   "columns": 2,
+   "fieldname": "autofield",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "columns": 2,
+   "fieldname": "autofield_value",
+   "fieldtype": "Data",
+   "in_list_view": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2024-06-05 14:29:47.327389",
+ "modified_by": "Administrator",
+ "module": "GST India",
+ "name": "Company Print Options",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

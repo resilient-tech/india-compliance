@@ -10,6 +10,10 @@ set_gstin_options_and_status(DOCTYPE);
 
 frappe.ui.form.off(DOCTYPE, "make_default_tax_template");
 frappe.ui.form.on(DOCTYPE, {
+    onload(frm){
+        frm.fields_dict.bank_details_for_printing.grid.fields_map.autofield.ignore_validation = 1
+        frm.fields_dict.registration_details_for_printing.grid.fields_map.autofield.ignore_validation = 1
+    },
     setup(frm) {
         erpnext.company.set_custom_query(frm, [
             "default_customs_expense_account",
@@ -19,6 +23,19 @@ frappe.ui.form.on(DOCTYPE, {
             "default_customs_payable_account",
             { root_type: "Liability" },
         ]);
+
+        frm.set_query("autofield", "bank_details_for_printing", (_, cdt, cdn) => {
+            return  {
+                query: "india_compliance.gst_india.overrides.company.get_default_print_options",
+                params : {for_bank : 1}
+            }
+        });
+        frm.set_query("autofield", "registration_details_for_printing", (_, cdt, cdn) => {
+            return {
+                query: "india_compliance.gst_india.overrides.company.get_default_print_options",
+                params : {for_bank : 0}
+            }
+        });
     },
 
     make_default_tax_template: function (frm) {
