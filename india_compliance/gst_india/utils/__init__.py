@@ -15,7 +15,9 @@ from frappe.utils import (
     cint,
     cstr,
     get_datetime,
+    get_last_day,
     get_link_to_form,
+    get_quarter_start,
     get_system_timezone,
     getdate,
 )
@@ -93,9 +95,6 @@ def get_gstin_list(party, party_type="Company"):
     """
     Returns a list the party's GSTINs.
     """
-    if not party:
-        return
-
     frappe.has_permission(party_type, doc=party, throw=True)
 
     gstin_list = frappe.get_all(
@@ -542,6 +541,32 @@ def get_gst_accounts_by_tax_type(company, tax_type, throw=True):
     )
 
 
+def get_gst_account_gst_tax_type_map():
+    """
+    - Returns gst_account by tax_type for all the companies
+    - Eg.:  {"Input Tax SGST - _TIRC": "sgst", "Input Tax CGST - _TIRC": "cgst"}
+
+    """
+
+    gst_account_map = frappe._dict()
+    settings = frappe.get_cached_doc("GST Settings", "GST Settings")
+
+    for row in settings.gst_accounts:
+        for account in GST_ACCOUNT_FIELDS:
+            account_value = row.get(account)
+
+            if not account_value:
+                continue
+
+            account_key = account[:-8]
+            if "Reverse Charge" in row.get("account_type"):
+                account_key = account_key + "_rcm"
+
+            gst_account_map[account_value] = account_key
+
+    return gst_account_map
+
+
 @frappe.whitelist()
 def get_all_gst_accounts(company):
     """
@@ -772,6 +797,26 @@ def get_timespan_date_range(timespan: str, company: str | None = None) -> tuple 
         date = add_to_date(getdate(), years=-1)
         fiscal_year = get_fiscal_year(date, company=company)
         return (fiscal_year[1], fiscal_year[2])
+
+    if timespan == "this fiscal year to last month":
+        date = getdate()
+        fiscal_year = get_fiscal_year(date, company=company)
+        last_month = add_to_date(date, months=-1)
+
+        if fiscal_year[1] > last_month:
+            return (fiscal_year[1], fiscal_year[1])
+
+        return (fiscal_year[1], get_last_day(last_month))
+
+    if timespan == "this quarter to last month":
+        date = getdate()
+        quarter_start = get_quarter_start(date)
+        last_month = get_last_day(add_to_date(date, months=-1))
+
+        if quarter_start > last_month:
+            return (quarter_start, quarter_start)
+
+        return (quarter_start, get_last_day(last_month))
 
     return
 

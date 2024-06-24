@@ -17,7 +17,6 @@ from india_compliance.gst_india.overrides.transaction import is_inter_state_supp
 from india_compliance.gst_india.report.gstr_3b_details.gstr_3b_details import (
     IneligibleITC,
 )
-from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 VALUES_TO_UPDATE = ["iamt", "camt", "samt", "csamt"]
 
@@ -121,24 +120,33 @@ class GSTR3BReport(Document):
         self.update_itc_reversal_from_bill_of_entry()
 
     def update_itc_reversal_from_purchase_invoice(self):
+        self.update_itc_reversal_for_purchase_us_17_4()
+        self.update_itc_reversal_for_purchase_due_to_pos()
+
+    def update_itc_reversal_for_purchase_due_to_pos(self):
         ineligible_credit = IneligibleITC(
             self.company, self.gst_details.get("gstin"), self.month_no, self.year
-        ).get_ineligible_itc_us_17_5_for_purchase(group_by="ineligibility_reason")
+        ).get_for_purchase(
+            "ITC restricted due to PoS rules", group_by="ineligibility_reason"
+        )
 
-        ineligible_credit_due_to_pos = IneligibleITC(
+        self.process_ineligible_credit(ineligible_credit)
+
+    def update_itc_reversal_for_purchase_us_17_4(self):
+        ineligible_credit = IneligibleITC(
             self.company, self.gst_details.get("gstin"), self.month_no, self.year
-        ).get_ineligible_itc_due_to_pos_for_purchase(group_by="ineligibility_reason")
+        ).get_for_purchase(
+            "Ineligible As Per Section 17(5)", group_by="ineligibility_reason"
+        )
 
-        ineligible_credit.extend(ineligible_credit_due_to_pos)
-
-        return self.process_ineligible_credit(ineligible_credit)
+        self.process_ineligible_credit(ineligible_credit)
 
     def update_itc_reversal_from_bill_of_entry(self):
         ineligible_credit = IneligibleITC(
             self.company, self.gst_details.get("gstin"), self.month_no, self.year
         ).get_for_bill_of_entry()
 
-        return self.process_ineligible_credit(ineligible_credit)
+        self.process_ineligible_credit(ineligible_credit)
 
     def process_ineligible_credit(self, ineligible_credit):
         if not ineligible_credit:
@@ -230,7 +238,6 @@ class GSTR3BReport(Document):
     def update_imports_from_bill_of_entry(self, itc_details):
         boe = frappe.qb.DocType("Bill of Entry")
         boe_taxes = frappe.qb.DocType("Bill of Entry Taxes")
-        gst_accounts = get_gst_accounts_by_type(self.company, "Input")
 
         def _get_tax_amount(account_type):
             return (
@@ -245,12 +252,12 @@ class GSTR3BReport(Document):
                     )
                     & boe.company_gstin.eq(self.gst_details.get("gstin"))
                     & boe.docstatus.eq(1)
-                    & boe_taxes.account_head.eq(gst_accounts[account_type])
+                    & boe_taxes.gst_tax_type.eq(account_type)
                 )
                 .run()
             )[0][0] or 0
 
-        igst, cess = _get_tax_amount("igst_account"), _get_tax_amount("cess_account")
+        igst, cess = _get_tax_amount("igst"), _get_tax_amount("cess")
         itc_details.setdefault("Import Of Goods", {"iamt": 0, "csamt": 0})
         itc_details["Import Of Goods"]["iamt"] += igst
         itc_details["Import Of Goods"]["csamt"] += cess
@@ -317,12 +324,13 @@ class GSTR3BReport(Document):
     def set_item_wise_tax_details(self, docs):
         self.invoice_item_wise_tax_details = {}
         item_wise_details = {}
-        account_head_gst_map = {}
-
-        for key, values in self.account_heads.items():
-            for value in values:
-                if value is not None:
-                    account_head_gst_map[value] = key
+        gst_tax_type_map = {
+            "cgst": "camt",
+            "sgst": "samt",
+            "igst": "iamt",
+            "cess": "csamt",
+            "cess_non_advol": "csamt",
+        }
 
         item_defaults = frappe._dict(
             {
@@ -358,7 +366,7 @@ class GSTR3BReport(Document):
 
             # Process tax details
             for tax in details["taxes"]:
-                gst_tax_type = account_head_gst_map.get(tax.account_head)
+                gst_tax_type = gst_tax_type_map.get(tax.gst_tax_type)
 
                 if not gst_tax_type:
                     continue
@@ -452,7 +460,7 @@ class GSTR3BReport(Document):
         tax_details = frappe.db.sql(
             f"""
             SELECT
-                parent, account_head, item_wise_tax_detail
+                parent, item_wise_tax_detail, gst_tax_type
             FROM `tab{tax_template}`
             WHERE
                 parenttype = %s and docstatus = 1

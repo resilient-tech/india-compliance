@@ -7,15 +7,15 @@
   {
    "fieldname": "upi_qr_text",
    "fieldtype": "Text",
-   "label": "UPI Code",
+   "label": "UPI QR Code",
    "reqd": 0
   }
  ],
  "idx": 0,
- "modified": "2024-06-03 13:19:21.517387",
+ "modified": "2024-06-03 13:19:22.517387",
  "modified_by": "Administrator",
  "module": "GST India",
- "name": "UPI QR",
+ "name": "UPI QR Code",
  "owner": "Administrator",
  "standard": 1,
  "template": "",

@@ -2102,6 +2102,8 @@ async function set_default_company_gstin(frm) {
     frm.set_value("company_gstin", "");
 
     const company = frm.doc.company;
+    if (!company) return;
+
     const { message: gstin_list } = await frappe.call(
         "india_compliance.gst_india.utils.get_gstin_list",
         { party: company }
