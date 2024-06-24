@@ -518,6 +518,7 @@ class TestIneligibleITC(FrappeTestCase):
 
         doc = create_transaction(**transaction_details)
         doc = make_return_doc("Purchase Invoice", doc.name)
+        doc.save()
         doc.submit()
 
         self.assertGLEntry(
