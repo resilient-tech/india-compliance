@@ -206,7 +206,7 @@ def is_indian_registered_company(doc):
     return True
 
 
-def validate_mandatory_fields(doc, fields, error_message=None):
+def validate_mandatory_fields(doc, fields, error_message=None, throw=True):
     if isinstance(fields, str):
         fields = (fields,)
 
@@ -218,6 +218,9 @@ def validate_mandatory_fields(doc, fields, error_message=None):
             continue
 
         if doc.flags.ignore_mandatory:
+            return False
+
+        if not throw:
             return False
 
         frappe.throw(
