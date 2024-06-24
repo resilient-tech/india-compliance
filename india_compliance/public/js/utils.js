@@ -87,18 +87,13 @@ Object.assign(india_compliance, {
         return in_list(frappe.boot.sales_doctypes, doctype) ? "Customer" : "Supplier";
     },
 
-    async set_gstin_status(field, transaction_date, force_update = 0) {
+    async set_gstin_status(field, transaction_date, force_update) {
         const gstin = field.value;
         if (!gstin || gstin.length !== 15) return field.set_description("");
 
         const { message } = await frappe.call({
             method: "india_compliance.gst_india.doctype.gstin.gstin.get_gstin_status",
-            args: {
-                gstin,
-                transaction_date,
-                is_request_from_ui: 1,
-                force_update,
-            },
+            args: { gstin, transaction_date, force_update },
         });
 
         if (!message) return field.set_description("");
@@ -113,6 +108,15 @@ Object.assign(india_compliance, {
         this.set_gstin_refresh_btn(field, transaction_date);
 
         return message;
+    },
+
+    validate_gst_transporter_id(transporter_id) {
+        if (!transporter_id || transporter_id.length !== 15) return;
+
+        frappe.call({
+            method: "india_compliance.gst_india.doctype.gstin.gstin.validate_gst_transporter_id",
+            args: { transporter_id },
+        });
     },
 
     get_gstin_status_desc(status, datetime) {
@@ -147,7 +151,7 @@ Object.assign(india_compliance, {
         `).appendTo(field.$wrapper.find(".gstin-last-updated"));
 
         refresh_btn.on("click", async function () {
-            const force_update = 1;
+            const force_update = true;
             await india_compliance.set_gstin_status(
                 field,
                 transaction_date,
@@ -384,7 +388,8 @@ Object.assign(india_compliance, {
             args: { company_gstin: gstin },
         });
 
-        this.authenticate_otp(gstin);
+        // wait for OTP to be authenticated to proceed
+        await this.authenticate_otp(gstin);
     },
 
     async authenticate_otp(gstin) {

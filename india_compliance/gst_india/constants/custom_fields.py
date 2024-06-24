@@ -188,9 +188,21 @@ CUSTOM_FIELDS = {
             "label": "E-commerce GSTIN",
             "length": 15,
             "fieldtype": "Data",
+            "depends_on": "eval:gst_settings.enable_sales_through_ecommerce_operators",
             "insert_after": "gst_section",
             "print_hide": 1,
             "translatable": 0,
+        },
+        {
+            "fieldname": "ecommerce_supply_type",
+            "label": "E-commerce Supply Type",
+            "fieldtype": "Data",
+            "depends_on": "eval:gst_settings.enable_sales_through_ecommerce_operators && doc.ecommerce_gstin",
+            "insert_after": "ecommerce_gstin",
+            "print_hide": 1,
+            "translatable": 0,
+            "is_virtual": 1,
+            "read_only": 1,
         },
         {
             "fieldname": "gst_col_break",
@@ -544,6 +556,20 @@ CUSTOM_FIELDS = {
                 " services\n04-Correction in Invoice\n05-Change in POS\n06-Finalization"
                 " of Provisional assessment\n07-Others"
             ),
+            "translatable": 0,
+        },
+    ],
+    (
+        "Sales Taxes and Charges",
+        "Purchase Taxes and Charges",
+        "Advance Taxes and Charges",
+    ): [
+        {
+            "fieldname": "gst_tax_type",
+            "label": "GST Tax Type",
+            "fieldtype": "Data",
+            "insert_after": "rate",
+            "read_only": 1,
             "translatable": 0,
         },
     ],

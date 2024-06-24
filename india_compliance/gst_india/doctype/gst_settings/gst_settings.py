@@ -90,6 +90,26 @@ class GSTSettings(Document):
             not self.enable_retry_einv_ewb_generation,
         )
 
+    def get_gstin_with_credentials(self, service=None):
+        if not service:
+            return
+
+        if service == "Returns" and not self:
+            return
+
+        if service == "e-Waybill" and not self.enable_e_waybill:
+            return
+
+        if service == "e-Invoice" and not self.enable_e_invoice:
+            return
+
+        if service in ["e-Invoice", "e-Waybill"]:
+            service = "e-Waybill / e-Invoice"
+
+        for row in self.credentials:
+            if row.service == service:
+                return row.gstin
+
     def validate_gst_accounts(self):
         account_list = []
         company_wise_account_types = {}
@@ -186,9 +206,14 @@ class GSTSettings(Document):
                 _("Missing Required Field"),
             )
 
-        if (self.enable_e_invoice or self.enable_e_waybill) and all(
-            credential.service != "e-Waybill / e-Invoice"
-            for credential in self.credentials
+        if (
+            (self.enable_e_invoice or self.enable_e_waybill)
+            and not self.sandbox_mode
+            and not frappe.flags.in_setup_wizard
+            and all(
+                credential.service != "e-Waybill / e-Invoice"
+                for credential in self.credentials
+            )
         ):
             frappe.msgprint(
                 _(
@@ -468,9 +493,9 @@ def restrict_gstr_1_transaction_for(posting_date, company_gstin, gst_settings=No
     gstr_1_filed_upto = get_gstr_1_filed_upto(company_gstin)
 
     if not gstr_1_filed_upto:
-        return False
+        restrict = False
 
-    if posting_date > getdate(gstr_1_filed_upto):
+    elif posting_date > getdate(gstr_1_filed_upto):
         restrict = False
 
     if (

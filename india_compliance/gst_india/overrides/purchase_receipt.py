@@ -24,16 +24,13 @@ def onload(doc, method=None):
     if ignore_gst_validations(doc, throw=False):
         return
 
-    doc.flags.ignore_mandatory = True
     if (
         validate_mandatory_fields(
-            doc, ("company_gstin", "place_of_supply", "gst_category")
+            doc, ("company_gstin", "place_of_supply", "gst_category"), throw=False
         )
         is False
     ):
         return
-
-    doc.flags.ignore_mandatory = False
 
     set_ineligibility_reason(doc, show_alert=False)
 

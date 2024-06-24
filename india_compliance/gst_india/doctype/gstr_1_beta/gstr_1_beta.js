@@ -141,6 +141,10 @@ frappe.ui.form.on(DOCTYPE, {
             );
         });
 
+        frappe.realtime.on("show_message", message => {
+            frappe.msgprint(message);
+        });
+
         frappe.realtime.on("gstr1_generation_failed", message => {
             const { error, filters } = message;
             let alert = `GSTR-1 Generation Failed for ${filters.company_gstin} - ${filters.month_or_quarter} - ${filters.year}.<br/><br/>${error}`;
@@ -424,7 +428,7 @@ class GSTR1 {
         const tab_name = this.status === "Filed" ? "Filed" : "File";
         const color = this.status === "Filed" ? "green" : "orange";
 
-        this.$wrapper.find(`[data-fieldname="filed_tab"]`).html(tab_name);
+        this.$wrapper.find(`[id="gstr-1-beta-filed_tab-tab"]`).html(tab_name);
         this.frm.page.set_indicator(this.status, color);
         this.frm.refresh();
     }
@@ -1178,7 +1182,7 @@ class GSTR1_TabManager extends TabManager {
         ];
     }
 
-    get_document_columns() {
+    get_document_columns(with_tax_rate) {
         // `Transaction Type` + Invoice Columns with `Document` as title instead of `Invoice`
         return [
             ...this.get_detail_view_column(),
@@ -1223,7 +1227,7 @@ class GSTR1_TabManager extends TabManager {
                 _value: (...args) => this.format_detailed_table_cell(args),
             },
             ...this.get_match_columns(),
-            ...this.get_tax_columns(),
+            ...this.get_tax_columns(with_tax_rate),
             {
                 name: "Document Value",
                 fieldname: GSTR1_DataField.DOC_VALUE,
@@ -1341,7 +1345,7 @@ class GSTR1_TabManager extends TabManager {
         return [
             ...this.get_detail_view_column(),
             ...this.get_match_columns(),
-            ...this.get_tax_columns(),
+            ...this.get_tax_columns(true),
         ];
     }
 
@@ -1349,14 +1353,14 @@ class GSTR1_TabManager extends TabManager {
         return [
             ...this.get_detail_view_column(),
             ...this.get_match_columns(),
-            ...this.get_tax_columns(),
+            ...this.get_tax_columns(true),
         ];
     }
 
     // Common Columns
 
-    get_tax_columns() {
-        return [
+    get_tax_columns(with_tax_rate) {
+        const columns = [
             {
                 name: "Place of Supply",
                 fieldname: GSTR1_DataField.POS,
@@ -1400,6 +1404,10 @@ class GSTR1_TabManager extends TabManager {
                 width: 100,
             },
         ];
+
+        if (!with_tax_rate) columns.splice(1, 1);
+
+        return columns;
     }
 
     get_igst_tax_columns(with_pos) {
@@ -1528,7 +1536,7 @@ class BooksTab extends GSTR1_TabManager {
     }
 
     get_b2cs_columns() {
-        let columns = this.get_document_columns();
+        let columns = this.get_document_columns(true);
         columns = columns.filter(
             col =>
                 ![GSTR1_DataField.CUST_GSTIN, GSTR1_DataField.REVERSE_CHARGE].includes(
@@ -1844,7 +1852,7 @@ class FiledTab extends GSTR1_TabManager {
                 fieldname: GSTR1_DataField.DOC_TYPE,
                 width: 100,
             },
-            ...this.get_tax_columns(),
+            ...this.get_tax_columns(true),
             ...this.get_match_columns(),
         ];
     }
@@ -2094,6 +2102,8 @@ async function set_default_company_gstin(frm) {
     frm.set_value("company_gstin", "");
 
     const company = frm.doc.company;
+    if (!company) return;
+
     const { message: gstin_list } = await frappe.call(
         "india_compliance.gst_india.utils.get_gstin_list",
         { party: company }

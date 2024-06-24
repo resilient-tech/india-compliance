@@ -18,7 +18,7 @@ VERSIONS_TO_COMPARE = [
     {
         "app_name": "ERPNext",
         "current_version": version.parse(erpnext.__version__),
-        "required_versions": {"version-14": "14.66.5", "version-15": "15.19.3"},
+        "required_versions": {"version-14": "14.70.7", "version-15": "15.27.7"},
     },
 ]
 

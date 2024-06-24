@@ -490,6 +490,9 @@ def _download_gstr_2a(
     if not force:
         periods = get_periods_to_download(company_gstin, return_type, periods)
 
+    if not periods:
+        return
+
     return download_gstr_2a(company_gstin, periods, otp, gst_categories)
 
 
@@ -498,6 +501,10 @@ def _download_gstr_2b(date_range, company_gstin, otp=None):
     periods = get_periods_to_download(
         company_gstin, return_type, BaseUtil.get_periods(date_range, return_type)
     )
+
+    if not periods:
+        return
+
     return download_gstr_2b(company_gstin, periods, otp)
 
 
@@ -602,11 +609,11 @@ def parse_params(fun):
 
 
 def auto_refresh_authtoken():
-    is_auto_refresh_enabled = frappe.db.get_single_value(
-        "GST Settings", "auto_refresh_auth_token"
+    enable_auto_reconciliation = frappe.get_cached_value(
+        "GST Settings", "GST Settings", "enable_auto_reconciliation"
     )
 
-    if not is_auto_refresh_enabled:
+    if not enable_auto_reconciliation:
         return
 
     for credential in frappe.get_all(
