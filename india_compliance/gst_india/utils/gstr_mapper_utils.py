@@ -4,12 +4,6 @@ from india_compliance.gst_india.constants import STATE_NUMBERS
 
 
 class GovDataMapper:
-    """
-    GST Developer API Documentation for Returns - https://developer.gst.gov.in/apiportal/taxpayer/returns
-
-    GSTR-1 JSON format - https://developer.gst.gov.in/pages/apiportal/data/Returns/GSTR1%20-%20Save%20GSTR1%20data/v4.0/GSTR1%20-%20Save%20GSTR1%20data%20attributes.xlsx
-    """
-
     KEY_MAPPING = {}
     FLOAT_FIELDS = {}
     DISCARD_IF_ZERO_FIELDS = {}

@@ -51,6 +51,17 @@ class ITC04DataMapper(GovDataMapper):
 
         return f"OTH-{UOM_MAP.get('OTH')}"
 
+    def convert_to_gov_data_format(self, input_data, **kwargs):
+        output = []
+
+        for invoice in input_data:
+            output.append(self.format_data(invoice, for_gov=True))
+
+        return output
+
+    def format_item_for_gov(self, items, *args):
+        return [self.format_data(item, for_gov=True) for item in items]
+
 
 class TABLE5A(ITC04DataMapper):
     CATEGORY = ITC04JsonKey.TABLE5A.value
@@ -105,16 +116,6 @@ class TABLE5A(ITC04DataMapper):
 
         return {self.CATEGORY: output}
 
-    def convert_to_gov_data_format(self, input_data, **kwargs):
-        output = []
-
-        for invoice in input_data:
-            formatted_data = self.format_data(invoice, for_gov=True)
-
-            output.append(formatted_data)
-
-        return output
-
     def format_item_for_internal(self, items, *args):
         return [
             {
@@ -122,9 +123,6 @@ class TABLE5A(ITC04DataMapper):
             }
             for item in items
         ]
-
-    def format_item_for_gov(self, items, *args):
-        return [self.format_data(item, for_gov=True) for item in items]
 
 
 class STOCK_ENTRY(ITC04DataMapper):
@@ -181,14 +179,6 @@ class STOCK_ENTRY(ITC04DataMapper):
 
         return {self.CATEGORY: output}
 
-    def convert_to_gov_data_format(self, input_data, **kwargs):
-        output = []
-
-        for invoice in input_data:
-            output.append(self.format_data(invoice, for_gov=True))
-
-        return output
-
     def format_item_for_internal(self, items, *args):
         return [
             {
@@ -197,9 +187,6 @@ class STOCK_ENTRY(ITC04DataMapper):
             }
             for item in items
         ]
-
-    def format_item_for_gov(self, items, *args):
-        return [self.format_data(item, for_gov=True) for item in items]
 
 
 CLASS_MAP = {
