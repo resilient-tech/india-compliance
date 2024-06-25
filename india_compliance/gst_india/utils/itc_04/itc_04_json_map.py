@@ -35,6 +35,7 @@ class ITC04DataMapper(GovDataMapper):
         GovDataField.SGST.value,
         GovDataField.CESS_AMOUNT.value,
         GovDataField.QUANTITY.value,
+        GovDataField.LOSS_QTY.value,
     }
 
     def __init__(self):
@@ -70,9 +71,7 @@ class TABLE5A(ITC04DataMapper):
         GovDataField.COMPANY_GSTIN.value: ITC04_DataField.COMPANY_GSTIN.value,
         GovDataField.JOB_WORKER_STATE_CODE.value: ITC04_DataField.JOB_WORKER_STATE_CODE.value,
         GovDataField.ITEMS.value: ITC04_DataField.ITEMS.value,
-        GovDataField.ORIGINAL_CHALLAN_NUMBER.value: ITC04_DataField.ORIGINAL_CHALLAN_NUMBER.value,
         GovDataField.ORIGINAL_CHALLAN_DATE.value: ITC04_DataField.ORIGINAL_CHALLAN_DATE.value,
-        GovDataField.JOB_WORK_CHALLAN_NUMBER.value: ITC04_DataField.JOB_WORK_CHALLAN_NUMBER.value,
         GovDataField.JOB_WORK_CHALLAN_DATE.value: ITC04_DataField.JOB_WORK_CHALLAN_DATE.value,
         GovDataField.NATURE_OF_JOB.value: ITC04_DataField.NATURE_OF_JOB.value,
         GovDataField.UOM.value: ITC04_DataField.UOM.value,
@@ -111,16 +110,49 @@ class TABLE5A(ITC04DataMapper):
                 GovDataField.JOB_WORK_CHALLAN_NUMBER.value
             )
             output[f"{original_challan_number} - {job_work_challan_number}"] = (
-                self.format_data(invoice)
+                self.format_data(
+                    invoice,
+                    {
+                        ITC04_DataField.ORIGINAL_CHALLAN_NUMBER.value: original_challan_number,
+                        ITC04_DataField.JOB_WORK_CHALLAN_NUMBER.value: job_work_challan_number,
+                    },
+                )
             )
 
         return {self.CATEGORY: output}
+
+    def convert_to_gov_data_format(self, input_data, **kwargs):
+        output = []
+
+        for invoice in input_data:
+            self.original_challan_number = invoice.get(
+                ITC04_DataField.ORIGINAL_CHALLAN_NUMBER.value
+            )
+            self.job_work_challan_number = invoice.get(
+                ITC04_DataField.JOB_WORK_CHALLAN_NUMBER.value
+            )
+            output.append(self.format_data(invoice, for_gov=True))
+
+        return output
 
     def format_item_for_internal(self, items, *args):
         return [
             {
                 **self.format_data(item),
             }
+            for item in items
+        ]
+
+    def format_item_for_gov(self, items, *args):
+        return [
+            self.format_data(
+                item,
+                {
+                    GovDataField.ORIGINAL_CHALLAN_NUMBER.value: self.original_challan_number,
+                    GovDataField.JOB_WORK_CHALLAN_NUMBER.value: self.job_work_challan_number,
+                },
+                for_gov=True,
+            )
             for item in items
         ]
 
