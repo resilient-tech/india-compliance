@@ -21,7 +21,10 @@ from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_ItemField,
     GSTR1_SubCategory,
 )
-from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import GSTR1DataMapper
+from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
+    convert_to_gov_data_format,
+    get_category_wise_data,
+)
 
 
 class ExcelWidth(Enum):
@@ -55,7 +58,7 @@ class DataProcessor:
         2. Format/Transform the data to match the Gov Excel format
         """
 
-        category_wise_data = GSTR1DataMapper().get_category_wise_data(input_data)
+        category_wise_data = get_category_wise_data(input_data)
         processed_data = {}
 
         for category, data in category_wise_data.items():
@@ -1138,7 +1141,7 @@ class ReconcileExcel:
 
         self.summary = gstr1_log.load_data("reconcile_summary")["reconcile_summary"]
         data = gstr1_log.load_data("reconcile")["reconcile"]
-        self.data = GSTR1DataMapper().get_category_wise_data(data)
+        self.data = get_category_wise_data(data)
 
     def export_data(self):
         excel = ExcelExporter()
@@ -2077,7 +2080,7 @@ def download_gstr_1_json(
         "data": {
             "gstin": company_gstin,
             "fp": period,
-            **GSTR1DataMapper().convert_to_gov_data_format(data, company_gstin),
+            **convert_to_gov_data_format(data, company_gstin),
         },
         "filename": f"GSTR-1-Gov-{company_gstin}-{period}.json",
     }

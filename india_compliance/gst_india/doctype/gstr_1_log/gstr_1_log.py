@@ -22,7 +22,7 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_download import (
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     GSTR1BooksData,
-    GSTR1DataMapper,
+    summarize_retsum_data,
 )
 from india_compliance.gst_india.utils.gstr_utils import request_otp
 
@@ -41,7 +41,7 @@ class SummarizeGSTR1:
         Helper function to summarize data for each sub-category
         """
         if is_filed and data.get("summary"):
-            return GSTR1DataMapper().summarize_retsum_data(data.get("summary"))
+            return summarize_retsum_data(data.get("summary"))
 
         subcategory_summary = self.get_subcategory_summary(data)
 

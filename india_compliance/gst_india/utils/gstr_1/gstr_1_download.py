@@ -6,7 +6,9 @@ from india_compliance.gst_india.api_classes.returns import GSTR1API
 from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
     create_import_log,
 )
-from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import GSTR1DataMapper
+from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
+    convert_to_internal_data_format,
+)
 
 UNFILED_ACTIONS = [
     "B2B",
@@ -75,7 +77,7 @@ def download_gstr1_json_data(gstr1_log):
 
         json_data.update(response)
 
-    mapped_data = GSTR1DataMapper().convert_to_internal_data_format(json_data)
+    mapped_data = convert_to_internal_data_format(json_data)
     gstr1_log.update_json_for(data_field, mapped_data, reset_reconcile=True)
 
     if is_queued:
@@ -107,7 +109,7 @@ def save_gstr_1(gstin, return_period, json_data, return_type):
             title=_("Invalid Response Received."),
         )
 
-    mapped_data = GSTR1DataMapper().convert_to_internal_data_format(json_data)
+    mapped_data = convert_to_internal_data_format(json_data)
 
     gstr1_log = frappe.get_doc("GSTR-1 Log", f"{return_period}-{gstin}")
     gstr1_log.update_json_for(data_field, mapped_data, overwrite=False)

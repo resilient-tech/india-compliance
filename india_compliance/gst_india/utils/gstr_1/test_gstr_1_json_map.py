@@ -23,8 +23,8 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     SUPECOM,
     TXPD,
     Exports,
-    GSTR1DataMapper,
     NilRated,
+    get_category_wise_data,
 )
 
 
@@ -37,11 +37,7 @@ def normalize_data(data):
 
 
 def process_mapped_data(data):
-    return list(
-        GSTR1DataMapper()
-        .get_category_wise_data(normalize_data(copy.deepcopy(data)))
-        .values()
-    )[0]
+    return list(get_category_wise_data(normalize_data(copy.deepcopy(data))).values())[0]
 
 
 class TestB2B(FrappeTestCase):
