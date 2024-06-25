@@ -294,6 +294,39 @@ CUSTOM_FIELDS = {
             "options": "Account",
             "insert_after": "default_customs_expense_account",
         },
+        {
+            "fieldname": "print_options",
+            "label": "Print Options",
+            "fieldtype": "Tab Break",
+            "insert_after": "dashboard_tab",
+        },
+        {
+            "label": "Enable Physical Signature",
+            "fieldname": "show_physical_signature",
+            "insert_after": "print_options",
+            "fieldtype": "Check",
+        },
+        {
+            "label": "Company Logo",
+            "fieldname": "logo_for_printing",
+            "insert_after": "show_physical_signature",
+            "fieldtype": "Attach",
+            "translatable": 0,
+        },
+        {
+            "label": "Bank Details",
+            "fieldname": "bank_details_for_printing",
+            "insert_after": "logo_for_printing",
+            "fieldtype": "Table",
+            "options": "Company Print Options",
+        },
+        {
+            "label": "Registration Details",
+            "fieldname": "registration_details_for_printing",
+            "insert_after": "bank_details_for_printing",
+            "fieldtype": "Table",
+            "options": "Company Print Options",
+        },
     ],
     ("Customer", "Supplier"): party_fields,
     # Purchase Fields
@@ -859,6 +892,20 @@ CUSTOM_FIELDS = {
                 " services\n04-Correction in Invoice\n05-Change in POS\n06-Finalization"
                 " of Provisional assessment\n07-Others"
             ),
+            "translatable": 0,
+        },
+    ],
+    (
+        "Sales Taxes and Charges",
+        "Purchase Taxes and Charges",
+        "Advance Taxes and Charges",
+    ): [
+        {
+            "fieldname": "gst_tax_type",
+            "label": "GST Tax Type",
+            "fieldtype": "Data",
+            "insert_after": "rate",
+            "read_only": 1,
             "translatable": 0,
         },
     ],

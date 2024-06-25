@@ -8,7 +8,6 @@ from india_compliance.gst_india.constants import (
     E_INVOICE_MASTER_CODES_URL,
     GST_TAX_RATES,
     GST_TAX_TYPES,
-    SALES_DOCTYPES,
     SUBCONTRACTING_DOCTYPES,
 )
 from india_compliance.gst_india.constants.e_waybill import (
@@ -16,7 +15,6 @@ from india_compliance.gst_india.constants.e_waybill import (
     VEHICLE_TYPES,
 )
 from india_compliance.gst_india.utils import (
-    get_gst_accounts_by_type,
     get_gst_uom,
     get_validated_country_code,
     validate_invoice_number,
@@ -39,25 +37,21 @@ class GSTTransactionData:
         self.sandbox_mode = self.settings.sandbox_mode
         self.transaction_details = frappe._dict()
 
-        gst_type = "Output"
         self.party_name_field = "customer_name"
+        self.is_purchase_rcm = False
 
-        if self.doc.doctype not in SALES_DOCTYPES:
+        if self.doc.doctype in (
+            "Purchase Invoice",
+            "Purchase Receipt",
+            "Subcontracting Receipt",
+            "Stock Entry",
+        ):
             self.party_name_field = "supplier_name"
-
-        if self.doc.doctype in ("Purchase Invoice", "Purchase Receipt"):
-            if self.doc.get("is_reverse_charge") != 1:
-                # for with reverse charge, gst_type is Output
-                # this will ensure zero taxes in transaction details
-                gst_type = "Input"
+            if self.doc.is_reverse_charge == 1:
+                # for with reverse charge in purchase, do not compute taxes
+                self.is_purchase_rcm = True
 
         self.party_name = self.doc.get(self.party_name_field)
-
-        # "CGST Account - TC": "cgst_account"
-        self.gst_accounts = {
-            v: k
-            for k, v in get_gst_accounts_by_type(self.doc.company, gst_type).items()
-        }
 
     def set_transaction_details(self):
         rounding_adjustment = self.rounded(
@@ -135,11 +129,12 @@ class GSTTransactionData:
         for row in self.doc.taxes:
             if (
                 not row.get("base_tax_amount_after_discount_amount")
-                or row.account_head not in self.gst_accounts
+                or self.is_purchase_rcm
+                or row.gst_tax_type not in GST_TAX_TYPES
             ):
                 continue
 
-            tax = self.gst_accounts[row.account_head][:-8]
+            tax = row.gst_tax_type
             self.transaction_details[f"total_{tax}_amount"] = abs(
                 self.rounded(row.base_tax_amount_after_discount_amount)
             )
@@ -378,12 +373,12 @@ class GSTTransactionData:
         for row in self.doc.taxes:
             if (
                 not row.get("base_tax_amount_after_discount_amount")
-                or row.account_head not in self.gst_accounts
+                or self.is_purchase_rcm
+                or row.gst_tax_type not in GST_TAX_TYPES
             ):
                 continue
 
-            # Remove '_account' from 'cgst_account'
-            tax = self.gst_accounts[row.account_head][:-8]
+            tax = row.gst_tax_type
             tax_rate = self.rounded(
                 frappe.parse_json(row.item_wise_tax_detail).get(
                     item.item_code or item.item_name

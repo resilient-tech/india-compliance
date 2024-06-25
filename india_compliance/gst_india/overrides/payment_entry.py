@@ -7,6 +7,7 @@ from erpnext.accounts.general_ledger import make_gl_entries
 from erpnext.accounts.utils import create_payment_ledger_entry
 from erpnext.controllers.accounts_controller import get_advance_payment_entries
 
+from india_compliance.gst_india.constants import TAX_TYPES
 from india_compliance.gst_india.overrides.transaction import get_gst_details
 from india_compliance.gst_india.overrides.transaction import (
     validate_backdated_transaction as _validate_backdated_transaction,
@@ -14,10 +15,7 @@ from india_compliance.gst_india.overrides.transaction import (
 from india_compliance.gst_india.overrides.transaction import (
     validate_transaction as validate_transaction_for_advance_payment,
 )
-from india_compliance.gst_india.utils import (
-    get_all_gst_accounts,
-    get_gst_accounts_by_type,
-)
+from india_compliance.gst_india.utils import get_all_gst_accounts
 
 
 @frappe.whitelist()
@@ -92,9 +90,8 @@ def validate(doc, method=None):
         validate_transaction_for_advance_payment(doc, method)
 
     else:
-        gst_accounts = get_all_gst_accounts(doc.company)
         for row in doc.taxes:
-            if row.account_head in gst_accounts and row.tax_amount != 0:
+            if row.gst_tax_type in TAX_TYPES and row.tax_amount != 0:
                 frappe.throw(
                     _("GST Taxes are not allowed for Supplier Advance Payment Entry")
                 )
@@ -116,9 +113,8 @@ def before_cancel(doc, method=None):
 
 
 def validate_backdated_transaction(doc, action="create"):
-    gst_accounts = get_gst_accounts_by_type(doc.company, "Output").values()
     for row in doc.taxes:
-        if row.account_head in gst_accounts and row.tax_amount != 0:
+        if row.gst_tax_type in TAX_TYPES and row.tax_amount != 0:
             _validate_backdated_transaction(doc, action=action)
             break
 
@@ -274,6 +270,10 @@ def get_proportionate_taxes_for_reversal(payment_entry, reference_row):
     """
     # Compile taxes
     gst_accounts = get_all_gst_accounts(payment_entry.company)
+
+    if not gst_accounts:
+        return
+
     taxes = {}
     for row in payment_entry.taxes:
         if row.account_head not in gst_accounts:
@@ -359,6 +359,9 @@ def get_advance_payment_entries_for_regional(
     company = frappe.db.get_value("Account", party_account, "company")
     taxes = get_taxes_summary(company, payment_entries)
 
+    if not taxes:
+        return
+
     for pe in payment_entries:
         tax_row = taxes.get(
             pe.reference_name,
@@ -374,6 +377,10 @@ def adjust_allocations_for_taxes_in_payment_reconciliation(doc):
         return
 
     taxes = get_taxes_summary(doc.company, doc.allocation)
+
+    if not taxes:
+        return
+
     taxes = {
         tax.payment_entry: frappe._dict(
             {
@@ -402,6 +409,9 @@ def adjust_allocations_for_taxes_in_payment_reconciliation(doc):
 
 def get_taxes_summary(company, payment_entries):
     gst_accounts = get_all_gst_accounts(company)
+    if not gst_accounts:
+        return {}
+
     references = [
         advance.reference_name
         for advance in payment_entries
