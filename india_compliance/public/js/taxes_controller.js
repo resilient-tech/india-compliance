@@ -289,7 +289,7 @@ for (const doctype of SUBCONTRACTING_DOCTYPE_ITEMS) {
     });
 }
 
-frappe.ui.form.on("IC Taxes and Charges", {
+frappe.ui.form.on("India Compliance Taxes and Charges", {
     rate(frm, cdt, cdn) {
         frm.taxes_controller.update_tax_rate(cdt, cdn);
     },

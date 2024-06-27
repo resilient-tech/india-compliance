@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class ICTaxesandCharges(Document):
+class IndiaComplianceTaxesandCharges(Document):
     pass

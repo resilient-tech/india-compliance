@@ -79,7 +79,7 @@ CUSTOM_FIELDS = {
             "fieldname": "taxes",
             "label": "Estimated Taxes",
             "fieldtype": "Table",
-            "options": "IC Taxes and Charges",
+            "options": "India Compliance Taxes and Charges",
             "insert_after": "taxes_and_charges",
         },
         {
@@ -162,7 +162,7 @@ CUSTOM_FIELDS = {
             "fieldname": "taxes",
             "label": "Estimated Taxes",
             "fieldtype": "Table",
-            "options": "IC Taxes and Charges",
+            "options": "India Compliance Taxes and Charges",
             "insert_after": "taxes_and_charges",
         },
         {

@@ -13,7 +13,7 @@ from india_compliance.gst_india.overrides.transaction import (
 from india_compliance.gst_india.utils import get_all_gst_accounts
 
 
-class ICGSTDetails(ItemGSTDetails):
+class CustomItemGSTDetails(ItemGSTDetails):
     def set_item_wise_tax_details(self):
         tax_details = frappe._dict()
         item_map = {}
@@ -72,7 +72,7 @@ class ICGSTDetails(ItemGSTDetails):
 def update_gst_details(doc, method=None):
     # TODO: add item tax template validation post exclude from GST
     ItemGSTTreatment().set(doc)
-    ICGSTDetails().update(doc)
+    CustomItemGSTDetails().update(doc)
 
 
 def set_item_wise_tax_rates(doc, item_name=None, tax_name=None):
