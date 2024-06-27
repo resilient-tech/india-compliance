@@ -5,6 +5,7 @@ from frappe import _
 from frappe.utils.data import flt
 from erpnext.controllers.taxes_and_totals import get_round_off_applicable_accounts
 
+from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.overrides.transaction import (
     ItemGSTDetails,
     ItemGSTTreatment,
@@ -14,6 +15,10 @@ from india_compliance.gst_india.utils import get_all_gst_accounts
 
 
 class CustomItemGSTDetails(ItemGSTDetails):
+    """
+    Support use of Item wise tax rates in Taxes and Charges table
+    """
+
     def set_item_wise_tax_details(self):
         tax_details = frappe._dict()
         item_map = {}
@@ -27,13 +32,12 @@ class CustomItemGSTDetails(ItemGSTDetails):
         for row in self.doc.taxes:
             if (
                 not row.base_tax_amount_after_discount_amount
+                or row.gst_tax_type not in GST_TAX_TYPES
                 or not row.item_wise_tax_rates
-                or row.account_head not in self.gst_account_map
             ):
                 continue
 
-            account_type = self.gst_account_map[row.account_head]
-            tax = account_type[:-8]
+            tax = row.gst_tax_type
             tax_rate_field = f"{tax}_rate"
             tax_amount_field = f"{tax}_amount"
 
