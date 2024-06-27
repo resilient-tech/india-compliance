@@ -1037,6 +1037,7 @@ class ItemGSTDetails:
             old = json.loads(row.item_wise_tax_detail)
 
             tax_difference = row.base_tax_amount_after_discount_amount
+            last_item_with_tax = None
 
             # update item taxes
             for item_name in old:
@@ -1057,12 +1058,16 @@ class ItemGSTDetails:
                 item_taxes[tax_rate_field] = tax_rate
                 item_taxes[tax_amount_field] += tax_amount
 
+                # update tax difference only for taxable items
+                if tax_amount:
+                    last_item_with_tax = item_taxes
+
             # Floating point errors
             tax_difference = flt(tax_difference, 5)
 
             # Handle rounding errors
-            if tax_difference:
-                item_taxes[tax_amount_field] += tax_difference
+            if tax_difference and last_item_with_tax:
+                last_item_with_tax[tax_amount_field] += tax_difference
 
         self.item_tax_details = tax_details
 
