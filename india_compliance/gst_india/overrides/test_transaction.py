@@ -664,6 +664,17 @@ class TestTransaction(FrappeTestCase):
             doc.items[0],
         )
 
+    def test_rounding_gst_details(self):
+        doc = create_transaction(
+            **self.transaction_details, rate=62.51, is_in_state=True, do_not_save=True
+        )
+        append_item(doc, frappe._dict(item_code="_Test Nil Rated Item"))
+        doc.save().submit()
+
+        self.assertDocumentEqual(
+            {"taxable_value": 62.51, "cgst_amount": 5.63}, doc.items[0]
+        )
+
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_gst_treatment_for_exports(self):
         if not self.is_sales_doctype:
