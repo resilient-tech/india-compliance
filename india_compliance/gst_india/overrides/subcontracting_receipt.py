@@ -3,15 +3,19 @@ import frappe
 from india_compliance.gst_india.utils import is_api_enabled
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 from india_compliance.gst_india.utils.taxes_controller import (
-    before_save as _before_save,
+    set_taxes_and_totals,
+    update_gst_details,
+    validate_taxes_and_transaction,
 )
-from india_compliance.gst_india.utils.taxes_controller import (
-    before_submit as _before_submit,
-)
-from india_compliance.gst_india.utils.taxes_controller import (
-    before_validate as _before_validate,
-)
-from india_compliance.gst_india.utils.taxes_controller import validate as _validate
+
+field_map = {
+    "taxes": "taxes",
+    "amount": "amount",
+    "total_taxes": "total_taxes",
+    "qty": "qty",
+    "grand_total": "base_rounded_total",
+    "company": "company",
+}
 
 
 def onload(doc, method=None):
@@ -31,16 +35,16 @@ def onload(doc, method=None):
 
 
 def before_save(doc, method=None):
-    _before_save(doc)
+    update_gst_details(doc)
 
 
 def before_submit(doc, method=None):
-    _before_submit(doc)
+    update_gst_details(doc)
 
 
 def before_validate(doc, method=None):
-    _before_validate(doc)
+    set_taxes_and_totals(doc, field_map)
 
 
 def validate(doc, method=None):
-    _validate(doc)
+    validate_taxes_and_transaction(doc, field_map)

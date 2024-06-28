@@ -19,6 +19,8 @@ class CustomItemGSTDetails(ItemGSTDetails):
     Support use of Item wise tax rates in Taxes and Charges table
     """
 
+    FIELDMAP = {"taxes": "taxes", "qty": "qty"}
+
     def set_item_wise_tax_details(self):
         tax_details = frappe._dict()
         item_map = {}
@@ -29,7 +31,7 @@ class CustomItemGSTDetails(ItemGSTDetails):
             tax_details[key] = self.item_defaults.copy()
             tax_details[key]["count"] += 1
 
-        for row in self.doc.taxes:
+        for row in self.doc.get(self.FIELDMAP.get("taxes")):
             if (
                 not row.base_tax_amount_after_discount_amount
                 or row.gst_tax_type not in GST_TAX_TYPES
@@ -56,7 +58,9 @@ class CustomItemGSTDetails(ItemGSTDetails):
                 item = item_map.get(row_name)
 
                 multiplier = (
-                    item.qty if tax == "cess_non_advol" else item.taxable_value / 100
+                    item.get(self.FIELDMAP.get("qty"))
+                    if tax == "cess_non_advol"
+                    else item.taxable_value / 100
                 )
 
                 # cases when charge type == "Actual"
@@ -102,12 +106,14 @@ def set_item_wise_tax_rates(doc, item_name=None, tax_name=None):
         tax.item_wise_tax_rates = json.dumps(item_wise_tax_rates)
 
 
-def set_base_tax_amount_and_tax_total(doc):
+def set_base_tax_amount_and_tax_total(doc, field_map):
     total_taxes = 0
     round_off_accounts = get_round_off_applicable_accounts(doc.company, [])
 
-    for tax in doc.taxes:
-        tax_amount = get_tax_amount(doc, tax.item_wise_tax_rates, tax.charge_type)
+    for tax in doc.get(field_map.get("taxes")):
+        tax_amount = get_tax_amount(
+            doc, tax.item_wise_tax_rates, tax.charge_type, field_map
+        )
 
         if tax.account_head in round_off_accounts:
             tax_amount = round(tax_amount, 0)
@@ -117,17 +123,17 @@ def set_base_tax_amount_and_tax_total(doc):
         tax.base_tax_amount_after_discount_amount = tax_amount
         tax.base_total = total_taxes
 
-    doc.total_taxes = total_taxes
+    setattr(doc, field_map.get("total_taxes"), total_taxes)
 
 
-def set_base_rounded_total(doc):
+def set_base_rounded_total(doc, field_map):
     total = 0
     for item in doc.items:
         total += item.taxable_value
 
-    total += doc.total_taxes
+    total += doc.get(field_map.get("total_taxes"))
 
-    doc.base_rounded_total = total
+    setattr(doc, field_map.get("grand_total"), total)
 
 
 @frappe.whitelist()
@@ -164,34 +170,38 @@ def get_item_tax_map(tax_templates, tax_accounts):
     return {f"{tax.parent},{tax.tax_type}": tax.tax_rate for tax in tax_rates}
 
 
-def get_rows_to_update(doc, item_name=None, tax_name=None):
+def get_rows_to_update(doc, field_map, item_name=None, tax_name=None):
     """
     Returns items and taxes to update based on item_name and tax_name passed.
     If item_name and tax_name are not passed, all items and taxes are returned.
     """
     items = doc.get("items", {"name": item_name}) if item_name else doc.items
-    taxes = doc.get("taxes", {"name": tax_name}) if tax_name else doc.taxes
+    taxes = (
+        doc.get(field_map.get("taxes"), {"name": tax_name}) if tax_name else doc.taxes
+    )
 
     return items, taxes
 
 
-def get_tax_amount(doc, item_wise_tax_rates, charge_type):
+def get_tax_amount(doc, item_wise_tax_rates, charge_type, field_map):
     if isinstance(item_wise_tax_rates, str):
         item_wise_tax_rates = json.loads(item_wise_tax_rates)
 
     tax_amount = 0
     for item in doc.items:
         multiplier = (
-            item.qty if charge_type == "On Item Quantity" else item.taxable_value / 100
+            item.get(field_map.get("qty"))
+            if charge_type == "On Item Quantity"
+            else item.taxable_value / 100
         )
         tax_amount += flt(item_wise_tax_rates.get(item.name, 0)) * multiplier
 
     return tax_amount
 
 
-def validate_taxes(doc):
-    gst_accounts = get_all_gst_accounts(doc.company)
-    for tax in doc.taxes:
+def validate_taxes(doc, field_map):
+    gst_accounts = get_all_gst_accounts(doc.get(field_map.get("company")))
+    for tax in doc.get(field_map.get("taxes")):
         if not tax.base_tax_amount_after_discount_amount:
             continue
 
@@ -203,26 +213,18 @@ def validate_taxes(doc):
             )
 
 
-def set_taxable_value(doc):
+def set_taxable_value(doc, field_map):
     for item in doc.items:
-        item.taxable_value = item.amount
+        item.taxable_value = item.get(field_map.get("amount"))
 
 
-def validate(doc, method=None):
-    validate_taxes(doc)
+def validate_taxes_and_transaction(doc, field_map):
+    validate_taxes(doc, field_map)
     validate_transaction(doc)
 
 
-def before_validate(doc, method=None):
+def set_taxes_and_totals(doc, field_map):
     set_item_wise_tax_rates(doc)
-    set_taxable_value(doc)
-    set_base_tax_amount_and_tax_total(doc)
-    set_base_rounded_total(doc)
-
-
-def before_save(doc, method=None):
-    update_gst_details(doc)
-
-
-def before_submit(doc, method=None):
-    update_gst_details(doc)
+    set_taxable_value(doc, field_map)
+    set_base_tax_amount_and_tax_total(doc, field_map)
+    set_base_rounded_total(doc, field_map)

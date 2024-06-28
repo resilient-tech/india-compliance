@@ -987,6 +987,8 @@ def is_export_without_payment_of_gst(doc):
 
 
 class ItemGSTDetails:
+    FIELDMAP = {}
+
     def get(self, docs, doctype, company):
         """
         Return Item GST Details for a list of documents
