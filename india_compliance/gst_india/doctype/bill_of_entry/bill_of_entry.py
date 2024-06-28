@@ -13,6 +13,7 @@ from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_ent
 from erpnext.controllers.accounts_controller import AccountsController
 from erpnext.controllers.taxes_and_totals import get_round_off_applicable_accounts
 
+from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.overrides.ineligible_itc import (
     update_landed_cost_voucher_for_gst_expense,
     update_regional_gl_entries,
@@ -22,6 +23,7 @@ from india_compliance.gst_india.overrides.transaction import (
     GSTAccounts,
     ItemGSTDetails,
     ItemGSTTreatment,
+    set_gst_tax_type,
 )
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
@@ -41,12 +43,11 @@ class BOEGSTDetails(ItemGSTDetails):
             if (
                 not row.tax_amount
                 or not row.item_wise_tax_rates
-                or row.account_head not in self.gst_account_map
+                or row.gst_tax_type not in GST_TAX_TYPES
             ):
                 continue
 
-            account_type = self.gst_account_map[row.account_head]
-            tax = account_type[:-8]
+            tax = row.gst_tax_type
             tax_rate_field = f"{tax}_rate"
             tax_amount_field = f"{tax}_amount"
 
@@ -113,6 +114,7 @@ class BillofEntry(Document):
 
     def before_validate(self):
         self.set_taxes_and_totals()
+        set_gst_tax_type(self)
 
     def before_save(self):
         update_gst_details(self)
@@ -287,9 +289,7 @@ class BillofEntry(Document):
                     ).format(tax.idx)
                 )
 
-            GSTAccounts.validate_charge_type_for_cess_non_advol_accounts(
-                [input_accounts.cess_non_advol_account], tax
-            )
+            GSTAccounts.validate_charge_type_for_cess_non_advol_accounts(tax)
 
             if tax.charge_type != "Actual":
                 continue
@@ -306,9 +306,7 @@ class BillofEntry(Document):
 
             # validating total tax
             total_tax = 0
-            is_non_cess_advol = (
-                tax.account_head == input_accounts.cess_non_advol_account
-            )
+            is_non_cess_advol = tax.gst_tax_type == "cess_non_advol"
 
             for item, rate in item_wise_tax_rates.items():
                 multiplier = (
@@ -516,6 +514,7 @@ def make_bill_of_entry(source_name, target_doc=None):
                 "charge_type": "On Net Total",
                 "account_head": input_igst_account,
                 "rate": rate,
+                "gst_tax_type": "igst",
                 "description": description,
             },
         )

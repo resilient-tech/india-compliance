@@ -5,6 +5,7 @@ import requests
 import frappe
 from frappe import _
 from frappe.utils import sbool
+from frappe.utils.scheduler import is_scheduler_disabled
 
 from india_compliance.exceptions import GatewayTimeoutError, GSPServerError
 from india_compliance.gst_india.utils import is_api_enabled
@@ -154,6 +155,10 @@ class BaseAPI:
                     )
 
             response_json = self.process_response(response_json)
+
+            if response_json.get("error_type") == "invalid_public_key":
+                return self._make_request(method, endpoint, params, headers, json)
+
             return response_json.get("result", response_json)
 
         except Exception as e:
@@ -286,7 +291,7 @@ def check_scheduler_status():
     if frappe.flags.in_test or frappe.conf.developer_mode:
         return
 
-    if frappe.utils.scheduler.is_scheduler_disabled():
+    if is_scheduler_disabled():
         frappe.throw(
             _(
                 "The Scheduler is currently disabled, which needs to be enabled to use e-Invoicing and e-Waybill features. "

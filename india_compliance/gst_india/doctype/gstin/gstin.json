@@ -9,10 +9,13 @@
   "gstin",
   "registration_date",
   "status",
-  "is_blocked",
+  "transporter_id_status",
   "column_break_nrjd",
   "last_updated_on",
-  "cancelled_date"
+  "cancelled_date",
+  "is_blocked",
+  "section_break_ttzc",
+  "gstr_1_filed_upto"
  ],
  "fields": [
   {
@@ -28,8 +31,7 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Status",
-   "reqd": 1
+   "label": "GSTIN Status"
   },
   {
    "fieldname": "registration_date",
@@ -59,12 +61,28 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Is Blocked"
+  },
+  {
+   "fieldname": "transporter_id_status",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Transporter ID Status"
+  },
+  {
+   "fieldname": "section_break_ttzc",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "gstr_1_filed_upto",
+   "fieldtype": "Date",
+   "hidden": 1,
+   "label": "GSTR-1 Filed Upto"
   }
  ],
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-03-29 11:54:43.241749",
+ "modified": "2024-06-14 13:59:53.998262",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTIN",
@@ -88,6 +106,12 @@
    "report": 1,
    "role": "Accounts Manager",
    "share": 1
+  },
+  {
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User"
   }
  ],
  "sort_field": "creation",

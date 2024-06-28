@@ -19,7 +19,7 @@ from frappe.utils.file_manager import save_file
 from india_compliance.exceptions import GSPServerError
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
-from india_compliance.gst_india.constants import STATE_NUMBERS, GST_TAX_TYPES
+from india_compliance.gst_india.constants import GST_TAX_TYPES, STATE_NUMBERS
 from india_compliance.gst_india.constants.e_waybill import (
     ADDRESS_FIELDS,
     CANCEL_REASON_CODES,
@@ -1527,7 +1527,7 @@ class EWaybillData(GSTTransactionData):
         to_party = self.transaction_details.party_name
         from_party = self.transaction_details.company_name
 
-        if self.doc.doctype == "Purchase Invoice":
+        if self.doc.doctype in ("Purchase Invoice", "Purchase Receipt"):
             to_party, from_party = from_party, to_party
 
         if self.doc.is_return:

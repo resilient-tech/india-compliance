@@ -22,6 +22,10 @@ for (const doctype of ["Sales Invoice", "Delivery Note"]) {
     ignore_port_code_validation(doctype);
 }
 
+for (const doctype of ["Sales Invoice", "Sales Order", "Delivery Note"]) {
+    set_e_commerce_ecommerce_supply_type(doctype);
+}
+
 function fetch_gst_details(doctype) {
     const event_fields = [
         "tax_category",
@@ -181,7 +185,7 @@ function set_and_validate_gstin_status(doctype) {
         },
 
         gst_transporter_id(frm) {
-            _set_and_validate_gstin_status(frm, "gst_transporter_id");
+            india_compliance.validate_gst_transporter_id(frm.doc.gst_transporter_id);
         },
 
         posting_date(frm) {
@@ -297,4 +301,29 @@ function is_invoice_no_validation_required(transaction_type) {
         (transaction_type === "Purchase Receipt" &&
             gst_settings.enable_e_waybill_from_pr)
     );
+}
+
+function set_e_commerce_ecommerce_supply_type(doctype) {
+    const event_fields = ["ecommerce_gstin", "is_reverse_charge"];
+
+    const events = Object.fromEntries(
+        event_fields.map(field => [field, frm => _set_e_commerce_ecommerce_supply_type(frm)])
+    );
+
+    frappe.ui.form.on(doctype, events);
+}
+
+function _set_e_commerce_ecommerce_supply_type(frm) {
+    if (!gst_settings.enable_sales_through_ecommerce_operators) return;
+
+    if (!frm.doc.ecommerce_gstin) {
+        frm.set_value("ecommerce_supply_type", "");
+        return;
+    }
+
+    if (frm.doc.is_reverse_charge) {
+        frm.set_value("ecommerce_supply_type", "Liable to pay tax u/s 9(5)");
+    } else {
+        frm.set_value("ecommerce_supply_type", "Liable to collect tax u/s 52(TCS)");
+    }
 }

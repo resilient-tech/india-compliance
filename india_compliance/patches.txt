@@ -3,7 +3,7 @@ execute:import frappe; frappe.delete_doc_if_exists("DocType", "GSTIN")
 
 [post_model_sync]
 india_compliance.patches.v14.set_default_for_overridden_accounts_setting
-execute:from india_compliance.gst_india.setup import create_custom_fields; create_custom_fields() #47
+execute:from india_compliance.gst_india.setup import create_custom_fields; create_custom_fields() #49
 execute:from india_compliance.gst_india.setup import create_property_setters; create_property_setters() #7
 execute:from india_compliance.income_tax_india.setup import create_custom_fields; create_custom_fields() #1
 india_compliance.patches.post_install.remove_old_fields #1
@@ -47,8 +47,12 @@ execute:from erpnext.stock.doctype.repost_item_valuation.repost_item_valuation i
 india_compliance.patches.v14.set_item_details_from_purchase_invoice_to_bill_of_entry
 india_compliance.patches.v14.update_item_gst_details_and_gst_trearment_in_bill_of_entry
 india_compliance.patches.v14.update_default_auto_reconciliation_settings
+india_compliance.patches.v14.update_default_gstr1_settings
 india_compliance.patches.v14.add_match_found_in_purchase_reconciliation_status
 india_compliance.patches.v14.unset_inward_supply_link_for_cancelled_purchase
 india_compliance.patches.v14.delete_not_generated_gstr_import_log
 india_compliance.patches.v14.rename_reverse_charge_to_purchase_reverse_charge
 india_compliance.patches.post_install.update_sales_rcm_accounts
+india_compliance.patches.v14.enable_sales_through_ecommerce_operator
+india_compliance.patches.post_install.set_gst_tax_type
+execute:from india_compliance.gst_india.setup import set_default_print_settings; set_default_print_settings()
