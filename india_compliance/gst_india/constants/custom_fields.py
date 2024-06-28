@@ -125,7 +125,7 @@ CUSTOM_FIELDS = {
             "label": "Place of Supply",
             "fieldtype": "Autocomplete",
             "options": get_place_of_supply_options(),
-            "insert_after": "billing_gstin",
+            "insert_after": "gst_category",
             "print_hide": 1,
             "read_only": 0,
             "translatable": 0,
@@ -1635,10 +1635,12 @@ E_WAYBILL_FIELDS = {
     "Delivery Note": E_WAYBILL_DN_FIELDS + [sales_e_waybill_field],
     "Purchase Invoice": E_WAYBILL_INV_FIELDS + [purchase_e_waybill_field],
     "Purchase Receipt": E_WAYBILL_PURCHASE_RECEIPT_FIELDS + [purchase_e_waybill_field],
-    "Stock Entry": E_WAYBILL_SE_FIELDS
-    + [e_waybill_status_field, *stock_entry_e_way_bill_field],
+    "Stock Entry": [*stock_entry_e_way_bill_field]
+    + E_WAYBILL_SE_FIELDS
+    + [e_waybill_status_field],
     "Subcontracting Receipt": E_WAYBILL_SCR_FIELDS
     + [e_waybill_status_field, subcontracting_receipt_e_way_bill_field],
-    "Subcontracting Order": E_WAYBILL_SE_FIELDS
-    + [e_waybill_status_field, *subcontracting_order_e_way_bill_field],
+    "Subcontracting Order": [*subcontracting_order_e_way_bill_field]
+    + E_WAYBILL_SE_FIELDS
+    + [e_waybill_status_field],
 }
