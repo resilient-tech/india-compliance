@@ -16,8 +16,10 @@
             <p class="value">{{ getReadableNumber(is_unlimited_account ? used_credits : balance_credits, 0)}}</p>
           </div>
           <div class="subscription-details-item">
-            <p class="label">{{ is_unlimited_account ? 'Next Billing Date' : 'Valid Upto' }}</p>
-            <p class="value" :class="{ 'mb-4': is_unlimited_account }">{{ valid_upto }}</p>
+            <div v-show="valid_upto">
+              <p class="label">{{ is_unlimited_account ? 'Next Billing Date' : 'Valid Upto' }}</p>
+              <p class="value" :class="{ 'mb-4': is_unlimited_account }">{{ valid_upto }}</p>
+            </div>
           </div>
           <router-link v-if="!is_unlimited_account"
             class="btn btn-primary btn-sm btn-block"
