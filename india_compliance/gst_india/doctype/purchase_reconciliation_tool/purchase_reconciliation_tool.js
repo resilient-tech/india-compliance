@@ -10,6 +10,16 @@ const tooltip_info = {
 };
 
 const api_enabled = india_compliance.is_api_enabled();
+const gstcategory = [
+    "B2B",
+    "B2BA",
+    "CDNR",
+    "CDNRA",
+    "ISD",
+    "ISDA",
+    "IMPG",
+    "IMPGSEZ",
+];
 const ALERT_HTML = `
     <div class="gstr2b-alert alert alert-primary fade show d-flex align-items-center justify-content-between border-0" role="alert">
         <div>
@@ -1211,18 +1221,8 @@ class ImportDialog {
     }
 
     download_gstr_by_category(only_missing) {
-        let gstcategory = [
-            "B2B",
-            "B2BA",
-            "CDNR",
-            "CDNRA",
-            "ISD",
-            "ISDA",
-            "IMPG",
-            "IMPGSEZ",
-        ];
         const marked_gst_categories = gstcategory.filter(
-            category => this.dialog.fields_dict[category].value == 1
+            category => this.dialog.fields_dict[category].value === 1
         );
         if (marked_gst_categories.length === 0) {
             frappe.throw(__("Please select at least one Category to Download"));
@@ -1390,77 +1390,33 @@ class ImportDialog {
     }
 
     get_gstr2a_checkbox() {
-        return [
-            {
-                label: "",
-                fieldtype: "Section Break",
-                depends_on: "eval:doc.return_type == 'GSTR2a'",
-            },
-            {
-                label: "B2B",
-                fieldname: "B2B",
+        const gstr2a_checkbox = [];
+        gstr2a_checkbox.push({
+            label: "",
+            fieldtype: "Section Break",
+            depends_on: "eval:doc.return_type == 'GSTR2a'",
+        })
+        for(let i=0;i<gstcategory.length;i++){
+            if(i%2 === 0 && i !== gstcategory.length-1 && i!== 0 ){
+                gstr2a_checkbox.push({
+                    label: "",
+                    fieldtype: "Column Break",
+                    depends_on: "eval:doc.return_type == 'GSTR2a'",
+                })
+            }
+            gstr2a_checkbox.push({
+                label: gstcategory[i],
+                fieldname: gstcategory[i],
                 fieldtype: "Check",
                 depends_on: "eval:doc.return_type == 'GSTR2a'",
-            },
-            {
-                label: "B2BA",
-                fieldname: "B2BA",
-                fieldtype: "Check",
-                depends_on: "eval:doc.return_type == 'GSTR2a'",
-            },
-            {
-                label: "",
-                fieldtype: "Column Break",
-                depends_on: "eval:doc.return_type == 'GSTR2a'",
-            },
-            {
-                label: "CDNR",
-                fieldname: "CDNR",
-                fieldtype: "Check",
-                depends_on: "eval:doc.return_type == 'GSTR2a'",
-            },
-            {
-                label: "CDNRA",
-                fieldname: "CDNRA",
-                fieldtype: "Check",
-                depends_on: "eval:doc.return_type == 'GSTR2a'",
-            },
-            {
-                label: "",
-                fieldtype: "Column Break",
-                depends_on: "eval:doc.return_type == 'GSTR2a'",
-            },
-            {
-                label: "ISD",
-                fieldname: "ISD",
-                fieldtype: "Check",
-                depends_on: "eval:doc.return_type == 'GSTR2a'",
-            },
-            {
-                label: "ISDA",
-                fieldname: "ISDA",
-                fieldtype: "Check",
-                depends_on: "eval:doc.return_type == 'GSTR2a'",
-            },
-            {
-                label: "",
-                fieldtype: "Column Break",
-                depends_on: "eval:doc.return_type == 'GSTR2a'",
-            },
-            {
-                label: "IMPG",
-                fieldname: "IMPG",
-                fieldtype: "Check",
-                depends_on: "eval:doc.return_type == 'GSTR2a'",
-            },
-            {
-                label: "IMPGSEZ",
-                fieldname: "IMPGSEZ",
-                fieldtype: "Check",
-                depends_on: "eval:doc.return_type == 'GSTR2a'",
-            },
-            { label: "", fieldtype: "Section Break" },
-        ];
+            })
+        }
+        gstr2a_checkbox.push({
+            label: "",
+            fieldtype: "Section Break",
+            depends_on: "eval:doc.return_type == 'GSTR2a'",
+        })
+        return gstr2a_checkbox
     }
 }
 
