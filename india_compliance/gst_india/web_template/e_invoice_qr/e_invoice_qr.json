@@ -1,13 +1,9 @@
 {
- "__islocal": true,
- "__unsaved": 1,
  "creation": "2024-06-27 12:22:43.643151",
  "docstatus": 0,
  "doctype": "Web Template",
  "fields": [
   {
-   "__islocal": 1,
-   "__unsaved": 1,
    "fieldname": "e_invoice_qr_text",
    "fieldtype": "Text",
    "label": "QR Text",
@@ -15,7 +11,7 @@
   }
  ],
  "idx": 0,
- "modified": "2024-06-27 12:22:43.643151",
+ "modified": "2024-07-01 11:39:21.368461",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Invoice QR",
