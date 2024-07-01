@@ -950,7 +950,7 @@ def get_tax_template(
     return default_tax
 
 
-def validate_reverse_charge_transaction(doc, is_sales_transaction):
+def validate_reverse_charge_transaction(doc):
     base_gst_tax = 0
     base_reverse_charge_booked = 0
 
@@ -975,7 +975,7 @@ def validate_reverse_charge_transaction(doc, is_sales_transaction):
 
             base_gst_tax += tax.base_tax_amount_after_discount_amount
 
-        elif "rcm" in tax.account_head:
+        elif "rcm" in tax.gst_tax_type:
             # Using Deduct for RCM
             if tax.get("add_deduct_tax") == "Deduct":
                 if tax.base_tax_amount_after_discount_amount < 0:
@@ -1457,7 +1457,7 @@ def validate_transaction(doc, method=None):
     validate_gst_category(doc.gst_category, gstin)
 
     GSTAccounts().validate(doc, is_sales_transaction)
-    validate_reverse_charge_transaction(doc, is_sales_transaction)
+    validate_reverse_charge_transaction(doc)
     update_taxable_values(doc)
     validate_item_wise_tax_detail(doc)
 
