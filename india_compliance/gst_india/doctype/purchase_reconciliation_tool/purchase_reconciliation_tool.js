@@ -1134,7 +1134,7 @@ class ImportDialog {
             fields: [
                 ...this.get_gstr_fields(),
                 ...this.get_gstr2a_checkbox(),
-                ...this.get_pending_fields(),
+                ...this.get_pending_data_fields(),
                 ...this.get_history_fields(),
             ],
         });
@@ -1372,7 +1372,7 @@ class ImportDialog {
         ];
     }
 
-    get_pending_fields() {
+    get_pending_data_fields() {
         const label = "Pending Download";
         return [
             { label, fieldtype: "Section Break" },
