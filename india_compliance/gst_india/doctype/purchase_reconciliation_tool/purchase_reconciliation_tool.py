@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 import json
 import re
+from collections import defaultdict
 from typing import List
 
 import frappe
@@ -20,6 +21,7 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     Reconciler,
 )
 from india_compliance.gst_india.utils import (
+    get_gstin_list,
     get_json_from_file,
     get_timespan_date_range,
     is_api_enabled,
@@ -28,7 +30,6 @@ from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr_2 import (
     ACTIONS,
     IMPORT_CATEGORY,
-    GSTRCategory,
     ReturnType,
     download_gstr_2a,
     download_gstr_2b,
@@ -123,9 +124,7 @@ class PurchaseReconciliationTool(Document):
         )
 
     @frappe.whitelist()
-    def get_import_history(
-        self, company_gstin, return_type, date_range, for_download=True
-    ):
+    def get_history_and_pending_data(self, company_gstin, return_type, date_range):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         if not return_type:
@@ -133,75 +132,44 @@ class PurchaseReconciliationTool(Document):
 
         return_type = ReturnType(return_type)
         periods = BaseUtil.get_periods(date_range, return_type, True)
-        if company_gstin == "All":
-            company_gstin = frappe.get_all(
-                "Address",
-                filters=[
-                    ["Dynamic Link", "link_doctype", "=", "Company"],
-                    ["Dynamic Link", "link_name", "=", self.company],
-                ],
-                pluck="gstin",
-            )
-        else:
-            company_gstin = [company_gstin]
-        history = get_import_history(company_gstin, return_type, periods)
+        company_gstins = (
+            get_gstin_list(self.company) if company_gstin == "All" else [company_gstin]
+        )
+        history = get_import_history(company_gstins, return_type, periods)
 
-        settings = frappe.get_cached_doc("GST Settings")
+        pending_data = defaultdict(set)
+        history_data = defaultdict(set)
 
-        data = {}
-        for gst_no in company_gstin:
-            data[gst_no] = {}
-            for period in periods:
-                data[gst_no][period] = []
-                status = "🟢 &nbsp; Downloaded"
-                for category in GSTRCategory:
-                    if category.value == "ISDA" and return_type == ReturnType.GSTR2A:
-                        continue
+        for period in periods:
+            for gst_no in company_gstins:
+                download = next(
+                    (
+                        log
+                        for log in history
+                        if log.return_period == period and log.gstin == gst_no
+                    ),
+                    None,
+                )
 
-                    if (
-                        not settings.enable_overseas_transactions
-                        and category.value in IMPORT_CATEGORY
-                    ):
-                        continue
-
-                    download = next(
-                        (
-                            log
-                            for log in history
-                            if log.return_period == period
-                            and log.classification in (category.value, "")
-                            and log.gstin == gst_no
-                        ),
-                        None,
+                status = "Not Processed"
+                if download:
+                    status = "Processed"
+                    history_data[period].add(
+                        "✅ &nbsp;"
+                        + download.last_updated_on.strftime("%d-%m-%Y %H:%M:%S")
                     )
 
-                    status = "🟠 &nbsp; Not Downloaded"
-                    action_type = "Downloaded On"
-                    if download:
-                        status = "🟢 &nbsp; Downloaded"
-                        if download.data_not_found:
-                            status = "🔵 &nbsp; Data Not Found"
-                        if download.request_id:
-                            status = "🔵 &nbsp; Queued"
+                if status == "Not Processed":
+                    pending_data[period].add(gst_no)
 
-                    if not for_download:
-                        status = status.replace("Downloaded", "Uploaded")
-                        action_type = action_type.replace("Downloaded", "Uploaded")
-
-                    _dict = {
-                        "Status": status,
-                        action_type: (
-                            "✅ &nbsp;"
-                            + download.last_updated_on.strftime("%d-%m-%Y %H:%M:%S")
-                            if download
-                            else ""
-                        ),
-                    }
-
-                    if _dict not in data[gst_no][period]:
-                        data[gst_no][period].append(_dict)
-
-        return {"data": data}
+        return {
+            "pending_download": (
+                pending_data if any(pending_data.values()) else "No Pending Downloads"
+            ),
+            "download_history": (
+                history_data if any(history_data.values()) else "No Download History"
+            ),
+        }
 
     @frappe.whitelist()
     def get_return_period_from_file(self, return_type, file_path):
@@ -532,7 +500,6 @@ def get_import_history(
     periods: List[str],
     fields=None,
     pluck=None,
-    company_name=None,
 ):
     if not (fields or pluck):
         fields = (
