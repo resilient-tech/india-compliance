@@ -10,7 +10,8 @@ from frappe.model.meta import get_field_precision
 from frappe.utils import flt, getdate
 import erpnext
 
-from india_compliance.gst_india.utils import get_gst_accounts_by_type, get_gst_uom
+from india_compliance.gst_india.constants import GST_TAX_TYPES
+from india_compliance.gst_india.utils import get_gst_uom
 
 
 def execute(filters=None):
@@ -20,33 +21,19 @@ def execute(filters=None):
     validate_filters(filters)
 
     columns = get_columns()
-    output_gst_accounts_dict = get_gst_accounts_by_type(filters.company, "Output")
 
-    data = get_hsn_data(filters, columns, output_gst_accounts_dict)
+    data = get_hsn_data(filters, columns)
 
     return columns, data
 
 
-def get_hsn_data(filters, columns, output_gst_accounts_dict):
-    output_gst_accounts = set()
+def get_hsn_data(filters, columns):
     non_cess_accounts = ["igst_account", "cgst_account", "sgst_account"]
     tax_columns = non_cess_accounts + ["cess_account"]
 
-    for account_type, account_name in output_gst_accounts_dict.items():
-        if not account_name:
-            continue
-
-        output_gst_accounts.add(account_name)
-
     company_currency = erpnext.get_company_currency(filters.company)
     item_list = get_items(filters)
-    itemised_tax = get_item_taxes(
-        item_list,
-        columns,
-        company_currency,
-        output_gst_accounts,
-        output_gst_accounts_dict,
-    )
+    itemised_tax = get_item_taxes(item_list, company_currency)
 
     data = []
     added_item = set()
@@ -208,7 +195,7 @@ def get_items(filters):
     items = frappe.db.sql(
         f"""
         SELECT
-            `tabSales Invoice Item`.gst_hsn_code,
+            COALESCE(`tabSales Invoice Item`.gst_hsn_code, '') AS gst_hsn_code,
             `tabSales Invoice Item`.stock_uom as uqc,
             sum(`tabSales Invoice Item`.stock_qty) AS stock_qty,
             sum(`tabSales Invoice Item`.taxable_value) AS taxable_value,
@@ -221,8 +208,9 @@ def get_items(filters):
             LEFT JOIN `tabGST HSN Code` ON `tabSales Invoice Item`.gst_hsn_code = `tabGST HSN Code`.name
         WHERE
             `tabSales Invoice`.docstatus = 1
-            AND `tabSales Invoice`.company_gstin != IFNULL(`tabSales Invoice`.billing_address_gstin, '')
-            AND `tabSales Invoice Item`.gst_hsn_code IS NOT NULL {conditions}
+            AND `tabSales Invoice`.is_opening != 'Yes'
+            AND `tabSales Invoice`.company_gstin != IFNULL(`tabSales Invoice`.billing_address_gstin, '') {conditions}
+
         GROUP BY
             `tabSales Invoice Item`.parent,
             `tabSales Invoice Item`.item_code
@@ -234,9 +222,7 @@ def get_items(filters):
     return items
 
 
-def get_item_taxes(
-    item_list, columns, company_currency, output_gst_accounts, output_gst_accounts_dict
-):
+def get_item_taxes(item_list, company_currency):
     if not item_list:
         return []
 
@@ -259,19 +245,19 @@ def get_item_taxes(
         frappe.qb.from_(doctype)
         .select(
             doctype.parent,
-            doctype.account_head,
+            doctype.gst_tax_type,
             doctype.item_wise_tax_detail,
             doctype.base_tax_amount_after_discount_amount,
         )
         .where(doctype.parenttype == "Sales Invoice")
         .where(doctype.docstatus == 1)
         .where(doctype.parent.isin(invoice_numbers))
-        .where(doctype.account_head.isin(output_gst_accounts))
+        .where(doctype.gst_tax_type.isin(GST_TAX_TYPES))
     ).run()
 
-    gst_account_map = {value: key for key, value in output_gst_accounts_dict.items()}
+    gst_account_map = get_gst_account_tax_type_map()
 
-    for parent, account_head, item_wise_tax_detail, tax_amount in tax_details:
+    for parent, gst_tax_type, item_wise_tax_detail, tax_amount in tax_details:
         if not item_wise_tax_detail:
             continue
 
@@ -283,7 +269,7 @@ def get_item_taxes(
                     continue
 
                 item_taxes = itemised_tax.setdefault((parent, item_code), {})
-                item_taxes[gst_account_map.get(account_head)] = frappe._dict(
+                item_taxes[gst_account_map.get(gst_tax_type)] = frappe._dict(
                     tax_rate=flt(tax_rate, 2),
                     tax_amount=flt(tax_amount, tax_amount_precision),
                 )
@@ -292,6 +278,17 @@ def get_item_taxes(
             continue
 
     return itemised_tax
+
+
+def get_gst_account_tax_type_map():
+    gst_account_map = {}
+
+    for tax_type in GST_TAX_TYPES:
+        if "cess" in tax_type:
+            gst_account_map[tax_type] = "cess_account"
+        else:
+            gst_account_map[tax_type] = tax_type + "_account"
+    return gst_account_map
 
 
 def get_merged_data(columns, data):

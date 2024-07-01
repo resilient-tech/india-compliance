@@ -5,6 +5,7 @@ from frappe.utils import flt, fmt_money
 from india_compliance.gst_india.overrides.payment_entry import get_taxes_summary
 from india_compliance.gst_india.overrides.transaction import (
     ignore_gst_validations,
+    validate_backdated_transaction,
     validate_mandatory_fields,
     validate_transaction,
 )
@@ -57,6 +58,7 @@ def validate(doc, method=None):
 
     gst_settings = frappe.get_cached_doc("GST Settings")
 
+    validate_backdated_transaction(doc, gst_settings)
     validate_invoice_number(doc)
     validate_credit_debit_note(doc)
     validate_fields_and_set_status_for_e_invoice(doc, gst_settings)
@@ -174,6 +176,10 @@ def on_submit(doc, method=None):
 
 
 def before_cancel(doc, method=None):
+    if ignore_gst_validations(doc):
+        return
+
+    validate_backdated_transaction(doc, action="cancel")
     validate_fields_and_set_status_for_e_invoice(doc)
     payment_references = frappe.get_all(
         "Payment Entry Reference",

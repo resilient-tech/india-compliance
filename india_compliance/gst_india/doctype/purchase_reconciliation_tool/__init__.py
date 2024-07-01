@@ -13,11 +13,7 @@ from frappe.query_builder.functions import Abs, IfNull, Sum
 from frappe.utils import add_months, format_date, getdate, rounded
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
-from india_compliance.gst_india.utils import (
-    get_escaped_name,
-    get_gst_accounts_by_type,
-    get_party_for_gstin,
-)
+from india_compliance.gst_india.utils import get_party_for_gstin
 from india_compliance.gst_india.utils.gstr_2 import IMPORT_CATEGORY, ReturnType
 
 
@@ -434,6 +430,7 @@ class PurchaseInvoice:
             .where(self.PI.docstatus == 1)
             .where(IfNull(self.PI.reconciliation_status, "") != "Not Applicable")
             .where(self.PI.is_opening == "NO")
+            .where(self.PI_TAX.parenttype == "Purchase Invoice")
             .groupby(self.PI.name)
             .select(
                 *fields,
@@ -453,10 +450,8 @@ class PurchaseInvoice:
         return query
 
     def get_fields(self, additional_fields=None, is_return=False):
-        gst_accounts = get_gst_accounts_by_type(self.company, "Input")
         tax_fields = [
-            self.query_tax_amount(account).as_(tax[:-8])
-            for tax, account in gst_accounts.items()
+            self.query_tax_amount(tax_type).as_(tax_type) for tax_type in GST_TAX_TYPES
         ]
 
         fields = [
@@ -489,13 +484,12 @@ class PurchaseInvoice:
 
         return fields
 
-    def query_tax_amount(self, account):
-        account = get_escaped_name(account)
+    def query_tax_amount(self, gst_tax_type):
         return Abs(
             Sum(
                 Case()
                 .when(
-                    self.PI_TAX.account_head == account,
+                    self.PI_TAX.gst_tax_type == gst_tax_type,
                     self.PI_TAX.base_tax_amount_after_discount_amount,
                 )
                 .else_(0)
@@ -599,10 +593,8 @@ class BillOfEntry:
         return query
 
     def get_fields(self, additional_fields=None):
-        gst_accounts = get_gst_accounts_by_type(self.company, "Input")
         tax_fields = [
-            self.query_tax_amount(account).as_(tax[:-8])
-            for tax, account in gst_accounts.items()
+            self.query_tax_amount(tax_type).as_(tax_type) for tax_type in GST_TAX_TYPES
         ]
 
         fields = [
@@ -613,16 +605,12 @@ class BillOfEntry:
             self.BOE.posting_date,
             self.BOE.company_gstin,
             self.PI.supplier_name,
-            self.PI.place_of_supply,
             self.PI.is_reverse_charge,
             *tax_fields,
         ]
 
         # In IMPGSEZ supplier details are avaialble in 2A
-        purchase_fields = [
-            "supplier_gstin",
-            "gst_category",
-        ]
+        purchase_fields = ["supplier_gstin", "gst_category", "place_of_supply"]
 
         for field in purchase_fields:
             fields.append(
@@ -641,13 +629,12 @@ class BillOfEntry:
 
         return fields
 
-    def query_tax_amount(self, account):
-        account = get_escaped_name(account)
+    def query_tax_amount(self, gst_tax_type):
         return Abs(
             Sum(
                 Case()
                 .when(
-                    self.BOE_TAX.account_head == account,
+                    self.BOE_TAX.gst_tax_type == gst_tax_type,
                     self.BOE_TAX.tax_amount,
                 )
                 .else_(0)
@@ -810,6 +797,7 @@ class Reconciler(BaseReconciliation):
         - Where a match is found, update Inward Supply and Purchase Invoice.
         """
 
+        matching_purchases = {}
         for supplier_gstin in purchases:
             if not inward_supplies.get(supplier_gstin):
                 continue
@@ -837,10 +825,16 @@ class Reconciler(BaseReconciliation):
                         purchase.doctype,
                     )
 
+                    matching_purchases.setdefault(purchase.doctype, []).append(
+                        purchase.name
+                    )
+
                     # Remove from current data to ensure matching is done only once.
                     purchases[supplier_gstin].pop(purchase_invoice_name)
                     inward_supplies[supplier_gstin].pop(inward_supply_name)
                     break
+
+        self.update_reconciliation_status(matching_purchases)
 
     def is_doc_matching(self, purchase, inward_supply, rules):
         """
@@ -934,9 +928,26 @@ class Reconciler(BaseReconciliation):
             "GST Inward Supply", inward_supply_name, inward_supply_fields
         )
 
+    def update_reconciliation_status(self, matching_purchases: dict):
+        """
+        Update reconciliation status for matched invoices in purchase docs.
+
+        param matching_purchases: dict of doctype and list of matched invoices
+        """
+        for doctype, doc_names in matching_purchases.items():
+            frappe.db.set_value(
+                doctype,
+                {"name": ("in", doc_names)},
+                "reconciliation_status",
+                "Match Found",
+            )
+
     def get_pan_level_data(self, data):
         out = {}
         for gstin, invoices in data.items():
+            if not gstin:
+                continue
+
             pan = gstin[2:-3]
             out.setdefault(pan, {})
             out[pan].update(invoices)
@@ -1035,6 +1046,7 @@ class ReconciledData(BaseReconciliation):
             reconciliation_data.append(frappe._dict({"_purchase_invoice": doc}))
 
         self.process_data(reconciliation_data, retain_doc=retain_doc)
+
         return reconciliation_data
 
     def get_all_inward_supply(

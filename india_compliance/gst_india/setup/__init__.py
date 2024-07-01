@@ -27,11 +27,12 @@ ITEM_VARIANT_FIELDNAMES = frozenset(("gst_hsn_code",))
 def after_install():
     create_custom_fields()
     create_accounting_dimension_fields()
-    create_property_setters()
+    create_property_setters(include_defaults=True)
     create_address_template()
     create_email_template()
     set_default_gst_settings()
     set_default_accounts_settings()
+    set_default_print_settings()
     create_hsn_codes()
     add_fields_to_item_variant_settings()
 
@@ -61,9 +62,13 @@ def create_accounting_dimension_fields():
         make_dimension_in_accounting_doctypes(doc, doctypes)
 
 
-def create_property_setters():
-    for property_setter in get_property_setters():
-        frappe.make_property_setter(property_setter, validate_fields_for_doctype=False)
+def create_property_setters(*, include_defaults=False):
+    for property_setter in get_property_setters(include_defaults=include_defaults):
+        frappe.make_property_setter(
+            property_setter,
+            validate_fields_for_doctype=False,
+            is_system_generated=property_setter.get("is_system_generated", True),
+        )
 
 
 def create_address_template():
@@ -211,6 +216,10 @@ def set_default_gst_settings():
         "reconcile_on_friday": 1,
         "reconcile_for_b2b": 1,
         "reconcile_for_cdnr": 1,
+        # GSTR-1
+        "compare_gstr_1_data": 1,
+        "freeze_transactions": 1,
+        "filing_frequency": "Monthly",
     }
 
     if frappe.conf.developer_mode:
@@ -250,6 +259,28 @@ def set_default_accounts_settings():
     )
 
     frappe.db.set_default("add_taxes_from_item_tax_template", 0)
+
+
+def set_default_print_settings():
+    sales_invoice_format = frappe.get_meta("Sales Invoice").default_print_format
+
+    if sales_invoice_format:
+        return
+
+    # print style
+    frappe.db.set_single_value("Print Settings", "print_style", "Modern")
+
+    # print format
+    frappe.make_property_setter(
+        {
+            "doctype": "Sales Invoice",
+            "doctype_or_field": "DocType",
+            "property": "default_print_format",
+            "value": "GST Tax Invoice",
+        },
+        validate_fields_for_doctype=False,
+        is_system_generated=False,
+    )
 
 
 def show_accounts_settings_override_warning():
