@@ -1,6 +1,6 @@
 import frappe
-from erpnext.subcontracting.doctype.subcontracting_receipt.subcontracting_receipt import (
-    SubcontractingReceipt as _SubcontractingReceipt,
+from erpnext.subcontracting.doctype.subcontracting_order.subcontracting_order import (
+    SubcontractingOrder as _SubcontractingOrder,
 )
 
 from india_compliance.gst_india.utils import is_api_enabled
@@ -11,7 +11,7 @@ from india_compliance.gst_india.utils.taxes_controller import (
 )
 
 
-class SubcontractingReceipt(_SubcontractingReceipt, SubcontractingTaxesController):
+class SubcontractingOrder(_SubcontractingOrder, SubcontractingTaxesController):
     FIELD_MAP = {
         "taxes": "taxes",
         "amount": "amount",

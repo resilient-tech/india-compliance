@@ -13,8 +13,26 @@ india_compliance.taxes_controller = class TaxesController {
     }
 
     setup() {
+        this.fetch_round_off_accounts();
         this.set_item_tax_template_query();
         this.set_account_head_query();
+    }
+
+    fetch_round_off_accounts() {
+        if (this.frm.doc.docstatus !== 0 || !this.frm.doc.company) return;
+
+        frappe.call({
+            method: "erpnext.controllers.taxes_and_totals.get_round_off_applicable_accounts",
+            args: {
+                company: this.frm.doc.company,
+                account_list: [],
+            },
+            callback(r) {
+                if (r.message) {
+                    frappe.flags.round_off_applicable_accounts = r.message;
+                }
+            },
+        });
     }
 
     set_item_tax_template_query() {
@@ -49,81 +67,14 @@ india_compliance.taxes_controller = class TaxesController {
 
         if (!this.frm.doc.taxes || !this.frm.doc.taxes.length) return;
 
-        let [items, taxes] = this.get_rows_to_update(item_name, tax_name);
-        let tax_accounts = new Set(taxes.map(tax => tax.account_head));
-
-        if (!tax_accounts.size) {
-            return;
-        }
-        let tax_templates = new Set(items.map(item => item.item_tax_template));
-        let item_tax_map = await this.get_item_tax_map(tax_templates, tax_accounts);
-
-        let updated_taxes = [];
-        for (let tax of taxes) {
-            let item_wise_tax_rates = tax.item_wise_tax_rates
-                ? JSON.parse(tax.item_wise_tax_rates)
-                : {};
-
-            for (let item of items) {
-                let key = [item.item_tax_template, tax.account_head].toString();
-                item_wise_tax_rates[item.name] = item_tax_map[key] || tax.rate;
-            }
-
-            tax.item_wise_tax_rates = JSON.stringify(item_wise_tax_rates);
-            updated_taxes.push(tax);
-        }
-    }
-
-    get_rows_to_update(item_name = null, tax_name = null) {
-        /*
-        Returns items and taxes to update based on itemName and taxName passed.
-        If itemName and taxName are not passed, all items and taxes are returned.
-        */
-        let items = item_name
-            ? this.frm.doc.items.filter(item => item.name === item_name)
-            : this.frm.doc.items;
-        let taxes = tax_name
-            ? this.frm.doc.taxes.filter(tax => tax.name === tax_name)
-            : this.frm.doc.taxes;
-
-        return [items, taxes];
-    }
-
-    async get_item_tax_map(tax_templates, tax_accounts) {
-        /**
-         * Parameters:
-         *     taxTemplates (Array): List of item tax templates used in the items
-         *     taxAccounts (Array): List of tax accounts used in the taxes
-         *
-         * Returns:
-         *     Object: A map of item_tax_template, tax_account and tax_rate
-         *
-         * Sample Output:
-         *     {
-         *         'GST 18%','IGST - TC': 18.0,
-         *         'GST 28%','IGST - TC': 28.0
-         *     }
-         */
-
-        if (!tax_templates.size) {
-            return {};
-        }
-
-        let tax_rates = {};
         await frappe.call({
-            method: "india_compliance.gst_india.utils.taxes_controller.get_item_tax_map",
+            doc: this.frm.doc,
+            method: "set_item_wise_tax_rates",
             args: {
-                tax_templates: Array.from(tax_templates),
-                tax_accounts: Array.from(tax_accounts),
-            },
-            callback: function (r) {
-                if (!r.exc) {
-                    tax_rates = r.message;
-                }
+                item_name: item_name,
+                tax_name: tax_name,
             },
         });
-
-        return tax_rates;
     }
 
     update_item_wise_tax_rates(tax_row) {
@@ -194,19 +145,20 @@ india_compliance.taxes_controller = class TaxesController {
             ) {
                 row.tax_amount = Math.round(row.tax_amount);
             }
+            row.base_tax_amount_after_discount_amount = row.tax_amount;
         });
-
         this.update_total_amount();
         this.update_total_taxes();
     }
 
     update_total_amount() {
+        const total_taxable_value = this.calculate_total_taxable_value();
         this.frm.doc.taxes.reduce((total, row) => {
             const total_amount = total + row.tax_amount;
-            row.base_tax_amount_after_discount_amount = total_amount;
+            row.base_total = total_amount;
 
             return total_amount;
-        }, 0);
+        }, total_taxable_value);
 
         this.frm.refresh_field("taxes");
     }
@@ -247,7 +199,7 @@ india_compliance.taxes_controller = class TaxesController {
         this.frm.set_value("total_taxes", total_taxes);
     }
 
-    update_taxable_value(cdt, cdn) {
+    update_item_taxable_value(cdt, cdn) {
         const row = locals[cdt][cdn];
         let amount;
 
@@ -264,6 +216,12 @@ india_compliance.taxes_controller = class TaxesController {
         }
 
         row.taxable_value = amount;
+    }
+
+    calculate_total_taxable_value() {
+        return this.frm.doc.items.reduce((total, item) => {
+            return total + item.taxable_value;
+        }, 0);
     }
 };
 
