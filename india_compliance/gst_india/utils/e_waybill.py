@@ -19,7 +19,7 @@ from frappe.utils.file_manager import save_file
 from india_compliance.exceptions import GSPServerError
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
-from india_compliance.gst_india.constants import STATE_NUMBERS
+from india_compliance.gst_india.constants import GST_TAX_TYPES, STATE_NUMBERS
 from india_compliance.gst_india.constants.e_waybill import (
     ADDRESS_FIELDS,
     CANCEL_REASON_CODES,
@@ -1082,6 +1082,8 @@ def get_billing_shipping_address_map(doc):
 class EWaybillData(GSTTransactionData):
     def __init__(self, *args, **kwargs):
         self.for_json = kwargs.pop("for_json", False)
+        self.exclude_reverse_charge_tax = True
+
         super().__init__(*args, **kwargs)
 
         self.validate_settings()
@@ -1401,6 +1403,13 @@ class EWaybillData(GSTTransactionData):
             )
 
         return hsn_wise_items.values()
+
+    def update_item_details(self, item_details, item):
+        if not self.doc.is_reverse_charge:
+            return
+
+        for tax in GST_TAX_TYPES:
+            item_details.update({f"{tax}_amount": 0, f"{tax}_rate": 0})
 
     def update_transaction_details(self):
         # first HSN Code for goods

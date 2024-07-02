@@ -85,8 +85,7 @@ def is_b2b_invoice(doc):
 
 def update_itc_totals(doc, method=None):
     # Set default value
-    if not doc.itc_classification:
-        doc.itc_classification = "All Other ITC"
+    set_itc_classification(doc)
 
     # Initialize values
     doc.itc_integrated_tax = 0
@@ -109,6 +108,22 @@ def update_itc_totals(doc, method=None):
 
         if tax.gst_tax_type == "cess":
             doc.itc_cess_amount += flt(tax.base_tax_amount_after_discount_amount)
+
+
+def set_itc_classification(doc):
+    default_classification = "All Other ITC"
+    reverse_charge_classification = "ITC on Reverse Charge"
+
+    if doc.is_reverse_charge:
+        doc.itc_classification = reverse_charge_classification
+        return
+
+    elif doc.itc_classification == reverse_charge_classification:
+        doc.itc_classification = default_classification
+        return
+
+    if not doc.itc_classification:
+        doc.itc_classification = default_classification
 
 
 def validate_supplier_invoice_number(doc):
