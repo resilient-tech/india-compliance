@@ -1,3 +1,5 @@
+const FIELD_MAP = { tax_amount: "base_tax_amount_after_discount_amount" };
+
 frappe.ui.form.on("Subcontracting Order", {
     setup(frm) {
         frm.set_query("taxes_and_charges", function () {
@@ -10,7 +12,7 @@ frappe.ui.form.on("Subcontracting Order", {
         });
     },
     onload(frm) {
-        frm.taxes_controller = new india_compliance.taxes_controller(frm);
+        frm.taxes_controller = new india_compliance.taxes_controller(frm, FIELD_MAP);
     },
 
     taxes_and_charges(frm) {

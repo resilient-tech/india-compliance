@@ -182,7 +182,7 @@ class SubcontractingTaxesController(TaxesController):
 
             total_taxes += tax_amount
 
-            setattr(self, self.FIELD_MAP.get("tax_amount"), tax_amount)
+            setattr(tax, self.FIELD_MAP.get("tax_amount"), tax_amount)
             tax.base_total = (
                 self.get(self.FIELD_MAP.get("total_taxable_value")) + total_taxes
             )
