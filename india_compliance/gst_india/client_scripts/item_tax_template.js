@@ -56,13 +56,11 @@ async function get_tax_rate_for_account(frm, account) {
     const gst_accounts = await get_gst_accounts(frm);
     if (!gst_accounts) return null;
 
-    const rcm_accounts = await get_company_sales_rcm_accounts(frm)
+    const [_, intra_state_accounts, inter_state_accounts, negative_rate_accounts] =
+        gst_accounts;
 
-    const [_, intra_state_accounts, inter_state_accounts] = gst_accounts;
+    if (negative_rate_accounts.includes(account)) gst_rate = gst_rate * -1;
 
-    if (rcm_accounts.includes(account)) {
-        gst_rate = gst_rate * -1
-    }
     if (intra_state_accounts.includes(account)) return gst_rate / 2;
     else if (inter_state_accounts.includes(account)) return gst_rate;
     else return null;
@@ -88,7 +86,7 @@ async function get_gst_accounts(frm) {
     if (!frm._company_gst_accounts?.[company]) {
         frm._company_gst_accounts = frm._company_gst_accounts || {};
         const { message } = await frappe.call({
-            method: "india_compliance.gst_india.overrides.transaction.get_valid_gst_accounts",
+            method: "india_compliance.gst_india.overrides.item_tax_template.get_valid_gst_accounts",
             args: { company: company },
         });
 
@@ -97,23 +95,4 @@ async function get_gst_accounts(frm) {
 
     if (!frm._company_gst_accounts[company]) return;
     return frm._company_gst_accounts[company];
-}
-
-
-async function get_company_sales_rcm_accounts(frm) {
-    const company = frm.doc.company;
-
-    // cache company gst accounts
-    if (!frm._company_rcm_accounts?.[company]) {
-        frm._company_rcm_accounts = frm._company_rcm_accounts || {};
-        const { message } = await frappe.call({
-            method: "india_compliance.gst_india.overrides.transaction.get_valid_gst_accounts_by_type",
-            args: { company: company, tax_type: "Sales Reverse Charge" },
-        });
-
-        frm._company_rcm_accounts[company] = Object.values(message);
-    }
-
-    if (!frm._company_rcm_accounts[company]) return;
-    return frm._company_rcm_accounts[company];
 }

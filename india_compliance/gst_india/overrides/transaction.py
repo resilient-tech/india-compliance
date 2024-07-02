@@ -271,18 +271,6 @@ def get_applicable_gst_accounts(
     return all_gst_accounts, applicable_gst_accounts
 
 
-@frappe.whitelist()
-def get_valid_gst_accounts(company):
-    frappe.has_permission("Item Tax Template", "read", throw=True)
-    return get_valid_accounts(company, for_sales=True, for_purchase=True, throw=False)
-
-
-@frappe.whitelist()
-def get_valid_gst_accounts_by_type(company, tax_type):
-    frappe.has_permission("Item Tax Template", "read", throw=True)
-    return get_gst_accounts_by_type(company, tax_type, throw=False)
-
-
 def get_valid_accounts(company, *, for_sales=False, for_purchase=False, throw=True):
     all_valid_accounts = []
     intra_state_accounts = []
