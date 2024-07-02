@@ -4,6 +4,7 @@ import frappe
 from frappe.tests.utils import FrappeTestCase
 
 from india_compliance.gst_india.overrides.transaction import get_valid_accounts
+from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 # Creation of Item tax template for indian and foreign company
 # Validation of GST Rate
@@ -81,21 +82,32 @@ def create_item_tax_template(**data):
             pluck="name",
         )
 
+    rcm_accounts = (
+        get_gst_accounts_by_type(doc.company, "Sales Reverse Charge", throw=False)
+    ).values()
+
     for account in intra_state_accounts:
+        tax_rate = gst_rate
+        if account in rcm_accounts:
+            tax_rate = tax_rate * -1
+
         doc.append(
             "taxes",
             {
                 "tax_type": account,
-                "tax_rate": gst_rate / 2,
+                "tax_rate": tax_rate / 2,
             },
         )
 
     for account in inter_state_accounts:
+        tax_rate = gst_rate
+        if account in rcm_accounts:
+            tax_rate = tax_rate * -1
         doc.append(
             "taxes",
             {
                 "tax_type": account,
-                "tax_rate": gst_rate,
+                "tax_rate": tax_rate,
             },
         )
 

@@ -101,9 +101,9 @@ def get_gst_accounts(
     if company:
         filters["company"] = company
     if only_reverse_charge:
-        filters["account_type"] = "Reverse Charge"
+        filters["account_type"] = "Purchase Reverse Charge"
     elif only_non_reverse_charge:
-        filters["account_type"] = ("!=", "Reverse Charge")
+        filters["account_type"] = ("!=", "Purchase Reverse Charge")
 
     settings = frappe.get_cached_doc("GST Settings", "GST Settings")
     gst_accounts = settings.get("gst_accounts", filters)

@@ -120,6 +120,12 @@ class GSTTransactionData:
             ):
                 continue
 
+            # eg: Skip reverse charge tax for e-Waybill
+            if self.doc.is_reverse_charge and getattr(
+                self, "exclude_reverse_charge_tax", False
+            ):
+                continue
+
             tax = row.gst_tax_type
             self.transaction_details[f"total_{tax}_amount"] = abs(
                 self.rounded(row.base_tax_amount_after_discount_amount)
@@ -127,6 +133,11 @@ class GSTTransactionData:
 
         # Other Charges
         current_total = 0
+
+        if self.doc.is_reverse_charge:
+            # Not adding taxes for rcm
+            tax_total_keys = tuple()
+
         for key in ("total", "rounding_adjustment", *tax_total_keys):
             current_total += self.transaction_details.get(key)
 
@@ -285,8 +296,8 @@ class GSTTransactionData:
                     "gst_treatment": row.gst_treatment,
                 }
             )
-            self.update_item_details(item_details, row)
             self.update_item_tax_details(item_details, row)
+            self.update_item_details(item_details, row)
             all_item_details.append(item_details)
 
         return all_item_details

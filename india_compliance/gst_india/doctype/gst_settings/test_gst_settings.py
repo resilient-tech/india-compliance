@@ -38,7 +38,7 @@ class TestGSTSettings(FrappeTestCase):
         for row in doc.gst_accounts:
             if (
                 row.company == "_Test Indian Registered Company"
-                and row.account_type == "Reverse Charge"
+                and row.account_type == "Purchase Reverse Charge"
             ):
                 row.account_type = "Output"
                 self.assertRaisesRegex(

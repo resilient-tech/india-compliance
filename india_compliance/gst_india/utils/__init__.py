@@ -487,6 +487,12 @@ def get_gst_accounts_by_type(company, account_type, throw=True):
         if row.account_type == account_type and row.company == company:
             return frappe._dict((key, row.get(key)) for key in GST_ACCOUNT_FIELDS)
 
+    if (
+        account_type == "Sales Reverse Charge"
+        and not settings.enable_reverse_charge_in_sales
+    ):
+        return frappe._dict()
+
     if not throw:
         return frappe._dict()
 

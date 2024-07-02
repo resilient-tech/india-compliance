@@ -90,7 +90,7 @@ def modify_tax_defaults(default_taxes, gst_rate):
             for row in tax.get("taxes"):
                 rate = (
                     gst_rate
-                    if row["account_head"]["tax_rate"] == 18
+                    if abs(row["account_head"]["tax_rate"]) == 18
                     else flt(gst_rate / 2, 3)
                 )
 
@@ -103,7 +103,16 @@ def update_gst_settings(company):
     # Will only add default GST accounts if present
     input_account_names = ["Input Tax CGST", "Input Tax SGST", "Input Tax IGST"]
     output_account_names = ["Output Tax CGST", "Output Tax SGST", "Output Tax IGST"]
-    rcm_accounts = ["Input Tax CGST RCM", "Input Tax SGST RCM", "Input Tax IGST RCM"]
+    purchase_rcm_accounts = [
+        "Input Tax CGST RCM",
+        "Input Tax SGST RCM",
+        "Input Tax IGST RCM",
+    ]
+    sales_rcm_accounts = [
+        "Output Tax CGST RCM",
+        "Output Tax SGST RCM",
+        "Output Tax IGST RCM",
+    ]
     gst_settings = frappe.get_single("GST Settings")
     existing_account_list = []
 
@@ -118,7 +127,10 @@ def update_gst_settings(company):
                 "company": company,
                 "account_name": (
                     "in",
-                    input_account_names + output_account_names + rcm_accounts,
+                    input_account_names
+                    + output_account_names
+                    + purchase_rcm_accounts
+                    + sales_rcm_accounts,
                 ),
             },
             ["account_name", "name"],
@@ -144,11 +156,19 @@ def update_gst_settings(company):
     )
     add_accounts_in_gst_settings(
         company,
-        rcm_accounts,
+        purchase_rcm_accounts,
         gst_accounts,
         existing_account_list,
         gst_settings,
-        "Reverse Charge",
+        "Purchase Reverse Charge",
+    )
+    add_accounts_in_gst_settings(
+        company,
+        sales_rcm_accounts,
+        gst_accounts,
+        existing_account_list,
+        gst_settings,
+        "Sales Reverse Charge",
     )
 
     # Ignore mandatory during install, some values may not be set by post install patch
