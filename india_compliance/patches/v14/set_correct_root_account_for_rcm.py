@@ -8,7 +8,7 @@ def execute():
     company_accounts = get_company_accounts(settings)
 
     for accounts in company_accounts.values():
-        if not accounts.get("Output") or not accounts.get("Reverse Charge"):
+        if not accounts.get("Output") or not accounts.get("Purchase Reverse Charge"):
             continue
 
         rcm_accounts = get_asset_rcm_accounts(accounts)
@@ -50,7 +50,10 @@ def get_asset_rcm_accounts(accounts):
             "root_type": "Asset",
             "name": (
                 "in",
-                [accounts["Reverse Charge"].get(field) for field in GST_ACCOUNT_FIELDS],
+                [
+                    accounts["Purchase Reverse Charge"].get(field)
+                    for field in GST_ACCOUNT_FIELDS
+                ],
             ),
         },
         pluck="name",
