@@ -1644,8 +1644,8 @@ class EWaybillData(GSTTransactionData):
             "sgstValue": self.transaction_details.total_sgst_amount,
             "igstValue": self.transaction_details.total_igst_amount,
             "cessValue": self.transaction_details.total_cess_amount,
-            "TotNonAdvolVal": self.transaction_details.total_cess_non_advol_amount,
-            "OthValue": (
+            "cessNonAdvolValue": self.transaction_details.total_cess_non_advol_amount,
+            "otherValue": (
                 self.transaction_details.rounding_adjustment
                 + self.transaction_details.other_charges
                 - self.transaction_details.discount_amount
@@ -1670,6 +1670,8 @@ class EWaybillData(GSTTransactionData):
                     "transactionType": "transType",
                     "actFromStateCode": "actualFromStateCode",
                     "actToStateCode": "actualToStateCode",
+                    "otherValue": "OthValue",
+                    "cessNonAdvolValue": "TotNonAdvolVal",
                 }
             ).items():
                 data[value] = data.pop(key)
