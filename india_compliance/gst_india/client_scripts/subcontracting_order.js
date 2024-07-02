@@ -1,4 +1,4 @@
-const FIELD_MAP = { tax_amount: "base_tax_amount_after_discount_amount" };
+const FIELD_MAP = { tax_amount: "tax_amount" };
 
 frappe.ui.form.on("Subcontracting Order", {
     setup(frm) {

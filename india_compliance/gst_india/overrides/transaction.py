@@ -77,16 +77,13 @@ def update_taxable_values(doc):
 
     if doc.taxes:
         if any(
-            row
-            for row in doc.taxes
-            if row.base_tax_amount_after_discount_amount
-            and row.gst_tax_type in TAX_TYPES
+            row for row in doc.taxes if row.tax_amount and row.gst_tax_type in TAX_TYPES
         ):
             reference_row_index = next(
                 (
                     cint(row.row_id) - 1
                     for row in doc.taxes
-                    if row.base_tax_amount_after_discount_amount
+                    if row.tax_amount
                     and row.charge_type == "On Previous Row Total"
                     and row.gst_tax_type in TAX_TYPES
                 ),
@@ -361,8 +358,7 @@ class GSTAccounts:
         self.gst_tax_rows = [
             row
             for row in self.doc.taxes
-            if (row.get("tax_amount") or row.base_tax_amount_after_discount_amount)
-            and row.gst_tax_type
+            if (row.get("tax_amount")) and row.gst_tax_type
         ]
 
         return self.gst_tax_rows

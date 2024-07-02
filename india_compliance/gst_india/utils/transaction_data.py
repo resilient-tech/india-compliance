@@ -128,7 +128,7 @@ class GSTTransactionData:
 
         for row in self.doc.taxes:
             if (
-                not row.get("base_tax_amount_after_discount_amount")
+                not row.tax_amount
                 or self.is_purchase_rcm
                 or row.gst_tax_type not in GST_TAX_TYPES
             ):
@@ -142,7 +142,7 @@ class GSTTransactionData:
 
             tax = row.gst_tax_type
             self.transaction_details[f"total_{tax}_amount"] = abs(
-                self.rounded(row.base_tax_amount_after_discount_amount)
+                self.rounded(row.tax_amount)
             )
 
         # Other Charges

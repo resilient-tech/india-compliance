@@ -33,7 +33,7 @@ class CustomItemGSTDetails(ItemGSTDetails):
 
         for row in self.doc.get(self.FIELDMAP.get("taxes")):
             if (
-                not row.base_tax_amount_after_discount_amount
+                not row.tax_amount
                 or row.gst_tax_type not in GST_TAX_TYPES
                 or not row.item_wise_tax_rates
             ):
@@ -83,152 +83,159 @@ def update_gst_details(doc, method=None):
     CustomItemGSTDetails().update(doc)
 
 
-class TaxesController:
-    @frappe.whitelist()
-    def set_item_wise_tax_rates(self, item_name=None, tax_name=None):
-        items, taxes = self.get_rows_to_update(item_name, tax_name)
+@frappe.whitelist()
+def set_item_wise_tax_rates(
+    doc, field_map, item_name=None, tax_name=None, is_client=False
+):
+    if is_client:
+        doc = frappe._dict(frappe.parse_json(doc))
+    items, taxes = get_rows_to_update(doc, field_map, item_name, tax_name)
+    tax_accounts = {tax.get("account_head") for tax in taxes}
+    if not tax_accounts:
+        return
 
-        tax_accounts = {tax.account_head for tax in taxes}
+    tax_templates = {item.get("item_tax_template") for item in items}
+    item_tax_map = get_item_tax_map(tax_templates, tax_accounts)
 
-        if not tax_accounts:
-            return
+    for tax in taxes:
+        item_wise_tax_rates = (
+            json.loads(tax.get("item_wise_tax_rates"))
+            if tax.get("item_wise_tax_rates")
+            else {}
+        )
 
-        tax_templates = {item.item_tax_template for item in items}
-        item_tax_map = self.get_item_tax_map(tax_templates, tax_accounts)
-
-        for tax in taxes:
-            item_wise_tax_rates = (
-                json.loads(tax.item_wise_tax_rates) if tax.item_wise_tax_rates else {}
+        for item in items:
+            key = f'{item.get("item_tax_template")},{tax.get("account_head")}'
+            item_wise_tax_rates[item.get("name")] = item_tax_map.get(
+                key, tax.get("rate")
             )
 
-            for item in items:
-                key = f"{item.item_tax_template},{tax.account_head}"
-                item_wise_tax_rates[item.name] = item_tax_map.get(key, tax.rate)
-
+        if is_client:
+            tax["item_wise_tax_rates"] = json.dumps(item_wise_tax_rates)
+        else:
             tax.item_wise_tax_rates = json.dumps(item_wise_tax_rates)
 
-    def get_item_tax_map(self, tax_templates, tax_accounts):
-        """
-        Parameters:
-            tax_templates (list): List of item tax templates used in the items
-            tax_accounts (list): List of tax accounts used in the taxes
+    if is_client:
+        return taxes
 
-        Returns:
-            dict: A map of item_tax_template, tax_account and tax_rate
 
-        Sample Output:
-            {
-                'GST 18%,IGST - TC': 18.0
-                'GST 28%,IGST - TC': 28.0
-            }
-        """
-        tax_templates = frappe.parse_json(tax_templates)
-        tax_accounts = frappe.parse_json(tax_accounts)
+def set_base_tax_amount_and_tax_total(doc, field_map):
+    total_taxes = 0
+    round_off_accounts = get_round_off_applicable_accounts(doc.company, [])
 
-        if not tax_templates:
-            return {}
-
-        tax_rates = frappe.get_all(
-            "Item Tax Template Detail",
-            fields=("parent", "tax_type", "tax_rate"),
-            filters={
-                "parent": ("in", tax_templates),
-                "tax_type": ("in", tax_accounts),
-            },
+    for tax in doc.get(field_map.get("taxes")):
+        tax.tax_amount = get_tax_amount(
+            doc, tax.item_wise_tax_rates, tax.charge_type, field_map
         )
+        if tax.account_head in round_off_accounts:
+            tax.tax_amount = round(tax.tax_amount, 0)
 
-        return {f"{tax.parent},{tax.tax_type}": tax.tax_rate for tax in tax_rates}
+        total_taxes += tax.tax_amount
 
-    def get_rows_to_update(self, item_name=None, tax_name=None):
-        """
-        Returns items and taxes to update based on item_name and tax_name passed.
-        If item_name and tax_name are not passed, all items and taxes are returned.
-        """
-        items = self.get("items", {"name": item_name}) if item_name else self.items
-        taxes = (
-            self.get(self.FIELD_MAP.get("taxes"), {"name": tax_name})
-            if tax_name
-            else self.taxes
+        tax.base_total = total_taxes + doc.get(field_map.get("total_taxable_value"))
+
+    setattr(doc, field_map.get("total_taxes"), total_taxes)
+
+
+def set_base_rounded_total(doc, field_map):
+    total = 0
+    for item in doc.items:
+        total += item.taxable_value
+
+    total += doc.get(field_map.get("total_taxes"))
+
+    setattr(doc, field_map.get("grand_total"), total)
+
+
+@frappe.whitelist()
+def get_item_tax_map(tax_templates, tax_accounts):
+    """
+    Parameters:
+        tax_templates (list): List of item tax templates used in the items
+        tax_accounts (list): List of tax accounts used in the taxes
+
+    Returns:
+        dict: A map of item_tax_template, tax_account and tax_rate
+
+    Sample Output:
+        {
+            'GST 18%,IGST - TC': 18.0
+            'GST 28%,IGST - TC': 28.0
+        }
+    """
+    tax_templates = frappe.parse_json(tax_templates)
+    tax_accounts = frappe.parse_json(tax_accounts)
+
+    if not tax_templates:
+        return {}
+
+    tax_rates = frappe.get_all(
+        "Item Tax Template Detail",
+        fields=("parent", "tax_type", "tax_rate"),
+        filters={
+            "parent": ("in", tax_templates),
+            "tax_type": ("in", tax_accounts),
+        },
+    )
+
+    return {f"{tax.parent},{tax.tax_type}": tax.tax_rate for tax in tax_rates}
+
+
+def get_rows_to_update(doc, field_map, item_name=None, tax_name=None):
+    """
+    Returns items and taxes to update based on item_name and tax_name passed.
+    If item_name and tax_name are not passed, all items and taxes are returned.
+    """
+    items = doc.get("items", {"name": item_name}) if item_name else doc.items
+    taxes = (
+        doc.get(field_map.get("taxes"), {"name": tax_name}) if tax_name else doc.taxes
+    )
+
+    return items, taxes
+
+
+def get_tax_amount(doc, item_wise_tax_rates, charge_type, field_map):
+    if isinstance(item_wise_tax_rates, str):
+        item_wise_tax_rates = json.loads(item_wise_tax_rates)
+
+    tax_amount = 0
+    for item in doc.items:
+        multiplier = (
+            item.get(field_map.get("qty"))
+            if charge_type == "On Item Quantity"
+            else item.taxable_value / 100
         )
+        tax_amount += flt(item_wise_tax_rates.get(item.name, 0)) * multiplier
 
-        return items, taxes
-
-    def get_tax_amount(self, item_wise_tax_rates, charge_type):
-        if isinstance(item_wise_tax_rates, str):
-            item_wise_tax_rates = json.loads(item_wise_tax_rates)
-
-        tax_amount = 0
-        for item in self.items:
-            multiplier = (
-                item.get(self.FIELD_MAP.get("qty"))
-                if charge_type == "On Item Quantity"
-                else item.taxable_value / 100
-            )
-            tax_amount += flt(item_wise_tax_rates.get(item.name, 0)) * multiplier
-
-        return tax_amount
+    return tax_amount
 
 
-class SubcontractingTaxesController(TaxesController):
-    def set_base_tax_amount_and_tax_total(self):
-        total_taxes = 0
+def validate_taxes(doc, field_map):
+    gst_accounts = get_all_gst_accounts(doc.get(field_map.get("company")))
+    for tax in doc.get(field_map.get("taxes")):
+        if not tax.tax_amount:
+            continue
 
-        round_off_accounts = get_round_off_applicable_accounts(self.company, [])
-        for tax in self.get(self.FIELD_MAP.get("taxes")):
-            tax_amount = self.get_tax_amount(tax.item_wise_tax_rates, tax.charge_type)
-
-            if tax.account_head in round_off_accounts:
-                tax_amount = round(tax_amount, 0)
-
-            total_taxes += tax_amount
-
-            setattr(tax, self.FIELD_MAP.get("tax_amount"), tax_amount)
-            tax.base_total = (
-                self.get(self.FIELD_MAP.get("total_taxable_value")) + total_taxes
-            )
-
-        setattr(self, self.FIELD_MAP.get("total_taxes"), total_taxes)
-
-    def set_base_rounded_total(self):
-        total = self.get(self.FIELD_MAP.get("total_taxable_value")) + self.get(
-            self.FIELD_MAP.get("total_taxes")
-        )
-
-        setattr(self, self.FIELD_MAP.get("grand_total"), total)
-
-    def set_total_taxable_value(self):
-        if self.doctype != "Stock Entry":
-            return
-        total = 0
-        for item in self.items:
-            total += item.taxable_value
-
-        self.total_taxable_value = total
-
-    def validate_taxes(self):
-        gst_accounts = get_all_gst_accounts(self.get(self.FIELD_MAP.get("company")))
-        for tax in self.get(self.FIELD_MAP.get("taxes")):
-            if not tax.base_tax_amount_after_discount_amount:
-                continue
-
-            if tax.account_head not in gst_accounts:
-                frappe.throw(
-                    _("Row #{0}: Only GST accounts are allowed in {1}.").format(
-                        tax.idx, self.doctype
-                    )
+        if tax.account_head not in gst_accounts:
+            frappe.throw(
+                _("Row #{0}: Only GST accounts are allowed in {1}.").format(
+                    tax.idx, doc.doctype
                 )
+            )
 
-    def set_taxable_value(self):
-        for item in self.items:
-            item.taxable_value = item.get(self.FIELD_MAP.get("amount"))
 
-    def validate_taxes_and_transaction(self):
-        self.validate_taxes()
-        validate_transaction(self)
+def set_taxable_value(doc, field_map):
+    for item in doc.items:
+        item.taxable_value = item.get(field_map.get("amount"))
 
-    def set_taxes_and_totals(self):
-        self.set_item_wise_tax_rates()
-        self.set_taxable_value()
-        self.set_total_taxable_value()
-        self.set_base_tax_amount_and_tax_total()
-        self.set_base_rounded_total()
+
+def validate_taxes_and_transaction(doc, field_map):
+    validate_taxes(doc, field_map)
+    validate_transaction(doc)
+
+
+def set_taxes_and_totals(doc, field_map):
+    set_item_wise_tax_rates(doc, field_map)
+    set_taxable_value(doc, field_map)
+    set_base_tax_amount_and_tax_total(doc, field_map)
+    set_base_rounded_total(doc, field_map)

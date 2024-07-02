@@ -228,6 +228,26 @@ doc_events = {
     "Sales Order Item": {
         "on_change": "india_compliance.gst_india.overrides.transaction.on_change_item",
     },
+    "Stock Entry": {
+        "onload": "india_compliance.gst_india.overrides.stock_entry.onload",
+        "before_validate": "india_compliance.gst_india.overrides.stock_entry.before_validate",
+        "validate": "india_compliance.gst_india.overrides.stock_entry.validate",
+        "before_save": "india_compliance.gst_india.overrides.stock_entry.before_save",
+        "before_submit": "india_compliance.gst_india.overrides.stock_entry.before_submit",
+    },
+    "Subcontracting Order": {
+        "before_validate": "india_compliance.gst_india.overrides.subcontracting_receipt.before_validate",
+        "validate": "india_compliance.gst_india.overrides.subcontracting_receipt.validate",
+        "before_save": "india_compliance.gst_india.overrides.subcontracting_receipt.before_save",
+        "before_submit": "india_compliance.gst_india.overrides.subcontracting_receipt.before_submit",
+    },
+    "Subcontracting Receipt": {
+        "onload": "india_compliance.gst_india.overrides.subcontracting_receipt.onload",
+        "before_validate": "india_compliance.gst_india.overrides.subcontracting_receipt.before_validate",
+        "validate": "india_compliance.gst_india.overrides.subcontracting_receipt.validate",
+        "before_save": "india_compliance.gst_india.overrides.subcontracting_receipt.before_save",
+        "before_submit": "india_compliance.gst_india.overrides.subcontracting_receipt.before_submit",
+    },
     "Supplier": {
         "validate": [
             "india_compliance.gst_india.overrides.supplier.validate",
@@ -367,13 +387,6 @@ override_doctype_class = {
     "Customize Form": (
         "india_compliance.audit_trail.overrides.customize_form.CustomizeForm"
     ),
-    "Subcontracting Receipt": (
-        "india_compliance.gst_india.overrides.subcontracting_receipt.SubcontractingReceipt"
-    ),
-    "Subcontracting Order": (
-        "india_compliance.gst_india.overrides.subcontracting_order.SubcontractingOrder"
-    ),
-    "Stock Entry": ("india_compliance.gst_india.overrides.stock_entry.StockEntry"),
 }
 
 

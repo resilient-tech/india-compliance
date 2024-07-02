@@ -69,12 +69,19 @@ india_compliance.taxes_controller = class TaxesController {
         if (!this.frm.doc.taxes || !this.frm.doc.taxes.length) return;
 
         await frappe.call({
-            doc: this.frm.doc,
-            method: "set_item_wise_tax_rates",
+            method: "india_compliance.gst_india.utils.taxes_controller.set_item_wise_tax_rates",
             args: {
+                doc: this.frm.doc,
+                field_map: this.FIELD_MAP,
                 item_name: item_name,
                 tax_name: tax_name,
+                is_client: true,
             },
+            callback: r => {
+                if (!r.exc) {
+                    this.frm.set_value("taxes", r.message);
+                }
+            }
         });
     }
 

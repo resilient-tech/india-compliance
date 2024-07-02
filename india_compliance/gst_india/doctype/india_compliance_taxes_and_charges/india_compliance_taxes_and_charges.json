@@ -16,7 +16,7 @@
   "rate",
   "gst_tax_type",
   "column_break_pipk",
-  "base_tax_amount_after_discount_amount",
+  "tax_amount",
   "base_total",
   "item_wise_tax_rates"
  ],
@@ -73,11 +73,11 @@
   },
   {
    "columns": 2,
-   "fieldname": "base_tax_amount_after_discount_amount",
+   "fieldname": "tax_amount",
    "fieldtype": "Currency",
    "in_list_view": 1,
    "label": "Amount",
-   "oldfieldname": "tax_amount",
+   "oldfieldname": "base_tax_amount_after_discount_amount",
    "oldfieldtype": "Currency",
    "options": "INR"
   },

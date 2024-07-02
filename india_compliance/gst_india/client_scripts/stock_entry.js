@@ -1,7 +1,7 @@
 frappe.provide("india_compliance");
 
 setup_e_waybill_actions("Stock Entry");
-const FIELD_MAP = { tax_amount: "base_tax_amount_after_discount_amount" };
+const FIELD_MAP = { tax_amount: "tax_amount", taxes: "taxes" };
 
 frappe.ui.form.on("Stock Entry", {
     setup(frm) {
