@@ -139,8 +139,14 @@ class GSTTransactionData:
             self.transaction_details.rounding_adjustment = self.rounded(
                 self.transaction_details.rounding_adjustment + other_charges
             )
-        else:
+
+        elif other_charges > 0:
             self.transaction_details.other_charges = self.rounded(other_charges)
+
+        else:
+            self.transaction_details.discount_amount = self.rounded(
+                abs(other_charges) + self.transaction_details.discount_amount
+            )
 
     def validate_mode_of_transport(self, throw=True):
         def _throw(error):
