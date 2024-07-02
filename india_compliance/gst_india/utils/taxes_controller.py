@@ -171,9 +171,9 @@ class TaxesController:
 
 class SubcontractingTaxesController(TaxesController):
     def set_base_tax_amount_and_tax_total(self):
-        total_taxes = self.calculate_total_taxable_value()
-        round_off_accounts = get_round_off_applicable_accounts(self.company, [])
+        total_taxes = 0
 
+        round_off_accounts = get_round_off_applicable_accounts(self.company, [])
         for tax in self.get(self.FIELD_MAP.get("taxes")):
             tax_amount = self.get_tax_amount(tax.item_wise_tax_rates, tax.charge_type)
 
@@ -182,24 +182,28 @@ class SubcontractingTaxesController(TaxesController):
 
             total_taxes += tax_amount
 
-            tax.base_tax_amount_after_discount_amount = tax_amount
-            tax.base_total = total_taxes
+            setattr(self, self.FIELD_MAP.get("tax_amount"), tax_amount)
+            tax.base_total = (
+                self.get(self.FIELD_MAP.get("total_taxable_value")) + total_taxes
+            )
 
         setattr(self, self.FIELD_MAP.get("total_taxes"), total_taxes)
 
     def set_base_rounded_total(self):
-        total = self.calculate_total_taxable_value() + self.get(
+        total = self.get(self.FIELD_MAP.get("total_taxable_value")) + self.get(
             self.FIELD_MAP.get("total_taxes")
         )
 
         setattr(self, self.FIELD_MAP.get("grand_total"), total)
 
-    def calculate_total_taxable_value(self):
+    def set_total_taxable_value(self):
+        if self.doctype != "Stock Entry":
+            return
         total = 0
         for item in self.items:
             total += item.taxable_value
 
-        return total
+        self.total_taxable_value = total
 
     def validate_taxes(self):
         gst_accounts = get_all_gst_accounts(self.get(self.FIELD_MAP.get("company")))
@@ -225,5 +229,6 @@ class SubcontractingTaxesController(TaxesController):
     def set_taxes_and_totals(self):
         self.set_item_wise_tax_rates()
         self.set_taxable_value()
+        self.set_total_taxable_value()
         self.set_base_tax_amount_and_tax_total()
         self.set_base_rounded_total()

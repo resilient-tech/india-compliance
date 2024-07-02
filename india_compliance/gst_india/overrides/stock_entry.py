@@ -17,6 +17,8 @@ class StockEntry(_StockEntry, SubcontractingTaxesController):
         "qty": "qty",
         "grand_total": "base_rounded_total",
         "company": "company",
+        "total_taxable_value": "total_taxable_value",
+        "tax_amount": "base_tax_amount_after_discount_amount",
     }
 
     def onload(self):

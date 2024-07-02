@@ -6,6 +6,8 @@ const SUBCONTRACTING_DOCTYPE_ITEMS = [
     "Subcontracting Receipt Item",
 ];
 
+const FIELD_MAP = { tax_amount: "base_tax_amount_after_discount_amount" };
+
 india_compliance.taxes_controller = class TaxesController {
     constructor(frm) {
         this.frm = frm;
@@ -136,16 +138,17 @@ india_compliance.taxes_controller = class TaxesController {
             }
 
             // update if tax amount is changed manually
-            if (tax_amount !== row.tax_amount) {
-                row.tax_amount = tax_amount;
+            if (tax_amount !== row[FIELD_MAP.tax_amount]) {
+                row[FIELD_MAP.tax_amount] = tax_amount;
             }
 
             if (
                 frappe.flags.round_off_applicable_accounts?.includes(row.account_head)
             ) {
-                row.tax_amount = Math.round(row.tax_amount);
+                row[FIELD_MAP.tax_amount] = Math.round(
+                    row[FIELD_MAP.tax_amount]
+                );
             }
-            row.base_tax_amount_after_discount_amount = row.tax_amount;
         });
         this.update_total_amount();
         this.update_total_taxes();
@@ -154,7 +157,7 @@ india_compliance.taxes_controller = class TaxesController {
     update_total_amount() {
         const total_taxable_value = this.calculate_total_taxable_value();
         this.frm.doc.taxes.reduce((total, row) => {
-            const total_amount = total + row.tax_amount;
+            const total_amount = total + row[FIELD_MAP.tax_amount];
             row.base_total = total_amount;
 
             return total_amount;
@@ -193,7 +196,7 @@ india_compliance.taxes_controller = class TaxesController {
 
     update_total_taxes() {
         const total_taxes = this.frm.doc.taxes.reduce(
-            (total, row) => total + row.tax_amount,
+            (total, row) => total + row[FIELD_MAP.tax_amount],
             0
         );
         this.frm.set_value("total_taxes", total_taxes);
@@ -236,12 +239,12 @@ for (const doctype of SUBCONTRACTING_DOCTYPE_ITEMS) {
         },
 
         qty(frm, cdt, cdn) {
-            frm.taxes_controller.update_taxable_value(cdt, cdn);
+            frm.taxes_controller.update_item_taxable_value(cdt, cdn);
             frm.taxes_controller.update_tax_amount();
         },
 
         item_code(frm, cdt, cdn) {
-            frm.taxes_controller.update_taxable_value(cdt, cdn);
+            frm.taxes_controller.update_item_taxable_value(cdt, cdn);
             frm.taxes_controller.update_tax_amount();
         },
     });
