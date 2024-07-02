@@ -31,8 +31,8 @@
             "sgstValue": 0,
             "igstValue": 0,
             "cessValue": 0,
-            "TotNonAdvolVal": 0,
-            "OthValue": 0.0,
+            "cessNonAdvolValue": 0,
+            "otherValue": 0.0,
             "totInvValue": 100.0,
             "transMode": 1,
             "transDistance": 10,
@@ -74,8 +74,8 @@
             "is_in_state": 1
         },
         "request_data": {
-            "OthValue": 0.0,
-            "TotNonAdvolVal": 0,
+            "otherValue": 0.0,
+            "cessNonAdvolValue": 0,
             "actFromStateCode": 24,
             "actToStateCode": 24,
             "cessValue": 0,
@@ -260,8 +260,8 @@
             "sgstValue": 0.91,
             "igstValue": 0,
             "cessValue": 0,
-            "TotNonAdvolVal": 0,
-            "OthValue": -0.02,
+            "cessNonAdvolValue": 0,
+            "otherValue": -0.02,
             "totInvValue": 17.0,
             "transMode": 1,
             "transDistance": 1,
@@ -337,8 +337,8 @@
             "sgstValue": 0.91,
             "igstValue": 0,
             "cessValue": 0,
-            "TotNonAdvolVal": 0,
-            "OthValue": -0.02,
+            "cessNonAdvolValue": 0,
+            "otherValue": -0.02,
             "totInvValue": 17.0,
             "transMode": 1,
             "transDistance": 1,
@@ -515,8 +515,8 @@
             "sub_supply_type": "Exhibition or Fairs"
         },
         "request_data": {
-            "OthValue": 0.0,
-            "TotNonAdvolVal": 0,
+            "otherValue": 0.0,
+            "cessNonAdvolValue": 0,
             "actFromStateCode": 24,
             "actToStateCode": 24,
             "cessValue": 0,
@@ -588,8 +588,8 @@
             "sub_supply_type": "Job Work Returns"
         },
         "request_data": {
-            "OthValue": 0.0,
-            "TotNonAdvolVal": 0,
+            "otherValue": 0.0,
+            "cessNonAdvolValue": 0,
             "actFromStateCode": 24,
             "actToStateCode": 24,
             "cessValue": 0,
@@ -661,8 +661,8 @@
             "sub_supply_type": "Job Work"
         },
         "request_data": {
-            "OthValue": 0.0,
-            "TotNonAdvolVal": 0,
+            "otherValue": 0.0,
+            "cessNonAdvolValue": 0,
             "actFromStateCode": 24,
             "actToStateCode": 24,
             "cessValue": 0,
@@ -735,8 +735,8 @@
             "sub_supply_type": "For Own Use"
         },
         "request_data": {
-            "OthValue": 0.0,
-            "TotNonAdvolVal": 0,
+            "otherValue": 0.0,
+            "cessNonAdvolValue": 0,
             "actFromStateCode": 24,
             "actToStateCode": 24,
             "cessValue": 0,
@@ -808,8 +808,8 @@
             "is_in_state_rcm": 1
         },
         "request_data": {
-            "OthValue": 0.0,
-            "TotNonAdvolVal": 0,
+            "otherValue": 0.0,
+            "cessNonAdvolValue": 0,
             "actFromStateCode": 24,
             "actToStateCode": 24,
             "cessValue": 0,
@@ -880,8 +880,8 @@
             "is_in_state": 1
         },
         "request_data": {
-            "OthValue": 0.0,
-            "TotNonAdvolVal": 0,
+            "otherValue": 0.0,
+            "cessNonAdvolValue": 0,
             "actFromStateCode": 24,
             "actToStateCode": 24,
             "cessValue": 0,
@@ -952,8 +952,8 @@
             "is_in_state": 1
         },
         "request_data": {
-            "OthValue": 0.0,
-            "TotNonAdvolVal": 0,
+            "otherValue": 0.0,
+            "cessNonAdvolValue": 0,
             "actFromStateCode": 24,
             "actToStateCode": 24,
             "cessValue": 0,
@@ -1020,8 +1020,8 @@
             "vehicle_no": "GJ07DL9009"
         },
         "request_data": {
-            "OthValue": 0.0,
-            "TotNonAdvolVal": 0,
+            "otherValue": 0.0,
+            "cessNonAdvolValue": 0,
             "actFromStateCode": 24,
             "actToStateCode": 24,
             "cessValue": 0,
