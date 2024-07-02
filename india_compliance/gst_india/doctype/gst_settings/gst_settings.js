@@ -3,9 +3,13 @@
 
 frappe.ui.form.on("GST Settings", {
     setup(frm) {
-        ["cgst_account", "sgst_account", "igst_account", "cess_account"].forEach(
-            field => filter_accounts(frm, field)
-        );
+        [
+            "cgst_account",
+            "sgst_account",
+            "igst_account",
+            "cess_account",
+            "cess_non_advol_account",
+        ].forEach(field => filter_accounts(frm, field));
 
         const company_query = {
             filters: {
