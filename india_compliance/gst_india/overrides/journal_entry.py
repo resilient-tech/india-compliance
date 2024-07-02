@@ -13,6 +13,8 @@ def before_validate(doc, method=None):
         return
 
     gst_tax_account_map = get_gst_account_gst_tax_type_map()
+    if not gst_tax_account_map:
+        frappe.throw(_("Please set GST Accounts in GST Settings"))
 
     for tax in doc.accounts:
         # Setting as None if not GST Account
