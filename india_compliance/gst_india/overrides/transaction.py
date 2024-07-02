@@ -543,7 +543,14 @@ class GSTAccounts:
                 indicator="orange",
             )
 
-<<<<<<< HEAD
+    def _get_matched_idx(self, rows_to_search, tax_types):
+        return next(
+            (row.idx for row in rows_to_search if row.gst_tax_type in tax_types), None
+        )
+
+    def _throw(self, message, title=None):
+        frappe.throw(message, title=title or _("Invalid GST Account"))
+
 
 def validate_tax_accounts_for_non_gst(doc):
     """GST Tax Accounts should not be charged for Non GST Items"""
@@ -557,27 +564,6 @@ def validate_tax_accounts_for_non_gst(doc):
                 ),
                 title=_("Invalid Taxes"),
             )
-
-
-def validate_charge_type_for_cess_non_advol_accounts(tax_row):
-    if tax_row.charge_type == "On Item Quantity" and (
-        tax_row.gst_tax_type not in ("cess_non_advol", "cess_non_advol_rcm")
-    ):
-        frappe.throw(
-            _(
-                "Row #{0}: Charge Type cannot be <strong>On Item Quantity</strong>"
-                " as it is not a Cess Non Advol Account"
-            ).format(tax_row.idx),
-            title=_("Invalid Charge Type"),
-=======
-    def _get_matched_idx(self, rows_to_search, tax_types):
-        return next(
-            (row.idx for row in rows_to_search if row.gst_tax_type in tax_types), None
->>>>>>> 7458c971 (feat: RCM for Sales Transaction (#2063))
-        )
-
-    def _throw(self, message, title=None):
-        frappe.throw(message, title=title or _("Invalid GST Account"))
 
 
 def validate_items(doc, throw):
