@@ -1,10 +1,5 @@
 frappe.provide("india_compliance");
-
-const SUBCONTRACTING_DOCTYPE_ITEMS = [
-    "Stock Entry Detail",
-    "Subcontracting Order Item",
-    "Subcontracting Receipt Item",
-];
+frappe.provide("india_compliance.taxes_controller_events");
 
 india_compliance.taxes_controller = class TaxesController {
     constructor(frm, field_map) {
@@ -195,27 +190,26 @@ india_compliance.taxes_controller = class TaxesController {
 
 };
 
-for (const doctype of SUBCONTRACTING_DOCTYPE_ITEMS) {
-    frappe.ui.form.on(doctype, {
-        async item_tax_template(frm, cdt, cdn) {
-            const row = locals[cdt][cdn];
-            if (!row.item_tax_template)
-                frm.taxes_controller.update_item_wise_tax_rates();
-            else await frm.taxes_controller.set_item_wise_tax_rates(cdn);
-            frm.taxes_controller.update_tax_amount();
-        },
+Object.assign(india_compliance.taxes_controller_events, {
+    async item_tax_template(frm, cdt, cdn) {
+        const row = locals[cdt][cdn];
+        if (!row.item_tax_template)
+            frm.taxes_controller.update_item_wise_tax_rates();
+        else await frm.taxes_controller.set_item_wise_tax_rates(cdn);
+        frm.taxes_controller.update_tax_amount();
+    },
 
-        qty(frm, cdt, cdn) {
-            frm.taxes_controller.update_item_taxable_value(cdt, cdn);
-            frm.taxes_controller.update_tax_amount();
-        },
+    qty(frm, cdt, cdn) {
+        frm.taxes_controller.update_item_taxable_value(cdt, cdn);
+        frm.taxes_controller.update_tax_amount();
+    },
 
-        item_code(frm, cdt, cdn) {
-            frm.taxes_controller.update_item_taxable_value(cdt, cdn);
-            frm.taxes_controller.update_tax_amount();
-        },
-    });
-}
+    item_code(frm, cdt, cdn) {
+        frm.taxes_controller.update_item_taxable_value(cdt, cdn);
+        frm.taxes_controller.update_tax_amount();
+    },
+});
+
 
 frappe.ui.form.on("India Compliance Taxes and Charges", {
     rate(frm, cdt, cdn) {
