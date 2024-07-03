@@ -1,5 +1,9 @@
 import frappe
 
+from india_compliance.gst_india.constants.e_waybill import (
+    SO_SR_FIELD_MAP,
+    STOCK_ENTRY_FIELD_MAP,
+)
 from india_compliance.gst_india.utils import is_api_enabled
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 from india_compliance.gst_india.utils.taxes_controller import (
@@ -7,16 +11,6 @@ from india_compliance.gst_india.utils.taxes_controller import (
     update_gst_details,
     validate_taxes_and_transaction,
 )
-
-FIELD_MAP = {
-    "taxes": "taxes",
-    "amount": "amount",
-    "total_taxes": "total_taxes",
-    "qty": "qty",
-    "grand_total": "base_rounded_total",
-    "company": "company",
-    "total_taxable_value": "total",
-}
 
 
 def onload(doc, method=None):
@@ -44,8 +38,14 @@ def before_submit(doc, method=None):
 
 
 def before_validate(doc, method=None):
-    set_taxes_and_totals(doc, FIELD_MAP)
+    field_map = (
+        STOCK_ENTRY_FIELD_MAP if doc.doctype == "Stock Entry" else SO_SR_FIELD_MAP
+    )
+    set_taxes_and_totals(doc, field_map)
 
 
 def validate(doc, method=None):
-    validate_taxes_and_transaction(doc, FIELD_MAP)
+    field_map = (
+        STOCK_ENTRY_FIELD_MAP if doc.doctype == "Stock Entry" else SO_SR_FIELD_MAP
+    )
+    validate_taxes_and_transaction(doc, field_map)
