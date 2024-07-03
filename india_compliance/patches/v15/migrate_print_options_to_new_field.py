@@ -2,6 +2,9 @@ import frappe
 
 
 def execute():
+    if not frappe.db.has_column("Company Print Options", "autofield"):
+        return
+
     doc = frappe.qb.DocType("Company Print Options")
 
     (
