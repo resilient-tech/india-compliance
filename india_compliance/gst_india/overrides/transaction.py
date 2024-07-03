@@ -344,6 +344,7 @@ class GSTAccounts:
             self.doc.company,
             for_sales=self.is_sales_transaction,
             for_purchase=not self.is_sales_transaction,
+            throw=False,
         )
 
         self.first_gst_idx = self._get_matched_idx(self.gst_tax_rows, TAX_TYPES)
