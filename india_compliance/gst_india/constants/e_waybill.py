@@ -97,22 +97,3 @@ TRANSIT_TYPES = {"Road": "R", "Warehouse": "W", "Others": "O"}
 CONSIGNMENT_STATUS = {"In Movement": "M", "In Transit": "T"}
 
 ITEM_LIMIT = 250
-
-SUBCONTRACTING_FIELD_MAP = {
-    "taxes": "taxes",
-    "amount": "amount",
-    "total_taxes": "total_taxes",
-    "qty": "qty",
-    "grand_total": "base_rounded_total",
-    "company": "company",
-}
-
-STOCK_ENTRY_FIELD_MAP = {
-    **SUBCONTRACTING_FIELD_MAP,
-    "total_taxable_value": "total_taxable_value",
-}
-
-SO_SR_FIELD_MAP = {
-    **SUBCONTRACTING_FIELD_MAP,
-    "total_taxable_value": "total",
-}

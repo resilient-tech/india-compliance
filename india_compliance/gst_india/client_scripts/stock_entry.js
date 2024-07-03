@@ -1,7 +1,6 @@
 frappe.provide("india_compliance");
 
 setup_e_waybill_actions("Stock Entry");
-const FIELD_MAP = { tax_amount: "tax_amount", taxes: "taxes" };
 
 frappe.ui.form.on("Stock Entry", {
     setup(frm) {
@@ -17,7 +16,7 @@ frappe.ui.form.on("Stock Entry", {
     },
 
     onload(frm) {
-        frm.taxes_controller = new india_compliance.taxes_controller(frm, FIELD_MAP);
+        frm.taxes_controller = new india_compliance.taxes_controller(frm, {"total_taxable_value": "total_taxable_value"});
     },
 
     refresh(frm) {

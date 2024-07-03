@@ -1,7 +1,5 @@
 setup_e_waybill_actions("Subcontracting Receipt");
 
-const FIELD_MAP = { tax_amount: "tax_amount" };
-
 frappe.ui.form.on("Subcontracting Receipt", {
     setup(frm) {
         frm.set_query("taxes_and_charges", function () {
@@ -14,7 +12,7 @@ frappe.ui.form.on("Subcontracting Receipt", {
         });
     },
     onload(frm) {
-        frm.taxes_controller = new india_compliance.taxes_controller(frm, FIELD_MAP);
+        frm.taxes_controller = new india_compliance.taxes_controller(frm, {"total_taxable_value": "total"});
     },
 
     refresh(frm) {

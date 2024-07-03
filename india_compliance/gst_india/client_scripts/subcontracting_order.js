@@ -1,5 +1,3 @@
-const FIELD_MAP = { tax_amount: "tax_amount" };
-
 frappe.ui.form.on("Subcontracting Order", {
     setup(frm) {
         frm.set_query("taxes_and_charges", function () {
@@ -12,7 +10,7 @@ frappe.ui.form.on("Subcontracting Order", {
         });
     },
     onload(frm) {
-        frm.taxes_controller = new india_compliance.taxes_controller(frm, FIELD_MAP);
+        frm.taxes_controller = new india_compliance.taxes_controller(frm, {"total_taxable_value": "total"});
     },
 
     taxes_and_charges(frm) {

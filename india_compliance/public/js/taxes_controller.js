@@ -9,8 +9,8 @@ const SUBCONTRACTING_DOCTYPE_ITEMS = [
 india_compliance.taxes_controller = class TaxesController {
     constructor(frm, field_map) {
         this.frm = frm;
+        this.field_map = field_map || {};
         this.setup();
-        this.FIELD_MAP = field_map;
     }
 
     setup() {
@@ -57,32 +57,13 @@ india_compliance.taxes_controller = class TaxesController {
         });
     }
 
-    async set_item_wise_tax_rates(item_name, tax_name) {
-        /**
-         * This method is used to set item wise tax rates from the server
-         * and update the item_wise_tax_rates field in the taxes table.
-         *
-         * @param {string} item_name - Item row name for which the tax rates are to be fetched.
-         * @param {string} tax_name - Tax row name for which the tax rates are to be fetched.
-         */
-
-        if (!this.frm.doc.taxes || !this.frm.doc.taxes.length) return;
-
-        await frappe.call({
-            method: "india_compliance.gst_india.utils.taxes_controller.set_item_wise_tax_rates",
-            args: {
-                doc: this.frm.doc,
-                field_map: this.FIELD_MAP,
-                item_name: item_name,
-                tax_name: tax_name,
-                is_client: true,
-            },
-            callback: r => {
-                if (!r.exc) {
-                    this.frm.set_value("taxes", r.message);
-                }
-            }
-        });
+    async process_tax_rate_update(cdt, cdn) {
+        const row = locals[cdt][cdn];
+        if (!row.charge_type || row.charge_type === "Actual") row.rate = 0;
+        else {
+            this.update_item_wise_tax_rates(row);
+            await this.update_tax_amount(cdt, cdn);
+        }
     }
 
     update_item_wise_tax_rates(tax_row) {
@@ -110,102 +91,25 @@ india_compliance.taxes_controller = class TaxesController {
         });
     }
 
-    async update_tax_rate(cdt, cdn) {
-        const row = locals[cdt][cdn];
-        if (!row.charge_type || row.charge_type === "Actual") row.rate = 0;
-        else {
-            this.update_item_wise_tax_rates(row);
-            await this.update_tax_amount(cdt, cdn);
-        }
-    }
-
-    async update_tax_amount(cdt, cdn) {
+    async set_item_wise_tax_rates(item_name, tax_name) {
         /**
-         * This method is used to update the tax amount in the tax row
-         * - Update for all tax rows when cdt is null.
-         * - Update for a single tax row when cdt and cdn are passed.
+         * This method is used to set item wise tax rates from the server
+         * and update the item_wise_tax_rates field in the taxes table.
          *
-         * @param {string} cdt - DocType of the tax row.
-         * @param {string} cdn - Name of the tax row.
+         * @param {string} item_name - Item row name for which the tax rates are to be fetched.
+         * @param {string} tax_name - Tax row name for which the tax rates are to be fetched.
          */
-        let taxes;
-        if (cdt) taxes = [locals[cdt][cdn]];
-        else taxes = this.frm.doc.taxes;
-        taxes.forEach(async row => {
-            if (!row.charge_type || row.charge_type === "Actual") return;
 
-            let tax_amount = 0;
+        if (!this.frm.doc.taxes || !this.frm.doc.taxes.length) return;
 
-            if (row.charge_type === "On Net Total") {
-                tax_amount = this.get_tax_on_net_total(row);
-            }
-            if (row.charge_type == "On Item Quantity") {
-                tax_amount = this.get_tax_on_item_quantity(row);
-            }
-
-            // update if tax amount is changed manually
-            if (tax_amount !== row[this.FIELD_MAP.tax_amount]) {
-                row[this.FIELD_MAP.tax_amount] = tax_amount;
-            }
-
-            if (
-                frappe.flags.round_off_applicable_accounts?.includes(row.account_head)
-            ) {
-                row[this.FIELD_MAP.tax_amount] = Math.round(
-                    row[this.FIELD_MAP.tax_amount]
-                );
-            }
+        await frappe.call({
+            method: "india_compliance.gst_india.utils.taxes_controller.set_item_wise_tax_rates",
+            args: {
+                doc: this.frm.doc,
+                item_name: item_name,
+                tax_name: tax_name,
+            },
         });
-        this.update_total_amount();
-        this.update_total_taxes();
-    }
-
-    update_total_amount() {
-        const total_taxable_value = this.calculate_total_taxable_value();
-        this.frm.doc.taxes.reduce((total, row) => {
-            const total_amount = total + row[this.FIELD_MAP.tax_amount];
-            row.base_total = total_amount;
-
-            return total_amount;
-        }, total_taxable_value);
-
-        this.frm.refresh_field("taxes");
-    }
-
-    get_tax_on_net_total(tax_row) {
-        /**
-         * This method is used to calculate the tax amount on net total
-         * based on the item wise tax rates.
-         *
-         * @param {object} tax_row - Tax row object.
-         */
-
-        const item_wise_tax_rates = JSON.parse(tax_row.item_wise_tax_rates || "{}");
-        return this.frm.doc.items.reduce((total, item) => {
-            return total + (item.taxable_value * item_wise_tax_rates[item.name]) / 100;
-        }, 0);
-    }
-
-    get_tax_on_item_quantity(tax_row) {
-        /**
-         * This method is used to calculate the tax amount on item quntity (cess non advol)
-         * based on the item wise tax rates and item quantity.
-         *
-         * @param {object} tax_row - Tax row object.
-         */
-
-        const item_wise_tax_rates = JSON.parse(tax_row.item_wise_tax_rates || "{}");
-        return this.frm.doc.items.reduce((total, item) => {
-            return total + item.qty * item_wise_tax_rates[item.name];
-        }, 0);
-    }
-
-    update_total_taxes() {
-        const total_taxes = this.frm.doc.taxes.reduce(
-            (total, row) => total + row[this.FIELD_MAP.tax_amount],
-            0
-        );
-        this.frm.set_value("total_taxes", total_taxes);
     }
 
     update_item_taxable_value(cdt, cdn) {
@@ -227,11 +131,68 @@ india_compliance.taxes_controller = class TaxesController {
         row.taxable_value = amount;
     }
 
+    async update_tax_amount() {
+        /**
+         * This method is used to update the tax amount in the tax rows
+         */
+
+        let total_taxes = 0;
+        const total_taxable_value = this.calculate_total_taxable_value();
+
+        this.frm.doc.taxes.forEach(async row => {
+            if (!row.charge_type || row.charge_type === "Actual") return;
+
+            row.tax_amount = this.get_tax_amount(row);
+
+            if (frappe.flags.round_off_applicable_accounts?.includes(row.account_head))
+                row.tax_amount = Math.round(row.tax_amount);
+
+            total_taxes += row.tax_amount;
+            row.base_total = total_taxes + total_taxable_value;
+        });
+
+        this.frm.set_value(this.get_fieldname("total_taxes"), total_taxes);
+        this.update_base_rounded_total();
+        this.frm.refresh_field("taxes");
+    }
+
+    update_base_rounded_total() {
+        const grand_total = this.calculate_total_taxable_value() + this.get_value("total_taxes");
+        this.frm.set_value(this.get_fieldname("base_rounded_total"), grand_total);
+    }
+
+    get_tax_amount(tax_row) {
+        /**
+         * Calculate tax amount based on the charge type.
+         */
+
+        const item_wise_tax_rates = JSON.parse(tax_row.item_wise_tax_rates || "{}");
+        return this.frm.doc.items.reduce((total, item) => {
+            let multiplier = item.charge_type === "On Item Quantity" ? item.qty : item.taxable_value / 100;
+            return total + (multiplier * item_wise_tax_rates[item.name]);
+        }, 0);
+    }
+
     calculate_total_taxable_value() {
         return this.frm.doc.items.reduce((total, item) => {
             return total + item.taxable_value;
         }, 0);
     }
+
+    get_value(field, doc, default_value) {
+        if (!default_value) default_value = 0;
+        doc = doc || this.frm.doc;
+
+        if (this.field_map[field])
+            return doc[this.field_map[field]] || default_value;
+
+        return doc[field] || default_value;
+    }
+
+    get_fieldname(field) {
+        return this.field_map[field] || field;
+    }
+
 };
 
 for (const doctype of SUBCONTRACTING_DOCTYPE_ITEMS) {
@@ -258,7 +219,7 @@ for (const doctype of SUBCONTRACTING_DOCTYPE_ITEMS) {
 
 frappe.ui.form.on("India Compliance Taxes and Charges", {
     rate(frm, cdt, cdn) {
-        frm.taxes_controller.update_tax_rate(cdt, cdn);
+        frm.taxes_controller.process_tax_rate_update(cdt, cdn);
     },
 
     tax_amount(frm, cdt, cdn) {
