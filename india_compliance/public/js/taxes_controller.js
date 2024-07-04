@@ -61,6 +61,29 @@ india_compliance.taxes_controller = class TaxesController {
         }
     }
 
+    update_taxes() {
+        if (this.frm.doc.taxes_and_charges) {
+            return frappe.call({
+                method: "erpnext.controllers.accounts_controller.get_taxes_and_charges",
+                args: {
+                    master_doctype: frappe.meta.get_docfield(
+                        this.frm.doc.doctype,
+                        "taxes_and_charges",
+                        this.frm.doc.name
+                    ).options,
+                    master_name: this.frm.doc.taxes_and_charges,
+                },
+                callback: async (r) => {
+                    if (!r.exc) {
+                        this.frm.set_value("taxes", r.message);
+                        await this.set_item_wise_tax_rates();
+                        this.update_tax_amount();
+                    }
+                },
+            });
+        }
+    };
+
     update_item_wise_tax_rates(tax_row) {
         /**
          * This method is used to update the item_wise_tax_rates field in the taxes table when
@@ -209,6 +232,10 @@ Object.assign(india_compliance.taxes_controller_events, {
         frm.taxes_controller.update_item_taxable_value(cdt, cdn);
         frm.taxes_controller.update_tax_amount();
     },
+
+    items_remove(frm) {
+        frm.taxes_controller.update_tax_amount();
+    },
 });
 
 frappe.ui.form.on("India Compliance Taxes and Charges", {
@@ -237,24 +264,3 @@ frappe.ui.form.on("India Compliance Taxes and Charges", {
         }
     },
 });
-
-india_compliance.update_taxes = function (frm) {
-    if (frm.doc.taxes_and_charges) {
-        return frm.call({
-            method: "erpnext.controllers.accounts_controller.get_taxes_and_charges",
-            args: {
-                master_doctype: frappe.meta.get_docfield(
-                    frm.doc.doctype,
-                    "taxes_and_charges",
-                    frm.doc.name
-                ).options,
-                master_name: frm.doc.taxes_and_charges,
-            },
-            callback: function (r) {
-                if (!r.exc) {
-                    frm.set_value("taxes", r.message);
-                }
-            },
-        });
-    }
-};

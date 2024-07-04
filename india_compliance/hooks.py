@@ -230,16 +230,13 @@ doc_events = {
     },
     "Stock Entry": {
         "onload": "india_compliance.gst_india.overrides.subcontracting_transaction.onload",
-        "before_validate": "india_compliance.gst_india.overrides.subcontracting_transaction.before_validate",
         "validate": "india_compliance.gst_india.overrides.subcontracting_transaction.validate",
     },
     "Subcontracting Order": {
-        "before_validate": "india_compliance.gst_india.overrides.subcontracting_transaction.before_validate",
         "validate": "india_compliance.gst_india.overrides.subcontracting_transaction.validate",
     },
     "Subcontracting Receipt": {
         "onload": "india_compliance.gst_india.overrides.subcontracting_transaction.onload",
-        "before_validate": "india_compliance.gst_india.overrides.subcontracting_transaction.before_validate",
         "validate": "india_compliance.gst_india.overrides.subcontracting_transaction.validate",
     },
     "Supplier": {

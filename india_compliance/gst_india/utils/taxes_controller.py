@@ -24,7 +24,7 @@ class CustomItemGSTDetails(ItemGSTDetails):
         tax_details = frappe._dict()
         item_map = {}
 
-        for row in self.doc.items:
+        for row in self.doc.get("items"):
             key = row.name
             item_map[key] = row
             tax_details[key] = self.item_defaults.copy()
@@ -134,7 +134,7 @@ class CustomTaxController:
         return taxes
 
     def update_item_taxable_value(self):
-        for item in self.doc.items:
+        for item in self.doc.get("items"):
             item.taxable_value = self.get_value("amount", item)
 
     def update_tax_amount(self):
@@ -198,7 +198,9 @@ class CustomTaxController:
         If item_name and tax_name are not passed, all items and taxes are returned.
         """
         items = (
-            self.doc.get("items", {"name": item_name}) if item_name else self.doc.items
+            self.doc.get("items", {"name": item_name})
+            if item_name
+            else self.doc.get("items")
         )
         taxes = (
             self.doc.get("taxes", {"name": tax_name}) if tax_name else self.doc.taxes
@@ -211,7 +213,7 @@ class CustomTaxController:
             item_wise_tax_rates = json.loads(item_wise_tax_rates)
 
         tax_amount = 0
-        for item in self.doc.items:
+        for item in self.doc.get("items"):
             multiplier = (
                 item.qty
                 if charge_type == "On Item Quantity"
@@ -222,7 +224,7 @@ class CustomTaxController:
         return tax_amount
 
     def calculate_total_taxable_value(self):
-        return sum([item.taxable_value for item in self.doc.items])
+        return sum([item.taxable_value for item in self.doc.get("items")])
 
     def get_value(self, field, doc=None, default=0):
         doc = doc or self.doc

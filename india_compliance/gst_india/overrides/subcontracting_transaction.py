@@ -1,6 +1,7 @@
 import frappe
 
 from india_compliance.gst_india.overrides.transaction import (
+    ignore_gst_validations,
     set_gst_tax_type,
     validate_transaction,
 )
@@ -32,18 +33,18 @@ def onload(doc, method=None):
     doc.set_onload("e_waybill_info", get_e_waybill_info(doc))
 
 
-def before_validate(doc, method=None):
+def validate(doc, method=None):
+    if ignore_gst_validations(doc):
+        return
+
     field_map = (
         STOCK_ENTRY_FIELD_MAP
         if doc.doctype == "Stock Entry"
         else SUBCONTRACTING_ORDER_RECEIPT_FIELD_MAP
     )
-
-    set_gst_tax_type(doc)
     CustomTaxController(doc, field_map).set_taxes_and_totals()
 
-
-def validate(doc, method=None):
+    set_gst_tax_type(doc)
     validate_taxes(doc)
     validate_transaction(doc)
     update_gst_details(doc)
