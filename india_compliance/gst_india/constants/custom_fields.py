@@ -113,14 +113,6 @@ CUSTOM_FIELDS = {
     # Stock Entry: Tax Fields
     "Stock Entry": [
         {
-            "fieldname": "total_taxable_value",
-            "label": "Taxes",
-            "fieldtype": "Float",
-            "insert_after": "items",
-            "read_only": 1,
-            "hidden": 1,
-        },
-        {
             "fieldname": "section_break_taxes",
             "label": "Taxes",
             "fieldtype": "Section Break",
