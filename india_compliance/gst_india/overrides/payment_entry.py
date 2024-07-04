@@ -360,7 +360,7 @@ def get_advance_payment_entries_for_regional(
     taxes = get_taxes_summary(company, payment_entries)
 
     if not taxes:
-        return
+        return payment_entries
 
     for pe in payment_entries:
         tax_row = taxes.get(
