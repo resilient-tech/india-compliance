@@ -147,13 +147,14 @@ india_compliance.taxes_controller = class TaxesController {
         });
 
         this.frm.set_value(this.get_fieldname("total_taxes"), total_taxes);
-        this.update_base_rounded_total();
+        this.update_base_grand_total();
         this.frm.refresh_field("taxes");
     }
 
-    update_base_rounded_total() {
-        const grand_total = this.calculate_total_taxable_value() + this.get_value("total_taxes");
-        this.frm.set_value(this.get_fieldname("base_rounded_total"), grand_total);
+    update_base_grand_total() {
+        const grand_total =
+            this.calculate_total_taxable_value() + this.get_value("total_taxes");
+        this.frm.set_value(this.get_fieldname("base_grand_total"), grand_total);
     }
 
     get_tax_amount(tax_row) {
@@ -163,8 +164,11 @@ india_compliance.taxes_controller = class TaxesController {
 
         const item_wise_tax_rates = JSON.parse(tax_row.item_wise_tax_rates || "{}");
         return this.frm.doc.items.reduce((total, item) => {
-            let multiplier = item.charge_type === "On Item Quantity" ? item.qty : item.taxable_value / 100;
-            return total + (multiplier * item_wise_tax_rates[item.name]);
+            let multiplier =
+                item.charge_type === "On Item Quantity"
+                    ? item.qty
+                    : item.taxable_value / 100;
+            return total + multiplier * item_wise_tax_rates[item.name];
         }, 0);
     }
 
@@ -178,8 +182,7 @@ india_compliance.taxes_controller = class TaxesController {
         if (!default_value) default_value = 0;
         doc = doc || this.frm.doc;
 
-        if (this.field_map[field])
-            return doc[this.field_map[field]] || default_value;
+        if (this.field_map[field]) return doc[this.field_map[field]] || default_value;
 
         return doc[field] || default_value;
     }
@@ -187,14 +190,12 @@ india_compliance.taxes_controller = class TaxesController {
     get_fieldname(field) {
         return this.field_map[field] || field;
     }
-
 };
 
 Object.assign(india_compliance.taxes_controller_events, {
     async item_tax_template(frm, cdt, cdn) {
         const row = locals[cdt][cdn];
-        if (!row.item_tax_template)
-            frm.taxes_controller.update_item_wise_tax_rates();
+        if (!row.item_tax_template) frm.taxes_controller.update_item_wise_tax_rates();
         else await frm.taxes_controller.set_item_wise_tax_rates(cdn);
         frm.taxes_controller.update_tax_amount();
     },
@@ -209,7 +210,6 @@ Object.assign(india_compliance.taxes_controller_events, {
         frm.taxes_controller.update_tax_amount();
     },
 });
-
 
 frappe.ui.form.on("India Compliance Taxes and Charges", {
     rate(frm, cdt, cdn) {

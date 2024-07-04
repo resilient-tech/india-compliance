@@ -95,7 +95,7 @@ class CustomTaxController:
         """
         example_field_map = {
             "amount": "amount",
-            "base_rounded_total": "base_rounded_total",
+            "base_grand_total": "base_grand_total",
             "total_taxes": "total_taxes",
         }
         """
@@ -107,7 +107,7 @@ class CustomTaxController:
         self.set_item_wise_tax_rates()
         self.update_item_taxable_value()
         self.update_tax_amount()
-        self.update_base_rounded_total()
+        self.update_base_grand_total()
 
     def set_item_wise_tax_rates(self, item_name=None, tax_name=None):
         """
@@ -156,9 +156,9 @@ class CustomTaxController:
 
         setattr(self.doc, self.get_fieldname("total_taxes"), total_taxes)
 
-    def update_base_rounded_total(self):
+    def update_base_grand_total(self):
         total = self.calculate_total_taxable_value() + self.get_value("total_taxes")
-        setattr(self.doc, self.get_fieldname("base_rounded_total"), total)
+        setattr(self.doc, self.get_fieldname("base_grand_total"), total)
 
     @staticmethod
     def get_item_tax_map(tax_templates, tax_accounts):

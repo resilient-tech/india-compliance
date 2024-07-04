@@ -63,7 +63,7 @@ class GSTTransactionData:
 
         grand_total_fieldname = (
             "base_grand_total"
-            if self.doc.get("disable_rounded_total")
+            if self.doc.get("disable_rounded_total", 1)
             else "base_rounded_total"
         )
 
