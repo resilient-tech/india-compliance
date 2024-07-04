@@ -1575,7 +1575,7 @@ transporter_info_field = {
     "fieldname": "transporter_info",
     "label": "Transporter Info",
     "fieldtype": "Section Break",
-    "insert_after": "letter_head",
+    "insert_after": "remarks",
     "collapsible": 1,
     "collapsible_depends_on": "transporter",
     "print_hide": 1,
@@ -1590,24 +1590,11 @@ stock_entry_e_way_bill_field = [
     },
     {
         **transporter_info_field,
+        "insert_after": "letter_head",
         "depends_on": "eval:doc.purpose === 'Send to Subcontractor'",
     },
 ]
 
-subcontracting_receipt_e_way_bill_field = {
-    **sales_e_waybill_field,
-    "insert_after": "supplier_name",
-}
-
-subcontracting_order_e_way_bill_field = [
-    {
-        **sales_e_waybill_field,
-        "insert_after": "schedule_date",
-    },
-    {
-        **transporter_info_field,
-    },
-]
 
 E_WAYBILL_FIELDS = {
     "Sales Invoice": E_WAYBILL_INV_FIELDS
@@ -1618,9 +1605,10 @@ E_WAYBILL_FIELDS = {
     "Stock Entry": [*stock_entry_e_way_bill_field]
     + E_WAYBILL_SE_FIELDS
     + [e_waybill_status_field],
-    "Subcontracting Receipt": E_WAYBILL_SCR_FIELDS
-    + [e_waybill_status_field, subcontracting_receipt_e_way_bill_field],
-    "Subcontracting Order": [*subcontracting_order_e_way_bill_field]
-    + E_WAYBILL_SE_FIELDS
-    + [e_waybill_status_field],
+    "Subcontracting Receipt": [transporter_info_field]
+    + E_WAYBILL_SCR_FIELDS
+    + [
+        e_waybill_status_field,
+        purchase_e_waybill_field,
+    ],
 }
