@@ -16,7 +16,9 @@ frappe.ui.form.on("Stock Entry", {
     },
 
     onload(frm) {
-        frm.taxes_controller = new india_compliance.taxes_controller(frm, {"total_taxable_value": "total_taxable_value"});
+        frm.taxes_controller = new india_compliance.taxes_controller(frm, {
+            total_taxable_value: "total_taxable_value",
+        });
     },
 
     refresh(frm) {
@@ -64,3 +66,5 @@ frappe.ui.form.on("Stock Entry", {
         india_compliance.update_taxes(frm);
     },
 });
+
+frappe.ui.form.on("Stock Entry Detail", india_compliance.taxes_controller_events);

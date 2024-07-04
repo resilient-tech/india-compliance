@@ -12,7 +12,9 @@ frappe.ui.form.on("Subcontracting Receipt", {
         });
     },
     onload(frm) {
-        frm.taxes_controller = new india_compliance.taxes_controller(frm, {"total_taxable_value": "total"});
+        frm.taxes_controller = new india_compliance.taxes_controller(frm, {
+            total_taxable_value: "total",
+        });
     },
 
     refresh(frm) {
@@ -37,4 +39,7 @@ frappe.ui.form.on("Subcontracting Receipt", {
     },
 });
 
-frappe.ui.form.on("Subcontracting Receipt Item", india_compliance.taxes_controller_events);
+frappe.ui.form.on(
+    "Subcontracting Receipt Item",
+    india_compliance.taxes_controller_events
+);

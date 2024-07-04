@@ -1,6 +1,9 @@
 import frappe
 
-from india_compliance.gst_india.overrides.transaction import validate_transaction
+from india_compliance.gst_india.overrides.transaction import (
+    set_gst_tax_type,
+    validate_transaction,
+)
 from india_compliance.gst_india.utils import is_api_enabled
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 from india_compliance.gst_india.utils.taxes_controller import (
@@ -35,6 +38,8 @@ def before_validate(doc, method=None):
         if doc.doctype == "Stock Entry"
         else SUBCONTRACTING_ORDER_RECEIPT_FIELD_MAP
     )
+
+    set_gst_tax_type(doc)
     CustomTaxController(doc, field_map).set_taxes_and_totals()
 
 

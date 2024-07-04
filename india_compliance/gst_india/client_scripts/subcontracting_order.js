@@ -10,10 +10,17 @@ frappe.ui.form.on("Subcontracting Order", {
         });
     },
     onload(frm) {
-        frm.taxes_controller = new india_compliance.taxes_controller(frm, {"total_taxable_value": "total"});
+        frm.taxes_controller = new india_compliance.taxes_controller(frm, {
+            total_taxable_value: "total",
+        });
     },
 
     taxes_and_charges(frm) {
         india_compliance.update_taxes(frm);
     },
 });
+
+frappe.ui.form.on(
+    "Subcontracting Order Item",
+    india_compliance.taxes_controller_events
+);
