@@ -13,7 +13,6 @@ from india_compliance.gst_india.overrides.transaction import (
     ItemGSTTreatment,
 )
 from india_compliance.gst_india.utils import get_all_gst_accounts
-from india_compliance.gst_india.utils.__init__ import send_updated_doc
 
 
 class CustomItemGSTDetails(ItemGSTDetails):
@@ -86,7 +85,7 @@ def set_item_wise_tax_rates(doc, item_name=None, tax_name=None):
     doc = json.loads(doc, object_hook=frappe._dict)
     CustomTaxController(doc).set_item_wise_tax_rates(item_name, tax_name)
 
-    return send_updated_doc(doc)
+    frappe.response.docs.append(doc)
 
 
 class CustomTaxController:
