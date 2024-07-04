@@ -361,9 +361,6 @@ def get_advance_payment_entries_for_regional(
     company = frappe.db.get_value("Account", party_account, "company")
     taxes = get_taxes_summary(company, payment_entries)
 
-    if not taxes:
-        return
-
     for pe in payment_entries:
         tax_row = taxes.get(
             pe.reference_name,
