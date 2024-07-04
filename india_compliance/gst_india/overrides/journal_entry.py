@@ -4,8 +4,7 @@ from frappe import _
 from india_compliance.gst_india.overrides.transaction import (
     is_indian_registered_company,
 )
-from india_compliance.gst_india.utils import get_all_gst_accounts
-from india_compliance.gst_india.utils.__init__ import get_gst_account_gst_tax_type_map
+from india_compliance.gst_india.utils import get_gst_account_gst_tax_type_map
 
 
 def before_validate(doc, method=None):
@@ -14,7 +13,7 @@ def before_validate(doc, method=None):
 
     gst_tax_account_map = get_gst_account_gst_tax_type_map()
     if not gst_tax_account_map:
-        frappe.throw(_("Please set GST Accounts in GST Settings"))
+        return
 
     for tax in doc.accounts:
         # Setting as None if not GST Account
@@ -27,11 +26,11 @@ def validate(doc, method=None):
 
     # validate company_gstin
     contains_gst_account = False
-    gst_accounts = get_all_gst_accounts(doc.company)
     for row in doc.accounts:
-        if row.account in gst_accounts:
-            contains_gst_account = True
-            break
+        if not row.gst_tax_type:
+            continue
+        contains_gst_account = True
+        break
 
     if contains_gst_account:
         frappe.throw(_("Company GSTIN is mandatory if any GST account is present."))
