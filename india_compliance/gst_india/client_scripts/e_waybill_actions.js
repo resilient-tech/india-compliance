@@ -288,9 +288,9 @@ function show_generate_e_waybill_dialog(frm) {
                 api_enabled && frm.doc.doctype ? __("Download JSON") : null,
             secondary_action: api_enabled
                 ? () => {
-                    d.hide();
-                    json_action(d.get_values());
-                }
+                      d.hide();
+                      json_action(d.get_values());
+                  }
                 : null,
         },
         frm
@@ -377,7 +377,6 @@ function get_generate_e_waybill_dialog(opts, frm) {
                     ? frm.doc.gst_transporter_id
                     : "",
             onchange: () => validate_gst_transporter_id(d),
-
         },
         // Sub Supply Type will be visible here for Delivery Note
         {
@@ -435,8 +434,7 @@ function get_generate_e_waybill_dialog(opts, frm) {
 
     options = get_sub_suppy_type_options(frm);
 
-    if (options){
-
+    if (options) {
         // Inserted at the end of Part A section
         fields.splice(5, 0, {
             label: "Sub Supply Type",
@@ -482,10 +480,10 @@ function get_generate_e_waybill_dialog(opts, frm) {
 }
 
 function get_sub_suppy_type_options(frm) {
-    let options =[]
-    const same_gstin = frm.doc.billing_address_gstin == frm.doc.company_gstin;
+    let options = [];
 
     if (frm.doctype === "Delivery Note") {
+        const same_gstin = frm.doc.billing_address_gstin == frm.doc.company_gstin;
 
         if (frm.doc.is_return) {
             if (same_gstin) {
@@ -505,20 +503,15 @@ function get_sub_suppy_type_options(frm) {
                 options = ["Job Work", "SKD/CKD"];
             }
         }
-    }
-    if (frm.doctype === "Stock Entry") {
+    } else if (frm.doctype === "Stock Entry") {
         options = ["Job Work"];
-    }
-
-    if (frm.doctype === "Subcontracting Receipt") {
-
+    } else if (frm.doctype === "Subcontracting Receipt") {
         if (frm.doc.is_return) {
             options = ["Job Work"];
-            }
-        else {
-                options = ["Job Work Returns"];
-            }
+        } else {
+            options = ["Job Work Returns"];
         }
+    }
 
     return options;
 }
@@ -836,7 +829,7 @@ function show_update_transporter_dialog(frm) {
                 reqd: 1,
                 default:
                     frm.doc.gst_transporter_id &&
-                        frm.doc.gst_transporter_id.length == 15
+                    frm.doc.gst_transporter_id.length == 15
                         ? frm.doc.gst_transporter_id
                         : "",
                 onchange: () => validate_gst_transporter_id(d),
@@ -1187,7 +1180,9 @@ async function update_gst_tranporter_id(dialog) {
 }
 
 function validate_gst_transporter_id(dialog) {
-    india_compliance.validate_gst_transporter_id(dialog.get_value("gst_transporter_id"));
+    india_compliance.validate_gst_transporter_id(
+        dialog.get_value("gst_transporter_id")
+    );
 }
 
 function update_generation_dialog(dialog, doc) {

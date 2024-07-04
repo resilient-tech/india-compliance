@@ -9,7 +9,6 @@ frappe.ui.form.on("Stock Entry", {
             return {
                 filters: [
                     ["company", "=", frm.doc.company],
-                    ["docstatus", "!=", 2],
                 ],
             };
         });
@@ -32,7 +31,7 @@ frappe.ui.form.on("Stock Entry", {
         if (is_e_waybill_applicable(frm) && !is_e_waybill_generatable(frm))
             frappe.show_alert(
                 {
-                    message: __("E-Way Bill is not generatable for this transaction"),
+                    message: __("Supplier Address is required to create e-Waybill"),
                     indicator: "yellow",
                 },
                 10

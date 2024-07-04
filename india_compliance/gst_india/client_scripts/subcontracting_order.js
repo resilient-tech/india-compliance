@@ -4,7 +4,6 @@ frappe.ui.form.on("Subcontracting Order", {
             return {
                 filters: [
                     ["company", "=", frm.doc.company],
-                    ["docstatus", "!=", 2],
                 ],
             };
         });
