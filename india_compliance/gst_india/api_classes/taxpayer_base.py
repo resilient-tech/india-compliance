@@ -284,7 +284,7 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
 
         return response
 
-    def get(self, action, return_period, params=None, endpoint=None, otp=None):
+    def get(self, action, return_period=None, params=None, endpoint=None, otp=None):
         params = {"gstin": self.company_gstin, **(params or {})}
         return self._request("get", action, return_period, params, endpoint, None, otp)
 
@@ -360,12 +360,12 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
 
         return app_key
 
-    def download_files(self, return_period, token, otp=None):
+    def download_files(self, return_period, token, action, endpoint, otp=None):
         response = self.get(
-            "FILEDET",
+            action,
             return_period,
             params={"ret_period": return_period, "token": token},
-            endpoint="returns",
+            endpoint=endpoint,
             otp=otp,
         )
 

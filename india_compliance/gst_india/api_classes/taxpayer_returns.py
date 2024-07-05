@@ -19,6 +19,15 @@ class ReturnsAPI(TaxpayerBaseAPI):
         "RET2B1010": "authorization_failed",  # API Authorization Failed for 2B
     }
 
+    def get(self, action, return_period, params=None, endpoint=None, otp=None):
+        # override the get method from TaxpayerBaseAPI as return_period is mandatory for returns API
+        return super().get(action, return_period, params, endpoint, otp)
+
+    def download_files(self, return_period, token, otp=None):
+        return super().download_files(
+            return_period, token, action="FILEDET", endpoint="returns", otp=otp
+        )
+
 
 class GSTR2bAPI(ReturnsAPI):
     API_NAME = "GSTR-2B"
