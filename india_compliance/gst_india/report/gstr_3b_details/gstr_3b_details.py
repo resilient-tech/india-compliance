@@ -8,8 +8,6 @@ from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Extract, Ifnull, IfNull, LiteralValue, Sum
 from frappe.utils import cint, get_first_day, get_last_day
 
-from india_compliance.gst_india.utils import get_escaped_gst_accounts
-
 
 def execute(filters=None):
     if not filters.get("section"):
@@ -114,7 +112,6 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
         )
 
     def get_data(self):
-        self.gst_accounts = get_escaped_gst_accounts(self.company, "Input")
         purchase_data = self.get_itc_from_purchase()
         boe_data = self.get_itc_from_boe()
         journal_entry_data = self.get_itc_from_journal_entry()
@@ -189,7 +186,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                 Sum(
                     Case()
                     .when(
-                        boe_taxes.gst_tax_type == "cess",
+                        boe_taxes.gst_tax_type.isin(["cess", "cess_non_advol"]),
                         boe_taxes.tax_amount,
                     )
                     .else_(0)
@@ -224,7 +221,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                 Sum(
                     Case()
                     .when(
-                        journal_entry_account.account == self.gst_accounts.igst_account,
+                        journal_entry_account.gst_tax_type == "igst",
                         (-1 * journal_entry_account.credit_in_account_currency),
                     )
                     .else_(0)
@@ -232,7 +229,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                 Sum(
                     Case()
                     .when(
-                        journal_entry_account.account == self.gst_accounts.cgst_account,
+                        journal_entry_account.gst_tax_type == "cgst",
                         (-1 * journal_entry_account.credit_in_account_currency),
                     )
                     .else_(0)
@@ -240,7 +237,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                 Sum(
                     Case()
                     .when(
-                        journal_entry_account.account == self.gst_accounts.sgst_account,
+                        journal_entry_account.gst_tax_type == "sgst",
                         (-1 * journal_entry_account.credit_in_account_currency),
                     )
                     .else_(0)
@@ -248,7 +245,9 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                 Sum(
                     Case()
                     .when(
-                        journal_entry_account.account == self.gst_accounts.cess_account,
+                        journal_entry_account.gst_tax_type.isin(
+                            ["cess", "cess_non_advol"]
+                        ),
                         (-1 * journal_entry_account.credit_in_account_currency),
                     )
                     .else_(0)

@@ -458,16 +458,16 @@ class TestTransaction(FrappeTestCase):
         frappe.db.set_single_value("GST Settings", "enable_reverse_charge_in_sales", 1)
         doc = create_transaction(
             **self.transaction_details,
-            is_reverse_charge=1,
-            is_in_state=True,
+            is_in_state_rcm=True,
             do_not_save=True,
         )
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(r"^(.*since supply is under reverse charge.*)$"),
+            re.compile(r"^(Cannot use Reverse Charge Account.*)$"),
             doc.insert,
         )
+
         frappe.db.set_single_value("GST Settings", "enable_reverse_charge_in_sales", 0)
 
     def test_purchase_from_composition_dealer(self):
@@ -950,6 +950,9 @@ class TestRegionalOverrides(FrappeTestCase):
                 "Input Tax CGST RCM - _TIRC",
                 "Input Tax SGST RCM - _TIRC",
                 "Input Tax IGST RCM - _TIRC",
+                "Output Tax CGST RCM - _TIRC",
+                "Output Tax SGST RCM - _TIRC",
+                "Output Tax IGST RCM - _TIRC",
             ],
         )
 
