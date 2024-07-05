@@ -42,7 +42,6 @@ class GSTR3BReport(Document):
             self.report_dict["gstin"] = self.gst_details.get("gstin")
             self.report_dict["ret_period"] = get_period(self.month, self.year)
             self.month_no = get_period(self.month)
-            self.account_heads = self.get_account_heads()
 
             self.get_outward_supply_details("Sales Invoice")
             self.set_outward_taxable_supplies()
@@ -171,22 +170,40 @@ class GSTR3BReport(Document):
                     self.report_dict["itc_elg"]["itc_inelg"][1][key] += row[key]
 
     def update_itc_reversal_from_journal_entry(self):
-        reversal_entries = frappe.db.sql(
-            """
-            SELECT ja.account, j.ineligibility_reason, sum(credit_in_account_currency) as amount
-            FROM `tabJournal Entry` j, `tabJournal Entry Account` ja
-            where j.docstatus = 1
-            and j.is_opening = 'No'
-            and ja.parent = j.name
-            and j.voucher_type = 'Reversal Of ITC'
-            and month(j.posting_date) = %s and year(j.posting_date) = %s
-            and j.company = %s and j.company_gstin = %s
-            GROUP BY ja.account, j.ineligibility_reason""",
-            (self.month_no, self.year, self.company, self.gst_details.get("gstin")),
-            as_dict=1,
+        journal_entry = frappe.qb.DocType("Journal Entry")
+        journal_entry_account = frappe.qb.DocType("Journal Entry Account")
+
+        reversal_entries = (
+            frappe.qb.from_(journal_entry)
+            .join(journal_entry_account)
+            .on(journal_entry_account.parent == journal_entry.name)
+            .select(
+                journal_entry_account.gst_tax_type,
+                journal_entry.ineligibility_reason,
+                Sum(journal_entry_account.credit_in_account_currency).as_("amount"),
+            )
+            .where(journal_entry.docstatus == 1)
+            .where(journal_entry.is_opening == "No")
+            .where(journal_entry.voucher_type == "Reversal Of ITC")
+            .where(Extract(DatePart.month, journal_entry.posting_date) == self.month_no)
+            .where(Extract(DatePart.year, journal_entry.posting_date) == self.year)
+            .where(IfNull(journal_entry_account.gst_tax_type, "") != "")
+            .where(journal_entry.company == self.company)
+            .where(journal_entry.company_gstin == self.gst_details.get("gstin"))
+            .groupby(
+                journal_entry_account.gst_tax_type, journal_entry.ineligibility_reason
+            )
+            .run(as_dict=True)
         )
 
         net_itc = self.report_dict["itc_elg"]["itc_net"]
+        gst_tax_type_to_key_map = {
+            "sgst": "samt",
+            "cgst": "camt",
+            "igst": "iamt",
+            "cess": "csamt",
+            "cess_non_advol": "csamt",
+        }
 
         for entry in reversal_entries:
             if entry.ineligibility_reason == "As per rules 42 & 43 of CGST Rules":
@@ -194,11 +211,11 @@ class GSTR3BReport(Document):
             else:
                 index = 1
 
-            for key in VALUES_TO_UPDATE:
-                if entry.account in self.account_heads.get(key):
-                    self.report_dict["itc_elg"]["itc_rev"][index][key] += entry.amount
-
-                    net_itc[key] -= entry.amount
+            tax_amount_key = gst_tax_type_to_key_map.get(entry.gst_tax_type)
+            self.report_dict["itc_elg"]["itc_rev"][index][
+                tax_amount_key
+            ] += entry.amount
+            net_itc[tax_amount_key] -= entry.amount
 
     def get_itc_details(self):
         itc_amounts = frappe.db.sql(
@@ -581,33 +598,6 @@ class GSTR3BReport(Document):
                     self.company_address
                 )
             )
-
-    def get_account_heads(self):
-        account_map = {
-            "sgst_account": "samt",
-            "cess_account": "csamt",
-            "cgst_account": "camt",
-            "igst_account": "iamt",
-        }
-
-        account_heads = {}
-        gst_settings_accounts = frappe.get_all(
-            "GST Account",
-            filters={
-                "company": self.company,
-                "account_type": ("in", ("Input", "Output")),
-            },
-            fields=["cgst_account", "sgst_account", "igst_account", "cess_account"],
-        )
-
-        if not gst_settings_accounts:
-            frappe.throw(_("Please set GST Accounts in GST Settings"))
-
-        for d in gst_settings_accounts:
-            for acc, val in d.items():
-                account_heads.setdefault(account_map.get(acc), []).append(val)
-
-        return account_heads
 
     def get_missing_field_invoices(self):
         missing_field_invoices = []
