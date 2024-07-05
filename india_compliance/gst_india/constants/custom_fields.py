@@ -837,6 +837,15 @@ CUSTOM_FIELDS = {
             "translatable": 0,
         },
     ],
+    "Journal Entry Account": [
+        {
+            "fieldname": "gst_tax_type",
+            "label": "GST Tax Type",
+            "fieldtype": "Data",
+            "insert_after": "account",
+            "read_only": 1,
+        },
+    ],
     "Tax Category": [
         {
             "fieldname": "is_inter_state",
