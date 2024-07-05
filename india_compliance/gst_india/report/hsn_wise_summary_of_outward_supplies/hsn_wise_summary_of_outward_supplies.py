@@ -39,7 +39,8 @@ def get_hsn_data(filters, columns):
     added_item = set()
 
     for d in item_list:
-        key = (d.parent, d.gst_hsn_code, d.item_code)
+        item_key = d.item_code or d.item_name
+        key = (d.parent, d.gst_hsn_code, item_key)
         if key in added_item:
             continue
 
@@ -53,7 +54,7 @@ def get_hsn_data(filters, columns):
         total_tax = 0
         tax_rate = 0
 
-        item_tax = itemised_tax.get((d.parent, d.item_code), {})
+        item_tax = itemised_tax.get((d.parent, item_key), {})
         for tax in tax_columns:
             tax_data = item_tax.get(tax, {})
             total_tax += flt(tax_data.get("tax_amount", 0), 2)
@@ -201,6 +202,7 @@ def get_items(filters):
             sum(`tabSales Invoice Item`.taxable_value) AS taxable_value,
             `tabSales Invoice Item`.parent,
             `tabSales Invoice Item`.item_code,
+            `tabSales Invoice Item`.item_name,
             COALESCE(`tabGST HSN Code`.description, 'NA') AS description
         FROM
             `tabSales Invoice`
