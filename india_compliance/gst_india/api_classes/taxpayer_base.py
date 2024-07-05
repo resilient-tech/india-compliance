@@ -254,7 +254,7 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
     def _request(
         self,
         method,
-        action,
+        action=None,
         return_period=None,
         params=None,
         endpoint=None,
@@ -284,12 +284,12 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
 
         return response
 
-    def get(self, action, return_period=None, params=None, endpoint=None, otp=None):
-        params = {"gstin": self.company_gstin, **(params or {})}
-        return self._request("get", action, return_period, params, endpoint, None, otp)
+    def get(self, *args, **kwargs):
+        params = {"gstin": self.company_gstin, **(kwargs.pop("params", {}))}
+        return self._request("get", *args, **kwargs, params=params)
 
-    def post(self, action, params=None, endpoint=None, json=None, otp=None):
-        return self._request("post", action, None, params, endpoint, json, otp)
+    def post(self, *args, **kwargs):
+        return self._request("post", *args, **kwargs)
 
     def before_request(self, request_args):
         self.encrypt_request(request_args.get("json"))
@@ -360,10 +360,10 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
 
         return app_key
 
-    def download_files(self, return_period, token, action, endpoint, otp=None):
+    def get_files(self, return_period, token, action, endpoint, otp=None):
         response = self.get(
-            action,
-            return_period,
+            action=action,
+            return_period=return_period,
             params={"ret_period": return_period, "token": token},
             endpoint=endpoint,
             otp=otp,

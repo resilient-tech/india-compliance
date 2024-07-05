@@ -9,7 +9,7 @@ class EInvoiceAPI(TaxpayerBaseAPI):
         "EINV30107": "no_docs_found",
         "EINV30108": "no_docs_found",
         "EINV30118": "no_docs_found",
-        "EINV30109": "not_generated",
+        "EINV30109": "queued",
     }
 
     def get_irn_list(
@@ -22,7 +22,7 @@ class EInvoiceAPI(TaxpayerBaseAPI):
     ):
         action = "IRNLIST"
         return self.get(
-            action,
+            action=action,
             params={
                 "rtnprd": return_period,
                 "suptyp": supply_type,
@@ -36,7 +36,7 @@ class EInvoiceAPI(TaxpayerBaseAPI):
     def get_irn_details(self, irn, otp=None):
         action = "IRNDTL"
         return self.get(
-            action,
+            action=action,
             return_period=None,
             params={"irn": irn},
             endpoint=self.endpoint,
@@ -44,6 +44,6 @@ class EInvoiceAPI(TaxpayerBaseAPI):
         )
 
     def download_files(self, return_period, token, otp=None):
-        return super().download_files(
+        return super().get_files(
             return_period, token, action="FILEDETL", endpoint=self.endpoint, otp=otp
         )

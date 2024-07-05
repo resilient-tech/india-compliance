@@ -19,12 +19,8 @@ class ReturnsAPI(TaxpayerBaseAPI):
         "RET2B1010": "authorization_failed",  # API Authorization Failed for 2B
     }
 
-    def get(self, action, return_period, params=None, endpoint=None, otp=None):
-        # override the get method from TaxpayerBaseAPI as return_period is mandatory for returns API
-        return super().get(action, return_period, params, endpoint, otp)
-
     def download_files(self, return_period, token, otp=None):
-        return super().download_files(
+        return super().get_files(
             return_period, token, action="FILEDET", endpoint="returns", otp=otp
         )
 
@@ -38,7 +34,11 @@ class GSTR2bAPI(ReturnsAPI):
             params.update({"file_num": file_num})
 
         return self.get(
-            "GET2B", return_period, params=params, endpoint="returns/gstr2b", otp=otp
+            action="GET2B",
+            return_period=return_period,
+            params=params,
+            endpoint="returns/gstr2b",
+            otp=otp,
         )
 
 
@@ -47,8 +47,8 @@ class GSTR2aAPI(ReturnsAPI):
 
     def get_data(self, action, return_period, otp=None):
         return self.get(
-            action,
-            return_period,
+            action=action,
+            return_period=return_period,
             params={"ret_period": return_period},
             endpoint="returns/gstr2a",
             otp=otp,
@@ -60,8 +60,8 @@ class GSTR1API(ReturnsAPI):
 
     def get_gstr_1_data(self, action, return_period, otp=None):
         return self.get(
-            action,
-            return_period,
+            action=action,
+            return_period=return_period,
             params={"ret_period": return_period},
             endpoint="returns/gstr1",
             otp=otp,
@@ -69,8 +69,8 @@ class GSTR1API(ReturnsAPI):
 
     def get_einvoice_data(self, section, return_period, otp=None):
         return self.get(
-            "EINV",
-            return_period,
+            action="EINV",
+            return_period=return_period,
             params={"ret_period": return_period, "sec": section},
             endpoint="returns/einvoice",
             otp=otp,
