@@ -10,7 +10,7 @@ const tooltip_info = {
 };
 
 const api_enabled = india_compliance.is_api_enabled();
-const gstcategory = [
+const GST_CATEGORIES = [
     "B2B",
     "B2BA",
     "CDNR",
@@ -1125,13 +1125,17 @@ class ImportDialog {
     }
 
     init_dialog() {
+        if (!this.frm.doc.company) {
+            frappe.throw(__("Please select a Company first!"));
+        }
+
         if (this.for_download) this._init_download_dialog();
         else this._init_upload_dialog();
 
         this.return_type = this.dialog.get_value("return_type");
         this.date_range = this.dialog.get_value("date_range");
         this.setup_dialog_actions();
-        this.fetch_history_and_pending_data();
+        this.fetch_import_history();
     }
 
     _init_download_dialog() {
@@ -1139,9 +1143,9 @@ class ImportDialog {
             title: __("Download Data from GSTN"),
             fields: [
                 ...this.get_gstr_fields(),
-                ...this.get_gstr2a_checkbox(),
-                ...this.get_pending_data_fields(),
-                ...this.get_history_fields(),
+                ...this.get_2a_category_fields(),
+                ...this.get_fields_for_pending_downloads(),
+                ...this.get_fields_for_download_history(),
             ],
         });
     }
@@ -1172,7 +1176,8 @@ class ImportDialog {
                         this.update_return_period();
                     },
                 },
-                ...this.get_history_fields(),
+                ...this.get_fields_for_pending_downloads(),
+                ...this.get_fields_for_download_history(),
             ],
         });
 
@@ -1221,7 +1226,7 @@ class ImportDialog {
     }
 
     download_gstr_by_category(only_missing) {
-        const marked_gst_categories = gstcategory.filter(
+        const marked_gst_categories = GST_CATEGORIES.filter(
             category => this.dialog.fields_dict[category].value === 1
         );
         if (marked_gst_categories.length === 0) {
@@ -1233,13 +1238,15 @@ class ImportDialog {
             this.return_type,
             this.company_gstin,
             only_missing,
+            marked_gst_categories,
             null,
-            marked_gst_categories
         );
         this.dialog.hide();
     }
 
-    async fetch_history_and_pending_data() {
+    async fetch_import_history() {
+        if (!this.company_gstin) return;
+
         const { message } = await this.frm.call("get_history_and_pending_data", {
             company_gstin: this.company_gstin,
             return_type: this.return_type,
@@ -1310,7 +1317,7 @@ class ImportDialog {
                 ],
                 onchange: () => {
                     this.return_type = this.dialog.get_value("return_type");
-                    this.fetch_history_and_pending_data();
+                    this.fetch_import_history();
                     this.setup_dialog_actions();
                 },
             },
@@ -1330,7 +1337,7 @@ class ImportDialog {
                 },
                 onchange: () => {
                     this.company_gstin = this.dialog.get_value("company_gstin");
-                    this.fetch_history_and_pending_data();
+                    this.fetch_import_history();
                 },
             },
             {
@@ -1347,7 +1354,7 @@ class ImportDialog {
                     this.frm.call("get_date_range", { period }).then(({ message }) => {
                         this.date_range =
                             message || this.dialog.get_value("date_range");
-                        this.fetch_history_and_pending_data();
+                        this.fetch_import_history();
                     });
                 },
             },
@@ -1362,61 +1369,59 @@ class ImportDialog {
                 depends_on: "eval:doc.period == 'Custom'",
                 onchange: () => {
                     this.date_range = this.dialog.get_value("date_range");
-                    this.fetch_history_and_pending_data();
+                    this.fetch_import_history();
                 },
             },
         ];
     }
 
-    get_pending_data_fields() {
-        const label = "Pending Download";
+    get_fields_for_pending_downloads() {
+        const label = this.for_download ? "Pending Download" : "Pending Upload";
         return [
-            { label, fieldtype: "Section Break" },
+            { label, fieldtype: "Section Break", depends_on: "eval:doc.company_gstin"},
             { label, fieldname: "pending_download", fieldtype: "HTML" },
         ];
     }
 
-    get_history_fields() {
+    get_fields_for_download_history() {
         const label = this.for_download ? "Download History" : "Upload History";
 
         return [
             {
                 label,
                 fieldtype: "Section Break",
-                depends_on: "eval:doc.company_gstin != 'All'",
+                depends_on: "eval:doc.company_gstin && doc.company_gstin != 'All'",
             },
             { label, fieldname: "history", fieldtype: "HTML" },
         ];
     }
 
-    get_gstr2a_checkbox() {
-        const gstr2a_checkbox = [];
-        gstr2a_checkbox.push({
-            label: "",
+    get_2a_category_fields() {
+        const fields = [];
+        const section_field = {
             fieldtype: "Section Break",
             depends_on: "eval:doc.return_type == 'GSTR2a'",
-        })
-        for(let i=0;i<gstcategory.length;i++){
-            if(i%2 === 0 && i !== gstcategory.length-1 && i!== 0 ){
-                gstr2a_checkbox.push({
-                    label: "",
-                    fieldtype: "Column Break",
-                    depends_on: "eval:doc.return_type == 'GSTR2a'",
-                })
-            }
-            gstr2a_checkbox.push({
-                label: gstcategory[i],
-                fieldname: gstcategory[i],
+        };
+
+        const import_categories = ["ISD", "ISDA", "IMPG", "IMPGSEZ"];
+        const overseas_enabled = gst_settings.enable_overseas_transactions
+
+        fields.push(section_field);
+        console.log(GST_CATEGORIES);
+        GST_CATEGORIES.forEach((category, i) => {
+            fields.push({
+                label: category,
+                fieldname: category,
                 fieldtype: "Check",
-                depends_on: "eval:doc.return_type == 'GSTR2a'",
-            })
-        }
-        gstr2a_checkbox.push({
-            label: "",
-            fieldtype: "Section Break",
-            depends_on: "eval:doc.return_type == 'GSTR2a'",
-        })
-        return gstr2a_checkbox
+                default: !import_categories.includes(category) || overseas_enabled,
+            });
+
+            // after every 4 fields section break
+            if (i % 4 === 3) fields.push({...section_field, hide_border: true});
+            else fields.push({ fieldtype: "Column Break" });
+        });
+
+        return fields;
     }
 }
 
@@ -1426,8 +1431,8 @@ async function download_gstr(
     return_type,
     company_gstin,
     only_missing = true,
+    gst_categories = null,
     otp = null,
-    gst_categories = null
 ) {
     const authenticated_company_gstins =
         await india_compliance.authenticate_company_gstins(
@@ -1810,4 +1815,3 @@ async function create_new_purchase_invoice(row, company, company_gstin) {
 
     frappe.new_doc("Purchase Invoice");
 }
-
