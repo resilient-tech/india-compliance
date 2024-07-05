@@ -72,7 +72,25 @@ class FilesAPI(BaseAPI):
         return b64decode(data).decode()
 
 
-class ReturnsAuthenticate(BaseAPI):
+class TaxpayerAuthenticate(BaseAPI):
+    SENSITIVE_INFO = BaseAPI.SENSITIVE_INFO + (
+        "auth-token",
+        "auth_token",
+        "app_key",
+        "sek",
+        "rek",
+    )
+
+    IGNORED_ERROR_CODES = {
+        "RETOTPREQUEST": "otp_requested",
+        "EVCREQUEST": "otp_requested",
+        "AUTH158": "invalid_otp",  # Invalid OTP
+        "AUTH4033": "invalid_otp",  # Invalid Session
+        # "AUTH4034": "invalid_otp",  # Invalid OTP
+        "AUTH4038": "authorization_failed",  # Session Expired
+        "TEC4002": "invalid_public_key",
+    }
+
     def request_otp(self):
         response = super().post(
             json={
@@ -208,38 +226,8 @@ class ReturnsAuthenticate(BaseAPI):
         return self.auth_token
 
 
-class ReturnsAPI(ReturnsAuthenticate):
-    API_NAME = "GST Returns"
+class TaxpayerBaseAPI(TaxpayerAuthenticate):
     BASE_PATH = "standard/gstn"
-    SENSITIVE_INFO = BaseAPI.SENSITIVE_INFO + (
-        "auth-token",
-        "auth_token",
-        "app_key",
-        "sek",
-        "rek",
-    )
-
-    IGNORED_ERROR_CODES = {
-        "RETOTPREQUEST": "otp_requested",
-        "EVCREQUEST": "otp_requested",
-        "RET11416": "no_docs_found",
-        "RET13508": "no_docs_found",
-        "RET13509": "no_docs_found",
-        "RET13510": "no_docs_found",
-        "RET2B1023": "not_generated",
-        "RET2B1016": "no_docs_found",
-        "RT-3BAS1009": "no_docs_found",
-        "RET11417": "no_docs_found",  # GSTR-1 Exports
-        "RET2B1018": "requested_before_cutoff_date",
-        "RTN_24": "queued",
-        "AUTH158": "invalid_otp",  # Invalid OTP
-        "AUTH4033": "invalid_otp",  # Invalid Session
-        # "AUTH4034": "invalid_otp",  # Invalid OTP
-        "AUTH4038": "authorization_failed",  # Session Expired
-        "RET11402": "authorization_failed",  # API Authorization Failed for 2A
-        "RET2B1010": "authorization_failed",  # API Authorization Failed for 2B
-        "TEC4002": "invalid_public_key",
-    }
 
     def setup(self, company_gstin):
         if self.sandbox_mode:
@@ -266,7 +254,7 @@ class ReturnsAPI(ReturnsAuthenticate):
     def _request(
         self,
         method,
-        action,
+        action=None,
         return_period=None,
         params=None,
         endpoint=None,
@@ -296,12 +284,12 @@ class ReturnsAPI(ReturnsAuthenticate):
 
         return response
 
-    def get(self, action, return_period, params=None, endpoint=None, otp=None):
-        params = {"gstin": self.company_gstin, **(params or {})}
-        return self._request("get", action, return_period, params, endpoint, None, otp)
+    def get(self, *args, **kwargs):
+        params = {"gstin": self.company_gstin, **(kwargs.pop("params", {}))}
+        return self._request("get", *args, **kwargs, params=params)
 
-    def post(self, action, params=None, endpoint=None, json=None, otp=None):
-        return self._request("post", action, None, params, endpoint, json, otp)
+    def post(self, *args, **kwargs):
+        return self._request("post", *args, **kwargs)
 
     def before_request(self, request_args):
         self.encrypt_request(request_args.get("json"))
@@ -372,12 +360,12 @@ class ReturnsAPI(ReturnsAuthenticate):
 
         return app_key
 
-    def download_files(self, return_period, token, otp=None):
+    def get_files(self, return_period, token, action, endpoint, otp=None):
         response = self.get(
-            "FILEDET",
-            return_period,
+            action=action,
+            return_period=return_period,
             params={"ret_period": return_period, "token": token},
-            endpoint="returns",
+            endpoint=endpoint,
             otp=otp,
         )
 
@@ -385,51 +373,3 @@ class ReturnsAPI(ReturnsAuthenticate):
             return response
 
         return FilesAPI().get_all(response)
-
-
-class GSTR2bAPI(ReturnsAPI):
-    API_NAME = "GSTR-2B"
-
-    def get_data(self, return_period, otp=None, file_num=None):
-        params = {"rtnprd": return_period}
-        if file_num:
-            params.update({"file_num": file_num})
-
-        return self.get(
-            "GET2B", return_period, params=params, endpoint="returns/gstr2b", otp=otp
-        )
-
-
-class GSTR2aAPI(ReturnsAPI):
-    API_NAME = "GSTR-2A"
-
-    def get_data(self, action, return_period, otp=None):
-        return self.get(
-            action,
-            return_period,
-            params={"ret_period": return_period},
-            endpoint="returns/gstr2a",
-            otp=otp,
-        )
-
-
-class GSTR1API(ReturnsAPI):
-    API_NAME = "GSTR-1"
-
-    def get_gstr_1_data(self, action, return_period, otp=None):
-        return self.get(
-            action,
-            return_period,
-            params={"ret_period": return_period},
-            endpoint="returns/gstr1",
-            otp=otp,
-        )
-
-    def get_einvoice_data(self, section, return_period, otp=None):
-        return self.get(
-            "EINV",
-            return_period,
-            params={"ret_period": return_period, "sec": section},
-            endpoint="returns/einvoice",
-            otp=otp,
-        )
