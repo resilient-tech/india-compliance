@@ -27,10 +27,9 @@ def validate(doc, method=None):
     # validate company_gstin
     contains_gst_account = False
     for row in doc.accounts:
-        if not row.gst_tax_type:
-            continue
-        contains_gst_account = True
-        break
+        if row.gst_tax_type:
+            contains_gst_account = True
+            break
 
     if contains_gst_account:
         frappe.throw(_("Company GSTIN is mandatory if any GST account is present."))

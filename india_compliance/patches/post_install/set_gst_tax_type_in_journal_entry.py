@@ -5,12 +5,12 @@ from india_compliance.gst_india.utils import get_gst_account_gst_tax_type_map
 
 
 def execute():
-    gst_tax_type_account_map = get_gst_account_gst_tax_type_map()
-    if not gst_tax_type_account_map:
+    gst_account_tax_type_map = get_gst_account_gst_tax_type_map()
+    if not gst_account_tax_type_map:
         return
 
     gst_accounts_by_tax_type = {}
-    for account, tax_type in gst_tax_type_account_map.items():
+    for account, tax_type in gst_account_tax_type_map.items():
         gst_accounts_by_tax_type.setdefault(tax_type, []).append(account)
 
     taxes_doctype = frappe.qb.DocType("Journal Entry Account")

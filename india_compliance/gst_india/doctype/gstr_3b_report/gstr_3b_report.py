@@ -197,11 +197,12 @@ class GSTR3BReport(Document):
         )
 
         net_itc = self.report_dict["itc_elg"]["itc_net"]
-        account_map = {
+        gst_tax_type_to_key_map = {
             "sgst": "samt",
-            "cess": "csamt",
             "cgst": "camt",
             "igst": "iamt",
+            "cess": "csamt",
+            "cess_non_advol": "csamt",
         }
 
         for entry in reversal_entries:
@@ -210,11 +211,11 @@ class GSTR3BReport(Document):
             else:
                 index = 1
 
-            tax_amount_type = account_map.get(entry.gst_tax_type)
+            tax_amount_key = gst_tax_type_to_key_map.get(entry.gst_tax_type)
             self.report_dict["itc_elg"]["itc_rev"][index][
-                tax_amount_type
+                tax_amount_key
             ] += entry.amount
-            net_itc[tax_amount_type] -= entry.amount
+            net_itc[tax_amount_key] -= entry.amount
 
     def get_itc_details(self):
         itc_amounts = frappe.db.sql(

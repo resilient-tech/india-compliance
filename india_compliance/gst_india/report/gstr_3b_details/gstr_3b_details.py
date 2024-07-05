@@ -186,7 +186,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                 Sum(
                     Case()
                     .when(
-                        boe_taxes.gst_tax_type == "cess",
+                        boe_taxes.gst_tax_type.isin(["cess", "cess_non_advol"]),
                         boe_taxes.tax_amount,
                     )
                     .else_(0)
@@ -245,7 +245,9 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                 Sum(
                     Case()
                     .when(
-                        journal_entry_account.gst_tax_type == "cess",
+                        journal_entry_account.gst_tax_type.isin(
+                            ["cess", "cess_non_advol"]
+                        ),
                         (-1 * journal_entry_account.credit_in_account_currency),
                     )
                     .else_(0)
