@@ -5,7 +5,7 @@ from frappe import _
 from frappe.query_builder.terms import Criterion
 from frappe.utils import cint
 
-from india_compliance.gst_india.api_classes.returns import GSTR2aAPI, GSTR2bAPI
+from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR2aAPI, GSTR2bAPI
 from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
     create_import_log,
 )

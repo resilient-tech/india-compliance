@@ -4,7 +4,8 @@ import frappe
 from frappe import _
 from frappe.utils import add_to_date, now_datetime
 
-from india_compliance.gst_india.api_classes.returns import ReturnsAPI
+from india_compliance.gst_india.api_classes.taxpayer_base import TaxpayerBaseAPI
+from india_compliance.gst_india.api_classes.taxpayer_returns import ReturnsAPI
 from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
     create_import_log,
     toggle_scheduled_jobs,
@@ -92,14 +93,14 @@ def get_company_gstin_credentials(company=None, company_gstin=None):
 def request_otp(company_gstin):
     frappe.has_permission("GST Settings", throw=True)
 
-    return ReturnsAPI(company_gstin).request_otp()
+    return TaxpayerBaseAPI(company_gstin).request_otp()
 
 
 @frappe.whitelist()
 def authenticate_otp(company_gstin, otp):
     frappe.has_permission("GST Settings", throw=True)
 
-    api = ReturnsAPI(company_gstin)
+    api = TaxpayerBaseAPI(company_gstin)
     response = api.autheticate_with_otp(otp)
 
     return api.process_response(response)
