@@ -20,10 +20,10 @@ from india_compliance.gst_india.overrides.ineligible_itc import (
     update_valuation_rate,
 )
 from india_compliance.gst_india.overrides.transaction import (
+    GSTAccounts,
     ItemGSTDetails,
     ItemGSTTreatment,
     set_gst_tax_type,
-    validate_charge_type_for_cess_non_advol_accounts,
 )
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
@@ -289,7 +289,7 @@ class BillofEntry(Document):
                     ).format(tax.idx)
                 )
 
-            validate_charge_type_for_cess_non_advol_accounts(tax)
+            GSTAccounts.validate_charge_type_for_cess_non_advol_accounts(tax)
 
             if tax.charge_type != "Actual":
                 continue
