@@ -2,7 +2,7 @@ import frappe
 from frappe import _
 from frappe.utils import cint
 
-from india_compliance.gst_india.api_classes.returns import GSTR1API
+from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
 from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
     create_import_log,
 )
