@@ -1,5 +1,5 @@
 <div class="download_data">
-    {% if data == "No Pending Downloads" | data == "No Download History" %}
+    {% if typeof(data) == "string" %}
         <h4>{{ data }}</h4>
     {% else %}
         <table class="table table-bordered table-hover">

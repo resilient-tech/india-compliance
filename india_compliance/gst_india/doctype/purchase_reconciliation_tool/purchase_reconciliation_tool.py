@@ -124,7 +124,9 @@ class PurchaseReconciliationTool(Document):
         )
 
     @frappe.whitelist()
-    def get_history_and_pending_data(self, company_gstin, return_type, date_range):
+    def get_history_and_pending_data(
+        self, company_gstin, return_type, date_range, for_download=True
+    ):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         if not return_type:
@@ -151,23 +153,24 @@ class PurchaseReconciliationTool(Document):
                     None,
                 )
 
-                status = "Not Processed"
                 if download:
-                    status = "Processed"
                     history_data[period].add(
                         "✅ &nbsp;"
                         + download.last_updated_on.strftime("%d-%m-%Y %H:%M:%S")
                     )
-
-                if status == "Not Processed":
+                else:
                     pending_data[period].add(gst_no)
 
         return {
             "pending_download": (
-                pending_data if any(pending_data.values()) else "No Pending Downloads"
+                pending_data
+                if any(pending_data.values())
+                else ("No Pending Downloads" if for_download else "No Pending Uploads")
             ),
             "download_history": (
-                history_data if any(history_data.values()) else "No Download History"
+                history_data
+                if any(history_data.values())
+                else ("No Download History" if for_download else "No Upload Histrory")
             ),
         }
 

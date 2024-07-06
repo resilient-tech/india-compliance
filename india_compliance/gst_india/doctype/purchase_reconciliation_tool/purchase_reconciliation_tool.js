@@ -1251,6 +1251,7 @@ class ImportDialog {
             company_gstin: this.company_gstin,
             return_type: this.return_type,
             date_range: this.date_range,
+            for_download: this.for_download,
         });
 
         let pending_download = {
@@ -1407,7 +1408,6 @@ class ImportDialog {
         const overseas_enabled = gst_settings.enable_overseas_transactions
 
         fields.push(section_field);
-        console.log(GST_CATEGORIES);
         GST_CATEGORIES.forEach((category, i) => {
             fields.push({
                 label: category,
