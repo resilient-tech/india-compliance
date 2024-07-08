@@ -389,7 +389,7 @@ def get_taxes_for_docs(docs, doctype, is_sales_doctype):
         frappe.qb.from_(taxes)
         .select(
             taxes.base_tax_amount_after_discount_amount,
-            taxes.account_head,
+            taxes.gst_tax_type,
             taxes.parent,
             taxes.item_wise_tax_detail,
         )
