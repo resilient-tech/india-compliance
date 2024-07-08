@@ -532,13 +532,13 @@ class GSTAccounts:
                 if account in row.item_tax_rate:
                     continue
 
-            frappe.msgprint(
-                _(
-                    "Item Row #{0}: GST Account {1} is missing in Item Tax Template {2}"
-                ).format(row.idx, bold(account), bold(row.item_tax_template)),
-                title=_("Invalid Item Tax Template"),
-                indicator="orange",
-            )
+                frappe.msgprint(
+                    _(
+                        "Item Row #{0}: GST Account {1} is missing in Item Tax Template {2}"
+                    ).format(row.idx, bold(account), bold(row.item_tax_template)),
+                    title=_("Invalid Item Tax Template"),
+                    indicator="orange",
+                )
 
     def _get_matched_idx(self, rows_to_search, tax_types):
         return next(
