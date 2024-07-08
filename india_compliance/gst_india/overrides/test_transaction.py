@@ -863,6 +863,47 @@ class TestTransaction(FrappeTestCase):
             doc.insert,
         )
 
+    def test_invalid_item_tax_template(self):
+        frappe.clear_messages()
+        item_tax_template = frappe.get_doc("Item Tax Template", "GST 28% - _TIRC")
+        tax_accounts = item_tax_template.get("taxes")
+
+        # Invalidate item tax template
+        item_tax_template.taxes = [tax_accounts[0]]
+        item_tax_template.save()
+
+        create_transaction(
+            **self.transaction_details,
+            is_in_state=True,
+            item_tax_template="GST 28% - _TIRC",
+            do_not_submit=True,
+        )
+
+        for message in frappe.message_log:
+            if "is missing in Item Tax Template" in message.get("message"):
+                break
+
+        else:
+            self.fail("Item Tax Template validation message not found")
+
+        # Restore item tax template
+        item_tax_template.taxes = tax_accounts
+        item_tax_template.save()
+
+    def test_valid_item_tax_template(self):
+        frappe.clear_messages()
+
+        create_transaction(
+            **self.transaction_details,
+            is_in_state=True,
+            item_tax_template="GST 12% - _TIRC",
+            do_not_submit=True,
+        )
+
+        for message in frappe.message_log:
+            if "is missing in Item Tax Template" in message.get("message"):
+                self.fail("Item Tax Template validation message found")
+
 
 class TestQuotationTransaction(FrappeTestCase):
     @classmethod
