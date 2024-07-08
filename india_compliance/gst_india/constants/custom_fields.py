@@ -915,6 +915,8 @@ CUSTOM_FIELDS = {
             "fieldtype": "Link",
             "options": "GST HSN Code",
             "insert_after": "item_group",
+            "fetch_from": "item_group.gst_hsn_code",
+            "fetch_if_empty": 1,
             "allow_in_quick_entry": 1,
             "mandatory_depends_on": "eval:gst_settings.validate_hsn_code && doc.is_sales_item",
             "description": "You can search code by the description of the category.",
@@ -924,6 +926,17 @@ CUSTOM_FIELDS = {
             "label": "Is Ineligible for Input Tax Credit",
             "fieldtype": "Check",
             "insert_after": "item_tax_section_break",
+        },
+    ],
+    "Item Group": [
+        {
+            "fieldname": "gst_hsn_code",
+            "label": "HSN/SAC",
+            "fieldtype": "Link",
+            "options": "GST HSN Code",
+            "insert_after": "item_group_name",
+            "mandatory_depends_on": "eval:gst_settings.validate_hsn_code",
+            "description": "You can search code by the description of the category.",
         },
     ],
     "Item Tax Template": [
