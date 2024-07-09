@@ -816,7 +816,6 @@ class TestTransaction(FrappeTestCase):
             doc.insert,
         )
 
-<<<<<<< HEAD
     def test_onload_for_non_gst_document(self):
         """
         For gst_breakup we are checking for "ignore_gst_validations".
@@ -836,7 +835,7 @@ class TestTransaction(FrappeTestCase):
 
         print_settings = frappe.get_single("Print Settings").as_dict()
         doc.run_method("before_print", print_settings)
-=======
+
     def test_invalid_item_tax_template(self):
         frappe.clear_messages()
         item_tax_template = frappe.get_doc("Item Tax Template", "GST 28% - _TIRC")
@@ -877,7 +876,6 @@ class TestTransaction(FrappeTestCase):
         for message in frappe.message_log:
             if "is missing in Item Tax Template" in message.get("message"):
                 self.fail("Item Tax Template validation message found")
->>>>>>> d42afa15 (test: test cases for item tax template validation)
 
 
 class TestQuotationTransaction(FrappeTestCase):
