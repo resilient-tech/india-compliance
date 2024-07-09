@@ -852,7 +852,7 @@ class TestTransaction(FrappeTestCase):
             do_not_submit=True,
         )
 
-        for message in frappe.message_log:
+        for message in frappe.get_message_log():
             if "is missing in Item Tax Template" in message.get("message"):
                 break
 
@@ -873,7 +873,7 @@ class TestTransaction(FrappeTestCase):
             do_not_submit=True,
         )
 
-        for message in frappe.message_log:
+        for message in frappe.get_message_log():
             if "is missing in Item Tax Template" in message.get("message"):
                 self.fail("Item Tax Template validation message found")
 
