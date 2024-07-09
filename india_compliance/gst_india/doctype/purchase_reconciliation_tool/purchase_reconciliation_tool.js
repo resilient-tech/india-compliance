@@ -69,6 +69,27 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         await frappe.require("purchase_reconciliation_tool.bundle.js");
         frm.trigger("company");
         frm.purchase_reconciliation_tool = new PurchaseReconciliationTool(frm);
+
+        frappe.realtime.on("data_reconciliation", message => {
+            const { data, filters } = message;
+            const keys_to_validate = [
+                "company_gstin",
+                "purchase_from_date",
+                "purchase_to_date",
+                "inward_supply_from_date",
+                "inward_supply_to_date",
+                "include_ignored",
+                "gst_return",
+            ];
+            const same_filter = keys_to_validate.every(key => frm.doc[key] === filters[key]);
+            if(!same_filter) return;
+
+            frappe.after_ajax(() => {
+                frm.doc.reconciliation_data = data;
+                frm.trigger("after_save");
+                frm.refresh();
+            });
+        });
     },
 
     onload(frm) {
@@ -1734,4 +1755,3 @@ async function create_new_purchase_invoice(row, company, company_gstin) {
 
     frappe.new_doc("Purchase Invoice");
 }
-

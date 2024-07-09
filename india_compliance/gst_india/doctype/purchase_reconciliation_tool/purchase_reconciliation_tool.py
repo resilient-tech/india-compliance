@@ -5,6 +5,7 @@ import re
 from typing import List
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.functions import IfNull
 from frappe.utils import add_to_date, cint, now_datetime
@@ -77,7 +78,10 @@ class PurchaseReconciliationTool(Document):
         # reconcile purchases and inward supplies
         if frappe.flags.in_install or frappe.flags.in_migrate:
             return
+        frappe.enqueue(self.reconcile, queue="short")
+        frappe.msgprint(_("Data is being prepared"), alert=True)
 
+    def reconcile(self):
         _Reconciler = Reconciler(**self.get_reco_doc())
         for row in ORIGINAL_VS_AMENDED:
             _Reconciler.reconcile(row["original"], row["amended"])
@@ -87,7 +91,12 @@ class PurchaseReconciliationTool(Document):
             self.ReconciledData.get(), default=json_handler
         )
 
-        self.db_set("is_modified", 0)
+        frappe.publish_realtime(
+            "data_reconciliation",
+            message={"data": self.reconciliation_data, "filters": self.get_reco_doc()},
+            user=frappe.session.user,
+            doctype=self.doctype,
+        )
 
     @frappe.whitelist()
     def upload_gstr(self, return_type, period, file_path):
