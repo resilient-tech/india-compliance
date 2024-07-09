@@ -139,7 +139,6 @@ india_compliance.taxes_controller = class TaxesController {
             return flt(flt(qty) * flt(rate), precision(precisionType, row));
         };
 
-        // TODO: rate is not updating before this method is called
         if (this.frm.doc.doctype === "Subcontracting Receipt") {
             amount = calculateAmount(row.qty, row.rate, "amount");
         } else if (this.frm.doc.doctype === "Stock Entry") {

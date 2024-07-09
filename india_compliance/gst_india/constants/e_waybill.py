@@ -25,10 +25,10 @@ buying_address = {
 }
 
 stock_entry_address = {
-    "bill_from": "company_address",
-    "bill_to": "supplier_address",
-    "ship_from": "source_warehouse_address",
-    "ship_to": "target_warehouse_address",
+    "bill_from": "bill_from_address",
+    "bill_to": "bill_to_address",
+    "ship_from": "ship_from_address",
+    "ship_to": "ship_to_address",
 }
 
 ADDRESS_FIELDS = {

@@ -441,13 +441,14 @@ class GSTAccounts:
                 ).format(self.first_gst_idx)
             )
 
-    def validate_for_invalid_account_type(self):
+    def validate_for_invalid_account_type(self, is_inter_state=None):
         """
         - SEZ / Inter-State supplies should not have CGST or SGST account
         - Intra-State supplies should not have IGST account
         - If Intra-State, ensure both CGST and SGST accounts are used
         """
-        is_inter_state = is_inter_state_supply(self.doc)
+        if is_inter_state is None:
+            is_inter_state = is_inter_state_supply(self.doc)
         for row in self.gst_tax_rows:
             if is_inter_state:
                 if row.account_head in self.intra_state_accounts:
@@ -791,7 +792,7 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
 
     # Party/Address Defaults
     if doctype in SUBCONTRACTING_DOCTYPES:
-        party_address_field = "supplier_address"
+        party_address_field = "bill_to_address"
         is_sales_transaction = True
     elif is_sales_transaction:
         party_address_field = "customer_address"

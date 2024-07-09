@@ -1001,6 +1001,10 @@ def update_transaction(doc, values):
     if doc.doctype in ("Delivery Note", "Stock Entry", "Subcontracting Receipt"):
         doc._sub_supply_type = SUB_SUPPLY_TYPES[values.sub_supply_type]
 
+    if doc.doctype == "Stock Entry":
+        doc.company_gstin = doc.bill_from_gstin
+        doc.supplier_gstin = doc.bill_to_gstin
+
 
 def get_e_waybill_info(doc):
     return frappe.db.get_value(
@@ -1414,7 +1418,7 @@ class EWaybillData(GSTTransactionData):
         return hsn_wise_items.values()
 
     def update_item_details(self, item_details, item):
-        if not self.doc.is_reverse_charge:
+        if not self.doc.get("is_reverse_charge"):
             return
 
         for tax in GST_TAX_TYPES:

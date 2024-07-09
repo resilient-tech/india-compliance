@@ -49,7 +49,7 @@ function fetch_gst_details(doctype) {
             doctype
         )
     ) {
-        event_fields.push("supplier", "supplier_address");
+        event_fields.push("supplier", "bill_to_address", "bill_from_gstin");
     } else {
         event_fields.push("supplier_address");
     }
@@ -132,6 +132,11 @@ async function update_gst_details(frm, event) {
 
     for (const fieldname of fieldnames_to_set) {
         party_details[fieldname] = frm.doc[fieldname];
+    }
+
+    if (frm.doc.doctype === "Stock Entry") {
+        party_details["company_gstin"] = frm.doc.bill_from_gstin;
+        party_details["supplier_gstin"] = frm.doc.bill_to_gstin;
     }
 
     args.party_details = JSON.stringify(party_details);

@@ -234,11 +234,39 @@ class DeliveryNoteEwaybill extends EwaybillApplicability {
 
 class StockEntryEwaybill extends EwaybillApplicability {
     is_e_waybill_applicable(show_message = false) {
-        return (
-            this.frm.doc.purpose == "Send to Subcontractor" &&
-            super.is_e_waybill_applicable(show_message) &&
-            gst_settings.enable_e_waybill_for_sc
-        );
+        if (
+            !gst_settings.enable_e_waybill ||
+            !gst_settings.enable_e_waybill_for_sc ||
+            this.frm.doc.purpose !== "Send to Subcontractor"
+        )
+            return false;
+
+        let is_ewb_applicable = true;
+        let message_list = [];
+
+        if (!this.frm.doc.bill_from_gstin) {
+            is_ewb_applicable = false;
+            message_list.push(
+                "Bill From GSTIN is not set. Ensure its set in Bill From Address."
+            );
+        }
+
+        if (this.frm.doc.is_opening === "Yes") {
+            is_ewb_applicable = false;
+            message_list.push(
+                "e-Waybill cannot be generated for transaction with 'Is Opening Entry' set to Yes."
+            );
+        }
+
+        this.frm._ewb_message = "";
+
+        if (show_message) {
+            this.frm._ewb_message = message_list
+                .map(message => `<li>${message}</li>`)
+                .join("");
+        }
+
+        return is_ewb_applicable;
     }
 
     is_e_waybill_generatable(show_message = false) {
@@ -246,14 +274,14 @@ class StockEntryEwaybill extends EwaybillApplicability {
 
         let message_list = [];
 
-        if (!this.frm.doc.supplier_address) {
+        if (!this.frm.doc.bill_to_address) {
             is_ewb_generatable = false;
-            message_list.push("Supplier Address is mandatory to generate e-Waybill.");
+            message_list.push("Bill To address is mandatory to generate e-Waybill.");
         }
 
-        if (this.frm.doc.company_gstin === this.frm.doc.supplier_gstin) {
+        if (this.frm.doc.bill_from_gstin === this.frm.doc.bill_to_gstin) {
             is_ewb_generatable = false;
-            message_list.push("Company GSTIN and Supplier GSTIN are same.");
+            message_list.push("Bill From GSTIN and Bill To GSTIN are same.");
         }
 
         const source = this.frm.doc.items[0].s_warehouse;

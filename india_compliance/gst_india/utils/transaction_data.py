@@ -47,7 +47,7 @@ class GSTTransactionData:
             "Stock Entry",
         ):
             self.party_name_field = "supplier_name"
-            if self.doc.is_reverse_charge == 1:
+            if self.doc.get("is_reverse_charge") == 1:
                 # for with reverse charge in purchase, do not compute taxes
                 self.is_purchase_rcm = True
 
@@ -135,7 +135,7 @@ class GSTTransactionData:
                 continue
 
             # eg: Skip reverse charge tax for e-Waybill
-            if self.doc.is_reverse_charge and getattr(
+            if self.doc.get("is_reverse_charge") and getattr(
                 self, "exclude_reverse_charge_tax", False
             ):
                 continue
@@ -148,7 +148,7 @@ class GSTTransactionData:
         # Other Charges
         current_total = 0
 
-        if self.doc.is_reverse_charge:
+        if self.doc.get("is_reverse_charge"):
             # Not adding taxes for rcm
             tax_total_keys = tuple()
 

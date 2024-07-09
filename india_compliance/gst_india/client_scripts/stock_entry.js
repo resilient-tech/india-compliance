@@ -1,17 +1,16 @@
 frappe.provide("india_compliance");
+DOCTYPE = "Stock Entry";
 
-setup_e_waybill_actions("Stock Entry");
+setup_e_waybill_actions(DOCTYPE);
 
-frappe.ui.form.on("Stock Entry", {
+frappe.ui.form.on(DOCTYPE, {
     setup(frm) {
-        frm.set_query("company_address", erpnext.queries.company_address_query);
         frm.set_query("taxes_and_charges", function () {
             return {
-                filters: [
-                    ["company", "=", frm.doc.company],
-                ],
+                filters: [["company", "=", frm.doc.company]],
             };
         });
+        set_address_display_events();
     },
 
     onload(frm) {
@@ -38,32 +37,50 @@ frappe.ui.form.on("Stock Entry", {
             );
     },
 
-    company_address(frm) {
-        if (frm.doc.company_address)
-            erpnext.utils.get_address_display(
-                frm,
-                "company_address",
-                "company_address_display",
-                false
+    supplier_address(frm) {
+        if (frm.doc.supplier_address) {
+            frm.set_value("bill_to_address", frm.doc.supplier_address);
+            frm.set_df_property("bill_to_address", "read_only", 1);
+            frm.set_df_property(
+                "bill_to_address",
+                "description",
+                "The 'Bill To' address is automatically populated based on the supplier address. To update the 'Bill To' address, please modify the supplier address accordingly."
             );
-    },
-
-    company(frm) {
-        frappe.call({
-            method: "frappe.contacts.doctype.address.address.get_default_address",
-            args: {
-                doctype: "Company",
-                name: frm.doc.company,
-            },
-            callback(r) {
-                frm.set_value("company_address", r.message);
-            },
-        });
+        } else {
+            frm.set_df_property("bill_to_address", "read_only", 0);
+            frm.set_df_property("bill_to_address", "description", "");
+        }
     },
 
     taxes_and_charges(frm) {
         frm.taxes_controller.update_taxes(frm);
     },
 });
+
+function set_address_display_events() {
+    const event_fields = [
+        "bill_from_address",
+        "bill_to_address",
+        "ship_from_address",
+        "ship_to_address",
+    ];
+
+    const events = Object.fromEntries(
+        event_fields.map(field => [
+            field,
+            frm => {
+                if (frm.doc[field])
+                    erpnext.utils.get_address_display(
+                        frm,
+                        field,
+                        field + "_display",
+                        false
+                    );
+            },
+        ])
+    );
+
+    frappe.ui.form.on(DOCTYPE, events);
+}
 
 frappe.ui.form.on("Stock Entry Detail", india_compliance.taxes_controller_events);
