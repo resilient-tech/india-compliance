@@ -57,9 +57,7 @@ class GSTR3BReport(Document):
             )
             self.set_inward_nil_exempt(inward_nil_exempt)
 
-            self.report_dict["eco_dtls"]["eco_reg_sup"][
-                "txval"
-            ] = self.get_9_5_taxable_value()
+            self.set_9_5_details()
 
             self.missing_field_invoices = self.get_missing_field_invoices()
             self.report_dict = format_values(self.report_dict)
@@ -331,29 +329,32 @@ class GSTR3BReport(Document):
 
         return inward_nil_exempt_details
 
-    def get_9_5_taxable_value(self):
+    def set_9_5_details(self):
         si = frappe.qb.DocType("Sales Invoice")
         si_item = frappe.qb.DocType("Sales Invoice Item")
 
-        taxable_value = (
-            frappe.qb.from_(si)
-            .join(si_item)
-            .on(si.name == si_item.parent)
-            .select(
-                Sum(si_item.taxable_value).as_("taxable_value"),
-            )
-            .where(si.docstatus == 1)
-            .where(si.is_reverse_charge == 1)
-            .where(IfNull(si.ecommerce_gstin, "") != "")
-            .where(Extract(DatePart.month, si.posting_date).eq(self.month_no))
-            .where(Extract(DatePart.year, si.posting_date).eq(self.year))
-            .where(si.company == self.company)
-            .where(si.company_gstin == self.gst_details.get("gstin"))
-            .where(si.is_opening == "No")
-            .run()
-        )[0][0]
+        def _get_9_5_2_taxable_value():
+            return (
+                frappe.qb.from_(si)
+                .join(si_item)
+                .on(si.name == si_item.parent)
+                .select(
+                    Sum(si_item.taxable_value).as_("taxable_value"),
+                )
+                .where(si.docstatus == 1)
+                .where(si.is_reverse_charge == 1)
+                .where(IfNull(si.ecommerce_gstin, "") != "")
+                .where(Extract(DatePart.month, si.posting_date).eq(self.month_no))
+                .where(Extract(DatePart.year, si.posting_date).eq(self.year))
+                .where(si.company == self.company)
+                .where(si.company_gstin == self.gst_details.get("gstin"))
+                .where(si.is_opening == "No")
+                .run()
+            )[0][0]
 
-        return taxable_value
+        self.report_dict["eco_dtls"]["eco_reg_sup"][
+            "txval"
+        ] = _get_9_5_2_taxable_value()
 
     def get_outward_supply_details(self, doctype, reverse_charge=None):
         self.get_outward_tax_invoices(doctype, reverse_charge=reverse_charge)
