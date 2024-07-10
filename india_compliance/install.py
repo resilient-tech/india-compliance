@@ -26,7 +26,6 @@ POST_INSTALL_PATCHES = (
     "rename_import_of_capital_goods",
     "update_hsn_code",
     "update_company_fixtures",
-    "update_sales_rcm_accounts",
     "merge_utgst_account_into_sgst_account",
     "remove_consumer_gst_category",
     "migrate_e_invoice_settings_to_gst_settings",
