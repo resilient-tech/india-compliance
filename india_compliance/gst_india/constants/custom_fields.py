@@ -56,6 +56,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Section Break",
             "insert_after": "total",
             "depends_on": "purchase_order",
+            "hide_border": 1,
         },
     ],
     "Subcontracting Receipt": [
@@ -64,7 +65,9 @@ CUSTOM_FIELDS = {
             "label": "Taxes",
             "fieldtype": "Section Break",
             "insert_after": "total",
+            "hide_border": 1,
         },
+        # TODO: Mandatory depends_on Indian Registered Company for supplier delivery note
     ],
     ("Subcontracting Order", "Subcontracting Receipt"): [
         {
@@ -89,16 +92,6 @@ CUSTOM_FIELDS = {
             "fetch_if_empty": 0,
         },
         {
-            "fieldname": "company_gstin",
-            "label": "Company GSTIN",
-            "fieldtype": "Data",
-            "insert_after": "billing_address_display",
-            "fetch_from": "company.gstin",
-            "print_hide": 1,
-            "read_only": 1,
-            "translatable": 0,
-        },
-        {
             "fieldname": "place_of_supply",
             "label": "Place of Supply",
             "fieldtype": "Autocomplete",
@@ -109,8 +102,60 @@ CUSTOM_FIELDS = {
             "translatable": 0,
             "fetch_from": "",
         },
+        {
+            "fieldname": "company_gstin",
+            "label": "Company GSTIN",
+            "fieldtype": "Data",
+            "insert_after": "billing_address_display",
+            "fetch_from": "company.gstin",
+            "print_hide": 1,
+            "read_only": 1,
+            "translatable": 0,
+        },
     ],
-    # Stock Entry: Tax Fields
+    ("Subcontracting Order", "Subcontracting Receipt", "Stock Entry"): [
+        {
+            "fieldname": "taxes_and_charges",
+            "label": "Taxes and Charges Template",
+            "fieldtype": "Link",
+            "insert_after": "section_break_taxes",
+            "options": "Sales Taxes and Charges Template",
+            "print_hide": 1,
+        },
+        {
+            "fieldname": "taxes",
+            "label": "Estimated Taxes",
+            "fieldtype": "Table",
+            "options": "India Compliance Taxes and Charges",
+            "insert_after": "taxes_and_charges",
+        },
+        {
+            "fieldname": "section_break_total",
+            "fieldtype": "Section Break",
+            "insert_after": "taxes",
+        },
+        {
+            "fieldname": "total_taxes",
+            "label": "Total Estimated Taxes",
+            "fieldtype": "Currency",
+            "insert_after": "section_break_total",
+            "read_only": 1,
+        },
+        {
+            "fieldtype": "Column Break",
+            "insert_after": "total_taxes",
+            "fieldname": "cb_grand_total",
+        },
+        {
+            "fieldname": "base_grand_total",
+            "label": "Grand Total",
+            "fieldtype": "Currency",
+            "insert_after": "cb_grand_total",
+            "read_only": 1,
+            "options": "currency",
+        },
+    ],
+    # Stock Entry: Address and Tax Fields
     "Stock Entry": [
         {
             "fieldname": "section_break_taxes",
@@ -127,12 +172,13 @@ CUSTOM_FIELDS = {
             "depends_on": "eval:doc.purpose === 'Send to Subcontractor'",
         },
         {
-            "label": "Address and Contact",
+            "label": "e-Waybill Address",
             "fieldname": "section_break_addresses_contact",
             "fieldtype": "Section Break",
             "insert_after": "tab_break_ewaybill",
-            "collapsible": 1,
+            "collapsible": 0,
             "print_hide": 1,
+            "hide_border": 1,
         },
         {
             "fieldname": "bill_from_address",
@@ -172,25 +218,9 @@ CUSTOM_FIELDS = {
             "fetch_if_empty": 0,
         },
         {
-            "fieldname": "ship_from_address",
-            "label": "Ship From",
-            "fieldtype": "Link",
-            "insert_after": "gst_category_bill_from",
-            "print_hide": 1,
-            "options": "Address",
-        },
-        {
-            "fieldname": "ship_from_address_display",
-            "label": "Ship From Address",
-            "fieldtype": "Text Editor",
-            "insert_after": "ship_from_address",
-            "read_only": 1,
-            "is_virtual": 1,
-        },
-        {
             "fieldname": "cb_billing_address",
             "fieldtype": "Column Break",
-            "insert_after": "ship_from_address_display",
+            "insert_after": "gst_category_bill_from",
         },
         {
             "fieldname": "bill_to_address",
@@ -234,17 +264,44 @@ CUSTOM_FIELDS = {
             "label": "Place of Supply",
             "fieldtype": "Autocomplete",
             "options": get_place_of_supply_options(),
-            "insert_after": "gst_category_bill_to",
+            "insert_after": "gst_category",
             "print_hide": 1,
             "read_only": 0,
             "translatable": 0,
             "fetch_from": "",
         },
         {
+            "fieldname": "section_break_shipping_address",
+            "fieldtype": "Section Break",
+            "insert_after": "place_of_supply",
+            "collapsible": 0,
+        },
+        {
+            "fieldname": "ship_from_address",
+            "label": "Ship From",
+            "fieldtype": "Link",
+            "insert_after": "section_break_shipping_address",
+            "print_hide": 1,
+            "options": "Address",
+        },
+        {
+            "fieldname": "ship_from_address_display",
+            "label": "Ship From Address",
+            "fieldtype": "Text Editor",
+            "insert_after": "ship_from_address",
+            "read_only": 1,
+            "is_virtual": 1,
+        },
+        {
+            "fieldname": "cb_shipping_address",
+            "fieldtype": "Column Break",
+            "insert_after": "ship_from_address_display",
+        },
+        {
             "fieldname": "ship_to_address",
             "label": "Ship To",
             "fieldtype": "Link",
-            "insert_after": "place_of_supply",
+            "insert_after": "cb_shipping_address",
             "print_hide": 1,
             "options": "Address",
         },
@@ -255,48 +312,6 @@ CUSTOM_FIELDS = {
             "insert_after": "ship_to_address",
             "read_only": 1,
             "is_virtual": 1,
-        },
-    ],
-    ("Subcontracting Order", "Subcontracting Receipt", "Stock Entry"): [
-        {
-            "fieldname": "taxes_and_charges",
-            "label": "Taxes and Charges Template",
-            "fieldtype": "Link",
-            "insert_after": "section_break_taxes",
-            "options": "Sales Taxes and Charges Template",
-            "print_hide": 1,
-        },
-        {
-            "fieldname": "taxes",
-            "label": "Estimated Taxes",
-            "fieldtype": "Table",
-            "options": "India Compliance Taxes and Charges",
-            "insert_after": "taxes_and_charges",
-        },
-        {
-            "fieldname": "section_break_total",
-            "fieldtype": "Section Break",
-            "insert_after": "taxes",
-        },
-        {
-            "fieldname": "total_taxes",
-            "label": "Total Estimated Taxes",
-            "fieldtype": "Currency",
-            "insert_after": "section_break_total",
-            "read_only": 1,
-        },
-        {
-            "fieldtype": "Column Break",
-            "insert_after": "total_taxes",
-            "fieldname": "cb_grand_total",
-        },
-        {
-            "fieldname": "base_grand_total",
-            "label": "Grand Total",
-            "fieldtype": "Currency",
-            "insert_after": "cb_grand_total",
-            "read_only": 1,
-            "options": "currency",
         },
     ],
     "Company": [
@@ -624,7 +639,45 @@ CUSTOM_FIELDS = {
             "translatable": 0,
         },
     ],
-    # Taxable Value and GST Details
+    # Taxable Value
+    (
+        "Supplier Quotation Item",
+        "Purchase Order Item",
+        "Purchase Receipt Item",
+        "Purchase Invoice Item",
+        "Quotation Item",
+        "Sales Order Item",
+        "Delivery Note Item",
+        "Sales Invoice Item",
+        "POS Invoice Item",
+    ): [
+        {
+            "fieldname": "taxable_value",
+            "label": "Taxable Value",
+            "fieldtype": "Currency",
+            "insert_after": "base_net_amount",
+            "options": "Company:company:default_currency",
+            "read_only": 1,
+            "translatable": 0,
+            "no_copy": 1,
+            "print_hide": 1,
+            "hidden": 0,
+        },
+    ],
+    "Subcontracting Order Item": [
+        {
+            "fieldname": "taxable_value",
+            "label": "Taxable Value",
+            "fieldtype": "Currency",
+            "insert_after": "additional_cost_per_qty",
+            "options": "Company:company:default_currency",
+            "read_only": 1,
+            "translatable": 0,
+            "no_copy": 1,
+            "print_hide": 1,
+            "hidden": 0,
+        },
+    ],
     "Stock Entry Detail": [
         {
             "fieldname": "taxable_value",
@@ -653,24 +706,10 @@ CUSTOM_FIELDS = {
             "hidden": 0,
         },
     ],
-    "Subcontracting Order Item": [
-        {
-            "fieldname": "taxable_value",
-            "label": "Taxable Value",
-            "fieldtype": "Currency",
-            "insert_after": "additional_cost_per_qty",
-            "options": "Company:company:default_currency",
-            "read_only": 1,
-            "translatable": 0,
-            "no_copy": 1,
-            "print_hide": 1,
-            "hidden": 0,
-        },
-    ],
     (
         "Subcontracting Order Item",
-        "Subcontracting Receipt Item",
         "Stock Entry Detail",
+        "Subcontracting Receipt Item",
     ): [
         {
             "fieldname": "item_tax_template",
@@ -679,6 +718,33 @@ CUSTOM_FIELDS = {
             "insert_after": "amount",
             "options": "Item Tax Template",
             "in_list_view": 1,
+        },
+    ],
+    # GST Details
+    (
+        "Supplier Quotation Item",
+        "Purchase Order Item",
+        "Purchase Receipt Item",
+        "Purchase Invoice Item",
+        "Quotation Item",
+        "Sales Order Item",
+        "Delivery Note Item",
+        "Sales Invoice Item",
+        "POS Invoice Item",
+        "Subcontracting Order Item",
+        "Stock Entry Detail",
+        "Subcontracting Receipt Item",
+    ): [
+        {
+            "fieldname": "gst_hsn_code",
+            "label": "HSN/SAC",
+            "fieldtype": "Data",
+            "fetch_from": "item_code.gst_hsn_code",
+            "insert_after": "description",
+            "allow_on_submit": 1,
+            "print_hide": 1,
+            "fetch_if_empty": 1,
+            "translatable": 0,
         },
         {
             "fieldname": "gst_treatment",
@@ -693,32 +759,6 @@ CUSTOM_FIELDS = {
             "translatable": 0,
             "no_copy": 1,
         },
-        {
-            "fieldname": "gst_hsn_code",
-            "label": "HSN/SAC",
-            "fieldtype": "Data",
-            "fetch_from": "item_code.gst_hsn_code",
-            "insert_after": "description",
-            "allow_on_submit": 1,
-            "print_hide": 1,
-            "fetch_if_empty": 1,
-            "translatable": 0,
-        },
-    ],
-    (
-        "Supplier Quotation Item",
-        "Purchase Order Item",
-        "Purchase Receipt Item",
-        "Purchase Invoice Item",
-        "Quotation Item",
-        "Sales Order Item",
-        "Delivery Note Item",
-        "Sales Invoice Item",
-        "POS Invoice Item",
-        "Stock Entry Detail",
-        "Subcontracting Receipt Item",
-        "Subcontracting Order Item",
-    ): [
         {
             "fieldtype": "Section Break",
             "label": "GST Details",
@@ -825,54 +865,6 @@ CUSTOM_FIELDS = {
             "read_only": 1,
             "translatable": 0,
             "no_copy": 1,
-        },
-    ],
-    (
-        "Supplier Quotation Item",
-        "Purchase Order Item",
-        "Purchase Receipt Item",
-        "Purchase Invoice Item",
-        "Quotation Item",
-        "Sales Order Item",
-        "Delivery Note Item",
-        "Sales Invoice Item",
-        "POS Invoice Item",
-    ): [
-        {
-            "fieldname": "gst_hsn_code",
-            "label": "HSN/SAC",
-            "fieldtype": "Data",
-            "fetch_from": "item_code.gst_hsn_code",
-            "insert_after": "description",
-            "allow_on_submit": 1,
-            "print_hide": 1,
-            "fetch_if_empty": 1,
-            "translatable": 0,
-        },
-        {
-            "fieldname": "gst_treatment",
-            "label": "GST Treatment",
-            "fieldtype": "Autocomplete",
-            "options": "Taxable\nZero-Rated\nNil-Rated\nExempted\nNon-GST",
-            "fetch_from": "item_tax_template.gst_treatment",
-            "fetch_if_empty": 1,
-            "insert_after": "item_tax_template",
-            "print_hide": 1,
-            "read_only": 1,
-            "translatable": 0,
-            "no_copy": 1,
-        },
-        {
-            "fieldname": "taxable_value",
-            "label": "Taxable Value",
-            "fieldtype": "Currency",
-            "insert_after": "base_net_amount",
-            "options": "Company:company:default_currency",
-            "read_only": 1,
-            "translatable": 0,
-            "no_copy": 1,
-            "print_hide": 1,
-            "hidden": 0,
         },
     ],
     (
@@ -1529,6 +1521,15 @@ E_WAYBILL_PURCHASE_RECEIPT_FIELDS = [
 
 E_WAYBILL_SE_FIELDS = [
     {
+        "fieldname": "transporter_info",
+        "label": "Transporter Info",
+        "fieldtype": "Section Break",
+        "insert_after": "ship_to_address_display",
+        "collapsible": 1,
+        "collapsible_depends_on": "transporter",
+        "print_hide": 1,
+    },
+    {
         "fieldname": "transporter",
         "label": "Transporter",
         "fieldtype": "Link",
@@ -1596,19 +1597,63 @@ E_WAYBILL_SCR_FIELDS = [
         "no_copy": 1,
     },
     {
+        "fieldname": "gst_transporter_id",
+        "label": "GST Transporter ID",
+        "fieldtype": "Data",
+        "insert_after": "transporter_name",
+        "fetch_from": "transporter.gst_transporter_id",
+        "print_hide": 1,
+        "no_copy": 1,
+        "translatable": 0,
+    },
+    {
         "fieldname": "vehicle_no",
         "label": "Vehicle No",
         "fieldtype": "Data",
-        "insert_after": "column_break5",
+        "insert_after": "gst_transporter_id",
         "print_hide": 1,
         "no_copy": 1,
         "translatable": 0,
         "length": 15,
     },
-    *E_WAYBILL_DN_FIELDS,
+    {
+        "fieldname": "distance",
+        "label": "Distance (in km)",
+        "fieldtype": "Int",
+        "insert_after": "vehicle_no",
+        "print_hide": 1,
+        "no_copy": 1,
+        "description": (
+            "Set as zero to update distance as per the e-Waybill portal (if available)"
+        ),
+    },
+    {
+        "fieldname": "mode_of_transport",
+        "label": "Mode of Transport",
+        "fieldtype": "Select",
+        "options": "\nRoad\nAir\nRail\nShip",
+        "default": "Road",
+        "insert_after": "lr_date",
+        "print_hide": 1,
+        "no_copy": 1,
+        "translatable": 0,
+    },
+    {
+        "fieldname": "gst_vehicle_type",
+        "label": "GST Vehicle Type",
+        "fieldtype": "Select",
+        "options": "Regular\nOver Dimensional Cargo (ODC)",
+        "depends_on": 'eval:["Road", "Ship"].includes(doc.mode_of_transport)',
+        "read_only_depends_on": "eval: doc.mode_of_transport == 'Ship'",
+        "default": "Regular",
+        "insert_after": "lr_date",
+        "print_hide": 1,
+        "no_copy": 1,
+        "translatable": 0,
+    },
 ]
 
-sales_e_waybill_field = {
+e_waybill_no_field = {
     "fieldname": "ewaybill",
     "label": "e-Waybill No.",
     "fieldtype": "Data",
@@ -1634,43 +1679,19 @@ e_waybill_status_field = {
     "read_only_depends_on": "eval:doc.ewaybill",
 }
 
-transporter_info_field = {
-    "fieldname": "transporter_info",
-    "label": "Transporter Info",
-    "fieldtype": "Section Break",
-    "insert_after": "remarks",
-    "collapsible": 1,
-    "collapsible_depends_on": "transporter",
-    "print_hide": 1,
-}
+purchase_e_waybill_field = {**e_waybill_no_field, "insert_after": "supplier_name"}
 
-purchase_e_waybill_field = {**sales_e_waybill_field, "insert_after": "supplier_name"}
-
-stock_entry_e_way_bill_field = [
-    {
-        **sales_e_waybill_field,
-        "insert_after": "posting_time",
-    },
-    {
-        **transporter_info_field,
-        "insert_after": "ship_to_address_display",
-    },
-]
+stock_entry_e_waybill_field = {**e_waybill_no_field, "insert_after": "posting_time"}
 
 
 E_WAYBILL_FIELDS = {
     "Sales Invoice": E_WAYBILL_INV_FIELDS
-    + [sales_e_waybill_field, e_waybill_status_field],
-    "Delivery Note": E_WAYBILL_DN_FIELDS + [sales_e_waybill_field],
+    + [e_waybill_no_field, e_waybill_status_field],
+    "Delivery Note": E_WAYBILL_DN_FIELDS + [e_waybill_no_field],
     "Purchase Invoice": E_WAYBILL_INV_FIELDS + [purchase_e_waybill_field],
     "Purchase Receipt": E_WAYBILL_PURCHASE_RECEIPT_FIELDS + [purchase_e_waybill_field],
-    "Stock Entry": [*stock_entry_e_way_bill_field]
-    + E_WAYBILL_SE_FIELDS
-    + [e_waybill_status_field],
-    "Subcontracting Receipt": [transporter_info_field]
-    + E_WAYBILL_SCR_FIELDS
-    + [
-        e_waybill_status_field,
-        purchase_e_waybill_field,
-    ],
+    "Stock Entry": E_WAYBILL_SE_FIELDS
+    + [stock_entry_e_waybill_field, e_waybill_status_field],
+    "Subcontracting Receipt": E_WAYBILL_SCR_FIELDS
+    + [purchase_e_waybill_field, e_waybill_status_field],
 }

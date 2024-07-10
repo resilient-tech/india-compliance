@@ -38,17 +38,12 @@ def get_property_setters(*, include_defaults=False):
         get_options_property_setter(
             "Stock Entry",
             "naming_series",
-            ["MAT-STE-.YY.-", "STERET-.YY.-", ""],
+            ["MAT-STE-"],
         ),
         get_options_property_setter(
             "Subcontracting Receipt",
             "naming_series",
-            ["MAT-SCR-.YY.-", "SCRRET-.YY.-", ""],
-        ),
-        get_options_property_setter(
-            "Subcontracting Order",
-            "naming_series",
-            ["SC-ORD-.YY.-", "SCORET-.YY.-", ""],
+            ["MAT-SCR-"],
         ),
         {
             "doctype": "Purchase Invoice",
@@ -114,8 +109,8 @@ def get_property_setters(*, include_defaults=False):
             "property": "default_email_template",
             "value": "Purchase Reconciliation",
         },
-        *EWAYBILL_PURCHASE_RECEIPT_PROPERTIES,
-        *EWAYBILL_SUBCONTRACTING_RECEIPT_PROPERTIES,
+        *PURCHASE_RECEIPT_PROPERTIES,
+        *SUBCONTRACTING_RECEIPT_PROPERTIES,
     ]
 
     if include_defaults:
@@ -230,11 +225,12 @@ LR_DATE_PROPERTIES = [
     },
 ]
 
-EWAYBILL_PURCHASE_RECEIPT_PROPERTIES = [
+PURCHASE_RECEIPT_PROPERTIES = [
     {"doctype": "Purchase Receipt", **field}
     for field in TRANSPORTER_NAME_PROPERTIES + LR_NO_PROPERTIES + LR_DATE_PROPERTIES
 ]
-EWAYBILL_SUBCONTRACTING_RECEIPT_PROPERTIES = [
+
+SUBCONTRACTING_RECEIPT_PROPERTIES = [
     {"doctype": "Subcontracting Receipt", **field}
     for field in TRANSPORTER_NAME_PROPERTIES + LR_NO_PROPERTIES + LR_DATE_PROPERTIES
 ]

@@ -90,6 +90,7 @@ def validate_transaction(doc, method=None):
     if validate_mandatory_fields(doc, ("bill_from_gstin", "place_of_supply")) is False:
         return False
 
+    # TODO: Conditionally check
     if (
         validate_mandatory_fields(
             doc,

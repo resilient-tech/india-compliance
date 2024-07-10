@@ -10,6 +10,13 @@ frappe.ui.form.on(DOCTYPE, {
                 filters: [["company", "=", frm.doc.company]],
             };
         });
+
+        frm.set_query("transporter", function () {
+            return {
+                filters: [["is_transporter", "=", 1]],
+            };
+        });
+
         set_address_display_events();
     },
 
@@ -73,6 +80,7 @@ frappe.ui.form.on(DOCTYPE, {
 });
 
 function set_address_display_events() {
+    // TODO: OnChange or removal of address
     const event_fields = [
         "bill_from_address",
         "bill_to_address",
