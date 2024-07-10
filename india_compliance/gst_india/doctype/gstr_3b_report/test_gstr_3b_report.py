@@ -240,7 +240,6 @@ def create_sales_invoices():
         is_out_state=True,
         rate=555,
     )
-    print("9")
     # E-commerce reverse charge
     create_sales_invoice(
         customer="_Test Registered Composition Customer",
