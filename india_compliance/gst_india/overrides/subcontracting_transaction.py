@@ -1,5 +1,6 @@
 import frappe
 from frappe import _, bold
+from frappe.contacts.doctype.address.address import get_address_display
 
 from india_compliance.gst_india.overrides.transaction import (
     DOCTYPES_WITH_GST_DETAIL,
@@ -34,6 +35,9 @@ SUBCONTRACTING_ORDER_RECEIPT_FIELD_MAP = {"total_taxable_value": "total"}
 
 
 def onload(doc, method=None):
+    if doc.doctype == "Stock Entry":
+        set_address_display(doc)
+
     if not doc.get("ewaybill"):
         return
 
@@ -203,3 +207,16 @@ def is_inter_state_supply(doc):
 
 def get_source_state_code(doc):
     return (doc.bill_from_gstin or doc.bill_to_gstin)[:2]
+
+
+def set_address_display(doc):
+    adddress_fields = (
+        "bill_from_address",
+        "bill_to_address",
+        "ship_from_address",
+        "ship_to_address",
+    )
+
+    for address in adddress_fields:
+        if doc.get(address):
+            setattr(doc, address + "_display", get_address_display(doc.get(address)))

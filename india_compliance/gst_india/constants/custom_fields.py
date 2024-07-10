@@ -148,6 +148,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Text Editor",
             "insert_after": "bill_from_address",
             "read_only": 1,
+            "is_virtual": 1,
         },
         {
             "fieldname": "bill_from_gstin",
@@ -184,6 +185,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Text Editor",
             "insert_after": "ship_from_address",
             "read_only": 1,
+            "is_virtual": 1,
         },
         {
             "fieldname": "cb_billing_address",
@@ -204,6 +206,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Text Editor",
             "insert_after": "bill_to_address",
             "read_only": 1,
+            "is_virtual": 1,
         },
         {
             "fieldname": "bill_to_gstin",
@@ -251,6 +254,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Text Editor",
             "insert_after": "ship_to_address",
             "read_only": 1,
+            "is_virtual": 1,
         },
     ],
     ("Subcontracting Order", "Subcontracting Receipt", "Stock Entry"): [
