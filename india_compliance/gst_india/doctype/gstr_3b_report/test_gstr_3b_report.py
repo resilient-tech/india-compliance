@@ -79,15 +79,26 @@ class TestGSTR3BReport(FrappeTestCase):
                         "txval": 100.0,
                     },
                     "osup_det": {
-                        "camt": 18.0,
+                        "camt": 9.0,
                         "csamt": 0.0,
                         "iamt": 37.98,
-                        "samt": 18.0,
-                        "txval": 411.0,
+                        "samt": 9.0,
+                        "txval": -355.0,
                     },
-                    "osup_nil_exmp": {"txval": 100.0},
+                    "osup_nil_exmp": {"txval": 766.0},
                     "osup_nongst": {"txval": 222.0},
                     "osup_zero": {"csamt": 0.0, "iamt": 99.9, "txval": 999.0},
+                },
+                # 3.1.1
+                "eco_dtls": {
+                    "eco_sup": {
+                        "txval": 0,
+                        "iamt": 0,
+                        "camt": 0,
+                        "samt": 0,
+                        "csamt": 0,
+                    },
+                    "eco_reg_sup": {"txval": 666},
                 },
                 # 3.2
                 "inter_sup": {
@@ -127,10 +138,10 @@ class TestGSTR3BReport(FrappeTestCase):
                             "ty": "ISD",
                         },
                         {
-                            "camt": 31.5,
+                            "camt": 22.5,
                             "csamt": 0.0,
                             "iamt": 0.0,
-                            "samt": 31.5,
+                            "samt": 22.5,
                             "ty": "OTH",
                         },
                     ],
@@ -150,7 +161,7 @@ class TestGSTR3BReport(FrappeTestCase):
                             "ty": "OTH",
                         },
                     ],
-                    "itc_net": {"camt": 40.5, "csamt": 0.0, "iamt": 0.0, "samt": 40.5},
+                    "itc_net": {"camt": 31.5, "csamt": 0.0, "iamt": 0.0, "samt": 31.5},
                     "itc_rev": [
                         {
                             "camt": 0.0,
@@ -197,7 +208,7 @@ class TestGSTR3BReport(FrappeTestCase):
 
 
 def create_sales_invoices():
-    create_sales_invoice(is_in_state=True)
+    # create_sales_invoice(is_in_state=True)
     create_sales_invoice(
         customer="_Test Registered Composition Customer",
         is_out_state=True,
@@ -213,13 +224,10 @@ def create_sales_invoices():
         place_of_supply="06-Haryana",
         rate=111,
     )
-
     # Same Item Nil-Rated
     create_sales_invoice(item_tax_template="Nil-Rated - _TIRC")
-
     # Non Gst item
     create_sales_invoice(item_code="_Test Non GST Item", rate=222)
-
     # Zero Rated
     create_sales_invoice(
         customer_address="_Test Registered Customer-Billing-1",
@@ -232,10 +240,19 @@ def create_sales_invoices():
         is_out_state=True,
         rate=555,
     )
+    print("9")
+    # E-commerce reverse charge
+    create_sales_invoice(
+        customer="_Test Registered Composition Customer",
+        is_reverse_charge=True,
+        rate=666,
+        item_code="_Test Trading Goods 1",
+        ecommerce_gstin="29AABCF8078M1C8",
+    )
 
 
 def create_purchase_invoices():
-    create_purchase_invoice(is_in_state=True)
+    # create_purchase_invoice(is_in_state=True)
     create_purchase_invoice(rate=250, qty=1, is_in_state=True)
     create_purchase_invoice(supplier="_Test Registered Composition Supplier")
     create_purchase_invoice(
