@@ -17,7 +17,9 @@ from india_compliance.gst_india.overrides.transaction import (
     validate_overseas_gst_category,
     validate_place_of_supply,
     validate_reverse_charge_transaction,
-    validate_transaction,
+)
+from india_compliance.gst_india.overrides.transaction import (
+    validate_transaction as _validate_transaction,
 )
 from india_compliance.gst_india.utils import get_state, is_api_enabled
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
@@ -60,14 +62,14 @@ def validate(doc, method=None):
 
     set_gst_tax_type(doc)
     validate_taxes(doc)
-    if doc.doctype == "Stock Entry":
-        validate_stock_entry_transaction(doc)
-    else:
-        validate_transaction(doc)
+    validate_transaction(doc)
     update_gst_details(doc)
 
 
-def validate_stock_entry_transaction(doc, method=None):
+def validate_transaction(doc, method=None):
+    if doc.doctype != "Stock Entry":
+        return _validate_transaction(doc)
+
     if ignore_gst_validations(doc):
         return False
 
