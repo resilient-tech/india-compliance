@@ -52,6 +52,21 @@ frappe.ui.form.on(DOCTYPE, {
         }
     },
 
+    company(frm) {
+        if (frm.doc.company) {
+            frappe.call({
+                method: "frappe.contacts.doctype.address.address.get_default_address",
+                args: {
+                    doctype: "Company",
+                    name: frm.doc.company,
+                },
+                callback(r) {
+                    frm.set_value("bill_from_address", r.message);
+                },
+            });
+        }
+    },
+
     taxes_and_charges(frm) {
         frm.taxes_controller.update_taxes(frm);
     },
