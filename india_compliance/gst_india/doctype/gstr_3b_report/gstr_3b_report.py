@@ -191,7 +191,7 @@ class GSTR3BReport(Document):
             )
         )
         reversal_entries = self.get_query_with_conditions(
-            journal_entry, reversal_entries, self.gst_details.get("gstin")
+            journal_entry, reversal_entries, party_gstin=""
         ).run(as_dict=True)
 
         net_itc = self.report_dict["itc_elg"]["itc_net"]
@@ -337,10 +337,15 @@ class GSTR3BReport(Document):
             )
         )
         query = self.get_query_with_conditions(si, query, si.billing_address_gstin)
-        query = query.where(si.is_reverse_charge == 1)
-        result = query.run(as_dict=True)[0]
+        result = (
+            query.where(si.is_reverse_charge == 1)
+            .where(IfNull(si.ecommerce_gstin, "") != "")
+            .run(as_dict=True)
+        )
+        total_taxable_value = flt(result[0]["taxable_value"], 2)
 
-        self.report_dict["eco_dtls"]["eco_reg_sup"]["txval"] = result["taxable_value"]
+        self.report_dict["eco_dtls"]["eco_reg_sup"]["txval"] = total_taxable_value
+        self.report_dict["sup_details"]["osup_det"]["txval"] -= total_taxable_value
 
     def get_outward_supply_details(self, doctype, reverse_charge=None):
         self.get_outward_tax_invoices(doctype, reverse_charge=reverse_charge)
@@ -480,7 +485,6 @@ class GSTR3BReport(Document):
         if not self.invoice_map:
             return {}
 
-        condition = self.get_reverse_charge_invoice_condition(doctype)
         item_details = frappe.db.sql(
             f"""
             SELECT
@@ -488,7 +492,6 @@ class GSTR3BReport(Document):
             FROM
                 `tab{doctype} Item`
             WHERE parent in ({", ".join(["%s"] * len(self.invoice_map))})
-            {condition}
             """,
             tuple(self.invoice_map),
             as_dict=1,
