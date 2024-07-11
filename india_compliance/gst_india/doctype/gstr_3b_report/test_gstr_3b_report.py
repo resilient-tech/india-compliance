@@ -248,33 +248,7 @@ def create_sales_invoices():
         item_code="_Test Trading Goods 1",
         rate=100,
         ecommerce_gstin="29AABCF8078M1C8",
-        taxes_and_charges="Output GST RCM In-state - _TIRC",
-        taxes=[
-            {
-                "charge_type": "On Net Total",
-                "account_head": "Output Tax CGST - _TIRC",
-                "rate": 9,
-                "description": "CGST",
-            },
-            {
-                "charge_type": "On Net Total",
-                "account_head": "Output Tax SGST - _TIRC",
-                "rate": 9,
-                "description": "SGST",
-            },
-            {
-                "charge_type": "On Net Total",
-                "account_head": "Output Tax CGST RCM - _TIRC",
-                "rate": -9,
-                "description": "CGST",
-            },
-            {
-                "charge_type": "On Net Total",
-                "account_head": "Output Tax SGST RCM - _TIRC",
-                "rate": -9,
-                "description": "SGST",
-            },
-        ],
+        is_in_state_rcm=True,
     )
 
 
