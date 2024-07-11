@@ -365,9 +365,21 @@ def update_gst_category():
 
     # party-wise addresses
     category_map = {}
+    gstin_wise_detail = {}
+
     for address in address_without_category:
-        gstin_info = get_gstin_info(address.gstin)
-        gst_category = gstin_info.gst_category
+        gstin = address.gstin
+
+        if gstin not in gstin_wise_detail:
+            gstin_info = get_gstin_info(gstin)
+            gstin_wise_detail[gstin] = gstin_info
+
+        gstin_info = gstin_wise_detail[gstin]
+
+        if not gstin_info:
+            continue
+
+        gst_category = gstin_wise_detail[gstin].get("gst_category")
 
         category_map.setdefault(gst_category, []).append(address.name)
 
