@@ -67,7 +67,6 @@ CUSTOM_FIELDS = {
             "insert_after": "total",
             "hide_border": 1,
         },
-        # TODO: Mandatory depends_on Indian Registered Company for supplier delivery note
     ],
     ("Subcontracting Order", "Subcontracting Receipt"): [
         {

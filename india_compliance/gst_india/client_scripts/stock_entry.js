@@ -18,6 +18,7 @@ frappe.ui.form.on(DOCTYPE, {
         });
 
         set_address_display_events();
+        set_supplier_address(frm);
     },
 
     onload(frm) {
@@ -45,18 +46,7 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     supplier_address(frm) {
-        if (frm.doc.supplier_address) {
-            frm.set_value("bill_to_address", frm.doc.supplier_address);
-            frm.set_df_property("bill_to_address", "read_only", 1);
-            frm.set_df_property(
-                "bill_to_address",
-                "description",
-                "The 'Bill To' address is automatically populated based on the supplier address. To update the 'Bill To' address, please modify the supplier address accordingly."
-            );
-        } else {
-            frm.set_df_property("bill_to_address", "read_only", 0);
-            frm.set_df_property("bill_to_address", "description", "");
-        }
+        set_supplier_address(frm);
     },
 
     company(frm) {
@@ -80,7 +70,6 @@ frappe.ui.form.on(DOCTYPE, {
 });
 
 function set_address_display_events() {
-    // TODO: OnChange or removal of address
     const event_fields = [
         "bill_from_address",
         "bill_to_address",
@@ -92,18 +81,32 @@ function set_address_display_events() {
         event_fields.map(field => [
             field,
             frm => {
-                if (frm.doc[field])
-                    erpnext.utils.get_address_display(
-                        frm,
-                        field,
-                        field + "_display",
-                        false
-                    );
+                erpnext.utils.get_address_display(
+                    frm,
+                    field,
+                    field + "_display",
+                    false
+                );
             },
         ])
     );
 
     frappe.ui.form.on(DOCTYPE, events);
+}
+
+function set_supplier_address(frm) {
+    if (frm.doc.supplier_address) {
+        frm.set_value("bill_to_address", frm.doc.supplier_address);
+        frm.set_df_property("bill_to_address", "read_only", 1);
+        frm.set_df_property(
+            "bill_to_address",
+            "description",
+            "The 'Bill To' address is automatically populated based on the supplier address. To update the 'Bill To' address, please modify the supplier address accordingly."
+        );
+    } else {
+        frm.set_df_property("bill_to_address", "read_only", 0);
+        frm.set_df_property("bill_to_address", "description", "");
+    }
 }
 
 frappe.ui.form.on("Stock Entry Detail", india_compliance.taxes_controller_events);

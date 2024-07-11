@@ -109,6 +109,12 @@ def get_property_setters(*, include_defaults=False):
             "property": "default_email_template",
             "value": "Purchase Reconciliation",
         },
+        {
+            "doctype": "Subcontracting Receipt",
+            "fieldname": "supplier_delivery_note",
+            "property": "mandatory_depends_on",
+            "value": "eval: gst_settings.require_supplier_invoice_no === 1 && doc.company_gstin",
+        },
         *PURCHASE_RECEIPT_PROPERTIES,
         *SUBCONTRACTING_RECEIPT_PROPERTIES,
     ]
