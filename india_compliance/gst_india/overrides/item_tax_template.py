@@ -83,10 +83,12 @@ def get_accounts_with_negative_rate(company):
     - Include all Purchase RCM accounts based on how taxes and charges template is created
     """
     negative_rate_accounts = list(
-        get_gst_accounts_by_type(company, "Sales Reverse Charge").values()
+        get_gst_accounts_by_type(company, "Sales Reverse Charge", throw=False).values()
     )
     purchase_rcm_accounts = list(
-        get_gst_accounts_by_type(company, "Purchase Reverse Charge").values()
+        get_gst_accounts_by_type(
+            company, "Purchase Reverse Charge", throw=False
+        ).values()
     )
 
     if not purchase_rcm_accounts:
