@@ -64,6 +64,7 @@ class TestGSTR3BReport(FrappeTestCase):
         ).insert()
 
         output = json.loads(report.json_output)
+
         self.assertDictEqual(
             output,
             {
@@ -79,13 +80,13 @@ class TestGSTR3BReport(FrappeTestCase):
                         "txval": 100.0,
                     },
                     "osup_det": {
-                        "camt": 9.0,
+                        "camt": 18.0,
                         "csamt": 0.0,
                         "iamt": 37.98,
-                        "samt": 9.0,
-                        "txval": -355.0,
+                        "samt": 18.0,
+                        "txval": 411.0,
                     },
-                    "osup_nil_exmp": {"txval": 766.0},
+                    "osup_nil_exmp": {"txval": 100.0},
                     "osup_nongst": {"txval": 222.0},
                     "osup_zero": {"csamt": 0.0, "iamt": 99.9, "txval": 999.0},
                 },
@@ -98,7 +99,7 @@ class TestGSTR3BReport(FrappeTestCase):
                         "samt": 0,
                         "csamt": 0,
                     },
-                    "eco_reg_sup": {"txval": 666},
+                    "eco_reg_sup": {"txval": 100},
                 },
                 # 3.2
                 "inter_sup": {
@@ -138,10 +139,10 @@ class TestGSTR3BReport(FrappeTestCase):
                             "ty": "ISD",
                         },
                         {
-                            "camt": 22.5,
+                            "camt": 31.5,
                             "csamt": 0.0,
                             "iamt": 0.0,
-                            "samt": 22.5,
+                            "samt": 31.5,
                             "ty": "OTH",
                         },
                     ],
@@ -161,7 +162,7 @@ class TestGSTR3BReport(FrappeTestCase):
                             "ty": "OTH",
                         },
                     ],
-                    "itc_net": {"camt": 31.5, "csamt": 0.0, "iamt": 0.0, "samt": 31.5},
+                    "itc_net": {"camt": 40.5, "csamt": 0.0, "iamt": 0.0, "samt": 40.5},
                     "itc_rev": [
                         {
                             "camt": 0.0,
@@ -208,7 +209,7 @@ class TestGSTR3BReport(FrappeTestCase):
 
 
 def create_sales_invoices():
-    # create_sales_invoice(is_in_state=True)
+    create_sales_invoice(is_in_state=True)
     create_sales_invoice(
         customer="_Test Registered Composition Customer",
         is_out_state=True,
@@ -242,16 +243,43 @@ def create_sales_invoices():
     )
     # E-commerce reverse charge
     create_sales_invoice(
-        customer="_Test Registered Composition Customer",
+        customer="_Test Registered Customer",
         is_reverse_charge=True,
-        rate=666,
         item_code="_Test Trading Goods 1",
+        rate=100,
         ecommerce_gstin="29AABCF8078M1C8",
+        taxes_and_charges="Output GST RCM In-state - _TIRC",
+        taxes=[
+            {
+                "charge_type": "On Net Total",
+                "account_head": "Output Tax CGST - _TIRC",
+                "rate": 9,
+                "description": "CGST",
+            },
+            {
+                "charge_type": "On Net Total",
+                "account_head": "Output Tax SGST - _TIRC",
+                "rate": 9,
+                "description": "SGST",
+            },
+            {
+                "charge_type": "On Net Total",
+                "account_head": "Output Tax CGST RCM - _TIRC",
+                "rate": -9,
+                "description": "CGST",
+            },
+            {
+                "charge_type": "On Net Total",
+                "account_head": "Output Tax SGST RCM - _TIRC",
+                "rate": -9,
+                "description": "SGST",
+            },
+        ],
     )
 
 
 def create_purchase_invoices():
-    # create_purchase_invoice(is_in_state=True)
+    create_purchase_invoice(is_in_state=True)
     create_purchase_invoice(rate=250, qty=1, is_in_state=True)
     create_purchase_invoice(supplier="_Test Registered Composition Supplier")
     create_purchase_invoice(
