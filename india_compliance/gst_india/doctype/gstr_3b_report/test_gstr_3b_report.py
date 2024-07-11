@@ -84,7 +84,7 @@ class TestGSTR3BReport(FrappeTestCase):
                         "csamt": 0.0,
                         "iamt": 37.98,
                         "samt": 18.0,
-                        "txval": 411.0,
+                        "txval": 532.0,
                     },
                     "osup_nil_exmp": {"txval": 100.0},
                     "osup_nongst": {"txval": 222.0},
@@ -248,6 +248,14 @@ def create_sales_invoices():
         item_code="_Test Trading Goods 1",
         rate=100,
         ecommerce_gstin="29AABCF8078M1C8",
+        is_in_state_rcm=True,
+    )
+    # Reverse Charge Sales
+    create_sales_invoice(
+        customer="_Test Registered Customer",
+        is_reverse_charge=True,
+        item_code="_Test Trading Goods 1",
+        rate=121,
         is_in_state_rcm=True,
     )
 
