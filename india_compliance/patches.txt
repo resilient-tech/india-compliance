@@ -37,7 +37,7 @@ execute:from india_compliance.gst_india.setup import create_email_template; crea
 india_compliance.patches.post_install.update_payment_entry_fields
 india_compliance.patches.v15.remove_ignore_reconciliation_field
 india_compliance.patches.v15.migrate_print_options_to_new_field
-india_compliance.patches.post_install.update_company_fixtures #3
+india_compliance.patches.post_install.update_company_fixtures #4
 india_compliance.patches.post_install.update_itc_classification_field
 india_compliance.patches.v14.update_purchase_reco_email_template
 india_compliance.patches.v14.delete_purchase_receipt_standard_custom_fields
