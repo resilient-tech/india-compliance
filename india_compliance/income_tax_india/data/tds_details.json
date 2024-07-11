@@ -1323,7 +1323,7 @@
   },
   {
     "name": "TDS - 194Q - Individual",
-    "category_name": "TDS on purchasing",
+    "category_name": "TDS on Purchasing",
     "round_off_tax_amount": 0,
     "tds_section": "194Q",
     "consider_party_ledger_amount": 0,
@@ -1348,7 +1348,7 @@
   },
   {
     "name": "TDS - 194Q - Company",
-    "category_name": "TDS on purchasing",
+    "category_name": "TDS on Purchasing",
     "round_off_tax_amount": 0,
     "tds_section": "194Q",
     "consider_party_ledger_amount": 0,
@@ -1373,7 +1373,7 @@
   },
   {
     "name": "TDS - 194Q - No PAN / Invalid PAN",
-    "category_name": "TDS on purchasing",
+    "category_name": "TDS on Purchasing",
     "round_off_tax_amount": 0,
     "tds_section": "194Q",
     "consider_party_ledger_amount": 0,
@@ -1398,7 +1398,7 @@
   },
   {
     "name":"TDS - 206C(1H) - Individual",
-    "category_name":"TDS on sale of goods",
+    "category_name":"TDS on Sale of Goods",
     "round_off_tax_amount":0,
     "tds_section":"206C(1H)",
     "consider_party_ledger_amount":0,
@@ -1423,7 +1423,7 @@
   },
   {
     "name":"TDS - 206C(1H) - Company",
-    "category_name":"TDS on sale of goods",
+    "category_name":"TDS on Sale of Goods",
     "round_off_tax_amount":0,
     "tds_section":"206C(1H)",
     "consider_party_ledger_amount":0,
@@ -1448,7 +1448,7 @@
   },
   {
     "name":"TDS - 206C(1H) - No PAN / Invalid PAN",
-    "category_name":"TDS on sale of goods",
+    "category_name":"TDS on Sale of Goods",
     "round_off_tax_amount":0,
     "tds_section":"206C(1H)",
     "consider_party_ledger_amount":0,
