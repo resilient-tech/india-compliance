@@ -196,6 +196,19 @@ def get_columns(filters):
     )
 
     if filters.summary_by == "Summary by Item":
+        if gst_settings.enable_sales_through_ecommerce_operators and (
+            not filters.invoice_category
+            or filters.invoice_category == "E-Commerce Sales"
+        ):
+            columns.append(
+                {
+                    "label": _("E-Commerce GSTIN"),
+                    "fieldname": "ecommerce_gstin",
+                    "fieldtype": "Data",
+                    "width": 180,
+                }
+            )
+
         columns.append(
             {
                 "label": _("Item Code"),
@@ -297,7 +310,7 @@ def get_columns(filters):
             },
         ]
     )
-    if not filters.invoice_category:
+    if not filters.invoice_category or filters.invoice_category == "E-Commerce Sales":
         columns.append(
             {
                 "label": _("Invoice Category"),
@@ -313,6 +326,23 @@ def get_columns(filters):
                 "fieldname": "invoice_sub_category",
                 "width": 120,
                 "fieldtype": "Data",
+            }
+        )
+
+    if (
+        filters.summary_by == "Summary by Item"
+        and gst_settings.enable_sales_through_ecommerce_operators
+        and (
+            not filters.invoice_category
+            or filters.invoice_category == "E-Commerce Sales"
+        )
+    ):
+        columns.append(
+            {
+                "label": _("E-Commerce Supply Type"),
+                "fieldname": "ecommerce_supply_type",
+                "fieldtype": "Data",
+                "width": 250,
             }
         )
 

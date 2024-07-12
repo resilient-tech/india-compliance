@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 from pypika import Order
+from pypika.terms import Case
 
 import frappe
 from frappe.query_builder.functions import Date, IfNull, Sum
@@ -10,6 +11,7 @@ from frappe.utils import getdate
 from india_compliance.gst_india.utils import get_full_gst_uom
 from india_compliance.gst_india.utils.gstr_1 import (
     CATEGORY_SUB_CATEGORY_MAPPING,
+    SUPECOM,
     GSTR1_B2B_InvoiceType,
     GSTR1_Category,
     GSTR1_SubCategory,
@@ -46,6 +48,9 @@ CATEGORY_CONDITIONS = {
         "category": "is_cdnur_invoice",
         "sub_category": "set_for_cdnur",
     },
+    "E-Commerce Sales": {
+        "category": "is_ecommerce_sales_invoice",
+    },
 }
 
 
@@ -80,6 +85,16 @@ class GSTR1Query:
                 self.si.posting_date,
                 IfNull(self.si.place_of_supply, "").as_("place_of_supply"),
                 self.si.is_reverse_charge,
+                IfNull(self.si.ecommerce_gstin, "").as_("ecommerce_gstin"),
+                Case()
+                .when(
+                    IfNull(self.si.ecommerce_gstin, "") != "",
+                    Case()
+                    .when(self.si.is_reverse_charge == 1, SUPECOM.US_9_5.value)
+                    .else_(SUPECOM.US_52.value),
+                )
+                .else_("")
+                .as_("ecommerce_supply_type"),
                 self.si.is_export_with_gst,
                 self.si.is_return,
                 self.si.is_debit_note,
@@ -289,6 +304,9 @@ class GSTR1CategoryConditions(GSTR1Conditions):
             and (self.is_export(invoice) or self.is_b2cl_cn_dn(invoice))
         )
 
+    def is_ecommerce_sales_invoice(self, invoice):
+        return bool(invoice.ecommerce_gstin)
+
 
 class GSTR1Subcategory(GSTR1CategoryConditions):
 
@@ -453,6 +471,11 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
         functions = CATEGORY_CONDITIONS.get(invoice_category)
         condition = getattr(self, functions["category"], None)
 
+        if invoice_category == "E-Commerce Sales":
+            return self.get_ecommerce_sales_invoices(
+                invoices, condition, invoice_sub_category
+            )
+
         for invoice in invoices:
             self.invoice_conditions = {}
             if not condition(invoice):
@@ -466,6 +489,23 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
 
             elif invoice_sub_category == invoice.invoice_sub_category:
                 filtered_invoices.append(invoice)
+
+        return filtered_invoices
+
+    def get_ecommerce_sales_invoices(
+        self, invoices, condition, invoice_sub_category=None
+    ):
+        filtered_invoices = []
+        for invoice in invoices:
+            self.invoice_conditions = {}
+            if not condition(invoice):
+                continue
+            if not invoice_sub_category:
+                filtered_invoices.append(invoice)
+            else:
+                if invoice_sub_category == invoice.ecommerce_supply_type:
+                    filtered_invoices.append(invoice)
+        self.process_invoices(filtered_invoices)
 
         return filtered_invoices
 

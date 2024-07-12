@@ -16,6 +16,10 @@ const INVOICE_TYPE = {
     "Credit/Debit Notes (Unregistered)": ["CDNUR"],
 };
 
+if (gst_settings.enable_sales_through_ecommerce_operators) {
+    INVOICE_TYPE["E-Commerce Sales"] = ["Liable to pay tax u/s 9(5)", "Liable to collect tax u/s 52(TCS)"]
+}
+
 frappe.query_reports["GST Sales Register Beta"] = {
     onload: set_sub_category_options,
 
@@ -70,8 +74,7 @@ frappe.query_reports["GST Sales Register Beta"] = {
             fieldtype: "Autocomplete",
             fieldname: "invoice_category",
             label: __("Invoice Category"),
-            options:
-                "B2B, SEZ, DE\nB2C (Large)\nExports\nB2C (Others)\nNil-Rated, Exempted, Non-GST\nCredit/Debit Notes (Registered)\nCredit/Debit Notes (Unregistered)",
+            options: Object.keys(INVOICE_TYPE),
             on_change(report) {
                 report.set_filter_value("invoice_sub_category", "");
                 set_sub_category_options(report);
