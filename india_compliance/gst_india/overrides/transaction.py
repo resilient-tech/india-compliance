@@ -389,7 +389,7 @@ class GSTAccounts:
         """
         - RCM accounts should not be used in transactions without Reverse Charge
         """
-        if self.doc.doctype == "Payment Entry" or self.doc.is_reverse_charge:
+        if self.doc.doctype == "Payment Entry" or self.doc.get("is_reverse_charge"):
             return
 
         if idx := self._get_matched_idx(self.gst_tax_rows, GST_RCM_TAX_TYPES):
@@ -661,7 +661,7 @@ def validate_hsn_codes(doc):
 
 
 def validate_sales_reverse_charge(doc):
-    if doc.is_reverse_charge and not doc.billing_address_gstin:
+    if doc.get("is_reverse_charge") and not doc.billing_address_gstin:
         frappe.throw(
             _(
                 "Transaction cannot be reverse charge since sales is to customer"
