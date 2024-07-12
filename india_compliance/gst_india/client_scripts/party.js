@@ -70,9 +70,7 @@ function validate_gstin(doctype) {
             if (PAN_REGEX.test(pan)) {
                 frm.doc.pan = pan;
                 frm.refresh_field("pan");
-                if(["Customer", "Supplier"].includes(doctype)){
-                    set_party_type(frm);
-                }
+                set_party_type(frm);
             }
         },
     });
@@ -96,9 +94,7 @@ function validate_pan(doctype) {
 
             frm.doc.pan = pan;
             frm.refresh_field("pan");
-            if(["Customer", "Supplier"].includes(doctype)){
-                set_party_type(frm);
-            }
+            set_party_type(frm);
         },
     });
 }
@@ -155,6 +151,7 @@ function set_gst_category(doctype) {
 }
 
 function set_party_type(frm) {
+    if(!["Customer","Supplier"].includes(frm.doc.doctype))  return;
     pan_to_party_type_map = {
         F: "Partnership",
         C: "Company",
