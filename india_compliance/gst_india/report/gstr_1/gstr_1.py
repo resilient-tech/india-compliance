@@ -1155,6 +1155,12 @@ class Gstr1Report:
                     "width": 150,
                 },
                 {
+                    "fieldname": "total_draft",
+                    "label": _("Draft"),
+                    "fieldtype": "Int",
+                    "width": 160,
+                },
+                {
                     "fieldname": "cancelled",
                     "label": _("Cancelled"),
                     "fieldtype": "Int",
@@ -2176,6 +2182,9 @@ def get_gstr1_excel(filters, data=None, columns=None):
             headers = report_data[0] or []
             data = format_data_to_dict(report_data)
 
+        if type_of_business == "Document Issued Summary":
+            format_doc_issued_excel_data(headers, data)
+
         create_excel_sheet(excel, type_of_business, headers, data)
 
     else:
@@ -2186,10 +2195,32 @@ def get_gstr1_excel(filters, data=None, columns=None):
             headers = report_data[0] or []
             data = format_data_to_dict(report_data)
 
+            if type_of_business == "Document Issued Summary":
+                format_doc_issued_excel_data(headers, data)
+
             create_excel_sheet(excel, type_of_business, headers, data)
 
     filename.extend([gstin, report_dict["fp"]])
     excel.export("_".join(filename))
+
+
+def format_doc_issued_excel_data(headers, data):
+    # add total_draft count to cancelled count
+    for doc in data:
+        doc["cancelled"] += doc.get("total_draft", 0)
+
+    # remove total_draft column from headers
+    total_draft_idx = next(
+        (
+            idx
+            for idx, header in enumerate(headers)
+            if header["fieldname"] == "total_draft"
+        ),
+        None,
+    )
+
+    if total_draft_idx is not None:
+        headers.pop(total_draft_idx)
 
 
 def create_excel_sheet(excel, sheet_name, headers, data):
