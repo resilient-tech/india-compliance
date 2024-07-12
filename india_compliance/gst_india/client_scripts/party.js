@@ -70,6 +70,7 @@ function validate_gstin(doctype) {
             if (PAN_REGEX.test(pan)) {
                 frm.doc.pan = pan;
                 frm.refresh_field("pan");
+                set_party_type(frm);
             }
         },
     });
@@ -93,6 +94,7 @@ function validate_pan(doctype) {
 
             frm.doc.pan = pan;
             frm.refresh_field("pan");
+            set_party_type(frm);
         },
     });
 }
@@ -146,4 +148,14 @@ function set_gst_category(doctype) {
             );
         },
     });
+}
+
+function set_party_type(frm) {
+    if (!["Customer", "Supplier"].includes(frm.doc.doctype)) return;
+    pan_to_party_type_map = {
+        F: "Partnership",
+        C: "Company",
+    };
+    party_type = frm.doc.doctype === "Customer" ? "customer_type" : "supplier_type";
+    frm.set_value(party_type, pan_to_party_type_map[frm.doc.pan[3]] || "Individual");
 }
