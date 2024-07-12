@@ -44,12 +44,11 @@ function fetch_gst_details(doctype) {
             "shipping_address_name",
             "is_export_with_gst"
         );
-    } else if (
-        ["Stock Entry", "Subcontracting Order", "Subcontracting Receipt"].includes(
-            doctype
-        )
-    ) {
-        event_fields.push("supplier", "bill_to_address", "bill_from_gstin");
+    } else if (doctype === "Stock Entry") {
+        event_fields.push("bill_from_gstin", "supplier_address", "bill_from_address");
+    } else if (["Subcontracting Order", "Subcontracting Receipt"].includes(doctype)) {
+        // TODO: Fix updation of Place of Supply and Taxes
+        event_fields.push("supplier_address", "billing_address");
     } else {
         event_fields.push("supplier_address");
     }
@@ -77,6 +76,7 @@ async function update_gst_details(frm, event) {
     if (
         [
             "company_gstin",
+            "bill_from_gstin",
             "customer_address",
             "shipping_address_name",
             "supplier_address",

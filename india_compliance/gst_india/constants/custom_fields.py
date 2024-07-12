@@ -206,7 +206,7 @@ CUSTOM_FIELDS = {
             "translatable": 0,
         },
         {
-            "fieldname": "gst_category_bill_from",
+            "fieldname": "bill_from_gst_category",
             "label": "GST Category",
             "fieldtype": "Data",
             "insert_after": "bill_from_gstin",
@@ -219,7 +219,7 @@ CUSTOM_FIELDS = {
         {
             "fieldname": "cb_billing_address",
             "fieldtype": "Column Break",
-            "insert_after": "gst_category_bill_from",
+            "insert_after": "bill_from_gst_category",
         },
         {
             "fieldname": "bill_to_address",
@@ -248,7 +248,7 @@ CUSTOM_FIELDS = {
             "translatable": 0,
         },
         {
-            "fieldname": "gst_category",
+            "fieldname": "bill_to_gst_category",
             "label": "GST Category",
             "fieldtype": "Data",
             "insert_after": "bill_to_gstin",
@@ -263,7 +263,7 @@ CUSTOM_FIELDS = {
             "label": "Place of Supply",
             "fieldtype": "Autocomplete",
             "options": get_place_of_supply_options(),
-            "insert_after": "gst_category",
+            "insert_after": "bill_to_gst_category",
             "print_hide": 1,
             "read_only": 0,
             "translatable": 0,

@@ -67,10 +67,6 @@ def update_taxable_values(doc):
     if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
         return
 
-    if doc.doctype in SUBCONTRACTING_DOCTYPES:
-        # custom functions
-        return
-
     total_charges = 0
     apportioned_charges = 0
     tax_witholding_amount = 0
@@ -130,10 +126,6 @@ def update_taxable_values(doc):
 
 def validate_item_wise_tax_detail(doc):
     if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
-        return
-
-    if doc.doctype in SUBCONTRACTING_DOCTYPES:
-        # custom functions
         return
 
     item_taxable_values = defaultdict(float)
@@ -356,9 +348,7 @@ class GSTAccounts:
 
     def has_gst_tax_rows(self):
         self.gst_tax_rows = [
-            row
-            for row in self.doc.taxes
-            if (row.get("tax_amount")) and row.gst_tax_type
+            row for row in self.doc.taxes if row.tax_amount and row.gst_tax_type
         ]
 
         return self.gst_tax_rows
@@ -381,7 +371,7 @@ class GSTAccounts:
     def validate_for_same_party_gstin(self):
         party_gstin = (
             self.doc.billing_address_gstin
-            if self.doc.doctype in [*SALES_DOCTYPES, "Payment Entry"]
+            if self.is_sales_transaction
             else self.doc.supplier_gstin
         )
 
@@ -433,7 +423,7 @@ class GSTAccounts:
                 ).format(self.first_gst_idx)
             )
 
-        if not self.doc.get("is_reverse_charge") and not self.doc.supplier_gstin:
+        if not self.doc.is_reverse_charge and not self.doc.supplier_gstin:
             self._throw(
                 _(
                     "Cannot charge GST in Row #{0} since purchase is from a Supplier"
@@ -449,6 +439,7 @@ class GSTAccounts:
         """
         if is_inter_state is None:
             is_inter_state = is_inter_state_supply(self.doc)
+
         for row in self.gst_tax_rows:
             if is_inter_state:
                 if row.account_head in self.intra_state_accounts:
@@ -535,9 +526,6 @@ class GSTAccounts:
             )
 
     def validate_missing_accounts_in_item_tax_template(self):
-        if self.doc.doctype in SUBCONTRACTING_DOCTYPES:
-            return
-
         for row in self.doc.get("items") or []:
             if not row.item_tax_template:
                 continue
@@ -1204,7 +1192,9 @@ class ItemGSTDetails:
         return response
 
     def set_tax_amount_precisions(self, doctype):
-        item_doctype = frappe.get_meta(doctype).get_field("items").get("options")
+        doc_meta = self.doc.meta if self.doc.meta else frappe.get_meta(doctype)
+        item_doctype = doc_meta.get_field("items").options
+
         meta = frappe.get_meta(item_doctype)
 
         self.precision = frappe._dict()
@@ -1387,7 +1377,7 @@ def validate_company_address_field(doc):
         return
 
     company_address_field = "company_address"
-    if doc.doctype not in SALES_DOCTYPES and doc.doctype != "Stock Entry":
+    if doc.doctype not in SALES_DOCTYPES:
         company_address_field = "billing_address"
 
     if (
@@ -1457,9 +1447,6 @@ def validate_transaction(doc, method=None):
     elif doc.doctype == "Payment Entry":
         is_sales_transaction = True
         gstin = doc.billing_address_gstin
-    elif doc.doctype in SUBCONTRACTING_DOCTYPES:
-        is_sales_transaction = True
-        gstin = doc.supplier_gstin
     else:
         gstin = doc.supplier_gstin
 

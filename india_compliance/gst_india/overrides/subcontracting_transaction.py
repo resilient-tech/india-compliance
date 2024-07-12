@@ -5,24 +5,17 @@ from frappe.contacts.doctype.address.address import get_address_display
 from india_compliance.gst_india.overrides.transaction import (
     DOCTYPES_WITH_GST_DETAIL,
     GSTAccounts,
+    get_place_of_supply,
     ignore_gst_validations,
     set_gst_tax_type,
-    update_taxable_values,
-    validate_ecommerce_gstin,
     validate_gst_category,
     validate_gst_transporter_id,
     validate_gstin_status,
-    validate_item_wise_tax_detail,
     validate_items,
     validate_mandatory_fields,
-    validate_overseas_gst_category,
     validate_place_of_supply,
-    validate_reverse_charge_transaction,
 )
-from india_compliance.gst_india.overrides.transaction import (
-    validate_transaction as _validate_transaction,
-)
-from india_compliance.gst_india.utils import get_state, is_api_enabled
+from india_compliance.gst_india.utils import is_api_enabled
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 from india_compliance.gst_india.utils.taxes_controller import (
     CustomTaxController,
@@ -54,6 +47,7 @@ def onload(doc, method=None):
 
 
 def validate(doc, method=None):
+    # New Ignore for Stock Entry.
     if ignore_gst_validations(doc):
         return
 
@@ -66,34 +60,47 @@ def validate(doc, method=None):
 
     set_gst_tax_type(doc)
     validate_taxes(doc)
-    validate_transaction(doc)
+
+    if validate_transaction(doc) is False:
+        return
+
     update_gst_details(doc)
 
 
 def validate_transaction(doc, method=None):
-    if doc.doctype != "Stock Entry":
-        return _validate_transaction(doc)
-
-    if ignore_gst_validations(doc):
-        return False
+    # TODO: For all SC Transactions
 
     validate_items(doc)
+
+    if doc.doctype == "Stock Entry":
+        company_gstin_field = "bill_from_gstin"
+        party_gstin_field = "bill_to_gstin"
+        company_address_field = "bill_from_address"
+        gst_category_field = "bill_to_gst_category"
+    else:
+        company_gstin_field = "company_gstin"
+        party_gstin_field = "supplier_gstin"
+        company_address_field = "company_address"
+        gst_category_field = "gst_category"
 
     if doc.place_of_supply:
         validate_place_of_supply(doc)
     else:
-        doc.place_of_supply = get_place_of_supply(doc)
+        doc.place_of_supply = get_place_of_supply(doc, doc.doctype)
 
-    if validate_billing_address_field(doc) is False:
+    if validate_company_address_field(doc) is False:
         return False
 
-    if validate_mandatory_fields(doc, ("bill_from_gstin", "place_of_supply")) is False:
+    if (
+        validate_mandatory_fields(doc, (company_gstin_field, "place_of_supply"))
+        is False
+    ):
         return False
 
-    if doc.bill_to_address and (
+    if getattr(doc, company_address_field) and (
         validate_mandatory_fields(
             doc,
-            "gst_category",
+            gst_category_field,
             _(
                 "{0} is a mandatory field for GST Transactions. Please ensure that"
                 " it is set in the Party and / or Address."
@@ -106,40 +113,16 @@ def validate_transaction(doc, method=None):
     elif not doc.gst_category:
         doc.gst_category = "Unregistered"
 
-    validate_overseas_gst_category(doc)
-
-    is_sales_transaction = True
-    gstin = doc.bill_to_gstin
+    gstin = getattr(doc, party_gstin_field)
 
     validate_gstin_status(gstin, doc.get("posting_date") or doc.get("transaction_date"))
     validate_gst_transporter_id(doc)
-    validate_ecommerce_gstin(doc)
-
     validate_gst_category(doc.gst_category, gstin)
 
-    StockEntryGSTAccounts().validate(doc, is_sales_transaction)
-    validate_reverse_charge_transaction(doc)
-    update_taxable_values(doc)
-    validate_item_wise_tax_detail(doc)
+    SubcontractingGSTAccounts().validate(doc, True)
 
 
-def get_place_of_supply(party_details):
-    """
-    :param party_details: A frappe._dict or document containing fields related to party
-    """
-
-    party_gstin = party_details.bill_to_gstin or party_details.bill_from_gstin
-
-    if not party_gstin:
-        return
-
-    state_code = party_gstin[:2]
-
-    if state := get_state(state_code):
-        return f"{state_code}-{state}"
-
-
-def validate_billing_address_field(doc):
+def validate_company_address_field(doc):
     if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
         return
 
@@ -158,7 +141,7 @@ def validate_billing_address_field(doc):
         return False
 
 
-class StockEntryGSTAccounts(GSTAccounts):
+class SubcontractingGSTAccounts(GSTAccounts):
     def validate(self, doc, is_sales_transaction=False):
         self.doc = doc
         self.is_sales_transaction = is_sales_transaction
@@ -175,17 +158,16 @@ class StockEntryGSTAccounts(GSTAccounts):
         self.validate_for_same_party_gstin()
         self.validate_reverse_charge_accounts()
         self.validate_sales_transaction()
-        self.validate_purchase_transaction()
         self.validate_for_invalid_account_type()  # CGST / SGST / IGST
         self.validate_for_charge_type()
-        self.validate_missing_accounts_in_item_tax_template()
 
         return
 
     def validate_for_same_party_gstin(self):
-        bill_to_gstin = self.doc.get("bill_to_gstin")
+        company_gstin = self.doc.get("company_gstin") or self.doc.bill_from_gstin
+        party_gstin = self.doc.get("supplier_gstin") or self.doc.bill_to_gstin
 
-        if not bill_to_gstin or self.doc.bill_from_gstin != bill_to_gstin:
+        if not party_gstin or company_gstin != party_gstin:
             return
 
         self._throw(
@@ -200,13 +182,16 @@ class StockEntryGSTAccounts(GSTAccounts):
 
 
 def is_inter_state_supply(doc):
-    return doc.gst_category == "SEZ" or (
+    # TODO: GST Category field for Stock Entry
+    # TODO: Address CSS
+    gst_category = doc.get("gst_category") or doc.bill_to_gst_category
+    return gst_category == "SEZ" or (
         doc.place_of_supply[:2] != get_source_state_code(doc)
     )
 
 
 def get_source_state_code(doc):
-    return (doc.bill_from_gstin or doc.bill_to_gstin)[:2]
+    return (doc.get("company_gstin") or doc.bill_from_gstin or doc.bill_to_gstin)[:2]
 
 
 def set_address_display(doc):
