@@ -151,7 +151,7 @@ function set_gst_category(doctype) {
 }
 
 function set_party_type(frm) {
-    if(!["Customer","Supplier"].includes(frm.doc.doctype))  return;
+    if (!["Customer", "Supplier"].includes(frm.doc.doctype)) return;
     pan_to_party_type_map = {
         F: "Partnership",
         C: "Company",
