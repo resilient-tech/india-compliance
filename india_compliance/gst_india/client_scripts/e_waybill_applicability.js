@@ -24,6 +24,19 @@ class EwaybillApplicability {
         }
 
         // at least one item is not a service
+        is_ewb_applicable = this.has_goods_item(is_ewb_applicable, message_list);
+
+        this.frm._ewb_message = "";
+        if (show_message) {
+            this.frm._ewb_message = message_list
+                .map(message => `<li>${message}</li>`)
+                .join("");
+        }
+
+        return is_ewb_applicable;
+    }
+
+    has_goods_item(is_ewb_applicable, message_list) {
         let has_goods_item = false;
         for (const item of this.frm.doc.items) {
             if (
@@ -39,13 +52,6 @@ class EwaybillApplicability {
         if (!has_goods_item) {
             is_ewb_applicable = false;
             message_list.push("All items are service items (HSN code starts with 99).");
-        }
-
-        this.frm._ewb_message = "";
-        if (show_message) {
-            this.frm._ewb_message = message_list
-                .map(message => `<li>${message}</li>`)
-                .join("");
         }
 
         return is_ewb_applicable;
@@ -258,6 +264,9 @@ class StockEntryEwaybill extends EwaybillApplicability {
             );
         }
 
+        // at least one item is not a service
+        is_ewb_applicable = this.has_goods_item(is_ewb_applicable, message_list);
+
         this.frm._ewb_message = "";
 
         if (show_message) {
@@ -283,19 +292,6 @@ class StockEntryEwaybill extends EwaybillApplicability {
             is_ewb_generatable = false;
             message_list.push("Bill From GSTIN and Bill To GSTIN are same.");
         }
-
-        const source = this.frm.doc.items[0].s_warehouse;
-        const target = this.frm.doc.items[0].t_warehouse;
-
-        this.frm.doc.items.forEach(item => {
-            if (item.s_warehouse !== source || item.t_warehouse !== target) {
-                is_ewb_generatable = false;
-                message_list.push(
-                    "Source and target warehouse have to be the same for all items."
-                );
-                return; // Exit loop early if discrepancy is found
-            }
-        });
 
         if (show_message) {
             this.frm._ewb_message += message_list

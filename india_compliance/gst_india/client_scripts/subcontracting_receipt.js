@@ -4,13 +4,19 @@ frappe.ui.form.on("Subcontracting Receipt", {
     setup(frm) {
         frm.set_query("taxes_and_charges", function () {
             return {
-                filters: [["company", "=", frm.doc.company]],
+                filters: [
+                    ["disabled", "=", 0],
+                    ["company", "=", frm.doc.company],
+                ],
             };
         });
 
         frm.set_query("transporter", function () {
             return {
-                filters: [["is_transporter", "=", 1]],
+                filters: [
+                    ["disabled", "=", 0],
+                    ["is_transporter", "=", 1],
+                ],
             };
         });
     },

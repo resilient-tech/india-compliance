@@ -7,18 +7,24 @@ frappe.ui.form.on(DOCTYPE, {
     setup(frm) {
         frm.set_query("taxes_and_charges", function () {
             return {
-                filters: [["company", "=", frm.doc.company]],
+                filters: [
+                    ["disabled", "=", 0],
+                    ["company", "=", frm.doc.company],
+                ],
             };
         });
 
         frm.set_query("transporter", function () {
             return {
-                filters: [["is_transporter", "=", 1]],
+                filters: [
+                    ["disabled", "=", 0],
+                    ["is_transporter", "=", 1],
+                ],
             };
         });
 
         set_address_display_events();
-        set_supplier_address(frm);
+        set_bill_to_address(frm);
     },
 
     onload(frm) {
@@ -45,9 +51,7 @@ frappe.ui.form.on(DOCTYPE, {
             );
     },
 
-    supplier_address(frm) {
-        set_supplier_address(frm);
-    },
+    supplier_address: set_bill_to_address,
 
     company(frm) {
         if (frm.doc.company) {
@@ -94,19 +98,21 @@ function set_address_display_events() {
     frappe.ui.form.on(DOCTYPE, events);
 }
 
-function set_supplier_address(frm) {
+function set_bill_to_address(frm) {
+    // TODO: For Source and Target Warehouse
+    const address_field = "bill_to_address";
+    let read_only, label;
     if (frm.doc.supplier_address) {
-        frm.set_value("bill_to_address", frm.doc.supplier_address);
-        frm.set_df_property("bill_to_address", "read_only", 1);
-        frm.set_df_property(
-            "bill_to_address",
-            "description",
-            "The 'Bill To' address is automatically populated based on the supplier address. To update the 'Bill To' address, please modify the supplier address accordingly."
-        );
+        frm.set_value(address_field, frm.doc.supplier_address);
+        read_only = 1;
+        label = "Bill To (same as Supplier Address)";
     } else {
-        frm.set_df_property("bill_to_address", "read_only", 0);
-        frm.set_df_property("bill_to_address", "description", "");
+        read_only = 0;
+        label = "Bill To";
     }
+
+    frm.set_df_property(address_field, "read_only", read_only);
+    frm.set_df_property(address_field, "label", label);
 }
 
 frappe.ui.form.on("Stock Entry Detail", india_compliance.taxes_controller_events);

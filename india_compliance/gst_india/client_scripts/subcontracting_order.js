@@ -3,6 +3,7 @@ frappe.ui.form.on("Subcontracting Order", {
         frm.set_query("taxes_and_charges", function () {
             return {
                 filters: [
+                    ["disabled", "=", 0],
                     ["company", "=", frm.doc.company],
                 ],
             };
