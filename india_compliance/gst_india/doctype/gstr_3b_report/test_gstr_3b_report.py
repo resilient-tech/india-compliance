@@ -64,6 +64,7 @@ class TestGSTR3BReport(FrappeTestCase):
         ).insert()
 
         output = json.loads(report.json_output)
+
         self.assertDictEqual(
             output,
             {
@@ -83,11 +84,22 @@ class TestGSTR3BReport(FrappeTestCase):
                         "csamt": 0.0,
                         "iamt": 37.98,
                         "samt": 18.0,
-                        "txval": 411.0,
+                        "txval": 532.0,
                     },
                     "osup_nil_exmp": {"txval": 100.0},
                     "osup_nongst": {"txval": 222.0},
                     "osup_zero": {"csamt": 0.0, "iamt": 99.9, "txval": 999.0},
+                },
+                # 3.1.1
+                "eco_dtls": {
+                    "eco_sup": {
+                        "txval": 0,
+                        "iamt": 0,
+                        "camt": 0,
+                        "samt": 0,
+                        "csamt": 0,
+                    },
+                    "eco_reg_sup": {"txval": 100},
                 },
                 # 3.2
                 "inter_sup": {
@@ -213,13 +225,10 @@ def create_sales_invoices():
         place_of_supply="06-Haryana",
         rate=111,
     )
-
     # Same Item Nil-Rated
     create_sales_invoice(item_tax_template="Nil-Rated - _TIRC")
-
     # Non Gst item
     create_sales_invoice(item_code="_Test Non GST Item", rate=222)
-
     # Zero Rated
     create_sales_invoice(
         customer_address="_Test Registered Customer-Billing-1",
@@ -231,6 +240,23 @@ def create_sales_invoices():
         is_export_with_gst=True,
         is_out_state=True,
         rate=555,
+    )
+    # E-commerce reverse charge
+    create_sales_invoice(
+        customer="_Test Registered Customer",
+        is_reverse_charge=True,
+        item_code="_Test Trading Goods 1",
+        rate=100,
+        ecommerce_gstin="29AABCF8078M1C8",
+        is_in_state_rcm=True,
+    )
+    # Reverse Charge Sales
+    create_sales_invoice(
+        customer="_Test Registered Customer",
+        is_reverse_charge=True,
+        item_code="_Test Trading Goods 1",
+        rate=121,
+        is_in_state_rcm=True,
     )
 
 

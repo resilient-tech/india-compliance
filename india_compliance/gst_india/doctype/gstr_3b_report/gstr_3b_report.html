@@ -71,6 +71,41 @@
 </table>
 
 <h5>
+	3.1.1&nbsp&nbsp{{__("Supplies notified under section 9(5) of the CGST Act, 2017")}}
+</h5>
+<table class="table table-bordered">
+	<thead>
+		<tr>
+			<th>{{__("Description")}}</th>
+			<th>{{__("Total Taxable Value")}}</th>
+			<th>{{__("Integrated Tax")}}</th>
+			<th>{{__("Central Tax")}}</th>
+			<th>{{__("State/UT Tax")}}</th>
+			<th>{{__("Cess")}}</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr>
+			<td>{{__("(i) Taxable supplies on which electronic commerce operator pays tax u/s 9(5) <br/>(to be furnished by electronic commerce operator)")}}</td>
+			<td class="right">0.00</td>
+			<td class="right">0.00</td>
+			<td class="right">0.00</td>
+			<td class="right">0.00</td>
+			<td class="right">0.00</td>
+		</tr>
+		<tr>
+			<td>{{__("(ii) Taxable supplies made by registered person through electronic commerce operator, <br/>on which electronic commerce operator is required to pay tax u/s 9(5)<br/> (to be furnished by registered person making supplies through electronic commerce operator)")}}</td>
+			<td class="right">{{flt(data.eco_dtls.eco_reg_sup.txval, 2)  }}</td>
+			<td class="disabled"></td>
+			<td class="disabled"></td>
+			<td class="disabled"></td>
+			<td class="disabled"></td>
+
+		</tr>
+	</tbody>
+</table>
+
+<h5>
 	3.2&nbsp&nbsp{{__("Of the supplies shown in 3.1 (a) above, details of inter-State supplies made to unregisterd
 	persons, composition taxable persons and UIN holders")}}
 </h5>

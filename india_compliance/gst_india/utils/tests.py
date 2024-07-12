@@ -153,6 +153,9 @@ def _append_taxes(
             tax["tax_amount"] = tax_amount
 
         if account.endswith("RCM"):
-            tax["add_deduct_tax"] = "Deduct"
+            if transaction.doctype in SALES_DOCTYPES:
+                tax["rate"] = -tax["rate"]
+            else:
+                tax["add_deduct_tax"] = "Deduct"
 
         transaction.append("taxes", tax)
