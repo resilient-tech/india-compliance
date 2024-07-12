@@ -333,6 +333,21 @@ class ItemQuickEntryForm extends frappe.ui.form.QuickEntryForm {
     render_dialog() {
         super.render_dialog();
         india_compliance.set_hsn_code_query(this.dialog.get_field("gst_hsn_code"));
+
+        this.set_hsn_from_item_group();
+    }
+
+    set_hsn_from_item_group() {
+        let item_group_field = this.dialog.fields_dict.item_group;
+
+        item_group_field.df.onchange = async () => {
+            const { message } = await frappe.db.get_value(
+                "Item Group",
+                item_group_field.value,
+                "gst_hsn_code"
+            );
+            this.dialog.set_value("gst_hsn_code", message.gst_hsn_code);
+        };
     }
 }
 
