@@ -3,7 +3,13 @@
 
 import frappe
 from frappe import _
-from frappe.utils.data import format_datetime, get_timespan_date_range, getdate
+from frappe.utils.data import (
+    format_date,
+    format_datetime,
+    get_timespan_date_range,
+    get_user_date_format,
+    getdate,
+)
 
 from india_compliance.audit_trail.utils import get_audit_trail_doctypes
 
@@ -271,7 +277,9 @@ class DetailedReport(BaseAuditTrail):
         for row in records:
             row["date_time"] = format_datetime(row["date_time"])
             row["doctype"] = doctype
-            row["creation_date"] = getdate(row["date_time"])
+            row["creation_date"] = getdate(
+                format_date(row["date_time"], get_user_date_format())
+            )
 
             if doctype == "Bill of Entry":
                 row["party_name"] = ""
