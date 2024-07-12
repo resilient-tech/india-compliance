@@ -123,5 +123,17 @@
 				"csamt": 0
 			}
 		]
+	},
+	"eco_dtls":{
+		"eco_sup":{
+			"txval":0,
+			"iamt":0,
+			"camt":0,
+			"samt":0,
+			"csamt":0
+		},
+		"eco_reg_sup":{
+			"txval":0
+		}
 	}
 }
