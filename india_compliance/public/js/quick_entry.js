@@ -346,7 +346,7 @@ class ItemQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 item_group_field.value,
                 "gst_hsn_code"
             );
-            await this.dialog.set_value("gst_hsn_code", message.gst_hsn_code);
+            this.dialog.set_value("gst_hsn_code", message.gst_hsn_code);
         };
     }
 }
