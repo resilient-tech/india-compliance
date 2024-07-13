@@ -50,7 +50,7 @@ def _get_gstin_info(gstin, *, throw_error=True):
     if not response:
         try:
             if frappe.cache().get_value("gst_server_error"):
-                return
+                return frappe._dict()
 
             response = PublicAPI().get_gstin_info(gstin)
             frappe.enqueue(
