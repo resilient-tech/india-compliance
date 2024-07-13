@@ -133,8 +133,6 @@ class TestTransaction(FrappeTestCase):
             doc.taxes[0],
         )
 
-<<<<<<< HEAD
-=======
     def test_rcm_transaction_with_returns(self):
         "Make sure RCM is not applied on Sales Return"
         if self.doctype not in [
@@ -153,54 +151,6 @@ class TestTransaction(FrappeTestCase):
 
         self.assertEqual(return_doc.is_reverse_charge, 1)
 
-    def test_non_taxable_items_with_tax(self):
-        doc = create_transaction(
-            **self.transaction_details,
-            is_in_state=True,
-            item_tax_template="GST 28% - _TIRC",
-            do_not_submit=True,
-        )
-
-        for item in doc.items:
-            item.gst_treatment = "Nil-Rated"
-
-        self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
-            re.compile(r"^(Cannot charge GST on Non-Taxable Items.*)$"),
-            validate_item_tax_template,
-            doc,
-        )
-
-    def test_validate_item_tax_template(self):
-        item_tax_template = frappe.get_doc("Item Tax Template", "GST 28% - _TIRC")
-        tax_accounts = item_tax_template.get("taxes")
-
-        # Invalidate item tax template
-        item_tax_template.taxes = []
-        item_tax_template.flags.ignore_mandatory = True
-        item_tax_template.save()
-
-        doc = create_transaction(
-            **self.transaction_details,
-            is_in_state=True,
-            item_tax_template="GST 28% - _TIRC",
-            do_not_submit=True,
-        )
-
-        for tax in doc.taxes:
-            tax.rate = 0
-
-        self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
-            re.compile(r"^(No GST is being charged on Taxable Items.*)$"),
-            doc.save,
-        )
-
-        # Restore item tax template
-        item_tax_template.taxes = tax_accounts
-        item_tax_template.save()
-
->>>>>>> 3dc10704 (fix: correct validation for rcm returns)
     def test_transaction_for_items_with_duplicate_taxes(self):
         # Should not allow same item in invoice with multiple taxes
         doc = create_transaction(**self.transaction_details, do_not_save=True)
