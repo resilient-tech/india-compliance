@@ -15,6 +15,7 @@ from erpnext.controllers.accounts_controller import (
     update_child_qty_rate,
     update_gl_dict_with_regional_fields,
 )
+from erpnext.controllers.sales_and_purchase_return import make_return_doc
 from erpnext.controllers.taxes_and_totals import get_regional_round_off_accounts
 from erpnext.stock.doctype.delivery_note.delivery_note import make_sales_invoice
 from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
@@ -131,6 +132,24 @@ class TestTransaction(FrappeTestCase):
             {"account_head": "Input Tax CGST - _TIRC", "base_tax_amount": 900},
             doc.taxes[0],
         )
+
+    def test_rcm_transaction_with_returns(self):
+        "Make sure RCM is not applied on Sales Return"
+        if self.doctype not in [
+            "Delivery Note",
+            "Sales Invoice",
+            "Purchase Receipt",
+            "Purchase Invoice",
+        ]:
+            return
+
+        doc = create_transaction(
+            **self.transaction_details, is_reverse_charge=1, is_in_state_rcm=1
+        )
+        return_doc = make_return_doc(self.doctype, doc.name)
+        return_doc.save().submit()
+
+        self.assertEqual(return_doc.is_reverse_charge, 1)
 
     def test_non_taxable_items_with_tax(self):
         doc = create_transaction(
