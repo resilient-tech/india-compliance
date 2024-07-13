@@ -49,13 +49,8 @@ def _get_gstin_info(gstin, *, throw_error=True):
 
     if not response:
         try:
-<<<<<<< HEAD
             if frappe.cache().get_value("gst_server_error"):
-                return
-=======
-            if frappe.cache.get_value("gst_server_error"):
                 return frappe._dict()
->>>>>>> 2f6b5b8c (fix: optimise function `update_gst_category` (#2397))
 
             response = PublicAPI().get_gstin_info(gstin)
             frappe.enqueue(
