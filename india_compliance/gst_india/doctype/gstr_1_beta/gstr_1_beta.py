@@ -28,7 +28,7 @@ class GSTR1Beta(Document):
 
     @frappe.whitelist()
     def sync_with_gstn(self, sync_for):
-        self.validate(sync_for=sync_for)
+        self.validate(sync_for=sync_for, recompute_books=True)
 
     @frappe.whitelist()
     def mark_as_filed(self):
