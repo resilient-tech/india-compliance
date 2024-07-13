@@ -603,6 +603,11 @@ class TestIneligibleITC(FrappeTestCase):
                     "debit": 0.0,
                     "credit": 267.26,  # 257 + 10.26
                 },
+                {
+                    "account": "Cost of Goods Sold - _TIRC",
+                    "debit": 10.26,
+                    "credit": 10.26,
+                },
             ],
         )
 
