@@ -15,6 +15,7 @@ from erpnext.controllers.accounts_controller import (
     update_child_qty_rate,
     update_gl_dict_with_regional_fields,
 )
+from erpnext.controllers.sales_and_purchase_return import make_return_doc
 from erpnext.controllers.taxes_and_totals import get_regional_round_off_accounts
 from erpnext.stock.doctype.delivery_note.delivery_note import make_sales_invoice
 from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
@@ -132,6 +133,74 @@ class TestTransaction(FrappeTestCase):
             doc.taxes[0],
         )
 
+<<<<<<< HEAD
+=======
+    def test_rcm_transaction_with_returns(self):
+        "Make sure RCM is not applied on Sales Return"
+        if self.doctype not in [
+            "Delivery Note",
+            "Sales Invoice",
+            "Purchase Receipt",
+            "Purchase Invoice",
+        ]:
+            return
+
+        doc = create_transaction(
+            **self.transaction_details, is_reverse_charge=1, is_in_state_rcm=1
+        )
+        return_doc = make_return_doc(self.doctype, doc.name)
+        return_doc.save().submit()
+
+        self.assertEqual(return_doc.is_reverse_charge, 1)
+
+    def test_non_taxable_items_with_tax(self):
+        doc = create_transaction(
+            **self.transaction_details,
+            is_in_state=True,
+            item_tax_template="GST 28% - _TIRC",
+            do_not_submit=True,
+        )
+
+        for item in doc.items:
+            item.gst_treatment = "Nil-Rated"
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(Cannot charge GST on Non-Taxable Items.*)$"),
+            validate_item_tax_template,
+            doc,
+        )
+
+    def test_validate_item_tax_template(self):
+        item_tax_template = frappe.get_doc("Item Tax Template", "GST 28% - _TIRC")
+        tax_accounts = item_tax_template.get("taxes")
+
+        # Invalidate item tax template
+        item_tax_template.taxes = []
+        item_tax_template.flags.ignore_mandatory = True
+        item_tax_template.save()
+
+        doc = create_transaction(
+            **self.transaction_details,
+            is_in_state=True,
+            item_tax_template="GST 28% - _TIRC",
+            do_not_submit=True,
+        )
+
+        for tax in doc.taxes:
+            tax.rate = 0
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(No GST is being charged on Taxable Items.*)$"),
+            doc.save,
+        )
+
+        # Restore item tax template
+        item_tax_template.taxes = tax_accounts
+        item_tax_template.save()
+
+>>>>>>> 3dc10704 (fix: correct validation for rcm returns)
     def test_transaction_for_items_with_duplicate_taxes(self):
         # Should not allow same item in invoice with multiple taxes
         doc = create_transaction(**self.transaction_details, do_not_save=True)
