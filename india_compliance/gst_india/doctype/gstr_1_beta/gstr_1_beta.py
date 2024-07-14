@@ -44,8 +44,8 @@ class GSTR1Beta(Document):
 
         else:
             frappe.db.set_value(
-                "GSTR-1 Log",
-                f"{period}-{self.company_gstin}",
+                "GST Return Log",
+                f"GSTR1-{period}-{self.company_gstin}",
                 "filing_status",
                 return_status,
             )
@@ -57,9 +57,11 @@ class GSTR1Beta(Document):
         period = get_period(self.month_or_quarter, self.year)
 
         # get gstr1 log
-        if log_name := frappe.db.exists("GSTR-1 Log", f"{period}-{self.company_gstin}"):
+        if log_name := frappe.db.exists(
+            "GST Return Log", f"GSTR1-{period}-{self.company_gstin}"
+        ):
 
-            gstr1_log = frappe.get_doc("GSTR-1 Log", log_name)
+            gstr1_log = frappe.get_doc("GST Return Log", log_name)
 
             message = None
             if gstr1_log.status == "In Progress":
@@ -78,10 +80,11 @@ class GSTR1Beta(Document):
                 return
 
         else:
-            gstr1_log = frappe.new_doc("GSTR-1 Log")
+            gstr1_log = frappe.new_doc("GST Return Log")
             gstr1_log.company = self.company
             gstr1_log.gstin = self.company_gstin
             gstr1_log.return_period = period
+            gstr1_log.return_type = "GSTR1"
             gstr1_log.insert()
 
         settings = frappe.get_cached_doc("GST Settings")
