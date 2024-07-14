@@ -185,13 +185,14 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Return Type",
+   "read_only": 1,
    "reqd": 1
   }
  ],
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-07-06 08:50:19.500592",
+ "modified": "2024-07-14 18:35:34.743195",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Return Log",

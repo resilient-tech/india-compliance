@@ -2,7 +2,9 @@ import copy
 
 from frappe.tests.utils import FrappeTestCase
 
-from india_compliance.gst_india.doctype.gstr_1_log.gstr_1_log import GenerateGSTR1
+from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
+    GenerateGSTR1,
+)
 from india_compliance.gst_india.utils import get_party_for_gstin as _get_party_for_gstin
 from india_compliance.gst_india.utils.gstr_1 import (
     SUB_CATEGORY_GOV_CATEGORY_MAPPING,
