@@ -1,15 +1,11 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
-import gzip
 import itertools
-from datetime import datetime
 
 import frappe
-from frappe import _, unscrub
-from frappe.model.document import Document
-from frappe.utils import flt, get_datetime, get_datetime_str, get_last_day, getdate
+from frappe import unscrub
+from frappe.utils import flt
 
-from india_compliance.gst_india.utils import is_production_api_enabled
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategory
 from india_compliance.gst_india.utils.gstr_1.__init__ import (
     CATEGORY_SUB_CATEGORY_MAPPING,
@@ -673,6 +669,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
                 data[subcategory] = [*subcategory_data.values()]
 
         return data
+<<<<<<< HEAD:india_compliance/gst_india/doctype/gstr_1_log/gstr_1_log.py
 
 
 class GSTR1Log(GenerateGSTR1, Document):
@@ -933,3 +930,5 @@ def get_compressed_data(json_data):
 
 def get_decompressed_data(content):
     return frappe.parse_json(frappe.safe_decode(gzip.decompress(content)))
+=======
+>>>>>>> 4929e8b0 (refactor: create GST return log instead of GSTR-1 log):india_compliance/gst_india/doctype/gst_return_log/generate_gstr_1.py
