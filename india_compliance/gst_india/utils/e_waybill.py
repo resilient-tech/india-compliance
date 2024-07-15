@@ -137,8 +137,7 @@ def generate_e_waybills(doctype, docnames, force=False):
 @frappe.whitelist()
 def generate_e_waybill(*, doctype, docname, values=None, force=False):
     doc = load_doc(doctype, docname, "submit")
-    if values:
-        update_transaction(doc, frappe.parse_json(values))
+    update_transaction(doc, values)
 
     _generate_e_waybill(doc, throw=True if values else False, force=force)
 
@@ -160,7 +159,6 @@ def _generate_e_waybill(doc, throw=True, force=False):
         with_irn = doc.get("irn") and not (
             doc.get("is_return") or doc.get("is_debit_note") or is_foreign_doc(doc)
         )
-
         data = EWaybillData(doc).get_data(with_irn=with_irn)
 
         api = EWaybillAPI if not with_irn else EInvoiceAPI
@@ -975,35 +973,38 @@ def update_e_waybill_log_for_extention(
 
 
 def update_transaction(doc, values):
-    transporter_name = (
-        frappe.db.get_value("Supplier", values.transporter, "supplier_name")
-        if values.transporter
-        else None
-    )
+    if values:
+        values = frappe.parse_json(values)
+        transporter_name = (
+            frappe.db.get_value("Supplier", values.transporter, "supplier_name")
+            if values.transporter
+            else None
+        )
 
-    data = {
-        "transporter": values.transporter,
-        "transporter_name": transporter_name,
-        "gst_transporter_id": values.gst_transporter_id,
-        "vehicle_no": values.vehicle_no,
-        "distance": values.distance,
-        "lr_no": values.lr_no,
-        "lr_date": values.lr_date,
-        "mode_of_transport": values.mode_of_transport,
-        "gst_vehicle_type": values.gst_vehicle_type,
-    }
+        data = {
+            "transporter": values.transporter,
+            "transporter_name": transporter_name,
+            "gst_transporter_id": values.gst_transporter_id,
+            "vehicle_no": values.vehicle_no,
+            "distance": values.distance,
+            "lr_no": values.lr_no,
+            "lr_date": values.lr_date,
+            "mode_of_transport": values.mode_of_transport,
+            "gst_vehicle_type": values.gst_vehicle_type,
+        }
 
-    if doc.doctype == "Sales Invoice":
-        data["port_address"] = values.port_address
+        if doc.doctype == "Sales Invoice":
+            data["port_address"] = values.port_address
 
-    doc.db_set(data)
+        doc.db_set(data)
 
-    if doc.doctype in ("Delivery Note", "Stock Entry", "Subcontracting Receipt"):
-        doc._sub_supply_type = SUB_SUPPLY_TYPES[values.sub_supply_type]
+        if doc.doctype in ("Delivery Note", "Stock Entry", "Subcontracting Receipt"):
+            doc._sub_supply_type = SUB_SUPPLY_TYPES[values.sub_supply_type]
 
     if doc.doctype == "Stock Entry":
         doc.company_gstin = doc.bill_from_gstin
         doc.supplier_gstin = doc.bill_to_gstin
+        doc.gst_category = doc.bill_to_gst_category
 
 
 def get_e_waybill_info(doc):

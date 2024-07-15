@@ -28,7 +28,7 @@ frappe.ui.form.on(DOCTYPE, {
             frm,
             "supplier_address",
             "bill_to_address",
-            __("Bill To (same as Supplier Address"),
+            __("Bill To (same as Supplier Address)"),
             __("Bill To")
         );
     },

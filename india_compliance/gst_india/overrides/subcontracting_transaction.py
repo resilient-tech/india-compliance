@@ -15,7 +15,7 @@ from india_compliance.gst_india.overrides.transaction import (
     validate_mandatory_fields,
     validate_place_of_supply,
 )
-from india_compliance.gst_india.utils import is_api_enabled
+from india_compliance.gst_india.utils import is_api_enabled, is_overseas_transaction
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 from india_compliance.gst_india.utils.taxes_controller import (
     CustomTaxController,
@@ -108,14 +108,14 @@ def validate_transaction(doc, method=None):
     ):
         return False
 
-    elif not doc.gst_category:
-        doc.gst_category = "Unregistered"
+    elif not doc.get(gst_category_field):
+        setattr(doc, gst_category_field, "Unregistered")
 
     gstin = getattr(doc, party_gstin_field)
 
     validate_gstin_status(gstin, doc.get("posting_date") or doc.get("transaction_date"))
     validate_gst_transporter_id(doc)
-    validate_gst_category(doc.gst_category, gstin)
+    validate_gst_category(doc.get(gst_category_field), gstin)
 
     SubcontractingGSTAccounts().validate(doc, True)
 
@@ -175,6 +175,19 @@ class SubcontractingGSTAccounts(GSTAccounts):
 
     def validate_for_invalid_account_type(self):
         super().validate_for_invalid_account_type(is_inter_state_supply(self.doc))
+
+    def validate_sales_transaction(self):
+        gst_category = self.doc.get("gst_category") or self.doc.bill_to_gst_category
+        is_overseas_doc = is_overseas_transaction(
+            self.doc, gst_category, self.doc.place_of_supply
+        )
+
+        if is_overseas_doc and not self.doc.is_export_with_gst:
+            self._throw(
+                _(
+                    "Cannot charge GST in Row #{0} since export is without payment of GST"
+                ).format(self.first_gst_idx)
+            )
 
 
 def is_inter_state_supply(doc):
