@@ -81,7 +81,6 @@ jobs:
 
       - name: Install
         run: |
-          pip install frappe-bench
           bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
         env:
           BRANCH_TO_CLONE: ${{ github.base_ref }}
