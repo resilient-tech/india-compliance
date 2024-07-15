@@ -613,20 +613,21 @@ def validate_place_of_supply(doc):
         )
 
 
-def is_inter_state_supply(doc):
+def is_inter_state_supply(doc, party_gstin_field=None, company_gstin_field=None):
     return doc.gst_category == "SEZ" or (
-        doc.place_of_supply[:2] != get_source_state_code(doc)
+        doc.place_of_supply[:2]
+        != get_source_state_code(doc, party_gstin_field, company_gstin_field)
     )
 
 
-def get_source_state_code(doc):
+def get_source_state_code(doc, party_gstin_field, company_gstin_field):
     """
     Get the state code of the state from which goods / services are being supplied.
     Logic opposite to that of utils.get_place_of_supply
     """
 
     if doc.doctype in SALES_DOCTYPES or doc.doctype == "Payment Entry":
-        return doc.company_gstin[:2]
+        return doc.get(party_gstin_field) or doc.company_gstin[:2]
 
     if doc.gst_category == "Overseas":
         return "96"
@@ -638,7 +639,12 @@ def get_source_state_code(doc):
             "gst_state_number",
         )
 
-    return (doc.supplier_gstin or doc.company_gstin)[:2]
+    return (
+        doc.get(party_gstin_field)
+        or doc.supplier_gstin
+        or doc.get(company_gstin_field)
+        or doc.company_gstin
+    )[:2]
 
 
 def validate_backdated_transaction(doc, gst_settings=None, action="create"):
@@ -779,21 +785,31 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
     gst_details = frappe._dict()
 
     # Party/Address Defaults
-    if doctype in SUBCONTRACTING_DOCTYPES:
-        party_address_field = "bill_to_address"
-        is_sales_transaction = True
-    elif is_sales_transaction:
+    if is_sales_transaction:
+        company_gstin_field = "company_gstin"
+        party_gstin_field = "billing_address_gstin"
         party_address_field = "customer_address"
+    elif doctype == "Stock Entry":
+        company_gstin_field = "bill_from_gstin"
+        party_gstin_field = "bill_to_gstin"
+        party_address_field = "bill_to_address"
     else:
+        company_gstin_field = "company_gstin"
+        party_gstin_field = "supplier_gstin"
         party_address_field = "supplier_address"
 
     if not party_details.get(party_address_field):
-        party_gst_details = get_party_gst_details(party_details, is_sales_transaction)
+        party_gst_details = get_party_gst_details(
+            party_details, is_sales_transaction, party_gstin_field
+        )
 
         # updating party details to get correct place of supply
         if party_gst_details:
             party_details.update(party_gst_details)
             gst_details.update(party_gst_details)
+
+    if doctype in SUBCONTRACTING_DOCTYPES:
+        is_sales_transaction = True
 
     # POS
     gst_details.place_of_supply = (
@@ -803,11 +819,11 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
     )
 
     if is_sales_transaction:
-        source_gstin = party_details.company_gstin
-        destination_gstin = party_details.billing_address_gstin
+        source_gstin = party_details.get(company_gstin_field)
+        destination_gstin = party_details.get(party_gstin_field)
     else:
-        source_gstin = party_details.supplier_gstin
-        destination_gstin = party_details.company_gstin
+        source_gstin = party_details.get(party_gstin_field)
+        destination_gstin = party_details.get(company_gstin_field)
 
     # set is_reverse_charge as per party_gst_details if not set
     if not is_sales_transaction and "is_reverse_charge" not in party_details:
@@ -835,7 +851,7 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
                 party_details.gst_category == "Registered Composition"
                 or (
                     not party_details.is_reverse_charge
-                    and not party_details.supplier_gstin
+                    and not party_details.get(party_gstin_field)
                 )
             )
         )
@@ -863,7 +879,7 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
         )
         return gst_details
 
-    if not gst_details.place_of_supply or not party_details.company_gstin:
+    if not gst_details.place_of_supply or not party_details.get(company_gstin_field):
         return gst_details
 
     # Fetch template by perceived tax
@@ -874,9 +890,11 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
             party_details.copy().update(
                 doctype=doctype,
                 place_of_supply=gst_details.place_of_supply,
-            )
+            ),
+            party_gstin_field,
+            company_gstin_field,
         ),
-        party_details.company_gstin[:2],
+        party_details.get(company_gstin_field)[:2],
         party_details.is_reverse_charge,
     ):
         gst_details.taxes_and_charges = default_tax
@@ -885,13 +903,11 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
     return gst_details
 
 
-def get_party_gst_details(party_details, is_sales_transaction):
+def get_party_gst_details(party_details, is_sales_transaction, party_gstin_field):
     """fetch GSTIN and GST category from party"""
 
     party_type = "Customer" if is_sales_transaction else "Supplier"
-    gstin_fieldname = (
-        "billing_address_gstin" if is_sales_transaction else "supplier_gstin"
-    )
+    gstin_fieldname = party_gstin_field
 
     if not (party := party_details.get(party_type.lower())) or not isinstance(
         party, str

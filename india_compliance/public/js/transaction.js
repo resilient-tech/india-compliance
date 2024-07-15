@@ -126,17 +126,14 @@ async function update_gst_details(frm, event) {
             "billing_address_gstin",
             "is_export_with_gst"
         );
+    } else if (frm.doc.doctype === "Stock Entry") {
+        fieldnames_to_set.push("bill_from_gstin", "bill_to_gstin", "bill_to_address");
     } else {
         fieldnames_to_set.push("supplier_address", "supplier_gstin");
     }
 
     for (const fieldname of fieldnames_to_set) {
         party_details[fieldname] = frm.doc[fieldname];
-    }
-
-    if (frm.doc.doctype === "Stock Entry") {
-        party_details["company_gstin"] = frm.doc.bill_from_gstin;
-        party_details["supplier_gstin"] = frm.doc.bill_to_gstin;
     }
 
     args.party_details = JSON.stringify(party_details);

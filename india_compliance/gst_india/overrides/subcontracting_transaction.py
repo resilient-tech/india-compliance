@@ -68,8 +68,6 @@ def validate(doc, method=None):
 
 
 def validate_transaction(doc, method=None):
-    # TODO: For all SC Transactions
-
     validate_items(doc)
 
     if doc.doctype == "Stock Entry":
@@ -80,7 +78,7 @@ def validate_transaction(doc, method=None):
     else:
         company_gstin_field = "company_gstin"
         party_gstin_field = "supplier_gstin"
-        company_address_field = "company_address"
+        company_address_field = "billing_address"
         gst_category_field = "gst_category"
 
     if doc.place_of_supply:
@@ -88,7 +86,7 @@ def validate_transaction(doc, method=None):
     else:
         doc.place_of_supply = get_place_of_supply(doc, doc.doctype)
 
-    if validate_company_address_field(doc) is False:
+    if validate_company_address_field(doc, company_address_field) is False:
         return False
 
     if (
@@ -122,19 +120,17 @@ def validate_transaction(doc, method=None):
     SubcontractingGSTAccounts().validate(doc, True)
 
 
-def validate_company_address_field(doc):
+def validate_company_address_field(doc, company_address_field):
     if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
         return
-
-    billing_address_field = "bill_from_address"
 
     if (
         validate_mandatory_fields(
             doc,
-            billing_address_field,
+            company_address_field,
             _(
                 "Please set {0} to ensure Bill From GSTIN is fetched in the transaction."
-            ).format(bold(doc.meta.get_label(billing_address_field))),
+            ).format(bold(doc.meta.get_label(company_address_field))),
         )
         is False
     ):
@@ -182,8 +178,6 @@ class SubcontractingGSTAccounts(GSTAccounts):
 
 
 def is_inter_state_supply(doc):
-    # TODO: GST Category field for Stock Entry
-    # TODO: Address CSS
     gst_category = doc.get("gst_category") or doc.bill_to_gst_category
     return gst_category == "SEZ" or (
         doc.place_of_supply[:2] != get_source_state_code(doc)
