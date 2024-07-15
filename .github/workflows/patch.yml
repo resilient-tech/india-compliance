@@ -87,6 +87,11 @@ jobs:
           bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
         env:
           BRANCH_TO_CLONE: ${{ github.base_ref }}
+
+      - name: Run Tests
+        run: cd ~/frappe-bench/ && bench --site test_site run-tests --app india_compliance --coverage
+        env:
+          TYPE: server
    
       - name: Run Patch Tests
         run: |
@@ -94,8 +99,8 @@ jobs:
           jq 'del(.install_apps)' ~/frappe-bench/sites/test_site/site_config.json > tmp.json
           mv tmp.json ~/frappe-bench/sites/test_site/site_config.json
 
-          wget https://erpnext.com/files/v13-erpnext.sql.gz 
-          bench --site test_site --force restore ~/frappe-bench/v13-erpnext.sql.gz
+          # wget https://erpnext.com/files/v13-erpnext.sql.gz 
+          # bench --site test_site --force restore ~/frappe-bench/v13-erpnext.sql.gz
 
           git -C "apps/frappe" remote set-url upstream https://github.com/frappe/frappe.git
           git -C "apps/erpnext" remote set-url upstream https://github.com/frappe/erpnext.git
@@ -110,7 +115,6 @@ jobs:
           bench pip install -e ./apps/india_compliance
           bench start &>> ~/frappe-bench/bench_start.log &
 
-          echo "before migration"
           bench --site test_site migrate
 
       - name: Show bench output
