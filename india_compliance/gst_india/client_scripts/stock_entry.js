@@ -24,7 +24,13 @@ frappe.ui.form.on(DOCTYPE, {
         });
 
         set_address_display_events();
-        set_bill_to_address(frm);
+        on_change_set_address(
+            frm,
+            "supplier_address",
+            "bill_to_address",
+            __("Bill To (same as Supplier Address"),
+            __("Bill To")
+        );
     },
 
     onload(frm) {
@@ -51,7 +57,35 @@ frappe.ui.form.on(DOCTYPE, {
             );
     },
 
-    supplier_address: set_bill_to_address,
+    supplier_address(frm) {
+        on_change_set_address(
+            frm,
+            "supplier_address",
+            "bill_to_address",
+            __("Bill To (same as Supplier Address)"),
+            __("Bill To")
+        );
+    },
+
+    source_warehouse_address(frm) {
+        on_change_set_address(
+            frm,
+            "source_warehouse_address",
+            "ship_from_address",
+            __("Ship From (same as Source Warehouse Address)"),
+            __("Ship From")
+        );
+    },
+
+    target_warehouse_address(frm) {
+        on_change_set_address(
+            frm,
+            "target_warehouse_address",
+            "ship_to_address",
+            __("Ship To (same as Target Warehouse Address)"),
+            __("Ship To")
+        );
+    },
 
     company(frm) {
         if (frm.doc.company) {
@@ -98,21 +132,18 @@ function set_address_display_events() {
     frappe.ui.form.on(DOCTYPE, events);
 }
 
-function set_bill_to_address(frm) {
-    // TODO: For Source and Target Warehouse
-    const address_field = "bill_to_address";
-    let read_only, label;
-    if (frm.doc.supplier_address) {
-        frm.set_value(address_field, frm.doc.supplier_address);
+function on_change_set_address(frm, source_field, target_field, label1, label2) {
+    let read_only;
+    let value = frm.doc[source_field];
+    if (value) {
+        frm.set_value(target_field, value);
         read_only = 1;
-        label = "Bill To (same as Supplier Address)";
     } else {
         read_only = 0;
-        label = "Bill To";
     }
 
-    frm.set_df_property(address_field, "read_only", read_only);
-    frm.set_df_property(address_field, "label", label);
+    frm.set_df_property(target_field, "read_only", read_only);
+    frm.set_df_property(target_field, "label", read_only ? label1 : label2);
 }
 
 frappe.ui.form.on("Stock Entry Detail", india_compliance.taxes_controller_events);
