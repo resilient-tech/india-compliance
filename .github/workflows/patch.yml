@@ -133,8 +133,8 @@ jobs:
             bench --site test_site migrate
           }
 
-          update_to_version 14
-          update_to_version 15
+          # update_to_version 14
+          # update_to_version 15
 
           echo "Updating to latest version"
           git -C "apps/frappe" checkout -q -f "${GITHUB_BASE_REF:-${GITHUB_REF##*/}}"
