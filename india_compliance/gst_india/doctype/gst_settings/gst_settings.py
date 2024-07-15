@@ -85,9 +85,24 @@ class GSTSettings(Document):
 
         frappe.db.set_value(
             "Scheduled Job Type",
-            "e_invoice.retry_e_invoice_e_waybill_generation",
+            {
+                "method": "india_compliance.gst_india.utils.e_invoice.retry_e_invoice_e_waybill_generation"
+            },
             "stopped",
             not self.enable_retry_einv_ewb_generation,
+        )
+
+    def update_auto_refresh_authtoken_scheduled_job(self):
+        if not self.has_value_changed("enable_auto_reconciliation"):
+            return
+
+        frappe.db.set_value(
+            "Scheduled Job Type",
+            {
+                "method": "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.auto_refresh_authtoken"
+            },
+            "stopped",
+            not self.enable_auto_reconciliation,
         )
 
     def get_gstin_with_credentials(self, service=None):
