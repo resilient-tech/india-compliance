@@ -35,6 +35,7 @@ function fetch_gst_details(doctype) {
         "company_gstin",
         "place_of_supply",
         "is_reverse_charge",
+        "supplier",
     ];
 
     // we are using address below to prevent multiple event triggers
@@ -80,6 +81,7 @@ async function update_gst_details(frm, event) {
             "customer_address",
             "shipping_address_name",
             "supplier_address",
+            "supplier"
         ].includes(event)
     ) {
         frm.__update_place_of_supply = true;
