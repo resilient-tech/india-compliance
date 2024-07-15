@@ -2,10 +2,6 @@ name: Linters
 
 on:
   workflow_call:
-  pull_request:
-    paths-ignore:
-      - '**.md'
-      - '**.csv'
 
 jobs:
 
