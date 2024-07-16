@@ -121,7 +121,7 @@ jobs:
           bench pip install -e ./apps/india_compliance
           bench start &>> ~/frappe-bench/bench_start.log &
 
-          bench --site test_site migrate --verbose
+          bench --site test_site migrate
 
       - name: Show bench output
         if: ${{ always() }}
