@@ -3,7 +3,6 @@ from frappe import _, bold
 from frappe.contacts.doctype.address.address import get_address_display
 
 from india_compliance.gst_india.overrides.transaction import (
-    DOCTYPES_WITH_GST_DETAIL,
     GSTAccounts,
     get_place_of_supply,
     ignore_gst_validations,
@@ -15,7 +14,7 @@ from india_compliance.gst_india.overrides.transaction import (
     validate_mandatory_fields,
     validate_place_of_supply,
 )
-from india_compliance.gst_india.utils import is_api_enabled, is_overseas_transaction
+from india_compliance.gst_india.utils import is_api_enabled
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 from india_compliance.gst_india.utils.taxes_controller import (
     CustomTaxController,
@@ -47,8 +46,7 @@ def onload(doc, method=None):
 
 
 def validate(doc, method=None):
-    # New Ignore for Stock Entry.
-    if ignore_gst_validations(doc):
+    if ignore_gst_validation_for_subcontracting(doc):
         return
 
     field_map = (
@@ -121,9 +119,6 @@ def validate_transaction(doc, method=None):
 
 
 def validate_company_address_field(doc, company_address_field):
-    if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
-        return
-
     if (
         validate_mandatory_fields(
             doc,
@@ -152,12 +147,8 @@ class SubcontractingGSTAccounts(GSTAccounts):
 
         self.validate_invalid_account_for_transaction()  # Sales / Purchase
         self.validate_for_same_party_gstin()
-        self.validate_reverse_charge_accounts()
-        self.validate_sales_transaction()
         self.validate_for_invalid_account_type()  # CGST / SGST / IGST
         self.validate_for_charge_type()
-
-        return
 
     def validate_for_same_party_gstin(self):
         company_gstin = self.doc.get("company_gstin") or self.doc.bill_from_gstin
@@ -173,32 +164,17 @@ class SubcontractingGSTAccounts(GSTAccounts):
             ).format(self.first_gst_idx)
         )
 
-    def validate_for_invalid_account_type(self):
-        super().validate_for_invalid_account_type(is_inter_state_supply(self.doc))
-
-    def validate_sales_transaction(self):
-        gst_category = self.doc.get("gst_category") or self.doc.bill_to_gst_category
-        is_overseas_doc = is_overseas_transaction(
-            self.doc, gst_category, self.doc.place_of_supply
-        )
-
-        if is_overseas_doc and not self.doc.is_export_with_gst:
-            self._throw(
-                _(
-                    "Cannot charge GST in Row #{0} since export is without payment of GST"
-                ).format(self.first_gst_idx)
-            )
+    def validate_for_charge_type(self):
+        for row in self.gst_tax_rows:
+            # validating charge type "On Item Quantity" and non_cess_advol_account
+            self.validate_charge_type_for_cess_non_advol_accounts(row)
 
 
-def is_inter_state_supply(doc):
-    gst_category = doc.get("gst_category") or doc.bill_to_gst_category
-    return gst_category == "SEZ" or (
-        doc.place_of_supply[:2] != get_source_state_code(doc)
-    )
+def ignore_gst_validation_for_subcontracting(doc):
+    if doc.doctype == "Stock Entry" and doc.purpose != "Send to Subcontractor":
+        return True
 
-
-def get_source_state_code(doc):
-    return (doc.get("company_gstin") or doc.bill_from_gstin or doc.bill_to_gstin)[:2]
+    return ignore_gst_validations(doc)
 
 
 def set_address_display(doc):

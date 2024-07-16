@@ -48,9 +48,6 @@ DOCTYPES_WITH_GST_DETAIL = {
     "Delivery Note",
     "Sales Invoice",
     "POS Invoice",
-    "Subcontracting Order",
-    "Subcontracting Receipt",
-    "Stock Entry",
 }
 
 
@@ -332,8 +329,6 @@ class GSTAccounts:
         self.validate_for_charge_type()
         self.validate_missing_accounts_in_item_tax_template()
 
-        return
-
     def setup_defaults(self):
         (
             self.all_valid_accounts,
@@ -433,14 +428,13 @@ class GSTAccounts:
                 ).format(self.first_gst_idx)
             )
 
-    def validate_for_invalid_account_type(self, is_inter_state=None):
+    def validate_for_invalid_account_type(self):
         """
         - SEZ / Inter-State supplies should not have CGST or SGST account
         - Intra-State supplies should not have IGST account
         - If Intra-State, ensure both CGST and SGST accounts are used
         """
-        if is_inter_state is None:
-            is_inter_state = is_inter_state_supply(self.doc)
+        is_inter_state = is_inter_state_supply(self.doc)
 
         for row in self.gst_tax_rows:
             if is_inter_state:
@@ -924,11 +918,10 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
     return gst_details
 
 
-def get_party_gst_details(party_details, is_sales_transaction, party_gstin_field):
+def get_party_gst_details(party_details, is_sales_transaction, gstin_fieldname):
     """fetch GSTIN and GST category from party"""
 
     party_type = "Customer" if is_sales_transaction else "Supplier"
-    gstin_fieldname = party_gstin_field
 
     if not (party := party_details.get(party_type.lower())) or not isinstance(
         party, str
