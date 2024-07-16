@@ -15,6 +15,9 @@ from frappe.utils import (
 
 from india_compliance.exceptions import GSPServerError
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
+from india_compliance.gst_india.api_classes.taxpayer_e_invoice import (
+    EInvoiceAPI as TaxpayerEInvoiceAPI,
+)
 from india_compliance.gst_india.constants import (
     CURRENCY_CODES,
     EXPORT_TYPES,
@@ -112,6 +115,57 @@ def generate_e_invoices(docnames, force=False):
             frappe.db.commit()  # nosemgrep
 
 
+def handle_duplicate_irn_error(api, doc, data, irn, settings):
+    """
+    Handle Duplicate IRN errors by fetching the IRN details and comparing with the current invoice.
+
+    Steps:
+    1. Fetch IRN details using the IRN number using e-Invoice API.
+    2. If the IRN details cannot be fetched, fetch the IRN details from the GST Portal.
+    3. Compare the buyer GSTIN and invoice amount with the current invoice and throw an error if they don't match.
+    """
+
+    response = api.get_e_invoice_by_irn(irn)
+
+    # Handle error 2283:
+    # IRN details cannot be provided as it is generated more than 2 days ago
+    if (
+        response.error_code == "2283"
+        and settings.fetch_e_invoice_details_from_gst_portal
+    ):
+        response = TaxpayerEInvoiceAPI(doc).get_irn_details(irn)
+        if response.error_type == "otp_requested":
+            return response
+
+        response = frappe._dict(response.data or response.error)
+
+    if signed_data := response.SignedInvoice:
+        invoice_data = json.loads(
+            jwt.decode(signed_data, options={"verify_signature": False})["data"]
+        )
+
+        previous_gstin = invoice_data.get("BuyerDtls").get("Gstin")
+        current_gstin = invoice_data.get("BuyerDtls").get("Gstin")
+        previous_invoice_amount = invoice_data.get("ValDtls").get("TotInvVal")
+        current_invoice_amount = data.get("ValDtls").get("TotInvVal")
+
+        if not (
+            previous_gstin == current_gstin
+            and previous_invoice_amount == current_invoice_amount
+        ):
+            frappe.throw(
+                _(
+                    "e-Invoice is already available against Invoice {0} with a Grand Total of Rs.{1}"
+                    " Duplicate IRN requests are not considered by e-Invoice Portal."
+                ).format(
+                    frappe.bold(invoice_data.get("DocDtls").get("No")),
+                    frappe.bold(previous_invoice_amount),
+                )
+            )
+
+    return response
+
+
 @frappe.whitelist()
 def generate_e_invoice(docname, throw=True, force=False):
     doc = load_doc("Sales Invoice", docname, "submit")
@@ -132,30 +186,11 @@ def generate_e_invoice(docname, throw=True, force=False):
 
         # Handle Duplicate IRN
         if result.InfCd == "DUPIRN":
-            response = api.get_e_invoice_by_irn(result.Desc.Irn)
+            response = handle_duplicate_irn_error(api, doc, data, result.Irn, settings)
+            if response.error_type == "otp_requested":
+                return response
 
-            if signed_data := response.SignedInvoice:
-                invoice_data = json.loads(
-                    jwt.decode(signed_data, options={"verify_signature": False})["data"]
-                )
-
-                previous_invoice_amount = invoice_data.get("ValDtls").get("TotInvVal")
-                current_invoice_amount = data.get("ValDtls").get("TotInvVal")
-
-                if previous_invoice_amount != current_invoice_amount:
-                    frappe.throw(
-                        _(
-                            "e-Invoice is already available against Invoice {0} with a Grand Total of Rs.{1}"
-                            " Duplicate IRN requests are not considered by e-Invoice Portal."
-                        ).format(
-                            frappe.bold(invoice_data.get("DocDtls").get("No")),
-                            frappe.bold(previous_invoice_amount),
-                        )
-                    )
-
-            # Handle error 2283:
-            # IRN details cannot be provided as it is generated more than 2 days ago
-            result = result.Desc if response.error_code == "2283" else response
+            result = result.Desc if response.error_code else response
 
         # Handle Invalid GSTIN Error
         if result.error_code in ("3028", "3029"):

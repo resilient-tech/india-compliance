@@ -49,7 +49,10 @@ frappe.ui.form.on("Sales Invoice", {
                     frappe.call({
                         method: "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
                         args: { docname: frm.doc.name, force: true },
-                        callback: () => {
+                        callback: async (r) => {
+                            if (r.message.error_type == "otp_requested")
+                                await india_compliance.authenticate_otp(frm.doc.company_gstin);
+
                             return frm.refresh();
                         },
                     });
