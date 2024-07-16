@@ -1,3 +1,5 @@
+import click
+
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
@@ -11,7 +13,10 @@ from india_compliance.audit_trail.utils import (
 
 
 def setup_fixtures():
-    print("here in setup fixtures")
+    click.secho(
+        ("here in setup fixtures"),
+        fg="bright_red",
+    )
     create_custom_fields(CUSTOM_FIELDS)
     create_property_setters_for_versioning()
 
