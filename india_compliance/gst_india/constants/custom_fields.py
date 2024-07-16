@@ -934,7 +934,6 @@ CUSTOM_FIELDS = {
             "label": "HSN/SAC",
             "fieldtype": "Link",
             "options": "GST HSN Code",
-            "reqd": 1,
             "insert_after": "defaults",
             "description": "You can search code by the description of the category.",
         },
