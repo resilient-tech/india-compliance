@@ -1,5 +1,6 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
+from itertools import combinations
 
 from pypika import Order
 from pypika.terms import Case
@@ -11,7 +12,6 @@ from frappe.utils import getdate
 from india_compliance.gst_india.utils import get_full_gst_uom
 from india_compliance.gst_india.utils.gstr_1 import (
     CATEGORY_SUB_CATEGORY_MAPPING,
-    SUPECOM,
     GSTR1_B2B_InvoiceType,
     GSTR1_Category,
     GSTR1_SubCategory,
@@ -90,8 +90,11 @@ class GSTR1Query:
                 .when(
                     IfNull(self.si.ecommerce_gstin, "") != "",
                     Case()
-                    .when(self.si.is_reverse_charge == 1, SUPECOM.US_9_5.value)
-                    .else_(SUPECOM.US_52.value),
+                    .when(
+                        self.si.is_reverse_charge == 1,
+                        GSTR1_SubCategory.SUPECOM_9_5.value,
+                    )
+                    .else_(GSTR1_SubCategory.SUPECOM_52.value),
                 )
                 .else_("")
                 .as_("ecommerce_supply_type"),
@@ -512,13 +515,18 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
     def get_overview(self):
         final_summary = []
         sub_category_summary = self.get_sub_category_summary()
-
         IGNORED_CATEGORIES = (
             GSTR1_Category.AT,
             GSTR1_Category.TXP,
             GSTR1_Category.DOC_ISSUE,
             GSTR1_Category.HSN,
-            GSTR1_Category.SUPECOM,
+            (
+                GSTR1_Category.SUPECOM
+                if not frappe.get_cached_value(
+                    "GST Settings", None, "enable_sales_through_ecommerce_operators"
+                )
+                else None
+            ),
         )
 
         for category, sub_categories in CATEGORY_SUB_CATEGORY_MAPPING.items():
@@ -572,31 +580,56 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
 
             summary_row["unique_records"].add(row.invoice_no)
 
+            if frappe.get_cached_value(
+                "GST Settings", None, "enable_sales_through_ecommerce_operators"
+            ):
+                self.update_ecommerce_summary(row, summary)
+
         for summary_row in summary.values():
             summary_row["no_of_records"] = len(summary_row["unique_records"])
 
         return summary
 
+    def update_ecommerce_summary(self, row, summary):
+        if not row.ecommerce_gstin:
+            return
+
+        ecommerce_summary = summary[row.get("ecommerce_supply_type")]
+        for key in self.AMOUNT_FIELDS:
+            ecommerce_summary[key] += row[key]
+            ecommerce_summary["unique_records"].add(row.invoice_no)
+
     def update_overlaping_invoice_summary(self, sub_category_summary, final_summary):
         nil_exempt = GSTR1_SubCategory.NIL_EXEMPT.value
-
+        supecom_52 = GSTR1_SubCategory.SUPECOM_52.value
+        supecom_9_5 = GSTR1_SubCategory.SUPECOM_9_5.value
         # Get Unique Taxable Invoices
         unique_invoices = set()
+
         for category, row in sub_category_summary.items():
-            if category == nil_exempt:
+            if category in (nil_exempt, supecom_52, supecom_9_5):
                 continue
 
             unique_invoices.update(row["unique_records"])
 
         # Get Overlaping Invoices
-        category_invoices = sub_category_summary[nil_exempt]["unique_records"]
-        overlaping_invoices = category_invoices.intersection(unique_invoices)
+        invoice_sets = [
+            sub_category_summary[nil_exempt]["unique_records"],
+            sub_category_summary[supecom_52]["unique_records"],
+            sub_category_summary[supecom_9_5]["unique_records"],
+            unique_invoices,
+        ]
+
+        overlaping_invoices = set()
+
+        for set1, set2 in combinations(invoice_sets, 2):
+            overlaping_invoices.update(set1.intersection(set2))
 
         # Update Summary
         if overlaping_invoices:
             final_summary.append(
                 {
-                    "description": "Overlaping Invoices in Nil-Rated/Exempt/Non-GST",
+                    "description": "Overlaping Invoices in Nil-Rated/Exempt/Non-GST and E-commerce Sales",
                     "no_of_records": -len(overlaping_invoices),
                 }
             )
