@@ -72,7 +72,7 @@ jobs:
 
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
-        run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
+        run: echo "::set-output name=dir::$(yarn cache dir)"
 
       - uses: actions/cache@v4
         id: yarn-cache
@@ -122,8 +122,6 @@ jobs:
           bench start &>> ~/frappe-bench/bench_start.log &
 
           bench --site test_site migrate
-
-          cat ~/frappe-bench/sites/test_site/logs/patch.log
 
       - name: Show bench output
         if: ${{ always() }}
