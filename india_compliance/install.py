@@ -52,6 +52,7 @@ POST_INSTALL_PATCHES = (
 
 def after_install():
     try:
+        print("before setup audit trail in install.py")
         setup_audit_trail()
 
         print("Setting up Income Tax...")

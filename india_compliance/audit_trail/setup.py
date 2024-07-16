@@ -11,6 +11,7 @@ from india_compliance.audit_trail.utils import (
 
 
 def setup_fixtures():
+    print("here in setup fixtures")
     create_custom_fields(CUSTOM_FIELDS)
     create_property_setters_for_versioning()
 

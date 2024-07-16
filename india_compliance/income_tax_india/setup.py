@@ -6,6 +6,7 @@ from india_compliance.income_tax_india.constants.custom_fields import CUSTOM_FIE
 
 
 def after_install():
+    print("in after install of setup of income tax india")
     create_custom_fields()
 
 
