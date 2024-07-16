@@ -113,12 +113,20 @@ jobs:
           git -C "apps/erpnext" checkout -q -f "${GITHUB_BASE_REF:-${GITHUB_REF##*/}}"
           git -C "apps/india_compliance" checkout -q -f "$GITHUB_SHA"
 
+          echo "kikking the process"
           pgrep honcho | xargs kill
+          
+          echo "remove env"
           rm -rf ~/frappe-bench/env
+
+          echo "env setup"
           bench -v setup env
+
+          echo "installing ic"
           bench pip install -e ./apps/india_compliance
           bench start &>> ~/frappe-bench/bench_start.log &
 
+          echo "startiong migration"
           bench --site test_site migrate
 
       - name: Show bench output
