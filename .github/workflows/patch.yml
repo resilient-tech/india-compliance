@@ -123,6 +123,8 @@ jobs:
 
           bench --site test_site migrate
 
+          cat ~/frappe-bench/sites/test_site/logs/patch.log
+
       - name: Show bench output
         if: ${{ always() }}
         run: |
