@@ -4,7 +4,7 @@ india_compliance.patches.v15.remove_duplicate_web_template
 
 [post_model_sync]
 india_compliance.patches.v14.set_default_for_overridden_accounts_setting
-execute:from india_compliance.gst_india.setup import create_custom_fields; create_custom_fields() #53
+execute:from india_compliance.gst_india.setup import create_custom_fields; create_custom_fields() #51
 execute:from india_compliance.gst_india.setup import create_property_setters; create_property_setters() #7
 execute:from india_compliance.income_tax_india.setup import create_custom_fields; create_custom_fields() #1
 india_compliance.patches.post_install.remove_old_fields #1
@@ -58,6 +58,3 @@ india_compliance.patches.v14.unset_inward_supply_link_for_cancelled_purchase
 india_compliance.patches.v14.delete_not_generated_gstr_import_log
 india_compliance.patches.v14.enable_sales_through_ecommerce_operator
 execute:from india_compliance.gst_india.setup import set_default_print_settings; set_default_print_settings()
-execute:import frappe; frappe.db.set_value("GST Settings", None, "validate_hsn_code", 1)
-execute:import frappe; frappe.db.set_value("GST Settings", None, "archive_party_info_days", 10)
-execute:import frappe; frappe.db.set_value("GST Settings", None, "enable_sales_through_ecommerce_operators", 1)

@@ -107,7 +107,7 @@ jobs:
           git -C "apps/erpnext" remote set-url upstream https://github.com/frappe/erpnext.git
           git -C "apps/india_compliance" remote set-url upstream https://github.com/resilient-tech/india-compliance.git
           
-          # add code for version-14-hotfix and version-15-hotfix
+          #add code for v14-hotfix and v15-hotfix
 
           echo "Updating to latest version"
           git -C "apps/frappe" checkout -q -f "${GITHUB_BASE_REF:-${GITHUB_REF##*/}}"
