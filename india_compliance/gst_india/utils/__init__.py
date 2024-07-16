@@ -410,9 +410,8 @@ def get_place_of_supply(party_details, doctype):
 
     elif doctype == "Stock Entry":
         party_gstin = party_details.bill_to_gstin or party_details.bill_from_gstin
-    elif doctype in ("Subcontracting Order", "Subcontracting Receipt"):
-        party_gstin = party_details.supplier_gstin or party_details.company_gstin
     else:
+        # for purchase, subcontracting order and receipt
         party_gstin = party_details.company_gstin or party_details.supplier_gstin
 
     if not party_gstin:

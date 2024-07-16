@@ -53,10 +53,9 @@ function fetch_gst_details(doctype) {
             "is_export_with_gst"
         );
     } else if (doctype === "Stock Entry") {
-        event_fields.push("bill_from_gstin", "supplier_address", "bill_from_address");
+        event_fields.push("bill_from_gstin", "bill_to_address");
     } else if (["Subcontracting Order", "Subcontracting Receipt"].includes(doctype)) {
-        // TODO: Fix updation of Place of Supply and Taxes
-        event_fields.push("supplier_address", "billing_address");
+        event_fields.push("supplier_gstin");
     } else {
         event_fields.push("supplier_address");
     }
@@ -72,7 +71,8 @@ async function update_gst_details(frm, event) {
     if (
         frm.updating_party_details ||
         !frm.doc.company ||
-        (event === "place_of_supply" && frm.__updating_gst_details)
+        (["place_of_supply", "bill_to_address"].includes(event) &&
+            frm.__updating_gst_details)
     )
         return;
 
@@ -85,6 +85,7 @@ async function update_gst_details(frm, event) {
         [
             "company_gstin",
             "bill_from_gstin",
+            "bill_to_address",
             "customer_address",
             "shipping_address_name",
             "supplier_address",
@@ -369,31 +370,40 @@ function _set_e_commerce_ecommerce_supply_type(frm) {
 
 function fetch_party_details(doctype) {
     let company_gstin_field = "company_gstin";
-    let posting_date_field = "posting_date";
 
     if (doctype === "Stock Entry") {
         company_gstin_field = "bill_from_gstin";
-    } else if (doctype === "Subcontracting Order") {
-        posting_date_field = "transaction_date";
     }
 
     frappe.ui.form.on(doctype, {
         supplier(frm) {
             setTimeout(() => {
-                const args = {};
-                const party_details = {};
-                party_details[company_gstin_field] = frm.doc[company_gstin_field];
-                party_details.supplier = frm.doc.supplier;
+                const party_details = {
+                    [company_gstin_field]: frm.doc[company_gstin_field],
+                    supplier: frm.doc.supplier,
+                };
+                const args = {
+                    party_details: JSON.stringify(party_details),
+                    posting_date: frm.doc.posting_date || frm.doc.transaction_date,
+                };
 
-                args.party_details = JSON.stringify(party_details);
-                args.posting_date = frm.doc[posting_date_field];
-
+                toggle_link_validation(frm, ["supplier_address"], false);
                 erpnext.utils.get_party_details(
                     frm,
                     "india_compliance.gst_india.overrides.transaction.get_party_details_for_subcontracting",
-                    args
+                    args,
+                    () => {
+                        toggle_link_validation(frm, ["supplier_address"], true);
+                    }
                 );
             }, 0);
         },
+    });
+}
+
+function toggle_link_validation(frm, fields, validate = true) {
+    fields.forEach(field => {
+        const df = frm.get_field(field).df;
+        if (df) df.ignore_link_validation = !validate;
     });
 }
