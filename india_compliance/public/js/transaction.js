@@ -10,6 +10,9 @@ const TRANSACTION_DOCTYPES = [
     "Purchase Order",
     "Purchase Receipt",
     "Purchase Invoice",
+];
+
+const SUBCONTRACTING_DOCTYPES = [
     "Stock Entry",
     "Subcontracting Order",
     "Subcontracting Receipt",
@@ -19,6 +22,11 @@ for (const doctype of TRANSACTION_DOCTYPES) {
     fetch_gst_details(doctype);
     validate_overseas_gst_category(doctype);
     set_and_validate_gstin_status(doctype);
+}
+
+for (const doctype of SUBCONTRACTING_DOCTYPES) {
+    fetch_party_details(doctype);
+    fetch_gst_details(doctype);
 }
 
 for (const doctype of ["Sales Invoice", "Delivery Note"]) {
@@ -35,7 +43,6 @@ function fetch_gst_details(doctype) {
         "company_gstin",
         "place_of_supply",
         "is_reverse_charge",
-        "supplier",
     ];
 
     // we are using address below to prevent multiple event triggers
@@ -81,7 +88,6 @@ async function update_gst_details(frm, event) {
             "customer_address",
             "shipping_address_name",
             "supplier_address",
-            "supplier"
         ].includes(event)
     ) {
         frm.__update_place_of_supply = true;
@@ -359,4 +365,35 @@ function _set_e_commerce_ecommerce_supply_type(frm) {
     } else {
         frm.set_value("ecommerce_supply_type", "Liable to collect tax u/s 52(TCS)");
     }
+}
+
+function fetch_party_details(doctype) {
+    let company_gstin_field = "company_gstin";
+    let posting_date_field = "posting_date";
+
+    if (doctype === "Stock Entry") {
+        company_gstin_field = "bill_from_gstin";
+    } else if (doctype === "Subcontracting Order") {
+        posting_date_field = "transaction_date";
+    }
+
+    frappe.ui.form.on(doctype, {
+        supplier(frm) {
+            setTimeout(() => {
+                const args = {};
+                const party_details = {};
+                party_details[company_gstin_field] = frm.doc[company_gstin_field];
+                party_details.supplier = frm.doc.supplier;
+
+                args.party_details = JSON.stringify(party_details);
+                args.posting_date = frm.doc[posting_date_field];
+
+                erpnext.utils.get_party_details(
+                    frm,
+                    "india_compliance.gst_india.overrides.transaction.get_party_details_for_subcontracting",
+                    args
+                );
+            }, 0);
+        },
+    });
 }

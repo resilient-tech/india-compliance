@@ -3,6 +3,7 @@ from collections import defaultdict
 
 import frappe
 from frappe import _, bold
+from frappe.contacts.doctype.address.address import get_default_address
 from frappe.utils import cint, flt, format_date
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 
@@ -765,6 +766,19 @@ def get_regional_round_off_accounts(company, account_list):
 def update_party_details(party_details, doctype, company):
     party_details.update(
         get_gst_details(party_details, doctype, company, update_place_of_supply=True)
+    )
+
+
+@frappe.whitelist()
+def get_party_details_for_subcontracting(party_details, doctype, company):
+    party_details = frappe.parse_json(party_details)
+    return party_details.update(
+        {
+            **get_gst_details(
+                party_details, doctype, company, update_place_of_supply=True
+            ),
+            "supplier_address": get_default_address("Supplier", party_details.supplier),
+        }
     )
 
 
