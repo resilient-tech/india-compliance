@@ -1197,6 +1197,7 @@ class ImportDialog {
                 });
             } else if (this.return_type === ReturnType.GSTR2B) {
                 this.dialog.$wrapper.find(".btn-secondary").addClass("hidden");
+                // TODO: Disable if no pending downloads
                 this.dialog.set_primary_action(__("Download"), () => {
                     download_gstr(
                         this.frm,
@@ -1254,7 +1255,6 @@ class ImportDialog {
         });
 
         let pending_download = {
-            label: this.for_download ? "Pending Download" : "Pending Upload",
             columns: ["Period", "GSTIN"],
             data: message.pending_download,
         };
@@ -1263,7 +1263,6 @@ class ImportDialog {
         );
 
         let download_history = {
-            label: this.for_download ? "Download History" : "Upload History",
             columns: ["Period", "Downloded On"],
             data: message.download_history,
         };
@@ -1404,7 +1403,7 @@ class ImportDialog {
     }
 
     get_fields_for_pending_downloads() {
-        const label = this.for_download ? "Pending Download" : "Pending Upload";
+        const label = this.for_download ? "🟠 Pending Download" : "🟠 Pending Upload";
         return [
             { label, fieldtype: "Section Break", depends_on: "eval:doc.company_gstin" },
             { label, fieldname: "pending_download", fieldtype: "HTML" },
@@ -1412,7 +1411,7 @@ class ImportDialog {
     }
 
     get_fields_for_download_history() {
-        const label = this.for_download ? "Download History" : "Upload History";
+        const label = this.for_download ? "🟢 Download History" : "🟢 Upload History";
 
         return [
             {
@@ -1451,6 +1450,7 @@ async function download_gstr(
     const { message } = await frm.call("download_gstr", args);
 
     if (message && message.length) {
+        // TODO: Setup Listners similar to GSTR-1 Beta
         message.forEach(async msg => {
             await india_compliance.authenticate_otp(msg.gstin, msg.error_type);
             download_gstr(

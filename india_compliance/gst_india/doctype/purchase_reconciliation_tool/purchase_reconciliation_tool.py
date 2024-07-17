@@ -444,6 +444,7 @@ def download_gstr(
     otp_failures = []
 
     for company_gstin in company_gstins:
+        # TODO: Handle cases were some periods are already downloaded for some GSTINs
         try:
             if not return_type or return_type == ReturnType.GSTR2A:
                 error = _download_gstr_2a(
