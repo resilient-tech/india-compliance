@@ -611,7 +611,11 @@ def validate_place_of_supply(doc):
 
 
 def is_inter_state_supply(doc):
-    return doc.gst_category == "SEZ" or (
+    gst_category = (
+        doc.bill_to_gst_category if doc.doctype == "Stock Entry" else doc.gst_category
+    )
+
+    return gst_category == "SEZ" or (
         doc.place_of_supply[:2] != get_source_state_code(doc)
     )
 
