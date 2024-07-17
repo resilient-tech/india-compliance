@@ -88,10 +88,12 @@ jobs:
         env:
           BRANCH_TO_CLONE: ${{ github.base_ref }}
 
-      # - name: Run Tests
-      #   run: cd ~/frappe-bench/ && bench --site test_site run-tests --app india_compliance --coverage
-      #   env:
-      #     TYPE: server
+      - name: Run Tests
+        run: cd ~/frappe-bench/ && bench --site test_site run-tests --app india_compliance --coverage
+        env:
+          TYPE: server
+
+      
    
       - name: Run Patch Tests
         run: |
@@ -108,6 +110,32 @@ jobs:
           git -C "apps/india_compliance" remote set-url upstream https://github.com/resilient-tech/india-compliance.git
           
           #add code for v14-hotfix and v15-hotfix
+          function update_to_version() {
+            version=$1
+
+            branch_name="version-$version-hotfix"
+            echo "Updating to v$version"
+
+            # Fetch and checkout branches
+            git -C "apps/frappe" fetch --depth 1 upstream $branch_name:$branch_name
+            git -C "apps/erpnext" fetch --depth 1 upstream $branch_name:$branch_name
+            git -C "apps/india_compliance" fetch --depth 1 upstream $branch_name:$branch_name
+            git -C "apps/frappe" checkout -q -f $branch_name
+            git -C "apps/erpnext" checkout -q -f $branch_name
+            git -C "apps/india_compliance" checkout -q -f $branch_name
+
+            # Resetup env and install apps
+            pgrep honcho | xargs kill
+            rm -rf ~/frappe-bench/env
+            bench -v setup env
+            bench pip install -e ./apps/erpnext
+            bench start &>> ~/frappe-bench/bench_start.log &
+
+            bench --site test_site migrate
+          }
+
+          update_to_version 14
+          update_to_version 15
 
           echo "Updating to latest version"
           git -C "apps/frappe" checkout -q -f "${GITHUB_BASE_REF:-${GITHUB_REF##*/}}"
