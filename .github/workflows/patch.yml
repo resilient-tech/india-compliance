@@ -92,8 +92,6 @@ jobs:
         run: cd ~/frappe-bench/ && bench --site test_site run-tests --app india_compliance --coverage
         env:
           TYPE: server
-
-      
    
       - name: Run Patch Tests
         run: |
@@ -129,6 +127,7 @@ jobs:
             rm -rf ~/frappe-bench/env
             bench -v setup env
             bench pip install -e ./apps/erpnext
+            bench pip install -e ./apps/india_compliance
             bench start &>> ~/frappe-bench/bench_start.log &
 
             bench --site test_site migrate
