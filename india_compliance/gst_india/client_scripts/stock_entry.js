@@ -23,6 +23,12 @@ frappe.ui.form.on(DOCTYPE, {
             };
         });
 
+        ["ship_from_address", "ship_to_address"].forEach(field => {
+            frm.set_query(field, function () {
+                return { filters: { country: "India", disabled: 0 } };
+            });
+        });
+
         set_address_display_events();
         on_change_set_address(
             frm,
@@ -133,6 +139,7 @@ function set_address_display_events() {
 }
 
 function on_change_set_address(frm, source_field, target_field, label1, label2) {
+    if (frm.doc.docstatus > 0) return;
     let read_only;
     let value = frm.doc[source_field];
     if (value) {

@@ -19,6 +19,12 @@ frappe.ui.form.on("Subcontracting Receipt", {
                 ],
             };
         });
+
+        ["supplier_address", "shipping_address"].forEach(field => {
+            frm.set_query(field, function () {
+                return { filters: { country: "India", disabled: 0 } };
+            });
+        });
     },
     onload(frm) {
         frm.taxes_controller = new india_compliance.taxes_controller(frm, {

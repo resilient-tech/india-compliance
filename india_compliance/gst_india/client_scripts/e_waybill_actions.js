@@ -442,6 +442,7 @@ function get_generate_e_waybill_dialog(opts, frm) {
             fieldtype: "Select",
             options: options.join("\n"),
             default: options[0],
+            read_only: options.length === 1,
             reqd: 1,
         });
     }
@@ -1040,7 +1041,7 @@ async function show_extend_validity_dialog(frm) {
                 },
                 callback: () => frm.refresh(),
             });
-            d.hide();
+            if (can_extend_now) d.hide();
         },
     });
     if (!can_extend_now) {

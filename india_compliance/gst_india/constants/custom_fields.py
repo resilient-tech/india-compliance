@@ -1701,7 +1701,7 @@ e_waybill_status_field = {
 
 purchase_e_waybill_field = {**e_waybill_no_field, "insert_after": "supplier_name"}
 
-stock_entry_e_waybill_field = {**e_waybill_no_field, "insert_after": "posting_time"}
+stock_entry_e_waybill_field = {**e_waybill_no_field, "insert_after": "asset_repair"}
 
 
 E_WAYBILL_FIELDS = {
@@ -1710,8 +1710,6 @@ E_WAYBILL_FIELDS = {
     "Delivery Note": E_WAYBILL_DN_FIELDS + [e_waybill_no_field],
     "Purchase Invoice": E_WAYBILL_INV_FIELDS + [purchase_e_waybill_field],
     "Purchase Receipt": E_WAYBILL_PURCHASE_RECEIPT_FIELDS + [purchase_e_waybill_field],
-    "Stock Entry": E_WAYBILL_SE_FIELDS
-    + [stock_entry_e_waybill_field, e_waybill_status_field],
-    "Subcontracting Receipt": E_WAYBILL_SCR_FIELDS
-    + [purchase_e_waybill_field, e_waybill_status_field],
+    "Stock Entry": E_WAYBILL_SE_FIELDS + [stock_entry_e_waybill_field],
+    "Subcontracting Receipt": E_WAYBILL_SCR_FIELDS + [purchase_e_waybill_field],
 }

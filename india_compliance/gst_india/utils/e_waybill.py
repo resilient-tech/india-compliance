@@ -58,9 +58,8 @@ def generate_e_waybill_json(doctype: str, docnames, values=None):
         "billLists": [],
     }
 
-    for doc in docnames:
-        doc = frappe.get_doc(doctype, doc)
-        doc.check_permission("submit")
+    for docname in docnames:
+        doc = load_doc(doctype, docname, "submit")
 
         if values:
             update_transaction(doc, frappe.parse_json(values))
@@ -137,7 +136,8 @@ def generate_e_waybills(doctype, docnames, force=False):
 @frappe.whitelist()
 def generate_e_waybill(*, doctype, docname, values=None, force=False):
     doc = load_doc(doctype, docname, "submit")
-    update_transaction(doc, values)
+    if values:
+        update_transaction(doc, frappe.parse_json(values))
 
     _generate_e_waybill(doc, throw=True if values else False, force=force)
 
@@ -157,8 +157,9 @@ def _generate_e_waybill(doc, throw=True, force=False):
         # Handles following error when generating e-Waybill using IRN:
         # 4010: E-way Bill cannot generated for Debit Note, Credit Note and Services
         with_irn = doc.get("irn") and not (
-            doc.get("is_return") or doc.get("is_debit_note") or is_foreign_doc(doc)
+            doc.is_return or doc.get("is_debit_note") or is_foreign_doc(doc)
         )
+
         data = EWaybillData(doc).get_data(with_irn=with_irn)
 
         api = EWaybillAPI if not with_irn else EInvoiceAPI
@@ -270,7 +271,7 @@ def _cancel_e_waybill(doc, values):
         if (
             e_waybill_data.sandbox_mode
             and doc.get("irn")
-            and not (doc.get("is_return") or doc.get("is_debit_note"))
+            and not (doc.is_return or doc.get("is_debit_note"))
         )
         else EWaybillAPI
     )
@@ -973,38 +974,31 @@ def update_e_waybill_log_for_extention(
 
 
 def update_transaction(doc, values):
-    if values:
-        values = frappe.parse_json(values)
-        transporter_name = (
-            frappe.db.get_value("Supplier", values.transporter, "supplier_name")
-            if values.transporter
-            else None
-        )
+    transporter_name = (
+        frappe.db.get_value("Supplier", values.transporter, "supplier_name")
+        if values.transporter
+        else None
+    )
 
-        data = {
-            "transporter": values.transporter,
-            "transporter_name": transporter_name,
-            "gst_transporter_id": values.gst_transporter_id,
-            "vehicle_no": values.vehicle_no,
-            "distance": values.distance,
-            "lr_no": values.lr_no,
-            "lr_date": values.lr_date,
-            "mode_of_transport": values.mode_of_transport,
-            "gst_vehicle_type": values.gst_vehicle_type,
-        }
+    data = {
+        "transporter": values.transporter,
+        "transporter_name": transporter_name,
+        "gst_transporter_id": values.gst_transporter_id,
+        "vehicle_no": values.vehicle_no,
+        "distance": values.distance,
+        "lr_no": values.lr_no,
+        "lr_date": values.lr_date,
+        "mode_of_transport": values.mode_of_transport,
+        "gst_vehicle_type": values.gst_vehicle_type,
+    }
 
-        if doc.doctype == "Sales Invoice":
-            data["port_address"] = values.port_address
+    if doc.doctype == "Sales Invoice":
+        data["port_address"] = values.port_address
 
-        doc.db_set(data)
+    doc.db_set(data)
 
-        if doc.doctype in ("Delivery Note", "Stock Entry", "Subcontracting Receipt"):
-            doc._sub_supply_type = SUB_SUPPLY_TYPES[values.sub_supply_type]
-
-    if doc.doctype == "Stock Entry":
-        doc.company_gstin = doc.bill_from_gstin
-        doc.supplier_gstin = doc.bill_to_gstin
-        doc.gst_category = doc.bill_to_gst_category
+    if doc.doctype in ("Delivery Note", "Stock Entry", "Subcontracting Receipt"):
+        doc._sub_supply_type = SUB_SUPPLY_TYPES[values.sub_supply_type]
 
 
 def get_e_waybill_info(doc):
@@ -1276,7 +1270,7 @@ class EWaybillData(GSTTransactionData):
             if self.doc.doctype in SALES_DOCTYPES
             else "supplier_gstin"
         )
-        if self.doc.get("company_gstin") == self.doc.get(party_gstin_fieldname):
+        if self.doc.company_gstin == self.doc.get(party_gstin_fieldname):
             frappe.throw(
                 _(
                     "e-Waybill cannot be generated because Party GSTIN is same as"
@@ -1330,8 +1324,10 @@ class EWaybillData(GSTTransactionData):
         if now < extend_after or now > extend_before:
             frappe.throw(
                 _(
-                    "e-Waybill can be extended between 8 hours before expiry time and 8 hours after expiry time"
-                )
+                    "e-Waybill can be extended between 8 hours before expiry time and 8 hours after expiry time."
+                    "<br><br>Instead you can schedule the extension of e-Waybill."
+                ),
+                title=_("Cannot Extend Now"),
             )
 
         if (
@@ -1501,7 +1497,7 @@ class EWaybillData(GSTTransactionData):
         }
 
         self.transaction_details.update(
-            default_supply_types.get((doc.doctype, doc.get("is_return", 0)), {})
+            default_supply_types.get((doc.doctype, doc.get("is_return") or 0), {})
         )
 
         if is_foreign_doc(self.doc):
@@ -1519,7 +1515,7 @@ class EWaybillData(GSTTransactionData):
         ):
             self.transaction_details.update(document_type="BIL")
 
-        if self.doc.doctype == "Purchase Invoice" and not self.doc.get("is_return"):
+        if self.doc.doctype == "Purchase Invoice" and not self.doc.is_return:
             self.transaction_details.name = self.doc.bill_no or self.doc.name
 
     def set_party_address_details(self):
@@ -1569,8 +1565,8 @@ class EWaybillData(GSTTransactionData):
         if self.doc.get("is_return"):
             to_party, from_party = from_party, to_party
 
-        self.bill_to.legal_name = to_party
-        self.bill_from.legal_name = from_party
+        self.bill_to.legal_name = to_party or self.bill_to.address_title
+        self.bill_from.legal_name = from_party or self.bill_from.address_title
 
         if self.doc.gst_category == "SEZ":
             self.bill_to.state_number = 96
@@ -1649,7 +1645,7 @@ class EWaybillData(GSTTransactionData):
                     return address.gstin
 
                 return sandbox_gstin.get(
-                    (self.doc.doctype, self.doc.get("is_return", 0))
+                    (self.doc.doctype, self.doc.get("is_return") or 0)
                 )[key]
 
             self.bill_from.gstin = _get_sandbox_gstin(self.bill_from, 0)
@@ -1686,9 +1682,9 @@ class EWaybillData(GSTTransactionData):
             "cessValue": self.transaction_details.total_cess_amount,
             "cessNonAdvolValue": self.transaction_details.total_cess_non_advol_amount,
             "otherValue": (
-                self.transaction_details.get("rounding_adjustment", 0)
-                + self.transaction_details.get("other_charges", 0)
-                - self.transaction_details.get("discount_amount", 0)
+                self.transaction_details.rounding_adjustment
+                + self.transaction_details.other_charges
+                - self.transaction_details.discount_amount
             ),
             "totInvValue": self.transaction_details.grand_total,
             "transMode": self.transaction_details.mode_of_transport,

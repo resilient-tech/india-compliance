@@ -30,6 +30,11 @@ def onload(doc, method=None):
     if doc.doctype == "Stock Entry":
         set_address_display(doc)
 
+        # For e-Waybill data mapping
+        doc.company_gstin = doc.bill_from_gstin
+        doc.supplier_gstin = doc.bill_to_gstin
+        doc.gst_category = doc.bill_to_gst_category
+
     if not doc.get("ewaybill"):
         return
 

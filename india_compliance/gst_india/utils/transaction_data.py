@@ -2,7 +2,7 @@ import re
 
 import frappe
 from frappe import _
-from frappe.utils import flt, format_date, get_link_to_form, getdate, rounded
+from frappe.utils import format_date, get_link_to_form, getdate, rounded
 
 from india_compliance.gst_india.constants import (
     E_INVOICE_MASTER_CODES_URL,
@@ -55,7 +55,7 @@ class GSTTransactionData:
 
     def set_transaction_details(self):
         rounding_adjustment = self.rounded(
-            flt(self.doc.get("base_rounding_adjustment"))
+            self.doc.get("base_rounding_adjustment") or 0
         )
 
         if self.doc.get("is_return"):
@@ -85,26 +85,21 @@ class GSTTransactionData:
                         self.doc.doctype, self.party_name, self.party_name_field
                     )
                 ),
-                "date": format_date(
-                    self.doc.get("posting_date") or self.doc.get("transaction_date"),
-                    self.DATE_FORMAT,
-                ),
+                "date": format_date(self.doc.posting_date, self.DATE_FORMAT),
                 "total": abs(self.rounded(total)),
                 "total_taxable_value": abs(self.rounded(total_taxable_value)),
                 "total_non_taxable_value": abs(
                     self.rounded(total - total_taxable_value)
                 ),
                 "rounding_adjustment": rounding_adjustment,
-                "grand_total": abs(
-                    self.rounded(flt(self.doc.get(grand_total_fieldname)))
-                ),
+                "grand_total": abs(self.rounded(self.doc.get(grand_total_fieldname))),
                 "grand_total_in_foreign_currency": (
-                    abs(self.rounded(flt(self.doc.get("grand_total"))))
-                    if self.doc.get("currency") != "INR"
+                    abs(self.rounded(self.doc.grand_total))
+                    if self.doc.get("currency", "INR") != "INR"
                     else ""
                 ),
                 "discount_amount": (
-                    abs(self.rounded(flt(self.doc.get("base_discount_amount"))))
+                    abs(self.rounded(self.doc.base_discount_amount))
                     if self.doc.get("is_cash_or_non_trade_discount")
                     else 0
                 ),
@@ -140,10 +135,12 @@ class GSTTransactionData:
             ):
                 continue
 
-            tax = row.gst_tax_type
-            self.transaction_details[f"total_{tax}_amount"] = abs(
-                self.rounded(row.tax_amount)
+            tax_key = f"total_{row.gst_tax_type}_amount"
+            tax_amount = (
+                row.get("base_tax_amount_after_discount_amount") or row.tax_amount
             )
+            self.transaction_details.setdefault(tax_key, 0)
+            self.transaction_details[tax_key] += abs(self.rounded(tax_amount))
 
         # Other Charges
         current_total = 0
@@ -267,9 +264,7 @@ class GSTTransactionData:
             )
 
         validate_invoice_number(self.doc)
-        posting_date = getdate(
-            self.doc.get("posting_date") or self.doc.get("transaction_date")
-        )
+        posting_date = getdate(self.doc.posting_date)
 
         if posting_date > getdate():
             frappe.throw(
@@ -308,9 +303,7 @@ class GSTTransactionData:
                     "item_name": self.sanitize_value(
                         row.item_name, regex=3, max_length=300
                     ),
-                    "uom": get_gst_uom(
-                        row.get("uom") or row.get("stock_uom"), self.settings
-                    ),
+                    "uom": get_gst_uom(row.get("uom") or row.stock_uom, self.settings),
                     "gst_treatment": row.gst_treatment,
                 }
             )
@@ -387,7 +380,7 @@ class GSTTransactionData:
 
         for row in self.doc.taxes:
             if (
-                not row.get("base_tax_amount_after_discount_amount")
+                not row.tax_amount
                 or self.is_purchase_rcm
                 or row.gst_tax_type not in GST_TAX_TYPES
             ):
@@ -426,13 +419,6 @@ class GSTTransactionData:
                     f"{tax}_rate": item.get(f"{tax}_rate"),
                 }
             )
-
-        tax_rate = sum(
-            self.rounded(item_details.get(f"{tax}_rate", 0), 3)
-            for tax in GST_TAX_TYPES[:3]
-        )
-
-        validate_gst_tax_rate(tax_rate, item)
 
     def get_progressive_item_tax_amount(self, amount, tax_type):
         """
@@ -679,9 +665,7 @@ def validate_unique_hsn_and_uom(doc):
     item_wise_hsn = {}
 
     for item in doc.items:
-        _validate_unique(
-            item_wise_uom, item.get("uom") or item.get("stock_uom"), _("UOM")
-        )
+        _validate_unique(item_wise_uom, item.get("uom") or item.stock_uom, _("UOM"))
         _validate_unique(item_wise_hsn, item.get("gst_hsn_code"), _("HSN Code"))
 
 
