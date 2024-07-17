@@ -122,7 +122,7 @@ class PurchaseReconciliationTool(Document):
         )
 
     @frappe.whitelist()
-    def get_history_and_pending_data(
+    def get_import_history(
         self, company_gstin, return_type, date_range, for_download=True
     ):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
@@ -135,41 +135,32 @@ class PurchaseReconciliationTool(Document):
         company_gstins = (
             get_gstin_list(self.company) if company_gstin == "All" else [company_gstin]
         )
-        history = get_import_history(company_gstins, return_type, periods)
 
-        pending_data = defaultdict(set)
-        history_data = defaultdict(set)
+        history = get_import_history(company_gstins, return_type, periods)
+        history = {(log.return_period, log.gstin): log for log in history}
+
+        action = "Download" if for_download else "Upload"
+        has_single_gstin = company_gstin != "All"
+
+        pending_download = defaultdict(set)
+        download_history = defaultdict(set)
 
         for period in periods:
             for gst_no in company_gstins:
-                download = next(
-                    (
-                        log
-                        for log in history
-                        if log.return_period == period and log.gstin == gst_no
-                    ),
-                    None,
-                )
+                download_row = history.get((period, gst_no))
 
-                if download:
-                    history_data[period].add(
+                if not download_row:
+                    pending_download[period].add(gst_no)
+
+                elif has_single_gstin:
+                    download_history[period].add(
                         "✅ &nbsp;"
-                        + download.last_updated_on.strftime("%d-%m-%Y %H:%M:%S")
+                        + download_row.last_updated_on.strftime("%d-%m-%Y %H:%M:%S")
                     )
-                else:
-                    pending_data[period].add(gst_no)
 
         return {
-            "pending_download": (
-                pending_data
-                if any(pending_data.values())
-                else ("No Pending Downloads" if for_download else "No Pending Uploads")
-            ),
-            "download_history": (
-                history_data
-                if any(history_data.values())
-                else ("No Download History" if for_download else "No Upload Histrory")
-            ),
+            "pending_download": (pending_download or f"No Pending {action}s"),
+            "download_history": (download_history or f"No {action} History"),
         }
 
     @frappe.whitelist()
@@ -510,11 +501,7 @@ def get_periods_to_download(company_gstin, return_type, periods):
 
 
 def get_import_history(
-    company_gstin,
-    return_type: ReturnType,
-    periods: List[str],
-    fields=None,
-    pluck=None,
+    company_gstin, return_type: ReturnType, periods: List[str], fields=None, pluck=None
 ):
     if not (fields or pluck):
         fields = (

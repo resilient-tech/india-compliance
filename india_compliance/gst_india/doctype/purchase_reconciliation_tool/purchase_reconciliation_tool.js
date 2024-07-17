@@ -1246,7 +1246,7 @@ class ImportDialog {
     async fetch_import_history() {
         if (!this.company_gstin) return;
 
-        const { message } = await this.frm.call("get_history_and_pending_data", {
+        const { message } = await this.frm.call("get_import_history", {
             company_gstin: this.company_gstin,
             return_type: this.return_type,
             date_range: this.date_range,
@@ -1271,6 +1271,7 @@ class ImportDialog {
             this.company_gstin === "All"
                 ? ""
                 : frappe.render_template("gstr_download_history", download_history);
+
         this.dialog.fields_dict.history.html(html);
     }
 
