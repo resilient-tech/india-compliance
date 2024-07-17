@@ -109,17 +109,15 @@ class PurchaseReconciliationTool(Document):
         date_range,
         return_type=None,
         force=False,
-        otp=None,
         gst_categories=None,
     ):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
-        download_gstr(
+        return download_gstr(
             company_gstins=company_gstins,
             date_range=date_range,
             return_type=return_type,
             force=force,
-            otp=otp,
             gst_categories=gst_categories,
         )
 
@@ -447,29 +445,36 @@ def download_gstr(
     date_range,
     return_type=None,
     force=False,
-    otp=None,
     gst_categories=None,
 ):
     if return_type:
         return_type = ReturnType(return_type)
 
+    otp_failures = []
+
     for company_gstin in company_gstins:
         try:
             if not return_type or return_type == ReturnType.GSTR2A:
-                _download_gstr_2a(date_range, company_gstin, force, otp, gst_categories)
+                error = _download_gstr_2a(
+                    date_range, company_gstin, force, gst_categories
+                )
 
             if not return_type or return_type == ReturnType.GSTR2B:
-                _download_gstr_2b(date_range, company_gstin, otp)
+                error = _download_gstr_2b(date_range, company_gstin)
+
+            if error:
+                otp_failures.append(error)
+
         except Exception:
             frappe.log_error(
                 frappe.get_traceback(),
                 f"Error while downloading {return_type.value if return_type else 'GSTR 2A & 2B'} for {company_gstin} ",
             )
 
+    return otp_failures
 
-def _download_gstr_2a(
-    date_range, company_gstin, force=False, otp=None, gst_categories=None
-):
+
+def _download_gstr_2a(date_range, company_gstin, force=False, gst_categories=None):
     return_type = ReturnType.GSTR2A
     periods = BaseUtil.get_periods(date_range, return_type)
     if not force:
@@ -478,10 +483,10 @@ def _download_gstr_2a(
     if not periods:
         return
 
-    return download_gstr_2a(company_gstin, periods, otp, gst_categories)
+    return download_gstr_2a(company_gstin, periods, gst_categories)
 
 
-def _download_gstr_2b(date_range, company_gstin, otp=None):
+def _download_gstr_2b(date_range, company_gstin):
     return_type = ReturnType.GSTR2B
     periods = get_periods_to_download(
         company_gstin, return_type, BaseUtil.get_periods(date_range, return_type)
@@ -490,7 +495,7 @@ def _download_gstr_2b(date_range, company_gstin, otp=None):
     if not periods:
         return
 
-    return download_gstr_2b(company_gstin, periods, otp)
+    return download_gstr_2b(company_gstin, periods)
 
 
 def get_periods_to_download(company_gstin, return_type, periods):

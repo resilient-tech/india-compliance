@@ -86,7 +86,9 @@ class ReturnsAuthenticate(BaseAPI):
         if response.status_cd != 1:
             return
 
-        return response.update({"error_type": "otp_requested"})
+        return response.update(
+            {"error_type": "otp_requested", "gstin": self.company_gstin}
+        )
 
     def autheticate_with_otp(self, otp=None):
         if not otp:
@@ -275,7 +277,7 @@ class ReturnsAPI(ReturnsAuthenticate):
     ):
         auth_token = self.get_auth_token()
 
-        if not auth_token:
+        if not auth_token or otp:
             response = self.autheticate_with_otp(otp=otp)
             if response.error_type in ["otp_requested", "invalid_otp"]:
                 return response
@@ -356,6 +358,7 @@ class ReturnsAPI(ReturnsAuthenticate):
 
         if error_code in self.IGNORED_ERROR_CODES:
             response.error_type = self.IGNORED_ERROR_CODES[error_code]
+            response.gstin = self.company_gstin
             return True
 
     def generate_app_key(self):

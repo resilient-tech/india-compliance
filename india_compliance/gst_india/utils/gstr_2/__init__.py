@@ -43,7 +43,7 @@ GSTR_MODULES = {
 IMPORT_CATEGORY = ("IMPG", "IMPGSEZ")
 
 
-def download_gstr_2a(gstin, return_periods, otp=None, gst_categories=None):
+def download_gstr_2a(gstin, return_periods, gst_categories=None):
     total_expected_requests = len(return_periods) * len(ACTIONS)
     requests_made = 0
     queued_message = False
@@ -79,7 +79,7 @@ def download_gstr_2a(gstin, return_periods, otp=None, gst_categories=None):
                 doctype="Purchase Reconciliation Tool",
             )
 
-            response = api.get_data(action, return_period, otp)
+            response = api.get_data(action, return_period)
             if response.error_type in ["otp_requested", "invalid_otp"]:
                 return response
 
@@ -131,7 +131,7 @@ def download_gstr_2a(gstin, return_periods, otp=None, gst_categories=None):
         end_transaction_progress(return_period)
 
 
-def download_gstr_2b(gstin, return_periods, otp=None):
+def download_gstr_2b(gstin, return_periods):
     total_expected_requests = len(return_periods)
     requests_made = 0
     queued_message = False
@@ -152,7 +152,7 @@ def download_gstr_2b(gstin, return_periods, otp=None):
             doctype="Purchase Reconciliation Tool",
         )
 
-        response = api.get_data(return_period, otp)
+        response = api.get_data(return_period)
         if response.error_type in ["otp_requested", "invalid_otp"]:
             return response
 
@@ -188,7 +188,7 @@ def download_gstr_2b(gstin, return_periods, otp=None):
         # Handle multiple files for GSTR2B
         if response.data and (file_count := response.data.get("fc")):
             for file_num in range(1, file_count + 1):
-                r = api.get_data(return_period, otp, file_num)
+                r = api.get_data(return_period, file_num=file_num)
                 save_gstr_2b(gstin, return_period, r)
 
             continue  # skip first response if file_count is greater than 1

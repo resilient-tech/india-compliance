@@ -1238,8 +1238,7 @@ class ImportDialog {
             this.return_type,
             this.company_gstin,
             only_missing,
-            marked_gst_categories,
-            null,
+            marked_gst_categories
         );
         this.dialog.hide();
     }
@@ -1376,10 +1375,37 @@ class ImportDialog {
         ];
     }
 
+    get_2a_category_fields() {
+        const fields = [];
+        const section_field = {
+            fieldtype: "Section Break",
+            depends_on: "eval:doc.return_type == 'GSTR2a'",
+        };
+
+        const import_categories = ["ISD", "ISDA", "IMPG", "IMPGSEZ"];
+        const overseas_enabled = gst_settings.enable_overseas_transactions;
+
+        fields.push(section_field);
+        GST_CATEGORIES.forEach((category, i) => {
+            fields.push({
+                label: category,
+                fieldname: category,
+                fieldtype: "Check",
+                default: !import_categories.includes(category) || overseas_enabled,
+            });
+
+            // after every 4 fields section break
+            if (i % 4 === 3) fields.push({ ...section_field, hide_border: true });
+            else fields.push({ fieldtype: "Column Break" });
+        });
+
+        return fields;
+    }
+
     get_fields_for_pending_downloads() {
         const label = this.for_download ? "Pending Download" : "Pending Upload";
         return [
-            { label, fieldtype: "Section Break", depends_on: "eval:doc.company_gstin"},
+            { label, fieldtype: "Section Break", depends_on: "eval:doc.company_gstin" },
             { label, fieldname: "pending_download", fieldtype: "HTML" },
         ];
     }
@@ -1396,33 +1422,6 @@ class ImportDialog {
             { label, fieldname: "history", fieldtype: "HTML" },
         ];
     }
-
-    get_2a_category_fields() {
-        const fields = [];
-        const section_field = {
-            fieldtype: "Section Break",
-            depends_on: "eval:doc.return_type == 'GSTR2a'",
-        };
-
-        const import_categories = ["ISD", "ISDA", "IMPG", "IMPGSEZ"];
-        const overseas_enabled = gst_settings.enable_overseas_transactions
-
-        fields.push(section_field);
-        GST_CATEGORIES.forEach((category, i) => {
-            fields.push({
-                label: category,
-                fieldname: category,
-                fieldtype: "Check",
-                default: !import_categories.includes(category) || overseas_enabled,
-            });
-
-            // after every 4 fields section break
-            if (i % 4 === 3) fields.push({...section_field, hide_border: true});
-            else fields.push({ fieldtype: "Column Break" });
-        });
-
-        return fields;
-    }
 }
 
 async function download_gstr(
@@ -1431,8 +1430,7 @@ async function download_gstr(
     return_type,
     company_gstin,
     only_missing = true,
-    gst_categories = null,
-    otp = null,
+    gst_categories = null
 ) {
     const authenticated_company_gstins =
         await india_compliance.authenticate_company_gstins(
@@ -1445,11 +1443,25 @@ async function download_gstr(
         company_gstins: authenticated_company_gstins,
         date_range: date_range,
         force: !only_missing,
-        otp,
         gst_categories,
     };
     frm.events.show_progress(frm, "download");
-    await frm.call("download_gstr", args);
+
+    const { message } = await frm.call("download_gstr", args);
+
+    if (message && message.length) {
+        message.forEach(async msg => {
+            await india_compliance.authenticate_otp(msg.gstin, msg.error_type);
+            download_gstr(
+                frm,
+                date_range,
+                return_type,
+                msg.gstin,
+                only_missing,
+                gst_categories
+            );
+        });
+    }
 }
 
 class EmailDialog {
