@@ -946,46 +946,49 @@ def validate_reverse_charge_transaction(doc):
     if not doc.get("is_reverse_charge"):
         return
 
+    is_return = doc.get("is_return", False)
+
+    def _throw_tax_error(is_positive, tax, comment_suffix=""):
+        expected = "positive" if is_positive else "negative"
+        if is_return:
+            expected = "negative" if is_positive else "positive"
+
+        frappe.throw(
+            _("Row #{0}: Tax amount should be {1} for GST Account {2}{3}").format(
+                tax.idx, expected, tax.account_head, comment_suffix
+            )
+        )
+
     for tax in doc.get("taxes"):
-        if not tax.gst_tax_type:
+        if not tax.gst_tax_type or not tax.tax_amount:
             continue
 
-        if "rcm" not in tax.gst_tax_type:
-            # NON RCM should be positive
-            if (
-                tax.get("add_deduct_tax", "Add") != "Add"
-                or tax.base_tax_amount_after_discount_amount < 0
-            ):
-                frappe.throw(
-                    _(
-                        "Row #{0}: Tax amount should be positive for GST Account {1}"
-                    ).format(tax.idx, tax.account_head)
-                )
+        tax_amount = tax.base_tax_amount_after_discount_amount
+        if is_return:
+            tax_amount = -tax_amount
 
-            base_gst_tax += tax.base_tax_amount_after_discount_amount
+        is_positive = tax_amount > 0
+
+        if "rcm" not in tax.gst_tax_type:
+            # NON RCM logic
+            if tax.get("add_deduct_tax", "Add") != "Add" or not is_positive:
+                _throw_tax_error(True, tax)
+
+            base_gst_tax += tax_amount
 
         elif "rcm" in tax.gst_tax_type:
-            # Using Deduct for RCM
+            # RCM logic
             if tax.get("add_deduct_tax") == "Deduct":
-                if tax.base_tax_amount_after_discount_amount < 0:
-                    frappe.throw(
-                        _(
-                            "Row #{0}: Tax amount should be positive for GST Account {1}"
-                            " as you are Deducting Tax"
-                        ).format(tax.idx, tax.account_head)
-                    )
+                if not is_positive:
+                    _throw_tax_error(True, tax, " as you are Deducting Tax")
 
-                base_reverse_charge_booked -= tax.base_tax_amount_after_discount_amount
+                base_reverse_charge_booked -= tax_amount
 
             else:
-                if tax.base_tax_amount_after_discount_amount > 0:
-                    frappe.throw(
-                        _(
-                            "Row #{0}: Tax amount should be negative for GST Account {1}"
-                        ).format(tax.idx, tax.account_head)
-                    )
+                if is_positive:
+                    _throw_tax_error(False, tax)
 
-                base_reverse_charge_booked += tax.base_tax_amount_after_discount_amount
+                base_reverse_charge_booked += tax_amount
 
     condition = flt(base_gst_tax + base_reverse_charge_booked, 2) == 0
 
