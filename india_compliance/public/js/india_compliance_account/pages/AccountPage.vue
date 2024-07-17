@@ -3,6 +3,11 @@
     <PreLoader v-if="isLoading" />
     <div v-else>
       <PageTitle title="India Compliance Account" />
+      <div class="subtext">
+        <span class="subtext-item">
+          Registered Email: {{ subscriptionDetails.email }}
+        </span>
+      </div>
       <Message
         v-if="message"
         :message="message.message"
@@ -225,6 +230,7 @@ export default {
 .subscription-info .last-updated-text {
   color: var(--gray-500);
 }
+
 .subscription-info .last-updated-text a {
   color: var(--text-light);
 }
@@ -255,12 +261,26 @@ export default {
   font-weight: 500;
   color: var(--text-light);
 }
+
 .links a:hover {
   color: var(--text-color);
   color: var(--primary);
   text-decoration: none;
 }
+
 .links a:hover li {
   margin-left: 0.3em;
+}
+
+.subtext {
+  margin-top: -50px;
+  color: var(--gray-500);
+  font-size: 0.875em;
+}
+
+.subtext-item {
+  padding-bottom: 12px;
+  display: block;
+  margin-left: 2px;
 }
 </style>
