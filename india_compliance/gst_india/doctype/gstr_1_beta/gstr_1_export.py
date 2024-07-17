@@ -159,6 +159,9 @@ class GovExcel(DataProcessor):
                 if row.get("upload_status") != "Missing in Books"
             ]
 
+            if category == GovJsonKey.DOC_ISSUE.value:
+                self.process_doc_issue_data(category_wise_data[category])
+
             if category not in [
                 GovJsonKey.CDNR.value,
                 GovJsonKey.CDNUR.value,
@@ -194,6 +197,15 @@ class GovExcel(DataProcessor):
 
         excel.remove_sheet("Sheet")
         excel.export(get_file_name("Gov", self.gstin, self.period))
+
+    def process_doc_issue_data(self, data):
+        """
+        Add draft count to cancelled count for DOC_ISSUE category
+        """
+        for doc in data:
+            doc[GSTR1_DataField.CANCELLED_COUNT.value] += doc.get(
+                GSTR1_DataField.DRAFT_COUNT.value, 0
+            )
 
     def get_category_headers(self, category):
         return getattr(self, f"get_{category.lower()}_headers")()
