@@ -11,7 +11,7 @@ from frappe.query_builder.functions import IfNull
 from frappe.utils import add_to_date, cint, now_datetime
 from frappe.utils.response import json_handler
 
-from india_compliance.gst_india.api_classes.returns import ReturnsAPI
+from india_compliance.gst_india.api_classes.taxpayer_base import TaxpayerBaseAPI
 from india_compliance.gst_india.constants import ORIGINAL_VS_AMENDED
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     BaseUtil,
@@ -609,7 +609,7 @@ def auto_refresh_authtoken():
         if credential.session_key and credential.session_expiry < add_to_date(
             now_datetime(), minutes=10
         ):
-            api = ReturnsAPI(credential.gstin)
+            api = TaxpayerBaseAPI(credential.gstin)
             response = api.refresh_auth_token()
             api.process_response(response)
 

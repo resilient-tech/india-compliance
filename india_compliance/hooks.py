@@ -121,6 +121,7 @@ doc_events = {
     },
     "Journal Entry": {
         "validate": "india_compliance.gst_india.overrides.journal_entry.validate",
+        "before_validate": "india_compliance.gst_india.overrides.journal_entry.before_validate",
     },
     "Payment Entry": {
         "onload": "india_compliance.gst_india.overrides.payment_entry.onload",
@@ -399,6 +400,8 @@ scheduler_events = {
         "*/5 * * * *": [
             "india_compliance.gst_india.utils.e_invoice.retry_e_invoice_e_waybill_generation",
             "india_compliance.gst_india.utils.gstr_utils.download_queued_request",
+        ],
+        "*/10 * * * *": [
             "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.auto_refresh_authtoken",
         ],
         "0 2 * * *": [
