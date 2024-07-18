@@ -152,6 +152,15 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         add_gstr2b_alert(frm);
     },
 
+    async company_gstin(frm) {
+        await fetch_date_range(
+            frm,
+            "inward_supply",
+            "get_date_range_and_check_missing_documents"
+        );
+        add_gstr2b_alert(frm);
+    },
+
     after_save(frm) {
         frm.purchase_reconciliation_tool.refresh(
             frm.doc.reconciliation_data ? JSON.parse(frm.doc.reconciliation_data) : []

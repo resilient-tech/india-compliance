@@ -20,6 +20,7 @@ class GSTRCategory(Enum):
     CDNR = "CDNR"
     CDNRA = "CDNRA"
     ISD = "ISD"
+    ISDA = "ISDA"  # for GSTR 2B only
     IMPG = "IMPG"
     IMPGSEZ = "IMPGSEZ"
 

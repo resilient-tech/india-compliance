@@ -71,7 +71,9 @@ class PurchaseReconciliationTool(Document):
 
         self.set_onload(
             "has_missing_2b_documents",
-            has_missing_2b_documents(date_range, ReturnType.GSTR2B, self.company_gstin),
+            has_missing_2b_documents(
+                date_range, ReturnType.GSTR2B, self.company_gstin, self.company
+            ),
         )
 
     def validate(self):
@@ -132,6 +134,7 @@ class PurchaseReconciliationTool(Document):
 
         return_type = ReturnType(return_type)
         periods = BaseUtil.get_periods(date_range, return_type, True)
+
         company_gstins = (
             get_gstin_list(self.company) if company_gstin == "All" else [company_gstin]
         )
@@ -201,7 +204,9 @@ class PurchaseReconciliationTool(Document):
 
         self.set_onload(
             "has_missing_2b_documents",
-            has_missing_2b_documents(date_range, ReturnType.GSTR2B, self.company_gstin),
+            has_missing_2b_documents(
+                date_range, ReturnType.GSTR2B, self.company_gstin, self.company
+            ),
         )
 
         return date_range
@@ -502,7 +507,12 @@ def get_periods_to_download(company_gstin, return_type, periods):
 
 
 def get_import_history(
-    company_gstin, return_type: ReturnType, periods: List[str], fields=None, pluck=None
+    company_gstins: list | str,
+    return_type: ReturnType,
+    periods: List[str],
+    *,
+    fields=None,
+    pluck=None,
 ):
     if not (fields or pluck):
         fields = (
@@ -514,10 +524,13 @@ def get_import_history(
             "gstin",
         )
 
+    if isinstance(company_gstins, str):
+        company_gstins = [company_gstins]
+
     return frappe.db.get_all(
         "GSTR Import Log",
         filters={
-            "gstin": ("in", company_gstin),
+            "gstin": ("in", company_gstins),
             "return_type": return_type.value,
             "return_period": ("in", periods),
         },
@@ -526,21 +539,28 @@ def get_import_history(
     )
 
 
-def has_missing_2b_documents(date_range, return_type: ReturnType, company_gstin):
+def has_missing_2b_documents(
+    date_range, return_type: ReturnType, company_gstin, company
+):
     periods = BaseUtil.get_periods(date_range, return_type, True)
 
     if not periods:
         return False
 
-    history = get_import_history(company_gstin, return_type, periods)
+    company_gstins = (
+        get_gstin_list(company) if company_gstin == "All" else [company_gstin]
+    )
+    history = get_import_history(company_gstins, return_type, periods)
+    history = {(log.return_period, log.gstin): log for log in history}
 
     if not history:
         return True
 
-    for period in periods:
-        download = next((log for log in history if log.return_period == period), None)
-        if not download or download.data_not_found or download.request_id:
-            return True
+    for gstin in company_gstins:
+        for period in periods:
+            download = history.get((period, gstin))
+            if not download or download.data_not_found or download.request_id:
+                return True
 
     return False
 
