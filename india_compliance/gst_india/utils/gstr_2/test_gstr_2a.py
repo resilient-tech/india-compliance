@@ -67,7 +67,8 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
     @patch("india_compliance.gst_india.utils.gstr_2.save_gstr")
     @patch("india_compliance.gst_india.utils.gstr_2.GSTR2aAPI")
     def test_download_gstr_2a(self, mock_gstr_2a_api, mock_save_gstr):
-        def mock_get_data(action, return_period, otp):
+
+        def mock_get_data(action, return_period):
             if action in ["B2B", "B2BA", "CDN", "CDNA"]:
                 return frappe._dict({action.lower(): self.test_data[action.lower()]})
             else:
