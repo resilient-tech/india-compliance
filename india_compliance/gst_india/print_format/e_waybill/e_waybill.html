@@ -5,6 +5,12 @@
 {% set data = _dict(json.loads(doc.data)) %}
 {%- set irn = frappe.db.get_value("Sales Invoice", {"ewaybill": data.ewbNo}, "irn") -%}
 
+{% if data.supplyType == "O" %}
+    {% set generated_by = data.fromTrdName %}
+{% else %}
+    {% set generated_by = data.toTrdName %}
+{% endif %}
+
 <html lang="en">
     <body>
         <div class="page-layout">
@@ -56,7 +62,7 @@
                         <td>
                             <span>
                                 <strong>
-                                    {{ add_spacing(data.userGstin, 5) }} - {{ data.fromTrdName }}
+                                    {{ add_spacing(data.userGstin, 5) }} - {{ generated_by }}
                                 </strong>
                             </span>
                         </td>

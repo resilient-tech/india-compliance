@@ -1423,6 +1423,11 @@ DISTANCE_REGEX = re.compile(r"\d+")
 
 INVOICE_DOCTYPES = {"Sales Invoice", "Purchase Invoice"}
 SALES_DOCTYPES = set(sales_doctypes)
+SUBCONTRACTING_DOCTYPES = (
+    "Subcontracting Order",
+    "Subcontracting Receipt",
+    "Stock Entry",
+)
 
 BUG_REPORT_URL = "https://github.com/resilient-tech/india-compliance/issues/new"
 
