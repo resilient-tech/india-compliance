@@ -20,7 +20,6 @@ class GSTRCategory(Enum):
     CDNR = "CDNR"
     CDNRA = "CDNRA"
     ISD = "ISD"
-    ISDA = "ISDA"
     IMPG = "IMPG"
     IMPGSEZ = "IMPGSEZ"
 
@@ -47,7 +46,6 @@ def download_gstr_2a(gstin, return_periods, gst_categories=None):
     total_expected_requests = len(return_periods) * len(ACTIONS)
     requests_made = 0
     queued_message = False
-    settings = frappe.get_cached_doc("GST Settings")
 
     return_type = ReturnType.GSTR2A
     api = GSTR2aAPI(gstin)
@@ -59,15 +57,6 @@ def download_gstr_2a(gstin, return_periods, gst_categories=None):
         for action, category in ACTIONS.items():
             requests_made += 1
 
-            if (
-                not settings.enable_overseas_transactions
-                and category.value in IMPORT_CATEGORY
-            ):
-                continue
-
-            if gst_categories and category.value not in gst_categories:
-                continue
-
             frappe.publish_realtime(
                 "update_api_progress",
                 {
@@ -78,6 +67,9 @@ def download_gstr_2a(gstin, return_periods, gst_categories=None):
                 user=frappe.session.user,
                 doctype="Purchase Reconciliation Tool",
             )
+
+            if gst_categories and category.value not in gst_categories:
+                continue
 
             response = api.get_data(action, return_period)
             if response.error_type in ["otp_requested", "invalid_otp"]:

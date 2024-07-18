@@ -154,8 +154,7 @@ class PurchaseReconciliationTool(Document):
 
                 elif has_single_gstin:
                     download_history[period].add(
-                        "✅ &nbsp;"
-                        + download_row.last_updated_on.strftime("%d-%m-%Y %H:%M:%S")
+                        download_row.last_updated_on.strftime("%d-%m-%Y %H:%M:%S")
                     )
 
         return {
@@ -444,15 +443,14 @@ def download_gstr(
     otp_failures = []
 
     for company_gstin in company_gstins:
-        # TODO: Handle cases were some periods are already downloaded for some GSTINs
         try:
             if not return_type or return_type == ReturnType.GSTR2A:
-                error = _download_gstr_2a(
+                error = download_pending_gstr_2a(
                     date_range, company_gstin, force, gst_categories
                 )
 
             if not return_type or return_type == ReturnType.GSTR2B:
-                error = _download_gstr_2b(date_range, company_gstin)
+                error = download_pending_gstr_2b(date_range, company_gstin)
 
             if error:
                 otp_failures.append(error)
@@ -466,7 +464,9 @@ def download_gstr(
     return otp_failures
 
 
-def _download_gstr_2a(date_range, company_gstin, force=False, gst_categories=None):
+def download_pending_gstr_2a(
+    date_range, company_gstin, force=False, gst_categories=None
+):
     return_type = ReturnType.GSTR2A
     periods = BaseUtil.get_periods(date_range, return_type)
     if not force:
@@ -478,7 +478,7 @@ def _download_gstr_2a(date_range, company_gstin, force=False, gst_categories=Non
     return download_gstr_2a(company_gstin, periods, gst_categories)
 
 
-def _download_gstr_2b(date_range, company_gstin):
+def download_pending_gstr_2b(date_range, company_gstin):
     return_type = ReturnType.GSTR2B
     periods = get_periods_to_download(
         company_gstin, return_type, BaseUtil.get_periods(date_range, return_type)

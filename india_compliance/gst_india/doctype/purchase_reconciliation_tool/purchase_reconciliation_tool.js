@@ -16,7 +16,6 @@ const GST_CATEGORIES = [
     "CDNR",
     "CDNRA",
     "ISD",
-    "ISDA",
     "IMPG",
     "IMPGSEZ",
 ];
@@ -1385,16 +1384,22 @@ class ImportDialog {
             depends_on: "eval:doc.return_type == 'GSTR2a'",
         };
 
-        const import_categories = ["ISD", "ISDA", "IMPG", "IMPGSEZ"];
+        const import_categories = ["IMPG", "IMPGSEZ"];
+        const rare_categories = ["ISD"]
         const overseas_enabled = gst_settings.enable_overseas_transactions;
 
         fields.push(section_field);
         GST_CATEGORIES.forEach((category, i) => {
+
+            let default_check = true;
+            if (rare_categories.includes(category)) default_check = false;
+            else if (import_categories.includes(category) && !overseas_enabled) default_check = false;
+
             fields.push({
                 label: category,
                 fieldname: category,
                 fieldtype: "Check",
-                default: !import_categories.includes(category) || overseas_enabled,
+                default: default_check,
             });
 
             // after every 4 fields section break
