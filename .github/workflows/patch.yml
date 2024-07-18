@@ -86,7 +86,7 @@ jobs:
         run: |
           bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
         env:
-          BRANCH_TO_CLONE: "v14.0.0"
+          BRANCH_TO_CLONE: version-14
 
       # - name: Run Tests
       #   run: cd ~/frappe-bench/ && bench --site test_site run-tests --app india_compliance --coverage
@@ -107,6 +107,25 @@ jobs:
           git -C "apps/frappe" remote set-url upstream https://github.com/frappe/frappe.git
           git -C "apps/erpnext" remote set-url upstream https://github.com/frappe/erpnext.git
           git -C "apps/india_compliance" remote set-url upstream https://github.com/resilient-tech/india-compliance.git
+
+          echo "checkout to v14.0.0"
+          echo "checkout to frappe"
+          git -C "apps/frappe" checkout -q -f tags/v14.0.0
+          echo "checkout to erpnext"
+          git -C "apps/erpnext" checkout -q -f tags/v14.0.0
+          echo "checkout to ic"
+          git -C "apps/india_compliance" checkout -q -f tags/v14.0.0
+
+
+          bench setup requirements --dev
+
+          bench use test_site
+          bench start &
+          bench reinstall --yes
+
+          bench --verbose install-app india_compliance
+          bench --site test_site add-to-hosts
+          
           
           #add code for v14-hotfix and v15-hotfix
           function update_to_version() {
