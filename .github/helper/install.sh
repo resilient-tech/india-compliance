@@ -59,7 +59,7 @@ sed -i 's/socketio:/# socketio:/g' Procfile
 sed -i 's/redis_socketio:/# redis_socketio:/g' Procfile
 
 bench get-app erpnext --branch "$BRANCH_TO_CLONE" --resolve-deps
-bench get-app india_compliance "${GITHUB_WORKSPACE}"
+bench get-app india_compliance "$BRANCH_TO_CLONE"
 bench setup requirements --dev
 
 wait $wkpid
