@@ -647,8 +647,7 @@ class TestEWaybill(FrappeTestCase):
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             re.compile(
-                r"""^(Only Sales Invoice, Purchase Invoice, Delivery Note, Purchase Receipt, Stock Entry,
-                    Subcontracting Receipt are supported.*)$"""
+                r"""^(Purchase Order is not supported for e-Waybill actions)$"""
             ),
             EWaybillData,
             purchase_order,

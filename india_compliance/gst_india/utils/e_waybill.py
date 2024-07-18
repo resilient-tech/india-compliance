@@ -1273,7 +1273,7 @@ class EWaybillData(GSTTransactionData):
         if self.doc.company_gstin == self.doc.get(party_gstin_fieldname):
             frappe.throw(
                 _(
-                    "e-Waybill cannot be generated because Party GSTIN is same as"
+                    "e-Waybill cannot be generated because party GSTIN is same as"
                     " company GSTIN"
                 ),
                 title=_("Invalid Data"),
@@ -1294,8 +1294,8 @@ class EWaybillData(GSTTransactionData):
     def validate_doctype_for_e_waybill(self):
         if self.doc.doctype not in PERMITTED_DOCTYPES:
             frappe.throw(
-                _("Only {0} are supported for e-Waybill actions").format(
-                    ", ".join(PERMITTED_DOCTYPES)
+                _("{0} is not supported for e-Waybill actions").format(
+                    self.doc.doctype
                 ),
                 title=_("Unsupported DocType"),
             )
