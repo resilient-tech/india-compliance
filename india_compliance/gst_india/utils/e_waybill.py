@@ -1260,14 +1260,7 @@ class EWaybillData(GSTTransactionData):
         if not self.doc.gst_transporter_id:
             self.validate_mode_of_transport()
 
-<<<<<<< HEAD
         self.validate_non_gst_items()
-
-        if (
-            self.doc.doctype == "Sales Invoice"
-            and self.doc.company_gstin == self.doc.billing_address_gstin
-        ):
-=======
         self.validate_same_gstin()
 
     def validate_same_gstin(self):
@@ -1280,7 +1273,6 @@ class EWaybillData(GSTTransactionData):
             else "supplier_gstin"
         )
         if self.doc.company_gstin == self.doc.get(party_gstin_fieldname):
->>>>>>> 48ca23d7 (feat: E-WayBill for Subcontracting (#2210))
             frappe.throw(
                 _(
                     "e-Waybill cannot be generated because party GSTIN is same as"
