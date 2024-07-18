@@ -481,7 +481,7 @@ function get_generate_e_waybill_dialog(opts, frm) {
 }
 
 function get_sub_suppy_type_options(frm) {
-    let options = [];
+    let options;
 
     if (frm.doctype === "Delivery Note") {
         const same_gstin = frm.doc.billing_address_gstin == frm.doc.company_gstin;

@@ -2,6 +2,9 @@ import frappe
 from frappe import _, bold
 from frappe.contacts.doctype.address.address import get_address_display
 
+from india_compliance.gst_india.overrides.sales_invoice import (
+    update_dashboard_with_gst_logs,
+)
 from india_compliance.gst_india.overrides.transaction import (
     GSTAccounts,
     get_place_of_supply,
@@ -24,6 +27,20 @@ from india_compliance.gst_india.utils.taxes_controller import (
 
 STOCK_ENTRY_FIELD_MAP = {"total_taxable_value": "total_taxable_value"}
 SUBCONTRACTING_ORDER_RECEIPT_FIELD_MAP = {"total_taxable_value": "total"}
+
+
+def get_dashboard_data(data):
+    doctype = (
+        "Subcontracting Receipt"
+        if data.fieldname == "subcontracting_receipt"
+        else "Stock Entry"
+    )
+    return update_dashboard_with_gst_logs(
+        doctype,
+        data,
+        "e-Waybill Log",
+        "Integration Request",
+    )
 
 
 def onload(doc, method=None):

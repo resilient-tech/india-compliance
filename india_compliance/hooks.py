@@ -375,6 +375,12 @@ override_doctype_dashboards = {
     "Purchase Receipt": (
         "india_compliance.gst_india.overrides.purchase_receipt.get_dashboard_data"
     ),
+    "Stock Entry": (
+        "india_compliance.gst_india.overrides.subcontracting_transaction.get_dashboard_data"
+    ),
+    "Subcontracting Receipt": (
+        "india_compliance.gst_india.overrides.subcontracting_transaction.get_dashboard_data"
+    ),
 }
 
 override_doctype_class = {
