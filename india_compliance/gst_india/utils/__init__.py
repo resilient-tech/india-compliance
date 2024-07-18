@@ -407,7 +407,11 @@ def get_place_of_supply(party_details, doctype):
                 return f"{gst_state_number}-{gst_state}"
 
         party_gstin = party_details.billing_address_gstin or party_details.company_gstin
+
+    elif doctype == "Stock Entry":
+        party_gstin = party_details.bill_to_gstin or party_details.bill_from_gstin
     else:
+        # for purchase, subcontracting order and receipt
         party_gstin = party_details.company_gstin or party_details.supplier_gstin
 
     if not party_gstin:

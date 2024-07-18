@@ -129,7 +129,8 @@
    "default": "0",
    "fieldname": "is_generated_in_sandbox_mode",
    "fieldtype": "Check",
-   "label": "Is Generated in Sandbox Mode"
+   "label": "Is Generated in Sandbox Mode",
+   "read_only": 1
   },
   {
    "depends_on": "eval: doc.extension_scheduled == 1",
@@ -180,7 +181,7 @@
    "link_fieldname": "ewaybill"
   }
  ],
- "modified": "2024-01-17 14:46:29.964817",
+ "modified": "2024-07-17 12:26:38.069883",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Waybill Log",
