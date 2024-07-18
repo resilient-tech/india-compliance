@@ -1038,11 +1038,11 @@ class TestEWaybill(FrappeTestCase):
 
     @change_settings("GST Settings", {"enable_e_waybill_for_sc": 1})
     @responses.activate
-    def test_e_waybill_for_stock_entry_with_same_address(self):
+    def test_e_waybill_for_stock_entry(self):
         """Test to generate e-waybill for Stock Entry"""
-        se_data = self.e_waybill_test_data.get("stock_entry_with_same_address")
+        se_data = self.e_waybill_test_data.get("stock_entry")
 
-        stock_entry = self._create_stock_entry("stock_entry_with_same_address")
+        stock_entry = self._create_stock_entry("stock_entry")
 
         self._generate_e_waybill(stock_entry.name, "Stock Entry", se_data)
 
