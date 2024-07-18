@@ -90,6 +90,8 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
     async company(frm) {
         if (!frm.doc.company) return;
         const options = await india_compliance.set_gstin_options(frm);
+        options.unshift("All")
+        frm.fields_dict.company_gstin.set_data(options)
 
         if (!frm.doc.company_gstin) frm.set_value("company_gstin", options[0]);
     },
@@ -1253,6 +1255,7 @@ class ImportDialog {
             date_range: this.date_range,
             for_download: this.for_download,
         });
+        this.frm._pending_download = message.pending_download
 
         let pending_download = {
             columns: ["Period", "GSTIN"],
@@ -1432,6 +1435,10 @@ async function download_gstr(
     only_missing = true,
     gst_categories = null
 ) {
+    if(typeof(frm._pending_download) == "string"){
+        frappe.msgprint("No Pending Download");
+        return;
+    }
     const authenticated_company_gstins =
         await india_compliance.authenticate_company_gstins(
             frm.doc.company,
