@@ -7,6 +7,7 @@ from frappe import _
 from frappe.utils import (
     add_to_date,
     cstr,
+    flt,
     format_date,
     get_datetime,
     getdate,
@@ -115,7 +116,8 @@ def generate_e_invoices(docnames, force=False):
             frappe.db.commit()  # nosemgrep
 
 
-def handle_duplicate_irn_error(api, doc, data, irn, settings):
+@frappe.whitelist()
+def handle_duplicate_irn_error(data, current_gstin, current_invoice_amount, **kwargs):
     """
     Handle Duplicate IRN errors by fetching the IRN details and comparing with the current invoice.
 
@@ -125,7 +127,19 @@ def handle_duplicate_irn_error(api, doc, data, irn, settings):
     3. Compare the buyer GSTIN and invoice amount with the current invoice and throw an error if they don't match.
     """
 
-    response = api.get_e_invoice_by_irn(irn)
+    if isinstance(data, str):
+        data = frappe._dict(json.loads(data))
+
+    if isinstance(current_invoice_amount, str):
+        current_invoice_amount = flt(current_invoice_amount)
+
+    docname = kwargs.get("docname")
+
+    doc = kwargs.get("doc") or load_doc("Sales Invoice", docname, "submit")
+    settings = kwargs.get("settings") or frappe.get_cached_doc("GST Settings")
+    api = kwargs.get("api") or EInvoiceAPI(doc)
+
+    response = api.get_e_invoice_by_irn(data.Irn)
 
     # Handle error 2283:
     # IRN details cannot be provided as it is generated more than 2 days ago
@@ -133,8 +147,18 @@ def handle_duplicate_irn_error(api, doc, data, irn, settings):
         response.error_code == "2283"
         and settings.fetch_e_invoice_details_from_gst_portal
     ):
-        response = TaxpayerEInvoiceAPI(doc).get_irn_details(irn)
+        response = TaxpayerEInvoiceAPI(doc).get_irn_details(data.Irn)
+
         if response.error_type == "otp_requested":
+            response.update(
+                {
+                    "data": data,
+                    "docname": docname,
+                    "current_gstin": current_gstin,
+                    "current_invoice_amount": current_invoice_amount,
+                }
+            )
+
             return response
 
         response = frappe._dict(response.data or response.error)
@@ -145,9 +169,7 @@ def handle_duplicate_irn_error(api, doc, data, irn, settings):
         )
 
         previous_gstin = invoice_data.get("BuyerDtls").get("Gstin")
-        current_gstin = invoice_data.get("BuyerDtls").get("Gstin")
         previous_invoice_amount = invoice_data.get("ValDtls").get("TotInvVal")
-        current_invoice_amount = data.get("ValDtls").get("TotInvVal")
 
         if not (
             previous_gstin == current_gstin
@@ -163,7 +185,10 @@ def handle_duplicate_irn_error(api, doc, data, irn, settings):
                 )
             )
 
-    return response
+    if response.error_code:
+        response = data
+
+    return load_and_process_e_invoice_generation(doc, response, api)
 
 
 @frappe.whitelist()
@@ -186,11 +211,16 @@ def generate_e_invoice(docname, throw=True, force=False):
 
         # Handle Duplicate IRN
         if result.InfCd == "DUPIRN":
-            response = handle_duplicate_irn_error(api, doc, data, result.Irn, settings)
-            if response.error_type == "otp_requested":
-                return response
-
-            result = result.Desc if response.error_code else response
+            current_gstin = data.get("BuyerDtls").get("Gstin")
+            current_invoice_amount = data.get("ValDtls").get("TotInvVal")
+            return handle_duplicate_irn_error(
+                data=result.Desc,
+                api=api,
+                doc=doc,
+                current_gstin=current_gstin,
+                current_invoice_amount=current_invoice_amount,
+                settings=settings,
+            )
 
         # Handle Invalid GSTIN Error
         if result.error_code in ("3028", "3029"):
@@ -228,6 +258,14 @@ def generate_e_invoice(docname, throw=True, force=False):
         doc.db_set({"einvoice_status": "Failed"})
         raise e
 
+    return load_and_process_e_invoice_generation(doc, result, api)
+
+
+def load_and_process_e_invoice_generation(doc, result, api):
+    """
+    Load and process the e-Invoice generation result.
+    """
+
     doc.db_set(
         {
             "irn": result.Irn,
@@ -248,7 +286,7 @@ def generate_e_invoice(docname, throw=True, force=False):
         doc,
         {
             "irn": doc.irn,
-            "sales_invoice": docname,
+            "sales_invoice": doc.name,
             "acknowledgement_number": result.AckNo,
             "acknowledged_on": parse_datetime(result.AckDt),
             "signed_invoice": result.SignedInvoice,

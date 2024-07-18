@@ -50,10 +50,18 @@ frappe.ui.form.on("Sales Invoice", {
                         method: "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
                         args: { docname: frm.doc.name, force: true },
                         callback: async (r) => {
-                            if (r.message.error_type == "otp_requested")
+                            if (r.message?.error_type == "otp_requested") {
                                 await india_compliance.authenticate_otp(frm.doc.company_gstin);
-
-                            return frm.refresh();
+                                frappe.call({
+                                    method: "india_compliance.gst_india.utils.e_invoice.handle_duplicate_irn_error",
+                                    args: {
+                                        docname: frm.doc.name,
+                                        data: r.message.data,
+                                        current_gstin: r.message.current_gstin,
+                                        current_invoice_amount: r.message.current_invoice_amount
+                                    }});
+                            }
+                            frm.refresh();
                         },
                     });
                 },
