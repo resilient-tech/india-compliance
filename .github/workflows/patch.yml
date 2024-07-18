@@ -86,7 +86,7 @@ jobs:
         run: |
           bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
         env:
-          BRANCH_TO_CLONE: ${{ github.base_ref }}
+          BRANCH_TO_CLONE: version-14
 
       # - name: Run Tests
       #   run: cd ~/frappe-bench/ && bench --site test_site run-tests --app india_compliance --coverage
@@ -119,6 +119,7 @@ jobs:
             git -C "apps/frappe" fetch --depth 1 upstream $branch_name:$branch_name
             git -C "apps/erpnext" fetch --depth 1 upstream $branch_name:$branch_name
             git -C "apps/india_compliance" fetch --depth 1 upstream $branch_name:$branch_name
+
             git -C "apps/frappe" checkout -q -f $branch_name
             git -C "apps/erpnext" checkout -q -f $branch_name
             git -C "apps/india_compliance" checkout -q -f $branch_name
@@ -136,6 +137,7 @@ jobs:
             bench pip install -e ./apps/india_compliance
             echo "log file"
             bench start &>> ~/frappe-bench/bench_start.log &
+
             echo "migration"
             bench --site test_site migrate
           }
@@ -144,6 +146,10 @@ jobs:
           update_to_version 15
 
           echo "Updating to latest version"
+          git -C "apps/frappe" fetch --depth 1 upstream $branch_name:"${GITHUB_BASE_REF:-${GITHUB_REF##*/}}"
+          git -C "apps/erpnext" fetch --depth 1 upstream $branch_name:"${GITHUB_BASE_REF:-${GITHUB_REF##*/}}"
+          git -C "apps/india_compliance" fetch --depth 1 upstream $branch_name:"$GITHUB_SHA"
+          
           git -C "apps/frappe" checkout -q -f "${GITHUB_BASE_REF:-${GITHUB_REF##*/}}"
           git -C "apps/erpnext" checkout -q -f "${GITHUB_BASE_REF:-${GITHUB_REF##*/}}"
           git -C "apps/india_compliance" checkout -q -f "$GITHUB_SHA"
