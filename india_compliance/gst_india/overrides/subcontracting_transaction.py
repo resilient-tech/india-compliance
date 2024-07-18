@@ -13,7 +13,6 @@ from india_compliance.gst_india.overrides.transaction import (
     validate_gst_category,
     validate_gst_transporter_id,
     validate_gstin_status,
-    validate_items,
     validate_mandatory_fields,
     validate_place_of_supply,
 )
@@ -88,8 +87,6 @@ def validate(doc, method=None):
 
 
 def validate_transaction(doc, method=None):
-    validate_items(doc)
-
     if doc.doctype == "Stock Entry":
         company_gstin_field = "bill_from_gstin"
         party_gstin_field = "bill_to_gstin"
