@@ -10,15 +10,7 @@ const tooltip_info = {
 };
 
 const api_enabled = india_compliance.is_api_enabled();
-const GST_CATEGORIES = [
-    "B2B",
-    "B2BA",
-    "CDNR",
-    "CDNRA",
-    "ISD",
-    "IMPG",
-    "IMPGSEZ",
-];
+const GST_CATEGORIES = ["B2B", "B2BA", "CDNR", "CDNRA", "ISD", "IMPG", "IMPGSEZ"];
 const ALERT_HTML = `
     <div class="gstr2b-alert alert alert-primary fade show d-flex align-items-center justify-content-between border-0" role="alert">
         <div>
@@ -88,9 +80,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
 
     async company(frm) {
         if (!frm.doc.company) return;
-        const options = await india_compliance.set_gstin_options(frm);
-        options.unshift("All")
-        frm.fields_dict.company_gstin.set_data(options)
+        const options = await india_compliance.set_gstin_options(frm, true);
 
         if (!frm.doc.company_gstin) frm.set_value("company_gstin", options[0]);
     },
@@ -1198,8 +1188,17 @@ class ImportDialog {
                 });
             } else if (this.return_type === ReturnType.GSTR2B) {
                 this.dialog.$wrapper.find(".btn-secondary").addClass("hidden");
-                // TODO: Disable if no pending downloads
                 this.dialog.set_primary_action(__("Download"), () => {
+                    if (this.has_no_pending_download) {
+                        frappe.msgprint({
+                            message:
+                                "There are no pending downloads for the selected period. GSTR2B is static and does not require redownload.",
+                            title: "No Pending Downloads",
+                            indicator: "orange",
+                        });
+                        return;
+                    }
+
                     download_gstr(
                         this.frm,
                         this.date_range,
@@ -1248,14 +1247,15 @@ class ImportDialog {
     async fetch_import_history() {
         if (!this.company_gstin) return;
 
+        // fetch history
         const { message } = await this.frm.call("get_import_history", {
             company_gstin: this.company_gstin,
             return_type: this.return_type,
             date_range: this.date_range,
             for_download: this.for_download,
         });
-        this.frm._pending_download = message.pending_download
 
+        // render html
         let pending_download = {
             columns: ["Period", "GSTIN"],
             data: message.pending_download,
@@ -1274,6 +1274,9 @@ class ImportDialog {
                 : frappe.render_template("gstr_download_history", download_history);
 
         this.dialog.fields_dict.history.html(html);
+
+        // flag
+        this.has_no_pending_download = typeof message.pending_download == "string";
     }
 
     async update_return_period() {
@@ -1385,15 +1388,15 @@ class ImportDialog {
         };
 
         const import_categories = ["IMPG", "IMPGSEZ"];
-        const rare_categories = ["ISD"]
+        const rare_categories = ["ISD"];
         const overseas_enabled = gst_settings.enable_overseas_transactions;
 
         fields.push(section_field);
         GST_CATEGORIES.forEach((category, i) => {
-
             let default_check = true;
             if (rare_categories.includes(category)) default_check = false;
-            else if (import_categories.includes(category) && !overseas_enabled) default_check = false;
+            else if (import_categories.includes(category) && !overseas_enabled)
+                default_check = false;
 
             fields.push({
                 label: category,
@@ -1440,10 +1443,6 @@ async function download_gstr(
     only_missing = true,
     gst_categories = null
 ) {
-    if(typeof(frm._pending_download) == "string"){
-        frappe.msgprint("No Pending Download");
-        return;
-    }
     const authenticated_company_gstins =
         await india_compliance.authenticate_company_gstins(
             frm.doc.company,
