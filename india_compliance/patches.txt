@@ -59,3 +59,4 @@ india_compliance.patches.v14.unset_inward_supply_link_for_cancelled_purchase
 india_compliance.patches.v14.delete_not_generated_gstr_import_log
 india_compliance.patches.v14.enable_sales_through_ecommerce_operator
 execute:from india_compliance.gst_india.setup import set_default_print_settings; set_default_print_settings()
+india_compliance.patches.v14.this_is_just_testing
