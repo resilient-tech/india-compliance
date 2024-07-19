@@ -86,7 +86,7 @@ jobs:
         run: |
           bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
         env:
-          BRANCH_TO_CLONE: version-14
+          BRANCH_TO_CLONE: ${{ github.base_ref }}
    
       - name: Run Patch Tests
         run: |
@@ -132,9 +132,9 @@ jobs:
           update_to_version 15
 
           echo "Updating to latest version"
-          git -C "apps/frappe" fetch --depth 1 upstream $branch_name:"${GITHUB_BASE_REF:-${GITHUB_REF##*/}}"
-          git -C "apps/erpnext" fetch --depth 1 upstream $branch_name:"${GITHUB_BASE_REF:-${GITHUB_REF##*/}}"
-          git -C "apps/india_compliance" fetch --depth 1 upstream $branch_name:"$GITHUB_SHA"
+          # git -C "apps/frappe" fetch --depth 1 upstream $branch_name:"${GITHUB_BASE_REF:-${GITHUB_REF##*/}}"
+          # git -C "apps/erpnext" fetch --depth 1 upstream $branch_name:"${GITHUB_BASE_REF:-${GITHUB_REF##*/}}"
+          # git -C "apps/india_compliance" fetch --depth 1 upstream $branch_name:"$GITHUB_SHA"
 
           git -C "apps/frappe" checkout -q -f "${GITHUB_BASE_REF:-${GITHUB_REF##*/}}"
           git -C "apps/erpnext" checkout -q -f "${GITHUB_BASE_REF:-${GITHUB_REF##*/}}"
