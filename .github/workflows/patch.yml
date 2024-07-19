@@ -86,7 +86,7 @@ jobs:
         run: |
           bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
         env:
-          BRANCH_TO_CLONE: ${{ github.base_ref }}
+          BRANCH_TO_CLONE: version-14
    
       - name: Run Patch Tests
         run: |
