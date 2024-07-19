@@ -21,8 +21,6 @@ POST_INSTALL_PATCHES = (
     "update_gst_accounts",  # this is an India Compliance patch, but needs priority
     "update_itc_amounts",
     ## India Compliance
-    "print_the_error",
-    "same_erpnext_code",
     "set_gst_tax_type",
     "update_state_name_to_puducherry",
     "rename_import_of_capital_goods",
@@ -52,10 +50,6 @@ POST_INSTALL_PATCHES = (
 
 def after_install():
     try:
-        click.secho(
-            ("before setup audit trail in install.py"),
-            fg="bright_red",
-        )
         setup_audit_trail()
 
         print("Setting up Income Tax...")

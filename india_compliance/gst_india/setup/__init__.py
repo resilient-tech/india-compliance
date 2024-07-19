@@ -25,10 +25,6 @@ ITEM_VARIANT_FIELDNAMES = frozenset(("gst_hsn_code",))
 
 
 def after_install():
-    click.secho(
-        ("before creating custom field in __init__ file"),
-        fg="bright_red",
-    )
     create_custom_fields()
     create_accounting_dimension_fields()
     create_property_setters(include_defaults=True)
