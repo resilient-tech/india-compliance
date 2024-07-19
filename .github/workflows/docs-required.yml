@@ -2,7 +2,7 @@ name: Documentation Required
 
 on:
   pull_request:
-    types: [ opened, edited ]
+    types: [ opened, synchronize, reopened, edited ]
 
 jobs:
   build:

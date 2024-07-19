@@ -102,15 +102,6 @@ jobs:
           git -C "apps/erpnext" remote set-url upstream https://github.com/frappe/erpnext.git
           git -C "apps/india_compliance" remote set-url upstream https://github.com/resilient-tech/india-compliance.git
 
-            # git -C "apps/frappe" fetch --depth 1 upstream tag v14.0.0
-            # git -C "apps/erpnext" fetch --depth 1 upstream tag v14.0.0
-            # git -C "apps/india_compliance" fetch --depth 1 upstream tag v14.0.0
-
-            # echo "checkout to v14.0.0"
-            # git -C "apps/frappe" checkout -q -f v14.0.0
-            # git -C "apps/erpnext" checkout -q -f v14.0.0
-            # git -C "apps/india_compliance" checkout -q -f v14.0.0
-
           function update_to_version() {
             version=$1
 
