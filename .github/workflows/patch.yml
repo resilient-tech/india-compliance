@@ -72,7 +72,7 @@ jobs:
 
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
-        run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
+        run: echo "::set-output name=dir::$(yarn cache dir)"
 
       - uses: actions/cache@v4
         id: yarn-cache
@@ -102,22 +102,48 @@ jobs:
           git -C "apps/erpnext" remote set-url upstream https://github.com/frappe/erpnext.git
           git -C "apps/india_compliance" remote set-url upstream https://github.com/resilient-tech/india-compliance.git
 
+          # function update_to_version() {
+          #   version=$1
+
+          #   branch_name="version-$version-hotfix"
+          #   echo "Updating to v$version"
+
+          #   # Fetch and checkout branches
+          #   git -C "apps/frappe" fetch --depth 1 upstream $branch_name:$branch_name
+          #   git -C "apps/erpnext" fetch --depth 1 upstream $branch_name:$branch_name
+          #   git -C "apps/india_compliance" fetch --depth 1 upstream $branch_name:$branch_name
+
+          #   git -C "apps/frappe" checkout -q -f $branch_name
+          #   git -C "apps/erpnext" checkout -q -f $branch_name
+          #   git -C "apps/india_compliance" checkout -q -f $branch_name
+
+          #   # Resetup env and install apps
+          #   pgrep honcho | xargs kill
+          #   rm -rf ~/frappe-bench/env
+          #   bench -v setup env
+          #   bench pip install -e ./apps/erpnext
+          #   bench pip install -e ./apps/india_compliance
+          #   bench start &>> ~/frappe-bench/bench_start.log &
+
+          #   bench --site test_site migrate
+          # }
+
           function update_to_version() {
             version=$1
-
             branch_name="version-$version-hotfix"
             echo "Updating to v$version"
 
-            # Fetch and checkout branches
+            echo "Fetching branches"
             git -C "apps/frappe" fetch --depth 1 upstream $branch_name:$branch_name
             git -C "apps/erpnext" fetch --depth 1 upstream $branch_name:$branch_name
             git -C "apps/india_compliance" fetch --depth 1 upstream $branch_name:$branch_name
 
+            echo "Checking out branches"
             git -C "apps/frappe" checkout -q -f $branch_name
             git -C "apps/erpnext" checkout -q -f $branch_name
             git -C "apps/india_compliance" checkout -q -f $branch_name
 
-            # Resetup env and install apps
+            echo "Setting up environment and installing apps"
             pgrep honcho | xargs kill
             rm -rf ~/frappe-bench/env
             bench -v setup env
@@ -125,29 +151,38 @@ jobs:
             bench pip install -e ./apps/india_compliance
             bench start &>> ~/frappe-bench/bench_start.log &
 
+            echo "Migrating site"
             bench --site test_site migrate
+
+            echo "Checking if doctypes are updated"
+            bench --site test_site console <<EOF
+            from frappe import get_all
+            doctypes = get_all("DocType", filters={"module": "India Compliance"})
+            print(f"Found {len(doctypes)} doctypes in India Compliance module")
+            EOF
           }
+
 
           update_to_version 14
           update_to_version 15
 
-          echo "Updating to latest version"
-          git -C "apps/frappe" fetch --depth 1 upstream $branch_name:"${GITHUB_BASE_REF:-${GITHUB_REF##*/}}"
-          git -C "apps/erpnext" fetch --depth 1 upstream $branch_name:"${GITHUB_BASE_REF:-${GITHUB_REF##*/}}"
-          git -C "apps/india_compliance" fetch --depth 1 upstream $branch_name:"$GITHUB_SHA"
+          # echo "Updating to latest version"
+          # git -C "apps/frappe" fetch --depth 1 upstream $branch_name:"${GITHUB_BASE_REF:-${GITHUB_REF##*/}}"
+          # git -C "apps/erpnext" fetch --depth 1 upstream $branch_name:"${GITHUB_BASE_REF:-${GITHUB_REF##*/}}"
+          # git -C "apps/india_compliance" fetch --depth 1 upstream $branch_name:"$GITHUB_SHA"
 
-          git -C "apps/frappe" checkout -q -f "${GITHUB_BASE_REF:-${GITHUB_REF##*/}}"
-          git -C "apps/erpnext" checkout -q -f "${GITHUB_BASE_REF:-${GITHUB_REF##*/}}"
-          git -C "apps/india_compliance" checkout -q -f "$GITHUB_SHA"
+          # git -C "apps/frappe" checkout -q -f "${GITHUB_BASE_REF:-${GITHUB_REF##*/}}"
+          # git -C "apps/erpnext" checkout -q -f "${GITHUB_BASE_REF:-${GITHUB_REF##*/}}"
+          # git -C "apps/india_compliance" checkout -q -f "$GITHUB_SHA"
 
-          pgrep honcho | xargs kill
-          rm -rf ~/frappe-bench/env
-          bench -v setup env
-          bench pip install -e ./apps/erpnext
-          bench pip install -e ./apps/india_compliance
-          bench start &>> ~/frappe-bench/bench_start.log &
+          # pgrep honcho | xargs kill
+          # rm -rf ~/frappe-bench/env
+          # bench -v setup env
+          # bench pip install -e ./apps/erpnext
+          # bench pip install -e ./apps/india_compliance
+          # bench start &>> ~/frappe-bench/bench_start.log &
 
-          bench --site test_site migrate
+          # bench --site test_site migrate
 
       - name: Show bench output
         if: ${{ always() }}
