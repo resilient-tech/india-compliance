@@ -89,9 +89,21 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-yarn-
 
+      - name: Calculate Branch to Clone
+        run: |
+          githubbranch=${GITHUB_BASE_REF:-${GITHUB_REF##*/}}
+          frappebranch=${FRAPPE_BRANCH:-$githubbranch}
+          echo "BRANCH_TO_CLONE=$frappebranch" >> $GITHUB_ENV
+        env:
+          GITHUB_BASE_REF: ${{ github.base_ref }}
+          GITHUB_REF: ${{ github.ref }}
+          FRAPPE_BRANCH: ${{ env.FrappeBranch }}
+
       - name: Install
         run: |
           bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
+        env:
+          BRANCH_TO_CLONE: ${{ env.BRANCH_TO_CLONE }}
 
       - name: Run Patch Tests
         run: |
@@ -112,22 +124,31 @@ jobs:
             branch_name="version-$version-hotfix"
             echo "Updating to v$version"
 
-            # Fetch and checkout branches
+            echo "fetch branches"
             git -C "apps/frappe" fetch --depth 1 upstream $branch_name:$branch_name
             git -C "apps/erpnext" fetch --depth 1 upstream $branch_name:$branch_name
             git -C "apps/india_compliance" fetch --depth 1 upstream $branch_name:$branch_name
 
+            echo "checout to branches"
             git -C "apps/frappe" checkout -q -f $branch_name
             git -C "apps/erpnext" checkout -q -f $branch_name
             git -C "apps/india_compliance" checkout -q -f $branch_name
 
-            # Resetup env and install apps
+            echo "Resetup env and install apps"
             pgrep honcho | xargs kill
             rm -rf ~/frappe-bench/env
             bench -v setup env
+
+            echo "Install Erpnext"
             bench pip install -e ./apps/erpnext
+
+            echo "Install India Compliance"
             bench pip install -e ./apps/india_compliance
+            
             bench start &>> ~/frappe-bench/bench_start.log &
+            
+            echo "Listing apps"
+            bench --site test_site list-apps
 
             bench --site test_site migrate
           }
