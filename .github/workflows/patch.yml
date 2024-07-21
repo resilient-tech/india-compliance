@@ -111,46 +111,50 @@ jobs:
           jq 'del(.install_apps)' ~/frappe-bench/sites/test_site/site_config.json > tmp.json
           mv tmp.json ~/frappe-bench/sites/test_site/site_config.json
 
-          wget https://erpnext.com/files/v13-erpnext.sql.gz
-          bench --site test_site --force restore ~/frappe-bench/v13-erpnext.sql.gz
+          # wget https://erpnext.com/files/v13-erpnext.sql.gz
+          # bench --site test_site restore ~/frappe-bench/v13-erpnext.sql.gz
+
+          echo "Listing all apps"
+          bench --site test_site list-apps
 
           git -C "apps/frappe" remote set-url upstream https://github.com/frappe/frappe.git
           git -C "apps/erpnext" remote set-url upstream https://github.com/frappe/erpnext.git
           git -C "apps/india_compliance" remote set-url upstream https://github.com/resilient-tech/india-compliance.git
 
           function update_to_version() {
-            version=$1
+              version=$1
 
-            branch_name="version-$version-hotfix"
-            echo "Updating to v$version"
+              branch_name="version-$version-hotfix"
+              echo "Updating to v$version"
 
-            echo "fetch branches"
-            git -C "apps/frappe" fetch --depth 1 upstream $branch_name:$branch_name
-            git -C "apps/erpnext" fetch --depth 1 upstream $branch_name:$branch_name
-            git -C "apps/india_compliance" fetch --depth 1 upstream $branch_name:$branch_name
+              echo "Fetching branches"
+              git -C "apps/frappe" fetch --depth 1 upstream $branch_name:$branch_name
+              git -C "apps/erpnext" fetch --depth 1 upstream $branch_name:$branch_name
+              git -C "apps/india_compliance" fetch --depth 1 upstream $branch_name:$branch_name
 
-            echo "checout to branches"
-            git -C "apps/frappe" checkout -q -f $branch_name
-            git -C "apps/erpnext" checkout -q -f $branch_name
-            git -C "apps/india_compliance" checkout -q -f $branch_name
+              echo "Checking out branches"
+              git -C "apps/frappe" checkout -q -f $branch_name
+              git -C "apps/erpnext" checkout -q -f $branch_name
+              git -C "apps/india_compliance" checkout -q -f $branch_name
 
-            echo "Resetup env and install apps"
-            pgrep honcho | xargs kill
-            rm -rf ~/frappe-bench/env
-            bench -v setup env
+              bench --site test_site install-app india_compliance
 
-            echo "Install Erpnext"
-            bench pip install -e ./apps/erpnext
+              echo "Resetting environment and installing apps"
+              pgrep honcho | xargs kill || true
+              rm -rf ~/frappe-bench/env
+              bench -v setup env
 
-            echo "Install India Compliance"
-            bench pip install -e ./apps/india_compliance
-            
-            bench start &>> ~/frappe-bench/bench_start.log &
-            
-            echo "Listing apps"
-            bench --site test_site list-apps
+              echo "Installing ERPNext"
+              bench pip install -e ./apps/erpnext
 
-            bench --site test_site migrate
+              echo "Installing India Compliance"
+              bench pip install -e ./apps/india_compliance
+
+              echo "Starting bench"
+              bench start &>> ~/frappe-bench/bench_start.log &
+
+              echo "Migrating site"
+              bench --site test_site migrate
           }
 
           update_to_version 14
