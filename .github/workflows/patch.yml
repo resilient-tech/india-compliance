@@ -10,7 +10,6 @@ on:
       - '**.csv'
   workflow_dispatch:
 
-
 concurrency:
   group: patch-develop-${{ github.event_name }}-${{ github.event.number || github.event_name == 'workflow_dispatch' && github.run_id || '' }}
   cancel-in-progress: true
@@ -26,7 +25,7 @@ jobs:
       mariadb:
         image: mariadb:10.6
         env:
-            MARIADB_ROOT_PASSWORD: 'travis'
+          MARIADB_ROOT_PASSWORD: 'travis'
         ports:
           - 3306:3306
         options: --health-cmd="mariadb-admin ping" --health-interval=5s --health-timeout=2s --health-retries=3
@@ -34,6 +33,14 @@ jobs:
     steps:
       - name: Clone
         uses: actions/checkout@v4
+
+      - name: Check for valid Python & Merge Conflicts
+        run: |
+          python -m compileall -f "${GITHUB_WORKSPACE}"
+          if grep -lr --exclude-dir=node_modules "^<<<<<<< " "${GITHUB_WORKSPACE}"
+              then echo "Found merge conflicts"
+              exit 1
+          fi
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -85,9 +92,7 @@ jobs:
       - name: Install
         run: |
           bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
-        env:
-          BRANCH_TO_CLONE: version-14
-   
+
       - name: Run Patch Tests
         run: |
           cd ~/frappe-bench/
@@ -97,7 +102,6 @@ jobs:
           wget https://erpnext.com/files/v13-erpnext.sql.gz
           bench --site test_site --force restore ~/frappe-bench/v13-erpnext.sql.gz
 
-          echo "setting up remote"
           git -C "apps/frappe" remote set-url upstream https://github.com/frappe/frappe.git
           git -C "apps/erpnext" remote set-url upstream https://github.com/frappe/erpnext.git
           git -C "apps/india_compliance" remote set-url upstream https://github.com/resilient-tech/india-compliance.git
@@ -108,17 +112,16 @@ jobs:
             branch_name="version-$version-hotfix"
             echo "Updating to v$version"
 
-            echo "Fetch branches
+            # Fetch and checkout branches
             git -C "apps/frappe" fetch --depth 1 upstream $branch_name:$branch_name
             git -C "apps/erpnext" fetch --depth 1 upstream $branch_name:$branch_name
             git -C "apps/india_compliance" fetch --depth 1 upstream $branch_name:$branch_name
 
-            echo "Checking out branches"
             git -C "apps/frappe" checkout -q -f $branch_name
             git -C "apps/erpnext" checkout -q -f $branch_name
             git -C "apps/india_compliance" checkout -q -f $branch_name
 
-            echo "Setting up environment and installing apps"
+            # Resetup env and install apps
             pgrep honcho | xargs kill
             rm -rf ~/frappe-bench/env
             bench -v setup env
@@ -126,15 +129,7 @@ jobs:
             bench pip install -e ./apps/india_compliance
             bench start &>> ~/frappe-bench/bench_start.log &
 
-            echo "Migrating site"
             bench --site test_site migrate
-            
-            echo "Checking if doctypes are updated"
-            bench --site test_site console <<EOF
-            from frappe import get_all
-            doctypes = get_all("DocType", filters={"module": "India Compliance"})
-            print(f"Found {len(doctypes)} doctypes in India Compliance module")
-            EOF
           }
 
           update_to_version 14
