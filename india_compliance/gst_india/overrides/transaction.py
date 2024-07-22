@@ -3,6 +3,8 @@ from collections import defaultdict
 
 import frappe
 from frappe import _, bold
+from frappe.contacts.doctype.address.address import get_default_address
+from frappe.model.utils import get_fetch_values
 from frappe.utils import cint, flt, format_date
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 
@@ -11,6 +13,7 @@ from india_compliance.gst_india.constants import (
     GST_TAX_TYPES,
     SALES_DOCTYPES,
     STATE_NUMBERS,
+    SUBCONTRACTING_DOCTYPES,
     TAX_TYPES,
 )
 from india_compliance.gst_india.constants.custom_fields import E_WAYBILL_INV_FIELDS
@@ -69,16 +72,13 @@ def update_taxable_values(doc):
 
     if doc.taxes:
         if any(
-            row
-            for row in doc.taxes
-            if row.base_tax_amount_after_discount_amount
-            and row.gst_tax_type in TAX_TYPES
+            row for row in doc.taxes if row.tax_amount and row.gst_tax_type in TAX_TYPES
         ):
             reference_row_index = next(
                 (
                     cint(row.row_id) - 1
                     for row in doc.taxes
-                    if row.base_tax_amount_after_discount_amount
+                    if row.tax_amount
                     and row.charge_type == "On Previous Row Total"
                     and row.gst_tax_type in TAX_TYPES
                 ),
@@ -329,8 +329,6 @@ class GSTAccounts:
         self.validate_for_charge_type()
         self.validate_missing_accounts_in_item_tax_template()
 
-        return
-
     def setup_defaults(self):
         (
             self.all_valid_accounts,
@@ -389,7 +387,7 @@ class GSTAccounts:
         """
         - RCM accounts should not be used in transactions without Reverse Charge
         """
-        if self.doc.doctype == "Payment Entry" or self.doc.is_reverse_charge:
+        if self.doc.doctype == "Payment Entry" or self.doc.get("is_reverse_charge"):
             return
 
         if idx := self._get_matched_idx(self.gst_tax_rows, GST_RCM_TAX_TYPES):
@@ -438,6 +436,7 @@ class GSTAccounts:
         - If Intra-State, ensure both CGST and SGST accounts are used
         """
         is_inter_state = is_inter_state_supply(self.doc)
+
         for row in self.gst_tax_rows:
             if is_inter_state:
                 if row.account_head in self.intra_state_accounts:
@@ -612,7 +611,11 @@ def validate_place_of_supply(doc):
 
 
 def is_inter_state_supply(doc):
-    return doc.gst_category == "SEZ" or (
+    gst_category = (
+        doc.bill_to_gst_category if doc.doctype == "Stock Entry" else doc.gst_category
+    )
+
+    return gst_category == "SEZ" or (
         doc.place_of_supply[:2] != get_source_state_code(doc)
     )
 
@@ -626,6 +629,9 @@ def get_source_state_code(doc):
     if doc.doctype in SALES_DOCTYPES or doc.doctype == "Payment Entry":
         return doc.company_gstin[:2]
 
+    if doc.doctype == "Stock Entry":
+        return doc.bill_from_gstin[:2]
+
     if doc.gst_category == "Overseas":
         return "96"
 
@@ -636,6 +642,7 @@ def get_source_state_code(doc):
             "gst_state_number",
         )
 
+    # for purchase, subcontracting order and receipt
     return (doc.supplier_gstin or doc.company_gstin)[:2]
 
 
@@ -661,7 +668,7 @@ def validate_hsn_codes(doc):
 
 
 def validate_sales_reverse_charge(doc):
-    if doc.is_reverse_charge and not doc.billing_address_gstin:
+    if doc.get("is_reverse_charge") and not doc.billing_address_gstin:
         frappe.throw(
             _(
                 "Transaction cannot be reverse charge since sales is to customer"
@@ -761,6 +768,31 @@ def update_party_details(party_details, doctype, company):
 
 
 @frappe.whitelist()
+def get_party_details_for_subcontracting(party_details, doctype, company):
+    party_details = frappe.parse_json(party_details)
+
+    party_address_field = (
+        "supplier_address" if doctype != "Stock Entry" else "bill_to_address"
+    )
+    party_details[party_address_field] = get_default_address(
+        "Supplier", party_details.supplier
+    )
+    party_details.update(
+        get_fetch_values(
+            doctype, party_address_field, party_details[party_address_field]
+        )
+    )
+
+    return party_details.update(
+        {
+            **get_gst_details(
+                party_details, doctype, company, update_place_of_supply=True
+            ),
+        }
+    )
+
+
+@frappe.whitelist()
 def get_gst_details(party_details, doctype, company, *, update_place_of_supply=False):
     """
     This function does not check for permissions since it returns insensitive data
@@ -777,11 +809,28 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
     gst_details = frappe._dict()
 
     # Party/Address Defaults
-    party_address_field = (
-        "customer_address" if is_sales_transaction else "supplier_address"
-    )
+    if is_sales_transaction:
+        company_gstin_field = "company_gstin"
+        party_gstin_field = "billing_address_gstin"
+        party_address_field = "customer_address"
+        gst_category_field = "gst_category"
+
+    elif doctype == "Stock Entry":
+        company_gstin_field = "bill_from_gstin"
+        party_gstin_field = "bill_to_gstin"
+        party_address_field = "bill_to_address"
+        gst_category_field = "bill_to_gst_category"
+
+    else:
+        company_gstin_field = "company_gstin"
+        party_gstin_field = "supplier_gstin"
+        party_address_field = "supplier_address"
+        gst_category_field = "gst_category"
+
     if not party_details.get(party_address_field):
-        party_gst_details = get_party_gst_details(party_details, is_sales_transaction)
+        party_gst_details = get_party_gst_details(
+            party_details, is_sales_transaction, party_gstin_field
+        )
 
         # updating party details to get correct place of supply
         if party_gst_details:
@@ -794,13 +843,6 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
         if (not update_place_of_supply and party_details.place_of_supply)
         else get_place_of_supply(party_details, doctype)
     )
-
-    if is_sales_transaction:
-        source_gstin = party_details.company_gstin
-        destination_gstin = party_details.billing_address_gstin
-    else:
-        source_gstin = party_details.supplier_gstin
-        destination_gstin = party_details.company_gstin
 
     # set is_reverse_charge as per party_gst_details if not set
     if not is_sales_transaction and "is_reverse_charge" not in party_details:
@@ -820,15 +862,19 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
 
     # Taxes Not Applicable
     if (
-        (destination_gstin and destination_gstin == source_gstin)  # Internal transfer
+        (
+            party_details.get(company_gstin_field)
+            and party_details.get(company_gstin_field)
+            == party_details.get(party_gstin_field)
+        )  # Internal transfer
         or (is_sales_transaction and is_export_without_payment_of_gst(party_details))
         or (
             not is_sales_transaction
             and (
-                party_details.gst_category == "Registered Composition"
+                party_details.get(gst_category_field) == "Registered Composition"
                 or (
                     not party_details.is_reverse_charge
-                    and not party_details.supplier_gstin
+                    and not party_details.get(party_gstin_field)
                 )
             )
         )
@@ -840,7 +886,7 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
 
     master_doctype = (
         "Sales Taxes and Charges Template"
-        if is_sales_transaction
+        if is_sales_transaction or doctype in SUBCONTRACTING_DOCTYPES
         else "Purchase Taxes and Charges Template"
     )
 
@@ -856,7 +902,7 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
         )
         return gst_details
 
-    if not gst_details.place_of_supply or not party_details.company_gstin:
+    if not gst_details.place_of_supply or not party_details.get(company_gstin_field):
         return gst_details
 
     # Fetch template by perceived tax
@@ -865,11 +911,10 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
         company,
         is_inter_state_supply(
             party_details.copy().update(
-                doctype=doctype,
-                place_of_supply=gst_details.place_of_supply,
-            )
+                doctype=doctype, place_of_supply=gst_details.place_of_supply
+            ),
         ),
-        party_details.company_gstin[:2],
+        party_details.get(company_gstin_field)[:2],
         party_details.is_reverse_charge,
     ):
         gst_details.taxes_and_charges = default_tax
@@ -878,13 +923,10 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
     return gst_details
 
 
-def get_party_gst_details(party_details, is_sales_transaction):
+def get_party_gst_details(party_details, is_sales_transaction, gstin_fieldname):
     """fetch GSTIN and GST category from party"""
 
     party_type = "Customer" if is_sales_transaction else "Supplier"
-    gstin_fieldname = (
-        "billing_address_gstin" if is_sales_transaction else "supplier_gstin"
-    )
 
     if not (party := party_details.get(party_type.lower())) or not isinstance(
         party, str
@@ -946,46 +988,49 @@ def validate_reverse_charge_transaction(doc):
     if not doc.get("is_reverse_charge"):
         return
 
+    is_return = doc.get("is_return", False)
+
+    def _throw_tax_error(is_positive, tax, comment_suffix=""):
+        expected = "positive" if is_positive else "negative"
+        if is_return:
+            expected = "negative" if is_positive else "positive"
+
+        frappe.throw(
+            _("Row #{0}: Tax amount should be {1} for GST Account {2}{3}").format(
+                tax.idx, expected, tax.account_head, comment_suffix
+            )
+        )
+
     for tax in doc.get("taxes"):
-        if not tax.gst_tax_type:
+        if not tax.gst_tax_type or not tax.tax_amount:
             continue
 
-        if "rcm" not in tax.gst_tax_type:
-            # NON RCM should be positive
-            if (
-                tax.get("add_deduct_tax", "Add") != "Add"
-                or tax.base_tax_amount_after_discount_amount < 0
-            ):
-                frappe.throw(
-                    _(
-                        "Row #{0}: Tax amount should be positive for GST Account {1}"
-                    ).format(tax.idx, tax.account_head)
-                )
+        tax_amount = tax.base_tax_amount_after_discount_amount
+        if is_return:
+            tax_amount = -tax_amount
 
-            base_gst_tax += tax.base_tax_amount_after_discount_amount
+        is_positive = tax_amount > 0
+
+        if "rcm" not in tax.gst_tax_type:
+            # NON RCM logic
+            if tax.get("add_deduct_tax", "Add") != "Add" or not is_positive:
+                _throw_tax_error(True, tax)
+
+            base_gst_tax += tax_amount
 
         elif "rcm" in tax.gst_tax_type:
-            # Using Deduct for RCM
+            # RCM logic
             if tax.get("add_deduct_tax") == "Deduct":
-                if tax.base_tax_amount_after_discount_amount < 0:
-                    frappe.throw(
-                        _(
-                            "Row #{0}: Tax amount should be positive for GST Account {1}"
-                            " as you are Deducting Tax"
-                        ).format(tax.idx, tax.account_head)
-                    )
+                if not is_positive:
+                    _throw_tax_error(True, tax, " as you are Deducting Tax")
 
-                base_reverse_charge_booked -= tax.base_tax_amount_after_discount_amount
+                base_reverse_charge_booked -= tax_amount
 
             else:
-                if tax.base_tax_amount_after_discount_amount > 0:
-                    frappe.throw(
-                        _(
-                            "Row #{0}: Tax amount should be negative for GST Account {1}"
-                        ).format(tax.idx, tax.account_head)
-                    )
+                if is_positive:
+                    _throw_tax_error(False, tax)
 
-                base_reverse_charge_booked += tax.base_tax_amount_after_discount_amount
+                base_reverse_charge_booked += tax_amount
 
     condition = flt(base_gst_tax + base_reverse_charge_booked, 2) == 0
 
@@ -1010,6 +1055,8 @@ def is_export_without_payment_of_gst(doc):
 
 
 class ItemGSTDetails:
+    FIELDMAP = {}
+
     def get(self, docs, doctype, company):
         """
         Return Item GST Details for a list of documents
@@ -1183,7 +1230,9 @@ class ItemGSTDetails:
         return response
 
     def set_tax_amount_precisions(self, doctype):
-        item_doctype = f"{doctype} Item"
+        doc_meta = self.doc.meta if self.doc.meta else frappe.get_meta(doctype)
+        item_doctype = doc_meta.get_field("items").options
+
         meta = frappe.get_meta(item_doctype)
 
         self.precision = frappe._dict()
