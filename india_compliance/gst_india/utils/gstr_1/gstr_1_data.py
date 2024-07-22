@@ -48,7 +48,7 @@ CATEGORY_CONDITIONS = {
         "category": "is_cdnur_invoice",
         "sub_category": "set_for_cdnur",
     },
-    "E-Commerce Sales": {
+    GSTR1_Category.SUPECOM.value: {
         "category": "is_ecommerce_sales_invoice",
     },
 }
@@ -474,7 +474,7 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
         functions = CATEGORY_CONDITIONS.get(invoice_category)
         condition = getattr(self, functions["category"], None)
 
-        if invoice_category == "E-Commerce Sales":
+        if invoice_category == GSTR1_Category.SUPECOM.value:
             return self.get_ecommerce_sales_invoices(
                 invoices, condition, invoice_sub_category
             )

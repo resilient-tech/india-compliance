@@ -196,10 +196,7 @@ def get_columns(filters):
     )
 
     if filters.summary_by == "Summary by Item":
-        if gst_settings.enable_sales_through_ecommerce_operators and (
-            not filters.invoice_category
-            or filters.invoice_category == "E-Commerce Sales"
-        ):
+        if gst_settings.enable_sales_through_ecommerce_operators:
             columns.append(
                 {
                     "label": _("E-Commerce GSTIN"),
@@ -332,10 +329,6 @@ def get_columns(filters):
     if (
         filters.summary_by == "Summary by Item"
         and gst_settings.enable_sales_through_ecommerce_operators
-        and (
-            not filters.invoice_category
-            or filters.invoice_category == "E-Commerce Sales"
-        )
     ):
         columns.append(
             {
