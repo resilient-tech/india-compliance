@@ -17,7 +17,7 @@ const INVOICE_TYPE = {
 };
 
 if (gst_settings.enable_sales_through_ecommerce_operators) {
-    INVOICE_TYPE["E-Commerce Sales"] = ["Liable to pay tax u/s 9(5)", "Liable to collect tax u/s 52(TCS)"]
+    INVOICE_TYPE["Supplies made through E-commerce Operators"] = ["Liable to pay tax u/s 9(5)", "Liable to collect tax u/s 52(TCS)"]
 }
 
 frappe.query_reports["GST Sales Register Beta"] = {

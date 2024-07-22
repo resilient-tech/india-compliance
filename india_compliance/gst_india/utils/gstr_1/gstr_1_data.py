@@ -3,7 +3,6 @@
 from itertools import combinations
 
 from pypika import Order
-from pypika.terms import Case
 
 import frappe
 from frappe.query_builder.functions import Date, IfNull, Sum
@@ -50,6 +49,7 @@ CATEGORY_CONDITIONS = {
     },
     GSTR1_Category.SUPECOM.value: {
         "category": "is_ecommerce_sales_invoice",
+        "sub_category": "set_for_ecommerce_supply_type",
     },
 }
 
@@ -86,18 +86,6 @@ class GSTR1Query:
                 IfNull(self.si.place_of_supply, "").as_("place_of_supply"),
                 self.si.is_reverse_charge,
                 IfNull(self.si.ecommerce_gstin, "").as_("ecommerce_gstin"),
-                Case()
-                .when(
-                    IfNull(self.si.ecommerce_gstin, "") != "",
-                    Case()
-                    .when(
-                        self.si.is_reverse_charge == 1,
-                        GSTR1_SubCategory.SUPECOM_9_5.value,
-                    )
-                    .else_(GSTR1_SubCategory.SUPECOM_52.value),
-                )
-                .else_("")
-                .as_("ecommerce_supply_type"),
                 self.si.is_export_with_gst,
                 self.si.is_return,
                 self.si.is_debit_note,
@@ -361,6 +349,13 @@ class GSTR1Subcategory(GSTR1CategoryConditions):
         invoice.invoice_type = "B2CL"
         return
 
+    def set_for_ecommerce_supply_type(self, invoice):
+        if invoice.is_reverse_charge:
+            invoice.invoice_sub_category = GSTR1_SubCategory.SUPECOM_9_5.value
+            return
+
+        invoice.invoice_sub_category = GSTR1_SubCategory.SUPECOM_52.value
+
     def _set_invoice_type_for_b2b_and_cdnr(self, invoice):
         if invoice.gst_category == "Deemed Export":
             invoice.invoice_type = GSTR1_B2B_InvoiceType.DE.value
@@ -417,9 +412,9 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
                 invoice["stock_uom"] = gst_uom
 
     def assign_categories(self, invoice):
-
         self.set_invoice_category(invoice)
         self.set_invoice_sub_category_and_type(invoice)
+        self.set_ecommerce_supply_type(invoice)
 
     def set_invoice_category(self, invoice):
         for category, functions in CATEGORY_CONDITIONS.items():
@@ -431,6 +426,16 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
         category = invoice.invoice_category
         function = CATEGORY_CONDITIONS[category]["sub_category"]
         getattr(self, function, None)(invoice)
+
+    def set_ecommerce_supply_type(self, invoice):
+        if not invoice.ecommerce_gstin:
+            return
+
+        if invoice.is_reverse_charge:
+            invoice.ecommerce_supply_type = GSTR1_SubCategory.SUPECOM_9_5.value
+            return
+
+        invoice.ecommerce_supply_type = GSTR1_SubCategory.SUPECOM_52.value
 
     def get_invoices_for_item_wise_summary(self):
         query = self.get_base_query()
@@ -474,11 +479,6 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
         functions = CATEGORY_CONDITIONS.get(invoice_category)
         condition = getattr(self, functions["category"], None)
 
-        if invoice_category == GSTR1_Category.SUPECOM.value:
-            return self.get_ecommerce_sales_invoices(
-                invoices, condition, invoice_sub_category
-            )
-
         for invoice in invoices:
             self.invoice_conditions = {}
             if not condition(invoice):
@@ -493,40 +493,23 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
             elif invoice_sub_category == invoice.invoice_sub_category:
                 filtered_invoices.append(invoice)
 
-        return filtered_invoices
-
-    def get_ecommerce_sales_invoices(
-        self, invoices, condition, invoice_sub_category=None
-    ):
-        filtered_invoices = []
-        for invoice in invoices:
-            self.invoice_conditions = {}
-            if not condition(invoice):
-                continue
-            if not invoice_sub_category:
-                filtered_invoices.append(invoice)
-            else:
-                if invoice_sub_category == invoice.ecommerce_supply_type:
-                    filtered_invoices.append(invoice)
-        self.process_invoices(filtered_invoices)
+        if invoice_category == GSTR1_Category.SUPECOM.value:
+            self.process_invoices(invoices)
 
         return filtered_invoices
 
     def get_overview(self):
         final_summary = []
+        self.is_ecommerce_sales_enabled = frappe.get_cached_value(
+            "GST Settings", None, "enable_sales_through_ecommerce_operators"
+        )
         sub_category_summary = self.get_sub_category_summary()
         IGNORED_CATEGORIES = (
             GSTR1_Category.AT,
             GSTR1_Category.TXP,
             GSTR1_Category.DOC_ISSUE,
             GSTR1_Category.HSN,
-            (
-                GSTR1_Category.SUPECOM
-                if not frappe.get_cached_value(
-                    "GST Settings", None, "enable_sales_through_ecommerce_operators"
-                )
-                else None
-            ),
+            (GSTR1_Category.SUPECOM if not self.is_ecommerce_sales_enabled else None),
         )
 
         for category, sub_categories in CATEGORY_SUB_CATEGORY_MAPPING.items():
@@ -580,9 +563,7 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
 
             summary_row["unique_records"].add(row.invoice_no)
 
-            if frappe.get_cached_value(
-                "GST Settings", None, "enable_sales_through_ecommerce_operators"
-            ):
+            if self.is_ecommerce_sales_enabled:
                 self.update_ecommerce_summary(row, summary)
 
         for summary_row in summary.values():
@@ -594,10 +575,10 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
         if not row.ecommerce_gstin:
             return
 
-        ecommerce_summary = summary[row.get("ecommerce_supply_type")]
+        ecommerce_summary_row = summary[row.get("ecommerce_supply_type")]
         for key in self.AMOUNT_FIELDS:
-            ecommerce_summary[key] += row[key]
-            ecommerce_summary["unique_records"].add(row.invoice_no)
+            ecommerce_summary_row[key] += row[key]
+            ecommerce_summary_row["unique_records"].add(row.invoice_no)
 
     def update_overlaping_invoice_summary(self, sub_category_summary, final_summary):
         nil_exempt = GSTR1_SubCategory.NIL_EXEMPT.value
