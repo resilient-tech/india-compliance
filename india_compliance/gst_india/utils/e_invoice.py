@@ -171,18 +171,33 @@ def handle_duplicate_irn_error(data, current_gstin, current_invoice_amount, **kw
         previous_gstin = invoice_data.get("BuyerDtls").get("Gstin")
         previous_invoice_amount = invoice_data.get("ValDtls").get("TotInvVal")
 
-        if not (
-            previous_gstin == current_gstin
-            and previous_invoice_amount == current_invoice_amount
-        ):
+        error_message = ""
+        if previous_gstin != current_gstin:
+            error_message += _("<li>Customer GSTIN (Previous: {0}).</li>").format(
+                frappe.bold(previous_gstin)
+            )
+
+        if previous_invoice_amount != current_invoice_amount:
+            previous_invoice_amount_formatted = frappe.format_value(
+                previous_invoice_amount, currency=frappe.db.get_default("currency")
+            )
+
+            error_message += _("<li>Invoice amount (Previous: {0}).</li>").format(
+                frappe.bold(previous_invoice_amount_formatted)
+            )
+
+        if error_message:
             frappe.throw(
                 _(
-                    "e-Invoice is already available against Invoice {0} with a Grand Total of Rs.{1}"
-                    " Duplicate IRN requests are not considered by e-Invoice Portal."
+                    "An e-Invoice already exists for Invoice {0}, but with different details compared to the current Invoice:<br>{1}"
+                    "Hence, the IRN number is not updated against current Invoice."
+                    "<br><br>Possible Solutions:<br><br>"
+                    "<li>Use different Invoice Number if you are generating new invoice or amendment is done after generation of e-Invoice.</li>"
+                    "<li>Try cancelling e-Invoice from e-Invoice portal if old invoice is invalid and is generate in last 24 hrs.</li>"
                 ).format(
                     frappe.bold(invoice_data.get("DocDtls").get("No")),
-                    frappe.bold(previous_invoice_amount),
-                )
+                    error_message,
+                ),
             )
 
     if response.error_code:
