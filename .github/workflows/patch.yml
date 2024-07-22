@@ -119,61 +119,26 @@ jobs:
           git -C "apps/erpnext" remote set-url upstream https://github.com/frappe/erpnext.git
           git -C "apps/india_compliance" remote set-url upstream https://github.com/resilient-tech/india-compliance.git
 
-          echo "Fetching branches"
-          git -C "apps/frappe" fetch --depth 1 upstream $tags:v14.0.0
-          git -C "apps/erpnext" fetch --depth 1 upstream $tags:v14.0.0
-          git -C "apps/india_compliance" fetch --depth 1 upstream $tags:v14.0.0
-
-          echo "Checking out branches"
-          git -C "apps/frappe" checkout -q -f tags/v14.0.0
-          git -C "apps/erpnext" checkout -q -f tags/v14.0.0
-          git -C "apps/india_compliance" checkout -q -f tags/v14.0.0
-
-          echo "bench setup requirements"
-          bench setup requirements --dev
-
-          echo "Migrating site"
-          bench --site test_site migrate
-
-          echo "installing ic in test_site"
-          bench --site test_site install-app india_compliance
-
-
-          echo "Migrating site"
-          bench --site test_site migrate
-
-          echo "Resetting environment and installing apps"
-          pgrep honcho | xargs kill || true
-          rm -rf ~/frappe-bench/env
-          bench -v setup env
-
-          echo "Installing ERPNext"
-          bench pip install -e ./apps/erpnext
-
-          echo "Installing India Compliance"
-          bench pip install -e ./apps/india_compliance
-
-          echo "Starting bench"
-          bench start &>> ~/frappe-bench/bench_start.log &
-
-          echo "Migrating site"
-          bench --site test_site migrate
-
           function update_to_version() {
               version=$1
 
-              branch_name="version-$version-hotfix"
-              echo "Updating to v$version"
+              tag_name="v$version"
+              echo "Updating to $tag_name"
 
-              echo "Fetching branches"
-              git -C "apps/frappe" fetch --depth 1 upstream $branch_name:$branch_name
-              git -C "apps/erpnext" fetch --depth 1 upstream $branch_name:$branch_name
-              git -C "apps/india_compliance" fetch --depth 1 upstream $branch_name:$branch_name
+              echo "Fetching tags"
+              git -C "apps/frappe" fetch --tags upstream
+              git -C "apps/erpnext" fetch --tags upstream
+              git -C "apps/india_compliance" fetch --tags upstream
 
-              echo "Checking out branches"
-              git -C "apps/frappe" checkout -q -f $branch_name
-              git -C "apps/erpnext" checkout -q -f $branch_name
-              git -C "apps/india_compliance" checkout -q -f $branch_name
+              echo "Listing available tags for verification"
+              git -C "apps/frappe" tag
+              git -C "apps/erpnext" tag
+              git -C "apps/india_compliance" tag
+
+              echo "Checking out tags"
+              git -C "apps/frappe" checkout -q -f $tag_name || { echo "Tag $tag_name not found in apps/frappe"; exit 1; }
+              git -C "apps/erpnext" checkout -q -f $tag_name || { echo "Tag $tag_name not found in apps/erpnext"; exit 1; }
+              git -C "apps/india_compliance" checkout -q -f $tag_name || { echo "Tag $tag_name not found in apps/india_compliance"; exit 1; }
 
               echo "bench setup requirements"
               bench setup requirements --dev
@@ -183,7 +148,6 @@ jobs:
 
               echo "installing ic in test_site"
               bench --site test_site install-app india_compliance
-
 
               echo "Migrating site"
               bench --site test_site migrate
@@ -206,9 +170,11 @@ jobs:
               bench --site test_site migrate
           }
 
-          update_to_version v14.0.0
-          update_to_version 14
-          update_to_version 15
+          # Call the function with the version number
+          update_to_version 14.0.0
+
+          # update_to_version 14
+          # update_to_version 15
 
       - name: Show bench output
         if: ${{ always() }}
