@@ -31,8 +31,10 @@ For a detailed overview of these features, please [refer to the documentation](h
 
 ## Installation
 
+### Manual Installation
+  
 Once you've [set up a Frappe site](https://frappeframework.com/docs/v14/user/en/installation/), installing India Compliance is simple:
-
+    
 1.  Download the app using the Bench CLI.
 
     ```bash
@@ -47,6 +49,24 @@ If it isn't specified, the `--branch` option will default to **develop**.
     ```bash
     bench --site [site name] install-app india_compliance
     ```
+### Docker
+
+Use docker to deploy India Compliance in production. See https://github.com/frappe/frappe_docker for reference.
+
+Replace `APPS_JSON` as mentioned below:
+
+```shell
+export APPS_JSON='[
+  {
+    "url": "https://github.com/frappe/erpnext",
+    "branch": "version-15"
+  },
+  {
+    "url": "https://github.com/resilient-tech/india-compliance",
+    "branch": "version-15"
+  }
+]'
+```
 
 ## In-app Purchases
 
