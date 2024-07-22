@@ -153,7 +153,7 @@ def handle_duplicate_irn_error(data, current_gstin, current_invoice_amount, **kw
             response.update(
                 {
                     "data": data,
-                    "docname": docname,
+                    "docname": docname or doc.name,
                     "current_gstin": current_gstin,
                     "current_invoice_amount": current_invoice_amount,
                 }

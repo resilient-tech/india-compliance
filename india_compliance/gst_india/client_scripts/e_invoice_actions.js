@@ -54,12 +54,8 @@ frappe.ui.form.on("Sales Invoice", {
                                 await india_compliance.authenticate_otp(frm.doc.company_gstin);
                                 frappe.call({
                                     method: "india_compliance.gst_india.utils.e_invoice.handle_duplicate_irn_error",
-                                    args: {
-                                        docname: frm.doc.name,
-                                        data: r.message.data,
-                                        current_gstin: r.message.current_gstin,
-                                        current_invoice_amount: r.message.current_invoice_amount
-                                    }});
+                                    args: r.message
+                                });
                             }
                             frm.refresh();
                         },
