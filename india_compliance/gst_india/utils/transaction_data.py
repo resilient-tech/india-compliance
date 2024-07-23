@@ -11,7 +11,6 @@ from india_compliance.gst_india.constants import (
     SUBCONTRACTING_DOCTYPES,
 )
 from india_compliance.gst_india.constants.e_waybill import (
-    ADDRESS_FIELDS,
     TRANSPORT_MODES,
     VEHICLE_TYPES,
 )
@@ -466,11 +465,11 @@ class GSTTransactionData:
             "reference_name": address.name,
         }
 
-        gstin_field = self.get_gstin_field(address_name)
+        address_gstin = self.address_gstin_map.get(address_name)
 
         return frappe._dict(
             {
-                "gstin": self.doc.get(gstin_field) or address.get("gstin") or "URP",
+                "gstin": address_gstin or address.get("gstin") or "URP",
                 "state_number": address.gst_state_number,
                 "address_title": self.sanitize_value(
                     address.address_title,
@@ -529,8 +528,8 @@ class GSTTransactionData:
     def get_item_data(self, item_details):
         pass
 
-    def get_gstin_field(self, address_name):
-        address_gstin_map = {
+    def set_address_gstin_map(self):
+        address_gstin_field_map = {
             "customer_address": "billing_address_gstin",
             "company_address": "company_gstin",
             "supplier_address": "supplier_gstin",
@@ -538,11 +537,11 @@ class GSTTransactionData:
             "bill_from_address": "bill_from_gstin",
             "bill_to_address": "bill_to_gstin",
         }
-        address = ADDRESS_FIELDS.get(self.doc.doctype)
 
-        for address_field in address.values():
-            if self.doc.get(address_field) == address_name:
-                return address_gstin_map.get(address_field)
+        self.address_gstin_map = {
+            self.doc.get(address): self.doc.get(gstin)
+            for address, gstin in address_gstin_field_map.items()
+        }
 
     @staticmethod
     def sanitize_data(d):

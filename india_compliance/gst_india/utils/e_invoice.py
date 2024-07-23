@@ -652,6 +652,8 @@ class EInvoiceData(GSTTransactionData):
         return super().set_transporter_details()
 
     def set_party_address_details(self):
+        self.set_address_gstin_map()
+
         self.billing_address = self.get_address_details(
             self.doc.customer_address,
             validate_gstin=self.doc.gst_category != "Overseas",

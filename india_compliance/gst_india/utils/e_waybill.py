@@ -1519,6 +1519,8 @@ class EWaybillData(GSTTransactionData):
             self.transaction_details.name = self.doc.bill_no or self.doc.name
 
     def set_party_address_details(self):
+        self.set_address_gstin_map()
+
         transaction_type = 1
         address = get_billing_shipping_address_map(self.doc)
         has_different_to_address = (
