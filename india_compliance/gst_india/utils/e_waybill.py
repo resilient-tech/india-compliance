@@ -999,6 +999,8 @@ def update_transaction(doc, values):
 
     if doc.doctype in ("Delivery Note", "Stock Entry", "Subcontracting Receipt"):
         doc._sub_supply_type = SUB_SUPPLY_TYPES[values.sub_supply_type]
+    if doc.doctype == "Delivery Note":
+        doc._sub_supply_desc = values.sub_supply_desc
 
 
 def get_e_waybill_info(doc):
@@ -1452,11 +1454,13 @@ class EWaybillData(GSTTransactionData):
             ("Delivery Note", 0): {
                 "supply_type": "O",
                 "sub_supply_type": doc.get("_sub_supply_type", ""),
+                "sub_supply_desc": doc.get("_sub_supply_desc", ""),
                 "document_type": "CHL",
             },
             ("Delivery Note", 1): {
                 "supply_type": "I",
                 "sub_supply_type": doc.get("_sub_supply_type", ""),
+                "sub_supply_desc": doc.get("_sub_supply_desc", ""),
                 "document_type": "CHL",
             },
             ("Purchase Invoice", 0): {

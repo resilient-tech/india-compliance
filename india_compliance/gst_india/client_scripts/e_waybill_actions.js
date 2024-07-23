@@ -378,7 +378,6 @@ function get_generate_e_waybill_dialog(opts, frm) {
                     : "",
             onchange: () => validate_gst_transporter_id(d),
         },
-        // Sub Supply Type will be visible here for Delivery Note
         {
             label: "Part B",
             fieldname: "section_part_b",
@@ -444,6 +443,33 @@ function get_generate_e_waybill_dialog(opts, frm) {
             default: options[0],
             read_only: options.length === 1,
             reqd: 1,
+        },{
+            label: "Sub Supply Description",
+            fieldname: "sub_supply_desc",
+            fieldtype: "Data",
+            depends_on: "eval: doc.sub_supply_type == 'Others'",
+            mandatory_depends_on: "eval: doc.sub_supply_type == 'Others'",
+        });
+    }
+    else{
+        const default_supply_types = {
+            "Sales Invoice_0": { sub_supply_type: "Supply" },
+            "Sales Invoice_1": { sub_supply_type: "Sales Return" },
+            "Purchase Invoice_0": { sub_supply_type: "Supply" },
+            "Purchase Invoice_1": { sub_supply_type: "Others" },
+            "Purchase Receipt_0": { sub_supply_type: "Supply" },
+            "Purchase Receipt_1": { sub_supply_type: "Others" },
+        };
+
+        const key = `${frm.doctype}_${frm.doc.is_return}`;
+        const default_sub_supply_type = default_supply_types[key].sub_supply_type;
+
+        fields.splice(5, 0, {
+            label: "Sub Supply Type",
+            fieldname: "sub_supply_type",
+            fieldtype: "Data",
+            default: default_sub_supply_type,
+            read_only: 1,
         });
     }
 
@@ -488,9 +514,9 @@ function get_sub_suppy_type_options(frm) {
 
         if (frm.doc.is_return) {
             if (same_gstin) {
-                options = ["For Own Use", "Exhibition or Fairs"];
+                options = ["For Own Use", "Exhibition or Fairs","Others"];
             } else {
-                options = ["Job Work Returns", "SKD/CKD"];
+                options = ["Job Work Returns", "SKD/CKD","Others"];
             }
         } else {
             if (same_gstin) {
@@ -499,9 +525,10 @@ function get_sub_suppy_type_options(frm) {
                     "Exhibition or Fairs",
                     "Line Sales",
                     "Recipient Not Known",
+                    "Others",
                 ];
             } else {
-                options = ["Job Work", "SKD/CKD"];
+                options = ["Job Work", "SKD/CKD","Others"];
             }
         }
     } else if (frm.doctype === "Stock Entry") {
