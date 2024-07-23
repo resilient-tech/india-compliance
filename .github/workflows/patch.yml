@@ -104,7 +104,7 @@ jobs:
           bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
         env:
           # BRANCH_TO_CLONE: ${{ env.BRANCH_TO_CLONE }}
-          BRANCH_TO_CLONE: version-14
+          BRANCH_TO_CLONE: v14.0.0
 
       - name: Run Patch Tests
         run: |
@@ -130,15 +130,10 @@ jobs:
               git -C "apps/erpnext" fetch --tags upstream
               git -C "apps/india_compliance" fetch --tags upstream
 
-              echo "Listing available tags for verification"
-              git -C "apps/frappe" tag
-              git -C "apps/erpnext" tag
-              git -C "apps/india_compliance" tag
-
               echo "Checking out tags"
-              git -C "apps/frappe" checkout -q -f $tag_name || { echo "Tag $tag_name not found in apps/frappe"; exit 1; }
-              git -C "apps/erpnext" checkout -q -f $tag_name || { echo "Tag $tag_name not found in apps/erpnext"; exit 1; }
-              git -C "apps/india_compliance" checkout -q -f $tag_name || { echo "Tag $tag_name not found in apps/india_compliance"; exit 1; }
+              git -C "apps/frappe" checkout -q -f $tag_name
+              git -C "apps/erpnext" checkout -q -f $tag_name 
+              git -C "apps/india_compliance" checkout -q -f $tag_name 
 
               echo "bench setup requirements"
               bench setup requirements --dev
