@@ -504,13 +504,15 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
             "GST Settings", None, "enable_sales_through_ecommerce_operators"
         )
         sub_category_summary = self.get_sub_category_summary()
-        IGNORED_CATEGORIES = (
+        IGNORED_CATEGORIES = {
             GSTR1_Category.AT,
             GSTR1_Category.TXP,
             GSTR1_Category.DOC_ISSUE,
             GSTR1_Category.HSN,
-            (GSTR1_Category.SUPECOM if not self.is_ecommerce_sales_enabled else None),
-        )
+        }
+
+        if not self.is_ecommerce_sales_enabled:
+            IGNORED_CATEGORIES.add(GSTR1_Category.SUPECOM)
 
         for category, sub_categories in CATEGORY_SUB_CATEGORY_MAPPING.items():
             if category in IGNORED_CATEGORIES:
