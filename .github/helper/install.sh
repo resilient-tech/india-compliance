@@ -33,7 +33,7 @@ wkpid=$!
 pip install frappe-bench
 
 # git clone "https://github.com/frappe/frappe" --branch "$BRANCH_TO_CLONE" --depth 1
-git clone "https://github.com/frappe/frappe" --tags "$BRANCH_TO_CLONE" --depth 1
+git clone "https://github.com/frappe/frappe" --tags "$BRANCH_TO_CLONE"
 bench init --skip-assets --frappe-path ~/frappe --python "$(which python)" frappe-bench
 
 mkdir ~/frappe-bench/sites/test_site
