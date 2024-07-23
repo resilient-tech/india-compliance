@@ -465,9 +465,11 @@ class GSTTransactionData:
             "reference_name": address.name,
         }
 
+        address_gstin = self.address_gstin_map.get(address_name)
+
         return frappe._dict(
             {
-                "gstin": address.get("gstin") or "URP",
+                "gstin": address_gstin or address.get("gstin") or "URP",
                 "state_number": address.gst_state_number,
                 "address_title": self.sanitize_value(
                     address.address_title,
@@ -525,6 +527,21 @@ class GSTTransactionData:
 
     def get_item_data(self, item_details):
         pass
+
+    def set_address_gstin_map(self):
+        address_gstin_field_map = {
+            "customer_address": "billing_address_gstin",
+            "company_address": "company_gstin",
+            "supplier_address": "supplier_gstin",
+            "billing_address": "company_gstin",
+            "bill_from_address": "bill_from_gstin",
+            "bill_to_address": "bill_to_gstin",
+        }
+
+        self.address_gstin_map = {
+            self.doc.get(address): self.doc.get(gstin)
+            for address, gstin in address_gstin_field_map.items()
+        }
 
     @staticmethod
     def sanitize_data(d):
