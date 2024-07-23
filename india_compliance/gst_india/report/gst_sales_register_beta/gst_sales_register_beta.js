@@ -34,6 +34,7 @@ frappe.query_reports["GST Sales Register Beta"] = {
                 report.set_filter_value({
                     company_gstin: "",
                 });
+                report.refresh();
             },
             get_query: function () {
                 return {
@@ -75,9 +76,10 @@ frappe.query_reports["GST Sales Register Beta"] = {
             fieldname: "invoice_category",
             label: __("Invoice Category"),
             options: Object.keys(INVOICE_TYPE),
-            on_change(report) {
+            on_change: report => {
                 report.set_filter_value("invoice_sub_category", "");
                 set_sub_category_options(report);
+                report.refresh();
             },
             depends_on:
                 'eval:doc.summary_by=="Summary by HSN" || doc.summary_by=="Summary by Item"',

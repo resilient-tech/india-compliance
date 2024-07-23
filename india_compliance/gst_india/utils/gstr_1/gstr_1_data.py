@@ -351,10 +351,10 @@ class GSTR1Subcategory(GSTR1CategoryConditions):
 
     def set_for_ecommerce_supply_type(self, invoice):
         if invoice.is_reverse_charge:
-            invoice.invoice_sub_category = GSTR1_SubCategory.SUPECOM_9_5.value
+            invoice.ecommerce_supply_type = GSTR1_SubCategory.SUPECOM_9_5.value
             return
 
-        invoice.invoice_sub_category = GSTR1_SubCategory.SUPECOM_52.value
+        invoice.ecommerce_supply_type = GSTR1_SubCategory.SUPECOM_52.value
 
     def _set_invoice_type_for_b2b_and_cdnr(self, invoice):
         if invoice.gst_category == "Deemed Export":
@@ -412,9 +412,12 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
                 invoice["stock_uom"] = gst_uom
 
     def assign_categories(self, invoice):
-        self.set_invoice_category(invoice)
-        self.set_invoice_sub_category_and_type(invoice)
-        self.set_ecommerce_supply_type(invoice)
+        if not invoice.invoice_sub_category:
+            self.set_invoice_category(invoice)
+            self.set_invoice_sub_category_and_type(invoice)
+
+        if invoice.ecommerce_gstin and not invoice.ecommerce_supply_type:
+            self.set_for_ecommerce_supply_type(invoice)
 
     def set_invoice_category(self, invoice):
         for category, functions in CATEGORY_CONDITIONS.items():
@@ -426,16 +429,6 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
         category = invoice.invoice_category
         function = CATEGORY_CONDITIONS[category]["sub_category"]
         getattr(self, function, None)(invoice)
-
-    def set_ecommerce_supply_type(self, invoice):
-        if not invoice.ecommerce_gstin:
-            return
-
-        if invoice.is_reverse_charge:
-            invoice.ecommerce_supply_type = GSTR1_SubCategory.SUPECOM_9_5.value
-            return
-
-        invoice.ecommerce_supply_type = GSTR1_SubCategory.SUPECOM_52.value
 
     def get_invoices_for_item_wise_summary(self):
         query = self.get_base_query()
@@ -493,17 +486,17 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
             elif invoice_sub_category == invoice.invoice_sub_category:
                 filtered_invoices.append(invoice)
 
-        if invoice_category == GSTR1_Category.SUPECOM.value:
-            self.process_invoices(invoices)
+            elif invoice_sub_category == invoice.ecommerce_supply_type:
+                filtered_invoices.append(invoice)
+
+        self.process_invoices(invoices)
 
         return filtered_invoices
 
     def get_overview(self):
         final_summary = []
-        self.is_ecommerce_sales_enabled = frappe.get_cached_value(
-            "GST Settings", None, "enable_sales_through_ecommerce_operators"
-        )
         sub_category_summary = self.get_sub_category_summary()
+
         IGNORED_CATEGORIES = {
             GSTR1_Category.AT,
             GSTR1_Category.TXP,
@@ -511,7 +504,10 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
             GSTR1_Category.HSN,
         }
 
-        if not self.is_ecommerce_sales_enabled:
+        is_ecommerce_sales_enabled = frappe.get_cached_value(
+            "GST Settings", None, "enable_sales_through_ecommerce_operators"
+        )
+        if not is_ecommerce_sales_enabled:
             IGNORED_CATEGORIES.add(GSTR1_Category.SUPECOM)
 
         for category, sub_categories in CATEGORY_SUB_CATEGORY_MAPPING.items():
@@ -555,40 +551,32 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
                 **self.AMOUNT_FIELDS,
             }
 
-        for row in invoices:
-            summary_row = summary[
-                row.get("invoice_sub_category", row["invoice_category"])
-            ]
+        def _update_summary_row(row, sub_category_field="invoice_sub_category"):
+            summary_row = summary[row.get(sub_category_field, row["invoice_category"])]
 
             for key in self.AMOUNT_FIELDS:
                 summary_row[key] += row[key]
 
             summary_row["unique_records"].add(row.invoice_no)
 
-            if self.is_ecommerce_sales_enabled:
-                self.update_ecommerce_summary(row, summary)
+        for row in invoices:
+            _update_summary_row(row)
+
+            if row.ecommerce_gstin:
+                _update_summary_row(row, "ecommerce_supply_type")
 
         for summary_row in summary.values():
             summary_row["no_of_records"] = len(summary_row["unique_records"])
 
         return summary
 
-    def update_ecommerce_summary(self, row, summary):
-        if not row.ecommerce_gstin:
-            return
-
-        ecommerce_summary_row = summary[row.get("ecommerce_supply_type")]
-        for key in self.AMOUNT_FIELDS:
-            ecommerce_summary_row[key] += row[key]
-            ecommerce_summary_row["unique_records"].add(row.invoice_no)
-
     def update_overlaping_invoice_summary(self, sub_category_summary, final_summary):
         nil_exempt = GSTR1_SubCategory.NIL_EXEMPT.value
         supecom_52 = GSTR1_SubCategory.SUPECOM_52.value
         supecom_9_5 = GSTR1_SubCategory.SUPECOM_9_5.value
+
         # Get Unique Taxable Invoices
         unique_invoices = set()
-
         for category, row in sub_category_summary.items():
             if category in (nil_exempt, supecom_52, supecom_9_5):
                 continue
@@ -598,15 +586,17 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
         # Get Overlaping Invoices
         invoice_sets = [
             sub_category_summary[nil_exempt]["unique_records"],
-            sub_category_summary[supecom_52]["unique_records"],
-            sub_category_summary[supecom_9_5]["unique_records"],
+            {
+                *sub_category_summary[supecom_52]["unique_records"],
+                *sub_category_summary[supecom_9_5]["unique_records"],
+            },
             unique_invoices,
         ]
 
-        overlaping_invoices = set()
+        overlaping_invoices = []
 
         for set1, set2 in combinations(invoice_sets, 2):
-            overlaping_invoices.update(set1.intersection(set2))
+            overlaping_invoices.extend(set1.intersection(set2))
 
         # Update Summary
         if overlaping_invoices:
