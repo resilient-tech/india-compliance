@@ -97,8 +97,11 @@ class TestTransactionData(FrappeTestCase):
     def test_get_address_details(self):
         doc = create_sales_invoice()
 
+        transaction_data = GSTTransactionData(doc)
+        transaction_data.set_address_gstin_map()
+
         self.assertDictEqual(
-            GSTTransactionData(doc).get_address_details(doc.customer_address),
+            transaction_data.get_address_details(doc.customer_address),
             {
                 "gstin": "24AANFA2641L1ZF",
                 "state_number": "24",
