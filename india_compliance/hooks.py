@@ -27,6 +27,8 @@ setup_wizard_complete = "india_compliance.gst_india.setup.setup_wizard_complete"
 setup_wizard_stages = "india_compliance.setup_wizard.get_setup_wizard_stages"
 
 app_include_js = "india_compliance.bundle.js"
+app_include_css = "india_compliance.bundle.css"
+
 
 doctype_js = {
     "Address": "gst_india/client_scripts/address.js",
@@ -56,6 +58,18 @@ doctype_js = {
         "gst_india/client_scripts/e_invoice_actions.js",
         "gst_india/client_scripts/e_waybill_actions.js",
         "gst_india/client_scripts/sales_invoice.js",
+    ],
+    "Stock Entry": [
+        "gst_india/client_scripts/stock_entry.js",
+        "gst_india/client_scripts/e_waybill_actions.js",
+    ],
+    "Subcontracting Order": [
+        "gst_india/client_scripts/subcontracting_order.js",
+        "gst_india/client_scripts/e_waybill_actions.js",
+    ],
+    "Subcontracting Receipt": [
+        "gst_india/client_scripts/subcontracting_receipt.js",
+        "gst_india/client_scripts/e_waybill_actions.js",
     ],
     "Supplier": "gst_india/client_scripts/supplier.js",
     "Accounts Settings": "audit_trail/client_scripts/accounts_settings.js",
@@ -121,6 +135,7 @@ doc_events = {
     },
     "Journal Entry": {
         "validate": "india_compliance.gst_india.overrides.journal_entry.validate",
+        "before_validate": "india_compliance.gst_india.overrides.journal_entry.before_validate",
     },
     "Payment Entry": {
         "onload": "india_compliance.gst_india.overrides.payment_entry.onload",
@@ -215,6 +230,17 @@ doc_events = {
     },
     "Sales Order Item": {
         "on_change": "india_compliance.gst_india.overrides.transaction.on_change_item",
+    },
+    "Stock Entry": {
+        "onload": "india_compliance.gst_india.overrides.subcontracting_transaction.onload",
+        "validate": "india_compliance.gst_india.overrides.subcontracting_transaction.validate",
+    },
+    "Subcontracting Order": {
+        "validate": "india_compliance.gst_india.overrides.subcontracting_transaction.validate",
+    },
+    "Subcontracting Receipt": {
+        "onload": "india_compliance.gst_india.overrides.subcontracting_transaction.onload",
+        "validate": "india_compliance.gst_india.overrides.subcontracting_transaction.validate",
     },
     "Supplier": {
         "validate": [
@@ -349,6 +375,12 @@ override_doctype_dashboards = {
     "Purchase Receipt": (
         "india_compliance.gst_india.overrides.purchase_receipt.get_dashboard_data"
     ),
+    "Stock Entry": (
+        "india_compliance.gst_india.overrides.subcontracting_transaction.get_dashboard_data"
+    ),
+    "Subcontracting Receipt": (
+        "india_compliance.gst_india.overrides.subcontracting_transaction.get_dashboard_data"
+    ),
 }
 
 override_doctype_class = {
@@ -399,6 +431,8 @@ scheduler_events = {
         "*/5 * * * *": [
             "india_compliance.gst_india.utils.e_invoice.retry_e_invoice_e_waybill_generation",
             "india_compliance.gst_india.utils.gstr_utils.download_queued_request",
+        ],
+        "*/10 * * * *": [
             "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.auto_refresh_authtoken",
         ],
         "0 2 * * *": [

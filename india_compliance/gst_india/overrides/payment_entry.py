@@ -270,6 +270,10 @@ def get_proportionate_taxes_for_reversal(payment_entry, reference_row):
     """
     # Compile taxes
     gst_accounts = get_all_gst_accounts(payment_entry.company)
+
+    if not gst_accounts:
+        return
+
     taxes = {}
     for row in payment_entry.taxes:
         if row.account_head not in gst_accounts:
@@ -355,6 +359,9 @@ def get_advance_payment_entries_for_regional(
     company = frappe.db.get_value("Account", party_account, "company")
     taxes = get_taxes_summary(company, payment_entries)
 
+    if not taxes:
+        return payment_entries
+
     for pe in payment_entries:
         tax_row = taxes.get(
             pe.reference_name,
@@ -370,6 +377,10 @@ def adjust_allocations_for_taxes_in_payment_reconciliation(doc):
         return
 
     taxes = get_taxes_summary(doc.company, doc.allocation)
+
+    if not taxes:
+        return
+
     taxes = {
         tax.payment_entry: frappe._dict(
             {
@@ -398,6 +409,9 @@ def adjust_allocations_for_taxes_in_payment_reconciliation(doc):
 
 def get_taxes_summary(company, payment_entries):
     gst_accounts = get_all_gst_accounts(company)
+    if not gst_accounts:
+        return {}
+
     references = [
         advance.reference_name
         for advance in payment_entries

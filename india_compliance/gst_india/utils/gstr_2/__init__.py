@@ -5,7 +5,7 @@ from frappe import _
 from frappe.query_builder.terms import Criterion
 from frappe.utils import cint
 
-from india_compliance.gst_india.api_classes.returns import GSTR2aAPI, GSTR2bAPI
+from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR2aAPI, GSTR2bAPI
 from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
     create_import_log,
 )
@@ -20,7 +20,7 @@ class GSTRCategory(Enum):
     CDNR = "CDNR"
     CDNRA = "CDNRA"
     ISD = "ISD"
-    ISDA = "ISDA"
+    ISDA = "ISDA"  # for GSTR 2B only
     IMPG = "IMPG"
     IMPGSEZ = "IMPGSEZ"
 
@@ -43,11 +43,10 @@ GSTR_MODULES = {
 IMPORT_CATEGORY = ("IMPG", "IMPGSEZ")
 
 
-def download_gstr_2a(gstin, return_periods, otp=None, gst_categories=None):
+def download_gstr_2a(gstin, return_periods, gst_categories=None):
     total_expected_requests = len(return_periods) * len(ACTIONS)
     requests_made = 0
     queued_message = False
-    settings = frappe.get_cached_doc("GST Settings")
 
     return_type = ReturnType.GSTR2A
     api = GSTR2aAPI(gstin)
@@ -58,15 +57,6 @@ def download_gstr_2a(gstin, return_periods, otp=None, gst_categories=None):
         has_data = False
         for action, category in ACTIONS.items():
             requests_made += 1
-
-            if (
-                not settings.enable_overseas_transactions
-                and category.value in IMPORT_CATEGORY
-            ):
-                continue
-
-            if gst_categories and category.value not in gst_categories:
-                continue
 
             frappe.publish_realtime(
                 "update_api_progress",
@@ -79,7 +69,10 @@ def download_gstr_2a(gstin, return_periods, otp=None, gst_categories=None):
                 doctype="Purchase Reconciliation Tool",
             )
 
-            response = api.get_data(action, return_period, otp)
+            if gst_categories and category.value not in gst_categories:
+                continue
+
+            response = api.get_data(action, return_period)
             if response.error_type in ["otp_requested", "invalid_otp"]:
                 return response
 
@@ -131,7 +124,7 @@ def download_gstr_2a(gstin, return_periods, otp=None, gst_categories=None):
         end_transaction_progress(return_period)
 
 
-def download_gstr_2b(gstin, return_periods, otp=None):
+def download_gstr_2b(gstin, return_periods):
     total_expected_requests = len(return_periods)
     requests_made = 0
     queued_message = False
@@ -152,7 +145,7 @@ def download_gstr_2b(gstin, return_periods, otp=None):
             doctype="Purchase Reconciliation Tool",
         )
 
-        response = api.get_data(return_period, otp)
+        response = api.get_data(return_period)
         if response.error_type in ["otp_requested", "invalid_otp"]:
             return response
 
@@ -188,7 +181,7 @@ def download_gstr_2b(gstin, return_periods, otp=None):
         # Handle multiple files for GSTR2B
         if response.data and (file_count := response.data.get("fc")):
             for file_num in range(1, file_count + 1):
-                r = api.get_data(return_period, otp, file_num)
+                r = api.get_data(return_period, file_num=file_num)
                 save_gstr_2b(gstin, return_period, r)
 
             continue  # skip first response if file_count is greater than 1

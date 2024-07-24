@@ -539,6 +539,9 @@ class EInvoiceData(GSTTransactionData):
             }
         )
 
+        if self.doc.is_reverse_charge:
+            item_details["total_value"] = item.taxable_value
+
         if batch_no := self.sanitize_value(
             item.batch_no, max_length=20, truncate=False
         ):
@@ -649,6 +652,8 @@ class EInvoiceData(GSTTransactionData):
         return super().set_transporter_details()
 
     def set_party_address_details(self):
+        self.set_address_gstin_map()
+
         self.billing_address = self.get_address_details(
             self.doc.customer_address,
             validate_gstin=self.doc.gst_category != "Overseas",

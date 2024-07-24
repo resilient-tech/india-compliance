@@ -31,8 +31,8 @@
             "sgstValue": 0,
             "igstValue": 0,
             "cessValue": 0,
-            "TotNonAdvolVal": 0,
-            "OthValue": 0.0,
+            "cessNonAdvolValue": 0,
+            "otherValue": 0.0,
             "totInvValue": 100.0,
             "transMode": 1,
             "transDistance": 10,
@@ -74,8 +74,8 @@
             "is_in_state": 1
         },
         "request_data": {
-            "OthValue": 0.0,
-            "TotNonAdvolVal": 0,
+            "otherValue": 0.0,
+            "cessNonAdvolValue": 0,
             "actFromStateCode": 24,
             "actToStateCode": 24,
             "cessValue": 0,
@@ -260,8 +260,8 @@
             "sgstValue": 0.91,
             "igstValue": 0,
             "cessValue": 0,
-            "TotNonAdvolVal": 0,
-            "OthValue": -0.02,
+            "cessNonAdvolValue": 0,
+            "otherValue": -0.02,
             "totInvValue": 17.0,
             "transMode": 1,
             "transDistance": 1,
@@ -337,8 +337,8 @@
             "sgstValue": 0.91,
             "igstValue": 0,
             "cessValue": 0,
-            "TotNonAdvolVal": 0,
-            "OthValue": -0.02,
+            "cessNonAdvolValue": 0,
+            "otherValue": -0.02,
             "totInvValue": 17.0,
             "transMode": 1,
             "transDistance": 1,
@@ -515,8 +515,8 @@
             "sub_supply_type": "Exhibition or Fairs"
         },
         "request_data": {
-            "OthValue": 0.0,
-            "TotNonAdvolVal": 0,
+            "otherValue": 0.0,
+            "cessNonAdvolValue": 0,
             "actFromStateCode": 24,
             "actToStateCode": 24,
             "cessValue": 0,
@@ -588,8 +588,8 @@
             "sub_supply_type": "Job Work Returns"
         },
         "request_data": {
-            "OthValue": 0.0,
-            "TotNonAdvolVal": 0,
+            "otherValue": 0.0,
+            "cessNonAdvolValue": 0,
             "actFromStateCode": 24,
             "actToStateCode": 24,
             "cessValue": 0,
@@ -661,8 +661,8 @@
             "sub_supply_type": "Job Work"
         },
         "request_data": {
-            "OthValue": 0.0,
-            "TotNonAdvolVal": 0,
+            "otherValue": 0.0,
+            "cessNonAdvolValue": 0,
             "actFromStateCode": 24,
             "actToStateCode": 24,
             "cessValue": 0,
@@ -735,8 +735,8 @@
             "sub_supply_type": "For Own Use"
         },
         "request_data": {
-            "OthValue": 0.0,
-            "TotNonAdvolVal": 0,
+            "otherValue": 0.0,
+            "cessNonAdvolValue": 0,
             "actFromStateCode": 24,
             "actToStateCode": 24,
             "cessValue": 0,
@@ -808,8 +808,8 @@
             "is_in_state_rcm": 1
         },
         "request_data": {
-            "OthValue": 0.0,
-            "TotNonAdvolVal": 0,
+            "otherValue": 0.0,
+            "cessNonAdvolValue": 0,
             "actFromStateCode": 24,
             "actToStateCode": 24,
             "cessValue": 0,
@@ -880,8 +880,8 @@
             "is_in_state": 1
         },
         "request_data": {
-            "OthValue": 0.0,
-            "TotNonAdvolVal": 0,
+            "otherValue": 0.0,
+            "cessNonAdvolValue": 0,
             "actFromStateCode": 24,
             "actToStateCode": 24,
             "cessValue": 0,
@@ -952,8 +952,8 @@
             "is_in_state": 1
         },
         "request_data": {
-            "OthValue": 0.0,
-            "TotNonAdvolVal": 0,
+            "otherValue": 0.0,
+            "cessNonAdvolValue": 0,
             "actFromStateCode": 24,
             "actToStateCode": 24,
             "cessValue": 0,
@@ -1020,8 +1020,8 @@
             "vehicle_no": "GJ07DL9009"
         },
         "request_data": {
-            "OthValue": 0.0,
-            "TotNonAdvolVal": 0,
+            "otherValue": 0.0,
+            "cessNonAdvolValue": 0,
             "actFromStateCode": 24,
             "actToStateCode": 24,
             "cessValue": 0,
@@ -1075,6 +1075,92 @@
         "response_data": {
             "message": "EWB : GSPGSTDOWN",
             "success": false
+        }
+    },
+    "stock_entry": {
+        "kwargs": {
+            "stock_entry_type": "Send to Subcontractor",
+            "purpose": "Send to Subcontractor",
+            "bill_from_address": "_Test Indian Registered Company-Billing",
+            "bill_to_address": "_Test Registered Supplier-Billing",
+            "items":
+                [{
+                    "item_code": "_Test Trading Goods 1",
+                    "qty": 1,
+                    "gst_hsn_code": "61149090",
+                    "s_warehouse": "Finished Goods - _TIRC",
+                    "t_warehouse": "Goods In Transit - _TIRC",
+                    "amount": 100
+                }],
+            "company": "_Test Indian Registered Company"
+        },
+        "values": {
+            "distance": 0.0,
+            "mode_of_transport": "Road",
+            "vehicle_no": "GJ07DL9009",
+            "sub_supply_type": "Job Work"
+        },
+        "request_data": {
+            "userGstin": "05AAACG2115R1ZN",
+            "supplyType": "O",
+            "subSupplyType": 4,
+            "docType": "CHL",
+            "docNo": "test_invoice_no",
+            "docDate": "19/07/2024",
+            "transactionType": 1,
+            "fromTrdName": "_Test Indian Registered Company",
+            "fromGstin": "05AAACG2115R1ZN",
+            "fromAddr1": "Test Address - 1",
+            "fromPlace": "Test City",
+            "fromPincode": 380015,
+            "fromStateCode": 24,
+            "actFromStateCode": 24,
+            "itemList": [
+                {
+                    "itemNo": 1,
+                    "productDesc": "Test Trading Goods 1",
+                    "hsnCode": "61149090",
+                    "qtyUnit": "NOS",
+                    "quantity": 1.0,
+                    "taxableAmount": 100.0,
+                    "sgstRate": 0.0,
+                    "cgstRate": 0.0,
+                    "igstRate": 0.0,
+                    "cessRate": 0.0,
+                    "cessNonAdvol": 0.0
+                }
+            ],
+            "totalValue": 100.0,
+            "cgstValue": 0,
+            "sgstValue": 0,
+            "igstValue": 0,
+            "cessValue": 0,
+            "cessNonAdvolValue": 0,
+            "otherValue": 0.0,
+            "totInvValue": 100.0,
+            "toTrdName": "Test Registered Supplier",
+            "toGstin": "05AAACG2140A1ZL",
+            "toAddr1": "Test Address - 7",
+            "toPlace": "Test City",
+            "toPincode": 380015,
+            "toStateCode": 24,
+            "actToStateCode": 24,
+            "transMode": 1,
+            "transDistance": 1,
+            "vehicleNo": "GJ07DL9009",
+            "mainHsnCode": "61149090",
+            "vehicleType": "R"
+        },
+        "params": "action=GENEWAYBILL",
+        "response_data": {
+            "message": "E-Way Bill is generated successfully",
+            "result": {
+                "alert": "",
+                "ewayBillDate": "08/08/2023 03:30:00 PM",
+                "ewayBillNo": 341003383265,
+                "validUpto": "09/08/2023 11:59:00 PM"
+            },
+            "success": true
         }
     }
 }

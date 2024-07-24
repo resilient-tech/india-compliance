@@ -3,6 +3,11 @@
     <PreLoader v-if="isLoading" />
     <div v-else>
       <PageTitle title="India Compliance Account" />
+      <div class="subtext">
+        <span class="subtext-item">
+          Registered Email: {{ subscriptionDetails.email }}
+        </span>
+      </div>
       <Message
         v-if="message"
         :message="message.message"
@@ -16,8 +21,10 @@
             <p class="value">{{ getReadableNumber(is_unlimited_account ? used_credits : balance_credits, 0)}}</p>
           </div>
           <div class="subscription-details-item">
-            <p class="label">{{ is_unlimited_account ? 'Next Billing Date' : 'Valid Upto' }}</p>
-            <p class="value" :class="{ 'mb-4': is_unlimited_account }">{{ valid_upto }}</p>
+            <div v-show="valid_upto">
+              <p class="label">{{ is_unlimited_account ? 'Next Billing Date' : 'Valid Upto' }}</p>
+              <p class="value" :class="{ 'mb-4': is_unlimited_account }">{{ valid_upto }}</p>
+            </div>
           </div>
           <router-link v-if="!is_unlimited_account"
             class="btn btn-primary btn-sm btn-block"
@@ -214,6 +221,7 @@ data() {
 .subscription-info .last-updated-text {
   color: var(--gray-500);
 }
+
 .subscription-info .last-updated-text a {
   color: var(--text-light);
 }
@@ -244,12 +252,26 @@ data() {
   font-weight: 500;
   color: var(--text-light);
 }
+
 .links a:hover {
   color: var(--text-color);
   color: var(--heading-color);
   text-decoration: none;
 }
+
 .links a:hover li {
   margin-left: 0.3em;
+}
+
+.subtext {
+  margin-top: -50px;
+  color: var(--gray-500);
+  font-size: 0.875em;
+}
+
+.subtext-item {
+  padding-bottom: 12px;
+  display: block;
+  margin-left: 2px;
 }
 </style>

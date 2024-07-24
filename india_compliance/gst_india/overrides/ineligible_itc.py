@@ -236,8 +236,8 @@ class IneligibleITC:
             ):
                 continue
 
-            entry[self.cr_or_dr] -= ineligible_item_tax_amount
-            entry[f"{self.cr_or_dr}_in_account_currency"] -= ineligible_item_tax_amount
+            entry[self.dr_or_cr] += ineligible_item_tax_amount
+            entry[f"{self.dr_or_cr}_in_account_currency"] += ineligible_item_tax_amount
             break
 
         else:
