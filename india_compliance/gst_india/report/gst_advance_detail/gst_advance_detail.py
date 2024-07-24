@@ -28,6 +28,10 @@ class GSTAdvanceDetail:
         self.gst_accounts = get_gst_accounts(filters)
 
     def get_columns(self):
+        company_currency = frappe.get_cached_value(
+            "Company", self.filters.get("company"), "default_currency"
+        )
+
         columns = [
             {
                 "fieldname": "posting_date",
@@ -59,28 +63,28 @@ class GSTAdvanceDetail:
                 "fieldname": "paid_amount",
                 "label": _("Paid Amount"),
                 "fieldtype": "Currency",
-                "options": "Company:company:default_currency",
+                "options": company_currency,
                 "width": 120,
             },
             {
                 "fieldname": "allocated_amount",
                 "label": _("Allocated Amount"),
                 "fieldtype": "Currency",
-                "options": "Company:company:default_currency",
+                "options": company_currency,
                 "width": 120,
             },
             {
                 "fieldname": "gst_paid",
                 "label": _("GST Paid"),
                 "fieldtype": "Currency",
-                "options": "Company:company:default_currency",
+                "options": company_currency,
                 "width": 120,
             },
             {
                 "fieldname": "gst_allocated",
                 "label": _("GST Allocated"),
                 "fieldtype": "Currency",
-                "options": "Company:company:default_currency",
+                "options": company_currency,
                 "width": 120,
             },
             {
