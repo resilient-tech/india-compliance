@@ -55,6 +55,9 @@ def get_data(filters):
 
 def get_columns(filters):
     columns = []
+    company_currency = frappe.get_cached_value(
+        "Company", filters.get("company"), "default_currency"
+    )
 
     if filters.summary_by == "Overview":
         columns.extend(
@@ -71,35 +74,35 @@ def get_columns(filters):
                     "fieldname": "taxable_value",
                     "width": "120",
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": company_currency,
                 },
                 {
                     "label": _("IGST Amount"),
                     "fieldname": "igst_amount",
                     "width": "120",
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": company_currency,
                 },
                 {
                     "label": _("CGST Amount"),
                     "fieldname": "cgst_amount",
                     "width": "120",
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": company_currency,
                 },
                 {
                     "label": _("SGST Amount"),
                     "fieldname": "sgst_amount",
                     "width": "120",
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": company_currency,
                 },
                 {
                     "label": _("Total Cess Amount"),
                     "fieldname": "total_cess_amount",
                     "width": "120",
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": company_currency,
                 },
             ]
         )
@@ -232,7 +235,7 @@ def get_columns(filters):
                 "fieldname": "taxable_value",
                 "width": 120,
                 "fieldtype": "Currency",
-                "options": "Company:company:default_currency",
+                "options": company_currency,
             },
             {
                 "label": _("GST Rate"),
@@ -245,49 +248,49 @@ def get_columns(filters):
                 "fieldname": "cgst_amount",
                 "width": 120,
                 "fieldtype": "Currency",
-                "options": "Company:company:default_currency",
+                "options": company_currency,
             },
             {
                 "label": _("SGST Amount"),
                 "fieldname": "sgst_amount",
                 "width": 120,
                 "fieldtype": "Currency",
-                "options": "Company:company:default_currency",
+                "options": company_currency,
             },
             {
                 "label": _("IGST Amount"),
                 "fieldname": "igst_amount",
                 "width": 120,
                 "fieldtype": "Currency",
-                "options": "Company:company:default_currency",
+                "options": company_currency,
             },
             {
                 "label": _("Total Cess Amount"),
                 "fieldname": "total_cess_amount",
                 "width": 120,
                 "fieldtype": "Currency",
-                "options": "Company:company:default_currency",
+                "options": company_currency,
             },
             {
                 "label": _("Total Tax"),
                 "fieldname": "total_tax",
                 "width": 120,
                 "fieldtype": "Currency",
-                "options": "Company:company:default_currency",
+                "options": company_currency,
             },
             {
                 "label": _("Total Amount"),
                 "fieldname": "total_amount",
                 "width": 120,
                 "fieldtype": "Currency",
-                "options": "Company:company:default_currency",
+                "options": company_currency,
             },
             {
                 "label": _("Retured Invoice Total"),
                 "fieldname": "returned_invoice_total",
                 "width": 120,
                 "fieldtype": "Currency",
-                "options": "Company:company:default_currency",
+                "options": company_currency,
             },
             {
                 "label": _("Invoice Type"),
