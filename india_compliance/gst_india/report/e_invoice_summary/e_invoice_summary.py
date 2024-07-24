@@ -89,6 +89,14 @@ def get_data(filters=None):
 
 
 def get_columns(filters=None):
+    if filters.get("company"):
+        company_currency = frappe.get_cached_value(
+            "Company", filters.get("company"), "default_currency"
+        )
+
+    else:
+        company_currency = "Company:company:default_currency"
+
     columns = [
         {
             "fieldtype": "Date",
@@ -136,7 +144,7 @@ def get_columns(filters=None):
         {"fieldtype": "Data", "fieldname": "irn", "label": _("IRN No."), "width": 250},
         {
             "fieldtype": "Currency",
-            "options": "Company:company:default_currency",
+            "options": company_currency,
             "fieldname": "base_grand_total",
             "label": _("Grand Total"),
             "width": 120,

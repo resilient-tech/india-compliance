@@ -10,7 +10,7 @@ def execute(filters=None):
     if not filters:
         filters = {}
 
-    return get_columns(), get_data(filters)
+    return get_columns(filters), get_data(filters)
 
 
 def validate_filters(filters=None):
@@ -93,7 +93,11 @@ def update_purchase_invoice_query(query):
     )
 
 
-def get_columns():
+def get_columns(filters):
+    company_currency = frappe.get_cached_value(
+        "Company", filters.get("company"), "default_currency"
+    )
+
     return [
         {
             "fieldname": "supplier",
@@ -146,28 +150,28 @@ def get_columns():
             "fieldname": "total_assessable_value",
             "label": _("Total Assessable Value"),
             "fieldtype": "Currency",
-            "options": "Company:company:default_currency",
+            "options": company_currency,
             "width": 110,
         },
         {
             "fieldname": "total_customs_duty",
             "label": _("Total Customs Duty"),
             "fieldtype": "Currency",
-            "options": "Company:company:default_currency",
+            "options": company_currency,
             "width": 110,
         },
         {
             "fieldname": "total_taxes",
             "label": _("Total Taxes"),
             "fieldtype": "Currency",
-            "options": "Company:company:default_currency",
+            "options": company_currency,
             "width": 100,
         },
         {
             "fieldname": "total_amount_payable",
             "label": _("Amount Payable"),
             "fieldtype": "Currency",
-            "options": "Company:company:default_currency",
+            "options": company_currency,
             "width": 90,
         },
     ]
