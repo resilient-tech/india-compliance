@@ -20,7 +20,7 @@ def execute(filters=None):
 
     validate_filters(filters)
 
-    columns = get_columns()
+    columns = get_columns(filters)
 
     data = get_hsn_data(filters, columns)
 
@@ -91,7 +91,11 @@ def validate_filters(filters):
         frappe.throw(_("To Date cannot be less than From Date"))
 
 
-def get_columns():
+def get_columns(filters):
+    company_currency = frappe.get_cached_value(
+        "Company", filters.get("company"), "default_currency"
+    )
+
     columns = [
         {
             "fieldname": "gst_hsn_code",
@@ -122,7 +126,7 @@ def get_columns():
             "fieldname": "total_amount",
             "label": _("Total Value"),
             "fieldtype": "Currency",
-            "options": "Company:company:default_currency",
+            "options": company_currency,
             "width": 120,
         },
         {
@@ -135,35 +139,35 @@ def get_columns():
             "fieldname": "taxable_amount",
             "label": _("Taxable Value"),
             "fieldtype": "Currency",
-            "options": "Company:company:default_currency",
+            "options": company_currency,
             "width": 170,
         },
         {
             "fieldname": "igst_account",
             "label": _("Integrated Tax Amount"),
             "fieldtype": "Currency",
-            "options": "Company:company:default_currency",
+            "options": company_currency,
             "width": 170,
         },
         {
             "fieldname": "cgst_account",
             "label": _("Central Tax Amount"),
             "fieldtype": "Currency",
-            "options": "Company:company:default_currency",
+            "options": company_currency,
             "width": 170,
         },
         {
             "fieldname": "sgst_account",
             "label": _("State/UT Tax Amount"),
             "fieldtype": "Currency",
-            "options": "Company:company:default_currency",
+            "options": company_currency,
             "width": 170,
         },
         {
             "fieldname": "cess_account",
             "label": _("Cess Amount"),
             "fieldtype": "Currency",
-            "options": "Company:company:default_currency",
+            "options": company_currency,
             "width": 170,
         },
     ]

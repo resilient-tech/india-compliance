@@ -27,6 +27,10 @@ def execute(filters=None):
 class BaseGSTR3BDetails:
     def __init__(self, filters=None):
         self.filters = frappe._dict(filters or {})
+        self.company_currency = frappe.get_cached_value(
+            "Company", filters.get("company"), "default_currency"
+        )
+
         self.columns = [
             {
                 "fieldname": "voucher_type",
@@ -78,28 +82,28 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                     "fieldname": "iamt",
                     "label": _("Integrated Tax"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 100,
                 },
                 {
                     "fieldname": "camt",
                     "label": _("Central Tax"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 100,
                 },
                 {
                     "fieldname": "samt",
                     "label": _("State/UT Tax"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 100,
                 },
                 {
                     "fieldname": "csamt",
                     "label": _("Cess Tax"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 100,
                 },
                 {
@@ -299,14 +303,14 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
                     "fieldname": "intra",
                     "label": _("Intra State"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 100,
                 },
                 {
                     "fieldname": "inter",
                     "label": _("Inter State"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 100,
                 },
                 {
