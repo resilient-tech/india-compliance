@@ -1,15 +1,6 @@
 # Just for reference
-# SUPPLY_TYPES = {"Inward": "I", "Outward": "O"}
-#
-# DOCUMENT_TYPES = {
-#     "Tax Invoice": "INV",
-#     "Bill of Supply": "BIL",
-#     "Bill of Entry": "BOE",
-#     "Delivery Challan": "CHL",
-#     "Others": "OTH",
-# }
-#
 # DATETIME_FORMAT = "%d/%m/%Y %I:%M:%S %p"
+
 selling_address = {
     "bill_from": "company_address",
     "bill_to": "customer_address",
@@ -61,6 +52,14 @@ EXTEND_VALIDITY_REASON_CODES = {
     "Transshipment": 4,
     "Accident": 5,
     "Others": 99,
+}
+
+DOCUMENT_TYPES = {
+    "Tax Invoice": "INV",
+    "Bill of Supply": "BIL",
+    "Bill of Entry": "BOE",
+    "Delivery Challan": "CHL",
+    "Others": "OTH",
 }
 
 SUPPLY_TYPES = {
