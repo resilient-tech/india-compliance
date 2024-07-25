@@ -19,7 +19,11 @@ from frappe.utils.file_manager import save_file
 from india_compliance.exceptions import GSPServerError
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
-from india_compliance.gst_india.constants import GST_TAX_TYPES, STATE_NUMBERS
+from india_compliance.gst_india.constants import (
+    GST_TAX_TYPES,
+    SALES_DOCTYPES,
+    STATE_NUMBERS,
+)
 from india_compliance.gst_india.constants.e_waybill import (
     ADDRESS_FIELDS,
     CANCEL_REASON_CODES,
@@ -54,9 +58,8 @@ def generate_e_waybill_json(doctype: str, docnames, values=None):
         "billLists": [],
     }
 
-    for doc in docnames:
-        doc = frappe.get_doc(doctype, doc)
-        doc.check_permission("submit")
+    for docname in docnames:
+        doc = load_doc(doctype, docname, "submit")
 
         if values:
             update_transaction(doc, frappe.parse_json(values))
@@ -994,8 +997,10 @@ def update_transaction(doc, values):
 
     doc.db_set(data)
 
-    if doc.doctype == "Delivery Note":
+    if doc.doctype in ("Delivery Note", "Stock Entry", "Subcontracting Receipt"):
         doc._sub_supply_type = SUB_SUPPLY_TYPES[values.sub_supply_type]
+    if doc.doctype == "Delivery Note":
+        doc._sub_supply_desc = values.sub_supply_desc
 
 
 def get_e_waybill_info(doc):
@@ -1067,7 +1072,7 @@ def get_billing_shipping_address_map(doc):
         else address.ship_to
     )
 
-    if doc.is_return:
+    if doc.get("is_return"):
         address.bill_from, address.bill_to = address.bill_to, address.bill_from
         address.ship_from, address.ship_to = address.ship_to, address.ship_from
 
@@ -1258,14 +1263,21 @@ class EWaybillData(GSTTransactionData):
             self.validate_mode_of_transport()
 
         self.validate_non_gst_items()
+        self.validate_same_gstin()
 
-        if (
-            self.doc.doctype == "Sales Invoice"
-            and self.doc.company_gstin == self.doc.billing_address_gstin
-        ):
+    def validate_same_gstin(self):
+        if self.doc.doctype == "Delivery Note":
+            return
+
+        party_gstin_fieldname = (
+            "billing_address_gstin"
+            if self.doc.doctype in SALES_DOCTYPES
+            else "supplier_gstin"
+        )
+        if self.doc.company_gstin == self.doc.get(party_gstin_fieldname):
             frappe.throw(
                 _(
-                    "e-Waybill cannot be generated because billing GSTIN is same as"
+                    "e-Waybill cannot be generated because party GSTIN is same as"
                     " company GSTIN"
                 ),
                 title=_("Invalid Data"),
@@ -1286,8 +1298,8 @@ class EWaybillData(GSTTransactionData):
     def validate_doctype_for_e_waybill(self):
         if self.doc.doctype not in PERMITTED_DOCTYPES:
             frappe.throw(
-                _("Only {0} are supported for e-Waybill actions").format(
-                    ", ".join(PERMITTED_DOCTYPES)
+                _("{0} is not supported for e-Waybill actions").format(
+                    self.doc.doctype
                 ),
                 title=_("Unsupported DocType"),
             )
@@ -1316,8 +1328,10 @@ class EWaybillData(GSTTransactionData):
         if now < extend_after or now > extend_before:
             frappe.throw(
                 _(
-                    "e-Waybill can be extended between 8 hours before expiry time and 8 hours after expiry time"
-                )
+                    "e-Waybill can be extended between 8 hours before expiry time and 8 hours after expiry time."
+                    "<br><br>Instead you can schedule the extension of e-Waybill."
+                ),
+                title=_("Cannot Extend Now"),
             )
 
         if (
@@ -1405,7 +1419,7 @@ class EWaybillData(GSTTransactionData):
         return hsn_wise_items.values()
 
     def update_item_details(self, item_details, item):
-        if not self.doc.is_reverse_charge:
+        if not self.doc.get("is_reverse_charge"):
             return
 
         for tax in GST_TAX_TYPES:
@@ -1440,11 +1454,13 @@ class EWaybillData(GSTTransactionData):
             ("Delivery Note", 0): {
                 "supply_type": "O",
                 "sub_supply_type": doc.get("_sub_supply_type", ""),
+                "sub_supply_desc": doc.get("_sub_supply_desc", ""),
                 "document_type": "CHL",
             },
             ("Delivery Note", 1): {
                 "supply_type": "I",
                 "sub_supply_type": doc.get("_sub_supply_type", ""),
+                "sub_supply_desc": doc.get("_sub_supply_desc", ""),
                 "document_type": "CHL",
             },
             ("Purchase Invoice", 0): {
@@ -1469,10 +1485,25 @@ class EWaybillData(GSTTransactionData):
                 "document_type": "CHL",
                 "sub_supply_desc": "Purchase Return",
             },
+            ("Stock Entry", 0): {
+                "supply_type": "O",
+                "sub_supply_type": doc.get("_sub_supply_type", ""),
+                "document_type": "CHL",
+            },
+            ("Subcontracting Receipt", 0): {
+                "supply_type": "I",
+                "sub_supply_type": doc.get("_sub_supply_type", ""),
+                "document_type": "CHL",
+            },
+            ("Subcontracting Receipt", 1): {
+                "supply_type": "O",
+                "sub_supply_type": doc.get("_sub_supply_type", ""),
+                "document_type": "CHL",
+            },
         }
 
         self.transaction_details.update(
-            default_supply_types.get((doc.doctype, doc.is_return), {})
+            default_supply_types.get((doc.doctype, doc.get("is_return") or 0), {})
         )
 
         if is_foreign_doc(self.doc):
@@ -1494,6 +1525,8 @@ class EWaybillData(GSTTransactionData):
             self.transaction_details.name = self.doc.bill_no or self.doc.name
 
     def set_party_address_details(self):
+        self.set_address_gstin_map()
+
         transaction_type = 1
         address = get_billing_shipping_address_map(self.doc)
         has_different_to_address = (
@@ -1530,14 +1563,18 @@ class EWaybillData(GSTTransactionData):
         to_party = self.transaction_details.party_name
         from_party = self.transaction_details.company_name
 
-        if self.doc.doctype in ("Purchase Invoice", "Purchase Receipt"):
+        if self.doc.doctype in (
+            "Purchase Invoice",
+            "Purchase Receipt",
+            "Subcontracting Receipt",
+        ):
             to_party, from_party = from_party, to_party
 
-        if self.doc.is_return:
+        if self.doc.get("is_return"):
             to_party, from_party = from_party, to_party
 
-        self.bill_to.legal_name = to_party
-        self.bill_from.legal_name = from_party
+        self.bill_to.legal_name = to_party or self.bill_to.address_title
+        self.bill_from.legal_name = from_party or self.bill_from.address_title
 
         if self.doc.gst_category == "SEZ":
             self.bill_to.state_number = 96
@@ -1598,6 +1635,9 @@ class EWaybillData(GSTTransactionData):
                 ("Purchase Receipt", 1): (REGISTERED_GSTIN, OTHER_GSTIN),
                 ("Delivery Note", 0): (REGISTERED_GSTIN, OTHER_GSTIN),
                 ("Delivery Note", 1): (OTHER_GSTIN, REGISTERED_GSTIN),
+                ("Stock Entry", 0): (REGISTERED_GSTIN, OTHER_GSTIN),
+                ("Subcontracting Receipt", 0): (OTHER_GSTIN, REGISTERED_GSTIN),
+                ("Subcontracting Receipt", 1): (REGISTERED_GSTIN, OTHER_GSTIN),
             }
 
             if self.bill_from.gstin == self.bill_to.gstin:
@@ -1612,11 +1652,12 @@ class EWaybillData(GSTTransactionData):
                 if address.gstin == "URP":
                     return address.gstin
 
-                return sandbox_gstin.get((self.doc.doctype, self.doc.is_return))[key]
+                return sandbox_gstin.get(
+                    (self.doc.doctype, self.doc.get("is_return") or 0)
+                )[key]
 
             self.bill_from.gstin = _get_sandbox_gstin(self.bill_from, 0)
             self.bill_to.gstin = _get_sandbox_gstin(self.bill_to, 1)
-
         data = {
             "userGstin": self.transaction_details.company_gstin,
             "supplyType": self.transaction_details.supply_type,

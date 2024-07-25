@@ -473,13 +473,13 @@ class TestEWaybill(FrappeTestCase):
         )
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(r"^(.*billing GSTIN is same as company GSTIN.*)$"),
+            re.compile(r"^(.*party GSTIN is same as company GSTIN.*)$"),
             EWaybillData(si).validate_applicability,
         )
 
     @responses.activate
     def test_validate_if_e_waybill_is_set(self):
-        """Test validdation if e-waybill not found"""
+        """Test validation if e-waybill not found"""
         si = self.create_sales_invoice_for("goods_item_with_ewaybill")
         self._generate_e_waybill(si.name)
 
@@ -655,7 +655,7 @@ class TestEWaybill(FrappeTestCase):
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             re.compile(
-                r"^(Only Sales Invoice, Purchase Invoice, Delivery Note, Purchase Receipt are supported.*)$"
+                r"""^(Purchase Order is not supported for e-Waybill actions)$"""
             ),
             EWaybillData,
             purchase_order,
@@ -1034,6 +1034,29 @@ class TestEWaybill(FrappeTestCase):
 
         delivery_note = create_transaction(**doc_args)
         return delivery_note
+
+    def _create_stock_entry(self, test_case):
+        """Generate Stock Entry to test e-Waybill functionalities"""
+        doc_args = self.e_waybill_test_data.get(test_case).get("kwargs")
+        doc_args.update({"doctype": "Stock Entry"})
+
+        stock_entry = create_transaction(**doc_args)
+        return stock_entry
+
+    @change_settings("GST Settings", {"enable_e_waybill_for_sc": 1})
+    @responses.activate
+    def test_e_waybill_for_stock_entry(self):
+        """Test to generate e-waybill for Stock Entry"""
+        se_data = self.e_waybill_test_data.get("stock_entry")
+
+        stock_entry = self._create_stock_entry("stock_entry")
+
+        self._generate_e_waybill(stock_entry.name, "Stock Entry", se_data)
+
+        self.assertDocumentEqual(
+            {"name": se_data.get("response_data").get("result").get("ewayBillNo")},
+            frappe.get_doc("e-Waybill Log", {"reference_name": stock_entry.name}),
+        )
 
 
 def update_dates_for_test_data(test_data):
