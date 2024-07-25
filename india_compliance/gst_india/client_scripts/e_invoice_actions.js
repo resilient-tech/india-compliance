@@ -52,7 +52,7 @@ frappe.ui.form.on("Sales Invoice", {
                         callback: async (r) => {
                             if (r.message?.error_type == "otp_requested") {
                                 await india_compliance.authenticate_otp(frm.doc.company_gstin);
-                                frappe.call({
+                                await frappe.call({
                                     method: "india_compliance.gst_india.utils.e_invoice.handle_duplicate_irn_error",
                                     args: r.message
                                 });
