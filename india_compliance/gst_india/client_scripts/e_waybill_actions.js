@@ -371,7 +371,7 @@ function get_generate_e_waybill_dialog(opts, frm) {
             fieldname: "gst_transporter_id",
             fieldtype: "Data",
             default:
-                frm.doc.gst_transporter_id?.length == 15
+                frm.doc.gst_transporter_id?.length === 15
                     ? frm.doc.gst_transporter_id
                     : "",
             onchange: () => validate_gst_transporter_id(d),
@@ -432,7 +432,7 @@ function get_generate_e_waybill_dialog(opts, frm) {
     ];
 
     if (frm.doctype === "Delivery Note") {
-        const same_gstin = frm.doc.billing_address_gstin == frm.doc.company_gstin;
+        const same_gstin = frm.doc.billing_address_gstin === frm.doc.company_gstin;
         let options;
 
         if (frm.doc.is_return) {
@@ -461,6 +461,7 @@ function get_generate_e_waybill_dialog(opts, frm) {
             fieldtype: "Select",
             options: options.join("\n"),
             default: options[0],
+            read_only: options.length === 1,
             reqd: 1,
         });
     }
@@ -811,7 +812,7 @@ function show_update_transporter_dialog(frm) {
                 reqd: 1,
                 default:
                     frm.doc.gst_transporter_id &&
-                        frm.doc.gst_transporter_id.length == 15
+                    frm.doc.gst_transporter_id.length === 15
                         ? frm.doc.gst_transporter_id
                         : "",
                 onchange: () => validate_gst_transporter_id(d),
@@ -1022,7 +1023,7 @@ async function show_extend_validity_dialog(frm) {
                 },
                 callback: () => frm.refresh(),
             });
-            d.hide();
+            if (can_extend_now) d.hide();
         },
     });
     if (!can_extend_now) {
