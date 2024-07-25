@@ -31,7 +31,7 @@ For a detailed overview of these features, please [refer to the documentation](h
 
 ## Installation
 
-For detailed instructions, please [refer to the documentation](http://localhost:5173/docs/getting-started/installation)
+For detailed instructions, please [refer to the documentation](https://docs.indiacompliance.app/docs/getting-started/installation)
 
 ## In-app Purchases
 
