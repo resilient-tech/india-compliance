@@ -71,7 +71,7 @@ CUSTOM_FIELDS = {
     ("Subcontracting Order", "Subcontracting Receipt"): [
         {
             "fieldname": "supplier_gstin",
-            "label": "Supplier GSTIN",
+            "label": "Job Worker GSTIN",
             "fieldtype": "Data",
             "insert_after": "address_display",
             "fetch_from": "supplier_address.gstin",
