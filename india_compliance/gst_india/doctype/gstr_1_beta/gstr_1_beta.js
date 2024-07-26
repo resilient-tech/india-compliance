@@ -38,8 +38,8 @@ const GSTR1_SubCategory = {
     HSN: "HSN Summary",
     DOC_ISSUE: "Document Issued",
 
-    SUPECOM_52: "TCS collected by E-commerce Operator u/s 52",
-    SUPECOM_9_5: "GST Payable on RCM by E-commerce Operator u/s 9(5)",
+    SUPECOM_52: "Liable to collect tax u/s 52(TCS)",
+    SUPECOM_9_5: "Liable to pay tax u/s 9(5)"
 };
 
 const INVOICE_TYPE = {
@@ -986,7 +986,7 @@ class TabManager {
             args[2]?.indent == 0
                 ? `<strong>${value}</strong>`
                 : isDescriptionCell
-                ? `<a href="#" class="description">
+                    ? `<a href="#" class="description">
                     <p style="padding-left: 15px">${value}</p>
                     </a>`
                     : value;
