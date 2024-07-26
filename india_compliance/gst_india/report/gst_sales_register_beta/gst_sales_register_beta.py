@@ -5,6 +5,7 @@ import frappe
 from frappe import _
 from frappe.utils import getdate
 
+from india_compliance.gst_india.utils.gstr_1 import GSTR1_Category
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
 
 
@@ -199,6 +200,16 @@ def get_columns(filters):
     )
 
     if filters.summary_by == "Summary by Item":
+        if gst_settings.enable_sales_through_ecommerce_operators:
+            columns.append(
+                {
+                    "label": _("E-Commerce GSTIN"),
+                    "fieldname": "ecommerce_gstin",
+                    "fieldtype": "Data",
+                    "width": 180,
+                }
+            )
+
         columns.append(
             {
                 "label": _("Item Code"),
@@ -300,7 +311,11 @@ def get_columns(filters):
             },
         ]
     )
-    if not filters.invoice_category:
+
+    if (
+        not filters.invoice_category
+        or filters.invoice_category == GSTR1_Category.SUPECOM.value
+    ):
         columns.append(
             {
                 "label": _("Invoice Category"),
@@ -309,13 +324,30 @@ def get_columns(filters):
                 "fieldtype": "Data",
             }
         )
-    if not filters.invoice_sub_category:
+
+    if (
+        not filters.invoice_sub_category
+        or filters.invoice_category == GSTR1_Category.SUPECOM.value
+    ):
         columns.append(
             {
                 "label": _("Invoice Sub Category"),
                 "fieldname": "invoice_sub_category",
                 "width": 120,
                 "fieldtype": "Data",
+            }
+        )
+
+    if (
+        filters.summary_by == "Summary by Item"
+        and gst_settings.enable_sales_through_ecommerce_operators
+    ):
+        columns.append(
+            {
+                "label": _("E-Commerce Supply Type"),
+                "fieldname": "ecommerce_supply_type",
+                "fieldtype": "Data",
+                "width": 250,
             }
         )
 

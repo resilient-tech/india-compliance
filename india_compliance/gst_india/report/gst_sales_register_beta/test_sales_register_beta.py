@@ -493,7 +493,7 @@ EXPECTED_OVERVIEW = [
         "total_cess_amount": 0.0,
     },
     {
-        "description": "Overlaping Invoices in Nil-Rated/Exempt/Non-GST",
+        "description": "Overlaping Invoices in Nil-Rated/Exempt/Non-GST and E-commerce Sales",
         "no_of_records": -5,
     },
 ]
