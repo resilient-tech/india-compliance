@@ -1,5 +1,6 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
+from itertools import combinations
 
 from pypika import Order
 
@@ -46,6 +47,10 @@ CATEGORY_CONDITIONS = {
         "category": "is_cdnur_invoice",
         "sub_category": "set_for_cdnur",
     },
+    GSTR1_Category.SUPECOM.value: {
+        "category": "is_ecommerce_sales_invoice",
+        "sub_category": "set_for_ecommerce_supply_type",
+    },
 }
 
 
@@ -80,6 +85,7 @@ class GSTR1Query:
                 self.si.posting_date,
                 IfNull(self.si.place_of_supply, "").as_("place_of_supply"),
                 self.si.is_reverse_charge,
+                IfNull(self.si.ecommerce_gstin, "").as_("ecommerce_gstin"),
                 self.si.is_export_with_gst,
                 self.si.is_return,
                 self.si.is_debit_note,
@@ -289,6 +295,9 @@ class GSTR1CategoryConditions(GSTR1Conditions):
             and (self.is_export(invoice) or self.is_b2cl_cn_dn(invoice))
         )
 
+    def is_ecommerce_sales_invoice(self, invoice):
+        return bool(invoice.ecommerce_gstin)
+
 
 class GSTR1Subcategory(GSTR1CategoryConditions):
 
@@ -339,6 +348,13 @@ class GSTR1Subcategory(GSTR1CategoryConditions):
 
         invoice.invoice_type = "B2CL"
         return
+
+    def set_for_ecommerce_supply_type(self, invoice):
+        if invoice.is_reverse_charge:
+            invoice.ecommerce_supply_type = GSTR1_SubCategory.SUPECOM_9_5.value
+            return
+
+        invoice.ecommerce_supply_type = GSTR1_SubCategory.SUPECOM_52.value
 
     def _set_invoice_type_for_b2b_and_cdnr(self, invoice):
         if invoice.gst_category == "Deemed Export":
@@ -396,9 +412,12 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
                 invoice["stock_uom"] = gst_uom
 
     def assign_categories(self, invoice):
+        if not invoice.invoice_sub_category:
+            self.set_invoice_category(invoice)
+            self.set_invoice_sub_category_and_type(invoice)
 
-        self.set_invoice_category(invoice)
-        self.set_invoice_sub_category_and_type(invoice)
+        if invoice.ecommerce_gstin and not invoice.ecommerce_supply_type:
+            self.set_for_ecommerce_supply_type(invoice)
 
     def set_invoice_category(self, invoice):
         for category, functions in CATEGORY_CONDITIONS.items():
@@ -467,19 +486,29 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
             elif invoice_sub_category == invoice.invoice_sub_category:
                 filtered_invoices.append(invoice)
 
+            elif invoice_sub_category == invoice.ecommerce_supply_type:
+                filtered_invoices.append(invoice)
+
+        self.process_invoices(invoices)
+
         return filtered_invoices
 
     def get_overview(self):
         final_summary = []
         sub_category_summary = self.get_sub_category_summary()
 
-        IGNORED_CATEGORIES = (
+        IGNORED_CATEGORIES = {
             GSTR1_Category.AT,
             GSTR1_Category.TXP,
             GSTR1_Category.DOC_ISSUE,
             GSTR1_Category.HSN,
-            GSTR1_Category.SUPECOM,
+        }
+
+        is_ecommerce_sales_enabled = frappe.get_cached_value(
+            "GST Settings", None, "enable_sales_through_ecommerce_operators"
         )
+        if not is_ecommerce_sales_enabled:
+            IGNORED_CATEGORIES.add(GSTR1_Category.SUPECOM)
 
         for category, sub_categories in CATEGORY_SUB_CATEGORY_MAPPING.items():
             if category in IGNORED_CATEGORIES:
@@ -522,15 +551,19 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
                 **self.AMOUNT_FIELDS,
             }
 
-        for row in invoices:
-            summary_row = summary[
-                row.get("invoice_sub_category", row["invoice_category"])
-            ]
+        def _update_summary_row(row, sub_category_field="invoice_sub_category"):
+            summary_row = summary[row.get(sub_category_field, row["invoice_category"])]
 
             for key in self.AMOUNT_FIELDS:
                 summary_row[key] += row[key]
 
             summary_row["unique_records"].add(row.invoice_no)
+
+        for row in invoices:
+            _update_summary_row(row)
+
+            if row.ecommerce_gstin:
+                _update_summary_row(row, "ecommerce_supply_type")
 
         for summary_row in summary.values():
             summary_row["no_of_records"] = len(summary_row["unique_records"])
@@ -539,24 +572,37 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
 
     def update_overlaping_invoice_summary(self, sub_category_summary, final_summary):
         nil_exempt = GSTR1_SubCategory.NIL_EXEMPT.value
+        supecom_52 = GSTR1_SubCategory.SUPECOM_52.value
+        supecom_9_5 = GSTR1_SubCategory.SUPECOM_9_5.value
 
         # Get Unique Taxable Invoices
         unique_invoices = set()
         for category, row in sub_category_summary.items():
-            if category == nil_exempt:
+            if category in (nil_exempt, supecom_52, supecom_9_5):
                 continue
 
             unique_invoices.update(row["unique_records"])
 
         # Get Overlaping Invoices
-        category_invoices = sub_category_summary[nil_exempt]["unique_records"]
-        overlaping_invoices = category_invoices.intersection(unique_invoices)
+        invoice_sets = [
+            sub_category_summary[nil_exempt]["unique_records"],
+            {
+                *sub_category_summary[supecom_52]["unique_records"],
+                *sub_category_summary[supecom_9_5]["unique_records"],
+            },
+            unique_invoices,
+        ]
+
+        overlaping_invoices = []
+
+        for set1, set2 in combinations(invoice_sets, 2):
+            overlaping_invoices.extend(set1.intersection(set2))
 
         # Update Summary
         if overlaping_invoices:
             final_summary.append(
                 {
-                    "description": "Overlaping Invoices in Nil-Rated/Exempt/Non-GST",
+                    "description": "Overlaping Invoices in Nil-Rated/Exempt/Non-GST and E-commerce Sales",
                     "no_of_records": -len(overlaping_invoices),
                 }
             )
