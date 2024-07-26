@@ -67,6 +67,26 @@ CUSTOM_FIELDS = {
             "insert_after": "total",
             "hide_border": 1,
         },
+        {
+            "fieldname": "section_break_ref_doc",
+            "fieldtype": "Section Break",
+            "insert_after": "bill_date",
+            "depends_on": "eval:doc.is_return !== 1",
+        },
+        {
+            "fieldname": "select_reference_documents",
+            "label": "Select Reference Documents",
+            "fieldtype": "Button",
+            "insert_after": "section_break_ref_doc",
+        },
+        {
+            "fieldname": "reference_doc",
+            "label": "Reference Documents",
+            "fieldtype": "Table",
+            "insert_after": "select_reference_documents",
+            "options": "Reference Document",
+            "depends_on": "eval:doc.is_return !== 1",
+        },
     ],
     ("Subcontracting Order", "Subcontracting Receipt"): [
         {
@@ -311,6 +331,26 @@ CUSTOM_FIELDS = {
             "insert_after": "ship_to_address",
             "read_only": 1,
             "is_virtual": 1,
+        },
+        {
+            "fieldname": "section_break_ref_doc",
+            "fieldtype": "Section Break",
+            "insert_after": "value_difference",
+            "depends_on": "eval:doc.purpose === 'Material Transfer' && doc.subcontracting_order",
+        },
+        {
+            "fieldname": "select_reference_documents",
+            "label": "Select Reference Documents",
+            "fieldtype": "Button",
+            "insert_after": "section_break_ref_doc",
+        },
+        {
+            "fieldname": "reference_doc",
+            "label": "Reference Documents",
+            "fieldtype": "Table",
+            "insert_after": "select_reference_documents",
+            "options": "Reference Document",
+            "depends_on": "eval:doc.purpose === 'Material Transfer' && doc.subcontracting_order",
         },
     ],
     "Company": [
