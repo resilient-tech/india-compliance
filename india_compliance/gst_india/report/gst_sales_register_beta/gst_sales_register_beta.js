@@ -16,6 +16,10 @@ const INVOICE_TYPE = {
     "Credit/Debit Notes (Unregistered)": ["CDNUR"],
 };
 
+if (gst_settings.enable_sales_through_ecommerce_operators) {
+    INVOICE_TYPE["Supplies made through E-commerce Operators"] = ["Liable to pay tax u/s 9(5)", "Liable to collect tax u/s 52(TCS)"]
+}
+
 frappe.query_reports["GST Sales Register Beta"] = {
     onload: set_sub_category_options,
 
@@ -30,6 +34,7 @@ frappe.query_reports["GST Sales Register Beta"] = {
                 report.set_filter_value({
                     company_gstin: "",
                 });
+                report.refresh();
             },
             get_query: function () {
                 return {
@@ -70,11 +75,11 @@ frappe.query_reports["GST Sales Register Beta"] = {
             fieldtype: "Autocomplete",
             fieldname: "invoice_category",
             label: __("Invoice Category"),
-            options:
-                "B2B, SEZ, DE\nB2C (Large)\nExports\nB2C (Others)\nNil-Rated, Exempted, Non-GST\nCredit/Debit Notes (Registered)\nCredit/Debit Notes (Unregistered)",
-            on_change(report) {
+            options: Object.keys(INVOICE_TYPE),
+            on_change: report => {
                 report.set_filter_value("invoice_sub_category", "");
                 set_sub_category_options(report);
+                report.refresh();
             },
             depends_on:
                 'eval:doc.summary_by=="Summary by HSN" || doc.summary_by=="Summary by Item"',
@@ -131,7 +136,7 @@ custom_report_column_total = function (...args) {
     if (column_field === "description") return;
 
     const total = this.datamanager.data.reduce((acc, row) => {
-        if (row.indent !== 1) acc += row[column_field] || 0;
+        if (row.indent !== 1 && row.description !== "Supplies made through E-commerce Operators") acc += row[column_field] || 0;
         return acc;
     }, 0);
 
