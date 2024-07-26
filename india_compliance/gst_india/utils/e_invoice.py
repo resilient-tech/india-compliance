@@ -204,18 +204,18 @@ def handle_duplicate_irn_error(
 
     if isinstance(irn_data, str):
         irn_data = json.loads(irn_data, object_hook=frappe._dict)
-
-    if isinstance(current_invoice_amount, str):
         current_invoice_amount = flt(current_invoice_amount)
 
     doc = doc or load_doc("Sales Invoice", docname, "submit")
     api = EInvoiceAPI(doc)
     response = api.get_e_invoice_by_irn(irn_data.Irn)
-    fetch_from_gst_portal = api.settings.fetch_e_invoice_details_from_gst_portal
 
     # Handle error 2283:
     # IRN details cannot be provided as it is generated more than 2 days ago
-    if response.error_code == "2283" and fetch_from_gst_portal:
+    if (
+        response.error_code == "2283"
+        and api.settings.fetch_e_invoice_details_from_gst_portal
+    ):
         response = TaxpayerEInvoiceAPI(doc).get_irn_details(irn_data.Irn)
 
         if response.error_type == "otp_requested":
@@ -225,7 +225,6 @@ def handle_duplicate_irn_error(
                     "current_gstin": current_gstin,
                     "current_invoice_amount": current_invoice_amount,
                     "docname": doc.name,
-                    "fetch_from_gst_portal": fetch_from_gst_portal,
                 }
             )
 
