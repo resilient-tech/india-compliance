@@ -769,7 +769,7 @@ class TestEInvoice(FrappeTestCase):
         # Assert if Invoice amount has changed
         self.assertRaisesRegex(
             frappe.ValidationError,
-            re.compile(r"^(e-Invoice is already available against Invoice.*)$"),
+            re.compile(r"^(An e-Invoice already exists for Invoice.*)$"),
             generate_e_invoice,
             si.name,
         )
