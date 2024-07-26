@@ -144,7 +144,6 @@ def generate_e_invoice(docname, throw=True, force=False):
                 current_gstin=current_gstin,
                 current_invoice_amount=current_invoice_amount,
                 doc=doc,
-                fetch_from_gst_portal=settings.fetch_e_invoice_details_from_gst_portal,
             )
 
         # Handle Invalid GSTIN Error
@@ -193,7 +192,6 @@ def handle_duplicate_irn_error(
     current_invoice_amount,
     doc=None,
     docname=None,
-    fetch_from_gst_portal=False,
 ):
     """
     Handle Duplicate IRN errors by fetching the IRN details and comparing with the current invoice.
@@ -210,11 +208,10 @@ def handle_duplicate_irn_error(
     if isinstance(current_invoice_amount, str):
         current_invoice_amount = flt(current_invoice_amount)
 
-    # TODO: Fetch from GST Portal as Bool from frontend
-
     doc = doc or load_doc("Sales Invoice", docname, "submit")
     api = EInvoiceAPI(doc)
     response = api.get_e_invoice_by_irn(irn_data.Irn)
+    fetch_from_gst_portal = api.settings.fetch_e_invoice_details_from_gst_portal
 
     # Handle error 2283:
     # IRN details cannot be provided as it is generated more than 2 days ago
