@@ -140,7 +140,7 @@ class GovExcel(DataProcessor):
         """
         self.gstin = gstin
         self.period = period
-        gstr_1_log = frappe.get_doc("GSTR-1 Log", f"{period}-{gstin}")
+        gstr_1_log = frappe.get_doc("GST Return Log", f"GSTR1-{period}-{gstin}")
 
         self.file_field = "filed" if gstr_1_log.filed else "books"
         data = gstr_1_log.load_data(self.file_field)[self.file_field]
@@ -735,7 +735,9 @@ class BooksExcel(DataProcessor):
         self.year = year
 
         self.period = get_period(month_or_quarter, year)
-        gstr1_log = frappe.get_doc("GSTR-1 Log", f"{self.period}-{company_gstin}")
+        gstr1_log = frappe.get_doc(
+            "GST Return Log", f"GSTR1-{self.period}-{company_gstin}"
+        )
 
         self.data = self.process_data(gstr1_log.load_data("books")["books"])
 
@@ -1149,7 +1151,9 @@ class ReconcileExcel:
         self.year = year
 
         self.period = get_period(month_or_quarter, year)
-        gstr1_log = frappe.get_doc("GSTR-1 Log", f"{self.period}-{company_gstin}")
+        gstr1_log = frappe.get_doc(
+            "GST Return Log", f"GSTR1-{self.period}-{company_gstin}"
+        )
 
         self.summary = gstr1_log.load_data("reconcile_summary")["reconcile_summary"]
         data = gstr1_log.load_data("reconcile")["reconcile"]
@@ -2049,7 +2053,7 @@ def download_gstr_1_json(
         delete_missing = json.loads(delete_missing)
 
     period = get_period(month_or_quarter, year)
-    gstr1_log = frappe.get_doc("GSTR-1 Log", f"{period}-{company_gstin}")
+    gstr1_log = frappe.get_doc("GST Return Log", f"GSTR1-{period}-{company_gstin}")
 
     data = gstr1_log.get_json_for("books")
     data = data.update(data.pop("aggregate_data", {}))

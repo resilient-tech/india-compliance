@@ -499,7 +499,7 @@ def update_not_applicable_status(e_invoice_applicability_date=None, company=None
 def restrict_gstr_1_transaction_for(posting_date, company_gstin, gst_settings=None):
     """
     Check if the user is allowed to modify transactions before the GSTR-1 filing date
-    Additionally, update the `is_not_latest_gstr1_data` field in the GSTR-1 Log
+    Additionally, update the `is_not_latest_gstr1_data` field in the GST Return Log
     """
     posting_date = getdate(posting_date)
 
@@ -536,7 +536,9 @@ def restrict_gstr_1_transaction_for(posting_date, company_gstin, gst_settings=No
 def update_is_not_latest_gstr1_data(posting_date, company_gstin):
     period = posting_date.strftime("%m%Y")
 
-    frappe.db.set_value("GSTR-1 Log", f"{period}-{company_gstin}", "is_latest_data", 0)
+    frappe.db.set_value(
+        "GST Return Log", f"GSTR1-{period}-{company_gstin}", "is_latest_data", 0
+    )
 
     frappe.publish_realtime(
         "is_not_latest_data",

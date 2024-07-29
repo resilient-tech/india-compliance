@@ -132,9 +132,9 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "GSTR-1 Log",
+   "label": "GST Return Log",
    "link_count": 0,
-   "link_to": "GSTR-1 Log",
+   "link_to": "GST Return Log",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -229,7 +229,7 @@
    "type": "Link"
   }
  ],
- "modified": "2024-06-08 16:54:55.015726",
+ "modified": "2024-07-14 18:01:43.058590",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST India",
