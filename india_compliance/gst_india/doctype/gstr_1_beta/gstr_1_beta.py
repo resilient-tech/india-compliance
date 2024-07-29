@@ -5,7 +5,6 @@ from datetime import datetime
 
 import frappe
 from frappe import _
-from frappe.desk.form.load import run_onload
 from frappe.model.document import Document
 from frappe.query_builder.functions import Date, Sum
 from frappe.utils import get_last_day, getdate
@@ -17,18 +16,13 @@ from india_compliance.gst_india.utils.gstr_utils import request_otp
 
 class GSTR1Beta(Document):
 
-    def onload(self):
-        data = getattr(self, "data", None)
-        if data is not None:
-            self.set_onload("data", data)
-
     @frappe.whitelist()
     def recompute_books(self):
-        self.validate(recompute_books=True)
+        self.generate_gstr1(recompute_books=True)
 
     @frappe.whitelist()
     def sync_with_gstn(self, sync_for):
-        self.validate(sync_for=sync_for, recompute_books=True)
+        self.generate_gstr1(sync_for=sync_for, recompute_books=True)
 
     @frappe.whitelist()
     def mark_as_filed(self):
@@ -44,22 +38,24 @@ class GSTR1Beta(Document):
 
         else:
             frappe.db.set_value(
-                "GSTR-1 Log",
-                f"{period}-{self.company_gstin}",
+                "GST Return Log",
+                f"GSTR1-{period}-{self.company_gstin}",
                 "filing_status",
                 return_status,
             )
 
-        self.validate()
-        run_onload(self)
+        self.generate_gstr1()
 
-    def validate(self, sync_for=None, recompute_books=False):
+    @frappe.whitelist()
+    def generate_gstr1(self, sync_for=None, recompute_books=False):
         period = get_period(self.month_or_quarter, self.year)
 
         # get gstr1 log
-        if log_name := frappe.db.exists("GSTR-1 Log", f"{period}-{self.company_gstin}"):
+        if log_name := frappe.db.exists(
+            "GST Return Log", f"GSTR1-{period}-{self.company_gstin}"
+        ):
 
-            gstr1_log = frappe.get_doc("GSTR-1 Log", log_name)
+            gstr1_log = frappe.get_doc("GST Return Log", log_name)
 
             message = None
             if gstr1_log.status == "In Progress":
@@ -78,10 +74,11 @@ class GSTR1Beta(Document):
                 return
 
         else:
-            gstr1_log = frappe.new_doc("GSTR-1 Log")
+            gstr1_log = frappe.new_doc("GST Return Log")
             gstr1_log.company = self.company
             gstr1_log.gstin = self.company_gstin
             gstr1_log.return_period = period
+            gstr1_log.return_type = "GSTR1"
             gstr1_log.insert()
 
         settings = frappe.get_cached_doc("GST Settings")
@@ -97,9 +94,10 @@ class GSTR1Beta(Document):
             data = gstr1_log.load_data()
 
             if data:
-                self.data = data
-                self.data["status"] = gstr1_log.filing_status or "Not Filed"
+                data = data
+                data["status"] = gstr1_log.filing_status or "Not Filed"
                 gstr1_log.update_status("Generated")
+                self.on_generate(data)
                 return
 
         # request OTP
@@ -107,17 +105,18 @@ class GSTR1Beta(Document):
             self.company_gstin
         ):
             request_otp(self.company_gstin)
-            self.data = "otp_requested"
+            data = "otp_requested"
+            self.on_generate(data)
             return
 
         self.gstr1_log = gstr1_log
 
         # generate gstr1
         gstr1_log.update_status("In Progress")
-        frappe.enqueue(self.generate_gstr1, queue="short")
+        frappe.enqueue(self._generate_gstr1, queue="short")
         frappe.msgprint(_("GSTR-1 is being prepared"), alert=True)
 
-    def generate_gstr1(self):
+    def _generate_gstr1(self):
         """
         Try to generate GSTR-1 data. Wrapper for generating GSTR-1 data
         """
@@ -144,11 +143,17 @@ class GSTR1Beta(Document):
 
             raise e
 
-    def on_generate(self, data, filters):
+    def on_generate(self, data, filters=None):
         """
         Once data is generated, update the status and publish the data
         """
-        self.gstr1_log.db_set({"generation_status": "Generated", "is_latest_data": 1})
+        if not filters:
+            filters = self
+
+        if getattr(self, "gstr1_log", None):
+            self.gstr1_log.db_set(
+                {"generation_status": "Generated", "is_latest_data": 1}
+            )
 
         frappe.publish_realtime(
             "gstr1_data_prepared",
