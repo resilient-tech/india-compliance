@@ -203,7 +203,7 @@ frappe.ui.form.on(DOCTYPE, {
         else frm.page.clear_indicator();
     },
 
-    async load_gstr1_data(frm) {
+    load_gstr1_data(frm) {
         const data = frm.doc.__gst_data;
         if (!frm._otp_requested && data == "otp_requested") {
             frm._otp_requested = true;
@@ -737,7 +737,7 @@ class TabManager {
                 this.filter_data(this.data[category], filters),
                 this.category_columns
             );
-            this.set_title(category);
+            this.set_title(category, null, true);
         } else if (view === "Summary") {
             this.setup_datatable(
                 this.wrapper,
