@@ -44,7 +44,7 @@ class GSTReturnLog(GenerateGSTR1, Document):
     def get_json_for(self, file_field):
         try:
             if file := get_file_doc(self.doctype, self.name, file_field):
-                return get_decompressed_data(file.get_content(encodings=[]))
+                return get_decompressed_data(file.get_content())
 
         except FileNotFoundError:
             # say File not restored
@@ -87,7 +87,7 @@ class GSTReturnLog(GenerateGSTR1, Document):
             new_json = json_data
 
         else:
-            new_json = get_decompressed_data(file.get_content(encodings=[]))
+            new_json = get_decompressed_data(file.get_content())
             new_json.update(json_data)
 
         content = get_compressed_data(new_json)
