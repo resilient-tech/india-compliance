@@ -16,3 +16,6 @@ def execute():
 
     # Drop the old table
     frappe.db.delete("GSTR-1 Log")
+
+    # Clear all fields saved in GSTR-1 Beta
+    frappe.db.delete("Singles", {"doctype": "GSTR-1 Beta"})
