@@ -111,7 +111,7 @@ def save_gstr_1(gstin, return_period, json_data, return_type):
 
     mapped_data = convert_to_internal_data_format(json_data)
 
-    gstr1_log = frappe.get_doc("GSTR-1 Log", f"{return_period}-{gstin}")
+    gstr1_log = frappe.get_doc("GST Return Log", f"GSTR1-{return_period}-{gstin}")
     gstr1_log.update_json_for(data_field, mapped_data, overwrite=False)
 
 
