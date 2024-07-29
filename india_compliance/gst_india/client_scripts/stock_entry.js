@@ -111,6 +111,23 @@ frappe.ui.form.on(DOCTYPE, {
     taxes_and_charges(frm) {
         frm.taxes_controller.update_taxes(frm);
     },
+
+    async select_original_doc_ref(frm) {
+        const data = [];
+        frappe.db
+            .get_list(DOCTYPE, {
+                filters: {
+                    subcontracting_order: ["=", frm.doc.subcontracting_order],
+                    purpose: ["=", "Send to Subcontractor"],
+                },
+            })
+            .then(res => {
+                res.forEach(row => {
+                    data.push({ Doctype: DOCTYPE, Name: row.name });
+                });
+            });
+        india_compliance.render_data_table(this, frm, "doc_references", data);
+    },
 });
 
 function set_address_display_events() {

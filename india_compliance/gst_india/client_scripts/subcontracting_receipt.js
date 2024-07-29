@@ -1,6 +1,7 @@
-setup_e_waybill_actions("Subcontracting Receipt");
+DOCTYPE = "Subcontracting Receipt";
+setup_e_waybill_actions(DOCTYPE);
 
-frappe.ui.form.on("Subcontracting Receipt", {
+frappe.ui.form.on(DOCTYPE, {
     setup(frm) {
         frm.set_query("taxes_and_charges", function () {
             return {
@@ -47,6 +48,42 @@ frappe.ui.form.on("Subcontracting Receipt", {
                 },
                 10
             );
+    },
+
+    async select_original_doc_ref(frm) {
+        const data = [];
+        frappe.db
+            .get_list("Stock Entry", {
+                filters: [
+                    [
+                        "Stock Entry Detail",
+                        "item_code",
+                        "in",
+                        Array.from(frm.doc.supplied_items, row => row.rm_item_code),
+                    ],
+                    ["purpose", "=", "Send to Subcontractor"],
+                ],
+                group_by: "name",
+            })
+            .then(res => {
+                res.forEach(row => {
+                    data.push({ Doctype: "Stock Entry", Name: row.name });
+                });
+            });
+        frappe.db
+            .get_list(DOCTYPE, {
+                filters: {
+                    is_return: ["is", "set"],
+                    supplier: ["=", frm.doc.supplier],
+                },
+                fields: ["name"],
+            })
+            .then(res => {
+                res.forEach(row => {
+                    data.push({ Doctype: DOCTYPE, Name: row.name });
+                });
+            });
+        india_compliance.render_data_table(this, frm, "doc_references", data);
     },
 
     taxes_and_charges(frm) {
