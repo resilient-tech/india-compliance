@@ -237,6 +237,7 @@ doc_events = {
     },
     "Subcontracting Order": {
         "validate": "india_compliance.gst_india.overrides.subcontracting_transaction.validate",
+        "after_mapping": "india_compliance.gst_india.overrides.subcontracting_transaction.after_mapping",
     },
     "Subcontracting Receipt": {
         "onload": "india_compliance.gst_india.overrides.subcontracting_transaction.onload",
