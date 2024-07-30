@@ -74,8 +74,8 @@ CUSTOM_FIELDS = {
             "depends_on": "eval:doc.is_return !== 1",
         },
         {
-            "fieldname": "select_original_doc_ref",
-            "label": "Select Original Document Reference",
+            "fieldname": "fetch_original_doc_ref",
+            "label": "Fetch Original Document Reference",
             "fieldtype": "Button",
             "insert_after": "section_break_ref_doc",
         },
@@ -83,9 +83,8 @@ CUSTOM_FIELDS = {
             "fieldname": "doc_references",
             "label": "Original Document References",
             "fieldtype": "Table",
-            "insert_after": "select_original_doc_ref",
+            "insert_after": "fetch_original_doc_ref",
             "options": "Dynamic Link",
-            "depends_on": "eval:doc.is_return !== 1",
         },
     ],
     ("Subcontracting Order", "Subcontracting Receipt"): [
@@ -339,8 +338,8 @@ CUSTOM_FIELDS = {
             "depends_on": "eval:doc.purpose === 'Material Transfer' && doc.subcontracting_order",
         },
         {
-            "fieldname": "select_original_doc_ref",
-            "label": "Select Original Document Reference",
+            "fieldname": "fetch_original_doc_ref",
+            "label": "Fetch Original Document Reference",
             "fieldtype": "Button",
             "insert_after": "section_break_ref_doc",
         },
@@ -348,9 +347,8 @@ CUSTOM_FIELDS = {
             "fieldname": "doc_references",
             "label": "Original Document References",
             "fieldtype": "Table",
-            "insert_after": "select_original_doc_ref",
+            "insert_after": "fetch_original_doc_ref",
             "options": "Dynamic Link",
-            "depends_on": "eval:doc.purpose === 'Material Transfer' && doc.subcontracting_order",
         },
     ],
     "Company": [

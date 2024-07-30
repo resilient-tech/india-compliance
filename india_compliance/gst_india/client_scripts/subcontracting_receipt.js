@@ -67,40 +67,22 @@ frappe.ui.form.on(DOCTYPE, {
             );
     },
 
-    async select_original_doc_ref(frm) {
-        const data = [];
-        frappe.db
-            .get_list("Stock Entry", {
-                filters: [
-                    [
-                        "Stock Entry Detail",
-                        "item_code",
-                        "in",
-                        Array.from(frm.doc.supplied_items, row => row.rm_item_code),
-                    ],
-                    ["purpose", "=", "Send to Subcontractor"],
-                ],
-                group_by: "name",
-            })
-            .then(res => {
-                res.forEach(row => {
-                    data.push({ Doctype: "Stock Entry", Name: row.name });
+    async fetch_original_doc_ref(frm) {
+        await frappe.call({
+            method: "india_compliance.gst_india.overrides.subcontracting_transaction.get_original_doc_ref_data",
+            args: {
+                supplier: frm.doc.supplier,
+                supplied_items: frm.doc.supplied_items.map(row => row.rm_item_code),
+            },
+            callback: function (r) {
+                r["message"].forEach(docs => {
+                    let row = frm.add_child("doc_references");
+                    row.link_doctype = docs.doctype;
+                    row.link_name = docs.name;
                 });
-            });
-        frappe.db
-            .get_list(DOCTYPE, {
-                filters: {
-                    is_return: ["is", "set"],
-                    supplier: ["=", frm.doc.supplier],
-                },
-                fields: ["name"],
-            })
-            .then(res => {
-                res.forEach(row => {
-                    data.push({ Doctype: DOCTYPE, Name: row.name });
-                });
-            });
-        india_compliance.render_data_table(this, frm, "doc_references", data);
+                frm.refresh_field("doc_references");
+            },
+        });
     },
 
     taxes_and_charges(frm) {

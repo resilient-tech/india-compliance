@@ -210,3 +210,36 @@ def set_address_display(doc):
     for address in adddress_fields:
         if doc.get(address):
             setattr(doc, address + "_display", get_address_display(doc.get(address)))
+
+
+@frappe.whitelist()
+def get_original_doc_ref_data(supplier, supplied_items):
+    data = {}
+    data["Subcontracting Receipt"] = frappe.db.get_all(
+        "Subcontracting Receipt",
+        filters={
+            "is_return": ["is", "set"],
+            "supplier": ["=", supplier],
+        },
+    )
+
+    data["Stock Entry"] = frappe.db.get_all(
+        "Stock Entry",
+        filters=[
+            ["Stock Entry Detail", "item_code", "in", supplied_items],
+            ["purpose", "=", "Send to Subcontractor"],
+        ],
+        group_by="name",
+    )
+
+    res = []
+    for doctype, values in data.items():
+        for row in values:
+            res.append(
+                {
+                    "name": row.name,
+                    "doctype": doctype,
+                }
+            )
+    return res
+
