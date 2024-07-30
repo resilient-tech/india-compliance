@@ -351,7 +351,7 @@ class PurchaseInvoice:
         self.__dict__.update(kwargs)
 
         self.PI = frappe.qb.DocType("Purchase Invoice")
-        self.PI_TAX = frappe.qb.DocType("Purchase Taxes and Charges")
+        self.PI_ITEM = frappe.qb.DocType("Purchase Invoice Item")
 
     def get_all(self, additional_fields=None, names=None, only_names=False):
         query = self.get_query(additional_fields)
@@ -409,32 +409,18 @@ class PurchaseInvoice:
         return BaseUtil.get_dict_for_key("supplier_gstin", data)
 
     def get_query(self, additional_fields=None, is_return=False):
-        PI_ITEM = frappe.qb.DocType("Purchase Invoice Item")
-
         fields = self.get_fields(additional_fields, is_return)
-        pi_item = (
-            frappe.qb.from_(PI_ITEM)
-            .select(
-                Abs(Sum(PI_ITEM.taxable_value)).as_("taxable_value"),
-                PI_ITEM.parent,
-            )
-            .groupby(PI_ITEM.parent)
-        )
 
         query = (
             frappe.qb.from_(self.PI)
-            .left_join(self.PI_TAX)
-            .on(self.PI_TAX.parent == self.PI.name)
-            .left_join(pi_item)
-            .on(pi_item.parent == self.PI.name)
+            .left_join(self.PI_ITEM)
+            .on(self.PI_ITEM.parent == self.PI.name)
             .where(self.PI.docstatus == 1)
             .where(IfNull(self.PI.reconciliation_status, "") != "Not Applicable")
             .where(self.PI.is_opening == "NO")
-            .where(self.PI_TAX.parenttype == "Purchase Invoice")
             .groupby(self.PI.name)
             .select(
                 *fields,
-                pi_item.taxable_value,
                 ConstantColumn("Purchase Invoice").as_("doctype"),
             )
         )
@@ -451,7 +437,8 @@ class PurchaseInvoice:
 
     def get_fields(self, additional_fields=None, is_return=False):
         tax_fields = [
-            self.query_tax_amount(tax_type).as_(tax_type) for tax_type in GST_TAX_TYPES
+            self.query_tax_amount(f"{tax_type}_amount").as_(tax_type)
+            for tax_type in GST_TAX_TYPES
         ]
 
         fields = [
@@ -461,6 +448,7 @@ class PurchaseInvoice:
             "bill_no",
             "place_of_supply",
             "is_reverse_charge",
+            Abs(Sum(self.PI_ITEM.taxable_value)).as_("taxable_value"),
             *tax_fields,
         ]
 
@@ -484,17 +472,8 @@ class PurchaseInvoice:
 
         return fields
 
-    def query_tax_amount(self, gst_tax_type):
-        return Abs(
-            Sum(
-                Case()
-                .when(
-                    self.PI_TAX.gst_tax_type == gst_tax_type,
-                    self.PI_TAX.base_tax_amount_after_discount_amount,
-                )
-                .else_(0)
-            )
-        )
+    def query_tax_amount(self, field):
+        return Abs(Sum(getattr(self.PI_ITEM, field)))
 
     @staticmethod
     def query_matched_purchase_invoice(from_date=None, to_date=None):
@@ -520,7 +499,7 @@ class BillOfEntry:
         self.__dict__.update(kwargs)
 
         self.BOE = frappe.qb.DocType("Bill of Entry")
-        self.BOE_TAX = frappe.qb.DocType("Bill of Entry Taxes")
+        self.BOE_ITEM = frappe.qb.DocType("Bill of Entry Item")
         self.PI = frappe.qb.DocType("Purchase Invoice")
 
     def get_all(self, additional_fields=None, names=None, only_names=False):
@@ -577,8 +556,8 @@ class BillOfEntry:
 
         query = (
             frappe.qb.from_(self.BOE)
-            .left_join(self.BOE_TAX)
-            .on(self.BOE_TAX.parent == self.BOE.name)
+            .left_join(self.BOE_ITEM)
+            .on(self.BOE_ITEM.parent == self.BOE.name)
             .join(self.PI)
             .on(self.BOE.purchase_invoice == self.PI.name)
             .where(self.BOE.docstatus == 1)
@@ -594,7 +573,8 @@ class BillOfEntry:
 
     def get_fields(self, additional_fields=None):
         tax_fields = [
-            self.query_tax_amount(tax_type).as_(tax_type) for tax_type in GST_TAX_TYPES
+            self.query_tax_amount(f"{tax_type}_amount").as_(tax_type)
+            for tax_type in GST_TAX_TYPES
         ]
 
         fields = [
@@ -629,17 +609,8 @@ class BillOfEntry:
 
         return fields
 
-    def query_tax_amount(self, gst_tax_type):
-        return Abs(
-            Sum(
-                Case()
-                .when(
-                    self.BOE_TAX.gst_tax_type == gst_tax_type,
-                    self.BOE_TAX.tax_amount,
-                )
-                .else_(0)
-            )
-        )
+    def query_tax_amount(self, field):
+        return Abs(Sum(getattr(self.BOE_ITEM, field)))
 
     @staticmethod
     def query_matched_bill_of_entry(from_date=None, to_date=None):
