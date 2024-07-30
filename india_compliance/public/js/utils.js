@@ -121,7 +121,7 @@ Object.assign(india_compliance, {
 
         if (!message || message == "") return field.set_description("");
 
-        const STATUS_COLORS = { 'Linked': "green", 'Not-Linked': "red", "Not an Individual Taxpayer" : "red",
+        const STATUS_COLORS = { 'Linked': "green", 'Not-Linked': "red", "Not an Individual Taxpayer" : "green",
             "Invalid PAN" : "red" };
         pan_status = `<div class="d-flex indicator ${STATUS_COLORS[message] || "orange"}">
                     Status:&nbsp;<strong>${message}</strong>
