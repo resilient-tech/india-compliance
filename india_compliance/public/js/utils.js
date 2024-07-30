@@ -110,6 +110,26 @@ Object.assign(india_compliance, {
         return message;
     },
 
+    async set_pan_status(field){
+        const pan = field.value;
+        if (!pan || pan.length !== 10) return field.set_description("");
+
+        const { message } = await frappe.call({
+            method: "india_compliance.gst_india.overrides.party.validate_pancard_status",
+            args: { pan },
+        });
+
+        if (!message || message == "") return field.set_description("");
+
+        const STATUS_COLORS = { 'Linked': "green", 'Not-Linked': "red", "Not an Individual Taxpayer" : "red",
+            "Invalid PAN" : "red" };
+        pan_status = `<div class="d-flex indicator ${STATUS_COLORS[message] || "orange"}">
+                    Status:&nbsp;<strong>${message}</strong>
+                </div>`;
+
+        field.set_description(pan_status);
+    },
+
     validate_gst_transporter_id(transporter_id) {
         if (!transporter_id || transporter_id.length !== 15) return;
 
