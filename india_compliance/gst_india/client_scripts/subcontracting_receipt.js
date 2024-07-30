@@ -26,6 +26,23 @@ frappe.ui.form.on(DOCTYPE, {
                 return { filters: { country: "India", disabled: 0 } };
             });
         });
+
+        frm.set_query("link_doctype", "doc_references", function (doc, cdt, cdn) {
+            return {
+                filters: {
+                    name: ["in", [doc.doctype, "Stock Entry"]],
+                },
+            };
+        });
+
+        frm.set_query("link_name", "doc_references", function (doc, cdt, cdn) {
+            return {
+                filters: {
+                    supplier: ["=", frm.doc.supplier],
+                    docstatus: 1,
+                },
+            };
+        });
     },
     onload(frm) {
         frm.taxes_controller = new india_compliance.taxes_controller(frm, {

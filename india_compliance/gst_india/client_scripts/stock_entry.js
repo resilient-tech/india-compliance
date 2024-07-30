@@ -37,6 +37,22 @@ frappe.ui.form.on(DOCTYPE, {
             __("Bill To (same as Supplier Address)"),
             __("Bill To")
         );
+
+        frm.set_query("link_doctype", "doc_references", function (doc, cdt, cdn) {
+            return {
+                filters: {
+                    name: ["=", doc.doctype],
+                },
+            };
+        });
+
+        frm.set_query("link_name", "doc_references", function (doc, cdt, cdn) {
+            return {
+                filters: {
+                    docstatus: 1,
+                },
+            };
+        });
     },
 
     onload(frm) {
