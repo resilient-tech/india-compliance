@@ -71,6 +71,15 @@ def validate(doc, method=None):
     if ignore_gst_validation_for_subcontracting(doc):
         return
 
+    if doc.doctype in ("Stock Entry", "Subcontracting Receipt"):
+        if not doc.doc_references:
+            frappe.throw(
+                _("Please Select Original Document Reference for ITC-04 Reporting"),
+                title=_("Mandatory Field"),
+            )
+        else:
+            remove_duplicates(doc)
+
     field_map = (
         STOCK_ENTRY_FIELD_MAP
         if doc.doctype == "Stock Entry"
@@ -243,3 +252,18 @@ def get_original_doc_ref_data(supplier, supplied_items):
             )
     return res
 
+
+def remove_duplicates(doc):
+    references, duplicate = [], False
+    for row in doc.doc_references:
+        ref = (row.link_doctype, row.link_name)
+
+        if ref not in references:
+            references.append(ref)
+        else:
+            duplicate = True
+
+    if duplicate:
+        doc.doc_references = []
+        for row in references:
+            doc.append("doc_references", dict(link_doctype=row[0], link_name=row[1]))
