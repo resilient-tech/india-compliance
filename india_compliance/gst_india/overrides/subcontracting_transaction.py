@@ -80,6 +80,9 @@ def validate(doc, method=None):
         else:
             remove_duplicates(doc)
 
+    if doc.doctype == "Stock Entry" and doc.purpose != "Send to Subcontractor":
+        return
+
     field_map = (
         STOCK_ENTRY_FIELD_MAP
         if doc.doctype == "Stock Entry"
@@ -202,9 +205,6 @@ class SubcontractingGSTAccounts(GSTAccounts):
 
 
 def ignore_gst_validation_for_subcontracting(doc):
-    if doc.doctype == "Stock Entry" and doc.purpose != "Send to Subcontractor":
-        return True
-
     return ignore_gst_validations(doc)
 
 
