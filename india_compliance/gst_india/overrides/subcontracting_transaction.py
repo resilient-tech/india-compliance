@@ -8,7 +8,6 @@ from india_compliance.gst_india.overrides.sales_invoice import (
 from india_compliance.gst_india.overrides.transaction import (
     GSTAccounts,
     get_place_of_supply,
-    get_tax_template,
     ignore_gst_validations,
     is_inter_state_supply,
     set_gst_tax_type,
@@ -19,7 +18,7 @@ from india_compliance.gst_india.overrides.transaction import (
     validate_mandatory_fields,
     validate_place_of_supply,
 )
-from india_compliance.gst_india.utils import is_api_enabled
+from india_compliance.gst_india.utils import get_gst_accounts_by_type, is_api_enabled
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 from india_compliance.gst_india.utils.taxes_controller import (
     CustomTaxController,
@@ -32,29 +31,46 @@ SUBCONTRACTING_ORDER_RECEIPT_FIELD_MAP = {"total_taxable_value": "total"}
 
 
 def after_mapping(doc, method, source_doc):
+    doc.taxes_and_charges = ""
+    doc.taxes = []
     if ignore_gst_validations(doc):
-        doc.taxes_and_charges = ""
         return
 
-    master_doctype = "Sales Taxes and Charges Template"
-    default_tax = get_tax_template(
-        master_doctype,
-        doc.company,
-        is_inter_state_supply(doc),
-        doc.company_gstin,
-        0,
-    )
+    set_taxes(doc)
 
-    tax_master = frappe.get_doc(master_doctype, default_tax)
-    taxes_and_charges = []
 
-    for tax in tax_master.get("taxes"):
-        if tax.description not in ["CGST", "SGST", "IGST"]:
-            continue
-        taxes_and_charges.append(tax)
+def set_taxes(doc):
+    tax_types = ["cgst", "sgst"]
+    if is_inter_state_supply(doc):
+        tax_types.append("igst")
 
-    doc.taxes_and_charges = default_tax
-    doc.taxes = taxes_and_charges
+    for tax_type in tax_types:
+        account = get_gst_accounts_by_type(doc.company, "Output").get(
+            tax_type + "_account"
+        )
+
+        if not account:
+            return
+
+        rate, description = frappe.db.get_value(
+            "Sales Taxes and Charges",
+            {
+                "parenttype": "Sales Taxes and Charges Template",
+                "account_head": account,
+            },
+            ("rate", "description"),
+        ) or (0, account)
+
+        doc.append(
+            "taxes",
+            {
+                "charge_type": "On Net Total",
+                "account_head": account,
+                "rate": rate,
+                "gst_tax_type": tax_type,
+                "description": description,
+            },
+        )
 
 
 def get_dashboard_data(data):
