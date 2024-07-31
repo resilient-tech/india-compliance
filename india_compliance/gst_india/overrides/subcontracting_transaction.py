@@ -8,7 +8,9 @@ from india_compliance.gst_india.overrides.sales_invoice import (
 from india_compliance.gst_india.overrides.transaction import (
     GSTAccounts,
     get_place_of_supply,
+    get_tax_template,
     ignore_gst_validations,
+    is_inter_state_supply,
     set_gst_tax_type,
     validate_gst_category,
     validate_gst_transporter_id,
@@ -30,46 +32,29 @@ SUBCONTRACTING_ORDER_RECEIPT_FIELD_MAP = {"total_taxable_value": "total"}
 
 
 def after_mapping(doc, method, source_doc):
-    tax_category = frappe.db.get_value(
-        "Purchase Taxes and Charges Template",
-        source_doc.taxes_and_charges,
-        "tax_category",
+    if ignore_gst_validations(doc):
+        doc.taxes_and_charges = ""
+        return
+
+    master_doctype = "Sales Taxes and Charges Template"
+    default_tax = get_tax_template(
+        master_doctype,
+        doc.company,
+        is_inter_state_supply(doc),
+        doc.company_gstin,
+        0,
     )
 
-    tax_categories = frappe.db.get_all(
-        "Tax Category", fields=["name", "is_inter_state", "is_reverse_charge"]
-    )
+    tax_master = frappe.get_doc(master_doctype, default_tax)
+    taxes_and_charges = []
 
-    is_inter_state_tax_categories = {
-        tax_category.name
-        for tax_category in tax_categories
-        if tax_category.is_inter_state == 1
-    }
-    not_is_reverse_charge_tax_categories = {
-        tax_category.name
-        for tax_category in tax_categories
-        if tax_category.is_reverse_charge == 0
-    }
+    for tax in tax_master.get("taxes"):
+        if tax.description not in ["CGST", "SGST", "IGST"]:
+            continue
+        taxes_and_charges.append(tax)
 
-    filters = {
-        "tax_category": [
-            "in",
-            not_is_reverse_charge_tax_categories - is_inter_state_tax_categories,
-        ],
-    }
-
-    if tax_category in is_inter_state_tax_categories:
-        filters = {
-            "tax_category": [
-                "in",
-                is_inter_state_tax_categories & not_is_reverse_charge_tax_categories,
-            ],
-        }
-
-    doc.taxes_and_charges = frappe.db.get_value(
-        "Sales Taxes and Charges Template",
-        filters={"company": source_doc.company, **filters},
-    )
+    doc.taxes_and_charges = default_tax
+    doc.taxes = taxes_and_charges
 
 
 def get_dashboard_data(data):
