@@ -63,11 +63,13 @@ async function add_gstr2b_alert(frm) {
 
 frappe.ui.form.on("Purchase Reconciliation Tool", {
     async setup(frm) {
-        patch_set_active_tab(frm);
         new india_compliance.quick_info_popover(frm, tooltip_info);
 
         await frappe.require("purchase_reconciliation_tool.bundle.js");
         frm.trigger("company");
+        frm.doc.__reconciliation_data = null;
+        set_date_range_description(frm);
+        add_gstr2b_alert(frm);
         frm.purchase_reconciliation_tool = new PurchaseReconciliationTool(frm);
 
         frappe.realtime.on("data_reconciliation", message => {
@@ -81,21 +83,17 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
                 "include_ignored",
                 "gst_return",
             ];
-            const same_filter = keys_to_validate.every(key => frm.doc[key] === filters[key]);
-            if(!same_filter) return;
+            const same_filter = keys_to_validate.every(
+                key => frm.doc[key] === filters[key]
+            );
+            if (!same_filter) return;
 
             frappe.after_ajax(() => {
-                frm.doc.reconciliation_data = data;
-                frm.trigger("after_save");
+                frm.doc.__reconciliation_data = data;
+                frm.trigger("load_reconciliation_data");
                 frm.refresh();
             });
         });
-    },
-
-    onload(frm) {
-        if (frm.doc.is_modified) frm.doc.reconciliation_data = null;
-        add_gstr2b_alert(frm);
-        set_date_range_description(frm);
     },
 
     async company(frm) {
@@ -108,7 +106,12 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
     refresh(frm) {
         // Primary Action
         frm.disable_save();
-        frm.page.set_primary_action(__("Reconcile"), () => frm.save());
+        frm.page.set_primary_action(__("Reconcile"), () => {
+            if (frm.doc.purchase_period == "" || frm.doc.inward_supply_period == "") {
+                frappe.msgprint("Please Enter All Period");
+            }
+            frm.call("generate_reconciliation_data");
+        });
 
         // add custom buttons
         api_enabled
@@ -154,7 +157,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
 
     before_save(frm) {
         frm.doc.__unsaved = true;
-        frm.doc.reconciliation_data = null;
+        frm.doc.__reconciliation_data = null;
     },
 
     async purchase_period(frm) {
@@ -172,9 +175,11 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         add_gstr2b_alert(frm);
     },
 
-    after_save(frm) {
+    load_reconciliation_data(frm) {
         frm.purchase_reconciliation_tool.refresh(
-            frm.doc.reconciliation_data ? JSON.parse(frm.doc.reconciliation_data) : []
+            frm.doc.__reconciliation_data
+                ? JSON.parse(frm.doc.__reconciliation_data)
+                : []
         );
     },
 
@@ -236,8 +241,8 @@ class PurchaseReconciliationTool {
 
     init(frm) {
         this.frm = frm;
-        this.data = frm.doc.reconciliation_data
-            ? JSON.parse(frm.doc.reconciliation_data)
+        this.data = frm.doc.__reconciliation_data
+            ? JSON.parse(frm.doc.__reconciliation_data)
             : [];
         this.filtered_data = this.data;
         this.$wrapper = this.frm.get_field("reconciliation_html").$wrapper;
@@ -1514,14 +1519,6 @@ function get_hash(data) {
     if (data.purchase_invoice_name || data.inward_supply_name)
         return data.purchase_invoice_name + "~" + data.inward_supply_name;
     if (data.supplier_gstin) return data.supplier_gstin;
-}
-
-function patch_set_active_tab(frm) {
-    const set_active_tab = frm.set_active_tab;
-    frm.set_active_tab = function (...args) {
-        set_active_tab.apply(this, args);
-        frm.refresh();
-    };
 }
 
 purchase_reconciliation_tool.link_documents = async function (

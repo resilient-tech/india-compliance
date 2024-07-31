@@ -1,5 +1,6 @@
 # Copyright (c) 2022, Resilient Tech and contributors
 # For license information, please see license.txt
+import gzip
 import json
 import re
 from typing import List
@@ -43,6 +44,12 @@ STATUS_MAP = {
     "Pending": "Unreconciled",
     "Ignore": "Ignored",
 }
+from frappe.core.doctype.prepared_report.prepared_report import (
+    _save_error,
+    create_json_gz_file,
+    get_completed_prepared_report,
+    make_prepared_report,
+)
 
 
 class PurchaseReconciliationTool(Document):
@@ -63,18 +70,8 @@ class PurchaseReconciliationTool(Document):
         )
         return {field: self.get(field) for field in fields}
 
-    def onload(self):
-        date_range = [
-            self.inward_supply_from_date,
-            self.inward_supply_to_date,
-        ]
-
-        self.set_onload(
-            "has_missing_2b_documents",
-            has_missing_2b_documents(date_range, ReturnType.GSTR2B, self.company_gstin),
-        )
-
-    def validate(self):
+    @frappe.whitelist()
+    def generate_reconciliation_data(self):
         # reconcile purchases and inward supplies
         if frappe.flags.in_install or frappe.flags.in_migrate:
             return
@@ -82,14 +79,50 @@ class PurchaseReconciliationTool(Document):
         frappe.msgprint(_("Data is being prepared"), alert=True)
 
     def reconcile(self):
-        _Reconciler = Reconciler(**self.get_reco_doc())
-        for row in ORIGINAL_VS_AMENDED:
-            _Reconciler.reconcile(row["original"], row["amended"])
-
-        self.ReconciledData = ReconciledData(**self.get_reco_doc())
-        self.reconciliation_data = json.dumps(
-            self.ReconciledData.get(), default=json_handler
+        dn = get_completed_prepared_report(
+            self.get_reco_doc(), frappe.session.user, "Purchase Reconciliation Tool"
         )
+        if dn:
+            doc = frappe.get_doc("Prepared Report", dn)
+            attachments = frappe.get_all(
+                "File",
+                fields=["name", "file_name", "file_url", "is_private"],
+                filters={
+                    "attached_to_name": doc.name,
+                    "attached_to_doctype": "Purchase Reconciliation Tool",
+                },
+            )
+            attached_file = frappe.get_doc("File", attachments[0].name)
+            attached_data = gzip.decompress(attached_file.get_content())
+            self.reconciliation_data = json.loads(attached_data.decode("utf-8"))
+        else:
+            _Reconciler = Reconciler(**self.get_reco_doc())
+            for row in ORIGINAL_VS_AMENDED:
+                _Reconciler.reconcile(row["original"], row["amended"])
+
+            self.ReconciledData = ReconciledData(**self.get_reco_doc())
+            self.reconciliation_data = json.dumps(
+                self.ReconciledData.get(), default=json_handler
+            )
+
+            report_name = make_prepared_report(
+                "Purchase Reconciliation Tool", self.get_reco_doc()
+            )
+            instance = frappe.get_doc("Prepared Report", report_name.get("name"))
+            try:
+                create_json_gz_file(
+                    self.reconciliation_data,
+                    "Purchase Reconciliation Tool",
+                    report_name.get("name"),
+                    "Purchase Reconciliation Tool",
+                )
+                instance.status = "Completed"
+
+            except Exception:
+                _save_error(instance, error=frappe.get_traceback(with_context=True))
+
+            instance.report_end_time = frappe.utils.now()
+            instance.save()
 
         frappe.publish_realtime(
             "data_reconciliation",
