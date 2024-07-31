@@ -222,35 +222,51 @@ def set_address_display(doc):
 
 
 @frappe.whitelist()
-def get_original_doc_ref_data(supplier, supplied_items):
-    data = {}
-    data["Subcontracting Receipt"] = frappe.db.get_all(
-        "Subcontracting Receipt",
-        filters={
-            "is_return": ["is", "set"],
-            "supplier": ["=", supplier],
-        },
-    )
+def get_relevant_references(
+    supplier, supplied_items, received_items, subcontracting_orders
+):
 
-    data["Stock Entry"] = frappe.db.get_all(
-        "Stock Entry",
+    if isinstance(supplied_items, str):
+        supplied_items = frappe.parse_json(supplied_items)
+        received_items = frappe.parse_json(received_items)
+        subcontracting_orders = frappe.parse_json(subcontracting_orders)
+
+    # same filters used for set_query in JS
+
+    receipt_returns = frappe.db.get_all(
+        "Subcontracting Receipt",
         filters=[
-            ["Stock Entry Detail", "item_code", "in", supplied_items],
-            ["purpose", "=", "Send to Subcontractor"],
+            ["docstatus", "=", 1],
+            ["is_return", "=", 1],
+            ["supplier", "=", supplier],
+            ["Subcontracting Receipt Item", "item_code", "in", received_items],
+            [
+                "Subcontracting Receipt Item",
+                "subcontracting_order",
+                "in",
+                subcontracting_orders,
+            ],
         ],
+        pluck="name",
         group_by="name",
     )
 
-    res = []
-    for doctype, values in data.items():
-        for row in values:
-            res.append(
-                {
-                    "name": row.name,
-                    "doctype": doctype,
-                }
-            )
-    return res
+    stock_entries = frappe.db.get_all(
+        "Stock Entry",
+        filters=[
+            ["docstatus", "=", 1],
+            ["purpose", "=", "Send to Subcontractor"],
+            ["subcontracting_order", "in", subcontracting_orders],
+            ["supplier", "=", supplier],
+            ["Stock Entry Detail", "item_code", "in", supplied_items],
+        ],
+        pluck="name",
+        group_by="name",
+    )
+
+    data = {"Subcontracting Receipt": receipt_returns, "Stock Entry": stock_entries}
+
+    return data
 
 
 def remove_duplicates(doc):

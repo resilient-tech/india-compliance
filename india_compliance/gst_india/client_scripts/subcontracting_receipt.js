@@ -27,7 +27,7 @@ frappe.ui.form.on(DOCTYPE, {
             });
         });
 
-        frm.set_query("link_doctype", "doc_references", function (doc, cdt, cdn) {
+        frm.set_query("link_doctype", "doc_references", function (doc) {
             return {
                 filters: {
                     name: ["in", [doc.doctype, "Stock Entry"]],
@@ -36,12 +36,43 @@ frappe.ui.form.on(DOCTYPE, {
         });
 
         frm.set_query("link_name", "doc_references", function (doc, cdt, cdn) {
-            return {
-                filters: {
-                    supplier: ["=", frm.doc.supplier],
-                    docstatus: 1,
-                },
-            };
+            const row = locals[cdt][cdn];
+            const subcontracting_orders = get_subcontracting_orders(doc);
+
+            // same as backend query in get_relevant_references
+            if (row.link_doctype == "Stock Entry") {
+                const supplied_items = get_supplied_items(doc);
+                return {
+                    filters: [
+                        ["docstatus", "=", 1],
+                        ["purpose", "=", "Send to Subcontractor"],
+                        ["subcontracting_order", "in", subcontracting_orders],
+                        ["supplier", "=", doc.supplier],
+                        ["Stock Entry Detail", "item_code", "in", supplied_items],
+                    ],
+                };
+            } else if (row.link_doctype == "Subcontracting Receipt") {
+                const received_items = get_received_items(doc);
+                return {
+                    filters: [
+                        ["docstatus", "=", 1],
+                        ["is_return", "=", 1],
+                        ["supplier", "=", doc.supplier],
+                        [
+                            "Subcontracting Receipt Item",
+                            "item_code",
+                            "in",
+                            received_items,
+                        ],
+                        [
+                            "Subcontracting Receipt Item",
+                            "subcontracting_order",
+                            "in",
+                            subcontracting_orders,
+                        ],
+                    ],
+                };
+            }
         });
     },
     onload(frm) {
@@ -50,9 +81,10 @@ frappe.ui.form.on(DOCTYPE, {
         });
     },
 
-    refresh(frm) {
+    refresh() {
         if (!gst_settings.enable_e_waybill || !gst_settings.enable_e_waybill_for_sc)
             return;
+
         show_sandbox_mode_indicator();
     },
 
@@ -68,18 +100,29 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     async fetch_original_doc_ref(frm) {
+        let existing_references = get_existing_references(frm);
+
         await frappe.call({
-            method: "india_compliance.gst_india.overrides.subcontracting_transaction.get_original_doc_ref_data",
+            method: "india_compliance.gst_india.overrides.subcontracting_transaction.get_relevant_references",
             args: {
                 supplier: frm.doc.supplier,
-                supplied_items: frm.doc.supplied_items.map(row => row.rm_item_code),
+                supplied_items: get_supplied_items(frm.doc),
+                received_items: get_received_items(frm.doc),
+                subcontracting_orders: get_subcontracting_orders(frm.doc),
             },
             callback: function (r) {
-                r["message"].forEach(docs => {
-                    let row = frm.add_child("doc_references");
-                    row.link_doctype = docs.doctype;
-                    row.link_name = docs.name;
+                if (!r.message) return;
+
+                Object.entries(r.message).forEach(([doctype, docnames]) => {
+                    docnames.forEach(docname => {
+                        if (existing_references[doctype]?.includes(docname)) return;
+
+                        let row = frm.add_child("doc_references");
+                        row.link_doctype = doctype;
+                        row.link_name = docname;
+                    });
                 });
+
                 frm.refresh_field("doc_references");
             },
         });
@@ -94,3 +137,27 @@ frappe.ui.form.on(
     "Subcontracting Receipt Item",
     india_compliance.taxes_controller_events
 );
+
+function get_existing_references(frm) {
+    let existing_references = {};
+
+    frm.doc.doc_references.forEach(row => {
+        if (!existing_references[row.link_doctype])
+            existing_references[row.link_doctype] = [];
+        existing_references[row.link_doctype].push(row.link_name);
+    });
+
+    return existing_references;
+}
+
+function get_supplied_items(doc) {
+    return new Set(doc.supplied_items.map(row => row.rm_item_code));
+}
+
+function get_received_items(doc) {
+    return new Set(doc.items.map(row => row.item_code));
+}
+
+function get_subcontracting_orders(doc) {
+    return new Set(doc.items.map(row => row.subcontracting_order));
+}

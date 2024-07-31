@@ -69,6 +69,7 @@ CUSTOM_FIELDS = {
         },
         {
             "fieldname": "section_break_ref_doc",
+            "label": "References",
             "fieldtype": "Section Break",
             "insert_after": "bill_date",
             "depends_on": "eval:doc.is_return !== 1",
@@ -333,6 +334,7 @@ CUSTOM_FIELDS = {
         },
         {
             "fieldname": "section_break_ref_doc",
+            "label": "References",
             "fieldtype": "Section Break",
             "insert_after": "value_difference",
             "depends_on": "eval:doc.purpose === 'Material Transfer' && doc.subcontracting_order",
