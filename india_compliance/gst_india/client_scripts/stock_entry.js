@@ -30,6 +30,28 @@ frappe.ui.form.on(DOCTYPE, {
         });
 
         set_address_display_events();
+
+        frm.set_query("link_doctype", "doc_references", {
+            name: ["=", "Stock Entry"],
+        });
+
+        frm.set_query("link_name", "doc_references", function (doc) {
+            return {
+                filters: [
+                    ["docstatus", "=", 1],
+                    ["purpose", "=", "Send to Subcontractor"],
+                    ["subcontracting_order", "=", doc.subcontracting_order],
+                    ["Stock Entry Detail", "item_code", "in", get_items(doc)],
+                ],
+            };
+        });
+    },
+
+    onload(frm) {
+        frm.taxes_controller = new india_compliance.taxes_controller(frm, {
+            total_taxable_value: "total_taxable_value",
+        });
+
         on_change_set_address(
             frm,
             "supplier_address",
@@ -37,12 +59,6 @@ frappe.ui.form.on(DOCTYPE, {
             __("Bill To (same as Supplier Address)"),
             __("Bill To")
         );
-    },
-
-    onload(frm) {
-        frm.taxes_controller = new india_compliance.taxes_controller(frm, {
-            total_taxable_value: "total_taxable_value",
-        });
     },
 
     refresh(frm) {
