@@ -110,24 +110,50 @@ Object.assign(india_compliance, {
         return message;
     },
 
-    async set_pan_status(field){
+    async set_pan_status(field, force_update = null) {
         const pan = field.value;
         if (!pan || pan.length !== 10) return field.set_description("");
 
         const { message } = await frappe.call({
-            method: "india_compliance.gst_india.overrides.party.validate_pancard_status",
-            args: { pan },
+            method: "india_compliance.gst_india.overrides.party.get_pan_status",
+            args: { pan, force_update },
         });
+        if (!message) return;
 
-        if (!message || message == "") return field.set_description("");
+        const [pan_status, datetime] = message;
+        const STATUS_COLORS = {
+            Valid: "green",
+            "Not-Linked": "red",
+            Invalid: "red",
+        };
+        let pan_desc;
 
-        const STATUS_COLORS = { 'Linked': "green", 'Not-Linked': "red", "Not an Individual Taxpayer" : "green",
-            "Invalid PAN" : "red" };
-        pan_status = `<div class="d-flex indicator ${STATUS_COLORS[message] || "orange"}">
-                    Status:&nbsp;<strong>${message}</strong>
-                </div>`;
+        if (!pan_status) {
+            const user_date = frappe.datetime.str_to_user(datetime);
+            const pretty_date = frappe.datetime.prettyDate(datetime);
 
-        field.set_description(pan_status);
+            pan_desc = $(`<div class="text-right">
+                        <span class="pan-last-updated">
+                            <span title="${user_date}">
+                                ${datetime ? "updated " + pretty_date : ""}
+                            </span>
+                            <svg class="icon icon-sm refresh-pan" style="cursor: pointer;">
+                                <use href="#icon-refresh"></use>
+                            </svg>
+                        </span>
+                    </div>`);
+
+            pan_desc.find(".refresh-pan").on("click", async function () {
+                await india_compliance.set_pan_status(field, true);
+            });
+        } else {
+            pan_desc = `<div class="d-flex indicator ${
+                STATUS_COLORS[pan_status] || "orange"
+            }">
+                                Status:&nbsp;<strong>${pan_status}</strong>
+                            </div>`;
+        }
+        return field.set_description(pan_desc);
     },
 
     validate_gst_transporter_id(transporter_id) {
