@@ -3,36 +3,28 @@ setup_e_waybill_actions(DOCTYPE);
 
 frappe.ui.form.on(DOCTYPE, {
     setup(frm) {
-        frm.set_query("taxes_and_charges", function () {
-            return {
-                filters: [
-                    ["disabled", "=", 0],
-                    ["company", "=", frm.doc.company],
-                ],
-            };
+        frm.set_query("taxes_and_charges", {
+            filters: [
+                ["disabled", "=", 0],
+                ["company", "=", frm.doc.company],
+            ],
         });
 
-        frm.set_query("transporter", function () {
-            return {
-                filters: [
-                    ["disabled", "=", 0],
-                    ["is_transporter", "=", 1],
-                ],
-            };
+        frm.set_query("transporter", {
+            filters: [
+                ["disabled", "=", 0],
+                ["is_transporter", "=", 1],
+            ],
         });
 
         ["supplier_address", "shipping_address"].forEach(field => {
-            frm.set_query(field, function () {
-                return { filters: { country: "India", disabled: 0 } };
-            });
+            frm.set_query(field, { filters: { country: "India", disabled: 0 } });
         });
 
-        frm.set_query("link_doctype", "doc_references", function (doc) {
-            return {
-                filters: {
-                    name: ["in", [doc.doctype, "Stock Entry"]],
-                },
-            };
+        frm.set_query("link_doctype", "doc_references", {
+            filters: {
+                name: ["in", ["Subcontracting Receipt", "Stock Entry"]],
+            },
         });
 
         frm.set_query("link_name", "doc_references", function (doc, cdt, cdn) {
@@ -99,10 +91,10 @@ frappe.ui.form.on(DOCTYPE, {
             );
     },
 
-    async fetch_original_doc_ref(frm) {
+    fetch_original_doc_ref(frm) {
         let existing_references = get_existing_references(frm);
 
-        await frappe.call({
+        frappe.call({
             method: "india_compliance.gst_india.overrides.subcontracting_transaction.get_relevant_references",
             args: {
                 supplier: frm.doc.supplier,
@@ -151,13 +143,13 @@ function get_existing_references(frm) {
 }
 
 function get_supplied_items(doc) {
-    return new Set(doc.supplied_items.map(row => row.rm_item_code));
+    return Array.from(new Set(doc.supplied_items.map(row => row.rm_item_code)));
 }
 
 function get_received_items(doc) {
-    return new Set(doc.items.map(row => row.item_code));
+    return Array.from(new Set(doc.items.map(row => row.item_code)));
 }
 
 function get_subcontracting_orders(doc) {
-    return new Set(doc.items.map(row => row.subcontracting_order));
+    return Array.from(new Set(doc.items.map(row => row.subcontracting_order)));
 }
