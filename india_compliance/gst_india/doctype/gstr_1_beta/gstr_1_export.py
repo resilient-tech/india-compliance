@@ -140,7 +140,7 @@ class GovExcel(DataProcessor):
         """
         self.gstin = gstin
         self.period = period
-        gstr_1_log = frappe.get_doc("GSTR-1 Log", f"{period}-{gstin}")
+        gstr_1_log = frappe.get_doc("GST Return Log", f"GSTR1-{period}-{gstin}")
 
         self.file_field = "filed" if gstr_1_log.filed else "books"
         data = gstr_1_log.load_data(self.file_field)[self.file_field]
@@ -158,6 +158,9 @@ class GovExcel(DataProcessor):
                 for row in category_data
                 if row.get("upload_status") != "Missing in Books"
             ]
+
+            if category == GovJsonKey.DOC_ISSUE.value:
+                self.process_doc_issue_data(category_wise_data[category])
 
             if category not in [
                 GovJsonKey.CDNR.value,
@@ -194,6 +197,15 @@ class GovExcel(DataProcessor):
 
         excel.remove_sheet("Sheet")
         excel.export(get_file_name("Gov", self.gstin, self.period))
+
+    def process_doc_issue_data(self, data):
+        """
+        Add draft count to cancelled count for DOC_ISSUE category
+        """
+        for doc in data:
+            doc[GSTR1_DataField.CANCELLED_COUNT.value] += doc.get(
+                GSTR1_DataField.DRAFT_COUNT.value, 0
+            )
 
     def get_category_headers(self, category):
         return getattr(self, f"get_{category.lower()}_headers")()
@@ -723,7 +735,9 @@ class BooksExcel(DataProcessor):
         self.year = year
 
         self.period = get_period(month_or_quarter, year)
-        gstr1_log = frappe.get_doc("GSTR-1 Log", f"{self.period}-{company_gstin}")
+        gstr1_log = frappe.get_doc(
+            "GST Return Log", f"GSTR1-{self.period}-{company_gstin}"
+        )
 
         self.data = self.process_data(gstr1_log.load_data("books")["books"])
 
@@ -1137,7 +1151,9 @@ class ReconcileExcel:
         self.year = year
 
         self.period = get_period(month_or_quarter, year)
-        gstr1_log = frappe.get_doc("GSTR-1 Log", f"{self.period}-{company_gstin}")
+        gstr1_log = frappe.get_doc(
+            "GST Return Log", f"GSTR1-{self.period}-{company_gstin}"
+        )
 
         self.summary = gstr1_log.load_data("reconcile_summary")["reconcile_summary"]
         data = gstr1_log.load_data("reconcile")["reconcile"]
@@ -2037,7 +2053,7 @@ def download_gstr_1_json(
         delete_missing = json.loads(delete_missing)
 
     period = get_period(month_or_quarter, year)
-    gstr1_log = frappe.get_doc("GSTR-1 Log", f"{period}-{company_gstin}")
+    gstr1_log = frappe.get_doc("GST Return Log", f"GSTR1-{period}-{company_gstin}")
 
     data = gstr1_log.get_json_for("books")
     data = data.update(data.pop("aggregate_data", {}))

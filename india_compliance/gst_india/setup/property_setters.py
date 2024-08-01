@@ -35,6 +35,16 @@ def get_property_setters(*, include_defaults=False):
             ["Bill of Entry"],
             prepend=False,
         ),
+        get_options_property_setter(
+            "Stock Entry",
+            "naming_series",
+            ["MAT-STE-"],
+        ),
+        get_options_property_setter(
+            "Subcontracting Receipt",
+            "naming_series",
+            ["MAT-SCR-"],
+        ),
         {
             "doctype": "Purchase Invoice",
             "fieldname": "bill_no",
@@ -99,9 +109,14 @@ def get_property_setters(*, include_defaults=False):
             "property": "default_email_template",
             "value": "Purchase Reconciliation",
         },
-        *TRANSPORTER_NAME_PROPERTIES,
-        *LR_NO_PROPERTIES,
-        *LR_DATE_PROPERTIES,
+        {
+            "doctype": "Subcontracting Receipt",
+            "fieldname": "supplier_delivery_note",
+            "property": "mandatory_depends_on",
+            "value": "eval: gst_settings.require_supplier_invoice_no === 1 && doc.company_gstin",
+        },
+        *PURCHASE_RECEIPT_PROPERTIES,
+        *SUBCONTRACTING_RECEIPT_PROPERTIES,
     ]
 
     if include_defaults:
@@ -132,7 +147,6 @@ def get_options_property_setter(doctype, fieldname, new_options, prepend=True):
 TRANSPORTER_NAME_PROPERTIES = [
     {
         "doctype_or_field": "DocField",
-        "doctype": "Purchase Receipt",
         "fieldname": "transporter_name",
         "property": "fieldtype",
         "property_type": "Select",
@@ -140,7 +154,6 @@ TRANSPORTER_NAME_PROPERTIES = [
     },
     {
         "doctype_or_field": "DocField",
-        "doctype": "Purchase Receipt",
         "fieldname": "transporter_name",
         "property": "fetch_from",
         "property_type": "Small Text",
@@ -148,7 +161,6 @@ TRANSPORTER_NAME_PROPERTIES = [
     },
     {
         "doctype_or_field": "DocField",
-        "doctype": "Purchase Receipt",
         "fieldname": "transporter_name",
         "property": "no_copy",
         "property_type": "Check",
@@ -156,7 +168,6 @@ TRANSPORTER_NAME_PROPERTIES = [
     },
     {
         "doctype_or_field": "DocField",
-        "doctype": "Purchase Receipt",
         "fieldname": "transporter_name",
         "property": "print_hide",
         "property_type": "Check",
@@ -164,7 +175,6 @@ TRANSPORTER_NAME_PROPERTIES = [
     },
     {
         "doctype_or_field": "DocField",
-        "doctype": "Purchase Receipt",
         "fieldname": "transporter_name",
         "property": "read_only",
         "property_type": "Check",
@@ -175,7 +185,6 @@ TRANSPORTER_NAME_PROPERTIES = [
 LR_NO_PROPERTIES = [
     {
         "doctype_or_field": "DocField",
-        "doctype": "Purchase Receipt",
         "fieldname": "lr_no",
         "property": "label",
         "property_type": "Data",
@@ -183,7 +192,6 @@ LR_NO_PROPERTIES = [
     },
     {
         "doctype_or_field": "DocField",
-        "doctype": "Purchase Receipt",
         "fieldname": "lr_no",
         "property": "print_hide",
         "property_type": "Check",
@@ -191,7 +199,6 @@ LR_NO_PROPERTIES = [
     },
     {
         "doctype_or_field": "DocField",
-        "doctype": "Purchase Receipt",
         "fieldname": "lr_no",
         "property": "length",
         "property_type": "Int",
@@ -203,7 +210,6 @@ LR_NO_PROPERTIES = [
 LR_DATE_PROPERTIES = [
     {
         "doctype_or_field": "DocField",
-        "doctype": "Purchase Receipt",
         "fieldname": "lr_date",
         "property": "label",
         "property_type": "Data",
@@ -211,7 +217,6 @@ LR_DATE_PROPERTIES = [
     },
     {
         "doctype_or_field": "DocField",
-        "doctype": "Purchase Receipt",
         "fieldname": "lr_date",
         "property": "print_hide",
         "property_type": "Check",
@@ -219,13 +224,23 @@ LR_DATE_PROPERTIES = [
     },
     {
         "doctype_or_field": "DocField",
-        "doctype": "Purchase Receipt",
         "fieldname": "lr_date",
         "property": "default",
         "property_type": "Text",
         "value": "Today",
     },
 ]
+
+PURCHASE_RECEIPT_PROPERTIES = [
+    {"doctype": "Purchase Receipt", **field}
+    for field in TRANSPORTER_NAME_PROPERTIES + LR_NO_PROPERTIES + LR_DATE_PROPERTIES
+]
+
+SUBCONTRACTING_RECEIPT_PROPERTIES = [
+    {"doctype": "Subcontracting Receipt", **field}
+    for field in TRANSPORTER_NAME_PROPERTIES + LR_NO_PROPERTIES + LR_DATE_PROPERTIES
+]
+
 
 # Customizable property setters that are set by default
 DEFAULT_PROPERTIES = [

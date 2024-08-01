@@ -57,6 +57,9 @@ class Gstr1Report:
         self.data = []
         self.doctype = "Sales Invoice"
         self.tax_doctype = "Sales Taxes and Charges"
+        self.company_currency = frappe.get_cached_value(
+            "Company", filters.get("company"), "default_currency"
+        )
         self.select_columns = """
             name as invoice_number,
             customer_name,
@@ -685,7 +688,7 @@ class Gstr1Report:
                     "fieldname": "taxable_value",
                     "label": _("Taxable Value"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 150,
                 },
             ]
@@ -721,7 +724,7 @@ class Gstr1Report:
                     "fieldname": "invoice_value",
                     "label": _("Invoice Value"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 100,
                 },
                 {
@@ -757,7 +760,7 @@ class Gstr1Report:
                     "fieldname": "cess_amount",
                     "label": _("Cess Amount"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 100,
                 }
             ]
@@ -781,7 +784,7 @@ class Gstr1Report:
                     "fieldname": "invoice_value",
                     "label": _("Invoice Value"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 100,
                 },
                 {
@@ -801,7 +804,7 @@ class Gstr1Report:
                     "fieldname": "cess_amount",
                     "label": _("Cess Amount"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 100,
                 },
                 {
@@ -863,7 +866,7 @@ class Gstr1Report:
                     "fieldname": "invoice_value",
                     "label": _("Note Value"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 120,
                 },
                 {
@@ -877,7 +880,7 @@ class Gstr1Report:
                     "fieldname": "cess_amount",
                     "label": _("Cess Amount"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 100,
                 },
             ]
@@ -916,7 +919,7 @@ class Gstr1Report:
                     "fieldname": "invoice_value",
                     "label": _("Note Value"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 120,
                 },
                 {
@@ -930,7 +933,7 @@ class Gstr1Report:
                     "fieldname": "cess_amount",
                     "label": _("Cess Amount"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 100,
                 },
             ]
@@ -954,7 +957,7 @@ class Gstr1Report:
                     "fieldname": "cess_amount",
                     "label": _("Cess Amount"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 100,
                 },
                 {
@@ -997,7 +1000,7 @@ class Gstr1Report:
                     "fieldname": "invoice_value",
                     "label": _("Invoice Value"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 120,
                 },
                 {
@@ -1024,7 +1027,7 @@ class Gstr1Report:
                     "fieldname": "cess_amount",
                     "label": _("Cess Amount"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 130,
                 }
             ]
@@ -1051,14 +1054,14 @@ class Gstr1Report:
                     "fieldname": "taxable_value",
                     "label": _("Gross Advance Recieved"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 150,
                 },
                 {
                     "fieldname": "cess_amount",
                     "label": _("Cess Amount"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 130,
                 },
             ]
@@ -1086,14 +1089,14 @@ class Gstr1Report:
                     "fieldname": "taxable_value",
                     "label": _("Gross Advance Adjusted"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 150,
                 },
                 {
                     "fieldname": "cess_amount",
                     "label": _("Cess Amount"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 130,
                 },
             ]
@@ -1110,21 +1113,21 @@ class Gstr1Report:
                     "fieldname": "nil_rated",
                     "label": _("Nil Rated Supplies"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 200,
                 },
                 {
                     "fieldname": "exempted",
                     "label": _("Exempted(other than nil rated/non GST supply)"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 350,
                 },
                 {
                     "fieldname": "non_gst",
                     "label": _("Non-GST Supplies"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 200,
                 },
             ]
@@ -1155,6 +1158,12 @@ class Gstr1Report:
                     "width": 150,
                 },
                 {
+                    "fieldname": "total_draft",
+                    "label": _("Draft"),
+                    "fieldtype": "Int",
+                    "width": 160,
+                },
+                {
                     "fieldname": "cancelled",
                     "label": _("Cancelled"),
                     "fieldtype": "Int",
@@ -1162,7 +1171,7 @@ class Gstr1Report:
                 },
             ]
         elif self.filters.get("type_of_business") == "HSN":
-            self.columns = get_hsn_columns()
+            self.columns = get_hsn_columns(self.filters)
             return
         elif self.filters.get("type_of_business") == "Section 14":
             self.columns = self.get_section_14_columns()
@@ -1182,30 +1191,35 @@ class Gstr1Report:
                 "fieldname": "total_taxable_value",
                 "label": _("Net value of supplies"),
                 "fieldtype": "Currency",
+                "options": self.company_currency,
                 "width": 120,
             },
             {
                 "fieldname": "total_igst_amount",
                 "label": _("Integrated tax"),
                 "fieldtype": "Currency",
+                "options": self.company_currency,
                 "width": 120,
             },
             {
                 "fieldname": "total_cgst_amount",
                 "label": _("Central tax"),
                 "fieldtype": "Currency",
+                "options": self.company_currency,
                 "width": 120,
             },
             {
                 "fieldname": "total_sgst_amount",
                 "label": _("State/UT tax"),
                 "fieldtype": "Currency",
+                "options": self.company_currency,
                 "width": 120,
             },
             {
                 "fieldname": "total_cess_amount",
                 "label": _("Cess"),
                 "fieldtype": "Currency",
+                "options": self.company_currency,
                 "width": 120,
             },
             {
@@ -2176,6 +2190,9 @@ def get_gstr1_excel(filters, data=None, columns=None):
             headers = report_data[0] or []
             data = format_data_to_dict(report_data)
 
+        if type_of_business == "Document Issued Summary":
+            format_doc_issued_excel_data(headers, data)
+
         create_excel_sheet(excel, type_of_business, headers, data)
 
     else:
@@ -2186,10 +2203,32 @@ def get_gstr1_excel(filters, data=None, columns=None):
             headers = report_data[0] or []
             data = format_data_to_dict(report_data)
 
+            if type_of_business == "Document Issued Summary":
+                format_doc_issued_excel_data(headers, data)
+
             create_excel_sheet(excel, type_of_business, headers, data)
 
     filename.extend([gstin, report_dict["fp"]])
     excel.export("_".join(filename))
+
+
+def format_doc_issued_excel_data(headers, data):
+    # add total_draft count to cancelled count
+    for doc in data:
+        doc["cancelled"] += doc.get("total_draft", 0)
+
+    # remove total_draft column from headers
+    total_draft_idx = next(
+        (
+            idx
+            for idx, header in enumerate(headers)
+            if header["fieldname"] == "total_draft"
+        ),
+        None,
+    )
+
+    if total_draft_idx is not None:
+        headers.pop(total_draft_idx)
 
 
 def create_excel_sheet(excel, sheet_name, headers, data):

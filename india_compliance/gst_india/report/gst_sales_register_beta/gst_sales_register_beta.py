@@ -5,6 +5,7 @@ import frappe
 from frappe import _
 from frappe.utils import getdate
 
+from india_compliance.gst_india.utils.gstr_1 import GSTR1_Category
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
 
 
@@ -55,6 +56,9 @@ def get_data(filters):
 
 def get_columns(filters):
     columns = []
+    company_currency = frappe.get_cached_value(
+        "Company", filters.get("company"), "default_currency"
+    )
 
     if filters.summary_by == "Overview":
         columns.extend(
@@ -71,35 +75,35 @@ def get_columns(filters):
                     "fieldname": "taxable_value",
                     "width": "120",
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": company_currency,
                 },
                 {
                     "label": _("IGST Amount"),
                     "fieldname": "igst_amount",
                     "width": "120",
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": company_currency,
                 },
                 {
                     "label": _("CGST Amount"),
                     "fieldname": "cgst_amount",
                     "width": "120",
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": company_currency,
                 },
                 {
                     "label": _("SGST Amount"),
                     "fieldname": "sgst_amount",
                     "width": "120",
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": company_currency,
                 },
                 {
                     "label": _("Total Cess Amount"),
                     "fieldname": "total_cess_amount",
                     "width": "120",
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": company_currency,
                 },
             ]
         )
@@ -196,6 +200,16 @@ def get_columns(filters):
     )
 
     if filters.summary_by == "Summary by Item":
+        if gst_settings.enable_sales_through_ecommerce_operators:
+            columns.append(
+                {
+                    "label": _("E-Commerce GSTIN"),
+                    "fieldname": "ecommerce_gstin",
+                    "fieldtype": "Data",
+                    "width": 180,
+                }
+            )
+
         columns.append(
             {
                 "label": _("Item Code"),
@@ -232,7 +246,7 @@ def get_columns(filters):
                 "fieldname": "taxable_value",
                 "width": 120,
                 "fieldtype": "Currency",
-                "options": "Company:company:default_currency",
+                "options": company_currency,
             },
             {
                 "label": _("GST Rate"),
@@ -245,49 +259,49 @@ def get_columns(filters):
                 "fieldname": "cgst_amount",
                 "width": 120,
                 "fieldtype": "Currency",
-                "options": "Company:company:default_currency",
+                "options": company_currency,
             },
             {
                 "label": _("SGST Amount"),
                 "fieldname": "sgst_amount",
                 "width": 120,
                 "fieldtype": "Currency",
-                "options": "Company:company:default_currency",
+                "options": company_currency,
             },
             {
                 "label": _("IGST Amount"),
                 "fieldname": "igst_amount",
                 "width": 120,
                 "fieldtype": "Currency",
-                "options": "Company:company:default_currency",
+                "options": company_currency,
             },
             {
                 "label": _("Total Cess Amount"),
                 "fieldname": "total_cess_amount",
                 "width": 120,
                 "fieldtype": "Currency",
-                "options": "Company:company:default_currency",
+                "options": company_currency,
             },
             {
                 "label": _("Total Tax"),
                 "fieldname": "total_tax",
                 "width": 120,
                 "fieldtype": "Currency",
-                "options": "Company:company:default_currency",
+                "options": company_currency,
             },
             {
                 "label": _("Total Amount"),
                 "fieldname": "total_amount",
                 "width": 120,
                 "fieldtype": "Currency",
-                "options": "Company:company:default_currency",
+                "options": company_currency,
             },
             {
                 "label": _("Retured Invoice Total"),
                 "fieldname": "returned_invoice_total",
                 "width": 120,
                 "fieldtype": "Currency",
-                "options": "Company:company:default_currency",
+                "options": company_currency,
             },
             {
                 "label": _("Invoice Type"),
@@ -297,7 +311,11 @@ def get_columns(filters):
             },
         ]
     )
-    if not filters.invoice_category:
+
+    if (
+        not filters.invoice_category
+        or filters.invoice_category == GSTR1_Category.SUPECOM.value
+    ):
         columns.append(
             {
                 "label": _("Invoice Category"),
@@ -306,13 +324,30 @@ def get_columns(filters):
                 "fieldtype": "Data",
             }
         )
-    if not filters.invoice_sub_category:
+
+    if (
+        not filters.invoice_sub_category
+        or filters.invoice_category == GSTR1_Category.SUPECOM.value
+    ):
         columns.append(
             {
                 "label": _("Invoice Sub Category"),
                 "fieldname": "invoice_sub_category",
                 "width": 120,
                 "fieldtype": "Data",
+            }
+        )
+
+    if (
+        filters.summary_by == "Summary by Item"
+        and gst_settings.enable_sales_through_ecommerce_operators
+    ):
+        columns.append(
+            {
+                "label": _("E-Commerce Supply Type"),
+                "fieldname": "ecommerce_supply_type",
+                "fieldtype": "Data",
+                "width": 250,
             }
         )
 

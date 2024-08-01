@@ -184,8 +184,7 @@ class TestIneligibleITC(FrappeTestCase):
         doc.items[4].expense_account = "Office Rent - _TIRC"
         doc.items[5].expense_account = "Office Rent - _TIRC"
 
-        doc.save()
-        doc.repost_accounting_entries()
+        doc.save()  # Repost Accounting on Save
 
         expected_entries = [
             {"account": "Round Off - _TIRC", "debit": 0.28, "credit": 0.0},
@@ -602,6 +601,11 @@ class TestIneligibleITC(FrappeTestCase):
                     "account": "Stock In Hand - _TIRC",
                     "debit": 0.0,
                     "credit": 267.26,  # 257 + 10.26
+                },
+                {
+                    "account": "Cost of Goods Sold - _TIRC",
+                    "debit": 10.26,
+                    "credit": 10.26,
                 },
             ],
         )
