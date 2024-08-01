@@ -71,7 +71,9 @@ def validate(doc, method=None):
     if ignore_gst_validation_for_subcontracting(doc):
         return
 
-    if doc.doctype in ("Stock Entry", "Subcontracting Receipt"):
+    if (doc.doctype == "Stock Entry" and doc.purpose == "Material Transfer") or (
+        doc.doctype == "Subcontracting Receipt" and not doc.is_return
+    ):
         if not doc.doc_references:
             frappe.throw(
                 _("Please Select Original Document Reference for ITC-04 Reporting"),
