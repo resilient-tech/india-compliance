@@ -1230,7 +1230,7 @@ class ItemGSTDetails:
         return response
 
     def set_tax_amount_precisions(self, doctype):
-        doc_meta = self.doc.meta if self.doc.meta else frappe.get_meta(doctype)
+        doc_meta = getattr(self, "doc", {}).get("meta", frappe.get_meta(doctype))
         item_doctype = doc_meta.get_field("items").options
 
         meta = frappe.get_meta(item_doctype)
