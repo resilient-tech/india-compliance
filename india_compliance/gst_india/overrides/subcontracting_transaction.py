@@ -33,8 +33,12 @@ SUBCONTRACTING_ORDER_RECEIPT_FIELD_MAP = {"total_taxable_value": "total"}
 
 
 def after_mapping(doc, method, source_doc):
+    if source_doc.doctype != "Purchase Order":
+        return
+
     doc.taxes_and_charges = ""
     doc.taxes = []
+
     if ignore_gst_validations(doc):
         return
 
