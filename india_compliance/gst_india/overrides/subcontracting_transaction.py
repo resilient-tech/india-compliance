@@ -35,7 +35,7 @@ STOCK_ENTRY_FIELD_MAP = {"total_taxable_value": "total_taxable_value"}
 SUBCONTRACTING_ORDER_RECEIPT_FIELD_MAP = {"total_taxable_value": "total"}
 
 
-def after_mapping(doc, method, source_doc):
+def after_mapping_subcontracting_order(doc, method, source_doc):
     if source_doc.doctype != "Purchase Order":
         return
 
@@ -67,6 +67,14 @@ def after_mapping(doc, method, source_doc):
         item.item_tax_template = out.get("item_tax_template")
 
 
+def after_mapping_stock_entry(doc, method, source_doc):
+    if source_doc.doctype == "Subcontracting Order":
+        return
+
+    doc.taxes_and_charges = ""
+    doc.taxes = []
+
+
 def set_taxes(doc):
     accounts = get_gst_accounts_by_type(doc.company, "Output", throw=False)
     if not accounts:
@@ -84,7 +92,6 @@ def set_taxes(doc):
         .where(sales.account_head == accounts.get("igst_account"))
         .where(sales_template.disabled == 0)
         .orderby(sales_template.is_default, order=Order.desc)
-        .limit(1)
         .run(pluck=True)
     )[0]
 
