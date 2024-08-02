@@ -80,18 +80,20 @@ def set_taxes(doc):
     if not accounts:
         return
 
-    sales = frappe.qb.DocType("Sales Taxes and Charges")
-    sales_template = frappe.qb.DocType("Sales Taxes and Charges Template")
+    sales_tax_template = frappe.qb.DocType("Sales Taxes and Charges Template")
+    sales_tax_template_row = frappe.qb.DocType("Sales Taxes and Charges")
 
     rate = (
-        frappe.qb.from_(sales)
-        .left_join(sales_template)
-        .on(sales_template.name == sales.parent)
-        .select(sales.rate or 0)
-        .where(sales.parenttype == "Sales Taxes and Charges Template")
-        .where(sales.account_head == accounts.get("igst_account"))
-        .where(sales_template.disabled == 0)
-        .orderby(sales_template.is_default, order=Order.desc)
+        frappe.qb.from_(sales_tax_template_row)
+        .left_join(sales_tax_template)
+        .on(sales_tax_template.name == sales_tax_template_row.parent)
+        .select(sales_tax_template_row.rate or 0)
+        .where(sales_tax_template_row.parenttype == "Sales Taxes and Charges Template")
+        .where(sales_tax_template_row.account_head == accounts.get("igst_account"))
+        .where(sales_tax_template.disabled == 0)
+        .orderby(sales_tax_template.is_default, order=Order.desc)
+        .orderby(sales_tax_template.modified, order=Order.desc)
+        .limit(1)
         .run(pluck=True)
     )[0]
 
