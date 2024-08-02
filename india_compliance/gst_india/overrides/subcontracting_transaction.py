@@ -1,6 +1,8 @@
 import frappe
 from frappe import _, bold
 from frappe.contacts.doctype.address.address import get_address_display
+from erpnext.accounts.party import get_address_tax_category
+from erpnext.stock.get_item_details import get_item_tax_template
 
 from india_compliance.gst_india.overrides.sales_invoice import (
     update_dashboard_with_gst_logs,
@@ -37,6 +39,25 @@ def after_mapping(doc, method, source_doc):
         return
 
     set_taxes(doc)
+
+    tax_category = source_doc.tax_category
+
+    if not tax_category:
+        tax_category = get_address_tax_category(
+            frappe.db.get_value("Supplier", source_doc.supplier, "tax_category"),
+            source_doc.supplier_address,
+        )
+
+    if not tax_category:
+        return
+
+    args = {"company": doc.company, "tax_category": tax_category}
+
+    for item in doc.items:
+        out = {}
+        item_doc = frappe.get_cached_doc("Item", item.item_code)
+        get_item_tax_template(args, item_doc, out)
+        item.item_tax_template = out.get("item_tax_template")
 
 
 def set_taxes(doc):
