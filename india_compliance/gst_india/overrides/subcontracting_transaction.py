@@ -63,7 +63,7 @@ def after_mapping(doc, method, source_doc):
 def set_taxes(doc):
     tax_types = ["cgst", "sgst"]
     if is_inter_state_supply(doc):
-        tax_types.append("igst")
+        tax_types = ["igst"]
 
     for tax_type in tax_types:
         account = get_gst_accounts_by_type(doc.company, "Output").get(
