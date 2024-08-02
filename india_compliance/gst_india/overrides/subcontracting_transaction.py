@@ -87,7 +87,7 @@ def set_taxes(doc):
         frappe.qb.from_(sales_tax_template_row)
         .left_join(sales_tax_template)
         .on(sales_tax_template.name == sales_tax_template_row.parent)
-        .select(sales_tax_template_row.rate or 0)
+        .select(sales_tax_template_row.rate)
         .where(sales_tax_template_row.parenttype == "Sales Taxes and Charges Template")
         .where(sales_tax_template_row.account_head == accounts.get("igst_account"))
         .where(sales_tax_template.disabled == 0)
@@ -95,7 +95,7 @@ def set_taxes(doc):
         .orderby(sales_tax_template.modified, order=Order.desc)
         .limit(1)
         .run(pluck=True)
-    )[0]
+    )[0] or 0
 
     tax_types = ("igst",)
     if not is_inter_state_supply(doc):
