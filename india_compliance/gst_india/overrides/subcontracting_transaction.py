@@ -1,6 +1,9 @@
+from pypika import Order
+
 import frappe
 from frappe import _, bold
 from frappe.contacts.doctype.address.address import get_address_display
+from frappe.utils import flt
 from erpnext.accounts.party import get_address_tax_category
 from erpnext.stock.get_item_details import get_item_tax_template
 
@@ -44,6 +47,9 @@ def after_mapping(doc, method, source_doc):
 
     set_taxes(doc)
 
+    if not doc.items:
+        return
+
     tax_category = source_doc.tax_category
 
     if not tax_category:
@@ -62,23 +68,30 @@ def after_mapping(doc, method, source_doc):
 
 
 def set_taxes(doc):
-    accounts = get_gst_accounts_by_type(doc.company, "Output")
+    accounts = get_gst_accounts_by_type(doc.company, "Output", throw=False)
     if not accounts:
         return
 
-    rate = frappe.db.get_value(
-        "Sales Taxes and Charges",
-        {
-            "parenttype": "Sales Taxes and Charges Template",
-            "account_head": accounts.get("igst_account"),
-        },
-        "rate",
-    ) or (0)
+    sales = frappe.qb.DocType("Sales Taxes and Charges")
+    sales_template = frappe.qb.DocType("Sales Taxes and Charges Template")
+
+    rate = (
+        frappe.qb.from_(sales)
+        .left_join(sales_template)
+        .on(sales_template.name == sales.parent)
+        .select(sales.rate or 0)
+        .where(sales.parenttype == "Sales Taxes and Charges Template")
+        .where(sales.account_head == accounts.get("igst_account"))
+        .where(sales_template.disabled == 0)
+        .orderby(sales_template.is_default, order=Order.desc)
+        .limit(1)
+        .run(pluck=True)
+    )[0]
 
     tax_types = ("igst",)
     if not is_inter_state_supply(doc):
         tax_types = ("cgst", "sgst")
-        rate = rate / 2
+        rate = flt(rate / 2)
 
     for tax_type in tax_types:
         account = accounts.get(tax_type + "_account")
