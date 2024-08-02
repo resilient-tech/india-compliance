@@ -48,9 +48,6 @@ def after_mapping(doc, method, source_doc):
             source_doc.supplier_address,
         )
 
-    if not tax_category:
-        return
-
     args = {"company": doc.company, "tax_category": tax_category}
 
     for item in doc.items:
@@ -61,27 +58,26 @@ def after_mapping(doc, method, source_doc):
 
 
 def set_taxes(doc):
-    tax_types = ["cgst", "sgst"]
-    if is_inter_state_supply(doc):
-        tax_types = ["igst"]
+    accounts = get_gst_accounts_by_type(doc.company, "Output")
+    if not accounts:
+        return
+
+    rate = frappe.db.get_value(
+        "Sales Taxes and Charges",
+        {
+            "parenttype": "Sales Taxes and Charges Template",
+            "account_head": accounts.get("igst_account"),
+        },
+        "rate",
+    ) or (0)
+
+    tax_types = ("igst",)
+    if not is_inter_state_supply(doc):
+        tax_types = ("cgst", "sgst")
+        rate = rate / 2
 
     for tax_type in tax_types:
-        account = get_gst_accounts_by_type(doc.company, "Output").get(
-            tax_type + "_account"
-        )
-
-        if not account:
-            return
-
-        rate, description = frappe.db.get_value(
-            "Sales Taxes and Charges",
-            {
-                "parenttype": "Sales Taxes and Charges Template",
-                "account_head": account,
-            },
-            ("rate", "description"),
-        ) or (0, account)
-
+        account = accounts.get(tax_type + "_account")
         doc.append(
             "taxes",
             {
@@ -89,7 +85,7 @@ def set_taxes(doc):
                 "account_head": account,
                 "rate": rate,
                 "gst_tax_type": tax_type,
-                "description": description,
+                "description": account,
             },
         )
 
