@@ -234,9 +234,11 @@ doc_events = {
     "Stock Entry": {
         "onload": "india_compliance.gst_india.overrides.subcontracting_transaction.onload",
         "validate": "india_compliance.gst_india.overrides.subcontracting_transaction.validate",
+        "after_mapping": "india_compliance.gst_india.overrides.subcontracting_transaction.after_mapping_stock_entry",
     },
     "Subcontracting Order": {
         "validate": "india_compliance.gst_india.overrides.subcontracting_transaction.validate",
+        "after_mapping": "india_compliance.gst_india.overrides.subcontracting_transaction.after_mapping_subcontracting_order",
     },
     "Subcontracting Receipt": {
         "onload": "india_compliance.gst_india.overrides.subcontracting_transaction.onload",

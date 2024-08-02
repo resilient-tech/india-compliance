@@ -1,6 +1,11 @@
+from pypika import Order
+
 import frappe
 from frappe import _, bold
 from frappe.contacts.doctype.address.address import get_address_display
+from frappe.utils import flt
+from erpnext.accounts.party import get_address_tax_category
+from erpnext.stock.get_item_details import get_item_tax_template
 
 from india_compliance.gst_india.overrides.sales_invoice import (
     update_dashboard_with_gst_logs,
@@ -9,6 +14,7 @@ from india_compliance.gst_india.overrides.transaction import (
     GSTAccounts,
     get_place_of_supply,
     ignore_gst_validations,
+    is_inter_state_supply,
     set_gst_tax_type,
     validate_gst_category,
     validate_gst_transporter_id,
@@ -17,7 +23,7 @@ from india_compliance.gst_india.overrides.transaction import (
     validate_mandatory_fields,
     validate_place_of_supply,
 )
-from india_compliance.gst_india.utils import is_api_enabled
+from india_compliance.gst_india.utils import get_gst_accounts_by_type, is_api_enabled
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 from india_compliance.gst_india.utils.taxes_controller import (
     CustomTaxController,
@@ -27,6 +33,87 @@ from india_compliance.gst_india.utils.taxes_controller import (
 
 STOCK_ENTRY_FIELD_MAP = {"total_taxable_value": "total_taxable_value"}
 SUBCONTRACTING_ORDER_RECEIPT_FIELD_MAP = {"total_taxable_value": "total"}
+
+
+def after_mapping_subcontracting_order(doc, method, source_doc):
+    if source_doc.doctype != "Purchase Order":
+        return
+
+    doc.taxes_and_charges = ""
+    doc.taxes = []
+
+    if ignore_gst_validations(doc):
+        return
+
+    set_taxes(doc)
+
+    if not doc.items:
+        return
+
+    tax_category = source_doc.tax_category
+
+    if not tax_category:
+        tax_category = get_address_tax_category(
+            frappe.db.get_value("Supplier", source_doc.supplier, "tax_category"),
+            source_doc.supplier_address,
+        )
+
+    args = {"company": doc.company, "tax_category": tax_category}
+
+    for item in doc.items:
+        out = {}
+        item_doc = frappe.get_cached_doc("Item", item.item_code)
+        get_item_tax_template(args, item_doc, out)
+        item.item_tax_template = out.get("item_tax_template")
+
+
+def after_mapping_stock_entry(doc, method, source_doc):
+    if source_doc.doctype == "Subcontracting Order":
+        return
+
+    doc.taxes_and_charges = ""
+    doc.taxes = []
+
+
+def set_taxes(doc):
+    accounts = get_gst_accounts_by_type(doc.company, "Output", throw=False)
+    if not accounts:
+        return
+
+    sales_tax_template = frappe.qb.DocType("Sales Taxes and Charges Template")
+    sales_tax_template_row = frappe.qb.DocType("Sales Taxes and Charges")
+
+    rate = (
+        frappe.qb.from_(sales_tax_template_row)
+        .left_join(sales_tax_template)
+        .on(sales_tax_template.name == sales_tax_template_row.parent)
+        .select(sales_tax_template_row.rate)
+        .where(sales_tax_template_row.parenttype == "Sales Taxes and Charges Template")
+        .where(sales_tax_template_row.account_head == accounts.get("igst_account"))
+        .where(sales_tax_template.disabled == 0)
+        .orderby(sales_tax_template.is_default, order=Order.desc)
+        .orderby(sales_tax_template.modified, order=Order.desc)
+        .limit(1)
+        .run(pluck=True)
+    )[0] or 0
+
+    tax_types = ("igst",)
+    if not is_inter_state_supply(doc):
+        tax_types = ("cgst", "sgst")
+        rate = flt(rate / 2)
+
+    for tax_type in tax_types:
+        account = accounts.get(tax_type + "_account")
+        doc.append(
+            "taxes",
+            {
+                "charge_type": "On Net Total",
+                "account_head": account,
+                "rate": rate,
+                "gst_tax_type": tax_type,
+                "description": account,
+            },
+        )
 
 
 def get_dashboard_data(data):
