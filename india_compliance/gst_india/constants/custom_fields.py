@@ -207,7 +207,7 @@ CUSTOM_FIELDS = {
         },
         {
             "fieldname": "bill_from_gst_category",
-            "label": "GST Category",
+            "label": "Bill From GST Category",
             "fieldtype": "Data",
             "insert_after": "bill_from_gstin",
             "read_only": 1,
@@ -249,7 +249,7 @@ CUSTOM_FIELDS = {
         },
         {
             "fieldname": "bill_to_gst_category",
-            "label": "GST Category",
+            "label": "Bill To GST Category",
             "fieldtype": "Data",
             "insert_after": "bill_to_gstin",
             "read_only": 1,
