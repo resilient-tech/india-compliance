@@ -30,21 +30,6 @@ frappe.ui.form.on(DOCTYPE, {
         });
 
         set_address_display_events();
-
-        frm.set_query("link_doctype", "doc_references", {
-            name: ["=", "Stock Entry"],
-        });
-
-        frm.set_query("link_name", "doc_references", function (doc) {
-            return {
-                filters: [
-                    ["docstatus", "=", 1],
-                    ["purpose", "=", "Send to Subcontractor"],
-                    ["subcontracting_order", "=", doc.subcontracting_order],
-                    ["Stock Entry Detail", "item_code", "in", get_items(doc)],
-                ],
-            };
-        });
     },
 
     onload(frm) {
