@@ -181,7 +181,7 @@ CUSTOM_FIELDS = {
             "label": "Taxes",
             "fieldtype": "Section Break",
             "insert_after": "get_stock_and_rate",
-            "depends_on": "eval:doc.purpose === 'Send to Subcontractor'",
+            "depends_on": "eval:doc.subcontracting_order",
         },
         {
             "label": "E-Waybill Info",
