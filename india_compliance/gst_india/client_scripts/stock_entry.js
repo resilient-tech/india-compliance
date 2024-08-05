@@ -5,31 +5,35 @@ setup_e_waybill_actions(DOCTYPE);
 
 frappe.ui.form.on(DOCTYPE, {
     setup(frm) {
-        frm.set_query("taxes_and_charges", function () {
-            return {
-                filters: [
-                    ["disabled", "=", 0],
-                    ["company", "=", frm.doc.company],
-                ],
-            };
+        frm.set_query("taxes_and_charges", {
+            filters: [
+                ["disabled", "=", 0],
+                ["company", "=", frm.doc.company],
+            ],
         });
 
-        frm.set_query("transporter", function () {
-            return {
-                filters: [
-                    ["disabled", "=", 0],
-                    ["is_transporter", "=", 1],
-                ],
-            };
+        frm.set_query("transporter", {
+            filters: [
+                ["disabled", "=", 0],
+                ["is_transporter", "=", 1],
+            ],
         });
 
         ["ship_from_address", "ship_to_address"].forEach(field => {
-            frm.set_query(field, function () {
-                return { filters: { country: "India", disabled: 0 } };
-            });
+            frm.set_query(field, { filters: { country: "India", disabled: 0 } });
         });
 
         set_address_display_events();
+
+        frm.set_query("link_doctype", "doc_references", {
+            name: ["=", "Stock Entry"],
+        });
+
+        frm.set_query("link_name", "doc_references", function (doc) {
+            return {
+                filters: get_filters_for_relevant_stock_entries(doc),
+            };
+        });
     },
 
     onload(frm) {
@@ -46,7 +50,7 @@ frappe.ui.form.on(DOCTYPE, {
         );
     },
 
-    refresh(frm) {
+    refresh() {
         if (!gst_settings.enable_e_waybill || !gst_settings.enable_e_waybill_for_sc)
             return;
 
@@ -112,6 +116,24 @@ frappe.ui.form.on(DOCTYPE, {
     taxes_and_charges(frm) {
         frm.taxes_controller.update_taxes(frm);
     },
+
+    async fetch_original_doc_ref(frm) {
+        let existing_references = frm.doc.doc_references.map(row => row.link_name);
+
+        data = await frappe.db.get_list(DOCTYPE, {
+            filters: get_filters_for_relevant_stock_entries(frm.doc),
+            group_by: "name",
+        });
+
+        data.forEach(doc => {
+            if (existing_references.includes(doc.name)) return;
+            var row = frm.add_child("doc_references");
+            row.link_doctype = DOCTYPE;
+            row.link_name = doc.name;
+        });
+
+        frm.refresh_field("doc_references");
+    },
 });
 
 function set_address_display_events() {
@@ -155,3 +177,16 @@ function on_change_set_address(frm, source_field, target_field, label1, label2) 
 }
 
 frappe.ui.form.on("Stock Entry Detail", india_compliance.taxes_controller_events);
+
+function get_filters_for_relevant_stock_entries(doc) {
+    return [
+        ["docstatus", "=", 1],
+        ["purpose", "=", "Send to Subcontractor"],
+        ["subcontracting_order", "=", doc.subcontracting_order],
+        ["Stock Entry Detail", "item_code", "in", get_items(doc)],
+    ];
+}
+
+function get_items(doc) {
+    return Array.from(new Set(doc.items.map(row => row.item_code)));
+}
