@@ -24,6 +24,15 @@ class ReturnsAPI(TaxpayerBaseAPI):
             return_period, token, action="FILEDET", endpoint="returns", otp=otp
         )
 
+    def get_return_status(self, return_period, otp=None):
+        return self.get(
+            action="RETSTATUS",
+            return_period=return_period,
+            params={"ret_period": return_period},
+            endpoint="returns",
+            otp=otp,
+        )
+
 
 class GSTR2bAPI(ReturnsAPI):
     API_NAME = "GSTR-2B"
@@ -73,5 +82,66 @@ class GSTR1API(ReturnsAPI):
             return_period=return_period,
             params={"ret_period": return_period, "sec": section},
             endpoint="returns/einvoice",
+            otp=otp,
+        )
+
+    def save_gstr_1_data(self, return_period, data, otp=None):
+        return self.put(
+            action="RETSAVE",
+            return_period=return_period,
+            json=data,
+            endpoint="returns/gstr1",
+            otp=otp,
+        )
+
+    def submit_gstr_1_data(self, return_period, otp=None):
+        return self.post(
+            action="RETSUBMIT",
+            return_period=return_period,
+            json={
+                "gstn": self.company_gstin,
+                "ret_period": return_period,
+                "generate_summary": "Y",
+            },
+            endpoint="returns/gstr1",
+            otp=otp,
+        )
+
+    def proceed_to_file(self, return_period, otp=None):
+        return self.post(
+            action="PROCEEDFILE",
+            return_period=return_period,
+            json={"gstn": self.company_gstin, "ret_period": return_period},
+            endpoint="returns/gstr1",
+            otp=otp,
+        )
+
+    def get_gstr_1_summary(self, return_period, otp=None):
+        return self.get(
+            action="RETSUM",
+            return_period=return_period,
+            params={"ret_period": return_period},
+            endpoint="returns/gstr1",
+            otp=otp,
+        )
+
+    def file_gstr_1(self, return_period, data, summary_data, otp=None):
+        # TODO: encrypt data with EVC (using AES 256)
+        signed_data = None
+        pan = self.company_gstin[2:12]
+        # TODO: encrypt summary payload with pan + otp (using HMAC-SHA256)
+        signed_summary_payload = None
+
+        return self.post(
+            action="RETFILE",
+            return_period=return_period,
+            json={
+                "action": "RETFILE",
+                "data": signed_data,
+                "sign": signed_summary_payload,
+                "st": "EVC",
+                "sid": pan,
+            },
+            endpoint="returns/gstr1",
             otp=otp,
         )

@@ -150,6 +150,13 @@ class TaxpayerAuthenticate(BaseAPI):
             endpoint="authenticate",
         )
 
+    def initiate_otp_for_evc(self, form_type):
+        return self.get(
+            action="EVCOTP",
+            params={"pan": self.company_gstin[2:12], "form_type": form_type},
+            endpoint="authenticate",
+        )
+
     def decrypt_response(self, response):
         values = {}
 
@@ -292,6 +299,9 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
 
     def post(self, *args, **kwargs):
         return self._request("post", *args, **kwargs)
+
+    def put(self, *args, **kwargs):
+        return self._request("put", *args, **kwargs)
 
     def before_request(self, request_args):
         self.encrypt_request(request_args.get("json"))
