@@ -359,16 +359,18 @@ def get_relevant_references(
 
 
 def remove_duplicates(doc):
-    references, duplicate = [], False
+    references = []
+    has_duplicates = False
+
     for row in doc.doc_references:
         ref = (row.link_doctype, row.link_name)
 
         if ref not in references:
             references.append(ref)
         else:
-            duplicate = True
+            has_duplicates = True
 
-    if duplicate:
+    if has_duplicates:
         doc.doc_references = []
         for row in references:
             doc.append("doc_references", dict(link_doctype=row[0], link_name=row[1]))

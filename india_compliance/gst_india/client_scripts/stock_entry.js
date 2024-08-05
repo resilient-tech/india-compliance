@@ -31,12 +31,7 @@ frappe.ui.form.on(DOCTYPE, {
 
         frm.set_query("link_name", "doc_references", function (doc) {
             return {
-                filters: [
-                    ["docstatus", "=", 1],
-                    ["purpose", "=", "Send to Subcontractor"],
-                    ["subcontracting_order", "=", doc.subcontracting_order],
-                    ["Stock Entry Detail", "item_code", "in", get_items(doc)],
-                ],
+                filters: get_filters_for_relevant_stock_entries(doc),
             };
         });
     },
@@ -123,25 +118,18 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     async fetch_original_doc_ref(frm) {
-        let existing_references = {
-            [DOCTYPE]: frm.doc.doc_references.map(row => row.link_name),
-        };
+        let existing_references = frm.doc.doc_references.map(row => row.link_name);
 
         data = await frappe.db.get_list(DOCTYPE, {
-            filters: [
-                ["docstatus", "=", 1],
-                ["purpose", "=", "Send to Subcontractor"],
-                ["subcontracting_order", "=", frm.doc.subcontracting_order],
-                ["Stock Entry Detail", "item_code", "in", get_items(frm.doc)],
-            ],
+            filters: get_filters_for_relevant_stock_entries(frm.doc),
             group_by: "name",
         });
 
-        data.forEach(docs => {
-            if (existing_references[DOCTYPE]?.includes(docs.name)) return;
+        data.forEach(doc => {
+            if (existing_references.includes(doc.name)) return;
             var row = frm.add_child("doc_references");
             row.link_doctype = DOCTYPE;
-            row.link_name = docs.name;
+            row.link_name = doc.name;
         });
 
         frm.refresh_field("doc_references");
@@ -189,6 +177,15 @@ function on_change_set_address(frm, source_field, target_field, label1, label2) 
 }
 
 frappe.ui.form.on("Stock Entry Detail", india_compliance.taxes_controller_events);
+
+function get_filters_for_relevant_stock_entries(doc) {
+    return [
+        ["docstatus", "=", 1],
+        ["purpose", "=", "Send to Subcontractor"],
+        ["subcontracting_order", "=", doc.subcontracting_order],
+        ["Stock Entry Detail", "item_code", "in", get_items(doc)],
+    ];
+}
 
 function get_items(doc) {
     return Array.from(new Set(doc.items.map(row => row.item_code)));
