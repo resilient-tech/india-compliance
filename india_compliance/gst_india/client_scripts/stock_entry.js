@@ -24,13 +24,6 @@ frappe.ui.form.on(DOCTYPE, {
         });
 
         set_address_display_events();
-        on_change_set_address(
-            frm,
-            "supplier_address",
-            "bill_to_address",
-            __("Bill To (same as Supplier Address)"),
-            __("Bill To")
-        );
 
         frm.set_query("link_doctype", "doc_references", {
             name: ["=", "Stock Entry"],
@@ -52,6 +45,14 @@ frappe.ui.form.on(DOCTYPE, {
         frm.taxes_controller = new india_compliance.taxes_controller(frm, {
             total_taxable_value: "total_taxable_value",
         });
+
+        on_change_set_address(
+            frm,
+            "supplier_address",
+            "bill_to_address",
+            __("Bill To (same as Supplier Address)"),
+            __("Bill To")
+        );
     },
 
     refresh() {
