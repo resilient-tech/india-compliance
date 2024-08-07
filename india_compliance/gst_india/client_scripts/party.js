@@ -71,6 +71,9 @@ function validate_gstin(doctype) {
                 frm.doc.pan = pan;
                 frm.refresh_field("pan");
                 set_party_type(frm);
+                if(doctype != "Address"){
+                    india_compliance.set_pan_status(frm.get_field("pan"));
+                }
             }
         },
     });
@@ -123,15 +126,17 @@ function set_gstin_options_and_status(doctype) {
         refresh(frm) {
             set_gstin_options(frm);
             india_compliance.set_gstin_status(frm.get_field("gstin"));
-            if (doctype !== "Address") {
-                india_compliance.set_pan_status(frm.get_field("pan"));
-            }
         },
         gstin(frm) {
             india_compliance.set_gstin_status(frm.get_field("gstin"));
-            if (doctype !== "Address") {
-                india_compliance.set_pan_status(frm.get_field("pan"));
-            }
+        },
+    });
+}
+
+function set_pan_status(doctype) {
+    frappe.ui.form.on(doctype, {
+        refresh(frm) {
+            india_compliance.set_pan_status(frm.get_field("pan"));
         },
         pan(frm) {
             india_compliance.set_pan_status(frm.get_field("pan"));

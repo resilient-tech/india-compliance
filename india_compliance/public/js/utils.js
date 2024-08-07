@@ -112,13 +112,17 @@ Object.assign(india_compliance, {
 
     async set_pan_status(field, force_update = null) {
         const pan = field.value;
-        if (!pan || pan.length !== 10) return field.set_description("");
+        field.set_description("");
+        if (!pan || pan.length !== 10) return;
 
-        const { message } = await frappe.call({
-            method: "india_compliance.gst_india.overrides.party.get_pan_status",
+        let { message } = await frappe.call({
+            method: "india_compliance.gst_india.doctype.pan.pan.get_pan_status",
             args: { pan, force_update },
         });
-        if (!message) return;
+
+        if (!message) {
+            message = ["", frappe.datetime.now_datetime()];
+        }
 
         const [pan_status, datetime] = message;
         const STATUS_COLORS = {
