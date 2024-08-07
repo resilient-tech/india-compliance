@@ -31,6 +31,17 @@ const ReturnType = {
     GSTR2B: "GSTR2b",
 };
 
+const filter_fields = [
+    "company",
+    "company_gstin",
+    "purchase_from_date",
+    "purchase_to_date",
+    "inward_supply_from_date",
+    "inward_supply_to_date",
+    "include_ignored",
+    "gst_return",
+];
+
 function remove_gstr2b_alert(alert) {
     if (alert.length === 0) return;
     $(alert).remove();
@@ -62,8 +73,22 @@ async function add_gstr2b_alert(frm) {
         });
 }
 
+function setup_filter_onchange_events(frm) {
+    const events = {};
+
+    filter_fields.forEach(field => {
+        events[field] = () => {
+            frm.doc.__reconciliation_data = null;
+            frm.refresh();
+        };
+    });
+
+    frappe.ui.form.on("Purchase Reconciliation Tool", events);
+}
+
 frappe.ui.form.on("Purchase Reconciliation Tool", {
     async setup(frm) {
+        patch_set_active_tab(frm);
         new india_compliance.quick_info_popover(frm, tooltip_info);
 
         await frappe.require("purchase_reconciliation_tool.bundle.js");
@@ -71,26 +96,31 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         frm.doc.__reconciliation_data = null;
         set_date_range_description(frm);
         add_gstr2b_alert(frm);
+        setup_filter_onchange_events(frm);
         frm.purchase_reconciliation_tool = new PurchaseReconciliationTool(frm);
 
+        frappe.realtime.on("report_generated", message => {
+            frm.call("attachment_data", {
+                name: message.name,
+            });
+        });
+
         frappe.realtime.on("data_reconciliation", message => {
-            const { data, filters } = message;
-            const keys_to_validate = [
-                "company_gstin",
-                "purchase_from_date",
-                "purchase_to_date",
-                "inward_supply_from_date",
-                "inward_supply_to_date",
-                "include_ignored",
-                "gst_return",
-            ];
-            const same_filter = keys_to_validate.every(
-                key => frm.doc[key] === filters[key]
+            const { data, filters, creation, report_name} = message;
+
+            frm.report_name = report_name
+            frm.is_latest_data = true
+
+            const same_filter = filter_fields.every(
+                field => frm.doc[field] === filters[field]
             );
             if (!same_filter) return;
 
             frappe.after_ajax(() => {
-                frm.doc.__reconciliation_data = data;
+                frm.doc.__reconciliation_data = JSON.stringify(
+                    data && data.result ? data.result : []
+                );
+                frm.doc.data_reconciled_on = creation;
                 frm.trigger("load_reconciliation_data");
                 frm.refresh();
             });
@@ -107,11 +137,45 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
     refresh(frm) {
         // Primary Action
         frm.disable_save();
-        frm.page.set_primary_action(__("Reconcile"), () => {
-            if (frm.doc.purchase_period == "" || frm.doc.inward_supply_period == "") {
-                frappe.msgprint("Please Enter All Period");
+        const button_label = frm.doc.__reconciliation_data
+            ? __("Rebuild")
+            : __("Reconcile");
+        const force_update = frm.doc.__reconciliation_data != null;
+
+        frm.page.set_primary_action(button_label, async () => {
+            if (
+                !frm.doc.company ||
+                !frm.doc.company_gstin ||
+                !frm.doc.purchase_period ||
+                !frm.doc.inward_supply_period ||
+                !frm.doc.gst_return
+            ) {
+                frappe.msgprint({
+                    message: __("Please Enter All Details"),
+                    title: "Message",
+                    indicator: "blue",
+                });
+                return;
             }
-            frm.call("generate_reconciliation_data");
+            const filetrs_to_pass = {};
+            filter_fields.forEach(field => {
+                filetrs_to_pass[field] = frm.doc[field];
+            });
+
+            const { message } = await frappe.call({
+                method: "frappe.core.doctype.prepared_report.prepared_report.get_reports_in_queued_state",
+                args: {
+                    filters: filetrs_to_pass,
+                    report_name: "Purchase Reconciliation Tool",
+                },
+            });
+            if (message.length) {
+                frappe.msgprint("A report is alerady in queued");
+                return;
+            }
+            frm.call("generate_reconciliation_data", {
+                force_update: force_update,
+            });
         });
 
         // add custom buttons
@@ -158,7 +222,6 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
 
     before_save(frm) {
         frm.doc.__unsaved = true;
-        frm.doc.__reconciliation_data = null;
     },
 
     async purchase_period(frm) {
@@ -189,7 +252,8 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         frm.purchase_reconciliation_tool.refresh(
             frm.doc.__reconciliation_data
                 ? JSON.parse(frm.doc.__reconciliation_data)
-                : []
+                : [],
+            frm.doc.data_reconciled_on ? frm.doc.data_reconciled_on : ""
         );
     },
 
@@ -259,7 +323,7 @@ class PurchaseReconciliationTool {
         this._tabs = ["invoice", "supplier", "summary"];
     }
 
-    refresh(data) {
+    refresh(data, data_reconciled_on) {
         if (data) {
             this.data = data;
             this.refresh_filter_fields();
@@ -267,14 +331,12 @@ class PurchaseReconciliationTool {
 
         this.apply_filters(!!data);
 
-        // data unchanged!
-        if (this.rendered_data == this.filtered_data) return;
-
         this._tabs.forEach(tab => {
             this.tabs[`${tab}_tab`].refresh(this[`get_${tab}_data`]());
         });
 
         this.rendered_data = this.filtered_data;
+        this.setup_footer(data_reconciled_on);
     }
 
     render_tab_group() {
@@ -322,6 +384,23 @@ class PurchaseReconciliationTool {
         // make tabs_dict for easy access
         this.tabs = Object.fromEntries(
             this.tab_group.tabs.map(tab => [tab.df.fieldname, tab])
+        );
+    }
+
+    setup_footer(data_reconciled_on) {
+        if (!data_reconciled_on) return;
+
+        const creation_time_string = `Created ${frappe.datetime.prettyDate(
+            data_reconciled_on
+        )} `;
+
+        const wrapper = this.frm.get_field("reconciliation_html").$wrapper;
+
+        if ($(wrapper).find(".creation-time").length)
+            $(wrapper).find(".creation-time").remove();
+
+        wrapper.append(
+            `<div class="creation-time text-muted float-right">${creation_time_string}</div>`
         );
     }
 
@@ -1014,6 +1093,7 @@ class DetailViewDialog {
                 () => {
                     this._apply_custom_action(action);
                     this.dialog.hide();
+                    this.update_report_status();
                 },
                 `mr-2 ${this._get_button_css(action)}`
             );
@@ -1045,6 +1125,15 @@ class DetailViewDialog {
         } else {
             apply_action(this.frm, action, [this.row]);
         }
+    }
+
+    update_report_status(){
+        if(this.frm.is_latest_data == false) return;
+        frappe.call({
+            method: "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.update_report_filters",
+            args : { report_name : this.frm.report_name },
+        })
+        this.frm.is_latest_data = false
     }
 
     _get_button_css(action) {
@@ -1633,6 +1722,14 @@ function get_hash(data) {
     if (data.purchase_invoice_name || data.inward_supply_name)
         return data.purchase_invoice_name + "~" + data.inward_supply_name;
     if (data.supplier_gstin) return data.supplier_gstin;
+}
+
+function patch_set_active_tab(frm) {
+    const set_active_tab = frm.set_active_tab;
+    frm.set_active_tab = function (...args) {
+        set_active_tab.apply(this, args);
+        frm.refresh();
+    };
 }
 
 purchase_reconciliation_tool.link_documents = async function (

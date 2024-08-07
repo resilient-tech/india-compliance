@@ -138,6 +138,10 @@
    "fieldname": "include_ignored",
    "fieldtype": "Check",
    "label": "Include Ignored"
+  },
+  {
+    "fieldname": "__reconciliation_data",
+    "fieldtype": "JSON"
   }
  ],
  "hide_toolbar": 1,
