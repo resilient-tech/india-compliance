@@ -1,52 +1,55 @@
 {
-    "actions": [],
-    "allow_rename": 1,
-    "creation": "2024-07-31 13:10:35.277697",
-    "doctype": "DocType",
-    "engine": "InnoDB",
-    "field_order": [
-        "pan",
-        "pan_status"
-    ],
-    "fields": [
-        {
-            "fieldname": "pan",
-            "fieldtype": "Data",
-            "label": "Pan"
-        },
-        {
-            "fieldname": "pan_status",
-            "fieldtype": "Data",
-            "label": "Pan Status"
-        },
-        {
-            "fieldname": "last_updated_on",
-            "fieldtype": "Datetime",
-            "label": "Last Updated On"
-        }
-    ],
-    "index_web_pages_for_search": 1,
-    "links": [],
-    "modified": "2024-07-31 13:11:07.830805",
-    "modified_by": "Administrator",
-    "module": "GST India",
-    "name": "Pan",
-    "owner": "Administrator",
-    "permissions": [
-        {
-            "create": 1,
-            "delete": 1,
-            "email": 1,
-            "export": 1,
-            "print": 1,
-            "read": 1,
-            "report": 1,
-            "role": "System Manager",
-            "share": 1,
-            "write": 1
-        }
-    ],
-    "sort_field": "creation",
-    "sort_order": "DESC",
-    "states": []
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-07-31 13:10:35.277697",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "pan",
+  "pan_status",
+  "last_updated_on"
+ ],
+ "fields": [
+  {
+   "fieldname": "pan",
+   "fieldtype": "Data",
+   "label": "Pan"
+  },
+  {
+   "fieldname": "pan_status",
+   "fieldtype": "Data",
+   "label": "Pan Status"
+  },
+  {
+   "fieldname": "last_updated_on",
+   "fieldtype": "Datetime",
+   "label": "Last Updated On"
+  }
+ ],
+ "in_create": 1,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-08-07 15:04:50.116211",
+ "modified_by": "Administrator",
+ "module": "GST India",
+ "name": "Pan",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "read_only": 1,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
 }
