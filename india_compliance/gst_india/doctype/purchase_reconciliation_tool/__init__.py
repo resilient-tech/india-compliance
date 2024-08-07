@@ -439,6 +439,9 @@ class PurchaseInvoice:
             )
         )
 
+        if self.company:
+            query = query.where(self.company == self.PI.company)
+
         if self.company_gstin == "All":
             query = query.where(self.PI.company_gstin.notnull())
         else:
@@ -586,6 +589,14 @@ class BillOfEntry:
             .groupby(self.BOE.name)
             .select(*fields, ConstantColumn("Bill of Entry").as_("doctype"))
         )
+
+        if self.company:
+            query = query.where(self.company == self.BOE.company)
+
+        if self.company_gstin == "All":
+            query = query.where(self.BOE.company_gstin.notnull())
+        else:
+            query = query.where(self.company_gstin == self.BOE.company_gstin)
 
         if self.include_ignored == 0:
             query = query.where(IfNull(self.BOE.reconciliation_status, "") != "Ignored")
