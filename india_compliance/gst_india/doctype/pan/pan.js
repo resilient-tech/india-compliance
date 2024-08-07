@@ -7,7 +7,4 @@ frappe.ui.form.on("Pan", {
             frm.call("update_pan_status");
         });
     },
-    pan(frm) {
-        frm.doc.pan = frm.doc.pan.toUpperCase();
-    },
 });
