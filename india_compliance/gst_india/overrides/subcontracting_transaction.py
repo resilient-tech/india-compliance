@@ -292,7 +292,7 @@ class SubcontractingGSTAccounts(GSTAccounts):
 
 def ignore_gst_validation_for_subcontracting(doc):
     if doc.doctype == "Stock Entry" and not doc.subcontracting_order:
-        return
+        return True
 
     return ignore_gst_validations(doc)
 
