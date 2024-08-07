@@ -88,7 +88,7 @@ class ITC04Query:
                 self.se.bill_to_gst_category.as_("gst_category"),
             )
             .where(IfNull(self.se.bill_to_gstin, "") != self.se.bill_from_gstin)
-            .where(self.se.subcontracting != "")
+            .where(self.se.subcontracting_order != "")
             .where(self.se.purpose == "Send to Subcontractor")
         )
 
@@ -160,7 +160,7 @@ class ITC04Query:
                 self.se.bill_from_gstin.as_("company_gstin"),
             )
             .where(IfNull(self.se.bill_to_gstin, "") != self.se.bill_from_gstin)
-            .where(self.se.subcontracting != "")
+            .where(self.se.subcontracting_order != "")
             .where(self.se.purpose == "Material Transfer")
         )
 
