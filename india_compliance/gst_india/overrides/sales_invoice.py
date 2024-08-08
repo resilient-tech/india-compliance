@@ -2,9 +2,11 @@ import frappe
 from frappe import _, bold
 from frappe.utils import flt, fmt_money
 
+from india_compliance.gst_india.constants import SALES_DOCTYPES
 from india_compliance.gst_india.overrides.payment_entry import get_taxes_summary
 from india_compliance.gst_india.overrides.transaction import (
     ignore_gst_validations,
+    is_inter_state_supply,
     validate_backdated_transaction,
     validate_mandatory_fields,
     validate_transaction,
@@ -28,6 +30,18 @@ from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 from india_compliance.gst_india.utils.transaction_data import (
     validate_unique_hsn_and_uom,
 )
+
+
+def before_mapping(doc, method, source_doc, table_maps):
+    if source_doc.doctype not in SALES_DOCTYPES:
+        return
+
+    if ignore_gst_validations(doc) or not doc.place_of_supply:
+        return
+
+    if is_inter_state_supply(doc) != is_inter_state_supply(source_doc):
+        table_maps["Sales Taxes and Charges"]["add_if_empty"] = False
+        doc.taxes = []
 
 
 def onload(doc, method=None):

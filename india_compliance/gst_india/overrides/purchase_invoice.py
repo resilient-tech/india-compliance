@@ -5,9 +5,22 @@ from frappe.utils import flt
 from india_compliance.gst_india.overrides.sales_invoice import (
     update_dashboard_with_gst_logs,
 )
-from india_compliance.gst_india.overrides.transaction import validate_transaction
+from india_compliance.gst_india.overrides.transaction import (
+    ignore_gst_validations,
+    is_inter_state_supply,
+    validate_transaction,
+)
 from india_compliance.gst_india.utils import is_api_enabled
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
+
+
+def before_mapping(doc, method, source_doc, table_maps):
+    if ignore_gst_validations(doc) or not doc.place_of_supply:
+        return
+
+    if is_inter_state_supply(doc) != is_inter_state_supply(source_doc):
+        table_maps["Purchase Taxes and Charges"]["add_if_empty"] = False
+        doc.taxes = []
 
 
 def onload(doc, method=None):

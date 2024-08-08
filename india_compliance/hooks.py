@@ -121,6 +121,7 @@ doc_events = {
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
+        "before_mapping": "india_compliance.gst_india.overrides.sales_invoice.before_mapping",
     },
     "Email Template": {
         "after_rename": "india_compliance.gst_india.overrides.email_template.after_rename",
@@ -162,6 +163,7 @@ doc_events = {
         ],
         "after_mapping": "india_compliance.gst_india.overrides.transaction.after_mapping",
         "on_cancel": "india_compliance.gst_india.overrides.purchase_invoice.on_cancel",
+        "before_mapping": "india_compliance.gst_india.overrides.purchase_invoice.before_mapping",
     },
     "Purchase Order": {
         "onload": "india_compliance.gst_india.overrides.transaction.onload",
@@ -176,6 +178,7 @@ doc_events = {
         "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
         "before_submit": "india_compliance.gst_india.overrides.transaction.update_gst_details",
         "before_update_after_submit": "india_compliance.gst_india.overrides.transaction.before_update_after_submit",
+        "before_mapping": "india_compliance.gst_india.overrides.purchase_invoice.before_mapping",
     },
     "Purchase Order Item": {
         "on_change": "india_compliance.gst_india.overrides.transaction.on_change_item",
@@ -195,6 +198,7 @@ doc_events = {
         "before_submit": [
             "india_compliance.gst_india.overrides.transaction.update_gst_details",
         ],
+        "before_mapping": "india_compliance.gst_india.overrides.purchase_invoice.before_mapping",
     },
     "Sales Invoice": {
         "onload": [
@@ -216,6 +220,7 @@ doc_events = {
             "india_compliance.gst_india.overrides.sales_invoice.before_cancel"
         ],
         "after_mapping": "india_compliance.gst_india.overrides.transaction.after_mapping",
+        "before_mapping": "india_compliance.gst_india.overrides.sales_invoice.before_mapping",
     },
     "Sales Order": {
         "onload": "india_compliance.gst_india.overrides.transaction.onload",
@@ -227,6 +232,7 @@ doc_events = {
         "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
         "before_submit": "india_compliance.gst_india.overrides.transaction.update_gst_details",
         "before_update_after_submit": "india_compliance.gst_india.overrides.transaction.before_update_after_submit",
+        "before_mapping": "india_compliance.gst_india.overrides.sales_invoice.before_mapping",
     },
     "Sales Order Item": {
         "on_change": "india_compliance.gst_india.overrides.transaction.on_change_item",
