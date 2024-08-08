@@ -6,6 +6,7 @@ import random
 import requests
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
 from frappe.utils import now
 
@@ -39,56 +40,47 @@ inverse_table = [0, 4, 3, 2, 1, 5, 6, 7, 8, 9]
 class Pan(Document):
     @frappe.whitelist()
     def update_pan_status(self):
-        get_pancard_status(self.pan, True)
-        frappe.msgprint("PAN Status Updated")
+        fetch_and_update_pan_status(self.pan, True)
+        frappe.msgprint(_("PAN Status Updated"))
 
     def before_save(self):
         self.name = self.pan.upper()
 
 
-def verhoeff_checksum(number: str) -> int:
-    """Calculate the Verhoeff checksum digit."""
-    c = 0
-    n = len(number)
-    for i in range(n):
-        c = multiplication_table[c][
-            permutation_table[(i + 1) % 8][int(number[n - i - 1])]
-        ]
-    return inverse_table[c]
+@frappe.whitelist()
+def get_pan_status(pan, force_update=False):
+    if not force_update and (
+        pan_status := frappe.db.get_value("Pan", pan, ["pan_status", "last_updated_on"])
+    ):
+        return pan_status
+
+    pan_doc = fetch_and_update_pan_status(pan, throw=force_update)
+    if not pan_doc:
+        return ("", "")
+
+    return (pan_doc.pan_status, pan_doc.last_updated_on)
 
 
-def generate_aadhaar_number():
-    """Generate a valid Aadhaar number using the Verhoeff algorithm."""
-    base_number = "".join(str(random.randint(0, 9)) for _ in range(11))
-    check_digit = verhoeff_checksum(base_number)
-    return base_number + str(check_digit)
+def fetch_and_update_pan_status(pan, throw):
+    pan_check_result = fetch_pan_status(pan, throw)
 
+    if not pan_check_result:
+        return
 
-def fetch_pan_status_from_api(aadhaar_number, pan, force_update):
-    """This is an unofficial API"""
-    url = "https://eportal.incometax.gov.in/iec/servicesapi/getEntity"
-    payload = {
-        "aadhaarNumber": aadhaar_number,  # this is random generated aadhaar_number
-        "pan": pan,
-        "preLoginFlag": "Y",
-        "serviceName": "linkAadhaarPreLoginService",
+    error_code_desc_map = {
+        "EF40124": "Valid",  # pan linked to generated aadhar card number
+        "EF40026": "Valid",  # pan linked but not to generated aadhar card
+        "EF40119": "Valid",  # not an individual taxpayer : AAACS8577K
+        "EF40089": "Invalid",  # invalid pan : OIMPS2320M
+        "EF40024": "Not-Linked",
+        "EF40077": "",  # Invalid Aadhaar number
     }
 
-    try:
-        response = requests.post(url, json=payload)
-        return response.json().get("messages", [])
-    except ConnectionError:
-        msg = "Connection error. Please retry after some time."
-    except Exception:
-        msg = "An error occurred. Please retry after some time."
+    status = error_code_desc_map.get(pan_check_result.get("code", ""), "")
+    if not status:
+        return
 
-    if force_update:
-        frappe.throw(msg)
-    else:
-        return ""
-
-
-def update_pan_document(pan, status):
+    # Update PAN status
     if docname := frappe.db.exists("Pan", pan):
         doc = frappe.get_doc("Pan", docname)
     else:
@@ -103,33 +95,57 @@ def update_pan_document(pan, status):
     )
     doc.save()
 
-
-def get_pancard_status(pan, force_update):
-    aadhaar_number = generate_aadhaar_number()
-    messages = fetch_pan_status_from_api(aadhaar_number, pan, force_update)
-
-    if not messages:
-        return
-
-    error_code_desc_map = {
-        "EF40124": "Valid",  # pan linked to generated aadhar card number
-        "EF40026": "Valid",  # pan linked but not to generated aadhar card
-        "EF40119": "Valid",  # not an individual taxpayer : AAACS8577K
-        "EF40089": "Invalid",  # invalid pan : OIMPS2320M
-        "EF40024": "Not-Linked",
-        "EF40077": "",  # Invalid Aadhaar number
-    }
-
-    status = error_code_desc_map.get(messages[0].get("code", ""), "")
-    if not status:
-        return
-
-    update_pan_document(pan, status)
+    return doc
 
 
-@frappe.whitelist()
-def get_pan_status(pan, force_update=False):
-    if force_update or not frappe.db.exists("Pan", pan):
-        get_pancard_status(pan, force_update)
+def fetch_pan_status(pan, throw=False):
+    """
+    This is an unofficial API
+    Use random generated aadhaar number to ensure request is not blocked
+    """
 
-    return frappe.db.get_value("Pan", pan, ["pan_status", "last_updated_on"])
+    url = "https://eportal.incometax.gov.in/iec/servicesapi/getEntity"
+
+    try:
+        payload = {
+            "aadhaarNumber": generate_random_aadhar_number(),
+            "pan": pan,
+            "preLoginFlag": "Y",
+            "serviceName": "linkAadhaarPreLoginService",
+        }
+
+        response = requests.post(url, json=payload)
+        messages = response.json().get("messages", [])
+
+        return messages[0] if messages else {}
+
+    except Exception as e:
+        if not throw:
+            return
+
+        frappe.throw(
+            _("An error occurred while fetching PAN status. {0}. <br><br> {1}").format(
+                e, frappe.get_traceback()
+            )
+        )
+
+
+def generate_random_aadhar_number():
+    """
+    Generate a valid Aadhaar number using the Verhoeff algorithm.
+    """
+    base_number = "".join(str(random.randint(0, 9)) for _ in range(11))
+    check_digit = verhoeff_checksum(base_number)
+    return base_number + str(check_digit)
+
+
+def verhoeff_checksum(number: str) -> int:
+    """Calculate the Verhoeff checksum digit."""
+    checksum = 0
+    length = len(number)
+    for index in range(length):
+        digit = int(number[length - index - 1])
+        permuted_digit = permutation_table[(index + 1) % 8][digit]
+        checksum = multiplication_table[checksum][permuted_digit]
+
+    return inverse_table[checksum]
