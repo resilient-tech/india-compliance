@@ -5,5 +5,5 @@
 from frappe.tests.utils import FrappeTestCase
 
 
-class TestPan(FrappeTestCase):
+class TestPAN(FrappeTestCase):
     pass

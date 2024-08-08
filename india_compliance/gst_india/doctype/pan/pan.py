@@ -37,7 +37,7 @@ permutation_table = [
 inverse_table = [0, 4, 3, 2, 1, 5, 6, 7, 8, 9]
 
 
-class Pan(Document):
+class PAN(Document):
     @frappe.whitelist()
     def update_pan_status(self):
         fetch_and_update_pan_status(self.pan, True)
@@ -50,7 +50,7 @@ class Pan(Document):
 @frappe.whitelist()
 def get_pan_status(pan, force_update=False):
     if not force_update and (
-        pan_status := frappe.db.get_value("Pan", pan, ["pan_status", "last_updated_on"])
+        pan_status := frappe.db.get_value("PAN", pan, ["pan_status", "last_updated_on"])
     ):
         return pan_status
 
@@ -81,10 +81,10 @@ def fetch_and_update_pan_status(pan, throw):
         return
 
     # Update PAN status
-    if docname := frappe.db.exists("Pan", pan):
-        doc = frappe.get_doc("Pan", docname)
+    if docname := frappe.db.exists("PAN", pan):
+        doc = frappe.get_doc("PAN", docname)
     else:
-        doc = frappe.new_doc("Pan")
+        doc = frappe.new_doc("PAN")
 
     doc.update(
         {
