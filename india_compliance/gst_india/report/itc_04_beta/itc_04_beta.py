@@ -1,5 +1,7 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
+from frappe import _
+
 from india_compliance.gst_india.utils.itc_04.itc_04_data import ITC04Query
 
 
@@ -26,85 +28,87 @@ def get_common_columns():
     return [
         {
             "fieldname": "company_gstin",
-            "label": "Company GSTIN",
+            "label": _("Company GSTIN"),
             "fieldtype": "Data",
             "width": 180,
         },
         {
             "fieldname": "posting_date",
-            "label": "Posting Date",
+            "label": _("Posting Date"),
             "fieldtype": "Date",
             "width": 180,
         },
         {
-            "fieldname": "invoice_no",
-            "label": "Invoice No (Challan No)",
-            "fieldtype": "Data",
+            "fieldname": "invoice_type",
+            "label": _("Invoice Type"),
             "width": 180,
         },
         {
             "fieldname": "supplier",
-            "label": "Supplier",
-            "fieldtype": "Data",
+            "label": _("Supplier"),
+            "fieldtype": "Link",
+            "options": "Supplier",
             "width": 180,
         },
         {
             "fieldname": "gst_category",
-            "label": "GST Category",
+            "label": _("GST Category"),
             "fieldtype": "Data",
             "width": 180,
         },
         {
             "fieldname": "supplier_gstin",
-            "label": "Supplier GSTIN",
+            "label": _("Supplier GSTIN"),
             "fieldtype": "Data",
             "width": 180,
         },
         {
             "fieldname": "place_of_supply",
-            "label": "Destination of Supply",
+            "label": _("Destination of Supply"),
             "fieldtype": "Data",
             "width": 180,
         },
         {
             "fieldname": "is_return",
-            "label": "Is Return",
+            "label": _("Is Return"),
             "fieldtype": "Check",
             "width": 180,
         },
         {
             "fieldname": "item_code",
-            "label": "Item Code",
-            "fieldtype": "Data",
+            "label": _("Item Code"),
+            "fieldtype": "Link",
+            "options": "Item",
             "width": 180,
         },
         {
             "fieldname": "gst_hsn_code",
-            "label": "HSN Code",
-            "fieldtype": "Data",
-            "width": 180,
+            "label": _("HSN Code"),
+            "fieldtype": "Link",
+            "options": "GST HSN Code",
+            "width": 120,
         },
         {
             "fieldname": "uom",
-            "label": "UOM",
+            "label": _("UOM"),
             "fieldtype": "Data",
             "width": 180,
         },
         {
             "fieldname": "gst_treatment",
-            "label": "GST Treatment",
+            "label": _("GST Treatment"),
             "fieldtype": "Data",
             "width": 180,
         },
         {
             "fieldname": "qty",
-            "label": "Qty",
+            "label": _("Qty"),
             "fieldtype": "Float",
             "width": 180,
         },
         {
             "fieldname": "item_type",
-            "label": "Item Type (Input/Capital Goods)",
+            "label": _("Item Type (Input/Capital Goods)"),
             "fieldtype": "Data",
             "width": 180,
         },
@@ -114,50 +118,57 @@ def get_common_columns():
 def get_columns_table_4():
     return get_common_columns() + [
         {
+            "fieldname": "invoice_no",
+            "label": _("Invoice No (Challan No)"),
+            "fieldtype": "Dynamic Link",
+            "options": "invoice_type",
+            "width": 180,
+        },
+        {
             "fieldname": "taxable_value",
-            "label": "Taxable Value",
+            "label": _("Taxable Value"),
             "fieldtype": "Currency",
             "width": 180,
         },
         {
             "fieldname": "gst_rate",
-            "label": "GST Rate",
+            "label": _("GST Rate"),
             "fieldtype": "Percent",
             "width": 180,
         },
         {
             "fieldname": "cgst_amount",
-            "label": "CGST Amount",
+            "label": _("CGST Amount"),
             "fieldtype": "Currency",
             "width": 180,
         },
         {
             "fieldname": "sgst_amount",
-            "label": "SGST Amount",
+            "label": _("SGST Amount"),
             "fieldtype": "Currency",
             "width": 180,
         },
         {
             "fieldname": "igst_amount",
-            "label": "IGST Amount",
+            "label": _("IGST Amount"),
             "fieldtype": "Currency",
             "width": 180,
         },
         {
             "fieldname": "total_cess_amount",
-            "label": "Total Cess Amount",
+            "label": _("Total Cess Amount"),
             "fieldtype": "Currency",
             "width": 180,
         },
         {
             "fieldname": "total_tax",
-            "label": "Total Tax",
+            "label": _("Total Tax"),
             "fieldtype": "Currency",
             "width": 180,
         },
         {
             "fieldname": "total_amount",
-            "label": "Total Amount",
+            "label": _("Total Amount"),
             "fieldtype": "Currency",
             "width": 180,
         },
@@ -168,8 +179,16 @@ def get_columns_table_5A():
     return [
         {
             "fieldname": "original_challan_no",
-            "label": "Original Challan No",
-            "fieldtype": "Data",
+            "label": _("Original Challan No"),
+            "fieldtype": "Dynamic Link",
+            "options": "original_challan_invoice_type",
+            "width": 180,
+        },
+        {
+            "fieldname": "invoice_no",
+            "label": _("Job Worker Invoice No (Challan No)"),
+            "fieldtype": "Dynamic Link",
+            "options": "invoice_type",
             "width": 180,
         },
     ] + get_common_columns()

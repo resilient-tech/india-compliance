@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 from pypika import Order
+from pypika.terms import ValueWrapper
 
 import frappe
 from frappe.query_builder.functions import Date, IfNull
@@ -18,6 +19,8 @@ class ITC04Query:
         self.se_item = frappe.qb.DocType("Stock Entry Detail")
         self.sr = frappe.qb.DocType("Subcontracting Receipt")
         self.sr_item = frappe.qb.DocType("Subcontracting Receipt Item")
+        self.se_doctype = ValueWrapper("Stock Entry")
+        self.sr_doctype = ValueWrapper("Subcontracting Receipt")
 
     def get_base_query_table_4(self, doc, doc_item):
         """Construct the base query for Table-4."""
@@ -86,6 +89,7 @@ class ITC04Query:
                 self.se.bill_to_gstin.as_("supplier_gstin"),
                 self.se.bill_from_gstin.as_("company_gstin"),
                 self.se.bill_to_gst_category.as_("gst_category"),
+                self.se_doctype.as_("invoice_type"),
             )
             .where(IfNull(self.se.bill_to_gstin, "") != self.se.bill_from_gstin)
             .where(self.se.subcontracting_order != "")
@@ -105,6 +109,7 @@ class ITC04Query:
                 self.sr_item.stock_uom.as_("uom"),
                 self.sr.company_gstin,
                 self.sr.supplier_gstin,
+                self.sr_doctype.as_("invoice_type"),
             )
             .where(IfNull(self.sr.supplier_gstin, "") != self.sr.company_gstin)
             .where(self.sr.is_return == 1)
@@ -135,6 +140,7 @@ class ITC04Query:
                 doc.base_grand_total.as_("invoice_total"),
                 IfNull(doc.gst_category, "").as_("gst_category"),
                 IfNull(doc_item.gst_treatment, "Not Defined").as_("gst_treatment"),
+                ref_doc.parenttype.as_("original_challan_invoice_type"),
                 IfNull(ref_doc.link_name, "").as_("original_challan_no"),
             )
             .where(doc.docstatus == 1)
@@ -158,6 +164,7 @@ class ITC04Query:
                 self.se_item.uom,
                 self.se.bill_to_gstin.as_("supplier_gstin"),
                 self.se.bill_from_gstin.as_("company_gstin"),
+                self.se_doctype.as_("invoice_type"),
             )
             .where(IfNull(self.se.bill_to_gstin, "") != self.se.bill_from_gstin)
             .where(self.se.subcontracting_order != "")
@@ -177,6 +184,7 @@ class ITC04Query:
                 self.sr_item.stock_uom.as_("uom"),
                 self.sr.company_gstin,
                 self.sr.supplier_gstin,
+                self.sr_doctype.as_("invoice_type"),
             )
             .where(IfNull(self.sr.supplier_gstin, "") != self.sr.company_gstin)
         )
