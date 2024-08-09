@@ -61,7 +61,7 @@ def get_pan_status(pan, force_update=False):
     return (pan_doc.pan_status, pan_doc.last_updated_on)
 
 
-def fetch_and_update_pan_status(pan, throw):
+def fetch_and_update_pan_status(pan, throw, duplicate=False):
     pan_check_result = fetch_pan_status(pan, throw)
 
     if not pan_check_result:
@@ -76,7 +76,14 @@ def fetch_and_update_pan_status(pan, throw):
         "EF40077": "",  # Invalid Aadhaar number
     }
 
-    status = error_code_desc_map.get(pan_check_result.get("code", ""), "")
+    error_code = pan_check_result.get("code", "")
+
+    # if invalid Aadhaar number then check pan status one more time
+    if not duplicate and error_code == "EF40077":
+        return fetch_and_update_pan_status(pan, throw, duplicate=True)
+
+    status = error_code_desc_map.get(error_code, "")
+
     if not status:
         return
 
