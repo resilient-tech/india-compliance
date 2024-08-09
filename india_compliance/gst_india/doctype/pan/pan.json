@@ -22,6 +22,8 @@
   {
    "fieldname": "pan_status",
    "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Pan Status"
   },
   {
@@ -37,7 +39,7 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-08-08 14:01:44.876614",
+ "modified": "2024-08-08 14:08:25.490761",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "PAN",
@@ -45,6 +47,7 @@
  "owner": "Administrator",
  "permissions": [
   {
+   "delete": 1,
    "export": 1,
    "read": 1,
    "report": 1,

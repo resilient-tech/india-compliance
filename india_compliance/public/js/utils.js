@@ -127,7 +127,7 @@ Object.assign(india_compliance, {
         const [pan_status, datetime] = message;
         const STATUS_COLORS = {
             Valid: "green",
-            "Not-Linked": "red",
+            "Not Linked": "red",
             Invalid: "red",
         };
         let pan_desc;
