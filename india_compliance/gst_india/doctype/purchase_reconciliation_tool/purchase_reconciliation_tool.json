@@ -47,7 +47,8 @@
    "fieldname": "purchase_period",
    "fieldtype": "Select",
    "label": "Purchase Period",
-   "options": "\nThis Month\nThis Quarter to Last Month\nThis Quarter\nThis Fiscal Year to Last Month\nThis Fiscal Year\nLast Month\nLast Quarter\nLast Fiscal Year\nCustom"
+   "options": "\nThis Month\nThis Quarter to Last Month\nThis Quarter\nThis Fiscal Year to Last Month\nThis Fiscal Year\nLast Month\nLast Quarter\nLast Fiscal Year\nCustom",
+   "reqd": 1
   },
   {
    "depends_on": "eval: doc.purchase_period == 'Custom'",
@@ -71,7 +72,8 @@
    "fieldname": "inward_supply_period",
    "fieldtype": "Select",
    "label": "Inward Supply Period",
-   "options": "\nThis Month\nThis Quarter to Last Month\nThis Quarter\nThis Fiscal Year to Last Month\nThis Fiscal Year\nLast Month\nLast Quarter\nLast Fiscal Year\nCustom"
+   "options": "\nThis Month\nThis Quarter to Last Month\nThis Quarter\nThis Fiscal Year to Last Month\nThis Fiscal Year\nLast Month\nLast Quarter\nLast Fiscal Year\nCustom",
+   "reqd": 1
   },
   {
    "depends_on": "eval: doc.inward_supply_period == 'Custom'",
@@ -150,7 +152,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-06-20 13:19:57.316043",
+ "modified": "2024-08-09 17:57:55.801686",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Purchase Reconciliation Tool",
