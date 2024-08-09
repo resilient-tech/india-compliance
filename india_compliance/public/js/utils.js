@@ -120,9 +120,7 @@ Object.assign(india_compliance, {
             args: { pan, force_update },
         });
 
-        if (!message) {
-            message = ["", frappe.datetime.now_datetime()];
-        }
+        if (!message) return;
 
         const [pan_status, datetime] = message;
         const STATUS_COLORS = {
@@ -130,33 +128,26 @@ Object.assign(india_compliance, {
             "Not Linked": "red",
             Invalid: "red",
         };
-        let pan_desc;
 
-        if (!pan_status) {
-            const user_date = frappe.datetime.str_to_user(datetime);
-            const pretty_date = frappe.datetime.prettyDate(datetime);
+        const user_date = frappe.datetime.str_to_user(datetime);
+        const pretty_date = frappe.datetime.prettyDate(datetime);
+        const pan_desc = $(
+            `<div class="d-flex indicator ${STATUS_COLORS[pan_status] || "orange"}">
+                Status:&nbsp;<strong>${pan_status}</strong>
+                <span class="text-right ml-auto">
+                    <span title="${user_date}">
+                        ${datetime ? "updated " + pretty_date : ""}
+                    </span>
+                    <svg class="icon icon-sm refresh-pan" style="cursor: pointer;">
+                        <use href="#icon-refresh"></use>
+                    </svg>
+                </span>
+            </div>`
+        );
 
-            pan_desc = $(`<div class="text-right">
-                        <span class="pan-last-updated">
-                            <span title="${user_date}">
-                                ${datetime ? "updated " + pretty_date : ""}
-                            </span>
-                            <svg class="icon icon-sm refresh-pan" style="cursor: pointer;">
-                                <use href="#icon-refresh"></use>
-                            </svg>
-                        </span>
-                    </div>`);
-
-            pan_desc.find(".refresh-pan").on("click", async function () {
-                await india_compliance.set_pan_status(field, true);
-            });
-        } else {
-            pan_desc = `<div class="d-flex indicator ${
-                STATUS_COLORS[pan_status] || "orange"
-            }">
-                                Status:&nbsp;<strong>${pan_status}</strong>
-                            </div>`;
-        }
+        pan_desc.find(".refresh-pan").on("click", async function () {
+            await india_compliance.set_pan_status(field, true);
+        });
         return field.set_description(pan_desc);
     },
 
