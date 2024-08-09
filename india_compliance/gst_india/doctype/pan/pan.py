@@ -72,7 +72,7 @@ def fetch_and_update_pan_status(pan, throw):
         "EF40026": "Valid",  # pan linked but not to generated aadhar card
         "EF40119": "Valid",  # not an individual taxpayer : AAACS8577K
         "EF40089": "Invalid",  # invalid pan : OIMPS2320M
-        "EF40024": "Not-Linked",
+        "EF40024": "Not Linked",
         "EF40077": "",  # Invalid Aadhaar number
     }
 
