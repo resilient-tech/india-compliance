@@ -1,7 +1,6 @@
 # Copyright (c) 2022, Resilient Tech and contributors
 # For license information, please see license.txt
 import gzip
-import json
 import re
 from collections import defaultdict
 from typing import List
@@ -66,23 +65,20 @@ class PurchaseReconciliationTool(Document):
         return {field: self.get(field) for field in fields}
 
     @frappe.whitelist()
-    def generate_reconciliation_data(self, force_update=False):
-        # reconcile purchases and inward supplies
+    def get_reconciliation_data(self, force_update=False):
         if frappe.flags.in_install or frappe.flags.in_migrate:
             return
-        frappe.enqueue(self.reconcile, queue="short", force_update=force_update)
 
-    def reconcile(self, force_update=False):
         doc_name = get_completed_prepared_report(
-            self.get_reco_doc(), frappe.session.user, "Purchase Reconciliation Tool"
+            self.get_reco_doc(), frappe.session.user, "ICUtility"
         )
         if doc_name and not force_update:
-            self.attachment_data(doc_name)
+            self.publish_reconciliation_data(doc_name)
         else:
-            make_prepared_report("Purchase Reconciliation Tool", self.get_reco_doc())
+            frappe.enqueue(make_prepared_report("ICUtility", self.get_reco_doc()))
 
     @frappe.whitelist()
-    def attachment_data(self, name):
+    def publish_reconciliation_data(self, name):
         attachments = frappe.get_all(
             "File",
             fields=["name", "file_name", "file_url", "is_private", "creation"],
@@ -91,14 +87,16 @@ class PurchaseReconciliationTool(Document):
                 "attached_to_doctype": "Prepared Report",
             },
         )
+
+        self.reconciliation_data = None
+        self.file_name = None
+
         if attachments:
             attached_file = frappe.get_doc("File", attachments[0].name)
             self.reconciliation_data = frappe.parse_json(
                 frappe.safe_decode(gzip.decompress(attached_file.get_content()))
             )
             self.file_name = attachments[0].name
-        else:
-            self.reconciliation_data = None
 
         frappe.publish_realtime(
             "data_reconciliation",
@@ -453,14 +451,6 @@ class PurchaseReconciliationTool(Document):
             )
 
         return data
-
-
-@frappe.whitelist()
-def update_report_filters(report_name):
-    filters = frappe.db.get_value("Prepared Report", report_name, "filters")
-    filters = json.loads(filters)
-    filters["is_latest_data"] = 1
-    frappe.db.set_value("Prepared Report", report_name, "filters", json.dumps(filters))
 
 
 def download_gstr(

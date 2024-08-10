@@ -94,27 +94,27 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         await frappe.require("purchase_reconciliation_tool.bundle.js");
         frm.trigger("company");
         frm.doc.__reconciliation_data = null;
-        set_date_range_description(frm);
         add_gstr2b_alert(frm);
+        set_date_range_description(frm);
         setup_filter_onchange_events(frm);
         frm.purchase_reconciliation_tool = new PurchaseReconciliationTool(frm);
 
         frappe.realtime.on("report_generated", message => {
-            frm.call("attachment_data", {
+            frm.call("publish_reconciliation_data", {
                 name: message.name,
             });
         });
 
         frappe.realtime.on("data_reconciliation", message => {
-            const { data, filters, creation, report_name} = message;
+            const { data, filters, creation, report_name } = message;
 
-            frm.report_name = report_name
-            frm.is_latest_data = true
+            frm.report_name = report_name;
+            frm.is_latest_data = true;
 
-            const same_filter = filter_fields.every(
+            const is_filter_same = filter_fields.every(
                 field => frm.doc[field] === filters[field]
             );
-            if (!same_filter) return;
+            if (!is_filter_same) return;
 
             frappe.after_ajax(() => {
                 frm.doc.__reconciliation_data = JSON.stringify(
@@ -166,14 +166,14 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
                 method: "frappe.core.doctype.prepared_report.prepared_report.get_reports_in_queued_state",
                 args: {
                     filters: filetrs_to_pass,
-                    report_name: "Purchase Reconciliation Tool",
+                    report_name: "ICUtility",
                 },
             });
             if (message.length) {
-                frappe.msgprint("A report is alerady in queued");
+                frappe.msgprint(__("A report is alerady in queued"));
                 return;
             }
-            frm.call("generate_reconciliation_data", {
+            frm.call("get_reconciliation_data", {
                 force_update: force_update,
             });
         });
@@ -218,10 +218,6 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
             $(".custom-button-group .inner-group-button").remove();
             $(button).appendTo($(".custom-button-group"));
         }
-    },
-
-    before_save(frm) {
-        frm.doc.__unsaved = true;
     },
 
     async purchase_period(frm) {
@@ -298,7 +294,9 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
                     setTimeout(() => {
                         frm.dashboard.clear_headline();
                     }, 2000);
-                    frm.save();
+                    frm.call("get_reconciliation_data", {
+                        force_update: true,
+                    });
                 }, 1000);
             }
         });
@@ -335,7 +333,6 @@ class PurchaseReconciliationTool {
             this.tabs[`${tab}_tab`].refresh(this[`get_${tab}_data`]());
         });
 
-        this.rendered_data = this.filtered_data;
         this.setup_footer(data_reconciled_on);
     }
 
@@ -1127,13 +1124,22 @@ class DetailViewDialog {
         }
     }
 
-    update_report_status(){
-        if(this.frm.is_latest_data == false) return;
-        frappe.call({
-            method: "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.update_report_filters",
-            args : { report_name : this.frm.report_name },
-        })
-        this.frm.is_latest_data = false
+    async update_report_status() {
+        if (this.frm.is_latest_data == false) return;
+
+        const filters = {};
+        filter_fields.forEach(field => {
+            filters[field] = this.frm.doc[field];
+        });
+        filters["is_latest_data"] = 1;
+
+        await frappe.db.set_value(
+            "Prepared Report",
+            this.frm.report_name,
+            "filters",
+            JSON.stringify(filters)
+        );
+        this.frm.is_latest_data = false;
     }
 
     _get_button_css(action) {

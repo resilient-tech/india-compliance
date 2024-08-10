@@ -10,6 +10,7 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool.__init__ im
 
 
 def execute(filters=None):
+    # reconcile purchases and inward supplies
     _Reconciler = Reconciler(**filters)
     for row in ORIGINAL_VS_AMENDED:
         _Reconciler.reconcile(row["original"], row["amended"])

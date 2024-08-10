@@ -24,7 +24,8 @@
   "not_reconciled",
   "no_reconciliation_data",
   "is_modified",
-  "section_break_cmfa"
+  "section_break_cmfa",
+  "__reconciliation_data"
  ],
  "fields": [
   {
@@ -127,6 +128,10 @@
    "hidden": 1
   },
   {
+   "fieldname": "__reconciliation_data",
+   "fieldtype": "JSON"
+  },
+  {
    "default": "0",
    "fieldname": "is_modified",
    "fieldtype": "Check",
@@ -138,17 +143,13 @@
    "fieldname": "include_ignored",
    "fieldtype": "Check",
    "label": "Include Ignored"
-  },
-  {
-    "fieldname": "__reconciliation_data",
-    "fieldtype": "JSON"
   }
  ],
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-06-20 13:19:57.316043",
+ "modified": "2024-08-10 16:20:48.790753",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Purchase Reconciliation Tool",
