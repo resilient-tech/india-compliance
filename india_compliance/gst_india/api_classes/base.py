@@ -260,7 +260,7 @@ class BaseAPI:
             raise GatewayTimeoutError
 
     def generate_request_id(self, length=12):
-        return frappe.generate_hash(length=length)
+        return f"IC{frappe.generate_hash(length=length - 2)}".upper()
 
     def mask_sensitive_info(self, log):
         request_headers = log.request_headers
