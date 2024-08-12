@@ -90,7 +90,8 @@
   "credentials_tab",
   "credentials",
   "api_secret",
-  "gstn_public_certificate"
+  "gstn_public_certificate",
+  "einvoice_public_certificate"
  ],
  "fields": [
   {
@@ -628,12 +629,18 @@
    "fieldname": "fetch_e_invoice_details_from_gst_portal",
    "fieldtype": "Check",
    "label": "Fetch e-Invoice details from GST Portal"
+  },
+  {
+   "fieldname": "einvoice_public_certificate",
+   "fieldtype": "Code",
+   "hidden": 1,
+   "label": "E-Invoice Public Certificate"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-07-25 19:16:25.036677",
+ "modified": "2024-08-09 15:47:10.921355",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
