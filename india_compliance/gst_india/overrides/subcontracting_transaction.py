@@ -35,6 +35,7 @@ STOCK_ENTRY_FIELD_MAP = {"total_taxable_value": "total_taxable_value"}
 SUBCONTRACTING_ORDER_RECEIPT_FIELD_MAP = {"total_taxable_value": "total"}
 
 
+# Functions to perform operations before and after mapping of transactions
 def after_mapping_subcontracting_order(doc, method, source_doc):
     if source_doc.doctype != "Purchase Order":
         return
@@ -73,6 +74,13 @@ def after_mapping_stock_entry(doc, method, source_doc):
 
     doc.taxes_and_charges = ""
     doc.taxes = []
+
+
+def before_mapping_subcontracting_receipt(doc, method, source_doc, table_maps):
+    table_maps["India Compliance Taxes and Charges"] = {
+        "doctype": "India Compliance Taxes and Charges",
+        "add_if_empty": True,
+    }
 
 
 def set_taxes(doc):
@@ -116,6 +124,7 @@ def set_taxes(doc):
         )
 
 
+# Common Functions for Suncontracting Transactions
 def get_dashboard_data(data):
     doctype = (
         "Subcontracting Receipt"
