@@ -40,7 +40,7 @@ class ReturnsAPI(TaxpayerBaseAPI):
             json={
                 "action": "RETNEWPTF",
                 "data": {
-                    "gstn": self.company_gstin,
+                    "gstin": self.company_gstin,
                     "ret_period": return_period,
                 },  # "isnil": "N" / "Y"
             },
