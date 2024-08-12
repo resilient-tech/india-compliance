@@ -131,7 +131,9 @@ class BaseAPI:
         response_json = None
 
         try:
+            print("Request: ", request_args, "\n\n")
             self.before_request(request_args)
+            print("Before Request: ", request_args, "\n\n")
 
             response = requests.request(method, **request_args)
             if api_request_id := response.headers.get("x-amzn-RequestId"):
@@ -158,11 +160,13 @@ class BaseAPI:
                         _("Error parsing response: {0}").format(response.content)
                     )
 
+            print("Response: ", response_json, "\n\n")
             response_json = self.process_response(response_json)
 
             if response_json.get("error_type") == "invalid_public_key":
                 return self._make_request(method, endpoint, params, headers, json)
 
+            print("Response JSON: ", response_json, "\n\n")
             return response_json.get("result", response_json)
 
         except Exception as e:

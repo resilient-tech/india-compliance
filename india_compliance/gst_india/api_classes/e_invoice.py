@@ -1,4 +1,3 @@
-import json
 import re
 from datetime import datetime
 
@@ -16,7 +15,7 @@ from india_compliance.gst_india.utils.cryptography import encrypt_using_public_k
 
 class EInvoiceAPI(BaseAPI):
     API_NAME = "e-Invoice"
-    BASE_PATH = "ei/api"
+    BASE_PATH = "nic-standard/ei/api"
     SENSITIVE_INFO = BaseAPI.SENSITIVE_INFO + ("password",)
     IGNORED_ERROR_CODES = {
         # Generate IRN errors
@@ -150,16 +149,19 @@ class EInvoiceAuth(EInvoiceAPI):
         if not (json_data := request_args.get("json")):
             return
 
-        json_data = json.dumps(json_data)
+        json_data = json_data.get("Data")
+
+        if not json_data:
+            return
+
+        json_data = frappe.as_json(json_data)
 
         encrypted_json = encrypt_using_public_key(
             json_data,
             self.get_public_certificate(),
         )
 
-        request_args["json"] = {
-            "data": encrypted_json,
-        }
+        request_args["json"]["Data"] = encrypted_json
 
     def get_public_certificate(self):
         certificate = self.settings.einvoice_public_certificate
@@ -177,10 +179,12 @@ class EInvoiceAuth(EInvoiceAPI):
 
     def authenticate(self):
         json = {
-            "UserName": self.username,
-            "Password": self.password,
-            "AppKey": self.app_key,
-            "ForceRefreshAccessToken": False,
+            "Data": {
+                "UserName": self.username,
+                "Password": self.password,
+                "AppKey": self.app_key,
+                "ForceRefreshAccessToken": False,
+            }
         }
 
         return self.post(endpoint="auth", json=json)

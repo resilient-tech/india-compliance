@@ -33,9 +33,7 @@ class PublicCertificate(BaseAPI):
         return response.certificate
 
     def get_einvoice_public_certificate(self, error_message=None) -> str:
-        return self.settings.einvoice_public_certificate
-        # TODO: to be implemented on AWS server
-        response = self.get(endpoint="einv_prod_public")
+        response = self.get(endpoint="nic_prod_public")
 
         if response.certificate == self.settings.einvoice_public_certificate:
             frappe.throw(error_message or _("Public Certificate is already up to date"))
