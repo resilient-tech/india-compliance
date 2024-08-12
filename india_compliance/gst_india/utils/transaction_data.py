@@ -8,7 +8,6 @@ from india_compliance.gst_india.constants import (
     E_INVOICE_MASTER_CODES_URL,
     GST_TAX_RATES,
     GST_TAX_TYPES,
-    SUBCONTRACTING_DOCTYPES,
 )
 from india_compliance.gst_india.constants.e_waybill import (
     TRANSPORT_MODES,
@@ -322,7 +321,13 @@ class GSTTransactionData:
             item = grouped_items.setdefault(
                 row.item_code,
                 frappe._dict(
-                    {**row.as_dict(), "idx": 0, "qty": 0.00, "taxable_value": 0.00}
+                    {
+                        **row.as_dict(),
+                        "idx": 0,
+                        "qty": 0.00,
+                        "taxable_value": 0.00,
+                        **{f"{tax}_amount": 0.00 for tax in GST_TAX_TYPES},
+                    }
                 ),
             )
 
@@ -332,6 +337,8 @@ class GSTTransactionData:
 
             item.qty += row.qty
             item.taxable_value += row.taxable_value
+            for tax in GST_TAX_TYPES:
+                item[f"{tax}_amount"] += row.get(f"{tax}_amount", 0)
 
         return list(grouped_items.values())
 
@@ -346,11 +353,13 @@ class GSTTransactionData:
         pass
 
     def update_item_tax_details(self, item_details, item):
-        if self.doc.doctype in SUBCONTRACTING_DOCTYPES:
-            self.update_item_tax_details_using_item_gst_details(item_details, item)
-
-        else:
-            self.update_item_tax_details_using_taxes(item_details, item)
+        for tax in GST_TAX_TYPES:
+            item_details.update(
+                {
+                    f"{tax}_amount": abs(self.rounded(item.get(f"{tax}_amount"))),
+                    f"{tax}_rate": abs(self.rounded(item.get(f"{tax}_rate"))),
+                }
+            )
 
         tax_rate = sum(
             self.rounded(item_details.get(f"{tax}_rate", 0), 3)
@@ -373,65 +382,6 @@ class GSTTransactionData:
                 ),
             }
         )
-
-    def update_item_tax_details_using_taxes(self, item_details, item):
-        for tax in GST_TAX_TYPES:
-            item_details.update({f"{tax}_amount": 0, f"{tax}_rate": 0})
-
-        for row in self.doc.taxes:
-            if (
-                not row.tax_amount
-                or self.is_purchase_rcm
-                or row.gst_tax_type not in GST_TAX_TYPES
-            ):
-                continue
-
-            tax = row.gst_tax_type
-            tax_rate = self.rounded(
-                frappe.parse_json(row.item_wise_tax_detail).get(
-                    item.item_code or item.item_name
-                )[0],
-                3,
-            )
-
-            # considers senarios where same item is there multiple times
-            tax_amount = self.get_progressive_item_tax_amount(
-                (
-                    tax_rate * item.qty
-                    if row.charge_type == "On Item Quantity"
-                    else tax_rate * item.taxable_value / 100
-                ),
-                tax,
-            )
-
-            item_details.update(
-                {
-                    f"{tax}_rate": tax_rate,
-                    f"{tax}_amount": tax_amount,
-                }
-            )
-
-    def update_item_tax_details_using_item_gst_details(self, item_details, item):
-        for tax in GST_TAX_TYPES:
-            item_details.update(
-                {
-                    f"{tax}_amount": item.get(f"{tax}_amount"),
-                    f"{tax}_rate": item.get(f"{tax}_rate"),
-                }
-            )
-
-    def get_progressive_item_tax_amount(self, amount, tax_type):
-        """
-        Helper function to calculate progressive tax amount for an item to remove
-        rounding errors.
-        """
-        error_field = f"{tax_type}_rounding_error"
-        error_amount = self.rounding_errors[error_field]
-
-        response = self.rounded(amount + error_amount)
-        self.rounding_errors[error_field] = amount + error_amount - response
-
-        return abs(response)
 
     def get_address_details(self, address_name, validate_gstin=False):
         address = frappe.get_cached_value(
