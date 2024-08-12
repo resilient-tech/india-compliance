@@ -301,6 +301,7 @@ class InwardSupply:
             .left_join(self.GSTR2_ITEM)
             .on(self.GSTR2_ITEM.parent == self.GSTR2.name)
             .where(IfNull(self.GSTR2.match_status, "") != "Amended")
+            .where(self.GSTR2_ITEM.parenttype == "GST Inward Supply")
             .groupby(self.GSTR2_ITEM.parent)
             .select(*fields, ConstantColumn("GST Inward Supply").as_("doctype"))
         )
@@ -418,6 +419,7 @@ class PurchaseInvoice:
             .where(self.PI.docstatus == 1)
             .where(IfNull(self.PI.reconciliation_status, "") != "Not Applicable")
             .where(self.PI.is_opening == "NO")
+            .where(self.PI_ITEM.parenttype == "Purchase Invoice")
             .groupby(self.PI.name)
             .select(
                 *fields,
@@ -562,6 +564,7 @@ class BillOfEntry:
             .on(self.BOE.purchase_invoice == self.PI.name)
             .where(self.BOE.docstatus == 1)
             .where(IfNull(self.BOE.reconciliation_status, "") != "Not Applicable")
+            .where(self.BOE_ITEM.parenttype == "Bill of Entry")
             .groupby(self.BOE.name)
             .select(*fields, ConstantColumn("Bill of Entry").as_("doctype"))
         )
