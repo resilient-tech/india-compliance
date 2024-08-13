@@ -28,16 +28,12 @@ from india_compliance.gst_india.utils.taxes_controller import (
 )
 
 
-class BillofEntry(Document, CustomTaxController):
+class BillofEntry(Document):
     get_gl_dict = AccountsController.get_gl_dict
     get_value_in_transaction_currency = (
         AccountsController.get_value_in_transaction_currency
     )
     get_voucher_subtype = AccountsController.get_voucher_subtype
-
-    def __init__(self, *args, **kwargs):
-        Document.__init__(self, *args, **kwargs)
-        CustomTaxController.__init__(self, self)
 
     def onload(self):
         if self.docstatus != 1:
@@ -118,12 +114,14 @@ class BillofEntry(Document, CustomTaxController):
         self.customs_payable_account = company.default_customs_payable_account
 
     def set_taxes_and_totals(self):
-        self.set_item_wise_tax_rates()
+        self.taxes_controller = CustomTaxController(self)
+
+        self.taxes_controller.set_item_wise_tax_rates()
         self.calculate_totals()
 
     def calculate_totals(self):
         self.set_total_customs_and_taxable_values()
-        self.update_tax_amount()
+        self.taxes_controller.update_tax_amount()
         self.total_amount_payable = self.total_customs_duty + self.total_taxes
 
     def set_total_customs_and_taxable_values(self):
