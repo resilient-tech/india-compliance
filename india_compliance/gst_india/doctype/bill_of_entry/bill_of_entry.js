@@ -1,5 +1,6 @@
 // Copyright (c) 2023, Resilient Tech and contributors
 // For license information, please see license.txt
+frappe.provide("india_compliance");
 
 frappe.ui.form.on("Bill of Entry", {
     onload(frm) {
@@ -68,11 +69,7 @@ frappe.ui.form.on("Bill of Entry", {
     },
 
     total_customs_duty(frm) {
-        frm.bill_of_entry_controller.update_total_amount_payable();
-    },
-
-    total_taxes(frm) {
-        frm.bill_of_entry_controller.update_total_amount_payable();
+        frm.taxes_controller.update_total_amount_payable();
     },
 });
 
@@ -99,41 +96,10 @@ frappe.ui.form.on("Bill of Entry Item", {
     },
 });
 
-frappe.ui.form.on("Bill of Entry Taxes", {
-    rate(frm, cdt, cdn) {
-        frm.taxes_controller.update_tax_rate(cdt, cdn);
-    },
-
-    tax_amount(frm, cdt, cdn) {
-        frm.taxes_controller.update_tax_amount(cdt, cdn);
-    },
-
-    async account_head(frm, cdt, cdn) {
-        await frm.taxes_controller.set_item_wise_tax_rates(null, cdn);
-        frm.taxes_controller.update_tax_amount(cdt, cdn);
-    },
-
-    async charge_type(frm, cdt, cdn) {
-        const row = locals[cdt][cdn];
-        if (!row.charge_type || row.charge_type === "Actual") {
-            row.rate = 0;
-            row.item_wise_tax_rates = "{}";
-            frm.refresh_field("taxes");
-        } else {
-            await frm.taxes_controller.set_item_wise_tax_rates(null, cdn);
-            frm.taxes_controller.update_tax_amount(cdt, cdn);
-        }
-    },
-
-    taxes_remove(frm) {
-        frm.bill_of_entry_controller.update_total_taxes();
-    },
-});
-
 class BillOfEntryController {
     constructor(frm) {
         this.frm = frm;
-        this.frm.taxes_controller = new TaxesController(frm);
+        this.frm.taxes_controller = new india_compliance.taxes_controller(frm);
         this.setup();
     }
 

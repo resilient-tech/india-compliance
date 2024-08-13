@@ -169,7 +169,11 @@ india_compliance.taxes_controller = class TaxesController {
         });
 
         this.frm.set_value(this.get_fieldname("total_taxes"), total_taxes);
-        this.update_base_grand_total();
+        if (this.frm.doc.doctype === "Bill of Entry") {
+            this.update_total_amount_payable();
+        } else {
+            this.update_base_grand_total();
+        }
         this.frm.refresh_field("taxes");
     }
 
@@ -177,6 +181,13 @@ india_compliance.taxes_controller = class TaxesController {
         const grand_total =
             this.calculate_total_taxable_value() + this.get_value("total_taxes");
         this.frm.set_value(this.get_fieldname("base_grand_total"), grand_total);
+    }
+
+    update_total_amount_payable() {
+        this.frm.set_value(
+            "total_amount_payable",
+            this.frm.doc.total_customs_duty + this.frm.doc.total_taxes
+        );
     }
 
     get_tax_amount(tax_row) {
