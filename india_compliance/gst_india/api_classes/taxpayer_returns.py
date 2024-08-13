@@ -109,6 +109,20 @@ class GSTR1API(ReturnsAPI):
             otp=otp,
         )
 
+    def reset_gstr_1_data(self, return_period, otp=None):
+        return self.post(
+            return_period=return_period,
+            json={
+                "action": "RESET",
+                "data": {
+                    "gstin": self.company_gstin,
+                    "ret_period": return_period,
+                },
+            },
+            endpoint="returns/gstr1",
+            otp=otp,
+        )
+
     def file_gstr_1(self, return_period, summary_data, pan, evc_otp):
         return self.post(
             return_period=return_period,

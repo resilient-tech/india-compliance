@@ -286,12 +286,6 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
         if return_period:
             headers["ret_period"] = return_period
 
-        # if return_type:
-        #     __headers = headers.copy()
-        #     __headers.update(self.default_headers)
-        #     __headers.pop("x-api-key", None)
-        #     json["hdr"] = __headers
-
         response = getattr(super(), method)(
             params={"action": action, **(params or {})},
             headers=headers,
@@ -354,8 +348,6 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
             json["data"] = aes_encrypt_data(b64_data.decode(), self.session_key)
 
             if json.get("st") == "EVC":
-                # sid may be without pipe character
-                # eg: with pipe: https://groups.google.com/g/gst-suvidha-provider-gsp-discussion-group/c/1EgkyDvfT7g/m/2O5Rt0tfCgAJ
                 sid_key = json.get("sid").encode()
                 json["sign"] = hmac_sha256(b64_data, sid_key)
 
