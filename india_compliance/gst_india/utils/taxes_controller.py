@@ -121,6 +121,12 @@ class CustomTaxController:
         item_tax_map = self.get_item_tax_map(tax_templates, tax_accounts)
 
         for tax in taxes:
+            if tax.charge_type == "Actual":
+                if not tax.item_wise_tax_rates:
+                    tax.item_wise_tax_rates = "{}"
+
+                continue
+
             item_wise_tax_rates = (
                 json.loads(tax.item_wise_tax_rates) if tax.item_wise_tax_rates else {}
             )
