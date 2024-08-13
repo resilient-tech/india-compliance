@@ -117,12 +117,10 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
             if (!is_filter_same) return;
 
             frappe.after_ajax(() => {
-                frm.doc.__reconciliation_data = JSON.stringify(
-                    data && data.result ? data.result : []
-                );
+                frm.doc.__reconciliation_data =
+                    data && data.result ? JSON.stringify(data.result) : null;
                 frm.doc.data_reconciled_on = creation;
                 frm.trigger("load_reconciliation_data");
-                frm.refresh();
             });
         });
     },
@@ -245,6 +243,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
     },
 
     load_reconciliation_data(frm) {
+        frm.refresh();
         frm.purchase_reconciliation_tool.refresh(
             frm.doc.__reconciliation_data
                 ? JSON.parse(frm.doc.__reconciliation_data)

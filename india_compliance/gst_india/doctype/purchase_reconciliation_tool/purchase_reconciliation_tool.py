@@ -79,31 +79,31 @@ class PurchaseReconciliationTool(Document):
 
     @frappe.whitelist()
     def publish_reconciliation_data(self, name):
-        attachments = frappe.get_all(
+        attachment = frappe.get_doc(
             "File",
-            fields=["name", "file_name", "file_url", "is_private", "creation"],
-            filters={
+            {
                 "attached_to_name": name,
                 "attached_to_doctype": "Prepared Report",
             },
         )
 
         self.reconciliation_data = None
-        self.file_name = None
 
-        if attachments:
-            attached_file = frappe.get_doc("File", attachments[0].name)
+        if attachment:
+            content = attachment.get_content()
+            if isinstance(content, str):
+                content = content.encode("utf-8")
+
             self.reconciliation_data = frappe.parse_json(
-                frappe.safe_decode(gzip.decompress(attached_file.get_content()))
+                frappe.safe_decode(gzip.decompress(content))
             )
-            self.file_name = attachments[0].name
 
         frappe.publish_realtime(
             "data_reconciliation",
             message={
                 "data": self.reconciliation_data,
                 "filters": self.get_reco_doc(),
-                "creation": attachments[0].creation if attachments else None,
+                "creation": attachment.creation if attachment else None,
                 "report_name": name,
             },
             user=frappe.session.user,
