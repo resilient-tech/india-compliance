@@ -435,6 +435,12 @@ class GSTAccounts:
         - Intra-State supplies should not have IGST account
         - If Intra-State, ensure both CGST and SGST accounts are used
         """
+        if (
+            frappe.db.get_value("Address", self.doc.company_address, "gst_category")
+            == "SEZ"
+        ):
+            return
+
         is_inter_state = is_inter_state_supply(self.doc)
 
         for row in self.gst_tax_rows:
