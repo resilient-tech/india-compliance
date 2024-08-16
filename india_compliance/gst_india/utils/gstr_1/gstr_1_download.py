@@ -37,7 +37,7 @@ def download_gstr1_json_data(gstr1_log):
 
     is_queued = False
     json_data = frappe._dict()
-    api = GSTR1API(gstin)
+    api = GSTR1API(gstr1_log)
 
     if gstr1_log.filing_status == "Filed":
         return_type = "GSTR1"
