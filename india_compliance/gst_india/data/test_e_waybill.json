@@ -1090,9 +1090,11 @@
                     "gst_hsn_code": "61149090",
                     "s_warehouse": "Finished Goods - _TIRC",
                     "t_warehouse": "Goods In Transit - _TIRC",
-                    "amount": 100
+                    "amount": 100,
+                    "taxable_value": 100
                 }],
-            "company": "_Test Indian Registered Company"
+            "company": "_Test Indian Registered Company",
+            "base_grand_total": 100
         },
         "values": {
             "distance": 0.0,
