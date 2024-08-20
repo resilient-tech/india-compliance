@@ -5,6 +5,7 @@ from pypika import Order
 from pypika.terms import ValueWrapper
 
 import frappe
+from frappe.query_builder import Case
 from frappe.query_builder.functions import Date, IfNull
 from frappe.utils import getdate
 
@@ -24,10 +25,14 @@ class ITC04Query:
 
     def get_base_query_table_4(self, doc, doc_item):
         """Construct the base query for Table-4."""
+        item = frappe.qb.DocType("Item")
+
         query = (
             frappe.qb.from_(doc)
             .inner_join(doc_item)
             .on(doc.name == doc_item.parent)
+            .left_join(item)
+            .on(doc_item.item_code == item.name)
             .select(
                 IfNull(doc_item.item_code, doc_item.item_name).as_("item_code"),
                 doc_item.qty,
@@ -67,14 +72,13 @@ class ITC04Query:
                     + doc_item.cess_amount
                     + doc_item.cess_non_advol_amount
                 ).as_("total_amount"),
+                Case()
+                .when(item.is_fixed_asset == 1, "Capital Goods")
+                .else_("Inputs")
+                .as_("item_type"),
             )
             .where(doc.docstatus == 1)
-            .orderby(
-                doc.posting_date,
-                doc.name,
-                doc_item.item_code,
-                order=Order.desc,
-            )
+            .orderby(doc.name, order=Order.desc)
         )
         query = self.get_query_with_common_filters(query, doc)
 
@@ -153,12 +157,7 @@ class ITC04Query:
                 IfNull(ref_doc.link_name, "").as_("original_challan_no"),
             )
             .where(doc.docstatus == 1)
-            .orderby(
-                doc.posting_date,
-                doc.name,
-                doc_item.item_code,
-                order=Order.desc,
-            )
+            .orderby(doc.name, order=Order.desc)
         )
 
         query = self.get_query_with_common_filters(query, doc)
@@ -204,6 +203,7 @@ class ITC04Query:
                 self.sr_doctype.as_("invoice_type"),
             )
             .where(IfNull(self.sr.supplier_gstin, "") != self.sr.company_gstin)
+            .where(self.sr.is_return == 0)
         )
 
         if self.filters.company_gstin:
