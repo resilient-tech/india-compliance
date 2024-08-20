@@ -146,15 +146,13 @@ class JobWorkMovement:
         ]
 
     def gstin_column(self):
-        if self.filters.company_gstin:
-            return []
-
         return [
             {
                 "fieldname": "company_gstin",
                 "label": _("Company GSTIN"),
                 "fieldtype": "Data",
                 "width": 160,
+                "hidden": True if self.filters.company_gstin else False,
             }
         ]
 
@@ -200,6 +198,11 @@ class JobWorkMovement:
                 "label": _("Item Type (Input/Capital Goods)"),
                 "fieldtype": "Data",
                 "width": 180,
+                "hidden": (
+                    False
+                    if self.filters.category == "Sent for Job Work (Table 4)"
+                    else True
+                ),
             },
             {
                 "fieldname": "item_code",
