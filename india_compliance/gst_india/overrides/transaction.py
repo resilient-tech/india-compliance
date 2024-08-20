@@ -436,7 +436,9 @@ class GSTAccounts:
         - If Intra-State, ensure both CGST and SGST accounts are used
         """
         if (
-            frappe.db.get_value("Address", self.doc.company_address, "gst_category")
+            frappe.db.get_value(
+                "Address", self.doc.get("company_address"), "gst_category"
+            )
             == "SEZ"
         ):
             return
