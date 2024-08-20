@@ -31,6 +31,17 @@ const ReturnType = {
     GSTR2B: "GSTR2b",
 };
 
+const filter_fields = [
+    "company",
+    "company_gstin",
+    "purchase_from_date",
+    "purchase_to_date",
+    "inward_supply_from_date",
+    "inward_supply_to_date",
+    "include_ignored",
+    "gst_return",
+];
+
 function remove_gstr2b_alert(alert) {
     if (alert.length === 0) return;
     $(alert).remove();
@@ -62,6 +73,19 @@ async function add_gstr2b_alert(frm) {
         });
 }
 
+function setup_filter_onchange_events(frm) {
+    const events = {};
+
+    filter_fields.forEach(field => {
+        events[field] = () => {
+            frm.doc.__reconciliation_data = null;
+            frm.refresh();
+        };
+    });
+
+    frappe.ui.form.on("Purchase Reconciliation Tool", events);
+}
+
 frappe.ui.form.on("Purchase Reconciliation Tool", {
     async setup(frm) {
         patch_set_active_tab(frm);
@@ -69,13 +93,36 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
 
         await frappe.require("purchase_reconciliation_tool.bundle.js");
         frm.trigger("company");
-        frm.purchase_reconciliation_tool = new PurchaseReconciliationTool(frm);
-    },
-
-    onload(frm) {
-        if (frm.doc.is_modified) frm.doc.reconciliation_data = null;
+        frm.doc.__reconciliation_data = null;
         add_gstr2b_alert(frm);
         set_date_range_description(frm);
+        setup_filter_onchange_events(frm);
+        frm.purchase_reconciliation_tool = new PurchaseReconciliationTool(frm);
+
+        frappe.realtime.on("report_generated", message => {
+            frm.call("publish_reconciliation_data", {
+                name: message.name,
+            });
+        });
+
+        frappe.realtime.on("data_reconciliation", message => {
+            const { data, filters, creation, report_name } = message;
+
+            frm.report_name = report_name;
+            frm.is_latest_data = true;
+
+            const is_filter_same = filter_fields.every(
+                field => frm.doc[field] === filters[field]
+            );
+            if (!is_filter_same) return;
+
+            frappe.after_ajax(() => {
+                frm.doc.__reconciliation_data =
+                    data && data.result ? JSON.stringify(data.result) : null;
+                frm.doc.data_reconciled_on = creation;
+                frm.trigger("load_reconciliation_data");
+            });
+        });
     },
 
     async company(frm) {
@@ -88,7 +135,46 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
     refresh(frm) {
         // Primary Action
         frm.disable_save();
-        frm.page.set_primary_action(__("Reconcile"), () => frm.save());
+        const button_label = frm.doc.__reconciliation_data
+            ? __("Rebuild")
+            : __("Reconcile");
+        const force_update = frm.doc.__reconciliation_data != null;
+
+        frm.page.set_primary_action(button_label, async () => {
+            if (
+                !frm.doc.company ||
+                !frm.doc.company_gstin ||
+                !frm.doc.purchase_period ||
+                !frm.doc.inward_supply_period ||
+                !frm.doc.gst_return
+            ) {
+                frappe.msgprint({
+                    message: __("Please Enter All Details"),
+                    title: "Message",
+                    indicator: "blue",
+                });
+                return;
+            }
+            const filetrs_to_pass = {};
+            filter_fields.forEach(field => {
+                filetrs_to_pass[field] = frm.doc[field];
+            });
+
+            const { message } = await frappe.call({
+                method: "frappe.core.doctype.prepared_report.prepared_report.get_reports_in_queued_state",
+                args: {
+                    filters: filetrs_to_pass,
+                    report_name: "ICUtility",
+                },
+            });
+            if (message.length) {
+                frappe.msgprint(__("A report is alerady in queued"));
+                return;
+            }
+            frm.call("get_reconciliation_data", {
+                force_update: force_update,
+            });
+        });
 
         // add custom buttons
         api_enabled
@@ -132,11 +218,6 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         }
     },
 
-    before_save(frm) {
-        frm.doc.__unsaved = true;
-        frm.doc.reconciliation_data = null;
-    },
-
     async purchase_period(frm) {
         await fetch_date_range(frm, "purchase");
         set_date_range_description(frm, "purchase");
@@ -161,9 +242,13 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         add_gstr2b_alert(frm);
     },
 
-    after_save(frm) {
+    load_reconciliation_data(frm) {
+        frm.refresh();
         frm.purchase_reconciliation_tool.refresh(
-            frm.doc.reconciliation_data ? JSON.parse(frm.doc.reconciliation_data) : []
+            frm.doc.__reconciliation_data
+                ? JSON.parse(frm.doc.__reconciliation_data)
+                : [],
+            frm.doc.data_reconciled_on ? frm.doc.data_reconciled_on : ""
         );
     },
 
@@ -208,7 +293,9 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
                     setTimeout(() => {
                         frm.dashboard.clear_headline();
                     }, 2000);
-                    frm.save();
+                    frm.call("get_reconciliation_data", {
+                        force_update: true,
+                    });
                 }, 1000);
             }
         });
@@ -225,15 +312,15 @@ class PurchaseReconciliationTool {
 
     init(frm) {
         this.frm = frm;
-        this.data = frm.doc.reconciliation_data
-            ? JSON.parse(frm.doc.reconciliation_data)
+        this.data = frm.doc.__reconciliation_data
+            ? JSON.parse(frm.doc.__reconciliation_data)
             : [];
         this.filtered_data = this.data;
         this.$wrapper = this.frm.get_field("reconciliation_html").$wrapper;
         this._tabs = ["invoice", "supplier", "summary"];
     }
 
-    refresh(data) {
+    refresh(data, data_reconciled_on) {
         if (data) {
             this.data = data;
             this.refresh_filter_fields();
@@ -241,14 +328,11 @@ class PurchaseReconciliationTool {
 
         this.apply_filters(!!data);
 
-        // data unchanged!
-        if (this.rendered_data == this.filtered_data) return;
-
         this._tabs.forEach(tab => {
             this.tabs[`${tab}_tab`].refresh(this[`get_${tab}_data`]());
         });
 
-        this.rendered_data = this.filtered_data;
+        this.setup_footer(data_reconciled_on);
     }
 
     render_tab_group() {
@@ -296,6 +380,23 @@ class PurchaseReconciliationTool {
         // make tabs_dict for easy access
         this.tabs = Object.fromEntries(
             this.tab_group.tabs.map(tab => [tab.df.fieldname, tab])
+        );
+    }
+
+    setup_footer(data_reconciled_on) {
+        if (!data_reconciled_on) return;
+
+        const creation_time_string = `Created ${frappe.datetime.prettyDate(
+            data_reconciled_on
+        )} `;
+
+        const wrapper = this.frm.get_field("reconciliation_html").$wrapper;
+
+        if ($(wrapper).find(".creation-time").length)
+            $(wrapper).find(".creation-time").remove();
+
+        wrapper.append(
+            `<div class="creation-time text-muted float-right">${creation_time_string}</div>`
         );
     }
 
@@ -988,6 +1089,7 @@ class DetailViewDialog {
                 () => {
                     this._apply_custom_action(action);
                     this.dialog.hide();
+                    this.update_report_status();
                 },
                 `mr-2 ${this._get_button_css(action)}`
             );
@@ -1019,6 +1121,24 @@ class DetailViewDialog {
         } else {
             apply_action(this.frm, action, [this.row]);
         }
+    }
+
+    async update_report_status() {
+        if (this.frm.is_latest_data == false) return;
+
+        const filters = {};
+        filter_fields.forEach(field => {
+            filters[field] = this.frm.doc[field];
+        });
+        filters["is_latest_data"] = 1;
+
+        await frappe.db.set_value(
+            "Prepared Report",
+            this.frm.report_name,
+            "filters",
+            JSON.stringify(filters)
+        );
+        this.frm.is_latest_data = false;
     }
 
     _get_button_css(action) {

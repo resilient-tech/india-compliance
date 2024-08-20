@@ -1,6 +1,6 @@
 # Copyright (c) 2022, Resilient Tech and contributors
 # For license information, please see license.txt
-import json
+import gzip
 import re
 from collections import defaultdict
 from typing import List
@@ -9,16 +9,13 @@ import frappe
 from frappe.model.document import Document
 from frappe.query_builder.functions import IfNull
 from frappe.utils import add_to_date, cint, now_datetime
-from frappe.utils.response import json_handler
 
 from india_compliance.gst_india.api_classes.taxpayer_base import TaxpayerBaseAPI
-from india_compliance.gst_india.constants import ORIGINAL_VS_AMENDED
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     BaseUtil,
     BillOfEntry,
     PurchaseInvoice,
     ReconciledData,
-    Reconciler,
 )
 from india_compliance.gst_india.utils import (
     get_gstin_list,
@@ -43,6 +40,10 @@ STATUS_MAP = {
     "Pending": "Unreconciled",
     "Ignore": "Ignored",
 }
+from frappe.core.doctype.prepared_report.prepared_report import (
+    get_completed_prepared_report,
+    make_prepared_report,
+)
 
 
 class PurchaseReconciliationTool(Document):
@@ -63,34 +64,51 @@ class PurchaseReconciliationTool(Document):
         )
         return {field: self.get(field) for field in fields}
 
-    def onload(self):
-        date_range = [
-            self.inward_supply_from_date,
-            self.inward_supply_to_date,
-        ]
-
-        self.set_onload(
-            "has_missing_2b_documents",
-            has_missing_2b_documents(
-                date_range, ReturnType.GSTR2B, self.company_gstin, self.company
-            ),
-        )
-
-    def validate(self):
-        # reconcile purchases and inward supplies
+    @frappe.whitelist()
+    def get_reconciliation_data(self, force_update=False):
         if frappe.flags.in_install or frappe.flags.in_migrate:
             return
 
-        _Reconciler = Reconciler(**self.get_reco_doc())
-        for row in ORIGINAL_VS_AMENDED:
-            _Reconciler.reconcile(row["original"], row["amended"])
+        doc_name = get_completed_prepared_report(
+            self.get_reco_doc(), frappe.session.user, "ICUtility"
+        )
+        if doc_name and not force_update:
+            self.publish_reconciliation_data(doc_name)
+        else:
+            frappe.enqueue(make_prepared_report("ICUtility", self.get_reco_doc()))
 
-        self.ReconciledData = ReconciledData(**self.get_reco_doc())
-        self.reconciliation_data = json.dumps(
-            self.ReconciledData.get(), default=json_handler
+    @frappe.whitelist()
+    def publish_reconciliation_data(self, name):
+        attachment = frappe.get_doc(
+            "File",
+            {
+                "attached_to_name": name,
+                "attached_to_doctype": "Prepared Report",
+            },
         )
 
-        self.db_set("is_modified", 0)
+        self.reconciliation_data = None
+
+        if attachment:
+            content = attachment.get_content()
+            if isinstance(content, str):
+                content = content.encode("utf-8")
+
+            self.reconciliation_data = frappe.parse_json(
+                frappe.safe_decode(gzip.decompress(content))
+            )
+
+        frappe.publish_realtime(
+            "data_reconciliation",
+            message={
+                "data": self.reconciliation_data,
+                "filters": self.get_reco_doc(),
+                "creation": attachment.creation if attachment else None,
+                "report_name": name,
+            },
+            user=frappe.session.user,
+            doctype=self.doctype,
+        )
 
     @frappe.whitelist()
     def upload_gstr(self, return_type, period, file_path):
