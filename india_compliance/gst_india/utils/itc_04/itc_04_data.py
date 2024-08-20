@@ -81,7 +81,12 @@ class ITC04Query:
         return query
 
     def get_query_table_4_se(self):
-        """Construct the query for Table-4 Stock Entry."""
+        """
+        Construct the query for Table-4 Stock Entry.
+        - Table-4 is for goods sent to job worker.
+        - This query is for Stock Entry with purpose "Send to Subcontractor".
+        """
+
         query = (
             self.get_base_query_table_4(self.se, self.se_item)
             .select(
@@ -102,7 +107,11 @@ class ITC04Query:
         return query
 
     def get_query_table_4_sr(self):
-        """Construct the query for Table-4 Subcontracting Receipt."""
+        """
+        Construct the query for Table-4 Subcontracting Receipt.
+        - Table-4 is for goods sent to job worker.
+        - This query is for Subcontracting Receipt Returns.
+        """
         query = (
             self.get_base_query_table_4(self.sr, self.sr_item)
             .select(
@@ -140,7 +149,7 @@ class ITC04Query:
                 doc.base_grand_total.as_("invoice_total"),
                 IfNull(doc.gst_category, "").as_("gst_category"),
                 IfNull(doc_item.gst_treatment, "Not Defined").as_("gst_treatment"),
-                ref_doc.parenttype.as_("original_challan_invoice_type"),
+                ref_doc.link_doctype.as_("original_challan_invoice_type"),
                 IfNull(ref_doc.link_name, "").as_("original_challan_no"),
             )
             .where(doc.docstatus == 1)
@@ -157,7 +166,11 @@ class ITC04Query:
         return query
 
     def get_query_table_5A_se(self):
-        """Construct the query for Table-5A Stock Entry."""
+        """
+        Construct the query for Table-5A Stock Entry.
+        - Table-5A is for goods received from job worker.
+        - This query is for Stock Entry Returns.
+        """
         query = (
             self.get_base_query_table_5A(self.se, self.se_item, self.ref_doc)
             .select(
@@ -177,7 +190,11 @@ class ITC04Query:
         return query
 
     def get_query_table_5A_sr(self):
-        """Construct the query for Table-5A Subcontracting Receipt."""
+        """
+        Construct the query for Table-5A Subcontracting Receipt.
+        - Table-5A is for goods received from job worker.
+        - This query is for Subcontracting Receipt.
+        """
         query = (
             self.get_base_query_table_5A(self.sr, self.sr_item, self.ref_doc)
             .select(

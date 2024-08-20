@@ -345,6 +345,28 @@ Object.assign(india_compliance, {
         return frappe.datetime.add_days(frappe.datetime.month_start(), -1);
     },
 
+    last_half_year(position) {
+        const today = frappe.datetime.now_date(true);
+        const current_month = today.getMonth() + 1;
+        const current_year = today.getFullYear();
+
+        if (current_month <= 3) {
+            return position === "start"
+                ? `${current_year - 1}-03-01`
+                : `${current_year - 1}-09-30`;
+
+        } else if (current_month <= 9) {
+            return position === "start"
+                ? `${current_year - 1}-10-01`
+                : `${current_year}-03-31`;
+
+        } else {
+            return position === "start"
+                ? `${current_year}-04-01`
+                : `${current_year}-09-30`;
+        }
+    },
+
     primary_to_danger_btn(parent) {
         parent.$wrapper
             .find(".btn-primary")
