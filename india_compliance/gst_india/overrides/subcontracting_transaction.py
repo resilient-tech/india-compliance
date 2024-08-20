@@ -157,6 +157,17 @@ def validate(doc, method=None):
     if ignore_gst_validation_for_subcontracting(doc):
         return
 
+    if (doc.doctype == "Stock Entry" and doc.purpose == "Material Transfer") or (
+        doc.doctype == "Subcontracting Receipt" and not doc.is_return
+    ):
+        if not doc.doc_references:
+            frappe.throw(
+                _("Please Select Original Document Reference for ITC-04 Reporting"),
+                title=_("Mandatory Field"),
+            )
+        else:
+            remove_duplicates(doc)
+
     field_map = (
         STOCK_ENTRY_FIELD_MAP
         if doc.doctype == "Stock Entry"
@@ -277,8 +288,8 @@ class SubcontractingGSTAccounts(GSTAccounts):
 
 
 def ignore_gst_validation_for_subcontracting(doc):
-    if doc.doctype == "Stock Entry" and doc.purpose != "Send to Subcontractor":
-        return True
+    if doc.doctype == "Stock Entry" and not doc.subcontracting_order:
+        return
 
     return ignore_gst_validations(doc)
 
@@ -294,3 +305,69 @@ def set_address_display(doc):
     for address in adddress_fields:
         if doc.get(address):
             setattr(doc, address + "_display", get_address_display(doc.get(address)))
+
+
+@frappe.whitelist()
+def get_relevant_references(
+    supplier, supplied_items, received_items, subcontracting_orders
+):
+
+    if isinstance(supplied_items, str):
+        supplied_items = frappe.parse_json(supplied_items)
+        received_items = frappe.parse_json(received_items)
+        subcontracting_orders = frappe.parse_json(subcontracting_orders)
+
+    # same filters used for set_query in JS
+
+    receipt_returns = frappe.db.get_all(
+        "Subcontracting Receipt",
+        filters=[
+            ["docstatus", "=", 1],
+            ["is_return", "=", 1],
+            ["supplier", "=", supplier],
+            ["Subcontracting Receipt Item", "item_code", "in", received_items],
+            [
+                "Subcontracting Receipt Item",
+                "subcontracting_order",
+                "in",
+                subcontracting_orders,
+            ],
+        ],
+        pluck="name",
+        group_by="name",
+    )
+
+    stock_entries = frappe.db.get_all(
+        "Stock Entry",
+        filters=[
+            ["docstatus", "=", 1],
+            ["purpose", "=", "Send to Subcontractor"],
+            ["subcontracting_order", "in", subcontracting_orders],
+            ["supplier", "=", supplier],
+            ["Stock Entry Detail", "item_code", "in", supplied_items],
+        ],
+        pluck="name",
+        group_by="name",
+    )
+
+    data = {"Subcontracting Receipt": receipt_returns, "Stock Entry": stock_entries}
+
+    return data
+
+
+def remove_duplicates(doc):
+    references = []
+    has_duplicates = False
+
+    for row in doc.doc_references:
+        ref = (row.link_doctype, row.link_name)
+
+        if ref not in references:
+            references.append(ref)
+        else:
+            has_duplicates = True
+
+    if has_duplicates:
+        doc.doc_references = []
+        for row in references:
+            doc.append("doc_references", dict(link_doctype=row[0], link_name=row[1]))
