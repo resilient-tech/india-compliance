@@ -94,7 +94,8 @@ def set_taxes(doc):
         .orderby(sales_tax_template.modified, order=Order.desc)
         .limit(1)
         .run(pluck=True)
-    )[0] or 0
+    )
+    rate = rate[0] if rate else 0
 
     tax_types = ("igst",)
     if not is_inter_state_supply(doc):
