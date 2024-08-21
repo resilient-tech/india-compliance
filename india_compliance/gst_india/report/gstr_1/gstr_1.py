@@ -1374,199 +1374,132 @@ class GSTR1DocumentIssuedSummary:
 
         return summarized_data
 
-    def get_query_for_sales_invoice(self):
+    def build_query(
+        self,
+        doctype,
+        filters,
+        gstin_field,
+        address_field,
+        company_gstin_field=None,
+        additional_conditions=None,
+        additional_selects=None,
+    ):
+        if not company_gstin_field:
+            company_gstin_field = doctype.company_gstin
+
         query = (
-            frappe.qb.from_(self.sales_invoice)
-            .join(self.sales_invoice_item)
+            frappe.qb.from_(doctype)
+            .select(
+                doctype.name,
+                IfNull(doctype.naming_series, "").as_("naming_series"),
+                doctype.creation,
+                doctype.docstatus,
+                doctype.amended_from,
+                Case()
+                .when(
+                    IfNull(gstin_field, "") == company_gstin_field,
+                    1,
+                )
+                .else_(0)
+                .as_("same_gstin_billing"),
+            )
+            .where(doctype.company == filters.company)
+            .where(doctype.posting_date.between(filters.from_date, filters.to_date))
+            .orderby(doctype.name)
+            .groupby(doctype.name)
+        )
+
+        if additional_conditions:
+            for condition in additional_conditions:
+                query = query.where(condition)
+
+        if additional_selects:
+            for select in additional_selects:
+                query = query.select(select)
+
+        query = (
+            query.where(address_field == filters.company_address)
+            if filters.company_address
+            else query
+        )
+
+        query = (
+            query.where(company_gstin_field == filters.company_gstin)
+            if filters.company_gstin
+            else query
+        )
+        return query
+
+    def get_query_for_sales_invoice(self):
+        additional_selects = [
+            self.sales_invoice.is_return,
+            self.sales_invoice.is_debit_note,
+            self.sales_invoice.is_opening,
+        ]
+
+        query = self.build_query(
+            doctype=self.sales_invoice,
+            filters=self.filters,
+            gstin_field=self.sales_invoice.billing_address_gstin,
+            address_field=self.sales_invoice.company_address,
+            additional_selects=additional_selects,
+        )
+
+        return (
+            query.join(self.sales_invoice_item)
             .on(self.sales_invoice.name == self.sales_invoice_item.parent)
             .select(
-                self.sales_invoice.name,
-                IfNull(self.sales_invoice.naming_series, "").as_("naming_series"),
-                self.sales_invoice.creation,
-                self.sales_invoice.docstatus,
-                self.sales_invoice.is_return,
-                self.sales_invoice.is_debit_note,
-                self.sales_invoice.amended_from,
-                Case()
-                .when(
-                    IfNull(self.sales_invoice.billing_address_gstin, "")
-                    == self.sales_invoice.company_gstin,
-                    1,
-                )
-                .else_(0)
-                .as_("same_gstin_billing"),
-                self.sales_invoice.is_opening,
                 self.sales_invoice_item.gst_treatment,
             )
-            .where(self.sales_invoice.company == self.filters.company)
-            .where(
-                self.sales_invoice.posting_date.between(
-                    self.filters.from_date, self.filters.to_date
-                )
-            )
-            .orderby(self.sales_invoice.name)
-            .groupby(self.sales_invoice.name)
         )
-        query = (
-            query.where(
-                self.sales_invoice.company_address == self.filters.company_address
-            )
-            if self.filters.company_address
-            else query
-        )
-
-        query = (
-            query.where(self.sales_invoice.company_gstin == self.filters.company_gstin)
-            if self.filters.company_gstin
-            else query
-        )
-
-        return query
 
     def get_query_for_purchase_invoice(self):
-        query = (
-            frappe.qb.from_(self.purchase_invoice)
-            .select(
-                self.purchase_invoice.name,
-                IfNull(self.purchase_invoice.naming_series, "").as_("naming_series"),
-                self.purchase_invoice.creation,
-                self.purchase_invoice.docstatus,
-                self.purchase_invoice.amended_from,
-                Case()
-                .when(
-                    IfNull(self.purchase_invoice.supplier_gstin, "")
-                    == self.purchase_invoice.company_gstin,
-                    1,
-                )
-                .else_(0)
-                .as_("same_gstin_billing"),
-                self.purchase_invoice.is_opening,
-            )
-            .where(self.purchase_invoice.company == self.filters.company)
-            .where(
-                self.purchase_invoice.posting_date.between(
-                    self.filters.from_date, self.filters.to_date
-                )
-            )
-            .where(self.purchase_invoice.is_reverse_charge == 1)
-            .orderby(self.purchase_invoice.name)
-            .groupby(self.purchase_invoice.name)
-        )
+        additional_selects = [
+            self.purchase_invoice.is_opening,
+        ]
 
-        query = (
-            query.where(
-                self.purchase_invoice.billing_address == self.filters.company_address
-            )
-            if self.filters.company_address
-            else query
+        additional_conditions = [
+            self.purchase_invoice.is_reverse_charge == 1,
+        ]
+        return self.build_query(
+            doctype=self.purchase_invoice,
+            filters=self.filters,
+            gstin_field=self.purchase_invoice.supplier_gstin,
+            address_field=self.purchase_invoice.billing_address,
+            additional_conditions=additional_conditions,
+            additional_selects=additional_selects,
         )
-
-        query = (
-            query.where(
-                self.purchase_invoice.company_gstin == self.filters.company_gstin
-            )
-            if self.filters.company_gstin
-            else query
-        )
-
-        return query
 
     def get_query_for_stock_entry(self):
-        query = (
-            frappe.qb.from_(self.stock_entry)
-            .select(
-                self.stock_entry.name,
-                IfNull(self.stock_entry.naming_series, "").as_("naming_series"),
-                self.stock_entry.creation,
-                self.stock_entry.docstatus,
-                self.stock_entry.amended_from,
-                Case()
-                .when(
-                    IfNull(self.stock_entry.bill_from_gstin, "")
-                    == self.stock_entry.bill_to_gstin,
-                    1,
-                )
-                .else_(0)
-                .as_("same_gstin_billing"),
-                self.stock_entry.is_opening,
-            )
-            .where(self.stock_entry.company == self.filters.company)
-            .where(
-                self.stock_entry.posting_date.between(
-                    self.filters.from_date, self.filters.to_date
-                )
-            )
-            .where(self.stock_entry.purpose == "Send to Subcontractor")
-            .where(self.stock_entry.subcontracting_order != "")
-            .orderby(self.stock_entry.name)
-            .groupby(self.stock_entry.name)
-        )
+        additional_selects = [
+            self.stock_entry.is_opening,
+        ]
 
-        query = (
-            query.where(
-                self.stock_entry.bill_from_address == self.filters.company_address
-            )
-            if self.filters.company_address
-            else query
+        additional_conditions = [
+            self.stock_entry.purpose == "Send to Subcontractor",
+            self.stock_entry.subcontracting_order != "",
+        ]
+        return self.build_query(
+            doctype=self.stock_entry,
+            filters=self.filters,
+            gstin_field=self.stock_entry.bill_to_gstin,
+            company_gstin_field=self.stock_entry.bill_from_gstin,
+            address_field=self.stock_entry.bill_from_address,
+            additional_conditions=additional_conditions,
+            additional_selects=additional_selects,
         )
-
-        query = (
-            query.where(self.stock_entry.bill_from_gstin == self.filters.company_gstin)
-            if self.filters.company_gstin
-            else query
-        )
-
-        return query
 
     def get_query_for_subcontracting_receipt(self):
-        query = (
-            frappe.qb.from_(self.subcontracting_receipt)
-            .select(
-                self.subcontracting_receipt.name,
-                IfNull(self.subcontracting_receipt.naming_series, "").as_(
-                    "naming_series"
-                ),
-                self.subcontracting_receipt.creation,
-                self.subcontracting_receipt.docstatus,
-                self.subcontracting_receipt.amended_from,
-                Case()
-                .when(
-                    IfNull(self.subcontracting_receipt.supplier_gstin, "")
-                    == self.subcontracting_receipt.company_gstin,
-                    1,
-                )
-                .else_(0)
-                .as_("same_gstin_billing"),
-            )
-            .where(self.subcontracting_receipt.company == self.filters.company)
-            .where(
-                self.subcontracting_receipt.posting_date.between(
-                    self.filters.from_date, self.filters.to_date
-                )
-            )
-            .where(self.subcontracting_receipt.is_return == 1)
-            .orderby(self.subcontracting_receipt.name)
-            .groupby(self.subcontracting_receipt.name)
+        additional_conditions = [
+            self.subcontracting_receipt.is_return == 1,
+        ]
+        return self.build_query(
+            doctype=self.subcontracting_receipt,
+            filters=self.filters,
+            gstin_field=self.subcontracting_receipt.supplier_gstin,
+            address_field=self.subcontracting_receipt.billing_address,
+            additional_conditions=additional_conditions,
         )
-
-        query = (
-            query.where(
-                self.subcontracting_receipt.billing_address
-                == self.filters.company_address
-            )
-            if self.filters.company_address
-            else query
-        )
-
-        query = (
-            query.where(
-                self.subcontracting_receipt.company_gstin == self.filters.company_gstin
-            )
-            if self.filters.company_gstin
-            else query
-        )
-
-        return query
 
     def seperate_data_by_naming_series(self, data, nature_of_document):
         if not data:
