@@ -107,7 +107,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
             );
             frm.add_custom_button(__("dropdown-divider"), () => {}, __("Actions"));
         }
-        ["Accept My Values", "Accept Supplier Values", "Pending", "Ignore"].forEach(
+        ["Accept", "Pending", "Ignore"].forEach(
             action =>
                 frm.add_custom_button(
                     __(action),
@@ -346,8 +346,7 @@ class PurchaseReconciliationTool {
                 fieldtype: "Select",
                 options: [
                     "No Action",
-                    "Accept My Values",
-                    "Accept Supplier Values",
+                    "Accept",
                     "Ignore",
                     "Pending",
                 ],
@@ -976,8 +975,7 @@ class DetailViewDialog {
         else
             actions.push(
                 "Unlink",
-                "Accept My Values",
-                "Accept Supplier Values",
+                "Accept",
                 "Pending"
             );
 
@@ -1027,8 +1025,7 @@ class DetailViewDialog {
         if (action == "Ignore") return "btn-secondary";
         if (action == "Create") return "btn-primary not-grey";
         if (action == "Link") return "btn-primary not-grey btn-link disabled";
-        if (action == "Accept My Values") return "btn-primary not-grey";
-        if (action == "Accept Supplier Values") return "btn-primary not-grey";
+        if (action == "Accept") return "btn-primary not-grey";
     }
 
     toggle_link_btn(disabled) {
