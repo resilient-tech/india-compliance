@@ -1349,8 +1349,8 @@ class GSTR1DocumentIssuedSummary:
         self.queries = {
             "Sales Invoice": self.get_query_for_sales_invoice,
             "Purchase Invoice": self.get_query_for_purchase_invoice,
-            "Stock Entry": self.get_query_for_stock_entry,
-            "Subcontracting Receipt": self.get_query_for_subcontracting_receipt,
+            # "Stock Entry": self.get_query_for_stock_entry, Not supported in v14.
+            # "Subcontracting Receipt": self.get_query_for_subcontracting_receipt,
         }
 
     def get_data(self) -> list:
