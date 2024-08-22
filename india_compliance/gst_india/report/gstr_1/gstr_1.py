@@ -1343,74 +1343,157 @@ class GSTR1DocumentIssuedSummary:
         self.filters = filters
         self.sales_invoice = frappe.qb.DocType("Sales Invoice")
         self.sales_invoice_item = frappe.qb.DocType("Sales Invoice Item")
+        self.purchase_invoice = frappe.qb.DocType("Purchase Invoice")
+        self.stock_entry = frappe.qb.DocType("Stock Entry")
+        self.subcontracting_receipt = frappe.qb.DocType("Subcontracting Receipt")
+        self.queries = {
+            "Sales Invoice": self.get_query_for_sales_invoice,
+            "Purchase Invoice": self.get_query_for_purchase_invoice,
+            "Stock Entry": self.get_query_for_stock_entry,
+            "Subcontracting Receipt": self.get_query_for_subcontracting_receipt,
+        }
 
     def get_data(self) -> list:
         return self.get_document_summary()
 
     def get_document_summary(self):
-        query = self.get_query()
-        data = query.run(as_dict=True)
-        data = self.handle_amended_docs(data)
         summarized_data = []
 
-        for (
-            nature_of_document,
-            seperated_data,
-        ) in self.seperate_data_by_nature_of_document(data).items():
-            summarized_data.extend(
-                self.seperate_data_by_naming_series(seperated_data, nature_of_document)
-            )
+        for doctype, query in self.queries.items():
+            data = query().run(as_dict=True)
+            data = self.handle_amended_docs(data)
+            for (
+                nature_of_document,
+                seperated_data,
+            ) in self.seperate_data_by_nature_of_document(data, doctype).items():
+                summarized_data.extend(
+                    self.seperate_data_by_naming_series(
+                        seperated_data, nature_of_document
+                    )
+                )
 
         return summarized_data
 
-    def get_query(self):
+    def build_query(
+        self,
+        doctype,
+        party_gstin_field,
+        company_gstin_field="company_gstin",
+        address_field=None,
+        additional_selects=None,
+        additional_conditions=None,
+    ):
+
+        party_gstin_field = getattr(doctype, party_gstin_field, None)
+        company_gstin_field = getattr(doctype, company_gstin_field, None)
+        address_field = getattr(doctype, address_field, None)
+
         query = (
-            frappe.qb.from_(self.sales_invoice)
-            .join(self.sales_invoice_item)
-            .on(self.sales_invoice.name == self.sales_invoice_item.parent)
+            frappe.qb.from_(doctype)
             .select(
-                self.sales_invoice.name,
-                IfNull(self.sales_invoice.naming_series, "").as_("naming_series"),
-                self.sales_invoice.creation,
-                self.sales_invoice.docstatus,
-                self.sales_invoice.is_return,
-                self.sales_invoice.is_debit_note,
-                self.sales_invoice.amended_from,
+                doctype.name,
+                IfNull(doctype.naming_series, "").as_("naming_series"),
+                doctype.creation,
+                doctype.docstatus,
+                doctype.amended_from,
                 Case()
                 .when(
-                    IfNull(self.sales_invoice.billing_address_gstin, "")
-                    == self.sales_invoice.company_gstin,
+                    IfNull(party_gstin_field, "") == company_gstin_field,
                     1,
                 )
                 .else_(0)
                 .as_("same_gstin_billing"),
-                self.sales_invoice.is_opening,
-                self.sales_invoice_item.gst_treatment,
             )
-            .where(self.sales_invoice.company == self.filters.company)
+            .where(doctype.company == self.filters.company)
             .where(
-                self.sales_invoice.posting_date.between(
+                doctype.posting_date.between(
                     self.filters.from_date, self.filters.to_date
                 )
             )
-            .orderby(self.sales_invoice.name)
-            .groupby(self.sales_invoice.name)
-        )
-        query = (
-            query.where(
-                self.sales_invoice.company_address == self.filters.company_address
-            )
-            if self.filters.company_address
-            else query
+            .orderby(doctype.name)
+            .groupby(doctype.name)
         )
 
-        query = (
-            query.where(self.sales_invoice.company_gstin == self.filters.company_gstin)
-            if self.filters.company_gstin
-            else query
-        )
+        if additional_selects:
+            query = query.select(*additional_selects)
+
+        if additional_conditions:
+            query = query.where(Criterion.all(additional_conditions))
+
+        if self.filters.company_address:
+            query = query.where(address_field == self.filters.company_address)
+
+        if self.filters.company_gstin:
+            query = query.where(company_gstin_field == self.filters.company_gstin)
 
         return query
+
+    def get_query_for_sales_invoice(self):
+        additional_selects = [
+            self.sales_invoice.is_return,
+            self.sales_invoice.is_debit_note,
+            self.sales_invoice.is_opening,
+        ]
+
+        query = self.build_query(
+            doctype=self.sales_invoice,
+            party_gstin_field="billing_address_gstin",
+            address_field="company_address",
+            additional_selects=additional_selects,
+        )
+
+        return (
+            query.join(self.sales_invoice_item)
+            .on(self.sales_invoice.name == self.sales_invoice_item.parent)
+            .select(
+                self.sales_invoice_item.gst_treatment,
+            )
+        )
+
+    def get_query_for_purchase_invoice(self):
+        additional_selects = [
+            self.purchase_invoice.is_opening,
+        ]
+
+        additional_conditions = [
+            self.purchase_invoice.is_reverse_charge == 1,
+        ]
+        return self.build_query(
+            doctype=self.purchase_invoice,
+            party_gstin_field="supplier_gstin",
+            address_field="billing_address",
+            additional_selects=additional_selects,
+            additional_conditions=additional_conditions,
+        )
+
+    def get_query_for_stock_entry(self):
+        additional_selects = [
+            self.stock_entry.is_opening,
+        ]
+
+        additional_conditions = [
+            self.stock_entry.purpose == "Send to Subcontractor",
+            self.stock_entry.subcontracting_order != "",
+        ]
+        return self.build_query(
+            doctype=self.stock_entry,
+            party_gstin_field="bill_to_gstin",
+            company_gstin_field="bill_from_gstin",
+            address_field="bill_from_address",
+            additional_selects=additional_selects,
+            additional_conditions=additional_conditions,
+        )
+
+    def get_query_for_subcontracting_receipt(self):
+        additional_conditions = [
+            self.subcontracting_receipt.is_return == 1,
+        ]
+        return self.build_query(
+            doctype=self.subcontracting_receipt,
+            party_gstin_field="supplier_gstin",
+            address_field="billing_address",
+            additional_conditions=additional_conditions,
+        )
 
     def seperate_data_by_naming_series(self, data, nature_of_document):
         if not data:
@@ -1502,13 +1585,15 @@ class GSTR1DocumentIssuedSummary:
 
         return True
 
-    def seperate_data_by_nature_of_document(self, data):
+    def seperate_data_by_nature_of_document(self, data, doctype):
         nature_of_document = {
             "Excluded from Report (Same GSTIN Billing)": [],
             "Excluded from Report (Is Opening Entry)": [],
             "Invoices for outward supply": [],
             "Debit Note": [],
             "Credit Note": [],
+            "Invoices for inward supply from unregistered person": [],
+            "Delivery Challan for job work": [],
         }
 
         for doc in data:
@@ -1520,6 +1605,13 @@ class GSTR1DocumentIssuedSummary:
                 nature_of_document["Excluded from Report (Same GSTIN Billing)"].append(
                     doc
                 )
+            elif doctype == "Purchase Invoice":
+                nature_of_document[
+                    "Invoices for inward supply from unregistered person"
+                ].append(doc)
+            elif doctype == "Stock Entry" or doctype == "Subcontracting Receipt":
+                nature_of_document["Delivery Challan for job work"].append(doc)
+            # for Sales Invoice
             elif doc.is_return:
                 nature_of_document["Credit Note"].append(doc)
             elif doc.is_debit_note:
