@@ -66,10 +66,12 @@ wait $wkpid
 
 bench use test_site
 bench start &
-bench reinstall --yes
 
-# bench --site test_site restore ${GITHUB_WORKSPACE}/20240822_162707-a1_localhost-database.sql.gz
+bench --site test_site restore ${GITHUB_WORKSPACE}/20240822_162707-a1_localhost-database.sql.gz
+
+bench --verbose install-app india_compliance
+bench --site test_site remove-from-installed-apps india_compliance
+bench reinstall --yes
 
 bench --verbose install-app india_compliance
 bench --site test_site add-to-hosts
-
