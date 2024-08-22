@@ -110,17 +110,17 @@
         "TEST_DIFFERENT_COMPANY_GSTIN_MISMATCH": [
             {
                 "PURCHASE_INVOICE": {
-                    "bill_no": "BILL-23-00021",
+                    "bill_no": "BILLXYZ-23-00021",
                     "company_gstin": "24AAQCA8719H1ZC"
                 },
                 "INWARD_SUPPLY": {
-                    "bill_no": "BILL-23-00021",
+                    "bill_no": "BILLXYZ-23-00021",
                     "company_gstin": "29AABCR1718E1ZL"
                 },
                 "RECONCILED_DATA": {
                     "action": "No Action",
                     "bill_date": "2023-12-11",
-                    "bill_no": "BILL-23-00021",
+                    "bill_no": "BILLXYZ-23-00021",
                     "classification": "B2B",
                     "differences": "COMPANY_GSTIN",
                     "inward_supply_company_gstin": "29AABCR1718E1ZL",
