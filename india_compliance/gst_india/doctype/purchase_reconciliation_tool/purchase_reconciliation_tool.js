@@ -75,7 +75,9 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
     onload(frm) {
         if (frm.doc.is_modified) frm.doc.reconciliation_data = null;
         add_gstr2b_alert(frm);
-        set_date_range_description(frm);
+
+        frm.trigger("purchase_period");
+        frm.trigger("inward_supply_period");
     },
 
     async company(frm) {
@@ -88,7 +90,12 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
     refresh(frm) {
         // Primary Action
         frm.disable_save();
-        frm.page.set_primary_action(__("Reconcile"), () => frm.save());
+        frm.page.set_primary_action(__("Reconcile"), () => {
+            if (!frm.doc.company && !frm.doc.company_gstin) {
+                frappe.throw(__('Please provide either a Company name or Company GSTIN.'));
+            }
+            frm.save();
+        });
 
         // add custom buttons
         api_enabled
@@ -107,7 +114,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
             );
             frm.add_custom_button(__("dropdown-divider"), () => {}, __("Actions"));
         }
-        ["Accept My Values", "Accept Supplier Values", "Pending", "Ignore"].forEach(
+        ["Accept", "Pending", "Ignore"].forEach(
             action =>
                 frm.add_custom_button(
                     __(action),
@@ -346,8 +353,7 @@ class PurchaseReconciliationTool {
                 fieldtype: "Select",
                 options: [
                     "No Action",
-                    "Accept My Values",
-                    "Accept Supplier Values",
+                    "Accept",
                     "Ignore",
                     "Pending",
                 ],
@@ -976,8 +982,7 @@ class DetailViewDialog {
         else
             actions.push(
                 "Unlink",
-                "Accept My Values",
-                "Accept Supplier Values",
+                "Accept",
                 "Pending"
             );
 
@@ -1027,8 +1032,7 @@ class DetailViewDialog {
         if (action == "Ignore") return "btn-secondary";
         if (action == "Create") return "btn-primary not-grey";
         if (action == "Link") return "btn-primary not-grey btn-link disabled";
-        if (action == "Accept My Values") return "btn-primary not-grey";
-        if (action == "Accept Supplier Values") return "btn-primary not-grey";
+        if (action == "Accept") return "btn-primary not-grey";
     }
 
     toggle_link_btn(disabled) {
