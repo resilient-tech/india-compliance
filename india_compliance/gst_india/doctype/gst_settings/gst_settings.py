@@ -1,6 +1,8 @@
 # Copyright (c) 2017, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
+from datetime import datetime
+
 import frappe
 from frappe import _
 from frappe.model.document import Document
@@ -345,6 +347,65 @@ class GSTSettings(Document):
             return False
 
         return True
+
+    @frappe.whitelist()
+    def check_gst_account_changes(self):
+        previous_doc = self.get_doc_before_save()
+        old_gst_accounts = {item.name: item for item in previous_doc.gst_accounts}
+        new_gst_accounts = {item.name: item for item in self.gst_accounts}
+
+        if len(new_gst_accounts) != len(old_gst_accounts):
+            return True
+
+        for account_name in new_gst_accounts:
+            old_account = old_gst_accounts.get(account_name)
+
+            if self.has_row_changed(old_account, new_gst_accounts[account_name]):
+                return True
+
+        return False
+
+    def has_row_changed(self, old_gst_account, new_gst_account):
+        if old_gst_account is None:
+            return True
+
+        return any(
+            old_gst_account.get(field) != new_gst_account.get(field)
+            for field in ["company", "account_type", *GST_ACCOUNT_FIELDS]
+        )
+
+
+@frappe.whitelist()
+def schedule_gst_patches(cron_time):
+    dt = datetime.strptime(cron_time, "%Y-%m-%d %H:%M:%S")
+    cron_format = f"{dt.minute} {dt.hour} {dt.day} {dt.month} {dt.weekday() + 1}"
+
+    doc = frappe.get_doc(
+        {
+            "doctype": "Scheduled Job Type",
+            "method": "india_compliance.gst_india.doctype.gst_settings.gst_settings.apply_gst_patches",
+            "cron_format": cron_format,
+            "frequency": "Cron",
+            "create_log": 1,
+        }
+    )
+    doc.insert()
+
+
+def apply_gst_patches():
+    from india_compliance.patches.post_install.improve_item_tax_template import (
+        execute as execute_improve_item_tax_template,
+    )
+    from india_compliance.patches.post_install.set_gst_tax_type import (
+        execute as execute_set_gst_tax_type,
+    )
+    from india_compliance.patches.post_install.update_gst_treatment_for_taxable_nil_transaction_item import (
+        execute as execute_update_gst_treatment,
+    )
+
+    execute_set_gst_tax_type()
+    execute_update_gst_treatment()
+    execute_improve_item_tax_template()
 
 
 @frappe.whitelist()
