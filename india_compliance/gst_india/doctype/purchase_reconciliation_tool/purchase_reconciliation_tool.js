@@ -75,7 +75,9 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
     onload(frm) {
         if (frm.doc.is_modified) frm.doc.reconciliation_data = null;
         add_gstr2b_alert(frm);
-        set_date_range_description(frm);
+
+        frm.trigger("purchase_period");
+        frm.trigger("inward_supply_period");
     },
 
     async company(frm) {
@@ -88,7 +90,12 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
     refresh(frm) {
         // Primary Action
         frm.disable_save();
-        frm.page.set_primary_action(__("Reconcile"), () => frm.save());
+        frm.page.set_primary_action(__("Reconcile"), () => {
+            if (!frm.doc.company && !frm.doc.company_gstin) {
+                frappe.throw(__('Please provide either a Company name or Company GSTIN.'));
+            }
+            frm.save();
+        });
 
         // add custom buttons
         api_enabled
