@@ -191,8 +191,13 @@
  ],
  "in_create": 1,
  "index_web_pages_for_search": 1,
- "links": [],
- "modified": "2024-07-14 18:35:34.743195",
+ "links": [
+  {
+   "link_doctype": "Integration Request",
+   "link_fieldname": "reference_docname"
+  }
+ ],
+ "modified": "2024-08-14 17:53:03.509293",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Return Log",
