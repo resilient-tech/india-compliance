@@ -60,7 +60,7 @@ sed -i 's/redis_socketio:/# redis_socketio:/g' Procfile
 
 bench get-app erpnext --branch "$BRANCH_TO_CLONE" --resolve-deps
 
-bench --site test_site restore ${GITHUB_WORKSPACE}/20240822_151612-patch_test_localhost-database.sql.gz
+bench --site test_site restore ${GITHUB_WORKSPACE}/20240822_162707-a1_localhost-database.sql.gz
 
 bench get-app india_compliance "${GITHUB_WORKSPACE}"
 bench setup requirements --dev
@@ -69,7 +69,7 @@ wait $wkpid
 
 bench use test_site
 bench start &
-bench reinstall --yes
+# bench reinstall --yes
 
 bench --verbose install-app india_compliance
 bench --site test_site add-to-hosts
