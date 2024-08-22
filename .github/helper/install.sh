@@ -60,7 +60,7 @@ sed -i 's/redis_socketio:/# redis_socketio:/g' Procfile
 
 bench get-app erpnext --branch "$BRANCH_TO_CLONE" --resolve-deps
 
-if [ "$RUN_RESTORE" == "true" ]; then
+if [ "$RUN_RESTORE" == "false" ]; then
     bench --site test_site restore ${GITHUB_WORKSPACE}/20240822_162707-a1_localhost-database.sql.gz
 fi
 
