@@ -89,6 +89,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-yarn-
 
+      - name: Set Restore Flag
+        run: echo "RUN_RESTORE=true" >> $GITHUB_ENV
+
       - name: Install
         run: |
             bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
