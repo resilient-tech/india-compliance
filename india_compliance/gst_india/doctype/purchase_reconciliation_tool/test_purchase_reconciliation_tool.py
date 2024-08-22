@@ -82,8 +82,10 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
             {
                 "company": "_Test Indian Registered Company",
                 "company_gstin": "All",
+                "purchase_period": "Custom",
                 "purchase_from_date": "2023-11-01",
                 "purchase_to_date": "2023-12-31",
+                "inward_supply_period": "Custom",
                 "inward_supply_from_date": "2023-11-01",
                 "inward_supply_to_date": "2023-12-31",
                 "gst_return": "GSTR 2B",
