@@ -1606,12 +1606,10 @@ class GSTR1DocumentIssuedSummary:
                 nature_of_document["Excluded from Report (Same GSTIN Billing)"].append(
                     doc
                 )
-<<<<<<< HEAD
             elif doc.gst_treatment == "Non-GST":
                 nature_of_document["Excluded from Report (Has Non GST Item)"].append(
                     doc
                 )
-=======
             elif doctype == "Purchase Invoice":
                 nature_of_document[
                     "Invoices for inward supply from unregistered person"
@@ -1619,7 +1617,6 @@ class GSTR1DocumentIssuedSummary:
             elif doctype == "Stock Entry" or doctype == "Subcontracting Receipt":
                 nature_of_document["Delivery Challan for job work"].append(doc)
             # for Sales Invoice
->>>>>>> 73799085 (fix: Support new categories of documents for GSTR-1 Document Issued Summary (#2529))
             elif doc.is_return:
                 nature_of_document["Credit Note"].append(doc)
             elif doc.is_debit_note:
