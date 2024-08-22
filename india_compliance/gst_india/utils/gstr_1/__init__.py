@@ -49,8 +49,8 @@ class GSTR1_SubCategory(Enum):
     DOC_ISSUE = "Document Issued"
 
     # E-Commerce
-    SUPECOM_52 = "TCS collected by E-commerce Operator u/s 52"
-    SUPECOM_9_5 = "GST Payable on RCM by E-commerce Operator u/s 9(5)"
+    SUPECOM_52 = "Liable to collect tax u/s 52(TCS)"
+    SUPECOM_9_5 = "Liable to pay tax u/s 9(5)"
 
 
 class SUPECOM(Enum):

@@ -1,0 +1,115 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2024-06-04 17:24:49.943912",
+ "default_view": "List",
+ "description": "Taxes and Charges introduced specific to requirements by Indian Laws. eg: Subcontracting Order",
+ "doctype": "DocType",
+ "document_type": "Setup",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "charge_type",
+  "col_break1",
+  "account_head",
+  "section_break_10",
+  "rate",
+  "gst_tax_type",
+  "column_break_pipk",
+  "tax_amount",
+  "base_total",
+  "item_wise_tax_rates"
+ ],
+ "fields": [
+  {
+   "columns": 2,
+   "default": "On Net Total",
+   "fieldname": "charge_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Type",
+   "oldfieldname": "charge_type",
+   "oldfieldtype": "Select",
+   "options": "\nOn Net Total\nOn Item Quantity",
+   "reqd": 1
+  },
+  {
+   "fieldname": "col_break1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "columns": 2,
+   "fieldname": "account_head",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Account Head",
+   "oldfieldname": "account_head",
+   "oldfieldtype": "Link",
+   "options": "Account",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_10",
+   "fieldtype": "Section Break"
+  },
+  {
+   "columns": 2,
+   "fieldname": "rate",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Rate",
+   "oldfieldname": "rate",
+   "oldfieldtype": "Currency"
+  },
+  {
+   "fieldname": "column_break_pipk",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "item_wise_tax_rates",
+   "fieldtype": "Code",
+   "hidden": 1,
+   "label": "Item Wise Tax Rates"
+  },
+  {
+   "columns": 2,
+   "fieldname": "tax_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Amount",
+   "oldfieldname": "base_tax_amount_after_discount_amount",
+   "oldfieldtype": "Currency",
+   "options": "INR"
+  },
+  {
+   "columns": 2,
+   "fieldname": "base_total",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Total",
+   "oldfieldname": "total",
+   "oldfieldtype": "Currency",
+   "options": "INR",
+   "read_only": 1
+  },
+  {
+   "fieldname": "gst_tax_type",
+   "fieldtype": "Data",
+   "label": "GST Tax Type",
+   "read_only": 1
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2024-06-27 07:58:06.639635",
+ "modified_by": "Administrator",
+ "module": "GST India",
+ "name": "India Compliance Taxes and Charges",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

@@ -199,7 +199,7 @@ Object.assign(india_compliance, {
         }
     },
 
-    get_gstin_otp(error_type, company_gstin) {
+    get_gstin_otp(company_gstin, error_type) {
         let description = `An OTP has been sent to the registered mobile/email for GSTIN ${company_gstin} for further authentication. Please provide OTP.`;
         if (error_type === "invalid_otp")
             description = `Invalid OTP was provided for GSTIN ${company_gstin}. Please try again.`;
@@ -345,6 +345,28 @@ Object.assign(india_compliance, {
         return frappe.datetime.add_days(frappe.datetime.month_start(), -1);
     },
 
+    last_half_year(position) {
+        const today = frappe.datetime.now_date(true);
+        const current_month = today.getMonth() + 1;
+        const current_year = today.getFullYear();
+
+        if (current_month <= 3) {
+            return position === "start"
+                ? `${current_year - 1}-03-01`
+                : `${current_year - 1}-09-30`;
+
+        } else if (current_month <= 9) {
+            return position === "start"
+                ? `${current_year - 1}-10-01`
+                : `${current_year}-03-31`;
+
+        } else {
+            return position === "start"
+                ? `${current_year}-04-01`
+                : `${current_year}-09-30`;
+        }
+    },
+
     primary_to_danger_btn(parent) {
         parent.$wrapper
             .find(".btn-primary")
@@ -392,12 +414,13 @@ Object.assign(india_compliance, {
         await this.authenticate_otp(gstin);
     },
 
-    async authenticate_otp(gstin) {
-        let error_type = "otp_requested";
+    async authenticate_otp(gstin, error_type = null) {
+        if (!error_type) error_type = "otp_requested";
+
         let is_authenticated = false;
 
         while (!is_authenticated) {
-            const otp = await this.get_gstin_otp(error_type, gstin);
+            const otp = await this.get_gstin_otp(gstin, error_type);
 
             const { message } = await frappe.call({
                 method: "india_compliance.gst_india.utils.gstr_utils.authenticate_otp",

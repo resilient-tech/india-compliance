@@ -5,6 +5,8 @@ const E_WAYBILL_CLASS = {
     "Purchase Invoice": PurchaseInvoiceEwaybill,
     "Delivery Note": DeliveryNoteEwaybill,
     "Purchase Receipt": PurchaseReceiptEwaybill,
+    "Stock Entry": StockEntryEwaybill,
+    "Subcontracting Receipt": SubcontractingReceiptEwaybill,
 };
 
 function setup_e_waybill_actions(doctype) {
@@ -286,9 +288,9 @@ function show_generate_e_waybill_dialog(frm) {
                 api_enabled && frm.doc.doctype ? __("Download JSON") : null,
             secondary_action: api_enabled
                 ? () => {
-                    d.hide();
-                    json_action(d.get_values());
-                }
+                      d.hide();
+                      json_action(d.get_values());
+                  }
                 : null,
         },
         frm
@@ -334,7 +336,49 @@ function show_generate_e_waybill_dialog(frm) {
 
 function get_generate_e_waybill_dialog(opts, frm) {
     if (!frm) frm = { doc: {} };
+    const ewaybill_defaults = get_sub_suppy_type_options(frm);
+
     const fields = [
+        {
+            label: "Document Details",
+            fieldname: "section_doc_details",
+            fieldtype: "Section Break",
+            // collapsible: ewaybill_defaults.sub_supply_type.length === 1,
+        },
+        {
+            label: "Supply Type",
+            fieldname: "supply_type",
+            fieldtype: "Data",
+            read_only: 1,
+            default: ewaybill_defaults.supply_type,
+        },
+        {
+            label: "Document Type",
+            fieldname: "document_type",
+            fieldtype: "Data",
+            read_only: 1,
+            default: ewaybill_defaults.document_type,
+        },
+        {
+            fieldtype: "Column Break",
+        },
+        {
+            label: "Sub Supply Type",
+            fieldname: "sub_supply_type",
+            fieldtype: "Select",
+            options: ewaybill_defaults.sub_supply_type.join("\n"),
+            default: ewaybill_defaults.sub_supply_type[0],
+            read_only: ewaybill_defaults.sub_supply_type.length === 1,
+            reqd: ewaybill_defaults.sub_supply_type.length !== 1,
+        },
+        {
+            label: "Sub Supply Description",
+            fieldname: "sub_supply_desc",
+            fieldtype: "Data",
+            depends_on: "eval: doc.sub_supply_type == 'Others'",
+            mandatory_depends_on: "eval: doc.sub_supply_type == 'Others'",
+            default: ewaybill_defaults.sub_supply_desc,
+        },
         {
             label: "Part A",
             fieldname: "section_part_a",
@@ -375,9 +419,7 @@ function get_generate_e_waybill_dialog(opts, frm) {
                     ? frm.doc.gst_transporter_id
                     : "",
             onchange: () => validate_gst_transporter_id(d),
-
         },
-        // Sub Supply Type will be visible here for Delivery Note
         {
             label: "Part B",
             fieldname: "section_part_b",
@@ -431,40 +473,6 @@ function get_generate_e_waybill_dialog(opts, frm) {
         },
     ];
 
-    if (frm.doctype === "Delivery Note") {
-        const same_gstin = frm.doc.billing_address_gstin == frm.doc.company_gstin;
-        let options;
-
-        if (frm.doc.is_return) {
-            if (same_gstin) {
-                options = ["For Own Use", "Exhibition or Fairs"];
-            } else {
-                options = ["Job Work Returns", "SKD/CKD"];
-            }
-        } else {
-            if (same_gstin) {
-                options = [
-                    "For Own Use",
-                    "Exhibition or Fairs",
-                    "Line Sales",
-                    "Recipient Not Known",
-                ];
-            } else {
-                options = ["Job Work", "SKD/CKD"];
-            }
-        }
-
-        // Inserted at the end of Part A section
-        fields.splice(5, 0, {
-            label: "Sub Supply Type",
-            fieldname: "sub_supply_type",
-            fieldtype: "Select",
-            options: options.join("\n"),
-            default: options[0],
-            reqd: 1,
-        });
-    }
-
     const is_foreign_transaction =
         frm.doc.gst_category === "Overseas" &&
         frm.doc.place_of_supply === "96-Other Countries";
@@ -496,6 +504,93 @@ function get_generate_e_waybill_dialog(opts, frm) {
     frappe.ui.form.ControlData.trigger_change_on_input_event = true;
 
     return d;
+}
+
+function get_sub_suppy_type_options(frm) {
+    let supply_type, sub_supply_type, sub_supply_desc, document_type;
+
+    if (frm.doctype === "Delivery Note") {
+        const same_gstin = frm.doc.billing_address_gstin == frm.doc.company_gstin;
+
+        if (frm.doc.is_return) {
+            supply_type = "Inward";
+            document_type = "Delivery Challan";
+            if (same_gstin) {
+                sub_supply_type = ["For Own Use", "Exhibition or Fairs", "Others"];
+            } else {
+                sub_supply_type = ["Job Work Returns", "SKD/CKD", "Others"];
+            }
+        } else {
+            supply_type = "Outward";
+            document_type = "Delivery Challan";
+            if (same_gstin) {
+                sub_supply_type = [
+                    "For Own Use",
+                    "Exhibition or Fairs",
+                    "Line Sales",
+                    "Recipient Not Known",
+                    "Others",
+                ];
+            } else {
+                sub_supply_type = ["Job Work", "SKD/CKD", "Others"];
+            }
+        }
+    } else {
+        const key = `${frm.doctype}_${frm.doc.is_return || 0}`;
+        const default_supply_types = {
+            "Sales Invoice_0": {
+                supply_type: "Outward",
+                sub_supply_type: ["Supply"],
+                document_type: "Tax Invoice",
+            },
+            "Sales Invoice_1": {
+                supply_type: "Inward",
+                sub_supply_type: ["Sales Return"],
+                document_type: "Delivery Challan",
+            },
+            "Purchase Invoice_0": {
+                supply_type: "Inward",
+                sub_supply_type: ["Supply"],
+                document_type: "Tax Invoice",
+            },
+            "Purchase Invoice_1": {
+                supply_type: "Outward",
+                sub_supply_type: ["Others"],
+                sub_supply_desc: "Purchase Return",
+                document_type: "Others",
+            },
+            "Purchase Receipt_0": {
+                supply_type: "Inward",
+                sub_supply_type: ["Supply"],
+                document_type: "Tax Invoice",
+            },
+            "Purchase Receipt_1": {
+                supply_type: "Outward",
+                sub_supply_type: ["Others"],
+                sub_supply_desc: "Purchase Return",
+                document_type: "Delivery Challan",
+            },
+            "Stock Entry_0": {
+                supply_type: "Outward",
+                sub_supply_type: ["Job Work"],
+                document_type: "Delivery Challan",
+            },
+            "Subcontracting Receipt_0": {
+                supply_type: "Inward",
+                sub_supply_type: ["Job Work Returns"],
+                document_type: "Delivery Challan",
+            },
+            "Subcontracting Receipt_1": {
+                supply_type: "Outward",
+                sub_supply_type: ["Job Work"],
+                document_type: "Delivery Challan",
+            },
+        };
+
+        return default_supply_types[key]
+    }
+
+    return { supply_type, sub_supply_type, sub_supply_desc, document_type };
 }
 
 function show_fetch_if_generated_dialog(frm) {
@@ -811,7 +906,7 @@ function show_update_transporter_dialog(frm) {
                 reqd: 1,
                 default:
                     frm.doc.gst_transporter_id &&
-                        frm.doc.gst_transporter_id.length == 15
+                    frm.doc.gst_transporter_id.length === 15
                         ? frm.doc.gst_transporter_id
                         : "",
                 onchange: () => validate_gst_transporter_id(d),
@@ -1022,7 +1117,7 @@ async function show_extend_validity_dialog(frm) {
                 },
                 callback: () => frm.refresh(),
             });
-            d.hide();
+            if (can_extend_now) d.hide();
         },
     });
     if (!can_extend_now) {
@@ -1162,7 +1257,9 @@ async function update_gst_tranporter_id(dialog) {
 }
 
 function validate_gst_transporter_id(dialog) {
-    india_compliance.validate_gst_transporter_id(dialog.get_value("gst_transporter_id"));
+    india_compliance.validate_gst_transporter_id(
+        dialog.get_value("gst_transporter_id")
+    );
 }
 
 function update_generation_dialog(dialog, doc) {
