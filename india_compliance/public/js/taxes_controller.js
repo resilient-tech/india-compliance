@@ -73,7 +73,7 @@ india_compliance.taxes_controller = class TaxesController {
                     ).options,
                     master_name: this.frm.doc.taxes_and_charges,
                 },
-                callback: async (r) => {
+                callback: async r => {
                     if (!r.exc) {
                         this.frm.set_value("taxes", r.message);
                         await this.set_item_wise_tax_rates();
@@ -82,7 +82,7 @@ india_compliance.taxes_controller = class TaxesController {
                 },
             });
         }
-    };
+    }
 
     update_item_wise_tax_rates(tax_row) {
         /**
@@ -190,7 +190,9 @@ india_compliance.taxes_controller = class TaxesController {
                 item.charge_type === "On Item Quantity"
                     ? item.qty
                     : item.taxable_value / 100;
-            return total + multiplier * item_wise_tax_rates[item.name];
+            return (
+                total + multiplier * (item_wise_tax_rates[item.name] || tax_row.rate)
+            );
         }, 0);
     }
 

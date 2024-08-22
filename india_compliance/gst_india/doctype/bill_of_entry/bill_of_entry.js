@@ -372,7 +372,12 @@ class TaxesController {
 
         const item_wise_tax_rates = JSON.parse(tax_row.item_wise_tax_rates || "{}");
         return this.frm.doc.items.reduce((total, item) => {
-            return total + (item.taxable_value * item_wise_tax_rates[item.name]) / 100;
+            return (
+                total +
+                (item.taxable_value *
+                    (item_wise_tax_rates[item.name] || tax_row.rate)) /
+                    100
+            );
         }, 0);
     }
 
@@ -386,7 +391,7 @@ class TaxesController {
 
         const item_wise_tax_rates = JSON.parse(tax_row.item_wise_tax_rates || "{}");
         return this.frm.doc.items.reduce((total, item) => {
-            return total + (item.qty * item_wise_tax_rates[item.name]);
+            return total + item.qty * (item_wise_tax_rates[item.name] || tax_row.rate);
         }, 0);
     }
 }
