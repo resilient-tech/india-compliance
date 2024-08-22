@@ -56,7 +56,7 @@ def after_install():
         print("Setting up Income Tax...")
         setup_income_tax()
 
-        print("Setting up GST...")
+        # print("Setting up GST...")
         setup_gst()
         disable_ic_account_page()
 
@@ -78,8 +78,8 @@ def after_install():
 
 
 def run_post_install_patches():
-    if not frappe.db.exists("Company", {"country": "India"}):
-        return
+    # if not frappe.db.exists("Company", {"country": "India"}):
+    #     return
 
     frappe.flags.in_patch = True
 
