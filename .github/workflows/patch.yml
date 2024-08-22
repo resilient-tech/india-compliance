@@ -89,22 +89,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-yarn-
 
-      - name: Calculate Branch to Clone
-        run: |
-          githubbranch=${GITHUB_BASE_REF:-${GITHUB_REF##*/}}
-          frappebranch=${FRAPPE_BRANCH:-$githubbranch}
-          echo "BRANCH_TO_CLONE=$frappebranch" >> $GITHUB_ENV
-        env:
-          GITHUB_BASE_REF: ${{ github.base_ref }}
-          GITHUB_REF: ${{ github.ref }}
-          FRAPPE_BRANCH: ${{ env.FrappeBranch }}
-
       - name: Install
         run: |
-          bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
+            bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
         env:
-          # BRANCH_TO_CLONE: ${{ env.BRANCH_TO_CLONE }}
-          BRANCH_TO_CLONE: v14.0.0
+            BRANCH_TO_CLONE: ${{  github.base_ref  }}
 
       - name: Run Patch Tests
         run: |
@@ -122,18 +111,18 @@ jobs:
           function update_to_version() {
               version=$1
 
-              tag_name="v$version"
-              echo "Updating to $tag_name"
+              branch_name="version-$version-hotfix"
+              echo "Updating to v$version"
 
-              echo "Fetching tags"
-              git -C "apps/frappe" fetch --tags upstream
-              git -C "apps/erpnext" fetch --tags upstream
-              git -C "apps/india_compliance" fetch --tags upstream
+              echo "Fetching branch"
+              git -C "apps/frappe" fetch --depth 1 upstream $branch_name:$branch_name
+              git -C "apps/erpnext" fetch --depth 1 upstream $branch_name:$branch_name
+              git -C "apps/india_compliance" fetch --depth 1 upstream $branch_name:$branch_name
 
-              echo "Checking out tags"
-              git -C "apps/frappe" checkout -q -f $tag_name
-              git -C "apps/erpnext" checkout -q -f $tag_name 
-              git -C "apps/india_compliance" checkout -q -f $tag_name 
+              echo "Checking out branch"
+              git -C "apps/frappe" checkout -q -f $branch_name
+              git -C "apps/erpnext" checkout -q -f $branch_name
+              git -C "apps/india_compliance" checkout -q -f $branch_name 
 
               echo "bench setup requirements"
               bench setup requirements --dev
@@ -165,11 +154,8 @@ jobs:
               bench --site test_site migrate
           }
 
-          # Call the function with the version number
-          update_to_version 14.0.0
-
           # update_to_version 14
-          # update_to_version 15
+          update_to_version 15
 
       - name: Show bench output
         if: ${{ always() }}
