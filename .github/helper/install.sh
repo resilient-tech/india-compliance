@@ -69,8 +69,8 @@ bench start &
 
 # bench --site test_site restore ${GITHUB_WORKSPACE}/20240822_162707-a1_localhost-database.sql.gz
 
-# cd ../../india_compliance/tests
-# python ../../india_compliance/tests/__init__.py before_tests
+cd ../../india_compliance/tests
+python ../../india_compliance/tests/__init__.py before_tests
 
 bench --verbose install-app india_compliance
 bench reinstall --yes
