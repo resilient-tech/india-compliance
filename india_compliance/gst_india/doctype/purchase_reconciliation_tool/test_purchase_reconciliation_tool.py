@@ -80,7 +80,7 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         purchase_reconciliation_tool = frappe.get_doc("Purchase Reconciliation Tool")
         purchase_reconciliation_tool.update(
             {
-                "company": "_Test Indian Registered Company",
+                # Reconcile all companies
                 "company_gstin": "All",
                 "purchase_from_date": "2023-11-01",
                 "purchase_to_date": "2023-12-31",
