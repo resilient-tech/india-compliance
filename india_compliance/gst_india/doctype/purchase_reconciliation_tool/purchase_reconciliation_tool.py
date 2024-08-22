@@ -38,8 +38,7 @@ from india_compliance.gst_india.utils.gstr_2 import (
 )
 
 STATUS_MAP = {
-    "Accept My Values": "Reconciled",
-    "Accept Supplier Values": "Reconciled",
+    "Accept": "Reconciled",
     "Pending": "Unreconciled",
     "Ignore": "Ignored",
 }

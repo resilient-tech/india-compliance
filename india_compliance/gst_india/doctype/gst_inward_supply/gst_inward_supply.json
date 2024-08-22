@@ -254,7 +254,7 @@
    "fieldtype": "Select",
    "in_standard_filter": 1,
    "label": "Action",
-   "options": "No Action\nAccept My Values\nAccept Supplier Values\nIgnore\nPending"
+   "options": "No Action\nAccept\nIgnore\nPending"
   },
   {
    "fieldname": "link_doctype",
