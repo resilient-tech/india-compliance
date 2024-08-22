@@ -1,3 +1,6 @@
+import frappe
+from frappe import _
+
 from india_compliance.gst_india.api_classes.taxpayer_base import TaxpayerBaseAPI
 
 
@@ -57,6 +60,19 @@ class GSTR2aAPI(ReturnsAPI):
 
 class GSTR1API(ReturnsAPI):
     API_NAME = "GSTR-1"
+
+    def setup(self, doc=None, *, company_gstin=None):
+        if doc:
+            company_gstin = doc.gstin
+            self.default_log_values.update(
+                reference_doctype=doc.doctype,
+                reference_name=doc.name,
+            )
+
+        if not company_gstin:
+            frappe.throw(_("Company GSTIN is required to use the GSTR-1 API"))
+
+        super().setup(company_gstin=company_gstin)
 
     def get_gstr_1_data(self, action, return_period, otp=None):
         return self.get(

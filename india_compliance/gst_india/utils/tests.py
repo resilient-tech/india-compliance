@@ -113,6 +113,7 @@ def append_item(transaction, data=None, company_abbr="_TIRC"):
             "gst_hsn_code": data.gst_hsn_code,
             "warehouse": f"Stores - {company_abbr}",
             "expense_account": f"Cost of Goods Sold - {company_abbr}",
+            "taxable_value": data.taxable_value or 0,
         },
     )
 

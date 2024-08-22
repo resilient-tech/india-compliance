@@ -110,6 +110,47 @@ Object.assign(india_compliance, {
         return message;
     },
 
+    async set_pan_status(field, force_update = null) {
+        const pan = field.value;
+        field.set_description("");
+        if (!pan || pan.length !== 10) return;
+
+        let { message } = await frappe.call({
+            method: "india_compliance.gst_india.doctype.pan.pan.get_pan_status",
+            args: { pan, force_update },
+        });
+
+        if (!message) return;
+
+        const [pan_status, datetime] = message;
+        const STATUS_COLORS = {
+            Valid: "green",
+            "Not Linked": "red",
+            Invalid: "red",
+        };
+
+        const user_date = frappe.datetime.str_to_user(datetime);
+        const pretty_date = frappe.datetime.prettyDate(datetime);
+        const pan_desc = $(
+            `<div class="d-flex indicator ${STATUS_COLORS[pan_status] || "orange"}">
+                Status:&nbsp;<strong>${pan_status}</strong>
+                <span class="text-right ml-auto">
+                    <span title="${user_date}">
+                        ${datetime ? "updated " + pretty_date : ""}
+                    </span>
+                    <svg class="icon icon-sm refresh-pan" style="cursor: pointer;">
+                        <use href="#icon-refresh"></use>
+                    </svg>
+                </span>
+            </div>`
+        );
+
+        pan_desc.find(".refresh-pan").on("click", async function () {
+            await india_compliance.set_pan_status(field, true);
+        });
+        return field.set_description(pan_desc);
+    },
+
     validate_gst_transporter_id(transporter_id) {
         if (!transporter_id || transporter_id.length !== 15) return;
 
@@ -343,6 +384,28 @@ Object.assign(india_compliance, {
 
     last_month_end() {
         return frappe.datetime.add_days(frappe.datetime.month_start(), -1);
+    },
+
+    last_half_year(position) {
+        const today = frappe.datetime.now_date(true);
+        const current_month = today.getMonth() + 1;
+        const current_year = today.getFullYear();
+
+        if (current_month <= 3) {
+            return position === "start"
+                ? `${current_year - 1}-03-01`
+                : `${current_year - 1}-09-30`;
+
+        } else if (current_month <= 9) {
+            return position === "start"
+                ? `${current_year - 1}-10-01`
+                : `${current_year}-03-31`;
+
+        } else {
+            return position === "start"
+                ? `${current_year}-04-01`
+                : `${current_year}-09-30`;
+        }
     },
 
     primary_to_danger_btn(parent) {

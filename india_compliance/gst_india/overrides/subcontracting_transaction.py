@@ -34,6 +34,7 @@ STOCK_ENTRY_FIELD_MAP = {"total_taxable_value": "total_taxable_value"}
 SUBCONTRACTING_ORDER_RECEIPT_FIELD_MAP = {"total_taxable_value": "total"}
 
 
+# Functions to perform operations before and after mapping of transactions
 def after_mapping_subcontracting_order(doc, method, source_doc):
     if source_doc.doctype != "Purchase Order":
         return
@@ -74,6 +75,13 @@ def after_mapping_stock_entry(doc, method, source_doc):
     doc.taxes = []
 
 
+def before_mapping_subcontracting_receipt(doc, method, source_doc, table_maps):
+    table_maps["India Compliance Taxes and Charges"] = {
+        "doctype": "India Compliance Taxes and Charges",
+        "add_if_empty": True,
+    }
+
+
 def set_taxes(doc):
     accounts = get_gst_accounts_by_type(doc.company, "Output", throw=False)
     if not accounts:
@@ -94,7 +102,8 @@ def set_taxes(doc):
         .orderby(sales_tax_template.modified, order=Order.desc)
         .limit(1)
         .run(pluck=True)
-    )[0] or 0
+    )
+    rate = rate[0] if rate else 0
 
     tax_types = ("igst",)
     if not is_inter_state_supply(doc):
@@ -115,6 +124,7 @@ def set_taxes(doc):
         )
 
 
+# Common Functions for Suncontracting Transactions
 def get_dashboard_data(data):
     doctype = (
         "Subcontracting Receipt"
@@ -156,6 +166,17 @@ def onload(doc, method=None):
 def validate(doc, method=None):
     if ignore_gst_validation_for_subcontracting(doc):
         return
+
+    if (doc.doctype == "Stock Entry" and doc.purpose == "Material Transfer") or (
+        doc.doctype == "Subcontracting Receipt" and not doc.is_return
+    ):
+        if not doc.doc_references:
+            frappe.throw(
+                _("Please Select Original Document Reference for ITC-04 Reporting"),
+                title=_("Mandatory Field"),
+            )
+        else:
+            remove_duplicates(doc)
 
     field_map = (
         STOCK_ENTRY_FIELD_MAP
@@ -277,7 +298,7 @@ class SubcontractingGSTAccounts(GSTAccounts):
 
 
 def ignore_gst_validation_for_subcontracting(doc):
-    if doc.doctype == "Stock Entry" and doc.purpose != "Send to Subcontractor":
+    if doc.doctype == "Stock Entry" and not doc.subcontracting_order:
         return True
 
     return ignore_gst_validations(doc)
@@ -294,3 +315,69 @@ def set_address_display(doc):
     for address in adddress_fields:
         if doc.get(address):
             setattr(doc, address + "_display", get_address_display(doc.get(address)))
+
+
+@frappe.whitelist()
+def get_relevant_references(
+    supplier, supplied_items, received_items, subcontracting_orders
+):
+
+    if isinstance(supplied_items, str):
+        supplied_items = frappe.parse_json(supplied_items)
+        received_items = frappe.parse_json(received_items)
+        subcontracting_orders = frappe.parse_json(subcontracting_orders)
+
+    # same filters used for set_query in JS
+
+    receipt_returns = frappe.db.get_all(
+        "Subcontracting Receipt",
+        filters=[
+            ["docstatus", "=", 1],
+            ["is_return", "=", 1],
+            ["supplier", "=", supplier],
+            ["Subcontracting Receipt Item", "item_code", "in", received_items],
+            [
+                "Subcontracting Receipt Item",
+                "subcontracting_order",
+                "in",
+                subcontracting_orders,
+            ],
+        ],
+        pluck="name",
+        group_by="name",
+    )
+
+    stock_entries = frappe.db.get_all(
+        "Stock Entry",
+        filters=[
+            ["docstatus", "=", 1],
+            ["purpose", "=", "Send to Subcontractor"],
+            ["subcontracting_order", "in", subcontracting_orders],
+            ["supplier", "=", supplier],
+            ["Stock Entry Detail", "item_code", "in", supplied_items],
+        ],
+        pluck="name",
+        group_by="name",
+    )
+
+    data = {"Subcontracting Receipt": receipt_returns, "Stock Entry": stock_entries}
+
+    return data
+
+
+def remove_duplicates(doc):
+    references = []
+    has_duplicates = False
+
+    for row in doc.doc_references:
+        ref = (row.link_doctype, row.link_name)
+
+        if ref not in references:
+            references.append(ref)
+        else:
+            has_duplicates = True
+
+    if has_duplicates:
+        doc.doc_references = []
+        for row in references:
+            doc.append("doc_references", dict(link_doctype=row[0], link_name=row[1]))

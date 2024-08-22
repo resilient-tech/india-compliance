@@ -67,6 +67,26 @@ CUSTOM_FIELDS = {
             "insert_after": "total",
             "hide_border": 1,
         },
+        {
+            "fieldname": "section_break_ref_doc",
+            "label": "References",
+            "fieldtype": "Section Break",
+            "insert_after": "bill_date",
+            "depends_on": "eval:doc.is_return !== 1",
+        },
+        {
+            "fieldname": "fetch_original_doc_ref",
+            "label": "Fetch Original Document Reference",
+            "fieldtype": "Button",
+            "insert_after": "section_break_ref_doc",
+        },
+        {
+            "fieldname": "doc_references",
+            "label": "Original Document References",
+            "fieldtype": "Table",
+            "insert_after": "fetch_original_doc_ref",
+            "options": "Dynamic Link",
+        },
     ],
     ("Subcontracting Order", "Subcontracting Receipt"): [
         {
@@ -161,7 +181,7 @@ CUSTOM_FIELDS = {
             "label": "Taxes",
             "fieldtype": "Section Break",
             "insert_after": "get_stock_and_rate",
-            "depends_on": "eval:doc.purpose === 'Send to Subcontractor'",
+            "depends_on": "eval:doc.subcontracting_order",
         },
         {
             "label": "E-Waybill Info",
@@ -311,6 +331,26 @@ CUSTOM_FIELDS = {
             "insert_after": "ship_to_address",
             "read_only": 1,
             "is_virtual": 1,
+        },
+        {
+            "fieldname": "section_break_ref_doc",
+            "label": "References",
+            "fieldtype": "Section Break",
+            "insert_after": "value_difference",
+            "depends_on": "eval:doc.purpose === 'Material Transfer' && doc.subcontracting_order",
+        },
+        {
+            "fieldname": "fetch_original_doc_ref",
+            "label": "Fetch Original Document Reference",
+            "fieldtype": "Button",
+            "insert_after": "section_break_ref_doc",
+        },
+        {
+            "fieldname": "doc_references",
+            "label": "Original Document References",
+            "fieldtype": "Table",
+            "insert_after": "fetch_original_doc_ref",
+            "options": "Dynamic Link",
         },
     ],
     "Company": [
