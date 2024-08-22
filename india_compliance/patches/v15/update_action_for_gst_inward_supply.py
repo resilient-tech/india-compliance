@@ -2,11 +2,10 @@ import frappe
 
 
 def execute():
-    docs = frappe.get_all(
+    # Discard the action "Accept Supplier Values"
+    frappe.db.set_value(
         "GST Inward Supply",
-        filters={"action": ["in", ["Accept My Values", "Accept Supplier Values"]]},
-        pluck="name",
+        {"action": ["in", ["Accept My Values", "Accept Supplier Values"]]},
+        "action",
+        "Accept",
     )
-
-    for doc in docs:
-        frappe.db.set_value("GST Inward Supply", doc, "action", "Accept")
