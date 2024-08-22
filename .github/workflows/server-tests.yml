@@ -12,6 +12,14 @@ on:
       secrets:
         codecov_token:
 
+    pull_request:
+      paths-ignore:
+          - "**.css"
+          - "**.js"
+          - "**.md"
+          - "**.html"
+          - "**.csv"
+
 
     push:
         branches: [develop, version-14-hotfix, version-14, version-15-hotfix, version-15]
