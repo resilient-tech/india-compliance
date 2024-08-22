@@ -13,7 +13,7 @@ from frappe.query_builder.functions import Abs, IfNull, Sum
 from frappe.utils import add_months, format_date, getdate, rounded
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
-from india_compliance.gst_india.utils import get_party_for_gstin
+from india_compliance.gst_india.utils import get_gstin_list, get_party_for_gstin
 from india_compliance.gst_india.utils.gstr_2 import IMPORT_CATEGORY, ReturnType
 
 
@@ -307,7 +307,12 @@ class InwardSupply:
         )
 
         if self.company_gstin == "All":
-            query = query.where(self.GSTR2.company_gstin.notnull())
+            if self.company:
+                gstin_list = get_gstin_list(self.company)
+                query = query.where(self.GSTR2.company_gstin.isin(gstin_list))
+            else:
+                query = query.where(self.GSTR2.company_gstin.notnull())
+
         else:
             query = query.where(self.company_gstin == self.GSTR2.company_gstin)
 
@@ -653,6 +658,7 @@ class BaseReconciliation:
         self, additional_fields=None, names=None, only_names=False
     ):
         return InwardSupply(
+            company=self.company,
             company_gstin=self.company_gstin,
             from_date=self.inward_supply_from_date,
             to_date=self.inward_supply_to_date,
@@ -662,6 +668,7 @@ class BaseReconciliation:
 
     def get_unmatched_inward_supply(self, category, amended_category):
         return InwardSupply(
+            company=self.company,
             company_gstin=self.company_gstin,
             from_date=self.inward_supply_from_date,
             to_date=self.inward_supply_to_date,
@@ -671,6 +678,7 @@ class BaseReconciliation:
 
     def query_inward_supply(self, additional_fields=None):
         query = InwardSupply(
+            company=self.company,
             company_gstin=self.company_gstin,
             from_date=self.inward_supply_from_date,
             to_date=self.inward_supply_to_date,
