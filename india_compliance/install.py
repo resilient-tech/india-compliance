@@ -22,6 +22,7 @@ POST_INSTALL_PATCHES = (
     "update_itc_amounts",
     ## India Compliance
     "set_gst_tax_type",
+    "set_gst_tax_type1",
     "update_state_name_to_puducherry",
     "rename_import_of_capital_goods",
     "update_hsn_code",
