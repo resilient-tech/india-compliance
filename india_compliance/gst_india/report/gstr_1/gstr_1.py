@@ -1377,15 +1377,16 @@ class GSTR1DocumentIssuedSummary:
     def build_query(
         self,
         doctype,
-        filters,
-        gstin_field,
-        address_field,
-        company_gstin_field=None,
-        additional_conditions=None,
+        party_gstin_field,
+        company_gstin_field="company_gstin",
+        address_field=None,
         additional_selects=None,
+        additional_conditions=None,
     ):
-        if not company_gstin_field:
-            company_gstin_field = doctype.company_gstin
+
+        party_gstin_field = getattr(doctype, party_gstin_field, None)
+        company_gstin_field = getattr(doctype, company_gstin_field, None)
+        address_field = getattr(doctype, address_field, None)
 
         query = (
             frappe.qb.from_(doctype)
@@ -1397,37 +1398,34 @@ class GSTR1DocumentIssuedSummary:
                 doctype.amended_from,
                 Case()
                 .when(
-                    IfNull(gstin_field, "") == company_gstin_field,
+                    IfNull(party_gstin_field, "") == company_gstin_field,
                     1,
                 )
                 .else_(0)
                 .as_("same_gstin_billing"),
             )
-            .where(doctype.company == filters.company)
-            .where(doctype.posting_date.between(filters.from_date, filters.to_date))
+            .where(doctype.company == self.filters.company)
+            .where(
+                doctype.posting_date.between(
+                    self.filters.from_date, self.filters.to_date
+                )
+            )
             .orderby(doctype.name)
             .groupby(doctype.name)
         )
 
-        if additional_conditions:
-            for condition in additional_conditions:
-                query = query.where(condition)
-
         if additional_selects:
-            for select in additional_selects:
-                query = query.select(select)
+            query = query.select(*additional_selects)
 
-        query = (
-            query.where(address_field == filters.company_address)
-            if filters.company_address
-            else query
-        )
+        if additional_conditions:
+            query = query.where(Criterion.all(additional_conditions))
 
-        query = (
-            query.where(company_gstin_field == filters.company_gstin)
-            if filters.company_gstin
-            else query
-        )
+        if self.filters.company_address:
+            query = query.where(address_field == self.filters.company_address)
+
+        if self.filters.company_gstin:
+            query = query.where(company_gstin_field == self.filters.company_gstin)
+
         return query
 
     def get_query_for_sales_invoice(self):
@@ -1439,9 +1437,8 @@ class GSTR1DocumentIssuedSummary:
 
         query = self.build_query(
             doctype=self.sales_invoice,
-            filters=self.filters,
-            gstin_field=self.sales_invoice.billing_address_gstin,
-            address_field=self.sales_invoice.company_address,
+            party_gstin_field="billing_address_gstin",
+            address_field="company_address",
             additional_selects=additional_selects,
         )
 
@@ -1463,11 +1460,10 @@ class GSTR1DocumentIssuedSummary:
         ]
         return self.build_query(
             doctype=self.purchase_invoice,
-            filters=self.filters,
-            gstin_field=self.purchase_invoice.supplier_gstin,
-            address_field=self.purchase_invoice.billing_address,
-            additional_conditions=additional_conditions,
+            party_gstin_field="supplier_gstin",
+            address_field="billing_address",
             additional_selects=additional_selects,
+            additional_conditions=additional_conditions,
         )
 
     def get_query_for_stock_entry(self):
@@ -1481,12 +1477,11 @@ class GSTR1DocumentIssuedSummary:
         ]
         return self.build_query(
             doctype=self.stock_entry,
-            filters=self.filters,
-            gstin_field=self.stock_entry.bill_to_gstin,
-            company_gstin_field=self.stock_entry.bill_from_gstin,
-            address_field=self.stock_entry.bill_from_address,
-            additional_conditions=additional_conditions,
+            party_gstin_field="bill_to_gstin",
+            company_gstin_field="bill_from_gstin",
+            address_field="bill_from_address",
             additional_selects=additional_selects,
+            additional_conditions=additional_conditions,
         )
 
     def get_query_for_subcontracting_receipt(self):
@@ -1495,9 +1490,8 @@ class GSTR1DocumentIssuedSummary:
         ]
         return self.build_query(
             doctype=self.subcontracting_receipt,
-            filters=self.filters,
-            gstin_field=self.subcontracting_receipt.supplier_gstin,
-            address_field=self.subcontracting_receipt.billing_address,
+            party_gstin_field="supplier_gstin",
+            address_field="billing_address",
             additional_conditions=additional_conditions,
         )
 
@@ -1595,11 +1589,11 @@ class GSTR1DocumentIssuedSummary:
         nature_of_document = {
             "Excluded from Report (Same GSTIN Billing)": [],
             "Excluded from Report (Is Opening Entry)": [],
-            "Invoices for inward supply from unregistered person": [],
-            "Delivery Challan for job work": [],
             "Invoices for outward supply": [],
             "Debit Note": [],
             "Credit Note": [],
+            "Invoices for inward supply from unregistered person": [],
+            "Delivery Challan for job work": [],
         }
 
         for doc in data:
