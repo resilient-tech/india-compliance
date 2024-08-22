@@ -13,6 +13,12 @@ name: "CodeQL"
 
 on:
   workflow_call:
+  pull_request:
+    paths-ignore:
+      - "**.css"
+      - "**.md"
+      - "**.html"
+      - "**.csv"
 
   push:
 

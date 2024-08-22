@@ -92,7 +92,7 @@ jobs:
       - name: Set Restore Flag
         run: echo "RUN_RESTORE=true" >> $GITHUB_ENV
 
-      - name: Install
+      - name: Run Post Install Patch
         run: |
             bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
         env:
