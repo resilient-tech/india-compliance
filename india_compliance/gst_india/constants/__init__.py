@@ -33,6 +33,7 @@ GST_CATEGORIES = {
     "UIN Holders": "B2B",
     "Tax Deductor": "B2B",
     "Tax Collector": "B2B",
+    "Input Service Distributor": "ISD",
 }
 
 EXPORT_TYPES = (

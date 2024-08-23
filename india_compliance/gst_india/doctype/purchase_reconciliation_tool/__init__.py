@@ -387,7 +387,7 @@ class PurchaseInvoice:
 
     def get_unmatched(self, category):
         gst_category = (
-            ("Registered Regular", "Tax Deductor")
+            ("Registered Regular", "Tax Deductor", "Input Service Distributor")
             if category in ("B2B", "CDNR", "ISD")
             else ("SEZ", "Overseas", "UIN Holders")
         )
