@@ -18,6 +18,10 @@ frappe.ui.form.on(DOCTYPE, {
         });
     },
 
+    onload: toggle_reverse_charge,
+
+    gst_category: toggle_reverse_charge,
+
     after_save(frm) {
         if (
             frm.doc.supplier_address ||
@@ -84,3 +88,17 @@ frappe.ui.form.on(DOCTYPE, {
         }, 2000);
     },
 });
+
+frappe.ui.form.on("Purchase Invoice Item", {
+    item_code: toggle_reverse_charge,
+
+    items_remove: toggle_reverse_charge,
+});
+
+function toggle_reverse_charge(frm) {
+    const has_goods_item = frm.doc.items.some(
+        item => !item.gst_hsn_code.startsWith("99")
+    );
+    const is_read_only = has_goods_item && frm.doc.gst_category === "Overseas" ? 1 : 0;
+    frm.set_df_property("is_reverse_charge", "read_only", is_read_only);
+}

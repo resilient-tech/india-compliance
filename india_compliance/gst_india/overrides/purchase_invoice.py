@@ -110,19 +110,22 @@ def update_itc_totals(doc, method=None):
 
 
 def set_itc_classification(doc):
-    default_classification = "All Other ITC"
-    reverse_charge_classification = "ITC on Reverse Charge"
+    if doc.gst_category == "Overseas":
+        for item in doc.items:
+            if not item.gst_hsn_code.startswith("99"):
+                doc.itc_classification = "Import Of Goods"
+                break
+        else:
+            doc.itc_classification = "Import Of Service"
 
-    if doc.is_reverse_charge:
-        doc.itc_classification = reverse_charge_classification
-        return
+    elif doc.is_reverse_charge:
+        doc.itc_classification = "ITC on Reverse Charge"
 
-    elif doc.itc_classification == reverse_charge_classification:
-        doc.itc_classification = default_classification
-        return
+    elif doc.gst_category == "Input Service Distributor" and doc.is_internal_transfer():
+        doc.itc_classification = "Input Service Distributor"
 
-    if not doc.itc_classification:
-        doc.itc_classification = default_classification
+    else:
+        doc.itc_classification = "All Other ITC"
 
 
 def validate_supplier_invoice_number(doc):
