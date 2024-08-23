@@ -669,3 +669,42 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
                 data[subcategory] = [*subcategory_data.values()]
 
         return data
+
+
+class FileGSTR1:
+    def reset_gstr1(self):
+        # Make API Request
+        # Update Fields with reference number
+        pass
+
+    def process_reset_gstr1(self):
+        # Unset the Fields with reference number
+        # Raise error in front-end if not done
+        # If Success, make unfiled data empty
+        # Emit success message / error message
+        pass
+
+    def upload_gstr1(self, json_data):
+        pass
+
+    def process_upload_gstr1(self):
+        pass
+
+    def proceed_to_file_gstr1(self):
+        pass
+
+    def process_proceed_to_file_gstr1(self):
+        pass
+
+    def file_gstr1(self, pan, otp=None):
+        # If OTP is none, generate evc OTP
+        # Use summary from self
+        # Make API Request
+        pass
+
+
+def check_return_status(self):
+    # Cron JOB
+    # check for logs with refeerence number.
+    # for each reference, try processing it.
+    pass
