@@ -51,6 +51,7 @@ POST_INSTALL_PATCHES = (
 
 def after_install():
     try:
+        has_valid_post_install_patch()
         setup_audit_trail()
 
         print("Setting up Income Tax...")
@@ -107,3 +108,8 @@ def disable_ic_account_page():
 def after_app_install(app_name):
     if app_name == "hrms":
         create_hrms_custom_fields()
+
+
+def has_valid_post_install_patch():
+    for patch in POST_INSTALL_PATCHES:
+        frappe.get_attr(f"india_compliance.patches.post_install.{patch}.execute")

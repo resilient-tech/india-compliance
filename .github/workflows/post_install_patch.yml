@@ -1,0 +1,107 @@
+name: Server Tests
+
+on:
+    pull_request:
+        paths-ignore:
+            - "**.css"
+            - "**.js"
+            - "**.md"
+            - "**.html"
+            - "**.csv"
+
+    push:
+        branches: [develop, version-14-hotfix, version-14, version-15-hotfix, version-15]
+        paths-ignore:
+            - "**.css"
+            - "**.js"
+            - "**.md"
+            - "**.html"
+            - "**.csv"
+env:
+    BRANCH: ${{ inputs.base_ref || github.base_ref || github.ref_name }}
+    APP_NAME: ${{ inputs.app_name || 'india_compliance' }}
+
+jobs:
+    tests:
+        runs-on: ubuntu-latest
+        timeout-minutes: 20
+
+        strategy:
+            fail-fast: false
+
+        name: Python Unit Tests
+
+        services:
+            mariadb:
+                image: mariadb:10.6
+                env:
+                    MARIADB_ROOT_PASSWORD: 'travis'
+                ports:
+                    - 3306:3306
+                options: --health-cmd="mariadb-admin ping" --health-interval=5s --health-timeout=2s --health-retries=3
+
+        steps:
+            - name: Clone
+              uses: actions/checkout@v4
+
+            - name: Setup Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.11"
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+                  check-latest: true
+
+            - name: Add to Hosts
+              run: echo "127.0.0.1 test_site" | sudo tee -a /etc/hosts
+
+            - name: Cache pip
+              uses: actions/cache@v4
+              with:
+                  path: ~/.cache/pip
+                  key: ${{ runner.os }}-pip-${{ hashFiles('**/*requirements.txt') }}
+                  restore-keys: |
+                      ${{ runner.os }}-pip-
+                      ${{ runner.os }}-
+
+            - name: Cache node modules
+              uses: actions/cache@v4
+              env:
+                  cache-name: cache-node-modules
+              with:
+                  path: ~/.npm
+                  key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+                  restore-keys: |
+                      ${{ runner.os }}-build-${{ env.cache-name }}-
+                      ${{ runner.os }}-build-
+                      ${{ runner.os }}-
+
+            - name: Get yarn cache directory path
+              id: yarn-cache-dir-path
+              run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
+
+            - uses: actions/cache@v4
+              id: yarn-cache
+              with:
+                  path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+                  key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+                  restore-keys: |
+                      ${{ runner.os }}-yarn-
+
+            - name: Install
+              run: |
+                  bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
+              env:
+                  BRANCH_TO_CLONE: ${{ env.BRANCH }}
+
+            - name: Execute has_valid_post_install_patch
+              run: |
+                python -c "
+                from india_compliance.install import POST_INSTALL_PATCHES
+
+                for patch in POST_INSTALL_PATCHES:
+                    frappe.get_attr(f'india_compliance.patches.post_install.{patch}.execute')
+                "
