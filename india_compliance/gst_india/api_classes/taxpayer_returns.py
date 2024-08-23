@@ -27,6 +27,30 @@ class ReturnsAPI(TaxpayerBaseAPI):
             return_period, token, action="FILEDET", endpoint="returns", otp=otp
         )
 
+    def get_return_status(self, return_period, reference_id, otp=None):
+        return self.get(
+            action="RETSTATUS",
+            return_period=return_period,
+            params={"ret_period": return_period, "ref_id": reference_id},
+            endpoint="returns",
+            otp=otp,
+        )
+
+    def proceed_to_file(self, return_type, return_period, otp=None):
+        return self.post(
+            return_type=return_type,
+            return_period=return_period,
+            json={
+                "action": "RETNEWPTF",
+                "data": {
+                    "gstin": self.company_gstin,
+                    "ret_period": return_period,
+                },  # "isnil": "N" / "Y"
+            },
+            endpoint="returns/gstrptf",
+            otp=otp,
+        )
+
 
 class GSTR2bAPI(ReturnsAPI):
     API_NAME = "GSTR-2B"
@@ -75,6 +99,7 @@ class GSTR1API(ReturnsAPI):
         super().setup(company_gstin=company_gstin)
 
     def get_gstr_1_data(self, action, return_period, otp=None):
+        # action: RETSUM for summary
         return self.get(
             action=action,
             return_period=return_period,
@@ -90,4 +115,38 @@ class GSTR1API(ReturnsAPI):
             params={"ret_period": return_period, "sec": section},
             endpoint="returns/einvoice",
             otp=otp,
+        )
+
+    def save_gstr_1_data(self, return_period, data, otp=None):
+        return self.put(
+            return_period=return_period,
+            json={"action": "RETSAVE", "data": data},
+            endpoint="returns/gstr1",
+            otp=otp,
+        )
+
+    def reset_gstr_1_data(self, return_period, otp=None):
+        return self.post(
+            return_period=return_period,
+            json={
+                "action": "RESET",
+                "data": {
+                    "gstin": self.company_gstin,
+                    "ret_period": return_period,
+                },
+            },
+            endpoint="returns/gstr1",
+            otp=otp,
+        )
+
+    def file_gstr_1(self, return_period, summary_data, pan, evc_otp):
+        return self.post(
+            return_period=return_period,
+            json={
+                "action": "RETFILE",
+                "data": summary_data,
+                "st": "EVC",
+                "sid": f"{pan}|{evc_otp}",
+            },
+            endpoint="returns/gstr1",
         )
