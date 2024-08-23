@@ -10,12 +10,13 @@ from frappe.model.document import Document
 from frappe.utils import get_datetime, get_datetime_str, get_last_day, getdate
 
 from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
+    FileGSTR1,
     GenerateGSTR1,
 )
 from india_compliance.gst_india.utils import is_production_api_enabled
 
 
-class GSTReturnLog(GenerateGSTR1, Document):
+class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
     @property
     def status(self):
         return self.generation_status
