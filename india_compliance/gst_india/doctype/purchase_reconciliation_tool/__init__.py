@@ -458,6 +458,7 @@ class PurchaseInvoice:
             "bill_no",
             "place_of_supply",
             "is_reverse_charge",
+            "itc_classification",
             Abs(Sum(self.PI_ITEM.taxable_value)).as_("taxable_value"),
             *tax_fields,
         ]
@@ -1233,7 +1234,7 @@ class ReconciledData(BaseReconciliation):
             "Overseas": "IMPG",
             "UIN Holders": "B2B",
             "Tax Deductor": "B2B",
-            "Input Service Distributor": "B2B",  # TODO: check if it's internal transfer for ISD
+            "Input Service Distributor": "B2B",
         }
 
         classification = GST_CATEGORIES.get(doc.gst_category)
@@ -1242,6 +1243,9 @@ class ReconciledData(BaseReconciliation):
 
         if not classification and doc.get("doctype") == "Bill of Entry":
             classification = "IMPG"
+
+        if doc.itc_classification == "Input Service Distributor":
+            classification = "ISD"
 
         return classification
 
