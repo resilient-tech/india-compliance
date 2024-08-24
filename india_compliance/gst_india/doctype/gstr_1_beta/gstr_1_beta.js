@@ -194,13 +194,23 @@ frappe.ui.form.on(DOCTYPE, {
     refresh(frm) {
         // Primary Action
         frm.disable_save();
-        frm.page.set_primary_action(__("Generate"), () =>
-            frm.call("generate_gstr1")
-        );
+        const gst_data = frm.doc.__gst_data;
 
-        // After indicator set in frappe refresh
-        if (frm.doc.__gst_data) frm.gstr1.render_indicator();
-        else frm.page.clear_indicator();
+        if(gst_data && (!is_gstr1_api_enabled() || gst_data.status == "Filed")) {
+            frm.page.clear_indicator();
+            return;
+        }
+
+        const button_label = gst_data?.status == "Not Filed" ? "Upload" : "Generate";
+        const method = gst_data ? "upload_gstr_1" : "generate_gstr1"
+        frm.page.set_primary_action(__(button_label), () =>  frm.call(method));
+
+        if(!gst_data) return;
+
+        frm.page.add_button(__("Reset"), () => {});
+        frm.page.add_button(__("Proceed to File"), () => {});
+        frm.page.clear_menu();
+        frm.gstr1.render_indicator();
     },
 
     load_gstr1_data(frm) {
