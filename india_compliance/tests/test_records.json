@@ -10,7 +10,8 @@
             "chart_of_accounts": "Standard",
             "enable_perpetual_inventory": 0,
             "gstin": "24AAQCA8719H1ZC",
-            "gst_category": "Registered Regular"
+            "gst_category": "Registered Regular",
+            "unrealized_profit_loss_account": "Cash - _TIRC"
         },
         {
             "abbr": "_TIUC",
@@ -231,6 +232,20 @@
             "gstin": "05AAACG2140A1ZL",
             "gst_category": "Registered Regular",
             "is_transporter": 1
+        },
+        {
+            "supplier_name": "Test Internal with ISD Supplier",
+            "name": "Test Internal with ISD Supplier",
+            "supplier_type": "Company",
+            "gstin": "24AABCR6898M1ZN",
+            "gst_category": "Input Service Distributor",
+            "is_internal_supplier": 1,
+            "represents_company": "_Test Indian Registered Company",
+            "companies": [
+                {
+                    "company": "_Test Indian Registered Company"
+                }
+            ]
         }
     ],
     "Address": [
