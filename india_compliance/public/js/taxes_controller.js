@@ -266,7 +266,7 @@ frappe.ui.form.on("India Compliance Taxes and Charges", {
 
     async charge_type(frm, cdt, cdn) {
         const row = locals[cdt][cdn];
-        if (!row.charge_type) {
+        if (!row.charge_type || row.charge_type === "Actual") {
             row.rate = 0;
             row.item_wise_tax_rates = "{}";
             frm.refresh_field("taxes");
