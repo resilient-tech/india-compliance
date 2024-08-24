@@ -149,6 +149,9 @@ class CustomTaxController:
         round_off_accounts = fetch_round_off_accounts(self.doc.company, [])
 
         for tax in self.doc.taxes:
+            if tax.charge_type == "Actual":
+                continue
+
             tax.tax_amount = self.get_tax_amount(
                 tax.item_wise_tax_rates, tax.charge_type
             )
