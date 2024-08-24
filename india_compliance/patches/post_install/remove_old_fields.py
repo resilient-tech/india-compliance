@@ -19,6 +19,7 @@ def execute():
     delete_old_fields("pan_details", "Company")
     delete_old_fields("export_type", ("Customer", "Supplier"))
     delete_old_fields("company_address", "Journal Entry")
+    delete_old_fields("reason_for_issuing_document", "Sales Invoice")
 
     # Field renamed post release
     delete_old_fields(
