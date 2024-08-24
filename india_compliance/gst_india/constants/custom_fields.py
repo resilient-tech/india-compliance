@@ -214,6 +214,7 @@ CUSTOM_FIELDS = {
             "insert_after": "bill_from_address",
             "read_only": 1,
             "is_virtual": 1,
+            "allow_on_submit": 1,
         },
         {
             "fieldname": "bill_from_gstin",
@@ -256,6 +257,7 @@ CUSTOM_FIELDS = {
             "insert_after": "bill_to_address",
             "read_only": 1,
             "is_virtual": 1,
+            "allow_on_submit": 1,
         },
         {
             "fieldname": "bill_to_gstin",
@@ -310,6 +312,7 @@ CUSTOM_FIELDS = {
             "insert_after": "ship_from_address",
             "read_only": 1,
             "is_virtual": 1,
+            "allow_on_submit": 1,
         },
         {
             "fieldname": "cb_shipping_address",
@@ -331,6 +334,7 @@ CUSTOM_FIELDS = {
             "insert_after": "ship_to_address",
             "read_only": 1,
             "is_virtual": 1,
+            "allow_on_submit": 1,
         },
         {
             "fieldname": "section_break_ref_doc",
@@ -541,6 +545,7 @@ CUSTOM_FIELDS = {
             "translatable": 0,
             "is_virtual": 1,
             "read_only": 1,
+            "allow_on_submit": 1,
         },
         {
             "fieldname": "gst_col_break",
@@ -1088,6 +1093,7 @@ CUSTOM_FIELDS = {
             "print_hide": 1,
             "translatable": 0,
             "is_virtual": 1,
+            "allow_on_submit": 1,
         },
     ],
     "Supplier": [
