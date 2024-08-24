@@ -20,9 +20,11 @@
   "section_break_oisv",
   "unfiled",
   "filed",
+  "upload_error",
   "column_break_hxfu",
   "unfiled_summary",
   "filed_summary",
+  "authenticated_summary",
   "computed_data_section",
   "is_latest_data",
   "section_break_emlz",
@@ -32,7 +34,11 @@
   "reconciled_data_section",
   "reconcile",
   "column_break_ndup",
-  "reconcile_summary"
+  "reconcile_summary",
+  "pending_request_info_section",
+  "request_type",
+  "column_break_kohw",
+  "token"
  ],
  "fields": [
   {
@@ -187,6 +193,38 @@
    "label": "Return Type",
    "read_only": 1,
    "reqd": 1
+  },
+  {
+   "fieldname": "upload_error",
+   "fieldtype": "Attach",
+   "label": "Upload Error Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "authenticated_summary",
+   "fieldtype": "Attach",
+   "label": "Authenticated Summary",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pending_request_info_section",
+   "fieldtype": "Section Break",
+   "hidden": 1,
+   "label": "Pending Request Info"
+  },
+  {
+   "fieldname": "request_type",
+   "fieldtype": "Data",
+   "label": "Request Type"
+  },
+  {
+   "fieldname": "column_break_kohw",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "token",
+   "fieldtype": "Data",
+   "label": "Token"
   }
  ],
  "in_create": 1,
@@ -197,7 +235,7 @@
    "link_fieldname": "reference_docname"
   }
  ],
- "modified": "2024-08-14 17:53:03.509293",
+ "modified": "2024-08-24 13:25:56.482743",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Return Log",
