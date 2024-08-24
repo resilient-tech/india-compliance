@@ -183,11 +183,12 @@ india_compliance.taxes_controller = class TaxesController {
         this.frm.set_value(this.get_fieldname("base_grand_total"), grand_total);
     }
 
-    update_total_amount_payable() {
-        this.frm.set_value(
-            "total_amount_payable",
-            this.frm.doc.total_customs_duty + this.frm.doc.total_taxes
+    update_total_taxes() {
+        const total_taxes = this.frm.doc.taxes.reduce(
+            (total, row) => total + row.tax_amount,
+            0
         );
+        this.frm.set_value("total_taxes", total_taxes);
     }
 
     get_tax_amount(tax_row) {
@@ -274,5 +275,9 @@ frappe.ui.form.on("India Compliance Taxes and Charges", {
             await frm.taxes_controller.set_item_wise_tax_rates(null, cdn);
             frm.taxes_controller.update_tax_amount(cdt, cdn);
         }
+    },
+
+    taxes_remove(frm) {
+        frm.taxes_controller.update_total_taxes();
     },
 });
