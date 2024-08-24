@@ -85,6 +85,7 @@ def is_b2b_invoice(doc):
 def update_itc_totals(doc, method=None):
     # Set default value
     set_itc_classification(doc)
+    validate_reverse_charge(doc)
 
     # Initialize values
     doc.itc_integrated_tax = 0
@@ -254,3 +255,10 @@ def set_ineligibility_reason(doc, show_alert=True):
             alert=True,
             indicator="orange",
         )
+
+
+def validate_reverse_charge(doc):
+    if doc.itc_classification != "Import of Goods" or not doc.is_reverse_charge:
+        return
+
+    frappe.throw(_("Reverse Charge is not applicable on Import of Goods."))
