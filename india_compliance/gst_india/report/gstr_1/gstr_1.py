@@ -78,7 +78,6 @@ class Gstr1Report(object):
             port_code,
             shipping_bill_number,
             shipping_bill_date,
-            reason_for_issuing_document,
             company_gstin,
             (
                 CASE
