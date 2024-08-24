@@ -953,21 +953,6 @@ CUSTOM_FIELDS = {
             ),
             "translatable": 0,
         },
-        {
-            "fieldname": "reason_for_issuing_document",
-            "label": "Reason For Issuing Document",
-            "fieldtype": "Select",
-            "insert_after": "return_against",
-            "print_hide": 1,
-            "depends_on": "eval:doc.is_return == 1",
-            "length": 45,
-            "options": (
-                "\n01-Sales Return\n02-Post Sale Discount\n03-Deficiency in"
-                " services\n04-Correction in Invoice\n05-Change in POS\n06-Finalization"
-                " of Provisional assessment\n07-Others"
-            ),
-            "translatable": 0,
-        },
     ],
     (
         "Sales Taxes and Charges",
