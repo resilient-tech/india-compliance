@@ -68,7 +68,11 @@ frappe.ui.form.on("Bill of Entry", {
     },
 
     total_customs_duty(frm) {
-        frm.taxes_controller.update_total_amount_payable();
+        frm.bill_of_entry_controller.update_total_amount_payable();
+    },
+
+    total_taxes(frm) {
+        frm.bill_of_entry_controller.update_total_amount_payable();
     },
 });
 
@@ -154,14 +158,6 @@ class BillOfEntryController {
                 return total + row.customs_duty;
             }, 0)
         );
-    }
-
-    update_total_taxes() {
-        const total_taxes = this.frm.doc.taxes.reduce(
-            (total, row) => total + row.tax_amount,
-            0
-        );
-        this.frm.set_value("total_taxes", total_taxes);
     }
 
     update_total_amount_payable() {
