@@ -1233,6 +1233,7 @@ class ReconciledData(BaseReconciliation):
             "Overseas": "IMPG",
             "UIN Holders": "B2B",
             "Tax Deductor": "B2B",
+            "Input Service Distributor": "B2B",  # TODO: check if it's internal transfer for ISD
         }
 
         classification = GST_CATEGORIES.get(doc.gst_category)

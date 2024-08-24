@@ -306,6 +306,7 @@ def guess_gst_category(
             "Registered Composition",
             "SEZ",
             "Deemed Export",
+            "Input Service Distributor",
         ):
             return gst_category
 
