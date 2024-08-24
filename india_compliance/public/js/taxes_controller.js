@@ -169,18 +169,19 @@ india_compliance.taxes_controller = class TaxesController {
         });
 
         this.frm.set_value(this.get_fieldname("total_taxes"), total_taxes);
-        if (this.frm.doc.doctype === "Bill of Entry") {
-            this.update_total_amount_payable();
-        } else {
-            this.update_base_grand_total();
-        }
+
+        this.update_base_grand_total();
         this.frm.refresh_field("taxes");
     }
 
     update_base_grand_total() {
         const grand_total =
             this.calculate_total_taxable_value() + this.get_value("total_taxes");
-        this.frm.set_value(this.get_fieldname("base_grand_total"), grand_total);
+
+        const field_name = this.get_fieldname("base_grand_total");
+        if (this.frm.fields_dict[field_name]) {
+            this.frm.set_value(field_name, grand_total);
+        }
     }
 
     update_total_taxes() {
