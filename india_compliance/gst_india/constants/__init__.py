@@ -1410,6 +1410,7 @@ GSTIN_FORMATS = {
     "UIN Holders": UNBODY,
     "Tax Deductor": TDS,
     "Tax Collector": TCS,
+    "Input Service Distributor": REGISTERED,
 }
 
 PAN_NUMBER = re.compile(r"^[A-Z]{5}[0-9]{4}[A-Z]{1}$")
