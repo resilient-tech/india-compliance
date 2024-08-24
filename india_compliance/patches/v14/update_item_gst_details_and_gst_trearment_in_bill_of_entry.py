@@ -88,7 +88,7 @@ def update_gst_details(company, doctype, docs):
 
 
 def get_taxes_for_docs(docs, doctype):
-    taxes_doctype = "India Compliance Taxes and Charges"
+    taxes_doctype = "Bill of Entry Taxes"  # check to be updated or not
     taxes = frappe.qb.DocType(taxes_doctype)
     return (
         frappe.qb.from_(taxes)

@@ -7,7 +7,7 @@ TAX_DOCTYPES = [
     "Sales Taxes and Charges",
     "Purchase Taxes and Charges",
     "Advance Taxes and Charges",
-    "India Compliance Taxes and Charges",
+    "Bill of Entry Taxes",  # check to be updated or not
 ]
 
 
