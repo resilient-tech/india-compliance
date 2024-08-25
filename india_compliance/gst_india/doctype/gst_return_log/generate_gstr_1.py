@@ -6,6 +6,7 @@ import frappe
 from frappe import unscrub
 from frappe.utils import flt
 
+from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategory
 from india_compliance.gst_india.utils.gstr_1.__init__ import (
     CATEGORY_SUB_CATEGORY_MAPPING,
@@ -18,6 +19,7 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_download import (
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     GSTR1BooksData,
+    convert_to_internal_data_format,
     summarize_retsum_data,
 )
 from india_compliance.gst_india.utils.gstr_utils import request_otp
@@ -673,28 +675,133 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
 
 class FileGSTR1:
     def reset_gstr1(self):
-        # Make API Request
-        # Update Fields with reference number
-        pass
+        # TODO: handle otp requested errors for all APIs
+        self.db_set({"filing_status": "Not Filed"})
+
+        api = GSTR1API(self)
+        response = api.reset_gstr1(self.return_period)
+
+        if response.get("reference_id"):
+            self.db_set(
+                {
+                    "request_type": "reset",
+                    "token": response.get("reference_id"),
+                }
+            )
+            # callback
 
     def process_reset_gstr1(self):
-        # Unset the Fields with reference number
-        # Raise error in front-end if not done
-        # If Success, make unfiled data empty
         # Emit success message / error message
+
+        if self.request_type != "reset":
+            return
+
+        api = GSTR1API(self)
+        response = api.get_return_status(self.return_period, self.token)
+
+        if response.get("status_cd"):
+            self.db_set({"request_type": None, "token": None})
+
+        if response.get("status_cd") == "P":
+            # callback
+
+            self.update_json_for("unfiled", {}, reset_reconcile=True)
+
+        else:
+            # callback
+            pass
+
         pass
 
     def upload_gstr1(self, json_data):
+        if not json_data:
+            return
+
+        self.db_set({"filing_status": "Not Filed"})
+
+        # Make API Request
+        api = GSTR1API(self)
+        response = api.save_gstr_1_data(self.return_period, json_data)
+
+        if response.get("reference_id"):
+            self.db_set(
+                {
+                    "request_type": "upload",
+                    "token": response.get("reference_id"),
+                }
+            )
+            # callback
+
         pass
 
     def process_upload_gstr1(self):
-        pass
+        if self.request_type != "upload":
+            return
+
+        api = GSTR1API(self)
+        response = api.get_return_status(self.return_period, self.token)
+
+        if response.get("status_cd"):
+            self.db_set({"request_type": None, "token": None})
+
+        if response.get("status_cd") == "P":
+            # callback
+            pass
+
+        elif response.get("status_cd") == "PE":
+            # callback
+            self.update_json_for("upload_error", response)
+            pass
+
+        else:
+            # callback
+            pass
 
     def proceed_to_file_gstr1(self):
+        api = GSTR1API(self)
+        response = api.proceed_to_file("GSTR1", self.return_period)
+
+        if response.get("reference_id"):
+            self.db_set(
+                {
+                    "request_type": "proceed_to_file",
+                    "token": response.get("reference_id"),
+                }
+            )
+            # callback
         pass
 
     def process_proceed_to_file_gstr1(self):
-        pass
+        if self.request_type != "proceed_to_file":
+            return
+
+        api = GSTR1API(self)
+        response = api.get_return_status(self.return_period, self.token)
+
+        if response.get("status_cd"):
+            # callback
+            self.db_set({"request_type": None, "token": None})
+
+        if response.get("status_cd") != "P":
+            # callback
+            return
+
+        summary = api.get_gstr_1_data("RETSUM", self.return_period)
+        self.update_json_for("authenticated_summary", summary)
+
+        # check if this summary is same as the one in the summary field
+        mapped_summary = self.get_json_for("filed").get("summary")  # TODO:verify
+        gov_summary = convert_to_internal_data_format(summary)
+
+        # compare dicts and it's values
+        # TODO: Compare
+        if mapped_summary == gov_summary:
+            # callback
+            self.db_set({"filing_status": "Ready to File"})
+
+        else:
+            # callback
+            pass
 
     def file_gstr1(self, pan, otp=None):
         # If OTP is none, generate evc OTP
