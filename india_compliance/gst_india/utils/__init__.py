@@ -901,6 +901,11 @@ def disable_item_tax_template_notification():
     frappe.defaults.clear_user_default("needs_item_tax_template_notification")
 
 
+@frappe.whitelist(methods=["POST"])
+def disable_new_gst_category_notification():
+    frappe.defaults.clear_user_default("needs_new_gst_category_notification")
+
+
 def validate_invoice_number(doc):
     """Validate GST invoice number requirements."""
 
