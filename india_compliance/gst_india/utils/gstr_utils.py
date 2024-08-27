@@ -4,7 +4,10 @@ import frappe
 from frappe import _
 from frappe.utils import add_to_date, now_datetime
 
-from india_compliance.gst_india.api_classes.taxpayer_base import TaxpayerBaseAPI
+from india_compliance.gst_india.api_classes.taxpayer_base import (
+    TaxpayerBaseAPI,
+    otp_handler,
+)
 from india_compliance.gst_india.api_classes.taxpayer_returns import ReturnsAPI
 from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
     create_import_log,
@@ -97,6 +100,7 @@ def request_otp(company_gstin):
 
 
 @frappe.whitelist()
+@otp_handler
 def authenticate_otp(company_gstin, otp):
     frappe.has_permission("GST Settings", throw=True)
 
@@ -148,9 +152,6 @@ def _download_queued_request(doc):
     except Exception as e:
         frappe.db.delete("GSTR Import Log", doc.name)
         raise e
-
-    if response.error_type in ["otp_requested", "invalid_otp"]:
-        return toggle_scheduled_jobs(stopped=True)
 
     if response.error_type == "no_docs_found":
         return create_import_log(

@@ -1,5 +1,6 @@
 import json
 from base64 import b64decode, b64encode
+from functools import wraps
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
@@ -8,6 +9,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_to_date, cint, now_datetime
 
+import india_compliance
 from india_compliance.gst_india.api_classes.base import BaseAPI, get_public_ip
 from india_compliance.gst_india.utils import merge_dicts, tar_gz_bytes_to_data
 from india_compliance.gst_india.utils.cryptography import (
@@ -17,6 +19,25 @@ from india_compliance.gst_india.utils.cryptography import (
     hash_sha256,
     hmac_sha256,
 )
+
+
+def otp_handler(func):
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+
+        except india_compliance.OTPRequestedError as e:
+            return e.response
+
+        except india_compliance.InvalidOTPError as e:
+            return e.response
+
+        except Exception as e:
+            raise e
+
+    return wrapper
 
 
 class PublicCertificate(BaseAPI):
@@ -104,9 +125,9 @@ class TaxpayerAuthenticate(BaseAPI):
         if response.status_cd != 1:
             return
 
-        return response.update(
-            {"error_type": "otp_requested", "gstin": self.company_gstin}
-        )
+        response.update({"error_type": "otp_requested", "gstin": self.company_gstin})
+
+        raise india_compliance.OTPRequestedError(response=response)
 
     def autheticate_with_otp(self, otp=None):
         if not otp:
@@ -347,6 +368,13 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
         if error_code in self.IGNORED_ERROR_CODES:
             response.error_type = self.IGNORED_ERROR_CODES[error_code]
             response.gstin = self.company_gstin
+
+            if response.error_type == "otp_requested":
+                raise india_compliance.OTPRequestedError(response=response)
+
+            if response.error_type == "invalid_otp":
+                raise india_compliance.InvalidOTPError(response=response)
+
             return True
 
     def generate_app_key(self):
