@@ -169,10 +169,9 @@ class GSTR1Beta(Document):
         )
 
         data = download_gstr_1_json(
-            self.company,
             self.company_gstin,
-            self.month_or_quarter,
             self.year,
+            self.month_or_quarter,
             delete_missing=True,
         )
 
@@ -182,7 +181,15 @@ class GSTR1Beta(Document):
         )
 
         gstr_1_log.upload_gstr1(data)
-        pass
+
+    @frappe.whitelist()
+    def reset_gstr1(self):
+        gstr_1_log = frappe.get_doc(
+            "GST Return Log",
+            f"GSTR1-{get_period(self.month_or_quarter, self.year)}-{self.company_gstin}",
+        )
+
+        gstr_1_log.reset_gstr1()
 
 
 ####### DATA ######################################################################################

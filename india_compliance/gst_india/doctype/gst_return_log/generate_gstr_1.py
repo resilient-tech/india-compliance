@@ -679,7 +679,7 @@ class FileGSTR1:
         self.db_set({"filing_status": "Not Filed"})
 
         api = GSTR1API(self)
-        response = api.reset_gstr1(self.return_period)
+        response = api.reset_gstr_1_data(self.return_period)
 
         if response.get("reference_id"):
             self.db_set(

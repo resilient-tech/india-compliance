@@ -196,19 +196,24 @@ frappe.ui.form.on(DOCTYPE, {
         frm.disable_save();
         const gst_data = frm.doc.__gst_data;
 
-        if(gst_data && (!is_gstr1_api_enabled() || gst_data.status == "Filed")) {
-            frm.page.clear_indicator();
+        if (gst_data && (!is_gstr1_api_enabled() || gst_data.status == "Filed")) {
+            frm.gstr1.render_indicator();
             return;
         }
 
         const button_label = gst_data?.status == "Not Filed" ? "Upload" : "Generate";
-        const method = gst_data ? "upload_gstr_1" : "generate_gstr1"
-        frm.page.set_primary_action(__(button_label), () =>  frm.call(method));
+        const method = button_label == "Upload" ? "upload_gstr1" : "generate_gstr1";
+        frm.page.set_primary_action(__(button_label), () => frm.call(method));
 
-        if(!gst_data) return;
+        if (!gst_data) {
+            frm.page.clear_indicator();
+            return;
+        }
 
-        frm.page.add_button(__("Reset"), () => {});
-        frm.page.add_button(__("Proceed to File"), () => {});
+        frm.add_custom_button(__("Reset"), () => {
+            frm.call("reset_gstr1");
+        });
+        frm.add_custom_button(__("Proceed to File"), () => {});
         frm.page.clear_menu();
         frm.gstr1.render_indicator();
     },
@@ -999,7 +1004,7 @@ class TabManager {
             args[2]?.indent == 0
                 ? `<strong>${value}</strong>`
                 : isDescriptionCell
-                    ? `<a href="#" class="description">
+                ? `<a href="#" class="description">
                     <p style="padding-left: 15px">${value}</p>
                     </a>`
                 : value;
