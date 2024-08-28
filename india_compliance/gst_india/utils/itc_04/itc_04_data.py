@@ -43,7 +43,6 @@ class ITC04Query:
                 doc.is_return,
                 IfNull(doc.place_of_supply, "").as_("place_of_supply"),
                 doc.base_grand_total.as_("invoice_total"),
-                doc.gst_category,
                 IfNull(doc_item.gst_treatment, "Not Defined").as_("gst_treatment"),
                 (doc_item.cgst_rate + doc_item.sgst_rate + doc_item.igst_rate).as_(
                     "gst_rate"
@@ -122,6 +121,7 @@ class ITC04Query:
                 self.sr_item.stock_uom.as_("uom"),
                 self.sr.company_gstin,
                 self.sr.supplier_gstin,
+                self.sr.gst_category.as_("gst_category"),
                 self.sr_doctype.as_("invoice_type"),
             )
             .where(IfNull(self.sr.supplier_gstin, "") != self.sr.company_gstin)
@@ -151,7 +151,6 @@ class ITC04Query:
                 doc.is_return,
                 IfNull(doc.place_of_supply, "").as_("place_of_supply"),
                 doc.base_grand_total.as_("invoice_total"),
-                IfNull(doc.gst_category, "").as_("gst_category"),
                 IfNull(doc_item.gst_treatment, "Not Defined").as_("gst_treatment"),
                 ref_doc.link_doctype.as_("original_challan_invoice_type"),
                 IfNull(ref_doc.link_name, "").as_("original_challan_no"),
@@ -176,6 +175,7 @@ class ITC04Query:
                 self.se_item.uom,
                 self.se.bill_to_gstin.as_("supplier_gstin"),
                 self.se.bill_from_gstin.as_("company_gstin"),
+                self.se.bill_to_gst_category.as_("gst_category"),
                 self.se_doctype.as_("invoice_type"),
             )
             .where(IfNull(self.se.bill_to_gstin, "") != self.se.bill_from_gstin)
@@ -200,6 +200,7 @@ class ITC04Query:
                 self.sr_item.stock_uom.as_("uom"),
                 self.sr.company_gstin,
                 self.sr.supplier_gstin,
+                self.sr.gst_category.as_("gst_category"),
                 self.sr_doctype.as_("invoice_type"),
             )
             .where(IfNull(self.sr.supplier_gstin, "") != self.sr.company_gstin)
