@@ -1,14 +1,12 @@
-import unittest
-
 import frappe
-from frappe.tests.utils import change_settings
+from frappe.tests.utils import FrappeTestCase, change_settings
 from erpnext.accounts.doctype.account.test_account import create_account
 
 from india_compliance.gst_india.utils.tests import append_item, create_purchase_invoice
 
 
-@change_settings("GST Settings", {"enable_overseas_transactions": 1})
-class TestPurchaseInvoice(unittest.TestCase):
+class TestPurchaseInvoice(FrappeTestCase):
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_itc_classification(self):
         pinv = create_purchase_invoice(
             supplier="_Test Foreign Supplier",
@@ -46,6 +44,17 @@ class TestPurchaseInvoice(unittest.TestCase):
             supplier="Test Internal with ISD Supplier",
             qty=-1,
             is_return=1,
-            do_not_submit=1,
         )
         self.assertEqual(pinv.itc_classification, "Input Service Distributor")
+
+        pinv = create_purchase_invoice(
+            supplier="_Test Foreign Supplier",
+            do_not_save=1,
+            is_reverse_charge=1,
+        )
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            "Reverse Charge is not applicable on Import of Goods",
+            pinv.save,
+        )

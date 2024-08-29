@@ -258,7 +258,7 @@ def set_ineligibility_reason(doc, show_alert=True):
 
 
 def validate_reverse_charge(doc):
-    if doc.itc_classification != "Import of Goods" or not doc.is_reverse_charge:
+    if doc.itc_classification != "Import Of Goods" or not doc.is_reverse_charge:
         return
 
-    frappe.throw(_("Reverse Charge is not applicable on Import of Goods."))
+    frappe.throw(_("Reverse Charge is not applicable on Import of Goods"))
