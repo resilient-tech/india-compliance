@@ -2144,6 +2144,8 @@ def get_invoice_type_for_excel(row):
             "Tax Deductor": "Regular B2B",
             "UIN Holders": "Regular B2B",
             "Unregistered": "B2CL",
+            "Tax Collector": "Regular B2B",
+            "Input Service Distributor": "Regular B2B",
         }
     ).get(gst_category)
 
