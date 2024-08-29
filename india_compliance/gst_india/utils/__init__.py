@@ -306,6 +306,7 @@ def guess_gst_category(
             "Registered Composition",
             "SEZ",
             "Deemed Export",
+            "Input Service Distributor",
         ):
             return gst_category
 
@@ -898,6 +899,11 @@ def tar_gz_bytes_to_data(tar_gz_bytes: bytes) -> str | None:
 @frappe.whitelist(methods=["POST"])
 def disable_item_tax_template_notification():
     frappe.defaults.clear_user_default("needs_item_tax_template_notification")
+
+
+@frappe.whitelist(methods=["POST"])
+def disable_new_gst_category_notification():
+    frappe.defaults.clear_user_default("needs_new_gst_category_notification")
 
 
 def validate_invoice_number(doc):
