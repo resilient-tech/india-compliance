@@ -96,7 +96,6 @@ class ITC04Query:
                 self.se_item.uom,
                 self.se.bill_to_gstin.as_("supplier_gstin"),
                 self.se.bill_from_gstin.as_("company_gstin"),
-                self.se.bill_to_gst_category.as_("gst_category"),
                 self.se_doctype.as_("invoice_type"),
             )
             .where(IfNull(self.se.bill_to_gstin, "") != self.se.bill_from_gstin)
@@ -121,7 +120,6 @@ class ITC04Query:
                 self.sr_item.stock_uom.as_("uom"),
                 self.sr.company_gstin,
                 self.sr.supplier_gstin,
-                self.sr.gst_category.as_("gst_category"),
                 self.sr_doctype.as_("invoice_type"),
             )
             .where(IfNull(self.sr.supplier_gstin, "") != self.sr.company_gstin)
@@ -175,7 +173,6 @@ class ITC04Query:
                 self.se_item.uom,
                 self.se.bill_to_gstin.as_("supplier_gstin"),
                 self.se.bill_from_gstin.as_("company_gstin"),
-                self.se.bill_to_gst_category.as_("gst_category"),
                 self.se_doctype.as_("invoice_type"),
             )
             .where(IfNull(self.se.bill_to_gstin, "") != self.se.bill_from_gstin)
@@ -200,7 +197,6 @@ class ITC04Query:
                 self.sr_item.stock_uom.as_("uom"),
                 self.sr.company_gstin,
                 self.sr.supplier_gstin,
-                self.sr.gst_category.as_("gst_category"),
                 self.sr_doctype.as_("invoice_type"),
             )
             .where(IfNull(self.sr.supplier_gstin, "") != self.sr.company_gstin)
