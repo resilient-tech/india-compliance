@@ -168,17 +168,6 @@ def validate(doc, method=None):
     if ignore_gst_validation_for_subcontracting(doc):
         return
 
-    if (doc.doctype == "Stock Entry" and doc.purpose == "Material Transfer") or (
-        doc.doctype == "Subcontracting Receipt" and not doc.is_return
-    ):
-        if not doc.doc_references:
-            frappe.throw(
-                _("Please Select Original Document Reference for ITC-04 Reporting"),
-                title=_("Mandatory Field"),
-            )
-        else:
-            remove_duplicates(doc)
-
     field_map = (
         STOCK_ENTRY_FIELD_MAP
         if doc.doctype == "Stock Entry"
@@ -193,6 +182,23 @@ def validate(doc, method=None):
         return
 
     update_gst_details(doc)
+
+
+def before_submit(doc, method=None):
+    # Stock Entries with Subcontracting Order should only be considered
+    if ignore_gst_validation_for_subcontracting(doc):
+        return
+
+    if (doc.doctype == "Stock Entry" and doc.purpose == "Material Transfer") or (
+        doc.doctype == "Subcontracting Receipt" and not doc.is_return
+    ):
+        if not doc.doc_references:
+            frappe.throw(
+                _("Please Select Original Document Reference for ITC-04 Reporting"),
+                title=_("Mandatory Field"),
+            )
+        else:
+            remove_duplicates(doc)
 
 
 def validate_transaction(doc, method=None):
