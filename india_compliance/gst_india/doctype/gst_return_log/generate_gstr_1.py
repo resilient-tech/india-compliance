@@ -688,7 +688,7 @@ class FileGSTR1:
                     "token": response.get("reference_id"),
                 }
             )
-            # callback
+            publish(self, {"request_type": "reset"})
 
     def process_reset_gstr1(self):
         # Emit success message / error message
@@ -699,19 +699,13 @@ class FileGSTR1:
         api = GSTR1API(self)
         response = api.get_return_status(self.return_period, self.token)
 
-        if response.get("status_cd"):
-            self.db_set({"request_type": None, "token": None})
-
         if response.get("status_cd") == "P":
-            # callback
-
+            self.db_set({"request_type": None, "token": None})
             self.update_json_for("unfiled", {}, reset_reconcile=True)
+            return response
 
         else:
-            # callback
-            pass
-
-        pass
+            return response
 
     def upload_gstr1(self, json_data):
         if not json_data:
@@ -730,9 +724,7 @@ class FileGSTR1:
                     "token": response.get("reference_id"),
                 }
             )
-            # callback
-
-        pass
+            publish(self, {"request_type": "upload"})
 
     def process_upload_gstr1(self):
         if self.request_type != "upload":
@@ -741,21 +733,18 @@ class FileGSTR1:
         api = GSTR1API(self)
         response = api.get_return_status(self.return_period, self.token)
 
-        if response.get("status_cd"):
+        if response.get("status_cd") in ("P", "PE"):
+            # callback
             self.db_set({"request_type": None, "token": None})
 
-        if response.get("status_cd") == "P":
-            # callback
-            pass
+            if response.get("status_cd") == "PE":
+                self.update_json_for("upload_error", response)
 
-        elif response.get("status_cd") == "PE":
-            # callback
-            self.update_json_for("upload_error", response)
-            pass
+            return response
 
         else:
             # callback
-            pass
+            return response
 
     def proceed_to_file_gstr1(self):
         api = GSTR1API(self)
@@ -808,6 +797,28 @@ class FileGSTR1:
         # Use summary from self
         # Make API Request
         pass
+
+
+@frappe.whitelist()
+def create_notifications(subject, description):
+    notification = frappe.get_doc(
+        {
+            "doctype": "Notification Log",
+            "for_user": frappe.session.user,
+            "type": "Alert",
+            "document_type": "GSTR-1 Beta",
+            "subject": subject,
+            "email_content": description,
+        }
+    )
+    notification.insert()
+
+
+def publish(self, request_type):
+    frappe.publish_realtime(
+        "gstr1",
+        message={**request_type},
+    )
 
 
 def check_return_status(self):

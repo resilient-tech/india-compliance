@@ -39,7 +39,7 @@ const GSTR1_SubCategory = {
     DOC_ISSUE: "Document Issued",
 
     SUPECOM_52: "Liable to collect tax u/s 52(TCS)",
-    SUPECOM_9_5: "Liable to pay tax u/s 9(5)"
+    SUPECOM_9_5: "Liable to pay tax u/s 9(5)",
 };
 
 const INVOICE_TYPE = {
@@ -165,9 +165,13 @@ frappe.ui.form.on(DOCTYPE, {
                 return;
 
             frappe.after_ajax(() => {
-                frm.doc.__gst_data = data ;
+                frm.doc.__gst_data = data;
                 frm.trigger("load_gstr1_data");
             });
+        });
+
+        frappe.realtime.on("gstr1", async message => {
+            fetch_with_retry(frm, message.request_type);
         });
     },
 
@@ -210,9 +214,15 @@ frappe.ui.form.on(DOCTYPE, {
             return;
         }
 
-        frm.add_custom_button(__("Reset"), () => {
-            frm.call("reset_gstr1");
+        frm.add_custom_button(__("Reset"), async () => {
+            frappe.confirm(
+                __(
+                    "All the details saved in different tables shall be deleted after reset.<br>Are you sure, you want to reset the already saved data?"
+                ),
+                () => frm.call("reset_gstr1")
+            );
         });
+
         frm.add_custom_button(__("Proceed to File"), () => {});
         frm.page.clear_menu();
         frm.gstr1.render_indicator();
@@ -241,6 +251,57 @@ frappe.ui.form.on(DOCTYPE, {
         frm.gstr1.refresh_data(data);
     },
 });
+
+const retry_intervals = [60000, 120000, 300000, 600000, 720000]; //1 min, 2 min, 5 min, 10 min, 12 min
+
+async function fetch_with_retry(frm, request_type, retries = 0) {
+    try {
+        method = `process_${request_type}_gstr1`;
+        const response = await frm.call(method);
+
+        frm.doc.__gst_data = frm.gstr1.data;
+        frm.trigger("load_gstr1_data");
+
+        if (response.message.status_cd == "IP" && retries < retry_intervals.length) {
+            await new Promise(resolve => setTimeout(resolve, retry_intervals[retries]));
+            return fetch_with_retry(frm, request_type, retries + 1);
+        }
+        generate_notification(frm, response, request_type);
+    } catch (error) {
+        console.error("An error occurred:", error);
+    }
+}
+
+function generate_notification(frm, response, request_type) {
+    const status_code_message_map = {
+        P: `Data ${request_type}ing is complete`,
+        PE: `Data ${request_type}ing is complete with errors`,
+        ER: `Data ${request_type}ing encountered errors`,
+        IP: "Request is in progress",
+    };
+    const alert_message = status_code_message_map[response.message.status_cd] || "";
+    const doc = response.docs[0];
+
+    if (
+        window.location.pathname.includes("gstr-1-beta") &&
+        (frm.doc.company == doc.company ||
+            frm.doc.company_gstin == doc.company_gstin ||
+            frm.doc.month_or_quarter == doc.month_or_quarter ||
+            frm.doc.year == doc.year)
+    ) {
+        frappe.show_alert(__(alert_message));
+        return;
+    }
+
+    //TODO: on click of notification open GSTR-1 Beta with it's filters
+    frappe.call({
+        method: "india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1.create_notifications",
+        args: {
+            subject: `Data ${requestType}ing`,
+            description: alert_message,
+        },
+    });
+}
 
 class GSTR1 {
     // Render page / Setup Listeners / Setup Data
