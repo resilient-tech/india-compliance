@@ -197,7 +197,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                 ).as_("csamt"),
                 LiteralValue(0).as_("camt"),
                 LiteralValue(0).as_("samt"),
-                ConstantColumn("Import of Goods").as_("itc_classification"),
+                ConstantColumn("Import Of Goods").as_("itc_classification"),
             )
             .where(
                 (boe.docstatus == 1)
