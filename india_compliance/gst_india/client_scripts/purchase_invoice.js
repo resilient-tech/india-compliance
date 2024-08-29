@@ -96,9 +96,11 @@ frappe.ui.form.on("Purchase Invoice Item", {
 });
 
 function toggle_reverse_charge(frm) {
-    const has_goods_item = frm.doc.items.some(
-        item => !item.gst_hsn_code.startsWith("99")
-    );
-    const is_read_only = has_goods_item && frm.doc.gst_category === "Overseas" ? 1 : 0;
+    let is_read_only = 0;
+    if (frm.doc.gst_category !== "Overseas") is_read_only = 0;
+    // has_goods_item
+    else if (frm.doc.items.some(item => !item.gst_hsn_code.startsWith("99")))
+        is_read_only = 1;
+
     frm.set_df_property("is_reverse_charge", "read_only", is_read_only);
 }
