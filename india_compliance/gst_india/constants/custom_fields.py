@@ -994,6 +994,7 @@ CUSTOM_FIELDS = {
             ),
             "default": "All Other ITC",
             "translatable": 0,
+            "read_only": 1,
         },
         {
             "fieldname": "ineligibility_reason",
