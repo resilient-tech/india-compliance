@@ -162,51 +162,68 @@ class GSTR1Beta(Document):
             doctype=self.doctype,
         )
 
-    @frappe.whitelist()
-    def upload_gstr1(self):
-        from india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export import (
-            download_gstr_1_json,
-        )
 
-        data = download_gstr_1_json(
-            self.company_gstin,
-            self.year,
-            self.month_or_quarter,
-            delete_missing=True,
-        )
+@frappe.whitelist()
+def upload_gstr1(month_or_quarter, year, company_gstin):
+    from india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export import (
+        download_gstr_1_json,
+    )
 
-        gstr_1_log = frappe.get_doc(
-            "GST Return Log",
-            f"GSTR1-{get_period(self.month_or_quarter, self.year)}-{self.company_gstin}",
-        )
+    data = download_gstr_1_json(
+        company_gstin,
+        year,
+        month_or_quarter,
+        delete_missing=True,
+    )
 
-        gstr_1_log.upload_gstr1(data)
+    gstr_1_log = frappe.get_doc(
+        "GST Return Log",
+        f"GSTR1-{get_period(month_or_quarter, year)}-{company_gstin}",
+    )
+    gstr_1_log.upload_gstr1(data)
 
-    @frappe.whitelist()
-    def process_upload_gstr1(self):
-        gstr_1_log = frappe.get_doc(
-            "GST Return Log",
-            f"GSTR1-{get_period(self.month_or_quarter, self.year)}-{self.company_gstin}",
-        )
-        return gstr_1_log.process_upload_gstr1()
 
-    @frappe.whitelist()
-    def reset_gstr1(self):
-        gstr_1_log = frappe.get_doc(
-            "GST Return Log",
-            f"GSTR1-{get_period(self.month_or_quarter, self.year)}-{self.company_gstin}",
-        )
+@frappe.whitelist()
+def process_upload_gstr1(month_or_quarter, year, company_gstin):
+    gstr_1_log = frappe.get_doc(
+        "GST Return Log",
+        f"GSTR1-{get_period(month_or_quarter, year)}-{company_gstin}",
+    )
+    data = gstr_1_log.process_upload_gstr1()
+    data.update(
+        {
+            "month_or_quarter": month_or_quarter,
+            "year": year,
+            "company_gstin": company_gstin,
+        }
+    )
+    return data
 
-        gstr_1_log.reset_gstr1()
 
-    @frappe.whitelist()
-    def process_reset_gstr1(self):
-        gstr_1_log = frappe.get_doc(
-            "GST Return Log",
-            f"GSTR1-{get_period(self.month_or_quarter, self.year)}-{self.company_gstin}",
-        )
+@frappe.whitelist()
+def reset_gstr1(month_or_quarter, year, company_gstin):
+    gstr_1_log = frappe.get_doc(
+        "GST Return Log",
+        f"GSTR1-{get_period(month_or_quarter, year)}-{company_gstin}",
+    )
+    gstr_1_log.reset_gstr1()
 
-        return gstr_1_log.process_reset_gstr1()
+
+@frappe.whitelist()
+def process_reset_gstr1(month_or_quarter, year, company_gstin):
+    gstr_1_log = frappe.get_doc(
+        "GST Return Log",
+        f"GSTR1-{get_period(month_or_quarter, year)}-{company_gstin}",
+    )
+    data = gstr_1_log.process_reset_gstr1()
+    data.update(
+        {
+            "month_or_quarter": month_or_quarter,
+            "year": year,
+            "company_gstin": company_gstin,
+        }
+    )
+    return data
 
 
 ####### DATA ######################################################################################

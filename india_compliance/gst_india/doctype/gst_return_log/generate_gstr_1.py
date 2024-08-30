@@ -818,6 +818,7 @@ def publish(self, request_type):
     frappe.publish_realtime(
         "gstr1",
         message={**request_type},
+        user=frappe.session.user,
     )
 
 

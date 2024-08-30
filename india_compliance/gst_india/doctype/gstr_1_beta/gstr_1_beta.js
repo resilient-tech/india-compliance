@@ -206,8 +206,20 @@ frappe.ui.form.on(DOCTYPE, {
         }
 
         const button_label = gst_data?.status == "Not Filed" ? "Upload" : "Generate";
-        const method = button_label == "Upload" ? "upload_gstr1" : "generate_gstr1";
-        frm.page.set_primary_action(__(button_label), () => frm.call(method));
+        frm.page.set_primary_action(__(button_label), () => {
+            if (button_label == "Generate") {
+                frm.call("generate_gstr1");
+            } else {
+                frappe.call({
+                    method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.upload_gstr1",
+                    args: {
+                        month_or_quarter: frm.doc.month_or_quarter,
+                        year: frm.doc.year,
+                        company_gstin: frm.doc.company_gstin,
+                    },
+                });
+            }
+        });
 
         if (!gst_data) {
             frm.page.clear_indicator();
@@ -219,7 +231,15 @@ frappe.ui.form.on(DOCTYPE, {
                 __(
                     "All the details saved in different tables shall be deleted after reset.<br>Are you sure, you want to reset the already saved data?"
                 ),
-                () => frm.call("reset_gstr1")
+                () =>
+                    frappe.call({
+                        method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.reset_gstr1",
+                        args: {
+                            month_or_quarter: frm.doc.month_or_quarter,
+                            year: frm.doc.year,
+                            company_gstin: frm.doc.company_gstin,
+                        },
+                    })
             );
         });
 
@@ -256,38 +276,41 @@ const retry_intervals = [60000, 120000, 300000, 600000, 720000]; //1 min, 2 min,
 
 async function fetch_with_retry(frm, request_type, retries = 0) {
     try {
-        method = `process_${request_type}_gstr1`;
-        const response = await frm.call(method);
+        const response = await frappe.call({
+            method: `india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.process_${request_type}_gstr1`,
+            args: {
+                month_or_quarter: frm.doc.month_or_quarter,
+                year: frm.doc.year,
+                company_gstin: frm.doc.company_gstin,
+            },
+        });
 
-        frm.doc.__gst_data = frm.gstr1.data;
-        frm.trigger("load_gstr1_data");
+        if (!response.message) return;
 
-        if (response.message.status_cd == "IP" && retries < retry_intervals.length) {
+        if (response.message.status_cd === "IP" && retries < retry_intervals.length) {
             await new Promise(resolve => setTimeout(resolve, retry_intervals[retries]));
             return fetch_with_retry(frm, request_type, retries + 1);
         }
-        generate_notification(frm, response, request_type);
+        generate_notification(frm, response.message, request_type);
     } catch (error) {
         console.error("An error occurred:", error);
     }
 }
 
-function generate_notification(frm, response, request_type) {
-    const status_code_message_map = {
+function generate_notification(frm, message, request_type) {
+    const status_message_map = {
         P: `Data ${request_type}ing is complete`,
         PE: `Data ${request_type}ing is complete with errors`,
         ER: `Data ${request_type}ing encountered errors`,
         IP: "Request is in progress",
     };
-    const alert_message = status_code_message_map[response.message.status_cd] || "";
-    const doc = response.docs[0];
+    const alert_message = status_message_map[message.status_cd] || "";
 
     if (
         window.location.pathname.includes("gstr-1-beta") &&
-        (frm.doc.company == doc.company ||
-            frm.doc.company_gstin == doc.company_gstin ||
-            frm.doc.month_or_quarter == doc.month_or_quarter ||
-            frm.doc.year == doc.year)
+        frm.doc.company_gstin == message.company_gstin &&
+        frm.doc.month_or_quarter == message.month_or_quarter &&
+        frm.doc.year == message.year
     ) {
         frappe.show_alert(__(alert_message));
         return;
@@ -297,7 +320,7 @@ function generate_notification(frm, response, request_type) {
     frappe.call({
         method: "india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1.create_notifications",
         args: {
-            subject: `Data ${requestType}ing`,
+            subject: `Data ${request_type}ing`,
             description: alert_message,
         },
     });
