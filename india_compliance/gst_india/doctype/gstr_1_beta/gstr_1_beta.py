@@ -162,6 +162,14 @@ class GSTR1Beta(Document):
             doctype=self.doctype,
         )
 
+    @frappe.whitelist()
+    def reset_gstr1(self):
+        gstr_1_log = frappe.get_doc(
+            "GST Return Log",
+            f"GSTR1-{get_period(self.month_or_quarter, self.year)}-{self.company_gstin}",
+        )
+        gstr_1_log.reset_gstr1()
+
 
 @frappe.whitelist()
 def upload_gstr1(month_or_quarter, year, company_gstin):
@@ -198,15 +206,6 @@ def process_upload_gstr1(month_or_quarter, year, company_gstin):
         }
     )
     return data
-
-
-@frappe.whitelist()
-def reset_gstr1(month_or_quarter, year, company_gstin):
-    gstr_1_log = frappe.get_doc(
-        "GST Return Log",
-        f"GSTR1-{get_period(month_or_quarter, year)}-{company_gstin}",
-    )
-    gstr_1_log.reset_gstr1()
 
 
 @frappe.whitelist()

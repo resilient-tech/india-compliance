@@ -688,7 +688,6 @@ class FileGSTR1:
                     "token": response.get("reference_id"),
                 }
             )
-            publish(self, {"request_type": "reset"})
 
     def process_reset_gstr1(self):
         # Emit success message / error message
@@ -701,6 +700,7 @@ class FileGSTR1:
 
         if response.get("status_cd") != "IP":
             self.db_set({"request_type": None, "token": None})
+            create_notifications(self.return_period, "reset", response.get("status_cd"))
 
         if response.get("status_cd") == "P":
             self.update_json_for("unfiled", {}, reset_reconcile=True)
@@ -724,7 +724,6 @@ class FileGSTR1:
                     "token": response.get("reference_id"),
                 }
             )
-            publish(self, {"request_type": "upload"})
 
     def process_upload_gstr1(self):
         if self.request_type != "upload":
@@ -735,6 +734,9 @@ class FileGSTR1:
 
         if response.get("status_cd") != "IP":
             self.db_set({"request_type": None, "token": None})
+            create_notifications(
+                self.return_period, "upload", response.get("status_cd")
+            )
 
         if response.get("status_cd") == "PE":
             self.update_json_for("upload_error", response)
@@ -794,27 +796,25 @@ class FileGSTR1:
         pass
 
 
-@frappe.whitelist()
-def create_notifications(subject, description):
+def create_notifications(return_period, request_type, status_cd):
+    status_message_map = {
+        "P": f"Data {request_type}ing for return period {return_period} has been successfully completed.",
+        "PE": f"Data {request_type}ing for return period {return_period} is complete with errors",
+        "ER": f"Data {request_type}ing for return period {return_period} has encountered errors",
+        "IP": f"The request for {request_type} is currently in progress for the return period {return_period}.",
+    }
+
     notification = frappe.get_doc(
         {
             "doctype": "Notification Log",
             "for_user": frappe.session.user,
             "type": "Alert",
             "document_type": "GSTR-1 Beta",
-            "subject": subject,
-            "email_content": description,
+            "subject": f"Data {request_type}ing",
+            "email_content": status_message_map.get(status_cd),
         }
     )
     notification.insert()
-
-
-def publish(self, request_type):
-    frappe.publish_realtime(
-        "gstr1",
-        message={**request_type},
-        user=frappe.session.user,
-    )
 
 
 def check_return_status(self):
