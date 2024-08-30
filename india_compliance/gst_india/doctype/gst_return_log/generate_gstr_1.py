@@ -699,13 +699,13 @@ class FileGSTR1:
         api = GSTR1API(self)
         response = api.get_return_status(self.return_period, self.token)
 
-        if response.get("status_cd") == "P":
+        if response.get("status_cd") != "IP":
             self.db_set({"request_type": None, "token": None})
-            self.update_json_for("unfiled", {}, reset_reconcile=True)
-            return response
 
-        else:
-            return response
+        if response.get("status_cd") == "P":
+            self.update_json_for("unfiled", {}, reset_reconcile=True)
+
+        return response
 
     def upload_gstr1(self, json_data):
         if not json_data:
@@ -733,18 +733,13 @@ class FileGSTR1:
         api = GSTR1API(self)
         response = api.get_return_status(self.return_period, self.token)
 
-        if response.get("status_cd") in ("P", "PE"):
-            # callback
+        if response.get("status_cd") != "IP":
             self.db_set({"request_type": None, "token": None})
 
-            if response.get("status_cd") == "PE":
-                self.update_json_for("upload_error", response)
+        if response.get("status_cd") == "PE":
+            self.update_json_for("upload_error", response)
 
-            return response
-
-        else:
-            # callback
-            return response
+        return response
 
     def proceed_to_file_gstr1(self):
         api = GSTR1API(self)
