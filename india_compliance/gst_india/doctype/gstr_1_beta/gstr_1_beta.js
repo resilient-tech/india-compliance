@@ -274,9 +274,9 @@ frappe.ui.form.on(DOCTYPE, {
 
 const retry_intervals = [60000, 120000, 300000, 600000, 720000]; //1 min, 2 min, 5 min, 10 min, 12 min
 
-async function fetch_with_retry(frm, request_type, retries = 0) {
-    try {
-        const response = await frappe.call({
+function fetch_with_retry(frm, request_type, retries = 0, now = false) {
+    setTimeout(async () => {
+        const { message } = await frappe.call({
             method: `india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.process_${request_type}_gstr1`,
             args: {
                 month_or_quarter: frm.doc.month_or_quarter,
@@ -285,16 +285,15 @@ async function fetch_with_retry(frm, request_type, retries = 0) {
             },
         });
 
-        if (!response.message) return;
+        if (!message) return;
 
-        if (response.message.status_cd === "IP" && retries < retry_intervals.length) {
-            await new Promise(resolve => setTimeout(resolve, retry_intervals[retries]));
+        if (message.status_cd === "IP" && retries < retry_intervals.length)
             return fetch_with_retry(frm, request_type, retries + 1);
-        }
-        generate_notification(frm, response.message, request_type);
-    } catch (error) {
-        console.error("An error occurred:", error);
-    }
+
+        generate_notification(frm, message, request_type);
+
+    }, now ? 0 : retry_intervals[retries]);
+
 }
 
 function generate_notification(frm, message, request_type) {
