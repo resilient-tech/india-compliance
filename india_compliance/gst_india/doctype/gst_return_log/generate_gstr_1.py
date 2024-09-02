@@ -700,7 +700,10 @@ class FileGSTR1:
 
         if response.get("status_cd") != "IP":
             self.db_set({"request_type": None, "token": None})
-            create_notifications(self.return_period, "reset", response.get("status_cd"))
+            doc_name = create_notifications(
+                self.return_period, "reset", response.get("status_cd")
+            )
+            response["notification_name"] = doc_name
 
         if response.get("status_cd") == "P":
             self.update_json_for("unfiled", {}, reset_reconcile=True)
@@ -734,9 +737,10 @@ class FileGSTR1:
 
         if response.get("status_cd") != "IP":
             self.db_set({"request_type": None, "token": None})
-            create_notifications(
+            doc_name = create_notifications(
                 self.return_period, "upload", response.get("status_cd")
             )
+            response["notification_name"] = doc_name
 
         if response.get("status_cd") == "PE":
             self.update_json_for("upload_error", response)
@@ -810,11 +814,13 @@ def create_notifications(return_period, request_type, status_cd):
             "for_user": frappe.session.user,
             "type": "Alert",
             "document_type": "GSTR-1 Beta",
-            "subject": f"Data {request_type}ing",
+            "document_name": "GSTR-1 Beta",
+            "subject": f"Data {request_type} for return period {return_period}",
             "email_content": status_message_map.get(status_cd),
         }
     )
     notification.insert()
+    return notification.name
 
 
 def check_return_status(self):

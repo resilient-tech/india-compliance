@@ -202,9 +202,9 @@ frappe.ui.form.on(DOCTYPE, {
         }
 
         const button_label = gst_data?.status == "Not Filed" ? "Upload" : "Generate";
-        frm.page.set_primary_action(__(button_label), () =>
-            primary_button_action(frm, button_label)
-        );
+        const method =
+            button_label === "Generate" ? handle_generate_button : handle_upload_button;
+        frm.page.set_primary_action(__(button_label), () => method(frm));
 
         if (!gst_data) {
             frm.page.clear_indicator();
@@ -241,22 +241,34 @@ frappe.ui.form.on(DOCTYPE, {
     },
 });
 
-function primary_button_action(frm, button_label) {
-    if (button_label == "Generate") {
-        frm.call("generate_gstr1");
-        return;
-    }
+function handle_upload_button(frm) {
     frappe.call({
-        method: 'india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.upload_gstr1',
+        method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.upload_gstr1",
         args: {
             month_or_quarter: frm.doc.month_or_quarter,
             year: frm.doc.year,
             company_gstin: frm.doc.company_gstin,
         },
-        callback: () => {
-            fetch_with_retry(frm, "upload");
-        },
+        callback: () => fetch_with_retry(frm, "upload"),
     });
+}
+
+async function handle_generate_button(frm) {
+    const { message: return_period } = await frappe.call({
+        method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_period",
+        args: { month_or_quarter: frm.doc.month_or_quarter, year: frm.doc.year },
+    });
+
+    const log_name = `GSTR1-${return_period}-${frm.doc.company_gstin}`;
+    const { message } = await frappe.db.get_value("GST Return Log", log_name, [
+        "token",
+        "request_type",
+    ]);
+
+    await frm.call("generate_gstr1");
+    if (message.token) {
+        fetch_with_retry(frm, message.request_type, (now = true));
+    }
 }
 
 function reset_gstr1_data(frm) {
@@ -265,16 +277,15 @@ function reset_gstr1_data(frm) {
             "All the details saved in different tables shall be deleted after reset.<br>Are you sure, you want to reset the already saved data?"
         ),
         () => {
-            frappe.show_alert(__("Please wait while we reset and regenerate the data."))
-            frm.call("reset_gstr1").then(
-                fetch_with_retry(frm, "reset")
-            )
+            frappe.show_alert(
+                __("Please wait while we reset and regenerate the data.")
+            );
+            frm.call("reset_gstr1").then(fetch_with_retry(frm, "reset"));
         }
     );
 }
 
 const retry_intervals = [5000, 15000, 30000]; // 5 second, 15 second, 30 second
-
 function fetch_with_retry(frm, request_type, retries = 0, now = false) {
     setTimeout(
         async () => {
@@ -292,33 +303,39 @@ function fetch_with_retry(frm, request_type, retries = 0, now = false) {
             if (message.status_cd === "IP" && retries < retry_intervals.length)
                 return fetch_with_retry(frm, request_type, retries + 1);
 
-            if(request_type == "reset") frm.call("generate_gstr1")
-
-            mark_notification(frm, message, request_type);
+            if (request_type == "reset") frm.call("generate_gstr1");
+            handle_notification(frm, message, request_type);
         },
         now ? 0 : retry_intervals[retries]
     );
 }
 
-function mark_notification(frm, message, request_type) {
-    //TODO: on click of notification open GSTR-1 Beta with it's filters
+async function handle_notification(frm, message, request_type) {
+    if (!message.status_cd) return;
 
     const status_message_map = {
-        "P": `Data ${request_type}ing has been successfully completed.`,
-        "PE": `Data ${request_type}ing is complete with errors`,
-        "ER": `Data ${request_type}ing has encountered errors`,
-        "IP": `The request for ${request_type} is currently in progress`,
-    }
-    const alert_message = status_message_map[message.status_cd] || ""
+        P: `Data ${request_type}ing has been successfully completed.`,
+        PE: `Data ${request_type}ing is complete with errors`,
+        ER: `Data ${request_type}ing has encountered errors`,
+        IP: `The request for ${request_type} is currently in progress`,
+    };
+    const alert_message = status_message_map[message.status_cd];
 
-    if (
+    const on_current_document =
         window.location.pathname.includes("gstr-1-beta") &&
         frm.doc.company_gstin == message.company_gstin &&
         frm.doc.month_or_quarter == message.month_or_quarter &&
-        frm.doc.year == message.year
-    )
-        frappe.show_alert(__(alert_message));
-        //TODO: mark the notification as marked
+        frm.doc.year == message.year;
+
+    if (!on_current_document) return;
+
+    frappe.show_alert(__(alert_message));
+
+    //mark the notifications as seen
+    $(".notifications-seen").css("display", "inline");
+    $(".notifications-unseen").css("display", "none");
+    await frappe.db.set_value("Notification Log", message.notification_name, "read", 1, update_modified=false)
+    $(`[data-name="${message.notification_name}"]`).removeClass("unread");
 }
 
 class GSTR1 {

@@ -215,6 +215,8 @@ def process_reset_gstr1(month_or_quarter, year, company_gstin):
         f"GSTR1-{get_period(month_or_quarter, year)}-{company_gstin}",
     )
     data = gstr_1_log.process_reset_gstr1()
+    if not data:
+        data = {}
     data.update(
         {
             "month_or_quarter": month_or_quarter,
@@ -274,6 +276,7 @@ def get_net_gst_liability(company, company_gstin, month_or_quarter, year):
 ####### UTILS ######################################################################################
 
 
+@frappe.whitelist()
 def get_period(month_or_quarter: str, year: str) -> str:
     """
     Returns the period in the format MMYYYY
