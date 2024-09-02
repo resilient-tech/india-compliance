@@ -461,7 +461,7 @@ class IneligibleITC:
         return query.groupby(dt[group_by]).run(as_dict=True)
 
     def get_common_query(self, doctype, dt, dt_item):
-        return (
+        query = (
             frappe.qb.from_(dt)
             .join(dt_item)
             .on(dt.name == dt_item.parent)
@@ -477,10 +477,18 @@ class IneligibleITC:
             .where(dt.docstatus == 1)
             .where(dt.company_gstin == self.gstin)
             .where(dt.company == self.company)
-            .where(
+            .where(Extract(DatePart.year, dt.posting_date).eq(self.year))
+        )
+
+        if isinstance(self.month_or_quarter, tuple):
+            query = query.where(
                 Extract(DatePart.month, dt.posting_date).between(
                     self.month_or_quarter[0], self.month_or_quarter[1]
                 )
             )
-            .where(Extract(DatePart.year, dt.posting_date).eq(self.year))
-        )
+        else:
+            query = query.where(
+                Extract(DatePart.month, dt.posting_date).eq(self.month_or_quarter)
+            )
+
+        return query
