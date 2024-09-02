@@ -12,7 +12,7 @@ from frappe.query_builder import DatePart
 from frappe.query_builder.functions import Extract, IfNull, Sum
 from frappe.utils import cstr, flt, get_date_str, get_first_day, get_last_day
 
-from india_compliance.gst_india.constants import INVOICE_DOCTYPES
+from india_compliance.gst_india.constants import INVOICE_DOCTYPES, STATE_NUMBERS
 from india_compliance.gst_india.overrides.transaction import is_inter_state_supply
 from india_compliance.gst_india.report.gstr_3b_details.gstr_3b_details import (
     IneligibleITC,
@@ -624,20 +624,20 @@ class GSTR3BReport(Document):
                 self.report_dict["inter_sup"][section].append(value)
 
     def get_company_gst_details(self):
-        gst_details = frappe.get_all(
-            "Address",
-            fields=["gstin", "gst_state", "gst_state_number"],
-            filters={"name": self.company_address},
-        )
+        if not self.company_gstin:
+            frappe.throw(_("Please enter GSTIN for Company {0}").format(self.company))
 
-        if gst_details:
-            return gst_details[0]
-        else:
-            frappe.throw(
-                _("Please enter GSTIN and state for the Company Address {0}").format(
-                    self.company_address
-                )
-            )
+        return {
+            "gstin": self.company_gstin,
+            "gst_state": next(
+                (
+                    key
+                    for key, value in STATE_NUMBERS.items()
+                    if value == self.company_gstin[:2]
+                ),
+                None,
+            ),
+        }
 
     def get_missing_field_invoices(self):
         missing_field_invoices = []

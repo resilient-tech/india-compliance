@@ -50,19 +50,17 @@ frappe.ui.form.on('GSTR 3B Report', {
 		});
 	},
 
-	setup: function(frm) {
-		frm.set_query('company_address', function(doc) {
-			if(!doc.company) {
-				frappe.throw(__('Please set Company'));
-			}
+	setup: function (frm) {
+        frm.set_query("company_gstin", function (doc) {
+            if (!doc.company) {
+                frappe.throw(__("Please set Company"));
+            }
 
-			return {
-				query: 'frappe.contacts.doctype.address.address.address_query',
-				filters: {
-					link_doctype: 'Company',
-					link_name: doc.company
-				}
-			};
-		});
-	},
+            return india_compliance.get_gstin_query(doc.company);
+        });
+    },
+
+    company: function (frm) {
+        frm.set_value("company_gstin", "");
+    },
 });

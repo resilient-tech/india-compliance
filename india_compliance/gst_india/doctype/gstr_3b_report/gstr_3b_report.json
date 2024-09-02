@@ -6,15 +6,20 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "company",
-  "company_address",
-  "year",
-  "month",
   "column_break_jhew",
+  "company",
   "enqueue_report",
   "generation_status",
-  "section_break_yqh7",
+  "column_break_ddqq",
+  "company_gstin",
+  "temp",
+  "column_break_pvct",
+  "year",
   "json_output",
+  "column_break_vtyi",
+  "month_or_quarter",
+  "section_break_yqh7",
+  "gstr3b_form",
   "missing_field_invoices"
  ],
  "fields": [
@@ -25,25 +30,14 @@
    "options": "Company"
   },
   {
-   "fieldname": "company_address",
-   "fieldtype": "Link",
-   "label": "Company Address",
-   "options": "Address"
-  },
-  {
    "fieldname": "year",
    "fieldtype": "Select",
    "label": "Year"
   },
   {
-   "fieldname": "month",
-   "fieldtype": "Select",
-   "label": "Month",
-   "options": "January\nFebruary\nMarch\nApril\nMay\nJune\nJuly\nAugust\nSeptember\nOctober\nNovember\nDecember"
-  },
-  {
    "fieldname": "json_output",
    "fieldtype": "Code",
+   "hidden": 1,
    "label": "JSON Output"
   },
   {
@@ -73,12 +67,46 @@
   {
    "fieldname": "generation_status",
    "fieldtype": "Data",
+   "hidden": 1,
    "label": "Status",
    "read_only": 1
+  },
+  {
+   "fieldname": "company_gstin",
+   "fieldtype": "Autocomplete",
+   "label": "Company GSTIN"
+  },
+  {
+   "fieldname": "column_break_ddqq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_vtyi",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_pvct",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "gstr3b_form",
+   "fieldtype": "HTML",
+   "label": "GSTR-3B Form"
+  },
+  {
+   "fieldname": "temp",
+   "fieldtype": "HTML",
+   "label": "Temp"
+  },
+  {
+   "fieldname": "month_or_quarter",
+   "fieldtype": "Select",
+   "label": "Month or Quarter",
+   "options": "Jan - Mar\nApr - Jun\nJul - Sep\nOct - Dec\nJanuary\nFebruary\nMarch\nApril\nMay\nJune\nJuly\nAugust\nSeptember\nOctober\nNovember\nDecember"
   }
  ],
  "links": [],
- "modified": "2024-03-29 11:54:43.342426",
+ "modified": "2024-09-02 11:51:36.927444",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR 3B Report",
