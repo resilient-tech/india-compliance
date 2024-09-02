@@ -421,10 +421,10 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
 
 
 class IneligibleITC:
-    def __init__(self, company, gstin, month, year) -> None:
+    def __init__(self, company, gstin, month_or_quarter, year) -> None:
         self.company = company
         self.gstin = gstin
-        self.month = month
+        self.month_or_quarter = month_or_quarter
         self.year = year
 
     def get_for_purchase(self, ineligibility_reason, group_by="name"):
@@ -477,6 +477,10 @@ class IneligibleITC:
             .where(dt.docstatus == 1)
             .where(dt.company_gstin == self.gstin)
             .where(dt.company == self.company)
-            .where(Extract(DatePart.month, dt.posting_date).eq(self.month))
+            .where(
+                Extract(DatePart.month, dt.posting_date).between(
+                    self.month_or_quarter[0], self.month_or_quarter[1]
+                )
+            )
             .where(Extract(DatePart.year, dt.posting_date).eq(self.year))
         )

@@ -40,8 +40,10 @@ class GSTR3BReport(Document):
 
             self.gst_details = self.get_company_gst_details()
             self.report_dict["gstin"] = self.gst_details.get("gstin")
-            self.report_dict["ret_period"] = get_period(self.month, self.year)
-            self.month_no = get_period(self.month)
+            self.report_dict["ret_period"] = get_period(
+                self.month_or_quarter, self.year
+            )
+            self.month_or_quarter_no = get_period(self.month_or_quarter)
 
             self.get_outward_supply_details("Sales Invoice")
             self.set_outward_taxable_supplies()
@@ -126,7 +128,10 @@ class GSTR3BReport(Document):
 
     def update_itc_reversal_for_purchase_due_to_pos(self):
         ineligible_credit = IneligibleITC(
-            self.company, self.gst_details.get("gstin"), self.month_no, self.year
+            self.company,
+            self.gst_details.get("gstin"),
+            self.month_or_quarter_no,
+            self.year,
         ).get_for_purchase(
             "ITC restricted due to PoS rules", group_by="ineligibility_reason"
         )
@@ -135,7 +140,10 @@ class GSTR3BReport(Document):
 
     def update_itc_reversal_for_purchase_us_17_4(self):
         ineligible_credit = IneligibleITC(
-            self.company, self.gst_details.get("gstin"), self.month_no, self.year
+            self.company,
+            self.gst_details.get("gstin"),
+            self.month_or_quarter_no,
+            self.year,
         ).get_for_purchase(
             "Ineligible As Per Section 17(5)", group_by="ineligibility_reason"
         )
@@ -144,7 +152,10 @@ class GSTR3BReport(Document):
 
     def update_itc_reversal_from_bill_of_entry(self):
         ineligible_credit = IneligibleITC(
-            self.company, self.gst_details.get("gstin"), self.month_no, self.year
+            self.company,
+            self.gst_details.get("gstin"),
+            self.month_or_quarter_no,
+            self.year,
         ).get_for_bill_of_entry()
 
         self.process_ineligible_credit(ineligible_credit)
@@ -226,11 +237,17 @@ class GSTR3BReport(Document):
             WHERE docstatus = 1
             and is_opening = 'No'
             and company_gstin != IFNULL(supplier_gstin, "")
-            and month(posting_date) = %s and year(posting_date) = %s and company = %s
+            and month(posting_date) between %s and %s and year(posting_date) = %s and company = %s
             and company_gstin = %s
             GROUP BY itc_classification
         """,
-            (self.month_no, self.year, self.company, self.gst_details.get("gstin")),
+            (
+                self.month_or_quarter_no[0],
+                self.month_or_quarter_no[1],
+                self.year,
+                self.company,
+                self.gst_details.get("gstin"),
+            ),
             as_dict=1,
         )
 
@@ -262,8 +279,16 @@ class GSTR3BReport(Document):
                 .on(boe_taxes.parent == boe.name)
                 .where(
                     boe.posting_date.between(
-                        get_date_str(get_first_day(f"{self.year}-{self.month_no}-01")),
-                        get_date_str(get_last_day(f"{self.year}-{self.month_no}-01")),
+                        get_date_str(
+                            get_first_day(
+                                f"{self.year}-{self.month_or_quarter_no[0]}-01"
+                            )
+                        ),
+                        get_date_str(
+                            get_last_day(
+                                f"{self.year}-{self.month_or_quarter_no[1]}-01"
+                            )
+                        ),
                     )
                     & boe.company_gstin.eq(self.gst_details.get("gstin"))
                     & boe.docstatus.eq(1)
@@ -287,11 +312,17 @@ class GSTR3BReport(Document):
             and p.is_opening = 'No'
             and p.company_gstin != IFNULL(p.supplier_gstin, "")
             and (i.gst_treatment != 'Taxable' or p.gst_category = 'Registered Composition') and
-            month(p.posting_date) = %s and year(p.posting_date) = %s
+            month(p.posting_date) between %s and %s and year(p.posting_date) = %s
             and p.company = %s and p.company_gstin = %s
             and p.gst_category != "Overseas"
             """,
-            (self.month_no, self.year, self.company, self.gst_details.get("gstin")),
+            (
+                self.month_or_quarter_no[0],
+                self.month_or_quarter_no[1],
+                self.year,
+                self.company,
+                self.gst_details.get("gstin"),
+            ),
             as_dict=1,
         )
 
@@ -473,7 +504,11 @@ class GSTR3BReport(Document):
     def get_query_with_conditions(self, invoice, query, party_gstin):
         return (
             query.where(invoice.docstatus == 1)
-            .where(Extract(DatePart.month, invoice.posting_date).eq(self.month_no))
+            .where(
+                Extract(DatePart.month, invoice.posting_date).between(
+                    self.month_or_quarter_no[0], self.month_or_quarter_no[1]
+                )
+            )
             .where(Extract(DatePart.year, invoice.posting_date).eq(self.year))
             .where(invoice.company == self.company)
             .where(invoice.company_gstin == self.gst_details.get("gstin"))
@@ -652,12 +687,17 @@ class GSTR3BReport(Document):
                 f"""
                     SELECT name FROM `tab{doctype}`
                     WHERE docstatus = 1 and is_opening = 'No'
-                    and month(posting_date) = %s and year(posting_date) = %s
+                    and month(posting_date) between %s and %s and year(posting_date) = %s
                     and company = %s and place_of_supply IS NULL
                     and company_gstin != IFNULL({party_gstin},"")
                     and gst_category != 'Overseas'
                 """,
-                (self.month_no, self.year, self.company),
+                (
+                    self.month_or_quarter_no[0],
+                    self.month_or_quarter_no[1],
+                    self.year,
+                    self.company,
+                ),
                 as_dict=1,
             )  # nosec
 
@@ -681,8 +721,17 @@ def get_json(template):
         return cstr(f.read())
 
 
-def get_period(month, year=None):
-    month_no = {
+def get_quarter(quarter):
+    return {
+        "Jan - Mar": (1, 3),
+        "Apr - Jun": (4, 6),
+        "Jul - Sep": (7, 9),
+        "Oct - Dec": (10, 12),
+    }.get(quarter)
+
+
+def get_month_number(month):
+    return {
         "January": 1,
         "February": 2,
         "March": 3,
@@ -697,10 +746,20 @@ def get_period(month, year=None):
         "December": 12,
     }.get(month)
 
-    if year:
-        return str(month_no).zfill(2) + str(year)
+
+def get_period(month_or_quarter, year=None):
+    if "-" in month_or_quarter:
+        month_or_quarter_no = get_quarter(month_or_quarter)
     else:
-        return month_no
+        month_or_quarter_no = get_month_number(month_or_quarter)
+
+    if isinstance(month_or_quarter_no, int):
+        month_or_quarter_no = (month_or_quarter_no, month_or_quarter_no)
+
+    if year:
+        return str(month_or_quarter_no[1]).zfill(2) + str(year)
+
+    return month_or_quarter_no
 
 
 def format_values(data, precision=2):
