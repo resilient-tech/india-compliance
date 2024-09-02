@@ -48,6 +48,8 @@ frappe.ui.form.on('GSTR 3B Report', {
 		frappe.realtime.on("gstr3b_report_generation", function(){
 			frm.reload_doc();
 		});
+
+        append_form(frm);
 	},
 
 	setup: function (frm) {
@@ -64,3 +66,12 @@ frappe.ui.form.on('GSTR 3B Report', {
         frm.set_value("company_gstin", "");
     },
 });
+
+function append_form(frm) {
+    $(frm.fields_dict.gstr3b_form.wrapper).empty();
+    $(
+        frappe.render_template("gstr_3b_report", {
+            data: JSON.parse(frm.doc.json_output),
+        })
+    ).appendTo(frm.fields_dict.gstr3b_form.wrapper);
+}
