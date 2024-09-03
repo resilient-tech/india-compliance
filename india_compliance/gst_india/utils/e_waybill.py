@@ -1210,7 +1210,6 @@ class EWaybillData(GSTTransactionData):
         return extension_details
 
     def validate_transaction(self):
-
         super().validate_transaction()
 
         if self.doc.ewaybill:
@@ -1264,7 +1263,10 @@ class EWaybillData(GSTTransactionData):
         self.validate_same_gstin()
 
     def validate_same_gstin(self):
-        if self.doc.doctype == "Delivery Note":
+        if self.doc.doctype == "Delivery Note" or (
+            self.doc.get("purpose") in ["Material Transfer", "Material Issue"]
+            and not self.doc.is_return
+        ):
             return
 
         party_gstin_fieldname = (
@@ -1488,6 +1490,11 @@ class EWaybillData(GSTTransactionData):
                 "sub_supply_type": doc.get("_sub_supply_type", ""),
                 "document_type": "CHL",
             },
+            ("Stock Entry", 1): {
+                "supply_type": "I",
+                "sub_supply_type": doc.get("_sub_supply_type", ""),
+                "document_type": "CHL",
+            },
             ("Subcontracting Receipt", 0): {
                 "supply_type": "I",
                 "sub_supply_type": doc.get("_sub_supply_type", ""),
@@ -1634,6 +1641,7 @@ class EWaybillData(GSTTransactionData):
                 ("Delivery Note", 0): (REGISTERED_GSTIN, OTHER_GSTIN),
                 ("Delivery Note", 1): (OTHER_GSTIN, REGISTERED_GSTIN),
                 ("Stock Entry", 0): (REGISTERED_GSTIN, OTHER_GSTIN),
+                ("Stock Entry", 1): (OTHER_GSTIN, REGISTERED_GSTIN),
                 ("Subcontracting Receipt", 0): (OTHER_GSTIN, REGISTERED_GSTIN),
                 ("Subcontracting Receipt", 1): (REGISTERED_GSTIN, OTHER_GSTIN),
             }
@@ -1643,6 +1651,7 @@ class EWaybillData(GSTTransactionData):
                     {
                         ("Delivery Note", 0): (REGISTERED_GSTIN, REGISTERED_GSTIN),
                         ("Delivery Note", 1): (REGISTERED_GSTIN, REGISTERED_GSTIN),
+                        ("Stock Entry", 0): (REGISTERED_GSTIN, REGISTERED_GSTIN),
                     }
                 )
 

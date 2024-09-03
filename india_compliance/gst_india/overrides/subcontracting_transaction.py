@@ -165,7 +165,7 @@ def onload(doc, method=None):
 
 
 def validate(doc, method=None):
-    if ignore_gst_validation_for_subcontracting(doc):
+    if ignore_based_on_purpose(doc):
         return
 
     field_map = (
@@ -287,6 +287,12 @@ class SubcontractingGSTAccounts(GSTAccounts):
         self.validate_for_charge_type()
 
     def validate_for_same_party_gstin(self):
+        if (
+            self.doc.doctype == "Stock Entry"
+            and self.doc.purpose != "Send to Subcontractor"
+        ):
+            return
+
         company_gstin = self.doc.get("company_gstin") or self.doc.bill_from_gstin
         party_gstin = self.doc.get("supplier_gstin") or self.doc.bill_to_gstin
 
@@ -330,7 +336,6 @@ def set_address_display(doc):
 def get_relevant_references(
     supplier, supplied_items, received_items, subcontracting_orders
 ):
-
     if isinstance(supplied_items, str):
         supplied_items = frappe.parse_json(supplied_items)
         received_items = frappe.parse_json(received_items)
@@ -390,3 +395,13 @@ def remove_duplicates(doc):
         doc.doc_references = []
         for row in references:
             doc.append("doc_references", dict(link_doctype=row[0], link_name=row[1]))
+
+
+def ignore_based_on_purpose(doc):
+    if doc.doctype == "Stock Entry" and (
+        not doc.subcontracting_order
+        and (doc.purpose not in ["Material Transfer", "Material Issue"])
+    ):
+        return True
+
+    return ignore_gst_validations(doc)
