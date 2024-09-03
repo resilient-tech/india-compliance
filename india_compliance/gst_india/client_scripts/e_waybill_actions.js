@@ -510,7 +510,7 @@ function get_sub_suppy_type_options(frm) {
     let supply_type, sub_supply_type, sub_supply_desc, document_type;
 
     if (frm.doctype === "Delivery Note") {
-        const same_gstin = frm.doc.billing_address_gstin == frm.doc.company_gstin;
+        const same_gstin = frm.doc.billing_address_gstin === frm.doc.company_gstin;
 
         if (frm.doc.is_return) {
             supply_type = "Inward";
@@ -533,6 +533,29 @@ function get_sub_suppy_type_options(frm) {
                 ];
             } else {
                 sub_supply_type = ["Job Work", "SKD/CKD", "Others"];
+            }
+        }
+    } else if (frm.doctype === "Stock Entry") {
+        document_type = "Delivery Challan";
+
+        if (frm.doc.purpose === "Send to Subcontractor") {
+            supply_type = "Outward";
+            sub_supply_type = ["Job Work"];
+        } else if (["Material Transfer", "Material Issue"].includes(frm.doc.purpose)) {
+            const same_gstin = frm.doc.bill_from_gstin === frm.doc.bill_to_gstin;
+
+            if (frm.doc.is_return) {
+                supply_type = "Inward";
+                sub_supply_type = ["Job Work Returns"];
+            } else if (same_gstin) {
+                supply_type = "Outward";
+                sub_supply_type = [
+                    "For Own Use",
+                    "Exhibition or Fairs",
+                    "Line Sales",
+                    "Recipient Not Known",
+                    "Others",
+                ];
             }
         }
     } else {
@@ -570,11 +593,6 @@ function get_sub_suppy_type_options(frm) {
                 sub_supply_desc: "Purchase Return",
                 document_type: "Delivery Challan",
             },
-            "Stock Entry_0": {
-                supply_type: "Outward",
-                sub_supply_type: ["Job Work"],
-                document_type: "Delivery Challan",
-            },
             "Subcontracting Receipt_0": {
                 supply_type: "Inward",
                 sub_supply_type: ["Job Work Returns"],
@@ -587,7 +605,7 @@ function get_sub_suppy_type_options(frm) {
             },
         };
 
-        return default_supply_types[key]
+        return default_supply_types[key];
     }
 
     return { supply_type, sub_supply_type, sub_supply_desc, document_type };
