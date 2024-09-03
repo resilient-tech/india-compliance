@@ -192,29 +192,34 @@ def upload_gstr1(month_or_quarter, year, company_gstin):
 
 
 @frappe.whitelist()
-def process_upload_gstr1(month_or_quarter, year, company_gstin):
+def proceed_to_file_gstr1(month_or_quarter, year, company_gstin):
     gstr_1_log = frappe.get_doc(
         "GST Return Log",
         f"GSTR1-{get_period(month_or_quarter, year)}-{company_gstin}",
     )
-    data = gstr_1_log.process_upload_gstr1()
-    data.update(
-        {
-            "month_or_quarter": month_or_quarter,
-            "year": year,
-            "company_gstin": company_gstin,
-        }
-    )
-    return data
+    gstr_1_log.proceed_to_file_gstr1()
 
 
 @frappe.whitelist()
-def process_reset_gstr1(month_or_quarter, year, company_gstin):
+def file_gstr1(month_or_quarter, year, company_gstin, pan, otp):
     gstr_1_log = frappe.get_doc(
         "GST Return Log",
         f"GSTR1-{get_period(month_or_quarter, year)}-{company_gstin}",
     )
-    data = gstr_1_log.process_reset_gstr1()
+    gstr_1_log.file_gstr1(pan, otp)
+
+
+@frappe.whitelist()
+def process_gstr1_request(month_or_quarter, year, company_gstin, request_type):
+    gstr_1_log = frappe.get_doc(
+        "GST Return Log",
+        f"GSTR1-{get_period(month_or_quarter, year)}-{company_gstin}",
+    )
+
+    method_name = f"process_{request_type}_gstr1"
+    method = getattr(gstr_1_log, method_name)
+    data = method()
+
     if not data:
         data = {}
     data.update(

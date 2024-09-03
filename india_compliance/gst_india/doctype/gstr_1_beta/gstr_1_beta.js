@@ -201,10 +201,21 @@ frappe.ui.form.on(DOCTYPE, {
             return;
         }
 
-        const button_label = gst_data?.status == "Not Filed" ? "Upload" : "Generate";
-        const method =
-            button_label === "Generate" ? handle_generate_button : handle_upload_button;
-        frm.page.set_primary_action(__(button_label), () => method(frm));
+        const actions = {
+            Generate: generate_gstr1_data,
+            Upload: upload_gstr1_data,
+            "Proceed to File": proceed_to_file,
+            File: file_gstr1_data,
+        };
+
+        const primary_button_label = ["Not Filed", "Ready to File"].includes(
+            gst_data?.status
+        )
+            ? "Upload"
+            : "Generate";
+        frm.page.set_primary_action(__(primary_button_label), () =>
+            actions[primary_button_label](frm)
+        );
 
         if (!gst_data) {
             frm.page.clear_indicator();
@@ -212,7 +223,13 @@ frappe.ui.form.on(DOCTYPE, {
         }
 
         frm.add_custom_button(__("Reset"), () => reset_gstr1_data(frm));
-        frm.add_custom_button(__("Proceed to File"), () => {});
+
+        const secondary_button_label =
+            gst_data?.status === "Ready to File" ? "File" : "Proceed to File";
+        frm.add_custom_button(__(secondary_button_label), () =>
+            actions[secondary_button_label](frm)
+        );
+
         frm.page.clear_menu();
         frm.gstr1.render_indicator();
     },
@@ -241,19 +258,7 @@ frappe.ui.form.on(DOCTYPE, {
     },
 });
 
-function handle_upload_button(frm) {
-    frappe.call({
-        method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.upload_gstr1",
-        args: {
-            month_or_quarter: frm.doc.month_or_quarter,
-            year: frm.doc.year,
-            company_gstin: frm.doc.company_gstin,
-        },
-        callback: () => fetch_with_retry(frm, "upload"),
-    });
-}
-
-async function handle_generate_button(frm) {
+async function generate_gstr1_data(frm) {
     const { message: return_period } = await frappe.call({
         method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_period",
         args: { month_or_quarter: frm.doc.month_or_quarter, year: frm.doc.year },
@@ -267,8 +272,13 @@ async function handle_generate_button(frm) {
 
     await frm.call("generate_gstr1");
     if (message.token) {
-        fetch_with_retry(frm, message.request_type, (now = true));
+        fetch_status_with_retry(frm, message.request_type, (now = true));
     }
+}
+
+function upload_gstr1_data(frm) {
+    frappe.show_alert(__("Please wait while we upload the data.It may take some time."));
+    call_gstr1_method(frm, "upload");
 }
 
 function reset_gstr1_data(frm) {
@@ -276,49 +286,159 @@ function reset_gstr1_data(frm) {
         __(
             "All the details saved in different tables shall be deleted after reset.<br>Are you sure, you want to reset the already saved data?"
         ),
-        () => {
+        async () => {
             frappe.show_alert(
                 __("Please wait while we reset and regenerate the data.")
             );
-            frm.call("reset_gstr1").then(fetch_with_retry(frm, "reset"));
+            await frm.call("reset_gstr1");
+            fetch_status_with_retry(frm, "reset");
         }
     );
 }
 
+function proceed_to_file(frm) {
+    frappe.show_alert(__("Please wait while we proceed to file the data."));
+    call_gstr1_method(frm, "proceed_to_file");
+}
+
+function call_gstr1_method(frm, action, additional_args = {}) {
+    const base_args = {
+        month_or_quarter: frm.doc.month_or_quarter,
+        year: frm.doc.year,
+        company_gstin: frm.doc.company_gstin,
+    };
+
+    const args = { ...base_args, ...additional_args };
+
+    frappe.call({
+        method: `india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.${action}_gstr1`,
+        args: args,
+        callback: () => fetch_status_with_retry(frm, action),
+    });
+}
+
 const retry_intervals = [5000, 15000, 30000]; // 5 second, 15 second, 30 second
-function fetch_with_retry(frm, request_type, retries = 0, now = false) {
+function fetch_status_with_retry(frm, request_type, retries = 0, now = false) {
     setTimeout(
         async () => {
             const { message } = await frappe.call({
-                method: `india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.process_${request_type}_gstr1`,
+                method: `india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.process_gstr1_request`,
                 args: {
                     month_or_quarter: frm.doc.month_or_quarter,
                     year: frm.doc.year,
                     company_gstin: frm.doc.company_gstin,
+                    request_type: request_type,
                 },
             });
 
-            if (!message) return;
-
             if (message.status_cd === "IP" && retries < retry_intervals.length)
-                return fetch_with_retry(frm, request_type, retries + 1);
+                return fetch_status_with_retry(frm, request_type, retries + 1);
 
-            if (request_type == "reset") frm.call("generate_gstr1");
+            //is it possible that still status_cd is IP => what to do then
+
+            if (request_type == "reset") {
+                frm.page.set_indicator("Not Filed", "orange");
+                frm.call("generate_gstr1");
+            }
+
+            if (request_type == "proceed_to_file")
+                handle_proceed_to_file_response(frm, message.filing_status);
+
             handle_notification(frm, message, request_type);
         },
         now ? 0 : retry_intervals[retries]
     );
 }
 
+function handle_proceed_to_file_response(frm, filing_status) {
+    if (!filing_status) return;
+
+    if (filing_status == "Ready to File") {
+        frm.remove_custom_button("Proceed to File");
+        frm.add_custom_button(__("Ready to File"), () => file_gstr1_data(frm));
+        frm.page.clear_menu();
+        frm.page.set_indicator("Ready to File", "orange");
+        return;
+    }
+
+    frappe.msgprint({
+        message: __("Summary has not matched. Please sync with GSTIN."),
+        indicator: "red",
+        title: __("GSTIN Sync Required"),
+        primary_action: {
+            label: __("Sync with GSTIN"),
+            action() {
+                render_empty_state(frm);
+                //here for what it will sync for
+                frm.call("sync_with_gstn", { sync_for: "unfiled" }).then(() => {
+                    frappe.msgprint(__("Synced successfully with GSTIN."));
+                });
+            },
+        },
+    });
+}
+
+function file_gstr1_data(frm) {
+    const dialog = new frappe.ui.Dialog({
+        title: "Filing GSTR-1",
+        fields: [
+            {
+                label: "PAN",
+                fieldname: "pan",
+                fieldtype: "Data",
+                default: frm.doc.company_gstin.substr(2, 10),
+                reqd: 1,
+            },
+            {
+                label: "OTP",
+                fieldname: "otp",
+                fieldtype: "Data",
+                hidden: 1,
+            },
+        ],
+        primary_action_label: "Verify PAN",
+        primary_action() {
+            if (dialog.get_value("pan").length != 10) {
+                frappe.throw(__("PAN should be 10 characters long"));
+            }
+            validate_details_and_file_gstr1(frm, dialog);
+        },
+    });
+    dialog.show();
+}
+
+function validate_details_and_file_gstr1(frm, dialog) {
+    const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+    const pan = dialog.get_value("pan")?.trim().toUpperCase();
+
+    if (!PAN_REGEX.test(pan)) {
+        frappe.throw(__("Invalid PAN format"));
+    }
+
+    dialog.get_field("otp").toggle(true);
+    dialog.set_primary_action("Authenticate OTP", () => {
+        //authenticate otp
+        //set pan to gstin doc
+        call_gstr1_method(frm, "file", { pan: pan, otp: dialog.get_value("otp") });
+        dialog.hide();
+    });
+}
+
 async function handle_notification(frm, message, request_type) {
     if (!message.status_cd) return;
 
+    const request_status =
+        request_type === "proceed_to_file"
+            ? "Proceed to file"
+            : `Data ${request_type}ing`;
+
     const status_message_map = {
-        P: `Data ${request_type}ing has been successfully completed.`,
-        PE: `Data ${request_type}ing is complete with errors`,
-        ER: `Data ${request_type}ing has encountered errors`,
-        IP: `The request for ${request_type} is currently in progress`,
+        P: `${request_status} has been successfully completed.`,
+        PE: `${request_status} is completed with errors`,
+        ER: `${request_status} has encountered errors`,
+        IP: `The request for ${request_status} is currently in progress`,
     };
+
     const alert_message = status_message_map[message.status_cd];
 
     const on_current_document =
@@ -330,12 +450,22 @@ async function handle_notification(frm, message, request_type) {
     if (!on_current_document) return;
 
     frappe.show_alert(__(alert_message));
+    mark_notification(message.notification_name);
+}
 
-    //mark the notifications as seen
+async function mark_notification(notification_name) {
     $(".notifications-seen").css("display", "inline");
     $(".notifications-unseen").css("display", "none");
-    await frappe.db.set_value("Notification Log", message.notification_name, "read", 1, update_modified=false)
-    $(`[data-name="${message.notification_name}"]`).removeClass("unread");
+
+    frappe.db.set_value(
+        "Notification Log",
+        notification_name,
+        "read",
+        1,
+        (update_modified = false)
+    ).then(()=> {
+        $(`[data-name="${notification_name}"]`).removeClass("unread");
+    })
 }
 
 class GSTR1 {

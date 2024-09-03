@@ -700,10 +700,9 @@ class FileGSTR1:
 
         if response.get("status_cd") != "IP":
             self.db_set({"request_type": None, "token": None})
-            doc_name = create_notifications(
+            response["notification_name"] = create_notifications(
                 self.return_period, "reset", response.get("status_cd")
             )
-            response["notification_name"] = doc_name
 
         if response.get("status_cd") == "P":
             self.update_json_for("unfiled", {}, reset_reconcile=True)
@@ -737,10 +736,9 @@ class FileGSTR1:
 
         if response.get("status_cd") != "IP":
             self.db_set({"request_type": None, "token": None})
-            doc_name = create_notifications(
+            response["notification_name"] = create_notifications(
                 self.return_period, "upload", response.get("status_cd")
             )
-            response["notification_name"] = doc_name
 
         if response.get("status_cd") == "PE":
             self.update_json_for("upload_error", response)
@@ -758,8 +756,6 @@ class FileGSTR1:
                     "token": response.get("reference_id"),
                 }
             )
-            # callback
-        pass
 
     def process_proceed_to_file_gstr1(self):
         if self.request_type != "proceed_to_file":
@@ -768,36 +764,44 @@ class FileGSTR1:
         api = GSTR1API(self)
         response = api.get_return_status(self.return_period, self.token)
 
-        if response.get("status_cd"):
-            # callback
-            self.db_set({"request_type": None, "token": None})
+        if response.get("status_cd") == "IP":
+            return response
 
-        if response.get("status_cd") != "P":
-            # callback
-            return
+        if response.get("status_cd") != "IP":
+            self.db_set({"request_type": None, "token": None})
 
         summary = api.get_gstr_1_data("RETSUM", self.return_period)
         self.update_json_for("authenticated_summary", summary)
 
-        # check if this summary is same as the one in the summary field
-        mapped_summary = self.get_json_for("filed").get("summary")  # TODO:verify
+        # compare the data
+        mapped_summary = self.get_json_for("books_summary")
+        # amended_summary = self.get_json_for("unfiled_summary")
+
         gov_summary = convert_to_internal_data_format(summary)
 
-        # compare dicts and it's values
-        # TODO: Compare
+        # # compare dicts and it's values
+        # # TODO: Compare
         if mapped_summary == gov_summary:
-            # callback
             self.db_set({"filing_status": "Ready to File"})
-
+            response["filing_status"] = "Ready to File"
         else:
-            # callback
-            pass
+            response["filing_status"] = "Summary Not Matched"
+
+        response["notification_name"] = create_notifications(
+            self.return_period, "upload", response.get("status_cd")
+        )
+        return response
 
     def file_gstr1(self, pan, otp=None):
-        # If OTP is none, generate evc OTP
-        # Use summary from self
-        # Make API Request
-        pass
+        if not otp:
+            # If OTP is none, generate evc OTP
+            pass
+
+        summary = self.get_json_for("authenticated_summary")
+        api = GSTR1API(self)
+        response = api.file_gstr_1(self.return_period, pan, otp, summary)
+
+        return response
 
 
 def create_notifications(return_period, request_type, status_cd):
