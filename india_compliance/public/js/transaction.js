@@ -79,7 +79,14 @@ async function update_gst_details(frm, event) {
     const party_type = india_compliance.get_party_type(frm.doc.doctype).toLowerCase();
     const party_fieldname = frm.doc.doctype === "Quotation" ? "party_name" : party_type;
     const party = frm.doc[party_fieldname];
-    if (!party) return;
+
+    const is_outward_material_transfer_or_issue =
+        frm.doc.doctype === "Stock Entry" &&
+        ["Material Transfer", "Material Issue"].includes(frm.doc.purpose) &&
+        !frm.doc.is_return;
+
+    if (!party && !is_outward_material_transfer_or_issue) return;
+
 
     if (
         [
@@ -136,7 +143,12 @@ async function update_gst_details(frm, event) {
             "is_export_with_gst"
         );
     } else if (frm.doc.doctype === "Stock Entry") {
-        fieldnames_to_set.push("bill_from_gstin", "bill_to_gstin", "bill_to_address");
+        fieldnames_to_set.push(
+            "bill_from_gstin",
+            "bill_to_gstin",
+            "bill_to_address",
+        );
+        party_details["is_outward_material_transfer_or_issue"] = is_outward_material_transfer_or_issue;
     } else {
         fieldnames_to_set.push("supplier_address", "supplier_gstin");
     }

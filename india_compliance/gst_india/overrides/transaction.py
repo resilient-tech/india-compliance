@@ -822,6 +822,10 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
     party_details = frappe.parse_json(party_details)
     gst_details = frappe._dict()
 
+    allow_same_gstin = False
+    if party_details.get("is_outward_material_transfer_or_issue"):
+        allow_same_gstin = True
+
     # Party/Address Defaults
     if is_sales_transaction:
         company_gstin_field = "company_gstin"
@@ -877,10 +881,13 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
     # Taxes Not Applicable
     if (
         (
-            party_details.get(company_gstin_field)
-            and party_details.get(company_gstin_field)
-            == party_details.get(party_gstin_field)
-        )  # Internal transfer
+            (
+                party_details.get(company_gstin_field)
+                and party_details.get(company_gstin_field)
+                == party_details.get(party_gstin_field)
+            )  # Internal transfer
+            and not allow_same_gstin
+        )
         or (is_sales_transaction and is_export_without_payment_of_gst(party_details))
         or (
             not is_sales_transaction
