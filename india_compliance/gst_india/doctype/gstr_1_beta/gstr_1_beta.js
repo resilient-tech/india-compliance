@@ -277,7 +277,9 @@ async function generate_gstr1_data(frm) {
 }
 
 function upload_gstr1_data(frm) {
-    frappe.show_alert(__("Please wait while we upload the data.It may take some time."));
+    frappe.show_alert(
+        __("Please wait while we upload the data.It may take some time.")
+    );
     call_gstr1_method(frm, "upload");
 }
 
@@ -334,8 +336,12 @@ function fetch_status_with_retry(frm, request_type, retries = 0, now = false) {
             if (message.status_cd === "IP" && retries < retry_intervals.length)
                 return fetch_status_with_retry(frm, request_type, retries + 1);
 
+            if (message.status_cd === "PE" || message.status_cd === "ER")
+                handle_errors(frm,message);
+
             //is it possible that still status_cd is IP => what to do then
 
+            //will this code executed when you have PE or ER
             if (request_type == "reset") {
                 frm.page.set_indicator("Not Filed", "orange");
                 frm.call("generate_gstr1");
@@ -348,6 +354,19 @@ function fetch_status_with_retry(frm, request_type, retries = 0, now = false) {
         },
         now ? 0 : retry_intervals[retries]
     );
+}
+
+function handle_errors(frm, message) {
+    frm.gstr1.tabs.error_tab.show()
+    const data = [{
+        "category" : "B2B",
+        "error_code" : "12345",
+        "description" : "I am testing",
+        "party_gstin" : "123456789",
+        "place_of_supply" : "27",
+        "invoice_number" : "12345678",
+    }]
+    frm.gstr1.tabs['error_tab'].tabmanager.refresh_data(data)
 }
 
 function handle_proceed_to_file_response(frm, filing_status) {
@@ -378,7 +397,13 @@ function handle_proceed_to_file_response(frm, filing_status) {
     });
 }
 
-function file_gstr1_data(frm) {
+async function file_gstr1_data(frm) {
+    const { message } = await frappe.db.get_value("GSTIN", frm.doc.company_gstin, [
+        "last_pan_used_for_gstr",
+    ]);
+    const pan_no =
+        message.last_pan_used_for_gstr || frm.doc.company_gstin.substr(2, 10);
+
     const dialog = new frappe.ui.Dialog({
         title: "Filing GSTR-1",
         fields: [
@@ -386,7 +411,7 @@ function file_gstr1_data(frm) {
                 label: "PAN",
                 fieldname: "pan",
                 fieldtype: "Data",
-                default: frm.doc.company_gstin.substr(2, 10),
+                default: pan_no,
                 reqd: 1,
             },
             {
@@ -418,7 +443,13 @@ function validate_details_and_file_gstr1(frm, dialog) {
     dialog.get_field("otp").toggle(true);
     dialog.set_primary_action("Authenticate OTP", () => {
         //authenticate otp
-        //set pan to gstin doc
+        frappe.db.set_value(
+            "GSTIN",
+            frm.doc.company_gstin,
+            "last_pan_used_for_gstr",
+            pan
+        );
+
         call_gstr1_method(frm, "file", { pan: pan, otp: dialog.get_value("otp") });
         dialog.hide();
     });
@@ -457,15 +488,17 @@ function mark_notification(notification_name) {
     $(".notifications-seen").css("display", "inline");
     $(".notifications-unseen").css("display", "none");
 
-    frappe.db.set_value(
-        "Notification Log",
-        notification_name,
-        "read",
-        1,
-        (update_modified = false)
-    ).then(()=> {
-        $(`[data-name="${notification_name}"]`).removeClass("unread");
-    })
+    frappe.db
+        .set_value(
+            "Notification Log",
+            notification_name,
+            "read",
+            1,
+            (update_modified = false)
+        )
+        .then(() => {
+            $(`[data-name="${notification_name}"]`).removeClass("unread");
+        });
 }
 
 class GSTR1 {
@@ -491,6 +524,11 @@ class GSTR1 {
             label: __("Filed"),
             name: "filed",
             _TabManager: FiledTab,
+        },
+        {
+            label: __("Error"),
+            name: "error",
+            _TabManager: ErrorTab,
         },
     ];
 
@@ -2253,6 +2291,73 @@ class ReconcileTab extends FiledTab {
             },
         ];
     }
+}
+
+class ErrorTab extends TabManager {
+    set_default_title() {
+        this.DEFAULT_TITLE = "Error Summary";
+        TabManager.prototype.set_default_title.call(this);
+    }
+
+    get_summary_columns() {
+        return [
+            {
+                name: "Category",
+                fieldname: "category",
+                width: 100,
+            },
+            {
+                name: "Error Code",
+                fieldname: "error_code",
+                width: 130,
+            },
+            {
+                name: "Error Description",
+                fieldname: "description",
+                width: 200,
+            },
+            {
+                name: "Party GSTIN",
+                fieldname: "party_gstin",
+                width: 130,
+            },
+            {
+                name: "Place Of Supply",
+                fieldname: "place_of_supply",
+                width: 130,
+            },
+            {
+                name: "Invoice Number",
+                fieldname: "invoice_number",
+                width: 130,
+            },
+        ];
+    }
+
+    setup_actions(){}
+    set_creation_time_string(){}
+
+    refresh_data(data)
+    {
+        this.set_default_title();
+        super.refresh_data(data, data, "Error Summary");
+        $('.dt-footer').remove();
+    }
+    setup_wrapper() {
+        this.wrapper.append(`
+            <div class="m-3 d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                    <div>
+                        <div class="tab-title-text">&nbsp</div>
+                        <div class="tab-subtitle-text"></div>
+                    </div>
+                </div>
+                <div class="custom-button-group page-actions custom-actions hidden-xs hidden-md"></div>
+            </div>
+            <div class="data-table"></div>
+        `);
+    }
+
 }
 
 class DetailViewDialog {

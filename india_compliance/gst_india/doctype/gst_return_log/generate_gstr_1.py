@@ -770,6 +770,7 @@ class FileGSTR1:
         if response.get("status_cd") != "IP":
             self.db_set({"request_type": None, "token": None})
 
+        # what to do when you have PE or ER
         summary = api.get_gstr_1_data("RETSUM", self.return_period)
         self.update_json_for("authenticated_summary", summary)
 
