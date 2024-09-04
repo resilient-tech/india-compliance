@@ -310,13 +310,6 @@ class StockEntryEwaybill extends EwaybillApplicability {
             message_list.push("Bill From GSTIN and Bill To GSTIN are different.");
         }
 
-        if (this.frm.doc.purpose === "Material Issue" && this.frm.doc.is_return) {
-            is_ewb_generatable = false;
-            message_list.push(
-                "Cannot return material in Material Issue Stock Entry Type"
-            );
-        }
-
         if (show_message) {
             this.frm._ewb_message += message_list
                 .map(message => `<li>${message}</li>`)
