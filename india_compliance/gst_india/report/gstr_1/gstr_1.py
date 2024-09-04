@@ -22,7 +22,11 @@ from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_
     get_hsn_data,
     get_hsn_wise_json_data,
 )
-from india_compliance.gst_india.utils import get_escaped_name, get_gst_accounts_by_type
+from india_compliance.gst_india.utils import (
+    get_escaped_name,
+    get_gst_accounts_by_type,
+    get_gstin_list,
+)
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr_1 import SUPECOM
 
@@ -2204,19 +2208,7 @@ def get_company_gstin_number(company, address=None, all_gstins=False):
         gstin = frappe.db.get_value("Address", address, "gstin")
 
     if not gstin:
-        filters = [
-            ["is_your_company_address", "=", 1],
-            ["Dynamic Link", "link_doctype", "=", "Company"],
-            ["Dynamic Link", "link_name", "=", company],
-            ["Dynamic Link", "parenttype", "=", "Address"],
-            ["gstin", "!=", ""],
-        ]
-        gstin = frappe.get_all(
-            "Address",
-            filters=filters,
-            pluck="gstin",
-            order_by="is_primary_address desc",
-        )
+        gstin = get_gstin_list(company)
         if gstin and not all_gstins:
             gstin = gstin[0]
 
