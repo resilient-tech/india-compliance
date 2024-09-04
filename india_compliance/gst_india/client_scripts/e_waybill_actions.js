@@ -510,7 +510,7 @@ function get_sub_suppy_type_options(frm) {
     let supply_type, sub_supply_type, sub_supply_desc, document_type;
 
     if (frm.doctype === "Delivery Note") {
-        const same_gstin = frm.doc.billing_address_gstin === frm.doc.company_gstin;
+        const same_gstin = frm.doc.billing_address_gstin == frm.doc.company_gstin;
 
         if (frm.doc.is_return) {
             supply_type = "Inward";
