@@ -355,7 +355,7 @@ function handle_proceed_to_file_response(frm, filing_status) {
 
     if (filing_status == "Ready to File") {
         frm.remove_custom_button("Proceed to File");
-        frm.add_custom_button(__("Ready to File"), () => file_gstr1_data(frm));
+        frm.add_custom_button(__("File"), () => file_gstr1_data(frm));
         frm.page.clear_menu();
         frm.page.set_indicator("Ready to File", "orange");
         return;
@@ -424,7 +424,7 @@ function validate_details_and_file_gstr1(frm, dialog) {
     });
 }
 
-async function handle_notification(frm, message, request_type) {
+function handle_notification(frm, message, request_type) {
     if (!message.status_cd) return;
 
     const request_status =
@@ -453,7 +453,7 @@ async function handle_notification(frm, message, request_type) {
     mark_notification(message.notification_name);
 }
 
-async function mark_notification(notification_name) {
+function mark_notification(notification_name) {
     $(".notifications-seen").css("display", "inline");
     $(".notifications-unseen").css("display", "none");
 

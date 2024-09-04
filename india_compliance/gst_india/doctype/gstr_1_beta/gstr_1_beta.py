@@ -188,7 +188,7 @@ def upload_gstr1(month_or_quarter, year, company_gstin):
         "GST Return Log",
         f"GSTR1-{get_period(month_or_quarter, year)}-{company_gstin}",
     )
-    gstr_1_log.upload_gstr1(data)
+    gstr_1_log.upload_gstr1(data.get("data"))
 
 
 @frappe.whitelist()

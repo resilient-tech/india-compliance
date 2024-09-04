@@ -773,19 +773,14 @@ class FileGSTR1:
         summary = api.get_gstr_1_data("RETSUM", self.return_period)
         self.update_json_for("authenticated_summary", summary)
 
-        # compare the data
         mapped_summary = self.get_json_for("books_summary")
-        # amended_summary = self.get_json_for("unfiled_summary")
-
         gov_summary = convert_to_internal_data_format(summary)
 
-        # # compare dicts and it's values
-        # # TODO: Compare
-        if mapped_summary == gov_summary:
-            self.db_set({"filing_status": "Ready to File"})
-            response["filing_status"] = "Ready to File"
-        else:
-            response["filing_status"] = "Summary Not Matched"
+        response["filing_status"] = (
+            "Ready to File"
+            if are_summaries_same(mapped_summary, gov_summary)
+            else "Summary Not Matched"
+        )
 
         response["notification_name"] = create_notifications(
             self.return_period, "upload", response.get("status_cd")
@@ -802,6 +797,26 @@ class FileGSTR1:
         response = api.file_gstr_1(self.return_period, pan, otp, summary)
 
         return response
+
+
+def are_summaries_same(mapped_summary, gov_summary):
+    KEYS_TO_COMPARE = {
+        "no_of_records",
+        "total_cess_amount",
+        "total_cgst_amount",
+        "total_igst_amount",
+        "total_sgst_amount",
+        "total_taxable_value",
+    }
+    gov_summary = gov_summary.get("summary")
+
+    for dict in mapped_summary:
+        gov_dict = gov_summary.get(dict["description"])
+
+        for key in KEYS_TO_COMPARE:
+            if gov_dict.get(key) != dict.get(key):
+                return False
+    return True
 
 
 def create_notifications(return_period, request_type, status_cd):
