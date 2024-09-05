@@ -337,11 +337,8 @@ function fetch_status_with_retry(frm, request_type, retries = 0, now = false) {
                 return fetch_status_with_retry(frm, request_type, retries + 1);
 
             if (message.status_cd === "PE" || message.status_cd === "ER")
-                handle_errors(frm,message);
+                handle_errors(frm, message);
 
-            //is it possible that still status_cd is IP => what to do then
-
-            //will this code executed when you have PE or ER
             if (request_type == "reset") {
                 frm.page.set_indicator("Not Filed", "orange");
                 frm.call("generate_gstr1");
@@ -357,16 +354,30 @@ function fetch_status_with_retry(frm, request_type, retries = 0, now = false) {
 }
 
 function handle_errors(frm, message) {
-    frm.gstr1.tabs.error_tab.show()
-    const data = [{
-        "category" : "B2B",
-        "error_code" : "12345",
-        "description" : "I am testing",
-        "party_gstin" : "123456789",
-        "place_of_supply" : "27",
-        "invoice_number" : "12345678",
-    }]
-    frm.gstr1.tabs['error_tab'].tabmanager.refresh_data(data)
+    const { status_cd, error_report } = message;
+    let data = [];
+
+    if (status_cd == "ER") {
+        data.push({
+            error_code: error_report.error_cd,
+            description: error_report.error_msg,
+        });
+    } else {
+        for (let category in error_report) {
+            for (let object of error_report[category]) {
+                data.push({
+                    category: category.toUpperCase(),
+                    error_code: object.error_cd,
+                    description: object.error_msg,
+                    party_gstin: object.ctin,
+                    place_of_supply: object.inv[0].pos,
+                    invoice_number: object.inv[0].inum,
+                });
+            }
+        }
+    }
+    frm.gstr1.tabs.error_tab.show();
+    frm.gstr1.tabs["error_tab"].tabmanager.refresh_data(data);
 }
 
 function handle_proceed_to_file_response(frm, filing_status) {
@@ -423,9 +434,6 @@ async function file_gstr1_data(frm) {
         ],
         primary_action_label: "Verify PAN",
         primary_action() {
-            if (dialog.get_value("pan").length != 10) {
-                frappe.throw(__("PAN should be 10 characters long"));
-            }
             validate_details_and_file_gstr1(frm, dialog);
         },
     });
@@ -435,6 +443,10 @@ async function file_gstr1_data(frm) {
 function validate_details_and_file_gstr1(frm, dialog) {
     const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
     const pan = dialog.get_value("pan")?.trim().toUpperCase();
+
+    if (pan.length != 10) {
+        frappe.throw(__("PAN should be 10 characters long"));
+    }
 
     if (!PAN_REGEX.test(pan)) {
         frappe.throw(__("Invalid PAN format"));
@@ -2304,22 +2316,22 @@ class ErrorTab extends TabManager {
             {
                 name: "Category",
                 fieldname: "category",
-                width: 100,
+                width: 80,
             },
             {
                 name: "Error Code",
                 fieldname: "error_code",
-                width: 130,
+                width: 100,
             },
             {
                 name: "Error Description",
                 fieldname: "description",
-                width: 200,
+                width: 250,
             },
             {
                 name: "Party GSTIN",
                 fieldname: "party_gstin",
-                width: 130,
+                width: 170,
             },
             {
                 name: "Place Of Supply",
@@ -2329,19 +2341,20 @@ class ErrorTab extends TabManager {
             {
                 name: "Invoice Number",
                 fieldname: "invoice_number",
+                fieldtype: "Link",
+                options: "Sales Invoice",
                 width: 130,
             },
         ];
     }
 
-    setup_actions(){}
-    set_creation_time_string(){}
+    setup_actions() {}
+    set_creation_time_string() {}
 
-    refresh_data(data)
-    {
+    refresh_data(data) {
         this.set_default_title();
         super.refresh_data(data, data, "Error Summary");
-        $('.dt-footer').remove();
+        $(".dt-footer").remove();
     }
     setup_wrapper() {
         this.wrapper.append(`
@@ -2357,7 +2370,6 @@ class ErrorTab extends TabManager {
             <div class="data-table"></div>
         `);
     }
-
 }
 
 class DetailViewDialog {

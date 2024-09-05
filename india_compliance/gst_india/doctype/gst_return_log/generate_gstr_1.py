@@ -690,8 +690,6 @@ class FileGSTR1:
             )
 
     def process_reset_gstr1(self):
-        # Emit success message / error message
-
         if self.request_type != "reset":
             return
 
@@ -766,8 +764,7 @@ class FileGSTR1:
 
         if response.get("status_cd") == "IP":
             return response
-
-        if response.get("status_cd") != "IP":
+        else:
             self.db_set({"request_type": None, "token": None})
 
         # what to do when you have PE or ER
@@ -809,13 +806,13 @@ def are_summaries_same(mapped_summary, gov_summary):
         "total_sgst_amount",
         "total_taxable_value",
     }
-    gov_summary = gov_summary.get("summary")
+    gov_summary_data = gov_summary.get("summary")
 
-    for dict in mapped_summary:
-        gov_dict = gov_summary.get(dict["description"])
+    for mapped_entry in mapped_summary:
+        gov_entry = gov_summary_data.get(mapped_entry["description"])
 
         for key in KEYS_TO_COMPARE:
-            if gov_dict.get(key) != dict.get(key):
+            if gov_entry.get(key) != mapped_entry.get(key):
                 return False
     return True
 
@@ -825,7 +822,6 @@ def create_notifications(return_period, request_type, status_cd):
         "P": f"Data {request_type}ing for return period {return_period} has been successfully completed.",
         "PE": f"Data {request_type}ing for return period {return_period} is complete with errors",
         "ER": f"Data {request_type}ing for return period {return_period} has encountered errors",
-        "IP": f"The request for {request_type} is currently in progress for the return period {return_period}.",
     }
 
     notification = frappe.get_doc(
