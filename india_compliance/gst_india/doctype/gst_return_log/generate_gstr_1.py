@@ -674,8 +674,9 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
 
 
 class FileGSTR1:
+    # TODO: handle otp requested errors for all APIs
     def reset_gstr1(self):
-        # TODO: handle otp requested errors for all APIs
+        # reset called after proceed to file
         self.db_set({"filing_status": "Not Filed"})
 
         api = GSTR1API(self)
@@ -698,7 +699,7 @@ class FileGSTR1:
 
         if response.get("status_cd") != "IP":
             self.db_set({"request_type": None, "token": None})
-            response["notification_name"] = create_notifications(
+            create_success_notifications(
                 self.return_period, "reset", response.get("status_cd")
             )
 
@@ -711,6 +712,7 @@ class FileGSTR1:
         if not json_data:
             return
 
+        # upload data after proceed to file
         self.db_set({"filing_status": "Not Filed"})
 
         # Make API Request
@@ -734,7 +736,7 @@ class FileGSTR1:
 
         if response.get("status_cd") != "IP":
             self.db_set({"request_type": None, "token": None})
-            response["notification_name"] = create_notifications(
+            create_success_notifications(
                 self.return_period, "upload", response.get("status_cd")
             )
 
@@ -746,6 +748,8 @@ class FileGSTR1:
     def proceed_to_file_gstr1(self):
         api = GSTR1API(self)
         response = api.proceed_to_file("GSTR1", self.return_period)
+
+        # TODO: handle case where it's already proceeded to file
 
         if response.get("reference_id"):
             self.db_set(
@@ -767,25 +771,39 @@ class FileGSTR1:
         else:
             self.db_set({"request_type": None, "token": None})
 
-        # what to do when you have PE or ER
+        if response.get("status_cd") != "P":
+            # TODO: Failure Notification
+            return
+
         summary = api.get_gstr_1_data("RETSUM", self.return_period)
         self.update_json_for("authenticated_summary", summary)
 
         mapped_summary = self.get_json_for("books_summary")
         gov_summary = convert_to_internal_data_format(summary)
+        gov_summary = summarize_retsum_data(gov_summary)
 
-        response["filing_status"] = (
-            "Ready to File"
-            if are_summaries_same(mapped_summary, gov_summary)
-            else "Summary Not Matched"
-        )
+        differing_categories = get_differing_categories(mapped_summary, gov_summary)
 
-        response["notification_name"] = create_notifications(
-            self.return_period, "upload", response.get("status_cd")
-        )
+        if not differing_categories:
+            self.db_set({"filing_status": "Ready to File"})
+            response["filing_status"] = "Ready to File"
+            create_success_notifications(
+                self.return_period, "upload", response.get("status_cd")
+            )
+
+        else:
+            response.update(
+                {
+                    "filing_status": "Summary Not Matched",
+                    "differing_categories": differing_categories,
+                }
+            )
+            # TODO: Failure Notification
+
         return response
 
     def file_gstr1(self, pan, otp=None):
+        # TODO: Try to file before proceeding to file
         if not otp:
             # If OTP is none, generate evc OTP
             pass
@@ -797,27 +815,43 @@ class FileGSTR1:
         return response
 
 
-def are_summaries_same(mapped_summary, gov_summary):
+def get_differing_categories(mapped_summary, gov_summary):
     KEYS_TO_COMPARE = {
-        "no_of_records",
         "total_cess_amount",
         "total_cgst_amount",
         "total_igst_amount",
         "total_sgst_amount",
         "total_taxable_value",
     }
-    gov_summary_data = gov_summary.get("summary")
 
-    for mapped_entry in mapped_summary:
-        gov_entry = gov_summary_data.get(mapped_entry["description"])
+    gov_summary = {row["description"]: row for row in gov_summary if row["indent"] == 0}
+    compared_categories = set()
+    differing_categories = set()
+
+    # This will intentionally skip the row in govt_summary with amended data
+    for row in mapped_summary:
+        if row["indent"] != 0:
+            continue
+
+        category = row["description"]
+        compared_categories.add(category)
+        gov_entry = gov_summary.get(category, {})
 
         for key in KEYS_TO_COMPARE:
-            if gov_entry.get(key) != mapped_entry.get(key):
-                return False
-    return True
+            if gov_entry.get(key, 0) != row.get(key):
+                differing_categories.add(category)
+                break
+
+    for row in gov_summary.values():
+        # Amendments are with indent 1. Hence auto-skipped
+        if row["description"] not in compared_categories:
+            differing_categories.add(row["description"])
+
+    return differing_categories
 
 
-def create_notifications(return_period, request_type, status_cd):
+def create_success_notifications(return_period, request_type, status_cd):
+    # TODO: GSTIN in message. It's not clear if this is for GSTR-1
     status_message_map = {
         "P": f"Data {request_type}ing for return period {return_period} has been successfully completed.",
         "PE": f"Data {request_type}ing for return period {return_period} is complete with errors",
@@ -829,6 +863,7 @@ def create_notifications(return_period, request_type, status_cd):
             "doctype": "Notification Log",
             "for_user": frappe.session.user,
             "type": "Alert",
+            # TODO: check possibility to link to Integration Request Log. Create different notification if error in API.
             "document_type": "GSTR-1 Beta",
             "document_name": "GSTR-1 Beta",
             "subject": f"Data {request_type} for return period {return_period}",

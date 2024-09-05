@@ -230,7 +230,6 @@ frappe.ui.form.on(DOCTYPE, {
             actions[secondary_button_label](frm)
         );
 
-        frm.page.clear_menu();
         frm.gstr1.render_indicator();
     },
 
@@ -277,10 +276,8 @@ async function generate_gstr1_data(frm) {
 }
 
 function upload_gstr1_data(frm) {
-    frappe.show_alert(
-        __("Please wait while we upload the data.It may take some time.")
-    );
-    call_gstr1_method(frm, "upload");
+    frappe.show_alert(__("Uploading data to GSTN"));
+    perform_gstr1_action(frm, "upload");
 }
 
 function reset_gstr1_data(frm) {
@@ -289,9 +286,7 @@ function reset_gstr1_data(frm) {
             "All the details saved in different tables shall be deleted after reset.<br>Are you sure, you want to reset the already saved data?"
         ),
         async () => {
-            frappe.show_alert(
-                __("Please wait while we reset and regenerate the data.")
-            );
+            frappe.show_alert(__("Resetting GSTR-1 data"));
             await frm.call("reset_gstr1");
             fetch_status_with_retry(frm, "reset");
         }
@@ -300,10 +295,42 @@ function reset_gstr1_data(frm) {
 
 function proceed_to_file(frm) {
     frappe.show_alert(__("Please wait while we proceed to file the data."));
-    call_gstr1_method(frm, "proceed_to_file");
+    perform_gstr1_action(frm, "proceed_to_file");
 }
 
-function call_gstr1_method(frm, action, additional_args = {}) {
+async function file_gstr1_data(frm) {
+    const { message } = await frappe.db.get_value("GSTIN", frm.doc.company_gstin, [
+        "last_pan_used_for_gstr",
+    ]);
+    const pan_no =
+        message.last_pan_used_for_gstr || frm.doc.company_gstin.substr(2, 10);
+
+    const dialog = new frappe.ui.Dialog({
+        title: "Filing GSTR-1",
+        fields: [
+            {
+                label: "PAN",
+                fieldname: "pan",
+                fieldtype: "Data",
+                default: pan_no,
+                reqd: 1,
+            },
+            {
+                label: "OTP",
+                fieldname: "otp",
+                fieldtype: "Data",
+                hidden: 1,
+            },
+        ],
+        primary_action_label: "Verify PAN",
+        primary_action() {
+            validate_details_and_file_gstr1(frm, dialog);
+        },
+    });
+    dialog.show();
+}
+
+function perform_gstr1_action(frm, action, additional_args = {}) {
     const base_args = {
         month_or_quarter: frm.doc.month_or_quarter,
         year: frm.doc.year,
@@ -391,6 +418,7 @@ function handle_proceed_to_file_response(frm, filing_status) {
         return;
     }
 
+    // TODO: Show differeing categories
     frappe.msgprint({
         message: __("Summary has not matched. Please sync with GSTIN."),
         indicator: "red",
@@ -406,38 +434,6 @@ function handle_proceed_to_file_response(frm, filing_status) {
             },
         },
     });
-}
-
-async function file_gstr1_data(frm) {
-    const { message } = await frappe.db.get_value("GSTIN", frm.doc.company_gstin, [
-        "last_pan_used_for_gstr",
-    ]);
-    const pan_no =
-        message.last_pan_used_for_gstr || frm.doc.company_gstin.substr(2, 10);
-
-    const dialog = new frappe.ui.Dialog({
-        title: "Filing GSTR-1",
-        fields: [
-            {
-                label: "PAN",
-                fieldname: "pan",
-                fieldtype: "Data",
-                default: pan_no,
-                reqd: 1,
-            },
-            {
-                label: "OTP",
-                fieldname: "otp",
-                fieldtype: "Data",
-                hidden: 1,
-            },
-        ],
-        primary_action_label: "Verify PAN",
-        primary_action() {
-            validate_details_and_file_gstr1(frm, dialog);
-        },
-    });
-    dialog.show();
 }
 
 function validate_details_and_file_gstr1(frm, dialog) {
@@ -462,7 +458,7 @@ function validate_details_and_file_gstr1(frm, dialog) {
             pan
         );
 
-        call_gstr1_method(frm, "file", { pan: pan, otp: dialog.get_value("otp") });
+        perform_gstr1_action(frm, "file", { pan: pan, otp: dialog.get_value("otp") });
         dialog.hide();
     });
 }
@@ -493,24 +489,6 @@ function handle_notification(frm, message, request_type) {
     if (!on_current_document) return;
 
     frappe.show_alert(__(alert_message));
-    mark_notification(message.notification_name);
-}
-
-function mark_notification(notification_name) {
-    $(".notifications-seen").css("display", "inline");
-    $(".notifications-unseen").css("display", "none");
-
-    frappe.db
-        .set_value(
-            "Notification Log",
-            notification_name,
-            "read",
-            1,
-            (update_modified = false)
-        )
-        .then(() => {
-            $(`[data-name="${notification_name}"]`).removeClass("unread");
-        });
 }
 
 class GSTR1 {
