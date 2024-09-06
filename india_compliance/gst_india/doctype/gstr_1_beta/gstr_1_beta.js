@@ -285,10 +285,9 @@ function reset_gstr1_data(frm) {
         __(
             "All the details saved in different tables shall be deleted after reset.<br>Are you sure, you want to reset the already saved data?"
         ),
-        async () => {
+        () => {
             frappe.show_alert(__("Resetting GSTR-1 data"));
-            await frm.call("reset_gstr1");
-            fetch_status_with_retry(frm, "reset");
+            perform_gstr1_action(frm, "reset");
         }
     );
 }
@@ -342,11 +341,32 @@ function perform_gstr1_action(frm, action, additional_args = {}) {
     frappe.call({
         method: `india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.${action}_gstr1`,
         args: args,
-        callback: () => fetch_status_with_retry(frm, action),
+        callback: response => {
+            const message = response?.message;
+
+            if (action == "file" && message?.error?.error_cd === "RET09001") {
+                frm.remove_custom_button("File");
+                frm.add_custom_button(__("Proceed to File"), () =>
+                    proceed_to_file(frm)
+                );
+                frm.page.set_indicator("Not Filed", "orange");
+                frappe.msgprint(
+                    __(
+                        "Latest Summary is not available. Please generate summary and try again."
+                    )
+                )
+            } else {
+                if (Object.keys(response).length == 0) {
+                    fetch_status_with_retry(frm, action);
+                } else {
+                    handle_proceed_to_file_response(frm, response.message);
+                }
+            }
+        },
     });
 }
 
-const retry_intervals = [5000, 15000, 30000]; // 5 second, 15 second, 30 second
+const retry_intervals = [5000, 15000, 30000, 60000, 120000, 300000, 600000, 720000]; // 5 second, 15 second, 30 second, 1 min, 2 min, 5 min, 10 min, 12 min
 function fetch_status_with_retry(frm, request_type, retries = 0, now = false) {
     setTimeout(
         async () => {
@@ -372,7 +392,7 @@ function fetch_status_with_retry(frm, request_type, retries = 0, now = false) {
             }
 
             if (request_type == "proceed_to_file")
-                handle_proceed_to_file_response(frm, message.filing_status);
+                handle_proceed_to_file_response(frm, message);
 
             handle_notification(frm, message, request_type);
         },
@@ -407,7 +427,8 @@ function handle_errors(frm, message) {
     frm.gstr1.tabs["error_tab"].tabmanager.refresh_data(data);
 }
 
-function handle_proceed_to_file_response(frm, filing_status) {
+function handle_proceed_to_file_response(frm, response) {
+    const filing_status = response.filing_status;
     if (!filing_status) return;
 
     if (filing_status == "Ready to File") {
@@ -418,16 +439,24 @@ function handle_proceed_to_file_response(frm, filing_status) {
         return;
     }
 
-    // TODO: Show differeing categories
+    const differing_categories = response.differing_categories
+        .map(item => `<li>${item}</li>`)
+        .join("");
+    const message = `
+        <p>${__(
+            "Summary for the following categories has not matched. Please sync with GSTIN."
+        )}</p>
+        <ul>${differing_categories}</ul>
+    `;
+
     frappe.msgprint({
-        message: __("Summary has not matched. Please sync with GSTIN."),
+        message: message,
         indicator: "red",
         title: __("GSTIN Sync Required"),
         primary_action: {
             label: __("Sync with GSTIN"),
             action() {
                 render_empty_state(frm);
-                //here for what it will sync for
                 frm.call("sync_with_gstn", { sync_for: "unfiled" }).then(() => {
                     frappe.msgprint(__("Synced successfully with GSTIN."));
                 });

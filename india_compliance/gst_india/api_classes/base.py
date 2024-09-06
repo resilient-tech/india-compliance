@@ -137,6 +137,7 @@ class BaseAPI:
 
             response = requests.request(method, **request_args)
             if api_request_id := response.headers.get("x-amzn-RequestId"):
+                self.request_id = api_request_id
                 log.request_id = api_request_id
 
             try:

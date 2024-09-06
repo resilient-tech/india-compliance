@@ -699,8 +699,11 @@ class FileGSTR1:
 
         if response.get("status_cd") != "IP":
             self.db_set({"request_type": None, "token": None})
-            create_success_notifications(
-                self.return_period, "reset", response.get("status_cd")
+            enqueue_notification(
+                self.return_period,
+                "reset",
+                response.get("status_cd"),
+                self.gstin,
             )
 
         if response.get("status_cd") == "P":
@@ -736,8 +739,11 @@ class FileGSTR1:
 
         if response.get("status_cd") != "IP":
             self.db_set({"request_type": None, "token": None})
-            create_success_notifications(
-                self.return_period, "upload", response.get("status_cd")
+            enqueue_notification(
+                self.return_period,
+                "upload",
+                response.get("status_cd"),
+                self.gstin,
             )
 
         if response.get("status_cd") == "PE":
@@ -749,7 +755,8 @@ class FileGSTR1:
         api = GSTR1API(self)
         response = api.proceed_to_file("GSTR1", self.return_period)
 
-        # TODO: handle case where it's already proceeded to file
+        if response.error and response.error.error_cd == "RET00003":
+            return self.fetch_and_compare_summary(api)
 
         if response.get("reference_id"):
             self.db_set(
@@ -772,23 +779,38 @@ class FileGSTR1:
             self.db_set({"request_type": None, "token": None})
 
         if response.get("status_cd") != "P":
-            # TODO: Failure Notification
+            enqueue_notification(
+                self.return_period,
+                "proceed_to_file",
+                response.get("status_cd"),
+                self.gstin,
+                api.request_id,
+            )
             return
+
+        return self.fetch_and_compare_summary(api, response)
+
+    def fetch_and_compare_summary(self, api, response=None):
+        if response is None:
+            response = {}
 
         summary = api.get_gstr_1_data("RETSUM", self.return_period)
         self.update_json_for("authenticated_summary", summary)
 
         mapped_summary = self.get_json_for("books_summary")
-        gov_summary = convert_to_internal_data_format(summary)
-        gov_summary = summarize_retsum_data(gov_summary)
+        gov_summary = convert_to_internal_data_format(summary).get("summary")
+        gov_summary = summarize_retsum_data(gov_summary.values())
 
         differing_categories = get_differing_categories(mapped_summary, gov_summary)
 
         if not differing_categories:
             self.db_set({"filing_status": "Ready to File"})
             response["filing_status"] = "Ready to File"
-            create_success_notifications(
-                self.return_period, "upload", response.get("status_cd")
+            enqueue_notification(
+                self.return_period,
+                "proceed_to_file",
+                response.get("status_cd"),
+                self.gstin,
             )
 
         else:
@@ -798,12 +820,17 @@ class FileGSTR1:
                     "differing_categories": differing_categories,
                 }
             )
-            # TODO: Failure Notification
+            enqueue_notification(
+                self.return_period,
+                "proceed_to_file",
+                response.get("status_cd"),
+                self.gstin,
+                api.request_id,
+            )
 
         return response
 
     def file_gstr1(self, pan, otp=None):
-        # TODO: Try to file before proceeding to file
         if not otp:
             # If OTP is none, generate evc OTP
             pass
@@ -811,6 +838,10 @@ class FileGSTR1:
         summary = self.get_json_for("authenticated_summary")
         api = GSTR1API(self)
         response = api.file_gstr_1(self.return_period, pan, otp, summary)
+
+        if response.error and response.error.error_cd == "RET09001":
+            self.db_set({"filing_status": "Not Filed"})
+            self.update_json_for("authenticated_summary", None)
 
         return response
 
@@ -850,28 +881,50 @@ def get_differing_categories(mapped_summary, gov_summary):
     return differing_categories
 
 
-def create_success_notifications(return_period, request_type, status_cd):
-    # TODO: GSTIN in message. It's not clear if this is for GSTR-1
+def enqueue_notification(
+    return_period, request_type, status_cd, gstin, request_id=None
+):
+    frappe.enqueue(
+        "india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1.create_notification",
+        queue="long",
+        return_period=return_period,
+        request_type=request_type,
+        status_cd=status_cd,
+        gstin=gstin,
+        request_id=request_id,
+    )
+
+
+def create_notification(return_period, request_type, status_cd, gstin, request_id=None):
+    # request_id shows failure response
     status_message_map = {
-        "P": f"Data {request_type}ing for return period {return_period} has been successfully completed.",
-        "PE": f"Data {request_type}ing for return period {return_period} is complete with errors",
-        "ER": f"Data {request_type}ing for return period {return_period} has encountered errors",
+        "P": f"Data {request_type} for GSTIN {gstin} and return period {return_period} has been successfully completed.",
+        "PE": f"Data {request_type} for GSTIN {gstin} and return period {return_period} is completed with errors",
+        "ER": f"Data {request_type} for GSTIN {gstin} and return period {return_period} has encountered errors",
     }
+
+    if request_id and (
+        doc_name := frappe.db.get_value(
+            "Integration Request", {"request_id": request_id}
+        )
+    ):
+        document_type = "Integration Request"
+        document_name = doc_name
+    else:
+        document_type = document_name = "GSTR-1 Beta"
 
     notification = frappe.get_doc(
         {
             "doctype": "Notification Log",
             "for_user": frappe.session.user,
             "type": "Alert",
-            # TODO: check possibility to link to Integration Request Log. Create different notification if error in API.
-            "document_type": "GSTR-1 Beta",
-            "document_name": "GSTR-1 Beta",
-            "subject": f"Data {request_type} for return period {return_period}",
+            "document_type": document_type,
+            "document_name": document_name,
+            "subject": f"Data {request_type} for GSTIN {gstin} and return period {return_period}",
             "email_content": status_message_map.get(status_cd),
         }
     )
     notification.insert()
-    return notification.name
 
 
 def check_return_status(self):
