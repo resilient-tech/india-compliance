@@ -53,7 +53,7 @@ function fetch_gst_details(doctype) {
             "is_export_with_gst"
         );
     } else if (doctype === "Stock Entry") {
-        event_fields.push("bill_from_gstin", "bill_to_address");
+        event_fields.push("bill_from_address", "bill_to_address");
     } else if (["Subcontracting Order", "Subcontracting Receipt"].includes(doctype)) {
         event_fields.push("supplier_gstin");
     } else {
@@ -86,7 +86,6 @@ async function update_gst_details(frm, event) {
         !frm.doc.is_return;
 
     if (!party && !is_outward_material_transfer_or_issue) return;
-
 
     if (
         [
@@ -146,9 +145,15 @@ async function update_gst_details(frm, event) {
         fieldnames_to_set.push(
             "bill_from_gstin",
             "bill_to_gstin",
-            "bill_to_address",
+            "bill_from_address",
+            "bill_to_address"
         );
-        party_details["is_outward_material_transfer_or_issue"] = is_outward_material_transfer_or_issue;
+
+        party_details["is_outward_material_transfer_or_issue"] =
+            ["Material Transfer", "Material Issue"].includes(frm.doc.purpose) &&
+            !frm.doc.is_return;
+        party_details["is_inward_material_transfer"] =
+            frm.doc.purpose === "Material Transfer" && frm.doc.is_return;
     } else {
         fieldnames_to_set.push("supplier_address", "supplier_gstin");
     }
@@ -382,6 +387,7 @@ function _set_e_commerce_ecommerce_supply_type(frm) {
 
 function fetch_party_details(doctype) {
     let company_gstin_field = "company_gstin";
+    let is_inward_material_transfer = false;
 
     if (doctype === "Stock Entry") {
         company_gstin_field = "bill_from_gstin";
@@ -389,10 +395,20 @@ function fetch_party_details(doctype) {
 
     frappe.ui.form.on(doctype, {
         supplier(frm) {
+            if (
+                frm.doc.doctype === "Stock Entry" &&
+                frm.doc.purpose === "Material Transfer" &&
+                frm.doc.is_return
+            ) {
+                company_gstin_field = "bill_to_gstin";
+                is_inward_material_transfer = true;
+            }
+
             setTimeout(() => {
                 const party_details = {
                     [company_gstin_field]: frm.doc[company_gstin_field],
                     supplier: frm.doc.supplier,
+                    is_inward_material_transfer,
                 };
                 const args = {
                     party_details: JSON.stringify(party_details),

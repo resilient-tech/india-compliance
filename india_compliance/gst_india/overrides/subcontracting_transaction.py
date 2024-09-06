@@ -69,11 +69,18 @@ def after_mapping_subcontracting_order(doc, method, source_doc):
 
 
 def after_mapping_stock_entry(doc, method, source_doc):
-    if source_doc.doctype == "Subcontracting Order":
+    if not source_doc.doctype == "Subcontracting Order":
+        doc.taxes_and_charges = ""
+        doc.taxes = []
+
+    if not doc.purpose == "Material Transfer" or not doc.is_return:
         return
 
-    doc.taxes_and_charges = ""
-    doc.taxes = []
+    doc.bill_to_address = source_doc.billing_address
+    doc.bill_from_address = source_doc.supplier_address
+    doc.bill_to_gstin = source_doc.company_gstin
+    doc.bill_from_gstin = source_doc.supplier_gstin
+    set_address_display(doc)
 
 
 def before_mapping_subcontracting_receipt(doc, method, source_doc, table_maps):
