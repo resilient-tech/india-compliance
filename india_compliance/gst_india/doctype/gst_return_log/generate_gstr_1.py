@@ -674,12 +674,13 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
 
 
 class FileGSTR1:
+    # TODO: handle otp requested errors for all APIs
     def reset_gstr1(self):
-        # TODO: handle otp requested errors for all APIs
+        # reset called after proceed to file
         self.db_set({"filing_status": "Not Filed"})
 
         api = GSTR1API(self)
-        response = api.reset_gstr1(self.return_period)
+        response = api.reset_gstr_1_data(self.return_period)
 
         if response.get("reference_id"):
             self.db_set(
@@ -688,35 +689,33 @@ class FileGSTR1:
                     "token": response.get("reference_id"),
                 }
             )
-            # callback
 
     def process_reset_gstr1(self):
-        # Emit success message / error message
-
         if self.request_type != "reset":
             return
 
         api = GSTR1API(self)
         response = api.get_return_status(self.return_period, self.token)
 
-        if response.get("status_cd"):
+        if response.get("status_cd") != "IP":
             self.db_set({"request_type": None, "token": None})
+            enqueue_notification(
+                self.return_period,
+                "reset",
+                response.get("status_cd"),
+                self.gstin,
+            )
 
         if response.get("status_cd") == "P":
-            # callback
-
             self.update_json_for("unfiled", {}, reset_reconcile=True)
 
-        else:
-            # callback
-            pass
-
-        pass
+        return response
 
     def upload_gstr1(self, json_data):
         if not json_data:
             return
 
+        # upload data after proceed to file
         self.db_set({"filing_status": "Not Filed"})
 
         # Make API Request
@@ -730,9 +729,6 @@ class FileGSTR1:
                     "token": response.get("reference_id"),
                 }
             )
-            # callback
-
-        pass
 
     def process_upload_gstr1(self):
         if self.request_type != "upload":
@@ -741,25 +737,26 @@ class FileGSTR1:
         api = GSTR1API(self)
         response = api.get_return_status(self.return_period, self.token)
 
-        if response.get("status_cd"):
+        if response.get("status_cd") != "IP":
             self.db_set({"request_type": None, "token": None})
+            enqueue_notification(
+                self.return_period,
+                "upload",
+                response.get("status_cd"),
+                self.gstin,
+            )
 
-        if response.get("status_cd") == "P":
-            # callback
-            pass
-
-        elif response.get("status_cd") == "PE":
-            # callback
+        if response.get("status_cd") == "PE":
             self.update_json_for("upload_error", response)
-            pass
 
-        else:
-            # callback
-            pass
+        return response
 
     def proceed_to_file_gstr1(self):
         api = GSTR1API(self)
         response = api.proceed_to_file("GSTR1", self.return_period)
+
+        if response.error and response.error.error_cd == "RET00003":
+            return self.fetch_and_compare_summary(api)
 
         if response.get("reference_id"):
             self.db_set(
@@ -768,8 +765,6 @@ class FileGSTR1:
                     "token": response.get("reference_id"),
                 }
             )
-            # callback
-        pass
 
     def process_proceed_to_file_gstr1(self):
         if self.request_type != "proceed_to_file":
@@ -778,36 +773,158 @@ class FileGSTR1:
         api = GSTR1API(self)
         response = api.get_return_status(self.return_period, self.token)
 
-        if response.get("status_cd"):
-            # callback
+        if response.get("status_cd") == "IP":
+            return response
+        else:
             self.db_set({"request_type": None, "token": None})
 
         if response.get("status_cd") != "P":
-            # callback
+            enqueue_notification(
+                self.return_period,
+                "proceed_to_file",
+                response.get("status_cd"),
+                self.gstin,
+                api.request_id,
+            )
             return
+
+        return self.fetch_and_compare_summary(api, response)
+
+    def fetch_and_compare_summary(self, api, response=None):
+        if response is None:
+            response = {}
 
         summary = api.get_gstr_1_data("RETSUM", self.return_period)
         self.update_json_for("authenticated_summary", summary)
 
-        # check if this summary is same as the one in the summary field
-        mapped_summary = self.get_json_for("filed").get("summary")  # TODO:verify
-        gov_summary = convert_to_internal_data_format(summary)
+        mapped_summary = self.get_json_for("books_summary")
+        gov_summary = convert_to_internal_data_format(summary).get("summary")
+        gov_summary = summarize_retsum_data(gov_summary.values())
 
-        # compare dicts and it's values
-        # TODO: Compare
-        if mapped_summary == gov_summary:
-            # callback
+        differing_categories = get_differing_categories(mapped_summary, gov_summary)
+
+        if not differing_categories:
             self.db_set({"filing_status": "Ready to File"})
+            response["filing_status"] = "Ready to File"
+            enqueue_notification(
+                self.return_period,
+                "proceed_to_file",
+                response.get("status_cd"),
+                self.gstin,
+            )
 
         else:
-            # callback
-            pass
+            response.update(
+                {
+                    "filing_status": "Summary Not Matched",
+                    "differing_categories": differing_categories,
+                }
+            )
+            enqueue_notification(
+                self.return_period,
+                "proceed_to_file",
+                response.get("status_cd"),
+                self.gstin,
+                api.request_id,
+            )
+
+        return response
 
     def file_gstr1(self, pan, otp=None):
-        # If OTP is none, generate evc OTP
-        # Use summary from self
-        # Make API Request
-        pass
+        if not otp:
+            # If OTP is none, generate evc OTP
+            pass
+
+        summary = self.get_json_for("authenticated_summary")
+        api = GSTR1API(self)
+        response = api.file_gstr_1(self.return_period, pan, otp, summary)
+
+        if response.error and response.error.error_cd == "RET09001":
+            self.db_set({"filing_status": "Not Filed"})
+            self.update_json_for("authenticated_summary", None)
+
+        return response
+
+
+def get_differing_categories(mapped_summary, gov_summary):
+    KEYS_TO_COMPARE = {
+        "total_cess_amount",
+        "total_cgst_amount",
+        "total_igst_amount",
+        "total_sgst_amount",
+        "total_taxable_value",
+    }
+
+    gov_summary = {row["description"]: row for row in gov_summary if row["indent"] == 0}
+    compared_categories = set()
+    differing_categories = set()
+
+    # This will intentionally skip the row in govt_summary with amended data
+    for row in mapped_summary:
+        if row["indent"] != 0:
+            continue
+
+        category = row["description"]
+        compared_categories.add(category)
+        gov_entry = gov_summary.get(category, {})
+
+        for key in KEYS_TO_COMPARE:
+            if gov_entry.get(key, 0) != row.get(key):
+                differing_categories.add(category)
+                break
+
+    for row in gov_summary.values():
+        # Amendments are with indent 1. Hence auto-skipped
+        if row["description"] not in compared_categories:
+            differing_categories.add(row["description"])
+
+    return differing_categories
+
+
+def enqueue_notification(
+    return_period, request_type, status_cd, gstin, request_id=None
+):
+    frappe.enqueue(
+        "india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1.create_notification",
+        queue="long",
+        return_period=return_period,
+        request_type=request_type,
+        status_cd=status_cd,
+        gstin=gstin,
+        request_id=request_id,
+    )
+
+
+def create_notification(return_period, request_type, status_cd, gstin, request_id=None):
+    # request_id shows failure response
+    status_message_map = {
+        "P": f"Data {request_type} for GSTIN {gstin} and return period {return_period} has been successfully completed.",
+        "PE": f"Data {request_type} for GSTIN {gstin} and return period {return_period} is completed with errors",
+        "ER": f"Data {request_type} for GSTIN {gstin} and return period {return_period} has encountered errors",
+    }
+
+    if request_id and (
+        doc_name := frappe.db.get_value(
+            "Integration Request", {"request_id": request_id}
+        )
+    ):
+        document_type = "Integration Request"
+        document_name = doc_name
+    else:
+        document_type = document_name = "GSTR-1 Beta"
+
+    notification = frappe.get_doc(
+        {
+            "doctype": "Notification Log",
+            "for_user": frappe.session.user,
+            "type": "Alert",
+            "document_type": document_type,
+            "document_name": document_name,
+            "subject": f"Data {request_type} for GSTIN {gstin} and return period {return_period}",
+            "email_content": status_message_map.get(status_cd),
+        }
+    )
+    notification.insert()
 
 
 def check_return_status(self):

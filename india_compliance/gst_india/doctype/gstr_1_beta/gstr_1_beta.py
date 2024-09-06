@@ -162,27 +162,75 @@ class GSTR1Beta(Document):
             doctype=self.doctype,
         )
 
-    @frappe.whitelist()
-    def upload_gstr1(self):
-        from india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export import (
-            download_gstr_1_json,
-        )
 
-        data = download_gstr_1_json(
-            self.company,
-            self.company_gstin,
-            self.month_or_quarter,
-            self.year,
-            delete_missing=True,
-        )
+@frappe.whitelist()
+def reset_gstr1(month_or_quarter, year, company_gstin):
+    gstr_1_log = frappe.get_doc(
+        "GST Return Log",
+        f"GSTR1-{get_period(month_or_quarter, year)}-{company_gstin}",
+    )
+    gstr_1_log.reset_gstr1()
 
-        gstr_1_log = frappe.get_doc(
-            "GST Return Log",
-            f"GSTR1-{get_period(self.month_or_quarter, self.year)}-{self.company_gstin}",
-        )
 
-        gstr_1_log.upload_gstr1(data)
-        pass
+@frappe.whitelist()
+def upload_gstr1(month_or_quarter, year, company_gstin):
+    from india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export import (
+        download_gstr_1_json,
+    )
+
+    data = download_gstr_1_json(
+        company_gstin,
+        year,
+        month_or_quarter,
+        delete_missing=True,
+    )
+
+    gstr_1_log = frappe.get_doc(
+        "GST Return Log",
+        f"GSTR1-{get_period(month_or_quarter, year)}-{company_gstin}",
+    )
+    gstr_1_log.upload_gstr1(data.get("data"))
+
+
+@frappe.whitelist()
+def proceed_to_file_gstr1(month_or_quarter, year, company_gstin):
+    gstr_1_log = frappe.get_doc(
+        "GST Return Log",
+        f"GSTR1-{get_period(month_or_quarter, year)}-{company_gstin}",
+    )
+    return gstr_1_log.proceed_to_file_gstr1()
+
+
+@frappe.whitelist()
+def file_gstr1(month_or_quarter, year, company_gstin, pan, otp):
+    gstr_1_log = frappe.get_doc(
+        "GST Return Log",
+        f"GSTR1-{get_period(month_or_quarter, year)}-{company_gstin}",
+    )
+    return gstr_1_log.file_gstr1(pan, otp)
+
+
+@frappe.whitelist()
+def process_gstr1_request(month_or_quarter, year, company_gstin, request_type):
+    gstr_1_log = frappe.get_doc(
+        "GST Return Log",
+        f"GSTR1-{get_period(month_or_quarter, year)}-{company_gstin}",
+    )
+
+    method_name = f"process_{request_type}_gstr1"
+    method = getattr(gstr_1_log, method_name)
+    data = method()
+
+    if not data:
+        data = {}
+    data.update(
+        {
+            "month_or_quarter": month_or_quarter,
+            "year": year,
+            "company_gstin": company_gstin,
+        }
+    )
+    return data
 
 
 ####### DATA ######################################################################################
@@ -234,6 +282,7 @@ def get_net_gst_liability(company, company_gstin, month_or_quarter, year):
 ####### UTILS ######################################################################################
 
 
+@frappe.whitelist()
 def get_period(month_or_quarter: str, year: str) -> str:
     """
     Returns the period in the format MMYYYY
