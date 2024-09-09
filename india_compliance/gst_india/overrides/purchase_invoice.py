@@ -43,6 +43,7 @@ def validate(doc, method=None):
     if validate_transaction(doc) is False:
         return
 
+    validate_gst_hsn_code(doc)
     set_ineligibility_reason(doc)
     update_itc_totals(doc)
     validate_supplier_invoice_number(doc)
@@ -51,7 +52,6 @@ def validate(doc, method=None):
 
 
 def on_cancel(doc, method=None):
-
     frappe.db.set_value(
         "GST Inward Supply",
         {"link_doctype": "Purchase Invoice", "link_name": doc.name},
@@ -263,3 +263,12 @@ def validate_reverse_charge(doc):
         return
 
     frappe.throw(_("Reverse Charge is not applicable on Import of Goods"))
+
+
+def validate_gst_hsn_code(doc):
+    if doc.gst_category != "Overseas":
+        return
+
+    for item in doc.items:
+        if not item.get("gst_hsn_code"):
+            frappe.throw(_("GST HSN Code is mandatory for Overseas Purchase Invoice"))
