@@ -89,8 +89,8 @@ class TaxpayerAuthenticate(BaseAPI):
         # "AUTH4034": "invalid_otp",  # Invalid OTP
         "AUTH4038": "authorization_failed",  # Session Expired
         "TEC4002": "invalid_public_key",
-        "RET00003": "Return Form already ready to be filed",
-        "RET09001": "Latest Summary is not available. Please generate summary and try again.",
+        "RET00003": "Return Form already ready to be filed",  # Actions performed on portal directly
+        "RET09001": "Latest Summary is not available. Please generate summary and try again.",  # Actions performed on portal directly
     }
 
     def request_otp(self):

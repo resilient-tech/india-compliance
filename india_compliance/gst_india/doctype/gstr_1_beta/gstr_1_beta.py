@@ -282,7 +282,6 @@ def get_net_gst_liability(company, company_gstin, month_or_quarter, year):
 ####### UTILS ######################################################################################
 
 
-@frappe.whitelist()
 def get_period(month_or_quarter: str, year: str) -> str:
     """
     Returns the period in the format MMYYYY

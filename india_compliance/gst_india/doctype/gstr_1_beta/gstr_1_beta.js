@@ -257,22 +257,10 @@ frappe.ui.form.on(DOCTYPE, {
     },
 });
 
-async function generate_gstr1_data(frm) {
-    const { message: return_period } = await frappe.call({
-        method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_period",
-        args: { month_or_quarter: frm.doc.month_or_quarter, year: frm.doc.year },
-    });
-
-    const log_name = `GSTR1-${return_period}-${frm.doc.company_gstin}`;
-    const { message } = await frappe.db.get_value("GST Return Log", log_name, [
-        "token",
-        "request_type",
-    ]);
-
-    await frm.call("generate_gstr1");
-    if (message.token) {
-        fetch_status_with_retry(frm, message.request_type, (now = true));
-    }
+function generate_gstr1_data(frm) {
+    frm.call("generate_gstr1");
+    const request_types = ['upload', 'reset', 'proceed_to_file']
+    request_types.map( request_type => fetch_status_with_retry(frm, request_type, (now = true)))
 }
 
 function upload_gstr1_data(frm) {
@@ -342,19 +330,8 @@ function perform_gstr1_action(frm, action, additional_args = {}) {
         method: `india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.${action}_gstr1`,
         args: args,
         callback: response => {
-            const message = response?.message;
-
-            if (action == "file" && message?.error?.error_cd === "RET09001") {
-                frm.remove_custom_button("File");
-                frm.add_custom_button(__("Proceed to File"), () =>
-                    proceed_to_file(frm)
-                );
-                frm.page.set_indicator("Not Filed", "orange");
-                frappe.msgprint(
-                    __(
-                        "Latest Summary is not available. Please generate summary and try again."
-                    )
-                )
+            if (action == "file") {
+                handle_file_response(frm, response)
             } else {
                 if (Object.keys(response).length == 0) {
                     fetch_status_with_retry(frm, action);
@@ -379,6 +356,7 @@ function fetch_status_with_retry(frm, request_type, retries = 0, now = false) {
                     request_type: request_type,
                 },
             });
+            if(!message.status_cd) return;
 
             if (message.status_cd === "IP" && retries < retry_intervals.length)
                 return fetch_status_with_retry(frm, request_type, retries + 1);
@@ -425,6 +403,21 @@ function handle_errors(frm, message) {
     }
     frm.gstr1.tabs.error_tab.show();
     frm.gstr1.tabs["error_tab"].tabmanager.refresh_data(data);
+}
+
+function handle_file_response(frm, response){
+    if(response.message?.error?.error_cd === "RET09001"){
+        frm.remove_custom_button("File");
+        frm.add_custom_button(__("Proceed to File"), () =>
+            proceed_to_file(frm)
+        );
+        frm.page.set_indicator("Not Filed", "orange");
+        frappe.msgprint(
+            __(
+                "Latest Summary is not available. Please generate summary and try again."
+            )
+        )
+    }
 }
 
 function handle_proceed_to_file_response(frm, response) {
@@ -493,8 +486,6 @@ function validate_details_and_file_gstr1(frm, dialog) {
 }
 
 function handle_notification(frm, message, request_type) {
-    if (!message.status_cd) return;
-
     const request_status =
         request_type === "proceed_to_file"
             ? "Proceed to file"

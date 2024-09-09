@@ -1,6 +1,7 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
 import itertools
+import json
 
 import frappe
 from frappe import unscrub
@@ -720,22 +721,34 @@ class FileGSTR1:
 
         # Make API Request
         api = GSTR1API(self)
-        response = api.save_gstr_1_data(self.return_period, json_data)
+        reference_ids = []
 
-        if response.get("reference_id"):
-            self.db_set(
-                {
-                    "request_type": "upload",
-                    "token": response.get("reference_id"),
-                }
-            )
+        json_data_parts = get_partitioned_data(json_data)
+
+        for json_data in json_data_parts:
+            response = api.save_gstr_1_data(self.return_period, json_data)
+            if response.get("reference_id"):
+                reference_ids.append(response.get("reference_id"))
+
+        self.db_set(
+            {
+                "request_type": "upload",
+                "token": json.dumps(reference_ids),
+            }
+        )
 
     def process_upload_gstr1(self):
         if self.request_type != "upload":
             return
 
         api = GSTR1API(self)
-        response = api.get_return_status(self.return_period, self.token)
+
+        tokens = json.loads(self.token)
+        for token in tokens:
+            response = api.get_return_status(self.return_period, token)
+
+            if response.get("status_cd") != "P":
+                break
 
         if response.get("status_cd") != "IP":
             self.db_set({"request_type": None, "token": None})
@@ -844,6 +857,42 @@ class FileGSTR1:
             self.update_json_for("authenticated_summary", None)
 
         return response
+
+
+def get_partitioned_data(json_data):
+    result = []
+    base_data = {"gstin": json_data["gstin"], "fp": json_data["fp"]}
+
+    partial_data = base_data.copy()
+    gst_categories = [
+        category for category in json_data.keys() if category not in ["gstin", "fp"]
+    ]
+
+    for category in gst_categories:
+        partial_data[category] = []
+        index = 0
+
+        for obj in json_data.get(category, []):
+            partial_data[category].append({"ctin": obj["ctin"], "inv": []})
+
+            for invoice in obj.get("inv", []):
+                partial_data[category][index]["inv"].append(invoice)
+
+                if len(json.dumps(partial_data)) > 5200000:
+                    invoice = partial_data[category][index]["inv"].pop()
+                    result.append(partial_data)
+
+                    partial_data = base_data.copy()
+                    partial_data[category] = [{"ctin": obj["ctin"], "inv": []}]
+
+                    partial_data[category][0]["inv"].append(invoice)
+
+            index += 1
+
+    if partial_data[category][index - 1]["inv"]:
+        result.append(partial_data)
+
+    return result
 
 
 def get_differing_categories(mapped_summary, gov_summary):
