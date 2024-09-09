@@ -8,18 +8,17 @@
  "field_order": [
   "column_break_jhew",
   "company",
-  "generation_status",
-  "json_output",
+  "enqueue_report",
   "column_break_pvct",
   "company_gstin",
+  "generation_status",
   "column_break_ddqq",
   "year",
   "column_break_vtyi",
   "month_or_quarter",
-  "column_break_lcim",
-  "enqueue_report",
   "section_break_yqh7",
   "gstr3b_form",
+  "json_output",
   "missing_field_invoices"
  ],
  "fields": [
@@ -98,14 +97,10 @@
    "fieldtype": "Select",
    "label": "Month or Quarter",
    "options": "Apr - Jun\nJul - Sep\nOct - Dec\nJan - Mar\nJanuary\nFebruary\nMarch\nApril\nMay\nJune\nJuly\nAugust\nSeptember\nOctober\nNovember\nDecember"
-  },
-  {
-   "fieldname": "column_break_lcim",
-   "fieldtype": "Column Break"
   }
  ],
  "links": [],
- "modified": "2024-09-02 15:32:25.960809",
+ "modified": "2024-09-09 08:37:11.799168",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR 3B Report",
