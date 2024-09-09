@@ -6,7 +6,6 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "column_break_jhew",
   "company",
   "enqueue_report",
   "column_break_pvct",
@@ -44,10 +43,6 @@
    "fieldtype": "Small Text",
    "label": "Invoices with no Place Of Supply",
    "read_only": 1
-  },
-  {
-   "fieldname": "column_break_jhew",
-   "fieldtype": "Column Break"
   },
   {
    "default": "0",
