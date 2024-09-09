@@ -259,8 +259,10 @@ frappe.ui.form.on(DOCTYPE, {
 
 function generate_gstr1_data(frm) {
     frm.call("generate_gstr1");
-    const request_types = ['upload', 'reset', 'proceed_to_file']
-    request_types.map( request_type => fetch_status_with_retry(frm, request_type, (now = true)))
+    const request_types = ["upload", "reset", "proceed_to_file"];
+    request_types.map(request_type =>
+        fetch_status_with_retry(frm, request_type, (now = true))
+    );
 }
 
 function upload_gstr1_data(frm) {
@@ -331,7 +333,7 @@ function perform_gstr1_action(frm, action, additional_args = {}) {
         args: args,
         callback: response => {
             if (action == "file") {
-                handle_file_response(frm, response)
+                handle_file_response(frm, response);
             } else {
                 if (Object.keys(response).length == 0) {
                     fetch_status_with_retry(frm, action);
@@ -356,7 +358,7 @@ function fetch_status_with_retry(frm, request_type, retries = 0, now = false) {
                     request_type: request_type,
                 },
             });
-            if(!message.status_cd) return;
+            if (!message.status_cd) return;
 
             if (message.status_cd === "IP" && retries < retry_intervals.length)
                 return fetch_status_with_retry(frm, request_type, retries + 1);
@@ -367,6 +369,15 @@ function fetch_status_with_retry(frm, request_type, retries = 0, now = false) {
             if (request_type == "reset") {
                 frm.page.set_indicator("Not Filed", "orange");
                 frm.call("generate_gstr1");
+            }
+
+            if (request_type == "upload" && frm.gstr1.status === "Ready to File") {
+                frm.remove_custom_button("File");
+                frm.add_custom_button(__("Proceed to File"), () =>
+                    proceed_to_file(frm)
+                );
+                frm.page.set_indicator("Not Filed", "orange");
+                frm.gstr1.status = "Not Filed";
             }
 
             if (request_type == "proceed_to_file")
@@ -405,18 +416,16 @@ function handle_errors(frm, message) {
     frm.gstr1.tabs["error_tab"].tabmanager.refresh_data(data);
 }
 
-function handle_file_response(frm, response){
-    if(response.message?.error?.error_cd === "RET09001"){
+function handle_file_response(frm, response) {
+    if (response.message?.error?.error_cd === "RET09001") {
         frm.remove_custom_button("File");
-        frm.add_custom_button(__("Proceed to File"), () =>
-            proceed_to_file(frm)
-        );
+        frm.add_custom_button(__("Proceed to File"), () => proceed_to_file(frm));
         frm.page.set_indicator("Not Filed", "orange");
         frappe.msgprint(
             __(
                 "Latest Summary is not available. Please generate summary and try again."
             )
-        )
+        );
     }
 }
 
@@ -427,8 +436,8 @@ function handle_proceed_to_file_response(frm, response) {
     if (filing_status == "Ready to File") {
         frm.remove_custom_button("Proceed to File");
         frm.add_custom_button(__("File"), () => file_gstr1_data(frm));
-        frm.page.clear_menu();
         frm.page.set_indicator("Ready to File", "orange");
+        frm.gstr1.status = "Ready to File";
         return;
     }
 

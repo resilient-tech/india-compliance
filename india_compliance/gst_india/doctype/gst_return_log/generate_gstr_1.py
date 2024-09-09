@@ -25,6 +25,13 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
 )
 from india_compliance.gst_india.utils.gstr_utils import request_otp
 
+code_to_status_map = {
+    "P": "Processed",
+    "PE": "Processed with Errors",
+    "ER": "Error",
+    "IP": "In Progress",
+}
+
 
 class SummarizeGSTR1:
     AMOUNT_FIELDS = {
@@ -684,31 +691,42 @@ class FileGSTR1:
         response = api.reset_gstr_1_data(self.return_period)
 
         if response.get("reference_id"):
-            self.db_set(
+            self.append(
+                "actions",
                 {
                     "request_type": "reset",
                     "token": response.get("reference_id"),
-                }
+                    "creation_time": frappe.utils.now_datetime(),
+                },
             )
+            self.save()
 
     def process_reset_gstr1(self):
-        if self.request_type != "reset":
+        if not self.actions:
             return
 
         api = GSTR1API(self)
-        response = api.get_return_status(self.return_period, self.token)
+        response = None
 
-        if response.get("status_cd") != "IP":
-            self.db_set({"request_type": None, "token": None})
-            enqueue_notification(
-                self.return_period,
-                "reset",
-                response.get("status_cd"),
-                self.gstin,
-            )
+        for doc in self.actions:
+            if doc.request_type != "reset" or doc.status:
+                continue
 
-        if response.get("status_cd") == "P":
-            self.update_json_for("unfiled", {}, reset_reconcile=True)
+            response = api.get_return_status(self.return_period, doc.token)
+
+            if response.get("status_cd") != "IP":
+                doc.db_set(
+                    {"status": code_to_status_map.get(response.get("status_cd"))}
+                )
+                enqueue_notification(
+                    self.return_period,
+                    "reset",
+                    response.get("status_cd"),
+                    self.gstin,
+                )
+
+            if response.get("status_cd") == "P":
+                self.update_json_for("unfiled", {}, reset_reconcile=True)
 
         return response
 
@@ -721,46 +739,49 @@ class FileGSTR1:
 
         # Make API Request
         api = GSTR1API(self)
-        reference_ids = []
 
         json_data_parts = get_partitioned_data(json_data)
 
         for json_data in json_data_parts:
             response = api.save_gstr_1_data(self.return_period, json_data)
-            if response.get("reference_id"):
-                reference_ids.append(response.get("reference_id"))
 
-        self.db_set(
-            {
-                "request_type": "upload",
-                "token": json.dumps(reference_ids),
-            }
-        )
+            if response.get("reference_id"):
+                self.append(
+                    "actions",
+                    {
+                        "request_type": "upload",
+                        "token": response.get("reference_id"),
+                        "creation_time": frappe.utils.now_datetime(),
+                    },
+                )
+        self.save()
 
     def process_upload_gstr1(self):
-        if self.request_type != "upload":
+        if not self.actions:
             return
 
         api = GSTR1API(self)
+        response = None
 
-        tokens = json.loads(self.token)
-        for token in tokens:
-            response = api.get_return_status(self.return_period, token)
+        for doc in self.actions:
+            if doc.request_type != "upload" or doc.status:
+                continue
 
-            if response.get("status_cd") != "P":
-                break
+            response = api.get_return_status(self.return_period, doc.token)
 
-        if response.get("status_cd") != "IP":
-            self.db_set({"request_type": None, "token": None})
-            enqueue_notification(
-                self.return_period,
-                "upload",
-                response.get("status_cd"),
-                self.gstin,
-            )
+            if response.get("status_cd") != "IP":
+                doc.db_set(
+                    {"status": code_to_status_map.get(response.get("status_cd"))}
+                )
+                enqueue_notification(
+                    self.return_period,
+                    "upload",
+                    response.get("status_cd"),
+                    self.gstin,
+                )
 
-        if response.get("status_cd") == "PE":
-            self.update_json_for("upload_error", response)
+            if response.get("status_cd") == "PE":
+                self.update_json_for("upload_error", response)
 
         return response
 
@@ -772,42 +793,53 @@ class FileGSTR1:
             return self.fetch_and_compare_summary(api)
 
         if response.get("reference_id"):
-            self.db_set(
+            self.append(
+                "actions",
                 {
                     "request_type": "proceed_to_file",
                     "token": response.get("reference_id"),
-                }
+                    "creation_time": frappe.utils.now_datetime(),
+                },
             )
+            self.save()
 
     def process_proceed_to_file_gstr1(self):
-        if self.request_type != "proceed_to_file":
+        if not self.actions:
             return
 
         api = GSTR1API(self)
-        response = api.get_return_status(self.return_period, self.token)
+        response = None
 
-        if response.get("status_cd") == "IP":
-            return response
-        else:
-            self.db_set({"request_type": None, "token": None})
+        for doc in self.actions:
+            if doc.request_type != "proceed_to_file" or doc.status:
+                continue
 
-        if response.get("status_cd") != "P":
-            enqueue_notification(
-                self.return_period,
-                "proceed_to_file",
-                response.get("status_cd"),
-                self.gstin,
-                api.request_id,
-            )
-            return
+            response = api.get_return_status(self.return_period, doc.token)
 
-        return self.fetch_and_compare_summary(api, response)
+            if response.get("status_cd") == "IP":
+                return response
+
+            doc.db_set({"status": code_to_status_map.get(response.get("status_cd"))})
+            if response.get("status_cd") != "P":
+                enqueue_notification(
+                    self.return_period,
+                    "proceed_to_file",
+                    response.get("status_cd"),
+                    self.gstin,
+                    api.request_id,
+                )
+                return
+
+            return self.fetch_and_compare_summary(api, response)
 
     def fetch_and_compare_summary(self, api, response=None):
         if response is None:
             response = {}
 
         summary = api.get_gstr_1_data("RETSUM", self.return_period)
+        if summary.error:
+            return
+
         self.update_json_for("authenticated_summary", summary)
 
         mapped_summary = self.get_json_for("books_summary")
@@ -859,6 +891,7 @@ class FileGSTR1:
         return response
 
 
+# TODO : optimse this
 def get_partitioned_data(json_data):
     result = []
     base_data = {"gstin": json_data["gstin"], "fp": json_data["fp"]}
