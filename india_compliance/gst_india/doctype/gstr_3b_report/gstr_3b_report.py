@@ -17,6 +17,7 @@ from india_compliance.gst_india.overrides.transaction import is_inter_state_supp
 from india_compliance.gst_india.report.gstr_3b_details.gstr_3b_details import (
     IneligibleITC,
 )
+from india_compliance.gst_india.utils import get_period
 
 VALUES_TO_UPDATE = ["iamt", "camt", "samt", "csamt"]
 
@@ -719,47 +720,6 @@ def get_json(template):
     )
     with open(file_path, "r") as f:
         return cstr(f.read())
-
-
-def get_quarter(quarter):
-    return {
-        "Jan - Mar": (1, 3),
-        "Apr - Jun": (4, 6),
-        "Jul - Sep": (7, 9),
-        "Oct - Dec": (10, 12),
-    }.get(quarter)
-
-
-def get_month_number(month):
-    return {
-        "January": 1,
-        "February": 2,
-        "March": 3,
-        "April": 4,
-        "May": 5,
-        "June": 6,
-        "July": 7,
-        "August": 8,
-        "September": 9,
-        "October": 10,
-        "November": 11,
-        "December": 12,
-    }.get(month)
-
-
-def get_period(month_or_quarter, year=None):
-    if "-" in month_or_quarter:
-        month_or_quarter_no = get_quarter(month_or_quarter)
-    else:
-        month_or_quarter_no = get_month_number(month_or_quarter)
-
-    if isinstance(month_or_quarter_no, int):
-        month_or_quarter_no = (month_or_quarter_no, month_or_quarter_no)
-
-    if year:
-        return str(month_or_quarter_no[1]).zfill(2) + str(year)
-
-    return month_or_quarter_no
 
 
 def format_values(data, precision=2):
