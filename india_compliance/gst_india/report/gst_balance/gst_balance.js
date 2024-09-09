@@ -29,13 +29,13 @@ frappe.query_reports["GST Balance"] = {
             fieldname: "from_date",
             label: __("From Date"),
             fieldtype: "Date",
-            default: erpnext.utils.get_fiscal_year(frappe.datetime.get_today(), true)[1],
+            default: india_compliance.last_month_start(),
         },
         {
             fieldname: "to_date",
             label: __("To Date"),
             fieldtype: "Date",
-            default: erpnext.utils.get_fiscal_year(frappe.datetime.get_today(), true)[2],
+            default: india_compliance.last_month_end(),
         },
         {
             fieldname: "show_summary",
