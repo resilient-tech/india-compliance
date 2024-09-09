@@ -1,6 +1,5 @@
 // Copyright (c) 2019, Frappe Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
-frappe.require("assets/india_compliance/js/components/set_gstin_options.js");
 
 frappe.ui.form.on("GSTR 3B Report", {
     refresh: function (frm) {
@@ -53,6 +52,15 @@ frappe.ui.form.on("GSTR 3B Report", {
         });
 
         append_form(frm);
+    },
+
+    setup: async function (frm) {
+        await frappe.require(
+            "assets/india_compliance/js/components/set_gstin_options.js"
+        );
+
+        if (!frm.doc.company) return;
+        await india_compliance.set_gstin_options(frm);
     },
 
     company: async function (frm) {
