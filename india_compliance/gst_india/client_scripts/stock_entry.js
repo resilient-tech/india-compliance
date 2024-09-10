@@ -198,26 +198,22 @@ function get_items(doc) {
 }
 
 function get_field_and_label(frm, field) {
-    let field_dict = {};
-    let label_dict = {};
+    let field_label_dict = {};
+
     if (frm.doc.purpose === "Material Transfer" && frm.doc.is_return) {
-        field_dict = {
-            party_field: "bill_from_address",
-            company_field: "bill_to_address",
-        };
-        label_dict = {
-            party_field: __("Bill From (same as Supplier Address)"),
-            company_field: __("Bill To"),
+        field_label_dict = {
+            party_field: [
+                "bill_from_address",
+                __("Bill From (same as Supplier Address)"),
+            ],
+            company_field: ["bill_to_address", __("Bill To")],
         };
     } else {
-        field_dict = {
-            party_field: "bill_to_address",
-            company_field: "bill_from_address",
-        };
-        label_dict = {
-            party_field: __("Bill To (same as Supplier Address)"),
-            company_field: __("Bill From"),
+        field_label_dict = {
+            party_field: ["bill_to_address", __("Bill To (same as Supplier Address)")],
+            company_field: ["bill_from_address", __("Bill From")],
         };
     }
-    return [field_dict[field], label_dict[field]];
+
+    return field_label_dict[field];
 }
