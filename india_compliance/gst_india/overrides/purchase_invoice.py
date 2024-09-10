@@ -5,6 +5,9 @@ from frappe.utils import flt
 from india_compliance.gst_india.overrides.sales_invoice import (
     update_dashboard_with_gst_logs,
 )
+from india_compliance.gst_india.overrides.transaction import (
+    validate_hsn_codes as _validate_hsn_codes,
+)
 from india_compliance.gst_india.overrides.transaction import validate_transaction
 from india_compliance.gst_india.utils import is_api_enabled
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
@@ -43,7 +46,7 @@ def validate(doc, method=None):
     if validate_transaction(doc) is False:
         return
 
-    validate_gst_hsn_code(doc)
+    validate_hsn_codes(doc)
     set_ineligibility_reason(doc)
     update_itc_totals(doc)
     validate_supplier_invoice_number(doc)
@@ -264,10 +267,12 @@ def validate_reverse_charge(doc):
     frappe.throw(_("Reverse Charge is not applicable on Import of Goods"))
 
 
-def validate_gst_hsn_code(doc):
+def validate_hsn_codes(doc):
     if doc.gst_category != "Overseas":
         return
 
-    for item in doc.items:
-        if not item.get("gst_hsn_code"):
-            frappe.throw(_("GST HSN Code is mandatory for Overseas Purchase Invoice"))
+    _validate_hsn_codes(
+        doc,
+        throw=True,
+        message="GST HSN Code is mandatory for Overseas Purchase Invoice.<br>",
+    )
