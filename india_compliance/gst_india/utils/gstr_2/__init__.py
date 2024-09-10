@@ -73,8 +73,6 @@ def download_gstr_2a(gstin, return_periods, gst_categories=None):
                 continue
 
             response = api.get_data(action, return_period)
-            if response.error_type in ["otp_requested", "invalid_otp"]:
-                return response
 
             if response.error_type == "no_docs_found":
                 create_import_log(
@@ -146,8 +144,6 @@ def download_gstr_2b(gstin, return_periods):
         )
 
         response = api.get_data(return_period)
-        if response.error_type in ["otp_requested", "invalid_otp"]:
-            return response
 
         if response.error_type == "not_generated":
             frappe.msgprint(
@@ -248,20 +244,6 @@ def save_gstr_2b(gstin, return_period, json_data):
 
 
 def save_gstr(gstin, return_type, return_period, json_data, gen_date_2b=None):
-    frappe.enqueue(
-        _save_gstr,
-        queue="long",
-        now=frappe.flags.in_test,
-        timeout=1800,
-        gstin=gstin,
-        return_type=return_type.value,
-        return_period=return_period,
-        json_data=json_data,
-        gen_date_2b=gen_date_2b,
-    )
-
-
-def _save_gstr(gstin, return_type, return_period, json_data, gen_date_2b=None):
     """Save GSTR data to Inward Supply
 
     :param return_period: str

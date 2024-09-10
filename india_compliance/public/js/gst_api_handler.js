@@ -79,7 +79,6 @@ Object.assign(india_compliance, {
     },
 
     async authenticate_otp(gstin, error_type = null) {
-        console.log(gstin, error_type);
         if (!error_type) error_type = "otp_requested";
 
         let is_authenticated = false;
