@@ -21,8 +21,8 @@ frappe.ui.form.on(DOCTYPE, {
     onload: toggle_reverse_charge,
 
     gst_category(frm) {
-        toggle_reverse_charge(frm);
         validate_gst_hsn_code(frm);
+        toggle_reverse_charge(frm);
     },
 
     after_save(frm) {
@@ -94,8 +94,8 @@ frappe.ui.form.on(DOCTYPE, {
 
 frappe.ui.form.on("Purchase Invoice Item", {
     item_code(frm) {
-        toggle_reverse_charge(frm);
         validate_gst_hsn_code(frm);
+        toggle_reverse_charge(frm);
     },
 
     items_remove: toggle_reverse_charge,
