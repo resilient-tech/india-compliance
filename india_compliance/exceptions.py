@@ -18,3 +18,8 @@ class InvalidOTPError(Exception):
     def __init__(self, message="Invalid OTP", *args, **kwargs):
         self.response = kwargs.pop("response", None)
         super().__init__(message, *args, **kwargs)
+
+
+class InvalidAuthTokenError(Exception):
+    def __init__(self, message="Invalid Auth Token", *args, **kwargs):
+        super().__init__(message, *args, **kwargs)
