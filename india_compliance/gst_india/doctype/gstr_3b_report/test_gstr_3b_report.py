@@ -57,9 +57,9 @@ class TestGSTR3BReport(FrappeTestCase):
             {
                 "doctype": "GSTR 3B Report",
                 "company": "_Test Indian Registered Company",
-                "company_address": "_Test Indian Registered Company-Billing",
+                "company_gstin": "24AAQCA8719H1ZC",
                 "year": today.year,
-                "month": month_number_mapping.get(today.month),
+                "month_or_quarter": month_number_mapping.get(today.month),
             }
         ).insert()
 
