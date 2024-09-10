@@ -95,11 +95,7 @@
   }
  ],
  "links": [],
-<<<<<<< HEAD
- "modified": "2024-01-02 14:09:31.230340",
-=======
  "modified": "2024-09-09 08:37:11.799168",
->>>>>>> bd4eba3b (fix: GSTR3B Enhancements for better ux (#2590))
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR 3B Report",
