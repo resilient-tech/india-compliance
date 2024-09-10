@@ -7,13 +7,16 @@
  "engine": "InnoDB",
  "field_order": [
   "company",
-  "company_address",
-  "year",
-  "month",
-  "column_break_jhew",
   "enqueue_report",
+  "column_break_pvct",
+  "company_gstin",
   "generation_status",
+  "column_break_ddqq",
+  "year",
+  "column_break_vtyi",
+  "month_or_quarter",
   "section_break_yqh7",
+  "gstr3b_form",
   "json_output",
   "missing_field_invoices"
  ],
@@ -25,25 +28,14 @@
    "options": "Company"
   },
   {
-   "fieldname": "company_address",
-   "fieldtype": "Link",
-   "label": "Company Address",
-   "options": "Address"
-  },
-  {
    "fieldname": "year",
    "fieldtype": "Select",
    "label": "Year"
   },
   {
-   "fieldname": "month",
-   "fieldtype": "Select",
-   "label": "Month",
-   "options": "January\nFebruary\nMarch\nApril\nMay\nJune\nJuly\nAugust\nSeptember\nOctober\nNovember\nDecember"
-  },
-  {
    "fieldname": "json_output",
    "fieldtype": "Code",
+   "hidden": 1,
    "label": "JSON Output"
   },
   {
@@ -51,10 +43,6 @@
    "fieldtype": "Small Text",
    "label": "Invoices with no Place Of Supply",
    "read_only": 1
-  },
-  {
-   "fieldname": "column_break_jhew",
-   "fieldtype": "Column Break"
   },
   {
    "default": "0",
@@ -73,12 +61,45 @@
   {
    "fieldname": "generation_status",
    "fieldtype": "Data",
+   "hidden": 1,
    "label": "Status",
    "read_only": 1
+  },
+  {
+   "fieldname": "company_gstin",
+   "fieldtype": "Autocomplete",
+   "label": "Company GSTIN"
+  },
+  {
+   "fieldname": "column_break_ddqq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_vtyi",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_pvct",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "gstr3b_form",
+   "fieldtype": "HTML",
+   "label": "GSTR-3B Form"
+  },
+  {
+   "fieldname": "month_or_quarter",
+   "fieldtype": "Select",
+   "label": "Month or Quarter",
+   "options": "Apr - Jun\nJul - Sep\nOct - Dec\nJan - Mar\nJanuary\nFebruary\nMarch\nApril\nMay\nJune\nJuly\nAugust\nSeptember\nOctober\nNovember\nDecember"
   }
  ],
  "links": [],
+<<<<<<< HEAD
  "modified": "2024-01-02 14:09:31.230340",
+=======
+ "modified": "2024-09-09 08:37:11.799168",
+>>>>>>> bd4eba3b (fix: GSTR3B Enhancements for better ux (#2590))
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR 3B Report",

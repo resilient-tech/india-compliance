@@ -8,6 +8,8 @@ from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Extract, Ifnull, IfNull, LiteralValue, Sum
 from frappe.utils import cint, get_first_day, get_last_day
 
+from india_compliance.gst_india.utils import get_period
+
 
 def execute(filters=None):
     if not filters.get("section"):
@@ -52,11 +54,12 @@ class BaseGSTR3BDetails:
             },
         ]
         self.data = []
+        self.month_or_quarter_no = get_period(self.filters.month_or_quarter)
         self.from_date = get_first_day(
-            f"{cint(self.filters.year)}-{cint(self.filters.month)}-01"
+            f"{cint(self.filters.year)}-{self.month_or_quarter_no[0]}-01"
         )
         self.to_date = get_last_day(
-            f"{cint(self.filters.year)}-{cint(self.filters.month)}-01"
+            f"{cint(self.filters.year)}-{self.month_or_quarter_no[1]}-01"
         )
         self.company = self.filters.company
         self.company_gstin = self.filters.company_gstin
@@ -272,14 +275,20 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
 
     def get_ineligible_itc_from_purchase(self):
         ineligible_itc = IneligibleITC(
-            self.company, self.company_gstin, self.filters.month, self.filters.year
+            self.company,
+            self.company_gstin,
+            self.month_or_quarter_no,
+            self.filters.year,
         ).get_for_purchase("Ineligible As Per Section 17(5)")
 
         return self.process_ineligible_itc(ineligible_itc)
 
     def get_ineligible_itc_from_boe(self):
         ineligible_itc = IneligibleITC(
-            self.company, self.company_gstin, self.filters.month, self.filters.year
+            self.company,
+            self.company_gstin,
+            self.month_or_quarter_no,
+            self.filters.year,
         ).get_for_bill_of_entry()
 
         return self.process_ineligible_itc(ineligible_itc)
@@ -420,10 +429,10 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
 
 
 class IneligibleITC:
-    def __init__(self, company, gstin, month, year) -> None:
+    def __init__(self, company, gstin, month_or_quarter, year) -> None:
         self.company = company
         self.gstin = gstin
-        self.month = month
+        self.month_or_quarter = month_or_quarter
         self.year = year
 
     def get_for_purchase(self, ineligibility_reason, group_by="name"):
@@ -476,6 +485,10 @@ class IneligibleITC:
             .where(dt.docstatus == 1)
             .where(dt.company_gstin == self.gstin)
             .where(dt.company == self.company)
-            .where(Extract(DatePart.month, dt.posting_date).eq(self.month))
+            .where(
+                Extract(DatePart.month, dt.posting_date).between(
+                    self.month_or_quarter[0], self.month_or_quarter[1]
+                )
+            )
             .where(Extract(DatePart.year, dt.posting_date).eq(self.year))
         )
