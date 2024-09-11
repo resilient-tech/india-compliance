@@ -1447,14 +1447,13 @@ async function download_gstr(
     only_missing = true,
     gst_categories = null
 ) {
-    // TODO: This can be ignored
-    const authenticated_company_gstins =
-        await india_compliance.authenticate_company_gstins(
-            frm.doc.company,
-            company_gstin == "All" ? null : company_gstin
-        );
+    let company_gstins;
+    if (company_gstin == "All")
+        company_gstins = await india_compliance.get_gstin_options(frm.doc.company);
 
-    authenticated_company_gstins.forEach(async gstin => {
+    else company_gstins = [company_gstin];
+
+    company_gstins.forEach(async gstin => {
         const args = {
             return_type: return_type,
             company_gstin: gstin,

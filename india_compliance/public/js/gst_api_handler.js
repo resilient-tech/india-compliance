@@ -52,32 +52,6 @@ Object.assign(india_compliance, {
         });
     },
 
-    async authenticate_company_gstins(company, company_gstin) {
-        const { message: gstin_authentication_status } = await frappe.call({
-            method: "india_compliance.gst_india.utils.gstr_utils.validate_company_gstins",
-            args: { company: company, company_gstin: company_gstin },
-        });
-
-        for (let gstin of Object.keys(gstin_authentication_status)) {
-            if (gstin_authentication_status[gstin]) continue;
-
-            gstin_authentication_status[gstin] =
-                await this.request_and_authenticate_otp(gstin);
-        }
-
-        return Object.keys(gstin_authentication_status);
-    },
-
-    async request_and_authenticate_otp(gstin) {
-        await frappe.call({
-            method: "india_compliance.gst_india.utils.gstr_utils.request_otp",
-            args: { company_gstin: gstin },
-        });
-
-        // wait for OTP to be authenticated to proceed
-        await this.authenticate_otp(gstin);
-    },
-
     async authenticate_otp(gstin, error_type = null) {
         if (!error_type) error_type = "otp_requested";
 
