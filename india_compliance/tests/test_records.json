@@ -231,6 +231,20 @@
             "gstin": "05AAACG2140A1ZL",
             "gst_category": "Registered Regular",
             "is_transporter": 1
+        },
+        {
+            "supplier_name": "Test Internal with ISD Supplier",
+            "name": "Test Internal with ISD Supplier",
+            "supplier_type": "Company",
+            "gstin": "24AABCR6898M1ZN",
+            "gst_category": "Input Service Distributor",
+            "is_internal_supplier": 1,
+            "represents_company": "_Test Indian Registered Company",
+            "companies": [
+                {
+                    "company": "_Test Indian Registered Company"
+                }
+            ]
         }
     ],
     "Address": [

@@ -33,6 +33,7 @@ GST_CATEGORIES = {
     "UIN Holders": "B2B",
     "Tax Deductor": "B2B",
     "Tax Collector": "B2B",
+    "Input Service Distributor": "B2B",
 }
 
 EXPORT_TYPES = (
@@ -1409,6 +1410,7 @@ GSTIN_FORMATS = {
     "UIN Holders": UNBODY,
     "Tax Deductor": TDS,
     "Tax Collector": TCS,
+    "Input Service Distributor": REGISTERED,
 }
 
 PAN_NUMBER = re.compile(r"^[A-Z]{5}[0-9]{4}[A-Z]{1}$")
