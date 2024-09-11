@@ -110,7 +110,7 @@ class TaxpayerAuthenticate(BaseAPI):
     IGNORED_ERROR_CODES = {
         "RETOTPREQUEST": "otp_requested",
         "EVCREQUEST": "otp_requested",
-        "AUTH158": "invalid_otp",  # Invalid OTP
+        "AUTH158": "authorization_failed",  # GSTR1
         "AUTH4033": "invalid_otp",  # Invalid Session
         # "AUTH4034": "invalid_otp",  # Invalid OTP
         "AUTH4038": "authorization_failed",  # Session Expired
