@@ -280,7 +280,7 @@ class TaxpayerAuthenticate(BaseAPI):
             {"auth_token": None},
         )
 
-        frappe.db.commit()
+        frappe.db.commit()  # nosemgrep - executed in after enqueue
 
 
 class TaxpayerBaseAPI(TaxpayerAuthenticate):
