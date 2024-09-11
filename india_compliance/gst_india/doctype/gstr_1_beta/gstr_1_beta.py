@@ -9,20 +9,23 @@ from frappe.model.document import Document
 from frappe.query_builder.functions import Date, Sum
 from frappe.utils import get_last_day, getdate
 
+from india_compliance.gst_india.api_classes.taxpayer_base import (
+    TaxpayerBaseAPI,
+    otp_handler,
+)
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 from india_compliance.gst_india.utils.gstin_info import get_gstr_1_return_status
-from india_compliance.gst_india.utils.gstr_utils import request_otp
 
 
 class GSTR1Beta(Document):
 
     @frappe.whitelist()
     def recompute_books(self):
-        self.generate_gstr1(recompute_books=True)
+        return self.generate_gstr1(recompute_books=True)
 
     @frappe.whitelist()
     def sync_with_gstn(self, sync_for):
-        self.generate_gstr1(sync_for=sync_for, recompute_books=True)
+        return self.generate_gstr1(sync_for=sync_for, recompute_books=True)
 
     @frappe.whitelist()
     def mark_as_filed(self):
@@ -44,9 +47,10 @@ class GSTR1Beta(Document):
                 return_status,
             )
 
-        self.generate_gstr1()
+        return self.generate_gstr1()
 
     @frappe.whitelist()
+    @otp_handler
     def generate_gstr1(self, sync_for=None, recompute_books=False):
         period = get_period(self.month_or_quarter, self.year)
 
@@ -100,14 +104,9 @@ class GSTR1Beta(Document):
                 self.on_generate(data)
                 return
 
-        # request OTP
-        if gstr1_log.is_sek_needed(settings) and not settings.is_sek_valid(
-            self.company_gstin
-        ):
-            request_otp(self.company_gstin)
-            data = "otp_requested"
-            self.on_generate(data)
-            return
+        # validate auth token
+        if gstr1_log.is_sek_needed(settings):
+            TaxpayerBaseAPI(self.company_gstin).validate_auth_token()
 
         self.gstr1_log = gstr1_log
 

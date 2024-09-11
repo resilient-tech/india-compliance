@@ -92,7 +92,9 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         frm.disable_save();
         frm.page.set_primary_action(__("Reconcile"), () => {
             if (!frm.doc.company && !frm.doc.company_gstin) {
-                frappe.throw(__('Please provide either a Company name or Company GSTIN.'));
+                frappe.throw(
+                    __("Please provide either a Company name or Company GSTIN.")
+                );
             }
             frm.save();
         });
@@ -114,13 +116,12 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
             );
             frm.add_custom_button(__("dropdown-divider"), () => {}, __("Actions"));
         }
-        ["Accept", "Pending", "Ignore"].forEach(
-            action =>
-                frm.add_custom_button(
-                    __(action),
-                    () => apply_action(frm, action),
-                    __("Actions")
-                )
+        ["Accept", "Pending", "Ignore"].forEach(action =>
+            frm.add_custom_button(
+                __(action),
+                () => apply_action(frm, action),
+                __("Actions")
+            )
         );
         frm.$wrapper
             .find("[data-label='dropdown-divider']")
@@ -351,12 +352,7 @@ class PurchaseReconciliationTool {
                 label: "Action",
                 fieldname: "action",
                 fieldtype: "Select",
-                options: [
-                    "No Action",
-                    "Accept",
-                    "Ignore",
-                    "Pending",
-                ],
+                options: ["No Action", "Accept", "Ignore", "Pending"],
             },
             {
                 label: "Classification",
@@ -979,12 +975,7 @@ class DetailViewDialog {
             if (doctype == "Purchase Invoice")
                 actions.push("Create", "Link", "Pending", "Ignore");
             else actions.push("Link", "Pending", "Ignore");
-        else
-            actions.push(
-                "Unlink",
-                "Accept",
-                "Pending"
-            );
+        else actions.push("Unlink", "Accept", "Pending");
 
         // setup actions
         actions.forEach(action => {
@@ -1456,37 +1447,23 @@ async function download_gstr(
     only_missing = true,
     gst_categories = null
 ) {
-    const authenticated_company_gstins =
-        await india_compliance.authenticate_company_gstins(
-            frm.doc.company,
-            company_gstin == "All" ? null : company_gstin
-        );
+    let company_gstins;
+    if (company_gstin == "All")
+        company_gstins = await india_compliance.get_gstin_options(frm.doc.company);
 
-    const args = {
-        return_type: return_type,
-        company_gstins: authenticated_company_gstins,
-        date_range: date_range,
-        force: !only_missing,
-        gst_categories,
-    };
-    frm.events.show_progress(frm, "download");
+    else company_gstins = [company_gstin];
 
-    const { message } = await frm.call("download_gstr", args);
-
-    if (message && message.length) {
-        // TODO: Setup Listners similar to GSTR-1 Beta
-        message.forEach(async msg => {
-            await india_compliance.authenticate_otp(msg.gstin, msg.error_type);
-            download_gstr(
-                frm,
-                date_range,
-                return_type,
-                msg.gstin,
-                only_missing,
-                gst_categories
-            );
-        });
-    }
+    company_gstins.forEach(async gstin => {
+        const args = {
+            return_type: return_type,
+            company_gstin: gstin,
+            date_range: date_range,
+            force: !only_missing,
+            gst_categories,
+        };
+        frm.events.show_progress(frm, "download");
+        await frm.taxpayer_api_call("download_gstr", args);
+    });
 }
 
 class EmailDialog {
