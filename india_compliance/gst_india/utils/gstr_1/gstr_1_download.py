@@ -53,9 +53,6 @@ def download_gstr1_json_data(gstr1_log):
     for action in actions:
         response = api.get_gstr_1_data(action, return_period)
 
-        if response.error_type in ["otp_requested", "invalid_otp"]:
-            return response, None
-
         if response.error_type == "no_docs_found":
             continue
 
