@@ -196,7 +196,7 @@ def generate_e_invoice(docname, throw=True, force=False):
     doc.db_set(
         {
             "irn": result.Irn,
-            "einvoice_status": "Generated",
+            "einvoice_status": result.get("einvoice_status") or "Generated",
         }
     )
 
@@ -287,6 +287,23 @@ def log_and_process_e_invoice_cancellation(doc, values, result, message):
     )
 
     frappe.msgprint(_(message), indicator="green", alert=True)
+
+
+@frappe.whitelist()
+def mark_e_invoice_as_generated(doctype, docname, values):
+    doc = load_doc(doctype, docname, "submit")
+
+    values = frappe.parse_json(values)
+    result = frappe._dict(
+        {
+            "Irn": values.irn,
+            "AckDt": values.ack_dt,
+            "AckNo": values.ack_no,
+            "einvoice_status": "Manually Generated",
+        }
+    )
+
+    return log_and_process_e_invoice_generation(doc, result)
 
 
 @frappe.whitelist()
