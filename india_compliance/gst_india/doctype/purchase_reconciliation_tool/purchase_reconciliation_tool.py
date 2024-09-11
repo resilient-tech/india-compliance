@@ -451,22 +451,15 @@ def download_gstr(
     force=False,
     gst_categories=None,
 ):
-    try:
-        return_type = ReturnType(return_type)
+    return_type = ReturnType(return_type)
 
-        if return_type == ReturnType.GSTR2A:
-            return download_pending_gstr_2a(
-                date_range, company_gstin, force, gst_categories
-            )
-
-        if return_type == ReturnType.GSTR2B:
-            return download_pending_gstr_2b(date_range, company_gstin)
-
-    except Exception:
-        frappe.log_error(
-            frappe.get_traceback(),
-            f"Error while downloading {return_type.value if return_type else 'GSTR 2A & 2B'} for {company_gstin} ",
+    if return_type == ReturnType.GSTR2A:
+        return download_pending_gstr_2a(
+            date_range, company_gstin, force, gst_categories
         )
+
+    if return_type == ReturnType.GSTR2B:
+        return download_pending_gstr_2b(date_range, company_gstin)
 
 
 def download_pending_gstr_2a(

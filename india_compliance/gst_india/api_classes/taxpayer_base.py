@@ -136,6 +136,11 @@ class TaxpayerAuthenticate(BaseAPI):
 
     def autheticate_with_otp(self, otp=None):
         if not otp:
+            # in enqueue / cron job
+            if getattr(frappe.local, "job", None):
+                frappe.local.job.after_job.add(self.reset_auth_token)
+                raise InvalidAuthTokenError
+
             # reset auth token
             frappe.db.set_value(
                 "GST Credential",
@@ -150,7 +155,7 @@ class TaxpayerAuthenticate(BaseAPI):
             self.auth_token = None
             return self.request_otp()
 
-        return super().post(
+        response = super().post(
             json={
                 "action": "AUTHTOKEN",
                 "app_key": self.app_key,
@@ -159,6 +164,14 @@ class TaxpayerAuthenticate(BaseAPI):
             },
             endpoint="authenticate",
         )
+
+        frappe.cache.set_value(
+            f"authenticated_gstin:{self.company_gstin}",
+            True,
+            expires_in_sec=60 * 15,
+        )
+
+        return response
 
     def refresh_auth_token(self):
         auth_token = self.get_auth_token()
@@ -317,12 +330,6 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
             if response.error_type in ["otp_requested", "invalid_otp"]:
                 return response
 
-            frappe.cache.set_value(
-                f"authenticated_gstin:{self.company_gstin}",
-                True,
-                expires_in_sec=60 * 15,
-            )
-
         headers = {"auth-token": auth_token}
         if return_period:
             headers["ret_period"] = return_period
@@ -406,13 +413,6 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
 
             if response.error_type == "invalid_otp":
                 raise InvalidOTPError(response=response)
-
-            if response.error_type == "authorization_failed" and getattr(
-                frappe.local, "job", None
-            ):
-                frappe.local.job.after_job.add(self.reset_auth_token)
-
-                raise InvalidAuthTokenError
 
             return True
 
