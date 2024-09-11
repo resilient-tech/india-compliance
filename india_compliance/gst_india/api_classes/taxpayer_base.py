@@ -491,6 +491,12 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
         # Dummy request
         self.get_filing_preference()
 
+        frappe.cache.set_value(
+            f"authenticated_gstin:{self.company_gstin}",
+            True,
+            expires_in_sec=60 * 15,
+        )
+
         return
 
     def get_filing_preference(self):

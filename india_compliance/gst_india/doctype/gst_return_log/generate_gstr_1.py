@@ -8,7 +8,7 @@ from frappe import unscrub
 from frappe.utils import floor, flt
 
 from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
-from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategory
+from india_compliance.gst_india.utils.gstr_1 import GovJsonKey, GSTR1_SubCategory
 from india_compliance.gst_india.utils.gstr_1.__init__ import (
     CATEGORY_SUB_CATEGORY_MAPPING,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX,
@@ -673,9 +673,10 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
 
 
 class FileGSTR1:
-    # TODO: handle otp requested errors for all APIs
     def reset_gstr1(self):
         # reset called after proceed to file
+        # TODO: Throw if already in progress
+
         self.db_set({"filing_status": "Not Filed"})
 
         api = GSTR1API(self)
@@ -715,6 +716,8 @@ class FileGSTR1:
                 )
 
             if response.get("status_cd") == "P":
+                # TODO: Better way to handle this. Exclude such records from books data.
+                self.remove_json_for("books")
                 self.update_json_for("unfiled", {}, reset_reconcile=True)
 
         return response
@@ -723,26 +726,30 @@ class FileGSTR1:
         if not json_data:
             return
 
+        keys = {category.value for category in GovJsonKey}
+        if any(key not in json_data for key in keys):
+            frappe.throw("Nothing to upload")
+
         # upload data after proceed to file
         self.db_set({"filing_status": "Not Filed"})
 
+        # remove error file if it exists
+        self.remove_json_for("upload_error")
+
         # Make API Request
         api = GSTR1API(self)
+        response = api.save_gstr_1_data(self.return_period, json_data)
 
-        json_data_parts = get_partitioned_data(json_data)
+        if response.get("reference_id"):
+            self.append(
+                "actions",
+                {
+                    "request_type": "upload",
+                    "token": response.get("reference_id"),
+                    "creation_time": frappe.utils.now_datetime(),
+                },
+            )
 
-        for json_data in json_data_parts:
-            response = api.save_gstr_1_data(self.return_period, json_data)
-
-            if response.get("reference_id"):
-                self.append(
-                    "actions",
-                    {
-                        "request_type": "upload",
-                        "token": response.get("reference_id"),
-                        "creation_time": frappe.utils.now_datetime(),
-                    },
-                )
         self.save()
 
     def process_upload_gstr1(self):
@@ -862,7 +869,7 @@ class FileGSTR1:
 
         return response
 
-    def file_gstr1(self, pan, otp=None):
+    def file_gstr1(self, pan, otp):
         if not otp:
             # If OTP is none, generate evc OTP
             pass
@@ -874,6 +881,10 @@ class FileGSTR1:
         if response.error and response.error.error_cd == "RET09001":
             self.db_set({"filing_status": "Not Filed"})
             self.update_json_for("authenticated_summary", None)
+
+        # TODO: On success. Update status, update ack no and date
+        # TODO: Update data for generate gstr-1
+        # TODO: 2nd phase Accounting Entry.
 
         return response
 

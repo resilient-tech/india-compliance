@@ -131,6 +131,7 @@ frappe.ui.form.on(DOCTYPE, {
             )
                 return;
 
+            // TODO: show generate button
             if (frm.$wrapper.find(".form-message.orange").length) return;
             frm.set_intro(
                 __(
@@ -226,6 +227,10 @@ frappe.ui.form.on(DOCTYPE, {
 
         const secondary_button_label =
             gst_data?.status === "Ready to File" ? "File" : "Proceed to File";
+
+        // TODO: proceed to file is not very relevant as long as we have not uploaded.
+        // after upload is successfully processed, we can update unfiled data = books data
+        // TODO: If no differences, we can skip the upload button.
         frm.add_custom_button(__(secondary_button_label), () =>
             actions[secondary_button_label](frm)
         );
@@ -246,7 +251,13 @@ frappe.ui.form.on(DOCTYPE, {
 });
 
 function generate_gstr1_data(frm) {
-    frm.taxpayer_api_call("generate_gstr1");
+    frm.taxpayer_api_call("generate_gstr1").then((r) => {
+        // TODO: Do this for all API calls
+        // TODO: Check size before sending it via redis. Instead it could raise alert.
+        if (!r.message) return;
+        frm.doc.__gst_data = r.message;
+        frm.trigger("load_gstr1_data");
+    });
     const request_types = ["upload", "reset", "proceed_to_file"];
     request_types.map(request_type =>
         fetch_status_with_retry(frm, request_type, (now = true))
@@ -276,6 +287,12 @@ function proceed_to_file(frm) {
 }
 
 async function file_gstr1_data(frm) {
+    // TODO: If amendments, show table for total liability breakup.
+    // compute other than amendments.
+    // This table to be shown only if there are amendments.
+
+    // TODO: EVC Generation, Resend, and Filing
+
     const { message } = await frappe.db.get_value("GSTIN", frm.doc.company_gstin, [
         "last_pan_used_for_gstr",
     ]);
@@ -296,7 +313,7 @@ async function file_gstr1_data(frm) {
                 label: "OTP",
                 fieldname: "otp",
                 fieldtype: "Data",
-                hidden: 1,
+                hidden: 1, // TODO: 2nd priority instead disable input
             },
         ],
         primary_action_label: "Verify PAN",
@@ -353,6 +370,13 @@ function fetch_status_with_retry(frm, request_type, retries = 0, now = false) {
                 return fetch_status_with_retry(frm, request_type, retries + 1);
 
             if (message.status_cd === "PE" || message.status_cd === "ER")
+                // TODO: Show errors on generate if any
+                // after filing or mark as filed, clear error files
+                // Highlight error tab
+
+                // TODO: ER => Throw error. PE => Show error (only for upload)
+                // Link to Integration Request if ER.
+
                 handle_errors(frm, message);
 
             if (request_type == "reset") {

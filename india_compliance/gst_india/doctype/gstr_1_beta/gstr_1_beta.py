@@ -101,8 +101,7 @@ class GSTR1Beta(Document):
                 data = data
                 data["status"] = gstr1_log.filing_status or "Not Filed"
                 gstr1_log.update_status("Generated")
-                self.on_generate(data)
-                return
+                return data
 
         # validate auth token
         if gstr1_log.is_sek_needed(settings):
@@ -163,6 +162,7 @@ class GSTR1Beta(Document):
 
 
 @frappe.whitelist()
+@otp_handler
 def reset_gstr1(month_or_quarter, year, company_gstin):
     gstr_1_log = frappe.get_doc(
         "GST Return Log",
@@ -172,6 +172,7 @@ def reset_gstr1(month_or_quarter, year, company_gstin):
 
 
 @frappe.whitelist()
+@otp_handler
 def upload_gstr1(month_or_quarter, year, company_gstin):
     from india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export import (
         download_gstr_1_json,
@@ -192,6 +193,7 @@ def upload_gstr1(month_or_quarter, year, company_gstin):
 
 
 @frappe.whitelist()
+@otp_handler
 def proceed_to_file_gstr1(month_or_quarter, year, company_gstin):
     gstr_1_log = frappe.get_doc(
         "GST Return Log",
@@ -201,6 +203,15 @@ def proceed_to_file_gstr1(month_or_quarter, year, company_gstin):
 
 
 @frappe.whitelist()
+def generate_evc_otp(company_gstin, pan):
+    # TODO: permissions check for all whitelisted functions
+    frappe.has_permission("GSTR-1 Beta", "write", throw=True)
+
+    return TaxpayerBaseAPI(company_gstin).initiate_otp_for_evc(pan, "R1")
+
+
+@frappe.whitelist()
+@otp_handler
 def file_gstr1(month_or_quarter, year, company_gstin, pan, otp):
     gstr_1_log = frappe.get_doc(
         "GST Return Log",
@@ -210,6 +221,7 @@ def file_gstr1(month_or_quarter, year, company_gstin, pan, otp):
 
 
 @frappe.whitelist()
+@otp_handler
 def process_gstr1_request(month_or_quarter, year, company_gstin, request_type):
     gstr_1_log = frappe.get_doc(
         "GST Return Log",
@@ -222,6 +234,7 @@ def process_gstr1_request(month_or_quarter, year, company_gstin, request_type):
 
     if not data:
         data = {}
+
     data.update(
         {
             "month_or_quarter": month_or_quarter,
