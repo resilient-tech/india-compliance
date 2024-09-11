@@ -18,7 +18,7 @@ from india_compliance.gst_india.utils import parse_datetime, titlecase, validate
 
 GST_CATEGORIES = {
     "Regular": "Registered Regular",
-    "Input Service Distributor (ISD)": "Registered Regular",
+    "Input Service Distributor (ISD)": "Input Service Distributor",
     "Composition": "Registered Composition",
     "Tax Deductor": "Tax Deductor",
     "Tax Collector (Electronic Commerce Operator)": "Tax Collector",

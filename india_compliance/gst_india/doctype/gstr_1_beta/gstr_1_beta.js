@@ -235,18 +235,6 @@ frappe.ui.form.on(DOCTYPE, {
 
     load_gstr1_data(frm) {
         const data = frm.doc.__gst_data;
-        if (!frm._otp_requested && data == "otp_requested") {
-            frm._otp_requested = true;
-
-            india_compliance
-                .authenticate_otp(frm.doc.company_gstin)
-                .then(() => frm.call("generate_gstr1"));
-
-            return;
-        }
-
-        frm._otp_requested = false;
-
         if (!data?.status) return;
 
         // Toggle HTML fields
@@ -269,7 +257,7 @@ async function generate_gstr1_data(frm) {
         "request_type",
     ]);
 
-    await frm.call("generate_gstr1");
+    await frm.taxpayer_api_call("generate_gstr1");
     if (message.token) {
         fetch_status_with_retry(frm, message.request_type, (now = true));
     }
@@ -1820,7 +1808,7 @@ class BooksTab extends GSTR1_TabManager {
 
     recompute_books() {
         render_empty_state(this.instance.frm);
-        this.instance.frm.call("recompute_books");
+        this.instance.frm.taxpayer_api_call("recompute_books");
     }
 
     // COLUMNS
@@ -2031,7 +2019,7 @@ class FiledTab extends GSTR1_TabManager {
 
     sync_with_gstn(sync_for) {
         render_empty_state(this.instance.frm);
-        this.instance.frm.call("sync_with_gstn", { sync_for });
+        this.instance.frm.taxpayer_api_call("sync_with_gstn", { sync_for });
     }
 
     download_filed_json() {
@@ -2107,7 +2095,7 @@ class FiledTab extends GSTR1_TabManager {
     mark_as_filed() {
         render_empty_state(this.instance.frm);
         this.instance.frm
-            .call("mark_as_filed")
+            .taxpayer_api_call("mark_as_filed")
             .then(() => this.instance.frm.trigger("load_gstr1_data"));
     }
 
