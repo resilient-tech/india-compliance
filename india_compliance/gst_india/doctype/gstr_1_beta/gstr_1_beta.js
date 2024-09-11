@@ -320,6 +320,7 @@ async function file_gstr1_data(frm) {
 }
 
 function perform_gstr1_action(frm, action, additional_args = {}) {
+    frm.gstr1.tabs.error_tab.hide();
     const base_args = {
         month_or_quarter: frm.doc.month_or_quarter,
         year: frm.doc.year,

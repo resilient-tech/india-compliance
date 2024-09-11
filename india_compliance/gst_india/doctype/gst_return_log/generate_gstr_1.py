@@ -5,7 +5,7 @@ import json
 
 import frappe
 from frappe import unscrub
-from frappe.utils import flt
+from frappe.utils import floor, flt
 
 from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategory
@@ -25,12 +25,13 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
 )
 from india_compliance.gst_india.utils.gstr_utils import request_otp
 
-code_to_status_map = {
+status_code_map = {
     "P": "Processed",
     "PE": "Processed with Errors",
     "ER": "Error",
     "IP": "In Progress",
 }
+MAXIMUM_UPLOAD_SIZE = 5200000
 
 
 class SummarizeGSTR1:
@@ -715,9 +716,7 @@ class FileGSTR1:
             response = api.get_return_status(self.return_period, doc.token)
 
             if response.get("status_cd") != "IP":
-                doc.db_set(
-                    {"status": code_to_status_map.get(response.get("status_cd"))}
-                )
+                doc.db_set({"status": status_code_map.get(response.get("status_cd"))})
                 enqueue_notification(
                     self.return_period,
                     "reset",
@@ -770,9 +769,7 @@ class FileGSTR1:
             response = api.get_return_status(self.return_period, doc.token)
 
             if response.get("status_cd") != "IP":
-                doc.db_set(
-                    {"status": code_to_status_map.get(response.get("status_cd"))}
-                )
+                doc.db_set({"status": status_code_map.get(response.get("status_cd"))})
                 enqueue_notification(
                     self.return_period,
                     "upload",
@@ -819,7 +816,7 @@ class FileGSTR1:
             if response.get("status_cd") == "IP":
                 return response
 
-            doc.db_set({"status": code_to_status_map.get(response.get("status_cd"))})
+            doc.db_set({"status": status_code_map.get(response.get("status_cd"))})
             if response.get("status_cd") != "P":
                 enqueue_notification(
                     self.return_period,
@@ -891,41 +888,96 @@ class FileGSTR1:
         return response
 
 
-# TODO : optimse this
+def is_within_limit(result):
+    return len(json.dumps(result, indent=4)) < MAXIMUM_UPLOAD_SIZE
+
+
 def get_partitioned_data(json_data):
-    result = []
+    if is_within_limit(json_data):
+        yield json_data
+        return
+
     base_data = {"gstin": json_data["gstin"], "fp": json_data["fp"]}
+    result = {}
+    has_yielded = False
 
-    partial_data = base_data.copy()
-    gst_categories = [
-        category for category in json_data.keys() if category not in ["gstin", "fp"]
-    ]
+    for category, category_data in json_data.items():
+        result[category] = category_data
 
-    for category in gst_categories:
-        partial_data[category] = []
-        index = 0
+        if is_within_limit(result):
+            continue
 
-        for obj in json_data.get(category, []):
-            partial_data[category].append({"ctin": obj["ctin"], "inv": []})
+        # 2 case : 1st - large categories, 2nd - combined category data is large
+        del result[category]
+        if result.keys() in [
+            "b2b",
+            "cdnr",
+        ]:  # Ensure at least one category is present before yielding the result
+            yield result
 
-            for invoice in obj.get("inv", []):
-                partial_data[category][index]["inv"].append(invoice)
+        result = base_data.copy()
+        result[category] = category_data
 
-                if len(json.dumps(partial_data)) > 5200000:
-                    invoice = partial_data[category][index]["inv"].pop()
-                    result.append(partial_data)
+        if is_within_limit(result):
+            continue
 
-                    partial_data = base_data.copy()
-                    partial_data[category] = [{"ctin": obj["ctin"], "inv": []}]
+        has_yielded = True
+        # Handle the case where individual objects within the category need to be partitioned
+        yield from partition_by_objects(result, category, category_data, base_data)
 
-                    partial_data[category][0]["inv"].append(invoice)
+    if not has_yielded:
+        yield result
 
-            index += 1
 
-    if partial_data[category][index - 1]["inv"]:
-        result.append(partial_data)
+def partition_by_objects(result, category, category_data, base_data):
+    result[category] = []
+    has_yielded = False
+    for object in category_data:
+        result[category].append(object)
 
-    return result
+        if is_within_limit(result):
+            continue
+
+        # 2 case: 1st object is so big, combine 2 object is big
+        object_data = result[category].pop()
+        if result[
+            category
+        ]:  # Ensure at least one object is present before yielding the result
+            yield result
+
+        result = base_data.copy()
+        result[category] = [object_data]
+
+        if is_within_limit(result):
+            continue
+
+        has_yielded = True
+        # Handle the case where invoices within the object need to be partitioned
+        yield from partition_by_invoices(result, category, object)
+
+    if not has_yielded:
+        yield result
+
+
+def partition_by_invoices(result, category, object):
+    result[category] = [{"ctin": object.get("ctin"), "inv": []}]
+
+    result_size = len(json.dumps(result, indent=4))
+    invoice_size = 1200
+    invoice_to_add = floor((MAXIMUM_UPLOAD_SIZE - result_size) / invoice_size)
+    count = 0
+
+    for invoice in object.get("inv"):
+        count += 1
+        result[category][-1]["inv"].append(invoice)
+
+        if count == invoice_to_add:
+            count = 0
+            yield result
+            result[category] = [{"ctin": object.get("ctin"), "inv": []}]
+
+    if result[category][-1]["inv"]:
+        yield result
 
 
 def get_differing_categories(mapped_summary, gov_summary):
