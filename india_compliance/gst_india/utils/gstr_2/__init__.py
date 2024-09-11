@@ -243,7 +243,9 @@ def save_gstr_2b(gstin, return_period, json_data):
     update_import_history(return_period)
 
 
-def save_gstr(gstin, return_type, return_period, json_data, gen_date_2b=None):
+def save_gstr(
+    gstin, return_type: ReturnType, return_period, json_data, gen_date_2b=None
+):
     """Save GSTR data to Inward Supply
 
     :param return_period: str
@@ -253,7 +255,7 @@ def save_gstr(gstin, return_type, return_period, json_data, gen_date_2b=None):
 
     company = get_party_for_gstin(gstin, "Company")
     for category in GSTRCategory:
-        gstr = get_data_handler(return_type, category)
+        gstr = get_data_handler(return_type.value, category)
         gstr(company, gstin, return_period, json_data, gen_date_2b).create_transactions(
             category,
             json_data.get(category.value.lower()),
