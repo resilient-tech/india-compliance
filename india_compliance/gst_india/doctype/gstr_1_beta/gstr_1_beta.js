@@ -251,7 +251,7 @@ frappe.ui.form.on(DOCTYPE, {
 });
 
 function generate_gstr1_data(frm) {
-    frm.taxpayer_api_call("generate_gstr1").then((r) => {
+    frm.taxpayer_api_call("generate_gstr1").then(r => {
         // TODO: Do this for all API calls
         // TODO: Check size before sending it via redis. Instead it could raise alert.
         if (!r.message) return;
@@ -369,15 +369,13 @@ function fetch_status_with_retry(frm, request_type, retries = 0, now = false) {
             if (message.status_cd === "IP" && retries < retry_intervals.length)
                 return fetch_status_with_retry(frm, request_type, retries + 1);
 
-            if (message.status_cd === "PE" || message.status_cd === "ER")
-                // TODO: Show errors on generate if any
-                // after filing or mark as filed, clear error files
-                // Highlight error tab
+            if (message.status_cd == "ER")
+                frappe.throw(__(message.error_report.error_msg));
 
-                // TODO: ER => Throw error. PE => Show error (only for upload)
-                // Link to Integration Request if ER.
-
+            if (message.status_cd == "PE" && request_type == "upload")
                 handle_errors(frm, message);
+
+            // Highlight error tab
 
             if (request_type == "reset") {
                 frm.page.set_indicator("Not Filed", "orange");
@@ -403,30 +401,8 @@ function fetch_status_with_retry(frm, request_type, retries = 0, now = false) {
 }
 
 function handle_errors(frm, message) {
-    const { status_cd, error_report } = message;
-    let data = [];
-
-    if (status_cd == "ER") {
-        data.push({
-            error_code: error_report.error_cd,
-            description: error_report.error_msg,
-        });
-    } else {
-        for (let category in error_report) {
-            for (let object of error_report[category]) {
-                data.push({
-                    category: category.toUpperCase(),
-                    error_code: object.error_cd,
-                    description: object.error_msg,
-                    party_gstin: object.ctin,
-                    place_of_supply: object.inv[0].pos,
-                    invoice_number: object.inv[0].inum,
-                });
-            }
-        }
-    }
     frm.gstr1.tabs.error_tab.show();
-    frm.gstr1.tabs["error_tab"].tabmanager.refresh_data(data);
+    frm.gstr1.tabs["error_tab"].tabmanager.refresh_data(message);
 }
 
 function handle_file_response(frm, response) {
@@ -2373,6 +2349,7 @@ class ErrorTab extends TabManager {
 
     refresh_data(data) {
         this.set_default_title();
+        data = this.get_error_data(data);
         super.refresh_data(data, data, "Error Summary");
         $(".dt-footer").remove();
     }
@@ -2389,6 +2366,25 @@ class ErrorTab extends TabManager {
             </div>
             <div class="data-table"></div>
         `);
+    }
+
+    get_error_data(message) {
+        const { error_report } = message;
+        let data = [];
+
+        for (let category in error_report) {
+            for (let object of error_report[category]) {
+                data.push({
+                    category: category.toUpperCase(),
+                    error_code: object.error_cd,
+                    description: object.error_msg,
+                    party_gstin: object.ctin,
+                    place_of_supply: object.inv[0].pos,
+                    invoice_number: object.inv[0].inum,
+                });
+            }
+        }
+        return data;
     }
 }
 

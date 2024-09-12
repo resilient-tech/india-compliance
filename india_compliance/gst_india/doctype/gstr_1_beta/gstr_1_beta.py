@@ -100,6 +100,8 @@ class GSTR1Beta(Document):
             if data:
                 data = data
                 data["status"] = gstr1_log.filing_status or "Not Filed"
+                if error_data := gstr1_log.get_json_for("upload_error"):
+                    data["error"] = error_data
                 gstr1_log.update_status("Generated")
                 return data
 

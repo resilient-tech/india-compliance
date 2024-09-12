@@ -745,17 +745,19 @@ class FileGSTR1:
                 continue
 
             response = api.get_return_status(self.return_period, doc.token)
+            status_cd = response.get("status_cd")
 
-            if response.get("status_cd") != "IP":
-                doc.db_set({"status": status_code_map.get(response.get("status_cd"))})
+            if status_cd != "IP":
+                doc.db_set({"status": status_code_map.get(status_cd)})
                 enqueue_notification(
                     self.return_period,
                     "upload",
-                    response.get("status_cd"),
+                    status_cd,
                     self.gstin,
+                    api.request_id if status_cd == "ER" else None,
                 )
 
-            if response.get("status_cd") == "PE":
+            if status_cd == "PE":
                 self.update_json_for("upload_error", response)
 
         return response
@@ -861,6 +863,7 @@ class FileGSTR1:
         # TODO: On success. Update status, update ack no and date
         # TODO: Update data for generate gstr-1
         # TODO: 2nd phase Accounting Entry.
+        # after filing or mark as filed, clear error files
 
         return response
 
