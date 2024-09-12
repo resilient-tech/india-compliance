@@ -25,12 +25,24 @@ SECTION_MAPPING = {
     },
 }
 
+AMOUNT_FIELDS_MAP = {
+    "Eligible ITC": {
+        "iamt": 0,
+        "camt": 0,
+        "samt": 0,
+        "csamt": 0,
+    },
+    "Values of exempt, nil rated and non-GST inward supplies": {
+        "intra": 0,
+        "inter": 0,
+    },
+}
+
 
 def execute(filters: dict | None = None):
-    filters = frappe._dict(filters or {})
-    _class = GSTPurchaseRegisterBeta(filters)
+    _class = GSTPurchaseRegisterBeta(frappe._dict(filters or {}))
 
-    if filters.get("summary_by") == "Overview":
+    if filters.summary_by == "Overview":
         data = _class.get_overview()
         columns = _class.get_columns()
 
@@ -42,16 +54,11 @@ def execute(filters: dict | None = None):
 
 
 class GSTPurchaseRegisterBeta:
-    AMOUNT_FIELDS = {
-        "iamt": 0,
-        "camt": 0,
-        "samt": 0,
-        "csamt": 0,
-    }
-
     def __init__(self, filters=None):
         self.filters = filters or {}
         self.company_gstin = self.filters.company_gstin
+        self.AMOUNT_FIELDS = AMOUNT_FIELDS_MAP[self.filters.sub_section]
+        self.data = []
 
     def get_data(self):
         doc = frappe.qb.DocType("Purchase Invoice")
@@ -128,7 +135,7 @@ class GSTPurchaseRegisterBeta:
 
         self.data = query.run(as_dict=True)
 
-        self.set_invoice_sub_category(self.filters.sub_section)
+        self.set_invoice_sub_category()
 
         if self.filters.get("invoice_sub_category"):
             self.data = [
@@ -436,54 +443,55 @@ class GSTPurchaseRegisterBeta:
 
         return summary
 
-    def set_invoice_sub_category(self, data, sub_section, company_gstin):
-        if sub_section == "Eligible ITC":
-            for invoice in data:
+    def set_invoice_sub_category(self):
+        if self.filters.sub_section == "Eligible ITC":
+            for invoice in self.data:
                 invoice.invoice_sub_category = invoice.itc_classification
 
         else:
-            address_state_map = frappe._dict(
-                frappe.get_all(
-                    "Address", fields=["name", "gst_state_number"], as_list=1
+            self.set_invoice_subcategory_table_5()
+
+    def set_invoice_subcategory_table_5(self):
+        address_state_map = frappe._dict(
+            frappe.get_all("Address", fields=["name", "gst_state_number"], as_list=1)
+        )
+
+        state = cint(self.company_gstin[0:2])
+
+        for idx in range(len(self.data) - 1, -1, -1):
+            invoice = self.data[idx]
+
+            place_of_supply = cint(invoice.place_of_supply[0:2]) or state
+            invoice_sub_category = ""
+
+            if invoice.gst_category == "Registered Composition":
+                supplier_state = cint(invoice.supplier_gstin[0:2])
+            else:
+                supplier_state = (
+                    cint(address_state_map.get(invoice.supplier_address)) or state
                 )
-            )
 
-            state = cint(company_gstin[0:2])
+            if (
+                invoice.gst_treatment in ["Nil-Rated", "Exempted"]
+                or invoice.get("gst_category") == "Registered Composition"
+            ):
+                invoice_sub_category = "Composition Scheme, Exempted, Nil Rated"
 
-            for idx in range(len(data) - 1, -1, -1):
-                invoice = data[idx]
+            elif invoice.gst_treatment == "Non-GST":
+                invoice_sub_category = "Non GST Supply"
 
-                place_of_supply = cint(invoice.place_of_supply[0:2]) or state
-                invoice_sub_category = ""
+            if not invoice_sub_category:
+                self.data.pop(idx)
+                continue
 
-                if invoice.gst_category == "Registered Composition":
-                    supplier_state = cint(invoice.supplier_gstin[0:2])
-                else:
-                    supplier_state = (
-                        cint(address_state_map.get(invoice.supplier_address)) or state
-                    )
+            intra, inter = 0, 0
+            taxable_value = invoice.taxable_value
 
-                intra, inter = 0, 0
-                taxable_value = invoice.taxable_value
+            if supplier_state == place_of_supply:
+                intra = taxable_value
+            else:
+                inter = taxable_value
 
-                if (
-                    invoice.gst_treatment in ["Nil-Rated", "Exempted"]
-                    or invoice.get("gst_category") == "Registered Composition"
-                ):
-                    invoice_sub_category = "Composition Scheme, Exempted, Nil Rated"
-
-                elif invoice.gst_treatment == "Non-GST":
-                    invoice_sub_category = "Non GST Supply"
-
-                if supplier_state == place_of_supply:
-                    intra = taxable_value
-                else:
-                    inter = taxable_value
-
-                if not invoice_sub_category:
-                    data.pop(idx)
-
-                else:
-                    invoice.invoice_sub_category = invoice_sub_category
-                    invoice.intra = intra
-                    invoice.inter = inter
+            invoice.invoice_sub_category = invoice_sub_category
+            invoice.intra = intra
+            invoice.inter = inter
