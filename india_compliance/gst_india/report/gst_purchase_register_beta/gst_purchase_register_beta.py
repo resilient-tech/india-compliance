@@ -31,12 +31,12 @@ def execute(filters: dict | None = None):
     _class = GSTPurchaseRegisterBeta(filters)
 
     if filters.get("summary_by") == "Overview":
-        data = _class.get_overview(filters, SECTION_MAPPING[filters.sub_section])
-        columns = _class.get_columns(filters)
+        data = _class.get_overview()
+        columns = _class.get_columns()
 
     else:
-        data = _class.get_data(filters)
-        columns = _class.get_columns(filters)
+        data = _class.get_data()
+        columns = _class.get_columns()
 
     return columns, data
 
@@ -53,7 +53,7 @@ class GSTPurchaseRegisterBeta:
         self.filters = filters or {}
         self.company_gstin = self.filters.company_gstin
 
-    def get_data(self, filters):
+    def get_data(self):
         doc = frappe.qb.DocType("Purchase Invoice")
         doc_item = frappe.qb.DocType("Purchase Invoice Item")
 
@@ -67,10 +67,11 @@ class GSTPurchaseRegisterBeta:
                 doc.supplier_address,
                 doc.place_of_supply,
                 doc.name.as_("invoice_no"),
-                doc.posting_date,
                 doc.grand_total.as_("invoice_total"),
                 doc.itc_classification,
                 doc.gst_category,
+                doc_item.item_code,
+                doc_item.item_name,
                 IfNull(doc_item.gst_treatment, "Not Defined").as_("gst_treatment"),
                 (doc.itc_integrated_tax).as_("iamt"),
                 (doc.itc_central_tax).as_("camt"),
@@ -81,66 +82,67 @@ class GSTPurchaseRegisterBeta:
             .orderby(doc.name, order=Order.desc)
         )
 
-        if filters.get("summary_by") != "Summary by Item":
+        if self.filters.get("summary_by") != "Summary by Item":
             query = query.groupby(doc.name)
 
-        if filters.get("company"):
-            query = query.where(doc.company == filters.company)
+        if self.filters.get("summary_by") == "Summary by Item":
+            query = query.select(
+                (doc_item.cgst_rate + doc_item.sgst_rate + doc_item.igst_rate).as_(
+                    "gst_rate"
+                ),
+                doc_item.taxable_value,
+                doc_item.cgst_amount,
+                doc_item.sgst_amount,
+                doc_item.igst_amount,
+                doc_item.cess_amount,
+                doc_item.cess_non_advol_amount,
+                (doc_item.cess_amount + doc_item.cess_non_advol_amount).as_(
+                    "total_cess_amount"
+                ),
+                (
+                    doc_item.cgst_amount
+                    + doc_item.sgst_amount
+                    + doc_item.igst_amount
+                    + doc_item.cess_amount
+                    + doc_item.cess_non_advol_amount
+                ).as_("total_tax"),
+                (
+                    doc_item.taxable_value
+                    + doc_item.cgst_amount
+                    + doc_item.sgst_amount
+                    + doc_item.igst_amount
+                    + doc_item.cess_amount
+                    + doc_item.cess_non_advol_amount
+                ).as_("total_amount"),
+            )
 
-        if filters.get("date_range"):
-            from_date = filters.date_range[0]
-            to_date = filters.date_range[1]
+        if self.filters.get("company"):
+            query = query.where(doc.company == self.filters.company)
+
+        if self.filters.get("date_range"):
+            from_date = self.filters.date_range[0]
+            to_date = self.filters.date_range[1]
 
             query = query.where(doc.posting_date >= from_date)
             query = query.where(doc.posting_date <= to_date)
 
         data = query.run(as_dict=True)
 
-        self.set_invoice_sub_category(data, filters.sub_section, filters.company_gstin)
+        self.set_invoice_sub_category(
+            data, self.filters.sub_section, self.filters.company_gstin
+        )
 
-        if filters.get("invoice_sub_category"):
+        if self.filters.get("invoice_sub_category"):
             data = [
                 d
                 for d in data
-                if d.invoice_sub_category == filters.invoice_sub_category
+                if d.invoice_sub_category == self.filters.invoice_sub_category
             ]
 
         return data
 
-    def get_columns(self, filters):
+    def get_columns(self):
         base_columns = [
-            {
-                "fieldname": "invoice_no",
-                "label": _("Invoice Number"),
-                "fieldtype": "Link",
-                "options": "Purchase Invoice",
-                "width": 180,
-            },
-            {
-                "fieldname": "supplier",
-                "label": _("Supplier"),
-                "fieldtype": "Link",
-                "options": "Supplier",
-                "width": 200,
-            },
-            {
-                "fieldname": "posting_date",
-                "label": _("Posting Date"),
-                "fieldtype": "Date",
-                "width": 90,
-            },
-            {
-                "fieldname": "invoice_total",
-                "label": _("Invoice Total"),
-                "fieldtype": "Data",
-                "width": 90,
-            },
-            {
-                "fieldname": "gst_treatment",
-                "label": _("GST Treatment"),
-                "fieldtype": "Data",
-                "width": 90,
-            },
             {
                 "fieldname": "samt",
                 "label": _("State Tax"),
@@ -165,16 +167,9 @@ class GSTPurchaseRegisterBeta:
                 "fieldtype": "Currency",
                 "width": 90,
             },
-            {
-                "fieldname": "invoice_sub_category",
-                "label": _("Invoice Sub Category"),
-                "fieldtype": "Data",
-                "width": 90,
-            },
         ]
-
-        if filters.get("summary_by") == "Overview":
-            overview_columns = [
+        if self.filters.get("summary_by") in ["Overview"]:
+            base_columns = [
                 {"label": _("Description"), "fieldname": "description", "width": "240"},
                 {
                     "label": _("No. of records"),
@@ -182,38 +177,129 @@ class GSTPurchaseRegisterBeta:
                     "width": "120",
                     "fieldtype": "Int",
                 },
+                *base_columns,
+            ]
+        elif self.filters.get("summary_by") == "Summary by Invoice":
+            base_columns = [
                 {
-                    "fieldname": "samt",
-                    "label": _("State Tax"),
+                    "fieldname": "invoice_no",
+                    "label": _("Invoice Number"),
+                    "fieldtype": "Link",
+                    "options": "Purchase Invoice",
+                    "width": 180,
+                },
+                {
+                    "fieldname": "supplier",
+                    "label": _("Supplier"),
+                    "fieldtype": "Link",
+                    "options": "Supplier",
+                    "width": 200,
+                },
+                *base_columns,
+                {
+                    "fieldname": "invoice_sub_category",
+                    "label": _("Invoice Sub Category"),
+                    "fieldtype": "Data",
+                    "width": 90,
+                },
+            ]
+        else:
+            base_columns = [
+                {
+                    "fieldname": "invoice_no",
+                    "label": _("Invoice Number"),
+                    "fieldtype": "Link",
+                    "options": "Purchase Invoice",
+                    "width": 180,
+                },
+                {
+                    "fieldname": "item_code",
+                    "label": _("Item Code"),
+                    "fieldtype": "Link",
+                    "options": "Item",
+                    "width": 180,
+                },
+                {
+                    "fieldname": "gst_treatment",
+                    "label": _("GST Treatment"),
+                    "fieldtype": "Data",
+                    "width": 90,
+                },
+                {
+                    "fieldname": "gst_rate",
+                    "label": _("GST Rate"),
+                    "fieldtype": "Percent",
+                    "width": 90,
+                },
+                {
+                    "fieldname": "taxable_value",
+                    "label": _("Taxable Value"),
                     "fieldtype": "Currency",
                     "width": 90,
                 },
                 {
-                    "fieldname": "iamt",
-                    "label": _("Integrated Tax"),
+                    "fieldname": "cgst_amount",
+                    "label": _("CGST Amount"),
                     "fieldtype": "Currency",
                     "width": 90,
                 },
                 {
-                    "fieldname": "camt",
-                    "label": _("Central Tax"),
+                    "fieldname": "sgst_amount",
+                    "label": _("SGST Amount"),
                     "fieldtype": "Currency",
                     "width": 90,
                 },
                 {
-                    "fieldname": "csamt",
+                    "fieldname": "igst_amount",
+                    "label": _("IGST Amount"),
+                    "fieldtype": "Currency",
+                    "width": 90,
+                },
+                {
+                    "fieldname": "cess_amount",
                     "label": _("CESS Amount"),
                     "fieldtype": "Currency",
                     "width": 90,
                 },
+                {
+                    "fieldname": "cess_non_advol_amount",
+                    "label": _("CESS Non Advol Amount"),
+                    "fieldtype": "Currency",
+                    "width": 90,
+                },
+                {
+                    "fieldname": "total_cess_amount",
+                    "label": _("Total CESS Amount"),
+                    "fieldtype": "Currency",
+                    "width": 90,
+                },
+                {
+                    "fieldname": "total_tax",
+                    "label": _("Total Tax"),
+                    "fieldtype": "Currency",
+                    "width": 90,
+                },
+                {
+                    "fieldname": "total_amount",
+                    "label": _("Total Amount"),
+                    "fieldtype": "Currency",
+                    "width": 90,
+                },
+                {
+                    "fieldname": "invoice_sub_category",
+                    "label": _("Invoice Sub Category"),
+                    "fieldtype": "Data",
+                    "width": 90,
+                },
             ]
-            return overview_columns
 
         return base_columns
 
-    def get_overview(self, filters, mapping):
+    def get_overview(self):
+        mapping = SECTION_MAPPING[self.filters.sub_section]
+
         final_summary = []
-        sub_category_summary = self.get_sub_category_summary(filters, mapping)
+        sub_category_summary = self.get_sub_category_summary(mapping)
 
         for category, sub_categories in mapping.items():
             category_summary = {
@@ -235,8 +321,8 @@ class GSTPurchaseRegisterBeta:
 
         return final_summary
 
-    def get_sub_category_summary(self, filters, mapping):
-        invoices = self.get_data(filters)
+    def get_sub_category_summary(self, mapping):
+        invoices = self.get_data()
         sub_categories = []
         for category in mapping:
             sub_categories.extend(mapping[category])
@@ -285,9 +371,10 @@ class GSTPurchaseRegisterBeta:
 
             state = cint(company_gstin[0:2])
 
-            for invoice in data:
-                place_of_supply = cint(invoice.place_of_supply[0:2]) or state
+            for idx in range(len(data) - 1, -1, -1):
+                invoice = data[idx]
 
+                place_of_supply = cint(invoice.place_of_supply[0:2]) or state
                 invoice_sub_category = ""
 
                 if invoice.gst_category == "Registered Composition":
@@ -296,6 +383,7 @@ class GSTPurchaseRegisterBeta:
                     supplier_state = (
                         cint(address_state_map.get(invoice.supplier_address)) or state
                     )
+
                 intra, inter = 0, 0
                 taxable_value = invoice.taxable_value
 
@@ -313,6 +401,10 @@ class GSTPurchaseRegisterBeta:
                 else:
                     inter = taxable_value
 
-                invoice.invoice_sub_category = invoice_sub_category
-                invoice.intra = intra
-                invoice.inter = inter
+                if not invoice_sub_category:
+                    data.pop(idx)
+
+                else:
+                    invoice.invoice_sub_category = invoice_sub_category
+                    invoice.intra = intra
+                    invoice.inter = inter
