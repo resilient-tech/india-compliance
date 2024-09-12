@@ -5,6 +5,7 @@ from pypika import Order
 import frappe
 from frappe import _
 from frappe.query_builder.functions import IfNull
+from frappe.utils import cint
 
 SECTION_MAPPING = {
     "Eligible ITC": {
@@ -16,9 +17,9 @@ SECTION_MAPPING = {
             "All Other ITC",
         ],
     },
-    "Values from Supplier under Registered Composition/Exempted/Nil-Rated/Non-GST Inward Supplies": {
-        "Registered-Composition/Exempted/Nil-Rated": [
-            "Registered-Composition/Exempted/Nil-Rated",
+    "Values of exempt, nil rated and non-GST inward supplies": {
+        "Composition Scheme, Exempted, Nil Rated": [
+            "Composition Scheme, Exempted, Nil Rated",
         ],
         "Non-GST": ["Non-GST"],
     },
@@ -60,10 +61,14 @@ def get_data(filters):
             doc_item.qty,
             doc_item.gst_hsn_code,
             doc.supplier,
+            doc.supplier_gstin,
+            doc.supplier_address,
+            doc.place_of_supply,
             doc.name.as_("invoice_no"),
             doc.posting_date,
             doc.grand_total.as_("invoice_total"),
             doc.itc_classification,
+            doc.gst_category,
             IfNull(doc_item.gst_treatment, "Not Defined").as_("gst_treatment"),
             (doc_item.cgst_rate + doc_item.sgst_rate + doc_item.igst_rate).as_(
                 "gst_rate"
@@ -109,7 +114,7 @@ def get_data(filters):
 
     data = query.run(as_dict=True)
 
-    set_invoice_sub_category(data, filters.sub_section)
+    set_invoice_sub_category(data, filters.sub_section, filters.company_gstin)
 
     if filters.get("invoice_sub_category"):
         data = [
@@ -343,14 +348,46 @@ def get_sub_category_summary(filters, mapping):
     return summary
 
 
-def set_invoice_sub_category(data, sub_section):
+def set_invoice_sub_category(data, sub_section, company_gstin):
     if sub_section == "Eligible ITC":
-        for row in data:
-            row.invoice_sub_category = row.itc_classification
+        for invoice in data:
+            invoice.invoice_sub_category = invoice.itc_classification
+
     else:
-        for row in data:
-            row.invoice_sub_category = (
-                "Non-GST"
-                if row.gst_treatment == "Non-GST"
-                else "Registered-Composition/Exempted/Nil-Rated"
-            )
+        address_state_map = frappe._dict(
+            frappe.get_all("Address", fields=["name", "gst_state_number"], as_list=1)
+        )
+
+        state = cint(company_gstin[0:2])
+
+        for invoice in data:
+            place_of_supply = cint(invoice.place_of_supply[0:2]) or state
+
+            invoice_sub_category = ""
+
+            if invoice.gst_category == "Registered Composition":
+                supplier_state = cint(invoice.supplier_gstin[0:2])
+            else:
+                supplier_state = (
+                    cint(address_state_map.get(invoice.supplier_address)) or state
+                )
+            intra, inter = 0, 0
+            taxable_value = invoice.taxable_value
+
+            if (
+                invoice.gst_treatment in ["Nil-Rated", "Exempted"]
+                or invoice.get("gst_category") == "Registered Composition"
+            ):
+                invoice_sub_category = "Composition Scheme, Exempted, Nil Rated"
+
+            elif invoice.gst_treatment == "Non-GST":
+                invoice_sub_category = "Non GST Supply"
+
+            if supplier_state == place_of_supply:
+                intra = taxable_value
+            else:
+                inter = taxable_value
+
+            invoice.invoice_sub_category = invoice_sub_category
+            invoice.intra = intra
+            invoice.inter = inter

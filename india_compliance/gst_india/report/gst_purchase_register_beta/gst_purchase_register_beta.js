@@ -10,10 +10,10 @@ const SUB_SECTION_MAPPING = {
             "All Other ITC",
         ],
     },
-    "Values from Supplier under Registered Composition/Exempted/Nil-Rated/Non-GST Inward Supplies":
+    "Values of exempt, nil rated and non-GST inward supplies":
         {
-            "Registered-Composition/Exempted/Nil-Rated": [
-                "Registered-Composition/Exempted/Nil-Rated",
+            "Composition Scheme, Exempted, Nil Rated": [
+                "Composition Scheme, Exempted, Nil Rated",
             ],
             "Non-GST": ["Non-GST"],
         },
@@ -48,6 +48,7 @@ frappe.query_reports["GST Purchase Register Beta"] = {
             fieldname: "company_gstin",
             label: __("Company GSTIN"),
             fieldtype: "Autocomplete",
+            reqd: 1,
             get_query() {
                 const company = frappe.query_report.get_filter_value("company");
                 return india_compliance.get_gstin_query(company);
@@ -75,7 +76,7 @@ frappe.query_reports["GST Purchase Register Beta"] = {
             fieldname: "sub_section",
             label: __("Sub Section"),
             options:
-                "Eligible ITC\nValues from Supplier under Registered Composition/Exempted/Nil-Rated/Non-GST Inward Supplies",
+                "Eligible ITC\nValues of exempt, nil rated and non-GST inward supplies",
             default: "Eligible ITC",
             reqd: 1,
             on_change: report => {
