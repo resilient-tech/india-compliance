@@ -760,6 +760,12 @@ class FileGSTR1:
             if status_cd == "PE":
                 self.update_json_for("upload_error", response)
 
+            if status_cd == "P":
+                self.update_json_for(
+                    "unfiled_summary", self.get_json_for("books_summary")
+                )
+                self.update_json_for("unfiled", self.get_json_for("books"))
+
         return response
 
     def proceed_to_file_gstr1(self):

@@ -131,7 +131,6 @@ frappe.ui.form.on(DOCTYPE, {
             )
                 return;
 
-            // TODO: show generate button
             if (frm.$wrapper.find(".form-message.orange").length) return;
             frm.set_intro(
                 __(
@@ -139,6 +138,7 @@ frappe.ui.form.on(DOCTYPE, {
                 ),
                 "orange"
             );
+            set_primary_secondary_buttons(frm);
         });
 
         frappe.realtime.on("show_message", message => {
@@ -195,47 +195,7 @@ frappe.ui.form.on(DOCTYPE, {
     refresh(frm) {
         // Primary Action
         frm.disable_save();
-        const gst_data = frm.doc.__gst_data;
-
-        if (gst_data && (!is_gstr1_api_enabled() || gst_data.status == "Filed")) {
-            frm.gstr1.render_indicator();
-            return;
-        }
-
-        const actions = {
-            Generate: generate_gstr1_data,
-            Upload: upload_gstr1_data,
-            "Proceed to File": proceed_to_file,
-            File: file_gstr1_data,
-        };
-
-        const primary_button_label = ["Not Filed", "Ready to File"].includes(
-            gst_data?.status
-        )
-            ? "Upload"
-            : "Generate";
-        frm.page.set_primary_action(__(primary_button_label), () =>
-            actions[primary_button_label](frm)
-        );
-
-        if (!gst_data) {
-            frm.page.clear_indicator();
-            return;
-        }
-
-        frm.add_custom_button(__("Reset"), () => reset_gstr1_data(frm));
-
-        const secondary_button_label =
-            gst_data?.status === "Ready to File" ? "File" : "Proceed to File";
-
-        // TODO: proceed to file is not very relevant as long as we have not uploaded.
-        // after upload is successfully processed, we can update unfiled data = books data
-        // TODO: If no differences, we can skip the upload button.
-        frm.add_custom_button(__(secondary_button_label), () =>
-            actions[secondary_button_label](frm)
-        );
-
-        frm.gstr1.render_indicator();
+        set_primary_secondary_buttons(frm);
     },
 
     load_gstr1_data(frm) {
@@ -249,6 +209,46 @@ frappe.ui.form.on(DOCTYPE, {
         frm.gstr1.refresh_data(data);
     },
 });
+
+function set_primary_secondary_buttons(frm) {
+    const gst_data = frm.doc.__gst_data;
+
+    if (gst_data && (!is_gstr1_api_enabled() || gst_data.status == "Filed")) {
+        frm.gstr1.render_indicator();
+        return;
+    }
+
+    const actions = {
+        Generate: generate_gstr1_data,
+        Upload: upload_gstr1_data,
+        "Proceed to File": proceed_to_file,
+        File: file_gstr1_data,
+    };
+
+    if (!gst_data || frm.$wrapper.find(".form-message.orange").length)
+        primary_button_label = "Generate";
+
+    else if (gst_data.status == "Ready to File") primary_button_label = "File";
+    else if (gst_data.status == "Not Filed") {
+        //TODO: after upload do i neeed to set primary action to proceed to file
+        primary_button_label = gst_data.reconcile_summary
+            ? "Upload"
+            : "Proceed to File";
+    }
+
+    frm.page.set_primary_action(__(primary_button_label), () =>
+        actions[primary_button_label](frm)
+    );
+
+    if (!gst_data) {
+        frm.page.clear_indicator();
+        return;
+    }
+
+    frm.add_custom_button(__("Reset"), () => reset_gstr1_data(frm));
+
+    frm.gstr1.render_indicator();
+}
 
 function generate_gstr1_data(frm) {
     frm.taxpayer_api_call("generate_gstr1").then(r => {
@@ -378,17 +378,8 @@ function fetch_status_with_retry(frm, request_type, retries = 0, now = false) {
             // Highlight error tab
 
             if (request_type == "reset") {
-                frm.page.set_indicator("Not Filed", "orange");
+                frm.page.set_primary_action("Upload", () => upload_gstr1_data(frm));
                 frm.call("generate_gstr1");
-            }
-
-            if (request_type == "upload" && frm.gstr1.status === "Ready to File") {
-                frm.remove_custom_button("File");
-                frm.add_custom_button(__("Proceed to File"), () =>
-                    proceed_to_file(frm)
-                );
-                frm.page.set_indicator("Not Filed", "orange");
-                frm.gstr1.status = "Not Filed";
             }
 
             if (request_type == "proceed_to_file")
@@ -407,9 +398,9 @@ function handle_errors(frm, message) {
 
 function handle_file_response(frm, response) {
     if (response.message?.error?.error_cd === "RET09001") {
-        frm.remove_custom_button("File");
-        frm.add_custom_button(__("Proceed to File"), () => proceed_to_file(frm));
+        frm.page.set_primary_action("Proceed to File", () => proceed_to_file(frm));
         frm.page.set_indicator("Not Filed", "orange");
+        frm.gstr1.status = "Not Filed";
         frappe.msgprint(
             __(
                 "Latest Summary is not available. Please generate summary and try again."
@@ -423,8 +414,7 @@ function handle_proceed_to_file_response(frm, response) {
     if (!filing_status) return;
 
     if (filing_status == "Ready to File") {
-        frm.remove_custom_button("Proceed to File");
-        frm.add_custom_button(__("File"), () => file_gstr1_data(frm));
+        frm.page.set_primary_action("File", () => file_gstr1_data(frm));
         frm.page.set_indicator("Ready to File", "orange");
         frm.gstr1.status = "Ready to File";
         return;
