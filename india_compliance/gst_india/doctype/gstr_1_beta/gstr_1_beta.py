@@ -161,14 +161,20 @@ class GSTR1Beta(Document):
         )
 
 
-@frappe.whitelist()
-@otp_handler
-def reset_gstr1(month_or_quarter, year, company_gstin):
+def handle_gstr1_action(action, month_or_quarter, year, company_gstin, *args):
+    frappe.has_permission("GSTR-1 Beta", "write", throw=True)
+
     gstr_1_log = frappe.get_doc(
         "GST Return Log",
         f"GSTR1-{get_period(month_or_quarter, year)}-{company_gstin}",
     )
-    gstr_1_log.reset_gstr1()
+    return getattr(gstr_1_log, action)(*args)
+
+
+@frappe.whitelist()
+@otp_handler
+def reset_gstr1(month_or_quarter, year, company_gstin):
+    handle_gstr1_action("reset_gstr1", month_or_quarter, year, company_gstin)
 
 
 @frappe.whitelist()
@@ -185,39 +191,31 @@ def upload_gstr1(month_or_quarter, year, company_gstin):
         delete_missing=True,
     )
 
-    gstr_1_log = frappe.get_doc(
-        "GST Return Log",
-        f"GSTR1-{get_period(month_or_quarter, year)}-{company_gstin}",
+    handle_gstr1_action(
+        "upload_gstr1", month_or_quarter, year, company_gstin, data.get("data")
     )
-    gstr_1_log.upload_gstr1(data.get("data"))
 
 
 @frappe.whitelist()
 @otp_handler
 def proceed_to_file_gstr1(month_or_quarter, year, company_gstin):
-    gstr_1_log = frappe.get_doc(
-        "GST Return Log",
-        f"GSTR1-{get_period(month_or_quarter, year)}-{company_gstin}",
+    return handle_gstr1_action(
+        "proceed_to_file_gstr1", month_or_quarter, year, company_gstin
     )
-    return gstr_1_log.proceed_to_file_gstr1()
 
 
 @frappe.whitelist()
 def generate_evc_otp(company_gstin, pan):
-    # TODO: permissions check for all whitelisted functions
     frappe.has_permission("GSTR-1 Beta", "write", throw=True)
-
     return TaxpayerBaseAPI(company_gstin).initiate_otp_for_evc(pan, "R1")
 
 
 @frappe.whitelist()
 @otp_handler
 def file_gstr1(month_or_quarter, year, company_gstin, pan, otp):
-    gstr_1_log = frappe.get_doc(
-        "GST Return Log",
-        f"GSTR1-{get_period(month_or_quarter, year)}-{company_gstin}",
+    return handle_gstr1_action(
+        "file_gstr1", month_or_quarter, year, company_gstin, pan, otp
     )
-    return gstr_1_log.file_gstr1(pan, otp)
 
 
 @frappe.whitelist()

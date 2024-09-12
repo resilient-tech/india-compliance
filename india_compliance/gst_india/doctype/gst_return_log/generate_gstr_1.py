@@ -682,16 +682,7 @@ class FileGSTR1:
         api = GSTR1API(self)
         response = api.reset_gstr_1_data(self.return_period)
 
-        if response.get("reference_id"):
-            self.append(
-                "actions",
-                {
-                    "request_type": "reset",
-                    "token": response.get("reference_id"),
-                    "creation_time": frappe.utils.now_datetime(),
-                },
-            )
-            self.save()
+        set_gstr1_actions(self, "reset", response.get("reference_id"), api.request_id)
 
     def process_reset_gstr1(self):
         if not self.actions:
@@ -727,7 +718,7 @@ class FileGSTR1:
             return
 
         keys = {category.value for category in GovJsonKey}
-        if any(key not in json_data for key in keys):
+        if all(key not in json_data for key in keys):
             frappe.throw("Nothing to upload")
 
         # upload data after proceed to file
@@ -740,17 +731,7 @@ class FileGSTR1:
         api = GSTR1API(self)
         response = api.save_gstr_1_data(self.return_period, json_data)
 
-        if response.get("reference_id"):
-            self.append(
-                "actions",
-                {
-                    "request_type": "upload",
-                    "token": response.get("reference_id"),
-                    "creation_time": frappe.utils.now_datetime(),
-                },
-            )
-
-        self.save()
+        set_gstr1_actions(self, "upload", response.get("reference_id"), api.request_id)
 
     def process_upload_gstr1(self):
         if not self.actions:
@@ -786,16 +767,9 @@ class FileGSTR1:
         if response.error and response.error.error_cd == "RET00003":
             return self.fetch_and_compare_summary(api)
 
-        if response.get("reference_id"):
-            self.append(
-                "actions",
-                {
-                    "request_type": "proceed_to_file",
-                    "token": response.get("reference_id"),
-                    "creation_time": frappe.utils.now_datetime(),
-                },
-            )
-            self.save()
+        set_gstr1_actions(
+            self, "proceed_to_file", response.get("reference_id"), api.request_id
+        )
 
     def process_proceed_to_file_gstr1(self):
         if not self.actions:
@@ -873,6 +847,8 @@ class FileGSTR1:
         if not otp:
             # If OTP is none, generate evc OTP
             pass
+
+        # TODO : add actions for file gstr1
 
         summary = self.get_json_for("authenticated_summary")
         api = GSTR1API(self)
@@ -1014,6 +990,37 @@ def get_differing_categories(mapped_summary, gov_summary):
             differing_categories.add(row["description"])
 
     return differing_categories
+
+
+def set_gstr1_actions(doc, request_type, token, request_id):
+    if token:
+        doc.append(
+            "actions",
+            {
+                "request_type": request_type,
+                "token": token,
+                "creation_time": frappe.utils.now_datetime(),
+            },
+        )
+        doc.save()
+        enqueue_actions(token, request_id)
+
+
+def enqueue_actions(token, request_id):
+    frappe.enqueue(
+        "india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1.add_integration_request",
+        queue="long",
+        token=token,
+        request_id=request_id,
+    )
+
+
+def add_integration_request(token, request_id):
+    doc_name = frappe.db.get_value("Integration Request", {"request_id": request_id})
+    if doc_name:
+        frappe.db.set_value(
+            "GSTR Action", {"token": token}, {"integration_request": doc_name}
+        )
 
 
 def enqueue_notification(

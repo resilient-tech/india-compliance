@@ -206,8 +206,7 @@
   },
   {
    "fieldname": "pending_request_info_section",
-   "fieldtype": "Section Break",
-   "label": "Pending Request Info"
+   "fieldtype": "Section Break"
   },
   {
    "fieldname": "actions",
@@ -224,7 +223,7 @@
    "link_fieldname": "reference_docname"
   }
  ],
- "modified": "2024-09-09 17:58:04.543487",
+ "modified": "2024-09-12 11:48:46.154973",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Return Log",

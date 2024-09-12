@@ -9,7 +9,8 @@
   "request_type",
   "token",
   "status",
-  "creation_time"
+  "creation_time",
+  "integration_request"
  ],
  "fields": [
   {
@@ -21,6 +22,7 @@
   {
    "fieldname": "token",
    "fieldtype": "Data",
+   "hidden": 1,
    "label": "Token"
   },
   {
@@ -34,12 +36,20 @@
    "fieldtype": "Datetime",
    "in_list_view": 1,
    "label": "Creation Time"
+  },
+  {
+   "fieldname": "integration_request",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Integration Request",
+   "options": "Integration Request",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2024-09-09 21:08:51.624884",
+ "modified": "2024-09-12 12:36:05.679413",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR Action",
