@@ -78,9 +78,11 @@ class GSTPurchaseRegisterBeta:
                 (doc.itc_cess_amount).as_("csamt"),
             )
             .where(doc.docstatus == 1)
-            .groupby(doc.name)
             .orderby(doc.name, order=Order.desc)
         )
+
+        if filters.get("summary_by") != "Summary by Item":
+            query = query.groupby(doc.name)
 
         if filters.get("company"):
             query = query.where(doc.company == filters.company)

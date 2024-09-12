@@ -28,6 +28,7 @@ frappe.query_reports["GST Purchase Register Beta"] = {
             label: __("Company"),
             fieldtype: "Link",
             options: "Company",
+            reqd: 1,
             default: frappe.defaults.get_user_default("Company"),
             on_change: report => {
                 report.set_filter_value({
@@ -42,7 +43,6 @@ frappe.query_reports["GST Purchase Register Beta"] = {
                     },
                 };
             },
-            reqd: 1,
         },
         {
             fieldname: "company_gstin",
@@ -68,8 +68,8 @@ frappe.query_reports["GST Purchase Register Beta"] = {
             fieldtype: "Select",
             fieldname: "summary_by",
             label: __("Summary By"),
-            options: "Overview\nSummary by Item",
-            default: "Summary by Item",
+            options: "Overview\nSummary by Item\nSummary by Invoice",
+            default: "Overview",
         },
         {
             fieldtype: "Select",
