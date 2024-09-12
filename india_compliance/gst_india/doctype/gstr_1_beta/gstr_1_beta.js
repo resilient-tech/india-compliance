@@ -407,6 +407,9 @@ function handle_file_response(frm, response) {
             )
         );
     }
+    if(response.message.ack_num){
+        frm.call("generate_gstr1")
+    }
 }
 
 function handle_proceed_to_file_response(frm, response) {

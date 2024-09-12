@@ -857,7 +857,6 @@ class FileGSTR1:
 
     def file_gstr1(self, pan, otp):
         verify_request_in_progress(self, "file")
-        # TODO : add actions for file gstr1
 
         summary = self.get_json_for("authenticated_summary")
         api = GSTR1API(self)
@@ -867,10 +866,16 @@ class FileGSTR1:
             self.db_set({"filing_status": "Not Filed"})
             self.update_json_for("authenticated_summary", None)
 
-        # TODO: On success. Update status, update ack no and date
-        # TODO: Update data for generate gstr-1
+        if response.get("ack_num"):
+            self.db_set({"filing_status": "Filed"})
+            self.db_set({"filing_date": frappe.utils.nowdate()})
+            self.db_set({"acknowledgement_number": response.get("ack_num")})
+
+            set_gstr1_actions(self, "file", response.get("ack_num"), api.request_id)
+
+            self.remove_json_for("upload_error")
+
         # TODO: 2nd phase Accounting Entry.
-        # after filing or mark as filed, clear error files
 
         return response
 
