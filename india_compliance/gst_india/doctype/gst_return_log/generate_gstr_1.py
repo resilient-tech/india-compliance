@@ -675,7 +675,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
 class FileGSTR1:
     def reset_gstr1(self):
         # reset called after proceed to file
-        # TODO: Throw if already in progress
+        verify_request_in_progress(self, "reset")
 
         self.db_set({"filing_status": "Not Filed"})
 
@@ -716,6 +716,8 @@ class FileGSTR1:
     def upload_gstr1(self, json_data):
         if not json_data:
             return
+
+        verify_request_in_progress(self, "upload")
 
         keys = {category.value for category in GovJsonKey}
         if all(key not in json_data for key in keys):
@@ -769,6 +771,8 @@ class FileGSTR1:
         return response
 
     def proceed_to_file_gstr1(self):
+        verify_request_in_progress(self, "proceed_to_file")
+
         api = GSTR1API(self)
         response = api.proceed_to_file("GSTR1", self.return_period)
 
@@ -852,10 +856,7 @@ class FileGSTR1:
         return response
 
     def file_gstr1(self, pan, otp):
-        if not otp:
-            # If OTP is none, generate evc OTP
-            pass
-
+        verify_request_in_progress(self, "file")
         # TODO : add actions for file gstr1
 
         summary = self.get_json_for("authenticated_summary")
@@ -872,6 +873,14 @@ class FileGSTR1:
         # after filing or mark as filed, clear error files
 
         return response
+
+
+def verify_request_in_progress(self, request_type):
+    for doc in self.actions:
+        if doc.request_type == request_type and not doc.status:
+            frappe.throw(
+                f"{request_type.capitalize()} is in progress.Please wait for the process to complete."
+            )
 
 
 def is_within_limit(result):
