@@ -542,7 +542,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         data["books"] = self.normalize_data(books_data)
 
         self.summarize_data(data)
-        return callback and callback(data, filters)
+        return callback and callback(filters)
 
     def generate_only_books_data(self, data, filters, callback=None):
         status = "Not Filed"
@@ -553,7 +553,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         data["status"] = status
 
         self.summarize_data(data)
-        return callback and callback(data, filters)
+        return callback and callback(filters)
 
     # GET DATA
     def get_gov_gstr1_data(self):

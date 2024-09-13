@@ -156,7 +156,7 @@ frappe.ui.form.on(DOCTYPE, {
         });
 
         frappe.realtime.on("gstr1_data_prepared", message => {
-            const { data, filters } = message;
+            const { filters } = message;
 
             if (
                 frm.doc.company_gstin !== filters.company_gstin ||
@@ -165,8 +165,8 @@ frappe.ui.form.on(DOCTYPE, {
             )
                 return;
 
-            frappe.after_ajax(() => {
-                frm.doc.__gst_data = data;
+            frm.call("generate_gstr1").then(r => {
+                frm.doc.__gst_data = r.message;
                 frm.trigger("load_gstr1_data");
             });
         });
@@ -252,16 +252,15 @@ function set_primary_secondary_buttons(frm) {
 
 function generate_gstr1_data(frm) {
     frm.taxpayer_api_call("generate_gstr1").then(r => {
-        // TODO: Do this for all API calls
-        // TODO: Check size before sending it via redis. Instead it could raise alert.
         if (!r.message) return;
         frm.doc.__gst_data = r.message;
         frm.trigger("load_gstr1_data");
+
+        const request_types = ["upload", "reset", "proceed_to_file"];
+        request_types.map(request_type =>
+            fetch_status_with_retry(frm, request_type, (now = true))
+        );
     });
-    const request_types = ["upload", "reset", "proceed_to_file"];
-    request_types.map(request_type =>
-        fetch_status_with_retry(frm, request_type, (now = true))
-    );
 }
 
 function upload_gstr1_data(frm) {
@@ -379,7 +378,10 @@ function fetch_status_with_retry(frm, request_type, retries = 0, now = false) {
 
             if (request_type == "reset") {
                 frm.page.set_primary_action("Upload", () => upload_gstr1_data(frm));
-                frm.call("generate_gstr1");
+                frm.call("generate_gstr1").then(r => {
+                    frm.doc.__gst_data = r.message;
+                    frm.trigger("load_gstr1_data");
+                });
             }
 
             if (request_type == "proceed_to_file")
@@ -408,7 +410,10 @@ function handle_file_response(frm, response) {
         );
     }
     if(response.message.ack_num){
-        frm.call("generate_gstr1")
+        frm.call("generate_gstr1").then(r => {
+            frm.doc.__gst_data = r.message;
+            frm.trigger("load_gstr1_data");
+        });
     }
 }
 
