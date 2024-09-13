@@ -1,11 +1,10 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
 import itertools
-import json
 
 import frappe
 from frappe import unscrub
-from frappe.utils import floor, flt
+from frappe.utils import flt
 
 from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
 from india_compliance.gst_india.utils.gstr_1 import GovJsonKey, GSTR1_SubCategory
@@ -886,98 +885,6 @@ def verify_request_in_progress(self, request_type):
             frappe.throw(
                 f"{request_type.capitalize()} is in progress.Please wait for the process to complete."
             )
-
-
-def is_within_limit(result):
-    return len(json.dumps(result, indent=4)) < MAXIMUM_UPLOAD_SIZE
-
-
-def get_partitioned_data(json_data):
-    if is_within_limit(json_data):
-        yield json_data
-        return
-
-    base_data = {"gstin": json_data["gstin"], "fp": json_data["fp"]}
-    result = {}
-    has_yielded = False
-
-    for category, category_data in json_data.items():
-        result[category] = category_data
-
-        if is_within_limit(result):
-            continue
-
-        # 2 case : 1st - large categories, 2nd - combined category data is large
-        del result[category]
-        if result.keys() in [
-            "b2b",
-            "cdnr",
-        ]:  # Ensure at least one category is present before yielding the result
-            yield result
-
-        result = base_data.copy()
-        result[category] = category_data
-
-        if is_within_limit(result):
-            continue
-
-        has_yielded = True
-        # Handle the case where individual objects within the category need to be partitioned
-        yield from partition_by_objects(result, category, category_data, base_data)
-
-    if not has_yielded:
-        yield result
-
-
-def partition_by_objects(result, category, category_data, base_data):
-    result[category] = []
-    has_yielded = False
-    for object in category_data:
-        result[category].append(object)
-
-        if is_within_limit(result):
-            continue
-
-        # 2 case: 1st object is so big, combine 2 object is big
-        object_data = result[category].pop()
-        if result[
-            category
-        ]:  # Ensure at least one object is present before yielding the result
-            yield result
-
-        result = base_data.copy()
-        result[category] = [object_data]
-
-        if is_within_limit(result):
-            continue
-
-        has_yielded = True
-        # Handle the case where invoices within the object need to be partitioned
-        yield from partition_by_invoices(result, category, object)
-
-    if not has_yielded:
-        yield result
-
-
-def partition_by_invoices(result, category, object):
-    result[category] = [{"ctin": object.get("ctin"), "inv": []}]
-
-    result_size = len(json.dumps(result, indent=4))
-    invoice_size = 1200
-    invoice_to_add = floor((MAXIMUM_UPLOAD_SIZE - result_size) / invoice_size)
-    count = 0
-
-    for invoice in object.get("inv"):
-        count += 1
-        result[category][-1]["inv"].append(invoice)
-
-        if count == invoice_to_add:
-            count = 0
-            yield result
-            result[category] = [{"ctin": object.get("ctin"), "inv": []}]
-
-    if result[category][-1]["inv"]:
-        yield result
 
 
 def get_differing_categories(mapped_summary, gov_summary):
