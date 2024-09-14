@@ -866,9 +866,13 @@ class FileGSTR1:
             self.update_json_for("authenticated_summary", None)
 
         if response.get("ack_num"):
-            self.db_set({"filing_status": "Filed"})
-            self.db_set({"filing_date": frappe.utils.nowdate()})
-            self.db_set({"acknowledgement_number": response.get("ack_num")})
+            self.db_set(
+                {
+                    "filing_status": "Filed",
+                    "filing_date": frappe.utils.nowdate(),
+                    "acknowledgement_number": response.get("ack_num"),
+                }
+            )
 
             set_gstr1_actions(self, "file", response.get("ack_num"), api.request_id)
 
@@ -877,6 +881,39 @@ class FileGSTR1:
         # TODO: 2nd phase Accounting Entry.
 
         return response
+
+    def get_amendment_data(self):
+        authenticated_summary = convert_to_internal_data_format(
+            self.get_json_for("authenticated_summary")
+        ).get("summary")
+        authenticated_summary = summarize_retsum_data(authenticated_summary.values())
+
+        non_amended_entries = {
+            "no_of_records": 0,
+            "total_igst_amount": 0,
+            "total_cgst_amount": 0,
+            "total_sgst_amount": 0,
+            "total_cess_amount": 0,
+            "total_taxable_value": 0,
+        }
+        amended_liability = {}
+
+        for data in authenticated_summary:
+            if "Net Liability from Amendments" == data["description"]:
+                amended_liability = data
+            elif data.get("consider_in_total_taxable_value") or data.get(
+                "consider_in_total_tax"
+            ):
+                for key, value in data.items():
+                    if key not in non_amended_entries:
+                        continue
+
+                    non_amended_entries[key] += value
+
+        return {
+            "non_amended_liability": non_amended_entries,
+            "amended_liability": amended_liability,
+        }
 
 
 def verify_request_in_progress(self, request_type):

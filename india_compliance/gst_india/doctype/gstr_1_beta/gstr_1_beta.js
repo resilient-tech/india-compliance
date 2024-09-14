@@ -283,9 +283,21 @@ function proceed_to_file(frm) {
 }
 
 async function file_gstr1_data(frm) {
-    // TODO: If amendments, show table for total liability breakup.
-    // compute other than amendments.
-    // This table to be shown only if there are amendments.
+    const total_liability = await frappe.call({
+        method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.handle_gstr1_action",
+        args: {
+            action: "get_amendment_data",
+            month_or_quarter: frm.doc.month_or_quarter,
+            year: frm.doc.year,
+            company_gstin: frm.doc.company_gstin,
+        },
+    });
+
+    const { amended_liability, non_amended_liability } = total_liability.message;
+    const amendment_table_html = generate_liability_table(
+        amended_liability,
+        non_amended_liability
+    );
 
     // TODO: EVC Generation, Resend, and Filing
 
@@ -298,6 +310,13 @@ async function file_gstr1_data(frm) {
     const dialog = new frappe.ui.Dialog({
         title: "Filing GSTR-1",
         fields: [
+            {
+                label: "Amendment Liability",
+                fieldname: "amendment_html",
+                fieldtype: "HTML",
+                options: amendment_table_html,
+                hidden: !amendment_table_html,
+            },
             {
                 label: "PAN",
                 fieldname: "pan",
@@ -320,6 +339,50 @@ async function file_gstr1_data(frm) {
     dialog.show();
 }
 
+function generate_liability_table(amended_liability, non_amended_liability) {
+    if (Object.keys(amended_liability).length === 0) return "";
+
+    let table_html = `
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th>No. of Records</th>
+                    <th>Total IGST</th>
+                    <th>Total CGST</th>
+                    <th>Total SGST</th>
+                    <th>Total Cess</th>
+                    <th>Total Taxable Value</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    table_html += generate_table_row("Amended Liability", amended_liability);
+    table_html += generate_table_row("Non-Amended Liability", non_amended_liability);
+
+    table_html += `
+            </tbody>
+        </table>
+    `;
+
+    return table_html;
+}
+
+function generate_table_row(description, liability) {
+    return `
+        <tr>
+            <td>${description}</td>
+            <td>${liability.no_of_records || 0}</td>
+            <td>${liability.total_igst_amount || 0}</td>
+            <td>${liability.total_cgst_amount || 0}</td>
+            <td>${liability.total_sgst_amount || 0}</td>
+            <td>${liability.total_cess_amount || 0}</td>
+            <td>${liability.total_taxable_value || 0}</td>
+        </tr>
+    `;
+}
+
 function perform_gstr1_action(frm, action, additional_args = {}) {
     frm.gstr1.tabs.error_tab.hide();
     const base_args = {
@@ -332,7 +395,7 @@ function perform_gstr1_action(frm, action, additional_args = {}) {
     const args = { ...base_args, ...additional_args };
 
     frappe.call({
-        method: `india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.handle_gstr1_action`,
+        method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.handle_gstr1_action",
         args: args,
         callback: response => {
             if (action == "file") {
