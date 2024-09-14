@@ -198,13 +198,13 @@ def generate_evc_otp(company_gstin, pan):
 
 @frappe.whitelist()
 @otp_handler
-def process_gstr1_request(month_or_quarter, year, company_gstin, request_type):
+def process_gstr1_request(month_or_quarter, year, company_gstin, action):
     gstr_1_log = frappe.get_doc(
         "GST Return Log",
         f"GSTR1-{get_period(month_or_quarter, year)}-{company_gstin}",
     )
 
-    method_name = f"process_{request_type}_gstr1"
+    method_name = f"process_{action}_gstr1"
     method = getattr(gstr_1_log, method_name)
     data = method()
 
