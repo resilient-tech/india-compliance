@@ -235,15 +235,15 @@ class ReconcileGSTR1:
             if not books_subdata and not gov_subdata:
                 continue
 
-            is_list = False  # Object Type for the subdata_value
+            # Object Type for the subdata_value
+            is_list = self.is_list(books_subdata, gov_subdata)
+
+            self.sanitize_books_data(books_subdata, is_list)
 
             reconcile_subdata = {}
 
             # Books vs Gov
             for key, books_value in books_subdata.items():
-                if not reconcile_subdata:
-                    is_list = isinstance(books_value, list)
-
                 gov_value = gov_subdata.get(key)
 
                 reconcile_row = self.get_reconciled_row(books_value, gov_value)
@@ -258,9 +258,6 @@ class ReconcileGSTR1:
 
                 # Update each row in Books Data
                 for row in books_values:
-                    if row.get("upload_status") == "Missing in Books":
-                        continue
-
                     if not gov_value:
                         row["upload_status"] = "Not Uploaded"
                         continue
@@ -274,9 +271,6 @@ class ReconcileGSTR1:
             for key, gov_value in gov_subdata.items():
                 if key in books_subdata:
                     continue
-
-                if not reconcile_subdata:
-                    is_list = isinstance(gov_value, list)
 
                 reconcile_subdata[key] = self.get_reconciled_row(None, gov_value)
 
@@ -296,12 +290,20 @@ class ReconcileGSTR1:
             if reconcile_subdata:
                 reconciled_data[subcategory] = reconcile_subdata
 
-        if update_books_match:
-            self.update_json_for("books", books_data)
-
+        self.update_json_for("books", books_data)
         self.update_json_for("reconcile", reconciled_data)
 
         return reconciled_data
+
+    def sanitize_books_data(self, books_subdata, is_list):
+        for key, value in books_subdata.copy().items():
+            values = value if is_list else [value]
+            if values[0].get("upload_status") == "Missing in Books":
+                del books_subdata[key]
+                continue
+
+            for row in values:
+                row.pop("upload_status", None)
 
     @staticmethod
     def get_reconciled_row(books_row, gov_row):
@@ -410,6 +412,13 @@ class ReconcileGSTR1:
                 empty_row[key] = [{}]
 
         return empty_row
+
+    @staticmethod
+    def is_list(books_subdata: dict, gov_subdata: dict):
+        book_row = next(iter(books_subdata.values()), None)
+        gov_row = next(iter(gov_subdata.values()), None)
+
+        return isinstance(book_row or gov_row, list)
 
 
 class AggregateInvoices:
@@ -706,8 +715,6 @@ class FileGSTR1:
                 )
 
             if response.get("status_cd") == "P":
-                # TODO: Better way to handle this. Exclude such records from books data.
-                self.remove_json_for("books")
                 self.update_json_for("unfiled", {}, reset_reconcile=True)
 
         return response
