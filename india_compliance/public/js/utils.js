@@ -6,6 +6,7 @@ import {
     TDS_REGEX,
     TCS_REGEX,
     GST_INVOICE_NUMBER_FORMAT,
+    PAN_REGEX,
 } from "./regex_constants";
 
 frappe.provide("india_compliance");
@@ -223,6 +224,22 @@ Object.assign(india_compliance, {
 
     is_e_invoice_enabled() {
         return india_compliance.is_api_enabled() && gst_settings.enable_e_invoice;
+    },
+
+    validate_pan(pan) {
+        if (!pan) return;
+
+        pan = pan.trim().toUpperCase();
+
+        if (pan.length != 10) {
+            frappe.throw(("PAN should be 10 characters long"));
+        }
+
+        if (!PAN_REGEX.test(pan)) {
+            frappe.throw(("Invalid PAN format"));
+        }
+
+        return pan;
     },
 
     validate_gstin(gstin) {

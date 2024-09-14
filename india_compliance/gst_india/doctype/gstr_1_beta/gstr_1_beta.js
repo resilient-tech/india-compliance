@@ -336,9 +336,18 @@ function file_gstr1_data(frm) {
             },
         ],
         primary_action_label: "Get OTP",
-        primary_action() {
-            validate_pan(frm, dialog);
-            show_otp_field(frm, dialog, pan);
+        async primary_action() {
+            const pan = dialog.get_value("pan");
+            india_compliance.validate_pan(pan);
+
+            // generate otp
+            await generate_evc_otp(frm.doc.company_gstin, pan)
+
+            // show otp field
+            dialog.set_df_property("otp", "read_only", 0);
+            dialog.set_df_property("acknowledged", "read_only", 0);
+
+            update_actions(frm, dialog, pan);
 
         },
     });
@@ -559,24 +568,7 @@ function handle_proceed_to_file_response(frm, response) {
     });
 }
 
-function validate_pan(frm, dialog) {
-    const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
-    const pan = dialog.get_value("pan")?.trim().toUpperCase();
-
-    if (pan.length != 10) {
-        frappe.throw(("PAN should be 10 characters long"));
-    }
-
-    if (!PAN_REGEX.test(pan)) {
-        frappe.throw(("Invalid PAN format"));
-    }
-
-}
-
-async function show_otp_field(frm, dialog, pan) {
-    dialog.set_df_property("otp", "read_only", 0);
-    dialog.set_df_property("acknowledged", "read_only", 0);
-
+async function update_actions(frm, dialog, pan) {
     dialog.set_primary_action("File", () => {
         if (!dialog.get_value("acknowledged")) {
             frappe.msgprint(
@@ -585,7 +577,7 @@ async function show_otp_field(frm, dialog, pan) {
             return;
         }
 
-// TODO: do this in backend
+        // TODO: do this in backend
         frappe.db.set_value(
             "GSTIN",
             frm.doc.company_gstin,
@@ -593,40 +585,21 @@ async function show_otp_field(frm, dialog, pan) {
             pan
         );
 
-        perform_gstr1_action(frm, "file", { pan: pan, otp: dialog.get_value("otp") });
-        dialog.hide();
+        perform_gstr1_action(frm, "file", { pan: pan, otp: dialog.get_value("otp") })
+        dialog.hide()
     });
 
-    dialog.set_secondary_action_label("Cancel");
+    dialog.set_secondary_action_label("Resend OTP");
     dialog.set_secondary_action(() => {
-        dialog.hide();
-    });
-
-    dialog.get_field("otp").set_description(`
-        <div class="otp-section">
-            <span class="otp-not-received-text">
-                Didn't receive OTP?
-            </span>
-            <button class="btn btn-secondary resend-otp-btn" data-fieldname="resend-otp">
-                Resend OTP
-            </button>
-        </div>
-    `);
-
-    dialog.$wrapper.find(".otp-section").css({
-        "text-align": "right",
-        "margin-top": "10px",
-    });
-
-    dialog.$wrapper.find(".resend-otp-btn").on("click", () => {
-        otp_data = generate_evc_otp(frm, pan);
+        generate_evc_otp(frm, pan);
     });
 }
 
-function generate_evc_otp(frm, pan) {
+function generate_evc_otp(company_gstin, pan) {
+    // TODO: common function for all returns
     return frappe.call({
         method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.generate_evc_otp",
-        args: { company_gstin: frm.doc.company_gstin, pan: pan },
+        args: { company_gstin: company_gstin, pan: pan },
     });
 }
 
