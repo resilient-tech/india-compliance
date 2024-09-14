@@ -163,61 +163,37 @@ class GSTR1Beta(Document):
         )
 
 
-def handle_gstr1_action(action, month_or_quarter, year, company_gstin, *args):
+@frappe.whitelist()
+@otp_handler
+def handle_gstr1_action(action, month_or_quarter, year, company_gstin, **kwargs):
     frappe.has_permission("GSTR-1 Beta", "write", throw=True)
 
     gstr_1_log = frappe.get_doc(
         "GST Return Log",
         f"GSTR1-{get_period(month_or_quarter, year)}-{company_gstin}",
     )
-    return getattr(gstr_1_log, action)(*args)
+    del kwargs["cmd"]
 
+    if action == "upload_gstr1":
+        from india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export import (
+            download_gstr_1_json,
+        )
 
-@frappe.whitelist()
-@otp_handler
-def reset_gstr1(month_or_quarter, year, company_gstin):
-    handle_gstr1_action("reset_gstr1", month_or_quarter, year, company_gstin)
+        data = download_gstr_1_json(
+            company_gstin,
+            year,
+            month_or_quarter,
+            delete_missing=True,
+        )
+        kwargs["json_data"] = data.get("data")
 
-
-@frappe.whitelist()
-@otp_handler
-def upload_gstr1(month_or_quarter, year, company_gstin):
-    from india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export import (
-        download_gstr_1_json,
-    )
-
-    data = download_gstr_1_json(
-        company_gstin,
-        year,
-        month_or_quarter,
-        delete_missing=True,
-    )
-
-    handle_gstr1_action(
-        "upload_gstr1", month_or_quarter, year, company_gstin, data.get("data")
-    )
-
-
-@frappe.whitelist()
-@otp_handler
-def proceed_to_file_gstr1(month_or_quarter, year, company_gstin):
-    return handle_gstr1_action(
-        "proceed_to_file_gstr1", month_or_quarter, year, company_gstin
-    )
+    return getattr(gstr_1_log, action)(**kwargs)
 
 
 @frappe.whitelist()
 def generate_evc_otp(company_gstin, pan):
     frappe.has_permission("GSTR-1 Beta", "write", throw=True)
     return TaxpayerBaseAPI(company_gstin).initiate_otp_for_evc(pan, "R1")
-
-
-@frappe.whitelist()
-@otp_handler
-def file_gstr1(month_or_quarter, year, company_gstin, pan, otp):
-    return handle_gstr1_action(
-        "file_gstr1", month_or_quarter, year, company_gstin, pan, otp
-    )
 
 
 @frappe.whitelist()

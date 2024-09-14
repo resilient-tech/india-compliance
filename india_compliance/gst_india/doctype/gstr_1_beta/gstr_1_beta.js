@@ -138,7 +138,9 @@ frappe.ui.form.on(DOCTYPE, {
                 ),
                 "orange"
             );
-            set_primary_secondary_buttons(frm);
+            frm.page.set_primary_action(__("Generate"), () =>
+                generate_gstr1_data(frm)
+            );
         });
 
         frappe.realtime.on("show_message", message => {
@@ -225,7 +227,7 @@ function set_primary_secondary_buttons(frm) {
         File: file_gstr1_data,
     };
 
-    if (!gst_data || frm.$wrapper.find(".form-message.orange").length)
+    if (!gst_data)
         primary_button_label = "Generate";
 
     else if (gst_data.status == "Ready to File") primary_button_label = "File";
@@ -326,6 +328,7 @@ async function file_gstr1_data(frm) {
 function perform_gstr1_action(frm, action, additional_args = {}) {
     frm.gstr1.tabs.error_tab.hide();
     const base_args = {
+        action: `${action}_gstr1`,
         month_or_quarter: frm.doc.month_or_quarter,
         year: frm.doc.year,
         company_gstin: frm.doc.company_gstin,
@@ -334,7 +337,7 @@ function perform_gstr1_action(frm, action, additional_args = {}) {
     const args = { ...base_args, ...additional_args };
 
     frappe.call({
-        method: `india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.${action}_gstr1`,
+        method: `india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.handle_gstr1_action`,
         args: args,
         callback: response => {
             if (action == "file") {
