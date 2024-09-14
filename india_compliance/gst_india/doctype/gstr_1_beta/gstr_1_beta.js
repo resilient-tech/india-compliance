@@ -330,10 +330,17 @@ async function file_gstr1_data(frm) {
                 fieldtype: "Data",
                 hidden: 1, // TODO: 2nd priority instead disable input
             },
+            {
+                label: "Once you file your return you will not be able to undo the action",
+                fieldname: "acknowledged",
+                fieldtype: "Check",
+                default: 0,
+                hidden: 1,
+            },
         ],
-        primary_action_label: "Verify PAN",
+        primary_action_label: "Get OTP",
         primary_action() {
-            validate_details_and_file_gstr1(frm, dialog);
+            validate_pan(frm, dialog);
         },
     });
     dialog.show();
@@ -520,7 +527,7 @@ function handle_proceed_to_file_response(frm, response) {
     });
 }
 
-function validate_details_and_file_gstr1(frm, dialog) {
+function validate_pan(frm, dialog) {
     const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
     const pan = dialog.get_value("pan")?.trim().toUpperCase();
 
@@ -532,9 +539,22 @@ function validate_details_and_file_gstr1(frm, dialog) {
         frappe.throw(__("Invalid PAN format"));
     }
 
+    show_otp_field(frm, dialog, pan);
+}
+
+async function show_otp_field(frm, dialog, pan) {
     dialog.get_field("otp").toggle(true);
-    dialog.set_primary_action("Authenticate OTP", () => {
-        //authenticate otp
+    dialog.get_field("acknowledged").toggle(true);
+
+    dialog.set_primary_action("File", () => {
+        if (!dialog.get_value("acknowledged")) {
+            frappe.msgprint(
+                __("Please acknowledge that you can not undo this action.")
+            );
+            return;
+        }
+        const otp = dialog.get_value("otp");
+
         frappe.db.set_value(
             "GSTIN",
             frm.doc.company_gstin,
@@ -544,6 +564,38 @@ function validate_details_and_file_gstr1(frm, dialog) {
 
         perform_gstr1_action(frm, "file", { pan: pan, otp: dialog.get_value("otp") });
         dialog.hide();
+    });
+
+    dialog.set_secondary_action_label("Cancel");
+    dialog.set_secondary_action(() => {
+        dialog.hide();
+    });
+
+    dialog.$wrapper.find(`[data-fieldname="otp"] input[data-fieldname="otp"]`).after(`
+        <div class="otp-section">
+            <span class="otp-not-received-text">
+                Didn't receive OTP?
+            </span>
+            <button class="btn btn-secondary resend-otp-btn" data-fieldname="resend-otp">
+                Resend OTP
+            </button>
+        </div>
+    `);
+
+    dialog.$wrapper.find(".otp-section").css({
+        "text-align": "right",
+        "margin-top": "10px",
+    });
+
+    dialog.$wrapper.find(".resend-otp-btn").on("click", () => {
+        otp_data = get_otp(frm, pan);
+    });
+}
+
+function get_otp(frm, pan) {
+    return frappe.call({
+        method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.generate_evc_otp",
+        args: { company_gstin: frm.doc.company_gstin, pan: pan },
     });
 }
 
