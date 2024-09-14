@@ -265,6 +265,7 @@ def get_file_doc(doctype, docname, attached_to_field):
         )
 
     except frappe.DoesNotExistError:
+        frappe.clear_last_message()
         return None
 
 
