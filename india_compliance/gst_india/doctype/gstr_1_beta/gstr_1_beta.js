@@ -138,9 +138,7 @@ frappe.ui.form.on(DOCTYPE, {
                 ),
                 "orange"
             );
-            frm.page.set_primary_action(__("Generate"), () =>
-                generate_gstr1_data(frm)
-            );
+            frm.page.set_primary_action(__("Generate"), () => generate_gstr1_data(frm));
         });
 
         frappe.realtime.on("show_message", message => {
@@ -227,12 +225,9 @@ function set_primary_secondary_buttons(frm) {
         File: file_gstr1_data,
     };
 
-    if (!gst_data)
-        primary_button_label = "Generate";
-
+    if (!gst_data) primary_button_label = "Generate";
     else if (gst_data.status == "Ready to File") primary_button_label = "File";
     else if (gst_data.status == "Not Filed") {
-        //TODO: after upload do i neeed to set primary action to proceed to file
         primary_button_label = gst_data.reconcile_summary
             ? "Upload"
             : "Proceed to File";
@@ -377,7 +372,12 @@ function fetch_status_with_retry(frm, request_type, retries = 0, now = false) {
             if (message.status_cd == "PE" && request_type == "upload")
                 handle_errors(frm, message);
 
-            // Highlight error tab
+            // TODO: Highlight error tab
+
+            if (request_type == "upload") {
+                //TODO: data is not refreshed immediately
+                frm.call("sync_with_gstn", { sync_for: "unfiled" });
+            }
 
             if (request_type == "reset") {
                 frm.page.set_primary_action("Upload", () => upload_gstr1_data(frm));
@@ -412,7 +412,7 @@ function handle_file_response(frm, response) {
             )
         );
     }
-    if(response.message.ack_num){
+    if (response.message.ack_num) {
         frm.call("generate_gstr1").then(r => {
             frm.doc.__gst_data = r.message;
             frm.trigger("load_gstr1_data");
