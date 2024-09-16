@@ -1,13 +1,20 @@
 import json
 from base64 import b64decode, b64encode
+from functools import wraps
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 
 import frappe
+import frappe.utils
 from frappe import _
 from frappe.utils import add_to_date, cint, now_datetime
 
+from india_compliance.exceptions import (
+    InvalidAuthTokenError,
+    InvalidOTPError,
+    OTPRequestedError,
+)
 from india_compliance.gst_india.api_classes.base import BaseAPI, get_public_ip
 from india_compliance.gst_india.utils import merge_dicts, tar_gz_bytes_to_data
 from india_compliance.gst_india.utils.cryptography import (
@@ -17,6 +24,25 @@ from india_compliance.gst_india.utils.cryptography import (
     hash_sha256,
     hmac_sha256,
 )
+
+
+def otp_handler(func):
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+
+        except OTPRequestedError as e:
+            return e.response
+
+        except InvalidOTPError as e:
+            return e.response
+
+        except Exception as e:
+            raise e
+
+    return wrapper
 
 
 class PublicCertificate(BaseAPI):
@@ -84,7 +110,7 @@ class TaxpayerAuthenticate(BaseAPI):
     IGNORED_ERROR_CODES = {
         "RETOTPREQUEST": "otp_requested",
         "EVCREQUEST": "otp_requested",
-        "AUTH158": "invalid_otp",  # Invalid OTP
+        "AUTH158": "authorization_failed",  # GSTR1
         "AUTH4033": "invalid_otp",  # Invalid Session
         # "AUTH4034": "invalid_otp",  # Invalid OTP
         "AUTH4038": "authorization_failed",  # Session Expired
@@ -104,12 +130,17 @@ class TaxpayerAuthenticate(BaseAPI):
         if response.status_cd != 1:
             return
 
-        return response.update(
-            {"error_type": "otp_requested", "gstin": self.company_gstin}
-        )
+        response.update({"error_type": "otp_requested", "gstin": self.company_gstin})
+
+        raise OTPRequestedError(response=response)
 
     def autheticate_with_otp(self, otp=None):
         if not otp:
+            # in enqueue / cron job
+            if getattr(frappe.local, "job", None):
+                frappe.local.job.after_job.add(self.reset_auth_token)
+                raise InvalidAuthTokenError
+
             # reset auth token
             frappe.db.set_value(
                 "GST Credential",
@@ -124,7 +155,7 @@ class TaxpayerAuthenticate(BaseAPI):
             self.auth_token = None
             return self.request_otp()
 
-        return super().post(
+        response = super().post(
             json={
                 "action": "AUTHTOKEN",
                 "app_key": self.app_key,
@@ -133,6 +164,14 @@ class TaxpayerAuthenticate(BaseAPI):
             },
             endpoint="authenticate",
         )
+
+        frappe.cache.set_value(
+            f"authenticated_gstin:{self.company_gstin}",
+            True,
+            expires_in_sec=60 * 15,
+        )
+
+        return response
 
     def refresh_auth_token(self):
         auth_token = self.get_auth_token()
@@ -227,9 +266,30 @@ class TaxpayerAuthenticate(BaseAPI):
 
         return self.auth_token
 
+    def reset_auth_token(self):
+        """
+        Reset after job to clear the auth token
+        """
+        frappe.db.set_value(
+            "GST Credential",
+            {
+                "gstin": self.company_gstin,
+                "username": self.username,
+                "service": "Returns",
+            },
+            {"auth_token": None},
+        )
+
+        frappe.db.commit()  # nosemgrep - executed in after enqueue
+
 
 class TaxpayerBaseAPI(TaxpayerAuthenticate):
     BASE_PATH = "standard/gstn"
+
+    IGNORED_ERROR_CODES = {
+        **TaxpayerAuthenticate.IGNORED_ERROR_CODES,
+        "RT-R1R3BAV-1007": "authorization_failed",  # Either auth-token or username is invalid. Raised in get_filing_preference
+    }
 
     def setup(self, company_gstin):
         if self.sandbox_mode:
@@ -347,6 +407,13 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
         if error_code in self.IGNORED_ERROR_CODES:
             response.error_type = self.IGNORED_ERROR_CODES[error_code]
             response.gstin = self.company_gstin
+
+            if response.error_type == "otp_requested":
+                raise OTPRequestedError(response=response)
+
+            if response.error_type == "invalid_otp":
+                raise InvalidOTPError(response=response)
+
             return True
 
     def generate_app_key(self):
@@ -376,3 +443,33 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
             return response
 
         return FilesAPI().get_all(response)
+
+    def validate_auth_token(self):
+        """
+        Try refreshing the auth token without error
+        to check if the auth token is valid
+
+        Generates a new OTP if the auth token is invalid
+        """
+        if frappe.cache.get_value(f"authenticated_gstin:{self.company_gstin}"):
+            return
+
+        # Dummy request
+        self.get_filing_preference()
+
+        return
+
+    def get_filing_preference(self):
+        return self.get(
+            action="GETPREF", params={"fy": self.get_fy()}, endpoint="returns"
+        )
+
+    @staticmethod
+    def get_fy():
+        date = frappe.utils.getdate()
+
+        # Standard for India as per GST
+        if date.month < 4:
+            return f"{date.year - 1}-{str(date.year)[2:]}"
+
+        return f"{date.year}-{str(date.year + 1)[2:]}"

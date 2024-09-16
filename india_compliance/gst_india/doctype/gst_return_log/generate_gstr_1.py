@@ -20,7 +20,6 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     GSTR1BooksData,
     summarize_retsum_data,
 )
-from india_compliance.gst_india.utils.gstr_utils import request_otp
 
 
 class SummarizeGSTR1:
@@ -512,15 +511,6 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
 
         # Get Data
         gov_data, is_enqueued = self.get_gov_gstr1_data()
-
-        if error_type := gov_data.get("error_type"):
-            # otp_requested, invalid_otp
-
-            if error_type == "invalid_otp":
-                request_otp(filters.company_gstin)
-
-            data = "otp_requested"
-            return callback and callback(data, filters)
 
         books_data = self.get_books_gstr1_data(filters)
 
