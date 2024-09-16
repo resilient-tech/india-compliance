@@ -193,6 +193,111 @@ def generate_e_invoice(docname, throw=True, force=False):
         doc.db_set({"einvoice_status": "Failed"})
         raise e
 
+<<<<<<< HEAD
+=======
+    return log_and_process_e_invoice_generation(doc, result, api.sandbox_mode)
+
+
+@frappe.whitelist()
+def handle_duplicate_irn_error(
+    irn_data,
+    current_gstin,
+    current_invoice_amount,
+    doc=None,
+    docname=None,
+):
+    """
+    Handle Duplicate IRN errors by fetching the IRN details and comparing with the current invoice.
+
+    Steps:
+    1. Fetch IRN details using the IRN number using e-Invoice API.
+    2. If the IRN details cannot be fetched, fetch the IRN details from the GST Portal.
+    3. Compare the buyer GSTIN and invoice amount with the current invoice and throw an error if they don't match.
+    """
+
+    if isinstance(irn_data, str):
+        irn_data = json.loads(irn_data, object_hook=frappe._dict)
+        current_invoice_amount = flt(current_invoice_amount)
+
+    doc = doc or load_doc("Sales Invoice", docname, "submit")
+    api = EInvoiceAPI(doc)
+    response = api.get_e_invoice_by_irn(irn_data.Irn)
+
+    # Handle error 2283:
+    # IRN details cannot be provided as it is generated more than 2 days ago
+    if (
+        response.error_code == "2283"
+        and api.settings.fetch_e_invoice_details_from_gst_portal
+    ):
+        response = TaxpayerEInvoiceAPI(doc).get_irn_details(irn_data.Irn)
+
+        if response.error_type == "otp_requested":
+            response.update(
+                {
+                    "irn_data": irn_data,
+                    "current_gstin": current_gstin,
+                    "current_invoice_amount": current_invoice_amount,
+                    "docname": doc.name,
+                }
+            )
+
+            return response
+
+        response = frappe._dict(response.data or response.error)
+
+    if signed_data := response.SignedInvoice:
+        verify_e_invoice_details(current_gstin, current_invoice_amount, signed_data)
+
+    if response.error_code:
+        response = irn_data
+
+    return log_and_process_e_invoice_generation(doc, response, api.sandbox_mode)
+
+
+def verify_e_invoice_details(current_gstin, current_invoice_amount, signed_data):
+    invoice_data = json.loads(
+        jwt.decode(signed_data, options={"verify_signature": False})["data"]
+    )
+
+    previous_gstin = invoice_data.get("BuyerDtls").get("Gstin")
+    previous_invoice_amount = invoice_data.get("ValDtls").get("TotInvVal")
+
+    error_message = ""
+    if previous_gstin != current_gstin:
+        error_message += _("<li>Customer GSTIN (Previous: {0}).</li>").format(
+            frappe.bold(previous_gstin)
+        )
+
+    if previous_invoice_amount != current_invoice_amount:
+        previous_invoice_amount_formatted = frappe.format_value(
+            previous_invoice_amount, currency=frappe.db.get_default("currency")
+        )
+
+        error_message += _("<li>Invoice amount (Previous: {0}).</li>").format(
+            frappe.bold(previous_invoice_amount_formatted)
+        )
+
+    if error_message:
+        frappe.throw(
+            _(
+                "An e-Invoice already exists for Invoice No {0}, but with different details compared to the current Invoice:<br>{1}"
+                "Hence, the IRN number is not updated against current Invoice."
+                "<br><br>Corrective Steps:<br><br>"
+                "<li>Generate a new Invoice for the same transaction.</li>"
+                "<li>Try cancelling e-Invoice from e-Invoice portal if possible. Alternatively, clear/update e-Invoice as posted automatically in GSTR-1.</li>"
+            ).format(
+                frappe.bold(invoice_data.get("DocDtls").get("No")),
+                error_message,
+            ),
+        )
+
+
+def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False, message=None):
+    """
+    Load and process the e-Invoice generation result.
+    """
+
+>>>>>>> be12ec3c (fix: update success message)
     doc.db_set(
         {
             "irn": result.Irn,
@@ -229,11 +334,10 @@ def generate_e_invoice(docname, throw=True, force=False):
     if not frappe.request:
         return
 
-    frappe.msgprint(
-        _("e-Invoice generated successfully"),
-        indicator="green",
-        alert=True,
-    )
+    if not message:
+        message = "e-Invoice generated successfully"
+
+    frappe.msgprint(_(message), indicator="green", alert=True)
 
     return send_updated_doc(doc)
 
@@ -303,7 +407,9 @@ def mark_e_invoice_as_generated(doctype, docname, values):
         }
     )
 
-    return log_and_process_e_invoice_generation(doc, result)
+    return log_and_process_e_invoice_generation(
+        doc, result, message="e-Invoice updated successfully"
+    )
 
 
 @frappe.whitelist()
