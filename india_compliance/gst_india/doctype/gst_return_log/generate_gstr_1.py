@@ -769,6 +769,7 @@ class FileGSTR1:
                 self.update_json_for("upload_error", response)
 
             if status_cd == "P":
+                self.db_set({"filing_status": "Uploaded"})
                 self.update_json_for(
                     "unfiled_summary", self.get_json_for("books_summary")
                 )
@@ -845,9 +846,10 @@ class FileGSTR1:
             )
 
         else:
+            self.db_set({"filing_status": "Not Filed"})
             response.update(
                 {
-                    "filing_status": "Summary Not Matched",
+                    "filing_status": "Not Filed",
                     "differing_categories": differing_categories,
                 }
             )
@@ -873,6 +875,7 @@ class FileGSTR1:
             self.update_json_for("authenticated_summary", None)
 
         if response.get("ack_num"):
+            frappe.db.set_value("GSTIN", self.gstin, "last_pan_used_for_gstr", pan)
             self.db_set(
                 {
                     "filing_status": "Filed",
@@ -896,12 +899,10 @@ class FileGSTR1:
         authenticated_summary = summarize_retsum_data(authenticated_summary.values())
 
         non_amended_entries = {
-            "no_of_records": 0,
             "total_igst_amount": 0,
             "total_cgst_amount": 0,
             "total_sgst_amount": 0,
             "total_cess_amount": 0,
-            "total_taxable_value": 0,
         }
         amended_liability = {}
 
@@ -926,8 +927,9 @@ class FileGSTR1:
 def verify_request_in_progress(self, request_type):
     for doc in self.actions:
         if doc.request_type == request_type and not doc.status:
+            formatted_request_type = request_type.replace("_", " ").title()
             frappe.throw(
-                f"{request_type.capitalize()} is in progress.Please wait for the process to complete."
+                f"{formatted_request_type} is in progress.Please wait for the process to complete."
             )
 
 

@@ -138,7 +138,9 @@ frappe.ui.form.on(DOCTYPE, {
                 ),
                 "orange"
             );
-            frm.page.set_primary_action(__("Generate"), () => generate_gstr1_data(frm));
+            frm.page.set_primary_action(__("Generate"), () =>
+                frm.gstr1.gstr1_action.generate_gstr1_data(frm)
+            );
         });
 
         frappe.realtime.on("show_message", message => {
@@ -216,188 +218,6 @@ frappe.ui.form.on(DOCTYPE, {
         frm.gstr1.refresh_data(data);
     },
 });
-
-function file_gstr1_data(frm) {
-    // TODO: EVC Generation, Resend, and Filing
-    const dialog = new frappe.ui.Dialog({
-        title: "File GSTR-1",
-        fields: [
-            {
-                label: "Company GSTIN",
-                fieldname: "company_gstin",
-                fieldtype: "Data",
-                read_only: 1,
-                default: frm.doc.company_gstin,
-            },
-            {
-                label: "Period",
-                fieldname: "period",
-                fieldtype: "Data",
-                read_only: 1,
-                default: `${frm.doc.month_or_quarter} - ${frm.doc.year}`,
-            },
-            {
-                label: "Total Liability",
-                fieldtype: "Section Break",
-                fieldname: "total_liability_section",
-            },
-            {
-                fieldname: "liability_breakup_html",
-                fieldtype: "HTML",
-                hidden: 1,
-            },
-            {
-                label: "Sign using EVC",
-                fieldtype: "Section Break",
-            },
-            {
-                label: "Authorised PAN",
-                fieldname: "pan",
-                fieldtype: "Data",
-                reqd: 1,
-            },
-            {
-                label: "EVC OTP",
-                fieldname: "otp",
-                fieldtype: "Data",
-                read_only: 1,
-            },
-            {
-                label: "Once you file your return you will not be able to undo the action",
-                fieldname: "acknowledged",
-                fieldtype: "Check",
-                default: 0,
-                read_only: 1,
-            },
-        ],
-        primary_action_label: "Get OTP",
-        async primary_action() {
-            const pan = dialog.get_value("pan");
-            india_compliance.validate_pan(pan);
-
-            // generate otp
-            await generate_evc_otp(frm.doc.company_gstin, pan);
-
-            // show otp field
-            dialog.set_df_property("otp", "read_only", 0);
-            dialog.set_df_property("acknowledged", "read_only", 0);
-
-            update_actions(frm, dialog, pan);
-        },
-    });
-
-    frappe.db
-        .get_value("GSTIN", frm.doc.company_gstin, ["last_pan_used_for_gstr"])
-        .then(({ message }) => {
-            const pan_no =
-                message.last_pan_used_for_gstr || frm.doc.company_gstin.substr(2, 10);
-
-            dialog.set_value("pan", pan_no);
-        });
-
-    taxpayer_api.call({
-        method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.handle_gstr1_action",
-        args: {
-            action: "get_amendment_data",
-            month_or_quarter: frm.doc.month_or_quarter,
-            year: frm.doc.year,
-            company_gstin: frm.doc.company_gstin,
-        },
-        callback: r => {
-            if (!r.message) return;
-            const { amended_liability, non_amended_liability } = r.message;
-            const amendment_table_html = generate_liability_table(
-                amended_liability,
-                non_amended_liability
-            );
-            const field = dialog.get_field("liability_breakup_html");
-
-            if (!amendment_table_html) return;
-            field.toggle(true);
-
-            field.df.options = amendment_table_html;
-            dialog.refresh();
-        },
-    });
-
-    dialog.show();
-}
-
-function generate_liability_table(amended_liability, non_amended_liability) {
-    // if (Object.keys(amended_liability).length === 0) return "";
-
-    let table_html = `
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>Description</th>
-                    <th>Total IGST</th>
-                    <th>Total CGST</th>
-                    <th>Total SGST</th>
-                    <th>Total Cess</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
-
-    table_html += generate_table_row("For current period", non_amended_liability);
-    table_html += generate_table_row("From amendments", amended_liability);
-    // TODO: Add total row
-    table_html += `
-            </tbody>
-        </table>
-    `;
-
-    return table_html;
-}
-
-function generate_table_row(description, liability) {
-    // TODO: amount format as currency
-    return `
-        <tr>
-            <td>${description}</td>
-            <td>${liability.total_igst_amount || 0}</td>
-            <td>${liability.total_cgst_amount || 0}</td>
-            <td>${liability.total_sgst_amount || 0}</td>
-            <td>${liability.total_cess_amount || 0}</td>
-        </tr>
-    `;
-}
-
-async function update_actions(frm, dialog, pan) {
-    dialog.set_primary_action("File", () => {
-        if (!dialog.get_value("acknowledged")) {
-            frappe.msgprint(
-                __("Please acknowledge that you can not undo this action.")
-            );
-            return;
-        }
-
-        // TODO: do this in backend
-        frappe.db.set_value(
-            "GSTIN",
-            frm.doc.company_gstin,
-            "last_pan_used_for_gstr",
-            pan
-        );
-
-        perform_gstr1_action(frm, "file", { pan: pan, otp: dialog.get_value("otp") });
-        dialog.hide();
-    });
-
-    dialog.set_secondary_action_label("Resend OTP");
-    dialog.set_secondary_action(() => {
-        generate_evc_otp(frm, pan);
-    });
-}
-
-function generate_evc_otp(company_gstin, pan) {
-    // TODO: common function for all returns
-    return frappe.call({
-        method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.generate_evc_otp",
-        args: { company_gstin: company_gstin, pan: pan },
-    });
-}
 
 class GSTR1 {
     // Render page / Setup Listeners / Setup Data
@@ -616,28 +436,30 @@ class GSTR1 {
     render_form_actions() {
         if (this.data && (!is_gstr1_api_enabled() || this.status == "Filed")) return;
 
-        let gstr1_action = new GSTR1Action(this.frm);
+        this.gstr1_action = new GSTR1Action(this.frm);
 
         // Custom Buttons
         if (this.data)
-            this.frm.add_custom_button(__("Reset"), () => gstr1_action.reset_gstr1_data());
+            this.frm.add_custom_button(__("Reset"), () =>
+                this.gstr1_action.reset_gstr1_data()
+            );
 
         // Primary Button
         const actions = {
-            Generate: gstr1_action.generate_gstr1_data,
-            Upload: gstr1_action.upload_gstr1_data,
-            "Proceed to File": gstr1_action.proceed_to_file,
-            File: gstr1_action.file_gstr1_data,
+            Generate: this.gstr1_action.generate_gstr1_data,
+            Upload: this.gstr1_action.upload_gstr1_data,
+            "Proceed to File": this.gstr1_action.proceed_to_file,
+            File: this.gstr1_action.file_gstr1_data,
         };
 
         let primary_button_label = "Generate";
 
-        if (this.status === "Not Filed") primary_action_label = "Upload";
+        if (this.status === "Not Filed") primary_button_label = "Upload";
         else if (this.status === "Uploaded") primary_button_label = "Proceed to File";
         else if (this.status == "Ready to File") primary_button_label = "File";
 
         this.frm.page.set_primary_action(__(primary_button_label), () =>
-            actions[primary_button_label].call(gstr1_action)
+            actions[primary_button_label].call(this.gstr1_action)
         );
     }
 
@@ -2380,13 +2202,195 @@ class DetailViewDialog {
     }
 }
 
-class FileGSTR1Dialog { }
+class FileGSTR1Dialog {
+    constructor(frm) {
+        this.frm = frm;
+        this.dialog = null;
+    }
+
+    file_gstr1_data() {
+        // TODO: EVC Generation, Resend, and Filing
+        const file_gstr1 = this;
+
+        this.dialog = new frappe.ui.Dialog({
+            title: "File GSTR-1",
+            fields: [
+                {
+                    label: "Company GSTIN",
+                    fieldname: "company_gstin",
+                    fieldtype: "Data",
+                    read_only: 1,
+                    default: this.frm.doc.company_gstin,
+                },
+                {
+                    label: "Period",
+                    fieldname: "period",
+                    fieldtype: "Data",
+                    read_only: 1,
+                    default: `${this.frm.doc.month_or_quarter} - ${this.frm.doc.year}`,
+                },
+                {
+                    label: "Total Liability",
+                    fieldtype: "Section Break",
+                    fieldname: "total_liability_section",
+                },
+                {
+                    fieldname: "liability_breakup_html",
+                    fieldtype: "HTML",
+                    hidden: 1,
+                },
+                {
+                    label: "Sign using EVC",
+                    fieldtype: "Section Break",
+                },
+                {
+                    label: "Authorised PAN",
+                    fieldname: "pan",
+                    fieldtype: "Data",
+                    reqd: 1,
+                },
+                {
+                    label: "EVC OTP",
+                    fieldname: "otp",
+                    fieldtype: "Data",
+                    read_only: 1,
+                },
+                {
+                    label: "Once you file your return you will not be able to undo the action",
+                    fieldname: "acknowledged",
+                    fieldtype: "Check",
+                    default: 0,
+                    read_only: 1,
+                },
+            ],
+            primary_action_label: "Get OTP",
+            async primary_action() {
+                const pan = file_gstr1.dialog.get_value("pan");
+                india_compliance.validate_pan(pan);
+
+                // generate otp
+                await india_compliance.generate_evc_otp(
+                    file_gstr1.frm.doc.company_gstin,
+                    pan,
+                    "R1"
+                );
+
+                // show otp field
+                file_gstr1.dialog.set_df_property("otp", "read_only", 0);
+                file_gstr1.dialog.set_df_property("acknowledged", "read_only", 0);
+
+                file_gstr1.update_actions(pan);
+            },
+        });
+
+        // get last used pan
+        frappe.db
+            .get_value("GSTIN", this.frm.doc.company_gstin, ["last_pan_used_for_gstr"])
+            .then(({ message }) => {
+                const pan_no =
+                    message.last_pan_used_for_gstr ||
+                    this.frm.doc.company_gstin.substr(2, 10);
+
+                this.dialog.set_value("pan", pan_no);
+            });
+
+        // update total amendes
+        taxpayer_api.call({
+            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.handle_gstr1_action",
+            args: {
+                action: "get_amendment_data",
+                month_or_quarter: this.frm.doc.month_or_quarter,
+                year: this.frm.doc.year,
+                company_gstin: this.frm.doc.company_gstin,
+            },
+            callback: r => {
+                if (!r.message) return;
+                const { amended_liability, non_amended_liability } = r.message;
+                const amendment_table_html = this.generate_liability_table(
+                    amended_liability,
+                    non_amended_liability
+                );
+                const field = this.dialog.get_field("liability_breakup_html");
+
+                if (!amendment_table_html) return;
+                field.toggle(true);
+
+                field.df.options = amendment_table_html;
+                this.dialog.refresh();
+            },
+        });
+
+        this.dialog.show();
+    }
+
+    generate_liability_table(amended_liability, non_amended_liability) {
+        let table_html = `
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Total IGST</th>
+                        <th>Total CGST</th>
+                        <th>Total SGST</th>
+                        <th>Total Cess</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        table_html += this.generate_table_row(
+            "For current period",
+            non_amended_liability
+        );
+        table_html += this.generate_table_row("From amendments", amended_liability);
+        // TODO: Add total row
+        table_html += `
+                </tbody>
+            </table>
+        `;
+
+        return table_html;
+    }
+
+    generate_table_row(description, liability) {
+        return `
+            <tr>
+                <td>${description}</td>
+                <td>${format_currency(liability.total_igst_amount)}</td>
+                <td>${format_currency(liability.total_cgst_amount)}</td>
+                <td>${format_currency(liability.total_sgst_amount)}</td>
+                <td>${format_currency(liability.total_cess_amount)}</td>
+            </tr>
+        `;
+    }
+
+    update_actions(pan) {
+        this.dialog.set_primary_action("File", () => {
+            if (!this.dialog.get_value("acknowledged")) {
+                frappe.msgprint(
+                    __("Please acknowledge that you can not undo this action.")
+                );
+                return;
+            }
+
+            this.perform_gstr1_action("file", {
+                pan: pan,
+                otp: this.dialog.get_value("otp"),
+            });
+        });
+
+        this.dialog.set_secondary_action_label("Resend OTP");
+        this.dialog.set_secondary_action(() => {
+            india_compliance.generate_evc_otp(this.frm.doc.company_gstin, pan, "R1");
+        });
+    }
+}
 
 class GSTR1Action extends FileGSTR1Dialog {
     RETRY_INTERVALS = [5000, 15000, 30000, 60000, 120000, 300000, 600000, 720000]; // 5 second, 15 second, 30 second, 1 min, 2 min, 5 min, 10 min, 12 min
 
     constructor(frm) {
-        super();
+        super(frm);
         this.frm = frm;
         this.defaults = {
             month_or_quarter: frm.doc.month_or_quarter,
@@ -2403,7 +2407,7 @@ class GSTR1Action extends FileGSTR1Dialog {
 
             const request_types = ["upload", "reset", "proceed_to_file"];
             request_types.map(request_type =>
-                this.fetch_status_with_retry(request_type, (now = true))
+                this.fetch_status_with_retry(request_type, true)
             );
         });
     }
@@ -2443,12 +2447,12 @@ class GSTR1Action extends FileGSTR1Dialog {
             args: args,
             callback: response => {
                 if (action == "file") {
-                    handle_file_response(this.frm, response);
+                    this.handle_file_response(response);
                 } else {
                     if (Object.keys(response).length == 0) {
-                        fetch_status_with_retry(this.frm, action);
+                        this.fetch_status_with_retry(action);
                     } else {
-                        handle_proceed_to_file_response(this.frm, response.message);
+                        this.handle_proceed_to_file_response(response.message);
                     }
                 }
             },
@@ -2471,7 +2475,7 @@ class GSTR1Action extends FileGSTR1Dialog {
                     frappe.throw(__(message.error_report.error_msg));
 
                 if (message.status_cd == "PE" && action == "upload")
-                    handle_errors(this.frm, message);
+                    this.handle_errors(message);
 
                 // TODO: Highlight error tab
 
@@ -2484,7 +2488,7 @@ class GSTR1Action extends FileGSTR1Dialog {
 
                 if (action == "reset") {
                     this.frm.page.set_primary_action("Upload", () =>
-                        upload_gstr1_data(this.frm)
+                        this.upload_gstr1_data()
                     );
                     this.frm.taxpayer_api_call("generate_gstr1").then(r => {
                         this.frm.doc.__gst_data = r.message;
@@ -2493,7 +2497,7 @@ class GSTR1Action extends FileGSTR1Dialog {
                 }
 
                 if (action == "proceed_to_file")
-                    handle_proceed_to_file_response(this.frm, message);
+                    this.handle_proceed_to_file_response(message);
 
                 this.handle_notification(message, action);
             },
@@ -2501,16 +2505,27 @@ class GSTR1Action extends FileGSTR1Dialog {
         );
     }
 
-    handle_errors(frm, message) {
-        frm.gstr1.tabs.error_tab.show();
-        frm.gstr1.tabs["error_tab"].tabmanager.refresh_data(message);
+    handle_errors(message) {
+        this.frm.gstr1.tabs.error_tab.show();
+        this.frm.gstr1.tabs["error_tab"].tabmanager.refresh_data(message);
     }
 
-    handle_file_response(frm, response) {
-        if (response.message?.error?.error_cd === "RET09001") {
-            frm.page.set_primary_action("Proceed to File", () => proceed_to_file(frm));
-            frm.page.set_indicator("Not Filed", "orange");
-            frm.gstr1.status = "Not Filed";
+    handle_file_response(response) {
+        if (response.message.error?.error_cd === "RET13509") {
+            this.dialog
+                .get_field("otp")
+                .set_description(`<p style="color: red">Invalid OTP</p>`);
+            return;
+        }
+
+        this.dialog.hide();
+
+        if (response.message.error?.error_cd === "RET09001") {
+            this.frm.page.set_primary_action("Proceed to File", () =>
+                this.proceed_to_file()
+            );
+            this.frm.page.set_indicator("Not Filed", "orange");
+            this.frm.gstr1.status = "Not Filed";
             frappe.msgprint(
                 __(
                     "Latest Summary is not available. Please generate summary and try again."
@@ -2518,9 +2533,9 @@ class GSTR1Action extends FileGSTR1Dialog {
             );
         }
         if (response.message.ack_num) {
-            frm.taxpayer_api_call("generate_gstr1").then(r => {
-                frm.doc.__gst_data = r.message;
-                frm.trigger("load_gstr1_data");
+            this.frm.taxpayer_api_call("generate_gstr1").then(r => {
+                this.frm.doc.__gst_data = r.message;
+                this.frm.trigger("load_gstr1_data");
             });
         }
     }
@@ -2530,11 +2545,15 @@ class GSTR1Action extends FileGSTR1Dialog {
         if (!filing_status) return;
 
         if (filing_status == "Ready to File") {
-            this.frm.page.set_primary_action("File", () => file_gstr1_data(this.frm));
+            this.frm.page.set_primary_action("File", () =>
+                this.frm.gstr1.gstr1_action.file_gstr1_data()
+            );
             this.frm.page.set_indicator("Ready to File", "orange");
             this.frm.gstr1.status = "Ready to File";
             return;
         }
+
+        this.frm.page.set_primary_action("Upload", () => this.upload_gstr1_data());
 
         const differing_categories = response.differing_categories
             .map(item => `<li>${item}</li>`)
@@ -2684,6 +2703,10 @@ function set_options_for_month_or_quarter(frm) {
 function render_empty_state(frm) {
     if ($(".gst-ledger-difference").length) {
         $(".gst-ledger-difference").remove();
+    }
+    if (frm.doc.__gst_data) {
+        frm.gstr1.data = null;
+        frm.gstr1.status = null;
     }
     frm.doc.__gst_data = null;
     frm.refresh();

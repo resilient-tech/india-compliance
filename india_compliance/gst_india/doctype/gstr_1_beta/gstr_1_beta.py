@@ -191,12 +191,6 @@ def handle_gstr1_action(action, month_or_quarter, year, company_gstin, **kwargs)
 
 
 @frappe.whitelist()
-def generate_evc_otp(company_gstin, pan):
-    frappe.has_permission("GSTR-1 Beta", "write", throw=True)
-    return TaxpayerBaseAPI(company_gstin).initiate_otp_for_evc(pan, "R1")
-
-
-@frappe.whitelist()
 @otp_handler
 def process_gstr1_request(month_or_quarter, year, company_gstin, action):
     gstr_1_log = frappe.get_doc(

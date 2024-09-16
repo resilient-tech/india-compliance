@@ -232,11 +232,11 @@ Object.assign(india_compliance, {
         pan = pan.trim().toUpperCase();
 
         if (pan.length != 10) {
-            frappe.throw(("PAN should be 10 characters long"));
+            frappe.throw(__("PAN should be 10 characters long"));
         }
 
         if (!PAN_REGEX.test(pan)) {
-            frappe.throw(("Invalid PAN format"));
+            frappe.throw(__("Invalid PAN format"));
         }
 
         return pan;
@@ -255,6 +255,17 @@ Object.assign(india_compliance, {
         } else {
             frappe.msgprint(__("Invalid GSTIN"));
         }
+    },
+
+    generate_evc_otp(company_gstin, pan, request_type) {
+        return frappe.call({
+            method: "india_compliance.gst_india.utils.gstr.generate_evc.generate_evc_otp",
+            args: {
+                company_gstin: company_gstin,
+                pan: pan,
+                request_type: request_type,
+            },
+        });
     },
 
     guess_gst_category(gstin, country) {
@@ -371,12 +382,10 @@ Object.assign(india_compliance, {
             return position === "start"
                 ? `${current_year - 1}-03-01`
                 : `${current_year - 1}-09-30`;
-
         } else if (current_month <= 9) {
             return position === "start"
                 ? `${current_year - 1}-10-01`
                 : `${current_year}-03-31`;
-
         } else {
             return position === "start"
                 ? `${current_year}-04-01`
