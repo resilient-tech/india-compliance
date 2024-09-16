@@ -279,7 +279,7 @@ def verify_e_invoice_details(current_gstin, current_invoice_amount, signed_data)
         )
 
 
-def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False):
+def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False, message=None):
     """
     Load and process the e-Invoice generation result.
     """
@@ -320,11 +320,10 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False):
     if not frappe.request:
         return
 
-    frappe.msgprint(
-        _("e-Invoice generated successfully"),
-        indicator="green",
-        alert=True,
-    )
+    if not message:
+        message = "e-Invoice generated successfully"
+
+    frappe.msgprint(_(message), indicator="green", alert=True)
 
     return send_updated_doc(doc)
 
@@ -394,7 +393,9 @@ def mark_e_invoice_as_generated(doctype, docname, values):
         }
     )
 
-    return log_and_process_e_invoice_generation(doc, result)
+    return log_and_process_e_invoice_generation(
+        doc, result, message="e-Invoice updated successfully"
+    )
 
 
 @frappe.whitelist()
