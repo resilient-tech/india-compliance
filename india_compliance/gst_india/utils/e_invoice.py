@@ -7,6 +7,7 @@ from frappe import _
 from frappe.utils import (
     add_to_date,
     cstr,
+    flt,
     format_date,
     get_datetime,
     getdate,
@@ -15,6 +16,9 @@ from frappe.utils import (
 
 from india_compliance.exceptions import GSPServerError
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
+from india_compliance.gst_india.api_classes.taxpayer_e_invoice import (
+    EInvoiceAPI as TaxpayerEInvoiceAPI,
+)
 from india_compliance.gst_india.constants import (
     CURRENCY_CODES,
     EXPORT_TYPES,
@@ -193,8 +197,6 @@ def generate_e_invoice(docname, throw=True, force=False):
         doc.db_set({"einvoice_status": "Failed"})
         raise e
 
-<<<<<<< HEAD
-=======
     return log_and_process_e_invoice_generation(doc, result, api.sandbox_mode)
 
 
@@ -297,7 +299,6 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False, messag
     Load and process the e-Invoice generation result.
     """
 
->>>>>>> be12ec3c (fix: update success message)
     doc.db_set(
         {
             "irn": result.Irn,
@@ -318,13 +319,13 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False, messag
         doc,
         {
             "irn": doc.irn,
-            "sales_invoice": docname,
+            "sales_invoice": doc.name,
             "acknowledgement_number": result.AckNo,
             "acknowledged_on": parse_datetime(result.AckDt),
             "signed_invoice": result.SignedInvoice,
             "signed_qr_code": result.SignedQRCode,
             "invoice_data": invoice_data,
-            "is_generated_in_sandbox_mode": api.sandbox_mode,
+            "is_generated_in_sandbox_mode": sandbox_mode,
         },
     )
 
