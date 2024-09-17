@@ -168,6 +168,9 @@ def validate(doc, method=None):
     if ignore_gst_validation_for_subcontracting(doc):
         return
 
+    if doc.get("purpose") != "Send to Subcontractor":
+        return
+
     field_map = (
         STOCK_ENTRY_FIELD_MAP
         if doc.doctype == "Stock Entry"
@@ -330,7 +333,6 @@ def set_address_display(doc):
 def get_relevant_references(
     supplier, supplied_items, received_items, subcontracting_orders
 ):
-
     if isinstance(supplied_items, str):
         supplied_items = frappe.parse_json(supplied_items)
         received_items = frappe.parse_json(received_items)
