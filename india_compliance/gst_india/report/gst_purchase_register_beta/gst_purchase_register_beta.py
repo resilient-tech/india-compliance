@@ -8,7 +8,7 @@ from frappe.query_builder.functions import IfNull
 from frappe.utils import cint
 
 SECTION_MAPPING = {
-    "Eligible ITC": {
+    "4": {
         "ITC Available": [
             "Import Of Goods",
             "Import Of Service",
@@ -16,8 +16,10 @@ SECTION_MAPPING = {
             "Input Service Distributor",
             "All Other ITC",
         ],
+        "ITC Reversed": ["As per rules 42 & 43 of CGST Rules", "Others"],
+        "Ineligible ITC": ["Ineligible As Per Section 17(5)", "Others"],
     },
-    "Values of exempt, nil rated and non-GST inward supplies": {
+    "5": {
         "Composition Scheme, Exempted, Nil Rated": [
             "Composition Scheme, Exempted, Nil Rated",
         ],
@@ -26,13 +28,13 @@ SECTION_MAPPING = {
 }
 
 AMOUNT_FIELDS_MAP = {
-    "Eligible ITC": {
+    "4": {
         "iamt": 0,
         "camt": 0,
         "samt": 0,
         "csamt": 0,
     },
-    "Values of exempt, nil rated and non-GST inward supplies": {
+    "5": {
         "intra": 0,
         "inter": 0,
     },
