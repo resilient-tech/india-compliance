@@ -1,7 +1,7 @@
 // Copyright (c) 2024, Resilient Tech and contributors
 // For license information, please see license.txt
 const SUB_SECTION_MAPPING = {
-    "Eligible ITC": {
+    4: {
         "ITC Available": [
             "Import Of Goods",
             "Import Of Service",
@@ -9,14 +9,15 @@ const SUB_SECTION_MAPPING = {
             "Input Service Distributor",
             "All Other ITC",
         ],
+        "ITC Reversed": ["As per rules 42 & 43 of CGST Rules", "Others"],
+        "Ineligible ITC": ["Ineligible As Per Section 17(5)", "Others"],
     },
-    "Values of exempt, nil rated and non-GST inward supplies":
-        {
-            "Composition Scheme, Exempted, Nil Rated": [
-                "Composition Scheme, Exempted, Nil Rated",
-            ],
-            "Non-GST": ["Non-GST"],
-        },
+    5: {
+        "Composition Scheme, Exempted, Nil Rated": [
+            "Composition Scheme, Exempted, Nil Rated",
+        ],
+        "Non-GST": ["Non-GST"],
+    },
 };
 
 frappe.query_reports["GST Purchase Register Beta"] = {
@@ -75,9 +76,16 @@ frappe.query_reports["GST Purchase Register Beta"] = {
             fieldtype: "Select",
             fieldname: "sub_section",
             label: __("Sub Section"),
-            options:
-                "Eligible ITC\nValues of exempt, nil rated and non-GST inward supplies",
-            default: "Eligible ITC",
+            options: [
+                { value: "4", label: __("Eligible ITC") },
+                {
+                    value: "5",
+                    label: __(
+                        "Values of exempt, nil rated and non-GST inward supplies"
+                    ),
+                },
+            ],
+            default: "4",
             reqd: 1,
             on_change: report => {
                 report.set_filter_value("invoice_category", "");
@@ -94,13 +102,13 @@ frappe.query_reports["GST Purchase Register Beta"] = {
                 set_sub_category_options(report);
                 report.refresh();
             },
-            depends_on: 'eval:doc.summary_by=="Summary by Item"',
+            depends_on: 'eval:doc.summary_by!=="Overview"',
         },
         {
             fieldtype: "Autocomplete",
             fieldname: "invoice_sub_category",
             label: __("Invoice Sub Category"),
-            depends_on: 'eval:doc.summary_by=="Summary by Item"',
+            depends_on: 'eval:doc.summary_by!=="Overview"',
         },
     ],
 
@@ -127,8 +135,7 @@ frappe.query_reports["GST Purchase Register Beta"] = {
 function set_sub_category_options(report) {
     const invoice_category = report.get_filter_value("invoice_category");
     const sub_section = report.get_filter_value("sub_section");
-    const sub_category =
-        SUB_SECTION_MAPPING[sub_section][invoice_category];
+    const sub_category = SUB_SECTION_MAPPING[sub_section][invoice_category];
     report.get_filter("invoice_sub_category").set_data(sub_category || []);
 
     if (invoice_category && sub_category.length === 1) {
