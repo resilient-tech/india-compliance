@@ -140,15 +140,7 @@
    "link_fieldname": "irn"
   }
  ],
-<<<<<<< HEAD
-<<<<<<< HEAD
- "modified": "2023-07-27 15:04:26.931722",
-=======
- "modified": "2024-09-17 15:15:35.720311",
->>>>>>> 279d5966 (fix: make e-Invoice log extensible)
-=======
  "modified": "2024-09-19 18:59:01.195753",
->>>>>>> 589b19cd (fix: changes as per review)
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Invoice Log",
