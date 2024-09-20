@@ -304,7 +304,8 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False, messag
         doc,
         {
             "irn": doc.irn,
-            "sales_invoice": doc.name,
+            "reference_doctype": doc.doctype,
+            "reference_name": doc.name,
             "acknowledgement_number": result.AckNo,
             "acknowledged_on": parse_datetime(result.AckDt),
             "signed_invoice": result.SignedInvoice,
