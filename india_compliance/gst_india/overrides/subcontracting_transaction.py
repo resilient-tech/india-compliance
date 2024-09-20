@@ -167,7 +167,7 @@ def validate(doc, method=None):
     if ignore_gst_validation_for_subcontracting(doc):
         return
 
-    if doc.get("purpose") != "Send to Subcontractor":
+    if doc.doctype == "Stock Entry" and doc.purpose != "Send to Subcontractor":
         return
 
     field_map = (
