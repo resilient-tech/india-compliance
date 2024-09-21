@@ -12,11 +12,12 @@ from frappe.query_builder import DatePart
 from frappe.query_builder.functions import Extract, IfNull, Sum
 from frappe.utils import cstr, flt, get_date_str, get_first_day, get_last_day
 
-from india_compliance.gst_india.constants import INVOICE_DOCTYPES
+from india_compliance.gst_india.constants import INVOICE_DOCTYPES, STATE_NUMBERS
 from india_compliance.gst_india.overrides.transaction import is_inter_state_supply
 from india_compliance.gst_india.report.gstr_3b_details.gstr_3b_details import (
     IneligibleITC,
 )
+from india_compliance.gst_india.utils import get_period
 
 VALUES_TO_UPDATE = ["iamt", "camt", "samt", "csamt"]
 
@@ -40,8 +41,10 @@ class GSTR3BReport(Document):
 
             self.gst_details = self.get_company_gst_details()
             self.report_dict["gstin"] = self.gst_details.get("gstin")
-            self.report_dict["ret_period"] = get_period(self.month, self.year)
-            self.month_no = get_period(self.month)
+            self.report_dict["ret_period"] = get_period(
+                self.month_or_quarter, self.year
+            )
+            self.month_or_quarter_no = get_period(self.month_or_quarter)
 
             self.get_outward_supply_details("Sales Invoice")
             self.set_outward_taxable_supplies()
@@ -126,7 +129,10 @@ class GSTR3BReport(Document):
 
     def update_itc_reversal_for_purchase_due_to_pos(self):
         ineligible_credit = IneligibleITC(
-            self.company, self.gst_details.get("gstin"), self.month_no, self.year
+            self.company,
+            self.gst_details.get("gstin"),
+            self.month_or_quarter_no,
+            self.year,
         ).get_for_purchase(
             "ITC restricted due to PoS rules", group_by="ineligibility_reason"
         )
@@ -135,7 +141,10 @@ class GSTR3BReport(Document):
 
     def update_itc_reversal_for_purchase_us_17_4(self):
         ineligible_credit = IneligibleITC(
-            self.company, self.gst_details.get("gstin"), self.month_no, self.year
+            self.company,
+            self.gst_details.get("gstin"),
+            self.month_or_quarter_no,
+            self.year,
         ).get_for_purchase(
             "Ineligible As Per Section 17(5)", group_by="ineligibility_reason"
         )
@@ -144,7 +153,10 @@ class GSTR3BReport(Document):
 
     def update_itc_reversal_from_bill_of_entry(self):
         ineligible_credit = IneligibleITC(
-            self.company, self.gst_details.get("gstin"), self.month_no, self.year
+            self.company,
+            self.gst_details.get("gstin"),
+            self.month_or_quarter_no,
+            self.year,
         ).get_for_bill_of_entry()
 
         self.process_ineligible_credit(ineligible_credit)
@@ -226,11 +238,17 @@ class GSTR3BReport(Document):
             WHERE docstatus = 1
             and is_opening = 'No'
             and company_gstin != IFNULL(supplier_gstin, "")
-            and month(posting_date) = %s and year(posting_date) = %s and company = %s
+            and month(posting_date) between %s and %s and year(posting_date) = %s and company = %s
             and company_gstin = %s
             GROUP BY itc_classification
         """,
-            (self.month_no, self.year, self.company, self.gst_details.get("gstin")),
+            (
+                self.month_or_quarter_no[0],
+                self.month_or_quarter_no[1],
+                self.year,
+                self.company,
+                self.gst_details.get("gstin"),
+            ),
             as_dict=1,
         )
 
@@ -262,8 +280,16 @@ class GSTR3BReport(Document):
                 .on(boe_taxes.parent == boe.name)
                 .where(
                     boe.posting_date.between(
-                        get_date_str(get_first_day(f"{self.year}-{self.month_no}-01")),
-                        get_date_str(get_last_day(f"{self.year}-{self.month_no}-01")),
+                        get_date_str(
+                            get_first_day(
+                                f"{self.year}-{self.month_or_quarter_no[0]}-01"
+                            )
+                        ),
+                        get_date_str(
+                            get_last_day(
+                                f"{self.year}-{self.month_or_quarter_no[1]}-01"
+                            )
+                        ),
                     )
                     & boe.company_gstin.eq(self.gst_details.get("gstin"))
                     & boe.docstatus.eq(1)
@@ -287,10 +313,16 @@ class GSTR3BReport(Document):
             and p.is_opening = 'No'
             and p.company_gstin != IFNULL(p.supplier_gstin, "")
             and (i.gst_treatment != 'Taxable' or p.gst_category = 'Registered Composition') and
-            month(p.posting_date) = %s and year(p.posting_date) = %s
+            month(p.posting_date) between %s and %s and year(p.posting_date) = %s
             and p.company = %s and p.company_gstin = %s
             """,
-            (self.month_no, self.year, self.company, self.gst_details.get("gstin")),
+            (
+                self.month_or_quarter_no[0],
+                self.month_or_quarter_no[1],
+                self.year,
+                self.company,
+                self.gst_details.get("gstin"),
+            ),
             as_dict=1,
         )
 
@@ -472,7 +504,11 @@ class GSTR3BReport(Document):
     def get_query_with_conditions(self, invoice, query, party_gstin):
         return (
             query.where(invoice.docstatus == 1)
-            .where(Extract(DatePart.month, invoice.posting_date).eq(self.month_no))
+            .where(
+                Extract(DatePart.month, invoice.posting_date).between(
+                    self.month_or_quarter_no[0], self.month_or_quarter_no[1]
+                )
+            )
             .where(Extract(DatePart.year, invoice.posting_date).eq(self.year))
             .where(invoice.company == self.company)
             .where(invoice.company_gstin == self.gst_details.get("gstin"))
@@ -623,20 +659,20 @@ class GSTR3BReport(Document):
                 self.report_dict["inter_sup"][section].append(value)
 
     def get_company_gst_details(self):
-        gst_details = frappe.get_all(
-            "Address",
-            fields=["gstin", "gst_state", "gst_state_number"],
-            filters={"name": self.company_address},
-        )
+        if not self.company_gstin:
+            frappe.throw(_("Please enter GSTIN for Company {0}").format(self.company))
 
-        if gst_details:
-            return gst_details[0]
-        else:
-            frappe.throw(
-                _("Please enter GSTIN and state for the Company Address {0}").format(
-                    self.company_address
-                )
-            )
+        return {
+            "gstin": self.company_gstin,
+            "gst_state": next(
+                (
+                    key
+                    for key, value in STATE_NUMBERS.items()
+                    if value == self.company_gstin[:2]
+                ),
+                None,
+            ),
+        }
 
     def get_missing_field_invoices(self):
         missing_field_invoices = []
@@ -651,12 +687,17 @@ class GSTR3BReport(Document):
                 f"""
                     SELECT name FROM `tab{doctype}`
                     WHERE docstatus = 1 and is_opening = 'No'
-                    and month(posting_date) = %s and year(posting_date) = %s
+                    and month(posting_date) between %s and %s and year(posting_date) = %s
                     and company = %s and place_of_supply IS NULL
                     and company_gstin != IFNULL({party_gstin},"")
                     and gst_category != 'Overseas'
                 """,
-                (self.month_no, self.year, self.company),
+                (
+                    self.month_or_quarter_no[0],
+                    self.month_or_quarter_no[1],
+                    self.year,
+                    self.company,
+                ),
                 as_dict=1,
             )  # nosec
 
@@ -678,28 +719,6 @@ def get_json(template):
     )
     with open(file_path, "r") as f:
         return cstr(f.read())
-
-
-def get_period(month, year=None):
-    month_no = {
-        "January": 1,
-        "February": 2,
-        "March": 3,
-        "April": 4,
-        "May": 5,
-        "June": 6,
-        "July": 7,
-        "August": 8,
-        "September": 9,
-        "October": 10,
-        "November": 11,
-        "December": 12,
-    }.get(month)
-
-    if year:
-        return str(month_no).zfill(2) + str(year)
-    else:
-        return month_no
 
 
 def format_values(data, precision=2):
