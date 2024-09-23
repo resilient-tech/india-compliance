@@ -91,3 +91,18 @@ class GSTR1API(ReturnsAPI):
             endpoint="returns/einvoice",
             otp=otp,
         )
+
+
+class IMSAPI(ReturnsAPI):
+    API_NAME = "IMS"
+
+    def get_data(self, action, params, otp=None):
+        return self.get(
+            action=action,
+            params=params,
+            endpoint="returns/ims",
+            otp=otp,
+        )
+
+    def get(self, *args, **kwargs):
+        return self._request("get", *args, **kwargs, params=kwargs.pop("params", {}))
