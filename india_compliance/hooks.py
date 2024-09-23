@@ -595,7 +595,10 @@ fields_for_group_similar_items = [
 override_whitelisted_methods = {
     "erpnext.accounts.doctype.payment_entry.payment_entry.get_outstanding_reference_documents": (
         "india_compliance.gst_india.overrides.payment_entry.get_outstanding_reference_documents"
-    )
+    ),
+    "erpnext.stock.get_item_details.get_item_details": (
+        "india_compliance.gst_india.overrides.purchase_invoice.get_item_details"
+    ),
 }
 #
 # each overriding function accepts a `data` argument;

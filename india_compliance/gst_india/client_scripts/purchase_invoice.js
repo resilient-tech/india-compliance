@@ -18,7 +18,16 @@ frappe.ui.form.on(DOCTYPE, {
         });
     },
 
-    onload: toggle_reverse_charge,
+    onload: function(frm) {
+        toggle_reverse_charge(frm);
+
+        if (frm.is_new()) {
+            frm.add_custom_button(
+                __("Create Purchase Invoice"),
+                () => get_irn_dialog(frm),
+            );
+        }
+    },
 
     gst_category(frm) {
         validate_gst_hsn_code(frm);
@@ -102,6 +111,41 @@ frappe.ui.form.on("Purchase Invoice Item", {
 
     gst_hsn_code: validate_gst_hsn_code,
 });
+
+
+function get_irn_dialog(frm) {
+    const dialog = new frappe.ui.Dialog({
+        title: __("Create Purchase Invoice"),
+        fields: [
+            {
+                label: "IRN",
+                fieldname: "irn",
+                fieldtype: "Data",
+                reqd: 1,
+            },
+            {
+                label: "Company GSTIN",
+                fieldname: "gstin",
+                fieldtype: "Data",
+                reqd: 1,
+            }
+        ],
+        primary_action(values) {
+            taxpayer_api.call(
+                method ="india_compliance.gst_india.overrides.purchase_invoice.create_purchase_invoice_from_irn",
+                args= {
+                    company_gstin: values.gstin,
+                    irn: values.irn,
+                },
+                function (r){
+                    dialog.hide();
+                    frappe.set_route("purchase-invoice", r.message);
+                },
+            );
+        },
+    });
+    dialog.show();
+}
 
 function toggle_reverse_charge(frm) {
     let is_read_only = 0;
