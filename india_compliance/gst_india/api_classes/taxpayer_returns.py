@@ -133,3 +133,11 @@ class IMSAPI(ReturnsAPI):
             json=gov_data,
             otp=otp,
         )
+
+    def get_request_status(self, gstin, transaction_id, otp=None):
+        return self.get(
+            action="REQSTS",
+            endpoint=self.END_POINT,
+            params={"gstin": gstin, "int_tran_id": transaction_id},
+            otp=otp,
+        )
