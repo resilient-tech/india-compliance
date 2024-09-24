@@ -35,7 +35,6 @@ class GSTR2bB2B(GSTR2b):
     def setup(self):
         super().setup()
         self.set_key("invoice_key", "inv")
-        self.set_key("items_key", "items")
 
     def get_invoice_details(self, invoice):
         return {

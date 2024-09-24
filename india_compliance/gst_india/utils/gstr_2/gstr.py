@@ -128,7 +128,7 @@ class GSTR:
     def get_transaction_items(self, invoice):
         return [
             self.get_transaction_item(frappe._dict(item))
-            for item in invoice.get(self.get_key("items_key"))
+            for item in invoice.get(self.get_key("items_key"), [])
         ]
 
     def get_transaction_item(self, item):
