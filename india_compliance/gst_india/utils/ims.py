@@ -35,27 +35,15 @@ class IMS:
 
     def get_transaction(self, invoice):
         transaction = frappe._dict(
-            {
-                **self.get_supplier_details(invoice),
-                **self.get_invoice_details(invoice),
-                **self.get_status_info(invoice),
-            }
+            supplier_gstin=invoice.stin,
+            sup_return_period=invoice.rtnprd,
+            # Required??
+            # source_file_status= invoice.srcfilstatus,
+            # source_form = invoice.srcform,
+            # is_pending_action_allowed = invoice.ispendactnallwd,
+            **self.get_invoice_details(invoice),
         )
         return transaction
-
-    def get_supplier_details(self, invoice):
-        return {
-            "supplier_gstin": invoice.stin,
-            "sup_return_period": invoice.rtnprd,
-        }
-
-    def get_status_info(self, invoice):
-        return {
-            # Required??
-            # "source_file_status": invoice.srcfilstatus,
-            # "source_form": invoice.srcform,
-            # "is_pending_action_allowed": invoice.ispendactnallwd,
-        }
 
 
 class B2B(IMS):
