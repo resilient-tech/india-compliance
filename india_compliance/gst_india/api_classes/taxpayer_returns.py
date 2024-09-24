@@ -123,3 +123,13 @@ class IMSAPI(ReturnsAPI):
             return response
 
         return FilesAPI().get_all(response)
+
+    def save_or_reset_action(self, action, gstin, data, otp=None):
+        gov_data = {"rtin": gstin, "reqtyp": action, "invdata": data}
+
+        return self.get(
+            action="RESETIMS" if action == "RESET" else action,
+            endpoint=self.END_POINT,
+            json=gov_data,
+            otp=otp,
+        )
