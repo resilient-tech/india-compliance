@@ -18,13 +18,13 @@ frappe.ui.form.on(DOCTYPE, {
         });
     },
 
-    onload: function(frm) {
+    onload: function (frm) {
         toggle_reverse_charge(frm);
 
         if (frm.is_new()) {
             frm.add_custom_button(
-                __("Create Purchase Invoice"),
-                () => get_irn_dialog(frm),
+                __("Create Invoice from IRN"),
+                () => show_irn_dialog(frm),
             );
         }
     },
@@ -113,7 +113,7 @@ frappe.ui.form.on("Purchase Invoice Item", {
 });
 
 
-function get_irn_dialog(frm) {
+function show_irn_dialog(frm) {
     const dialog = new frappe.ui.Dialog({
         title: __("Create Purchase Invoice"),
         fields: [
@@ -126,26 +126,61 @@ function get_irn_dialog(frm) {
             {
                 label: "Company GSTIN",
                 fieldname: "gstin",
-                fieldtype: "Data",
+                fieldtype: "Autocomplete",
+                get_query: function () {
+                    return {
+                        query: "india_compliance.gst_india.overrides.purchase_invoice.get_gstin_with_company_name",
+                    };
+                },
                 reqd: 1,
             }
         ],
+        primary_action_label: 'Create',
         primary_action(values) {
             taxpayer_api.call(
-                method ="india_compliance.gst_india.overrides.purchase_invoice.create_purchase_invoice_from_irn",
-                args= {
+                method = "india_compliance.gst_india.overrides.purchase_invoice.create_purchase_invoice_from_irn",
+                args = {
                     company_gstin: values.gstin,
                     irn: values.irn,
                 },
-                function (r){
+                function (r) {
+                    doc = r.message;
                     dialog.hide();
-                    frappe.set_route("purchase-invoice", r.message);
+                    frappe.set_route("purchase-invoice", doc.name);
+                    set_party_details(doc, frm);
                 },
             );
         },
     });
     dialog.show();
+
+    frappe.db.get_value("Company", frappe.defaults.get_default("company"), "gstin").then(r => {
+        dialog.fields_dict.gstin.set_input(r.message.gstin);
+    })
 }
+
+function set_party_details(doc, frm) {
+    erpnext.utils.get_party_details(
+        frm,
+        "erpnext.accounts.party.get_party_details",
+        {
+            posting_date: doc.posting_date,
+            bill_date: doc.bill_date,
+            party: doc.supplier,
+            party_type: "Supplier",
+            account: doc.credit_to,
+            price_list: doc.buying_price_list,
+            fetch_payment_terms_template: cint(!doc.ignore_default_payment_terms_template),
+        },
+        function () {
+            frm.set_value("apply_tds", frm.supplier_tds ? 1 : 0);
+            frm.set_value("tax_withholding_category", frm.supplier_tds);
+            frm.set_df_property("apply_tds", "read_only", frm.supplier_tds ? 0 : 1);
+            frm.set_df_property("tax_withholding_category", "hidden", frm.supplier_tds ? 0 : 1);
+        }
+    );
+}
+
 
 function toggle_reverse_charge(frm) {
     let is_read_only = 0;
