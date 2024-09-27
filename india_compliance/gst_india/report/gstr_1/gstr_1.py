@@ -1593,7 +1593,7 @@ class GSTR1DocumentIssuedSummary:
 
     def seperate_data_by_nature_of_document(self, data, doctype):
         nature_of_document = {
-            "Non GST Invoices": [],
+            "Invalid Invoice Number (length greater than 16)": [],
             "Excluded from Report (Same GSTIN Billing)": [],
             "Excluded from Report (Is Opening Entry)": [],
             "Invoices for outward supply": [],
@@ -1605,7 +1605,9 @@ class GSTR1DocumentIssuedSummary:
 
         for doc in data:
             if len(doc.name) > 16 or not GST_INVOICE_NUMBER_FORMAT.match(doc.name):
-                nature_of_document["Non GST Invoices"].append(doc)
+                nature_of_document[
+                    "Invalid Invoice Number (length greater than 16)"
+                ].append(doc)
             elif doc.is_opening == "Yes":
                 nature_of_document["Excluded from Report (Is Opening Entry)"].append(
                     doc
