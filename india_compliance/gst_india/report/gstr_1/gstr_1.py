@@ -11,7 +11,10 @@ from frappe.query_builder import Criterion
 from frappe.query_builder.functions import Date, IfNull, Sum
 from frappe.utils import cint, flt, formatdate, getdate
 
-from india_compliance.gst_india.constants.__init__ import GST_TAX_TYPES
+from india_compliance.gst_india.constants.__init__ import (
+    GST_INVOICE_NUMBER_FORMAT,
+    GST_TAX_TYPES,
+)
 from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies import (
     get_columns as get_hsn_columns,
 )
@@ -1590,6 +1593,7 @@ class GSTR1DocumentIssuedSummary:
 
     def seperate_data_by_nature_of_document(self, data, doctype):
         nature_of_document = {
+            "Non GST Invoices": [],
             "Excluded from Report (Same GSTIN Billing)": [],
             "Excluded from Report (Is Opening Entry)": [],
             "Invoices for outward supply": [],
@@ -1600,7 +1604,9 @@ class GSTR1DocumentIssuedSummary:
         }
 
         for doc in data:
-            if doc.is_opening == "Yes":
+            if len(doc.name) > 16 or not GST_INVOICE_NUMBER_FORMAT.match(doc.name):
+                nature_of_document["Non GST Invoices"].append(doc)
+            elif doc.is_opening == "Yes":
                 nature_of_document["Excluded from Report (Is Opening Entry)"].append(
                     doc
                 )
