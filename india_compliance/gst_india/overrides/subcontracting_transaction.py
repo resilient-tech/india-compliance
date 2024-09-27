@@ -290,8 +290,8 @@ class SubcontractingGSTAccounts(GSTAccounts):
         self.validate_for_charge_type()
 
     def validate_for_same_party_gstin(self):
-        company_gstin = self.doc.get("company_gstin") or self.doc.bill_from_gstin
-        party_gstin = self.doc.get("supplier_gstin") or self.doc.bill_to_gstin
+        company_gstin = self.doc.get("company_gstin") or self.doc.get("bill_from_gstin")
+        party_gstin = self.doc.get("supplier_gstin") or self.doc.get("bill_to_gstin")
 
         if not party_gstin or company_gstin != party_gstin:
             return
