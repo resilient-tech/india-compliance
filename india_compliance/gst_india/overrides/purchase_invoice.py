@@ -9,7 +9,7 @@ from india_compliance.gst_india.overrides.transaction import (
     validate_hsn_codes as _validate_hsn_codes,
 )
 from india_compliance.gst_india.overrides.transaction import validate_transaction
-from india_compliance.gst_india.utils import is_api_enabled
+from india_compliance.gst_india.utils import is_api_enabled, validate_invoice_number
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 
 
@@ -47,6 +47,7 @@ def validate(doc, method=None):
         return
 
     validate_hsn_codes(doc)
+    validate_invoice_number(doc)
     set_ineligibility_reason(doc)
     update_itc_totals(doc)
     validate_supplier_invoice_number(doc)
