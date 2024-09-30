@@ -33,3 +33,7 @@ class PublicAPI(BaseAPI):
         return self.get(
             "returns", params={"action": "RETTRACK", "gstin": gstin, "fy": fy}
         )
+
+    def is_ignored_error(self, response_json):
+        if response_json.get("errorCode") == "FO8000":
+            return True
