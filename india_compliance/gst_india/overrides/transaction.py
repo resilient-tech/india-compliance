@@ -823,11 +823,16 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
     is_sales_transaction = doctype in SALES_DOCTYPES or doctype == "Payment Entry"
     party_details = frappe.parse_json(party_details)
     gst_details = frappe._dict()
+    address = frappe.db.get_single_value(
+        "Accounts Settings", "determine_address_tax_category_from"
+    )
 
     # Party/Address Defaults
     if is_sales_transaction:
         company_gstin_field = "company_gstin"
-        party_gstin_field = "billing_address_gstin"
+        party_gstin_field = (
+            "billing_address_gstin" if address == "Billing Address" else "company_gstin"
+        )
         party_address_field = "customer_address"
         gst_category_field = "gst_category"
 
@@ -1493,13 +1498,24 @@ def validate_transaction(doc, method=None):
 
     validate_overseas_gst_category(doc)
 
+    address = frappe.db.get_single_value(
+        "Accounts Settings", "determine_address_tax_category_from"
+    )
     if is_sales_transaction := doc.doctype in SALES_DOCTYPES:
         validate_hsn_codes(doc)
         validate_sales_reverse_charge(doc)
-        gstin = doc.billing_address_gstin
+        gstin = (
+            doc.billing_address_gstin
+            if address == "Billing Address"
+            else doc.company_gstin
+        )
     elif doc.doctype == "Payment Entry":
         is_sales_transaction = True
-        gstin = doc.billing_address_gstin
+        gstin = (
+            doc.billing_address_gstin
+            if address == "Billing Address"
+            else doc.company_gstin
+        )
     else:
         gstin = doc.supplier_gstin
 

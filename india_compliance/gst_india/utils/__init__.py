@@ -407,7 +407,14 @@ def get_place_of_supply(party_details, doctype):
             if gst_state_number and gst_state:
                 return f"{gst_state_number}-{gst_state}"
 
-        party_gstin = party_details.billing_address_gstin or party_details.company_gstin
+        address = frappe.db.get_single_value(
+            "Accounts Settings", "determine_address_tax_category_from"
+        )
+        party_gstin = (
+            party_details.billing_address_gstin
+            if address == "Billing Address"
+            else party_details.company_gstin
+        )
 
     elif doctype == "Stock Entry":
         party_gstin = party_details.bill_to_gstin or party_details.bill_from_gstin
