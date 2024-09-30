@@ -56,11 +56,8 @@ def _get_gstin_info(gstin, *, throw_error=True):
             frappe.enqueue(
                 "india_compliance.gst_india.doctype.gstin.gstin.create_or_update_gstin_status",
                 queue="long",
-                response=get_formatted_response_for_status(response, gstin),
+                response=get_formatted_response_for_status(response),
             )
-
-            if response.get("errorCode") == "FO8000":
-                return get_formatted_response_for_status(response, gstin)
 
         except Exception as exc:
             if isinstance(exc, GSPServerError):
@@ -79,7 +76,7 @@ def _get_gstin_info(gstin, *, throw_error=True):
 
     gstin_info = frappe._dict(
         gstin=response.gstin,
-        business_name=titlecase(business_name),
+        business_name=titlecase(business_name or ""),
         gst_category=GST_CATEGORIES.get(response.dty, ""),
         status=response.sts,
     )
@@ -201,7 +198,7 @@ def fetch_gstin_status(*, gstin=None, throw=True):
 
         if throw or not company_gstin:
             response = PublicAPI().get_gstin_info(gstin)
-            return get_formatted_response_for_status(response, gstin)
+            return get_formatted_response_for_status(response)
 
         response = EInvoiceAPI(company_gstin=company_gstin).get_gstin_info(gstin)
         return frappe._dict(
@@ -228,18 +225,10 @@ def fetch_gstin_status(*, gstin=None, throw=True):
         frappe.clear_last_message()
 
 
-def get_formatted_response_for_status(response, gstin):
+def get_formatted_response_for_status(response):
     """
     Format response from Public API
     """
-    if response.get("errorCode") == "FO8000":
-        return frappe._dict(
-            {
-                "gstin": gstin,
-                "status": "Invalid",
-            }
-        )
-
     return frappe._dict(
         {
             "gstin": response.gstin,
