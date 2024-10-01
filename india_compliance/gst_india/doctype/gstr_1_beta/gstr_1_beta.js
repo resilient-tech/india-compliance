@@ -2487,10 +2487,8 @@ class GSTR1Action extends FileGSTR1Dialog {
 
         frappe.show_alert(__("Please wait while we proceed to file the data."));
         this.perform_gstr1_action(action, r => {
-            if (r.message)
-                this.handle_proceed_to_file_response(
-                    r.message
-                ); // already proceed to file
+            // already proceed to file
+            if (r.message) this.handle_proceed_to_file_response(r.message);
             else this.fetch_status_with_retry(action);
         });
     }
