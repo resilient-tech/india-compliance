@@ -14,8 +14,10 @@ frappe.ui.form.on("Subcontracting Order", {
             total_taxable_value: "total",
         });
 
-        frm.get_docfield("taxes", "charge_type").options =
-            "\nOn Net Total\nOn Item Quantity";
+        frm.get_docfield("taxes", "charge_type").options = [
+            "On Net Total",
+            "On Item Quantity",
+        ];
     },
 
     taxes_and_charges(frm) {
