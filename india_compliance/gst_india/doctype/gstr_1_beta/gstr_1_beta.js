@@ -2214,16 +2214,14 @@ class DetailViewDialog {
 class FileGSTR1Dialog {
     constructor(frm) {
         this.frm = frm;
-        this.dialog = null;
+        this.filing_dialog = null;
     }
 
     file_gstr1_data() {
         if (this.is_request_in_progress()) return;
 
         // TODO: EVC Generation, Resend, and Filing
-        const file_gstr1 = this;
-
-        this.dialog = new frappe.ui.Dialog({
+        this.filing_dialog = new frappe.ui.Dialog({
             title: "File GSTR-1",
             fields: [
                 {
@@ -2275,22 +2273,22 @@ class FileGSTR1Dialog {
                 },
             ],
             primary_action_label: "Get OTP",
-            async primary_action() {
-                const pan = file_gstr1.dialog.get_value("pan");
+            primary_action: async () => {
+                const pan = this.filing_dialog.get_value("pan");
                 india_compliance.validate_pan(pan);
 
                 // generate otp
                 await india_compliance.generate_evc_otp(
-                    file_gstr1.frm.doc.company_gstin,
+                    this.frm.doc.company_gstin,
                     pan,
                     "R1"
                 );
 
                 // show otp field
-                file_gstr1.dialog.set_df_property("otp", "read_only", 0);
-                file_gstr1.dialog.set_df_property("acknowledged", "read_only", 0);
+                this.filing_dialog.set_df_property("otp", "read_only", 0);
+                this.filing_dialog.set_df_property("acknowledged", "read_only", 0);
 
-                file_gstr1.update_actions(pan);
+                this.update_actions(pan);
             },
         });
 
@@ -2302,7 +2300,7 @@ class FileGSTR1Dialog {
                     message.last_pan_used_for_gstr ||
                     this.frm.doc.company_gstin.substr(2, 10);
 
-                this.dialog.set_value("pan", pan_no);
+                this.filing_dialog.set_value("pan", pan_no);
             });
 
         // update total amendes
@@ -2321,17 +2319,17 @@ class FileGSTR1Dialog {
                     amended_liability,
                     non_amended_liability
                 );
-                const field = this.dialog.get_field("liability_breakup_html");
+                const field = this.filing_dialog.get_field("liability_breakup_html");
 
                 if (!amendment_table_html) return;
                 field.toggle(true);
 
                 field.df.options = amendment_table_html;
-                this.dialog.refresh();
+                this.filing_dialog.refresh();
             },
         });
 
-        this.dialog.show();
+        this.filing_dialog.show();
     }
 
     generate_liability_table(amended_liability, non_amended_liability) {
@@ -2376,29 +2374,63 @@ class FileGSTR1Dialog {
     }
 
     update_actions(pan) {
-        this.dialog.set_primary_action("File", () => {
-            if (!this.dialog.get_value("acknowledged")) {
+        this.filing_dialog.set_primary_action("File", () => {
+            if (!this.filing_dialog.get_value("acknowledged")) {
                 frappe.msgprint(
                     __("Please acknowledge that you can not undo this action.")
                 );
                 return;
             }
 
-            this.perform_gstr1_action("file", {
-                pan: pan,
-                otp: this.dialog.get_value("otp"),
-            });
+            this.perform_gstr1_action(
+                "file",
+                r => this.handle_filing_response(r.message),
+                {
+                    pan: pan,
+                    otp: this.filing_dialog.get_value("otp"),
+                }
+            );
         });
 
-        this.dialog.set_secondary_action_label("Resend OTP");
-        this.dialog.set_secondary_action(() => {
+        this.filing_dialog.set_secondary_action_label("Resend OTP");
+        this.filing_dialog.set_secondary_action(() => {
             india_compliance.generate_evc_otp(this.frm.doc.company_gstin, pan, "R1");
         });
+    }
+
+    handle_filing_response(response) {
+        if (response.error?.error_cd === "RET13509") {
+            this.filing_dialog
+                .get_field("otp")
+                .set_description(`<p style="color: red">Invalid OTP</p>`);
+            return;
+        }
+
+        this.filing_dialog.hide();
+
+        if (response.error?.error_cd === "RET09001") {
+            this.frm.page.set_primary_action("Proceed to File", () =>
+                this.proceed_to_file()
+            );
+            this.frm.page.set_indicator("Not Filed", "orange");
+            this.frm.gstr1.status = "Not Filed";
+            frappe.msgprint(
+                __(
+                    "Latest Summary is not available. Please generate summary and try again."
+                )
+            );
+        }
+        if (response.ack_num) {
+            this.frm.taxpayer_api_call("generate_gstr1").then(r => {
+                this.frm.doc.__gst_data = r.message;
+                this.frm.trigger("load_gstr1_data");
+            });
+        }
     }
 }
 
 class GSTR1Action extends FileGSTR1Dialog {
-    RETRY_INTERVALS = [5000, 15000, 30000, 60000, 120000, 300000, 600000, 720000]; // 5 second, 15 second, 30 second, 1 min, 2 min, 5 min, 10 min, 12 min
+    RETRY_INTERVALS = [2000, 3000, 15000, 30000, 60000, 120000, 300000, 600000, 720000]; // 5 second, 15 second, 30 second, 1 min, 2 min, 5 min, 10 min, 12 min
 
     constructor(frm) {
         super(frm);
@@ -2426,12 +2458,16 @@ class GSTR1Action extends FileGSTR1Dialog {
     upload_gstr1_data() {
         if (this.is_request_in_progress()) return;
 
+        const action = "upload";
+
         frappe.show_alert(__("Uploading data to GSTN"));
-        this.perform_gstr1_action("upload");
+        this.perform_gstr1_action(action, () => this.fetch_status_with_retry(action));
     }
 
     reset_gstr1_data() {
         if (this.is_request_in_progress()) return;
+
+        const action = "reset";
 
         frappe.confirm(
             __(
@@ -2439,17 +2475,27 @@ class GSTR1Action extends FileGSTR1Dialog {
             ),
             () => {
                 frappe.show_alert(__("Resetting GSTR-1 data"));
-                this.perform_gstr1_action("reset");
+                this.perform_gstr1_action(action, () =>
+                    this.fetch_status_with_retry(action)
+                );
             }
         );
     }
 
     proceed_to_file() {
+        const action = "proceed_to_file";
+
         frappe.show_alert(__("Please wait while we proceed to file the data."));
-        this.perform_gstr1_action("proceed_to_file");
+        this.perform_gstr1_action(action, r => {
+            if (r.message)
+                this.handle_proceed_to_file_response(
+                    r.message
+                ); // already proceed to file
+            else this.fetch_status_with_retry(action);
+        });
     }
 
-    perform_gstr1_action(action, additional_args = {}) {
+    perform_gstr1_action(action, callback, additional_args = {}) {
         this.toggle_actions(false, action);
 
         // TODO: Why error tabs are hidden here. Only on successful upload
@@ -2463,17 +2509,7 @@ class GSTR1Action extends FileGSTR1Dialog {
         taxpayer_api.call({
             method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.handle_gstr1_action",
             args: args,
-            callback: response => {
-                if (action == "file") {
-                    this.handle_file_response(response);
-                } else {
-                    if (Object.keys(response).length == 0) {
-                        this.fetch_status_with_retry(action);
-                    } else {
-                        this.handle_proceed_to_file_response(response.message);
-                    }
-                }
-            },
+            callback: response => callback && callback(response),
         });
     }
 
@@ -2490,10 +2526,8 @@ class GSTR1Action extends FileGSTR1Dialog {
                     return this.fetch_status_with_retry(action, retries + 1);
 
                 if (action == "upload") {
-                    if (message.status_cd == "P") {
-                        this.perform_gstr1_action("proceed_to_file");
-                        return;
-                    } else if (message.status_cd == "PE") this.handle_errors(message);
+                    if (message.status_cd == "P") return this.proceed_to_file();
+                    else if (message.status_cd == "PE") this.show_errors(message);
                     // TODO: Highlight error tab
                 }
 
@@ -2511,11 +2545,6 @@ class GSTR1Action extends FileGSTR1Dialog {
                 }
 
                 if (action == "proceed_to_file") {
-                    ["books", "unfiled", "reconcile"].map(tab =>
-                        this.frm.gstr1.tabs[`${tab}_tab`].hide()
-                    );
-                    this.frm.gstr1.tabs.filed_tab.set_active();
-
                     this.handle_proceed_to_file_response(message);
                     action = "upload"; // for notification
                 }
@@ -2526,45 +2555,22 @@ class GSTR1Action extends FileGSTR1Dialog {
         );
     }
 
-    handle_errors(message) {
+    show_errors(message) {
         this.frm.gstr1.tabs.error_tab.show();
         this.frm.gstr1.tabs["error_tab"].tabmanager.refresh_data(message);
     }
 
-    handle_file_response(response) {
-        if (response.message.error?.error_cd === "RET13509") {
-            this.dialog
-                .get_field("otp")
-                .set_description(`<p style="color: red">Invalid OTP</p>`);
-            return;
-        }
-
-        this.dialog.hide();
-
-        if (response.message.error?.error_cd === "RET09001") {
-            this.frm.page.set_primary_action("Proceed to File", () =>
-                this.proceed_to_file()
-            );
-            this.frm.page.set_indicator("Not Filed", "orange");
-            this.frm.gstr1.status = "Not Filed";
-            frappe.msgprint(
-                __(
-                    "Latest Summary is not available. Please generate summary and try again."
-                )
-            );
-        }
-        if (response.message.ack_num) {
-            this.frm.taxpayer_api_call("generate_gstr1").then(r => {
-                this.frm.doc.__gst_data = r.message;
-                this.frm.trigger("load_gstr1_data");
-            });
-        }
-    }
-
     handle_proceed_to_file_response(response) {
+        // only show filed tab
+        ["books", "unfiled", "reconcile"].map(tab =>
+            this.frm.gstr1.tabs[`${tab}_tab`].hide()
+        );
+        this.frm.gstr1.tabs.filed_tab.set_active();
+
         const filing_status = response.filing_status;
         if (!filing_status) return;
 
+        // summary matched
         if (filing_status == "Ready to File") {
             this.frm.page.set_primary_action("File", () =>
                 this.frm.gstr1.gstr1_action.file_gstr1_data()
@@ -2574,11 +2580,13 @@ class GSTR1Action extends FileGSTR1Dialog {
             return;
         }
 
+        // summary not matched
         this.frm.page.set_primary_action("Upload", () => this.upload_gstr1_data());
 
         const differing_categories = response.differing_categories
             .map(item => `<li>${item}</li>`)
             .join("");
+
         const message = `
         <p>${__(
             "Summary for the following categories has not matched. Please sync with GSTIN."
@@ -2592,15 +2600,11 @@ class GSTR1Action extends FileGSTR1Dialog {
             title: __("GSTIN Sync Required"),
             primary_action: {
                 label: __("Sync with GSTIN"),
-                action() {
+                action: () => {
                     render_empty_state(this.frm);
-                    this.frm
-                        .taxpayer_api_call("sync_with_gstn", {
-                            sync_for: "unfiled",
-                        })
-                        .then(() => {
-                            frappe.msgprint(__("Synced successfully with GSTIN."));
-                        });
+                    this.frm.taxpayer_api_call("sync_with_gstn", {
+                        sync_for: "unfiled",
+                    });
                 },
             },
         });
@@ -2632,8 +2636,9 @@ class GSTR1Action extends FileGSTR1Dialog {
     }
 
     is_request_in_progress() {
-        const in_progress = this.frm.__action_performed;
+        let in_progress = this.frm.__action_performed;
         if (!in_progress) return false;
+        else if (in_progress == "proceed_to_file") in_progress = "upload";
 
         frappe.show_alert({
             message: __(`Already ${in_progress}ing`),
