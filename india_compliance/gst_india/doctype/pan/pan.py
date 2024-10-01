@@ -100,7 +100,7 @@ def fetch_and_update_pan_status(pan, throw, duplicate=False):
             "last_updated_on": now(),
         }
     )
-    doc.save()
+    doc.save(ignore_permissions=True)
 
     return doc
 

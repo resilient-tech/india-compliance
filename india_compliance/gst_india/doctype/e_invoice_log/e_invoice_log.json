@@ -7,7 +7,8 @@
  "engine": "InnoDB",
  "field_order": [
   "irn",
-  "sales_invoice",
+  "reference_doctype",
+  "reference_name",
   "is_generated_in_sandbox_mode",
   "column_break_1",
   "acknowledgement_number",
@@ -74,13 +75,6 @@
    "read_only": 1
   },
   {
-   "fieldname": "sales_invoice",
-   "fieldtype": "Link",
-   "label": "Sales Invoice",
-   "options": "Sales Invoice",
-   "read_only": 1
-  },
-  {
    "fieldname": "column_break_1",
    "fieldtype": "Column Break"
   },
@@ -120,6 +114,23 @@
    "fieldname": "is_generated_in_sandbox_mode",
    "fieldtype": "Check",
    "label": "Is Generated in Sandbox Mode"
+  },
+  {
+   "fieldname": "reference_doctype",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Reference Document Type",
+   "options": "DocType",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reference_name",
+   "fieldtype": "Dynamic Link",
+   "in_standard_filter": 1,
+   "label": "Reference Document Name",
+   "options": "reference_doctype",
+   "read_only": 1
   }
  ],
  "in_create": 1,
@@ -129,7 +140,7 @@
    "link_fieldname": "irn"
   }
  ],
- "modified": "2024-03-29 11:36:18.869978",
+ "modified": "2024-09-19 18:59:01.195753",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Invoice Log",
@@ -160,5 +171,5 @@
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
- "title_field": "sales_invoice"
+ "title_field": "reference_name"
 }

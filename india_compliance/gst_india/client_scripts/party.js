@@ -149,6 +149,7 @@ async function set_gstin_options(frm) {
 
     frm._gstin_options_set_for = frm.doc.name;
     const field = frm.get_field("gstin");
+    if (!field || field.df.fieldtype != "Autocomplete") return;
     field.df.ignore_validation = true;
     field.set_data(await india_compliance.get_gstin_options(frm.doc.name, frm.doctype));
 }

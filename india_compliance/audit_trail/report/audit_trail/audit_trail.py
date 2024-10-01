@@ -152,9 +152,8 @@ class DetailedReport(BaseAuditTrail):
             },
             {
                 "label": _("DocType"),
-                "fieldtype": "Link",
+                "fieldtype": "Data",
                 "fieldname": "doctype",
-                "options": "DocType",
                 "width": 120,
             },
             {
@@ -172,10 +171,9 @@ class DetailedReport(BaseAuditTrail):
             },
             {
                 "label": _("Party Type"),
-                "fieldtype": "Link",
+                "fieldtype": "Data",
                 "fieldname": "party_type",
                 "width": 100,
-                "options": "DocType",
             },
             {
                 "label": _("Party Name"),
@@ -302,9 +300,8 @@ class DocTypeReport(BaseAuditTrail):
         columns = [
             {
                 "label": _("DocType"),
-                "fieldtype": "Link",
+                "fieldtype": "Data",
                 "fieldname": "doctype",
-                "options": "DocType",
                 "width": 150,
             },
             {

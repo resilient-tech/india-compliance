@@ -29,13 +29,13 @@ frappe.query_reports["GST Balance"] = {
             fieldname: "from_date",
             label: __("From Date"),
             fieldtype: "Date",
-            default: frappe.defaults.get_user_default("year_start_date"),
+            default: india_compliance.last_month_start(),
         },
         {
             fieldname: "to_date",
             label: __("To Date"),
             fieldtype: "Date",
-            default: frappe.defaults.get_user_default("year_end_date"),
+            default: india_compliance.last_month_end(),
         },
         {
             fieldname: "show_summary",

@@ -107,7 +107,6 @@ class TestAdvancePaymentEntry(FrappeTestCase):
             is_in_state=1,
             is_return=1,
             qty=-1,
-            reason_for_issuing_document="01-Sales Return",
             return_against=invoice_doc.name,
         )
 
