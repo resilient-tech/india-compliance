@@ -67,11 +67,31 @@ CUSTOM_FIELDS = {
             "insert_after": "total",
             "hide_border": 1,
         },
+        {
+            "fieldname": "section_break_ref_doc",
+            "label": "References",
+            "fieldtype": "Section Break",
+            "insert_after": "bill_date",
+            "depends_on": "eval:doc.is_return !== 1",
+        },
+        {
+            "fieldname": "fetch_original_doc_ref",
+            "label": "Fetch Original Document Reference",
+            "fieldtype": "Button",
+            "insert_after": "section_break_ref_doc",
+        },
+        {
+            "fieldname": "doc_references",
+            "label": "Original Document References",
+            "fieldtype": "Table",
+            "insert_after": "fetch_original_doc_ref",
+            "options": "Dynamic Link",
+        },
     ],
     ("Subcontracting Order", "Subcontracting Receipt"): [
         {
             "fieldname": "supplier_gstin",
-            "label": "Supplier GSTIN",
+            "label": "Job Worker GSTIN",
             "fieldtype": "Data",
             "insert_after": "address_display",
             "fetch_from": "supplier_address.gstin",
@@ -161,7 +181,7 @@ CUSTOM_FIELDS = {
             "label": "Taxes",
             "fieldtype": "Section Break",
             "insert_after": "get_stock_and_rate",
-            "depends_on": "eval:doc.purpose === 'Send to Subcontractor'",
+            "depends_on": "eval:doc.subcontracting_order",
         },
         {
             "label": "E-Waybill Info",
@@ -194,6 +214,7 @@ CUSTOM_FIELDS = {
             "insert_after": "bill_from_address",
             "read_only": 1,
             "is_virtual": 1,
+            "allow_on_submit": 1,
         },
         {
             "fieldname": "bill_from_gstin",
@@ -207,7 +228,7 @@ CUSTOM_FIELDS = {
         },
         {
             "fieldname": "bill_from_gst_category",
-            "label": "GST Category",
+            "label": "Bill From GST Category",
             "fieldtype": "Data",
             "insert_after": "bill_from_gstin",
             "read_only": 1,
@@ -236,6 +257,7 @@ CUSTOM_FIELDS = {
             "insert_after": "bill_to_address",
             "read_only": 1,
             "is_virtual": 1,
+            "allow_on_submit": 1,
         },
         {
             "fieldname": "bill_to_gstin",
@@ -249,7 +271,7 @@ CUSTOM_FIELDS = {
         },
         {
             "fieldname": "bill_to_gst_category",
-            "label": "GST Category",
+            "label": "Bill To GST Category",
             "fieldtype": "Data",
             "insert_after": "bill_to_gstin",
             "read_only": 1,
@@ -290,6 +312,7 @@ CUSTOM_FIELDS = {
             "insert_after": "ship_from_address",
             "read_only": 1,
             "is_virtual": 1,
+            "allow_on_submit": 1,
         },
         {
             "fieldname": "cb_shipping_address",
@@ -311,6 +334,27 @@ CUSTOM_FIELDS = {
             "insert_after": "ship_to_address",
             "read_only": 1,
             "is_virtual": 1,
+            "allow_on_submit": 1,
+        },
+        {
+            "fieldname": "section_break_ref_doc",
+            "label": "References",
+            "fieldtype": "Section Break",
+            "insert_after": "value_difference",
+            "depends_on": "eval:doc.purpose === 'Material Transfer' && doc.subcontracting_order",
+        },
+        {
+            "fieldname": "fetch_original_doc_ref",
+            "label": "Fetch Original Document Reference",
+            "fieldtype": "Button",
+            "insert_after": "section_break_ref_doc",
+        },
+        {
+            "fieldname": "doc_references",
+            "label": "Original Document References",
+            "fieldtype": "Table",
+            "insert_after": "fetch_original_doc_ref",
+            "options": "Dynamic Link",
         },
     ],
     "Company": [
@@ -501,6 +545,7 @@ CUSTOM_FIELDS = {
             "translatable": 0,
             "is_virtual": 1,
             "read_only": 1,
+            "allow_on_submit": 1,
         },
         {
             "fieldname": "gst_col_break",
@@ -913,21 +958,6 @@ CUSTOM_FIELDS = {
             ),
             "translatable": 0,
         },
-        {
-            "fieldname": "reason_for_issuing_document",
-            "label": "Reason For Issuing Document",
-            "fieldtype": "Select",
-            "insert_after": "return_against",
-            "print_hide": 1,
-            "depends_on": "eval:doc.is_return == 1",
-            "length": 45,
-            "options": (
-                "\n01-Sales Return\n02-Post Sale Discount\n03-Deficiency in"
-                " services\n04-Correction in Invoice\n05-Change in POS\n06-Finalization"
-                " of Provisional assessment\n07-Others"
-            ),
-            "translatable": 0,
-        },
     ],
     (
         "Sales Taxes and Charges",
@@ -964,6 +994,7 @@ CUSTOM_FIELDS = {
             ),
             "default": "All Other ITC",
             "translatable": 0,
+            "read_only": 1,
         },
         {
             "fieldname": "ineligibility_reason",
@@ -1048,6 +1079,7 @@ CUSTOM_FIELDS = {
             "print_hide": 1,
             "translatable": 0,
             "is_virtual": 1,
+            "allow_on_submit": 1,
         },
     ],
     "Supplier": [
@@ -1352,7 +1384,7 @@ E_INVOICE_FIELDS = {
             "label": "e-Invoice Status",
             "fieldtype": "Select",
             "insert_after": "status",
-            "options": "\nPending\nGenerated\nAuto-Retry\nCancelled\nManually Cancelled\nFailed\nNot Applicable\nPending Cancellation",
+            "options": "\nPending\nGenerated\nManually Generated\nAuto-Retry\nCancelled\nManually Cancelled\nFailed\nNot Applicable\nPending Cancellation",
             "default": None,
             "hidden": 1,
             "no_copy": 1,

@@ -8,6 +8,8 @@ from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Extract, Ifnull, IfNull, LiteralValue, Sum
 from frappe.utils import cint, get_first_day, get_last_day
 
+from india_compliance.gst_india.utils import get_period
+
 
 def execute(filters=None):
     if not filters.get("section"):
@@ -27,6 +29,10 @@ def execute(filters=None):
 class BaseGSTR3BDetails:
     def __init__(self, filters=None):
         self.filters = frappe._dict(filters or {})
+        self.company_currency = frappe.get_cached_value(
+            "Company", filters.get("company"), "default_currency"
+        )
+
         self.columns = [
             {
                 "fieldname": "voucher_type",
@@ -48,11 +54,12 @@ class BaseGSTR3BDetails:
             },
         ]
         self.data = []
+        self.month_or_quarter_no = get_period(self.filters.month_or_quarter)
         self.from_date = get_first_day(
-            f"{cint(self.filters.year)}-{cint(self.filters.month)}-01"
+            f"{cint(self.filters.year)}-{self.month_or_quarter_no[0]}-01"
         )
         self.to_date = get_last_day(
-            f"{cint(self.filters.year)}-{cint(self.filters.month)}-01"
+            f"{cint(self.filters.year)}-{self.month_or_quarter_no[1]}-01"
         )
         self.company = self.filters.company
         self.company_gstin = self.filters.company_gstin
@@ -78,28 +85,28 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                     "fieldname": "iamt",
                     "label": _("Integrated Tax"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 100,
                 },
                 {
                     "fieldname": "camt",
                     "label": _("Central Tax"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 100,
                 },
                 {
                     "fieldname": "samt",
                     "label": _("State/UT Tax"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 100,
                 },
                 {
                     "fieldname": "csamt",
                     "label": _("Cess Tax"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 100,
                 },
                 {
@@ -193,7 +200,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                 ).as_("csamt"),
                 LiteralValue(0).as_("camt"),
                 LiteralValue(0).as_("samt"),
-                ConstantColumn("Import of Goods").as_("itc_classification"),
+                ConstantColumn("Import Of Goods").as_("itc_classification"),
             )
             .where(
                 (boe.docstatus == 1)
@@ -268,14 +275,20 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
 
     def get_ineligible_itc_from_purchase(self):
         ineligible_itc = IneligibleITC(
-            self.company, self.company_gstin, self.filters.month, self.filters.year
+            self.company,
+            self.company_gstin,
+            self.month_or_quarter_no,
+            self.filters.year,
         ).get_for_purchase("Ineligible As Per Section 17(5)")
 
         return self.process_ineligible_itc(ineligible_itc)
 
     def get_ineligible_itc_from_boe(self):
         ineligible_itc = IneligibleITC(
-            self.company, self.company_gstin, self.filters.month, self.filters.year
+            self.company,
+            self.company_gstin,
+            self.month_or_quarter_no,
+            self.filters.year,
         ).get_for_bill_of_entry()
 
         return self.process_ineligible_itc(ineligible_itc)
@@ -299,14 +312,14 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
                     "fieldname": "intra",
                     "label": _("Intra State"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 100,
                 },
                 {
                     "fieldname": "inter",
                     "label": _("Inter State"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 100,
                 },
                 {
@@ -417,10 +430,10 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
 
 
 class IneligibleITC:
-    def __init__(self, company, gstin, month, year) -> None:
+    def __init__(self, company, gstin, month_or_quarter, year) -> None:
         self.company = company
         self.gstin = gstin
-        self.month = month
+        self.month_or_quarter = month_or_quarter
         self.year = year
 
     def get_for_purchase(self, ineligibility_reason, group_by="name"):
@@ -473,6 +486,10 @@ class IneligibleITC:
             .where(dt.docstatus == 1)
             .where(dt.company_gstin == self.gstin)
             .where(dt.company == self.company)
-            .where(Extract(DatePart.month, dt.posting_date).eq(self.month))
+            .where(
+                Extract(DatePart.month, dt.posting_date).between(
+                    self.month_or_quarter[0], self.month_or_quarter[1]
+                )
+            )
             .where(Extract(DatePart.year, dt.posting_date).eq(self.year))
         )

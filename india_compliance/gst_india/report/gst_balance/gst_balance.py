@@ -39,7 +39,7 @@ def execute(filters=None):
 
 @frappe.whitelist()
 def get_pending_voucher_types(company=None):
-    frappe.has_permission("GST Settings", "write", throw=True)
+    frappe.has_permission("GST Settings", "read", throw=True)
 
     company_accounts = ""
     if company:
@@ -78,6 +78,10 @@ class GSTBalanceReport:
             frappe.throw(_("From Date cannot be greater than To Date"))
 
     def get_columns(self):
+        company_currency = frappe.get_cached_value(
+            "Company", self.filters.get("company"), "default_currency"
+        )
+
         if not self.filters.show_summary:
             return [
                 {
@@ -91,42 +95,42 @@ class GSTBalanceReport:
                     "fieldname": "opening_debit",
                     "label": _("Opening (Dr)"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": company_currency,
                     "width": 150,
                 },
                 {
                     "fieldname": "opening_credit",
                     "label": _("Opening (Cr)"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": company_currency,
                     "width": 150,
                 },
                 {
                     "fieldname": "debit",
                     "label": _("Debit"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": company_currency,
                     "width": 150,
                 },
                 {
                     "fieldname": "credit",
                     "label": _("Credit"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": company_currency,
                     "width": 150,
                 },
                 {
                     "fieldname": "closing_debit",
                     "label": _("Closing (Dr)"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": company_currency,
                     "width": 150,
                 },
                 {
                     "fieldname": "closing_credit",
                     "label": _("Closing (Cr)"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": company_currency,
                     "width": 150,
                 },
             ]
@@ -149,7 +153,7 @@ class GSTBalanceReport:
                         "fieldname": f"gstin_{gstin}",
                         "label": gstin,
                         "fieldtype": "Currency",
-                        "options": "Company:company:default_currency",
+                        "options": company_currency,
                         "width": 150,
                     }
                 )

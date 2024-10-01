@@ -5,5 +5,5 @@
 from frappe.tests.utils import FrappeTestCase
 
 
-class TestGSTR1FiledLog(FrappeTestCase):
+class TestPAN(FrappeTestCase):
     pass

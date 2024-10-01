@@ -1,8 +1,9 @@
 {
  "actions": [],
- "autoname": "format:{return_period}-{gstin}",
- "creation": "2024-03-11 11:59:06.887429",
- "description": "Keeps the log of GSTR-1 filed by GSTIN and Period",
+ "autoname": "format:{return_type}-{return_period}-{gstin}",
+ "creation": "2024-07-06 08:47:55.801429",
+ "default_view": "List",
+ "description": "Keeps the log of GST Returns filed by GSTIN and Period",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -10,6 +11,7 @@
   "filing_status",
   "return_period",
   "company",
+  "return_type",
   "column_break_sqwh",
   "filing_date",
   "acknowledgement_number",
@@ -47,7 +49,16 @@
   {
    "fieldname": "return_period",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Return Period",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
    "read_only": 1
   },
   {
@@ -67,41 +78,12 @@
    "read_only": 1
   },
   {
-   "fieldname": "section_break_oisv",
-   "fieldtype": "Section Break",
-   "label": "Government Data"
-  },
-  {
    "fieldname": "gstin",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "GSTIN",
-   "read_only": 1
-  },
-  {
-   "fieldname": "column_break_hxfu",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "computed_data_section",
-   "fieldtype": "Section Break",
-   "hide_border": 1,
-   "label": "Computed Data"
-  },
-  {
-   "fieldname": "reconciled_data_section",
-   "fieldtype": "Section Break",
-   "label": "Reconciled Data"
-  },
-  {
-   "fieldname": "column_break_ndup",
-   "fieldtype": "Column Break"
-  },
-  {
-   "default": "0",
-   "fieldname": "is_latest_data",
-   "fieldtype": "Check",
-   "label": "Is Latest Data",
-   "read_only": 1
+   "read_only": 1,
+   "reqd": 1
   },
   {
    "fieldname": "generation_status",
@@ -112,9 +94,30 @@
    "read_only": 1
   },
   {
+   "fieldname": "section_break_oisv",
+   "fieldtype": "Section Break",
+   "label": "Government Data"
+  },
+  {
+   "fieldname": "unfiled",
+   "fieldtype": "Attach",
+   "label": "Unfiled Invoices",
+   "read_only": 1
+  },
+  {
    "fieldname": "filed",
    "fieldtype": "Attach",
    "label": "Filed Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_hxfu",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "unfiled_summary",
+   "fieldtype": "Attach",
+   "label": "Unfiled Summary",
    "read_only": 1
   },
   {
@@ -124,10 +127,31 @@
    "read_only": 1
   },
   {
+   "fieldname": "computed_data_section",
+   "fieldtype": "Section Break",
+   "hide_border": 1,
+   "label": "Computed Data"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_latest_data",
+   "fieldtype": "Check",
+   "label": "Is Latest Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_emlz",
+   "fieldtype": "Section Break"
+  },
+  {
    "fieldname": "books",
    "fieldtype": "Attach",
    "label": "Books Data",
    "read_only": 1
+  },
+  {
+   "fieldname": "column_break_ehcm",
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "books_summary",
@@ -136,10 +160,19 @@
    "read_only": 1
   },
   {
+   "fieldname": "reconciled_data_section",
+   "fieldtype": "Section Break",
+   "label": "Reconciled Data"
+  },
+  {
    "fieldname": "reconcile",
    "fieldtype": "Attach",
    "label": "Reconcile GSTR-1",
    "read_only": 1
+  },
+  {
+   "fieldname": "column_break_ndup",
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "reconcile_summary",
@@ -148,40 +181,26 @@
    "read_only": 1
   },
   {
-   "fieldname": "unfiled",
-   "fieldtype": "Attach",
-   "label": "Unfiled Invoices",
-   "read_only": 1
-  },
-  {
-   "fieldname": "unfiled_summary",
-   "fieldtype": "Attach",
-   "label": "Unfiled Summary",
-   "read_only": 1
-  },
-  {
-   "fieldname": "section_break_emlz",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "column_break_ehcm",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "company",
-   "fieldtype": "Link",
-   "label": "Company",
-   "options": "Company",
-   "read_only": 1
+   "fieldname": "return_type",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Return Type",
+   "read_only": 1,
+   "reqd": 1
   }
  ],
  "in_create": 1,
  "index_web_pages_for_search": 1,
- "links": [],
- "modified": "2024-05-28 19:49:55.513493",
+ "links": [
+  {
+   "link_doctype": "Integration Request",
+   "link_fieldname": "reference_docname"
+  }
+ ],
+ "modified": "2024-08-14 17:53:03.509293",
  "modified_by": "Administrator",
  "module": "GST India",
- "name": "GSTR-1 Log",
+ "name": "GST Return Log",
  "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [

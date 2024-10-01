@@ -38,8 +38,8 @@ const GSTR1_SubCategory = {
     HSN: "HSN Summary",
     DOC_ISSUE: "Document Issued",
 
-    SUPECOM_52: "TCS collected by E-commerce Operator u/s 52",
-    SUPECOM_9_5: "GST Payable on RCM by E-commerce Operator u/s 9(5)",
+    SUPECOM_52: "Liable to collect tax u/s 52(TCS)",
+    SUPECOM_9_5: "Liable to pay tax u/s 9(5)"
 };
 
 const INVOICE_TYPE = {
@@ -103,7 +103,6 @@ const GSTR1_DataField = {
 
 frappe.ui.form.on(DOCTYPE, {
     async setup(frm) {
-        patch_set_indicator(frm);
         frappe.require("gstr1.bundle.js").then(() => {
             frm.gstr1 = new GSTR1(frm);
             frm.trigger("company");
@@ -166,8 +165,8 @@ frappe.ui.form.on(DOCTYPE, {
                 return;
 
             frappe.after_ajax(() => {
-                frm.doc.__onload = { data };
-                frm.trigger("after_save");
+                frm.doc.__gst_data = data ;
+                frm.trigger("load_gstr1_data");
             });
         });
     },
@@ -195,27 +194,22 @@ frappe.ui.form.on(DOCTYPE, {
     refresh(frm) {
         // Primary Action
         frm.disable_save();
-        frm.page.set_primary_action(__("Generate"), () => frm.save());
+        frm.page.set_primary_action(__("Generate"), () =>
+            frm.taxpayer_api_call("generate_gstr1")
+        );
+
+        // After indicator set in frappe refresh
+        if (frm.doc.__gst_data) frm.gstr1.render_indicator();
+        else frm.page.clear_indicator();
     },
 
-    before_save(frm) {
-        frm.doc.__unsaved = true;
-    },
-
-    async after_save(frm) {
-        const data = frm.doc.__onload?.data;
-        if (!frm._otp_requested && data == "otp_requested") {
-            frm._otp_requested = true;
-
-            india_compliance
-                .authenticate_otp(frm.doc.company_gstin)
-                .then(() => frm.save());
-            return;
-        }
-
-        frm._otp_requested = false;
-
+    load_gstr1_data(frm) {
+        const data = frm.doc.__gst_data;
         if (!data?.status) return;
+
+        // Toggle HTML fields
+        frm.refresh();
+
         frm.gstr1.status = data.status;
         frm.gstr1.refresh_data(data);
     },
@@ -260,8 +254,6 @@ class GSTR1 {
     }
 
     refresh_data(data) {
-        this.render_indicator();
-
         // clear filters if any and set default view
         this.active_view = "Summary";
         this.filter_group.filter_x_button.click();
@@ -430,7 +422,6 @@ class GSTR1 {
 
         this.$wrapper.find(`[data-fieldname="filed_tab"]`).html(tab_name);
         this.frm.page.set_indicator(this.status, color);
-        this.frm.refresh();
     }
 
     // SETUP
@@ -986,10 +977,10 @@ class TabManager {
             args[2]?.indent == 0
                 ? `<strong>${value}</strong>`
                 : isDescriptionCell
-                ? `<a href="#" class="description">
+                    ? `<a href="#" class="description">
                     <p style="padding-left: 15px">${value}</p>
                     </a>`
-                    : value;
+                : value;
 
         return value;
     }
@@ -1519,7 +1510,7 @@ class BooksTab extends GSTR1_TabManager {
 
     recompute_books() {
         render_empty_state(this.instance.frm);
-        this.instance.frm.call("recompute_books");
+        this.instance.frm.taxpayer_api_call("recompute_books");
     }
 
     // COLUMNS
@@ -1730,7 +1721,7 @@ class FiledTab extends GSTR1_TabManager {
 
     sync_with_gstn(sync_for) {
         render_empty_state(this.instance.frm);
-        this.instance.frm.call("sync_with_gstn", { sync_for });
+        this.instance.frm.taxpayer_api_call("sync_with_gstn", { sync_for });
     }
 
     download_filed_json() {
@@ -1739,9 +1730,9 @@ class FiledTab extends GSTR1_TabManager {
             const { include_uploaded, delete_missing } = dialog
                 ? dialog.get_values()
                 : {
-                    include_uploaded: true,
-                    delete_missing: false,
-                };
+                      include_uploaded: true,
+                      delete_missing: false,
+                  };
 
             const doc = me.instance.frm.doc;
 
@@ -1806,8 +1797,8 @@ class FiledTab extends GSTR1_TabManager {
     mark_as_filed() {
         render_empty_state(this.instance.frm);
         this.instance.frm
-            .call("mark_as_filed")
-            .then(() => this.instance.frm.trigger("after_save"));
+            .taxpayer_api_call("mark_as_filed")
+            .then(() => this.instance.frm.trigger("load_gstr1_data"));
     }
 
     // COLUMNS
@@ -1981,7 +1972,7 @@ class ReconcileTab extends FiledTab {
         });
     }
 
-    get_creation_time_string() { } // pass
+    get_creation_time_string() {} // pass
 
     get_detail_view_column() {
         return [
@@ -2095,7 +2086,7 @@ function is_gstr1_api_enabled() {
 }
 
 function patch_set_indicator(frm) {
-    frm.toolbar.set_indicator = function () { };
+    frm.toolbar.set_indicator = function () {};
 }
 
 async function set_default_company_gstin(frm) {
@@ -2178,7 +2169,7 @@ function render_empty_state(frm) {
     if ($(".gst-ledger-difference").length) {
         $(".gst-ledger-difference").remove();
     }
-    frm.doc.__onload = null;
+    frm.doc.__gst_data = null;
     frm.refresh();
 }
 

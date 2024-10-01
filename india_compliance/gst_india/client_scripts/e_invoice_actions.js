@@ -49,11 +49,24 @@ frappe.ui.form.on("Sales Invoice", {
                     frappe.call({
                         method: "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
                         args: { docname: frm.doc.name, force: true },
-                        callback: () => {
-                            return frm.refresh();
+                        callback: async (r) => {
+                            if (r.message?.error_type == "otp_requested") {
+                                await india_compliance.authenticate_otp(frm.doc.company_gstin);
+                                await frappe.call({
+                                    method: "india_compliance.gst_india.utils.e_invoice.handle_duplicate_irn_error",
+                                    args: r.message
+                                });
+                            }
+                            frm.refresh();
                         },
                     });
                 },
+                "e-Invoice"
+            );
+
+            frm.add_custom_button(
+                __("Mark as Generated"),
+                () => show_mark_e_invoice_as_generated_dialog(frm),
                 "e-Invoice"
             );
         }
@@ -180,6 +193,54 @@ function show_cancel_e_invoice_dialog(frm, callback) {
             Sales invoice will be cancelled along with the IRN.
         </div>
     `).prependTo(d.wrapper);
+}
+
+function show_mark_e_invoice_as_generated_dialog(frm) {
+    const d = new frappe.ui.Dialog({
+        title: __("Update e-Invoice Details"),
+        fields: get_generated_e_invoice_dialog_fields(),
+        primary_action_label: __("Update"),
+        primary_action(values) {
+            frappe.call({
+                method: "india_compliance.gst_india.utils.e_invoice.mark_e_invoice_as_generated",
+                args: {
+                    doctype: frm.doctype,
+                    docname: frm.doc.name,
+                    values,
+                },
+                callback: () => {
+                    d.hide();
+                    frm.refresh();
+                },
+            });
+        },
+    });
+
+    d.show();
+}
+
+function get_generated_e_invoice_dialog_fields() {
+    let fields = [
+        {
+            label: "IRN Number",
+            fieldname: "irn",
+            fieldtype: "Data",
+            reqd: 1,
+        },
+        {
+            label: "Acknowledgement Number",
+            fieldname: "ack_no",
+            fieldtype: "Data",
+            reqd: 1,
+        },
+        {
+            label: "Acknowledged On",
+            fieldname: "ack_dt",
+            fieldtype: "Datetime",
+            reqd: 1,
+        },
+    ];
+    return fields;
 }
 
 function show_mark_e_invoice_as_cancelled_dialog(frm) {

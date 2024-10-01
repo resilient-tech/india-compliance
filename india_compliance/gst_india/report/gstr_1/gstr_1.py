@@ -22,7 +22,11 @@ from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_
     get_hsn_data,
     get_hsn_wise_json_data,
 )
-from india_compliance.gst_india.utils import get_escaped_name, get_gst_accounts_by_type
+from india_compliance.gst_india.utils import (
+    get_escaped_name,
+    get_gst_accounts_by_type,
+    get_gstin_list,
+)
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr_1 import SUPECOM
 
@@ -57,6 +61,9 @@ class Gstr1Report:
         self.data = []
         self.doctype = "Sales Invoice"
         self.tax_doctype = "Sales Taxes and Charges"
+        self.company_currency = frappe.get_cached_value(
+            "Company", filters.get("company"), "default_currency"
+        )
         self.select_columns = """
             name as invoice_number,
             customer_name,
@@ -75,7 +82,6 @@ class Gstr1Report:
             port_code,
             shipping_bill_number,
             shipping_bill_date,
-            reason_for_issuing_document,
             company_gstin,
             (
                 CASE
@@ -685,7 +691,7 @@ class Gstr1Report:
                     "fieldname": "taxable_value",
                     "label": _("Taxable Value"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 150,
                 },
             ]
@@ -721,7 +727,7 @@ class Gstr1Report:
                     "fieldname": "invoice_value",
                     "label": _("Invoice Value"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 100,
                 },
                 {
@@ -757,7 +763,7 @@ class Gstr1Report:
                     "fieldname": "cess_amount",
                     "label": _("Cess Amount"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 100,
                 }
             ]
@@ -781,7 +787,7 @@ class Gstr1Report:
                     "fieldname": "invoice_value",
                     "label": _("Invoice Value"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 100,
                 },
                 {
@@ -801,7 +807,7 @@ class Gstr1Report:
                     "fieldname": "cess_amount",
                     "label": _("Cess Amount"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 100,
                 },
                 {
@@ -863,7 +869,7 @@ class Gstr1Report:
                     "fieldname": "invoice_value",
                     "label": _("Note Value"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 120,
                 },
                 {
@@ -877,7 +883,7 @@ class Gstr1Report:
                     "fieldname": "cess_amount",
                     "label": _("Cess Amount"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 100,
                 },
             ]
@@ -916,7 +922,7 @@ class Gstr1Report:
                     "fieldname": "invoice_value",
                     "label": _("Note Value"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 120,
                 },
                 {
@@ -930,7 +936,7 @@ class Gstr1Report:
                     "fieldname": "cess_amount",
                     "label": _("Cess Amount"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 100,
                 },
             ]
@@ -954,7 +960,7 @@ class Gstr1Report:
                     "fieldname": "cess_amount",
                     "label": _("Cess Amount"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 100,
                 },
                 {
@@ -997,7 +1003,7 @@ class Gstr1Report:
                     "fieldname": "invoice_value",
                     "label": _("Invoice Value"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 120,
                 },
                 {
@@ -1024,7 +1030,7 @@ class Gstr1Report:
                     "fieldname": "cess_amount",
                     "label": _("Cess Amount"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 130,
                 }
             ]
@@ -1051,14 +1057,14 @@ class Gstr1Report:
                     "fieldname": "taxable_value",
                     "label": _("Gross Advance Recieved"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 150,
                 },
                 {
                     "fieldname": "cess_amount",
                     "label": _("Cess Amount"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 130,
                 },
             ]
@@ -1086,14 +1092,14 @@ class Gstr1Report:
                     "fieldname": "taxable_value",
                     "label": _("Gross Advance Adjusted"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 150,
                 },
                 {
                     "fieldname": "cess_amount",
                     "label": _("Cess Amount"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 130,
                 },
             ]
@@ -1110,21 +1116,21 @@ class Gstr1Report:
                     "fieldname": "nil_rated",
                     "label": _("Nil Rated Supplies"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 200,
                 },
                 {
                     "fieldname": "exempted",
                     "label": _("Exempted(other than nil rated/non GST supply)"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 350,
                 },
                 {
                     "fieldname": "non_gst",
                     "label": _("Non-GST Supplies"),
                     "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
+                    "options": self.company_currency,
                     "width": 200,
                 },
             ]
@@ -1168,7 +1174,7 @@ class Gstr1Report:
                 },
             ]
         elif self.filters.get("type_of_business") == "HSN":
-            self.columns = get_hsn_columns()
+            self.columns = get_hsn_columns(self.filters)
             return
         elif self.filters.get("type_of_business") == "Section 14":
             self.columns = self.get_section_14_columns()
@@ -1188,30 +1194,35 @@ class Gstr1Report:
                 "fieldname": "total_taxable_value",
                 "label": _("Net value of supplies"),
                 "fieldtype": "Currency",
+                "options": self.company_currency,
                 "width": 120,
             },
             {
                 "fieldname": "total_igst_amount",
                 "label": _("Integrated tax"),
                 "fieldtype": "Currency",
+                "options": self.company_currency,
                 "width": 120,
             },
             {
                 "fieldname": "total_cgst_amount",
                 "label": _("Central tax"),
                 "fieldtype": "Currency",
+                "options": self.company_currency,
                 "width": 120,
             },
             {
                 "fieldname": "total_sgst_amount",
                 "label": _("State/UT tax"),
                 "fieldtype": "Currency",
+                "options": self.company_currency,
                 "width": 120,
             },
             {
                 "fieldname": "total_cess_amount",
                 "label": _("Cess"),
                 "fieldtype": "Currency",
+                "options": self.company_currency,
                 "width": 120,
             },
             {
@@ -1335,74 +1346,157 @@ class GSTR1DocumentIssuedSummary:
         self.filters = filters
         self.sales_invoice = frappe.qb.DocType("Sales Invoice")
         self.sales_invoice_item = frappe.qb.DocType("Sales Invoice Item")
+        self.purchase_invoice = frappe.qb.DocType("Purchase Invoice")
+        self.stock_entry = frappe.qb.DocType("Stock Entry")
+        self.subcontracting_receipt = frappe.qb.DocType("Subcontracting Receipt")
+        self.queries = {
+            "Sales Invoice": self.get_query_for_sales_invoice,
+            "Purchase Invoice": self.get_query_for_purchase_invoice,
+            "Stock Entry": self.get_query_for_stock_entry,
+            "Subcontracting Receipt": self.get_query_for_subcontracting_receipt,
+        }
 
     def get_data(self) -> list:
         return self.get_document_summary()
 
     def get_document_summary(self):
-        query = self.get_query()
-        data = query.run(as_dict=True)
-        data = self.handle_amended_docs(data)
         summarized_data = []
 
-        for (
-            nature_of_document,
-            seperated_data,
-        ) in self.seperate_data_by_nature_of_document(data).items():
-            summarized_data.extend(
-                self.seperate_data_by_naming_series(seperated_data, nature_of_document)
-            )
+        for doctype, query in self.queries.items():
+            data = query().run(as_dict=True)
+            data = self.handle_amended_docs(data)
+            for (
+                nature_of_document,
+                seperated_data,
+            ) in self.seperate_data_by_nature_of_document(data, doctype).items():
+                summarized_data.extend(
+                    self.seperate_data_by_naming_series(
+                        seperated_data, nature_of_document
+                    )
+                )
 
         return summarized_data
 
-    def get_query(self):
+    def build_query(
+        self,
+        doctype,
+        party_gstin_field,
+        company_gstin_field="company_gstin",
+        address_field=None,
+        additional_selects=None,
+        additional_conditions=None,
+    ):
+
+        party_gstin_field = getattr(doctype, party_gstin_field, None)
+        company_gstin_field = getattr(doctype, company_gstin_field, None)
+        address_field = getattr(doctype, address_field, None)
+
         query = (
-            frappe.qb.from_(self.sales_invoice)
-            .join(self.sales_invoice_item)
-            .on(self.sales_invoice.name == self.sales_invoice_item.parent)
+            frappe.qb.from_(doctype)
             .select(
-                self.sales_invoice.name,
-                IfNull(self.sales_invoice.naming_series, "").as_("naming_series"),
-                self.sales_invoice.creation,
-                self.sales_invoice.docstatus,
-                self.sales_invoice.is_return,
-                self.sales_invoice.is_debit_note,
-                self.sales_invoice.amended_from,
+                doctype.name,
+                IfNull(doctype.naming_series, "").as_("naming_series"),
+                doctype.creation,
+                doctype.docstatus,
+                doctype.amended_from,
                 Case()
                 .when(
-                    IfNull(self.sales_invoice.billing_address_gstin, "")
-                    == self.sales_invoice.company_gstin,
+                    IfNull(party_gstin_field, "") == company_gstin_field,
                     1,
                 )
                 .else_(0)
                 .as_("same_gstin_billing"),
-                self.sales_invoice.is_opening,
-                self.sales_invoice_item.gst_treatment,
             )
-            .where(self.sales_invoice.company == self.filters.company)
+            .where(doctype.company == self.filters.company)
             .where(
-                self.sales_invoice.posting_date.between(
+                doctype.posting_date.between(
                     self.filters.from_date, self.filters.to_date
                 )
             )
-            .orderby(self.sales_invoice.name)
-            .groupby(self.sales_invoice.name)
-        )
-        query = (
-            query.where(
-                self.sales_invoice.company_address == self.filters.company_address
-            )
-            if self.filters.company_address
-            else query
+            .orderby(doctype.name)
+            .groupby(doctype.name)
         )
 
-        query = (
-            query.where(self.sales_invoice.company_gstin == self.filters.company_gstin)
-            if self.filters.company_gstin
-            else query
-        )
+        if additional_selects:
+            query = query.select(*additional_selects)
+
+        if additional_conditions:
+            query = query.where(Criterion.all(additional_conditions))
+
+        if self.filters.company_address:
+            query = query.where(address_field == self.filters.company_address)
+
+        if self.filters.company_gstin:
+            query = query.where(company_gstin_field == self.filters.company_gstin)
 
         return query
+
+    def get_query_for_sales_invoice(self):
+        additional_selects = [
+            self.sales_invoice.is_return,
+            self.sales_invoice.is_debit_note,
+            self.sales_invoice.is_opening,
+        ]
+
+        query = self.build_query(
+            doctype=self.sales_invoice,
+            party_gstin_field="billing_address_gstin",
+            address_field="company_address",
+            additional_selects=additional_selects,
+        )
+
+        return (
+            query.join(self.sales_invoice_item)
+            .on(self.sales_invoice.name == self.sales_invoice_item.parent)
+            .select(
+                self.sales_invoice_item.gst_treatment,
+            )
+        )
+
+    def get_query_for_purchase_invoice(self):
+        additional_selects = [
+            self.purchase_invoice.is_opening,
+        ]
+
+        additional_conditions = [
+            self.purchase_invoice.is_reverse_charge == 1,
+        ]
+        return self.build_query(
+            doctype=self.purchase_invoice,
+            party_gstin_field="supplier_gstin",
+            address_field="billing_address",
+            additional_selects=additional_selects,
+            additional_conditions=additional_conditions,
+        )
+
+    def get_query_for_stock_entry(self):
+        additional_selects = [
+            self.stock_entry.is_opening,
+        ]
+
+        additional_conditions = [
+            self.stock_entry.purpose == "Send to Subcontractor",
+            self.stock_entry.subcontracting_order != "",
+        ]
+        return self.build_query(
+            doctype=self.stock_entry,
+            party_gstin_field="bill_to_gstin",
+            company_gstin_field="bill_from_gstin",
+            address_field="bill_from_address",
+            additional_selects=additional_selects,
+            additional_conditions=additional_conditions,
+        )
+
+    def get_query_for_subcontracting_receipt(self):
+        additional_conditions = [
+            self.subcontracting_receipt.is_return == 1,
+        ]
+        return self.build_query(
+            doctype=self.subcontracting_receipt,
+            party_gstin_field="supplier_gstin",
+            address_field="billing_address",
+            additional_conditions=additional_conditions,
+        )
 
     def seperate_data_by_naming_series(self, data, nature_of_document):
         if not data:
@@ -1494,13 +1588,15 @@ class GSTR1DocumentIssuedSummary:
 
         return True
 
-    def seperate_data_by_nature_of_document(self, data):
+    def seperate_data_by_nature_of_document(self, data, doctype):
         nature_of_document = {
             "Excluded from Report (Same GSTIN Billing)": [],
             "Excluded from Report (Is Opening Entry)": [],
             "Invoices for outward supply": [],
             "Debit Note": [],
             "Credit Note": [],
+            "Invoices for inward supply from unregistered person": [],
+            "Delivery Challan for job work": [],
         }
 
         for doc in data:
@@ -1512,6 +1608,13 @@ class GSTR1DocumentIssuedSummary:
                 nature_of_document["Excluded from Report (Same GSTIN Billing)"].append(
                     doc
                 )
+            elif doctype == "Purchase Invoice":
+                nature_of_document[
+                    "Invoices for inward supply from unregistered person"
+                ].append(doc)
+            elif doctype == "Stock Entry" or doctype == "Subcontracting Receipt":
+                nature_of_document["Delivery Challan for job work"].append(doc)
+            # for Sales Invoice
             elif doc.is_return:
                 nature_of_document["Credit Note"].append(doc)
             elif doc.is_debit_note:
@@ -2045,6 +2148,8 @@ def get_invoice_type_for_excel(row):
             "Tax Deductor": "Regular B2B",
             "UIN Holders": "Regular B2B",
             "Unregistered": "B2CL",
+            "Tax Collector": "Regular B2B",
+            "Input Service Distributor": "Regular B2B",
         }
     ).get(gst_category)
 
@@ -2098,19 +2203,7 @@ def get_company_gstin_number(company, address=None, all_gstins=False):
         gstin = frappe.db.get_value("Address", address, "gstin")
 
     if not gstin:
-        filters = [
-            ["is_your_company_address", "=", 1],
-            ["Dynamic Link", "link_doctype", "=", "Company"],
-            ["Dynamic Link", "link_name", "=", company],
-            ["Dynamic Link", "parenttype", "=", "Address"],
-            ["gstin", "!=", ""],
-        ]
-        gstin = frappe.get_all(
-            "Address",
-            filters=filters,
-            pluck="gstin",
-            order_by="is_primary_address desc",
-        )
+        gstin = get_gstin_list(company)
         if gstin and not all_gstins:
             gstin = gstin[0]
 

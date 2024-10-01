@@ -31,50 +31,7 @@ For a detailed overview of these features, please [refer to the documentation](h
 
 ## Installation
 
-### Docker
-
-Use docker to deploy India Compliance in production. Use this [guide](https://github.com/frappe/frappe_docker/blob/main/docs/custom-apps.md) to deploy India Compliance by building your custom image.
-
-<details>
-<summary>Sample Apps JSON</summary>
-
-`apps.json` could look like this for `version-15`:
-
-```shell
-export APPS_JSON='[
-  {
-    "url": "https://github.com/frappe/erpnext",
-    "branch": "version-15"
-  },
-  {
-    "url": "https://github.com/resilient-tech/india-compliance",
-    "branch": "version-15"
-  }
-]'
-
-export APPS_JSON_BASE64=$(echo ${APPS_JSON} | base64 -w 0)
-```
-
-</details>
-
-### Manual
-  
-Once you've [set up a Frappe site](https://frappeframework.com/docs/v14/user/en/installation/), installing India Compliance is simple:
-
-1.  Download the app using the Bench CLI.
-
-    ```bash
-    bench get-app --branch [branch name] https://github.com/resilient-tech/india-compliance.git
-    ```
-
-Replace `[branch name]` with the branch that you're using for Frappe Framework and ERPNext.
-If it isn't specified, the `--branch` option will default to **develop**.
-
-2.  Install the app on your site.
-
-    ```bash
-    bench --site [site name] install-app india_compliance
-    ```
+For detailed instructions, please [refer to the documentation](https://docs.indiacompliance.app/docs/getting-started/installation)
 
 ## In-app Purchases
 

@@ -435,6 +435,20 @@ class GSTAccounts:
         - Intra-State supplies should not have IGST account
         - If Intra-State, ensure both CGST and SGST accounts are used
         """
+        if self.is_sales_transaction:
+            company_address_field = "company_address"
+        elif self.doc.doctype == "Stock Entry":
+            company_address_field = "bill_from_address"
+        else:
+            company_address_field = "billing_address"
+
+        company_gst_category = frappe.db.get_value(
+            "Address", self.doc.get(company_address_field), "gst_category"
+        )
+
+        if company_gst_category == "SEZ":
+            return
+
         is_inter_state = is_inter_state_supply(self.doc)
 
         for row in self.gst_tax_rows:
@@ -658,13 +672,13 @@ def validate_backdated_transaction(doc, gst_settings=None, action="create"):
         )
 
 
-def validate_hsn_codes(doc):
+def validate_hsn_codes(doc, throw=False, message=None):
     validate_hsn_code, valid_hsn_length = get_hsn_settings()
 
     if not validate_hsn_code:
         return
 
-    return _validate_hsn_codes(doc, valid_hsn_length, message=None)
+    return _validate_hsn_codes(doc, valid_hsn_length, throw, message)
 
 
 def validate_sales_reverse_charge(doc):
@@ -677,7 +691,7 @@ def validate_sales_reverse_charge(doc):
         )
 
 
-def _validate_hsn_codes(doc, valid_hsn_length, message=None):
+def _validate_hsn_codes(doc, valid_hsn_length, throw=False, message=None):
     rows_with_missing_hsn = []
     rows_with_invalid_hsn = []
 
@@ -710,6 +724,7 @@ def _validate_hsn_codes(doc, valid_hsn_length, message=None):
                 "{0}" "Please enter HSN/SAC code for the following row numbers: <br>{1}"
             ).format(message or "", frappe.bold(", ".join(rows_with_missing_hsn))),
             title=_("Invalid HSN/SAC"),
+            raise_exception=throw,
         )
 
     if rows_with_invalid_hsn:
@@ -724,6 +739,7 @@ def _validate_hsn_codes(doc, valid_hsn_length, message=None):
                 frappe.bold(", ".join(rows_with_invalid_hsn)),
             ),
             title=_("Invalid HSN/SAC"),
+            raise_exception=throw,
         )
 
 
@@ -1230,8 +1246,7 @@ class ItemGSTDetails:
         return response
 
     def set_tax_amount_precisions(self, doctype):
-        doc_meta = self.doc.meta if self.doc.meta else frappe.get_meta(doctype)
-        item_doctype = doc_meta.get_field("items").options
+        item_doctype = frappe.get_meta(doctype).get_field("items").options
 
         meta = frappe.get_meta(item_doctype)
 

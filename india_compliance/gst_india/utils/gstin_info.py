@@ -11,14 +11,14 @@ from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
 from india_compliance.gst_india.api_classes.public import PublicAPI
-from india_compliance.gst_india.doctype.gstr_1_log.gstr_1_log import (
+from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
     process_gstr_1_returns_info,
 )
 from india_compliance.gst_india.utils import parse_datetime, titlecase, validate_gstin
 
 GST_CATEGORIES = {
     "Regular": "Registered Regular",
-    "Input Service Distributor (ISD)": "Registered Regular",
+    "Input Service Distributor (ISD)": "Input Service Distributor",
     "Composition": "Registered Composition",
     "Tax Deductor": "Tax Deductor",
     "Tax Collector (Electronic Commerce Operator)": "Tax Collector",

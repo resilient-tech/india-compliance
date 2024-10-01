@@ -1727,6 +1727,14 @@ class RETSUM(GSTR1DataMapper):
 
         return {"summary": output}
 
+    def format_data(self, data, default_data=None, for_gov=False):
+        response = super().format_data(data, default_data, for_gov)
+
+        if data.get("sec_nm") == "DOC_ISSUE":
+            response["no_of_records"] = data.get("net_doc_issued", 0)
+
+        return response
+
     def format_subsection_data(self, section, subsection_data):
         subsection = subsection_data.get("typ") or subsection_data.get("sec_nm")
         formatted_data = self.format_data(subsection_data)
@@ -1841,6 +1849,7 @@ def summarize_retsum_data(input_data):
 
     summarized_data = []
     total_values_keys = [
+        "no_of_records",
         "total_igst_amount",
         "total_cgst_amount",
         "total_sgst_amount",

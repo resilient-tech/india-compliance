@@ -110,6 +110,47 @@ Object.assign(india_compliance, {
         return message;
     },
 
+    async set_pan_status(field, force_update = null) {
+        const pan = field.value;
+        field.set_description("");
+        if (!pan || pan.length !== 10) return;
+
+        let { message } = await frappe.call({
+            method: "india_compliance.gst_india.doctype.pan.pan.get_pan_status",
+            args: { pan, force_update },
+        });
+
+        if (!message) return;
+
+        const [pan_status, datetime] = message;
+        const STATUS_COLORS = {
+            Valid: "green",
+            "Not Linked": "red",
+            Invalid: "red",
+        };
+
+        const user_date = frappe.datetime.str_to_user(datetime);
+        const pretty_date = frappe.datetime.prettyDate(datetime);
+        const pan_desc = $(
+            `<div class="d-flex indicator ${STATUS_COLORS[pan_status] || "orange"}">
+                Status:&nbsp;<strong>${pan_status}</strong>
+                <span class="text-right ml-auto">
+                    <span title="${user_date}">
+                        ${datetime ? "updated " + pretty_date : ""}
+                    </span>
+                    <svg class="icon icon-sm refresh-pan" style="cursor: pointer;">
+                        <use href="#icon-refresh"></use>
+                    </svg>
+                </span>
+            </div>`
+        );
+
+        pan_desc.find(".refresh-pan").on("click", async function () {
+            await india_compliance.set_pan_status(field, true);
+        });
+        return field.set_description(pan_desc);
+    },
+
     validate_gst_transporter_id(transporter_id) {
         if (!transporter_id || transporter_id.length !== 15) return;
 
@@ -197,47 +238,6 @@ Object.assign(india_compliance, {
         } else {
             frappe.msgprint(__("Invalid GSTIN"));
         }
-    },
-
-    get_gstin_otp(company_gstin, error_type) {
-        let description = `An OTP has been sent to the registered mobile/email for GSTIN ${company_gstin} for further authentication. Please provide OTP.`;
-        if (error_type === "invalid_otp")
-            description = `Invalid OTP was provided for GSTIN ${company_gstin}. Please try again.`;
-
-        return new Promise(resolve => {
-            const prompt = new frappe.ui.Dialog({
-                title: __("Enter OTP"),
-                fields: [
-                    {
-                        fieldtype: "Data",
-                        label: __("One Time Password"),
-                        fieldname: "otp",
-                        reqd: 1,
-                        description: description,
-                    },
-                ],
-                primary_action_label: __("Submit"),
-                primary_action(values) {
-                    resolve(values.otp);
-                    prompt.hide();
-                },
-                secondary_action_label: __("Resend OTP"),
-                secondary_action() {
-                    frappe.call({
-                        method: "india_compliance.gst_india.utils.gstr_utils.request_otp",
-                        args: { company_gstin },
-                        callback: function () {
-                            frappe.show_alert({
-                                message: __("OTP has been resent."),
-                                indicator: "green",
-                            });
-                            prompt.get_secondary_btn().addClass("disabled");
-                        },
-                    });
-                },
-            });
-            prompt.show();
-        });
     },
 
     guess_gst_category(gstin, country) {
@@ -345,6 +345,28 @@ Object.assign(india_compliance, {
         return frappe.datetime.add_days(frappe.datetime.month_start(), -1);
     },
 
+    last_half_year(position) {
+        const today = frappe.datetime.now_date(true);
+        const current_month = today.getMonth() + 1;
+        const current_year = today.getFullYear();
+
+        if (current_month <= 3) {
+            return position === "start"
+                ? `${current_year - 1}-03-01`
+                : `${current_year - 1}-09-30`;
+
+        } else if (current_month <= 9) {
+            return position === "start"
+                ? `${current_year - 1}-10-01`
+                : `${current_year}-03-31`;
+
+        } else {
+            return position === "start"
+                ? `${current_year}-04-01`
+                : `${current_year}-09-30`;
+        }
+    },
+
     primary_to_danger_btn(parent) {
         parent.$wrapper
             .find(".btn-primary")
@@ -364,58 +386,6 @@ Object.assign(india_compliance, {
             .find(`.inner-group-button[data-label=${btn_group_name}]`)
             .find(`.dropdown-item[data-label="${encodeURIComponent(btn_name)}"]`)
             .addClass("text-danger");
-    },
-
-    async authenticate_company_gstins(company, company_gstin) {
-        const { message: gstin_authentication_status } = await frappe.call({
-            method: "india_compliance.gst_india.utils.gstr_utils.validate_company_gstins",
-            args: { company: company, company_gstin: company_gstin },
-        });
-
-        for (let gstin of Object.keys(gstin_authentication_status)) {
-            if (gstin_authentication_status[gstin]) continue;
-
-            gstin_authentication_status[gstin] =
-                await this.request_and_authenticate_otp(gstin);
-        }
-
-        return Object.keys(gstin_authentication_status);
-    },
-
-    async request_and_authenticate_otp(gstin) {
-        await frappe.call({
-            method: "india_compliance.gst_india.utils.gstr_utils.request_otp",
-            args: { company_gstin: gstin },
-        });
-
-        // wait for OTP to be authenticated to proceed
-        await this.authenticate_otp(gstin);
-    },
-
-    async authenticate_otp(gstin, error_type = null) {
-        if (!error_type) error_type = "otp_requested";
-
-        let is_authenticated = false;
-
-        while (!is_authenticated) {
-            const otp = await this.get_gstin_otp(gstin, error_type);
-
-            const { message } = await frappe.call({
-                method: "india_compliance.gst_india.utils.gstr_utils.authenticate_otp",
-                args: { company_gstin: gstin, otp: otp },
-            });
-
-            if (
-                message &&
-                ["otp_requested", "invalid_otp"].includes(message.error_type)
-            ) {
-                error_type = message.error_type;
-                continue;
-            }
-
-            is_authenticated = true;
-            return true;
-        }
     },
 
     show_dismissable_alert(wrapper, message, alert_type = "primary", on_close = null) {

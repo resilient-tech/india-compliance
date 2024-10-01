@@ -75,7 +75,9 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
     onload(frm) {
         if (frm.doc.is_modified) frm.doc.reconciliation_data = null;
         add_gstr2b_alert(frm);
-        set_date_range_description(frm);
+
+        frm.trigger("purchase_period");
+        frm.trigger("inward_supply_period");
     },
 
     async company(frm) {
@@ -88,7 +90,14 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
     refresh(frm) {
         // Primary Action
         frm.disable_save();
-        frm.page.set_primary_action(__("Reconcile"), () => frm.save());
+        frm.page.set_primary_action(__("Reconcile"), () => {
+            if (!frm.doc.company && !frm.doc.company_gstin) {
+                frappe.throw(
+                    __("Please provide either a Company name or Company GSTIN.")
+                );
+            }
+            frm.save();
+        });
 
         // add custom buttons
         api_enabled
@@ -107,13 +116,12 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
             );
             frm.add_custom_button(__("dropdown-divider"), () => {}, __("Actions"));
         }
-        ["Accept My Values", "Accept Supplier Values", "Pending", "Ignore"].forEach(
-            action =>
-                frm.add_custom_button(
-                    __(action),
-                    () => apply_action(frm, action),
-                    __("Actions")
-                )
+        ["Accept", "Pending", "Ignore"].forEach(action =>
+            frm.add_custom_button(
+                __(action),
+                () => apply_action(frm, action),
+                __("Actions")
+            )
         );
         frm.$wrapper
             .find("[data-label='dropdown-divider']")
@@ -344,13 +352,7 @@ class PurchaseReconciliationTool {
                 label: "Action",
                 fieldname: "action",
                 fieldtype: "Select",
-                options: [
-                    "No Action",
-                    "Accept My Values",
-                    "Accept Supplier Values",
-                    "Ignore",
-                    "Pending",
-                ],
+                options: ["No Action", "Accept", "Ignore", "Pending"],
             },
             {
                 label: "Classification",
@@ -973,13 +975,7 @@ class DetailViewDialog {
             if (doctype == "Purchase Invoice")
                 actions.push("Create", "Link", "Pending", "Ignore");
             else actions.push("Link", "Pending", "Ignore");
-        else
-            actions.push(
-                "Unlink",
-                "Accept My Values",
-                "Accept Supplier Values",
-                "Pending"
-            );
+        else actions.push("Unlink", "Accept", "Pending");
 
         // setup actions
         actions.forEach(action => {
@@ -1027,8 +1023,7 @@ class DetailViewDialog {
         if (action == "Ignore") return "btn-secondary";
         if (action == "Create") return "btn-primary not-grey";
         if (action == "Link") return "btn-primary not-grey btn-link disabled";
-        if (action == "Accept My Values") return "btn-primary not-grey";
-        if (action == "Accept Supplier Values") return "btn-primary not-grey";
+        if (action == "Accept") return "btn-primary not-grey";
     }
 
     toggle_link_btn(disabled) {
@@ -1452,37 +1447,23 @@ async function download_gstr(
     only_missing = true,
     gst_categories = null
 ) {
-    const authenticated_company_gstins =
-        await india_compliance.authenticate_company_gstins(
-            frm.doc.company,
-            company_gstin == "All" ? null : company_gstin
-        );
+    let company_gstins;
+    if (company_gstin == "All")
+        company_gstins = await india_compliance.get_gstin_options(frm.doc.company);
 
-    const args = {
-        return_type: return_type,
-        company_gstins: authenticated_company_gstins,
-        date_range: date_range,
-        force: !only_missing,
-        gst_categories,
-    };
-    frm.events.show_progress(frm, "download");
+    else company_gstins = [company_gstin];
 
-    const { message } = await frm.call("download_gstr", args);
-
-    if (message && message.length) {
-        // TODO: Setup Listners similar to GSTR-1 Beta
-        message.forEach(async msg => {
-            await india_compliance.authenticate_otp(msg.gstin, msg.error_type);
-            download_gstr(
-                frm,
-                date_range,
-                return_type,
-                msg.gstin,
-                only_missing,
-                gst_categories
-            );
-        });
-    }
+    company_gstins.forEach(async gstin => {
+        const args = {
+            return_type: return_type,
+            company_gstin: gstin,
+            date_range: date_range,
+            force: !only_missing,
+            gst_categories,
+        };
+        frm.events.show_progress(frm, "download");
+        await frm.taxpayer_api_call("download_gstr", args);
+    });
 }
 
 class EmailDialog {

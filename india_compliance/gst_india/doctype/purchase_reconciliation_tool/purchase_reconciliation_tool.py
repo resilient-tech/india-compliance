@@ -11,7 +11,10 @@ from frappe.query_builder.functions import IfNull
 from frappe.utils import add_to_date, cint, now_datetime
 from frappe.utils.response import json_handler
 
-from india_compliance.gst_india.api_classes.taxpayer_base import TaxpayerBaseAPI
+from india_compliance.gst_india.api_classes.taxpayer_base import (
+    TaxpayerBaseAPI,
+    otp_handler,
+)
 from india_compliance.gst_india.constants import ORIGINAL_VS_AMENDED
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     BaseUtil,
@@ -38,8 +41,7 @@ from india_compliance.gst_india.utils.gstr_2 import (
 )
 
 STATUS_MAP = {
-    "Accept My Values": "Reconciled",
-    "Accept Supplier Values": "Reconciled",
+    "Accept": "Reconciled",
     "Pending": "Unreconciled",
     "Ignore": "Ignored",
 }
@@ -105,9 +107,10 @@ class PurchaseReconciliationTool(Document):
             return save_gstr_2b(self.company_gstin, period, json_data)
 
     @frappe.whitelist()
+    @otp_handler
     def download_gstr(
         self,
-        company_gstins,
+        company_gstin,
         date_range,
         return_type=None,
         force=False,
@@ -115,12 +118,18 @@ class PurchaseReconciliationTool(Document):
     ):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
-        return download_gstr(
-            company_gstins=company_gstins,
+        TaxpayerBaseAPI(company_gstin).validate_auth_token()
+
+        frappe.enqueue(
+            download_gstr,
+            company_gstin=company_gstin,
             date_range=date_range,
             return_type=return_type,
             force=force,
             gst_categories=gst_categories,
+            queue="long",
+            now=frappe.flags.in_test,
+            timeout=1800,
         )
 
     @frappe.whitelist()
@@ -436,37 +445,21 @@ class PurchaseReconciliationTool(Document):
 
 
 def download_gstr(
-    company_gstins,
+    company_gstin,
     date_range,
-    return_type=None,
+    return_type,
     force=False,
     gst_categories=None,
 ):
-    if return_type:
-        return_type = ReturnType(return_type)
+    return_type = ReturnType(return_type)
 
-    otp_failures = []
+    if return_type == ReturnType.GSTR2A:
+        return download_pending_gstr_2a(
+            date_range, company_gstin, force, gst_categories
+        )
 
-    for company_gstin in company_gstins:
-        try:
-            if not return_type or return_type == ReturnType.GSTR2A:
-                error = download_pending_gstr_2a(
-                    date_range, company_gstin, force, gst_categories
-                )
-
-            if not return_type or return_type == ReturnType.GSTR2B:
-                error = download_pending_gstr_2b(date_range, company_gstin)
-
-            if error:
-                otp_failures.append(error)
-
-        except Exception:
-            frappe.log_error(
-                frappe.get_traceback(),
-                f"Error while downloading {return_type.value if return_type else 'GSTR 2A & 2B'} for {company_gstin} ",
-            )
-
-    return otp_failures
+    if return_type == ReturnType.GSTR2B:
+        return download_pending_gstr_2b(date_range, company_gstin)
 
 
 def download_pending_gstr_2a(
@@ -646,7 +639,7 @@ class AutoReconcile:
         )
         self.reconciliation_companies = self.get_reconciliation_company_list()
 
-    def download_gstr(self):
+    def download_gst_returns(self):
         if not self.is_reconciliation_enabled():
             return
 
@@ -654,14 +647,17 @@ class AutoReconcile:
         gst_categories = self.get_gst_categories()
         gstins = self.get_gstins_with_valid_credentials()
 
-        download_gstr(
-            date_range=[
-                self.inward_supply_from_date.strftime("%Y-%m-%d"),
-                self.today.strftime("%Y-%m-%d"),
-            ],
-            company_gstins=gstins,
-            gst_categories=gst_categories,
-        )
+        for gstin in gstins:
+            for return_type in (ReturnType.GSTR2A, ReturnType.GSTR2B):
+                download_gstr(
+                    date_range=[
+                        self.inward_supply_from_date.strftime("%Y-%m-%d"),
+                        self.today.strftime("%Y-%m-%d"),
+                    ],
+                    company_gstin=gstin,
+                    gst_categories=gst_categories,
+                    return_type=return_type.value,
+                )
 
     def get_gst_categories(self):
         return [
@@ -736,7 +732,7 @@ class AutoReconcile:
 
 def auto_download_gstr():
     """Auto download GSTR 2A and 2B"""
-    AutoReconcile().download_gstr()
+    AutoReconcile().download_gst_returns()
 
 
 def auto_reconcile():
