@@ -5,6 +5,9 @@ from frappe.utils import flt
 from india_compliance.gst_india.overrides.sales_invoice import (
     update_dashboard_with_gst_logs,
 )
+from india_compliance.gst_india.overrides.transaction import (
+    validate_hsn_codes as _validate_hsn_codes,
+)
 from india_compliance.gst_india.overrides.transaction import validate_transaction
 from india_compliance.gst_india.utils import is_api_enabled
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
@@ -43,6 +46,7 @@ def validate(doc, method=None):
     if validate_transaction(doc) is False:
         return
 
+    validate_hsn_codes(doc)
     set_ineligibility_reason(doc)
     update_itc_totals(doc)
     validate_supplier_invoice_number(doc)
@@ -51,7 +55,6 @@ def validate(doc, method=None):
 
 
 def on_cancel(doc, method=None):
-
     frappe.db.set_value(
         "GST Inward Supply",
         {"link_doctype": "Purchase Invoice", "link_name": doc.name},
@@ -85,6 +88,7 @@ def is_b2b_invoice(doc):
 def update_itc_totals(doc, method=None):
     # Set default value
     set_itc_classification(doc)
+    validate_reverse_charge(doc)
 
     # Initialize values
     doc.itc_integrated_tax = 0
@@ -110,19 +114,22 @@ def update_itc_totals(doc, method=None):
 
 
 def set_itc_classification(doc):
-    default_classification = "All Other ITC"
-    reverse_charge_classification = "ITC on Reverse Charge"
+    if doc.gst_category == "Overseas":
+        for item in doc.items:
+            if not item.gst_hsn_code.startswith("99"):
+                doc.itc_classification = "Import Of Goods"
+                break
+        else:
+            doc.itc_classification = "Import Of Service"
 
-    if doc.is_reverse_charge:
-        doc.itc_classification = reverse_charge_classification
-        return
+    elif doc.is_reverse_charge:
+        doc.itc_classification = "ITC on Reverse Charge"
 
-    elif doc.itc_classification == reverse_charge_classification:
-        doc.itc_classification = default_classification
-        return
+    elif doc.gst_category == "Input Service Distributor" and doc.is_internal_transfer():
+        doc.itc_classification = "Input Service Distributor"
 
-    if not doc.itc_classification:
-        doc.itc_classification = default_classification
+    else:
+        doc.itc_classification = "All Other ITC"
 
 
 def validate_supplier_invoice_number(doc):
@@ -251,3 +258,21 @@ def set_ineligibility_reason(doc, show_alert=True):
             alert=True,
             indicator="orange",
         )
+
+
+def validate_reverse_charge(doc):
+    if doc.itc_classification != "Import Of Goods" or not doc.is_reverse_charge:
+        return
+
+    frappe.throw(_("Reverse Charge is not applicable on Import of Goods"))
+
+
+def validate_hsn_codes(doc):
+    if doc.gst_category != "Overseas":
+        return
+
+    _validate_hsn_codes(
+        doc,
+        throw=True,
+        message="GST HSN Code is mandatory for Overseas Purchase Invoice.<br>",
+    )

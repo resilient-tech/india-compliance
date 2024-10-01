@@ -168,16 +168,8 @@ def validate(doc, method=None):
     if ignore_gst_validation_for_subcontracting(doc):
         return
 
-    if (doc.doctype == "Stock Entry" and doc.purpose == "Material Transfer") or (
-        doc.doctype == "Subcontracting Receipt" and not doc.is_return
-    ):
-        if not doc.doc_references:
-            frappe.throw(
-                _("Please Select Original Document Reference for ITC-04 Reporting"),
-                title=_("Mandatory Field"),
-            )
-        else:
-            remove_duplicates(doc)
+    if doc.doctype == "Stock Entry" and doc.purpose != "Send to Subcontractor":
+        return
 
     field_map = (
         STOCK_ENTRY_FIELD_MAP
@@ -193,6 +185,23 @@ def validate(doc, method=None):
         return
 
     update_gst_details(doc)
+
+
+def before_submit(doc, method=None):
+    # Stock Entries with Subcontracting Order should only be considered
+    if ignore_gst_validation_for_subcontracting(doc):
+        return
+
+    if (doc.doctype == "Stock Entry" and doc.purpose == "Material Transfer") or (
+        doc.doctype == "Subcontracting Receipt" and not doc.is_return
+    ):
+        if not doc.doc_references:
+            frappe.throw(
+                _("Please Select Original Document Reference for ITC-04 Reporting"),
+                title=_("Mandatory Field"),
+            )
+        else:
+            remove_duplicates(doc)
 
 
 def validate_transaction(doc, method=None):
@@ -281,8 +290,8 @@ class SubcontractingGSTAccounts(GSTAccounts):
         self.validate_for_charge_type()
 
     def validate_for_same_party_gstin(self):
-        company_gstin = self.doc.get("company_gstin") or self.doc.bill_from_gstin
-        party_gstin = self.doc.get("supplier_gstin") or self.doc.bill_to_gstin
+        company_gstin = self.doc.get("company_gstin") or self.doc.get("bill_from_gstin")
+        party_gstin = self.doc.get("supplier_gstin") or self.doc.get("bill_to_gstin")
 
         if not party_gstin or company_gstin != party_gstin:
             return
@@ -324,7 +333,6 @@ def set_address_display(doc):
 def get_relevant_references(
     supplier, supplied_items, received_items, subcontracting_orders
 ):
-
     if isinstance(supplied_items, str):
         supplied_items = frappe.parse_json(supplied_items)
         received_items = frappe.parse_json(received_items)
