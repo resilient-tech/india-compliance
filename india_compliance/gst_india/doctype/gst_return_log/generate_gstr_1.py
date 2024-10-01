@@ -700,23 +700,24 @@ class FileGSTR1:
         api = GSTR1API(self)
         response = None
 
-        for doc in self.actions:
-            if doc.request_type != "reset" or doc.status:
-                continue
+        doc = self.get_unprocessed_action("reset")
 
-            response = api.get_return_status(self.return_period, doc.token)
+        if not doc:
+            return
 
-            if response.get("status_cd") != "IP":
-                doc.db_set({"status": status_code_map.get(response.get("status_cd"))})
-                enqueue_notification(
-                    self.return_period,
-                    "reset",
-                    response.get("status_cd"),
-                    self.gstin,
-                )
+        response = api.get_return_status(self.return_period, doc.token)
 
-            if response.get("status_cd") == "P":
-                self.update_json_for("unfiled", {}, reset_reconcile=True)
+        if response.get("status_cd") != "IP":
+            doc.db_set({"status": status_code_map.get(response.get("status_cd"))})
+            enqueue_notification(
+                self.return_period,
+                "reset",
+                response.get("status_cd"),
+                self.gstin,
+            )
+
+        if response.get("status_cd") == "P":
+            self.update_json_for("unfiled", {}, reset_reconcile=True)
 
         return response
 
@@ -749,32 +750,32 @@ class FileGSTR1:
         api = GSTR1API(self)
         response = None
 
-        for doc in self.actions:
-            if doc.request_type != "upload" or doc.status:
-                continue
+        doc = self.get_unprocessed_action("upload")
 
-            response = api.get_return_status(self.return_period, doc.token)
-            status_cd = response.get("status_cd")
+        if not doc:
+            return
 
-            if status_cd != "IP":
-                doc.db_set({"status": status_code_map.get(status_cd)})
-                enqueue_notification(
-                    self.return_period,
-                    "upload",
-                    status_cd,
-                    self.gstin,
-                    api.request_id if status_cd == "ER" else None,
-                )
+        response = api.get_return_status(self.return_period, doc.token)
+        status_cd = response.get("status_cd")
 
-            if status_cd == "PE":
-                self.update_json_for("upload_error", response)
+        if status_cd != "IP":
+            doc.db_set({"status": status_code_map.get(status_cd)})
+            enqueue_notification(
+                self.return_period,
+                "upload",
+                status_cd,
+                self.gstin,
+                api.request_id if status_cd == "ER" else None,
+            )
 
-            if status_cd == "P":
-                self.db_set({"filing_status": "Uploaded"})
-                self.update_json_for(
-                    "unfiled_summary", self.get_json_for("books_summary")
-                )
-                self.update_json_for("unfiled", self.get_json_for("books"))
+        if status_cd == "PE":
+            self.update_json_for("upload_error", response.get("error_report"))
+            return response.get("error_report")
+
+        if status_cd == "P":
+            self.db_set({"filing_status": "Uploaded"})
+            self.update_json_for("unfiled_summary", self.get_json_for("books_summary"))
+            self.update_json_for("unfiled", self.get_json_for("books"))
 
         return response
 
@@ -798,27 +799,28 @@ class FileGSTR1:
         api = GSTR1API(self)
         response = None
 
-        for doc in self.actions:
-            if doc.request_type != "proceed_to_file" or doc.status:
-                continue
+        doc = self.get_unprocessed_action("proceed_to_file")
 
-            response = api.get_return_status(self.return_period, doc.token)
+        if not doc:
+            return
 
-            if response.get("status_cd") == "IP":
-                return response
+        response = api.get_return_status(self.return_period, doc.token)
 
-            doc.db_set({"status": status_code_map.get(response.get("status_cd"))})
-            if response.get("status_cd") != "P":
-                enqueue_notification(
-                    self.return_period,
-                    "proceed_to_file",
-                    response.get("status_cd"),
-                    self.gstin,
-                    api.request_id,
-                )
-                return
+        if response.get("status_cd") == "IP":
+            return response
 
-            return self.fetch_and_compare_summary(api, response)
+        doc.db_set({"status": status_code_map.get(response.get("status_cd"))})
+        if response.get("status_cd") != "P":
+            enqueue_notification(
+                self.return_period,
+                "proceed_to_file",
+                response.get("status_cd"),
+                self.gstin,
+                api.request_id,
+            )
+            return
+
+        return self.fetch_and_compare_summary(api, response)
 
     def fetch_and_compare_summary(self, api, response=None):
         if response is None:

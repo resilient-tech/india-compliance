@@ -188,6 +188,11 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
 
         return fields
 
+    def get_unprocessed_action(self, action):
+        for row in self.get("actions") or []:
+            if row.request_type == action and not row.status:
+                return row
+
 
 def process_gstr_1_returns_info(company, gstin, response):
     return_info = {}
