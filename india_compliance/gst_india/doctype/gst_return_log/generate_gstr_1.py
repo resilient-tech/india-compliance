@@ -12,6 +12,7 @@ from india_compliance.gst_india.utils.gstr_1.__init__ import (
     CATEGORY_SUB_CATEGORY_MAPPING,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
+    GSTR1_Category,
     GSTR1_DataField,
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_download import (
@@ -942,6 +943,18 @@ def get_differing_categories(mapped_summary, gov_summary):
         "total_taxable_value",
     }
 
+    # TODO: Check this for all categories
+    CATEGORY_KEYS = {
+        (GSTR1_Category.NIL_EXEMPT.value): {
+            "total_exempted_amount",
+            "total_nil_rated_amount",
+            "total_non_gst_amount",
+        },
+        (GSTR1_Category.DOC_ISSUE.value): {
+            "no_of_records",
+        },
+    }
+
     gov_summary = {row["description"]: row for row in gov_summary if row["indent"] == 0}
     compared_categories = set()
     differing_categories = set()
@@ -955,7 +968,9 @@ def get_differing_categories(mapped_summary, gov_summary):
         compared_categories.add(category)
         gov_entry = gov_summary.get(category, {})
 
-        for key in KEYS_TO_COMPARE:
+        keys_to_compare = CATEGORY_KEYS.get(category, KEYS_TO_COMPARE)
+
+        for key in keys_to_compare:
             if gov_entry.get(key, 0) != row.get(key):
                 differing_categories.add(category)
                 break
@@ -963,7 +978,12 @@ def get_differing_categories(mapped_summary, gov_summary):
     for row in gov_summary.values():
         # Amendments are with indent 1. Hence auto-skipped
         if row["description"] not in compared_categories:
-            differing_categories.add(row["description"])
+            keys_to_compare = CATEGORY_KEYS.get(row["description"], KEYS_TO_COMPARE)
+
+            for key in keys_to_compare:
+                if row.get(key, 0) != 0:
+                    differing_categories.add(row["description"])
+                    break
 
     return differing_categories
 
