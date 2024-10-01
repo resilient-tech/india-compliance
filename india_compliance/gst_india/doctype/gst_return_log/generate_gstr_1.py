@@ -3,7 +3,7 @@
 import itertools
 
 import frappe
-from frappe import unscrub
+from frappe import _, unscrub
 from frappe.utils import flt
 
 from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
@@ -684,7 +684,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
 class FileGSTR1:
     def reset_gstr1(self):
         # reset called after proceed to file
-        verify_request_in_progress(self, "reset")
+        verify_request_in_progress(self)
 
         self.db_set({"filing_status": "Not Filed"})
 
@@ -724,7 +724,7 @@ class FileGSTR1:
         if not json_data:
             return
 
-        verify_request_in_progress(self, ["upload", "proceed_to_file"])
+        verify_request_in_progress(self)
 
         keys = {category.value for category in GovJsonKey}
         if all(key not in json_data for key in keys):
@@ -779,7 +779,7 @@ class FileGSTR1:
         return response
 
     def proceed_to_file_gstr1(self):
-        verify_request_in_progress(self, "proceed_to_file")
+        verify_request_in_progress(self)
 
         api = GSTR1API(self)
         response = api.proceed_to_file("GSTR1", self.return_period)
@@ -865,7 +865,7 @@ class FileGSTR1:
         return response
 
     def file_gstr1(self, pan, otp):
-        verify_request_in_progress(self, "file")
+        verify_request_in_progress(self)
 
         summary = self.get_json_for("authenticated_summary")
         api = GSTR1API(self)
@@ -925,15 +925,13 @@ class FileGSTR1:
         }
 
 
-def verify_request_in_progress(self, request_types):
-    if isinstance(request_types, str):
-        request_types = [request_types]
-
-    for doc in self.actions:
-        if doc.request_type in request_types and not doc.status:
-            formatted_request_type = request_types[0].replace("_", " ").title()
+def verify_request_in_progress(return_log):
+    for row in return_log.actions:
+        if not row.status:
             frappe.throw(
-                f"{formatted_request_type} is in progress. Please wait for the process to complete."
+                _(
+                    "There is a {0} request in progress. Please wait for the process to complete."
+                ).format(row.request_type)
             )
 
 
