@@ -724,7 +724,7 @@ class FileGSTR1:
         if not json_data:
             return
 
-        verify_request_in_progress(self, "upload")
+        verify_request_in_progress(self, ["upload", "proceed_to_file"])
 
         keys = {category.value for category in GovJsonKey}
         if all(key not in json_data for key in keys):
@@ -925,12 +925,15 @@ class FileGSTR1:
         }
 
 
-def verify_request_in_progress(self, request_type):
+def verify_request_in_progress(self, request_types):
+    if isinstance(request_types, str):
+        request_types = [request_types]
+
     for doc in self.actions:
-        if doc.request_type == request_type and not doc.status:
-            formatted_request_type = request_type.replace("_", " ").title()
+        if doc.request_type in request_types and not doc.status:
+            formatted_request_type = request_types[0].replace("_", " ").title()
             frappe.throw(
-                f"{formatted_request_type} is in progress.Please wait for the process to complete."
+                f"{formatted_request_type} is in progress. Please wait for the process to complete."
             )
 
 
