@@ -812,15 +812,6 @@ class FileGSTR1:
             return response
 
         doc.db_set({"status": status_code_map.get(response.get("status_cd"))})
-        if response.get("status_cd") != "P":
-            enqueue_notification(
-                self.return_period,
-                "proceed_to_file",
-                response.get("status_cd"),
-                self.gstin,
-                api.request_id,
-            )
-            return
 
         return self.fetch_and_compare_summary(api, response)
 
@@ -843,12 +834,6 @@ class FileGSTR1:
         if not differing_categories:
             self.db_set({"filing_status": "Ready to File"})
             response["filing_status"] = "Ready to File"
-            enqueue_notification(
-                self.return_period,
-                "proceed_to_file",
-                response.get("status_cd"),
-                self.gstin,
-            )
 
         else:
             self.db_set({"filing_status": "Not Filed"})
@@ -873,7 +858,7 @@ class FileGSTR1:
 
         summary = self.get_json_for("authenticated_summary")
         api = GSTR1API(self)
-        response = api.file_gstr_1(self.return_period, pan, otp, summary)
+        response = api.file_gstr_1(self.return_period, summary, pan, otp)
 
         if response.error and response.error.error_cd == "RET09001":
             self.db_set({"filing_status": "Not Filed"})

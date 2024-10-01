@@ -439,6 +439,7 @@ class GSTR1 {
         const color = this.status === "Filed" ? "green" : "orange";
 
         this.$wrapper.find(`[data-fieldname="filed_tab"]`).html(tab_name);
+        this.$wrapper.find(`[data-fieldname="error_tab"]`).html("⛔ Error");
         this.frm.page.set_indicator(this.status, color);
     }
 
@@ -2467,8 +2468,6 @@ class GSTR1Action extends FileGSTR1Dialog {
 
     proceed_to_file() {
         const action = "proceed_to_file";
-
-        frappe.show_alert(__("Please wait while we proceed to file the data."));
         this.perform_gstr1_action(action, r => {
             // already proceed to file
             if (r.message) this.handle_proceed_to_file_response(r.message);
@@ -2478,9 +2477,6 @@ class GSTR1Action extends FileGSTR1Dialog {
 
     perform_gstr1_action(action, callback, additional_args = {}) {
         this.toggle_actions(false, action);
-
-        // TODO: Why error tabs are hidden here. Only on successful upload
-        this.frm.gstr1.tabs.error_tab.hide();
         const args = {
             ...this.defaults,
             ...additional_args,
