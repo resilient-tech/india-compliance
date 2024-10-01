@@ -302,6 +302,12 @@ class GSTR1 {
                 return;
             }
 
+            if (this.data.status == "Ready to File" && ["books", "unfiled", "reconcile"].includes(tab_name)) {
+                tab.hide();
+                _tab.shown = false;
+                return;
+            }
+
             tab.show();
             _tab.shown = true;
             tab.tabmanager.refresh_data(
@@ -1016,10 +1022,10 @@ class TabManager {
             args[2]?.indent == 0
                 ? `<strong>${value}</strong>`
                 : isDescriptionCell
-                ? `<a href="#" class="description">
+                    ? `<a href="#" class="description">
                     <p style="padding-left: 15px">${value}</p>
                     </a>`
-                : value;
+                    : value;
 
         return value;
     }
@@ -1769,9 +1775,9 @@ class FiledTab extends GSTR1_TabManager {
             const { include_uploaded, delete_missing } = dialog
                 ? dialog.get_values()
                 : {
-                      include_uploaded: true,
-                      delete_missing: false,
-                  };
+                    include_uploaded: true,
+                    delete_missing: false,
+                };
 
             const doc = me.instance.frm.doc;
 
@@ -2011,7 +2017,7 @@ class ReconcileTab extends FiledTab {
         });
     }
 
-    get_creation_time_string() {} // pass
+    get_creation_time_string() { } // pass
 
     get_detail_view_column() {
         return [
@@ -2084,8 +2090,8 @@ class ErrorTab extends TabManager {
         ];
     }
 
-    setup_actions() {}
-    set_creation_time_string() {}
+    setup_actions() { }
+    set_creation_time_string() { }
 
     refresh_data(data) {
         this.set_default_title();
@@ -2480,10 +2486,8 @@ class GSTR1Action extends FileGSTR1Dialog {
                 // TODO: Highlight error tab
 
                 if (action == "upload") {
-                    //TODO: data is not refreshed immediately
-                    this.frm.taxpayer_api_call("sync_with_gstn", {
-                        sync_for: "unfiled",
-                    });
+                    this.perform_gstr1_action("proceed_to_file");
+                    return;
                 }
 
                 if (action == "reset") {
@@ -2496,8 +2500,12 @@ class GSTR1Action extends FileGSTR1Dialog {
                     });
                 }
 
-                if (action == "proceed_to_file")
+                if (action == "proceed_to_file") {
+                    ["books", "unfiled", "reconcile"].map(tab =>
+                        this.frm.gstr1.tabs[`${tab}_tab`].hide()
+                    );
                     this.handle_proceed_to_file_response(message);
+                }
 
                 this.handle_notification(message, action);
             },
@@ -2621,7 +2629,7 @@ function is_gstr1_api_enabled() {
 }
 
 function patch_set_indicator(frm) {
-    frm.toolbar.set_indicator = function () {};
+    frm.toolbar.set_indicator = function () { };
 }
 
 async function set_default_company_gstin(frm) {
