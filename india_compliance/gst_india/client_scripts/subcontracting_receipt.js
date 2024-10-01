@@ -72,8 +72,10 @@ frappe.ui.form.on(DOCTYPE, {
             total_taxable_value: "total",
         });
 
-        frm.get_docfield("taxes", "charge_type").options =
-            "\nOn Net Total\nOn Item Quantity";
+        frm.get_docfield("taxes", "charge_type").options = [
+            "On Net Total",
+            "On Item Quantity",
+        ];
     },
 
     refresh() {
