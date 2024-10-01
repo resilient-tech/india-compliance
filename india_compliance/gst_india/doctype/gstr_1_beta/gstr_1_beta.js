@@ -302,7 +302,10 @@ class GSTR1 {
                 return;
             }
 
-            if (this.data.status == "Ready to File" && ["books", "unfiled", "reconcile"].includes(tab_name)) {
+            if (
+                this.data.status == "Ready to File" &&
+                ["books", "unfiled", "reconcile"].includes(tab_name)
+            ) {
                 tab.hide();
                 _tab.shown = false;
                 return;
@@ -311,8 +314,8 @@ class GSTR1 {
             tab.show();
             _tab.shown = true;
             tab.tabmanager.refresh_data(
-                this.data[tab_name],
-                this.data[`${tab_name}_summary`],
+                this.data[tab_name] || {},
+                this.data[`${tab_name}_summary`] || [],
                 this.status
             );
         });
@@ -2215,6 +2218,8 @@ class FileGSTR1Dialog {
     }
 
     file_gstr1_data() {
+        if (this.is_request_in_progress()) return;
+
         // TODO: EVC Generation, Resend, and Filing
         const file_gstr1 = this;
 
@@ -2419,11 +2424,15 @@ class GSTR1Action extends FileGSTR1Dialog {
     }
 
     upload_gstr1_data() {
+        if (this.is_request_in_progress()) return;
+
         frappe.show_alert(__("Uploading data to GSTN"));
         this.perform_gstr1_action("upload");
     }
 
     reset_gstr1_data() {
+        if (this.is_request_in_progress()) return;
+
         frappe.confirm(
             __(
                 "All the details saved in different tables shall be deleted after reset.<br>Are you sure, you want to reset the already saved data?"
@@ -2441,6 +2450,9 @@ class GSTR1Action extends FileGSTR1Dialog {
     }
 
     perform_gstr1_action(action, additional_args = {}) {
+        this.toggle_actions(false, action);
+
+        // TODO: Why error tabs are hidden here. Only on successful upload
         this.frm.gstr1.tabs.error_tab.hide();
         const args = {
             ...this.defaults,
@@ -2477,23 +2489,21 @@ class GSTR1Action extends FileGSTR1Dialog {
                 if (message.status_cd === "IP" && retries < retry_intervals.length)
                     return this.fetch_status_with_retry(action, retries + 1);
 
+                if (action == "upload") {
+                    if (message.status_cd == "P") {
+                        this.perform_gstr1_action("proceed_to_file");
+                        return;
+                    } else if (message.status_cd == "PE") this.handle_errors(message);
+                    // TODO: Highlight error tab
+                }
+
+                this.toggle_actions(true);
+
                 if (message.status_cd == "ER")
                     frappe.throw(__(message.error_report.error_msg));
 
-                if (message.status_cd == "PE" && action == "upload")
-                    this.handle_errors(message);
-
-                // TODO: Highlight error tab
-
-                if (action == "upload") {
-                    this.perform_gstr1_action("proceed_to_file");
-                    return;
-                }
-
                 if (action == "reset") {
-                    this.frm.page.set_primary_action("Upload", () =>
-                        this.upload_gstr1_data()
-                    );
+                    render_empty_state(this.frm);
                     this.frm.taxpayer_api_call("generate_gstr1").then(r => {
                         this.frm.doc.__gst_data = r.message;
                         this.frm.trigger("load_gstr1_data");
@@ -2504,7 +2514,10 @@ class GSTR1Action extends FileGSTR1Dialog {
                     ["books", "unfiled", "reconcile"].map(tab =>
                         this.frm.gstr1.tabs[`${tab}_tab`].hide()
                     );
+                    this.frm.gstr1.tabs.filed_tab.set_active();
+
                     this.handle_proceed_to_file_response(message);
+                    action = "upload"; // for notification
                 }
 
                 this.handle_notification(message, action);
@@ -2616,6 +2629,31 @@ class GSTR1Action extends FileGSTR1Dialog {
         if (!on_current_document) return;
 
         frappe.show_alert(__(alert_message));
+    }
+
+    is_request_in_progress() {
+        const in_progress = this.frm.__action_performed;
+        if (!in_progress) return false;
+
+        frappe.show_alert({
+            message: __(`Already ${in_progress}ing`),
+            indicator: "red",
+        });
+
+        return true;
+    }
+
+    toggle_actions(show, action) {
+        const actions = ["Upload", "Reset", "File"];
+        const btns = $(actions.map(action => `[data-label="${action}"]`).join(","));
+
+        if (show) {
+            this.frm.__action_performed = null;
+            btns && btns.removeClass("disabled");
+        } else {
+            this.frm.__action_performed = action;
+            btns && btns.addClass("disabled");
+        }
     }
 }
 
