@@ -2051,6 +2051,7 @@ class ReconcileTab extends FiledTab {
 }
 
 class ErrorTab extends TabManager {
+    DEFAULT_SUBTITLE = "Fix these errors and upload again";
     set_default_title() {
         this.DEFAULT_TITLE = "Error Summary";
         TabManager.prototype.set_default_title.call(this);
@@ -2061,7 +2062,7 @@ class ErrorTab extends TabManager {
             {
                 name: "Category",
                 fieldname: "category",
-                width: 80,
+                width: 120,
             },
             {
                 name: "Error Code",
@@ -2069,25 +2070,25 @@ class ErrorTab extends TabManager {
                 width: 100,
             },
             {
-                name: "Error Description",
-                fieldname: "description",
+                name: "Error Message",
+                fieldname: "error_message",
                 width: 250,
             },
             {
+                name: "Invoice Number",
+                fieldname: GSTR1_DataField.DOC_NUMBER,
+                fieldtype: "Link",
+                options: "Sales Invoice",
+                width: 150,
+            },
+            {
                 name: "Party GSTIN",
-                fieldname: "party_gstin",
-                width: 170,
+                fieldname: GSTR1_DataField.CUST_GSTIN,
+                width: 160,
             },
             {
                 name: "Place Of Supply",
-                fieldname: "place_of_supply",
-                width: 130,
-            },
-            {
-                name: "Invoice Number",
-                fieldname: "invoice_number",
-                fieldtype: "Link",
-                options: "Sales Invoice",
+                fieldname: GSTR1_DataField.POS,
                 width: 130,
             },
         ];
@@ -2097,11 +2098,12 @@ class ErrorTab extends TabManager {
     set_creation_time_string() { }
 
     refresh_data(data) {
-        this.set_default_title();
-        data = this.get_error_data(data);
+        console.log(data);
+        data = data.error_report
         super.refresh_data(data, data, "Error Summary");
         $(".dt-footer").remove();
     }
+
     setup_wrapper() {
         this.wrapper.append(`
             <div class="m-3 d-flex justify-content-between align-items-center">
@@ -2115,25 +2117,6 @@ class ErrorTab extends TabManager {
             </div>
             <div class="data-table"></div>
         `);
-    }
-
-    get_error_data(message) {
-        const { error_report } = message;
-        let data = [];
-
-        for (let category in error_report) {
-            for (let object of error_report[category]) {
-                data.push({
-                    category: category.toUpperCase(),
-                    error_code: object.error_cd,
-                    description: object.error_msg,
-                    party_gstin: object.ctin,
-                    place_of_supply: object.inv[0].pos,
-                    invoice_number: object.inv[0].inum,
-                });
-            }
-        }
-        return data;
     }
 }
 

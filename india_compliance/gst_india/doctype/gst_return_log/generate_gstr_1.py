@@ -769,8 +769,10 @@ class FileGSTR1:
             )
 
         if status_cd == "PE":
-            self.update_json_for("upload_error", response.get("error_report"))
-            return response.get("error_report")
+            response["error_report"] = convert_to_internal_data_format(
+                response.get("error_report"), True
+            )
+            self.update_json_for("upload_error", response)
 
         if status_cd == "P":
             self.db_set({"filing_status": "Uploaded"})
