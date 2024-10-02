@@ -150,8 +150,7 @@ async function update_gst_details(frm, event) {
         );
 
         party_details["is_outward_material_transfer_or_issue"] =
-            ["Material Transfer", "Material Issue"].includes(frm.doc.purpose) &&
-            !frm.doc.is_return;
+            is_outward_material_transfer_or_issue;
         party_details["is_inward_material_transfer"] =
             frm.doc.purpose === "Material Transfer" && frm.doc.is_return;
     } else {

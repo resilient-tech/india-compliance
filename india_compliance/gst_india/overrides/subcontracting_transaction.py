@@ -172,7 +172,7 @@ def onload(doc, method=None):
 
 
 def validate(doc, method=None):
-    if ignore_based_on_purpose(doc):
+    if cannot_generate_ewaybill(doc):
         return
 
     field_map = (
@@ -196,16 +196,18 @@ def before_submit(doc, method=None):
     if ignore_gst_validation_for_subcontracting(doc):
         return
 
-    if (doc.doctype == "Stock Entry" and doc.purpose == "Material Transfer") or (
-        doc.doctype == "Subcontracting Receipt" and not doc.is_return
-    ):
-        if not doc.doc_references:
-            frappe.throw(
-                _("Please Select Original Document Reference for ITC-04 Reporting"),
-                title=_("Mandatory Field"),
-            )
-        else:
-            remove_duplicates(doc)
+    if doc.doctype == "Stock Entry" and doc.purpose != "Material Transfer":
+        return
+    if doc.doctype == "Subcontracting Receipt" and doc.is_return:
+        return
+
+    if not doc.doc_references:
+        frappe.throw(
+            _("Please Select Original Document Reference for ITC-04 Reporting"),
+            title=_("Mandatory Field"),
+        )
+    else:
+        remove_duplicates(doc)
 
 
 def validate_transaction(doc, method=None):
@@ -294,10 +296,7 @@ class SubcontractingGSTAccounts(GSTAccounts):
         self.validate_for_charge_type()
 
     def validate_for_same_party_gstin(self):
-        if (
-            self.doc.doctype == "Stock Entry"
-            and self.doc.purpose != "Send to Subcontractor"
-        ):
+        if is_outward_material_transfer(self.doc):
             return
 
         company_gstin = self.doc.get("company_gstin") or self.doc.bill_from_gstin
@@ -404,11 +403,27 @@ def remove_duplicates(doc):
             doc.append("doc_references", dict(link_doctype=row[0], link_name=row[1]))
 
 
-def ignore_based_on_purpose(doc):
-    if doc.doctype == "Stock Entry" and (
-        not doc.subcontracting_order
-        and (doc.purpose not in ["Material Transfer", "Material Issue"])
+def cannot_generate_ewaybill(doc):
+    if (
+        doc.doctype == "Stock Entry"
+        and doc.purpose == "Send to Subcontractor"
+        and not doc.subcontracting_order
     ):
+        return True
+    if doc.doctype == "Stock Entry" and doc.purpose not in [
+        "Material Transfer",
+        "Material Issue",
+        "Send to Subcontractor",
+    ]:
         return True
 
     return ignore_gst_validations(doc)
+
+
+def is_outward_material_transfer(doc):
+    if (
+        doc.doctype == "Stock Entry"
+        and doc.purpose in ["Material Transfer", "Material Issue"]
+        and not doc.is_return
+    ):
+        return True

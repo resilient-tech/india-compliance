@@ -35,6 +35,9 @@ from india_compliance.gst_india.constants.e_waybill import (
     TRANSIT_TYPES,
     UPDATE_VEHICLE_REASON_CODES,
 )
+from india_compliance.gst_india.overrides.subcontracting_transaction import (
+    is_outward_material_transfer,
+)
 from india_compliance.gst_india.utils import (
     handle_server_errors,
     is_foreign_doc,
@@ -1263,10 +1266,10 @@ class EWaybillData(GSTTransactionData):
         self.validate_same_gstin()
 
     def validate_same_gstin(self):
-        if self.doc.doctype == "Delivery Note" or (
-            self.doc.get("purpose") in ["Material Transfer", "Material Issue"]
-            and not self.doc.is_return
-        ):
+        if self.doc.doctype == "Delivery Note":
+            return
+
+        if is_outward_material_transfer(self.doc):
             return
 
         party_gstin_fieldname = (
