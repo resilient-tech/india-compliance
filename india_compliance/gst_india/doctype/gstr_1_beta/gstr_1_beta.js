@@ -2620,7 +2620,7 @@ class GSTR1Action extends FileGSTR1Dialog {
         else if (in_progress == "proceed_to_file") in_progress = "upload";
 
         frappe.show_alert({
-            message: __(`Already ${in_progress}ing`),
+            message: __('Already ' + in_progress + 'ing'),
             indicator: "red",
         });
 

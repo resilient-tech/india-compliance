@@ -729,7 +729,7 @@ class FileGSTR1:
 
         keys = {category.value for category in GovJsonKey}
         if all(key not in json_data for key in keys):
-            frappe.throw("Nothing to upload")
+            frappe.throw(_("Nothing to upload"))
 
         # upload data after proceed to file
         self.db_set({"filing_status": "Not Filed"})
