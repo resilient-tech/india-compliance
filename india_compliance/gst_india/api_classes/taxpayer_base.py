@@ -115,6 +115,7 @@ class TaxpayerAuthenticate(BaseAPI):
         # "AUTH4034": "invalid_otp",  # Invalid OTP
         "AUTH4038": "authorization_failed",  # Session Expired
         "TEC4002": "invalid_public_key",
+        "RET13506": "OTP is either expired or incorrect",
         "RET00003": "Return Form already ready to be filed",  # Actions performed on portal directly
         "RET09001": "Latest Summary is not available. Please generate summary and try again.",  # Actions performed on portal directly
     }
