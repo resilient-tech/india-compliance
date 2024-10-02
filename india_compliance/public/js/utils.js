@@ -395,12 +395,10 @@ Object.assign(india_compliance, {
             return position === "start"
                 ? `${current_year - 1}-03-01`
                 : `${current_year - 1}-09-30`;
-
         } else if (current_month <= 9) {
             return position === "start"
                 ? `${current_year - 1}-10-01`
                 : `${current_year}-03-31`;
-
         } else {
             return position === "start"
                 ? `${current_year}-04-01`
@@ -507,6 +505,17 @@ Object.assign(india_compliance, {
         });
 
         return alert;
+    },
+    is_e_waybill_generatable_for_subcontracting(doc) {
+        if (doc.purpose == "Send to Subcontractor" && doc.subcontracting_order) {
+            return true;
+        }
+
+        if (in_list(["Material Transfer", "Material Issue"], doc.purpose)) {
+            return true;
+        }
+
+        return false
     },
 });
 

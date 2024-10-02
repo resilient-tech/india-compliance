@@ -69,11 +69,11 @@ def after_mapping_subcontracting_order(doc, method, source_doc):
 
 
 def after_mapping_stock_entry(doc, method, source_doc):
-    if not source_doc.doctype == "Subcontracting Order":
+    if source_doc.doctype != "Subcontracting Order":
         doc.taxes_and_charges = ""
         doc.taxes = []
 
-    if not doc.purpose == "Material Transfer" or not doc.is_return:
+    if doc.purpose != "Material Transfer" or not doc.is_return:
         return
 
     doc.bill_to_address = source_doc.billing_address
