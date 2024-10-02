@@ -203,11 +203,9 @@ class GovExcel(DataProcessor):
         Add draft count to cancelled count for DOC_ISSUE category
         """
         for doc in data.copy():
-            if doc.get(GSTR1_DataField.DOC_TYPE.value) in [
-                "Invalid Invoice Number (length greater than 16)",
-                "Excluded from Report (Same GSTIN Billing)",
-                "Excluded from Report (Is Opening Entry)",
-            ]:
+            if doc.get(GSTR1_DataField.DOC_TYPE.value).startswith(
+                "Excluded from Report"
+            ):
                 data.remove(doc)
                 continue
 

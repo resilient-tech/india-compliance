@@ -11,10 +11,7 @@ from frappe.query_builder import Criterion
 from frappe.query_builder.functions import Date, IfNull, Sum
 from frappe.utils import cint, flt, formatdate, getdate
 
-from india_compliance.gst_india.constants.__init__ import (
-    GST_INVOICE_NUMBER_FORMAT,
-    GST_TAX_TYPES,
-)
+from india_compliance.gst_india.constants.__init__ import GST_TAX_TYPES
 from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies import (
     get_columns as get_hsn_columns,
 )
@@ -30,6 +27,7 @@ from india_compliance.gst_india.utils import (
     get_gst_accounts_by_type,
     get_gstin_list,
 )
+from india_compliance.gst_india.utils.__init__ import validate_invoice_number
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr_1 import SUPECOM
 
@@ -1593,7 +1591,7 @@ class GSTR1DocumentIssuedSummary:
 
     def seperate_data_by_nature_of_document(self, data, doctype):
         nature_of_document = {
-            "Invalid Invoice Number (length greater than 16)": [],
+            "Excluded from Report (Invalid Invoice Number)": [],
             "Excluded from Report (Same GSTIN Billing)": [],
             "Excluded from Report (Is Opening Entry)": [],
             "Invoices for outward supply": [],
@@ -1604,10 +1602,11 @@ class GSTR1DocumentIssuedSummary:
         }
 
         for doc in data:
-            if len(doc.name) > 16 or not GST_INVOICE_NUMBER_FORMAT.match(doc.name):
+            if not validate_invoice_number(doc, throw=False):
                 nature_of_document[
-                    "Invalid Invoice Number (length greater than 16)"
+                    "Excluded from Report (Invalid Invoice Number)"
                 ].append(doc)
+
             elif doc.is_opening == "Yes":
                 nature_of_document["Excluded from Report (Is Opening Entry)"].append(
                     doc
