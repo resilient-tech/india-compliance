@@ -2447,7 +2447,13 @@ class GSTR1Action extends FileGSTR1Dialog {
         const action = "upload";
 
         frappe.show_alert(__("Uploading data to GSTN"));
-        this.perform_gstr1_action(action, () => this.fetch_status_with_retry(action));
+        this.perform_gstr1_action(action, (response) => {
+            if(response._server_messages) {
+                this.toggle_actions(true);
+                return
+            }
+            this.fetch_status_with_retry(action)
+        });
     }
 
     reset_gstr1_data() {
