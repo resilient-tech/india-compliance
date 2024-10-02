@@ -171,6 +171,7 @@ class ITC04Query:
         query = (
             self.get_base_query_table_5A(self.se, self.se_item, self.ref_doc)
             .select(
+                IfNull(self.se.name, "").as_("invoice_no"),
                 self.se_item.uom,
                 self.se.bill_to_gstin.as_("supplier_gstin"),
                 self.se.bill_from_gstin.as_("company_gstin"),
@@ -195,6 +196,7 @@ class ITC04Query:
         query = (
             self.get_base_query_table_5A(self.sr, self.sr_item, self.ref_doc)
             .select(
+                IfNull(self.sr.supplier_delivery_note, "").as_("invoice_no"),
                 self.sr_item.stock_uom.as_("uom"),
                 self.sr.company_gstin,
                 self.sr.supplier_gstin,
