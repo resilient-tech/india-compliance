@@ -152,6 +152,7 @@ class ITC04Query:
                 IfNull(doc_item.gst_treatment, "Not Defined").as_("gst_treatment"),
                 ref_doc.link_doctype.as_("original_challan_invoice_type"),
                 IfNull(ref_doc.link_name, "").as_("original_challan_no"),
+                self.get_challan_date_query(ref_doc).as_("original_challan_date"),
             )
             .where(doc.docstatus == 1)
             .orderby(doc.name, order=Order.desc)
@@ -222,3 +223,14 @@ class ITC04Query:
             query = query.where(Date(doc.posting_date) <= getdate(self.filters.to_date))
 
         return query
+
+    def get_challan_date_query(self, ref_doc):
+        se_doc = frappe.qb.DocType("Stock Entry")
+        sr_doc = frappe.qb.DocType("Subcontracting Receipt")
+
+        return frappe.qb.from_(se_doc).select(se_doc.posting_date).where(
+            (se_doc.name == ref_doc.link_name) & (ref_doc.link_doctype == "Stock Entry")
+        ) + frappe.qb.from_(sr_doc).select(sr_doc.posting_date).where(
+            (sr_doc.name == ref_doc.link_name)
+            & (ref_doc.link_doctype == "Subcontracting Receipt")
+        )
