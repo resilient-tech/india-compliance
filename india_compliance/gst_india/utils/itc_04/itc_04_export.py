@@ -85,7 +85,7 @@ def process_table_4_data(invoice_data):
             "cess_amount": invoice.total_cess_amount,
             "uom": f"{uom}-{UOM_MAP[uom]}",
             "qty": invoice.qty,
-            "desc": "",
+            "desc": invoice.description,
             "goods_type": "7b",
         }
 
@@ -129,7 +129,7 @@ def process_table_5a_data(invoice_data):
             "nature_of_job": "Work",
             "uom": f"{uom}-{UOM_MAP[uom]}",
             "qty": invoice.qty,
-            "desc": "",
+            "desc": invoice.description,
         }
 
     res = {}

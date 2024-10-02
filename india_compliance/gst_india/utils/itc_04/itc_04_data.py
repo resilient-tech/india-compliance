@@ -43,6 +43,7 @@ class ITC04Query:
                 doc.is_return,
                 IfNull(doc.place_of_supply, "").as_("place_of_supply"),
                 doc.base_grand_total.as_("invoice_total"),
+                IfNull(doc_item.description, "").as_("description"),
                 IfNull(doc_item.gst_treatment, "Not Defined").as_("gst_treatment"),
                 (doc_item.cgst_rate + doc_item.sgst_rate + doc_item.igst_rate).as_(
                     "gst_rate"
@@ -142,9 +143,9 @@ class ITC04Query:
             .select(
                 IfNull(doc_item.item_code, doc_item.item_name).as_("item_code"),
                 doc_item.qty,
+                IfNull(doc_item.description, "").as_("description"),
                 doc_item.gst_hsn_code,
                 IfNull(doc.supplier, "").as_("supplier"),
-                IfNull(doc.name, "").as_("invoice_no"),
                 doc.posting_date,
                 doc.is_return,
                 IfNull(doc.place_of_supply, "").as_("place_of_supply"),
