@@ -413,12 +413,13 @@ Object.assign(india_compliance, {
 
         return alert;
     },
+
     is_e_waybill_generatable_for_subcontracting(doc) {
         if (doc.purpose == "Send to Subcontractor" && doc.subcontracting_order) {
             return true;
         }
 
-        if (in_list(["Material Transfer", "Material Issue"], doc.purpose)) {
+        if (["Material Transfer", "Material Issue"].includes(doc.purpose)) {
             return true;
         }
 
