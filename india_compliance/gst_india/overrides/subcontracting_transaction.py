@@ -175,6 +175,9 @@ def validate(doc, method=None):
     if cannot_generate_ewaybill(doc):
         return
 
+    if doc.doctype == "Stock Entry" and doc.purpose != "Send to Subcontractor":
+        return
+
     field_map = (
         STOCK_ENTRY_FIELD_MAP
         if doc.doctype == "Stock Entry"

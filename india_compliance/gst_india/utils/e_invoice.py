@@ -279,7 +279,7 @@ def verify_e_invoice_details(current_gstin, current_invoice_amount, signed_data)
         )
 
 
-def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False):
+def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False, message=None):
     """
     Load and process the e-Invoice generation result.
     """
@@ -287,7 +287,7 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False):
     doc.db_set(
         {
             "irn": result.Irn,
-            "einvoice_status": "Generated",
+            "einvoice_status": result.get("einvoice_status") or "Generated",
         }
     )
 
@@ -304,7 +304,8 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False):
         doc,
         {
             "irn": doc.irn,
-            "sales_invoice": doc.name,
+            "reference_doctype": doc.doctype,
+            "reference_name": doc.name,
             "acknowledgement_number": result.AckNo,
             "acknowledged_on": parse_datetime(result.AckDt),
             "signed_invoice": result.SignedInvoice,
@@ -320,11 +321,10 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False):
     if not frappe.request:
         return
 
-    frappe.msgprint(
-        _("e-Invoice generated successfully"),
-        indicator="green",
-        alert=True,
-    )
+    if not message:
+        message = "e-Invoice generated successfully"
+
+    frappe.msgprint(_(message), indicator="green", alert=True)
 
     return send_updated_doc(doc)
 
@@ -378,6 +378,25 @@ def log_and_process_e_invoice_cancellation(doc, values, result, message):
     )
 
     frappe.msgprint(_(message), indicator="green", alert=True)
+
+
+@frappe.whitelist()
+def mark_e_invoice_as_generated(doctype, docname, values):
+    doc = load_doc(doctype, docname, "submit")
+
+    values = frappe.parse_json(values)
+    result = frappe._dict(
+        {
+            "Irn": values.irn,
+            "AckDt": values.ack_dt,
+            "AckNo": values.ack_no,
+            "einvoice_status": "Manually Generated",
+        }
+    )
+
+    return log_and_process_e_invoice_generation(
+        doc, result, message="e-Invoice updated successfully"
+    )
 
 
 @frappe.whitelist()
