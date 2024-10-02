@@ -212,7 +212,8 @@
    "fieldname": "actions",
    "fieldtype": "Table",
    "label": "Actions",
-   "options": "GSTR Action"
+   "options": "GSTR Action",
+   "read_only": 1
   }
  ],
  "in_create": 1,
@@ -223,7 +224,7 @@
    "link_fieldname": "reference_docname"
   }
  ],
- "modified": "2024-09-12 11:48:46.154973",
+ "modified": "2024-10-02 12:16:04.271962",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Return Log",
