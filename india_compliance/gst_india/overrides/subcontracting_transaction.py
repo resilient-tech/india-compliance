@@ -23,7 +23,11 @@ from india_compliance.gst_india.overrides.transaction import (
     validate_mandatory_fields,
     validate_place_of_supply,
 )
-from india_compliance.gst_india.utils import get_gst_accounts_by_type, is_api_enabled
+from india_compliance.gst_india.utils import (
+    get_gst_accounts_by_type,
+    is_api_enabled,
+    is_outward_material_transfer,
+)
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 from india_compliance.gst_india.utils.taxes_controller import (
     CustomTaxController,
@@ -421,12 +425,3 @@ def cannot_generate_ewaybill(doc):
         return True
 
     return ignore_gst_validations(doc)
-
-
-def is_outward_material_transfer(doc):
-    if (
-        doc.doctype == "Stock Entry"
-        and doc.purpose in ["Material Transfer", "Material Issue"]
-        and not doc.is_return
-    ):
-        return True
