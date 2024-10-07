@@ -1,6 +1,7 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
 
+import json
 from datetime import datetime
 
 import frappe
@@ -213,6 +214,16 @@ def process_gstr1_request(month_or_quarter, year, company_gstin, action):
         }
     )
     return data
+
+
+@frappe.whitelist()
+def update_filing_status(filters):
+    frappe.has_permission("GST Return Log", "write", throw=True)
+
+    filters = frappe._dict(json.loads(filters))
+    log_name = f"GSTR1-{get_period(filters.month_or_quarter, filters.year)}-{filters.company_gstin}"
+
+    frappe.db.set_value("GST Return Log", log_name, "filing_status", "Not Filed")
 
 
 ####### DATA ######################################################################################

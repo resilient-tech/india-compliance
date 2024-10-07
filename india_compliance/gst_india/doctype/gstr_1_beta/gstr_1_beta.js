@@ -462,11 +462,17 @@ class GSTR1 {
             File: this.gstr1_action.file_gstr1_data,
         };
 
-        let primary_button_label = "Generate";
+        let primary_button_label = {
+            "Not Filed": "Upload",
+            "Uploaded": "Proceed to File",
+            "Ready to File": "File",
+        }[this.status] || "Generate";
 
-        if (this.status === "Not Filed") primary_button_label = "Upload";
-        else if (this.status === "Uploaded") primary_button_label = "Proceed to File";
-        else if (this.status == "Ready to File") primary_button_label = "File";
+        if (this.status === "Ready to File") {
+            this.frm.add_custom_button(__("Previous Action"), () => {
+                this.gstr1_action.previous_action_handler();
+            });
+        }
 
         this.frm.page.set_primary_action(__(primary_button_label), () =>
             actions[primary_button_label].call(this.gstr1_action)
@@ -2483,6 +2489,24 @@ class GSTR1Action extends FileGSTR1Dialog {
         });
     }
 
+    previous_action_handler() {
+        if(this.is_request_in_progress()) return;
+
+        const { company, company_gstin, month_or_quarter, year } = this.frm.doc;
+        const filters = {
+            "company": company, "company_gstin": company_gstin, "month_or_quarter": month_or_quarter, "year": year
+        };
+
+        frappe.call({
+            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.update_filing_status",
+            args: { filters },
+            callback: () => {
+                this.frm.doc.__gst_data.status = "Not Filed";
+                this.frm.trigger("load_gstr1_data");
+            }
+        })
+    }
+
     perform_gstr1_action(action, callback, additional_args = {}) {
         this.toggle_actions(false, action);
         const args = {
@@ -2560,6 +2584,9 @@ class GSTR1Action extends FileGSTR1Dialog {
             this.frm.page.set_primary_action("File", () =>
                 this.frm.gstr1.gstr1_action.file_gstr1_data()
             );
+            this.frm.add_custom_button(__("Previous Action"), () => {
+                this.frm.gstr1.gstr1_action.previous_action_handler();
+            });
             this.frm.page.set_indicator("Ready to File", "orange");
             this.frm.gstr1.status = "Ready to File";
             return;
@@ -2634,7 +2661,7 @@ class GSTR1Action extends FileGSTR1Dialog {
     }
 
     toggle_actions(show, action) {
-        const actions = ["Upload", "Reset", "File"];
+        const actions = ["Upload", "Reset", "File", "Previous%20Action"];
         const btns = $(actions.map(action => `[data-label="${action}"]`).join(","));
 
         if (show) {
