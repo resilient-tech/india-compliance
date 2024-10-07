@@ -211,21 +211,15 @@ def validate_doc_references(doc):
     if not (is_stock_entry or is_subcontracting_receipt):
         return
 
-    error_msg = _("Please Select Original Document Reference for ITC-04 Reporting")
-    if not doc.doc_references:
-        if is_stock_entry:
-            frappe.throw(
-                error_msg,
-                title=_("Mandatory Field"),
-            )
-        else:
-            frappe.msgprint(
-                error_msg,
-                alert=True,
-                indicator="yellow",
-            )
-    else:
+    if doc.doc_references:
         remove_duplicates(doc)
+        return
+
+    error_msg = _("Please Select Original Document Reference for ITC-04 Reporting")
+    if is_stock_entry:
+        frappe.throw(error_msg, title=_("Mandatory Field"))
+    else:
+        frappe.msgprint(error_msg, alert=True, indicator="yellow")
 
 
 def validate_transaction(doc, method=None):
