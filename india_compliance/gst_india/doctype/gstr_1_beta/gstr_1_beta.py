@@ -226,6 +226,84 @@ def update_filing_status(filters):
     frappe.db.set_value("GST Return Log", log_name, "filing_status", "Not Filed")
 
 
+@frappe.whitelist()
+def get_general_entries(month_or_quarter, year, company):
+    from_date, to_date = get_gstr_1_from_and_to_date(month_or_quarter, year)
+
+    journal_entry = frappe.qb.DocType("Journal Entry")
+    journal_entry_account = frappe.qb.DocType("Journal Entry Account")
+
+    gst_accounts = get_gst_accounts_by_type(company, "Sales Reverse Charge")
+    if not gst_accounts:
+        return "No GST Accounts found"
+
+    return (
+        frappe.qb.from_(journal_entry)
+        .join(journal_entry_account)
+        .on(journal_entry.name == journal_entry_account.parent)
+        .select(
+            journal_entry_account.name,
+        )
+        .where(journal_entry.posting_date.between(getdate(from_date), getdate(to_date)))
+        .where(journal_entry_account.account.in_(gst_accounts))
+        .run()
+    )
+
+
+@frappe.whitelist()
+def make_journal_entry(company, company_gstin, month_or_quarter, year, auto_submit):
+    frappe.has_permission("Journal Entry", "write", throw=True)
+
+    from_date, to_date = get_gstr_1_from_and_to_date(month_or_quarter, year)
+    sales_invoice = frappe.qb.DocType("Sales Invoice")
+    sales_invoice_taxes = frappe.qb.DocType("Sales Taxes and Charges")
+
+    data = (
+        frappe.qb.from_(sales_invoice)
+        .join(sales_invoice_taxes)
+        .on(sales_invoice.name == sales_invoice_taxes.parent)
+        .select(
+            sales_invoice_taxes.account_head.as_("account"),
+            Sum(sales_invoice_taxes.tax_amount).as_("tax_amount"),
+        )
+        .where(sales_invoice.is_reverse_charge == 1)
+        .where(
+            Date(sales_invoice.posting_date).between(
+                getdate(from_date), getdate(to_date)
+            )
+        )
+        .groupby(sales_invoice_taxes.account_head)
+        .run(as_dict=True)
+    )
+
+    journal_entry = frappe.get_doc(
+        {
+            "doctype": "Journal Entry",
+            "company": company,
+            "company_gstin": company_gstin,
+            "posting_date": get_last_day(to_date),
+        }
+    )
+
+    for tax in data:
+        journal_entry.append(
+            "accounts",
+            {
+                "account": tax.account,
+                "reference_type": "Sales Invoice",
+                "debit_in_account_currency": max(tax.tax_amount, 0),
+                "credit_in_account_currency": abs(min(tax.tax_amount, 0)),
+            },
+        )
+
+    journal_entry.save()
+
+    if auto_submit == "1":
+        journal_entry.submit()
+
+    return journal_entry.name
+
+
 ####### DATA ######################################################################################
 
 

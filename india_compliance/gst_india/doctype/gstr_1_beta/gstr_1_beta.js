@@ -444,15 +444,19 @@ class GSTR1 {
     }
 
     render_form_actions() {
-        if (this.data && (!is_gstr1_api_enabled() || this.status == "Filed")) return;
+        if (this.data && !is_gstr1_api_enabled()) return;
 
         this.gstr1_action = new GSTR1Action(this.frm);
 
         // Custom Buttons
-        if (this.data)
+        if (this.data){
+            if (this.status == "Filed")
+                return this.get_journal_entries()
+
             this.frm.add_custom_button(__("Reset"), () =>
                 this.gstr1_action.reset_gstr1_data()
             );
+        }
 
         // Primary Button
         const actions = {
@@ -711,6 +715,22 @@ class GSTR1 {
 
         let element = $('[data-fieldname="data_section"]');
         element.prepend(gst_liability_html);
+    }
+
+    get_journal_entries(){
+        const { company, month_or_quarter, year } = this.frm.doc;
+
+        frappe.call({
+            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_general_entries",
+            args: {month_or_quarter, year, company},
+            callback: (r) => {
+                if(r.message) return;
+
+                this.frm.add_custom_button(__("Create Journal Entry"), () =>
+                    this.gstr1_action.make_journal_entry()
+                );
+            }
+        })
     }
 }
 
@@ -2454,7 +2474,7 @@ class GSTR1Action extends FileGSTR1Dialog {
 
         frappe.show_alert(__("Uploading data to GSTN"));
         this.perform_gstr1_action(action, (response) => {
-            if(response._server_messages) {
+            if (response._server_messages) {
                 this.toggle_actions(true);
                 return
             }
@@ -2490,7 +2510,7 @@ class GSTR1Action extends FileGSTR1Dialog {
     }
 
     previous_action_handler() {
-        if(this.is_request_in_progress()) return;
+        if (this.is_request_in_progress()) return;
 
         const { company, company_gstin, month_or_quarter, year } = this.frm.doc;
         const filters = {
@@ -2505,6 +2525,33 @@ class GSTR1Action extends FileGSTR1Dialog {
                 this.frm.trigger("load_gstr1_data");
             }
         })
+    }
+
+    make_journal_entry() {
+        const d = new frappe.ui.Dialog({
+            title : "Create Journal Entry",
+            fields: [
+                {
+                    fieldname: "auto_submit",
+                    fieldtype: "Check",
+                    label: "Submit After Creation",
+                },
+            ],
+            primary_action_label: "Create",
+            primary_action: async (values) => {
+                const { company, company_gstin, month_or_quarter, year } = this.frm.doc;
+
+                frappe.call({
+                    method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.make_journal_entry",
+                    args: { company, company_gstin, month_or_quarter, year, auto_submit: values.auto_submit },
+                    callback: (r) => {
+                        frappe.set_route("journal-entry", r.message);
+                        d.hide();
+                    }
+                })
+            }
+        })
+        d.show();
     }
 
     perform_gstr1_action(action, callback, additional_args = {}) {
