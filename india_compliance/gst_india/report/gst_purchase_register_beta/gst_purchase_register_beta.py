@@ -118,40 +118,12 @@ class BaseGSTR3B:
     def get_data(self):
         raise NotImplementedError("Report Not Available")
 
-    def select_tax_details(self, query, doc_taxes):
+    def select_tax_details(self, query, dt_item):
         return query.select(
-            Sum(
-                Case()
-                .when(
-                    doc_taxes.gst_tax_type == "igst",
-                    doc_taxes.tax_amount,
-                )
-                .else_(0)
-            ).as_("iamt"),
-            Sum(
-                Case()
-                .when(
-                    doc_taxes.gst_tax_type == "cgst",
-                    doc_taxes.tax_amount,
-                )
-                .else_(0)
-            ).as_("camt"),
-            Sum(
-                Case()
-                .when(
-                    doc_taxes.gst_tax_type == "sgst",
-                    doc_taxes.tax_amount,
-                )
-                .else_(0)
-            ).as_("samt"),
-            Sum(
-                Case()
-                .when(
-                    doc_taxes.gst_tax_type.isin(["cess", "cess_non_advol"]),
-                    doc_taxes.tax_amount,
-                )
-                .else_(0)
-            ).as_("csamt"),
+            Sum(dt_item.igst_amount).as_("iamt"),
+            Sum(dt_item.cgst_amount).as_("camt"),
+            Sum(dt_item.sgst_amount).as_("samt"),
+            Sum(dt_item.cess_amount + dt_item.cess_non_advol_amount).as_("csamt"),
         )
 
     def select_item_details(self, query, doc_item):
@@ -200,13 +172,13 @@ class BaseGSTR3B:
     def get_category_filters(self, category, sub_category):
         if (
             self.filters.get("invoice_sub_category")
-            and not self.filters.invoice_sub_category == sub_category
+            and self.filters.invoice_sub_category != sub_category
         ):
             return True
 
         if (
             self.filters.get("invoice_category")
-            and not self.filters.invoice_category == category
+            and self.filters.invoice_category != category
         ):
             return True
 
@@ -437,14 +409,11 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
     def get_itc_from_purchase(self):
         purchase_invoice = frappe.qb.DocType("Purchase Invoice")
         purchase_invoice_item = frappe.qb.DocType("Purchase Invoice Item")
-        purchase_invoice_taxes = frappe.qb.DocType("Purchase Taxes and Charges")
 
         query = (
             frappe.qb.from_(purchase_invoice)
             .inner_join(purchase_invoice_item)
             .on(purchase_invoice_item.parent == purchase_invoice.name)
-            .inner_join(purchase_invoice_taxes)
-            .on(purchase_invoice_taxes.parent == purchase_invoice.name)
             .select(
                 ConstantColumn("Purchase Invoice").as_("voucher_type"),
                 purchase_invoice.name.as_("voucher_no"),
@@ -464,12 +433,19 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
         query = self.get_common_filters(query, purchase_invoice)
 
         if self.group_by:
-            query = self.select_tax_details(query, purchase_invoice_taxes)
-            query = query.groupby(purchase_invoice.name)
+            query = query.select(
+                Sum(purchase_invoice_item.igst_amount).as_("iamt"),
+                Sum(purchase_invoice_item.cgst_amount).as_("camt"),
+                Sum(purchase_invoice_item.sgst_amount).as_("samt"),
+                Sum(
+                    purchase_invoice_item.cess_amount
+                    + purchase_invoice_item.cess_non_advol_amount
+                ).as_("csamt"),
+                Sum(purchase_invoice_item.taxable_value).as_("taxable_value"),
+                IfNull(purchase_invoice.gst_category, "").as_("gst_category"),
+            ).groupby(purchase_invoice.name)
         else:
-            query = self.select_item_details(query, purchase_invoice_item).groupby(
-                purchase_invoice_item.item_code, purchase_invoice.name
-            )
+            query = self.select_item_details(query, purchase_invoice_item)
 
         if self.filters.get("invoice_sub_category"):
             query = query.where(
@@ -491,14 +467,11 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
 
         boe = frappe.qb.DocType("Bill of Entry")
         boe_item = frappe.qb.DocType("Bill of Entry Item")
-        boe_taxes = frappe.qb.DocType("Bill of Entry Taxes")
 
         query = (
             frappe.qb.from_(boe)
             .inner_join(boe_item)
             .on(boe_item.parent == boe.name)
-            .inner_join(boe_taxes)
-            .on(boe_taxes.parent == boe.name)
             .select(
                 ConstantColumn("Bill of Entry").as_("voucher_type"),
                 boe.name.as_("voucher_no"),
@@ -509,30 +482,14 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
 
         if self.group_by:
             query = query.select(
-                Sum(
-                    Case()
-                    .when(
-                        boe_taxes.gst_tax_type == "igst",
-                        boe_taxes.tax_amount,
-                    )
-                    .else_(0)
-                ).as_("iamt"),
-                Sum(
-                    Case()
-                    .when(
-                        boe_taxes.gst_tax_type.isin(["cess", "cess_non_advol"]),
-                        boe_taxes.tax_amount,
-                    )
-                    .else_(0)
-                ).as_("csamt"),
+                Sum(boe_item.igst_amount).as_("iamt"),
+                Sum(boe_item.cess_amount + boe_item.cess_non_advol_amount).as_("csamt"),
                 LiteralValue(0).as_("camt"),
                 LiteralValue(0).as_("samt"),
             ).groupby(boe.name)
 
         else:
-            query = self.select_item_details(query, boe_item).groupby(
-                boe_item.item_code, boe.name
-            )
+            query = self.select_item_details(query, boe_item)
 
         query = self.get_common_filters(query, boe)
 
@@ -743,6 +700,7 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3B):
                 purchase_invoice_item.gst_treatment,
                 purchase_invoice.supplier_gstin,
                 purchase_invoice.supplier_address,
+                IfNull(purchase_invoice.gst_category, "").as_("gst_category"),
             )
             .where(
                 (purchase_invoice.is_opening == "No")
