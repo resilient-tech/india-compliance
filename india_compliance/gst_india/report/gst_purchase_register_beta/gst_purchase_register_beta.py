@@ -327,8 +327,7 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
     def extend_columns(self):
         if self.filters.summary_by == "Summary by Item":
             self.get_item_wise_columns()
-
-        else:
+        elif self.filters.summary_by == "Overview":
             self.columns.extend(
                 [
                     {
@@ -368,13 +367,58 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
                     },
                 ]
             )
+        else:
+            self.columns.extend(
+                [
+                    {
+                        "fieldname": "itc_available",
+                        "label": _("ITC Available"),
+                        "fieldtype": "Data",
+                        "width": 200,
+                    },
+                    {
+                        "fieldname": "itc_reversed",
+                        "label": _("ITC Reversed"),
+                        "fieldtype": "Data",
+                        "width": 250,
+                    },
+                    {
+                        "fieldname": "tax_available",
+                        "label": _("Tax Available"),
+                        "fieldtype": "Currency",
+                        "options": self.company_currency,
+                        "width": 150,
+                    },
+                    {
+                        "fieldname": "tax_reversed",
+                        "label": _("Tax Reversed"),
+                        "fieldtype": "Currency",
+                        "options": self.company_currency,
+                        "width": 150,
+                    },
+                    {
+                        "fieldname": "gst_category",
+                        "label": _("GST Category"),
+                        "fieldtype": "Data",
+                        "width": 150,
+                    },
+                    {
+                        "fieldname": "taxable_value",
+                        "label": _("Taxable Value"),
+                        "fieldtype": "Currency",
+                        "width": 150,
+                    },
+                ]
+            )
 
     def get_data(self):
         if self.filters.summary_by == "Summary by Item":
             self.get_item_wise_data()
         else:
             self.get_invoice_data()
-            if self.filters.summary_by == "Overview":
+            if self.filters.summary_by == "Summary by Invoice":
+                self.process_invoices()
+            else:
                 self.create_tree_view()
 
     def get_invoice_data(self):
@@ -396,6 +440,28 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
             data,
             key=lambda k: (k["invoice_sub_category"], k["posting_date"]),
         )
+
+    def process_invoices(self):
+        for row in self.data:
+            itc_field, tax_field = self.get_report_field(row.invoice_sub_category)
+            row.update(
+                {
+                    itc_field: row.invoice_sub_category,
+                    tax_field: (row.iamt + row.camt + row.samt + row.csamt),
+                }
+            )
+
+    def get_report_field(self, sub_category):
+        if sub_category in [
+            "Import Of Goods",
+            "Import Of Service",
+            "ITC on Reverse Charge",
+            "Input Service Distributor",
+            "All Other ITC",
+        ]:
+            return "itc_available", "tax_available"
+        else:
+            return "itc_reversed", "tax_reversed"
 
     def get_item_wise_data(self):
         purchase_data = self.get_itc_from_purchase()
@@ -486,6 +552,7 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
                 Sum(boe_item.cess_amount + boe_item.cess_non_advol_amount).as_("csamt"),
                 LiteralValue(0).as_("camt"),
                 LiteralValue(0).as_("samt"),
+                Sum(boe_item.taxable_value).as_("taxable_value"),
             ).groupby(boe.name)
 
         else:
@@ -511,7 +578,7 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
                     Case()
                     .when(
                         journal_entry_account.gst_tax_type == "igst",
-                        (-1 * journal_entry_account.credit_in_account_currency),
+                        (journal_entry_account.credit_in_account_currency),
                     )
                     .else_(0)
                 ).as_("iamt"),
@@ -519,7 +586,7 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
                     Case()
                     .when(
                         journal_entry_account.gst_tax_type == "cgst",
-                        (-1 * journal_entry_account.credit_in_account_currency),
+                        (journal_entry_account.credit_in_account_currency),
                     )
                     .else_(0)
                 ).as_("camt"),
@@ -527,7 +594,7 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
                     Case()
                     .when(
                         journal_entry_account.gst_tax_type == "sgst",
-                        (-1 * journal_entry_account.credit_in_account_currency),
+                        (journal_entry_account.credit_in_account_currency),
                     )
                     .else_(0)
                 ).as_("samt"),
@@ -537,7 +604,7 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
                         journal_entry_account.gst_tax_type.isin(
                             ["cess", "cess_non_advol"]
                         ),
-                        (-1 * journal_entry_account.credit_in_account_currency),
+                        (journal_entry_account.credit_in_account_currency),
                     )
                     .else_(0)
                 ).as_("csamt"),
@@ -567,26 +634,12 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
         return query.run(as_dict=True)
 
     def get_ineligible_itc_from_purchase(self):
-        ineligible_itc = IneligibleITC(self.filters).get_for_purchase(
+        return IneligibleITC(self.filters).get_for_purchase(
             "Ineligible As Per Section 17(5)"
         )
 
-        return self.process_ineligible_itc(ineligible_itc)
-
     def get_ineligible_itc_from_boe(self):
-        ineligible_itc = IneligibleITC(self.filters).get_for_bill_of_entry()
-
-        return self.process_ineligible_itc(ineligible_itc)
-
-    def process_ineligible_itc(self, ineligible_itc):
-        if not ineligible_itc:
-            return []
-
-        for row in ineligible_itc.copy():
-            for key in ["iamt", "camt", "samt", "csamt"]:
-                row[key] = row[key] * -1
-
-        return ineligible_itc
+        return IneligibleITC(self.filters).get_for_bill_of_entry()
 
 
 class GSTR3B_Inward_Nil_Exempt(BaseGSTR3B):
@@ -741,7 +794,10 @@ class IneligibleITC:
 
         query = (
             self.get_common_query(doctype, dt, dt_item)
-            .select((dt.ineligibility_reason).as_("invoice_sub_category"))
+            .select(
+                (dt.ineligibility_reason).as_("invoice_sub_category"),
+                IfNull(dt.gst_category, "").as_("gst_category"),
+            )
             .where((dt.is_opening == "No"))
             .where(IfNull(dt.ineligibility_reason, "") == ineligibility_reason)
         )
@@ -797,6 +853,7 @@ class IneligibleITC:
                 Sum(dt_item.cgst_amount).as_("camt"),
                 Sum(dt_item.sgst_amount).as_("samt"),
                 Sum(dt_item.cess_amount + dt_item.cess_non_advol_amount).as_("csamt"),
+                Sum(dt_item.taxable_value).as_("taxable_value"),
             )
         )
 
