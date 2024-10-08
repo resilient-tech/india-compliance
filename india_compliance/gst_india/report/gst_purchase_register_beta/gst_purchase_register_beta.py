@@ -542,7 +542,7 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
                 ConstantColumn("Bill of Entry").as_("voucher_type"),
                 boe.name.as_("voucher_no"),
                 boe.posting_date,
-                ConstantColumn("Import of Goods").as_("invoice_sub_category"),
+                ConstantColumn("Import Of Goods").as_("invoice_sub_category"),
             )
         )
 
@@ -687,7 +687,9 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3B):
 
             invoice_sub_category = ""
 
-            if invoice.gst_category == "Registered Composition":
+            if invoice.gst_category == "Registered Composition" and invoice.get(
+                "supplier_gstin"
+            ):
                 supplier_state = cint(invoice.supplier_gstin[0:2])
             else:
                 supplier_state = (
