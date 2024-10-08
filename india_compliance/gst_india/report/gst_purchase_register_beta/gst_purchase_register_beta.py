@@ -118,14 +118,6 @@ class BaseGSTR3B:
     def get_data(self):
         raise NotImplementedError("Report Not Available")
 
-    def select_tax_details(self, query, dt_item):
-        return query.select(
-            Sum(dt_item.igst_amount).as_("iamt"),
-            Sum(dt_item.cgst_amount).as_("camt"),
-            Sum(dt_item.sgst_amount).as_("samt"),
-            Sum(dt_item.cess_amount + dt_item.cess_non_advol_amount).as_("csamt"),
-        )
-
     def select_item_details(self, query, doc_item):
         return query.select(
             doc_item.item_code,
@@ -691,10 +683,9 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3B):
         state = cint(self.company_gstin[0:2])
 
         for invoice in invoices:
-            place_of_supply = cint(invoice.place_of_supply[0:2]) or state
-
             invoice_sub_category = ""
 
+            place_of_supply = cint(invoice.place_of_supply[0:2]) or state
             if invoice.gst_category == "Registered Composition" and invoice.get(
                 "supplier_gstin"
             ):
