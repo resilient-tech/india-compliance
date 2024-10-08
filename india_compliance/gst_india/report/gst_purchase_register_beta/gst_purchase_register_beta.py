@@ -129,6 +129,7 @@ class BaseGSTR3B:
     def select_item_details(self, query, doc_item):
         return query.select(
             doc_item.item_code,
+            doc_item.gst_hsn_code,
             (doc_item.cgst_rate + doc_item.sgst_rate + doc_item.igst_rate).as_(
                 "gst_rate"
             ),
@@ -191,6 +192,13 @@ class BaseGSTR3B:
                     "fieldtype": "Link",
                     "options": "Item",
                     "width": 180,
+                },
+                {
+                    "fieldname": "gst_hsn_code",
+                    "label": _("HSN Code"),
+                    "fieldtype": "Link",
+                    "options": "GST HSN Code",
+                    "width": 120,
                 },
                 {
                     "fieldname": "gst_rate",
