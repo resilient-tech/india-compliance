@@ -994,6 +994,7 @@ CUSTOM_FIELDS = {
             ),
             "default": "All Other ITC",
             "translatable": 0,
+            "read_only": 1,
         },
         {
             "fieldname": "ineligibility_reason",
@@ -1383,7 +1384,7 @@ E_INVOICE_FIELDS = {
             "label": "e-Invoice Status",
             "fieldtype": "Select",
             "insert_after": "status",
-            "options": "\nPending\nGenerated\nAuto-Retry\nCancelled\nManually Cancelled\nFailed\nNot Applicable\nPending Cancellation",
+            "options": "\nPending\nGenerated\nManually Generated\nAuto-Retry\nCancelled\nManually Cancelled\nFailed\nNot Applicable\nPending Cancellation",
             "default": None,
             "hidden": 1,
             "no_copy": 1,

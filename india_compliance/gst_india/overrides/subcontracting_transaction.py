@@ -168,6 +168,9 @@ def validate(doc, method=None):
     if ignore_gst_validation_for_subcontracting(doc):
         return
 
+    if doc.doctype == "Stock Entry" and doc.purpose != "Send to Subcontractor":
+        return
+
     field_map = (
         STOCK_ENTRY_FIELD_MAP
         if doc.doctype == "Stock Entry"
@@ -287,8 +290,8 @@ class SubcontractingGSTAccounts(GSTAccounts):
         self.validate_for_charge_type()
 
     def validate_for_same_party_gstin(self):
-        company_gstin = self.doc.get("company_gstin") or self.doc.bill_from_gstin
-        party_gstin = self.doc.get("supplier_gstin") or self.doc.bill_to_gstin
+        company_gstin = self.doc.get("company_gstin") or self.doc.get("bill_from_gstin")
+        party_gstin = self.doc.get("supplier_gstin") or self.doc.get("bill_to_gstin")
 
         if not party_gstin or company_gstin != party_gstin:
             return
@@ -330,7 +333,6 @@ def set_address_display(doc):
 def get_relevant_references(
     supplier, supplied_items, received_items, subcontracting_orders
 ):
-
     if isinstance(supplied_items, str):
         supplied_items = frappe.parse_json(supplied_items)
         received_items = frappe.parse_json(received_items)

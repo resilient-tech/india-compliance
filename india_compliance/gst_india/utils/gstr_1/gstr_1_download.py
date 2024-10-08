@@ -53,9 +53,6 @@ def download_gstr1_json_data(gstr1_log):
     for action in actions:
         response = api.get_gstr_1_data(action, return_period)
 
-        if response.error_type in ["otp_requested", "invalid_otp"]:
-            return response, None
-
         if response.error_type == "no_docs_found":
             continue
 
@@ -113,6 +110,7 @@ def save_gstr_1(gstin, return_period, json_data, return_type):
 
     gstr1_log = frappe.get_doc("GST Return Log", f"GSTR1-{return_period}-{gstin}")
     gstr1_log.update_json_for(data_field, mapped_data, overwrite=False)
+    gstr1_log.update_status("Generated")
 
 
 def save_gstr_1_filed_data(gstin, return_period, json_data):
