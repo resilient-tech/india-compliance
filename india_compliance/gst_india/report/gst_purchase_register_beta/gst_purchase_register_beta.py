@@ -5,7 +5,8 @@ from frappe import _
 from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Ifnull, IfNull, LiteralValue, Sum
-from frappe.utils import cint
+
+from india_compliance.gst_india.overrides.transaction import is_inter_state_supply
 
 SECTION_MAPPING = {
     "4": {
@@ -162,7 +163,7 @@ class BaseGSTR3B:
     def get_sub_categories(self, category):
         return SECTION_MAPPING[self.sub_section][category]
 
-    def get_category_filters(self, category, sub_category):
+    def filter_by_category(self, category, sub_category):
         if (
             self.filters.get("invoice_sub_category")
             and self.filters.invoice_sub_category != sub_category
@@ -528,7 +529,7 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
         return query.run(as_dict=True)
 
     def get_itc_from_boe(self):
-        if self.get_category_filters("ITC Available", "Import Of Goods"):
+        if self.filter_by_category("ITC Available", "Import Of Goods"):
             return []
 
         boe = frappe.qb.DocType("Bill of Entry")
@@ -679,21 +680,8 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3B):
 
         invoices = self.get_inward_nil_exempt()
 
-        address_state_map = self.get_address_state_map()
-        state = cint(self.company_gstin[0:2])
-
         for invoice in invoices:
             invoice_sub_category = ""
-
-            place_of_supply = cint(invoice.place_of_supply[0:2]) or state
-            if invoice.gst_category == "Registered Composition" and invoice.get(
-                "supplier_gstin"
-            ):
-                supplier_state = cint(invoice.supplier_gstin[0:2])
-            else:
-                supplier_state = (
-                    cint(address_state_map.get(invoice.supplier_address)) or state
-                )
 
             intra, inter = 0, 0
             taxable_value = invoice.taxable_value
@@ -707,14 +695,16 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3B):
             elif invoice.gst_treatment == "Non-GST":
                 invoice_sub_category = "Non GST Supply"
 
-            if self.get_category_filters(invoice_sub_category, invoice_sub_category):
+            # don't include invoice if not consistent with the filters applied
+            if self.filter_by_category(invoice_sub_category, invoice_sub_category):
                 continue
 
+            # intra, inter details not required for summary by item
             if self.group_by:
-                if supplier_state == place_of_supply:
-                    intra = taxable_value
-                else:
+                if is_inter_state_supply(invoice):
                     inter = taxable_value
+                else:
+                    intra = taxable_value
 
             formatted_data.append(
                 {
@@ -753,7 +743,7 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3B):
                 purchase_invoice.supplier_address,
                 purchase_invoice_item.gst_treatment,
                 purchase_invoice.supplier_gstin,
-                purchase_invoice.supplier_address,
+                purchase_invoice.company_gstin,
                 IfNull(purchase_invoice.gst_category, "").as_("gst_category"),
             )
             .where(
@@ -834,7 +824,7 @@ class IneligibleITC:
             .where(dt_item.is_ineligible_for_itc == 1)
         )
 
-        if self._class.get_category_filters(
+        if self._class.filter_by_category(
             "Ineligible ITC", "Ineligible As Per Section 17(5)"
         ):
             return []
