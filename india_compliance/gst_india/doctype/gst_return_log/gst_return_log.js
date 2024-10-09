@@ -9,14 +9,14 @@ frappe.ui.form.on("GST Return Log", {
             $(frm.fields_dict[field].wrapper).on('click', '.control-value a', function (e) {
                 e.preventDefault();
 
-                frm.call("get_data_for_gz", { file_field: field }).then(res => {
-                    const args = {
-                        cmd: "india_compliance.gst_india.doctype.gst_return_log.gst_return_log.download_file",
-                        data: res.message,
-                        file_name: `${field}.json`
-                    };
-                    open_url_post(frappe.request.url, args);
-                });
+                const args = {
+                    cmd: "india_compliance.gst_india.doctype.gst_return_log.gst_return_log.download_file",
+                    file_field: field,
+                    name: frm.doc.name,
+                    doctype: frm.doc.doctype,
+                    file_name: `${field}.gz`
+                };
+                open_url_post(frappe.request.url, args);
             });
         });
     },

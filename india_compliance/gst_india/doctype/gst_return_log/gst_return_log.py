@@ -193,10 +193,6 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
             if row.request_type == action and not row.status:
                 return row
 
-    @frappe.whitelist()
-    def get_data_for_gz(self, file_field):
-        return self.get_json_for(file_field)
-
 
 @frappe.whitelist()
 def download_file():
@@ -204,8 +200,10 @@ def download_file():
 
     data = frappe._dict(frappe.local.form_dict)
     frappe.response["filename"] = data["file_name"]
-    frappe.response["filecontent"] = data["data"]
-    frappe.response["content_type"] = "application/json"
+
+    file = get_file_doc(data["doctype"], data["name"], data["file_field"])
+    frappe.response["filecontent"] = file.get_content(encodings=[])
+
     frappe.response["type"] = "download"
 
 
