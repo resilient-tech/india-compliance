@@ -5,7 +5,7 @@ import datetime
 
 import frappe
 from frappe.test_runner import make_test_objects
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
@@ -50,7 +50,7 @@ BILL_OF_ENTRY_DEFAULT_ARGS = {
 }
 
 
-class TestPurchaseReconciliationTool(FrappeTestCase):
+class TestPurchaseReconciliationTool(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
