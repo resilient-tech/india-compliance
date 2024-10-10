@@ -168,11 +168,11 @@ def onload(doc, method=None):
 
 
 def validate(doc, method=None):
-    if doc.doctype in ("Stock Entry", "Subcontracting Receipt"):
-        validate_transaction_name(doc)
-
     if ignore_gst_validation_for_subcontracting(doc):
         return
+
+    if doc.doctype in ("Stock Entry", "Subcontracting Receipt"):
+        validate_transaction_name(doc)
 
     if doc.doctype == "Stock Entry" and doc.purpose != "Send to Subcontractor":
         return
