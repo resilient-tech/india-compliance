@@ -1,10 +1,10 @@
 import re
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 
 
-class TestAccountsSettings(FrappeTestCase):
+class TestAccountsSettings(IntegrationTestCase):
     def test_validate_change_in_enable_audit_trail_and_validate_delete_linked_ledger_entries(
         self,
     ):

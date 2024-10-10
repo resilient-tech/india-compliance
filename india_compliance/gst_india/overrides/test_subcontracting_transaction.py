@@ -1,9 +1,9 @@
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 
 from india_compliance.gst_india.utils.tests import create_transaction
 
 
-class TestSubcontractingTransaction(FrappeTestCase):
+class TestSubcontractingTransaction(IntegrationTestCase):
     def test_create_and_update_stock_entry(self):
         # Create a subcontracting transaction
         args = {
