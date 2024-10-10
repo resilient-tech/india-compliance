@@ -5,7 +5,7 @@ import frappe
 from frappe import _, bold
 from frappe.contacts.doctype.address.address import get_default_address
 from frappe.model.utils import get_fetch_values
-from frappe.utils import cint, flt, format_date, getdate
+from frappe.utils import cint, flt, format_date, get_link_to_form, getdate
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 
 from india_compliance.gst_india.constants import (
@@ -682,33 +682,25 @@ def validate_backdated_transaction(doc, gst_settings=None, action="submit"):
     if not gstr_1_filed_upto or getdate(doc.posting_date) > gstr_1_filed_upto:
         return
 
-    doc_name = get_gst_return_log_name(doc)
-    if not doc_name:
+    gst_return_log_name = get_gst_return_log_name(doc.company_gstin, gstr_1_filed_upto)
+    if not gst_return_log_name:
         return
 
-    gst_return_log = frappe.get_doc("GST Return Log", doc_name)
-
-    url = f"{frappe.utils.get_url()}/app/{doc.doctype.replace(' ', '-').lower()}/{doc.name}"
+    gst_return_log = frappe.get_doc("GST Return Log", gst_return_log_name)
     gst_return_log.add_comment(
         "Comment",
-        f"{doc.doctype} : [{doc.name}]({url}) has been {action} by {frappe.session.user}",
+        f"{doc.doctype} : {get_link_to_form(doc.doctype, doc.name)} has been {action} by {frappe.session.user}",
     )
 
 
-def get_gst_return_log_name(doc):
-    posting_date = getdate(doc.posting_date)
-    year = posting_date.year
-    month = f"{posting_date.month:02d}"
+def get_gst_return_log_name(company_gstin, gstr_1_filed_upto):
+    filters = {
+        "return_period": f"{gstr_1_filed_upto.month:02d}{gstr_1_filed_upto.year}",
+        "gstin": company_gstin,
+    }
 
-    doc_name = f"GSTR1-{month}{year}-{doc.company_gstin}"
-    if frappe.db.exists("GST Return Log", doc_name):
+    if doc_name := frappe.db.exists("GST Return Log", filters):
         return doc_name
-
-    quarter_month = (cint(month) - 1) // 3 * 3 + 3
-    quarter_name = f"GSTR1-{quarter_month:02d}{year}-{doc.company_gstin}"
-
-    if frappe.db.exists("GST Return Log", quarter_name):
-        return quarter_name
 
     return None
 
