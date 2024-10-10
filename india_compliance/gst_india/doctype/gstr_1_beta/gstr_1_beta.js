@@ -444,14 +444,12 @@ class GSTR1 {
     }
 
     render_form_actions() {
-        if (this.data && !is_gstr1_api_enabled()) return;
-
         this.gstr1_action = new GSTR1Action(this.frm);
 
         // Custom Buttons
-        if (this.data){
-            if (this.status == "Filed")
-                return this.get_journal_entries()
+        if (this.data) {
+            if (this.status === "Filed") return this.check_for_journal_entry();
+            if (!is_gstr1_api_enabled()) return;
 
             this.frm.add_custom_button(__("Reset"), () =>
                 this.gstr1_action.reset_gstr1_data()
@@ -717,14 +715,14 @@ class GSTR1 {
         element.prepend(gst_liability_html);
     }
 
-    get_journal_entries(){
+    check_for_journal_entry() {
         const { company, month_or_quarter, year } = this.frm.doc;
 
         frappe.call({
-            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_general_entries",
-            args: {month_or_quarter, year, company},
+            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_journal_entries",
+            args: { month_or_quarter, year, company },
             callback: (r) => {
-                if(r.message) return;
+                if (r.message) return;
 
                 this.frm.add_custom_button(__("Create Journal Entry"), () =>
                     this.gstr1_action.make_journal_entry()
@@ -2125,7 +2123,6 @@ class ErrorTab extends TabManager {
     set_creation_time_string() { }
 
     refresh_data(data) {
-        console.log(data);
         data = data.error_report
         super.refresh_data(data, data, "Error Summary");
         $(".dt-footer").remove();
@@ -2529,7 +2526,7 @@ class GSTR1Action extends FileGSTR1Dialog {
 
     make_journal_entry() {
         const d = new frappe.ui.Dialog({
-            title : "Create Journal Entry",
+            title: "Create Journal Entry",
             fields: [
                 {
                     fieldname: "auto_submit",
@@ -2545,6 +2542,7 @@ class GSTR1Action extends FileGSTR1Dialog {
                     method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.make_journal_entry",
                     args: { company, company_gstin, month_or_quarter, year, auto_submit: values.auto_submit },
                     callback: (r) => {
+                        frappe.open_in_new_tab = true;
                         frappe.set_route("journal-entry", r.message);
                         d.hide();
                     }

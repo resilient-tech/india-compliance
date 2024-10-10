@@ -7,7 +7,9 @@ from datetime import datetime
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.query_builder.functions import Date, Sum
+from frappe.query_builder import Case
+from frappe.query_builder.custom import ConstantColumn
+from frappe.query_builder.functions import Date, IfNull, Sum
 from frappe.utils import get_last_day, getdate
 
 from india_compliance.gst_india.api_classes.taxpayer_base import (
@@ -227,25 +229,31 @@ def update_filing_status(filters):
 
 
 @frappe.whitelist()
-def get_general_entries(month_or_quarter, year, company):
+def get_journal_entries(month_or_quarter, year, company):
+    frappe.has_permission("Journal Entry", "read", throw=True)
+
     from_date, to_date = get_gstr_1_from_and_to_date(month_or_quarter, year)
 
     journal_entry = frappe.qb.DocType("Journal Entry")
     journal_entry_account = frappe.qb.DocType("Journal Entry Account")
 
-    gst_accounts = get_gst_accounts_by_type(company, "Sales Reverse Charge")
-    if not gst_accounts:
-        return "No GST Accounts found"
+    gst_accounts = list(
+        get_gst_accounts_by_type(company, "Sales Reverse Charge", throw=False).values()
+    )
 
-    return (
+    if not gst_accounts:
+        return True
+
+    return bool(
         frappe.qb.from_(journal_entry)
         .join(journal_entry_account)
         .on(journal_entry.name == journal_entry_account.parent)
         .select(
-            journal_entry_account.name,
+            journal_entry.name,
         )
         .where(journal_entry.posting_date.between(getdate(from_date), getdate(to_date)))
-        .where(journal_entry_account.account.in_(gst_accounts))
+        .where(journal_entry_account.account.isin(gst_accounts))
+        .where(journal_entry.docstatus == 1)
         .run()
     )
 
@@ -264,7 +272,18 @@ def make_journal_entry(company, company_gstin, month_or_quarter, year, auto_subm
         .on(sales_invoice.name == sales_invoice_taxes.parent)
         .select(
             sales_invoice_taxes.account_head.as_("account"),
-            Sum(sales_invoice_taxes.tax_amount).as_("tax_amount"),
+            ConstantColumn("Sales Invoice").as_("reference_type"),
+            Case()
+            .when(
+                sales_invoice_taxes.tax_amount > 0, Sum(sales_invoice_taxes.tax_amount)
+            )
+            .as_("debit_in_account_currency"),
+            Case()
+            .when(
+                sales_invoice_taxes.tax_amount < 0,
+                Sum(sales_invoice_taxes.tax_amount * (-1)),
+            )
+            .as_("credit_in_account_currency"),
         )
         .where(sales_invoice.is_reverse_charge == 1)
         .where(
@@ -272,6 +291,7 @@ def make_journal_entry(company, company_gstin, month_or_quarter, year, auto_subm
                 getdate(from_date), getdate(to_date)
             )
         )
+        .where(IfNull(sales_invoice_taxes.gst_tax_type, "") != "")
         .groupby(sales_invoice_taxes.account_head)
         .run(as_dict=True)
     )
@@ -284,18 +304,7 @@ def make_journal_entry(company, company_gstin, month_or_quarter, year, auto_subm
             "posting_date": get_last_day(to_date),
         }
     )
-
-    for tax in data:
-        journal_entry.append(
-            "accounts",
-            {
-                "account": tax.account,
-                "reference_type": "Sales Invoice",
-                "debit_in_account_currency": max(tax.tax_amount, 0),
-                "credit_in_account_currency": abs(min(tax.tax_amount, 0)),
-            },
-        )
-
+    journal_entry.extend("accounts", data)
     journal_entry.save()
 
     if auto_submit == "1":
