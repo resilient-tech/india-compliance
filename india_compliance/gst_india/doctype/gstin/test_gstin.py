@@ -1,8 +1,14 @@
 # Copyright (c) 2023, Resilient Tech and Contributors
 # See license.txt
 import responses
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase, change_settings
 from responses import matchers
+=======
+from responses import matchers
+
+from frappe.tests import IntegrationTestCase, change_settings
+>>>>>>> 48ba8b67 (test: change of test utility)
 
 from india_compliance.gst_india.doctype.gstin.gstin import validate_gst_transporter_id
 
@@ -23,7 +29,7 @@ TRANSPORTER_ID_API_RESPONSE = {
 }
 
 
-class TestGSTIN(FrappeTestCase):
+class TestGSTIN(IntegrationTestCase):
     @responses.activate
     @change_settings("GST Settings", {"validate_gstin_status": 1, "sandbox_mode": 0})
     def test_validate_gst_transporter_id(self):

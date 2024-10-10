@@ -4,8 +4,13 @@
 import json
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import get_month, getdate
+=======
+from frappe.tests import IntegrationTestCase, change_settings
+from frappe.utils import getdate
+>>>>>>> 48ba8b67 (test: change of test utility)
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
@@ -24,7 +29,7 @@ from india_compliance.gst_india.utils.tests import (
 )
 
 
-class TestGSTR3BReport(FrappeTestCase):
+class TestGSTR3BReport(IntegrationTestCase):
     def setUp(self):
         frappe.set_user("Administrator")
         filters = {"company": "_Test Indian Registered Company"}

@@ -1,14 +1,18 @@
 from datetime import date
 
 from frappe import parse_json, read_file
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 
 from india_compliance.gst_india.utils import get_data_file_path
 from india_compliance.gst_india.utils.gstr_2 import GSTRCategory, save_gstr_2b
 from india_compliance.gst_india.utils.gstr_2.test_gstr_2a import TestGSTRMixin
 
 
+<<<<<<< HEAD:india_compliance/gst_india/utils/gstr_2/test_gstr_2b_v3_0.py
 class TestGSTR2b(TestGSTRMixin, FrappeTestCase):
+=======
+class TestGSTR2b(IntegrationTestCase, TestGSTRMixin):
+>>>>>>> 48ba8b67 (test: change of test utility):india_compliance/gst_india/utils/gstr_2/test_gstr_2b.py
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

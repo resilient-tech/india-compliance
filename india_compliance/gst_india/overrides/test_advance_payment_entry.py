@@ -4,6 +4,10 @@ from contextlib import contextmanager
 from typing import ClassVar
 
 import frappe
+<<<<<<< HEAD
+=======
+from frappe.tests import IntegrationTestCase
+>>>>>>> 48ba8b67 (test: change of test utility)
 from erpnext.accounts.doctype.payment_entry.payment_entry import (
     get_outstanding_reference_documents,
 )
@@ -48,8 +52,13 @@ def toggle_seperate_advance_accounting():
         )
 
 
+<<<<<<< HEAD
 class TestAdvancePaymentEntry(FrappeTestCase):
     EXPECTED_GL: ClassVar[list] = [
+=======
+class TestAdvancePaymentEntry(IntegrationTestCase):
+    EXPECTED_GL = [
+>>>>>>> 48ba8b67 (test: change of test utility)
         {"account": "Cash - _TIRC", "debit": 590.0, "credit": 0.0},
         {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 500.0},
         {"account": "Output Tax SGST - _TIRC", "debit": 0.0, "credit": 45.0},

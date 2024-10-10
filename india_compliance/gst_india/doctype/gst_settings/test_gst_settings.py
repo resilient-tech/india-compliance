@@ -3,11 +3,16 @@
 import re
 
 import frappe
-from frappe.tests.utils import FrappeTestCase, change_settings
+from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils.data import getdate
 
 
+<<<<<<< HEAD
 class TestGSTSettings(FrappeTestCase):
+=======
+class TestGSTSettings(IntegrationTestCase):
+
+>>>>>>> 48ba8b67 (test: change of test utility)
     @change_settings("GST Settings", {"enable_api": 1})
     def test_api_key_enabled(self):
         doc = frappe.get_doc("GST Settings")

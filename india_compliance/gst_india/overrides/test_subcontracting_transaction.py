@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import re
 
 import frappe
@@ -20,10 +21,14 @@ from erpnext.subcontracting.doctype.subcontracting_order.test_subcontracting_ord
     create_subcontracting_order,
 )
 from frappe.tests.utils import FrappeTestCase
+=======
+from frappe.tests import IntegrationTestCase
+>>>>>>> 48ba8b67 (test: change of test utility)
 
 from india_compliance.gst_india.utils.tests import create_transaction
 
 
+<<<<<<< HEAD
 def make_raw_materials():
     raw_materials = {
         "Subcontracted SRM Item 1": {"valuation_rate": 20},
@@ -251,6 +256,9 @@ class TestSubcontractingTransaction(FrappeTestCase):
             for row in sco.supplied_items
         ]
 
+=======
+class TestSubcontractingTransaction(IntegrationTestCase):
+>>>>>>> 48ba8b67 (test: change of test utility)
     def test_create_and_update_stock_entry(self):
         # Create a subcontracting transaction
         args = {

@@ -3,6 +3,11 @@ import re
 from typing import ClassVar
 
 import frappe
+<<<<<<< HEAD
+=======
+from frappe.tests import IntegrationTestCase, change_settings
+from frappe.utils import today
+>>>>>>> 48ba8b67 (test: change of test utility)
 from erpnext.accounts.doctype.purchase_invoice.purchase_invoice import (
     make_regional_gl_entries,
 )
@@ -50,7 +55,7 @@ from india_compliance.gst_india.utils.tests import (
         # ("POS Invoice"),
     ],
 )
-class TestTransaction(FrappeTestCase):
+class TestTransaction(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         frappe.db.savepoint("before_test_transaction")
@@ -1104,7 +1109,7 @@ def create_refund_transaction():
     return doc.insert()
 
 
-class TestQuotationTransaction(FrappeTestCase):
+class TestQuotationTransaction(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -1137,11 +1142,15 @@ def get_lead(first_name):
     return lead.name
 
 
+<<<<<<< HEAD
 class TestSpecificTransactions(FrappeTestCase):
     @classmethod
     def tearDown(cls):
         frappe.db.rollback()
 
+=======
+class TestSpecificTransactions(IntegrationTestCase):
+>>>>>>> 48ba8b67 (test: change of test utility)
     def test_copy_e_waybill_fields_from_dn_to_si(self):
         "Make sure e-Waybill fields are copied from Delivery Note to Sales Invoice"
         dn = create_transaction(doctype="Delivery Note", vehicle_no="GJ01AA1111")
@@ -1259,7 +1268,7 @@ def create_tax_accounts(account_name):
     ).insert(ignore_if_duplicate=True)
 
 
-class TestRegionalOverrides(FrappeTestCase):
+class TestRegionalOverrides(IntegrationTestCase):
     @change_settings(
         "GST Settings",
         {"round_off_gst_values": 1},
@@ -1341,8 +1350,13 @@ class TestRegionalOverrides(FrappeTestCase):
         self.assertTrue(party_details.get("taxes"))
 
 
+<<<<<<< HEAD
 class TestItemUpdate(FrappeTestCase):
     DATA: ClassVar[dict] = {
+=======
+class TestItemUpdate(IntegrationTestCase):
+    DATA = {
+>>>>>>> 48ba8b67 (test: change of test utility)
         "customer": "_Test Unregistered Customer",
         "item_code": "_Test Trading Goods 1",
         "qty": 1,

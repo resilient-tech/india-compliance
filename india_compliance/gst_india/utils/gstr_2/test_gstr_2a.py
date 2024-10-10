@@ -3,7 +3,7 @@ from unittest.mock import Mock, patch
 
 import frappe
 from frappe import parse_json, read_file
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 from frappe.utils import get_datetime
 
 from india_compliance.gst_india.utils import get_data_file_path
@@ -39,7 +39,11 @@ class TestGSTRMixin:
         self.assertAlmostEqual(last_updated_on, get_datetime(), delta=timedelta(minutes=2))
 
 
+<<<<<<< HEAD
 class TestGSTR2a(TestGSTRMixin, FrappeTestCase):
+=======
+class TestGSTR2a(IntegrationTestCase, TestGSTRMixin):
+>>>>>>> 48ba8b67 (test: change of test utility)
     # Tests as per version 2.1 of GSTR2A Dt: 14-10-2020
     @classmethod
     def setUpClass(cls):

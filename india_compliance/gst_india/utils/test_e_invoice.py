@@ -2,9 +2,13 @@ import json
 import re
 
 import frappe
+<<<<<<< HEAD
 import responses
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
 from frappe.tests.utils import FrappeTestCase, change_settings
+=======
+from frappe.tests import IntegrationTestCase, change_settings
+>>>>>>> 48ba8b67 (test: change of test utility)
 from frappe.utils import add_to_date, get_datetime, getdate, now_datetime
 from frappe.utils.data import format_date
 from responses import matchers
@@ -26,7 +30,7 @@ from india_compliance.gst_india.utils.e_waybill import EWaybillData
 from india_compliance.gst_india.utils.tests import append_item, create_sales_invoice
 
 
-class TestEInvoice(FrappeTestCase):
+class TestEInvoice(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

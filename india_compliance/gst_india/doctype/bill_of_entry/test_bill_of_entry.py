@@ -5,8 +5,12 @@ import json
 import re
 
 import frappe
+<<<<<<< HEAD
 from erpnext.projects.doctype.project.test_project import make_project
 from frappe.tests.utils import FrappeTestCase
+=======
+from frappe.tests import IntegrationTestCase
+>>>>>>> 48ba8b67 (test: change of test utility)
 from frappe.utils import today
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
@@ -22,7 +26,7 @@ from india_compliance.gst_india.utils.itc_claim import format_period
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
 
 
-class TestBillofEntry(FrappeTestCase):
+class TestBillofEntry(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

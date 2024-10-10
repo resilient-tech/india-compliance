@@ -1,6 +1,7 @@
 # Copyright (c) 2024, Resilient Tech and Contributors
 # See license.txt
 
+<<<<<<< HEAD
 import frappe
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import getdate
@@ -42,3 +43,11 @@ class TestGSTReturnLog(FrappeTestCase):
         )
         self.assertTrue(comment)
         self.assertIn("has been submitted by", comment.content)
+=======
+# import frappe
+from frappe.tests import IntegrationTestCase
+
+
+class TestGSTReturnLog(IntegrationTestCase):
+    pass
+>>>>>>> 48ba8b67 (test: change of test utility)

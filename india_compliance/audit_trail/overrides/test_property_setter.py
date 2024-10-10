@@ -1,10 +1,10 @@
 import re
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 
 
-class TestPropertySetter(FrappeTestCase):
+class TestPropertySetter(IntegrationTestCase):
     def test_validate_property_setter_where_audit_trail_enabled_and_doc_is_protected(
         self,
     ):
