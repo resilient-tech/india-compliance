@@ -9,6 +9,15 @@ class TestPropertySetter(FrappeTestCase):
         self,
     ):
         frappe.db.set_single_value("Accounts Settings", "enable_audit_trail", 1)
+        frappe.db.delete(
+            "Property Setter",
+            {
+                "doctype_or_field": "DocType",
+                "doc_type": "Purchase Invoice",
+                "property": "track_changes",
+            },
+        )
+
         doc = frappe.get_doc(
             {
                 "doctype": "Property Setter",
