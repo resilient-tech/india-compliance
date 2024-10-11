@@ -390,6 +390,10 @@ def get_place_of_supply(party_details, doctype):
     # fallback to company GSTIN for sales or supplier GSTIN for purchases
     # (in retail scenarios, customer / company GSTIN may not be set)
 
+    determine_address_tax_category_from = frappe.db.get_single_value(
+        "Accounts Settings", "determine_address_tax_category_from"
+    )
+
     if doctype in SALES_DOCTYPES or doctype == "Payment Entry":
         # for exports, Place of Supply is set using GST category in absence of GSTIN
         if party_details.gst_category == "Overseas":
@@ -407,20 +411,25 @@ def get_place_of_supply(party_details, doctype):
             if gst_state_number and gst_state:
                 return f"{gst_state_number}-{gst_state}"
 
-        address = frappe.db.get_single_value(
-            "Accounts Settings", "determine_address_tax_category_from"
-        )
         party_gstin = (
             party_details.billing_address_gstin
-            if address == "Billing Address"
+            if determine_address_tax_category_from == "Billing Address"
             else party_details.company_gstin
         )
 
     elif doctype == "Stock Entry":
-        party_gstin = party_details.bill_to_gstin or party_details.bill_from_gstin
+        party_gstin = (
+            party_details.bill_to_gstin
+            if determine_address_tax_category_from == "Billing Address"
+            else party_details.bill_from_gstin
+        )
     else:
         # for purchase, subcontracting order and receipt
-        party_gstin = party_details.company_gstin or party_details.supplier_gstin
+        party_gstin = (
+            party_details.company_gstin
+            if determine_address_tax_category_from == "Billing Address"
+            else party_details.supplier_gstin
+        )
 
     if not party_gstin:
         return
