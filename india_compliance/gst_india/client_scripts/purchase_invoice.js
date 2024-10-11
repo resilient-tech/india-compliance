@@ -144,10 +144,10 @@ function show_irn_dialog(frm) {
                     irn: values.irn,
                 },
                 function (r) {
-                    doc = r.message;
                     dialog.hide();
-                    frappe.set_route("purchase-invoice", doc.name);
-                    set_party_details(doc, frm);
+                    if(!r.message) return;
+
+                    frappe.set_route("purchase-invoice", r.message);
                 },
             );
         },
@@ -157,28 +157,6 @@ function show_irn_dialog(frm) {
     frappe.db.get_value("Company", frappe.defaults.get_default("company"), "gstin").then(r => {
         dialog.fields_dict.gstin.set_input(r.message.gstin);
     })
-}
-
-function set_party_details(doc, frm) {
-    erpnext.utils.get_party_details(
-        frm,
-        "erpnext.accounts.party.get_party_details",
-        {
-            posting_date: doc.posting_date,
-            bill_date: doc.bill_date,
-            party: doc.supplier,
-            party_type: "Supplier",
-            account: doc.credit_to,
-            price_list: doc.buying_price_list,
-            fetch_payment_terms_template: cint(!doc.ignore_default_payment_terms_template),
-        },
-        function () {
-            frm.set_value("apply_tds", frm.supplier_tds ? 1 : 0);
-            frm.set_value("tax_withholding_category", frm.supplier_tds);
-            frm.set_df_property("apply_tds", "read_only", frm.supplier_tds ? 0 : 1);
-            frm.set_df_property("tax_withholding_category", "hidden", frm.supplier_tds ? 0 : 1);
-        }
-    );
 }
 
 

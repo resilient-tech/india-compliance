@@ -4,8 +4,7 @@ import jwt
 
 import frappe
 from frappe import _
-from frappe.query_builder.functions import IfNull
-from frappe.utils import cstr, flt
+from frappe.utils import cstr, flt, getdate
 
 from india_compliance.gst_india.api_classes.taxpayer_base import (
     TaxpayerBaseAPI,
@@ -323,37 +322,30 @@ def validate_hsn_codes(doc):
     )
 
 
-def fetch_irn_details(company_gstin, irn):
-    return TaxpayerEInvoiceAPI(company_gstin=company_gstin).get_irn_details(irn)
-
-
 @frappe.whitelist()
 @otp_handler
 def create_purchase_invoice_from_irn(company_gstin, irn):
     TaxpayerBaseAPI(company_gstin).validate_auth_token()
 
-    response = fetch_irn_details(company_gstin, irn)
+    response = TaxpayerEInvoiceAPI(company_gstin=company_gstin).get_irn_details(irn)
     response = frappe._dict(response.data)
-
-    invoice_data = json.loads(
+    irn_data = json.loads(
         jwt.decode(response.SignedInvoice, options={"verify_signature": False})["data"]
     )
 
-    supplier_name = get_party_name(
-        invoice_data.get("SellerDtls"), party_type="Supplier"
-    )
-    company_name = get_party_name(invoice_data.get("BuyerDtls"), party_type="Company")
+    supplier_name = get_party_name(irn_data.get("SellerDtls"), party_type="Supplier")
+    company_name = get_party_name(irn_data.get("BuyerDtls"), party_type="Company")
 
     items, unmapped_items = get_mapped_and_unmapped_items(
-        invoice_data.get("ItemList"), supplier_name
+        irn_data.get("ItemList"), supplier_name
     )
 
     doc = create_purchase_invoice(
-        supplier_name, company_name, invoice_data.get("AckDt"), items, unmapped_items
+        supplier_name, company_name, irn_data, items, unmapped_items
     )
-    create_invoice_log(doc, invoice_data, irn, unmapped_items)
+    create_invoice_log(doc, irn_data, irn, unmapped_items)
 
-    return doc
+    return doc.name
 
 
 def get_party_name(party_details, party_type):
@@ -420,13 +412,15 @@ def get_mapped_and_unmapped_items(items, supplier_name):
 
 
 def create_purchase_invoice(
-    supplier_name, company_name, ack_date, items, unmapped_items
+    supplier_name, company_name, irn_data, items, unmapped_items
 ):
     invoice_data = {
         "doctype": "Purchase Invoice",
         "supplier": supplier_name,
         "company": company_name,
-        "posting_date": ack_date,
+        "posting_date": irn_data.get("AckDt"),
+        "bill_no": irn_data.get("DocDtls").get("No"),
+        "bill_date": getdate(irn_data.get("DocDtls").get("Dt")),
         "due_date": frappe.utils.nowdate(),
         "items": [],
     }
@@ -454,7 +448,23 @@ def create_purchase_invoice(
         )
 
     doc = frappe.get_doc(invoice_data)
-    doc.set_posting_time = 1
+
+    from erpnext.accounts.party import get_party_details
+
+    party_details = get_party_details(
+        posting_date=doc.posting_date,
+        bill_date=doc.bill_date,
+        party=doc.supplier,
+        party_type="Supplier",
+        account=doc.credit_to,
+        price_list=doc.buying_price_list,
+        fetch_payment_terms_template=(not doc.ignore_default_payment_terms_template),
+        company=doc.company,
+        doctype="Purchase Invoice",
+    )
+    doc.update(party_details)
+    doc.calculate_taxes_and_totals()
+
     doc.flags.ignore_validate = True
     doc.flags.ignore_links = True
     doc.insert(ignore_mandatory=True)
@@ -530,15 +540,13 @@ def get_item_details(args, doc):
 
 @frappe.whitelist()
 def get_gstin_with_company_name():
-    address = frappe.qb.DocType("Address")
-    links = frappe.qb.DocType("Dynamic Link")
-
-    return (
-        frappe.qb.from_(address)
-        .join(links)
-        .on(address.name == links.parent)
-        .select(address.gstin.as_("value"), links.link_name.as_("description"))
-        .where(links.link_doctype == "Company")
-        .where(IfNull(address.gstin, "") != "")
-        .run(as_dict=True)
+    data = frappe.get_all(
+        "Address",
+        filters=[
+            ["Address", "gstin", "!=", ""],
+            ["Dynamic Link", "link_doctype", "=", "Company"],
+        ],
+        fields=["gstin as value", "`tabDynamic Link`.link_name as description"],
+        distinct=True,
     )
+    return data
