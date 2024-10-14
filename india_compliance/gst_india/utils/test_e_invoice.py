@@ -251,7 +251,7 @@ class TestEInvoice(FrappeTestCase):
 
         self.assertDocumentEqual(
             {"name": test_data.get("response_data").get("result").get("Irn")},
-            frappe.get_doc("e-Invoice Log", {"sales_invoice": si.name}),
+            frappe.get_doc("e-Invoice Log", {"reference_name": si.name}),
         )
         self.assertDocumentEqual(
             {"name": test_data.get("response_data").get("result").get("EwbNo")},
@@ -297,7 +297,7 @@ class TestEInvoice(FrappeTestCase):
 
         self.assertDocumentEqual(
             {"name": test_data.get("response_data").get("result").get("Irn")},
-            frappe.get_doc("e-Invoice Log", {"sales_invoice": si.name}),
+            frappe.get_doc("e-Invoice Log", {"reference_name": si.name}),
         )
 
         self.assertFalse(
@@ -356,7 +356,7 @@ class TestEInvoice(FrappeTestCase):
 
         self.assertDocumentEqual(
             {"name": test_data.get("response_data").get("result").get("Irn")},
-            frappe.get_doc("e-Invoice Log", {"sales_invoice": si.name}),
+            frappe.get_doc("e-Invoice Log", {"reference_name": si.name}),
         )
 
         self.assertFalse(
@@ -430,7 +430,7 @@ class TestEInvoice(FrappeTestCase):
 
         self.assertDocumentEqual(
             {"name": test_data.get("response_data").get("result").get("Irn")},
-            frappe.get_doc("e-Invoice Log", {"sales_invoice": credit_note.name}),
+            frappe.get_doc("e-Invoice Log", {"reference_name": credit_note.name}),
         )
 
         self.assertFalse(
@@ -495,7 +495,7 @@ class TestEInvoice(FrappeTestCase):
 
         self.assertDocumentEqual(
             {"name": test_data.get("response_data").get("result").get("Irn")},
-            frappe.get_doc("e-Invoice Log", {"sales_invoice": debit_note.name}),
+            frappe.get_doc("e-Invoice Log", {"reference_name": debit_note.name}),
         )
 
         self.assertFalse(

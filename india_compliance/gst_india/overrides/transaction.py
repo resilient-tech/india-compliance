@@ -672,13 +672,13 @@ def validate_backdated_transaction(doc, gst_settings=None, action="create"):
         )
 
 
-def validate_hsn_codes(doc):
+def validate_hsn_codes(doc, throw=False, message=None):
     validate_hsn_code, valid_hsn_length = get_hsn_settings()
 
     if not validate_hsn_code:
         return
 
-    return _validate_hsn_codes(doc, valid_hsn_length, message=None)
+    return _validate_hsn_codes(doc, valid_hsn_length, throw, message)
 
 
 def validate_sales_reverse_charge(doc):
@@ -691,7 +691,7 @@ def validate_sales_reverse_charge(doc):
         )
 
 
-def _validate_hsn_codes(doc, valid_hsn_length, message=None):
+def _validate_hsn_codes(doc, valid_hsn_length, throw=False, message=None):
     rows_with_missing_hsn = []
     rows_with_invalid_hsn = []
 
@@ -724,6 +724,7 @@ def _validate_hsn_codes(doc, valid_hsn_length, message=None):
                 "{0}" "Please enter HSN/SAC code for the following row numbers: <br>{1}"
             ).format(message or "", frappe.bold(", ".join(rows_with_missing_hsn))),
             title=_("Invalid HSN/SAC"),
+            raise_exception=throw,
         )
 
     if rows_with_invalid_hsn:
@@ -738,6 +739,7 @@ def _validate_hsn_codes(doc, valid_hsn_length, message=None):
                 frappe.bold(", ".join(rows_with_invalid_hsn)),
             ),
             title=_("Invalid HSN/SAC"),
+            raise_exception=throw,
         )
 
 

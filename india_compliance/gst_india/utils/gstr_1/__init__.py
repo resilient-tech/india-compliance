@@ -124,6 +124,9 @@ class GSTR1_DataField(Enum):
     NET_ISSUE = "net_issue"
     UPLOAD_STATUS = "upload_status"
 
+    ERROR_CD = "error_code"
+    ERROR_MSG = "error_message"
+
 
 class GSTR1_ItemField(Enum):
     INDEX = "idx"
@@ -193,6 +196,9 @@ class GovDataField(Enum):
 
     SUPECOM_52 = "clttx"
     SUPECOM_9_5 = "paytx"
+
+    ERROR_CD = "error_cd"
+    ERROR_MSG = "error_msg"
 
     FLAG = "flag"
 
