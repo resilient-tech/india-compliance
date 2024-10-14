@@ -181,14 +181,14 @@ CUSTOM_FIELDS = {
             "label": "Taxes",
             "fieldtype": "Section Break",
             "insert_after": "get_stock_and_rate",
-            "depends_on": "eval:doc.subcontracting_order",
+            "depends_on": "eval: india_compliance.is_e_waybill_generatable_for_subcontracting(doc)",
         },
         {
             "label": "E-Waybill Info",
             "fieldname": "tab_break_ewaybill",
             "fieldtype": "Tab Break",
             "insert_after": "address_display",
-            "depends_on": "eval:doc.purpose === 'Send to Subcontractor'",
+            "depends_on": "eval: india_compliance.is_e_waybill_generatable_for_subcontracting(doc)",
         },
         {
             "label": "e-Waybill Address",

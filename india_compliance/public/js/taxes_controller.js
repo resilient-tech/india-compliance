@@ -206,13 +206,13 @@ india_compliance.taxes_controller = class TaxesController {
             return (
                 total + multiplier * (item_wise_tax_rates[item.name] || tax_row.rate)
             );
-        }, 0);
+        }, 0) || 0;
     }
 
     calculate_total_taxable_value() {
         return this.frm.doc.items.reduce((total, item) => {
             return total + item.taxable_value;
-        }, 0);
+        }, 0) || 0;
     }
 
     get_value(field, doc, default_value) {
