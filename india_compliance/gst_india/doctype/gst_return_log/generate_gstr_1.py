@@ -946,6 +946,8 @@ def get_differing_categories(mapped_summary, gov_summary):
         },
     }
 
+    IGNORED_CATEGORIES = {"Net Liability from Amendments"}
+
     gov_summary = {row["description"]: row for row in gov_summary if row["indent"] == 0}
     compared_categories = set()
     differing_categories = set()
@@ -956,6 +958,9 @@ def get_differing_categories(mapped_summary, gov_summary):
             continue
 
         category = row["description"]
+        if category in IGNORED_CATEGORIES:
+            continue
+
         compared_categories.add(category)
         gov_entry = gov_summary.get(category, {})
 
@@ -968,13 +973,19 @@ def get_differing_categories(mapped_summary, gov_summary):
 
     for row in gov_summary.values():
         # Amendments are with indent 1. Hence auto-skipped
-        if row["description"] not in compared_categories:
-            keys_to_compare = CATEGORY_KEYS.get(row["description"], KEYS_TO_COMPARE)
+        category = row["description"]
+        if category in IGNORED_CATEGORIES:
+            continue
 
-            for key in keys_to_compare:
-                if row.get(key, 0) != 0:
-                    differing_categories.add(row["description"])
-                    break
+        if category in compared_categories:
+            continue
+
+        keys_to_compare = CATEGORY_KEYS.get(row["description"], KEYS_TO_COMPARE)
+
+        for key in keys_to_compare:
+            if row.get(key, 0) != 0:
+                differing_categories.add(row["description"])
+                break
 
     return differing_categories
 

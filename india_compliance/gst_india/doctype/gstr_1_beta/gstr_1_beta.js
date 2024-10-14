@@ -2295,7 +2295,7 @@ class FileGSTR1Dialog {
                 this.filing_dialog.set_df_property("otp", "read_only", 0);
                 this.filing_dialog.set_df_property("acknowledged", "read_only", 0);
 
-                this.update_actions(pan);
+                this.update_actions_for_filing(pan);
             },
         });
 
@@ -2380,7 +2380,7 @@ class FileGSTR1Dialog {
         `;
     }
 
-    update_actions(pan) {
+    update_actions_for_filing(pan) {
         this.filing_dialog.set_primary_action("File", () => {
             if (!this.filing_dialog.get_value("acknowledged")) {
                 frappe.msgprint(
@@ -2429,6 +2429,7 @@ class FileGSTR1Dialog {
                 )
             );
         }
+
         if (response.ack_num) {
             this.frm.taxpayer_api_call("generate_gstr1").then(r => {
                 this.frm.doc.__gst_data = r.message;
@@ -2615,17 +2616,17 @@ class GSTR1Action extends FileGSTR1Dialog {
     }
 
     handle_proceed_to_file_response(response) {
-        // only show filed tab
-        ["books", "unfiled", "reconcile"].map(tab =>
-            this.frm.gstr1.tabs[`${tab}_tab`].hide()
-        );
-        this.frm.gstr1.tabs.filed_tab.set_active();
-
         const filing_status = response.filing_status;
         if (!filing_status) return;
 
         // summary matched
         if (filing_status == "Ready to File") {
+            // only show filed tab
+            ["books", "unfiled", "reconcile"].map(tab =>
+                this.frm.gstr1.tabs[`${tab}_tab`].hide()
+            );
+            this.frm.gstr1.tabs.filed_tab.set_active();
+
             this.frm.page.set_primary_action("File", () =>
                 this.frm.gstr1.gstr1_action.file_gstr1_data()
             );
