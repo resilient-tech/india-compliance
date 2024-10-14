@@ -1,7 +1,7 @@
 import re
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 from erpnext.controllers.subcontracting_controller import (
     get_materials_from_supplier,
     make_rm_stock_entry,
@@ -156,7 +156,7 @@ def make_stock_transfer_entry(**args):
     return doc.submit()
 
 
-class TestSubcontractingTransaction(FrappeTestCase):
+class TestSubcontractingTransaction(IntegrationTestCase):
     def _create_stock_entry(self, doc_args):
         """Generate Stock Entry to test e-Waybill functionalities"""
         doc_args.update({"doctype": "Stock Entry"})
