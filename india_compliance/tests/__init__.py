@@ -2,7 +2,7 @@ from functools import partial
 
 import frappe
 from frappe.desk.page.setup_wizard.setup_wizard import setup_complete
-from frappe.test_runner import make_test_objects
+from frappe.tests.utils import make_test_objects
 from frappe.utils import getdate
 from frappe.utils.nestedset import get_root_of
 from erpnext.accounts.utils import get_fiscal_year

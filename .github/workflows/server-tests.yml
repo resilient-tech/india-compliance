@@ -109,7 +109,7 @@ jobs:
                   BRANCH_TO_CLONE: ${{ env.BRANCH }}
 
             - name: Run Tests
-              run: cd ~/frappe-bench/ && bench --site test_site run-tests --app ${{ env.APP_NAME }} --coverage
+              run: cd ~/frappe-bench/ && bench --site test_site run-parallel-tests --app ${{ env.APP_NAME }} --with-coverage
               env:
                   TYPE: server
 

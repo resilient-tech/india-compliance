@@ -2,14 +2,14 @@ from datetime import date
 
 import frappe
 from frappe import parse_json, read_file
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 
 from india_compliance.gst_india.utils import get_data_file_path
 from india_compliance.gst_india.utils.gstr_2 import GSTRCategory, save_gstr_2b
 from india_compliance.gst_india.utils.gstr_2.test_gstr_2a import TestGSTRMixin
 
 
-class TestGSTR2b(FrappeTestCase, TestGSTRMixin):
+class TestGSTR2b(IntegrationTestCase, TestGSTRMixin):
     @classmethod
     def setUpClass(cls):
         cls.gstin = "01AABCE2207R1Z5"
