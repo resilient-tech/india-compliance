@@ -2418,8 +2418,8 @@ class FileGSTR1Dialog {
         this.filing_dialog.hide();
 
         if (response.error?.error_cd === "RET09001") {
-            this.frm.page.set_primary_action("Proceed to File", () =>
-                this.proceed_to_file()
+            this.frm.page.set_primary_action("Upload", () =>
+                this.upload_gstr1_data()
             );
             this.frm.page.set_indicator("Not Filed", "orange");
             this.frm.gstr1.status = "Not Filed";
@@ -2431,7 +2431,7 @@ class FileGSTR1Dialog {
         }
 
         if (response.ack_num) {
-            this.frm.taxpayer_api_call("generate_gstr1").then(r => {
+            this.frm.taxpayer_api_call("generate_gstr1", { display_alert: false }).then(r => {
                 this.frm.doc.__gst_data = r.message;
                 this.frm.trigger("load_gstr1_data");
             });

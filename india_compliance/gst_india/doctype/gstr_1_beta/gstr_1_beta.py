@@ -54,7 +54,7 @@ class GSTR1Beta(Document):
 
     @frappe.whitelist()
     @otp_handler
-    def generate_gstr1(self, sync_for=None, recompute_books=False):
+    def generate_gstr1(self, sync_for=None, recompute_books=False, display_alert=True):
         period = get_period(self.month_or_quarter, self.year)
 
         # get gstr1 log
@@ -117,7 +117,8 @@ class GSTR1Beta(Document):
         # generate gstr1
         gstr1_log.update_status("In Progress")
         frappe.enqueue(self._generate_gstr1, queue="short")
-        frappe.msgprint(_("GSTR-1 is being prepared"), alert=True)
+        if display_alert:
+            frappe.msgprint(_("GSTR-1 is being prepared"), alert=True)
 
     def _generate_gstr1(self):
         """
