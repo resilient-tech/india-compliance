@@ -1,11 +1,17 @@
 # Copyright (c) 2021, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
+<<<<<<< HEAD
 import re
 from unittest import TestCase
 
 import frappe
 from frappe.tests.utils import change_settings
+=======
+
+import frappe
+from frappe.tests import IntegrationTestCase
+>>>>>>> 98e77f4e (test: fix other dependencies for test cases)
 
 from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies import (
     execute as run_report,
@@ -16,11 +22,7 @@ from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_
 from india_compliance.gst_india.utils.tests import append_item, create_sales_invoice
 
 
-class TestHSNWiseSummaryReport(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        pass
-
+class TestHSNWiseSummaryReport(IntegrationTestCase):
     @classmethod
     def tearDownClass(cls):
         frappe.db.rollback()

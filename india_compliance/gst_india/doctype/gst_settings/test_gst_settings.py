@@ -11,6 +11,12 @@ from frappe.utils.data import getdate
 class TestGSTSettings(FrappeTestCase):
 =======
 class TestGSTSettings(IntegrationTestCase):
+    @classmethod
+    def setUpClass(cls):
+        # don't create test objects
+        frappe.local.test_objects["GST Settings"] = []
+
+        super().setUpClass()
 
 >>>>>>> 48ba8b67 (test: change of test utility)
     @change_settings("GST Settings", {"enable_api": 1})

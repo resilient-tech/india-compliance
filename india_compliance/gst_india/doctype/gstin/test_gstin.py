@@ -7,6 +7,7 @@ from responses import matchers
 =======
 from responses import matchers
 
+import frappe
 from frappe.tests import IntegrationTestCase, change_settings
 >>>>>>> 48ba8b67 (test: change of test utility)
 
@@ -30,6 +31,13 @@ TRANSPORTER_ID_API_RESPONSE = {
 
 
 class TestGSTIN(IntegrationTestCase):
+    @classmethod
+    def setUpClass(cls):
+        # don't create test objects
+        frappe.local.test_objects["GSTIN"] = []
+
+        super().setUpClass()
+
     @responses.activate
     @change_settings("GST Settings", {"validate_gstin_status": 1, "sandbox_mode": 0})
     def test_validate_gst_transporter_id(self):
