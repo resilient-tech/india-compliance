@@ -50,7 +50,14 @@ frappe.ui.form.on(DOCTYPE, {
         );
     },
 
-    refresh() {
+    refresh(frm) {
+        frm.get_field("bill_to_address_display")
+            .$wrapper.find(".ql-editor")
+            .css("white-space", "normal");
+        frm.get_field("bill_from_address_display")
+            .$wrapper.find(".ql-editor")
+            .css("white-space", "normal");
+
         if (!gst_settings.enable_e_waybill || !gst_settings.enable_e_waybill_for_sc)
             return;
 
