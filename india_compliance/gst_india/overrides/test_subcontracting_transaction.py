@@ -1,10 +1,7 @@
-<<<<<<< HEAD
-from frappe.tests.utils import FrappeTestCase
-=======
 import re
 
 import frappe
-from frappe.tests import IntegrationTestCase
+from frappe.tests.utils import FrappeTestCase
 from erpnext.controllers.subcontracting_controller import (
     get_materials_from_supplier,
     make_rm_stock_entry,
@@ -17,14 +14,10 @@ from erpnext.subcontracting.doctype.subcontracting_order.subcontracting_order im
 from erpnext.subcontracting.doctype.subcontracting_order.test_subcontracting_order import (
     create_subcontracting_order,
 )
->>>>>>> ad4e1399 (fix: only show warning for subcontracting receipt (#2652))
 
 from india_compliance.gst_india.utils.tests import create_transaction
 
 
-<<<<<<< HEAD
-class TestSubcontractingTransaction(FrappeTestCase):
-=======
 def make_raw_materials():
     raw_materials = {
         "Subcontracted SRM Item 1": {"valuation_rate": 20},
@@ -163,7 +156,7 @@ def make_stock_transfer_entry(**args):
     return doc.submit()
 
 
-class TestSubcontractingTransaction(IntegrationTestCase):
+class TestSubcontractingTransaction(FrappeTestCase):
     def _create_stock_entry(self, doc_args):
         """Generate Stock Entry to test e-Waybill functionalities"""
         doc_args.update({"doctype": "Stock Entry"})
@@ -171,7 +164,6 @@ class TestSubcontractingTransaction(IntegrationTestCase):
         stock_entry = create_transaction(**doc_args)
         return stock_entry
 
->>>>>>> ad4e1399 (fix: only show warning for subcontracting receipt (#2652))
     def test_create_and_update_stock_entry(self):
         # Create a subcontracting transaction
         args = {
