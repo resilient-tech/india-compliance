@@ -11,6 +11,13 @@ from india_compliance.gst_india.doctype.gst_hsn_code.gst_hsn_code import (
 
 
 class TestGSTHSNCode(IntegrationTestCase):
+    @classmethod
+    def setUpClass(cls):
+        # don't create test objects
+        frappe.local.test_objects["GST HSN Code"] = []
+
+        super().setUpClass()
+
     @change_settings("GST Settings", {"validate_hsn_code": 0})
     def test_validate_hsn_when_validate_hsn_code_disabled(self):
         doc = frappe.get_doc({"doctype": "GST HSN Code", "hsn_code": "1"})
