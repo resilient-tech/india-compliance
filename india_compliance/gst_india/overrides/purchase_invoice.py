@@ -4,7 +4,8 @@ import jwt
 
 import frappe
 from frappe import _
-from frappe.utils import cstr, flt, getdate
+from frappe.utils import flt, getdate
+from erpnext.accounts.party import get_party_details
 
 from india_compliance.gst_india.api_classes.taxpayer_base import (
     TaxpayerBaseAPI,
@@ -172,21 +173,21 @@ def update_item_mapping(doc):
         {"reference_name": doc.name, "reference_doctype": "Purchase Invoice"},
     )
 
-    mapping_dict = {}
-    for mapping in log.item_mapping:
-        key = (mapping.item_row_name, flt(mapping.rate, precision=2))
-        mapping_dict.setdefault(key, []).append(mapping)
-
+    item_mapping = {}
     for item in doc.items:
         key = (item.name, flt(item.rate, precision=2))
+        item_mapping[key] = {"item_code": item.item_code, "uom": item.uom}
 
-        if key in mapping_dict:
-            for map_doc in mapping_dict[key]:
-                if map_doc.erpnext_fieldname == "item_name":
-                    item.item_code = map_doc.erpnext_value
+    for item in log.item_mapping:
+        key = (item.item_row_name, flt(item.rate, precision=2))
 
-                else:
-                    item.uom = map_doc.erpnext_value
+        if key in item_mapping:
+            mapped_item = item_mapping[key]
+
+            if item.erpnext_fieldname == "item_name":
+                item.erpnext_value = mapped_item.get("item_code")
+            else:
+                item.erpnext_value = mapped_item.get("uom")
 
     log.save(ignore_permissions=True)
 
@@ -325,40 +326,138 @@ def validate_hsn_codes(doc):
 @frappe.whitelist()
 @otp_handler
 def create_purchase_invoice_from_irn(company_gstin, irn):
-    TaxpayerBaseAPI(company_gstin).validate_auth_token()
+    e_invoice_log = get_e_invoice_log(company_gstin, irn)
 
-    response = TaxpayerEInvoiceAPI(company_gstin=company_gstin).get_irn_details(irn)
-    response = frappe._dict(response.data)
-    irn_data = json.loads(
-        jwt.decode(response.SignedInvoice, options={"verify_signature": False})["data"]
-    )
+    invoice_data = format_data(json.loads(e_invoice_log.invoice_data))
 
-    supplier_name = get_party_name(irn_data.get("SellerDtls"), party_type="Supplier")
-    company_name = get_party_name(irn_data.get("BuyerDtls"), party_type="Company")
+    supplier = get_party_name(invoice_data.get("supplier"), party_type="Supplier")
+    company = get_party_name(invoice_data.get("buyer"), party_type="Company")
 
-    items, unmapped_items = get_mapped_and_unmapped_items(
-        irn_data.get("ItemList"), supplier_name
-    )
+    doc = create_purchase_invoice(supplier, company, invoice_data.get("invoice"))
+    e_invoice_log.update(
+        {
+            "reference_doctype": "Purchase Invoice",
+            "reference_name": doc.name,
+        }
+    ).save(ignore_permissions=True)
 
-    doc = create_purchase_invoice(
-        supplier_name, company_name, irn_data, items, unmapped_items
-    )
-    create_invoice_log(doc, irn_data, irn, unmapped_items)
+    update_mapped_and_unmapped_items(doc, supplier, e_invoice_log)
 
     return doc.name
 
 
+def get_e_invoice_log(company_gstin, irn):
+    if frappe.db.exists("e-Invoice Log", irn):
+        return frappe.get_doc("e-Invoice Log", irn)
+
+    irn_data = get_irn_details(company_gstin, irn)
+    return frappe.get_doc(
+        {
+            "doctype": "e-Invoice Log",
+            "irn": irn,
+            "acknowledgement_number": irn_data.get("AckNo"),
+            "acknowledged_on": irn_data.get("AckDt"),
+            "invoice_data": frappe.as_json(irn_data, indent=4),
+        }
+    ).save(ignore_permissions=True)
+
+
+def get_irn_details(company_gstin, irn):
+    TaxpayerBaseAPI(company_gstin).validate_auth_token()
+
+    response = TaxpayerEInvoiceAPI(company_gstin=company_gstin).get_irn_details(irn)
+    decoded_data = jwt.decode(
+        response.data["SignedInvoice"], options={"verify_signature": False}
+    )
+
+    return json.loads(decoded_data["data"])
+
+
+def format_data(irn_data):
+    field_map = {
+        "BuyerDtls": "buyer",
+        "SellerDtls": "supplier",
+        "Gstin": "gstin",
+        "Pin": "pincode",
+        "Stcd": "gst_state_number",
+        "Dt": "bill_date",
+        "No": "bill_no",
+        "AckDt": "posting_date",
+        "Distance": "distance",
+        "VehNo": "vehicle_no",
+        "TransId": "gst_transporter_id",
+        "HsnCd": "item_code",
+        "PrdDesc": "item_name",
+        "Qty": "qty",
+        "Unit": "uom",
+        "UnitPrice": "rate",
+    }
+    data = {
+        "supplier": {},
+        "buyer": {},
+        "invoice": {"items": []},
+    }
+
+    def map_keys(source, target, section):
+        for key, value in source.items():
+            if not field_map.get(key):
+                continue
+
+            target[section][field_map.get(key)] = value
+
+    map_keys(irn_data["BuyerDtls"], data, "buyer")
+    map_keys(irn_data["SellerDtls"], data, "supplier")
+    map_keys({**irn_data["DocDtls"], **irn_data["EwbDtls"]}, data, "invoice")
+
+    for item in irn_data["ItemList"]:
+        items_details = {
+            field_map.get(key): value
+            for key, value in item.items()
+            if field_map.get(key)
+        }
+        data["invoice"]["items"].append(items_details)
+
+    return data
+
+
+def create_purchase_invoice(supplier, company, invoice):
+    invoice_data = {
+        "doctype": "Purchase Invoice",
+        "supplier": supplier,
+        "company": company,
+        "due_date": frappe.utils.nowdate(),
+    }
+    invoice["bill_date"] = getdate(invoice["bill_date"])
+    invoice_data.update(invoice)
+
+    doc = frappe.get_doc(invoice_data)
+    doc.update(
+        get_party_details(
+            posting_date=doc.posting_date,
+            bill_date=doc.bill_date,
+            party=doc.supplier,
+            party_type="Supplier",
+            account=doc.credit_to,
+            price_list=doc.buying_price_list,
+            fetch_payment_terms_template=(
+                not doc.ignore_default_payment_terms_template
+            ),
+            company=doc.company,
+            doctype="Purchase Invoice",
+        )
+    )
+    doc.calculate_taxes_and_totals()
+
+    doc.flags.ignore_validate = True
+    doc.flags.ignore_links = True
+    doc.insert(ignore_mandatory=True)
+
+    return doc
+
+
 def get_party_name(party_details, party_type):
     try:
-        address_doc = frappe.get_doc(
-            "Address",
-            {
-                "gstin": party_details.get("Gstin") or None,
-                "pincode": cstr(party_details.get("Pin")),
-                "gst_state_number": party_details.get("Stcd"),
-            },
-        )
-
+        address_doc = frappe.get_doc("Address", party_details)
     except frappe.DoesNotExistError:
         frappe.clear_last_message()
         frappe.throw(
@@ -378,141 +477,49 @@ def get_party_name(party_details, party_type):
     frappe.throw(f"{party_type.capitalize()} not found with this address")
 
 
-def get_mapped_and_unmapped_items(items, supplier_name):
-    unmapped_items = {"item_name": [], "uom": []}
+def update_mapped_and_unmapped_items(doc, supplier, e_invoice_log):
+    def get_mapped_data(mappings, fieldname):
+        return {
+            mapping.get("e_invoice_value"): mapping.get("erpnext_value")
+            for mapping in mappings
+            if mapping.get("erpnext_fieldname") == fieldname
+        }
+
+    def log_unmapped_item(fieldname, item):
+        e_invoice_log.append(
+            "item_mapping",
+            {
+                "party": supplier,
+                "party_type": "Supplier",
+                "erpnext_fieldname": fieldname,
+                "e_invoice_value": item.get(fieldname),
+                "rate": item.rate,
+                "item_row_name": item.name,
+            },
+        )
 
     mappings = frappe.get_all(
         "e-Invoice Mapping",
-        filters={"party": supplier_name},
+        filters={"party": supplier},
         fields=["e_invoice_value", "erpnext_value", "erpnext_fieldname"],
     )
-    mapped_items = {
-        mapping.get("e_invoice_value"): mapping.get("erpnext_value")
-        for mapping in mappings
-        if mapping.get("erpnext_fieldname") == "item_name"
-    }
-    mapped_uoms = {
-        mapping.get("e_invoice_value"): mapping.get("erpnext_value")
-        for mapping in mappings
-        if mapping.get("erpnext_fieldname") == "uom"
-    }
 
-    for item in items:
-        if item_code := mapped_items.get(item.get("PrdDesc")):
-            item["item_code"] = item_code
+    mapped_items = get_mapped_data(mappings, "item_name")
+    mapped_uoms = get_mapped_data(mappings, "uom")
+
+    for item in doc.items:
+        if item_code := mapped_items.get(item.item_name):
+            item.item_code = item_code
         else:
-            unmapped_items["item_name"].append(item)
+            log_unmapped_item("item_name", item)
 
-        if item_uom := mapped_uoms.get(item.get("Unit")):
-            item["Unit"] = item_uom
+        if item_uom := mapped_uoms.get(item.uom):
+            item.uom = item_uom
         else:
-            unmapped_items["uom"].append(item)
-
-    return items, unmapped_items
-
-
-def create_purchase_invoice(
-    supplier_name, company_name, irn_data, items, unmapped_items
-):
-    invoice_data = {
-        "doctype": "Purchase Invoice",
-        "supplier": supplier_name,
-        "company": company_name,
-        "posting_date": irn_data.get("AckDt"),
-        "bill_no": irn_data.get("DocDtls").get("No"),
-        "bill_date": getdate(irn_data.get("DocDtls").get("Dt")),
-        "due_date": frappe.utils.nowdate(),
-        "items": [],
-    }
-
-    for item in items:
-        if item_code := item.get("item_code"):
-            invoice_data["items"].append(
-                {
-                    "item_code": item_code,
-                    "qty": item.get("Qty"),
-                    "rate": item.get("UnitPrice"),
-                    "uom": item.get("Unit"),
-                    "amount": item.get("TotAmt"),
-                }
-            )
-
-    for item in unmapped_items["item_name"]:
-        invoice_data["items"].append(
-            {
-                "item_name": item.get("PrdDesc"),
-                "qty": item.get("Qty"),
-                "rate": item.get("UnitPrice"),
-                "uom": item.get("Unit"),
-            }
-        )
-
-    doc = frappe.get_doc(invoice_data)
-
-    from erpnext.accounts.party import get_party_details
-
-    party_details = get_party_details(
-        posting_date=doc.posting_date,
-        bill_date=doc.bill_date,
-        party=doc.supplier,
-        party_type="Supplier",
-        account=doc.credit_to,
-        price_list=doc.buying_price_list,
-        fetch_payment_terms_template=(not doc.ignore_default_payment_terms_template),
-        company=doc.company,
-        doctype="Purchase Invoice",
-    )
-    doc.update(party_details)
-    doc.calculate_taxes_and_totals()
+            log_unmapped_item("uom", item)
 
     doc.flags.ignore_validate = True
-    doc.flags.ignore_links = True
-    doc.insert(ignore_mandatory=True)
-
-    return doc
-
-
-def create_invoice_log(doc, invoice_data, irn, unmapped_items):
-    if not len(unmapped_items["item_name"]) and not len(unmapped_items["uom"]):
-        return
-
-    e_invoice_log = (
-        frappe.get_doc("e-Invoice Log", irn)
-        if frappe.db.exists("e-Invoice Log", irn)
-        else frappe.get_doc(
-            {
-                "doctype": "e-Invoice Log",
-                "reference_doctype": "Purchase Invoice",
-                "reference_name": doc.name,
-                "irn": invoice_data.get("Irn"),
-                "is_generated_from_irn": 0,
-                "acknowledgement_number": invoice_data.get("AckNo"),
-                "acknowledged_on": invoice_data.get("AckDt"),
-                "invoice_data": frappe.as_json(invoice_data, indent=4),
-            }
-        )
-    )
-
-    item_desc_table_map = {item.get("item_name"): item.name for item in doc.items}
-
-    for field_type, items in unmapped_items.items():
-        for item in items:
-            e_invoice_log.append(
-                "item_mapping",
-                {
-                    "party_type": "Supplier",
-                    "party": doc.supplier,
-                    "erpnext_fieldname": field_type,
-                    "item_row_name": item_desc_table_map.get(item.get("PrdDesc")),
-                    "e_invoice_value": (
-                        item.get("PrdDesc")
-                        if field_type == "item_name"
-                        else item.get("Unit")
-                    ),
-                    "rate": item.get("UnitPrice"),
-                },
-            )
-
+    doc.save(ignore_permissions=True)
     e_invoice_log.save(ignore_permissions=True)
 
 
