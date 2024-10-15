@@ -168,28 +168,40 @@ def update_item_mapping(doc):
     ):
         return
 
-    log = frappe.get_doc(
-        "e-Invoice Log",
-        {"reference_name": doc.name, "reference_doctype": "Purchase Invoice"},
+    item_mapping = frappe.get_all(
+        "e-Invoice Mapping",
+        filters={
+            "erpnext_value": ["=", ""],
+            "item_row_name": ["in", [item.name for item in doc.items]],
+        },
+        fields=["item_row_name", "rate", "erpnext_fieldname"],
     )
 
-    item_mapping = {}
+    mapped_items = {
+        (item.item_row_name, flt(item.rate, precision=2), item.erpnext_fieldname)
+        for item in item_mapping
+    }
+
+    def update_mapping(item, fieldname):
+        frappe.db.set_value(
+            "e-Invoice Mapping",
+            {
+                "item_row_name": item.name,
+                "rate": item.rate,
+                "erpnext_fieldname": fieldname,
+            },
+            "erpnext_value",
+            item.get("item_code" if fieldname == "item_name" else fieldname),
+        )
+
     for item in doc.items:
-        key = (item.name, flt(item.rate, precision=2))
-        item_mapping[key] = {"item_code": item.item_code, "uom": item.uom}
+        rate = flt(item.rate, precision=2)
 
-    for item in log.item_mapping:
-        key = (item.item_row_name, flt(item.rate, precision=2))
+        for fieldname in ["item_name", "uom"]:
+            key = (item.name, rate, fieldname)
 
-        if key in item_mapping:
-            mapped_item = item_mapping[key]
-
-            if item.erpnext_fieldname == "item_name":
-                item.erpnext_value = mapped_item.get("item_code")
-            else:
-                item.erpnext_value = mapped_item.get("uom")
-
-    log.save(ignore_permissions=True)
+            if key in mapped_items:
+                update_mapping(item, fieldname)
 
 
 def get_dashboard_data(data):
@@ -210,7 +222,6 @@ def get_dashboard_data(data):
         "e-Waybill Log",
         "Integration Request",
         "GST Inward Supply",
-        "e-Invoice Log",
     )
 
     return data
@@ -420,15 +431,15 @@ def format_data(irn_data):
     return data
 
 
-def create_purchase_invoice(supplier, company, invoice):
+def create_purchase_invoice(supplier, company, invoice_info):
     invoice_data = {
         "doctype": "Purchase Invoice",
         "supplier": supplier,
         "company": company,
         "due_date": frappe.utils.nowdate(),
     }
-    invoice["bill_date"] = getdate(invoice["bill_date"])
-    invoice_data.update(invoice)
+    invoice_info["bill_date"] = getdate(invoice_info["bill_date"])
+    invoice_data.update(invoice_info)
 
     doc = frappe.get_doc(invoice_data)
     doc.update(
@@ -486,30 +497,38 @@ def update_mapped_and_unmapped_items(doc, supplier, e_invoice_log):
         }
 
     def log_unmapped_item(fieldname, item):
-        e_invoice_log.append(
-            "item_mapping",
+        frappe.get_doc(
             {
+                "doctype": "e-Invoice Mapping",
                 "party": supplier,
                 "party_type": "Supplier",
                 "erpnext_fieldname": fieldname,
                 "e_invoice_value": item.get(fieldname),
                 "rate": item.rate,
                 "item_row_name": item.name,
-            },
-        )
+            }
+        ).save(ignore_permissions=True)
 
     mappings = frappe.get_all(
         "e-Invoice Mapping",
-        filters={"party": supplier},
+        filters={"party": supplier, "erpnext_value": ["!=", ""]},
         fields=["e_invoice_value", "erpnext_value", "erpnext_fieldname"],
     )
 
     mapped_items = get_mapped_data(mappings, "item_name")
     mapped_uoms = get_mapped_data(mappings, "uom")
 
+    items = frappe.get_all(
+        "Item",
+        filters={"item_code": ["in", list(mapped_items.values())]},
+        fields=["item_code", "item_name"],
+    )
+    item_names = {item.item_code: item.item_name for item in items}
+
     for item in doc.items:
         if item_code := mapped_items.get(item.item_name):
             item.item_code = item_code
+            item.item_name = item_names.get(item_code)
         else:
             log_unmapped_item("item_name", item)
 

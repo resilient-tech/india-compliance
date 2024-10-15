@@ -22,9 +22,7 @@
   "cancelled_on",
   "column_break_3",
   "cancel_reason_code",
-  "cancel_remark",
-  "section_break_clwh",
-  "item_mapping"
+  "cancel_remark"
  ],
  "fields": [
   {
@@ -133,16 +131,6 @@
    "label": "Reference Document Name",
    "options": "reference_doctype",
    "read_only": 1
-  },
-  {
-   "fieldname": "section_break_clwh",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "item_mapping",
-   "fieldtype": "Table",
-   "label": "Item Mapping",
-   "options": "e-Invoice Mapping"
   }
  ],
  "in_create": 1,
@@ -152,7 +140,7 @@
    "link_fieldname": "irn"
   }
  ],
- "modified": "2024-09-24 17:51:10.730928",
+ "modified": "2024-09-19 18:59:01.195753",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Invoice Log",

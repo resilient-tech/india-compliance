@@ -243,7 +243,6 @@ def update_dashboard_with_gst_logs(doctype, data, *log_doctypes):
             "e-Waybill Log": "reference_name",
             "Integration Request": "reference_docname",
             "GST Inward Supply": "link_name",
-            "e-Invoice Log": "reference_name",
         }
     )
 
