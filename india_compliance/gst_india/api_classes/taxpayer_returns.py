@@ -99,6 +99,7 @@ class GSTR1API(ReturnsAPI):
 class IMSAPI(ReturnsAPI):
     API_NAME = "IMS"
     END_POINT = "returns/ims"
+    DATA_KEY = "invdata"
 
     def get_data(self, action, params, otp=None):
         return self.get(
@@ -125,12 +126,12 @@ class IMSAPI(ReturnsAPI):
         return FilesAPI().get_all(response)
 
     def save_or_reset_action(self, action, gstin, data, otp=None):
-        gov_data = {"rtin": gstin, "reqtyp": action, "invdata": data}
+        json = {"rtin": gstin, "reqtyp": action, "invdata": data}
 
-        return self.get(
+        return self.put(
             action="RESETIMS" if action == "RESET" else action,
             endpoint=self.END_POINT,
-            json=gov_data,
+            json=json,
             otp=otp,
         )
 
