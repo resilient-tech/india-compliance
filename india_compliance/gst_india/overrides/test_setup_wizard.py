@@ -1,8 +1,8 @@
 import frappe
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 
 
-class TestSetupWizard(FrappeTestCase):
+class TestSetupWizard(IntegrationTestCase):
     def test_setup_wizard_with_valid_gstin(self):
         setup_company = "Wind Power LLP"
         company = frappe.get_doc("Company", setup_company)
