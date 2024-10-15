@@ -1060,6 +1060,16 @@ CUSTOM_FIELDS = {
             "read_only": 1,
             "print_hide": 1,
         },
+        {
+            "fieldname": "is_generated_from_irn",
+            "label": "Is Generated From IRN",
+            "fieldtype": "Check",
+            "default": 0,
+            "read_only": 1,
+            "print_hide": 1,
+            "no_copy": 1,
+            "hidden": 1,
+        },
     ],
     "Purchase Receipt": [
         {

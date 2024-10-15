@@ -437,6 +437,7 @@ def create_purchase_invoice(supplier, company, invoice_info):
         "supplier": supplier,
         "company": company,
         "due_date": frappe.utils.nowdate(),
+        "is_generated_from_irn": 1,
     }
     invoice_info["bill_date"] = getdate(invoice_info["bill_date"])
     invoice_data.update(invoice_info)
@@ -549,7 +550,7 @@ def get_item_details(args, doc):
     doc = json.loads(doc)
     data = get_item_details(args, doc)
 
-    if not frappe.db.exists("e-Invoice Log", {"reference_name": doc.get("name")}):
+    if not doc.get("is_generated_from_irn"):
         return data
 
     args = json.loads(args)
