@@ -194,14 +194,22 @@ def download_invoices(json_data):
 def upload_invoices(gstin):
     json_data = get_gov_data()
 
-    # Make API Request
     api = IMSAPI()
     response = api.save_or_reset_action("SAVE", gstin, json_data)
 
     print("IMS Invoices Uploaded", response.get("reference_id"))
 
 
-def get_gov_data():
+def reset_invoices(gstin):
+    json_data = get_gov_data(is_reset=True)
+
+    api = IMSAPI()
+    response = api.save_or_reset_action("RESET", gstin, json_data)
+
+    print("IMS Invoices Reset", response.get("reference_id"))
+
+
+def get_gov_data(is_reset=False):
     category_key_map = {
         "Invoice_0": "b2b",
         "Invoice_1": "b2ba",
@@ -224,15 +232,21 @@ def get_gov_data():
         data = {
             "stin": invoice.supplier_gstin,
             "inv_typ": invoice.classification,
-            "action": "A",
             "srcform": "",
             "rtnprd": invoice.sup_return_period,
             "val": invoice.document_value,
             "pos": STATE_NUMBERS[invoice.place_of_supply.split("-")[1]],
-            "prev_status": "A",
+            "prev_status": "A",  # Previous status should be derived
             **_class.get_category_details(invoice),
             **_class.get_item_details(invoice.items[0]),
         }
+
+        if not is_reset:
+            data.update(
+                {
+                    "action": "A",  # Action should be derived
+                }
+            )
 
         if json_data.get(category):
             json_data[category].append(data)
