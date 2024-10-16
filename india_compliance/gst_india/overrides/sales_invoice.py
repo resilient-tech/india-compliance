@@ -202,14 +202,16 @@ def before_cancel(doc, method=None):
 
 
 def on_cancel(doc, method=None):
+    if not doc.irn:
+        return
+
     values = {
         "irn": doc.irn,
         "reason": "Data Entry Mistake",
         "ewaybill": doc.ewaybill or "",
         "remark": "",
     }
-    if doc.irn:
-        cancel_e_invoice(doc.name, values, show_msg=False)
+    cancel_e_invoice(doc.name, values, show_msg=False)
 
 
 def is_e_waybill_applicable(doc, gst_settings=None):

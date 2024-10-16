@@ -334,9 +334,7 @@ def cancel_e_invoice(docname, values, show_msg=True):
     doc = load_doc("Sales Invoice", docname, "cancel")
     values = frappe.parse_json(values)
 
-    valid = validate_if_e_invoice_can_be_cancelled(doc, throw=show_msg)
-    if not valid:
-        return
+    validate_if_e_invoice_can_be_cancelled(doc)
 
     if doc.get("ewaybill"):
         _cancel_e_waybill(doc, values, show_msg)
@@ -532,25 +530,21 @@ def validate_taxable_item(doc, throw=True):
     )
 
 
-def validate_if_e_invoice_can_be_cancelled(doc, throw=True):
+def validate_if_e_invoice_can_be_cancelled(doc):
     if not doc.irn:
         frappe.throw(_("IRN not found"), title=_("Error Cancelling e-Invoice"))
 
     # this works because we do run_onload in load_doc above
     acknowledged_on = doc.get_onload().get("e_invoice_info", {}).get("acknowledged_on")
 
-    is_cancellation_allowed = (
-        acknowledged_on
-        and add_to_date(get_datetime(acknowledged_on), days=1, as_datetime=True)
-        >= get_datetime()
-    )
-
-    if throw and not is_cancellation_allowed:
+    if (
+        not acknowledged_on
+        or add_to_date(get_datetime(acknowledged_on), days=1, as_datetime=True)
+        < get_datetime()
+    ):
         frappe.throw(
             _("e-Invoice can only be cancelled upto 24 hours after it is generated")
         )
-
-    return is_cancellation_allowed
 
 
 def retry_e_invoice_e_waybill_generation():
