@@ -165,9 +165,9 @@ def get_dashboard_data(data):
         "Purchase Invoice",
         data,
         "e-Waybill Log",
+        "e-Invoice Log",
         "Integration Request",
         "GST Inward Supply",
-        "e-Invoice Log",
     )
 
     return data
