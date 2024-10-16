@@ -1,8 +1,8 @@
 import frappe
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 
 
-class TestUtils(FrappeTestCase):
+class TestUtils(IntegrationTestCase):
     def test_validate_new_party(self):
         party = frappe.new_doc(
             "Customer", customer_name="Resilient Tech", gstin="24AUTPV8831F1ZZ"
