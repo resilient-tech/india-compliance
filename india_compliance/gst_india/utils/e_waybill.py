@@ -260,7 +260,7 @@ def cancel_e_waybill(*, doctype, docname, values):
     return send_updated_doc(doc)
 
 
-def _cancel_e_waybill(doc, values):
+def _cancel_e_waybill(doc, values, show_msg=True):
     """Separate function, since called in backend from e-invoice utils"""
 
     e_waybill_data = EWaybillData(doc)
@@ -280,11 +280,12 @@ def _cancel_e_waybill(doc, values):
 
     log_and_process_e_waybill_cancellation(doc, values, result)
 
-    frappe.msgprint(
-        _("e-Waybill cancelled successfully"),
-        indicator="green",
-        alert=True,
-    )
+    if show_msg:
+        frappe.msgprint(
+            _("e-Waybill cancelled successfully"),
+            indicator="green",
+            alert=True,
+        )
 
 
 def log_and_process_e_waybill_cancellation(doc, values, result):

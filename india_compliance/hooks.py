@@ -215,6 +215,7 @@ doc_events = {
         "before_cancel": [
             "india_compliance.gst_india.overrides.sales_invoice.before_cancel"
         ],
+        "on_cancel": ["india_compliance.gst_india.overrides.sales_invoice.on_cancel"],
         "after_mapping": "india_compliance.gst_india.overrides.transaction.after_mapping",
     },
     "Sales Order": {
