@@ -161,7 +161,7 @@
   {
    "fieldname": "taxes",
    "fieldtype": "Table",
-   "options": "Bill of Entry Taxes",
+   "options": "India Compliance Taxes and Charges",
    "reqd": 1
   },
   {
@@ -297,7 +297,7 @@
    "link_fieldname": "link_name"
   }
  ],
- "modified": "2024-03-29 11:36:17.991037",
+ "modified": "2024-08-12 15:48:43.769450",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Bill of Entry",

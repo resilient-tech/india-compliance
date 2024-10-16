@@ -1,4 +1,4 @@
-from frappe.tests.utils import FrappeTestCase, change_settings
+from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import getdate
 
 from india_compliance.gst_india.report.gst_sales_register_beta.gst_sales_register_beta import (
@@ -643,7 +643,7 @@ INVOICES = [
 ]
 
 
-class TestSalesRegisterBeta(FrappeTestCase):
+class TestSalesRegisterBeta(IntegrationTestCase):
     @classmethod
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def setUpClass(cls):
