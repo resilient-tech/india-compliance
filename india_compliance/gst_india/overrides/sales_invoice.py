@@ -58,7 +58,6 @@ def validate(doc, method=None):
 
     gst_settings = frappe.get_cached_doc("GST Settings")
 
-    validate_backdated_transaction(doc, gst_settings)
     validate_invoice_number(doc)
     validate_credit_debit_note(doc)
     validate_fields_and_set_status_for_e_invoice(doc, gst_settings)
@@ -139,6 +138,8 @@ def is_shipping_address_in_india(doc):
 
 
 def on_submit(doc, method=None):
+    validate_backdated_transaction(doc)
+
     if getattr(doc, "_submitted_from_ui", None) or validate_transaction(doc) is False:
         return
 
