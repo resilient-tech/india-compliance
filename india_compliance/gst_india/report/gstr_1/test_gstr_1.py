@@ -1,5 +1,5 @@
 import frappe
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 from frappe.utils import getdate
 
 from india_compliance.gst_india.report.gstr_1.gstr_1 import (
@@ -31,7 +31,7 @@ JSON_OUTPUT = {
 }
 
 
-class TestGSTR1DocumentIssuedSummary(FrappeTestCase):
+class TestGSTR1DocumentIssuedSummary(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
