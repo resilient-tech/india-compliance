@@ -414,6 +414,7 @@ def get_place_of_supply(party_details, doctype):
         party_gstin = (
             party_details.billing_address_gstin
             if determine_address_tax_category_from == "Billing Address"
+            and party_details.billing_address_gstin
             else party_details.company_gstin
         )
 
@@ -421,6 +422,7 @@ def get_place_of_supply(party_details, doctype):
         party_gstin = (
             party_details.bill_to_gstin
             if determine_address_tax_category_from == "Billing Address"
+            and party_details.bill_to_gstin
             else party_details.bill_from_gstin
         )
     else:
@@ -428,6 +430,7 @@ def get_place_of_supply(party_details, doctype):
         party_gstin = (
             party_details.company_gstin
             if determine_address_tax_category_from == "Billing Address"
+            and party_details.company_gstin
             else party_details.supplier_gstin
         )
 
