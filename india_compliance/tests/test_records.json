@@ -43,6 +43,7 @@
             "item_name": "_Test Trading Goods 1",
             "valuation_rate": 100,
             "gst_hsn_code": "61149090",
+            "stock_uom": "Nos",
             "uoms": [
                 {
                     "conversion_factor": 1,
@@ -70,6 +71,7 @@
             "item_name": "_Test Non GST Item",
             "valuation_rate": 100,
             "gst_hsn_code": "27131100",
+            "stock_uom": "Nos",
             "uoms": [
                 {
                     "conversion_factor": 1,
@@ -102,6 +104,7 @@
             "item_name": "_Test Nil Rated Item",
             "valuation_rate": 100,
             "gst_hsn_code": "61149090",
+            "stock_uom": "Nos",
             "item_defaults": [
                 {
                     "company": "_Test Indian Registered Company",
@@ -129,6 +132,7 @@
             "valuation_rate": 100,
             "item_group": "Services",
             "gst_hsn_code": "999900",
+            "stock_uom": "Nos",
             "uoms": [
                 {
                     "conversion_factor": 1,
@@ -449,50 +453,6 @@
                 {
                     "link_doctype": "Company",
                     "link_name": "_Test Indian Registered Company"
-                }
-            ]
-        }
-    ],
-    "POS Profile": [
-        {
-            "name": "_Test POS Profile",
-            "company": "_Test Indian Registered Company",
-            "warehouse": "Stores - _TIRC",
-            "write_off_account": "Write Off - _TIRC",
-            "write_off_cost_center": "Main - _TIRC",
-            "payments": [
-                {
-                    "name": "tirc",
-                    "mode_of_payment": "Cash",
-                    "default": 1
-                }
-            ]
-        },
-        {
-            "name": "_Test POS Profile 2",
-            "company": "_Test Indian Unregistered Company",
-            "warehouse": "Stores - _TIUC",
-            "write_off_account": "Write Off - _TIUC",
-            "write_off_cost_center": "Main - _TIUC",
-            "payments": [
-                {
-                    "name": "tiuc",
-                    "mode_of_payment": "Cash",
-                    "default": 1
-                }
-            ]
-        },
-        {
-            "name": "_Test POS Profile 3",
-            "company": "_Test Foreign Company",
-            "warehouse": "Stores - _TFC",
-            "write_off_account": "Write Off - _TFC",
-            "write_off_cost_center": "Main - _TFC",
-            "payments": [
-                {
-                    "name": "tfc",
-                    "mode_of_payment": "Cash",
-                    "default": 1
                 }
             ]
         }

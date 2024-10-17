@@ -1,10 +1,10 @@
 import frappe
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 
 from india_compliance.gst_india.overrides.company import get_tax_defaults
 
 
-class TestCompanyFixtures(FrappeTestCase):
+class TestCompanyFixtures(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         frappe.db.savepoint("before_test_company")

@@ -4,7 +4,7 @@ import re
 from parameterized import parameterized_class
 
 import frappe
-from frappe.tests.utils import FrappeTestCase, change_settings
+from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import today
 from erpnext.accounts.doctype.purchase_invoice.purchase_invoice import (
     make_regional_gl_entries,
@@ -50,7 +50,7 @@ from india_compliance.gst_india.utils.tests import (
         # ("POS Invoice"),
     ],
 )
-class TestTransaction(FrappeTestCase):
+class TestTransaction(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         frappe.db.savepoint("before_test_transaction")
@@ -924,7 +924,7 @@ class TestTransaction(FrappeTestCase):
                 self.fail("Item Tax Template validation message found")
 
 
-class TestQuotationTransaction(FrappeTestCase):
+class TestQuotationTransaction(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -957,7 +957,7 @@ def get_lead(first_name):
     return lead.name
 
 
-class TestSpecificTransactions(FrappeTestCase):
+class TestSpecificTransactions(IntegrationTestCase):
     def test_copy_e_waybill_fields_from_dn_to_si(self):
         "Make sure e-Waybill fields are copied from Delivery Note to Sales Invoice"
         dn = create_transaction(doctype="Delivery Note", vehicle_no="GJ01AA1111")
@@ -1017,7 +1017,7 @@ def create_tax_accounts(account_name):
     ).insert(ignore_if_duplicate=True)
 
 
-class TestRegionalOverrides(FrappeTestCase):
+class TestRegionalOverrides(IntegrationTestCase):
     @change_settings(
         "GST Settings",
         {"round_off_gst_values": 1},
@@ -1106,7 +1106,7 @@ class TestRegionalOverrides(FrappeTestCase):
         self.assertTrue(party_details.get("taxes"))
 
 
-class TestItemUpdate(FrappeTestCase):
+class TestItemUpdate(IntegrationTestCase):
     DATA = {
         "customer": "_Test Unregistered Customer",
         "item_code": "_Test Trading Goods 1",

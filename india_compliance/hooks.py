@@ -27,8 +27,6 @@ setup_wizard_complete = "india_compliance.gst_india.setup.setup_wizard_complete"
 setup_wizard_stages = "india_compliance.setup_wizard.get_setup_wizard_stages"
 
 app_include_js = "india_compliance.bundle.js"
-app_include_css = "india_compliance.bundle.css"
-
 
 doctype_js = {
     "Address": "gst_india/client_scripts/address.js",
@@ -244,7 +242,7 @@ doc_events = {
     "Subcontracting Receipt": {
         "onload": "india_compliance.gst_india.overrides.subcontracting_transaction.onload",
         "validate": "india_compliance.gst_india.overrides.subcontracting_transaction.validate",
-        "before_submit": "india_compliance.gst_india.overrides.subcontracting_transaction.before_submit",
+        "before_save": "india_compliance.gst_india.overrides.subcontracting_transaction.before_save",
         "before_mapping": "india_compliance.gst_india.overrides.subcontracting_transaction.before_mapping_subcontracting_receipt",
     },
     "Supplier": {

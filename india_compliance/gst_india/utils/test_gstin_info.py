@@ -1,12 +1,12 @@
-import unittest
 from unittest.mock import Mock, patch
 
 import frappe
+from frappe.tests import IntegrationTestCase
 
 from india_compliance.gst_india.utils.gstin_info import get_gstin_info
 
 
-class TestGstinInfo(unittest.TestCase):
+class TestGstinInfo(IntegrationTestCase):
     MOCK_GSTIN_INFO = frappe._dict(
         {
             "adadr": [
