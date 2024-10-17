@@ -48,9 +48,21 @@ frappe.ui.form.on(DOCTYPE, {
             __("Bill To (same as Supplier Address)"),
             __("Bill To")
         );
+
+        frm.get_docfield("taxes", "charge_type").options = [
+            "On Net Total",
+            "On Item Quantity",
+        ];
     },
 
-    refresh() {
+    refresh(frm) {
+        frm.get_field("bill_to_address_display")
+            .$wrapper.find(".ql-editor")
+            .css("white-space", "normal");
+        frm.get_field("bill_from_address_display")
+            .$wrapper.find(".ql-editor")
+            .css("white-space", "normal");
+
         if (!gst_settings.enable_e_waybill || !gst_settings.enable_e_waybill_for_sc)
             return;
 
