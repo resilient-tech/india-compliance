@@ -906,16 +906,22 @@ def disable_new_gst_category_notification():
     frappe.defaults.clear_user_default("needs_new_gst_category_notification")
 
 
-def validate_invoice_number(doc):
+def validate_invoice_number(doc, throw=True):
     """Validate GST invoice number requirements."""
 
-    if len(doc.name) > 16:
+    is_valid_length = len(doc.name) <= 16
+    is_valid_format = GST_INVOICE_NUMBER_FORMAT.match(doc.name)
+
+    if not throw:
+        return is_valid_length and is_valid_format
+
+    if not is_valid_length:
         frappe.throw(
             _("GST Invoice Number cannot exceed 16 characters"),
             title=_("Invalid GST Invoice Number"),
         )
 
-    if not GST_INVOICE_NUMBER_FORMAT.match(doc.name):
+    if not is_valid_format:
         frappe.throw(
             _(
                 "GST Invoice Number should start with an alphanumeric character and can"
