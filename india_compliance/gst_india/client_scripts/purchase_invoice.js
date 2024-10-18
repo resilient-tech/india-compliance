@@ -18,7 +18,16 @@ frappe.ui.form.on(DOCTYPE, {
         });
     },
 
-    onload: toggle_reverse_charge,
+    onload: function (frm) {
+        toggle_reverse_charge(frm);
+
+        if (frm.is_new()) {
+            frm.add_custom_button(
+                __("Create Invoice from IRN"),
+                () => show_irn_dialog(frm),
+            );
+        }
+    },
 
     gst_category(frm) {
         validate_gst_hsn_code(frm);
@@ -102,6 +111,54 @@ frappe.ui.form.on("Purchase Invoice Item", {
 
     gst_hsn_code: validate_gst_hsn_code,
 });
+
+
+function show_irn_dialog(frm) {
+    const dialog = new frappe.ui.Dialog({
+        title: __("Create Purchase Invoice"),
+        fields: [
+            {
+                label: "IRN",
+                fieldname: "irn",
+                fieldtype: "Data",
+                reqd: 1,
+            },
+            {
+                label: "Company GSTIN",
+                fieldname: "gstin",
+                fieldtype: "Autocomplete",
+                get_query: function () {
+                    return {
+                        query: "india_compliance.gst_india.overrides.purchase_invoice.get_gstin_with_company_name",
+                    };
+                },
+                reqd: 1,
+            }
+        ],
+        primary_action_label: 'Create',
+        primary_action(values) {
+            taxpayer_api.call(
+                method = "india_compliance.gst_india.overrides.purchase_invoice.create_purchase_invoice_from_irn",
+                args = {
+                    company_gstin: values.gstin,
+                    irn: values.irn,
+                },
+                function (r) {
+                    dialog.hide();
+                    if(!r.message) return;
+
+                    frappe.set_route("purchase-invoice", r.message);
+                },
+            );
+        },
+    });
+    dialog.show();
+
+    frappe.db.get_value("Company", frappe.defaults.get_default("company"), "gstin").then(r => {
+        dialog.fields_dict.gstin.set_input(r.message.gstin);
+    })
+}
+
 
 function toggle_reverse_charge(frm) {
     let is_read_only = 0;

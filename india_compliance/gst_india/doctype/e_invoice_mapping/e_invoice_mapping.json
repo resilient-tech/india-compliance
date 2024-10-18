@@ -1,0 +1,92 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-09-20 15:05:52.401445",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "party_type",
+  "party",
+  "erpnext_fieldname",
+  "erpnext_value",
+  "e_invoice_value",
+  "item_row_name",
+  "rate"
+ ],
+ "fields": [
+  {
+   "fieldname": "party_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Party Type",
+   "options": "DocType",
+   "read_only": 1
+  },
+  {
+   "fieldname": "party",
+   "fieldtype": "Dynamic Link",
+   "in_list_view": 1,
+   "label": "Party",
+   "options": "party_type",
+   "read_only": 1
+  },
+  {
+   "fieldname": "erpnext_fieldname",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Erpnext Fieldname",
+   "read_only": 1
+  },
+  {
+   "fieldname": "erpnext_value",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Erpnext Value"
+  },
+  {
+   "fieldname": "e_invoice_value",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "e-Invoice Value",
+   "read_only": 1
+  },
+  {
+   "fieldname": "item_row_name",
+   "fieldtype": "Data",
+   "label": "Item Row Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "rate",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Rate",
+   "precision": "2",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-10-14 23:13:02.604854",
+ "modified_by": "Administrator",
+ "module": "GST India",
+ "name": "e-Invoice Mapping",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
