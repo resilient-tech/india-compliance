@@ -391,13 +391,9 @@ def get_place_of_supply(party_details, doctype):
         "Accounts Settings", "Accounts Settings", "determine_address_tax_category_from"
     )
 
-    if pos_basis == "Shipping Address":
-        if doctype in SALES_DOCTYPES or doctype == "Payment Entry":
-            pos_gstin = party_details.company_gstin
-        elif doctype == "Stock Entry":
-            pos_gstin = party_details.bill_from_gstin
-        else:
-            pos_gstin = party_details.supplier_gstin
+    if pos_basis == "Shipping Address" and doctype in SALES_DOCTYPES:
+        # POS Basis Shipping Address is only applicable for Sales
+        pos_gstin = party_details.company_gstin
 
     # fallback to company GSTIN for sales or supplier GSTIN for purchases
     # (in retail scenarios, customer / company GSTIN may not be set)
