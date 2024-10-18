@@ -315,6 +315,12 @@ class B2B(GovDataMapper):
                 GSTR1_DataField.CUST_NAME.value: self.guess_customer_name(
                     customer_gstin
                 ),
+                GSTR1_DataField.ERROR_CD.value: customer_data.get(
+                    GovDataField.ERROR_CD.value
+                ),
+                GSTR1_DataField.ERROR_MSG.value: customer_data.get(
+                    GovDataField.ERROR_MSG.value
+                ),
             }
 
             for invoice in customer_data.get(GovDataField.INVOICES.value):
@@ -967,6 +973,12 @@ class CDNR(GovDataMapper):
                         GSTR1_DataField.CUST_GSTIN.value: customer_gstin,
                         GSTR1_DataField.CUST_NAME.value: self.guess_customer_name(
                             customer_gstin
+                        ),
+                        GSTR1_DataField.ERROR_CD.value: customer_data.get(
+                            GovDataField.ERROR_CD.value
+                        ),
+                        GSTR1_DataField.ERROR_MSG.value: customer_data.get(
+                            GovDataField.ERROR_MSG.value
                         ),
                     },
                 )
@@ -1859,7 +1871,7 @@ CLASS_MAP = {
 }
 
 
-def convert_to_internal_data_format(gov_data):
+def convert_to_internal_data_format(gov_data, for_errors=False):
     """
     Converts Gov data format to internal data format for all categories
     """
@@ -1873,7 +1885,16 @@ def convert_to_internal_data_format(gov_data):
             mapper_class().convert_to_internal_data_format(gov_data.get(category))
         )
 
-    return output
+    if not for_errors:
+        return output
+
+    errors = []
+    for category, data in output.items():
+        for row in data.values():
+            row["category"] = category
+            errors.append(row)
+
+    return errors
 
 
 def get_category_wise_data(

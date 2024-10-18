@@ -115,6 +115,9 @@ class TaxpayerAuthenticate(BaseAPI):
         # "AUTH4034": "invalid_otp",  # Invalid OTP
         "AUTH4038": "authorization_failed",  # Session Expired
         "TEC4002": "invalid_public_key",
+        "RET13506": "OTP is either expired or incorrect",
+        "RET00003": "Return Form already ready to be filed",  # Actions performed on portal directly
+        "RET09001": "Latest Summary is not available. Please generate summary and try again.",  # Actions performed on portal directly
     }
 
     def request_otp(self):
@@ -186,6 +189,13 @@ class TaxpayerAuthenticate(BaseAPI):
                 "username": self.username,
                 "auth_token": auth_token,
             },
+            endpoint="authenticate",
+        )
+
+    def initiate_otp_for_evc(self, pan, form_type):
+        return self.get(
+            action="EVCOTP",
+            params={"pan": pan, "form_type": form_type},
             endpoint="authenticate",
         )
 
@@ -317,6 +327,7 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
         self,
         method,
         action=None,
+        return_type=None,
         return_period=None,
         params=None,
         endpoint=None,
@@ -331,6 +342,10 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
                 return response
 
         headers = {"auth-token": auth_token}
+        if return_type:
+            headers["rtn_typ"] = return_type
+            headers["userrole"] = return_type
+
         if return_period:
             headers["ret_period"] = return_period
 
@@ -352,6 +367,9 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
 
     def post(self, *args, **kwargs):
         return self._request("post", *args, **kwargs)
+
+    def put(self, *args, **kwargs):
+        return self._request("put", *args, **kwargs)
 
     def before_request(self, request_args):
         self.encrypt_request(request_args.get("json"))
@@ -381,6 +399,23 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
             response.result = frappe.parse_json(b64decode(decrypted_data).decode())
 
         return response
+
+    def encrypt_request(self, json):
+        if not json:
+            return
+
+        super().encrypt_request(json)
+
+        if json.get("data"):
+            b64_data = b64encode(frappe.as_json(json.get("data")).encode())
+            json["data"] = aes_encrypt_data(b64_data.decode(), self.session_key)
+
+            if json.get("st") == "EVC":
+                sid_key = json.get("sid").encode()
+                json["sign"] = hmac_sha256(b64_data, sid_key)
+
+            else:
+                json["hmac"] = hmac_sha256(b64_data, self.session_key)
 
     def handle_error_response(self, response):
         success_value = response.get("status_cd") != 0

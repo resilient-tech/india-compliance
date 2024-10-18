@@ -6,6 +6,10 @@ div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_html"] .section-body {
     margin-top: 0;
 }
 
+div[data-page-route="GSTR-1 Beta"] .section-body {
+    max-width: 100% !important;
+}
+
 div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_html"] .form-tabs-list {
     margin-top: var(--margin-sm);
     display: flex;
@@ -100,13 +104,17 @@ div[data-page-route="GSTR-1 Beta"] .custom-tabs > .nav-item > .nav-link.active {
     color: var(--primary);
 }
 
-div[data-page-route="GSTR-1 Beta"] .custom-tabs > .nav-item:first-child:not(:has(.disabled)):hover {
+div[data-page-route="GSTR-1 Beta"]
+    .custom-tabs
+    > .nav-item:first-child:not(:has(.disabled)):hover {
     background-color: var(--btn-default-hover-bg);
     border-radius: 0.4rem 0 0 0.4rem;
     color: var(--text-color);
 }
 
-div[data-page-route="GSTR-1 Beta"] .custom-tabs > .nav-item:last-child:not(:has(.disabled)):hover {
+div[data-page-route="GSTR-1 Beta"]
+    .custom-tabs
+    > .nav-item:last-child:not(:has(.disabled)):hover {
     background-color: var(--btn-default-hover-bg);
     border-radius: 0 0.4rem 0.4rem 0;
     color: var(--text-color);

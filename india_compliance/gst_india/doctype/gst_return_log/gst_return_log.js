@@ -2,6 +2,24 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("GST Return Log", {
+    onload(frm) {
+        const attachFields = ['unfiled', 'unfiled_summary', 'filed', 'filed_summary', 'upload_error', 'authenticated_summary', 'books', 'books_summary', 'reconcile', 'reconcile_summary'];
+
+        attachFields.forEach(field => {
+            $(frm.fields_dict[field].wrapper).on('click', '.control-value a', function (e) {
+                e.preventDefault();
+
+                const args = {
+                    cmd: "india_compliance.gst_india.doctype.gst_return_log.gst_return_log.download_file",
+                    file_field: field,
+                    name: frm.doc.name,
+                    doctype: frm.doc.doctype,
+                    file_name: `${field}.gz`
+                };
+                open_url_post(frappe.request.url, args);
+            });
+        });
+    },
     refresh(frm) {
         const [month_or_quarter, year] = india_compliance.get_month_year_from_period(
             frm.doc.return_period
