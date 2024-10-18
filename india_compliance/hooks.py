@@ -193,6 +193,7 @@ doc_events = {
         "before_submit": [
             "india_compliance.gst_india.overrides.transaction.update_gst_details",
         ],
+        "after_mapping": "india_compliance.gst_india.overrides.purchase_receipt.after_mapping",
     },
     "Sales Invoice": {
         "onload": [
