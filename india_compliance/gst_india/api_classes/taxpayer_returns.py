@@ -1,7 +1,10 @@
 import frappe
 from frappe import _
 
-from india_compliance.gst_india.api_classes.taxpayer_base import TaxpayerBaseAPI
+from india_compliance.gst_india.api_classes.taxpayer_base import (
+    FilesAPI,
+    TaxpayerBaseAPI,
+)
 
 
 class ReturnsAPI(TaxpayerBaseAPI):
@@ -89,5 +92,53 @@ class GSTR1API(ReturnsAPI):
             return_period=return_period,
             params={"ret_period": return_period, "sec": section},
             endpoint="returns/einvoice",
+            otp=otp,
+        )
+
+
+class IMSAPI(ReturnsAPI):
+    API_NAME = "IMS"
+    END_POINT = "returns/ims"
+    DATA_KEY = "invdata"
+
+    def get_data(self, action, params, otp=None):
+        return self.get(
+            action=action,
+            params=params,
+            endpoint=self.END_POINT,
+            otp=otp,
+        )
+
+    def get(self, *args, **kwargs):
+        return self._request("get", *args, **kwargs, params=kwargs.pop("params", {}))
+
+    def get_files(self, gstin, token, otp=None):
+        response = self.get(
+            action="FILEDET",
+            params={"gstin": gstin, "token": token},
+            endpoint=self.END_POINT,
+            otp=otp,
+        )
+
+        if response.error_type == "queued":
+            return response
+
+        return FilesAPI().get_all(response)
+
+    def save_or_reset_action(self, action, gstin, data, otp=None):
+        json = {"rtin": gstin, "reqtyp": action, "invdata": data}
+
+        return self.put(
+            action="RESETIMS" if action == "RESET" else action,
+            endpoint=self.END_POINT,
+            json=json,
+            otp=otp,
+        )
+
+    def get_request_status(self, gstin, transaction_id, otp=None):
+        return self.get(
+            action="REQSTS",
+            endpoint=self.END_POINT,
+            params={"gstin": gstin, "int_tran_id": transaction_id},
             otp=otp,
         )
