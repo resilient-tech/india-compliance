@@ -4,7 +4,7 @@
 frappe.ui.form.on("GST Return Log", {
     refresh(frm) {
         const [month_or_quarter, year] = india_compliance.get_month_year_from_period(
-            frm.doc.return_period
+            frm.doc.return_period, frm.doc.is_quarterly
         );
 
         frm.add_custom_button(__("View GSTR-1"), () => {
