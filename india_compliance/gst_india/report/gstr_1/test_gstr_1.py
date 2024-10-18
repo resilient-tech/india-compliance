@@ -8,7 +8,10 @@ from india_compliance.gst_india.report.gstr_1.gstr_1 import (
     format_data_to_dict,
     get_json,
 )
-from india_compliance.gst_india.utils.tests import create_sales_invoice
+from india_compliance.gst_india.utils.tests import (
+    create_purchase_invoice,
+    create_sales_invoice,
+)
 
 JSON_OUTPUT = {
     "doc_det": [
@@ -25,6 +28,11 @@ JSON_OUTPUT = {
         {
             "doc_num": 5,
             "doc_typ": "Credit Note",
+            "docs": [],
+        },
+        {
+            "doc_num": 2,
+            "doc_typ": "Invoices for inward supply from unregistered person",
             "docs": [],
         },
     ]
@@ -80,6 +88,7 @@ def create_test_items():
     invoices_for_outward_supply = JSON_OUTPUT["doc_det"][0]["docs"]
     debit_notes = JSON_OUTPUT["doc_det"][1]["docs"]
     credit_notes = JSON_OUTPUT["doc_det"][2]["docs"]
+    purchase_rcm = JSON_OUTPUT["doc_det"][3]["docs"]
 
     # Sales Invoices
     sales_invoices = create_sales_invoices(3)
@@ -169,10 +178,35 @@ def create_test_items():
         }
     )
 
+    # Purchase Invoices (RCM)
+
+    # Registered RCM
+    create_purchase_invoices(5)
+
+    # Unregistered RCM
+    purchases = create_purchase_invoices(5, supplier="_Test Unregistered Supplier")
+    purchase_rcm.append(
+        {
+            "num": 1,
+            "to": purchases[-1].name,
+            "from": purchases[0].name,
+            "totnum": 5,
+            "cancel": 0,
+            "net_issue": 5,
+        }
+    )
+
 
 def create_sales_invoices(count, **kwargs):
     """Create a list of sales invoices."""
     return [create_sales_invoice(**kwargs) for _ in range(count)]
+
+
+def create_purchase_invoices(count, **kwargs):
+    """Create a list of purchase invoices."""
+    return [
+        create_purchase_invoice(**kwargs, is_reverse_charge=True) for _ in range(count)
+    ]
 
 
 def create_opening_entry():
