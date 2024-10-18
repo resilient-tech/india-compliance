@@ -330,13 +330,14 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False, messag
 
 
 @frappe.whitelist()
-def cancel_e_invoice(docname, values):
+def cancel_e_invoice(docname, values, show_msg=True):
     doc = load_doc("Sales Invoice", docname, "cancel")
     values = frappe.parse_json(values)
+
     validate_if_e_invoice_can_be_cancelled(doc)
 
     if doc.get("ewaybill"):
-        _cancel_e_waybill(doc, values)
+        _cancel_e_waybill(doc, values, show_msg)
 
     data = {
         "Irn": doc.irn,
@@ -347,14 +348,16 @@ def cancel_e_invoice(docname, values):
     result = EInvoiceAPI(doc).cancel_irn(data)
 
     log_and_process_e_invoice_cancellation(
-        doc, values, result, "e-Invoice cancelled successfully"
+        doc, values, result, "e-Invoice cancelled successfully", show_msg=show_msg
     )
 
-    doc.cancel()
+    if show_msg:
+        doc.cancel()
+
     return send_updated_doc(doc)
 
 
-def log_and_process_e_invoice_cancellation(doc, values, result, message):
+def log_and_process_e_invoice_cancellation(doc, values, result, message, show_msg=True):
     log_e_invoice(
         doc,
         {
@@ -377,7 +380,8 @@ def log_and_process_e_invoice_cancellation(doc, values, result, message):
         }
     )
 
-    frappe.msgprint(_(message), indicator="green", alert=True)
+    if show_msg:
+        frappe.msgprint(_(message), indicator="green", alert=True)
 
 
 @frappe.whitelist()
