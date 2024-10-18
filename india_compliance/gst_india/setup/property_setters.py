@@ -73,7 +73,7 @@ def get_property_setters(*, include_defaults=False):
             "doctype": "Accounts Settings",
             "fieldname": "determine_address_tax_category_from",
             "property": "read_only",
-            "value": "1",
+            "value": "0",
         },
         {
             "doctype": "Accounts Settings",
