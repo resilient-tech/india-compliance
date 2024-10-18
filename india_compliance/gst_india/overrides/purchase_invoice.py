@@ -47,7 +47,7 @@ def validate(doc, method=None):
         return
 
     validate_hsn_codes(doc)
-    if doc.is_reverse_charge:
+    if doc.is_reverse_charge and not doc.supplier_gstin:
         validate_invoice_number(doc)
 
     set_ineligibility_reason(doc)
