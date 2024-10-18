@@ -189,3 +189,20 @@ class TestGstinInfo(IntegrationTestCase):
                 },
             },
         )
+
+    def test_invalid_gstin(self):
+        self.mock_public_api.return_value = Mock()
+        self.mock_public_api.return_value.get_gstin_info.return_value = frappe._dict(
+            {
+                "errorCode": "FO8000",
+                "gstin": "24AQTPC8950E1ZO",
+                "message": "No records found",
+                "status": 500,
+                "sts": "Invalid",
+                "success": False,
+            }
+        )
+
+        gstin_info = get_gstin_info("24AQTPC8950E1ZO")
+        self.assertEqual(gstin_info.status, "Invalid")
+        self.assertEqual(gstin_info.business_name, "")

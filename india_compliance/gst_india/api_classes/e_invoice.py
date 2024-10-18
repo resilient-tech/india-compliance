@@ -24,6 +24,7 @@ class EInvoiceAPI(BaseAPI):
         # Invalid GSTIN error
         "3028": "GSTIN is invalid",
         "3029": "GSTIN is not active",
+        "3001": "Requested data is not available",
     }
 
     def setup(self, doc=None, *, company_gstin=None):
