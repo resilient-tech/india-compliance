@@ -1460,6 +1460,7 @@ class GSTR1DocumentIssuedSummary:
 
         additional_conditions = [
             self.purchase_invoice.is_reverse_charge == 1,
+            IfNull(self.purchase_invoice.supplier_gstin, "") == "",
         ]
         return self.build_query(
             doctype=self.purchase_invoice,
