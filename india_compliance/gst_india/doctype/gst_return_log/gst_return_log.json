@@ -36,9 +36,7 @@
   "column_break_ndup",
   "reconcile_summary",
   "pending_request_info_section",
-  "request_type",
-  "column_break_kohw",
-  "token"
+  "actions"
  ],
  "fields": [
   {
@@ -208,23 +206,14 @@
   },
   {
    "fieldname": "pending_request_info_section",
-   "fieldtype": "Section Break",
-   "hidden": 1,
-   "label": "Pending Request Info"
+   "fieldtype": "Section Break"
   },
   {
-   "fieldname": "request_type",
-   "fieldtype": "Data",
-   "label": "Request Type"
-  },
-  {
-   "fieldname": "column_break_kohw",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "token",
-   "fieldtype": "Data",
-   "label": "Token"
+   "fieldname": "actions",
+   "fieldtype": "Table",
+   "label": "Actions",
+   "options": "GSTR Action",
+   "read_only": 1
   }
  ],
  "in_create": 1,
@@ -235,7 +224,7 @@
    "link_fieldname": "reference_docname"
   }
  ],
- "modified": "2024-08-24 13:25:56.482743",
+ "modified": "2024-10-02 12:16:04.271962",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Return Log",

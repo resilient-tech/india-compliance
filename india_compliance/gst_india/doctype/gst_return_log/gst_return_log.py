@@ -188,6 +188,24 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
 
         return fields
 
+    def get_unprocessed_action(self, action):
+        for row in self.get("actions") or []:
+            if row.request_type == action and not row.status:
+                return row
+
+
+@frappe.whitelist()
+def download_file():
+    frappe.has_permission("GST Return Log", "read")
+
+    data = frappe._dict(frappe.local.form_dict)
+    frappe.response["filename"] = data["file_name"]
+
+    file = get_file_doc(data["doctype"], data["name"], data["file_field"])
+    frappe.response["filecontent"] = file.get_content(encodings=[])
+
+    frappe.response["type"] = "download"
+
 
 def process_gstr_1_returns_info(company, gstin, response):
     return_info = {}
@@ -265,6 +283,7 @@ def get_file_doc(doctype, docname, attached_to_field):
         )
 
     except frappe.DoesNotExistError:
+        frappe.clear_last_message()
         return None
 
 

@@ -115,8 +115,9 @@ class TaxpayerAuthenticate(BaseAPI):
         # "AUTH4034": "invalid_otp",  # Invalid OTP
         "AUTH4038": "authorization_failed",  # Session Expired
         "TEC4002": "invalid_public_key",
-        "RET00003": "Return Form already ready to be filed",
-        "RET09001": "Latest Summary is not available. Please generate summary and try again.",
+        "RET13506": "OTP is either expired or incorrect",
+        "RET00003": "Return Form already ready to be filed",  # Actions performed on portal directly
+        "RET09001": "Latest Summary is not available. Please generate summary and try again.",  # Actions performed on portal directly
     }
 
     def request_otp(self):
@@ -490,6 +491,12 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
 
         # Dummy request
         self.get_filing_preference()
+
+        frappe.cache.set_value(
+            f"authenticated_gstin:{self.company_gstin}",
+            True,
+            expires_in_sec=60 * 15,
+        )
 
         return
 

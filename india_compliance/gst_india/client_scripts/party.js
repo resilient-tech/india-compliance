@@ -85,15 +85,7 @@ function validate_pan(doctype) {
             let { pan } = frm.doc;
             if (!pan || pan.length < 10) return;
 
-            if (pan.length > 10) {
-                frappe.throw(__("PAN should be 10 characters long"));
-            }
-
-            pan = pan.trim().toUpperCase();
-
-            if (!PAN_REGEX.test(pan)) {
-                frappe.throw(__("Invalid PAN format"));
-            }
+            pan = india_compliance.validate_pan(pan);
 
             frm.doc.pan = pan;
             frm.refresh_field("pan");
@@ -149,6 +141,7 @@ async function set_gstin_options(frm) {
 
     frm._gstin_options_set_for = frm.doc.name;
     const field = frm.get_field("gstin");
+    if (!field || field.df.fieldtype != "Autocomplete") return;
     field.df.ignore_validation = true;
     field.set_data(await india_compliance.get_gstin_options(frm.doc.name, frm.doctype));
 }

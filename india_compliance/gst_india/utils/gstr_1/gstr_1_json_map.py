@@ -315,6 +315,12 @@ class B2B(GovDataMapper):
                 GSTR1_DataField.CUST_NAME.value: self.guess_customer_name(
                     customer_gstin
                 ),
+                GSTR1_DataField.ERROR_CD.value: customer_data.get(
+                    GovDataField.ERROR_CD.value
+                ),
+                GSTR1_DataField.ERROR_MSG.value: customer_data.get(
+                    GovDataField.ERROR_MSG.value
+                ),
             }
 
             for invoice in customer_data.get(GovDataField.INVOICES.value):
@@ -967,6 +973,12 @@ class CDNR(GovDataMapper):
                         GSTR1_DataField.CUST_GSTIN.value: customer_gstin,
                         GSTR1_DataField.CUST_NAME.value: self.guess_customer_name(
                             customer_gstin
+                        ),
+                        GSTR1_DataField.ERROR_CD.value: customer_data.get(
+                            GovDataField.ERROR_CD.value
+                        ),
+                        GSTR1_DataField.ERROR_MSG.value: customer_data.get(
+                            GovDataField.ERROR_MSG.value
                         ),
                     },
                 )
@@ -1821,6 +1833,14 @@ class RETSUM(GovDataMapper):
 
         return {"summary": output}
 
+    def format_data(self, data, default_data=None, for_gov=False):
+        response = super().format_data(data, default_data, for_gov)
+
+        if data.get("sec_nm") == "DOC_ISSUE":
+            response["no_of_records"] = data.get("net_doc_issued", 0)
+
+        return response
+
     def format_subsection_data(self, section, subsection_data):
         subsection = subsection_data.get("typ") or subsection_data.get("sec_nm")
         formatted_data = self.format_data(subsection_data)
@@ -1851,7 +1871,7 @@ CLASS_MAP = {
 }
 
 
-def convert_to_internal_data_format(gov_data):
+def convert_to_internal_data_format(gov_data, for_errors=False):
     """
     Converts Gov data format to internal data format for all categories
     """
@@ -1865,7 +1885,16 @@ def convert_to_internal_data_format(gov_data):
             mapper_class().convert_to_internal_data_format(gov_data.get(category))
         )
 
-    return output
+    if not for_errors:
+        return output
+
+    errors = []
+    for category, data in output.items():
+        for row in data.values():
+            row["category"] = category
+            errors.append(row)
+
+    return errors
 
 
 def get_category_wise_data(
@@ -1935,6 +1964,7 @@ def summarize_retsum_data(input_data):
 
     summarized_data = []
     total_values_keys = [
+        "no_of_records",
         "total_igst_amount",
         "total_cgst_amount",
         "total_sgst_amount",
