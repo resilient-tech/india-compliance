@@ -30,7 +30,7 @@ Object.assign(india_compliance, {
 
     QUARTER: ["Jan-Mar", "Apr-Jun", "Jul-Sep", "Oct-Dec"],
 
-    get_month_year_from_period(period) {
+    get_month_year_from_period(period, is_quarterly) {
         /**
          * Returns month or quarter and year from the period
          * Month or quarter depends on the filing frequency set in GST Settings
@@ -39,11 +39,10 @@ Object.assign(india_compliance, {
          * @returns {Array} - [month_or_quarter, year]
          */
 
-        const { filing_frequency } = gst_settings;
         const month_number = period.slice(0, 2);
         const year = period.slice(2);
 
-        if (filing_frequency === "Monthly") return [this.MONTH[month_number - 1], year];
+        if (is_quarterly === 0) return [this.MONTH[month_number - 1], year];
         else return [this.QUARTER[Math.floor(month_number / 3)], year];
     },
 

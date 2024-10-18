@@ -536,12 +536,19 @@ def restrict_gstr_1_transaction_for(posting_date, company_gstin, gst_settings=No
 def update_is_not_latest_gstr1_data(posting_date, company_gstin):
     period = posting_date.strftime("%m%Y")
 
-    frappe.db.set_value(
-        "GST Return Log", f"GSTR1-{period}-{company_gstin}", "is_latest_data", 0
-    )
+    gst_return_log = f"GSTR1-{period}-{company_gstin}"
+    frappe.db.set_value("GST Return Log", gst_return_log, "is_latest_data", 0)
 
     frappe.publish_realtime(
         "is_not_latest_data",
-        message={"filters": {"company_gstin": company_gstin, "period": period}},
+        message={
+            "filters": {
+                "company_gstin": company_gstin,
+                "period": period,
+                "is_quarterly": frappe.db.get_value(
+                    "GST Return Log", gst_return_log, "is_quarterly"
+                ),
+            }
+        },
         doctype="GSTR-1 Beta",
     )
