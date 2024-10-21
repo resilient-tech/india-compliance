@@ -1151,3 +1151,23 @@ class TestItemUpdate(FrappeTestCase):
                 },
                 doc.items[1],
             )
+
+
+class TestPlaceOfSupply(FrappeTestCase):
+    def test_pos_sales_invoice(self):
+        doc_args = {
+            "doctype": "Sales Invoice",
+            "customer": "_Test Registered Composition Customer",
+        }
+
+        settings = ["Accounts Settings", None, "determine_address_tax_category_from"]
+
+        # Shipping Address
+        frappe.db.set_value(*settings, "Shipping Address")
+        doc = create_transaction(**doc_args)
+        self.assertEqual(doc.place_of_supply, "24-Gujarat")
+
+        # Billing Address
+        frappe.db.set_value(*settings, "Billing Address")
+        doc = create_transaction(**doc_args)
+        self.assertEqual(doc.place_of_supply, "29-Karnataka")
