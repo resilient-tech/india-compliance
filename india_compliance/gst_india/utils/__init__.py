@@ -386,10 +386,18 @@ def get_place_of_supply(party_details, doctype):
     :param party_details: A frappe._dict or document containing fields related to party
     """
 
+    pos_basis = frappe.get_cached_value(
+        "Accounts Settings", "Accounts Settings", "determine_address_tax_category_from"
+    )
+
+    if pos_basis == "Shipping Address" and doctype in SALES_DOCTYPES:
+        # POS Basis Shipping Address is only applicable for Sales
+        pos_gstin = party_details.company_gstin
+
     # fallback to company GSTIN for sales or supplier GSTIN for purchases
     # (in retail scenarios, customer / company GSTIN may not be set)
 
-    if doctype in SALES_DOCTYPES or doctype == "Payment Entry":
+    elif doctype in SALES_DOCTYPES or doctype == "Payment Entry":
         # for exports, Place of Supply is set using GST category in absence of GSTIN
         if party_details.gst_category == "Overseas":
             return get_overseas_place_of_supply(party_details)
@@ -406,14 +414,18 @@ def get_place_of_supply(party_details, doctype):
             if gst_state_number and gst_state:
                 return f"{gst_state_number}-{gst_state}"
 
-        party_gstin = party_details.billing_address_gstin or party_details.company_gstin
-    else:
-        party_gstin = party_details.company_gstin or party_details.supplier_gstin
+        pos_gstin = party_details.billing_address_gstin or party_details.company_gstin
 
-    if not party_gstin:
+    elif doctype == "Stock Entry":
+        pos_gstin = party_details.bill_to_gstin or party_details.bill_from_gstin
+    else:
+        # for purchase, subcontracting order and receipt
+        pos_gstin = party_details.company_gstin or party_details.supplier_gstin
+
+    if not pos_gstin:
         return
 
-    state_code = party_gstin[:2]
+    state_code = pos_gstin[:2]
 
     if state := get_state(state_code):
         return f"{state_code}-{state}"
