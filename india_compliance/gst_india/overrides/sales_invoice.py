@@ -202,7 +202,11 @@ def before_cancel(doc, method=None):
 
 
 def on_cancel(doc, method=None):
-    if not doc.irn:
+    if (
+        not doc.irn
+        or not frappe.form_dict
+        or frappe.form_dict.cmd.endswith("cancel_e_invoice")
+    ):
         return
 
     values = {
