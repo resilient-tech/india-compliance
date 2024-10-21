@@ -1153,7 +1153,7 @@ class TestItemUpdate(FrappeTestCase):
             )
 
 
-class TestPlaceOfSupply(IntegrationTestCase):
+class TestPlaceOfSupply(FrappeTestCase):
     def test_pos_sales_invoice(self):
         doc_args = {
             "doctype": "Sales Invoice",
