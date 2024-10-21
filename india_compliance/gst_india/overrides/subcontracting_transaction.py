@@ -365,7 +365,7 @@ def get_relevant_references(
             ["Subcontracting Receipt Item", "item_code", "in", filters.received_items],
             [
                 "Subcontracting Receipt Item",
-                "subcontracting_order",
+                "subcontractiPng_order",
                 "in",
                 filters.subcontracting_orders,
             ],
