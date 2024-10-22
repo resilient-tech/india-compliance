@@ -27,6 +27,7 @@ from india_compliance.gst_india.utils import (
     get_gst_accounts_by_type,
     get_gstin_list,
 )
+from india_compliance.gst_india.utils.__init__ import validate_invoice_number
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr_1 import SUPECOM
 
@@ -1590,6 +1591,7 @@ class GSTR1DocumentIssuedSummary:
 
     def seperate_data_by_nature_of_document(self, data, doctype):
         nature_of_document = {
+            "Excluded from Report (Invalid Invoice Number)": [],
             "Excluded from Report (Same GSTIN Billing)": [],
             "Excluded from Report (Is Opening Entry)": [],
             "Invoices for outward supply": [],
@@ -1600,7 +1602,12 @@ class GSTR1DocumentIssuedSummary:
         }
 
         for doc in data:
-            if doc.is_opening == "Yes":
+            if not validate_invoice_number(doc, throw=False):
+                nature_of_document[
+                    "Excluded from Report (Invalid Invoice Number)"
+                ].append(doc)
+
+            elif doc.is_opening == "Yes":
                 nature_of_document["Excluded from Report (Is Opening Entry)"].append(
                     doc
                 )
