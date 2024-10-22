@@ -1,15 +1,21 @@
 import re
+from datetime import datetime
+
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
 
 import frappe
 from frappe import _
 
 from india_compliance.gst_india.api_classes.base import BaseAPI, check_scheduler_status
+from india_compliance.gst_india.api_classes.taxpayer_base import PublicCertificate
 from india_compliance.gst_india.constants import DISTANCE_REGEX
+from india_compliance.gst_india.utils.cryptography import encrypt_using_public_key
 
 
 class EInvoiceAPI(BaseAPI):
     API_NAME = "e-Invoice"
-    BASE_PATH = "ei/api"
+    BASE_PATH = "nic-standard/ei/api"
     SENSITIVE_INFO = BaseAPI.SENSITIVE_INFO + ("password",)
     IGNORED_ERROR_CODES = {
         # Generate IRN errors
@@ -32,27 +38,28 @@ class EInvoiceAPI(BaseAPI):
 
         check_scheduler_status()
 
+        self.company_gstin = company_gstin
         if doc:
-            company_gstin = doc.company_gstin
+            self.company_gstin = doc.company_gstin
             self.default_log_values.update(
                 reference_doctype=doc.doctype,
                 reference_name=doc.name,
             )
 
         if self.sandbox_mode:
-            company_gstin = "02AMBPG7773M002"
+            self.company_gstin = "02AMBPG7773M002"
             self.username = "adqgsphpusr1"
             self.password = "Gsp@1234"
 
-        elif not company_gstin:
+        elif not self.company_gstin:
             frappe.throw(_("Company GSTIN is required to use the e-Invoice API"))
 
         else:
-            self.fetch_credentials(company_gstin, "e-Waybill / e-Invoice")
+            self.fetch_credentials(self.company_gstin, "e-Waybill / e-Invoice")
 
         self.default_headers.update(
             {
-                "gstin": company_gstin,
+                "gstin": self.company_gstin,
                 "user_name": self.username,
                 "password": self.password,
                 "requestid": self.generate_request_id(),
@@ -112,3 +119,72 @@ class EInvoiceAPI(BaseAPI):
 
     def sync_gstin_info(self, gstin):
         return self.get(endpoint="master/syncgstin", params={"gstin": gstin})
+
+
+class EInvoiceAuth(EInvoiceAPI):
+    API_NAME = "e-Invoice Auth"
+
+    def _fetch_credentials(self, row, require_password=True):
+        self.password = row.get_password(raise_exception=require_password)
+        self.app_key = row.app_key or self.generate_app_key()
+
+    def generate_app_key(self):
+        app_key = self.generate_request_id(length=32)
+        frappe.db.set_value(
+            "GST Credential",
+            {
+                "gstin": self.company_gstin,
+                "username": self.username,
+                "service": "e-Waybill / e-Invoice",
+            },
+            {"app_key": app_key},
+        )
+
+        return app_key
+
+    def before_request(self, request_args):
+        self.encrypt_request(request_args)
+
+    def encrypt_request(self, request_args):
+        if not (json_data := request_args.get("json")):
+            return
+
+        json_data = json_data.get("Data")
+
+        if not json_data:
+            return
+
+        json_data = frappe.as_json(json_data)
+
+        encrypted_json = encrypt_using_public_key(
+            json_data,
+            self.get_public_certificate(),
+        )
+
+        request_args["json"]["Data"] = encrypted_json
+
+    def get_public_certificate(self):
+        certificate = self.settings.einvoice_public_certificate
+
+        if not certificate:
+            certificate = PublicCertificate().get_einvoice_public_certificate()
+
+        cert = x509.load_pem_x509_certificate(certificate.encode(), default_backend())
+        valid_up_to = cert.not_valid_after
+
+        if valid_up_to < datetime.now():
+            certificate = PublicCertificate().get_einvoice_public_certificate()
+
+        return certificate.encode()
+
+    def authenticate(self):
+        json = {
+            "Data": {
+                "UserName": self.username,
+                "Password": self.password,
+                "AppKey": self.app_key,
+                "ForceRefreshAccessToken": False,
+            }
+        }
+
+        return self.post(endpoint="auth", json=json)
