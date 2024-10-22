@@ -5,13 +5,17 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.functions import IfNull
-from frappe.utils import add_to_date, cint, get_link_to_form, getdate
+from frappe.utils import add_to_date, getdate
 
 from india_compliance.gst_india.constants import GST_ACCOUNT_FIELDS, GST_PARTY_TYPES
 from india_compliance.gst_india.constants.custom_fields import (
     E_INVOICE_FIELDS,
     E_WAYBILL_FIELDS,
     SALES_REVERSE_CHARGE_FIELDS,
+)
+from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
+    add_comment_to_gst_return_log,
+    update_is_not_latest_gstr1_data,
 )
 from india_compliance.gst_india.doctype.gstin.gstin import get_gstr_1_filed_upto
 from india_compliance.gst_india.page.india_compliance_account import (
@@ -528,60 +532,8 @@ def restrict_gstr_1_transaction_for(doc, gst_settings=None, action="submit"):
     if restrict:
         return gstr_1_filed_upto
 
+    # postprocess
     update_is_not_latest_gstr1_data(posting_date, doc.company_gstin)
 
     if posting_date <= getdate(gstr_1_filed_upto):
-        gst_return_log_name = get_gst_return_log_name(
-            doc.posting_date, doc.company_gstin
-        )
-        if not gst_return_log_name:
-            return
-
-        gst_return_log = frappe.get_doc("GST Return Log", gst_return_log_name)
-        gst_return_log.add_comment(
-            "Comment",
-            f"{doc.doctype} : {get_link_to_form(doc.doctype, doc.name)} has been {action} by {frappe.session.user}",
-        )
-
-
-def get_gst_return_log_name(posting_date, company_gstin):
-    posting_date = getdate(posting_date)
-    year = posting_date.year
-    month = f"{posting_date.month:02d}"
-
-    # monthly
-    if doc_name := frappe.db.exists(
-        "GST Return Log",
-        {
-            "return_period": f"{month}{year}",
-            "gstin": company_gstin,
-        },
-    ):
-        return doc_name
-
-    # quarterly
-    quarter_month = (cint(month) - 1) // 3 * 3 + 3
-    if doc_name := frappe.db.exists(
-        "GST Return Log",
-        {
-            "return_period": f"{quarter_month:02d}{year}",
-            "gstin": company_gstin,
-        },
-    ):
-        return doc_name
-
-    return None
-
-
-def update_is_not_latest_gstr1_data(posting_date, company_gstin):
-    period = posting_date.strftime("%m%Y")
-
-    frappe.db.set_value(
-        "GST Return Log", f"GSTR1-{period}-{company_gstin}", "is_latest_data", 0
-    )
-
-    frappe.publish_realtime(
-        "is_not_latest_data",
-        message={"filters": {"company_gstin": company_gstin, "period": period}},
-        doctype="GSTR-1 Beta",
-    )
+        add_comment_to_gst_return_log(doc, action)
