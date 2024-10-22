@@ -4,13 +4,8 @@ import re
 from parameterized import parameterized_class
 
 import frappe
-<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase, change_settings
-from frappe.utils import today
-=======
-from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import add_days, getdate, today
->>>>>>> b2f70edf (fix: add comment in gst return log for backdated transactions (#2656))
 from erpnext.accounts.doctype.purchase_invoice.purchase_invoice import (
     make_regional_gl_entries,
 )
@@ -935,15 +930,11 @@ def get_lead(first_name):
     return lead.name
 
 
-<<<<<<< HEAD
 class TestSpecificTransactions(FrappeTestCase):
-=======
-class TestSpecificTransactions(IntegrationTestCase):
     @classmethod
     def tearDown(cls):
         frappe.db.rollback()
 
->>>>>>> b2f70edf (fix: add comment in gst return log for backdated transactions (#2656))
     def test_copy_e_waybill_fields_from_dn_to_si(self):
         "Make sure e-Waybill fields are copied from Delivery Note to Sales Invoice"
         dn = create_transaction(doctype="Delivery Note", vehicle_no="GJ01AA1111")
