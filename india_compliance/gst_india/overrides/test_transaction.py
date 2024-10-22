@@ -5,7 +5,7 @@ from parameterized import parameterized_class
 
 import frappe
 from frappe.tests import IntegrationTestCase, change_settings
-from frappe.utils import today
+from frappe.utils import add_days, getdate, today
 from erpnext.accounts.doctype.purchase_invoice.purchase_invoice import (
     make_regional_gl_entries,
 )
@@ -958,6 +958,10 @@ def get_lead(first_name):
 
 
 class TestSpecificTransactions(IntegrationTestCase):
+    @classmethod
+    def tearDown(cls):
+        frappe.db.rollback()
+
     def test_copy_e_waybill_fields_from_dn_to_si(self):
         "Make sure e-Waybill fields are copied from Delivery Note to Sales Invoice"
         dn = create_transaction(doctype="Delivery Note", vehicle_no="GJ01AA1111")
@@ -971,6 +975,63 @@ class TestSpecificTransactions(IntegrationTestCase):
         si_return = make_sales_return(si.name)
 
         self.assertEqual(si_return.vehicle_no, None)
+
+    @change_settings("GST Settings", {"restrict_changes_after_gstr_1": 1})
+    def test_backdated_transaction(self):
+        si = create_transaction(doctype="Sales Invoice", do_not_submit=True)
+
+        # update filing date
+        gstin_doc = frappe.new_doc(
+            "GSTIN",
+            gstin=si.company_gstin,
+            status="Active",
+            gstr_1_filed_upto=add_days(today(), 1),
+        )
+        gstin_doc.save(ignore_permissions=True)
+
+        # create user
+        test_user = frappe.get_doc("User", {"email": "test@example.com"})
+        test_user.add_roles("Accounts User")
+        frappe.set_user(test_user.name)
+
+        # submit invoice
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"You are not allowed to submit Sales Invoice"),
+            si.submit,
+        )
+
+    def test_backdated_transaction_with_comment(self):
+        si = create_transaction(doctype="Sales Invoice", do_not_submit=True)
+
+        # create filing log
+        posting_date = getdate(si.posting_date)
+        gst_return_log = frappe.new_doc(
+            "GST Return Log",
+            return_period=f"{posting_date.month:02d}{posting_date.year}",
+            gstin=si.company_gstin,
+            return_type="GSTR1",
+        )
+        gst_return_log.save()
+
+        # update filing date
+        gstin_doc = frappe.new_doc(
+            "GSTIN",
+            gstin=si.company_gstin,
+            status="Active",
+            gstr_1_filed_upto=add_days(today(), 1),
+        )
+        gstin_doc.save(ignore_permissions=True)
+
+        # submit invoice
+        si.submit()
+
+        comment = frappe.get_value(
+            "Comment",
+            {"comment_type": "Comment", "reference_name": gst_return_log.name},
+            ["content"],
+        )
+        self.assertTrue(si.name in comment)
 
 
 def create_cess_accounts():
