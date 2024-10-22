@@ -45,7 +45,6 @@
   "e_invoice_applicable_companies",
   "gstr_1_section_break",
   "compare_gstr_1_data",
-  "filing_frequency",
   "column_break_cxmn",
   "restrict_changes_after_gstr_1",
   "role_allowed_to_modify",
@@ -586,12 +585,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "filing_frequency",
-   "fieldtype": "Select",
-   "label": "Filing Frequency",
-   "options": "Monthly\nQuarterly"
-  },
-  {
    "depends_on": "eval: doc.restrict_changes_after_gstr_1",
    "fieldname": "role_allowed_to_modify",
    "fieldtype": "Link",
@@ -633,7 +626,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-07-25 19:16:25.036677",
+ "modified": "2024-10-17 17:30:39.135632",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

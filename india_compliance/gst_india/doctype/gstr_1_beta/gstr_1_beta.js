@@ -108,8 +108,6 @@ frappe.ui.form.on(DOCTYPE, {
             frm.trigger("company");
         });
 
-        frm.filing_frequency = gst_settings.filing_frequency;
-
         // Set Default Values
         set_default_company_gstin(frm);
         set_options_for_year(frm);
@@ -122,7 +120,7 @@ frappe.ui.form.on(DOCTYPE, {
             const { filters } = message;
 
             const [month_or_quarter, year] =
-                india_compliance.get_month_year_from_period(filters.period);
+                india_compliance.get_month_year_from_period(filters.period, filters.is_quarterly);
 
             if (
                 frm.doc.company_gstin !== filters.company_gstin ||
@@ -187,6 +185,11 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     year(frm) {
+        render_empty_state(frm);
+        set_options_for_month_or_quarter(frm);
+    },
+
+    is_quarterly(frm){
         render_empty_state(frm);
         set_options_for_month_or_quarter(frm);
     },
@@ -2136,7 +2139,7 @@ function set_options_for_month_or_quarter(frm) {
 
     if (frm.doc.year === current_year) {
         // Options for current year till current month
-        if (frm.filing_frequency === "Monthly")
+        if (frm.doc.is_quarterly === 0)
             options = india_compliance.MONTH.slice(0, current_month_idx + 1);
         else {
             let quarter_idx;
@@ -2149,11 +2152,11 @@ function set_options_for_month_or_quarter(frm) {
         }
     } else if (frm.doc.year === "2017") {
         // Options for 2017 from July to December
-        if (frm.filing_frequency === "Monthly")
+        if (frm.doc.is_quarterly === 0)
             options = india_compliance.MONTH.slice(6);
         else options = india_compliance.QUARTER.slice(2);
     } else {
-        if (frm.filing_frequency === "Monthly") options = india_compliance.MONTH;
+        if (frm.doc.is_quarterly === 0) options = india_compliance.MONTH;
         else options = india_compliance.QUARTER;
     }
 
@@ -2181,6 +2184,7 @@ async function get_net_gst_liability(frm) {
             year: frm.doc.year,
             company_gstin: frm.doc.company_gstin,
             company: frm.doc.company,
+            is_quarterly: frm.doc.is_quarterly,
         },
     });
 
