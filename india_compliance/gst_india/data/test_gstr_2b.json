@@ -35,6 +35,18 @@
             "cgst": 200,
             "sgst": 200,
             "cess": 100
+          },
+          "ecom": {
+            "igst": 400,
+            "cgst": 200,
+            "sgst": 200,
+            "cess": 100
+          },
+          "ecoma": {
+            "igst": 400,
+            "cgst": 200,
+            "sgst": 200,
+            "cess": 100
           }
         },
         "isdsup": {
@@ -187,6 +199,18 @@
             "cgst": 200,
             "sgst": 200,
             "cess": 100
+          },
+          "ecom": {
+            "igst": 400,
+            "cgst": 200,
+            "sgst": 200,
+            "cess": 100
+          },
+          "ecoma": {
+            "igst": 400,
+            "cgst": 200,
+            "sgst": 200,
+            "cess": 100
           }
         },
         "isdsup": {
@@ -265,6 +289,128 @@
             "cgst": 200,
             "sgst": 200,
             "cess": 100
+          }
+        },
+        "othersup": {
+          "igst": 1600,
+          "cgst": 800,
+          "sgst": 800,
+          "cess": 400,
+          "cdnr": {
+            "igst": 400,
+            "cgst": 200,
+            "sgst": 200,
+            "cess": 100
+          },
+          "cdnra": {
+            "igst": 400,
+            "cgst": 200,
+            "sgst": 200,
+            "cess": 100
+          },
+          "cdnrrev": {
+            "igst": 400,
+            "cgst": 200,
+            "sgst": 200,
+            "cess": 100
+          },
+          "cdnrarev": {
+            "igst": 400,
+            "cgst": 200,
+            "sgst": 200,
+            "cess": 100
+          },
+          "isd": {
+            "igst": 400,
+            "cgst": 200,
+            "sgst": 200,
+            "cess": 100
+          },
+          "isda": {
+            "igst": 400,
+            "cgst": 200,
+            "sgst": 200,
+            "cess": 100
+          }
+        }
+      },
+      "itcrev": {
+        "nonrevsup": {
+          "igst": 1600,
+          "cgst": 800,
+          "sgst": 800,
+          "cess": 400,
+          "b2b": {
+            "igst": 400,
+            "cgst": 200,
+            "sgst": 200,
+            "cess": 100
+          },
+          "b2ba": {
+            "igst": 400,
+            "cgst": 200,
+            "sgst": 200,
+            "cess": 100
+          },
+          "cdnr": {
+            "igst": 400,
+            "cgst": 200,
+            "sgst": 200,
+            "cess": 100
+          },
+          "cdnra": {
+            "igst": 400,
+            "cgst": 200,
+            "sgst": 200,
+            "cess": 100
+          }
+        },
+        "isdsup": {
+          "igst": 0,
+          "cgst": 0,
+          "sgst": 0,
+          "cess": 0,
+          "isd": {
+            "igst": 0,
+            "cgst": 0,
+            "sgst": 0,
+            "cess": 0
+          },
+          "isda": {
+            "igst": 0,
+            "cgst": 0,
+            "sgst": 0,
+            "cess": 0
+          }
+        },
+        "imports": {
+          "igst": 0,
+          "cgst": 0,
+          "sgst": 0,
+          "cess": 0,
+          "impg": {
+            "igst": 0,
+            "cgst": 0,
+            "sgst": 0,
+            "cess": 0
+          },
+          "impgsez": {
+            "igst": 0,
+            "cgst": 0,
+            "sgst": 0,
+            "cess": 0
+          },
+          "impga": {
+            "igst": 0,
+            "cgst": 0,
+            "sgst": 0,
+            "cess": 0
+          },
+          "impgasez": {
+            "igst": 0,
+            "cgst": 0,
+            "sgst": 0,
+            "cess": 0
           }
         },
         "othersup": {
@@ -408,6 +554,112 @@
           "igst": 400,
           "cess": 100
         }
+      ],
+      "ecom": [
+        {
+          "sgst": 0,
+          "ttldocs": 1,
+          "trdnm": "GSTN",
+          "supprd": "012023",
+          "supfildt": "26-08-2023",
+          "txval": 12324,
+          "ctin": "07USERR0205A1ZS",
+          "cgst": 0,
+          "cess": 0,
+          "igst": 123.24
+        },
+        {
+          "sgst": 0,
+          "ttldocs": 1,
+          "trdnm": "GSTN",
+          "supprd": "052023",
+          "supfildt": "26-08-2023",
+          "txval": 443,
+          "ctin": "07USERR0205A1ZS",
+          "cgst": 0,
+          "cess": 0,
+          "igst": 4.43
+        }
+      ],
+      "ecoma": [
+        {
+          "sgst": 0,
+          "ttldocs": 1,
+          "trdnm": "GSTN",
+          "supprd": "012023",
+          "supfildt": "26-08-2023",
+          "txval": 12324,
+          "ctin": "07USERR0205A1ZS",
+          "cgst": 0,
+          "cess": 0,
+          "igst": 123.24
+        },
+        {
+          "sgst": 0,
+          "ttldocs": 1,
+          "trdnm": "GSTN",
+          "supprd": "052023",
+          "supfildt": "26-08-2023",
+          "txval": 443,
+          "ctin": "07USERR0205A1ZS",
+          "cgst": 0,
+          "cess": 0,
+          "igst": 4.43
+        }
+      ],
+      "itcrev": [
+        {
+          "b2b": {
+            "ctin": "00AABCE2207R1Z5",
+            "trdnm": "GSTN",
+            "supprd": "022020",
+            "supfildt": "02-03-2020",
+            "ttldocs": 3,
+            "txval": 500,
+            "igst": 400,
+            "cgst": 0,
+            "sgst": 0,
+            "cess": 100
+          },
+          "b2ba": {
+            "ctin": "00AABCE2207R1Z5",
+            "trdnm": "GSTN",
+            "supprd": "022020",
+            "supfildt": "02-03-2020",
+            "ttldocs": 3,
+            "txval": 500,
+            "igst": 400,
+            "cgst": 0,
+            "sgst": 0,
+            "cess": 100
+          },
+          "cdnr": {
+            "ctin": "00AABCE2207R1Z5",
+            "trdnm": "GSTN",
+            "supprd": "022020",
+            "supfildt": "02-03-2020",
+            "nttyp": "D",
+            "ttldocs": 3,
+            "txval": 400,
+            "igst": 0,
+            "cgst": 200,
+            "sgst": 200,
+            "cess": 0
+          },
+          "cdnra": {
+            "ctin": "00AABCE2207R1Z5",
+            "trdnm": "GSTN",
+            "supprd": "022020",
+            "supfildt": "02-03-2020",
+            "nttyp": "D",
+            "ttldocs": 3,
+            "txval": 400,
+            "igst": 0,
+            "cgst": 200,
+            "sgst": 200,
+            "cess": 0
+          }
+        }
       ]
     },
     "docdata": {
@@ -430,18 +682,7 @@
               "diffprcnt": 1,
               "srctyp": "e-Invoice",
               "irn": "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR",
-              "irngendate": "24-12-2019",
-              "items": [
-                {
-                  "num": 1,
-                  "rt": 5,
-                  "txval": 400,
-                  "igst": 0,
-                  "cgst": 200,
-                  "sgst": 200,
-                  "cess": 0
-                }
-              ]
+              "irngendate": "24-12-2019"
             }
           ]
         }
@@ -464,18 +705,7 @@
               "rev": "N",
               "itcavl": "N",
               "rsn": "P",
-              "diffprcnt": 1,
-              "items": [
-                {
-                  "num": 1,
-                  "rt": 5,
-                  "txval": 400,
-                  "igst": 0,
-                  "cgst": 200,
-                  "sgst": 200,
-                  "cess": 0
-                }
-              ]
+              "diffprcnt": 1
             }
           ]
         }
@@ -500,18 +730,7 @@
               "diffprcnt": 1,
               "srctyp": "e-Invoice",
               "irn": "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR",
-              "irngendate": "24-12-2019",
-              "items": [
-                {
-                  "num": 1,
-                  "rt": 5,
-                  "txval": 400,
-                  "igst": 400,
-                  "cgst": 0,
-                  "sgst": 0,
-                  "cess": 0
-                }
-              ]
+              "irngendate": "24-12-2019"
             }
           ]
         }
@@ -536,18 +755,7 @@
               "rev": "N",
               "itcavl": "N",
               "rsn": "C",
-              "diffprcnt": 1,
-              "items": [
-                {
-                  "num": 1,
-                  "rt": 5,
-                  "txval": 400,
-                  "igst": 0,
-                  "cgst": 200,
-                  "sgst": 200,
-                  "cess": 0
-                }
-              ]
+              "diffprcnt": 1
             }
           ]
         }
@@ -627,6 +835,195 @@
               "txval": 123.02,
               "igst": 123.02,
               "cess": 0.5
+            }
+          ]
+        }
+      ],
+      "ecom": [
+        {
+          "inv": [
+            {
+              "dt": "01-01-2023",
+              "val": 343242,
+              "rev": "N",
+              "itcavl": "Y",
+              "pos": "23",
+              "typ": "R",
+              "inum": "doc1",
+              "rsn": "",
+              "srctyp": "e-Invoice",
+              "irn": "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR",
+              "irngendate": "24-12-2019"
+            }
+          ],
+          "trdnm": "GSTN",
+          "supfildt": "26-08-2023",
+          "supprd": "012023",
+          "ctin": "07USERR0205A1ZS"
+        },
+        {
+          "inv": [
+            {
+              "dt": "01-05-2023",
+              "val": 234324234,
+              "rev": "N",
+              "itcavl": "Y",
+              "pos": "23",
+              "typ": "R",
+              "inum": "E123",
+              "rsn": "",
+              "srctyp": "e-Invoice",
+              "irn": "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR",
+              "irngendate": "24-12-2019"
+            }
+          ],
+          "trdnm": "GSTN",
+          "supfildt": "26-08-2023",
+          "supprd": "052023",
+          "ctin": "07USERR0205A1ZS"
+        }
+      ],
+      "ecoma": [
+        {
+          "inv": [
+            {
+              "dt": "01-01-2023",
+              "val": 343242,
+              "rev": "N",
+              "itcavl": "Y",
+              "pos": "23",
+              "typ": "R",
+              "inum": "doc1",
+              "rsn": "",
+              "srctyp": "e-Invoice",
+              "irn": "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR",
+              "irngendate": "24-12-2019"
+            }
+          ],
+          "trdnm": "GSTN",
+          "supfildt": "26-08-2023",
+          "supprd": "012023",
+          "ctin": "07USERR0205A1ZS"
+        },
+        {
+          "inv": [
+            {
+              "dt": "01-05-2023",
+              "val": 234324234,
+              "rev": "N",
+              "itcavl": "Y",
+              "pos": "23",
+              "typ": "R",
+              "inum": "E123",
+              "rsn": "",
+              "srctyp": "e-Invoice",
+              "irn": "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR",
+              "irngendate": "24-12-2019"
+            }
+          ],
+          "trdnm": "GSTN",
+          "supfildt": "26-08-2023",
+          "supprd": "052023",
+          "ctin": "07USERR0205A1ZS"
+        }
+      ],
+      "itcrev": [
+        {
+          "b2b": [
+            {
+              "ctin": "01AABCE2207R1Z5",
+              "trdnm": "GSTN",
+              "supfildt": "18-11-2019",
+              "supprd": "112019",
+              "inv": [
+                {
+                  "inum": "S008400",
+                  "typ": "R",
+                  "dt": "24-11-2016",
+                  "val": 729248.16,
+                  "pos": "06",
+                  "rev": "N",
+                  "itcavl": "N",
+                  "rsn": "P",
+                  "diffprcnt": 1,
+                  "srctyp": "e-Invoice",
+                  "irn": "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR",
+                  "irngendate": "24-12-2019"
+                }
+              ]
+            }
+          ],
+          "b2ba": [
+            {
+              "ctin": "01AABCE2207R1Z5",
+              "trdnm": "GSTN",
+              "supfildt": "18-11-2019",
+              "supprd": "112019",
+              "inv": [
+                {
+                  "oinum": "S008400",
+                  "oidt": "24-11-2016",
+                  "inum": "S008400",
+                  "typ": "R",
+                  "dt": "24-11-2016",
+                  "val": 729248.16,
+                  "pos": "06",
+                  "rev": "N",
+                  "itcavl": "N",
+                  "rsn": "P",
+                  "diffprcnt": 1
+                }
+              ]
+            }
+          ],
+          "cdnr": [
+            {
+              "ctin": "01AAAAP1208Q1ZS",
+              "trdnm": "GSTN",
+              "supfildt": "18-11-2019",
+              "supprd": "112019",
+              "nt": [
+                {
+                  "ntnum": "533515",
+                  "typ": "D",
+                  "suptyp": "R",
+                  "dt": "23-09-2016",
+                  "val": 729248.16,
+                  "pos": "01",
+                  "rev": "N",
+                  "itcavl": "N",
+                  "rsn": "C",
+                  "diffprcnt": 1,
+                  "srctyp": "e-Invoice",
+                  "irn": "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR",
+                  "irngendate": "24-12-2019"
+                }
+              ]
+            }
+          ],
+          "cdnra": [
+            {
+              "ctin": "01AAAAP1208Q1ZS",
+              "trdnm": "GSTN",
+              "supfildt": "18-11-2019",
+              "supprd": "112019",
+              "nt": [
+                {
+                  "onttyp": "D",
+                  "ontnum": "533515",
+                  "ontdt": "23-09-2016",
+                  "ntnum": "533515",
+                  "typ": "D",
+                  "suptyp": "R",
+                  "dt": "23-09-2016",
+                  "val": 729248.16,
+                  "pos": "01",
+                  "rev": "N",
+                  "itcavl": "N",
+                  "rsn": "C",
+                  "diffprcnt": 1
+                }
+              ]
             }
           ]
         }

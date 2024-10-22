@@ -1193,16 +1193,6 @@ class ImportDialog {
             } else if (this.return_type === ReturnType.GSTR2B) {
                 this.dialog.$wrapper.find(".btn-secondary").addClass("hidden");
                 this.dialog.set_primary_action(__("Download"), () => {
-                    if (this.has_no_pending_download) {
-                        frappe.msgprint({
-                            message:
-                                "There are no pending downloads for the selected period. GSTR2B is static and does not require redownload.",
-                            title: "No Pending Downloads",
-                            indicator: "orange",
-                        });
-                        return;
-                    }
-
                     download_gstr(
                         this.frm,
                         this.date_range,
@@ -1278,9 +1268,6 @@ class ImportDialog {
                 : frappe.render_template("gstr_download_history", download_history);
 
         this.dialog.fields_dict.history.html(html);
-
-        // flag
-        this.has_no_pending_download = typeof message.pending_download == "string";
     }
 
     async update_return_period() {
