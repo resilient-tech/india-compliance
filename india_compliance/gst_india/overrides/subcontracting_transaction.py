@@ -355,27 +355,25 @@ def set_address_display(doc):
 
 @frappe.whitelist()
 def get_relevant_references(
-    supplier, supplied_items, received_items, subcontracting_orders
+    doctype=None, txt=None, searchfield=None, start=None, page_len=None, filters=None
 ):
-    if isinstance(supplied_items, str):
-        supplied_items = frappe.parse_json(supplied_items)
-        received_items = frappe.parse_json(received_items)
-        subcontracting_orders = frappe.parse_json(subcontracting_orders)
+    if isinstance(filters, str):
+        filters = frappe.parse_json(filters)
 
-    # same filters used for set_query in JS
+    filters = frappe._dict(filters)
 
     receipt_returns = frappe.db.get_all(
         "Subcontracting Receipt",
         filters=[
             ["docstatus", "=", 1],
             ["is_return", "=", 1],
-            ["supplier", "=", supplier],
-            ["Subcontracting Receipt Item", "item_code", "in", received_items],
+            ["supplier", "=", filters.supplier],
+            ["Subcontracting Receipt Item", "item_code", "in", filters.received_items],
             [
                 "Subcontracting Receipt Item",
                 "subcontracting_order",
                 "in",
-                subcontracting_orders,
+                filters.subcontracting_orders,
             ],
         ],
         pluck="name",
@@ -387,17 +385,27 @@ def get_relevant_references(
         filters=[
             ["docstatus", "=", 1],
             ["purpose", "=", "Send to Subcontractor"],
-            ["subcontracting_order", "in", subcontracting_orders],
-            ["supplier", "=", supplier],
-            ["Stock Entry Detail", "item_code", "in", supplied_items],
+            ["supplier", "=", filters.supplier],
+            ["Stock Entry Detail", "item_code", "in", filters.supplied_items],
         ],
-        pluck="name",
+        or_filters=[
+            ["subcontracting_order", "is", "not set"],
+            ["subcontracting_order", "in", filters.subcontracting_orders],
+        ],
+        fields=["name", "subcontracting_order"],
         group_by="name",
     )
 
-    data = {"Subcontracting Receipt": receipt_returns, "Stock Entry": stock_entries}
+    if filters.filters_for == "Subcontracting Receipt":
+        return [(name,) for name in receipt_returns]
 
-    return data
+    elif filters.filters_for == "Stock Entry":
+        return [(row.name,) for row in stock_entries]
+
+    return {
+        "Subcontracting Receipt": receipt_returns,
+        "Stock Entry": [row.name for row in stock_entries if row.subcontracting_order],
+    }
 
 
 def remove_duplicates(doc):
