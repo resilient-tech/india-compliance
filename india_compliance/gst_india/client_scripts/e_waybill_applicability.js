@@ -243,7 +243,9 @@ class StockEntryEwaybill extends EwaybillApplicability {
         if (
             !gst_settings.enable_e_waybill ||
             !gst_settings.enable_e_waybill_for_sc ||
-            this.frm.doc.purpose !== "Send to Subcontractor"
+            !["Material Transfer", "Material Issue", "Send to Subcontractor"].includes(
+                this.frm.doc.purpose
+            )
         )
             return false;
 
@@ -282,15 +284,30 @@ class StockEntryEwaybill extends EwaybillApplicability {
         let is_ewb_generatable = this.is_e_waybill_applicable(show_message);
 
         let message_list = [];
+        const same_gstin = this.frm.doc.bill_from_gstin === this.frm.doc.bill_to_gstin;
 
         if (!this.frm.doc.bill_to_address) {
             is_ewb_generatable = false;
             message_list.push("Bill To address is mandatory to generate e-Waybill.");
         }
 
-        if (this.frm.doc.bill_from_gstin === this.frm.doc.bill_to_gstin) {
+        if (
+            (this.frm.doc.purpose === "Send to Subcontractor" ||
+                (this.frm.doc.purpose === "Material Transfer" &&
+                    this.frm.doc.is_return)) &&
+            same_gstin
+        ) {
             is_ewb_generatable = false;
             message_list.push("Bill From GSTIN and Bill To GSTIN are same.");
+        }
+
+        if (
+            ["Material Transfer", "Material Issue"].includes(this.frm.doc.purpose) &&
+            !this.frm.doc.is_return &&
+            !same_gstin
+        ) {
+            is_ewb_generatable = false;
+            message_list.push("Bill From GSTIN and Bill To GSTIN are different.");
         }
 
         if (show_message) {
@@ -304,7 +321,9 @@ class StockEntryEwaybill extends EwaybillApplicability {
 
     is_e_waybill_api_enabled() {
         return (
-            this.frm.doc.purpose == "Send to Subcontractor" &&
+            ["Material Transfer", "Material Issue", "Send to Subcontractor"].includes(
+                this.frm.doc.purpose
+            ) &&
             super.is_e_waybill_api_enabled() &&
             gst_settings.enable_e_waybill_for_sc
         );

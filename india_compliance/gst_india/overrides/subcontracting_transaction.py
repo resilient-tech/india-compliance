@@ -23,7 +23,11 @@ from india_compliance.gst_india.overrides.transaction import (
     validate_mandatory_fields,
     validate_place_of_supply,
 )
-from india_compliance.gst_india.utils import get_gst_accounts_by_type, is_api_enabled
+from india_compliance.gst_india.utils import (
+    get_gst_accounts_by_type,
+    is_api_enabled,
+    is_outward_material_transfer,
+)
 from india_compliance.gst_india.utils import (
     validate_invoice_number as validate_transaction_name,
 )
@@ -72,11 +76,18 @@ def after_mapping_subcontracting_order(doc, method, source_doc):
 
 
 def after_mapping_stock_entry(doc, method, source_doc):
-    if source_doc.doctype == "Subcontracting Order":
+    if source_doc.doctype != "Subcontracting Order":
+        doc.taxes_and_charges = ""
+        doc.taxes = []
+
+    if doc.purpose != "Material Transfer" or not doc.is_return:
         return
 
-    doc.taxes_and_charges = ""
-    doc.taxes = []
+    doc.bill_to_address = source_doc.billing_address
+    doc.bill_from_address = source_doc.supplier_address
+    doc.bill_to_gstin = source_doc.company_gstin
+    doc.bill_from_gstin = source_doc.supplier_gstin
+    set_address_display(doc)
 
 
 def before_mapping_subcontracting_receipt(doc, method, source_doc, table_maps):
@@ -168,7 +179,7 @@ def onload(doc, method=None):
 
 
 def validate(doc, method=None):
-    if ignore_gst_validation_for_subcontracting(doc):
+    if cannot_generate_ewaybill(doc):
         return
 
     if doc.doctype in ("Stock Entry", "Subcontracting Receipt"):
@@ -209,7 +220,7 @@ def before_submit(doc, method=None):
 
 
 def validate_doc_references(doc):
-    is_stock_entry = doc.doctype == "Stock Entry" and doc.purpose == "Material Transfer"
+    is_stock_entry = doc.doctype == "Stock Entry" and doc.purpose != "Material Transfer"
     is_subcontracting_receipt = (
         doc.doctype == "Subcontracting Receipt" and not doc.is_return
     )
@@ -314,8 +325,11 @@ class SubcontractingGSTAccounts(GSTAccounts):
         self.validate_for_charge_type()
 
     def validate_for_same_party_gstin(self):
-        company_gstin = self.doc.get("company_gstin") or self.doc.get("bill_from_gstin")
-        party_gstin = self.doc.get("supplier_gstin") or self.doc.get("bill_to_gstin")
+        if is_outward_material_transfer(self.doc):
+            return
+
+        company_gstin = self.doc.get("company_gstin") or self.doc.bill_from_gstin
+        party_gstin = self.doc.get("supplier_gstin") or self.doc.bill_to_gstin
 
         if not party_gstin or company_gstin != party_gstin:
             return
@@ -416,3 +430,20 @@ def remove_duplicates(doc):
         doc.doc_references = []
         for row in references:
             doc.append("doc_references", dict(link_doctype=row[0], link_name=row[1]))
+
+
+def cannot_generate_ewaybill(doc):
+    if (
+        doc.doctype == "Stock Entry"
+        and doc.purpose == "Send to Subcontractor"
+        and not doc.subcontracting_order
+    ):
+        return True
+    if doc.doctype == "Stock Entry" and doc.purpose not in [
+        "Material Transfer",
+        "Material Issue",
+        "Send to Subcontractor",
+    ]:
+        return True
+
+    return ignore_gst_validations(doc)

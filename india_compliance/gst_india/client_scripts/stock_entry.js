@@ -34,6 +34,11 @@ frappe.ui.form.on(DOCTYPE, {
                 filters: get_filters_for_relevant_stock_entries(doc),
             };
         });
+
+        // No event trigger are called when form is new
+        if (frm.is_new()) {
+            frm.trigger("bill_to_address");
+        }
     },
 
     onload(frm) {
@@ -44,8 +49,7 @@ frappe.ui.form.on(DOCTYPE, {
         on_change_set_address(
             frm,
             "supplier_address",
-            "bill_to_address",
-            __("Bill To (same as Supplier Address)"),
+            ...get_field_and_label(frm, "party_field"),
             __("Bill To")
         );
 
@@ -84,8 +88,7 @@ frappe.ui.form.on(DOCTYPE, {
         on_change_set_address(
             frm,
             "supplier_address",
-            "bill_to_address",
-            __("Bill To (same as Supplier Address)"),
+            ...get_field_and_label(frm, "party_field"),
             __("Bill To")
         );
     },
@@ -119,7 +122,10 @@ frappe.ui.form.on(DOCTYPE, {
                     name: frm.doc.company,
                 },
                 callback(r) {
-                    frm.set_value("bill_from_address", r.message);
+                    frm.set_value(
+                        get_field_and_label(frm, "company_field")[0],
+                        r.message
+                    );
                 },
             });
         }
@@ -201,4 +207,25 @@ function get_filters_for_relevant_stock_entries(doc) {
 
 function get_items(doc) {
     return Array.from(new Set(doc.items.map(row => row.item_code)));
+}
+
+function get_field_and_label(frm, field) {
+    let field_label_dict = {};
+
+    if (frm.doc.purpose === "Material Transfer" && frm.doc.is_return) {
+        field_label_dict = {
+            party_field: [
+                "bill_from_address",
+                __("Bill From (same as Supplier Address)"),
+            ],
+            company_field: ["bill_to_address", __("Bill To")],
+        };
+    } else {
+        field_label_dict = {
+            party_field: ["bill_to_address", __("Bill To (same as Supplier Address)")],
+            company_field: ["bill_from_address", __("Bill From")],
+        };
+    }
+
+    return field_label_dict[field];
 }
