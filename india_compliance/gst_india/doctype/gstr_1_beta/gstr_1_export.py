@@ -2068,6 +2068,7 @@ def download_gstr_1_json(
         if subcategory in {
             GSTR1_SubCategory.NIL_EXEMPT.value,
             GSTR1_SubCategory.HSN.value,
+            GSTR1_SubCategory.DOC_ISSUE.value,
         }:
             continue
 

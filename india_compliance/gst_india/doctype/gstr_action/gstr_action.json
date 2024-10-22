@@ -1,0 +1,61 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-09-09 17:43:22.979394",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "request_type",
+  "token",
+  "status",
+  "creation_time",
+  "integration_request"
+ ],
+ "fields": [
+  {
+   "fieldname": "request_type",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Request Type"
+  },
+  {
+   "fieldname": "token",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Token"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Status"
+  },
+  {
+   "fieldname": "creation_time",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Creation Time"
+  },
+  {
+   "fieldname": "integration_request",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Integration Request",
+   "options": "Integration Request",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2024-09-12 12:36:05.679413",
+ "modified_by": "Administrator",
+ "module": "GST India",
+ "name": "GSTR Action",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -20,9 +20,11 @@
   "section_break_oisv",
   "unfiled",
   "filed",
+  "upload_error",
   "column_break_hxfu",
   "unfiled_summary",
   "filed_summary",
+  "authenticated_summary",
   "computed_data_section",
   "is_latest_data",
   "section_break_emlz",
@@ -32,7 +34,9 @@
   "reconciled_data_section",
   "reconcile",
   "column_break_ndup",
-  "reconcile_summary"
+  "reconcile_summary",
+  "pending_request_info_section",
+  "actions"
  ],
  "fields": [
   {
@@ -187,6 +191,29 @@
    "label": "Return Type",
    "read_only": 1,
    "reqd": 1
+  },
+  {
+   "fieldname": "upload_error",
+   "fieldtype": "Attach",
+   "label": "Upload Error Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "authenticated_summary",
+   "fieldtype": "Attach",
+   "label": "Authenticated Summary",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pending_request_info_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "actions",
+   "fieldtype": "Table",
+   "label": "Actions",
+   "options": "GSTR Action",
+   "read_only": 1
   }
  ],
  "in_create": 1,
@@ -197,7 +224,7 @@
    "link_fieldname": "reference_docname"
   }
  ],
- "modified": "2024-08-14 17:53:03.509293",
+ "modified": "2024-10-02 12:16:04.271962",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Return Log",
