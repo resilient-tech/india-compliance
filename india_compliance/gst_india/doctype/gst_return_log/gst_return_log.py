@@ -261,7 +261,7 @@ def process_gstr_1_returns_info(company, gstin, response):
 
 
 def get_gst_return_log(posting_date, company_gstin):
-    period = posting_date.strftime("%m%Y")
+    period = getdate(posting_date).strftime("%m%Y")
     if name := frappe.db.exists(DOCTYPE, f"GSTR1-{period}-{company_gstin}"):
         return frappe.get_doc(DOCTYPE, name)
 
