@@ -1,5 +1,18 @@
 // Copyright (c) 2017, Frappe Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
+const ALERT_HTML = `
+    <div class="gst-account-changed-alert alert alert-primary fade show d-flex align-items-center justify-content-between border-0" role="alert">
+        <div>
+            Do you want to update Item GST Details based on GST Accounts
+           <button id="run-patch-button" class="btn btn-primary btn-sm ml-2">
+                Run patches
+            </button>
+        </div>
+        <button type="button" class="close" data-dismiss="alert">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+`;
 
 frappe.ui.form.on("GST Settings", {
     setup(frm) {
@@ -33,12 +46,60 @@ frappe.ui.form.on("GST Settings", {
     enable_e_invoice: set_auto_generate_e_waybill,
     auto_generate_e_invoice: set_auto_generate_e_waybill,
     generate_e_waybill_with_e_invoice: set_auto_generate_e_waybill,
+    before_save: async function (frm) {
+        const { message } = await frm.call("check_gst_account_changes");
+        frm.has_gst_account_changed = message
+    },
     after_save(frm) {
         // sets latest values in frappe.boot for current user
         // other users will still need to refresh page
         Object.assign(gst_settings, frm.doc);
+        show_gst_account_alert(frm);
     },
 });
+
+function show_gst_account_alert(frm) {
+    if (!frm.has_gst_account_changed) return;
+    //alert already exists
+    if (frm.layout.wrapper.find(".gst-account-changed-alert").length !== 0) return;
+
+    const alert_element = $(ALERT_HTML).prependTo(frm.layout.wrapper);
+
+    alert_element
+        .find("#run-patch-button")
+        .on("click", () => open_patch_schedule_dialog(alert_element));
+}
+
+function open_patch_schedule_dialog(alert_element) {
+    const dialog = new frappe.ui.Dialog({
+        title: __("Schedule Patch Execution Time"),
+        fields: [
+            {
+                label: "Execution Time",
+                fieldname: "execution_time",
+                fieldtype: "Datetime",
+                default: `${frappe.datetime.add_days(
+                    frappe.datetime.now_date(),
+                    1
+                )} 02:00:00`,
+            },
+        ],
+        primary_action_label: __("Schedule"),
+        primary_action(values) {
+            if (values.execution_time < frappe.datetime.now_datetime()) {
+                frappe.msgprint(__("Patch run time cannot be in the past"));
+                return;
+            }
+            dialog.hide();
+            frappe.call({
+                method: "india_compliance.gst_india.doctype.gst_settings.gst_settings.schedule_gst_patches",
+                args: { cron_time: values.execution_time },
+            });
+            alert_element.remove();
+        },
+    });
+    dialog.show();
+}
 
 function filter_accounts(frm, account_field) {
     frm.set_query(account_field, "gst_accounts", (_, cdt, cdn) => {
