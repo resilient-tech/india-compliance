@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.functions import IfNull
-from frappe.utils import add_to_date, getdate
+from frappe.utils import add_to_date, cint, get_link_to_form, getdate
 
 from india_compliance.gst_india.constants import GST_ACCOUNT_FIELDS, GST_PARTY_TYPES
 from india_compliance.gst_india.constants.custom_fields import (
@@ -496,12 +496,12 @@ def update_not_applicable_status(e_invoice_applicability_date=None, company=None
     query.run()
 
 
-def restrict_gstr_1_transaction_for(posting_date, company_gstin, gst_settings=None):
+def restrict_gstr_1_transaction_for(doc, gst_settings=None, action="submit"):
     """
     Check if the user is allowed to modify transactions before the GSTR-1 filing date
     Additionally, update the `is_not_latest_gstr1_data` field in the GST Return Log
     """
-    posting_date = getdate(posting_date)
+    posting_date = getdate(doc.posting_date)
 
     if not gst_settings:
         gst_settings = frappe.get_cached_doc("GST Settings")
@@ -511,7 +511,7 @@ def restrict_gstr_1_transaction_for(posting_date, company_gstin, gst_settings=No
     if not gst_settings.restrict_changes_after_gstr_1:
         restrict = False
 
-    gstr_1_filed_upto = get_gstr_1_filed_upto(company_gstin)
+    gstr_1_filed_upto = get_gstr_1_filed_upto(doc.company_gstin)
 
     if not gstr_1_filed_upto:
         restrict = False
@@ -528,7 +528,47 @@ def restrict_gstr_1_transaction_for(posting_date, company_gstin, gst_settings=No
     if restrict:
         return gstr_1_filed_upto
 
-    update_is_not_latest_gstr1_data(posting_date, company_gstin)
+    update_is_not_latest_gstr1_data(posting_date, doc.company_gstin)
+
+    if posting_date <= getdate(gstr_1_filed_upto):
+        gst_return_log_name = get_gst_return_log_name(
+            doc.posting_date, doc.company_gstin
+        )
+        if not gst_return_log_name:
+            return
+
+        gst_return_log = frappe.get_doc("GST Return Log", gst_return_log_name)
+        gst_return_log.add_comment(
+            "Comment",
+            f"{doc.doctype} : {get_link_to_form(doc.doctype, doc.name)} has been {action} by {frappe.session.user}",
+        )
+
+
+def get_gst_return_log_name(posting_date, company_gstin):
+    posting_date = getdate(posting_date)
+    year = posting_date.year
+    month = f"{posting_date.month:02d}"
+
+    # monthly
+    if doc_name := frappe.db.exists(
+        "GST Return Log",
+        {
+            "return_period": f"{month}{year}",
+            "gstin": company_gstin,
+        },
+    ):
+        return doc_name
+
+    # quarterly
+    quarter_month = (cint(month) - 1) // 3 * 3 + 3
+    if doc_name := frappe.db.exists(
+        "GST Return Log",
+        {
+            "return_period": f"{quarter_month:02d}{year}",
+            "gstin": company_gstin,
+        },
+    ):
+        return doc_name
 
     return None
 

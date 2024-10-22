@@ -5,7 +5,7 @@ import frappe
 from frappe import _, bold
 from frappe.contacts.doctype.address.address import get_default_address
 from frappe.model.utils import get_fetch_values
-from frappe.utils import cint, flt, format_date, get_link_to_form, getdate
+from frappe.utils import cint, flt, format_date
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 
 from india_compliance.gst_india.constants import (
@@ -20,10 +20,7 @@ from india_compliance.gst_india.constants.custom_fields import E_WAYBILL_INV_FIE
 from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
     restrict_gstr_1_transaction_for,
 )
-from india_compliance.gst_india.doctype.gstin.gstin import (
-    get_and_validate_gstin_status,
-    get_gstr_1_filed_upto,
-)
+from india_compliance.gst_india.doctype.gstin.gstin import get_and_validate_gstin_status
 from india_compliance.gst_india.utils import (
     get_all_gst_accounts,
     get_gst_account_gst_tax_type_map,
@@ -664,45 +661,13 @@ def get_source_state_code(doc):
 
 
 def validate_backdated_transaction(doc, gst_settings=None, action="submit"):
-    gst_settings = gst_settings or frappe.get_cached_doc("GST Settings")
-
-    gstr_1_filed_upto = restrict_gstr_1_transaction_for(
-        doc.posting_date, doc.company_gstin, gst_settings
-    )
-
-    if gstr_1_filed_upto:
+    if gstr_1_filed_upto := restrict_gstr_1_transaction_for(doc, gst_settings, action):
         frappe.throw(
             _(
                 "You are not allowed to {0} {1} as GSTR-1 has been filed upto {2}"
             ).format(action, doc.doctype, frappe.bold(format_date(gstr_1_filed_upto))),
             title=_("Restricted Changes"),
         )
-
-    gstr_1_filed_upto = get_gstr_1_filed_upto(doc.company_gstin)
-    if not gstr_1_filed_upto or getdate(doc.posting_date) > gstr_1_filed_upto:
-        return
-
-    gst_return_log_name = get_gst_return_log_name(doc.company_gstin, gstr_1_filed_upto)
-    if not gst_return_log_name:
-        return
-
-    gst_return_log = frappe.get_doc("GST Return Log", gst_return_log_name)
-    gst_return_log.add_comment(
-        "Comment",
-        f"{doc.doctype} : {get_link_to_form(doc.doctype, doc.name)} has been {action} by {frappe.session.user}",
-    )
-
-
-def get_gst_return_log_name(company_gstin, gstr_1_filed_upto):
-    filters = {
-        "return_period": f"{gstr_1_filed_upto.month:02d}{gstr_1_filed_upto.year}",
-        "gstin": company_gstin,
-    }
-
-    if doc_name := frappe.db.exists("GST Return Log", filters):
-        return doc_name
-
-    return None
 
 
 def validate_hsn_codes(doc, throw=False, message=None):
