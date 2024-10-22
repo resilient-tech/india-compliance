@@ -83,8 +83,6 @@ def validate(doc, method=None):
         return
 
     if doc.party_type == "Customer":
-        validate_backdated_transaction(doc)
-
         # Presume is export with GST if GST accounts are present
         doc.is_export_with_gst = 1
         validate_transaction_for_advance_payment(doc, method)
@@ -98,6 +96,9 @@ def validate(doc, method=None):
 
 
 def on_submit(doc, method=None):
+    if doc.party_type == "Customer":
+        validate_backdated_transaction(doc)
+
     make_gst_revesal_entry_from_advance_payment(doc)
 
 
@@ -112,7 +113,7 @@ def before_cancel(doc, method=None):
     validate_backdated_transaction(doc, action="cancel")
 
 
-def validate_backdated_transaction(doc, action="create"):
+def validate_backdated_transaction(doc, action="submit"):
     for row in doc.taxes:
         if row.gst_tax_type in TAX_TYPES and row.tax_amount != 0:
             _validate_backdated_transaction(doc, action=action)
