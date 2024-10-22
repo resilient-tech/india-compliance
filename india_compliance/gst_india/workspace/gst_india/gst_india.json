@@ -42,7 +42,7 @@
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
+   "is_query_report": 1,
    "label": "GSTR-1",
    "link_count": 0,
    "link_to": "GSTR-1",
@@ -92,7 +92,7 @@
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
+   "is_query_report": 1,
    "label": "Bill of Entry Summary",
    "link_count": 0,
    "link_to": "Bill of Entry Summary",
@@ -180,7 +180,7 @@
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
+   "is_query_report": 1,
    "label": "GSTR-3B Details",
    "link_count": 0,
    "link_to": "GSTR-3B Details",
@@ -190,7 +190,7 @@
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
+   "is_query_report": 1,
    "label": "GST Balance",
    "link_count": 0,
    "link_to": "GST Balance",
@@ -210,7 +210,7 @@
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
+   "is_query_report": 1,
    "label": "Audit Trail",
    "link_count": 0,
    "link_to": "Audit Trail",
@@ -220,16 +220,47 @@
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
+   "is_query_report": 1,
    "label": "GST Advance Detail",
    "link_count": 0,
    "link_to": "GST Advance Detail",
    "link_type": "Report",
    "onboard": 0,
+   "report_ref_doctype": "Payment Entry",
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "New Reports",
+   "link_count": 2,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "GST Sales Register Beta",
+   "link_count": 0,
+   "link_to": "GST Sales Register Beta",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "GST Job Work Stock Movement",
+   "link_count": 0,
+   "link_to": "GST Job Work Stock Movement",
+   "link_type": "Report",
+   "onboard": 0,
+   "report_ref_doctype": "Subcontracting Order",
    "type": "Link"
   }
  ],
- "modified": "2024-07-14 18:01:43.058590",
+ "modified": "2024-10-05 10:28:10.623892",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST India",
