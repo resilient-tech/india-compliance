@@ -20,6 +20,7 @@ from india_compliance.gst_india.utils import (
     validate_invoice_number,
 )
 from india_compliance.gst_india.utils.e_invoice import (
+    cancel_e_invoice,
     get_e_invoice_info,
     validate_e_invoice_applicability,
     validate_hsn_codes_for_e_invoice,
@@ -199,6 +200,23 @@ def before_cancel(doc, method=None):
         reverse_gst_adjusted_against_payment_entry(
             reference.voucher_detail_no, reference.payment_name
         )
+
+
+def on_cancel(doc, method=None):
+    if (
+        not doc.irn
+        or not frappe.form_dict
+        or frappe.form_dict.cmd.endswith("cancel_e_invoice")
+    ):
+        return
+
+    values = {
+        "irn": doc.irn,
+        "reason": "Data Entry Mistake",
+        "ewaybill": doc.ewaybill or "",
+        "remark": "",
+    }
+    cancel_e_invoice(doc.name, values, show_msg=False)
 
 
 def is_e_waybill_applicable(doc, gst_settings=None):
