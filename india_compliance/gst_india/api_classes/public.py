@@ -18,6 +18,7 @@ class PublicAPI(BaseAPI):
         self.default_headers.update({"requestid": self.generate_request_id()})
 
     def get_gstin_info(self, gstin):
+        self.gstin = gstin
         response = self.get("search", params={"action": "TP", "gstin": gstin})
         if self.sandbox_mode:
             response.update(
@@ -33,3 +34,13 @@ class PublicAPI(BaseAPI):
         return self.get(
             "returns", params={"action": "RETTRACK", "gstin": gstin, "fy": fy}
         )
+
+    def is_ignored_error(self, response_json):
+        if response_json.get("errorCode") == "FO8000":
+            response_json.update(
+                {
+                    "sts": "Invalid",
+                    "gstin": self.gstin,
+                }
+            )
+            return True
