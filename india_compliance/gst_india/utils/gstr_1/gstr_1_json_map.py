@@ -1567,7 +1567,9 @@ class DOC_ISSUE(GovDataMapper):
         doc_nature_wise_data = {}
 
         for invoice in input_data:
-            if invoice[GSTR1_DataField.DOC_TYPE.value] not in self.DOCUMENT_NATURE:
+            if invoice[GSTR1_DataField.DOC_TYPE.value].startswith(
+                "Excluded from Report"
+            ):
                 continue
 
             doc_nature_wise_data.setdefault(
