@@ -226,12 +226,6 @@
    "link_to": "GST Advance Detail",
    "link_type": "Report",
    "onboard": 0,
-<<<<<<< HEAD
-   "type": "Link"
-  }
- ],
- "modified": "2024-07-14 18:01:43.058590",
-=======
    "report_ref_doctype": "Payment Entry",
    "type": "Link"
   },
@@ -267,7 +261,6 @@
   }
  ],
  "modified": "2024-10-05 10:28:10.623892",
->>>>>>> d50fa6ac (fix: set query report 1 in gst india workspace)
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST India",
