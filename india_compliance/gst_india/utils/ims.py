@@ -46,7 +46,7 @@ class IMS:
             # source_form = invoice.srcform,
             # is_pending_action_allowed = invoice.ispendactnallwd,
             **self.get_invoice_details(invoice),
-            item=self.get_transaction_item(invoice),
+            items=self.get_transaction_item(invoice),
         )
         return transaction
 
@@ -186,9 +186,17 @@ class B2BCNA(B2BCN):
         return invoice_details
 
 
-def download_invoices(json_data):
+def download_invoices(otp=None):
+    api = IMSAPI(company_gstin="24AAUPV7468F1ZW")
+    response = api.get_data(
+        "GETINV", params={"section": ["B2B", "B2BA", "CN", "DN", "CNA", "DNA"]}, otp=otp
+    )  # section is a list
+
+    if response.error_type == "no_docs_found":
+        return
+
     for category in CATEGORIES:
-        getattr(ims, category)().create_transactions(json_data.get(category.lower()))
+        getattr(ims, category)().create_transactions(response.get(category.lower(), []))
 
 
 def upload_invoices(gstin):

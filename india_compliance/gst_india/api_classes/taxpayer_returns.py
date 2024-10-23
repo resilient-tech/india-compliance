@@ -109,9 +109,6 @@ class IMSAPI(ReturnsAPI):
             otp=otp,
         )
 
-    def get(self, *args, **kwargs):
-        return self._request("get", *args, **kwargs, params=kwargs.pop("params", {}))
-
     def get_files(self, gstin, token, otp=None):
         response = self.get(
             action="FILEDET",
