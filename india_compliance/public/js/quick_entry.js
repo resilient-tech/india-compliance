@@ -24,11 +24,11 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 fieldtype: "Section Break",
                 description: this.api_enabled
                     ? __(
-                        `When you enter a GSTIN, the permanent address linked to it is
+                          `When you enter a GSTIN, the permanent address linked to it is
                         autofilled.<br>
                         Change the {0} to autofill other addresses.`,
-                        [frappe.meta.get_label("Address", "pincode")]
-                    )
+                          [frappe.meta.get_label("Address", "pincode")]
+                      )
                     : "",
                 collapsible: 0,
             },
@@ -338,7 +338,8 @@ class ItemQuickEntryForm extends frappe.ui.form.QuickEntryForm {
     }
 
     set_hsn_from_item_group() {
-        let item_group_field = this.dialog.fields_dict.item_group;
+        const item_group_field = this.dialog.fields_dict.item_group;
+        const hsn_code_field = this.dialog.fields_dict.gst_hsn_code;
 
         item_group_field.df.onchange = async () => {
             const { message } = await frappe.db.get_value(
@@ -346,7 +347,10 @@ class ItemQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 item_group_field.value,
                 "gst_hsn_code"
             );
-            this.dialog.set_value("gst_hsn_code", message.gst_hsn_code);
+
+            if (message.gst_hsn_code && message.gst_hsn_code !== hsn_code_field.value) {
+                this.dialog.set_value("gst_hsn_code", message.gst_hsn_code);
+            }
         };
     }
 }
