@@ -13,8 +13,13 @@ from india_compliance.gst_india.api_classes.taxpayer_base import (
     TaxpayerBaseAPI,
     otp_handler,
 )
+from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
+from india_compliance.gst_india.utils.__init__ import get_month_or_quarter_dict
 from india_compliance.gst_india.utils.gstin_info import get_gstr_1_return_status
+
+MONTH = list(get_month_or_quarter_dict().keys())[4:]
+QUARTER = ["Jan-Mar", "Apr-Jun", "Jul-Sep", "Oct-Dec"]
 
 
 class GSTR1Beta(Document):
@@ -52,7 +57,8 @@ class GSTR1Beta(Document):
     @frappe.whitelist()
     @otp_handler
     def generate_gstr1(self, sync_for=None, recompute_books=False):
-        period = get_period(self.month_or_quarter, self.year)
+        self.validate_and_update_filing_frequency()
+        period = get_period(self.valid_month_or_quarter, self.year)
 
         # get gstr1 log
         if log_name := frappe.db.exists(
@@ -83,7 +89,7 @@ class GSTR1Beta(Document):
             gstr1_log.gstin = self.company_gstin
             gstr1_log.return_period = period
             gstr1_log.return_type = "GSTR1"
-            gstr1_log.is_quarterly = self.is_quarterly
+            gstr1_log.is_quarterly = self.valid_is_quarterly
             gstr1_log.insert()
 
         settings = frappe.get_cached_doc("GST Settings")
@@ -124,9 +130,9 @@ class GSTR1Beta(Document):
         filters = frappe._dict(
             company=self.company,
             company_gstin=self.company_gstin,
-            month_or_quarter=self.month_or_quarter,
+            month_or_quarter=self.valid_month_or_quarter,
             year=self.year,
-            is_quarterly=self.is_quarterly,
+            is_quarterly=self.valid_is_quarterly,
         )
 
         try:
@@ -149,6 +155,8 @@ class GSTR1Beta(Document):
         Once data is generated, update the status and publish the data
         """
         if not filters:
+            self.is_quarterly = self.valid_is_quarterly
+            self.month_or_quarter = self.valid_month_or_quarter
             filters = self
 
         if getattr(self, "gstr1_log", None):
@@ -162,6 +170,56 @@ class GSTR1Beta(Document):
             user=frappe.session.user,
             doctype=self.doctype,
         )
+
+    def validate_and_update_filing_frequency(self):
+        api = GSTR1API(company_gstin=self.company_gstin)
+        filters = {
+            "fy": api.get_fy(),
+            "gstin": self.company_gstin,
+            "action": "GETPREF",
+        }
+        if response := frappe.db.get_list(
+            "Integration Request",
+            {"data": frappe.as_json(filters, indent=4), "output": ["like", "%result%"]},
+            pluck="output",
+            limit=1,
+            order_by="creation desc",
+        ):
+            output = frappe.parse_json(response[0])
+            preference = self.get_preference(output.result.get("response"))
+
+        else:
+            response = api.get_filing_preference()
+            preference = self.get_preference(response.response)
+
+        if (self.is_quarterly == 1 and preference == "Q") or (
+            self.is_quarterly == 0 and preference == "M"
+        ):
+            self.valid_is_quarterly = self.is_quarterly
+            self.valid_month_or_quarter = self.month_or_quarter
+            return
+
+        self.toggle_filing_preference()
+
+    def toggle_filing_preference(self):
+        self.valid_is_quarterly = 1 if self.is_quarterly == 0 else 0
+
+        if self.valid_is_quarterly:
+            # If the user has selected a month but the preference is quarter
+            quarter = MONTH.index(self.month_or_quarter) // 3
+            self.valid_month_or_quarter = QUARTER[quarter]
+        else:
+            # If the user has selected a quarter but uthe preference is month
+            quarter_idx = QUARTER.index(self.month_or_quarter)
+            self.valid_month_or_quarter = MONTH[quarter_idx * 3]
+
+    def get_preference(self, response):
+        if "-" in self.month_or_quarter:
+            quarter_idx = QUARTER.index(self.month_or_quarter)
+        else:
+            quarter_idx = MONTH.index(self.month_or_quarter) // 3
+
+        return response[quarter_idx].get("preference")
 
 
 ####### DATA ######################################################################################

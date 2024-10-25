@@ -157,10 +157,15 @@ frappe.ui.form.on(DOCTYPE, {
 
             if (
                 frm.doc.company_gstin !== filters.company_gstin ||
-                frm.doc.month_or_quarter != filters.month_or_quarter ||
                 frm.doc.year != filters.year
             )
                 return;
+
+            frm.doc.is_quarterly = filters.is_quarterly
+            set_options_for_month_or_quarter(frm, set_only_options=true);
+            frm.doc.month_or_quarter = filters.month_or_quarter
+            frm.refresh_field("is_quarterly")
+            frm.refresh_field("month_or_quarter")
 
             frappe.after_ajax(() => {
                 frm.doc.__gst_data = data ;
@@ -2120,7 +2125,7 @@ function set_options_for_year(frm) {
     frm.set_value("year", current_year.toString());
 }
 
-function set_options_for_month_or_quarter(frm) {
+function set_options_for_month_or_quarter(frm, set_only_options=false) {
     /**
      * Set options for Month or Quarter based on the year and current date
      * 1. If the year is current year, then options are till current month
@@ -2161,6 +2166,8 @@ function set_options_for_month_or_quarter(frm) {
     }
 
     set_field_options("month_or_quarter", options);
+    if (set_only_options) return
+
     if (frm.doc.year === current_year)
         // set second last option as default
         frm.set_value("month_or_quarter", options[options.length - 2]);
