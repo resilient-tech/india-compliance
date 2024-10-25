@@ -61,7 +61,11 @@
   "gstr_3b_filled",
   "column_break_47",
   "gstr_1_filing_date",
-  "registration_cancel_date"
+  "registration_cancel_date",
+  "gstr_3b_details_section",
+  "invoice_type",
+  "invoice_status",
+  "prev_status"
  ],
  "fields": [
   {
@@ -354,11 +358,37 @@
    "fieldname": "original_bill_date",
    "fieldtype": "Date",
    "label": "Original Document Date"
+  },
+  {
+   "fieldname": "gstr_3b_details_section",
+   "fieldtype": "Section Break",
+   "label": "GSTR 3B Details"
+  },
+  {
+   "fieldname": "invoice_type",
+   "fieldtype": "Select",
+   "label": "Invoice Type",
+   "options": "\nRegular\nDeemed Export\nSEZWP\nSEZWOP"
+  },
+  {
+   "default": "No Action",
+   "fieldname": "prev_status",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Previous Status",
+   "read_only": 1
+  },
+  {
+   "default": "No Action",
+   "fieldname": "invoice_status",
+   "fieldtype": "Data",
+   "label": "Invoice Status",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-03-29 11:54:42.687831",
+ "modified": "2024-10-23 18:10:50.059086",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Inward Supply",
