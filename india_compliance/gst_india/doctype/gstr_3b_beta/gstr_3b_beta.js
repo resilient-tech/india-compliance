@@ -97,11 +97,8 @@ class GSTR3B {
 
     async fetch_invoice_data() {
         if (!this.frm.doc.is_modified) {
-            await frappe.call({
-                method: "india_compliance.gst_india.doctype.gstr_3b_beta.gstr_3b_beta.fetch_invoice_data",
-                callback: r => {
-                    this.frm.set_value("invoice_data", r.message);
-                },
+            await this.frm.call("fetch_invoice_data").then(r => {
+                this.frm.set_value("invoice_data", r.message);
             });
             this.filter_invoices();
         }
