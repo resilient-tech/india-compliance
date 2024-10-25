@@ -164,8 +164,6 @@ frappe.ui.form.on(DOCTYPE, {
             frm.doc.is_quarterly = filters.is_quarterly
             set_options_for_month_or_quarter(frm, set_only_options=true);
             frm.doc.month_or_quarter = filters.month_or_quarter
-            frm.refresh_field("is_quarterly")
-            frm.refresh_field("month_or_quarter")
 
             frappe.after_ajax(() => {
                 frm.doc.__gst_data = data ;
