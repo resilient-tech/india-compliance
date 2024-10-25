@@ -660,10 +660,8 @@ def get_source_state_code(doc):
     return (doc.supplier_gstin or doc.company_gstin)[:2]
 
 
-def validate_backdated_transaction(doc, gst_settings=None, action="create"):
-    if gstr_1_filed_upto := restrict_gstr_1_transaction_for(
-        doc.posting_date, doc.company_gstin, gst_settings
-    ):
+def validate_backdated_transaction(doc, gst_settings=None, action="submit"):
+    if gstr_1_filed_upto := restrict_gstr_1_transaction_for(doc, gst_settings, action):
         frappe.throw(
             _(
                 "You are not allowed to {0} {1} as GSTR-1 has been filed upto {2}"
