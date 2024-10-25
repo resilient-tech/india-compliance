@@ -24,6 +24,9 @@ from india_compliance.gst_india.overrides.transaction import (
     validate_place_of_supply,
 )
 from india_compliance.gst_india.utils import get_gst_accounts_by_type, is_api_enabled
+from india_compliance.gst_india.utils import (
+    validate_invoice_number as validate_transaction_name,
+)
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 from india_compliance.gst_india.utils.taxes_controller import (
     CustomTaxController,
@@ -167,6 +170,9 @@ def onload(doc, method=None):
 def validate(doc, method=None):
     if ignore_gst_validation_for_subcontracting(doc):
         return
+
+    if doc.doctype in ("Stock Entry", "Subcontracting Receipt"):
+        validate_transaction_name(doc)
 
     if doc.doctype == "Stock Entry" and doc.purpose != "Send to Subcontractor":
         return
