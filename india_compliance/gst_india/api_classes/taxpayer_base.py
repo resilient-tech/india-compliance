@@ -465,16 +465,17 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
 
         return
 
-    def get_filing_preference(self):
+    def get_filing_preference(self, date=None):
         return self.get(
-            action="GETPREF", params={"fy": self.get_fy()}, endpoint="returns"
+            action="GETPREF", params={"fy": self.get_fy(date)}, endpoint="returns"
         )
 
     @staticmethod
-    def get_fy():
-        date = frappe.utils.getdate()
-
+    def get_fy(date=None):
         # Standard for India as per GST
+        if not date:
+            date = frappe.utils.getdate()
+
         if date.month < 4:
             return f"{date.year - 1}-{str(date.year)[2:]}"
 

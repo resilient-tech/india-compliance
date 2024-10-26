@@ -173,36 +173,43 @@ class GSTR1Beta(Document):
 
     def validate_and_update_filing_frequency(self):
         api = GSTR1API(company_gstin=self.company_gstin)
-        filters = {
-            "fy": api.get_fy(),
-            "gstin": self.company_gstin,
+
+        start_date, end_date = get_gstr_1_from_and_to_date(
+            self.month_or_quarter, self.year, self.is_quarterly
+        )
+        data = {
             "action": "GETPREF",
+            "fy": TaxpayerBaseAPI.get_fy(start_date),
+            "gstin": self.company_gstin,
         }
-        if response := frappe.db.get_list(
+        filters = {
+            "data": frappe.as_json(data, indent=4),
+            "output": ["like", "%result%"],
+            "creation": ["between", [start_date, end_date]],
+        }
+        if output := frappe.db.get_list(
             "Integration Request",
-            {"data": frappe.as_json(filters, indent=4), "output": ["like", "%result%"]},
+            filters,
             pluck="output",
             limit=1,
             order_by="creation desc",
         ):
-            output = frappe.parse_json(response[0])
-            preference = self.get_preference(output.result.get("response"))
+            response = frappe.parse_json(output[0]).result.get("response")
 
         else:
-            response = api.get_filing_preference()
-            preference = self.get_preference(response.response)
+            response = api.get_filing_preference(date=start_date).response
 
-        if (self.is_quarterly == 1 and preference == "Q") or (
-            self.is_quarterly == 0 and preference == "M"
-        ):
+        expected_preference = self.get_preference(response)
+        preference = "Q" if self.is_quarterly else "M"
+
+        if preference == expected_preference:
             self.valid_is_quarterly = self.is_quarterly
             self.valid_month_or_quarter = self.month_or_quarter
-            return
-
-        self.toggle_filing_preference()
+        else:
+            self.toggle_filing_preference()
 
     def toggle_filing_preference(self):
-        self.valid_is_quarterly = 1 if self.is_quarterly == 0 else 0
+        self.valid_is_quarterly = 1 - self.is_quarterly
 
         if self.valid_is_quarterly:
             # If the user has selected a month but the preference is quarter
@@ -214,7 +221,7 @@ class GSTR1Beta(Document):
             self.valid_month_or_quarter = MONTH[quarter_idx * 3]
 
     def get_preference(self, response):
-        if "-" in self.month_or_quarter:
+        if self.is_quarterly:
             quarter_idx = QUARTER.index(self.month_or_quarter)
         else:
             quarter_idx = MONTH.index(self.month_or_quarter) // 3
