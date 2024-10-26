@@ -682,10 +682,10 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
 
 
 class FileGSTR1:
-    def reset_gstr1(self):
-        # reset called after proceed to file
-        verify_request_in_progress(self)
+    def reset_gstr1(self, force):
+        verify_request_in_progress(self, force)
 
+        # reset called after proceed to file
         self.db_set({"filing_status": "Not Filed"})
 
         api = GSTR1API(self)
@@ -721,11 +721,11 @@ class FileGSTR1:
 
         return response
 
-    def upload_gstr1(self, json_data):
+    def upload_gstr1(self, json_data, force):
         if not json_data:
             return
 
-        verify_request_in_progress(self)
+        verify_request_in_progress(self, force)
 
         keys = {category.value for category in GovJsonKey}
         if all(key not in json_data for key in keys):
@@ -782,8 +782,8 @@ class FileGSTR1:
 
         return response
 
-    def proceed_to_file_gstr1(self):
-        verify_request_in_progress(self)
+    def proceed_to_file_gstr1(self, force):
+        verify_request_in_progress(self, force)
 
         api = GSTR1API(self)
         response = api.proceed_to_file("GSTR1", self.return_period)
@@ -854,8 +854,8 @@ class FileGSTR1:
 
         return response
 
-    def file_gstr1(self, pan, otp):
-        verify_request_in_progress(self)
+    def file_gstr1(self, pan, otp, force):
+        verify_request_in_progress(self, force)
 
         summary = self.get_json_for("authenticated_summary")
         api = GSTR1API(self)
@@ -878,8 +878,6 @@ class FileGSTR1:
             set_gstr1_actions(self, "file", response.get("ack_num"), api.request_id)
 
             self.remove_json_for("upload_error")
-
-        # TODO: 2nd phase Accounting Entry.
 
         return response
 
@@ -915,7 +913,10 @@ class FileGSTR1:
         }
 
 
-def verify_request_in_progress(return_log):
+def verify_request_in_progress(return_log, force):
+    if force == "true":
+        return
+
     for row in return_log.actions:
         if not row.status:
             frappe.throw(

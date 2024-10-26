@@ -170,7 +170,7 @@ class GSTR1Beta(Document):
 @frappe.whitelist()
 @otp_handler
 def handle_gstr1_action(action, month_or_quarter, year, company_gstin, **kwargs):
-    frappe.has_permission("GSTR-1 Beta", "write", throw=True)
+    frappe.has_permission("GST Return Log", "write", throw=True)
 
     gstr_1_log = frappe.get_doc(
         "GST Return Log",
@@ -197,6 +197,8 @@ def handle_gstr1_action(action, month_or_quarter, year, company_gstin, **kwargs)
 @frappe.whitelist()
 @otp_handler
 def process_gstr1_request(month_or_quarter, year, company_gstin, action):
+    frappe.has_permission("GST Return Log", "write", throw=True)
+
     gstr_1_log = frappe.get_doc(
         "GST Return Log",
         f"GSTR1-{get_period(month_or_quarter, year)}-{company_gstin}",

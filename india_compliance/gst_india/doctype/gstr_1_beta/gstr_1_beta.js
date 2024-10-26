@@ -2224,8 +2224,8 @@ class FileGSTR1Dialog {
         this.filing_dialog = null;
     }
 
-    file_gstr1_data() {
-        if (this.is_request_in_progress()) return;
+    async file_gstr1_data() {
+        if (await this.is_request_in_progress()) return;
 
         // TODO: EVC Generation, Resend, and Filing
         this.filing_dialog = new frappe.ui.Dialog({
@@ -2465,8 +2465,8 @@ class GSTR1Action extends FileGSTR1Dialog {
         });
     }
 
-    upload_gstr1_data() {
-        if (this.is_request_in_progress()) return;
+    async upload_gstr1_data() {
+        if (await this.is_request_in_progress()) return;
 
         const action = "upload";
 
@@ -2480,8 +2480,8 @@ class GSTR1Action extends FileGSTR1Dialog {
         });
     }
 
-    reset_gstr1_data() {
-        if (this.is_request_in_progress()) return;
+    async reset_gstr1_data() {
+        if (await this.is_request_in_progress()) return;
 
         const action = "reset";
 
@@ -2507,8 +2507,8 @@ class GSTR1Action extends FileGSTR1Dialog {
         });
     }
 
-    previous_action_handler() {
-        if (this.is_request_in_progress()) return;
+    async previous_action_handler() {
+        if (await this.is_request_in_progress()) return;
 
         const { company, company_gstin, month_or_quarter, year } = this.frm.doc;
         const filters = {
@@ -2559,6 +2559,7 @@ class GSTR1Action extends FileGSTR1Dialog {
             ...this.defaults,
             ...additional_args,
             action: `${action}_gstr1`,
+            force: this.frm.force_action ? this.frm.force_action : false,
         };
 
         taxpayer_api.call({
@@ -2695,15 +2696,35 @@ class GSTR1Action extends FileGSTR1Dialog {
 
     is_request_in_progress() {
         let in_progress = this.frm.__action_performed;
+
         if (!in_progress) return false;
         else if (in_progress == "proceed_to_file") in_progress = "upload";
 
-        frappe.show_alert({
-            message: __('Already ' + in_progress + 'ing'),
-            indicator: "red",
-        });
+        const in_progress_action = in_progress.charAt(0).toUpperCase() + in_progress.slice(1)
 
-        return true;
+        return new Promise((resolve) => {
+            const d = frappe.msgprint({
+                message: __(`<b>${in_progress_action} is in progress. Do you still want to continue?<b>`),
+                indicator: "red",
+                title: __("Process in Progress"),
+                primary_action: {
+                    label: __("Yes"),
+                    action: () => {
+                        this.toggle_actions(true, in_progress);
+                        this.frm.force_action = true;
+                        resolve(false);
+                        d.hide();
+                    },
+                },
+                secondary_action: {
+                    label: __("No"),
+                    action: () => {
+                        resolve(true)
+                        d.hide();
+                    },
+                }
+            });
+        });
     }
 
     toggle_actions(show, action) {
