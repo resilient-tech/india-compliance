@@ -503,6 +503,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
 
         # APIs Enabled
         status = self.get_return_status()
+        # filing_frequency = self.get_filing_frequency() & update this in filters
 
         if status == "Filed":
             gov_data_field = "filed"

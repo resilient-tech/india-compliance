@@ -335,6 +335,14 @@ def get_gstr_1_return_status(
     return "Not Filed"
 
 
+def get_filing_frequency(gstin, period):
+    # is not Q1-M1 ? => fetch if available from Q1-M1
+    # if not, is it filed for the period or date has surpassed? => if not, then don't fetch and return nothing
+
+    # if filed, then fetch from the filed data
+    pass
+
+
 def get_fy(period, year_increment=0):
     month, year = period[:2], period[2:]
     year = str(int(year) + year_increment)
