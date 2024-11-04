@@ -1,6 +1,8 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
 
+from collections import defaultdict
+
 import frappe
 from frappe.model.document import Document
 from frappe.query_builder.custom import ConstantColumn
@@ -38,22 +40,22 @@ class GSTR3BBeta(Document):
         return invoice_data
 
     def before_save(self):
-        invoice_to_update = []
+        invoices_to_update = defaultdict(set)
         for key, value in self.invoice_data.items():
             if value["is_dirty"]:
-                invoice_to_update.append((key, value["invoice_status"]))
+                invoices_to_update[value["invoice_status"]].add(key)
 
-        self.update_invoice_status(invoice_to_update)
+        self.update_invoice_status(invoices_to_update)
 
         self.invoice_data = ""
 
-    def update_invoice_status(self, data):
-        for invoice in data:
+    def update_invoice_status(self, invoices_to_update):
+        for action, invoices in invoices_to_update.items():
             frappe.db.set_value(
                 "GST Inward Supply",
-                invoice[0],
+                {"name": ("in", invoices)},
                 "invoice_status",
-                invoice[1],
+                action,
             )
 
     @frappe.whitelist()
