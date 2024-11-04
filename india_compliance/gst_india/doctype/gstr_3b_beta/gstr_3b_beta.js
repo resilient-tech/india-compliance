@@ -5,7 +5,7 @@ const api_enabled = india_compliance.is_api_enabled();
 
 frappe.ui.form.on("GSTR-3B Beta", {
     async setup(frm) {
-        await frappe.require("purchase_reconciliation_tool.bundle.js");
+        await frappe.require("gstr3b.bundle.js");
 
         set_company_gstin(frm);
         set_options_for_year(frm);
@@ -89,10 +89,10 @@ class GSTR3B {
     }
 
     async fetch_invoice_data() {
-            await this.frm.call("fetch_invoice_data").then(r => {
-                this.frm.set_value("invoice_data", r.message);
-            });
-            this.filter_invoices();
+        await this.frm.call("fetch_invoice_data").then(r => {
+            this.frm.set_value("invoice_data", r.message);
+        });
+        this.filter_invoices();
     }
 
     update_invoice_data() {
