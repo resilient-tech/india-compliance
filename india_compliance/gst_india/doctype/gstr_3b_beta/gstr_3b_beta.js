@@ -147,6 +147,13 @@ class GSTR3B {
     get_columns() {
         return [
             {
+                fieldname: "view",
+                fieldtype: "html",
+                width: 60,
+                align: "center",
+                _value: (...args) => get_icon(...args),
+            },
+            {
                 label: "GSTIN of Supplier",
                 fieldname: "supplier_gstin",
                 align: "center",
@@ -201,6 +208,20 @@ class GSTR3B {
                 width: 100,
                 fieldtype: "html",
             },
+            {
+                label: "Match Status",
+                fieldname: "match_status",
+                align: "center",
+                width: 100,
+            },
+            {
+                label: "Linked Voucher",
+                fieldname: "linked_doc",
+                align: "center",
+                width: 100,
+                fieldtype: "Dynamic Link",
+                options: "linked_voucher_type",
+            },
         ];
     }
 
@@ -230,6 +251,11 @@ class GSTR3B {
         this.data_table.$datatable.on("click", ".btn.pending", function (e) {
             me.change_status(me, $(this).attr("data-name"), "Pending");
         });
+
+        this.data_table.$datatable.on("click", ".btn.eye", function (e) {
+            const row = me.frm.filtered_invoices[$(this).attr("data-name")];
+            me.dm = new DetailViewDialog(me.frm, row);
+        });
     }
 
     change_status(me, invoice_name, status) {
@@ -241,6 +267,129 @@ class GSTR3B {
         me.frm.filtered_invoices[invoice_name]["is_dirty"] = 1;
 
         me.render_data_table();
+    }
+}
+
+class DetailViewDialog {
+    table_fields = [
+        "name",
+        "bill_no",
+        "bill_date",
+        "taxable_value",
+        "cgst",
+        "sgst",
+        "igst",
+        "cess",
+        "is_reverse_charge",
+        "place_of_supply",
+    ];
+
+    constructor(frm, row) {
+        this.frm = frm;
+        this.row = row;
+        this.render_dialog();
+    }
+
+    async render_dialog() {
+        await this.get_invoice_details();
+        this.process_data();
+        this.init_dialog();
+        this.render_html();
+        this.dialog.show();
+    }
+
+    async get_invoice_details() {
+        const { message } = await this.frm.call("get_invoice_details", {
+            purchase_name: this.row.linked_doc,
+            inward_supply_name: this.row.invoice_name,
+        });
+
+        this.data = message;
+    }
+
+    process_data() {
+        for (let key of ["_purchase_invoice", "_inward_supply"]) {
+            const doc = this.data[key];
+            if (!doc) continue;
+
+            this.table_fields.forEach(field => {
+                if (field == "is_reverse_charge" && doc[field] != undefined)
+                    doc[field] = doc[field] ? "Yes" : "No";
+            });
+        }
+    }
+
+    init_dialog() {
+        const supplier_details = `
+        <h5>${this.data.supplier_name}
+        ${this.data.supplier_gstin ? ` (${this.data.supplier_gstin})` : ""}
+        </h5>
+        `;
+
+        this.dialog = new frappe.ui.Dialog({
+            title: `Detail View (${this.data.classification})`,
+            fields: [
+                {
+                    fieldtype: "HTML",
+                    fieldname: "supplier_details",
+                    options: supplier_details,
+                },
+                {
+                    fieldtype: "HTML",
+                    fieldname: "diff_cards",
+                },
+                {
+                    fieldtype: "HTML",
+                    fieldname: "detail_table",
+                },
+            ],
+        });
+    }
+
+    render_html() {
+        this.render_cards();
+        this.render_table();
+    }
+
+    render_cards() {
+        let cards = [
+            {
+                value: this.data.tax_difference,
+                label: "Tax Difference",
+                datatype: "Currency",
+                currency: frappe.boot.sysdefaults.currency,
+                indicator:
+                    this.data.tax_difference === 0 ? "text-success" : "text-danger",
+            },
+            {
+                value: this.data.taxable_value_difference,
+                label: "Taxable Amount Difference",
+                datatype: "Currency",
+                currency: frappe.boot.sysdefaults.currency,
+                indicator:
+                    this.data.taxable_value_difference === 0
+                        ? "text-success"
+                        : "text-danger",
+            },
+        ];
+
+        if (!this.row.linked_doc || !this.row.invoice_name) cards = [];
+
+        new india_compliance.NumberCardManager({
+            $wrapper: this.dialog.fields_dict.diff_cards.$wrapper,
+            cards: cards,
+        });
+    }
+
+    render_table() {
+        const detail_table = this.dialog.fields_dict.detail_table;
+
+        detail_table.html(
+            frappe.render_template("invoice_detail_comparision", {
+                purchase: this.data._purchase_invoice,
+                inward_supply: this.data._inward_supply,
+            })
+        );
     }
 }
 
@@ -320,6 +469,13 @@ function get_icon(value, column, data, color) {
     }
 
     const hash = data["invoice_name"];
+
+    if (!color) {
+        return `<button class="btn eye" data-name="${hash}">
+                    <i class="fa fa-eye"></i>
+                </button>`;
+    }
+
     return `<button class="btn ${column.fieldname}" data-name="${hash}">
                 <i class="fa fa-circle${style}" style="color: ${color}"></i>
             </button>`;
