@@ -2,6 +2,10 @@ div[data-page-route="GSTR-3B Beta"] {
     --dt-row-height: 34px;
 }
 
+div[data-page-route="GSTR-3B Beta"] .section-body {
+    max-width: 100% !important;
+}
+
 div[data-page-route="GSTR-3B Beta"]
     [data-fieldname="invoices_html"]
     .section-body {
