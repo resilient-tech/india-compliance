@@ -259,7 +259,7 @@ Object.assign(india_compliance, {
 
     generate_evc_otp(company_gstin, pan, request_type) {
         return frappe.call({
-            method: "india_compliance.gst_india.utils.gstr.generate_evc.generate_evc_otp",
+            method: "india_compliance.gst_india.utils.gstr_utils.generate_evc_otp",
             args: {
                 company_gstin: company_gstin,
                 pan: pan,
