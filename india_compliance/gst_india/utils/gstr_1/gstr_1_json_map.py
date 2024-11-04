@@ -98,7 +98,11 @@ class GovDataMapper:
         output = {}
 
         if default_data:
-            output.update(default_data)
+            for key, value in default_data.items():
+                if not (value or value == 0):
+                    continue
+
+                output[key] = value
 
         key_mapping = self.KEY_MAPPING.copy()
 
