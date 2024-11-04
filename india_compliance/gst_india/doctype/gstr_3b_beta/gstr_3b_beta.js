@@ -7,21 +7,18 @@ frappe.ui.form.on("GSTR-3B Beta", {
     async setup(frm) {
         await frappe.require("purchase_reconciliation_tool.bundle.js");
 
-        frm.gstr3b = new GSTR3B(frm);
-
-        frm.trigger("company");
-
+        set_company_gstin(frm);
         set_options_for_year(frm);
         set_options_for_month(frm);
-        frm.gstr3b.filter_invoices();
+
+        frm.gstr3b = new GSTR3B(frm);
     },
 
     async company(frm) {
-        if (!frm.doc.company) return;
-        const options = await india_compliance.set_gstin_options(frm);
-
-        if (!frm.doc.company_gstin) frm.set_value("company_gstin", options[0]);
+        set_company_gstin(frm);
+        frm.gstr3b.filter_invoices();
     },
+
     company_gstin(frm) {
         frm.gstr3b.filter_invoices();
     },
@@ -85,23 +82,17 @@ class GSTR3B {
     constructor(frm) {
         this.frm = frm;
         this.generate_gstr3b();
-        this.frm.filtered_invoices = this.frm.doc.invoice_data;
     }
 
     generate_gstr3b() {
         this.fetch_invoice_data();
-        setTimeout(() => {
-            this.render_data_table();
-        }, 100);
     }
 
     async fetch_invoice_data() {
-        if (!this.frm.doc.is_modified) {
             await this.frm.call("fetch_invoice_data").then(r => {
                 this.frm.set_value("invoice_data", r.message);
             });
             this.filter_invoices();
-        }
     }
 
     update_invoice_data() {
@@ -111,7 +102,6 @@ class GSTR3B {
                 this.frm.doc.invoice_data[key] = invoice;
             }
         }
-        this.frm.filtered_invoices = {};
     }
 
     filter_invoices() {
@@ -121,15 +111,16 @@ class GSTR3B {
             this.frm.doc.month
         );
 
-        for (const key in this.frm.doc.invoice_data) {
-            const invoice = this.frm.doc.invoice_data[key];
+        for (const invoice_name in this.frm.doc.invoice_data) {
+            const invoice = this.frm.doc.invoice_data[invoice_name];
             if (
                 invoice["company"] === this.frm.doc.company &&
                 invoice["company_gstin"] === this.frm.doc.company_gstin &&
                 invoice["invoice_date"] >= from_date &&
                 invoice["invoice_date"] <= to_date
             ) {
-                this.frm.filtered_invoices[key] = this.frm.doc.invoice_data[key];
+                this.frm.filtered_invoices[invoice_name] =
+                    this.frm.doc.invoice_data[invoice_name];
             }
         }
         this.render_data_table();
@@ -261,7 +252,6 @@ class GSTR3B {
     change_status(me, invoice_name, status) {
         const curr_status = me.frm.filtered_invoices[invoice_name]["invoice_status"];
 
-        if (!me.frm.is_modified) me.frm.is_modified = 1;
         me.frm.filtered_invoices[invoice_name]["invoice_status"] =
             status === curr_status ? "No Action" : status;
         me.frm.filtered_invoices[invoice_name]["is_dirty"] = 1;
@@ -502,4 +492,11 @@ function update_status(frm, invoice_names, status) {
         frm.filtered_invoices[invoice_name]["is_dirty"] = 1;
     }
     frm.gstr3b.render_data_table();
+}
+
+async function set_company_gstin(frm) {
+    if (!frm.doc.company) return;
+    const options = await india_compliance.set_gstin_options(frm);
+
+    if (!frm.doc.company_gstin) frm.set_value("company_gstin", options[0]);
 }

@@ -45,7 +45,6 @@ class GSTR3BBeta(Document):
 
         self.update_invoice_status(invoice_to_update)
 
-        self.is_modified = 0
         self.invoice_data = ""
 
     def update_invoice_status(self, data):
