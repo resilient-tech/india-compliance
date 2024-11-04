@@ -230,16 +230,12 @@ class GSTR3B {
     set_listners() {
         const me = this;
 
-        this.data_table.$datatable.on("click", ".btn.accept", function (e) {
-            me.change_status(me, $(this).attr("data-name"), "Accept");
-        });
-
-        this.data_table.$datatable.on("click", ".btn.reject", function (e) {
-            me.change_status(me, $(this).attr("data-name"), "Reject");
-        });
-
-        this.data_table.$datatable.on("click", ".btn.pending", function (e) {
-            me.change_status(me, $(this).attr("data-name"), "Pending");
+        this.data_table.$datatable.on("click", ".btn.actions", function (e) {
+            me.change_status(
+                me,
+                $(this).attr("data-name"),
+                $(this).attr("invoice-status")
+            );
         });
 
         this.data_table.$datatable.on("click", ".btn.eye", function (e) {
@@ -249,11 +245,11 @@ class GSTR3B {
     }
 
     change_status(me, invoice_name, status) {
-        const curr_status = me.frm.filtered_invoices[invoice_name]["invoice_status"];
+        const invoice = me.frm.filtered_invoices[invoice_name];
+        const curr_status = invoice["invoice_status"];
 
-        me.frm.filtered_invoices[invoice_name]["invoice_status"] =
-            status === curr_status ? "No Action" : status;
-        me.frm.filtered_invoices[invoice_name]["is_dirty"] = 1;
+        invoice["invoice_status"] = status === curr_status ? "No Action" : status;
+        if (!invoice["is_dirty"]) invoice["is_dirty"] = 1;
 
         me.render_data_table();
     }
@@ -444,16 +440,17 @@ function get_first_last_day(year, month) {
 }
 
 function get_icon(value, column, data, color) {
-    style = "-o";
+    const status = column.fieldname[0].toUpperCase() + column.fieldname.slice(1);
+    let style = "-o";
     switch (data["invoice_status"]) {
         case "Accept":
-            if (column.fieldname === "accept") style = "";
+            if (status === "Accept") style = "";
             break;
         case "Reject":
-            if (column.fieldname === "reject") style = "";
+            if (status === "Reject") style = "";
             break;
         case "Pending":
-            if (column.fieldname === "pending") style = "";
+            if (status === "Pending") style = "";
             break;
     }
 
@@ -465,7 +462,7 @@ function get_icon(value, column, data, color) {
                 </button>`;
     }
 
-    return `<button class="btn ${column.fieldname}" data-name="${hash}">
+    return `<button class="btn actions" data-name="${hash}" invoice-status="${status}">
                 <i class="fa fa-circle${style}" style="color: ${color}"></i>
             </button>`;
 }
