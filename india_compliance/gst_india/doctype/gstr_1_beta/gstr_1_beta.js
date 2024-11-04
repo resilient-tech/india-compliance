@@ -471,8 +471,8 @@ class GSTR1 {
         }[this.status] || "Generate";
 
         if (this.status === "Ready to File") {
-            this.frm.add_custom_button(__("Previous Action"), () => {
-                this.gstr1_action.previous_action_handler();
+            this.frm.add_custom_button(__("Mark as Unfiled"), () => {
+                this.gstr1_action.mark_as_unfiled();
             });
         }
 
@@ -1810,7 +1810,7 @@ class FiledTab extends GSTR1_TabManager {
             const doc = me.instance.frm.doc;
 
             frappe.call({
-                method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export.download_gstr_1_json",
+                method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export.get_gstr_1_json",
                 args: {
                     company_gstin: doc.company_gstin,
                     year: doc.year,
@@ -2431,7 +2431,7 @@ class FileGSTR1Dialog {
         }
 
         if (response.ack_num) {
-            this.frm.taxpayer_api_call("generate_gstr1", { display_alert: false }).then(r => {
+            this.frm.taxpayer_api_call("generate_gstr1", { message: "Verifying filed GSTR-1" }).then(r => {
                 this.frm.doc.__gst_data = r.message;
                 this.frm.trigger("load_gstr1_data");
             });
@@ -2507,7 +2507,7 @@ class GSTR1Action extends FileGSTR1Dialog {
         });
     }
 
-    previous_action_handler() {
+    mark_as_unfiled() {
         if (this.is_request_in_progress()) return;
 
         const { company, company_gstin, month_or_quarter, year } = this.frm.doc;
@@ -2516,7 +2516,7 @@ class GSTR1Action extends FileGSTR1Dialog {
         };
 
         frappe.call({
-            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.update_filing_status",
+            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.mark_as_unfiled",
             args: { filters },
             callback: () => {
                 this.frm.doc.__gst_data.status = "Not Filed";
@@ -2630,8 +2630,8 @@ class GSTR1Action extends FileGSTR1Dialog {
             this.frm.page.set_primary_action("File", () =>
                 this.frm.gstr1.gstr1_action.file_gstr1_data()
             );
-            this.frm.add_custom_button(__("Previous Action"), () => {
-                this.frm.gstr1.gstr1_action.previous_action_handler();
+            this.frm.add_custom_button(__("Mark as Unfiled"), () => {
+                this.frm.gstr1.gstr1_action.mark_as_unfiled();
             });
             this.frm.page.set_indicator("Ready to File", "orange");
             this.frm.gstr1.status = "Ready to File";
@@ -2707,7 +2707,7 @@ class GSTR1Action extends FileGSTR1Dialog {
     }
 
     toggle_actions(show, action) {
-        const actions = ["Upload", "Reset", "File", "Previous%20Action"];
+        const actions = ["Upload", "Reset", "File", "Mark%20as%20Unfiled"];
         const btns = $(actions.map(action => `[data-label="${action}"]`).join(","));
 
         if (show) {

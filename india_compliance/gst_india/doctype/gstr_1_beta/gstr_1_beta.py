@@ -54,7 +54,7 @@ class GSTR1Beta(Document):
 
     @frappe.whitelist()
     @otp_handler
-    def generate_gstr1(self, sync_for=None, recompute_books=False, display_alert=True):
+    def generate_gstr1(self, sync_for=None, recompute_books=False, message=None):
         period = get_period(self.month_or_quarter, self.year)
 
         # get gstr1 log
@@ -117,8 +117,11 @@ class GSTR1Beta(Document):
         # generate gstr1
         gstr1_log.update_status("In Progress")
         frappe.enqueue(self._generate_gstr1, queue="short")
-        if display_alert:
-            frappe.msgprint(_("GSTR-1 is being prepared"), alert=True)
+
+        if not message:
+            message = "GSTR-1 is being prepared"
+
+        frappe.msgprint(_(message), alert=True)
 
     def _generate_gstr1(self):
         """
@@ -180,10 +183,10 @@ def handle_gstr1_action(action, month_or_quarter, year, company_gstin, **kwargs)
 
     if action == "upload_gstr1":
         from india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export import (
-            download_gstr_1_json,
+            get_gstr_1_json,
         )
 
-        data = download_gstr_1_json(
+        data = get_gstr_1_json(
             company_gstin,
             year,
             month_or_quarter,
@@ -203,8 +206,7 @@ def process_gstr1_request(month_or_quarter, year, company_gstin, action):
     )
 
     method_name = f"process_{action}_gstr1"
-    method = getattr(gstr_1_log, method_name)
-    data = method()
+    data = getattr(gstr_1_log, method_name)()
 
     if not data:
         data = {}
@@ -220,7 +222,7 @@ def process_gstr1_request(month_or_quarter, year, company_gstin, action):
 
 
 @frappe.whitelist()
-def update_filing_status(filters):
+def mark_as_unfiled(filters):
     frappe.has_permission("GST Return Log", "write", throw=True)
 
     filters = frappe._dict(json.loads(filters))
