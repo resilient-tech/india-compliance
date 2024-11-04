@@ -2215,7 +2215,7 @@ class FileGSTR1Dialog {
     }
 
     async file_gstr1_data() {
-        if (await this.is_request_in_progress()) return;
+        if (await this.is_request_in_progress("File")) return;
 
         // TODO: EVC Generation, Resend, and Filing
         this.filing_dialog = new frappe.ui.Dialog({
@@ -2450,9 +2450,8 @@ class GSTR1Action extends FileGSTR1Dialog {
     }
 
     async upload_gstr1_data() {
-        if (await this.is_request_in_progress()) return;
-
         const action = "upload";
+        if (await this.is_request_in_progress(action)) return;
 
         frappe.show_alert(__("Uploading data to GSTN"));
         this.perform_gstr1_action(action, (response) => {
@@ -2467,9 +2466,8 @@ class GSTR1Action extends FileGSTR1Dialog {
     }
 
     async reset_gstr1_data() {
-        if (await this.is_request_in_progress()) return;
-
         const action = "reset";
+        if (await this.is_request_in_progress(action)) return;
 
         frappe.confirm(
             __(
@@ -2493,8 +2491,8 @@ class GSTR1Action extends FileGSTR1Dialog {
         });
     }
 
-    mark_as_unfiled() {
-        if (this.is_request_in_progress()) return;
+    async mark_as_unfiled() {
+        if (await this.is_request_in_progress("Mark as Unfiled")) return;
 
         const { company, company_gstin, month_or_quarter, year } = this.frm.doc;
         const filters = {
@@ -2503,7 +2501,7 @@ class GSTR1Action extends FileGSTR1Dialog {
 
         frappe.call({
             method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.mark_as_unfiled",
-            args: { filters },
+            args: { filters: filters,  force: this.frm.__action_performed == undefined },
             callback: () => {
                 this.frm.gstr1.status = "Not Filed";
                 this.frm.refresh();
@@ -2676,21 +2674,24 @@ class GSTR1Action extends FileGSTR1Dialog {
         frappe.show_alert(__(alert_message));
     }
 
-    is_request_in_progress() {
+    is_request_in_progress(action) {
         let in_progress = this.frm.__action_performed;
 
         if (!in_progress) return false;
         else if (in_progress == "proceed_to_file") in_progress = "upload";
 
-        const in_progress_action = in_progress.charAt(0).toUpperCase() + in_progress.slice(1)
+        const capitalize_first_letter = (str) => str.charAt(0).toUpperCase() + str.slice(1);
+
+        const in_progress_action = capitalize_first_letter(in_progress);
+        action = capitalize_first_letter(action);
 
         return new Promise((resolve) => {
             const d = frappe.msgprint({
-                message: __(`<b>${in_progress_action} is in progress. Do you still want to continue?<b>`),
+                message: __(`<b>${in_progress_action} is in progress. Do you want to perform ${action}?<b>`),
                 indicator: "red",
                 title: __("Process in Progress"),
                 primary_action: {
-                    label: __("Yes"),
+                    label: __(`${action}`),
                     action: () => {
                         this.toggle_actions(true, in_progress);
                         this.frm.force_action = true;
@@ -2699,7 +2700,7 @@ class GSTR1Action extends FileGSTR1Dialog {
                     },
                 },
                 secondary_action: {
-                    label: __("No"),
+                    label: __("Cancel"),
                     action: () => {
                         resolve(true)
                         d.hide();

@@ -920,16 +920,19 @@ class FileGSTR1:
 
 
 def verify_request_in_progress(return_log, force):
-    if force == "true":
-        return
-
     for row in return_log.actions:
         if not row.status:
+            if force:
+                row.status = "Ignored"
+                continue
+
             frappe.throw(
                 _(
                     "There is a {0} request in progress. Please wait for the process to complete."
                 ).format(row.request_type)
             )
+
+    return_log.save()
 
 
 def get_differing_categories(mapped_summary, gov_summary):
