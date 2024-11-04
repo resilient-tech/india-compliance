@@ -147,7 +147,7 @@ def generate_e_invoice(docname, throw=True, force=False):
             )
 
         # Handle Invalid GSTIN Error
-        if result.error_code in ("3028", "3029"):
+        if result.error_code in ("3028", "3029", "3001"):
             gstin = data.get("BuyerDtls").get("Gstin")
             response = api.sync_gstin_info(gstin)
 
