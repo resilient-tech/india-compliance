@@ -185,9 +185,11 @@ class SummarizeGSTR1:
 
     @staticmethod
     def count_doc_issue_summary(summary_row, data_row):
-        summary_row["no_of_records"] += data_row.get(
-            GSTR1_DataField.TOTAL_COUNT.value, 0
-        ) - data_row.get(GSTR1_DataField.CANCELLED_COUNT.value, 0)
+        summary_row["no_of_records"] += (
+            data_row.get(GSTR1_DataField.TOTAL_COUNT.value, 0)
+            - data_row.get(GSTR1_DataField.CANCELLED_COUNT.value, 0)
+            - data_row.get(GSTR1_DataField.DRAFT_COUNT.value, 0)
+        )
 
     @staticmethod
     def count_hsn_summary(summary_row):
@@ -777,8 +779,12 @@ class FileGSTR1:
 
         if status_cd == "P":
             self.db_set({"filing_status": "Uploaded"})
-            self.update_json_for("unfiled_summary", self.get_json_for("books_summary"))
+
             self.update_json_for("unfiled", self.get_json_for("books"))
+            self.update_json_for("unfiled_summary", self.get_json_for("books_summary"))
+
+            self.update_json_for("reconcile", {})
+            self.update_json_for("reconcile_summary", {})
 
         return response
 
@@ -1066,10 +1072,3 @@ def create_notification(return_period, request_type, status_cd, gstin, request_i
         }
     )
     notification.insert()
-
-
-def check_return_status(self):
-    # Cron JOB
-    # check for logs with refeerence number.
-    # for each reference, try processing it.
-    pass
