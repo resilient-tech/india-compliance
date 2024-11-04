@@ -41,11 +41,11 @@ frappe.ui.form.on("GSTR-3B Beta", {
         });
 
         // add custom buttons
-        if (api_enabled) {
-            frm.add_custom_button(__("Download Invoices"), () => {
-                // Do something
-            });
-        }
+        // if (api_enabled) {
+        //     frm.add_custom_button(__("Download Invoices"), () => {
+        //         // Do something
+        //     });
+        // }
 
         frm.add_custom_button(
             __("Accept"),
@@ -99,7 +99,7 @@ class GSTR3B {
         for (const key in this.frm.filtered_invoices) {
             const invoice = this.frm.filtered_invoices[key];
             if (invoice["is_dirty"]) {
-                this.frm.doc.invoice_data[key] = invoice;
+                this.frm.doc.invoice_data[key] = Object.assign({}, invoice);
             }
         }
     }
@@ -119,8 +119,7 @@ class GSTR3B {
                 invoice["invoice_date"] >= from_date &&
                 invoice["invoice_date"] <= to_date
             ) {
-                this.frm.filtered_invoices[invoice_name] =
-                    this.frm.doc.invoice_data[invoice_name];
+                this.frm.filtered_invoices[invoice_name] = Object.assign({}, invoice);
             }
         }
         this.render_data_table();
@@ -154,13 +153,13 @@ class GSTR3B {
                 label: "Supplier",
                 fieldname: "supplier",
                 align: "center",
-                width: 120,
+                width: 200,
             },
             {
                 label: "Invoice No.",
                 fieldname: "invoice_no",
                 align: "center",
-                width: 80,
+                width: 120,
             },
             {
                 label: "Invoice Type",
@@ -172,7 +171,7 @@ class GSTR3B {
                 label: "Accept",
                 fieldname: "accept",
                 align: "center",
-                width: 80,
+                width: 50,
                 fieldtype: "html",
                 _value: (...args) => get_icon(...args, "#4bf90b"),
             },
@@ -180,7 +179,7 @@ class GSTR3B {
                 label: "Reject",
                 fieldname: "reject",
                 align: "center",
-                width: 80,
+                width: 50,
                 fieldtype: "html",
                 _value: (...args) => get_icon(...args, "#f21a02"),
             },
@@ -188,7 +187,7 @@ class GSTR3B {
                 label: "Pending",
                 fieldname: "pending",
                 align: "center",
-                width: 80,
+                width: 50,
                 fieldtype: "html",
                 _value: (...args) => get_icon(...args, "#FFD43B"),
             },
@@ -209,7 +208,7 @@ class GSTR3B {
                 label: "Linked Voucher",
                 fieldname: "linked_doc",
                 align: "center",
-                width: 100,
+                width: 150,
                 fieldtype: "Dynamic Link",
                 options: "linked_voucher_type",
             },
@@ -476,7 +475,7 @@ function bulk_update_status(frm, status) {
         frm.gstr3b.data_table.datatable.rowmanager.getCheckedRows();
 
     if (!checked_rows_indexes.length) {
-        frappe.msgprint("Please select invoices");
+        frappe.msgprint(__("Please select invoices"));
         return;
     }
 
