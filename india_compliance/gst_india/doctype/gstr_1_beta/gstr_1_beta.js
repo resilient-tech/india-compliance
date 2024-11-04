@@ -257,7 +257,7 @@ class GSTR1 {
 
     init(frm) {
         this.frm = frm;
-        this.data = frm.doc._data;
+        this.data = null;
         this.filters = [];
         this.$wrapper = frm.fields_dict.tabs_html.$wrapper;
     }
@@ -448,7 +448,7 @@ class GSTR1 {
 
         // Custom Buttons
         if (this.data) {
-            if (this.status === "Filed") return this.check_for_journal_entry();
+            if (this.status === "Filed") return;
             if (!is_gstr1_api_enabled()) return;
 
             this.frm.add_custom_button(__("Reset"), () =>
@@ -715,20 +715,10 @@ class GSTR1 {
         element.prepend(gst_liability_html);
     }
 
-    check_for_journal_entry() {
-        const { company, month_or_quarter, year } = this.frm.doc;
-
-        frappe.call({
-            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_journal_entries",
-            args: { month_or_quarter, year, company },
-            callback: (r) => {
-                if (r.message) return;
-
-                this.frm.add_custom_button(__("Create Journal Entry"), () =>
-                    this.gstr1_action.make_journal_entry()
-                );
-            }
-        })
+    show_suggested_jv_dialog() {
+        // Get JV table
+        // show in dialog as a confirm dialog
+        // on Create JV btn => create JV
     }
 }
 
@@ -1871,7 +1861,7 @@ class FiledTab extends GSTR1_TabManager {
         render_empty_state(this.instance.frm);
         this.instance.frm
             .taxpayer_api_call("mark_as_filed")
-            .then(() => this.instance.frm.trigger("load_gstr1_data"));
+            .then(() => this.instance.frm.trigger("load_gstr1_data") && this.instance.show_suggested_jv_dialog());
     }
 
     // COLUMNS
@@ -2272,7 +2262,7 @@ class FileGSTR1Dialog {
                     read_only: 1,
                 },
                 {
-                    label: "Once you file your return you will not be able to undo the action",
+                    label: "I confirm that this GSTR-1 filing cannot be undone and that all details are correct to the best of my knowledge.",
                     fieldname: "acknowledged",
                     fieldtype: "Check",
                     default: 0,
@@ -2293,7 +2283,10 @@ class FileGSTR1Dialog {
 
                 // show otp field
                 this.filing_dialog.set_df_property("otp", "read_only", 0);
+                this.filing_dialog.set_df_property("otp", "reqd", 1);
+
                 this.filing_dialog.set_df_property("acknowledged", "read_only", 0);
+                this.filing_dialog.set_df_property("acknowledged", "reqd", 1);
 
                 this.update_actions_for_filing(pan);
             },
@@ -2322,16 +2315,16 @@ class FileGSTR1Dialog {
             callback: r => {
                 if (!r.message) return;
                 const { amended_liability, non_amended_liability } = r.message;
-                const amendment_table_html = this.generate_liability_table(
+                const liability_html = this.generate_liability_table(
                     amended_liability,
                     non_amended_liability
                 );
                 const field = this.filing_dialog.get_field("liability_breakup_html");
 
-                if (!amendment_table_html) return;
+                if (!liability_html) return;
                 field.toggle(true);
 
-                field.df.options = amendment_table_html;
+                field.df.options = liability_html;
                 this.filing_dialog.refresh();
             },
         });
@@ -2382,20 +2375,10 @@ class FileGSTR1Dialog {
 
     update_actions_for_filing(pan) {
         this.filing_dialog.set_primary_action("File", () => {
-            if (!this.filing_dialog.get_value("acknowledged")) {
-                frappe.msgprint(
-                    __("Please acknowledge that you can not undo this action.")
-                );
-                return;
-            }
-
             this.perform_gstr1_action(
                 "file",
                 r => this.handle_filing_response(r.message),
-                {
-                    pan: pan,
-                    otp: this.filing_dialog.get_value("otp"),
-                }
+                { pan: pan, otp: this.filing_dialog.get_value("otp") }
             );
         });
 
@@ -2434,6 +2417,7 @@ class FileGSTR1Dialog {
             this.frm.taxpayer_api_call("generate_gstr1", { message: "Verifying filed GSTR-1" }).then(r => {
                 this.frm.doc.__gst_data = r.message;
                 this.frm.trigger("load_gstr1_data");
+                this.frm.gstr1.show_suggested_jv_dialog();
             });
         }
     }
@@ -2472,10 +2456,12 @@ class GSTR1Action extends FileGSTR1Dialog {
 
         frappe.show_alert(__("Uploading data to GSTN"));
         this.perform_gstr1_action(action, (response) => {
-            if (response._server_messages) {
+            // No data to upload
+            if (response._server_messages && response._server_messages.length) {
                 this.toggle_actions(true);
                 return
             }
+
             this.fetch_status_with_retry(action)
         });
     }
@@ -2519,13 +2505,14 @@ class GSTR1Action extends FileGSTR1Dialog {
             method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.mark_as_unfiled",
             args: { filters },
             callback: () => {
-                this.frm.doc.__gst_data.status = "Not Filed";
-                this.frm.trigger("load_gstr1_data");
+                this.frm.gstr1.status = "Not Filed";
+                this.frm.refresh();
             }
         })
     }
 
     make_journal_entry() {
+        // TODO: Refactor
         const d = new frappe.ui.Dialog({
             title: "Create Journal Entry",
             fields: [
@@ -2580,10 +2567,11 @@ class GSTR1Action extends FileGSTR1Dialog {
                 if (message.status_cd === "IP" && retries < retry_intervals.length)
                     return this.fetch_status_with_retry(action, retries + 1);
 
+                // Not IP
+
                 if (action == "upload") {
                     if (message.status_cd == "P") return this.proceed_to_file();
                     else if (message.status_cd == "PE") this.show_errors(message);
-                    // TODO: Highlight error tab
                 }
 
                 this.toggle_actions(true);
@@ -2627,14 +2615,8 @@ class GSTR1Action extends FileGSTR1Dialog {
             );
             this.frm.gstr1.tabs.filed_tab.set_active();
 
-            this.frm.page.set_primary_action("File", () =>
-                this.frm.gstr1.gstr1_action.file_gstr1_data()
-            );
-            this.frm.add_custom_button(__("Mark as Unfiled"), () => {
-                this.frm.gstr1.gstr1_action.mark_as_unfiled();
-            });
-            this.frm.page.set_indicator("Ready to File", "orange");
             this.frm.gstr1.status = "Ready to File";
+            this.frm.refresh();
             return;
         }
 
@@ -2813,10 +2795,12 @@ function render_empty_state(frm) {
     if ($(".gst-ledger-difference").length) {
         $(".gst-ledger-difference").remove();
     }
-    if (frm.doc.__gst_data) {
+
+    if (frm.gstr1?.data) {
         frm.gstr1.data = null;
         frm.gstr1.status = null;
     }
+
     frm.doc.__gst_data = null;
     frm.refresh();
 }
