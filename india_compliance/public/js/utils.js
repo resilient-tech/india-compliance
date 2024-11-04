@@ -257,17 +257,6 @@ Object.assign(india_compliance, {
         }
     },
 
-    generate_evc_otp(company_gstin, pan, request_type) {
-        return frappe.call({
-            method: "india_compliance.gst_india.utils.gstr_utils.generate_evc_otp",
-            args: {
-                company_gstin: company_gstin,
-                pan: pan,
-                request_type: request_type,
-            },
-        });
-    },
-
     guess_gst_category(gstin, country) {
         if (!gstin) {
             if (country && country !== "India") return "Overseas";
