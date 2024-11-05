@@ -388,7 +388,7 @@ def get_subcontracting_receipt_references(
     return frappe.db.get_all(
         "Subcontracting Receipt",
         filters=_filters,
-        fields=["name", "posting_date", "subcontracting_order"],
+        fields=["name", "posting_date"],
         group_by="name",
         as_list=True,
     )
@@ -404,7 +404,6 @@ def get_stock_entry_references(
     filters=None,
     only_linked_references=False,
 ):
-
     filters = frappe._dict(filters)
 
     or_filters = []
