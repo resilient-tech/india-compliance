@@ -6,15 +6,16 @@ const api_enabled = india_compliance.is_api_enabled();
 frappe.ui.form.on("GSTR-3B Beta", {
     async setup(frm) {
         await frappe.require("gstr3b.bundle.js");
+        frm.gstr3b = new GSTR3B(frm);
 
         set_company_gstin(frm);
         set_options_for_year(frm);
         set_options_for_month(frm);
 
-        frm.gstr3b = new GSTR3B(frm);
+        frm.gstr3b.fetch_invoice_data();
     },
 
-    async company(frm) {
+    company(frm) {
         set_company_gstin(frm);
         frm.gstr3b.filter_invoices();
     },
@@ -25,8 +26,8 @@ frappe.ui.form.on("GSTR-3B Beta", {
 
     year(frm) {
         set_options_for_month(frm);
-        frm.gstr3b.filter_invoices();
     },
+
     month(frm) {
         frm.gstr3b.filter_invoices();
     },
@@ -81,17 +82,15 @@ frappe.ui.form.on("GSTR-3B Beta", {
 class GSTR3B {
     constructor(frm) {
         this.frm = frm;
-        this.generate_gstr3b();
-    }
-
-    generate_gstr3b() {
-        this.fetch_invoice_data();
+        this.frm.filtered_invoices = {};
+        this.frm.doc.invoice_data = {};
     }
 
     async fetch_invoice_data() {
         await this.frm.call("fetch_invoice_data").then(r => {
             this.frm.set_value("invoice_data", r.message);
         });
+
         this.filter_invoices();
     }
 
@@ -418,12 +417,16 @@ function set_options_for_month(frm) {
     }
 
     set_field_options("month", options);
+
+    let month_to_set;
+
     // set second last option as default
-    if (frm.doc.year === current_year) {
-        frm.set_value("month", options[options.length - 2]);
-    }
+    if (frm.doc.year === current_year) month_to_set = options[options.length - 2];
     // set last option as default
-    else frm.set_value("month", options[options.length - 1]);
+    else month_to_set = options[options.length - 1];
+
+    if (month_to_set !== frm.doc.month) frm.set_value("month", month_to_set);
+    else frm.gstr3b.filter_invoices();
 }
 
 function get_first_last_day(year, month) {
