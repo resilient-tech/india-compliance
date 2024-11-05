@@ -34,9 +34,8 @@ frappe.ui.form.on(DOCTYPE, {
                 query: "india_compliance.gst_india.overrides.subcontracting_transaction.get_relevant_references",
                 params: {
                     supplier: doc.supplier,
-                    supplied_items: get_supplied_items(doc),
-                    received_items: [],
-                    subcontracting_orders: get_subcontracting_orders(doc),
+                    supplied_items: get_items(doc),
+                    subcontracting_orders: [doc.subcontracting_order],
                     filters_for: "Stock Entry",
                 },
             };

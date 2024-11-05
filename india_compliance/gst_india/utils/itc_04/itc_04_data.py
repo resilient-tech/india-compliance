@@ -175,7 +175,7 @@ class ITC04Query:
                 self.se_doctype.as_("invoice_type"),
             )
             .where(IfNull(self.se.bill_to_gstin, "") != self.se.bill_from_gstin)
-            .where(self.se.subcontracting_order != "")  # should be removed or not ??
+            .where(self.se.is_return == 1)
             .where(self.se.purpose == "Material Transfer")
         )
 

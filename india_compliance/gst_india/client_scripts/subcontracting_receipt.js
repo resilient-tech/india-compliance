@@ -29,35 +29,25 @@ frappe.ui.form.on(DOCTYPE, {
 
         frm.set_query("link_name", "doc_references", function (doc, cdt, cdn) {
             const row = locals[cdt][cdn];
-            const subcontracting_orders = get_subcontracting_orders(doc);
 
             const query =
                 "india_compliance.gst_india.overrides.subcontracting_transaction.get_relevant_references";
             const filters = {
                 supplier: doc.supplier,
-                supplied_items: [],
-                received_items: [],
-                subcontracting_orders: subcontracting_orders,
+                subcontracting_orders: get_subcontracting_orders(doc),
             };
 
             if (row.link_doctype == "Stock Entry") {
-                const supplied_items = get_supplied_items(doc);
-                filters["supplied_items"] = supplied_items;
+                filters["supplied_items"] = get_supplied_items(doc);
                 filters["filters_for"] = "Stock Entry";
 
-                return {
-                    query,
-                    filters,
-                };
+                return { query, filters };
+
             } else if (row.link_doctype == "Subcontracting Receipt") {
-                const received_items = get_received_items(doc);
-                filters["received_items"] = received_items;
+                filters["received_items"] = get_received_items(doc);
                 filters["filters_for"] = "Subcontracting Receipt";
 
-                return {
-                    query,
-                    filters,
-                };
+                return { query, filters };
             }
         });
     },
