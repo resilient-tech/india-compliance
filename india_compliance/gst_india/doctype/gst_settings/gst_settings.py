@@ -1,8 +1,6 @@
 # Copyright (c) 2017, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-from datetime import datetime
-
 import frappe
 from frappe import _
 from frappe.model.document import Document
@@ -376,23 +374,13 @@ class GSTSettings(Document):
 
 
 @frappe.whitelist()
-def schedule_gst_patches(cron_time):
-    dt = datetime.strptime(cron_time, "%Y-%m-%d %H:%M:%S")
-    cron_format = f"{dt.minute} {dt.hour} {dt.day} {dt.month} {dt.weekday() + 1}"
-
-    doc = frappe.get_doc(
-        {
-            "doctype": "Scheduled Job Type",
-            "method": "india_compliance.gst_india.doctype.gst_settings.gst_settings.apply_gst_patches",
-            "cron_format": cron_format,
-            "frequency": "Cron",
-            "create_log": 1,
-        }
-    )
-    doc.insert()
-
-
 def apply_gst_patches():
+    if (
+        not frappe.has_permission("GST Settings", "write")
+        and "System Manager" not in frappe.get_roles()
+    ):
+        frappe.throw(_("You do not have enough permissions for this"))
+
     from india_compliance.patches.post_install.improve_item_tax_template import (
         execute as execute_improve_item_tax_template,
     )
