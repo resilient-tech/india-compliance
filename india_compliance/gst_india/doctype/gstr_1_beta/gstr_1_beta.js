@@ -715,10 +715,82 @@ class GSTR1 {
         element.prepend(gst_liability_html);
     }
 
-    show_suggested_jv_dialog() {
-        // Get JV table
-        // show in dialog as a confirm dialog
-        // on Create JV btn => create JV
+    async show_suggested_jv_dialog() {
+        const {month_or_quarter, year, company} = this.frm.doc;
+        const data = await frappe.call({
+            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_journal_entries",
+            args: { month_or_quarter, year , company },
+        })
+
+        if(!data.message) return;
+
+        const dialog = this.create_journal_entry_dialog(data.message)
+        dialog.show();
+
+        const journal_entry_html = dialog.get_field("journal_entry_accounts")
+        journal_entry_html.df.options = this.generate_tax_table(data.message)
+        journal_entry_html.refresh()
+    }
+
+    create_journal_entry_dialog(data){
+        const dialog = new frappe.ui.Dialog({
+            title: "Create Journal Entry",
+            fields: [
+                {
+                    fieldname: "journal_entry_accounts",
+                    fieldtype: "HTML",
+                },
+                {
+                    fieldname: "auto_submit",
+                    fieldtype: "Check",
+                    label: "Submit After Creation",
+                },
+            ],
+            primary_action_label: "Create Journal Entry",
+            primary_action: async (values) => {
+                const { company, company_gstin, month_or_quarter, year } = this.frm.doc;
+
+                frappe.call({
+                    method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.make_journal_entry",
+                    args: { company, company_gstin, month_or_quarter, year, auto_submit : values.auto_submit, data: data },
+                    callback: (r) => {
+                        frappe.open_in_new_tab = true;
+                        frappe.set_route("journal-entry", r.message);
+                        dialog.hide();
+                    }
+                })
+            }
+        })
+        return dialog
+    }
+
+    generate_tax_table(data) {
+        const rows = data.map(entry => this.generate_table_row(entry)).join('');
+        return `
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Account</th>
+                        <th>Reference Type</th>
+                        <th>Debit</th>
+                        <th>Credit</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows}
+                </tbody>
+            </table>`;
+    }
+
+    generate_table_row(entry) {
+        return `
+            <tr>
+                <td>${entry.account}</td>
+                <td>${entry.reference_type}</td>
+                <td>${format_currency(entry.debit_in_account_currency)}</td>
+                <td>${format_currency(entry.credit_in_account_currency)}</td>
+            </tr>
+        `;
     }
 }
 
@@ -2509,35 +2581,6 @@ class GSTR1Action extends FileGSTR1Dialog {
                 this.frm.refresh();
             }
         })
-    }
-
-    make_journal_entry() {
-        // TODO: Refactor
-        const d = new frappe.ui.Dialog({
-            title: "Create Journal Entry",
-            fields: [
-                {
-                    fieldname: "auto_submit",
-                    fieldtype: "Check",
-                    label: "Submit After Creation",
-                },
-            ],
-            primary_action_label: "Create",
-            primary_action: async (values) => {
-                const { company, company_gstin, month_or_quarter, year } = this.frm.doc;
-
-                frappe.call({
-                    method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.make_journal_entry",
-                    args: { company, company_gstin, month_or_quarter, year, auto_submit: values.auto_submit },
-                    callback: (r) => {
-                        frappe.open_in_new_tab = true;
-                        frappe.set_route("journal-entry", r.message);
-                        d.hide();
-                    }
-                })
-            }
-        })
-        d.show();
     }
 
     perform_gstr1_action(action, callback, additional_args = {}) {
