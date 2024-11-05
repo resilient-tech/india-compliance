@@ -348,30 +348,28 @@ def set_address_display(doc):
 
 
 @frappe.whitelist()
-def get_relevant_references(
-    doctype=None, txt=None, searchfield=None, start=None, page_len=None, filters=None
-):
+def get_relevant_references(filters=None):
     if isinstance(filters, str):
         filters = frappe.parse_json(filters)
 
+    receipt_returns = get_subcontracting_receipt_references(filters=filters)
+    stock_entries = get_stock_entry_references(
+        filters=filters, only_linked_references=True
+    )
+
+    return {
+        "Subcontracting Receipt": [row[0] for row in receipt_returns],
+        "Stock Entry": [row[0] for row in stock_entries],
+    }
+
+
+@frappe.whitelist()
+def get_subcontracting_receipt_references(
+    doctype=None, txt=None, searchfield=None, start=None, page_len=None, filters=None
+):
     filters = frappe._dict(filters)
 
-    if filters.filters_for == "Subcontracting Receipt":
-        receipt_returns = get_subcontracting_receipt_references(txt, filters)
-        return [(name,) for name in receipt_returns]
-
-    elif filters.filters_for == "Stock Entry":
-        stock_entries = get_stock_entry_references(txt, filters)
-        return [(name,) for name in stock_entries]
-
-    receipt_returns = get_subcontracting_receipt_references(txt, filters)
-    stock_entries = get_stock_entry_references(txt, filters)
-
-    return {"Subcontracting Receipt": receipt_returns, "Stock Entry": stock_entries}
-
-
-def get_subcontracting_receipt_references(txt, filters):
-    filters = [
+    _filters = [
         ["docstatus", "=", 1],
         ["is_return", "=", 1],
         ["supplier", "=", filters.supplier],
@@ -385,16 +383,32 @@ def get_subcontracting_receipt_references(txt, filters):
     ]
 
     if txt:
-        filters.append(["name", "like", f"%{txt}%"])
+        _filters.append(["name", "like", f"%{txt}%"])
 
     return frappe.db.get_all(
-        "Subcontracting Receipt", filters=filters, pluck="name", group_by="name"
+        "Subcontracting Receipt",
+        filters=_filters,
+        fields=["name", "posting_date", "subcontracting_order"],
+        group_by="name",
+        as_list=True,
     )
 
 
-def get_stock_entry_references(txt, filters):
+@frappe.whitelist()
+def get_stock_entry_references(
+    doctype=None,
+    txt=None,
+    searchfield=None,
+    start=None,
+    page_len=None,
+    filters=None,
+    only_linked_references=False,
+):
+
+    filters = frappe._dict(filters)
+
     or_filters = []
-    filters = [
+    _filters = [
         ["docstatus", "=", 1],
         ["purpose", "=", "Send to Subcontractor"],
         ["supplier", "=", filters.supplier],
@@ -402,22 +416,24 @@ def get_stock_entry_references(txt, filters):
     ]
 
     if txt:
-        filters.append(["name", "like", f"%{txt}%"])
+        _filters.append(["name", "like", f"%{txt}%"])
 
-    if filters.filters_for == "Stock Entry":
+    if only_linked_references:
+        _filters.append(["subcontracting_order", "in", filters.subcontracting_orders])
+
+    else:
         or_filters = [
             ["subcontracting_order", "is", "not set"],
             ["subcontracting_order", "in", filters.subcontracting_orders],
         ]
-    else:
-        filters.append(["subcontracting_order", "in", filters.subcontracting_orders])
 
     return frappe.db.get_all(
         "Stock Entry",
-        filters=filters,
+        filters=_filters,
         or_filters=or_filters,
-        pluck="name",
+        fields=["name", "posting_date", "subcontracting_order"],
         group_by="name",
+        as_list=True,
     )
 
 

@@ -30,25 +30,29 @@ frappe.ui.form.on(DOCTYPE, {
         frm.set_query("link_name", "doc_references", function (doc, cdt, cdn) {
             const row = locals[cdt][cdn];
 
-            const query =
-                "india_compliance.gst_india.overrides.subcontracting_transaction.get_relevant_references";
             const filters = {
                 supplier: doc.supplier,
                 subcontracting_orders: get_subcontracting_orders(doc),
             };
 
-            if (row.link_doctype == "Stock Entry") {
-                filters["supplied_items"] = get_supplied_items(doc);
-                filters["filters_for"] = "Stock Entry";
+            if (row.link_doctype == "Stock Entry")
+                return {
+                    query: "india_compliance.gst_india.overrides.subcontracting_transaction.get_stock_entry_references",
+                    filters: {
+                        ...filters,
+                        supplied_items: get_supplied_items(doc),
+                    },
+                }
 
-                return { query, filters };
+            else if (row.link_doctype == "Subcontracting Receipt")
+                return {
+                    query: "india_compliance.gst_india.overrides.subcontracting_transaction.get_subcontracting_receipt_references",
+                    filters: {
+                        ...filters,
+                        received_items: get_received_items(doc),
+                    }
+                }
 
-            } else if (row.link_doctype == "Subcontracting Receipt") {
-                filters["received_items"] = get_received_items(doc);
-                filters["filters_for"] = "Subcontracting Receipt";
-
-                return { query, filters };
-            }
         });
     },
     onload(frm) {
