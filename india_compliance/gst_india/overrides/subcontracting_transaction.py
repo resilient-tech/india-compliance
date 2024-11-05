@@ -185,9 +185,6 @@ def validate(doc, method=None):
     if doc.doctype in ("Stock Entry", "Subcontracting Receipt"):
         validate_transaction_name(doc)
 
-    if doc.doctype == "Stock Entry" and doc.purpose != "Send to Subcontractor":
-        return
-
     field_map = (
         STOCK_ENTRY_FIELD_MAP
         if doc.doctype == "Stock Entry"
@@ -212,20 +209,24 @@ def before_save(doc, method=None):
 
 
 def before_submit(doc, method=None):
-    # Stock Entries with Subcontracting Order should only be considered
-    if ignore_gst_validation_for_subcontracting(doc):
+    if ignore_gst_validations(doc):
         return
 
     validate_doc_references(doc)
 
 
 def validate_doc_references(doc):
-    is_stock_entry = doc.doctype == "Stock Entry" and doc.purpose != "Material Transfer"
+    is_return_material_transfer = (
+        doc.doctype == "Stock Entry"
+        and doc.purpose == "Material Transfer"
+        and doc.is_return
+    )
+
     is_subcontracting_receipt = (
         doc.doctype == "Subcontracting Receipt" and not doc.is_return
     )
 
-    if not (is_stock_entry or is_subcontracting_receipt):
+    if not (is_return_material_transfer or is_subcontracting_receipt):
         return
 
     if doc.doc_references:
@@ -233,7 +234,7 @@ def validate_doc_references(doc):
         return
 
     error_msg = _("Please Select Original Document Reference for ITC-04 Reporting")
-    if is_stock_entry:
+    if is_return_material_transfer:
         frappe.throw(error_msg, title=_("Mandatory Field"))
     else:
         frappe.msgprint(error_msg, alert=True, indicator="yellow")
@@ -347,13 +348,6 @@ class SubcontractingGSTAccounts(GSTAccounts):
             self.validate_charge_type_for_cess_non_advol_accounts(row)
 
 
-def ignore_gst_validation_for_subcontracting(doc):
-    if doc.doctype == "Stock Entry" and not doc.subcontracting_order:
-        return True
-
-    return ignore_gst_validations(doc)
-
-
 def set_address_display(doc):
     adddress_fields = (
         "bill_from_address",
@@ -433,12 +427,6 @@ def remove_duplicates(doc):
 
 
 def cannot_generate_ewaybill(doc):
-    if (
-        doc.doctype == "Stock Entry"
-        and doc.purpose == "Send to Subcontractor"
-        and not doc.subcontracting_order
-    ):
-        return True
     if doc.doctype == "Stock Entry" and doc.purpose not in [
         "Material Transfer",
         "Material Issue",

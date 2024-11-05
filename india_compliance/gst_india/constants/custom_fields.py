@@ -341,7 +341,7 @@ CUSTOM_FIELDS = {
             "label": "References",
             "fieldtype": "Section Break",
             "insert_after": "value_difference",
-            "depends_on": "eval:doc.purpose === 'Material Transfer' && doc.subcontracting_order",
+            "depends_on": "eval:doc.purpose === 'Material Transfer' && doc.is_return",
         },
         {
             "fieldname": "fetch_original_doc_ref",
