@@ -307,6 +307,10 @@ doc_events = {
         "validate": "india_compliance.audit_trail.overrides.version.validate",
         "on_trash": "india_compliance.audit_trail.overrides.version.on_trash",
     },
+    "Fee Category": {
+        "before_insert": "india_compliance.gst_india.overrides.fee_category.before_update",
+        "before_validate": "india_compliance.gst_india.overrides.fee_category.before_update",
+    },
 }
 
 
