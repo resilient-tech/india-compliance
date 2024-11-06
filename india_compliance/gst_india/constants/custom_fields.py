@@ -1346,6 +1346,19 @@ HRMS_CUSTOM_FIELDS = {
     ],
 }
 
+EDUCATION_CUSTOM_FIELDS = {
+    "Fee Category": [
+        {
+            "fieldname": "gst_hsn_code",
+            "label": "HSN/SAC",
+            "fieldtype": "Link",
+            "options": "GST HSN Code",
+            "insert_after": "description",
+            "description": "You can search code by the description of the category.",
+        }
+    ]
+}
+
 reverse_charge_field = frappe._dict(
     fieldname="is_reverse_charge",
     label="Is Reverse Charge",
