@@ -497,13 +497,24 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         """
         data = {}
 
+        from india_compliance.gst_india.utils.gstin_info import get_filing_frequency
+
+        filing_frequency = get_filing_frequency(
+            self.company, self.gstin, self.return_period
+        )
+        if filing_frequency and filing_frequency != self.is_quarterly:
+            self.is_quarterly = filing_frequency
+            filters.is_quarterly = filing_frequency
+            frappe.db.set_value(
+                "GST Return Log", self.name, "is_quarterly", filing_frequency
+            )
+
         # APIs Disabled
         if not self.is_gstr1_api_enabled(warn_for_missing_credentials=True):
             return self.generate_only_books_data(data, filters, callback)
 
         # APIs Enabled
         status = self.get_return_status()
-        # filing_frequency = self.get_filing_frequency() & update this in filters
 
         if status == "Filed":
             gov_data_field = "filed"

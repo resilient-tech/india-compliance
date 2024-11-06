@@ -315,3 +315,11 @@ def get_gstr_1_from_and_to_date(
         to_date = get_last_day(from_date)
 
     return from_date, to_date
+
+
+@frappe.whitelist()
+def get_filing_preference(month_or_quarter: str, year: str, company_gstin):
+    period = get_period(month_or_quarter, year)
+    return frappe.db.get_value(
+        "GST Return Log", f"GSTR1-{period}-{company_gstin}", "is_quarterly"
+    )

@@ -190,9 +190,8 @@
    "reqd": 1
   },
   {
-   "default": "0",
    "fieldname": "is_quarterly",
-   "fieldtype": "Check",
+   "fieldtype": "Data",
    "label": "Is Quarterly",
    "read_only": 1
   }
@@ -205,7 +204,7 @@
    "link_fieldname": "reference_docname"
   }
  ],
- "modified": "2024-10-18 10:51:57.440489",
+ "modified": "2024-11-06 17:47:55.754860",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Return Log",

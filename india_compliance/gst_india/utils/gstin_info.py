@@ -1,20 +1,26 @@
 import json
-from datetime import timedelta
+from datetime import date, timedelta
 from string import whitespace
 
 import frappe
 from frappe import _
-from frappe.utils import getdate
+from frappe.utils import cint, getdate
 
 from india_compliance.exceptions import GSPServerError
 from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
 from india_compliance.gst_india.api_classes.public import PublicAPI
+from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
     process_gstr_1_returns_info,
 )
 from india_compliance.gst_india.utils import parse_datetime, titlecase, validate_gstin
+from india_compliance.gst_india.utils.__init__ import get_month_or_quarter_dict
+
+MONTH = list(get_month_or_quarter_dict().keys())[4:]
+QUARTER = ["Jan-Mar", "Apr-Jun", "Jul-Sep", "Oct-Dec"]
+
 
 GST_CATEGORIES = {
     "Regular": "Registered Regular",
@@ -335,12 +341,68 @@ def get_gstr_1_return_status(
     return "Not Filed"
 
 
-def get_filing_frequency(gstin, period):
-    # is not Q1-M1 ? => fetch if available from Q1-M1
-    # if not, is it filed for the period or date has surpassed? => if not, then don't fetch and return nothing
+def get_filing_frequency(company, gstin, period):
+    month = cint(period[:2])
+    year = cint(period[2:])
 
-    # if filed, then fetch from the filed data
-    pass
+    start_month = (month - 1) // 3 * 3 + 1
+    quarter = (month - 1) // 3 + 1
+
+    start_date = getdate(f"{year}-{start_month}-01")
+    log_name = f"GSTR1-{start_month:02d}{year}-{gstin}"
+
+    if filing_preference := frappe.db.get_value(
+        "GST Return Log", log_name, "is_quarterly"
+    ):
+        return filing_preference
+
+    filing_due_date = date(year, start_month + 1, 13)
+    if (
+        frappe.db.get_value("GST Return Log", log_name, "filing_status") != "Filed"
+        and getdate() < filing_due_date
+    ):
+        return
+
+    api = GSTR1API(company_gstin=gstin)
+    response = api.get_filing_preference(date=start_date).response
+
+    filing_preference = 1 if response[quarter].get("preference") == "Q" else 0
+    frappe.enqueue(
+        create_gst_return_log_for_quarter,
+        company,
+        gstin,
+        start_month,
+        year,
+        filing_preference,
+    )
+
+    return filing_preference
+
+
+def create_gst_return_log_for_quarter(
+    company_name, gstin, start_month, year, filing_frequency
+):
+    return_periods = []
+
+    for month_offset in range(3):
+        current_month = start_month + month_offset
+        period = f"{current_month:02d}{year}"
+        return_periods.append(period)
+
+    for period in return_periods:
+        try:
+            frappe.get_doc(
+                {
+                    "doctype": "GST Return Log",
+                    "company": company_name,
+                    "gstin": gstin,
+                    "return_period": period,
+                    "return_type": "GSTR1",
+                    "is_quarterly": filing_frequency,
+                }
+            ).insert()
+        except frappe.DuplicateEntryError:
+            pass
 
 
 def get_fy(period, year_increment=0):

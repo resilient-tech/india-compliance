@@ -181,10 +181,14 @@ frappe.ui.form.on(DOCTYPE, {
         frm.set_value("company_gstin", options[0]);
     },
 
-    company_gstin: render_empty_state,
+    company_gstin(frm){
+        render_empty_state(frm);
+        update_fields_based_on_filing_preference(frm);
+    },
 
     month_or_quarter(frm) {
         render_empty_state(frm);
+        update_fields_based_on_filing_preference(frm);
     },
 
     year(frm) {
@@ -2121,6 +2125,40 @@ function set_options_for_year(frm) {
 
     frm.get_field("year").set_data(options);
     frm.set_value("year", current_year.toString());
+}
+
+function update_fields_based_on_filing_preference(frm){
+    frappe.call({
+        method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_filing_preference",
+        args: {month_or_quarter: frm.doc.month_or_quarter, year: frm.doc.year, company_gstin: frm.doc.company_gstin},
+        callback: (r) => {
+            const preference = r.message === undefined ? r.message : cint(r.message);
+
+            if(preference === undefined){
+                frm.set_df_property("is_quarterly", "read_only", 0);
+                return
+            }
+            if(preference === frm.doc.is_quarterly){
+                frm.set_df_property("is_quarterly", "read_only", 1);
+                return
+            }
+
+            frm.doc.is_quarterly = preference
+            frm.set_df_property("is_quarterly", "read_only", 1)
+            set_options_for_month_or_quarter(frm, set_only_options=true)
+
+            if(preference == 1){
+                const old_month_index = india_compliance.MONTH.indexOf(frm.doc.month_or_quarter)
+                const quarter = Math.floor(old_month_index / 3)
+                frm.doc.month_or_quarter = india_compliance.QUARTER[quarter]
+            }else{
+                const old_quarter_index = india_compliance.QUARTER.indexOf(frm.doc.month_or_quarter) * 3
+                frm.doc.month_or_quarter = india_compliance.MONTH[old_quarter_index]
+            }
+            frm.refresh_field("month_or_quarter")
+            frm.refresh_field("is_quarterly")
+        }
+    })
 }
 
 function set_options_for_month_or_quarter(frm, set_only_options=false) {
