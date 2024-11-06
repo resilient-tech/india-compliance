@@ -31,7 +31,12 @@ frappe.ui.form.on(DOCTYPE, {
 
         frm.set_query("link_name", "doc_references", function (doc) {
             return {
-                filters: get_filters_for_relevant_stock_entries(doc),
+                query: "india_compliance.gst_india.overrides.subcontracting_transaction.get_stock_entry_references",
+                filters: {
+                    supplier: doc.supplier,
+                    supplied_items: get_items(doc),
+                    subcontracting_orders: [doc.subcontracting_order],
+                },
             };
         });
     },

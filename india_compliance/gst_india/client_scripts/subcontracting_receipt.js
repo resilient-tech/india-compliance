@@ -29,42 +29,30 @@ frappe.ui.form.on(DOCTYPE, {
 
         frm.set_query("link_name", "doc_references", function (doc, cdt, cdn) {
             const row = locals[cdt][cdn];
-            const subcontracting_orders = get_subcontracting_orders(doc);
 
-            // same as backend query in get_relevant_references
-            if (row.link_doctype == "Stock Entry") {
-                const supplied_items = get_supplied_items(doc);
+            const filters = {
+                supplier: doc.supplier,
+                subcontracting_orders: get_subcontracting_orders(doc),
+            };
+
+            if (row.link_doctype == "Stock Entry")
                 return {
-                    filters: [
-                        ["docstatus", "=", 1],
-                        ["purpose", "=", "Send to Subcontractor"],
-                        ["subcontracting_order", "in", subcontracting_orders],
-                        ["supplier", "=", doc.supplier],
-                        ["Stock Entry Detail", "item_code", "in", supplied_items],
-                    ],
-                };
-            } else if (row.link_doctype == "Subcontracting Receipt") {
-                const received_items = get_received_items(doc);
+                    query: "india_compliance.gst_india.overrides.subcontracting_transaction.get_stock_entry_references",
+                    filters: {
+                        ...filters,
+                        supplied_items: get_supplied_items(doc),
+                    },
+                }
+
+            else if (row.link_doctype == "Subcontracting Receipt")
                 return {
-                    filters: [
-                        ["docstatus", "=", 1],
-                        ["is_return", "=", 1],
-                        ["supplier", "=", doc.supplier],
-                        [
-                            "Subcontracting Receipt Item",
-                            "item_code",
-                            "in",
-                            received_items,
-                        ],
-                        [
-                            "Subcontracting Receipt Item",
-                            "subcontracting_order",
-                            "in",
-                            subcontracting_orders,
-                        ],
-                    ],
-                };
-            }
+                    query: "india_compliance.gst_india.overrides.subcontracting_transaction.get_subcontracting_receipt_references",
+                    filters: {
+                        ...filters,
+                        received_items: get_received_items(doc),
+                    }
+                }
+
         });
     },
     onload(frm) {
@@ -102,10 +90,12 @@ frappe.ui.form.on(DOCTYPE, {
         frappe.call({
             method: "india_compliance.gst_india.overrides.subcontracting_transaction.get_relevant_references",
             args: {
-                supplier: frm.doc.supplier,
-                supplied_items: get_supplied_items(frm.doc),
-                received_items: get_received_items(frm.doc),
-                subcontracting_orders: get_subcontracting_orders(frm.doc),
+                filters: {
+                    supplier: frm.doc.supplier,
+                    supplied_items: get_supplied_items(frm.doc),
+                    received_items: get_received_items(frm.doc),
+                    subcontracting_orders: get_subcontracting_orders(frm.doc),
+                },
             },
             callback: function (r) {
                 if (!r.message) return;

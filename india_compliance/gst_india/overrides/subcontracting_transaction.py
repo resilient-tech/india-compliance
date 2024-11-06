@@ -354,50 +354,92 @@ def set_address_display(doc):
 
 
 @frappe.whitelist()
-def get_relevant_references(
-    supplier, supplied_items, received_items, subcontracting_orders
+def get_relevant_references(filters=None):
+    if isinstance(filters, str):
+        filters = frappe.parse_json(filters)
+
+    receipt_returns = get_subcontracting_receipt_references(filters=filters)
+    stock_entries = get_stock_entry_references(
+        filters=filters, only_linked_references=True
+    )
+
+    return {
+        "Subcontracting Receipt": [row[0] for row in receipt_returns],
+        "Stock Entry": [row[0] for row in stock_entries],
+    }
+
+
+@frappe.whitelist()
+def get_subcontracting_receipt_references(
+    doctype=None, txt=None, searchfield=None, start=None, page_len=None, filters=None
 ):
-    if isinstance(supplied_items, str):
-        supplied_items = frappe.parse_json(supplied_items)
-        received_items = frappe.parse_json(received_items)
-        subcontracting_orders = frappe.parse_json(subcontracting_orders)
+    filters = frappe._dict(filters)
 
-    # same filters used for set_query in JS
+    _filters = [
+        ["docstatus", "=", 1],
+        ["is_return", "=", 1],
+        ["supplier", "=", filters.supplier],
+        ["Subcontracting Receipt Item", "item_code", "in", filters.received_items],
+        [
+            "Subcontracting Receipt Item",
+            "subcontracting_order",
+            "in",
+            filters.subcontracting_orders,
+        ],
+    ]
 
-    receipt_returns = frappe.db.get_all(
+    if txt:
+        _filters.append(["name", "like", f"%{txt}%"])
+
+    return frappe.db.get_all(
         "Subcontracting Receipt",
-        filters=[
-            ["docstatus", "=", 1],
-            ["is_return", "=", 1],
-            ["supplier", "=", supplier],
-            ["Subcontracting Receipt Item", "item_code", "in", received_items],
-            [
-                "Subcontracting Receipt Item",
-                "subcontracting_order",
-                "in",
-                subcontracting_orders,
-            ],
-        ],
-        pluck="name",
+        filters=_filters,
+        fields=["name", "posting_date"],
         group_by="name",
+        as_list=True,
     )
 
-    stock_entries = frappe.db.get_all(
+
+@frappe.whitelist()
+def get_stock_entry_references(
+    doctype=None,
+    txt=None,
+    searchfield=None,
+    start=None,
+    page_len=None,
+    filters=None,
+    only_linked_references=False,
+):
+    filters = frappe._dict(filters)
+
+    or_filters = []
+    _filters = [
+        ["docstatus", "=", 1],
+        ["purpose", "=", "Send to Subcontractor"],
+        ["supplier", "=", filters.supplier],
+        ["Stock Entry Detail", "item_code", "in", filters.supplied_items],
+    ]
+
+    if txt:
+        _filters.append(["name", "like", f"%{txt}%"])
+
+    if only_linked_references:
+        _filters.append(["subcontracting_order", "in", filters.subcontracting_orders])
+
+    else:
+        or_filters = [
+            ["subcontracting_order", "is", "not set"],
+            ["subcontracting_order", "in", filters.subcontracting_orders],
+        ]
+
+    return frappe.db.get_all(
         "Stock Entry",
-        filters=[
-            ["docstatus", "=", 1],
-            ["purpose", "=", "Send to Subcontractor"],
-            ["subcontracting_order", "in", subcontracting_orders],
-            ["supplier", "=", supplier],
-            ["Stock Entry Detail", "item_code", "in", supplied_items],
-        ],
-        pluck="name",
+        filters=_filters,
+        or_filters=or_filters,
+        fields=["name", "posting_date", "subcontracting_order"],
         group_by="name",
+        as_list=True,
     )
-
-    data = {"Subcontracting Receipt": receipt_returns, "Stock Entry": stock_entries}
-
-    return data
 
 
 def remove_duplicates(doc):
