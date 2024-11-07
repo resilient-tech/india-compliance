@@ -16,6 +16,9 @@ from india_compliance.gst_india.api_classes.taxpayer_base import (
     TaxpayerBaseAPI,
     otp_handler,
 )
+from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
+    verify_request_in_progress,
+)
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 from india_compliance.gst_india.utils.gstin_info import get_gstr_1_return_status
 
@@ -173,7 +176,7 @@ class GSTR1Beta(Document):
 @frappe.whitelist()
 @otp_handler
 def handle_gstr1_action(action, month_or_quarter, year, company_gstin, **kwargs):
-    frappe.has_permission("GSTR-1 Beta", "write", throw=True)
+    frappe.has_permission("GST Return Log", "write", throw=True)
 
     gstr_1_log = frappe.get_doc(
         "GST Return Log",
@@ -200,6 +203,8 @@ def handle_gstr1_action(action, month_or_quarter, year, company_gstin, **kwargs)
 @frappe.whitelist()
 @otp_handler
 def process_gstr1_request(month_or_quarter, year, company_gstin, action):
+    frappe.has_permission("GST Return Log", "write", throw=True)
+
     gstr_1_log = frappe.get_doc(
         "GST Return Log",
         f"GSTR1-{get_period(month_or_quarter, year)}-{company_gstin}",
@@ -222,11 +227,16 @@ def process_gstr1_request(month_or_quarter, year, company_gstin, action):
 
 
 @frappe.whitelist()
-def mark_as_unfiled(filters):
+def mark_as_unfiled(filters, force):
     frappe.has_permission("GST Return Log", "write", throw=True)
 
     filters = frappe._dict(json.loads(filters))
     log_name = f"GSTR1-{get_period(filters.month_or_quarter, filters.year)}-{filters.company_gstin}"
+
+    force = bool(force)
+    if force:
+        return_log = frappe.get_doc("GST Return Log", log_name)
+        verify_request_in_progress(return_log, force)
 
     frappe.db.set_value("GST Return Log", log_name, "filing_status", "Not Filed")
 

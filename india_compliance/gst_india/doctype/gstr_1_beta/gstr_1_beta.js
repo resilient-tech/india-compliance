@@ -2214,8 +2214,8 @@ class FileGSTR1Dialog {
         this.filing_dialog = null;
     }
 
-    file_gstr1_data() {
-        if (this.is_request_in_progress()) return;
+    async file_gstr1_data() {
+        if (await this.is_request_in_progress("File")) return;
 
         // TODO: EVC Generation, Resend, and Filing
         this.filing_dialog = new frappe.ui.Dialog({
@@ -2449,10 +2449,9 @@ class GSTR1Action extends FileGSTR1Dialog {
         });
     }
 
-    upload_gstr1_data() {
-        if (this.is_request_in_progress()) return;
-
+    async upload_gstr1_data() {
         const action = "upload";
+        if (await this.is_request_in_progress(action)) return;
 
         frappe.show_alert(__("Uploading data to GSTN"));
         this.perform_gstr1_action(action, (response) => {
@@ -2466,10 +2465,9 @@ class GSTR1Action extends FileGSTR1Dialog {
         });
     }
 
-    reset_gstr1_data() {
-        if (this.is_request_in_progress()) return;
-
+    async reset_gstr1_data() {
         const action = "reset";
+        if (await this.is_request_in_progress(action)) return;
 
         frappe.confirm(
             __(
@@ -2493,8 +2491,8 @@ class GSTR1Action extends FileGSTR1Dialog {
         });
     }
 
-    mark_as_unfiled() {
-        if (this.is_request_in_progress()) return;
+    async mark_as_unfiled() {
+        if (await this.is_request_in_progress("Mark as Unfiled")) return;
 
         const { company, company_gstin, month_or_quarter, year } = this.frm.doc;
         const filters = {
@@ -2503,7 +2501,7 @@ class GSTR1Action extends FileGSTR1Dialog {
 
         frappe.call({
             method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.mark_as_unfiled",
-            args: { filters },
+            args: { filters: filters,  force: this.frm.__action_performed == undefined },
             callback: () => {
                 this.frm.gstr1.status = "Not Filed";
                 this.frm.refresh();
@@ -2546,6 +2544,7 @@ class GSTR1Action extends FileGSTR1Dialog {
             ...this.defaults,
             ...additional_args,
             action: `${action}_gstr1`,
+            force: this.frm.force_action ? this.frm.force_action : false,
         };
 
         taxpayer_api.call({
@@ -2675,17 +2674,45 @@ class GSTR1Action extends FileGSTR1Dialog {
         frappe.show_alert(__(alert_message));
     }
 
-    is_request_in_progress() {
+    is_request_in_progress(action) {
         let in_progress = this.frm.__action_performed;
+
         if (!in_progress) return false;
         else if (in_progress == "proceed_to_file") in_progress = "upload";
 
-        frappe.show_alert({
-            message: __('Already ' + in_progress + 'ing'),
-            indicator: "red",
-        });
+        const capitalize_first_letter = (str) => str.charAt(0).toUpperCase() + str.slice(1);
 
-        return true;
+        const in_progress_action = capitalize_first_letter(in_progress);
+        action = capitalize_first_letter(action);
+
+        return new Promise((resolve) => {
+            const d = frappe.msgprint({
+                message: __(`<b>${in_progress_action} is in progress. Do you want to perform ${action}?<b>`),
+                indicator: "red",
+                title: __("Process in Progress"),
+                primary_action: {
+                    label: __(`${action}`),
+                    action: () => {
+                        this.toggle_actions(true, in_progress);
+                        this.frm.force_action = true;
+                        resolve(false);
+                        d.hide();
+                    },
+                },
+                secondary_action: {
+                    label: __("Cancel"),
+                    action: () => {
+                        resolve(true)
+                        d.hide();
+                    },
+                }
+            });
+
+            d.onhide = () => {
+                resolve(true);
+                frappe.msg_dialog.msg_area.empty();
+            };
+        });
     }
 
     toggle_actions(show, action) {
