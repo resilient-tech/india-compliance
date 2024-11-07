@@ -4,8 +4,9 @@ import itertools
 
 import frappe
 from frappe import unscrub
-from frappe.utils import flt
+from frappe.utils import cstr, flt
 
+from india_compliance.gst_india.utils.__init__ import get_month_or_quarter_dict
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategory
 from india_compliance.gst_india.utils.gstr_1.__init__ import (
     CATEGORY_SUB_CATEGORY_MAPPING,
@@ -20,6 +21,9 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     GSTR1BooksData,
     summarize_retsum_data,
 )
+
+MONTH = list(get_month_or_quarter_dict().keys())[4:]
+QUARTER = ["Jan-Mar", "Apr-Jun", "Jul-Sep", "Oct-Dec"]
 
 
 class SummarizeGSTR1:
@@ -497,24 +501,21 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         """
         data = {}
 
-        from india_compliance.gst_india.utils.gstin_info import get_filing_frequency
-
-        filing_frequency = get_filing_frequency(
-            self.company, self.gstin, self.return_period
-        )
-        if filing_frequency and filing_frequency != self.is_quarterly:
-            self.is_quarterly = filing_frequency
-            filters.is_quarterly = filing_frequency
-            frappe.db.set_value(
-                "GST Return Log", self.name, "is_quarterly", filing_frequency
-            )
-
         # APIs Disabled
         if not self.is_gstr1_api_enabled(warn_for_missing_credentials=True):
             return self.generate_only_books_data(data, filters, callback)
 
         # APIs Enabled
         status = self.get_return_status()
+
+        from india_compliance.gst_india.utils.gstin_info import get_filing_frequency
+
+        filing_frequency = get_filing_frequency(self.gstin, self.return_period)
+
+        if cstr(filing_frequency) and filing_frequency != self.is_quarterly:
+            self.db_set({"is_quarterly": filing_frequency})
+            filters.is_quarterly = filing_frequency
+            update_month_or_quarter(filters)
 
         if status == "Filed":
             gov_data_field = "filed"
@@ -671,3 +672,12 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
                 data[subcategory] = [*subcategory_data.values()]
 
         return data
+
+
+def update_month_or_quarter(filters):
+    if filters.is_quarterly == 1:
+        quarter = MONTH.index(filters.month_or_quarter) // 3
+        filters.month_or_quarter = QUARTER[quarter]
+    else:
+        quarter_idx = QUARTER.index(filters.month_or_quarter)
+        filters.month_or_quarter = MONTH[(quarter_idx * 3) + 2]

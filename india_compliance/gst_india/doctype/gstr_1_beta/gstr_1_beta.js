@@ -161,9 +161,11 @@ frappe.ui.form.on(DOCTYPE, {
             )
                 return;
 
-            frm.doc.is_quarterly = filters.is_quarterly
-            set_options_for_month_or_quarter(frm, set_only_options=true);
-            frm.doc.month_or_quarter = filters.month_or_quarter
+            if(frm.doc.is_quarterly != filters.is_quarterly){
+                frm.doc.is_quarterly = filters.is_quarterly
+                set_options_for_month_or_quarter(frm, set_only_options=true)
+                frm.doc.month_or_quarter = filters.month_or_quarter
+            }
 
             frappe.after_ajax(() => {
                 frm.doc.__gst_data = data ;
@@ -2127,38 +2129,43 @@ function set_options_for_year(frm) {
     frm.set_value("year", current_year.toString());
 }
 
-function update_fields_based_on_filing_preference(frm){
-    frappe.call({
+async function update_fields_based_on_filing_preference(frm){
+    let {message : preference } = await frappe.call({
         method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_filing_preference",
         args: {month_or_quarter: frm.doc.month_or_quarter, year: frm.doc.year, company_gstin: frm.doc.company_gstin},
-        callback: (r) => {
-            const preference = r.message === undefined ? r.message : cint(r.message);
-
-            if(preference === undefined){
-                frm.set_df_property("is_quarterly", "read_only", 0);
-                return
-            }
-            if(preference === frm.doc.is_quarterly){
-                frm.set_df_property("is_quarterly", "read_only", 1);
-                return
-            }
-
-            frm.doc.is_quarterly = preference
-            frm.set_df_property("is_quarterly", "read_only", 1)
-            set_options_for_month_or_quarter(frm, set_only_options=true)
-
-            if(preference == 1){
-                const old_month_index = india_compliance.MONTH.indexOf(frm.doc.month_or_quarter)
-                const quarter = Math.floor(old_month_index / 3)
-                frm.doc.month_or_quarter = india_compliance.QUARTER[quarter]
-            }else{
-                const old_quarter_index = india_compliance.QUARTER.indexOf(frm.doc.month_or_quarter) * 3
-                frm.doc.month_or_quarter = india_compliance.MONTH[old_quarter_index]
-            }
-            frm.refresh_field("month_or_quarter")
-            frm.refresh_field("is_quarterly")
-        }
     })
+
+    if(preference === undefined){
+        frm.set_df_property("is_quarterly", "read_only", 0);
+        return
+    }
+
+    preference = cint(preference)
+
+    if(preference === frm.doc.is_quarterly){
+        frm.set_df_property("is_quarterly", "read_only", 1);
+        return
+    }
+
+    update_preference(frm, preference)
+}
+
+function update_preference(frm, preference){
+    frm.doc.is_quarterly = preference
+    frm.set_df_property("is_quarterly", "read_only", 1)
+    set_options_for_month_or_quarter(frm, set_only_options=true)
+
+    if(preference === 1){
+        const month_index = india_compliance.MONTH.indexOf(frm.doc.month_or_quarter)
+        const quarter = Math.floor(month_index / 3)
+        frm.doc.month_or_quarter = india_compliance.QUARTER[quarter]
+    }else{
+        const quarter_index = india_compliance.QUARTER.indexOf(frm.doc.month_or_quarter) * 3
+        //  added 2 to set month_or_quarter as last month of that quarter
+        frm.doc.month_or_quarter = india_compliance.MONTH[quarter_index+2]
+    }
+    frm.refresh_field("month_or_quarter")
+    frm.refresh_field("is_quarterly")
 }
 
 function set_options_for_month_or_quarter(frm, set_only_options=false) {

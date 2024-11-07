@@ -1,10 +1,10 @@
 import json
-from datetime import date, timedelta
+from datetime import timedelta
 from string import whitespace
 
 import frappe
 from frappe import _
-from frappe.utils import cint, getdate
+from frappe.utils import cint, get_last_day, getdate
 
 from india_compliance.exceptions import GSPServerError
 from india_compliance.gst_india.api_classes.base import BASE_URL
@@ -16,11 +16,6 @@ from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
     process_gstr_1_returns_info,
 )
 from india_compliance.gst_india.utils import parse_datetime, titlecase, validate_gstin
-from india_compliance.gst_india.utils.__init__ import get_month_or_quarter_dict
-
-MONTH = list(get_month_or_quarter_dict().keys())[4:]
-QUARTER = ["Jan-Mar", "Apr-Jun", "Jul-Sep", "Oct-Dec"]
-
 
 GST_CATEGORIES = {
     "Regular": "Registered Regular",
@@ -341,7 +336,7 @@ def get_gstr_1_return_status(
     return "Not Filed"
 
 
-def get_filing_frequency(company, gstin, period):
+def get_filing_frequency(gstin, period):
     month = cint(period[:2])
     year = cint(period[2:])
 
@@ -349,18 +344,23 @@ def get_filing_frequency(company, gstin, period):
     quarter = (month - 1) // 3 + 1
 
     start_date = getdate(f"{year}-{start_month}-01")
-    log_name = f"GSTR1-{start_month:02d}{year}-{gstin}"
+    months_of_quarter = [start_month + i for i in range(3)]
+    log_names = [f"GSTR1-{month:02d}{year}-{gstin}" for month in months_of_quarter]
 
-    if filing_preference := frappe.db.get_value(
-        "GST Return Log", log_name, "is_quarterly"
+    if filing_preference := frappe.get_list(
+        "GST Return Log",
+        filters={"name": ["in", log_names]},
+        fields=["is_quarterly", "name"],
     ):
-        return filing_preference
+        for record in filing_preference:
+            if not record.get("is_quarterly"):
+                continue
 
-    filing_due_date = date(year, start_month + 1, 13)
-    if (
-        frappe.db.get_value("GST Return Log", log_name, "filing_status") != "Filed"
-        and getdate() < filing_due_date
-    ):
+            return record.get("is_quarterly")
+
+    if frappe.db.get_value(
+        "GST Return Log", log_names[0], "filing_status"
+    ) != "Filed" and getdate() < get_last_day(start_date):
         return
 
     api = GSTR1API(company_gstin=gstin)
@@ -369,40 +369,36 @@ def get_filing_frequency(company, gstin, period):
     filing_preference = 1 if response[quarter].get("preference") == "Q" else 0
     frappe.enqueue(
         create_gst_return_log_for_quarter,
-        company,
-        gstin,
-        start_month,
-        year,
-        filing_preference,
+        gstin=gstin,
+        log_names=log_names,
+        filing_preference=filing_preference,
     )
 
     return filing_preference
 
 
-def create_gst_return_log_for_quarter(
-    company_name, gstin, start_month, year, filing_frequency
-):
-    return_periods = []
+def create_gst_return_log_for_quarter(gstin, log_names, filing_preference):
+    existing_log = frappe.get_all(
+        "GST Return Log", filters={"name": ["in", log_names]}, pluck="name"
+    )
 
-    for month_offset in range(3):
-        current_month = start_month + month_offset
-        period = f"{current_month:02d}{year}"
-        return_periods.append(period)
+    for log_name in log_names:
+        if log_name in existing_log:
+            frappe.db.set_value(
+                "GST Return Log", log_name, "is_quarterly", filing_preference
+            )
+            continue
 
-    for period in return_periods:
-        try:
-            frappe.get_doc(
-                {
-                    "doctype": "GST Return Log",
-                    "company": company_name,
-                    "gstin": gstin,
-                    "return_period": period,
-                    "return_type": "GSTR1",
-                    "is_quarterly": filing_frequency,
-                }
-            ).insert()
-        except frappe.DuplicateEntryError:
-            pass
+        frappe.get_doc(
+            {
+                "doctype": "GST Return Log",
+                "name": log_name,
+                "return_type": "GSTR1",
+                "is_quarterly": filing_preference,
+                "return_period": log_name.split("-")[1],
+                "gstin": gstin,
+            }
+        ).insert()
 
 
 def get_fy(period, year_increment=0):

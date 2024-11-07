@@ -83,7 +83,6 @@ class GSTR1Beta(Document):
             gstr1_log.gstin = self.company_gstin
             gstr1_log.return_period = period
             gstr1_log.return_type = "GSTR1"
-            gstr1_log.is_quarterly = self.is_quarterly
             gstr1_log.insert()
 
         settings = frappe.get_cached_doc("GST Settings")
