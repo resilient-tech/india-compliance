@@ -251,12 +251,35 @@ class StockEntryEwaybill extends EwaybillApplicability {
 
         let is_ewb_applicable = true;
         let message_list = [];
+        const is_return = this.frm.doc.is_return;
 
-        if (!this.frm.doc.bill_from_gstin) {
+        if (is_return && !this.frm.doc.bill_from_gstin) {
             is_ewb_applicable = false;
             message_list.push(
                 "Bill From GSTIN is not set. Ensure its set in Bill From Address."
             );
+        }
+
+        if (!is_return && !this.frm.doc.bill_to_gstin) {
+            is_ewb_applicable = false;
+            message_list.push(
+                "Bill To GSTIN is not set. Ensure its set in Bill To Address."
+            );
+        }
+
+        const same_gstin = this.frm.doc.bill_from_gstin === this.frm.doc.bill_to_gstin;
+        const applicable_for_same_gstin = !(
+            is_return || this.frm.doc.purpose === "Send to Subcontractor"
+        );
+
+        if (same_gstin && !applicable_for_same_gstin) {
+            is_ewb_applicable = false;
+            message_list.push("Bill From GSTIN and Bill To GSTIN are same.");
+        }
+
+        if (!same_gstin && applicable_for_same_gstin) {
+            is_ewb_applicable = false;
+            message_list.push("Bill From GSTIN and Bill To GSTIN are different.");
         }
 
         if (this.frm.doc.is_opening === "Yes") {
@@ -284,30 +307,10 @@ class StockEntryEwaybill extends EwaybillApplicability {
         let is_ewb_generatable = this.is_e_waybill_applicable(show_message);
 
         let message_list = [];
-        const same_gstin = this.frm.doc.bill_from_gstin === this.frm.doc.bill_to_gstin;
 
         if (!this.frm.doc.bill_to_address) {
             is_ewb_generatable = false;
             message_list.push("Bill To address is mandatory to generate e-Waybill.");
-        }
-
-        if (
-            (this.frm.doc.purpose === "Send to Subcontractor" ||
-                (this.frm.doc.purpose === "Material Transfer" &&
-                    this.frm.doc.is_return)) &&
-            same_gstin
-        ) {
-            is_ewb_generatable = false;
-            message_list.push("Bill From GSTIN and Bill To GSTIN are same.");
-        }
-
-        if (
-            ["Material Transfer", "Material Issue"].includes(this.frm.doc.purpose) &&
-            !this.frm.doc.is_return &&
-            !same_gstin
-        ) {
-            is_ewb_generatable = false;
-            message_list.push("Bill From GSTIN and Bill To GSTIN are different.");
         }
 
         if (show_message) {

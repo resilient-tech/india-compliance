@@ -179,7 +179,10 @@ def onload(doc, method=None):
 
 
 def validate(doc, method=None):
-    if cannot_generate_ewaybill(doc):
+    if ignore_gst_validations(doc):
+        return
+
+    if not is_e_waybill_applicable(doc):
         return
 
     if doc.doctype in ("Stock Entry", "Subcontracting Receipt"):
@@ -426,12 +429,34 @@ def remove_duplicates(doc):
             doc.append("doc_references", dict(link_doctype=row[0], link_name=row[1]))
 
 
-def cannot_generate_ewaybill(doc):
-    if doc.doctype == "Stock Entry" and doc.purpose not in [
-        "Material Transfer",
-        "Material Issue",
-        "Send to Subcontractor",
-    ]:
+def is_e_waybill_applicable(doc):
+    gst_settings = frappe.get_cached_doc("GST Settings")
+
+    if not (
+        gst_settings.enable_api
+        and gst_settings.enable_e_waybill
+        and gst_settings.enable_e_waybill_for_sc
+    ):
+        return False
+
+    if doc.doctype != "Stock Entry":
         return True
 
-    return ignore_gst_validations(doc)
+    if doc.purpose not in [
+        "Material Transfer",
+        "Material Receipt",
+        "Send to Subcontractor",
+    ]:
+        return False
+
+    same_gstin = doc.bill_from_gstin == doc.bill_to_gstin
+    applicable_for_same_gstin = not (
+        doc.is_return or doc.purpose == "Send to Subcontractor"
+    )
+
+    if (same_gstin and not applicable_for_same_gstin) or (
+        not same_gstin and applicable_for_same_gstin
+    ):
+        return False
+
+    return True

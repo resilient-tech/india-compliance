@@ -288,9 +288,9 @@ function show_generate_e_waybill_dialog(frm) {
                 api_enabled && frm.doc.doctype ? __("Download JSON") : null,
             secondary_action: api_enabled
                 ? () => {
-                      d.hide();
-                      json_action(d.get_values());
-                  }
+                    d.hide();
+                    json_action(d.get_values());
+                }
                 : null,
         },
         frm
@@ -924,7 +924,7 @@ function show_update_transporter_dialog(frm) {
                 reqd: 1,
                 default:
                     frm.doc.gst_transporter_id &&
-                    frm.doc.gst_transporter_id.length === 15
+                        frm.doc.gst_transporter_id.length === 15
                         ? frm.doc.gst_transporter_id
                         : "",
                 onchange: () => validate_gst_transporter_id(d),
@@ -1205,6 +1205,10 @@ function has_e_waybill_threshold_met(frm) {
         return true;
 }
 function is_e_waybill_applicable(frm, show_message) {
+    /**
+     * Defines supported conditions where e-Waybill is applicable
+     * and it's generation is supported.
+     */
     return new E_WAYBILL_CLASS[frm.doctype](frm).is_e_waybill_applicable(show_message);
 }
 
@@ -1213,6 +1217,9 @@ function is_e_waybill_api_enabled(frm) {
 }
 
 function is_e_waybill_generatable(frm, show_message) {
+    /**
+     * Checks if all information required to generate e-Waybill is available.
+     */
     return new E_WAYBILL_CLASS[frm.doctype](frm).is_e_waybill_generatable(show_message);
 }
 
@@ -1401,11 +1408,11 @@ function show_sandbox_mode_indicator() {
             `
             <div class="sidebar-menu ic-sandbox-mode">
                 <p><label class="indicator-pill no-indicator-dot yellow" title="${__(
-                    "Your site has enabled Sandbox Mode in GST Settings."
-                )}">${__("Sandbox Mode")}</label></p>
+                "Your site has enabled Sandbox Mode in GST Settings."
+            )}">${__("Sandbox Mode")}</label></p>
                 <p><a class="small text-muted" href="/app/gst-settings" target="_blank">${__(
-                    "Sandbox Mode is enabled for GST APIs."
-                )}</a></p>
+                "Sandbox Mode is enabled for GST APIs."
+            )}</a></p>
             </div>
             `
         );
