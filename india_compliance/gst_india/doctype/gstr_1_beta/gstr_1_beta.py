@@ -255,9 +255,9 @@ def get_journal_entries(month_or_quarter, year, company):
     )
 
     if not gst_accounts:
-        return True
+        return
 
-    return bool(
+    sales_reverse_charge = (
         frappe.qb.from_(journal_entry)
         .join(journal_entry_account)
         .on(journal_entry.name == journal_entry_account.parent)
@@ -270,12 +270,9 @@ def get_journal_entries(month_or_quarter, year, company):
         .run()
     )
 
+    if not sales_reverse_charge:
+        return
 
-@frappe.whitelist()
-def make_journal_entry(company, company_gstin, month_or_quarter, year, auto_submit):
-    frappe.has_permission("Journal Entry", "write", throw=True)
-
-    from_date, to_date = get_gstr_1_from_and_to_date(month_or_quarter, year)
     sales_invoice = frappe.qb.DocType("Sales Invoice")
     sales_invoice_taxes = frappe.qb.DocType("Sales Taxes and Charges")
 
@@ -305,19 +302,31 @@ def make_journal_entry(company, company_gstin, month_or_quarter, year, auto_subm
             )
         )
         .where(IfNull(sales_invoice_taxes.gst_tax_type, "") != "")
+        .where(sales_invoice.docstatus == 1)
         .groupby(sales_invoice_taxes.account_head)
         .run(as_dict=True)
     )
+
+    return data
+
+
+@frappe.whitelist()
+def make_journal_entry(
+    company, company_gstin, month_or_quarter, year, je_accounts_details, auto_submit
+):
+    frappe.has_permission("Journal Entry", "write", throw=True)
+
+    from_date, to_date = get_gstr_1_from_and_to_date(month_or_quarter, year)
 
     journal_entry = frappe.get_doc(
         {
             "doctype": "Journal Entry",
             "company": company,
             "company_gstin": company_gstin,
-            "posting_date": get_last_day(to_date),
+            "posting_date": to_date,
         }
     )
-    journal_entry.extend("accounts", data)
+    journal_entry.extend("accounts", frappe.parse_json(je_accounts_details))
     journal_entry.save()
 
     if auto_submit == "1":

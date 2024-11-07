@@ -169,6 +169,7 @@ india_compliance.taxes_controller = class TaxesController {
         });
 
         this.frm.set_value(this.get_fieldname("total_taxes"), total_taxes);
+
         this.update_base_grand_total();
         this.frm.refresh_field("taxes");
     }
@@ -176,7 +177,19 @@ india_compliance.taxes_controller = class TaxesController {
     update_base_grand_total() {
         const grand_total =
             this.calculate_total_taxable_value() + this.get_value("total_taxes");
-        this.frm.set_value(this.get_fieldname("base_grand_total"), grand_total);
+
+        const field_name = this.get_fieldname("base_grand_total");
+        if (this.frm.fields_dict[field_name]) {
+            this.frm.set_value(field_name, grand_total);
+        }
+    }
+
+    update_total_taxes() {
+        const total_taxes = this.frm.doc.taxes.reduce(
+            (total, row) => total + row.tax_amount,
+            0
+        );
+        this.frm.set_value("total_taxes", total_taxes);
     }
 
     get_tax_amount(tax_row) {
@@ -255,7 +268,7 @@ frappe.ui.form.on("India Compliance Taxes and Charges", {
 
     async charge_type(frm, cdt, cdn) {
         const row = locals[cdt][cdn];
-        if (!row.charge_type) {
+        if (!row.charge_type || row.charge_type === "Actual") {
             row.rate = 0;
             row.item_wise_tax_rates = "{}";
             frm.refresh_field("taxes");
@@ -263,5 +276,9 @@ frappe.ui.form.on("India Compliance Taxes and Charges", {
             await frm.taxes_controller.set_item_wise_tax_rates(null, cdn);
             frm.taxes_controller.update_tax_amount(cdt, cdn);
         }
+    },
+
+    taxes_remove(frm) {
+        frm.taxes_controller.update_total_taxes();
     },
 });

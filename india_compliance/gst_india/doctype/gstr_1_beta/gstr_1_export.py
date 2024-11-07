@@ -202,7 +202,13 @@ class GovExcel(DataProcessor):
         """
         Add draft count to cancelled count for DOC_ISSUE category
         """
-        for doc in data:
+        for doc in data.copy():
+            if doc.get(GSTR1_DataField.DOC_TYPE.value).startswith(
+                "Excluded from Report"
+            ):
+                data.remove(doc)
+                continue
+
             doc[GSTR1_DataField.CANCELLED_COUNT.value] += doc.get(
                 GSTR1_DataField.DRAFT_COUNT.value, 0
             )
