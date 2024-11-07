@@ -71,6 +71,11 @@ frappe.ui.form.on(DOCTYPE, {
         frm.taxes_controller = new india_compliance.taxes_controller(frm, {
             total_taxable_value: "total",
         });
+
+        frm.get_docfield("taxes", "charge_type").options = [
+            "On Net Total",
+            "On Item Quantity",
+        ];
     },
 
     refresh() {

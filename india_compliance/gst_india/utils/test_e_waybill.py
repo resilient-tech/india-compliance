@@ -8,7 +8,7 @@ import time_machine
 from responses import matchers
 
 import frappe
-from frappe.tests.utils import FrappeTestCase, change_settings
+from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import add_to_date, get_datetime, now_datetime, today
 from frappe.utils.data import format_date
 from frappe.www.printview import get_html_and_style
@@ -41,7 +41,7 @@ DATETIME_FORMAT = "%d/%m/%Y %I:%M:%S %p"
 DATE_FORMAT = "dd/mm/yyyy"
 
 
-class TestEWaybill(FrappeTestCase):
+class TestEWaybill(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
