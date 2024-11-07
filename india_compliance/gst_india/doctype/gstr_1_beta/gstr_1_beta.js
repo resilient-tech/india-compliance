@@ -2707,6 +2707,11 @@ class GSTR1Action extends FileGSTR1Dialog {
                     },
                 }
             });
+
+            d.onhide = () => {
+                resolve(true);
+                frappe.msg_dialog.msg_area.empty();
+            };
         });
     }
 
