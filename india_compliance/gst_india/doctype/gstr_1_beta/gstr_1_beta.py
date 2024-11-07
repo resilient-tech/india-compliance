@@ -302,7 +302,7 @@ def get_journal_entries(month_or_quarter, year, company):
 
 @frappe.whitelist()
 def make_journal_entry(
-    company, company_gstin, month_or_quarter, year, auto_submit, data
+    company, company_gstin, month_or_quarter, year, je_accounts_details, auto_submit
 ):
     frappe.has_permission("Journal Entry", "write", throw=True)
 
@@ -316,7 +316,7 @@ def make_journal_entry(
             "posting_date": to_date,
         }
     )
-    journal_entry.extend("accounts", frappe.parse_json(data))
+    journal_entry.extend("accounts", frappe.parse_json(je_accounts_details))
     journal_entry.save()
 
     if auto_submit == "1":
