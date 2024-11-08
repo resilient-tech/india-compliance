@@ -147,6 +147,9 @@ class GSTR1Beta(Document):
         """
         Once data is generated, update the status and publish the data
         """
+        if not filters:
+            filters = self
+
         if getattr(self, "gstr1_log", None):
             self.gstr1_log.db_set(
                 {"generation_status": "Generated", "is_latest_data": 1}
@@ -249,8 +252,13 @@ def get_gstr_1_from_and_to_date(
 
 
 @frappe.whitelist()
-def get_filing_preference(month_or_quarter: str, year: str, company_gstin):
+def get_filing_preference_from_log(month_or_quarter: str, year: str, company_gstin):
     period = get_period(month_or_quarter, year)
-    return frappe.db.get_value(
-        "GST Return Log", f"GSTR1-{period}-{company_gstin}", "is_quarterly"
+    filing_preference = frappe.db.get_value(
+        "GST Return Log", f"GSTR1-{period}-{company_gstin}", "filing_preference"
     )
+
+    if not filing_preference:
+        return None
+
+    return 1 if filing_preference == "Quarterly" else 0

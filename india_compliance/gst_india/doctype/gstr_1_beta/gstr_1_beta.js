@@ -120,7 +120,7 @@ frappe.ui.form.on(DOCTYPE, {
             const { filters } = message;
 
             const [month_or_quarter, year] =
-                india_compliance.get_month_year_from_period(filters.period, filters.is_quarterly);
+                india_compliance.get_month_year_from_period(filters.period, frm.doc.is_quarterly);
 
             if (
                 frm.doc.company_gstin !== filters.company_gstin ||
@@ -162,9 +162,8 @@ frappe.ui.form.on(DOCTYPE, {
                 return;
 
             if(frm.doc.is_quarterly != filters.is_quarterly){
-                frm.doc.is_quarterly = filters.is_quarterly
-                set_options_for_month_or_quarter(frm, set_only_options=true)
-                frm.doc.month_or_quarter = filters.month_or_quarter
+                frm.set_value("month_or_quarter", filters.month_or_quarter)
+                frm.set_value("is_quarterly", filters.is_quarterly)
             }
 
             frappe.after_ajax(() => {
@@ -2131,7 +2130,7 @@ function set_options_for_year(frm) {
 
 async function update_fields_based_on_filing_preference(frm){
     let {message : preference } = await frappe.call({
-        method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_filing_preference",
+        method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_filing_preference_from_log",
         args: {month_or_quarter: frm.doc.month_or_quarter, year: frm.doc.year, company_gstin: frm.doc.company_gstin},
     })
 

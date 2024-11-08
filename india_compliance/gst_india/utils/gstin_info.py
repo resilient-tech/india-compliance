@@ -336,12 +336,12 @@ def get_gstr_1_return_status(
     return "Not Filed"
 
 
-def get_filing_frequency(gstin, period):
+def get_filing_preference(gstin, period):
     month = cint(period[:2])
     year = cint(period[2:])
 
     start_month = (month - 1) // 3 * 3 + 1
-    quarter = (month - 1) // 3 + 1
+    quarter = (month - 1) // 3
 
     start_date = getdate(f"{year}-{start_month}-01")
     months_of_quarter = [start_month + i for i in range(3)]
@@ -350,13 +350,13 @@ def get_filing_frequency(gstin, period):
     if filing_preference := frappe.get_list(
         "GST Return Log",
         filters={"name": ["in", log_names]},
-        fields=["is_quarterly", "name"],
+        fields=["filing_preference"],
     ):
         for record in filing_preference:
-            if not record.get("is_quarterly"):
+            if not record.get("filing_preference"):
                 continue
 
-            return record.get("is_quarterly")
+            return record.get("filing_preference")
 
     if frappe.db.get_value(
         "GST Return Log", log_names[0], "filing_status"
@@ -366,7 +366,9 @@ def get_filing_frequency(gstin, period):
     api = GSTR1API(company_gstin=gstin)
     response = api.get_filing_preference(date=start_date).response
 
-    filing_preference = 1 if response[quarter].get("preference") == "Q" else 0
+    filing_preference = (
+        "Quarterly" if response[quarter].get("preference") == "Q" else "Monthly"
+    )
     frappe.enqueue(
         create_gst_return_log_for_quarter,
         gstin=gstin,
@@ -385,7 +387,7 @@ def create_gst_return_log_for_quarter(gstin, log_names, filing_preference):
     for log_name in log_names:
         if log_name in existing_log:
             frappe.db.set_value(
-                "GST Return Log", log_name, "is_quarterly", filing_preference
+                "GST Return Log", log_name, "filing_preference", filing_preference
             )
             continue
 
@@ -394,7 +396,7 @@ def create_gst_return_log_for_quarter(gstin, log_names, filing_preference):
                 "doctype": "GST Return Log",
                 "name": log_name,
                 "return_type": "GSTR1",
-                "is_quarterly": filing_preference,
+                "filing_preference": filing_preference,
                 "return_period": log_name.split("-")[1],
                 "gstin": gstin,
             }

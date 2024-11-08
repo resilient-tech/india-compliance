@@ -4,7 +4,7 @@ import itertools
 
 import frappe
 from frappe import unscrub
-from frappe.utils import cstr, flt
+from frappe.utils import flt
 
 from india_compliance.gst_india.utils.__init__ import get_month_or_quarter_dict
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategory
@@ -508,14 +508,13 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         # APIs Enabled
         status = self.get_return_status()
 
-        from india_compliance.gst_india.utils.gstin_info import get_filing_frequency
+        from india_compliance.gst_india.utils.gstin_info import get_filing_preference
 
-        filing_frequency = get_filing_frequency(self.gstin, self.return_period)
+        filing_preference = get_filing_preference(self.gstin, self.return_period)
 
-        if cstr(filing_frequency) and filing_frequency != self.is_quarterly:
-            self.db_set({"is_quarterly": filing_frequency})
-            filters.is_quarterly = filing_frequency
-            update_month_or_quarter(filters)
+        if filing_preference and self.filing_preference is None:
+            self.db_set({"filing_preference": filing_preference})
+            update_filters(filters, filing_preference)
 
         if status == "Filed":
             gov_data_field = "filed"
@@ -674,7 +673,13 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         return data
 
 
-def update_month_or_quarter(filters):
+def update_filters(filters, filing_preference):
+    is_quarterly = 1 if filing_preference == "Quarterly" else 0
+
+    if filters.is_quarterly == is_quarterly:
+        return
+
+    filters.is_quarterly = is_quarterly
     if filters.is_quarterly == 1:
         quarter = MONTH.index(filters.month_or_quarter) // 3
         filters.month_or_quarter = QUARTER[quarter]

@@ -4,7 +4,7 @@
 frappe.ui.form.on("GST Return Log", {
     refresh(frm) {
         const [month_or_quarter, year] = india_compliance.get_month_year_from_period(
-            frm.doc.return_period, frm.doc.is_quarterly
+            frm.doc.return_period, frm.doc.filing_preference === "Monthly" ? 0 : 1
         );
 
         frm.add_custom_button(__("View GSTR-1"), () => {
@@ -17,13 +17,14 @@ frappe.ui.form.on("GST Return Log", {
                         clearInterval(interval);
                         resolve();
                     }
-                }, 100);
+                }, 200);
             }).then(async () => {
                 await cur_frm.set_value({
                     company: frm.doc.company,
                     company_gstin: frm.doc.gstin,
                     year: year,
                     month_or_quarter: month_or_quarter,
+                    is_quarterly : frm.doc.filing_preference == "Monthly" ? 0 : 1,
                 });
                 cur_frm.save();
             });

@@ -12,7 +12,7 @@
   "return_period",
   "company",
   "return_type",
-  "is_quarterly",
+  "filing_preference",
   "column_break_sqwh",
   "filing_date",
   "acknowledgement_number",
@@ -190,9 +190,9 @@
    "reqd": 1
   },
   {
-   "fieldname": "is_quarterly",
+   "fieldname": "filing_preference",
    "fieldtype": "Data",
-   "label": "Is Quarterly",
+   "label": "Filing Preference",
    "read_only": 1
   }
  ],
@@ -204,7 +204,7 @@
    "link_fieldname": "reference_docname"
   }
  ],
- "modified": "2024-11-06 17:47:55.754860",
+ "modified": "2024-11-07 23:12:55.966658",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Return Log",
