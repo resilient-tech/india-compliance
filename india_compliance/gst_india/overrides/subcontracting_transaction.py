@@ -449,14 +449,4 @@ def is_e_waybill_applicable(doc):
     ]:
         return False
 
-    same_gstin = doc.bill_from_gstin == doc.bill_to_gstin
-    applicable_for_same_gstin = not (
-        doc.is_return or doc.purpose == "Send to Subcontractor"
-    )
-
-    if (same_gstin and not applicable_for_same_gstin) or (
-        not same_gstin and applicable_for_same_gstin
-    ):
-        return False
-
     return True

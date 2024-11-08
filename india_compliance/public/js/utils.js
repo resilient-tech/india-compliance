@@ -416,14 +416,26 @@ Object.assign(india_compliance, {
 
     is_e_waybill_generatable_for_subcontracting(doc) {
         if (
-            ["Material Transfer", "Material Issue", "Send to Subcontractor"].includes(
+            !(
+                gst_settings.enable_api &&
+                gst_settings.enable_e_waybill &&
+                gst_settings.ewaybill_for_subcontracting
+            )
+        ) {
+            return false;
+        }
+
+        if (doc.doctype != "Stock Entry") return true;
+
+        if (
+            !["Material Transfer", "Material Issue", "Send to Subcontractor"].includes(
                 doc.purpose
             )
         ) {
-            return true;
+            return false;
         }
 
-        return false;
+        return true;
     },
 });
 
