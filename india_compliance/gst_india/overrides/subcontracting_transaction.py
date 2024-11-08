@@ -26,7 +26,7 @@ from india_compliance.gst_india.overrides.transaction import (
 from india_compliance.gst_india.utils import (
     get_gst_accounts_by_type,
     is_api_enabled,
-    is_outward_material_transfer,
+    is_outward_stock_entry,
 )
 from india_compliance.gst_india.utils import (
     validate_invoice_number as validate_transaction_name,
@@ -329,7 +329,7 @@ class SubcontractingGSTAccounts(GSTAccounts):
         self.validate_for_charge_type()
 
     def validate_for_same_party_gstin(self):
-        if is_outward_material_transfer(self.doc):
+        if is_outward_stock_entry(self.doc):
             return
 
         company_gstin = self.doc.get("company_gstin") or self.doc.bill_from_gstin

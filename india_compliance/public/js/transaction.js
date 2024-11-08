@@ -80,12 +80,12 @@ async function update_gst_details(frm, event) {
     const party_fieldname = frm.doc.doctype === "Quotation" ? "party_name" : party_type;
     const party = frm.doc[party_fieldname];
 
-    const is_outward_material_transfer_or_issue =
+    const same_gstin_stock_entry =
         frm.doc.doctype === "Stock Entry" &&
         ["Material Transfer", "Material Issue"].includes(frm.doc.purpose) &&
         !frm.doc.is_return;
 
-    if (!party && !is_outward_material_transfer_or_issue) return;
+    if (!(party || same_gstin_stock_entry)) return;
 
     if (
         [
@@ -149,9 +149,8 @@ async function update_gst_details(frm, event) {
             "bill_to_address"
         );
 
-        party_details["is_outward_material_transfer_or_issue"] =
-            is_outward_material_transfer_or_issue;
-        party_details["is_inward_material_transfer"] =
+        party_details["is_outward_stock_entry"] = same_gstin_stock_entry;
+        party_details["is_inward_stock_entry"] =
             frm.doc.purpose === "Material Transfer" && frm.doc.is_return;
     } else {
         fieldnames_to_set.push("supplier_address", "supplier_gstin");
@@ -386,7 +385,7 @@ function _set_e_commerce_ecommerce_supply_type(frm) {
 
 function fetch_party_details(doctype) {
     let company_gstin_field = "company_gstin";
-    let is_inward_material_transfer = false;
+    let is_inward_stock_entry = false;
 
     if (doctype === "Stock Entry") {
         company_gstin_field = "bill_from_gstin";
@@ -400,14 +399,14 @@ function fetch_party_details(doctype) {
                 frm.doc.is_return
             ) {
                 company_gstin_field = "bill_to_gstin";
-                is_inward_material_transfer = true;
+                is_inward_stock_entry = true;
             }
 
             setTimeout(() => {
                 const party_details = {
                     [company_gstin_field]: frm.doc[company_gstin_field],
                     supplier: frm.doc.supplier,
-                    is_inward_material_transfer,
+                    is_inward_stock_entry,
                 };
                 const args = {
                     party_details: JSON.stringify(party_details),

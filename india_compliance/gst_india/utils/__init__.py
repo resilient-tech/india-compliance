@@ -1011,7 +1011,7 @@ def get_period(month_or_quarter, year=None):
     return month_or_quarter_no
 
 
-def is_outward_material_transfer(doc):
+def is_outward_stock_entry(doc):
     if (
         doc.doctype == "Stock Entry"
         and doc.purpose in ["Material Transfer", "Material Issue"]

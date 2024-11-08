@@ -38,7 +38,7 @@ from india_compliance.gst_india.constants.e_waybill import (
 from india_compliance.gst_india.utils import (
     handle_server_errors,
     is_foreign_doc,
-    is_outward_material_transfer,
+    is_outward_stock_entry,
     load_doc,
     parse_datetime,
     send_updated_doc,
@@ -1263,7 +1263,7 @@ class EWaybillData(GSTTransactionData):
         if not self.doc.gst_transporter_id:
             self.validate_mode_of_transport()
 
-        if is_outward_material_transfer(self.doc):
+        if is_outward_stock_entry(self.doc):
             self.validate_different_gstin()
         else:
             self.validate_same_gstin()

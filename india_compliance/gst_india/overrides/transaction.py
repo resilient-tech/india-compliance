@@ -787,7 +787,7 @@ def get_party_details_for_subcontracting(party_details, doctype, company):
     if doctype == "Stock Entry":
         party_address_field = (
             "bill_from_address"
-            if party_details.get("is_inward_material_transfer")
+            if party_details.get("is_inward_stock_entry")
             else "bill_to_address"
         )
     else:
@@ -827,7 +827,7 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
     gst_details = frappe._dict()
 
     allow_same_gstin = False
-    if party_details.get("is_outward_material_transfer_or_issue"):
+    if party_details.get("is_outward_stock_entry"):
         allow_same_gstin = True
 
     # Party/Address Defaults
@@ -838,7 +838,7 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
         gst_category_field = "gst_category"
 
     elif doctype == "Stock Entry":
-        if party_details.get("is_inward_material_transfer"):
+        if party_details.get("is_inward_stock_entry"):
             company_gstin_field = "bill_to_gstin"
             party_gstin_field = "bill_from_gstin"
             party_address_field = "bill_from_address"
