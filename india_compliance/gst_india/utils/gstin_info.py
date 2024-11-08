@@ -4,6 +4,7 @@ from string import whitespace
 
 import frappe
 from frappe import _
+from frappe.query_builder import Case
 from frappe.utils import cint, get_last_day, getdate
 
 from india_compliance.exceptions import GSPServerError
@@ -401,6 +402,57 @@ def create_gst_return_log_for_quarter(gstin, log_names, filing_preference):
                 "gstin": gstin,
             }
         ).insert()
+
+    update_log_without_filing_preference()
+
+
+def update_log_without_filing_preference():
+    gst_return_logs = frappe.get_all(
+        "GST Return Log",
+        filters={"filing_preference": ["is", "not set"]},
+        fields=["name", "return_period", "gstin"],
+    )
+
+    if not gst_return_logs:
+        return
+
+    filing_preferences = {}
+    logs_to_update = {}
+
+    for log in gst_return_logs:
+        return_period = log.get("return_period")
+        gstin = log.get("gstin")
+        financial_year = get_fy(return_period)
+        key = f"{financial_year}:{gstin}"
+
+        if key not in filing_preferences:
+            start_date = getdate(f"{return_period[2:]}-{return_period[:2]}-01")
+            api = GSTR1API(company_gstin=gstin)
+            filing_preferences[key] = api.get_filing_preference(
+                date=start_date
+            ).response
+
+        month = cint(return_period[:2])
+        quarter = (month - 1) // 3
+        preference_data = filing_preferences.get(key)
+        logs_to_update[log.get("name")] = (
+            "Quarterly"
+            if preference_data[quarter].get("preference") == "Q"
+            else "Monthly"
+        )
+
+    gst_return_log = frappe.qb.DocType("GST Return Log")
+    case_conditions = Case()
+
+    for name, preference_data in logs_to_update.items():
+        case_conditions.when(gst_return_log.name == name, preference_data)
+
+    (
+        frappe.qb.update(gst_return_log)
+        .set(gst_return_log.filing_preference, case_conditions)
+        .where(gst_return_log.name.isin(list(logs_to_update.keys())))
+        .run()
+    )
 
 
 def get_fy(period, year_increment=0):
