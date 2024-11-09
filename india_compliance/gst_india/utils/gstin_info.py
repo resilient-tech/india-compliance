@@ -403,10 +403,10 @@ def create_gst_return_log_for_quarter(gstin, log_names, filing_preference):
             }
         ).insert()
 
-    update_log_without_filing_preference()
+    update_logs_without_filing_preference()
 
 
-def update_log_without_filing_preference():
+def update_logs_without_filing_preference():
     gst_return_logs = frappe.get_all(
         "GST Return Log",
         filters={"filing_preference": ["is", "not set"]},
