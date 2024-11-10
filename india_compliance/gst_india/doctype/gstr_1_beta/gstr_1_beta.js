@@ -716,6 +716,8 @@ class GSTR1 {
     }
 
     async show_suggested_jv_dialog() {
+        if (!frappe.perm.has_perm("Journal Entry")) return;
+
         const { month_or_quarter, year, company } = this.frm.doc;
         const { message: je_accounts_details } = await frappe.call({
             method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_journal_entries",
@@ -2578,7 +2580,7 @@ class GSTR1Action extends FileGSTR1Dialog {
 
         frappe.call({
             method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.mark_as_unfiled",
-            args: { filters: filters,  force: this.frm.__action_performed == undefined },
+            args: { filters: filters, force: this.frm.__action_performed == undefined },
             callback: () => {
                 this.frm.gstr1.status = "Not Filed";
                 this.frm.refresh();

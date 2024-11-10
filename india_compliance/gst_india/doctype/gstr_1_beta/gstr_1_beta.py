@@ -243,7 +243,8 @@ def mark_as_unfiled(filters, force):
 
 @frappe.whitelist()
 def get_journal_entries(month_or_quarter, year, company):
-    frappe.has_permission("Journal Entry", "read", throw=True)
+    if not frappe.has_permission("Journal Entry", "write"):
+        return
 
     from_date, to_date = get_gstr_1_from_and_to_date(month_or_quarter, year)
 
@@ -314,7 +315,8 @@ def get_journal_entries(month_or_quarter, year, company):
 def make_journal_entry(
     company, company_gstin, month_or_quarter, year, je_accounts_details, auto_submit
 ):
-    frappe.has_permission("Journal Entry", "write", throw=True)
+    if not frappe.has_permission("Journal Entry", "write"):
+        return
 
     from_date, to_date = get_gstr_1_from_and_to_date(month_or_quarter, year)
 
