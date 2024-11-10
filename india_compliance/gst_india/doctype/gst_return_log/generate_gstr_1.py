@@ -921,16 +921,18 @@ class FileGSTR1:
 
 def verify_request_in_progress(return_log, force):
     for row in return_log.actions:
-        if not row.status:
-            if force:
-                row.db_set({"status": "Ignored"})
-                continue
+        if row.status:
+            continue
 
-            frappe.throw(
-                _(
-                    "There is a {0} request in progress. Please wait for the process to complete."
-                ).format(row.request_type)
-            )
+        if force:
+            row.db_set({"status": "Ignored"})
+            continue
+
+        frappe.throw(
+            _(
+                "There is a {0} request in progress. Please wait for the process to complete."
+            ).format(row.request_type)
+        )
 
 
 def get_differing_categories(mapped_summary, gov_summary):
