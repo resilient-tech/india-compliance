@@ -326,6 +326,7 @@ def make_journal_entry(
             "company": company,
             "company_gstin": company_gstin,
             "posting_date": to_date,
+            "user_remark": f"Reduced Output GST Liability to the extent of Sales Reverse Charge as per GSTR-1 for {month_or_quarter} {year}",
         }
     )
     journal_entry.extend("accounts", frappe.parse_json(je_accounts_details))
