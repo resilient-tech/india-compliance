@@ -248,30 +248,11 @@ def get_journal_entries(month_or_quarter, year, company):
 
     from_date, to_date = get_gstr_1_from_and_to_date(month_or_quarter, year)
 
-    journal_entry = frappe.qb.DocType("Journal Entry")
-    journal_entry_account = frappe.qb.DocType("Journal Entry Account")
-
     gst_accounts = list(
         get_gst_accounts_by_type(company, "Sales Reverse Charge", throw=False).values()
     )
 
     if not gst_accounts:
-        return
-
-    sales_reverse_charge = (
-        frappe.qb.from_(journal_entry)
-        .join(journal_entry_account)
-        .on(journal_entry.name == journal_entry_account.parent)
-        .select(
-            journal_entry.name,
-        )
-        .where(journal_entry.posting_date.between(getdate(from_date), getdate(to_date)))
-        .where(journal_entry_account.account.isin(gst_accounts))
-        .where(journal_entry.docstatus == 1)
-        .run()
-    )
-
-    if not sales_reverse_charge:
         return
 
     sales_invoice = frappe.qb.DocType("Sales Invoice")
