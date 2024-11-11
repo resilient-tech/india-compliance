@@ -302,7 +302,7 @@ class GSTR1 {
                 return;
             }
 
-            if (this.data.status == "Ready to File") {
+            if (this.status == "Ready to File") {
                 if (["books", "unfiled", "reconcile"].includes(tab_name)) {
                     tab.hide();
                     _tab.shown = false;
@@ -2612,6 +2612,7 @@ class GSTR1Action extends FileGSTR1Dialog {
             callback: () => {
                 this.frm.gstr1.status = "Not Filed";
                 this.frm.refresh();
+                this.frm.gstr1.refresh_data();
             },
         });
     }
