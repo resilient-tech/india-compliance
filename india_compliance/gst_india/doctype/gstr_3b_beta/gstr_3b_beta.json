@@ -59,13 +59,13 @@
    "label": "Month"
   },
   {
-   "depends_on": "eval: !doc.invoice_data",
+   "depends_on": "eval: !doc.__invoice_data",
    "fieldname": "invoices_empty_state",
    "fieldtype": "HTML",
    "options": "<img alt=\"No Data\" src=\"/assets/frappe/images/ui-states/list-empty-state.svg\">\n\t<p class=\"text-muted\">{{ __(\"Generate to view the data\") }}</p>"
   },
   {
-   "depends_on": "eval: !doc.invoice_data",
+   "depends_on": "eval: doc.__invoice_data && Object.keys(doc.__inovice_data).length === 0",
    "fieldname": "no_invoices_data",
    "fieldtype": "HTML",
    "options": "<img alt=\"No Data\" src=\"/assets/frappe/images/ui-states/list-empty-state.svg\">\n\t<p class=\"text-muted\">{{ __(\"No data available for selected filters\") }}</p>"
@@ -88,6 +88,7 @@
    "label": "Is Modified"
   },
   {
+   "depends_on": "eval: doc.__invoice_data && Object.keys(doc.__invoice_data).length",
    "fieldname": "invoice_html",
    "fieldtype": "HTML"
   }
@@ -96,7 +97,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-11-11 11:33:03.116263",
+ "modified": "2024-11-11 12:16:43.412048",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR-3B Beta",

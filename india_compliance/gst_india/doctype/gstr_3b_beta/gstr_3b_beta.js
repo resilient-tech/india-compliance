@@ -13,6 +13,7 @@ frappe.ui.form.on("GSTR-3B Beta", {
     },
 
     async company(frm) {
+        render_empty_state(frm);
         if (!frm.doc.company) return;
         const options = await india_compliance.set_gstin_options(frm);
 
@@ -20,15 +21,16 @@ frappe.ui.form.on("GSTR-3B Beta", {
     },
 
     company_gstin(frm) {
-        // Do something
+        render_empty_state(frm);
     },
 
     year(frm) {
+        render_empty_state(frm);
         set_options_for_month(frm);
     },
 
     month(frm) {
-        // Do something
+        render_empty_state(frm);
     },
 
     refresh(frm) {
@@ -212,13 +214,6 @@ class GSTR3B {
     get_invoice_columns() {
         return [
             {
-                fieldname: "view",
-                fieldtype: "html",
-                width: 60,
-                align: "center",
-                _value: (...args) => get_icon(...args),
-            },
-            {
                 label: "Supplier Name",
                 fieldname: "supplier_name_gstin",
                 align: "center",
@@ -335,4 +330,9 @@ function get_first_last_day(year, month) {
     const to_date = givenDate.endOf("month").format("YYYY-MM-DD");
 
     return { from_date, to_date };
+}
+
+function render_empty_state(frm) {
+    frm.doc.__invoice_data = null;
+    frm.refresh();
 }
