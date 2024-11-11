@@ -719,31 +719,47 @@ class GSTR1 {
         if (!frappe.perm.has_perm("Journal Entry")) return;
 
         const { month_or_quarter, year, company } = this.frm.doc;
-        const { message: je_accounts_details } = await frappe.call({
+        const { message: je_details } = await frappe.call({
             method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_journal_entries",
             args: { month_or_quarter, year, company },
         });
 
-        if (!je_accounts_details) return;
+        if (!je_details || !je_details.data) return;
 
-        this.create_journal_entry_dialog(je_accounts_details);
+        this.create_journal_entry_dialog(je_details);
     }
 
-    create_journal_entry_dialog(je_accounts_details) {
+    create_journal_entry_dialog(je_details) {
         const dialog = new frappe.ui.Dialog({
-            title: "Create Journal Entry",
+            title: "Suggested Journal Entry",
             fields: [
+                {
+                    fieldname: "posting_date",
+                    fieldtype: "Date",
+                    label: "Posting Date",
+                    reqd: 1,
+                    default: je_details.posting_date,
+                },
                 {
                     fieldname: "journal_entry_accounts",
                     fieldtype: "HTML",
+                    options: this.generate_tax_table(je_details.data),
+                },
+                {
+                    fieldname: "user_remarks",
+                    fieldtype: "Text",
+                    label: "Remarks",
+                    read_only: 1,
+                    default: `Reduced Output GST Liability to the extent of Sales Reverse Charge as per GSTR-1 for ${this.frm.doc.month_or_quarter} - ${this.frm.doc.year}`,
                 },
                 {
                     fieldname: "auto_submit",
                     fieldtype: "Check",
-                    label: "Submit After Creation",
+                    label: "Submit after Creation",
+                    default: 1,
                 },
             ],
-            primary_action_label: "Create Journal Entry",
+            primary_action_label: "Create",
             primary_action: values => {
                 const { company, company_gstin, month_or_quarter, year } = this.frm.doc;
 
@@ -754,8 +770,8 @@ class GSTR1 {
                         company_gstin,
                         month_or_quarter,
                         year,
-                        je_accounts_details,
-                        auto_submit: values.auto_submit,
+                        accounts: je_details.data,
+                        values: values,
                     },
                     callback: r => {
                         frappe.open_in_new_tab = true;
@@ -765,8 +781,6 @@ class GSTR1 {
                 });
             },
         });
-        const journal_entry_html = this.generate_tax_table(je_accounts_details);
-        dialog.fields_dict.journal_entry_accounts.$wrapper.html(journal_entry_html);
 
         dialog.show();
     }
@@ -778,7 +792,6 @@ class GSTR1 {
                 <thead>
                     <tr>
                         <th>Account</th>
-                        <th>Reference Type</th>
                         <th>Debit</th>
                         <th>Credit</th>
                     </tr>
@@ -793,7 +806,6 @@ class GSTR1 {
         return `
             <tr>
                 <td>${entry.account}</td>
-                <td>${entry.reference_type}</td>
                 <td>${format_currency(entry.debit_in_account_currency)}</td>
                 <td>${format_currency(entry.credit_in_account_currency)}</td>
             </tr>
@@ -2156,7 +2168,7 @@ class ErrorTab extends TabManager {
             {
                 name: "Category",
                 fieldname: "category",
-                width: 120,
+                width: 150,
             },
             {
                 name: "Error Code",
@@ -2183,7 +2195,7 @@ class ErrorTab extends TabManager {
             {
                 name: "Place Of Supply",
                 fieldname: GSTR1_DataField.POS,
-                width: 130,
+                width: 150,
             },
         ];
     }
@@ -2521,9 +2533,12 @@ class GSTR1Action extends FileGSTR1Dialog {
             this.frm.doc.__gst_data = r.message;
             this.frm.trigger("load_gstr1_data");
 
-            const request_types = ["upload", "reset", "proceed_to_file"];
-            request_types.map(request_type =>
-                this.fetch_status_with_retry(request_type, true)
+            console.log(r.message.pending_actions);
+
+            if (!r.message.pending_actions) return;
+
+            r.message.pending_actions.forEach(request_type =>
+                this.fetch_status_with_retry(request_type, 0, true)
             );
         });
     }
@@ -2611,10 +2626,12 @@ class GSTR1Action extends FileGSTR1Dialog {
                     method: `india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.process_gstr1_request`,
                     args: { ...this.defaults, action },
                 });
+
                 if (!message.status_cd) return;
 
-                if (message.status_cd === "IP" && retries < retry_intervals.length)
+                if (message.status_cd === "IP" && retries < this.RETRY_INTERVALS.length) {
                     return this.fetch_status_with_retry(action, retries + 1);
+                }
 
                 // Not IP
 

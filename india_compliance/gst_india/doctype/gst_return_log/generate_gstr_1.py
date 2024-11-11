@@ -505,6 +505,25 @@ class AggregateInvoices:
 
 
 class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
+    def get_gstr1_data(self):
+        data = self.load_data()
+
+        if not data:
+            return
+
+        data = data
+        data["status"] = self.filing_status or "Not Filed"
+        if error_data := self.get_json_for("upload_error"):
+            data["error"] = error_data
+
+        data["pending_actions"] = set(
+            [row.request_type for row in self.actions if not row.status]
+        )
+
+        self.update_status("Generated")
+
+        return data
+
     def generate_gstr1_data(self, filters, callback=None):
         """
         Generate GSTR-1 Data

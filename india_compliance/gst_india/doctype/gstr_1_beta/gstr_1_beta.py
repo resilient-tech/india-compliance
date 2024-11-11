@@ -8,7 +8,6 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder import Case
-from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Date, IfNull, Sum
 from frappe.utils import get_last_day, getdate
 
@@ -101,14 +100,9 @@ class GSTR1Beta(Document):
 
         # files are already present
         if gstr1_log.has_all_files(settings):
-            data = gstr1_log.load_data()
+            data = gstr1_log.get_gstr1_data()
 
             if data:
-                data = data
-                data["status"] = gstr1_log.filing_status or "Not Filed"
-                if error_data := gstr1_log.get_json_for("upload_error"):
-                    data["error"] = error_data
-                gstr1_log.update_status("Generated")
                 return data
 
         # validate auth token
@@ -264,7 +258,6 @@ def get_journal_entries(month_or_quarter, year, company):
         .on(sales_invoice.name == sales_invoice_taxes.parent)
         .select(
             sales_invoice_taxes.account_head.as_("account"),
-            ConstantColumn("Sales Invoice").as_("reference_type"),
             Case()
             .when(
                 sales_invoice_taxes.tax_amount > 0, Sum(sales_invoice_taxes.tax_amount)
@@ -289,31 +282,35 @@ def get_journal_entries(month_or_quarter, year, company):
         .run(as_dict=True)
     )
 
-    return data
+    return {"data": data, "posting_date": to_date}
 
 
 @frappe.whitelist()
 def make_journal_entry(
-    company, company_gstin, month_or_quarter, year, je_accounts_details, auto_submit
+    company, company_gstin, month_or_quarter, year, accounts, values
 ):
     if not frappe.has_permission("Journal Entry", "write"):
         return
 
-    from_date, to_date = get_gstr_1_from_and_to_date(month_or_quarter, year)
+    if isinstance(values, str):
+        values = frappe.parse_json(values)
+
+    if isinstance(accounts, str):
+        accounts = frappe.parse_json(accounts)
 
     journal_entry = frappe.get_doc(
         {
             "doctype": "Journal Entry",
             "company": company,
             "company_gstin": company_gstin,
-            "posting_date": to_date,
-            "user_remark": f"Reduced Output GST Liability to the extent of Sales Reverse Charge as per GSTR-1 for {month_or_quarter} {year}",
+            "posting_date": values.posting_date,
+            "user_remark": f"Reduced Output GST Liability to the extent of Sales Reverse Charge as per GSTR-1 for {month_or_quarter} - {year}",
+            "accounts": accounts,
         }
     )
-    journal_entry.extend("accounts", frappe.parse_json(je_accounts_details))
     journal_entry.save()
 
-    if auto_submit == "1":
+    if values.auto_submit == 1:
         journal_entry.submit()
 
     return journal_entry.name
