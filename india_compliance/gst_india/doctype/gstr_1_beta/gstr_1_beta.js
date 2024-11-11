@@ -2396,7 +2396,7 @@ class FileGSTR1Dialog {
 
         // update total amendes
         taxpayer_api.call({
-            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.handle_gstr1_action",
+            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.perform_gstr1_action",
             args: {
                 action: "get_amendment_data",
                 month_or_quarter: this.frm.doc.month_or_quarter,
