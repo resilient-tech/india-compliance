@@ -14,7 +14,7 @@
   "column_break_jufx",
   "month",
   "section_break_11",
-  "invoices_html",
+  "invoice_html",
   "invoices_empty_state",
   "no_invoices_data",
   "section_break_otus",
@@ -59,10 +59,6 @@
    "label": "Month"
   },
   {
-   "fieldname": "invoices_html",
-   "fieldtype": "HTML"
-  },
-  {
    "depends_on": "eval: !doc.invoice_data",
    "fieldname": "invoices_empty_state",
    "fieldtype": "HTML",
@@ -90,13 +86,17 @@
    "fieldtype": "Check",
    "hidden": 1,
    "label": "Is Modified"
+  },
+  {
+   "fieldname": "invoice_html",
+   "fieldtype": "HTML"
   }
  ],
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-11-05 12:18:47.899549",
+ "modified": "2024-11-11 11:33:03.116263",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR-3B Beta",

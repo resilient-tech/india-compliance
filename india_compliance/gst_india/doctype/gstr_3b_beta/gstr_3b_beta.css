@@ -7,13 +7,13 @@ div[data-page-route="GSTR-3B Beta"] .section-body {
 }
 
 div[data-page-route="GSTR-3B Beta"]
-    [data-fieldname="invoices_html"]
+    [data-fieldname="invoice_html"]
     .section-body {
     margin-top: 0;
 }
 
 div[data-page-route="GSTR-3B Beta"]
-    [data-fieldname="invoices_html"]
+    [data-fieldname="invoice_html"]
     .form-tabs-list {
     display: flex;
     justify-content: space-between;
@@ -24,14 +24,14 @@ div[data-page-route="GSTR-3B Beta"]
 }
 
 div[data-page-route="GSTR-3B Beta"]
-    [data-fieldname="invoices_html"]
+    [data-fieldname="invoice_html"]
     .form-tabs-list
     .custom-button-group {
     display: flex;
 }
 
 div[data-page-route="GSTR-3B Beta"]
-    [data-fieldname="invoices_html"]
+    [data-fieldname="invoice_html"]
     .form-tabs-list
     .inner-group-button, .filter-selector {
     margin-bottom: 8px;
@@ -39,7 +39,7 @@ div[data-page-route="GSTR-3B Beta"]
 }
 
 div[data-page-route="GSTR-3B Beta"]
-    [data-fieldname="invoices_html"]
+    [data-fieldname="invoice_html"]
     .form-tabs-list
     .custom-button-group
     .btn {

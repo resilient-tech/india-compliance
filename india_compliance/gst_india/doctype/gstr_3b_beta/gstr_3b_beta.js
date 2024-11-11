@@ -8,20 +8,19 @@ frappe.ui.form.on("GSTR-3B Beta", {
         await frappe.require("gstr3b.bundle.js");
         frm.gstr3b = new GSTR3B(frm);
 
-        set_company_gstin(frm);
         set_options_for_year(frm);
         set_options_for_month(frm);
-
-        frm.gstr3b.fetch_invoice_data();
     },
 
-    company(frm) {
-        set_company_gstin(frm);
-        frm.gstr3b.filter_invoices();
+    async company(frm) {
+        if (!frm.doc.company) return;
+        const options = await india_compliance.set_gstin_options(frm);
+
+        if (!frm.doc.company_gstin) frm.set_value("company_gstin", options[0]);
     },
 
     company_gstin(frm) {
-        frm.gstr3b.filter_invoices();
+        // Do something
     },
 
     year(frm) {
@@ -29,25 +28,15 @@ frappe.ui.form.on("GSTR-3B Beta", {
     },
 
     month(frm) {
-        frm.gstr3b.filter_invoices();
+        // Do something
     },
 
     refresh(frm) {
         // Primary Action
         frm.disable_save();
-        frm.page.set_primary_action(__("Save Actions"), async () => {
-            frm.gstr3b.update_invoice_data();
-            await frm.save();
-            frm.gstr3b.generate_gstr3b();
+        frm.page.set_primary_action(__("Get Invoices"), async () => {
+            // Do something
         });
-
-        // add custom buttons
-        // if (api_enabled) {
-        //     frm.add_custom_button(__("Download Invoices"), () => {
-        //         // Do something
-        //     });
-        // }
-
         frm.add_custom_button(
             __("Accept"),
             () => {
@@ -81,59 +70,146 @@ frappe.ui.form.on("GSTR-3B Beta", {
 
 class GSTR3B {
     constructor(frm) {
-        this.frm = frm;
-        this.frm.filtered_invoices = {};
-        this.frm.doc.invoice_data = {};
+        this.init(frm);
+        this.render_tab_group();
+        this.setup_filter_button();
+        this.render_data_tables();
     }
 
-    async fetch_invoice_data() {
-        await this.frm.call("fetch_invoice_data").then(r => {
-            this.frm.set_value("invoice_data", r.message);
+    init(frm) {
+        this.frm = frm;
+        this.$wrapper = this.frm.get_field("invoice_html").$wrapper;
+        this._tabs = ["invoice", "summary"];
+    }
+
+    refresh() {
+        this._tabs.forEach(tab => {
+            this.tabs[`${tab}_tab`].refresh(this[`get_${tab}_data`]());
+        });
+    }
+
+    render_tab_group() {
+        this.tab_group = new frappe.ui.FieldGroup({
+            fields: [
+                {
+                    //hack: for the FieldGroup(Layout) to avoid rendering default "details" tab
+                    fieldtype: "Section Break",
+                },
+                {
+                    label: "Match Summary",
+                    fieldtype: "Tab Break",
+                    fieldname: "summary_tab",
+                    active: 1,
+                },
+                {
+                    fieldtype: "HTML",
+                    fieldname: "summary_data",
+                },
+                {
+                    label: "Document View",
+                    fieldtype: "Tab Break",
+                    fieldname: "invoice_tab",
+                },
+                {
+                    fieldtype: "HTML",
+                    fieldname: "invoice_data",
+                },
+            ],
+            body: this.$wrapper,
+            frm: this.frm,
         });
 
-        this.filter_invoices();
-    }
+        this.tab_group.make();
 
-    update_invoice_data() {
-        for (const key in this.frm.filtered_invoices) {
-            const invoice = this.frm.filtered_invoices[key];
-            if (invoice["is_dirty"]) {
-                this.frm.doc.invoice_data[key] = Object.assign({}, invoice);
-            }
-        }
-    }
-
-    filter_invoices() {
-        this.frm.filtered_invoices = {};
-        const { from_date, to_date } = get_first_last_day(
-            this.frm.doc.year,
-            this.frm.doc.month
+        // make tabs_dict for easy access
+        this.tabs = Object.fromEntries(
+            this.tab_group.tabs.map(tab => [tab.df.fieldname, tab])
         );
-
-        for (const invoice_name in this.frm.doc.invoice_data) {
-            const invoice = this.frm.doc.invoice_data[invoice_name];
-            if (
-                invoice["company"] === this.frm.doc.company &&
-                invoice["company_gstin"] === this.frm.doc.company_gstin &&
-                invoice["invoice_date"] >= from_date &&
-                invoice["invoice_date"] <= to_date
-            ) {
-                this.frm.filtered_invoices[invoice_name] = Object.assign({}, invoice);
-            }
-        }
-        this.render_data_table();
     }
 
-    get_data() {
-        let data = [];
-        for (const key in this.frm.filtered_invoices) {
-            data.push(this.frm.filtered_invoices[key]);
-        }
-
-        return data;
+    setup_filter_button() {
+        this.filter_group = new india_compliance.FilterGroup({
+            doctype: "GSTR-3B Beta",
+            parent: this.$wrapper.find(".form-tabs-list"),
+            on_change: () => {
+                this.refresh();
+            },
+        });
     }
 
-    get_columns() {
+    render_data_tables() {
+        this._tabs.forEach(tab => {
+            this.tabs[`${tab}_tab`] = new india_compliance.DataTableManager({
+                $wrapper: this.tab_group.get_field(`${tab}_data`).$wrapper,
+                columns: this[`get_${tab}_columns`](),
+                data: this[`get_${tab}_data`](),
+                options: {
+                    cellHeight: 55,
+                },
+            });
+        });
+    }
+
+    get_summary_columns() {
+        return [
+            {
+                label: "Match Status",
+                fieldname: "match_status",
+                width: 200,
+                _value: (...args) => `<a href="#" class='match-status'>${args[0]}</a>`,
+            },
+            {
+                label: "Count <br>2A/2B Docs",
+                fieldname: "inward_supply_count",
+                width: 120,
+                align: "center",
+            },
+            {
+                label: "Count <br>Purchase Docs",
+                fieldname: "purchase_count",
+                width: 120,
+                align: "center",
+            },
+            {
+                label: "Taxable Amount Diff <br>2A/2B - Purchase",
+                fieldname: "taxable_value_difference",
+                width: 180,
+                align: "center",
+                _value: (...args) => format_number(args[0]),
+            },
+            {
+                label: "Tax Difference <br>2A/2B - Purchase",
+                fieldname: "tax_difference",
+                width: 180,
+                align: "center",
+                _value: (...args) => format_number(args[0]),
+            },
+            {
+                label: "% Action Taken",
+                fieldname: "action_taken",
+                width: 120,
+                align: "center",
+                _value: (...args) => {
+                    return (
+                        roundNumber(
+                            (args[2].action_taken_count / args[2].total_docs) * 100,
+                            2
+                        ) + " %"
+                    );
+                },
+            },
+        ];
+    }
+
+    get_summary_data() {
+        return [];
+    }
+
+    get_invoice_data() {
+        return [];
+    }
+
+    get_invoice_columns() {
         return [
             {
                 fieldname: "view",
@@ -143,14 +219,8 @@ class GSTR3B {
                 _value: (...args) => get_icon(...args),
             },
             {
-                label: "GSTIN of Supplier",
-                fieldname: "supplier_gstin",
-                align: "center",
-                width: 180,
-            },
-            {
-                label: "Supplier",
-                fieldname: "supplier",
+                label: "Supplier Name",
+                fieldname: "supplier_name_gstin",
                 align: "center",
                 width: 200,
             },
@@ -158,37 +228,13 @@ class GSTR3B {
                 label: "Invoice No.",
                 fieldname: "invoice_no",
                 align: "center",
-                width: 120,
+                width: 150,
             },
             {
                 label: "Invoice Type",
                 fieldname: "invoice_type",
                 align: "center",
                 width: 80,
-            },
-            {
-                label: "Accept",
-                fieldname: "accept",
-                align: "center",
-                width: 50,
-                fieldtype: "html",
-                _value: (...args) => get_icon(...args, "#4bf90b"),
-            },
-            {
-                label: "Reject",
-                fieldname: "reject",
-                align: "center",
-                width: 50,
-                fieldtype: "html",
-                _value: (...args) => get_icon(...args, "#f21a02"),
-            },
-            {
-                label: "Pending",
-                fieldname: "pending",
-                align: "center",
-                width: 50,
-                fieldtype: "html",
-                _value: (...args) => get_icon(...args, "#FFD43B"),
             },
             {
                 label: "Status",
@@ -211,169 +257,19 @@ class GSTR3B {
                 fieldtype: "Dynamic Link",
                 options: "linked_voucher_type",
             },
-        ];
-    }
-
-    render_data_table() {
-        this.data_table = new india_compliance.DataTableManager({
-            $wrapper: this.frm.get_field("invoices_html").$wrapper,
-            columns: this.get_columns(),
-            data: this.get_data(),
-            options: {
-                cellHeight: 55,
-            },
-        });
-        this.set_listners();
-    }
-
-    set_listners() {
-        const me = this;
-
-        this.data_table.$datatable.on("click", ".btn.actions", function (e) {
-            me.change_status(
-                me,
-                $(this).attr("data-name"),
-                $(this).attr("invoice-status")
-            );
-        });
-
-        this.data_table.$datatable.on("click", ".btn.eye", function (e) {
-            const row = me.frm.filtered_invoices[$(this).attr("data-name")];
-            me.dm = new DetailViewDialog(me.frm, row);
-        });
-    }
-
-    change_status(me, invoice_name, status) {
-        const invoice = me.frm.filtered_invoices[invoice_name];
-        const curr_status = invoice["invoice_status"];
-
-        invoice["invoice_status"] = status === curr_status ? "No Action" : status;
-        if (!invoice["is_dirty"]) invoice["is_dirty"] = 1;
-
-        me.render_data_table();
-    }
-}
-
-class DetailViewDialog {
-    table_fields = [
-        "name",
-        "bill_no",
-        "bill_date",
-        "taxable_value",
-        "cgst",
-        "sgst",
-        "igst",
-        "cess",
-        "is_reverse_charge",
-        "place_of_supply",
-    ];
-
-    constructor(frm, row) {
-        this.frm = frm;
-        this.row = row;
-        this.render_dialog();
-    }
-
-    async render_dialog() {
-        await this.get_invoice_details();
-        this.process_data();
-        this.init_dialog();
-        this.render_html();
-        this.dialog.show();
-    }
-
-    async get_invoice_details() {
-        const { message } = await this.frm.call("get_invoice_details", {
-            purchase_name: this.row.linked_doc,
-            inward_supply_name: this.row.invoice_name,
-        });
-
-        this.data = message;
-    }
-
-    process_data() {
-        for (let key of ["_purchase_invoice", "_inward_supply"]) {
-            const doc = this.data[key];
-            if (!doc) continue;
-
-            this.table_fields.forEach(field => {
-                if (field == "is_reverse_charge" && doc[field] != undefined)
-                    doc[field] = doc[field] ? "Yes" : "No";
-            });
-        }
-    }
-
-    init_dialog() {
-        const supplier_details = `
-        <h5>${this.data.supplier_name}
-        ${this.data.supplier_gstin ? ` (${this.data.supplier_gstin})` : ""}
-        </h5>
-        `;
-
-        this.dialog = new frappe.ui.Dialog({
-            title: `Detail View (${this.data.classification})`,
-            fields: [
-                {
-                    fieldtype: "HTML",
-                    fieldname: "supplier_details",
-                    options: supplier_details,
-                },
-                {
-                    fieldtype: "HTML",
-                    fieldname: "diff_cards",
-                },
-                {
-                    fieldtype: "HTML",
-                    fieldname: "detail_table",
-                },
-            ],
-        });
-    }
-
-    render_html() {
-        this.render_cards();
-        this.render_table();
-    }
-
-    render_cards() {
-        let cards = [
             {
-                value: this.data.tax_difference,
                 label: "Tax Difference",
-                datatype: "Currency",
-                currency: frappe.boot.sysdefaults.currency,
-                indicator:
-                    this.data.tax_difference === 0 ? "text-success" : "text-danger",
+                fieldname: "tax_difference",
+                align: "center",
+                width: 150,
             },
             {
-                value: this.data.taxable_value_difference,
-                label: "Taxable Amount Difference",
-                datatype: "Currency",
-                currency: frappe.boot.sysdefaults.currency,
-                indicator:
-                    this.data.taxable_value_difference === 0
-                        ? "text-success"
-                        : "text-danger",
+                label: "Taxable Value Difference",
+                fieldname: "taxable_value_difference",
+                align: "center",
+                width: 150,
             },
         ];
-
-        if (!this.row.linked_doc || !this.row.invoice_name) cards = [];
-
-        new india_compliance.NumberCardManager({
-            $wrapper: this.dialog.fields_dict.diff_cards.$wrapper,
-            cards: cards,
-        });
-    }
-
-    render_table() {
-        const detail_table = this.dialog.fields_dict.detail_table;
-
-        detail_table.html(
-            frappe.render_template("invoice_detail_comparision", {
-                purchase: this.data._purchase_invoice,
-                inward_supply: this.data._inward_supply,
-            })
-        );
     }
 }
 
@@ -426,7 +322,6 @@ function set_options_for_month(frm) {
     else month_to_set = options[options.length - 1];
 
     if (month_to_set !== frm.doc.month) frm.set_value("month", month_to_set);
-    else frm.gstr3b.filter_invoices();
 }
 
 function get_first_last_day(year, month) {
@@ -440,62 +335,4 @@ function get_first_last_day(year, month) {
     const to_date = givenDate.endOf("month").format("YYYY-MM-DD");
 
     return { from_date, to_date };
-}
-
-function get_icon(value, column, data, color) {
-    const status = column.fieldname[0].toUpperCase() + column.fieldname.slice(1);
-    let style = "-o";
-    switch (data["invoice_status"]) {
-        case "Accept":
-            if (status === "Accept") style = "";
-            break;
-        case "Reject":
-            if (status === "Reject") style = "";
-            break;
-        case "Pending":
-            if (status === "Pending") style = "";
-            break;
-    }
-
-    const hash = data["invoice_name"];
-
-    if (!color) {
-        return `<button class="btn eye" data-name="${hash}">
-                    <i class="fa fa-eye"></i>
-                </button>`;
-    }
-
-    return `<button class="btn actions" data-name="${hash}" invoice-status="${status}">
-                <i class="fa fa-circle${style}" style="color: ${color}"></i>
-            </button>`;
-}
-
-function bulk_update_status(frm, status) {
-    const checked_rows_indexes =
-        frm.gstr3b.data_table.datatable.rowmanager.getCheckedRows();
-
-    if (!checked_rows_indexes.length) {
-        frappe.msgprint(__("Please select invoices"));
-        return;
-    }
-
-    const modified_invoice_names = checked_rows_indexes.map(
-        i => frm.gstr3b.data_table.data[i]["invoice_name"]
-    );
-    update_status(frm, modified_invoice_names, status);
-}
-
-function update_status(frm, invoice_names, status) {
-    for (const invoice_name of invoice_names) {
-        frm.filtered_invoices[invoice_name]["invoice_status"] = status;
-        frm.filtered_invoices[invoice_name]["is_dirty"] = 1;
-    }
-    frm.gstr3b.render_data_table();
-}
-
-async function set_company_gstin(frm) {
-    if (!frm.doc.company) return;
-    const options = await india_compliance.set_gstin_options(frm);
-
-    if (!frm.doc.company_gstin) frm.set_value("company_gstin", options[0]);
 }
