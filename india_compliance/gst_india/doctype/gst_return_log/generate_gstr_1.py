@@ -514,7 +514,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         data = data
         data["status"] = self.filing_status or "Not Filed"
         if error_data := self.get_json_for("upload_error"):
-            data["error"] = error_data
+            data["errors"] = error_data
 
         data["pending_actions"] = set(
             [row.request_type for row in self.actions if not row.status]

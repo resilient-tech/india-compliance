@@ -244,9 +244,9 @@ class GSTR1 {
             _TabManager: FiledTab,
         },
         {
-            label: __("Error"),
-            name: "error",
-            _TabManager: ErrorTab,
+            label: __("Errors"),
+            name: "errors",
+            _TabManager: ErrorsTab,
         },
     ];
 
@@ -439,7 +439,7 @@ class GSTR1 {
         const color = this.status === "Filed" ? "green" : "orange";
 
         this.$wrapper.find(`[data-fieldname="filed_tab"]`).html(tab_name);
-        this.$wrapper.find(`[data-fieldname="error_tab"]`).html("⛔ Error");
+        this.$wrapper.find(`[data-fieldname="errors_tab"]`).addClass("text-danger");
         this.frm.page.set_indicator(this.status, color);
     }
 
@@ -464,11 +464,12 @@ class GSTR1 {
             File: this.gstr1_action.file_gstr1_data,
         };
 
-        let primary_button_label = {
-            "Not Filed": "Upload",
-            "Uploaded": "Proceed to File",
-            "Ready to File": "File",
-        }[this.status] || "Generate";
+        let primary_button_label =
+            {
+                "Not Filed": "Upload",
+                Uploaded: "Proceed to File",
+                "Ready to File": "File",
+            }[this.status] || "Generate";
 
         if (this.status === "Ready to File") {
             this.frm.add_custom_button(__("Mark as Unfiled"), () => {
@@ -1952,7 +1953,11 @@ class FiledTab extends GSTR1_TabManager {
         render_empty_state(this.instance.frm);
         this.instance.frm
             .taxpayer_api_call("mark_as_filed")
-            .then(() => this.instance.frm.trigger("load_gstr1_data") && this.instance.show_suggested_jv_dialog());
+            .then(
+                () =>
+                    this.instance.frm.trigger("load_gstr1_data") &&
+                    this.instance.show_suggested_jv_dialog()
+            );
     }
 
     // COLUMNS
@@ -2156,7 +2161,7 @@ class ReconcileTab extends FiledTab {
     }
 }
 
-class ErrorTab extends TabManager {
+class ErrorsTab extends TabManager {
     DEFAULT_SUBTITLE = "Fix these errors and upload again";
     set_default_title() {
         this.DEFAULT_TITLE = "Error Summary";
@@ -2178,7 +2183,7 @@ class ErrorTab extends TabManager {
             {
                 name: "Error Message",
                 fieldname: "error_message",
-                width: 250,
+                width: 325,
             },
             {
                 name: "Invoice Number",
@@ -2204,7 +2209,7 @@ class ErrorTab extends TabManager {
     set_creation_time_string() { }
 
     refresh_data(data) {
-        data = data.error_report
+        data = data.error_report;
         super.refresh_data(data, data, "Error Summary");
         $(".dt-footer").remove();
     }
@@ -2483,7 +2488,9 @@ class FileGSTR1Dialog {
         if (response.error?.error_cd === "RET13506") {
             this.filing_dialog
                 .get_field("otp")
-                .set_description(`<p style="color: red">OTP is either expired or incorrect.</p>`);
+                .set_description(
+                    `<p style="color: red">OTP is either expired or incorrect.</p>`
+                );
 
             this.toggle_actions(true);
             return;
@@ -2492,9 +2499,7 @@ class FileGSTR1Dialog {
         this.filing_dialog.hide();
 
         if (response.error?.error_cd === "RET09001") {
-            this.frm.page.set_primary_action("Upload", () =>
-                this.upload_gstr1_data()
-            );
+            this.frm.page.set_primary_action("Upload", () => this.upload_gstr1_data());
             this.frm.page.set_indicator("Not Filed", "orange");
             this.frm.gstr1.status = "Not Filed";
             frappe.msgprint(
@@ -2505,11 +2510,15 @@ class FileGSTR1Dialog {
         }
 
         if (response.ack_num) {
-            this.frm.taxpayer_api_call("generate_gstr1", { message: "Verifying filed GSTR-1" }).then(r => {
-                this.frm.doc.__gst_data = r.message;
-                this.frm.trigger("load_gstr1_data");
-                this.frm.gstr1.show_suggested_jv_dialog();
-            });
+            this.frm
+                .taxpayer_api_call("generate_gstr1", {
+                    message: "Verifying filed GSTR-1",
+                })
+                .then(r => {
+                    this.frm.doc.__gst_data = r.message;
+                    this.frm.trigger("load_gstr1_data");
+                    this.frm.gstr1.show_suggested_jv_dialog();
+                });
         }
     }
 }
@@ -2546,14 +2555,14 @@ class GSTR1Action extends FileGSTR1Dialog {
         if (await this.is_request_in_progress(action)) return;
 
         frappe.show_alert(__("Uploading data to GSTN"));
-        this.perform_gstr1_action(action, (response) => {
+        this.perform_gstr1_action(action, response => {
             // No data to upload
             if (response._server_messages && response._server_messages.length) {
                 this.proceed_to_file();
-                return
+                return;
             }
 
-            this.check_action_status_with_retry(action)
+            this.check_action_status_with_retry(action);
         });
     }
 
@@ -2588,7 +2597,10 @@ class GSTR1Action extends FileGSTR1Dialog {
 
         const { company, company_gstin, month_or_quarter, year } = this.frm.doc;
         const filters = {
-            "company": company, "company_gstin": company_gstin, "month_or_quarter": month_or_quarter, "year": year
+            company: company,
+            company_gstin: company_gstin,
+            month_or_quarter: month_or_quarter,
+            year: year,
         };
 
         frappe.call({
@@ -2597,8 +2609,8 @@ class GSTR1Action extends FileGSTR1Dialog {
             callback: () => {
                 this.frm.gstr1.status = "Not Filed";
                 this.frm.refresh();
-            }
-        })
+            },
+        });
     }
 
     perform_gstr1_action(action, callback, additional_args = {}) {
@@ -2627,7 +2639,10 @@ class GSTR1Action extends FileGSTR1Dialog {
 
                 if (!message.status_cd) return;
 
-                if (message.status_cd === "IP" && retries < this.RETRY_INTERVALS.length) {
+                if (
+                    message.status_cd === "IP" &&
+                    retries < this.RETRY_INTERVALS.length
+                ) {
                     return this.check_action_status_with_retry(action, retries + 1);
                 }
 
@@ -2663,8 +2678,9 @@ class GSTR1Action extends FileGSTR1Dialog {
     }
 
     show_errors(message) {
-        this.frm.gstr1.tabs.error_tab.show();
-        this.frm.gstr1.tabs["error_tab"].tabmanager.refresh_data(message);
+        this.frm.gstr1.tabs.errors_tab.show();
+        this.frm.gstr1.tabs.errors_tab.set_active();
+        this.frm.gstr1.tabs["errors_tab"].tabmanager.refresh_data(message);
     }
 
     handle_proceed_to_file_response(response) {
@@ -2745,14 +2761,18 @@ class GSTR1Action extends FileGSTR1Dialog {
         if (!in_progress) return false;
         else if (in_progress == "proceed_to_file") in_progress = "upload";
 
-        const capitalize_first_letter = (str) => str.charAt(0).toUpperCase() + str.slice(1);
+        const capitalize_first_letter = str =>
+            str.charAt(0).toUpperCase() + str.slice(1);
 
         const in_progress_action = capitalize_first_letter(in_progress);
         action = capitalize_first_letter(action);
 
-        return new Promise((resolve) => {
+        return new Promise(resolve => {
             const d = frappe.msgprint({
-                message: `${in_progress_action} ` + __("is in progress. Do you want to perform") + ` ${action}?`,
+                message:
+                    `${in_progress_action} ` +
+                    __("is in progress. Do you want to perform") +
+                    ` ${action}?`,
                 indicator: "red",
                 title: __("Process in Progress"),
                 primary_action: {
@@ -2767,10 +2787,10 @@ class GSTR1Action extends FileGSTR1Dialog {
                 secondary_action: {
                     label: __("Cancel"),
                     action: () => {
-                        resolve(true)
+                        resolve(true);
                         d.hide();
                     },
-                }
+                },
             });
 
             d.onhide = () => {
