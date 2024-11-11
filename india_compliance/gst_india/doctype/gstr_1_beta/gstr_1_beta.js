@@ -2581,7 +2581,7 @@ class GSTR1Action extends FileGSTR1Dialog {
             row => row.draft_count > 0
         );
         if (!draft_invoices?.length)
-            upload();
+            return upload();
 
         frappe.confirm(
             __(
