@@ -244,7 +244,7 @@ class GSTR1 {
             _TabManager: FiledTab,
         },
         {
-            label: __("Errors"),
+            label: __("Upload Errors"),
             name: "errors",
             _TabManager: ErrorsTab,
         },
@@ -302,13 +302,16 @@ class GSTR1 {
                 return;
             }
 
-            if (
-                this.data.status == "Ready to File" &&
-                ["books", "unfiled", "reconcile"].includes(tab_name)
-            ) {
-                tab.hide();
-                _tab.shown = false;
-                return;
+            if (this.data.status == "Ready to File") {
+                if (["books", "unfiled", "reconcile"].includes(tab_name)) {
+                    tab.hide();
+                    _tab.shown = false;
+                    return;
+                }
+
+                if (tab_name === "filed") {
+                    tab.set_active();
+                }
             }
 
             tab.show();
