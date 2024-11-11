@@ -2494,6 +2494,8 @@ class FileGSTR1Dialog {
     }
 
     handle_filing_response(response) {
+        this.toggle_actions(true);
+
         if (response.error?.error_cd === "RET13506") {
             this.filing_dialog
                 .get_field("otp")
@@ -2501,7 +2503,6 @@ class FileGSTR1Dialog {
                     `<p style="color: red">OTP is either expired or incorrect.</p>`
                 );
 
-            this.toggle_actions(true);
             return;
         }
 
