@@ -98,7 +98,11 @@ class GovDataMapper:
         output = {}
 
         if default_data:
-            output.update(default_data)
+            for key, value in default_data.items():
+                if not (value or value == 0):
+                    continue
+
+                output[key] = value
 
         key_mapping = self.KEY_MAPPING.copy()
 
@@ -315,6 +319,12 @@ class B2B(GovDataMapper):
                 GSTR1_DataField.CUST_NAME.value: self.guess_customer_name(
                     customer_gstin
                 ),
+                GSTR1_DataField.ERROR_CD.value: customer_data.get(
+                    GovDataField.ERROR_CD.value
+                ),
+                GSTR1_DataField.ERROR_MSG.value: customer_data.get(
+                    GovDataField.ERROR_MSG.value
+                ),
             }
 
             for invoice in customer_data.get(GovDataField.INVOICES.value):
@@ -466,6 +476,12 @@ class B2CL(GovDataMapper):
             default_invoice_data = {
                 GSTR1_DataField.POS.value: pos,
                 GSTR1_DataField.DOC_TYPE.value: self.DOCUMENT_CATEGORY,
+                GSTR1_DataField.ERROR_CD.value: pos_data.get(
+                    GovDataField.ERROR_CD.value
+                ),
+                GSTR1_DataField.ERROR_MSG.value: pos_data.get(
+                    GovDataField.ERROR_MSG.value
+                ),
             }
 
             for invoice in pos_data.get(GovDataField.INVOICES.value):
@@ -600,6 +616,12 @@ class Exports(GovDataMapper):
 
             default_invoice_data = {
                 GSTR1_DataField.DOC_TYPE.value: document_type,
+                GSTR1_DataField.ERROR_CD.value: export_category.get(
+                    GovDataField.ERROR_CD.value
+                ),
+                GSTR1_DataField.ERROR_MSG.value: export_category.get(
+                    GovDataField.ERROR_MSG.value
+                ),
             }
 
             for invoice in export_category.get(GovDataField.INVOICES.value):
@@ -694,6 +716,8 @@ class B2CS(GovDataMapper):
         GovDataField.CGST.value: GSTR1_DataField.CGST.value,
         GovDataField.SGST.value: GSTR1_DataField.SGST.value,
         GovDataField.CESS.value: GSTR1_DataField.CESS.value,
+        GovDataField.ERROR_CD.value: GSTR1_DataField.ERROR_CD.value,
+        GovDataField.ERROR_MSG.value: GSTR1_DataField.ERROR_MSG.value,
     }
 
     def __init__(self):
@@ -804,8 +828,15 @@ class NilRated(GovDataMapper):
     def convert_to_internal_data_format(self, input_data):
         output = {}
 
+        default_data = {
+            GSTR1_DataField.ERROR_CD.value: input_data.get(GovDataField.ERROR_CD.value),
+            GSTR1_DataField.ERROR_MSG.value: input_data.get(
+                GovDataField.ERROR_MSG.value
+            ),
+        }
+
         for invoice in input_data[GovDataField.INVOICES.value]:
-            invoice_data = self.format_data(invoice)
+            invoice_data = self.format_data(invoice, default_data)
 
             if not invoice_data:
                 continue
@@ -968,6 +999,12 @@ class CDNR(GovDataMapper):
                         GSTR1_DataField.CUST_NAME.value: self.guess_customer_name(
                             customer_gstin
                         ),
+                        GSTR1_DataField.ERROR_CD.value: customer_data.get(
+                            GovDataField.ERROR_CD.value
+                        ),
+                        GSTR1_DataField.ERROR_MSG.value: customer_data.get(
+                            GovDataField.ERROR_MSG.value
+                        ),
                     },
                 )
                 self.update_totals(
@@ -1097,6 +1134,8 @@ class CDNUR(GovDataMapper):
         GovDataField.TAXABLE_VALUE.value: GSTR1_ItemField.TAXABLE_VALUE.value,
         GovDataField.IGST.value: GSTR1_ItemField.IGST.value,
         GovDataField.CESS.value: GSTR1_ItemField.CESS.value,
+        GovDataField.ERROR_CD.value: GSTR1_DataField.ERROR_CD.value,
+        GovDataField.ERROR_MSG.value: GSTR1_DataField.ERROR_MSG.value,
     }
     DOCUMENT_TYPES = {
         "C": "Credit Note",
@@ -1239,6 +1278,13 @@ class HSNSUM(GovDataMapper):
     def convert_to_internal_data_format(self, input_data):
         output = {}
 
+        default_data = {
+            GSTR1_DataField.ERROR_CD.value: input_data.get(GovDataField.ERROR_CD.value),
+            GSTR1_DataField.ERROR_MSG.value: input_data.get(
+                GovDataField.ERROR_MSG.value
+            ),
+        }
+
         for invoice in input_data[GovDataField.HSN_DATA.value]:
             output[
                 " - ".join(
@@ -1248,7 +1294,7 @@ class HSNSUM(GovDataMapper):
                         str(flt(invoice.get(GovDataField.TAX_RATE.value))),
                     )
                 )
-            ] = self.format_data(invoice)
+            ] = self.format_data(invoice, default_data)
 
         return {self.SUBCATEGORY: output}
 
@@ -1345,6 +1391,8 @@ class AT(GovDataMapper):
         GovDataField.CGST.value: GSTR1_DataField.CGST.value,
         GovDataField.SGST.value: GSTR1_DataField.SGST.value,
         GovDataField.CESS.value: GSTR1_DataField.CESS.value,
+        GovDataField.ERROR_CD.value: GSTR1_DataField.ERROR_CD.value,
+        GovDataField.ERROR_MSG.value: GSTR1_DataField.ERROR_MSG.value,
     }
     DEFAULT_ITEM_AMOUNTS = {
         GSTR1_DataField.IGST.value: 0,
@@ -1864,7 +1912,7 @@ CLASS_MAP = {
 }
 
 
-def convert_to_internal_data_format(gov_data):
+def convert_to_internal_data_format(gov_data, for_errors=False):
     """
     Converts Gov data format to internal data format for all categories
     """
@@ -1878,7 +1926,16 @@ def convert_to_internal_data_format(gov_data):
             mapper_class().convert_to_internal_data_format(gov_data.get(category))
         )
 
-    return output
+    if not for_errors:
+        return output
+
+    errors = []
+    for category, data in output.items():
+        for row in data.values():
+            row["category"] = category
+            errors.append(row)
+
+    return errors
 
 
 def get_category_wise_data(

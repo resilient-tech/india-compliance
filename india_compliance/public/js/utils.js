@@ -6,6 +6,7 @@ import {
     TDS_REGEX,
     TCS_REGEX,
     GST_INVOICE_NUMBER_FORMAT,
+    PAN_REGEX,
 } from "./regex_constants";
 
 frappe.provide("india_compliance");
@@ -225,6 +226,22 @@ Object.assign(india_compliance, {
         return india_compliance.is_api_enabled() && gst_settings.enable_e_invoice;
     },
 
+    validate_pan(pan) {
+        if (!pan) return;
+
+        pan = pan.trim().toUpperCase();
+
+        if (pan.length != 10) {
+            frappe.throw(__("PAN should be 10 characters long"));
+        }
+
+        if (!PAN_REGEX.test(pan)) {
+            frappe.throw(__("Invalid PAN format"));
+        }
+
+        return pan;
+    },
+
     validate_gstin(gstin) {
         if (!gstin || gstin.length !== 15) {
             frappe.msgprint(__("GSTIN must be 15 characters long"));
@@ -354,12 +371,10 @@ Object.assign(india_compliance, {
             return position === "start"
                 ? `${current_year - 1}-03-01`
                 : `${current_year - 1}-09-30`;
-
         } else if (current_month <= 9) {
             return position === "start"
                 ? `${current_year - 1}-10-01`
                 : `${current_year}-03-31`;
-
         } else {
             return position === "start"
                 ? `${current_year}-04-01`
