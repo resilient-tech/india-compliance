@@ -2562,16 +2562,32 @@ class GSTR1Action extends FileGSTR1Dialog {
         const action = "upload";
         if (await this.is_request_in_progress(action)) return;
 
-        frappe.show_alert(__("Uploading data to GSTN"));
-        this.perform_gstr1_action(action, response => {
-            // No data to upload
-            if (response._server_messages && response._server_messages.length) {
-                this.proceed_to_file();
-                return;
-            }
+        const upload = () => {
+            frappe.show_alert(__("Uploading data to GSTN"));
+            this.perform_gstr1_action(action, response => {
+                // No data to upload
+                if (response._server_messages && response._server_messages.length) {
+                    this.proceed_to_file();
+                    return;
+                }
 
-            this.check_action_status_with_retry(action);
-        });
+                this.check_action_status_with_retry(action);
+            });
+        };
+
+        // has draft invoices
+        const draft_invoices = this.frm.gstr1.data.books["Document Issued"]?.filter(
+            row => row.draft_count > 0
+        );
+        if (!draft_invoices?.length)
+            upload();
+
+        frappe.confirm(
+            __(
+                "There are <b>draft</b> invoices in books which are <b>excluded</b> in upload. Do you want to proceed with uploading?"
+            ),
+            () => upload()
+        );
     }
 
     async reset_gstr1_data() {
