@@ -1300,6 +1300,11 @@ class GSTR1_TabManager extends TabManager {
                 width: 160,
             },
             {
+                name: "Customer Name",
+                fieldname: GSTR1_DataField.CUST_NAME,
+                width: 200,
+            },
+            {
                 name: "Invoice Type",
                 fieldname: GSTR1_DataField.DOC_TYPE,
                 width: 150,
