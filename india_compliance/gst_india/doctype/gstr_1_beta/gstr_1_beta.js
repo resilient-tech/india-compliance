@@ -2373,6 +2373,7 @@ class FileGSTR1Dialog {
                     read_only: 1,
                 },
             ],
+            size: "large",
             primary_action_label: "Get OTP",
             primary_action: async () => {
                 const pan = this.filing_dialog.get_value("pan");
@@ -2469,10 +2470,10 @@ class FileGSTR1Dialog {
         return `
             <tr>
                 <td>${description}</td>
-                <td>${format_currency(liability.total_igst_amount)}</td>
-                <td>${format_currency(liability.total_cgst_amount)}</td>
-                <td>${format_currency(liability.total_sgst_amount)}</td>
-                <td>${format_currency(liability.total_cess_amount)}</td>
+                <td style="text-align: right;">${format_currency(liability.total_igst_amount)}</td>
+                <td style="text-align: right;">${format_currency(liability.total_cgst_amount)}</td>
+                <td style="text-align: right;">${format_currency(liability.total_sgst_amount)}</td>
+                <td style="text-align: right;">${format_currency(liability.total_cess_amount)}</td>
             </tr>
         `;
     }
