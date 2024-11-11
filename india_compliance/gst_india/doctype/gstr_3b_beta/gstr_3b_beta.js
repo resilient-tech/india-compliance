@@ -37,8 +37,12 @@ frappe.ui.form.on("GSTR-3B Beta", {
         // Primary Action
         frm.disable_save();
         frm.page.set_primary_action(__("Get Invoices"), async () => {
-            // Do something
+            const { message } = await frm.call("get_invoice_data");
+            frm.doc.__invoice_data = message;
+            frm.refresh();
+            frm.gstr3b.render_data_tables();
         });
+
         frm.add_custom_button(
             __("Accept"),
             () => {
@@ -204,11 +208,51 @@ class GSTR3B {
     }
 
     get_summary_data() {
-        return [];
+        if (!this.frm.doc.__invoice_data) return [];
+
+        const data = {};
+        this.frm.doc.__invoice_data.forEach(row => {
+            let new_row = data[row.match_status];
+            if (!new_row) {
+                new_row = data[row.match_status] = {
+                    match_status: row.match_status,
+                    inward_supply_count: 0,
+                    purchase_count: 0,
+                    action_taken_count: 0,
+                    total_docs: 0,
+                    tax_difference: 0,
+                    taxable_value_difference: 0,
+                };
+            }
+            if (row.inward_supply_name) new_row.inward_supply_count += 1;
+            if (row.purchase_invoice_name) new_row.purchase_count += 1;
+            if (row.action != "No Action") new_row.action_taken_count += 1;
+            new_row.total_docs += 1;
+            new_row.tax_difference += row.tax_difference || 0;
+            new_row.taxable_value_difference += row.taxable_value_difference || 0;
+        });
+
+        return Object.values(data);
     }
 
     get_invoice_data() {
-        return [];
+        if (!this.frm.doc.__invoice_data) return [];
+
+        const data = [];
+        this.frm.doc.__invoice_data.forEach(row => {
+            data.push({
+                supplier_name_gstin: this.get_supplier_name_gstin(row),
+                invoice_no: row.bill_no,
+                invoice_type: row._inward_supply.supply_type,
+                invoice_status: row._inward_supply.invoice_status,
+                match_status: row.match_status,
+                linked_doc: row.purchase_invoice_name,
+                tax_difference: row.tax_difference,
+                taxable_value_difference: row.taxable_value_difference,
+            });
+        });
+
+        return data;
     }
 
     get_invoice_columns() {
@@ -265,6 +309,16 @@ class GSTR3B {
                 width: 150,
             },
         ];
+    }
+
+    get_supplier_name_gstin(row) {
+        return `
+        ${row.supplier_name}
+        <br />
+        <a href="#" style="font-size: 0.9em;" class="supplier-gstin">
+            ${row.supplier_gstin || ""}
+        </a>
+        `;
     }
 }
 

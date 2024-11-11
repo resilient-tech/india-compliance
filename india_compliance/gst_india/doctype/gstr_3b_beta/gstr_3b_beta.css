@@ -69,8 +69,8 @@ div[data-page-route="GSTR-3B Beta"] .datatable .dt-row-filter .dt-cell {
 }
 
 div[data-page-route="GSTR-3B Beta"]
-    [data-fieldname="no_invoices_data"],
-div[data-page-route="GSTR-3B Beta"] [data-fieldname="invoices_empty_state"] {
+    [data-fieldname="no_invoice_data"],
+div[data-page-route="GSTR-3B Beta"] [data-fieldname="invoice_empty_state"] {
     min-height: 320px;
     display: flex;
     align-items: center;
@@ -79,10 +79,10 @@ div[data-page-route="GSTR-3B Beta"] [data-fieldname="invoices_empty_state"] {
 }
 
 div[data-page-route="GSTR-3B Beta"]
-    [data-fieldname="no_invoices_data"]
+    [data-fieldname="no_invoice_data"]
     > img,
 div[data-page-route="GSTR-3B Beta"]
-    [data-fieldname="invoices_empty_state"]
+    [data-fieldname="invoice_empty_state"]
     > img {
     margin-bottom: var(--margin-md);
     max-height: 100px;

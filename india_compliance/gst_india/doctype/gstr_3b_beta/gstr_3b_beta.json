@@ -15,10 +15,8 @@
   "month",
   "section_break_11",
   "invoice_html",
-  "invoices_empty_state",
-  "no_invoices_data",
-  "section_break_otus",
-  "invoice_data"
+  "invoice_empty_state",
+  "no_invoice_data"
  ],
  "fields": [
   {
@@ -59,28 +57,6 @@
    "label": "Month"
   },
   {
-   "depends_on": "eval: !doc.__invoice_data",
-   "fieldname": "invoices_empty_state",
-   "fieldtype": "HTML",
-   "options": "<img alt=\"No Data\" src=\"/assets/frappe/images/ui-states/list-empty-state.svg\">\n\t<p class=\"text-muted\">{{ __(\"Generate to view the data\") }}</p>"
-  },
-  {
-   "depends_on": "eval: doc.__invoice_data && Object.keys(doc.__inovice_data).length === 0",
-   "fieldname": "no_invoices_data",
-   "fieldtype": "HTML",
-   "options": "<img alt=\"No Data\" src=\"/assets/frappe/images/ui-states/list-empty-state.svg\">\n\t<p class=\"text-muted\">{{ __(\"No data available for selected filters\") }}</p>"
-  },
-  {
-   "fieldname": "section_break_otus",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "invoice_data",
-   "fieldtype": "JSON",
-   "hidden": 1,
-   "label": "Invoice Data"
-  },
-  {
    "default": "0",
    "fieldname": "is_modified",
    "fieldtype": "Check",
@@ -88,16 +64,28 @@
    "label": "Is Modified"
   },
   {
-   "depends_on": "eval: doc.__invoice_data && Object.keys(doc.__invoice_data).length",
+   "depends_on": "eval: doc.__invoice_data && doc.__invoice_data.length",
    "fieldname": "invoice_html",
    "fieldtype": "HTML"
+  },
+  {
+   "depends_on": "eval: !doc.__invoice_data",
+   "fieldname": "invoice_empty_state",
+   "fieldtype": "HTML",
+   "options": "<img alt=\"No Data\" src=\"/assets/frappe/images/ui-states/list-empty-state.svg\">\n\t<p class=\"text-muted\">{{ __(\"Generate to view the data\") }}</p>"
+  },
+  {
+   "depends_on": "eval: doc.__invoice_data && doc.__invoice_data.length === 0",
+   "fieldname": "no_invoice_data",
+   "fieldtype": "HTML",
+   "options": "<img alt=\"No Data\" src=\"/assets/frappe/images/ui-states/list-empty-state.svg\">\n\t<p class=\"text-muted\">{{ __(\"No data available for selected filters\") }}</p>"
   }
  ],
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-11-11 12:16:43.412048",
+ "modified": "2024-11-11 16:48:42.759839",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR-3B Beta",
