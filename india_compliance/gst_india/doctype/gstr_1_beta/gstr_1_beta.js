@@ -2752,11 +2752,11 @@ class GSTR1Action extends FileGSTR1Dialog {
 
         return new Promise((resolve) => {
             const d = frappe.msgprint({
-                message: __(`<b>${in_progress_action} is in progress. Do you want to perform ${action}?<b>`),
+                message: `<b>${in_progress_action}` + __("is in progress. Do you want to perform ") + `${action}?<b>`,
                 indicator: "red",
                 title: __("Process in Progress"),
                 primary_action: {
-                    label: __(`${action}`),
+                    label: `${action}`,
                     action: () => {
                         this.toggle_actions(true, in_progress);
                         this.frm.force_action = true;
