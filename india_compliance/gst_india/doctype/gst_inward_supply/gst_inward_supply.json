@@ -63,8 +63,8 @@
   "gstr_1_filing_date",
   "registration_cancel_date",
   "gstr_3b_details_section",
-  "invoice_status",
-  "prev_status",
+  "ims_action",
+  "previous_ims_action",
   "column_break_opxc",
   "ims_return_period"
  ],
@@ -366,21 +366,6 @@
    "label": "IMS Details"
   },
   {
-   "default": "No Action",
-   "fieldname": "prev_status",
-   "fieldtype": "Data",
-   "hidden": 1,
-   "label": "Previous Action",
-   "read_only": 1
-  },
-  {
-   "default": "No Action",
-   "fieldname": "invoice_status",
-   "fieldtype": "Data",
-   "label": "Invoice Action",
-   "read_only": 1
-  },
-  {
    "fieldname": "column_break_opxc",
    "fieldtype": "Column Break"
   },
@@ -388,11 +373,26 @@
    "fieldname": "ims_return_period",
    "fieldtype": "Data",
    "label": "Return Period"
+  },
+  {
+   "default": "No Action",
+   "fieldname": "ims_action",
+   "fieldtype": "Data",
+   "label": "Invoice Action",
+   "read_only": 1
+  },
+  {
+   "default": "No Action",
+   "fieldname": "previous_ims_action",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Previous Action",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-11-11 11:53:50.809243",
+ "modified": "2024-11-11 18:09:39.221966",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Inward Supply",

@@ -37,6 +37,7 @@ class GSTR3BBeta(Document):
             invoice_data.append(
                 frappe._dict(
                     {
+                        "ims_action": doc.ims_action,
                         "_inward_supply": doc,
                         "_purchase_invoice": purchases_and_bill_of_entry.pop(
                             doc.link_name, frappe._dict()
@@ -90,7 +91,7 @@ class GSTR3BBeta(Document):
                 inward_supply.link_name,
                 inward_supply.link_doctype,
                 inward_supply.match_status,
-                inward_supply.invoice_status,
+                inward_supply.ims_action,
                 inward_supply.supply_type,
                 inward_supply.name,
                 inward_supply.classification,
