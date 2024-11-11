@@ -517,7 +517,12 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
             data["error"] = error_data
 
         data["pending_actions"] = set(
-            [row.request_type for row in self.actions if not row.status]
+            [
+                row.request_type
+                for row in self.actions
+                if not row.status
+                and row.request_type in ["reset", "upload", "proceed_to_file"]
+            ]
         )
 
         self.update_status("Generated")
@@ -902,7 +907,13 @@ class FileGSTR1:
                 }
             )
 
-            set_gstr1_actions(self, "file", response.get("ack_num"), api.request_id)
+            set_gstr1_actions(
+                self,
+                "file",
+                response.get("ack_num"),
+                api.request_id,
+                status="Processed",
+            )
 
         return response
 
@@ -1019,18 +1030,20 @@ def get_differing_categories(mapped_summary, gov_summary):
     return differing_categories
 
 
-def set_gstr1_actions(doc, request_type, token, request_id):
+def set_gstr1_actions(doc, request_type, token, request_id, status=None):
     if not token:
         return
 
-    doc.append(
-        "actions",
-        {
-            "request_type": request_type,
-            "token": token,
-            "creation_time": frappe.utils.now_datetime(),
-        },
-    )
+    row = {
+        "request_type": request_type,
+        "token": token,
+        "creation_time": frappe.utils.now_datetime(),
+    }
+
+    if status:
+        row["status"] = status
+
+    doc.append("actions", row)
     doc.save()
     enqueue_link_integration_request(token, request_id)
 
