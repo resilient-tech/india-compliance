@@ -2485,6 +2485,8 @@ class FileGSTR1Dialog {
                 r => this.handle_filing_response(r.message),
                 { pan: pan, otp: this.filing_dialog.get_value("otp") }
             );
+
+            this.toggle_actions(true);
         });
 
         this.filing_dialog.set_secondary_action_label("Resend OTP");
@@ -2494,8 +2496,6 @@ class FileGSTR1Dialog {
     }
 
     handle_filing_response(response) {
-        this.toggle_actions(true);
-
         if (response.error?.error_cd === "RET13506") {
             this.filing_dialog
                 .get_field("otp")
