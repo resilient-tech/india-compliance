@@ -40,7 +40,7 @@ frappe.ui.form.on("GSTR-3B Beta", {
             const { message } = await frm.call("get_invoice_data");
             frm.doc.__invoice_data = message;
             frm.refresh();
-            frm.gstr3b.render_data_tables();
+            frm.gstr3b.generate_data();
         });
 
         frm.add_custom_button(
@@ -78,8 +78,6 @@ class GSTR3B {
     constructor(frm) {
         this.init(frm);
         this.render_tab_group();
-        this.setup_filter_button();
-        this.render_data_tables();
     }
 
     init(frm) {
@@ -88,10 +86,29 @@ class GSTR3B {
         this._tabs = ["invoice", "summary"];
     }
 
+    generate_data() {
+        this.data = this.frm.doc.__invoice_data;
+        this.filtered_data = this.frm.doc.__invoice_data;
+
+        this.setup_filter_button();
+        this.render_data_tables();
+    }
+
     refresh() {
+        this.apply_filters();
+
+        // data unchanged!
+        if (this.rendered_data == this.filtered_data) return;
+
         this._tabs.forEach(tab => {
             this.tabs[`${tab}_tab`].refresh(this[`get_${tab}_data`]());
         });
+
+        this.rendered_data = this.filtered_data;
+    }
+
+    refresh_filter_fields() {
+        this.filter_group.filter_options.filter_fields = this.get_filter_fields();
     }
 
     render_tab_group() {
@@ -137,9 +154,74 @@ class GSTR3B {
         this.filter_group = new india_compliance.FilterGroup({
             doctype: "GSTR-3B Beta",
             parent: this.$wrapper.find(".form-tabs-list"),
+            filter_options: {
+                fieldname: "ims_action",
+                filter_fields: this.get_filter_fields(),
+            },
             on_change: () => {
                 this.refresh();
             },
+        });
+    }
+
+    get_filter_fields() {
+        const fields = [
+            {
+                label: "Supplier Name",
+                fieldname: "supplier_name",
+                fieldtype: "Autocomplete",
+                options: this.get_autocomplete_options("supplier_name"),
+            },
+            {
+                label: "Supplier GSTIN",
+                fieldname: "supplier_gstin",
+                fieldtype: "Autocomplete",
+                options: this.get_autocomplete_options("supplier_gstin"),
+            },
+            {
+                label: "Match Status",
+                fieldname: "match_status",
+                fieldtype: "Select",
+                options: [
+                    "Exact Match",
+                    "Suggested Match",
+                    "Mismatch",
+                    "Manual Match",
+                    "Missing in PI",
+                ],
+            },
+            {
+                label: "Action",
+                fieldname: "ims_action",
+                fieldtype: "Select",
+                options: ["Accept", "Reject", "Pending", "No Action"],
+            },
+        ];
+
+        fields.forEach(field => (field.parent = "GSTR-3B Beta"));
+        return fields;
+    }
+
+    apply_filters() {
+        const has_filters = this.filter_group.filters.length > 0;
+        if (!has_filters) {
+            this.filters = null;
+            this.filtered_data = this.data;
+            return;
+        }
+
+        let filters = this.filter_group.get_filters();
+        if (this.filters === filters) return;
+
+        this.filters = filters;
+
+        this.filtered_data = this.data.filter(row => {
+            return filters.every(filter =>
+                india_compliance.FILTER_OPERATORS[filter[2]](
+                    filter[3] || "",
+                    row[filter[1]] || ""
+                )
+            );
         });
     }
 
@@ -154,6 +236,39 @@ class GSTR3B {
                 },
             });
         });
+        this.set_listeners();
+    }
+
+    set_listeners() {
+        const me = this;
+
+        this.tabs.invoice_tab.$datatable.on("click", ".supplier-gstin", function (e) {
+            add_filter(e, "supplier_gstin", $(this).text().trim(), me);
+        });
+
+        this.tabs.invoice_tab.$datatable.on("click", ".match-status", function (e) {
+            add_filter(e, "match_status", $(this).text(), me);
+        });
+
+        this.tabs.summary_tab.$datatable.on("click", ".match-status", function (e) {
+            add_filter(e, "match_status", $(this).text(), me);
+        });
+
+        this.tabs.invoice_tab.$datatable.on("click", ".ims-action", function (e) {
+            add_filter(e, "ims_action", $(this).text(), me);
+        });
+
+        async function add_filter(e, field, field_value, me) {
+            e.preventDefault();
+
+            await me.filter_group.push_new_filter([
+                "GSTR-3B Beta",
+                field,
+                "=",
+                field_value,
+            ]);
+            me.filter_group.apply();
+        }
     }
 
     get_summary_columns() {
@@ -211,7 +326,7 @@ class GSTR3B {
         if (!this.frm.doc.__invoice_data) return [];
 
         const data = {};
-        this.frm.doc.__invoice_data.forEach(row => {
+        this.filtered_data.forEach(row => {
             let new_row = data[row.match_status];
             if (!new_row) {
                 new_row = data[row.match_status] = {
@@ -226,7 +341,7 @@ class GSTR3B {
             }
             if (row.inward_supply_name) new_row.inward_supply_count += 1;
             if (row.purchase_invoice_name) new_row.purchase_count += 1;
-            if (row.action != "No Action") new_row.action_taken_count += 1;
+            if (row.ims_action != "No Action") new_row.action_taken_count += 1;
             new_row.total_docs += 1;
             new_row.tax_difference += row.tax_difference || 0;
             new_row.taxable_value_difference += row.taxable_value_difference || 0;
@@ -239,12 +354,12 @@ class GSTR3B {
         if (!this.frm.doc.__invoice_data) return [];
 
         const data = [];
-        this.frm.doc.__invoice_data.forEach(row => {
+        this.filtered_data.forEach(row => {
             data.push({
                 supplier_name_gstin: this.get_supplier_name_gstin(row),
                 invoice_no: row.bill_no,
                 invoice_type: row._inward_supply.supply_type,
-                invoice_status: row._inward_supply.invoice_status,
+                ims_action: row._inward_supply.ims_action,
                 match_status: row.match_status,
                 linked_doc: row.purchase_invoice_name,
                 tax_difference: row.tax_difference,
@@ -276,17 +391,18 @@ class GSTR3B {
                 width: 80,
             },
             {
-                label: "Status",
-                fieldname: "invoice_status",
+                label: "Action",
+                fieldname: "ims_action",
                 align: "center",
                 width: 100,
-                fieldtype: "html",
+                _value: (...args) => `<a href="#" class='ims-action'>${args[0]}</a>`,
             },
             {
                 label: "Match Status",
                 fieldname: "match_status",
                 align: "center",
                 width: 100,
+                _value: (...args) => `<a href="#" class='match-status'>${args[0]}</a>`,
             },
             {
                 label: "Linked Voucher",
@@ -319,6 +435,14 @@ class GSTR3B {
             ${row.supplier_gstin || ""}
         </a>
         `;
+    }
+
+    get_autocomplete_options(field) {
+        const options = [];
+        this.data.forEach(row => {
+            if (row[field] && !options.includes(row[field])) options.push(row[field]);
+        });
+        return options;
     }
 }
 
