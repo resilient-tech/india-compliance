@@ -169,7 +169,7 @@ class GSTR1Beta(Document):
 
 @frappe.whitelist()
 @otp_handler
-def handle_gstr1_action(action, month_or_quarter, year, company_gstin, **kwargs):
+def perform_gstr1_action(action, month_or_quarter, year, company_gstin, **kwargs):
     frappe.has_permission("GST Return Log", "write", throw=True)
 
     gstr_1_log = frappe.get_doc(
@@ -196,7 +196,7 @@ def handle_gstr1_action(action, month_or_quarter, year, company_gstin, **kwargs)
 
 @frappe.whitelist()
 @otp_handler
-def process_gstr1_request(month_or_quarter, year, company_gstin, action):
+def check_action_status(month_or_quarter, year, company_gstin, action):
     frappe.has_permission("GST Return Log", "write", throw=True)
 
     gstr_1_log = frappe.get_doc(
@@ -237,7 +237,7 @@ def mark_as_unfiled(filters, force):
 
 @frappe.whitelist()
 def get_journal_entries(month_or_quarter, year, company):
-    if not frappe.has_permission("Journal Entry", "write"):
+    if not frappe.has_permission("Journal Entry", "create"):
         return
 
     from_date, to_date = get_gstr_1_from_and_to_date(month_or_quarter, year)
@@ -289,7 +289,7 @@ def get_journal_entries(month_or_quarter, year, company):
 def make_journal_entry(
     company, company_gstin, month_or_quarter, year, accounts, values
 ):
-    if not frappe.has_permission("Journal Entry", "write"):
+    if not frappe.has_permission("Journal Entry", "create"):
         return
 
     if isinstance(values, str):

@@ -2533,12 +2533,10 @@ class GSTR1Action extends FileGSTR1Dialog {
             this.frm.doc.__gst_data = r.message;
             this.frm.trigger("load_gstr1_data");
 
-            console.log(r.message.pending_actions);
-
             if (!r.message.pending_actions) return;
 
             r.message.pending_actions.forEach(request_type =>
-                this.fetch_status_with_retry(request_type, 0, true)
+                this.check_action_status_with_retry(request_type, 0, true)
             );
         });
     }
@@ -2551,11 +2549,11 @@ class GSTR1Action extends FileGSTR1Dialog {
         this.perform_gstr1_action(action, (response) => {
             // No data to upload
             if (response._server_messages && response._server_messages.length) {
-                this.toggle_actions(true);
+                this.proceed_to_file();
                 return
             }
 
-            this.fetch_status_with_retry(action)
+            this.check_action_status_with_retry(action)
         });
     }
 
@@ -2570,7 +2568,7 @@ class GSTR1Action extends FileGSTR1Dialog {
             () => {
                 frappe.show_alert(__("Resetting GSTR-1 data"));
                 this.perform_gstr1_action(action, () =>
-                    this.fetch_status_with_retry(action)
+                    this.check_action_status_with_retry(action)
                 );
             }
         );
@@ -2581,7 +2579,7 @@ class GSTR1Action extends FileGSTR1Dialog {
         this.perform_gstr1_action(action, r => {
             // already proceed to file
             if (r.message) this.handle_proceed_to_file_response(r.message);
-            else this.fetch_status_with_retry(action);
+            else this.check_action_status_with_retry(action);
         });
     }
 
@@ -2613,24 +2611,24 @@ class GSTR1Action extends FileGSTR1Dialog {
         };
 
         taxpayer_api.call({
-            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.handle_gstr1_action",
+            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.perform_gstr1_action",
             args: args,
             callback: response => callback && callback(response),
         });
     }
 
-    fetch_status_with_retry(action, retries = 0, now = false) {
+    check_action_status_with_retry(action, retries = 0, now = false) {
         setTimeout(
             async () => {
                 const { message } = await taxpayer_api.call({
-                    method: `india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.process_gstr1_request`,
+                    method: `india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.check_action_status`,
                     args: { ...this.defaults, action },
                 });
 
                 if (!message.status_cd) return;
 
                 if (message.status_cd === "IP" && retries < this.RETRY_INTERVALS.length) {
-                    return this.fetch_status_with_retry(action, retries + 1);
+                    return this.check_action_status_with_retry(action, retries + 1);
                 }
 
                 // Not IP

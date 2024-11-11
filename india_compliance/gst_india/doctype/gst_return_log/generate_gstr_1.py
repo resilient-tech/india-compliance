@@ -813,6 +813,7 @@ class FileGSTR1:
         api = GSTR1API(self)
         response = api.proceed_to_file("GSTR1", self.return_period)
 
+        # Return Form already ready to be filed
         if response.error and response.error.error_cd == "RET00003":
             return self.fetch_and_compare_summary(api)
 
@@ -886,6 +887,7 @@ class FileGSTR1:
         api = GSTR1API(self)
         response = api.file_gstr_1(self.return_period, summary, pan, otp)
 
+        # Latest Summary is not available. Please generate summary and try again.
         if response.error and response.error.error_cd == "RET09001":
             self.db_set({"filing_status": "Not Filed"})
             self.update_json_for("authenticated_summary", None)
@@ -901,8 +903,6 @@ class FileGSTR1:
             )
 
             set_gstr1_actions(self, "file", response.get("ack_num"), api.request_id)
-
-            self.remove_json_for("upload_error")
 
         return response
 
@@ -1020,29 +1020,32 @@ def get_differing_categories(mapped_summary, gov_summary):
 
 
 def set_gstr1_actions(doc, request_type, token, request_id):
-    if token:
-        doc.append(
-            "actions",
-            {
-                "request_type": request_type,
-                "token": token,
-                "creation_time": frappe.utils.now_datetime(),
-            },
-        )
-        doc.save()
-        enqueue_actions(token, request_id)
+    if not token:
+        return
+
+    doc.append(
+        "actions",
+        {
+            "request_type": request_type,
+            "token": token,
+            "creation_time": frappe.utils.now_datetime(),
+        },
+    )
+    doc.save()
+    enqueue_link_integration_request(token, request_id)
 
 
-def enqueue_actions(token, request_id):
+def enqueue_link_integration_request(token, request_id):
+    """
+    Integration request is enqueued. Hence, it's name is not available immediately.
+    Hence, link it after the request is processed.
+    """
     frappe.enqueue(
-        "india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1.add_integration_request",
-        queue="long",
-        token=token,
-        request_id=request_id,
+        link_integration_request, queue="long", token=token, request_id=request_id
     )
 
 
-def add_integration_request(token, request_id):
+def link_integration_request(token, request_id):
     doc_name = frappe.db.get_value("Integration Request", {"request_id": request_id})
     if doc_name:
         frappe.db.set_value(
@@ -1054,7 +1057,7 @@ def enqueue_notification(
     return_period, request_type, status_cd, gstin, request_id=None
 ):
     frappe.enqueue(
-        "india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1.create_notification",
+        create_notification,
         queue="long",
         return_period=return_period,
         request_type=request_type,
