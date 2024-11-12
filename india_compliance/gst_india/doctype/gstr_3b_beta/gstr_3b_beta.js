@@ -39,14 +39,14 @@ frappe.ui.form.on("GSTR-3B Beta", {
         if (!frm.doc.is_data_loaded) {
             frm.page.clear_primary_action();
 
-        frm.page.set_primary_action(__("Get Invoices"), async () => {
-            const { message } = await frm.call("get_invoice_data");
-            frm.doc.__invoice_data = message;
+            frm.page.set_primary_action(__("Get Invoices"), async () => {
+                const { message } = await frm.call("get_invoice_data");
+                frm.doc.__invoice_data = message;
 
                 // Toggle HTML fields
-            frm.refresh();
+                frm.refresh();
 
-            frm.gstr3b.generate_data();
+                frm.gstr3b.generate_data();
                 frm.doc.is_data_loaded = true;
             });
         } else {
@@ -54,7 +54,7 @@ frappe.ui.form.on("GSTR-3B Beta", {
 
             frm.page.set_primary_action(__("Upload Invoices"), async () => {
                 // Do something
-        });
+            });
         }
 
         frm.add_custom_button(
@@ -92,10 +92,12 @@ class GSTR3B {
     constructor(frm) {
         this.init(frm);
         this.render_tab_group();
+        this.setup_filter_button();
     }
 
     init(frm) {
         this.frm = frm;
+        this.data = [];
         this.frm.doc.is_data_loaded = false;
         this.$wrapper = this.frm.get_field("invoice_html").$wrapper;
         this._tabs = ["invoice", "summary"];
@@ -105,7 +107,8 @@ class GSTR3B {
         this.data = this.frm.doc.__invoice_data;
         this.filtered_data = this.frm.doc.__invoice_data;
 
-        this.setup_filter_button();
+        // clear filters
+        this.filter_group.filter_x_button.click();
         this.render_data_tables();
     }
 
@@ -170,7 +173,7 @@ class GSTR3B {
             doctype: "GSTR-3B Beta",
             parent: this.$wrapper.find(".form-tabs-list"),
             filter_options: {
-                fieldname: "ims_action",
+                fieldname: "supplier_name",
                 filter_fields: this.get_filter_fields(),
             },
             on_change: () => {
@@ -338,7 +341,7 @@ class GSTR3B {
     }
 
     get_summary_data() {
-        if (!this.frm.doc.__invoice_data) return [];
+        if (!this.data.length) return [];
 
         const data = {};
         this.filtered_data.forEach(row => {
@@ -366,7 +369,7 @@ class GSTR3B {
     }
 
     get_invoice_data() {
-        if (!this.frm.doc.__invoice_data) return [];
+        if (!this.data.length) return [];
 
         const data = [];
         this.filtered_data.forEach(row => {
