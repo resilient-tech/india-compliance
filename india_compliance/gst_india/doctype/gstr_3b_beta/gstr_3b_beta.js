@@ -85,6 +85,13 @@ frappe.ui.form.on("GSTR-3B Beta", {
             },
             __("Actions")
         );
+
+        // move actions button next to filters
+        for (let button of $(".custom-actions .inner-group-button")) {
+            if (button.innerText?.trim() != "Actions") continue;
+            $(".custom-button-group .inner-group-button").remove();
+            $(button).appendTo($(".custom-button-group"));
+        }
     },
 });
 
@@ -533,4 +540,8 @@ function render_empty_state(frm) {
     frm.doc.is_data_loaded = false;
 
     frm.refresh();
+}
+
+function bulk_update_status(frm, status) {
+    // Do Something
 }
