@@ -56,41 +56,41 @@ frappe.ui.form.on("GSTR-3B Beta", {
                 // Do something
             });
 
-        frm.add_custom_button(
-            __("Accept"),
-            () => {
-                bulk_update_status(frm, "Accept");
-            },
-            __("Actions")
-        );
-        frm.add_custom_button(
-            __("Reject"),
-            () => {
-                bulk_update_status(frm, "Reject");
-            },
-            __("Actions")
-        );
-        frm.add_custom_button(
-            __("Pending"),
-            () => {
-                bulk_update_status(frm, "Pending");
-            },
-            __("Actions")
-        );
-        frm.add_custom_button(
-            __("No Action"),
-            () => {
-                bulk_update_status(frm, "No Action");
-            },
-            __("Actions")
-        );
+            frm.add_custom_button(
+                __("Accept"),
+                () => {
+                    bulk_update_action(frm, "Accept");
+                },
+                __("Actions")
+            );
+            frm.add_custom_button(
+                __("Reject"),
+                () => {
+                    bulk_update_action(frm, "Reject");
+                },
+                __("Actions")
+            );
+            frm.add_custom_button(
+                __("Pending"),
+                () => {
+                    bulk_update_action(frm, "Pending");
+                },
+                __("Actions")
+            );
+            frm.add_custom_button(
+                __("No Action"),
+                () => {
+                    bulk_update_action(frm, "No Action");
+                },
+                __("Actions")
+            );
 
-        // move actions button next to filters
-        for (let button of $(".custom-actions .inner-group-button")) {
-            if (button.innerText?.trim() != "Actions") continue;
-            $(".custom-button-group .inner-group-button").remove();
-            $(button).appendTo($(".custom-button-group"));
-        }
+            // move actions button next to filters
+            for (let button of $(".custom-actions .inner-group-button")) {
+                if (button.innerText?.trim() != "Actions") continue;
+                $(".custom-button-group .inner-group-button").remove();
+                $(button).appendTo($(".custom-button-group"));
+            }
         }
 
         frm.add_custom_button(__("Download Invoices"), () => {
@@ -393,6 +393,7 @@ class GSTR3B {
                 linked_doc: row.purchase_invoice_name,
                 tax_difference: row.tax_difference,
                 taxable_value_difference: row.taxable_value_difference,
+                inward_supply_name: row.inward_supply_name,
             });
         });
 
@@ -546,6 +547,20 @@ function render_empty_state(frm) {
     frm.refresh();
 }
 
-function bulk_update_status(frm, status) {
-    // Do Something
+function bulk_update_action(frm, action) {
+    if (frm.get_active_tab()?.df.fieldname != "invoice_tab") return;
+    const { invoice_tab } = frm.gstr3b.tabs;
+    const checked_invoices = invoice_tab.get_checked_items();
+
+    if (!checked_invoices.length)
+        return frappe.show_alert({
+            message: __("Please select invoices"),
+            indicator: "red",
+        });
+
+    const invoice_names = checked_invoices.map(row => row.inward_supply_name);
+
+    frm.call("update_action", { invoice_names, action }).then(() => {
+        frm.refresh();
+    });
 }

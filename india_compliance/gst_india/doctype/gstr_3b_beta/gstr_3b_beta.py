@@ -51,6 +51,28 @@ class GSTR3BBeta(Document):
         return invoice_data
 
     @frappe.whitelist()
+    def update_action(self, invoice_names, action):
+        invoice_names = frappe.parse_json(invoice_names)
+
+        self.update_previous_action(invoice_names)
+
+        frappe.db.set_value(
+            "GST Inward Supply",
+            {"name": ("in", invoice_names)},
+            "ims_action",
+            action,
+        )
+
+    def update_previous_action(self, invoice_names):
+        gst_inward_supply = frappe.qb.DocType("GST Inward Supply")
+        (
+            frappe.qb.update(gst_inward_supply)
+            .set(gst_inward_supply.previous_ims_action, gst_inward_supply.ims_action)
+            .where(gst_inward_supply.name.isin(invoice_names))
+            .run()
+        )
+
+    @frappe.whitelist()
     def get_invoice_comparision(self, purchase_name, inward_supply_name):
         inward_supply = self.get_all_inward_supplies(name=inward_supply_name)
         purchases = self.get_all_purchases(purchase_name)
