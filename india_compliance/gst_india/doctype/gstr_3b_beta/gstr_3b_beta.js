@@ -36,12 +36,26 @@ frappe.ui.form.on("GSTR-3B Beta", {
     refresh(frm) {
         // Primary Action
         frm.disable_save();
+        if (!frm.doc.is_data_loaded) {
+            frm.page.clear_primary_action();
+
         frm.page.set_primary_action(__("Get Invoices"), async () => {
             const { message } = await frm.call("get_invoice_data");
             frm.doc.__invoice_data = message;
+
+                // Toggle HTML fields
             frm.refresh();
+
             frm.gstr3b.generate_data();
+                frm.doc.is_data_loaded = true;
+            });
+        } else {
+            frm.page.clear_primary_action();
+
+            frm.page.set_primary_action(__("Upload Invoices"), async () => {
+                // Do something
         });
+        }
 
         frm.add_custom_button(
             __("Accept"),
@@ -82,6 +96,7 @@ class GSTR3B {
 
     init(frm) {
         this.frm = frm;
+        this.frm.doc.is_data_loaded = false;
         this.$wrapper = this.frm.get_field("invoice_html").$wrapper;
         this._tabs = ["invoice", "summary"];
     }
@@ -512,5 +527,7 @@ function get_first_last_day(year, month) {
 
 function render_empty_state(frm) {
     frm.doc.__invoice_data = null;
+    frm.doc.is_data_loaded = false;
+
     frm.refresh();
 }
