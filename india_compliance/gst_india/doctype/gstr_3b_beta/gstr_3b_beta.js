@@ -55,7 +55,6 @@ frappe.ui.form.on("GSTR-3B Beta", {
             frm.page.set_primary_action(__("Upload Invoices"), async () => {
                 // Do something
             });
-        }
 
         frm.add_custom_button(
             __("Accept"),
@@ -92,6 +91,11 @@ frappe.ui.form.on("GSTR-3B Beta", {
             $(".custom-button-group .inner-group-button").remove();
             $(button).appendTo($(".custom-button-group"));
         }
+        }
+
+        frm.add_custom_button(__("Download Invoices"), () => {
+            // Do something
+        });
     },
 });
 
