@@ -117,6 +117,7 @@ class GSTR3B {
     generate_data() {
         this.data = this.frm.doc.__invoice_data;
         this.filtered_data = this.frm.doc.__invoice_data;
+        this.process_data(this.data);
 
         // clear filters
         this.filter_group.filter_x_button.click();
@@ -287,6 +288,11 @@ class GSTR3B {
             add_filter(e, "ims_action", $(this).text(), me);
         });
 
+        this.tabs.invoice_tab.$datatable.on("click", ".btn.eye", function (e) {
+            const row = me.mapped_data[$(this).attr("data-name")];
+            me.dm = new DetailViewDialog(me.frm, row);
+        });
+
         async function add_filter(e, field, field_value, me) {
             e.preventDefault();
 
@@ -403,16 +409,23 @@ class GSTR3B {
     get_invoice_columns() {
         return [
             {
+                fieldname: "view",
+                fieldtype: "html",
+                width: 60,
+                align: "center",
+                _value: (...args) => get_icon(...args),
+            },
+            {
                 label: "Supplier Name",
                 fieldname: "supplier_name_gstin",
                 align: "center",
-                width: 200,
+                width: 220,
             },
             {
                 label: "Invoice No.",
                 fieldname: "invoice_no",
                 align: "center",
-                width: 150,
+                width: 180,
             },
             {
                 label: "Invoice Type",
@@ -473,6 +486,146 @@ class GSTR3B {
             if (row[field] && !options.includes(row[field])) options.push(row[field]);
         });
         return options;
+    }
+
+    process_data(data) {
+        this.mapped_data = {};
+
+        for (const row of data) {
+            this.mapped_data[row.inward_supply_name] = { ...row };
+        }
+    }
+}
+
+class DetailViewDialog {
+    table_fields = [
+        "name",
+        "bill_no",
+        "bill_date",
+        "taxable_value",
+        "cgst",
+        "sgst",
+        "igst",
+        "cess",
+        "is_reverse_charge",
+        "place_of_supply",
+    ];
+
+    constructor(frm, row) {
+        this.frm = frm;
+        this.row = row;
+        this.render_dialog();
+    }
+
+    async render_dialog() {
+        await this.get_invoice_details();
+        this.process_data();
+        this.init_dialog();
+        this.render_html();
+        this.dialog.show();
+    }
+
+    async get_invoice_details() {
+        const { message } = await frappe.call(
+            "india_compliance.gst_india.doctype.gstr_3b_beta.gstr_3b_beta.get_comparision_data",
+            {
+                purchase_name: this.row.purchase_invoice_name,
+                inward_supply_name: this.row.inward_supply_name,
+            }
+        );
+
+        this.comparision_data = message;
+    }
+
+    process_data() {
+        for (let key of ["_purchase_invoice", "_inward_supply"]) {
+            const doc = this.comparision_data[key];
+            if (!doc) continue;
+
+            this.table_fields.forEach(field => {
+                if (field == "is_reverse_charge" && doc[field] != undefined)
+                    doc[field] = doc[field] ? "Yes" : "No";
+            });
+        }
+    }
+
+    init_dialog() {
+        const supplier_details = `
+        <h5>${this.comparision_data.supplier_name}
+        ${
+            this.comparision_data.supplier_gstin
+                ? ` (${this.comparision_data.supplier_gstin})`
+                : ""
+        }
+        </h5>
+        `;
+
+        this.dialog = new frappe.ui.Dialog({
+            title: `Detail View (${this.comparision_data.classification})`,
+            fields: [
+                {
+                    fieldtype: "HTML",
+                    fieldname: "supplier_details",
+                    options: supplier_details,
+                },
+                {
+                    fieldtype: "HTML",
+                    fieldname: "diff_cards",
+                },
+                {
+                    fieldtype: "HTML",
+                    fieldname: "detail_table",
+                },
+            ],
+        });
+    }
+
+    render_html() {
+        this.render_cards();
+        this.render_table();
+    }
+
+    render_cards() {
+        let cards = [
+            {
+                value: this.comparision_data.tax_difference,
+                label: "Tax Difference",
+                datatype: "Currency",
+                currency: frappe.boot.sysdefaults.currency,
+                indicator:
+                    this.comparision_data.tax_difference === 0
+                        ? "text-success"
+                        : "text-danger",
+            },
+            {
+                value: this.comparision_data.taxable_value_difference,
+                label: "Taxable Amount Difference",
+                datatype: "Currency",
+                currency: frappe.boot.sysdefaults.currency,
+                indicator:
+                    this.comparision_data.taxable_value_difference === 0
+                        ? "text-success"
+                        : "text-danger",
+            },
+        ];
+
+        if (!this.row.purchase_invoice_name || !this.row.inward_supply_name) cards = [];
+
+        new india_compliance.NumberCardManager({
+            $wrapper: this.dialog.fields_dict.diff_cards.$wrapper,
+            cards: cards,
+        });
+    }
+
+    render_table() {
+        const detail_table = this.dialog.fields_dict.detail_table;
+
+        detail_table.html(
+            frappe.render_template("invoice_detail_comparision", {
+                purchase: this.comparision_data._purchase_invoice,
+                inward_supply: this.comparision_data._inward_supply,
+            })
+        );
     }
 }
 
@@ -563,4 +716,10 @@ function bulk_update_action(frm, action) {
     frm.call("update_action", { invoice_names, action }).then(() => {
         frm.refresh();
     });
+}
+
+function get_icon(value, column, data) {
+    return `<button class="btn eye" data-name="${data.inward_supply_name}">
+                <i class="fa fa-eye"></i>
+            </button>`;
 }

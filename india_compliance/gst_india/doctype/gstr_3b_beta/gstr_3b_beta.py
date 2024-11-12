@@ -16,6 +16,12 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
 from india_compliance.gst_india.utils import get_month_or_quarter_dict
 
 
+@frappe.whitelist()
+def get_comparision_data(purchase_name, inward_supply_name):
+    GSTR3BBeta = frappe.get_doc("GSTR-3B Beta")
+    return GSTR3BBeta.get_invoice_comparision(purchase_name, inward_supply_name)
+
+
 class GSTR3BBeta(Document):
     @frappe.whitelist()
     def get_invoice_data(self):
@@ -72,7 +78,6 @@ class GSTR3BBeta(Document):
             .run()
         )
 
-    @frappe.whitelist()
     def get_invoice_comparision(self, purchase_name, inward_supply_name):
         inward_supply = self.get_all_inward_supplies(name=inward_supply_name)
         purchases = self.get_all_purchases(purchase_name)
@@ -93,6 +98,9 @@ class GSTR3BBeta(Document):
         return reconciliation_data[0]
 
     def get_all_inward_supplies(self, name=None, filters=None):
+        if not filters:
+            filters = {}
+
         inward_supply = frappe.qb.DocType("GST Inward Supply")
         inward_supply_item = frappe.qb.DocType("GST Inward Supply Item")
         fields = GST_TAX_TYPES[:-1] + ("taxable_value",)
@@ -138,6 +146,9 @@ class GSTR3BBeta(Document):
         return query.run(as_dict=True)
 
     def get_all_purchases(self, name=None, filters=None):
+        if not filters:
+            filters = {}
+
         purchases = self.get_all_purchase_invoice(name, filters)
         purchases.extend(self.get_all_bill_of_entry(name, filters))
 
