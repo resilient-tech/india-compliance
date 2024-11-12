@@ -56,7 +56,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Section Break",
             "insert_after": "total",
             "hide_border": 1,
-            "depends_on": "eval: purchase_order && india_compliance.is_e_waybill_generatable_for_subcontracting(doc)",
+            "depends_on": "eval: doc.purchase_order && india_compliance.is_e_waybill_generatable_for_subcontracting(doc)",
         },
     ],
     "Subcontracting Receipt": [

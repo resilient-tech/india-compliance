@@ -419,7 +419,7 @@ Object.assign(india_compliance, {
             !(
                 gst_settings.enable_api &&
                 gst_settings.enable_e_waybill &&
-                gst_settings.ewaybill_for_subcontracting
+                gst_settings.enable_e_waybill_for_sc
             )
         ) {
             return false;
