@@ -243,18 +243,43 @@ class StockEntryEwaybill extends EwaybillApplicability {
         if (
             !gst_settings.enable_e_waybill ||
             !gst_settings.enable_e_waybill_for_sc ||
-            this.frm.doc.purpose !== "Send to Subcontractor"
+            !["Material Transfer", "Material Issue", "Send to Subcontractor"].includes(
+                this.frm.doc.purpose
+            )
         )
             return false;
 
         let is_ewb_applicable = true;
         let message_list = [];
+        const is_return = this.frm.doc.is_return;
 
-        if (!this.frm.doc.bill_from_gstin) {
+        if (is_return && !this.frm.doc.bill_from_gstin) {
             is_ewb_applicable = false;
             message_list.push(
                 "Bill From GSTIN is not set. Ensure its set in Bill From Address."
             );
+        }
+
+        if (!is_return && !this.frm.doc.bill_to_gstin) {
+            is_ewb_applicable = false;
+            message_list.push(
+                "Bill To GSTIN is not set. Ensure its set in Bill To Address."
+            );
+        }
+
+        const same_gstin = this.frm.doc.bill_from_gstin === this.frm.doc.bill_to_gstin;
+        const applicable_for_same_gstin = !(
+            is_return || this.frm.doc.purpose === "Send to Subcontractor"
+        );
+
+        if (same_gstin && !applicable_for_same_gstin) {
+            is_ewb_applicable = false;
+            message_list.push("Bill From GSTIN and Bill To GSTIN are same.");
+        }
+
+        if (!same_gstin && applicable_for_same_gstin) {
+            is_ewb_applicable = false;
+            message_list.push("Bill From GSTIN and Bill To GSTIN are different.");
         }
 
         if (this.frm.doc.is_opening === "Yes") {
@@ -288,11 +313,6 @@ class StockEntryEwaybill extends EwaybillApplicability {
             message_list.push("Bill To address is mandatory to generate e-Waybill.");
         }
 
-        if (this.frm.doc.bill_from_gstin === this.frm.doc.bill_to_gstin) {
-            is_ewb_generatable = false;
-            message_list.push("Bill From GSTIN and Bill To GSTIN are same.");
-        }
-
         if (show_message) {
             this.frm._ewb_message += message_list
                 .map(message => `<li>${message}</li>`)
@@ -304,7 +324,9 @@ class StockEntryEwaybill extends EwaybillApplicability {
 
     is_e_waybill_api_enabled() {
         return (
-            this.frm.doc.purpose == "Send to Subcontractor" &&
+            ["Material Transfer", "Material Issue", "Send to Subcontractor"].includes(
+                this.frm.doc.purpose
+            ) &&
             super.is_e_waybill_api_enabled() &&
             gst_settings.enable_e_waybill_for_sc
         );

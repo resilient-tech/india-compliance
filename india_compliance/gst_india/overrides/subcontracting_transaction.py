@@ -23,7 +23,11 @@ from india_compliance.gst_india.overrides.transaction import (
     validate_mandatory_fields,
     validate_place_of_supply,
 )
-from india_compliance.gst_india.utils import get_gst_accounts_by_type, is_api_enabled
+from india_compliance.gst_india.utils import (
+    get_gst_accounts_by_type,
+    is_api_enabled,
+    is_outward_stock_entry,
+)
 from india_compliance.gst_india.utils import (
     validate_invoice_number as validate_transaction_name,
 )
@@ -72,11 +76,18 @@ def after_mapping_subcontracting_order(doc, method, source_doc):
 
 
 def after_mapping_stock_entry(doc, method, source_doc):
-    if source_doc.doctype == "Subcontracting Order":
+    if source_doc.doctype != "Subcontracting Order":
+        doc.taxes_and_charges = ""
+        doc.taxes = []
+
+    if doc.purpose != "Material Transfer" or not doc.is_return:
         return
 
-    doc.taxes_and_charges = ""
-    doc.taxes = []
+    doc.bill_to_address = source_doc.billing_address
+    doc.bill_from_address = source_doc.supplier_address
+    doc.bill_to_gstin = source_doc.company_gstin
+    doc.bill_from_gstin = source_doc.supplier_gstin
+    set_address_display(doc)
 
 
 def before_mapping_subcontracting_receipt(doc, method, source_doc, table_maps):
@@ -168,14 +179,14 @@ def onload(doc, method=None):
 
 
 def validate(doc, method=None):
-    if ignore_gst_validation_for_subcontracting(doc):
+    if ignore_gst_validations(doc):
+        return
+
+    if not is_e_waybill_applicable(doc):
         return
 
     if doc.doctype in ("Stock Entry", "Subcontracting Receipt"):
         validate_transaction_name(doc)
-
-    if doc.doctype == "Stock Entry" and doc.purpose != "Send to Subcontractor":
-        return
 
     field_map = (
         STOCK_ENTRY_FIELD_MAP
@@ -201,20 +212,24 @@ def before_save(doc, method=None):
 
 
 def before_submit(doc, method=None):
-    # Stock Entries with Subcontracting Order should only be considered
-    if ignore_gst_validation_for_subcontracting(doc):
+    if ignore_gst_validations(doc):
         return
 
     validate_doc_references(doc)
 
 
 def validate_doc_references(doc):
-    is_stock_entry = doc.doctype == "Stock Entry" and doc.purpose == "Material Transfer"
+    is_return_material_transfer = (
+        doc.doctype == "Stock Entry"
+        and doc.purpose == "Material Transfer"
+        and doc.is_return
+    )
+
     is_subcontracting_receipt = (
         doc.doctype == "Subcontracting Receipt" and not doc.is_return
     )
 
-    if not (is_stock_entry or is_subcontracting_receipt):
+    if not (is_return_material_transfer or is_subcontracting_receipt):
         return
 
     if doc.doc_references:
@@ -222,7 +237,7 @@ def validate_doc_references(doc):
         return
 
     error_msg = _("Please Select Original Document Reference for ITC-04 Reporting")
-    if is_stock_entry:
+    if is_return_material_transfer:
         frappe.throw(error_msg, title=_("Mandatory Field"))
     else:
         frappe.msgprint(error_msg, alert=True, indicator="yellow")
@@ -314,8 +329,11 @@ class SubcontractingGSTAccounts(GSTAccounts):
         self.validate_for_charge_type()
 
     def validate_for_same_party_gstin(self):
-        company_gstin = self.doc.get("company_gstin") or self.doc.get("bill_from_gstin")
-        party_gstin = self.doc.get("supplier_gstin") or self.doc.get("bill_to_gstin")
+        if is_outward_stock_entry(self.doc):
+            return
+
+        company_gstin = self.doc.get("company_gstin") or self.doc.bill_from_gstin
+        party_gstin = self.doc.get("supplier_gstin") or self.doc.bill_to_gstin
 
         if not party_gstin or company_gstin != party_gstin:
             return
@@ -331,13 +349,6 @@ class SubcontractingGSTAccounts(GSTAccounts):
         for row in self.gst_tax_rows:
             # validating charge type "On Item Quantity" and non_cess_advol_account
             self.validate_charge_type_for_cess_non_advol_accounts(row)
-
-
-def ignore_gst_validation_for_subcontracting(doc):
-    if doc.doctype == "Stock Entry" and not doc.subcontracting_order:
-        return True
-
-    return ignore_gst_validations(doc)
 
 
 def set_address_display(doc):
@@ -458,3 +469,26 @@ def remove_duplicates(doc):
         doc.doc_references = []
         for row in references:
             doc.append("doc_references", dict(link_doctype=row[0], link_name=row[1]))
+
+
+def is_e_waybill_applicable(doc):
+    gst_settings = frappe.get_cached_doc("GST Settings")
+
+    if not (
+        gst_settings.enable_api
+        and gst_settings.enable_e_waybill
+        and gst_settings.enable_e_waybill_for_sc
+    ):
+        return False
+
+    if doc.doctype != "Stock Entry":
+        return True
+
+    if doc.purpose not in [
+        "Material Transfer",
+        "Material Receipt",
+        "Send to Subcontractor",
+    ]:
+        return False
+
+    return True

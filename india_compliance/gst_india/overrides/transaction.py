@@ -62,7 +62,6 @@ def set_gst_breakup(doc):
 
 
 def update_taxable_values(doc):
-
     if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
         return
 
@@ -785,9 +784,15 @@ def update_party_details(party_details, doctype, company):
 def get_party_details_for_subcontracting(party_details, doctype, company):
     party_details = frappe.parse_json(party_details)
 
-    party_address_field = (
-        "supplier_address" if doctype != "Stock Entry" else "bill_to_address"
-    )
+    if doctype == "Stock Entry":
+        party_address_field = (
+            "bill_from_address"
+            if party_details.get("is_inward_stock_entry")
+            else "bill_to_address"
+        )
+    else:
+        party_address_field = "supplier_address"
+
     party_details[party_address_field] = get_default_address(
         "Supplier", party_details.supplier
     )
@@ -817,10 +822,13 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
      - tax template
      - taxes in the tax template
     """
-
     is_sales_transaction = doctype in SALES_DOCTYPES or doctype == "Payment Entry"
     party_details = frappe.parse_json(party_details)
     gst_details = frappe._dict()
+
+    allow_same_gstin = False
+    if party_details.get("is_outward_stock_entry"):
+        allow_same_gstin = True
 
     # Party/Address Defaults
     if is_sales_transaction:
@@ -830,10 +838,16 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
         gst_category_field = "gst_category"
 
     elif doctype == "Stock Entry":
-        company_gstin_field = "bill_from_gstin"
-        party_gstin_field = "bill_to_gstin"
-        party_address_field = "bill_to_address"
-        gst_category_field = "bill_to_gst_category"
+        if party_details.get("is_inward_stock_entry"):
+            company_gstin_field = "bill_to_gstin"
+            party_gstin_field = "bill_from_gstin"
+            party_address_field = "bill_from_address"
+            gst_category_field = "bill_from_gst_category"
+        else:
+            company_gstin_field = "bill_from_gstin"
+            party_gstin_field = "bill_to_gstin"
+            party_address_field = "bill_to_address"
+            gst_category_field = "bill_to_gst_category"
 
     else:
         company_gstin_field = "company_gstin"
@@ -877,10 +891,13 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
     # Taxes Not Applicable
     if (
         (
-            party_details.get(company_gstin_field)
-            and party_details.get(company_gstin_field)
-            == party_details.get(party_gstin_field)
-        )  # Internal transfer
+            not allow_same_gstin
+            and (
+                party_details.get(company_gstin_field)
+                and party_details.get(company_gstin_field)
+                == party_details.get(party_gstin_field)
+            )  # Internal transfer
+        )
         or (is_sales_transaction and is_export_without_payment_of_gst(party_details))
         or (
             not is_sales_transaction
@@ -1522,7 +1539,6 @@ def before_print(doc, method=None, print_settings=None):
 
 
 def onload(doc, method=None):
-
     if ignore_gst_validations(doc) or not doc.place_of_supply or not doc.company_gstin:
         return
 

@@ -430,6 +430,30 @@ Object.assign(india_compliance, {
 
         return alert;
     },
+
+    is_e_waybill_generatable_for_subcontracting(doc) {
+        if (
+            !(
+                gst_settings.enable_api &&
+                gst_settings.enable_e_waybill &&
+                gst_settings.enable_e_waybill_for_sc
+            )
+        ) {
+            return false;
+        }
+
+        if (doc.doctype != "Stock Entry") return true;
+
+        if (
+            !["Material Transfer", "Material Issue", "Send to Subcontractor"].includes(
+                doc.purpose
+            )
+        ) {
+            return false;
+        }
+
+        return true;
+    },
 });
 
 function is_gstin_check_digit_valid(gstin) {

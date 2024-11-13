@@ -1009,3 +1009,12 @@ def get_period(month_or_quarter, year=None):
         return str(month_or_quarter_no[1]).zfill(2) + str(year)
 
     return month_or_quarter_no
+
+
+def is_outward_stock_entry(doc):
+    if (
+        doc.doctype == "Stock Entry"
+        and doc.purpose in ["Material Transfer", "Material Issue"]
+        and not doc.is_return
+    ):
+        return True

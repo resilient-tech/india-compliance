@@ -38,6 +38,7 @@ from india_compliance.gst_india.constants.e_waybill import (
 from india_compliance.gst_india.utils import (
     handle_server_errors,
     is_foreign_doc,
+    is_outward_stock_entry,
     load_doc,
     parse_datetime,
     send_updated_doc,
@@ -1210,7 +1211,6 @@ class EWaybillData(GSTTransactionData):
         return extension_details
 
     def validate_transaction(self):
-
         super().validate_transaction()
 
         if self.doc.ewaybill:
@@ -1234,6 +1234,8 @@ class EWaybillData(GSTTransactionData):
         - Atleast one item with HSN for goods is required
         - Basic transporter details must be present
         - Sales Invoice with same company and billing gstin
+        - Inward Stock Transfer with same company and supplier gstin
+        - Outward Material Transfer with different company and supplier gstin
         """
 
         address = ADDRESS_FIELDS.get(self.doc.doctype)
@@ -1261,7 +1263,19 @@ class EWaybillData(GSTTransactionData):
         if not self.doc.gst_transporter_id:
             self.validate_mode_of_transport()
 
-        self.validate_same_gstin()
+        if is_outward_stock_entry(self.doc):
+            self.validate_different_gstin()
+        else:
+            self.validate_same_gstin()
+
+    def validate_different_gstin(self):
+        if self.doc.company_gstin != self.doc.get("supplier_gstin"):
+            frappe.throw(
+                _(
+                    "e-Waybill cannot be generated because party GSTIN and company GSTIN are different"
+                ),
+                title=_("Invalid Data"),
+            )
 
     def validate_same_gstin(self):
         if self.doc.doctype == "Delivery Note":
@@ -1488,6 +1502,11 @@ class EWaybillData(GSTTransactionData):
                 "sub_supply_type": doc.get("_sub_supply_type", ""),
                 "document_type": "CHL",
             },
+            ("Stock Entry", 1): {
+                "supply_type": "I",
+                "sub_supply_type": doc.get("_sub_supply_type", ""),
+                "document_type": "CHL",
+            },
             ("Subcontracting Receipt", 0): {
                 "supply_type": "I",
                 "sub_supply_type": doc.get("_sub_supply_type", ""),
@@ -1634,6 +1653,7 @@ class EWaybillData(GSTTransactionData):
                 ("Delivery Note", 0): (REGISTERED_GSTIN, OTHER_GSTIN),
                 ("Delivery Note", 1): (OTHER_GSTIN, REGISTERED_GSTIN),
                 ("Stock Entry", 0): (REGISTERED_GSTIN, OTHER_GSTIN),
+                ("Stock Entry", 1): (OTHER_GSTIN, REGISTERED_GSTIN),
                 ("Subcontracting Receipt", 0): (OTHER_GSTIN, REGISTERED_GSTIN),
                 ("Subcontracting Receipt", 1): (REGISTERED_GSTIN, OTHER_GSTIN),
             }
@@ -1643,6 +1663,7 @@ class EWaybillData(GSTTransactionData):
                     {
                         ("Delivery Note", 0): (REGISTERED_GSTIN, REGISTERED_GSTIN),
                         ("Delivery Note", 1): (REGISTERED_GSTIN, REGISTERED_GSTIN),
+                        ("Stock Entry", 0): (REGISTERED_GSTIN, REGISTERED_GSTIN),
                     }
                 )
 
