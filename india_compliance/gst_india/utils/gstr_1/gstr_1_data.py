@@ -14,9 +14,8 @@ from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_B2B_InvoiceType,
     GSTR1_Category,
     GSTR1_SubCategory,
+    get_b2c_limit,
 )
-
-B2C_LIMIT = 2_50_000
 
 CATEGORY_CONDITIONS = {
     GSTR1_Category.B2B.value: {
@@ -234,11 +233,15 @@ class GSTR1Conditions:
             else invoice.invoice_total
         )
 
-        return (abs(invoice_total) > B2C_LIMIT) and self.is_inter_state(invoice)
+        return (
+            abs(invoice_total) > get_b2c_limit(invoice.posting_date)
+        ) and self.is_inter_state(invoice)
 
     @cache_invoice_condition
     def is_b2cl_inv(self, invoice):
-        return abs(invoice.invoice_total) > B2C_LIMIT and self.is_inter_state(invoice)
+        return abs(invoice.invoice_total) > get_b2c_limit(
+            invoice.posting_date
+        ) and self.is_inter_state(invoice)
 
 
 class GSTR1CategoryConditions(GSTR1Conditions):
