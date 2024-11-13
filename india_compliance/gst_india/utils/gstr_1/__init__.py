@@ -1,5 +1,7 @@
 from enum import Enum
 
+from frappe.utils import getdate
+
 
 class GSTR1_Category(Enum):
     """
@@ -333,3 +335,20 @@ SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX = [
     GSTR1_SubCategory.B2B_REVERSE_CHARGE.value,
     *SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
 ]
+
+
+B2C_LIMIT = [
+    ("2024-07-31", 2_50_000),
+    ("2099-03-31", 1_00_000),
+]
+
+
+def get_b2c_limit(date):
+    if isinstance(date, str):
+        date = getdate(date)
+
+    for limit_date, limit in B2C_LIMIT:
+        if date <= getdate(limit_date):
+            return limit
+
+    return B2C_LIMIT[-1][1]
