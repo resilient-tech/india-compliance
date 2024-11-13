@@ -59,28 +59,28 @@ frappe.ui.form.on("GSTR-3B Beta", {
             frm.add_custom_button(
                 __("Accept"),
                 () => {
-                    bulk_update_action(frm, "Accept");
+                    apply_action(frm, "Accept");
                 },
                 __("Actions")
             );
             frm.add_custom_button(
                 __("Reject"),
                 () => {
-                    bulk_update_action(frm, "Reject");
+                    apply_action(frm, "Reject");
                 },
                 __("Actions")
             );
             frm.add_custom_button(
                 __("Pending"),
                 () => {
-                    bulk_update_action(frm, "Pending");
+                    apply_action(frm, "Pending");
                 },
                 __("Actions")
             );
             frm.add_custom_button(
                 __("No Action"),
                 () => {
-                    bulk_update_action(frm, "No Action");
+                    apply_action(frm, "No Action");
                 },
                 __("Actions")
             );
@@ -117,14 +117,18 @@ class GSTR3B {
     generate_data() {
         this.data = this.frm.doc.__invoice_data;
         this.filtered_data = this.frm.doc.__invoice_data;
-        this.process_data(this.data);
 
         // clear filters
         this.filter_group.filter_x_button.click();
         this.render_data_tables();
     }
 
-    refresh() {
+    refresh(data) {
+        if (data) {
+            this.data = data;
+            this.refresh_filter_fields();
+        }
+
         this.apply_filters();
 
         // data unchanged!
@@ -394,7 +398,7 @@ class GSTR3B {
                 supplier_name_gstin: this.get_supplier_name_gstin(row),
                 invoice_no: row.bill_no,
                 invoice_type: row._inward_supply.supply_type,
-                ims_action: row._inward_supply.ims_action,
+                ims_action: row.ims_action,
                 match_status: row.match_status,
                 linked_doc: row.purchase_invoice_name,
                 tax_difference: row.tax_difference,
@@ -486,14 +490,6 @@ class GSTR3B {
             if (row[field] && !options.includes(row[field])) options.push(row[field]);
         });
         return options;
-    }
-
-    process_data(data) {
-        this.mapped_data = {};
-
-        for (const row of data) {
-            this.mapped_data[row.inward_supply_name] = { ...row };
-        }
     }
 }
 
@@ -700,7 +696,7 @@ function render_empty_state(frm) {
     frm.refresh();
 }
 
-function bulk_update_action(frm, action) {
+function apply_action(frm, action) {
     if (frm.get_active_tab()?.df.fieldname != "invoice_tab") return;
     const { invoice_tab } = frm.gstr3b.tabs;
     const checked_invoices = invoice_tab.get_checked_items();
@@ -713,8 +709,28 @@ function bulk_update_action(frm, action) {
 
     const invoice_names = checked_invoices.map(row => row.inward_supply_name);
 
-    frm.call("update_action", { invoice_names, action }).then(() => {
-        frm.refresh();
+    // Update action in UI
+    const new_data = frm.gstr3b.data.filter(row => {
+        if (invoice_names.includes(row.inward_supply_name)) row.ims_action = action;
+        return true;
+    });
+    frm.gstr3b.refresh(new_data);
+
+    // Update action in database
+    frappe.call({
+        method: "update_action",
+        doc: frm,
+        args: { invoice_names, action },
+    });
+
+    after_successful_action(invoice_tab);
+}
+
+function after_successful_action(tab) {
+    if (tab) tab.clear_checked_items();
+    frappe.show_alert({
+        message: "Action applied successfully",
+        indicator: "green",
     });
 }
 
