@@ -293,7 +293,7 @@ class GSTR3B {
         });
 
         this.tabs.invoice_tab.$datatable.on("click", ".btn.eye", function (e) {
-            const row = me.mapped_data[$(this).attr("data-name")];
+            const row = me.mapped_invoice_data[$(this).attr("data-name")];
             me.dm = new DetailViewDialog(me.frm, row);
         });
 
@@ -393,7 +393,11 @@ class GSTR3B {
         if (!this.data.length) return [];
 
         const data = [];
+        this.mapped_invoice_data = {};
+
         this.filtered_data.forEach(row => {
+            this.mapped_invoice_data[row.inward_supply_name] = row;
+
             data.push({
                 supplier_name_gstin: this.get_supplier_name_gstin(row),
                 invoice_no: row.bill_no,
@@ -522,13 +526,14 @@ class DetailViewDialog {
     }
 
     async get_invoice_details() {
-        const { message } = await frappe.call(
-            "india_compliance.gst_india.doctype.gstr_3b_beta.gstr_3b_beta.get_comparision_data",
-            {
+        const { message } = await frappe.call({
+            method: "get_invoice_comparision",
+            doc: this.frm,
+            args: {
                 purchase_name: this.row.purchase_invoice_name,
                 inward_supply_name: this.row.inward_supply_name,
-            }
-        );
+            },
+        });
 
         this.comparision_data = message;
     }

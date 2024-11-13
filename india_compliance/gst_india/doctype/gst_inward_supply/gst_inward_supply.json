@@ -64,9 +64,8 @@
   "registration_cancel_date",
   "gstr_3b_details_section",
   "ims_action",
-  "previous_ims_action",
-  "column_break_opxc",
-  "ims_return_period"
+  "is_pending_action_allowed",
+  "previous_ims_action"
  ],
  "fields": [
   {
@@ -366,19 +365,9 @@
    "label": "IMS Details"
   },
   {
-   "fieldname": "column_break_opxc",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "ims_return_period",
-   "fieldtype": "Data",
-   "label": "Return Period"
-  },
-  {
-   "default": "No Action",
    "fieldname": "ims_action",
    "fieldtype": "Data",
-   "label": "Invoice Action",
+   "label": "IMS Action",
    "read_only": 1
   },
   {
@@ -386,13 +375,20 @@
    "fieldname": "previous_ims_action",
    "fieldtype": "Data",
    "hidden": 1,
-   "label": "Previous Action",
+   "label": "Previous IMS Action",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_pending_action_allowed",
+   "fieldtype": "Check",
+   "label": "Is Pending Action Allowed",
    "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-11-11 18:09:39.221966",
+ "modified": "2024-11-13 16:00:35.569245",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Inward Supply",
