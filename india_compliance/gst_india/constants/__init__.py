@@ -146,7 +146,7 @@ STATE_PINCODE_MAPPING = {
     "Jammu and Kashmir": (180, 194),
     "Himachal Pradesh": (171, 177),
     "Punjab": (140, 160),
-    "Chandigarh": (160, 160),
+    "Chandigarh": ((140, 140), (160, 160)),
     "Uttarakhand": (244, 263),
     "Haryana": (121, 136),
     "Delhi": (110, 110),
