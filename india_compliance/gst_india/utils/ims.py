@@ -1,4 +1,5 @@
 import frappe
+from frappe.query_builder.functions import IfNull
 from frappe.utils.data import format_date
 
 from india_compliance.gst_india.api_classes.taxpayer_returns import IMSAPI
@@ -20,12 +21,22 @@ CATEGORIES = [
 
 class IMS:
     STATE_MAP = {value: f"{value}-{key}" for key, value in STATE_NUMBERS.items()}
+    ACTION_MAP = {"A": "Accept", "R": "Reject", "P": "Pending", "N": "No Action"}
+
+    def __init__(self, company_gstin):
+        self.existing_transactions = self.get_existing_transactions()
+        self.company_gstin = company_gstin
 
     def create_transactions(self, invoices):
         transactions = self.get_all_transactions(invoices)
 
         for transaction in transactions:
             create_inward_supply(transaction)
+
+            if transaction.get("unique_key") in self.existing_transactions:
+                self.existing_transactions.pop(transaction.get("unique_key"))
+
+        self.delete_missing_transactions()
 
     def get_all_transactions(self, invoices):
         transactions = []
@@ -41,12 +52,18 @@ class IMS:
             sup_return_period=invoice.rtnprd,
             place_of_supply=self.STATE_MAP[invoice.pos],
             document_value=invoice.val,
+            company_gstin=self.company_gstin,
             # Required??
-            # source_file_status= invoice.srcfilstatus,
+            # gstr_1_filled= invoice.srcfilstatus,
             # source_form = invoice.srcform,
-            # is_pending_action_allowed = invoice.ispendactnallwd,
+            is_pending_action_allowed=invoice.ispendactnallwd,
             **self.get_invoice_details(invoice),
             items=self.get_transaction_item(invoice),
+            ims_action=self.ACTION_MAP.get(invoice.action),
+        )
+
+        transaction["unique_key"] = (
+            f"{transaction.get('supplier_gstin', '')}-{transaction.get('bill_no', '')}"
         )
         return transaction
 
@@ -70,13 +87,37 @@ class IMS:
             "cess": item.cess,
         }
 
+    def get_existing_transactions(self):
+        inward_supply = frappe.qb.DocType("GST Inward Supply")
+        self.existing_transactions = (
+            frappe.qb.from_(inward_supply)
+            .select(
+                inward_supply.name, inward_supply.supplier_gstin, inward_supply.bill_no
+            )
+            .where(IfNull(inward_supply.sup_return_period, "") == "")
+            .where(IfNull(inward_supply.ims_action, "") != "")
+        ).run(as_dict=True)
+
+        return {
+            f"{transaction.get('supplier_gstin', '')}-{transaction.get('bill_no', '')}": transaction.get(
+                "name"
+            )
+            for transaction in self.existing_transactions
+        }
+
+    def delete_missing_transactions(self):
+        if self.existing_transactions:
+            for inward_supply_name in self.existing_transactions.values():
+                frappe.delete_doc("GST Inward Supply", inward_supply_name)
+
 
 class B2B(IMS):
     def get_invoice_details(self, invoice):
         return {
             "bill_no": invoice.inum,
             "bill_date": parse_datetime(invoice.idt, day_first=True),
-            "classification": invoice.inv_typ,
+            # "supply_type": "", TODO: Check options
+            "classification": "B2B",
             "doc_type": "Invoice",  # Custom Field
         }
 
@@ -116,7 +157,8 @@ class B2BDN(B2B):
         return {
             "bill_no": invoice.nt_num,
             "bill_date": parse_datetime(invoice.nt_dt, day_first=True),
-            "classification": invoice.inv_typ,
+            # "supply_type": "", TODO: Check options
+            "classification": "B2B",
             "doc_type": "Debit Note",  # Custom Field
         }
 
@@ -187,7 +229,9 @@ class B2BCNA(B2BCN):
 
 
 def download_invoices(otp=None):
-    api = IMSAPI(company_gstin="24AAUPV7468F1ZW")
+    company_gstin = "24AAUPV7468F1ZW"
+
+    api = IMSAPI(company_gstin)
     response = api.get_data(
         "GETINV", params={"section": ["B2B", "B2BA", "CN", "DN", "CNA", "DNA"]}, otp=otp
     )  # section is a list
@@ -196,7 +240,9 @@ def download_invoices(otp=None):
         return
 
     for category in CATEGORIES:
-        getattr(ims, category)().create_transactions(response.get(category.lower(), []))
+        getattr(ims, category)(company_gstin).create_transactions(
+            response.get(category.lower(), [])
+        )
 
 
 def upload_invoices(gstin):
@@ -239,12 +285,12 @@ def get_gov_data(is_reset=False):
 
         data = {
             "stin": invoice.supplier_gstin,
-            "inv_typ": invoice.classification,
+            # "inv_typ": invoice.supply_type, TODO: Check options
             "srcform": "",
             "rtnprd": invoice.sup_return_period,
             "val": invoice.document_value,
             "pos": STATE_NUMBERS[invoice.place_of_supply.split("-")[1]],
-            "prev_status": "A",  # Previous status should be derived
+            "prev_status": invoice.previous_ims_action,
             **_class.get_category_details(invoice),
             **_class.get_item_details(invoice.items[0]),
         }
@@ -252,7 +298,7 @@ def get_gov_data(is_reset=False):
         if not is_reset:
             data.update(
                 {
-                    "action": "A",  # Action should be derived
+                    "action": invoice.ims_action,
                 }
             )
 
