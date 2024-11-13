@@ -2,6 +2,7 @@ import frappe
 from frappe.query_builder.functions import IfNull
 from frappe.utils.data import format_date
 
+from india_compliance.gst_india.api_classes.taxpayer_base import otp_handler
 from india_compliance.gst_india.api_classes.taxpayer_returns import IMSAPI
 from india_compliance.gst_india.constants import STATE_NUMBERS
 from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
@@ -228,6 +229,7 @@ class B2BCNA(B2BCN):
         return invoice_details
 
 
+@otp_handler
 def download_invoices(otp=None):
     company_gstin = "24AAUPV7468F1ZW"
 

@@ -93,8 +93,16 @@ frappe.ui.form.on("GSTR-3B Beta", {
             }
         }
 
-        frm.add_custom_button(__("Download Invoices"), () => {
-            // Do something
+        frm.add_custom_button(__("Download Invoices"), async () => {
+            await frappe.call({
+                doc: frm,
+                method: "download_ims_invoices",
+            });
+
+            frappe.show_alert({
+                message: "Downloaded Invoices Successfully and AutoReconciled",
+                indicator: "green",
+            });
         });
     },
 });
