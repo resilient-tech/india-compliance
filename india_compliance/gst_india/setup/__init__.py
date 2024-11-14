@@ -14,6 +14,7 @@ from india_compliance.gst_india.constants.custom_fields import (
     CUSTOM_FIELDS,
     E_INVOICE_FIELDS,
     E_WAYBILL_FIELDS,
+    EDUCATION_CUSTOM_FIELDS,
     HRMS_CUSTOM_FIELDS,
     SALES_REVERSE_CHARGE_FIELDS,
 )
@@ -45,9 +46,16 @@ def create_custom_fields():
     if "hrms" in frappe.get_installed_apps():
         create_hrms_custom_fields()
 
+    if "education" in frappe.get_installed_apps():
+        create_education_custom_fields()
+
 
 def create_hrms_custom_fields():
     _create_custom_fields(HRMS_CUSTOM_FIELDS, ignore_validate=True)
+
+
+def create_education_custom_fields():
+    _create_custom_fields(EDUCATION_CUSTOM_FIELDS, ignore_validate=True)
 
 
 def create_accounting_dimension_fields():
