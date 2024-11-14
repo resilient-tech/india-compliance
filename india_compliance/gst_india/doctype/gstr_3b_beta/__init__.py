@@ -43,7 +43,7 @@ class IMSReconciler:
 
     def auto_reconcile_invoices(self, filters):
         """
-        Reconcile purchases and inward supplies for given category.
+        Reconcile purchases and inward supplies.
         """
 
         _Reconciler = Reconciler()

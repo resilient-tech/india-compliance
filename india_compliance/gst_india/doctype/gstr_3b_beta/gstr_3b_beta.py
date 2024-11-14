@@ -5,28 +5,17 @@ import frappe
 from frappe.model.document import Document
 from frappe.utils import get_date_str, get_first_day, get_last_day
 
+from india_compliance.gst_india.api_classes.taxpayer_base import otp_handler
+from india_compliance.gst_india.api_classes.taxpayer_returns import IMSAPI
 from india_compliance.gst_india.doctype.gstr_3b_beta import IMSReconciler
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     ReconciledData,
 )
-from india_compliance.gst_india.utils import get_month_or_quarter_dict
-from india_compliance.gst_india.utils.ims import download_invoices
+from india_compliance.gst_india.utils import get_month_or_quarter_dict, ims
 
 
 class GSTR3BBeta(Document):
     IMS_RECONCILER = IMSReconciler()
-
-    @frappe.whitelist()
-    def download_and_reconcile_invoices(self):
-        frappe.has_permission("GSTR-3B Beta", "write", throw=True)
-
-        filters = self.get_filters()
-
-        # Download Invioces
-        download_invoices()
-
-        # Auto_Reconcile Invoices
-        self.IMS_RECONCILER.auto_reconcile_invoices(filters)
 
     @frappe.whitelist()
     def get_invoice_data(self):
@@ -182,3 +171,36 @@ class GSTR3BBeta(Document):
                 "period": str(month).zfill(2) + str(self.year),
             }
         )
+
+
+CATEGORIES = [
+    "B2B",
+    "B2BA",
+    "B2BDN",
+    "B2BDNA",
+    "B2BCN",
+    "B2BCNA",
+]
+
+
+@frappe.whitelist()
+@otp_handler
+def download_invoices_and_reconcile(company, company_gstin):
+    frappe.has_permission("GSTR-3B Beta", "write", throw=True)
+
+    api = IMSAPI(company_gstin)
+    response = api.get_data(
+        "GETINV", params={"section": ["B2B", "B2BA", "CN", "DN", "CNA", "DNA"]}
+    )  # section is a list
+
+    if response.error_type == "no_docs_found":
+        return
+
+    for category in CATEGORIES:
+        getattr(ims, category)(company, company_gstin).create_transactions(
+            response.get(category.lower(), [])
+        )
+
+    # Auto_Reconcile Invoices
+    filters = frappe._dict({"company": company, "company_gstin": company_gstin})
+    IMSReconciler().auto_reconcile_invoices(filters)

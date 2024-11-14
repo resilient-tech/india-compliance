@@ -2,7 +2,7 @@ import frappe
 from frappe.query_builder.functions import IfNull
 from frappe.utils.data import format_date
 
-from india_compliance.gst_india.api_classes.taxpayer_base import otp_handler
+# from india_compliance.gst_india.api_classes.taxpayer_base import otp_handler
 from india_compliance.gst_india.api_classes.taxpayer_returns import IMSAPI
 from india_compliance.gst_india.constants import STATE_NUMBERS
 from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
@@ -10,23 +10,15 @@ from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply impo
 )
 from india_compliance.gst_india.utils import ims, parse_datetime
 
-CATEGORIES = [
-    "B2B",
-    "B2BA",
-    "B2BDN",
-    "B2BDNA",
-    "B2BCN",
-    "B2BCNA",
-]
-
 
 class IMS:
     STATE_MAP = {value: f"{value}-{key}" for key, value in STATE_NUMBERS.items()}
     ACTION_MAP = {"A": "Accept", "R": "Reject", "P": "Pending", "N": "No Action"}
 
-    def __init__(self, company_gstin):
+    def __init__(self, company, company_gstin):
         self.existing_transactions = self.get_existing_transactions()
         self.company_gstin = company_gstin
+        self.company = company
 
     def create_transactions(self, invoices):
         transactions = self.get_all_transactions(invoices)
@@ -53,6 +45,7 @@ class IMS:
             sup_return_period=invoice.rtnprd,
             place_of_supply=self.STATE_MAP[invoice.pos],
             document_value=invoice.val,
+            company=self.company,
             company_gstin=self.company_gstin,
             # Required??
             # gstr_1_filled= invoice.srcfilstatus,
@@ -227,24 +220,6 @@ class B2BCNA(B2BCN):
             }
         )
         return invoice_details
-
-
-@otp_handler
-def download_invoices(otp=None):
-    company_gstin = "24AAUPV7468F1ZW"
-
-    api = IMSAPI(company_gstin)
-    response = api.get_data(
-        "GETINV", params={"section": ["B2B", "B2BA", "CN", "DN", "CNA", "DNA"]}, otp=otp
-    )  # section is a list
-
-    if response.error_type == "no_docs_found":
-        return
-
-    for category in CATEGORIES:
-        getattr(ims, category)(company_gstin).create_transactions(
-            response.get(category.lower(), [])
-        )
 
 
 def upload_invoices(gstin):
