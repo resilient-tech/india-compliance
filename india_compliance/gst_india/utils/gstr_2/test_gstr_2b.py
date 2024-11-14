@@ -58,6 +58,15 @@ class TestGSTR2b(IntegrationTestCase, TestGSTRMixin):
                 ),
                 "irn_gen_date": date(2019, 12, 24),
                 "doc_type": "Invoice",
+                "items": [
+                    {
+                        "taxable_value": 12200,
+                        "igst": 183,
+                        "cgst": 0,
+                        "sgst": 0,
+                        "cess": 0,
+                    }
+                ],
             },
             doc,
         )
@@ -87,6 +96,15 @@ class TestGSTR2b(IntegrationTestCase, TestGSTRMixin):
                 "original_bill_no": "S008400",
                 "original_bill_date": date(2016, 11, 24),
                 "doc_type": "Invoice",
+                "items": [
+                    {
+                        "taxable_value": 12200,
+                        "igst": 183,
+                        "cgst": 0,
+                        "sgst": 0,
+                        "cess": 0,
+                    }
+                ],
             },
             doc,
         )
@@ -116,6 +134,15 @@ class TestGSTR2b(IntegrationTestCase, TestGSTRMixin):
                 ),
                 "irn_gen_date": date(2019, 12, 24),
                 "doc_type": "Credit Note",
+                "items": [
+                    {
+                        "taxable_value": 12200,
+                        "igst": 183,
+                        "cgst": 0,
+                        "sgst": 0,
+                        "cess": 0,
+                    }
+                ],
             },
             doc,
         )
@@ -143,6 +170,15 @@ class TestGSTR2b(IntegrationTestCase, TestGSTRMixin):
                 "reason_itc_unavailability": "Return filed post annual cut-off",
                 "diffprcnt": "1",
                 "doc_type": "Credit Note",
+                "items": [
+                    {
+                        "taxable_value": 12200,
+                        "igst": 183,
+                        "cgst": 0,
+                        "sgst": 0,
+                        "cess": 0,
+                    }
+                ],
             },
             doc,
         )
