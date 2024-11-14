@@ -19,16 +19,16 @@ class GSTR2b(GSTR):
             "sup_return_period": supplier.supprd,
         }
 
-    def get_transaction_item(self, item):
-        return {
-            "item_number": item.num,
-            "rate": item.rt,
-            "taxable_value": item.txval,
-            "igst": item.igst,
-            "cgst": item.cgst,
-            "sgst": item.sgst,
-            "cess": item.cess,
-        }
+    def get_transaction_items(self, invoice):
+        return [
+            {
+                "taxable_value": invoice.txval,
+                "igst": invoice.igst,
+                "cgst": invoice.cgst,
+                "sgst": invoice.sgst,
+                "cess": invoice.cess,
+            }
+        ]
 
 
 class GSTR2bB2B(GSTR2b):
@@ -131,10 +131,6 @@ class GSTR2bISD(GSTR2b):
             "document_value": invoice.igst + invoice.cgst + invoice.sgst + invoice.cess,
         }
 
-    # item details are included in invoice details
-    def get_transaction_items(self, invoice):
-        return [self.get_transaction_item(invoice)]
-
 
 class GSTR2bISDA(GSTR2bISD):
     def get_invoice_details(self, invoice):
@@ -166,10 +162,6 @@ class GSTR2bIMPGSEZ(GSTR2b):
             "document_value": invoice.txval + invoice.igst + invoice.cess,
             "itc_availability": "Yes",  # always available
         }
-
-    # item details are included in invoice details
-    def get_transaction_items(self, invoice):
-        return [self.get_transaction_item(invoice)]
 
 
 class GSTR2bIMPG(GSTR2bIMPGSEZ):
