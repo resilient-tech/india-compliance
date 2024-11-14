@@ -5,13 +5,7 @@ import frappe
 from frappe.model.document import Document
 from frappe.utils import get_date_str, get_first_day, get_last_day
 
-from india_compliance.gst_india.doctype.gstr_3b_beta import (
-    auto_reconcile_invoices,
-    get_base_bill_of_entry_query,
-    get_base_inward_supply_query,
-    get_base_purchase_query,
-    get_query_with_filters,
-)
+from india_compliance.gst_india.doctype.gstr_3b_beta import IMSReconciler
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     ReconciledData,
 )
@@ -20,18 +14,24 @@ from india_compliance.gst_india.utils.ims import download_invoices
 
 
 class GSTR3BBeta(Document):
+    IMS_RECONCILER = IMSReconciler()
+
     @frappe.whitelist()
-    def download_ims_invoices(self):
+    def download_and_reconcile_invoices(self):
+        frappe.has_permission("GSTR-3B Beta", "write", throw=True)
+
         filters = self.get_filters()
 
         # Download Invioces
         download_invoices()
 
         # Auto_Reconcile Invoices
-        auto_reconcile_invoices(filters)
+        self.IMS_RECONCILER.auto_reconcile_invoices(filters)
 
     @frappe.whitelist()
     def get_invoice_data(self):
+        frappe.has_permission("GSTR-3B Beta", "write", throw=True)
+
         filters = self.get_filters()
 
         inward_supplies = self.get_all_inward_supplies(filters=filters)
@@ -57,6 +57,8 @@ class GSTR3BBeta(Document):
 
     @frappe.whitelist()
     def update_action(self, invoice_names, action):
+        frappe.has_permission("GSTR-3B Beta", "write", throw=True)
+
         invoice_names = frappe.parse_json(invoice_names)
 
         self.update_previous_action(invoice_names)
@@ -69,16 +71,19 @@ class GSTR3BBeta(Document):
         )
 
     def update_previous_action(self, invoice_names):
-        gst_inward_supply = frappe.qb.DocType("GST Inward Supply")
+        inward_supply = frappe.qb.DocType("GST Inward Supply")
         (
-            frappe.qb.update(gst_inward_supply)
-            .set(gst_inward_supply.previous_ims_action, gst_inward_supply.ims_action)
-            .where(gst_inward_supply.name.isin(invoice_names))
+            frappe.qb.update(inward_supply)
+            .set(inward_supply.previous_ims_action, inward_supply.ims_action)
+            .where(inward_supply.name.isin(invoice_names))
             .run()
         )
 
     @frappe.whitelist()
     def get_invoice_comparision(self, purchase_name, inward_supply_name):
+        frappe.has_permission("GSTR-3B Beta", "write", throw=True)
+
+        self._reconciler_class = IMSReconciler()
         inward_supply = self.get_all_inward_supplies(name=inward_supply_name)
         purchases = self.get_all_purchases(purchase_name)
 
@@ -101,18 +106,20 @@ class GSTR3BBeta(Document):
         if not filters:
             filters = {}
 
-        inward_supply = frappe.qb.DocType("GST Inward Supply")
-        inward_supply_item = frappe.qb.DocType("GST Inward Supply Item")
-        query = get_base_inward_supply_query(inward_supply, inward_supply_item)
+        query = self.IMS_RECONCILER.get_base_inward_supply_query()
 
         if name:
-            query = query.where(inward_supply.name == name)
+            query = query.where(self.IMS_RECONCILER.inward_supply.name == name)
 
-        query = get_query_with_filters(inward_supply, query, filters)
+        query = self.IMS_RECONCILER.get_query_with_filters(
+            self.IMS_RECONCILER.inward_supply, query, filters
+        )
 
         if filters.get("from_date"):
             query = query.where(
-                inward_supply.bill_date.between(filters.from_date, filters.to_date)
+                self.IMS_RECONCILER.inward_supply.bill_date.between(
+                    filters.from_date, filters.to_date
+                )
             )
 
         return query.run(as_dict=True)
@@ -127,38 +134,39 @@ class GSTR3BBeta(Document):
         return {doc.name: doc for doc in purchases}
 
     def get_all_purchase_invoice(self, name, filters):
-        purchase = frappe.qb.DocType("Purchase Invoice")
-        purchase_item = frappe.qb.DocType("Purchase Invoice Item")
-
-        query = get_base_purchase_query(purchase, purchase_item)
+        query = self.IMS_RECONCILER.get_base_purchase_query()
 
         if name:
-            query = query.where(purchase.name == name)
+            query = query.where(self.IMS_RECONCILER.purchase_invoice.name == name)
 
-        query = get_query_with_filters(purchase, query, filters)
+        query = self.IMS_RECONCILER.get_query_with_filters(
+            self.IMS_RECONCILER.purchase_invoice, query, filters
+        )
 
         if filters.get("from_date"):
             query = query.where(
-                purchase.posting_date.between(filters.from_date, filters.to_date)
+                self.IMS_RECONCILER.purchase_invoice.posting_date.between(
+                    filters.from_date, filters.to_date
+                )
             )
 
         return query.run(as_dict=True)
 
     def get_all_bill_of_entry(self, name, filters):
-        boe = frappe.qb.DocType("Bill of Entry")
-        boe_item = frappe.qb.DocType("Bill of Entry Item")
-        purchase_invoice = frappe.qb.DocType("Purchase Invoice")
-
-        query = get_base_bill_of_entry_query(boe, boe_item, purchase_invoice)
+        query = self.IMS_RECONCILER.get_base_bill_of_entry_query()
 
         if name:
-            query = query.where(boe.name == name)
+            query = query.where(self.IMS_RECONCILER.boe.name == name)
 
-        query = get_query_with_filters(boe, query, filters)
+        query = self.IMS_RECONCILER.get_query_with_filters(
+            self.IMS_RECONCILER.boe, query, filters
+        )
 
         if filters.get("from_date"):
             query = query.where(
-                boe.bill_of_entry_date.between(filters.from_date, filters.to_date)
+                self.IMS_RECONCILER.boe.bill_of_entry_date.between(
+                    filters.from_date, filters.to_date
+                )
             )
 
         return query.run(as_dict=True)
