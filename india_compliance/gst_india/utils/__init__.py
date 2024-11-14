@@ -391,31 +391,32 @@ def get_place_of_supply(party_details, doctype):
         "Accounts Settings", "Accounts Settings", "determine_address_tax_category_from"
     )
 
-    if pos_basis == "Shipping Address" and doctype in SALES_DOCTYPES:
-        # POS Basis Shipping Address is only applicable for Sales
-        pos_gstin = party_details.company_gstin
-
     # fallback to company GSTIN for sales or supplier GSTIN for purchases
     # (in retail scenarios, customer / company GSTIN may not be set)
-
-    elif doctype in SALES_DOCTYPES or doctype == "Payment Entry":
+    if doctype in SALES_DOCTYPES or doctype == "Payment Entry":
         # for exports, Place of Supply is set using GST category in absence of GSTIN
         if party_details.gst_category == "Overseas":
             return get_overseas_place_of_supply(party_details)
 
-        if (
-            party_details.gst_category == "Unregistered"
-            and party_details.customer_address
-        ):
+        address = (
+            party_details.shipping_address_name or party_details.company_address
+            if pos_basis == "Shipping Address" and doctype != "Payment Entry"
+            else party_details.customer_address
+        )
+        if party_details.gst_category == "Unregistered" and address:
             gst_state_number, gst_state = frappe.db.get_value(
                 "Address",
-                party_details.customer_address,
+                address,
                 ("gst_state_number", "gst_state"),
             )
             if gst_state_number and gst_state:
                 return f"{gst_state_number}-{gst_state}"
 
-        pos_gstin = party_details.billing_address_gstin or party_details.company_gstin
+        pos_gstin = (
+            frappe.db.get_value("Address", party_details.shipping_address_name, "gstin")
+            if pos_basis == "Shipping Address"
+            else party_details.billing_address_gstin
+        ) or party_details.company_gstin
 
     elif doctype == "Stock Entry":
         pos_gstin = party_details.bill_to_gstin or party_details.bill_from_gstin
