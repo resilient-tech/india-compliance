@@ -93,9 +93,15 @@ def get_property_setters(*, include_defaults=False):
         },
         {
             "doctype": "Accounts Settings",
+            "fieldname": "add_taxes_from_item_tax_template",
+            "property": "description",
+            "value": "Overridden by India Compliance",
+        },
+        {
+            "doctype": "Accounts Settings",
             "fieldname": "tax_settings_section",
             "property": "label",
-            "value": "Tax Settings (Overridden by India Compliance)",
+            "value": "Tax Settings",
         },
         {
             "doctype": "Accounts Settings",
