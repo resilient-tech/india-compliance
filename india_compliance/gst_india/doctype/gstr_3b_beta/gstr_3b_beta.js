@@ -59,28 +59,28 @@ frappe.ui.form.on("GSTR-3B Beta", {
             frm.add_custom_button(
                 __("Accept"),
                 () => {
-                    apply_action(frm, "Accept");
+                    apply_bulk_action(frm, "Accept");
                 },
                 __("Actions")
             );
             frm.add_custom_button(
                 __("Reject"),
                 () => {
-                    apply_action(frm, "Reject");
+                    apply_bulk_action(frm, "Reject");
                 },
                 __("Actions")
             );
             frm.add_custom_button(
                 __("Pending"),
                 () => {
-                    apply_action(frm, "Pending");
+                    apply_bulk_action(frm, "Pending");
                 },
                 __("Actions")
             );
             frm.add_custom_button(
                 __("No Action"),
                 () => {
-                    apply_action(frm, "No Action");
+                    apply_bulk_action(frm, "No Action");
                 },
                 __("Actions")
             );
@@ -532,6 +532,7 @@ class DetailViewDialog {
         await this.get_invoice_details();
         this.process_data();
         this.init_dialog();
+        this.setup_actions();
         this.render_html();
         this.dialog.show();
     }
@@ -639,6 +640,32 @@ class DetailViewDialog {
             })
         );
     }
+
+    setup_actions() {
+        // setup actions
+        ["Accept", "Reject", "Pending", "No Action"].forEach(action => {
+            this.dialog.add_custom_action(
+                action,
+                () => {
+                    apply_action(this.frm, [this.row.inward_supply_name], action);
+                    this.dialog.hide();
+                },
+                `mr-2 ${this._get_button_css(action)}`
+            );
+        });
+
+        this.dialog.$wrapper
+            .find(".btn.btn-secondary.not-grey")
+            .removeClass("btn-secondary");
+        this.dialog.$wrapper.find(".modal-footer").css("flex-direction", "inherit");
+    }
+
+    _get_button_css(action) {
+        if (action == "Accept") return "btn-success not-grey";
+        if (action == "Reject") return "btn-danger not-grey";
+        if (action == "Pending") return "btn-warning not-grey";
+        if (action == "No Action") return "btn-secondary";
+    }
 }
 
 function set_options_for_year(frm) {
@@ -711,8 +738,7 @@ function render_empty_state(frm) {
 
     frm.refresh();
 }
-
-function apply_action(frm, action) {
+function apply_bulk_action(frm, action) {
     if (frm.get_active_tab()?.df.fieldname != "invoice_tab") return;
     const { invoice_tab } = frm.gstr3b.tabs;
     const checked_invoices = invoice_tab.get_checked_items();
@@ -724,7 +750,12 @@ function apply_action(frm, action) {
         });
 
     const invoice_names = checked_invoices.map(row => row.inward_supply_name);
+    apply_action(frm, invoice_names, action);
 
+    after_successful_action(invoice_tab);
+}
+
+async function apply_action(frm, invoice_names, action) {
     // Update action in UI
     const new_data = frm.gstr3b.data.filter(row => {
         if (invoice_names.includes(row.inward_supply_name)) row.ims_action = action;
@@ -733,13 +764,16 @@ function apply_action(frm, action) {
     frm.gstr3b.refresh(new_data);
 
     // Update action in database
-    frappe.call({
+    await frappe.call({
         method: "update_action",
         doc: frm,
         args: { invoice_names, action },
     });
 
-    after_successful_action(invoice_tab);
+    frappe.show_alert({
+        message: "Action applied successfully",
+        indicator: "green",
+    });
 }
 
 function after_successful_action(tab) {
