@@ -563,9 +563,9 @@ class Gstr1Report:
 
             parent_dict = invoice_item_wise_tax_details.setdefault(parent, {})
             for item_code, invoice_tax_details in item_wise_tax_detail.items():
-                tax_rate = flt(invoice_tax_details[0])
+                tax_rate = flt(invoice_tax_details.get("tax_rate"))
                 tax_rate = flt(tax_rate * 2 if is_cgst_or_sgst else tax_rate)
-                tax_amount = flt(invoice_tax_details[1])
+                tax_amount = flt(invoice_tax_details.get("tax_amount"))
 
                 item_dict = parent_dict.setdefault(
                     item_code, {"tax_rate": 0, "cess_amount": 0, "taxable_value": 0}

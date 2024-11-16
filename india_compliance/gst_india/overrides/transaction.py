@@ -143,7 +143,10 @@ def validate_item_wise_tax_detail(doc):
 
         item_wise_tax_detail = frappe.parse_json(row.item_wise_tax_detail or "{}")
 
-        for item_name, (tax_rate, tax_amount) in item_wise_tax_detail.items():
+        for item_name, tax_row in item_wise_tax_detail.items():
+            tax_rate = tax_row.get("tax_rate")
+            tax_amount = tax_row.get("tax_amount")
+
             if tax_amount and not tax_rate:
                 frappe.throw(
                     _(
@@ -1186,7 +1189,8 @@ class ItemGSTDetails:
                     continue
 
                 item_taxes = tax_details[item_name]
-                tax_rate, tax_amount = old[item_name]
+                tax_rate = old[item_name].get("tax_rate")
+                tax_amount = old[item_name].get("tax_amount")
 
                 tax_difference -= tax_amount
 

@@ -388,9 +388,9 @@ class GSTTransactionData:
 
             tax = row.gst_tax_type
             tax_rate = self.rounded(
-                frappe.parse_json(row.item_wise_tax_detail).get(
-                    item.item_code or item.item_name
-                )[0],
+                frappe.parse_json(row.item_wise_tax_detail)
+                .get(item.item_code or item.item_name)
+                .get("tax_rate"),
                 3,
             )
 
