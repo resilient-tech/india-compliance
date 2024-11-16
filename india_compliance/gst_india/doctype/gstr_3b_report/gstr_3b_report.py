@@ -443,9 +443,11 @@ class GSTR3BReport(Document):
                 if tax.item_wise_tax_detail:
                     try:
                         item_wise_detail = json.loads(tax.item_wise_tax_detail)
-                        for item_code, tax_amounts in item_wise_detail.items():
+                        for item_code, taxes in item_wise_detail.items():
                             gst_treatment = item_code_gst_treatment_map.get(item_code)
-                            invoice_items[gst_treatment][gst_tax_type] += tax_amounts[1]
+                            invoice_items[gst_treatment][gst_tax_type] += taxes.get(
+                                "tax_amount"
+                            )
 
                     except ValueError:
                         continue

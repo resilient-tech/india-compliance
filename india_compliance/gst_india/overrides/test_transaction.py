@@ -606,7 +606,15 @@ class TestTransaction(IntegrationTestCase):
             ["CGST", "SGST"],
             charge_type="Actual",
             tax_amount=9,
-            item_wise_tax_detail=json.dumps({"_Test Trading Goods 1": [9, -9]}),
+            item_wise_tax_detail=json.dumps(
+                {
+                    "_Test Trading Goods 1": {
+                        "tax_rate": 9,
+                        "tax_amount": -9,
+                        "net_amount": -100,
+                    }
+                }
+            ),
             dont_recompute_tax=1,
         )
 
