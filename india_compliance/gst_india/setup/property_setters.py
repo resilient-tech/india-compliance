@@ -107,7 +107,7 @@ def get_property_setters(*, include_defaults=False):
             "doctype": "Accounts Settings",
             "fieldname": "tax_settings_section",
             "property": "collapsible",
-            "value": "1",
+            "value": "0",
         },
         {
             "doctype": "Purchase Reconciliation Tool",
