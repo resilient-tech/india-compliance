@@ -387,10 +387,6 @@ def get_place_of_supply(party_details, doctype):
     :param party_details: A frappe._dict or document containing fields related to party
     """
 
-    pos_basis = frappe.get_cached_value(
-        "Accounts Settings", "Accounts Settings", "determine_address_tax_category_from"
-    )
-
     # fallback to company GSTIN for sales or supplier GSTIN for purchases
     # (in retail scenarios, customer / company GSTIN may not be set)
     if doctype in SALES_DOCTYPES or doctype == "Payment Entry":
@@ -398,25 +394,39 @@ def get_place_of_supply(party_details, doctype):
         if party_details.gst_category == "Overseas":
             return get_overseas_place_of_supply(party_details)
 
-        address = (
-            party_details.shipping_address_name or party_details.company_address
-            if pos_basis == "Shipping Address" and doctype != "Payment Entry"
-            else party_details.customer_address
+        # customer address based on POS Basis
+        customer_address = party_details.customer_address
+        pos_basis = frappe.get_cached_value(
+            "Accounts Settings",
+            "Accounts Settings",
+            "determine_address_tax_category_from",
         )
-        if party_details.gst_category == "Unregistered" and address:
+
+        shipping_gstin = None
+        if (
+            doctype != "Payment Entry"
+            and pos_basis == "Shipping Address"
+            and party_details.shipping_address_name
+        ):
+            customer_address = party_details.shipping_address_name
+            shipping_gstin = frappe.db.get_value("Address", customer_address, "gstin")
+
+        # for unregistered
+        if party_details.gst_category == "Unregistered" and customer_address:
             gst_state_number, gst_state = frappe.db.get_value(
                 "Address",
-                address,
+                customer_address,
                 ("gst_state_number", "gst_state"),
             )
             if gst_state_number and gst_state:
                 return f"{gst_state_number}-{gst_state}"
 
+        # for registered
         pos_gstin = (
-            frappe.db.get_value("Address", party_details.shipping_address_name, "gstin")
-            if pos_basis == "Shipping Address"
-            else party_details.billing_address_gstin
-        ) or party_details.company_gstin
+            shipping_gstin
+            or party_details.billing_address_gstin
+            or party_details.company_gstin
+        )
 
     elif doctype == "Stock Entry":
         pos_gstin = party_details.bill_to_gstin or party_details.bill_from_gstin
