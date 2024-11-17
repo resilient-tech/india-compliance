@@ -119,7 +119,7 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     company(frm) {
-        if (frm.doc.company && doc.purpose === "Send to Subcontractor") {
+        if (frm.doc.company && frm.doc.purpose === "Send to Subcontractor") {
             frappe.call({
                 method: "frappe.contacts.doctype.address.address.get_default_address",
                 args: {
