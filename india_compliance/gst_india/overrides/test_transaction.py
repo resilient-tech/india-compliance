@@ -1251,9 +1251,11 @@ class TestItemUpdate(IntegrationTestCase):
 
 class TestPlaceOfSupply(IntegrationTestCase):
     def test_pos_sales_invoice(self):
+        # Sales Invoice with Shipping Address
         doc_args = {
             "doctype": "Sales Invoice",
             "customer": "_Test Registered Composition Customer",
+            "shipping_address_name": "_Test Indian Registered Company-Billing",
         }
 
         settings = ["Accounts Settings", None, "determine_address_tax_category_from"]
@@ -1267,3 +1269,26 @@ class TestPlaceOfSupply(IntegrationTestCase):
         frappe.db.set_value(*settings, "Billing Address")
         doc = create_transaction(**doc_args)
         self.assertEqual(doc.place_of_supply, "29-Karnataka")
+
+        frappe.db.set_value(*settings, "Shipping Address")
+
+        # Sales Invoice with only Billing Address
+        doc_args = {
+            "doctype": "Sales Invoice",
+            "customer": "_Test Registered Composition Customer",
+        }
+
+        settings = ["Accounts Settings", None, "determine_address_tax_category_from"]
+
+        # (from Billing Address)
+        doc = create_transaction(**doc_args)
+        self.assertEqual(doc.place_of_supply, "29-Karnataka")  # Billing Address
+
+        # Sales Invoice for Unregistered Customer
+        doc_args = {
+            "doctype": "Sales Invoice",
+            "customer": "_Test Unregistered Customer",
+        }
+
+        doc = create_transaction(**doc_args)
+        self.assertEqual(doc.place_of_supply, "24-Gujarat")  # Company GSTIN
