@@ -486,7 +486,7 @@ def is_e_waybill_applicable(doc):
 
     if doc.purpose not in [
         "Material Transfer",
-        "Material Receipt",
+        "Material Issue",
         "Send to Subcontractor",
     ]:
         return False
