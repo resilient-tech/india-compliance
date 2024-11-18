@@ -16,7 +16,9 @@ class TestGSTR2b(IntegrationTestCase, TestGSTRMixin):
         cls.return_period = "032020"
         cls.doctype = "GST Inward Supply"
         cls.log_doctype = "GSTR Import Log"
-        cls.test_data = parse_json(read_file(get_data_file_path("test_gstr_2b.json")))
+        cls.test_data = parse_json(
+            read_file(get_data_file_path("test_gstr_2b_v4_0.json"))
+        )
 
         save_gstr_2b(
             cls.gstin,
@@ -58,17 +60,11 @@ class TestGSTR2b(IntegrationTestCase, TestGSTRMixin):
                 ),
                 "irn_gen_date": date(2019, 12, 24),
                 "doc_type": "Invoice",
-                "items": [
-                    {
-                        "item_number": 1,
-                        "rate": 5,
-                        "taxable_value": 400,
-                        "igst": 0,
-                        "cgst": 200,
-                        "sgst": 200,
-                        "cess": 0,
-                    }
-                ],
+                "taxable_value": 12200,
+                "igst": 183,
+                "cgst": 0,
+                "sgst": 0,
+                "cess": 0,
             },
             doc,
         )
@@ -98,17 +94,11 @@ class TestGSTR2b(IntegrationTestCase, TestGSTRMixin):
                 "original_bill_no": "S008400",
                 "original_bill_date": date(2016, 11, 24),
                 "doc_type": "Invoice",
-                "items": [
-                    {
-                        "item_number": 1,
-                        "rate": 5,
-                        "taxable_value": 400,
-                        "igst": 0,
-                        "cgst": 200,
-                        "sgst": 200,
-                        "cess": 0,
-                    }
-                ],
+                "taxable_value": 12200,
+                "igst": 183,
+                "cgst": 0,
+                "sgst": 0,
+                "cess": 0,
             },
             doc,
         )
@@ -138,17 +128,11 @@ class TestGSTR2b(IntegrationTestCase, TestGSTRMixin):
                 ),
                 "irn_gen_date": date(2019, 12, 24),
                 "doc_type": "Credit Note",
-                "items": [
-                    {
-                        "item_number": 1,
-                        "rate": 5,
-                        "taxable_value": 400,
-                        "igst": 400,
-                        "cgst": 0,
-                        "sgst": 0,
-                        "cess": 0,
-                    }
-                ],
+                "taxable_value": 12200,
+                "igst": 183,
+                "cgst": 0,
+                "sgst": 0,
+                "cess": 0,
             },
             doc,
         )
@@ -176,17 +160,11 @@ class TestGSTR2b(IntegrationTestCase, TestGSTRMixin):
                 "reason_itc_unavailability": "Return filed post annual cut-off",
                 "diffprcnt": "1",
                 "doc_type": "Credit Note",
-                "items": [
-                    {
-                        "item_number": 1,
-                        "rate": 5,
-                        "taxable_value": 400,
-                        "igst": 0,
-                        "cgst": 200,
-                        "sgst": 200,
-                        "cess": 0,
-                    }
-                ],
+                "taxable_value": 12200,
+                "igst": 183,
+                "cgst": 0,
+                "sgst": 0,
+                "cess": 0,
             },
             doc,
         )
@@ -206,14 +184,10 @@ class TestGSTR2b(IntegrationTestCase, TestGSTRMixin):
                 "bill_date": date(2016, 3, 3),
                 "itc_availability": "Yes",
                 "document_value": 400,
-                "items": [
-                    {
-                        "igst": 0,
-                        "cgst": 200,
-                        "sgst": 200,
-                        "cess": 0,
-                    }
-                ],
+                "igst": 0,
+                "cgst": 200,
+                "sgst": 200,
+                "cess": 0,
             },
             doc,
         )
@@ -236,14 +210,10 @@ class TestGSTR2b(IntegrationTestCase, TestGSTRMixin):
                 "bill_date": date(2016, 3, 3),
                 "itc_availability": "Yes",
                 "document_value": 400,
-                "items": [
-                    {
-                        "igst": 0,
-                        "cgst": 200,
-                        "sgst": 200,
-                        "cess": 0,
-                    }
-                ],
+                "igst": 0,
+                "cgst": 200,
+                "sgst": 200,
+                "cess": 0,
             },
             doc,
         )
@@ -260,13 +230,9 @@ class TestGSTR2b(IntegrationTestCase, TestGSTRMixin):
                 "bill_date": date(2019, 11, 18),
                 "is_amended": 0,
                 "document_value": 246.54,
-                "items": [
-                    {
-                        "taxable_value": 123.02,
-                        "igst": 123.02,
-                        "cess": 0.5,
-                    }
-                ],
+                "taxable_value": 123.02,
+                "igst": 123.02,
+                "cess": 0.5,
             },
             doc,
         )
@@ -285,13 +251,9 @@ class TestGSTR2b(IntegrationTestCase, TestGSTRMixin):
                 "bill_date": date(2019, 11, 18),
                 "is_amended": 0,
                 "document_value": 246.54,
-                "items": [
-                    {
-                        "taxable_value": 123.02,
-                        "igst": 123.02,
-                        "cess": 0.5,
-                    }
-                ],
+                "taxable_value": 123.02,
+                "igst": 123.02,
+                "cess": 0.5,
             },
             doc,
         )

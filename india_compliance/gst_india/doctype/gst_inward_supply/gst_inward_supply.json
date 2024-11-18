@@ -25,6 +25,13 @@
   "is_reverse_charge",
   "section_break_16",
   "items",
+  "section_break_ykls",
+  "igst",
+  "cgst",
+  "sgst",
+  "cess",
+  "column_break_uuvs",
+  "taxable_value",
   "document_value",
   "section_break_18",
   "diffprcnt",
@@ -354,11 +361,44 @@
    "fieldname": "original_bill_date",
    "fieldtype": "Date",
    "label": "Original Document Date"
+  },
+  {
+   "fieldname": "section_break_ykls",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "igst",
+   "fieldtype": "Float",
+   "label": "Total IGST"
+  },
+  {
+   "fieldname": "cgst",
+   "fieldtype": "Float",
+   "label": "Total CGST"
+  },
+  {
+   "fieldname": "sgst",
+   "fieldtype": "Float",
+   "label": "Total SGST"
+  },
+  {
+   "fieldname": "cess",
+   "fieldtype": "Float",
+   "label": "Total CESS"
+  },
+  {
+   "fieldname": "column_break_uuvs",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "taxable_value",
+   "fieldtype": "Float",
+   "label": "Taxable Value"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-03-29 11:54:42.687831",
+ "modified": "2024-11-16 16:23:13.402870",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Inward Supply",

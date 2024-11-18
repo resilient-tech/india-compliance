@@ -250,7 +250,6 @@ class InwardSupply:
         self.__dict__.update(kwargs)
 
         self.GSTR2 = frappe.qb.DocType("GST Inward Supply")
-        self.GSTR2_ITEM = frappe.qb.DocType("GST Inward Supply Item")
 
     def get_all(self, additional_fields=None, names=None, only_names=False):
         query = self.with_period_filter(additional_fields)
@@ -298,11 +297,7 @@ class InwardSupply:
         fields = self.get_fields(additional_fields)
         query = (
             frappe.qb.from_(self.GSTR2)
-            .left_join(self.GSTR2_ITEM)
-            .on(self.GSTR2_ITEM.parent == self.GSTR2.name)
             .where(IfNull(self.GSTR2.match_status, "") != "Amended")
-            .where(self.GSTR2_ITEM.parenttype == "GST Inward Supply")
-            .groupby(self.GSTR2_ITEM.parent)
             .select(*fields, ConstantColumn("GST Inward Supply").as_("doctype"))
         )
 
@@ -321,10 +316,7 @@ class InwardSupply:
 
         return query
 
-    def get_fields(self, additional_fields=None, table=None):
-        if not table:
-            table = self.GSTR2
-
+    def get_fields(self, additional_fields=None):
         fields = [
             "bill_no",
             "bill_date",
@@ -338,18 +330,14 @@ class InwardSupply:
         if additional_fields:
             fields += additional_fields
 
-        fields = [table[field] for field in fields]
-        fields += self.get_tax_fields(table)
+        fields = [self.GSTR2[field] for field in fields]
+        fields += self.get_tax_fields()
 
         return fields
 
-    def get_tax_fields(self, table):
+    def get_tax_fields(self):
         fields = GST_TAX_TYPES[:-1] + ("taxable_value",)
-
-        if table == frappe.qb.DocType("GST Inward Supply"):
-            return [Sum(self.GSTR2_ITEM[field]).as_(field) for field in fields]
-
-        return [table[field] for field in fields]
+        return [self.GSTR2[field] for field in fields]
 
 
 class PurchaseInvoice:

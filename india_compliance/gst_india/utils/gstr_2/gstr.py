@@ -113,11 +113,20 @@ class GSTR:
             items=self.get_transaction_items(invoice),
         )
 
+        if transaction.get("items"):
+            self.update_totals(transaction)
+
         transaction["unique_key"] = (
             f"{transaction.get('supplier_gstin', '')}-{transaction.get('bill_no', '')}"
         )
 
         return transaction
+
+    def update_totals(self, transaction):
+        for field in ["taxable_value", "igst", "cgst", "sgst", "cess"]:
+            transaction[field] = sum(
+                [row.get(field) for row in transaction.get("items") if row.get(field)]
+            )
 
     def get_supplier_details(self, supplier):
         return {}
@@ -128,7 +137,7 @@ class GSTR:
     def get_transaction_items(self, invoice):
         return [
             self.get_transaction_item(frappe._dict(item))
-            for item in invoice.get(self.get_key("items_key"))
+            for item in invoice.get(self.get_key("items_key"), [])
         ]
 
     def get_transaction_item(self, item):

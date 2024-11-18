@@ -260,14 +260,10 @@ class TestGSTR2a(IntegrationTestCase, TestGSTRMixin):
                 "amendment_type": "Receiver GSTIN Amended",
                 "is_amended": 1,
                 "document_value": 80,
-                "items": [
-                    {
-                        "igst": 20,
-                        "cgst": 20,
-                        "sgst": 20,
-                        "cess": 20,
-                    }
-                ],
+                "igst": 20,
+                "cgst": 20,
+                "sgst": 20,
+                "cess": 20,
             },
             doc,
         )
@@ -287,13 +283,9 @@ class TestGSTR2a(IntegrationTestCase, TestGSTRMixin):
                 "doc_type": "Bill of Entry",
                 "is_amended": 0,
                 "document_value": 246.54,
-                "items": [
-                    {
-                        "taxable_value": 123.02,
-                        "igst": 123.02,
-                        "cess": 0.5,
-                    }
-                ],
+                "taxable_value": 123.02,
+                "igst": 123.02,
+                "cess": 0.5,
             },
             doc,
         )
@@ -311,15 +303,11 @@ class TestGSTR2a(IntegrationTestCase, TestGSTRMixin):
                 "supplier_name": "GSTN",
                 "is_amended": 0,
                 "document_value": 246.54,
-                "items": [
-                    {
-                        "taxable_value": 123.02,
-                        "igst": 123.02,
-                        "cgst": 0,
-                        "sgst": 0,
-                        "cess": 0.5,
-                    }
-                ],
+                "taxable_value": 123.02,
+                "igst": 123.02,
+                "cgst": 0,
+                "sgst": 0,
+                "cess": 0.5,
             },
             doc,
         )

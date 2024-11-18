@@ -42,6 +42,11 @@ class GSTR2bB2B(GSTR2b):
             "bill_no": invoice.inum,
             "supply_type": get_mapped_value(invoice.typ, self.VALUE_MAPS.gst_category),
             "bill_date": parse_datetime(invoice.dt, day_first=True),
+            "taxable_value": invoice.txval,
+            "igst": invoice.igst,
+            "cgst": invoice.cgst,
+            "sgst": invoice.sgst,
+            "cess": invoice.cess,
             "document_value": invoice.val,
             "place_of_supply": get_mapped_value(invoice.pos, self.VALUE_MAPS.states),
             "is_reverse_charge": get_mapped_value(
@@ -129,12 +134,12 @@ class GSTR2bISD(GSTR2b):
             "itc_availability": get_mapped_value(
                 invoice.itcelg, self.VALUE_MAPS.yes_no
             ),
+            "igst": invoice.igst,
+            "cgst": invoice.cgst,
+            "sgst": invoice.sgst,
+            "cess": invoice.cess,
             "document_value": invoice.igst + invoice.cgst + invoice.sgst + invoice.cess,
         }
-
-    # item details are included in invoice details
-    def get_transaction_items(self, invoice):
-        return [self.get_transaction_item(invoice)]
 
 
 class GSTR2bISDA(GSTR2bISD):
@@ -164,13 +169,12 @@ class GSTR2bIMPGSEZ(GSTR2b):
             "bill_date": parse_datetime(invoice.boedt, day_first=True),
             "is_amended": get_mapped_value(invoice.isamd, self.VALUE_MAPS.Y_N_to_check),
             "port_code": invoice.portcode,
+            "taxable_value": invoice.txval,
+            "igst": invoice.igst,
+            "cess": invoice.cess,
             "document_value": invoice.txval + invoice.igst + invoice.cess,
             "itc_availability": "Yes",  # always available
         }
-
-    # item details are included in invoice details
-    def get_transaction_items(self, invoice):
-        return [self.get_transaction_item(invoice)]
 
 
 class GSTR2bIMPG(GSTR2bIMPGSEZ):
