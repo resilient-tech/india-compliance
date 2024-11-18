@@ -332,8 +332,8 @@ class SubcontractingGSTAccounts(GSTAccounts):
         if is_outward_stock_entry(self.doc):
             return
 
-        company_gstin = self.doc.get("company_gstin") or self.doc.bill_from_gstin
-        party_gstin = self.doc.get("supplier_gstin") or self.doc.bill_to_gstin
+        company_gstin = self.doc.get("company_gstin") or self.doc.get("bill_from_gstin")
+        party_gstin = self.doc.get("supplier_gstin") or self.doc.get("bill_to_gstin")
 
         if not party_gstin or company_gstin != party_gstin:
             return
@@ -486,7 +486,7 @@ def is_e_waybill_applicable(doc):
 
     if doc.purpose not in [
         "Material Transfer",
-        "Material Receipt",
+        "Material Issue",
         "Send to Subcontractor",
     ]:
         return False
