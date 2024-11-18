@@ -752,16 +752,38 @@ function apply_bulk_action(frm, action) {
     const invoice_names = checked_invoices.map(row => row.inward_supply_name);
     apply_action(frm, invoice_names, action);
 
-    after_successful_action(invoice_tab);
+    if (invoice_tab) invoice_tab.clear_checked_items();
 }
 
 async function apply_action(frm, invoice_names, action) {
     // Update action in UI
+    let pending_not_allowed = [];
     const new_data = frm.gstr3b.data.filter(row => {
-        if (invoice_names.includes(row.inward_supply_name)) row.ims_action = action;
+        if (!invoice_names.includes(row.inward_supply_name)) return true;
+
+        if (!validate_pending_action(row, action)) {
+            pending_not_allowed.push(row.inward_supply_name);
+            return true;
+        }
+
+        row.ims_action = action;
+
         return true;
     });
+
+    invoice_names = invoice_names.filter(name => !pending_not_allowed.includes(name));
+
     frm.gstr3b.refresh(new_data);
+
+    if (pending_not_allowed.length) {
+        frappe.msgprint(
+            `The following invoices are not allowed to be marked as Pending: ${pending_not_allowed.join(
+                ", "
+            )}`
+        );
+    }
+
+    if (!invoice_names.length) return;
 
     // Update action in database
     await frappe.call({
@@ -776,12 +798,9 @@ async function apply_action(frm, invoice_names, action) {
     });
 }
 
-function after_successful_action(tab) {
-    if (tab) tab.clear_checked_items();
-    frappe.show_alert({
-        message: "Action applied successfully",
-        indicator: "green",
-    });
+function validate_pending_action(row, action) {
+    if (action === "Pending" && !row.is_pending_action_allowed) return false;
+    return true;
 }
 
 function get_icon(value, column, data) {

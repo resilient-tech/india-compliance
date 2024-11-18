@@ -32,6 +32,7 @@ class GSTR3BBeta(Document):
                 frappe._dict(
                     {
                         "ims_action": doc.ims_action,
+                        "is_pending_action_allowed": doc.is_pending_action_allowed,
                         "_inward_supply": doc,
                         "_purchase_invoice": purchases_and_bill_of_entry.pop(
                             doc.link_name, frappe._dict()
