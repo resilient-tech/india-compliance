@@ -21,5 +21,7 @@ def execute():
         .run(as_dict=True)
     )
 
+    inward_supply_map = {d.pop("name"): d for d in inward_supply_values}
+
     # Update GST Inward Supply
-    bulk_update("GST Inward Supply", inward_supply_values)
+    bulk_update("GST Inward Supply", inward_supply_map)
