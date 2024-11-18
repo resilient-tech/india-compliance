@@ -5,7 +5,7 @@ india_compliance.patches.v15.remove_duplicate_web_template
 [post_model_sync]
 india_compliance.patches.v14.set_default_for_overridden_accounts_setting
 execute:from india_compliance.gst_india.setup import create_custom_fields; create_custom_fields() #59
-execute:from india_compliance.gst_india.setup import create_property_setters; create_property_setters() #9
+execute:from india_compliance.gst_india.setup import create_property_setters; create_property_setters() #10
 execute:from india_compliance.income_tax_india.setup import create_custom_fields; create_custom_fields() #2
 india_compliance.patches.post_install.remove_old_fields #2
 india_compliance.patches.post_install.set_gst_tax_type
@@ -58,6 +58,7 @@ india_compliance.patches.v14.stop_unnecessary_scheduled_jobs
 india_compliance.patches.v14.add_match_found_in_purchase_reconciliation_status
 india_compliance.patches.v14.unset_inward_supply_link_for_cancelled_purchase
 india_compliance.patches.v14.delete_not_generated_gstr_import_log
+india_compliance.patches.v14.update_total_taxes_for_gst_inward_supply
 india_compliance.patches.v14.enable_sales_through_ecommerce_operator
 execute:from india_compliance.gst_india.setup import set_default_print_settings; set_default_print_settings()
 india_compliance.patches.v15.migrate_gstr1_log_to_returns_log

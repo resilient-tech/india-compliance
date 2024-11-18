@@ -55,7 +55,7 @@ async function add_gstr2b_alert(frm) {
                 frm,
                 [frm.doc.inward_supply_from_date, frm.doc.inward_supply_to_date],
                 ReturnType.GSTR2B,
-                frm.company_gstin,
+                frm.doc.company_gstin,
                 true
             );
             remove_gstr2b_alert(existing_alert);

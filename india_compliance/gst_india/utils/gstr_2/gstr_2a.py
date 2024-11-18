@@ -216,17 +216,16 @@ class GSTR2aISD(GSTR2a):
             "amendment_type": get_mapped_value(
                 invoice.atyp, self.VALUE_MAPS.amend_type
             ),
+            "igst": invoice.iamt,
+            "cgst": invoice.camt,
+            "sgst": invoice.samt,
+            "cess": invoice.cess,
             "document_value": invoice.iamt + invoice.camt + invoice.samt + invoice.cess,
         }
 
-    def get_transaction_item(self, item, item_number=None):
-        transaction_item = super().get_transaction_item(item)
-        transaction_item["cess"] = item.cess
-        return transaction_item
-
-    # item details are included in invoice details
+    # item details are not available
     def get_transaction_items(self, invoice):
-        return [self.get_transaction_item(invoice)]
+        pass
 
 
 class GSTR2aISDA(GSTR2aISD):
@@ -244,6 +243,9 @@ class GSTR2aIMPG(GSTR2a):
             "bill_date": parse_datetime(invoice.bedt, day_first=True),
             "is_amended": get_mapped_value(invoice.amd, self.VALUE_MAPS.Y_N_to_check),
             "port_code": invoice.portcd,
+            "taxable_value": invoice.txval,
+            "igst": invoice.iamt,
+            "cess": invoice.csamt,
             "document_value": invoice.txval + invoice.iamt + invoice.csamt,
         }
 
@@ -255,9 +257,9 @@ class GSTR2aIMPG(GSTR2a):
             )
         ]
 
-    # item details are included in invoice details
+    # item details are not available
     def get_transaction_items(self, invoice):
-        return [self.get_transaction_item(invoice)]
+        pass
 
 
 class GSTR2aIMPGSEZ(GSTR2aIMPG):
