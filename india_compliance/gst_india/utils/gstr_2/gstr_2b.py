@@ -19,11 +19,23 @@ class GSTR2b(GSTR):
             "sup_return_period": supplier.supprd,
         }
 
+    def get_transaction_item(self, item):
+        return {
+            "item_number": item.num,
+            "rate": item.rt,
+            "taxable_value": item.txval,
+            "igst": item.igst,
+            "cgst": item.cgst,
+            "sgst": item.sgst,
+            "cess": item.cess,
+        }
+
 
 class GSTR2bB2B(GSTR2b):
     def setup(self):
         super().setup()
         self.set_key("invoice_key", "inv")
+        self.set_key("items_key", "items")
 
     def get_invoice_details(self, invoice):
         return {

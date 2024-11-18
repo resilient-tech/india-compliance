@@ -16,7 +16,9 @@ class TestGSTR2b(IntegrationTestCase, TestGSTRMixin):
         cls.return_period = "032020"
         cls.doctype = "GST Inward Supply"
         cls.log_doctype = "GSTR Import Log"
-        cls.test_data = parse_json(read_file(get_data_file_path("test_gstr_2b.json")))
+        cls.test_data = parse_json(
+            read_file(get_data_file_path("test_gstr_2b_v4_0.json"))
+        )
 
         save_gstr_2b(
             cls.gstin,
