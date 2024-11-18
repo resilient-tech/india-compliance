@@ -134,7 +134,17 @@ class IMSReconciler:
         return BaseUtil.get_dict_for_key("supplier_gstin", data)
 
     def get_base_inward_supply_query(self):
-        fields = self.get_fields(table=self.inward_supply)
+        additional_fields = [
+            "is_pending_action_allowed",
+            "igst",
+            "cgst",
+            "sgst",
+            "cess",
+            "taxable_value",
+        ]
+        fields = self.get_fields(
+            additional_fields=additional_fields, table=self.inward_supply
+        )
 
         return (
             frappe.qb.from_(self.inward_supply)
@@ -155,7 +165,10 @@ class IMSReconciler:
         )
 
     def get_base_purchase_query(self):
-        fields = self.get_fields(table=self.purchase_invoice)
+        fields = self.get_fields(
+            table=self.purchase_invoice,
+        )
+        tax_fields = self.get_tax_fields(self.purchase_invoice_item)
 
         return (
             frappe.qb.from_(self.purchase_invoice)
@@ -163,6 +176,7 @@ class IMSReconciler:
             .on(self.purchase_invoice_item.parent == self.purchase_invoice.name)
             .select(
                 Abs(Sum(self.purchase_invoice_item.taxable_value)).as_("taxable_value"),
+                *tax_fields,
                 *fields,
                 ConstantColumn("Purchase Invoice").as_("doctype"),
             )
@@ -170,7 +184,7 @@ class IMSReconciler:
         )
 
     def get_base_bill_of_entry_query(self):
-        tax_fields = self.get_tax_fields(self.boe)
+        tax_fields = self.get_tax_fields(self.boe_item)
 
         return (
             frappe.qb.from_(self.boe)
@@ -221,23 +235,12 @@ class IMSReconciler:
             fields += additional_fields
 
         fields = [table[field] for field in fields]
-        fields += self.get_tax_fields(table)
 
         return fields
 
     def get_tax_fields(self, table):
-        if table == self.inward_supply:
-            fields = GST_TAX_TYPES[:-1] + ("taxable_value",)
-            return [Sum(self.inward_supply_item[field]).as_(field) for field in fields]
-
-        elif table == self.purchase_invoice:
-            doc = self.purchase_invoice_item
-
-        else:
-            doc = self.boe_item
-
         return [
-            self.query_tax_amount(doc, f"{tax_type}_amount").as_(tax_type)
+            self.query_tax_amount(table, f"{tax_type}_amount").as_(tax_type)
             for tax_type in GST_TAX_TYPES
         ]
 

@@ -41,19 +41,11 @@ class IMS:
 
     def get_transaction(self, invoice):
         transaction = frappe._dict(
-            supplier_gstin=invoice.stin,
-            sup_return_period=invoice.rtnprd,
-            place_of_supply=self.STATE_MAP[invoice.pos],
-            document_value=invoice.val,
-            company=self.company,
-            company_gstin=self.company_gstin,
             # Required??
             # gstr_1_filled= invoice.srcfilstatus,
             # source_form = invoice.srcform,
-            is_pending_action_allowed=invoice.ispendactnallwd,
+            **self.update_transaction(invoice),
             **self.get_invoice_details(invoice),
-            items=self.get_transaction_item(invoice),
-            ims_action=self.ACTION_MAP.get(invoice.action),
         )
 
         transaction["unique_key"] = (
@@ -61,16 +53,22 @@ class IMS:
         )
         return transaction
 
-    def get_transaction_item(self, invoice):
-        return [
-            {
-                "taxable_value": invoice.txval,
-                "igst": invoice.iamt,
-                "cgst": invoice.camt,
-                "sgst": invoice.samt,
-                "cess": invoice.cess,
-            }
-        ]
+    def update_transaction(self, invoice):
+        return {
+            "supplier_gstin": invoice.stin,
+            "sup_return_period": invoice.rtnprd,
+            "place_of_supply": self.STATE_MAP[invoice.pos],
+            "document_value": invoice.val,
+            "company": self.company,
+            "company_gstin": self.company_gstin,
+            "is_pending_action_allowed": invoice.ispendactnallwd,
+            "ims_action": self.ACTION_MAP.get(invoice.action),
+            "cgst": invoice.camt,
+            "sgst": invoice.samt,
+            "igst": invoice.iamt,
+            "cess": invoice.cess,
+            "taxable_value": invoice.txval,
+        }
 
     def get_item_details(self, item):
         return {
