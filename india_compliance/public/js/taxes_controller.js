@@ -10,8 +10,7 @@ india_compliance.taxes_controller = class TaxesController {
 
     setup() {
         this.fetch_round_off_accounts();
-        this.set_item_tax_template_query();
-        this.set_account_head_query();
+        this.setup_queries();
     }
 
     fetch_round_off_accounts() {
@@ -31,17 +30,15 @@ india_compliance.taxes_controller = class TaxesController {
         });
     }
 
-    set_item_tax_template_query() {
-        this.frm.set_query("item_tax_template", "items", () => {
-            return {
-                filters: {
-                    company: this.frm.doc.company,
-                },
-            };
+    setup_queries() {
+        this.frm.set_query("item_tax_template", "items", (doc, cdt, cdn) => {
+            return erpnext.TransactionController.prototype.set_query_for_item_tax_template(
+                doc,
+                cdt,
+                cdn
+            );
         });
-    }
 
-    set_account_head_query() {
         this.frm.set_query("account_head", "taxes", () => {
             return {
                 filters: {
@@ -198,21 +195,26 @@ india_compliance.taxes_controller = class TaxesController {
          */
 
         const item_wise_tax_rates = JSON.parse(tax_row.item_wise_tax_rates || "{}");
-        return this.frm.doc.items.reduce((total, item) => {
-            let multiplier =
-                item.charge_type === "On Item Quantity"
-                    ? item.qty
-                    : item.taxable_value / 100;
-            return (
-                total + multiplier * (item_wise_tax_rates[item.name] || tax_row.rate)
-            );
-        }, 0) || 0;
+        return (
+            this.frm.doc.items.reduce((total, item) => {
+                let multiplier =
+                    item.charge_type === "On Item Quantity"
+                        ? item.qty
+                        : item.taxable_value / 100;
+                return (
+                    total +
+                    multiplier * (item_wise_tax_rates[item.name] || tax_row.rate)
+                );
+            }, 0) || 0
+        );
     }
 
     calculate_total_taxable_value() {
-        return this.frm.doc.items.reduce((total, item) => {
-            return total + item.taxable_value;
-        }, 0) || 0;
+        return (
+            this.frm.doc.items.reduce((total, item) => {
+                return total + item.taxable_value;
+            }, 0) || 0
+        );
     }
 
     get_value(field, doc, default_value) {
