@@ -158,7 +158,6 @@ class GSTR1API(ReturnsAPI):
 class IMSAPI(ReturnsAPI):
     API_NAME = "IMS"
     END_POINT = "returns/ims"
-    DATA_KEY = "invdata"
 
     def get_data(self, action, params, otp=None):
         return self.get(
@@ -168,10 +167,10 @@ class IMSAPI(ReturnsAPI):
             otp=otp,
         )
 
-    def get_files(self, gstin, token, otp=None):
+    def get_files(self, token, otp=None):
         response = self.get(
             action="FILEDET",
-            params={"gstin": gstin, "token": token},
+            params={"gstin": self.company_gstin, "token": token},
             endpoint=self.END_POINT,
             otp=otp,
         )
@@ -181,8 +180,8 @@ class IMSAPI(ReturnsAPI):
 
         return FilesAPI().get_all(response)
 
-    def save_or_reset_action(self, action, gstin, data, otp=None):
-        json = {"rtin": gstin, "reqtyp": action, "invdata": data}
+    def save_or_reset_action(self, action, data, otp=None):
+        json = {"rtin": self.company_gstin, "reqtyp": action, "invdata": data}
 
         return self.put(
             action="RESETIMS" if action == "RESET" else action,
@@ -191,10 +190,10 @@ class IMSAPI(ReturnsAPI):
             otp=otp,
         )
 
-    def get_request_status(self, gstin, transaction_id, otp=None):
+    def get_request_status(self, transaction_id, otp=None):
         return self.get(
             action="REQSTS",
             endpoint=self.END_POINT,
-            params={"gstin": gstin, "int_tran_id": transaction_id},
+            params={"gstin": self.company_gstin, "int_tran_id": transaction_id},
             otp=otp,
         )

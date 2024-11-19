@@ -70,15 +70,6 @@ class IMS:
             "taxable_value": invoice.txval,
         }
 
-    def get_item_details(self, item):
-        return {
-            "txval": item.taxable_value,
-            "iamt": item.igst,
-            "camt": item.cgst,
-            "samt": item.sgst,
-            "cess": item.cess,
-        }
-
     def get_existing_transactions(self):
         inward_supply = frappe.qb.DocType("GST Inward Supply")
         self.existing_transactions = (
@@ -220,25 +211,25 @@ class B2BCNA(B2BCN):
         return invoice_details
 
 
-def upload_invoices(gstin):
-    json_data = get_gov_data()
+def upload_invoices(company, company_gstin, otp=None):
+    json_data = get_gov_data(company, company_gstin)
 
-    api = IMSAPI()
-    response = api.save_or_reset_action("SAVE", gstin, json_data)
+    api = IMSAPI(company_gstin)
+    response = api.save_or_reset_action("SAVE", json_data, otp)
 
-    print("IMS Invoices Uploaded", response.get("reference_id"))
+    print(response)
 
 
-def reset_invoices(gstin):
+def reset_invoices(company_gstin):
     json_data = get_gov_data(is_reset=True)
 
-    api = IMSAPI()
-    response = api.save_or_reset_action("RESET", gstin, json_data)
+    api = IMSAPI(company_gstin)
+    response = api.save_or_reset_action("RESET", json_data)
 
     print("IMS Invoices Reset", response.get("reference_id"))
 
 
-def get_gov_data(is_reset=False):
+def get_gov_data(company, company_gstin, is_reset=False):
     category_key_map = {
         "Invoice_0": "b2b",
         "Invoice_1": "b2ba",
@@ -248,15 +239,16 @@ def get_gov_data(is_reset=False):
         "Credit Note_1": "b2bcna",
     }
 
-    gst_inward_supply_list = frappe.get_all("GST Inward Supply", pluck="name")
+    gst_inward_supply_list = frappe.get_all(
+        "GST Inward Supply", filters={"ims_action": ["is", "set"]}, fields=["*"]
+    )
     json_data = {}
 
-    for inv_name in gst_inward_supply_list:
-        invoice = frappe.get_doc("GST Inward Supply", inv_name)
+    for invoice in gst_inward_supply_list:
         key = f"{invoice.doc_type}_{invoice.is_amended}"
 
         category = category_key_map[key]
-        _class = getattr(ims, category.upper())()
+        _class = getattr(ims, category.upper())(company, company_gstin)
 
         data = {
             "stin": invoice.supplier_gstin,
@@ -266,8 +258,12 @@ def get_gov_data(is_reset=False):
             "val": invoice.document_value,
             "pos": STATE_NUMBERS[invoice.place_of_supply.split("-")[1]],
             "prev_status": invoice.previous_ims_action,
+            "iamt": invoice.igst,
+            "camt": invoice.cgst,
+            "samt": invoice.sgst,
+            "cess": invoice.cess,
+            "txval": invoice.taxable_value,
             **_class.get_category_details(invoice),
-            **_class.get_item_details(invoice.items[0]),
         }
 
         if not is_reset:
