@@ -184,9 +184,11 @@ class IMSAPI(ReturnsAPI):
         json = {"rtin": self.company_gstin, "reqtyp": action, "invdata": data}
 
         return self.put(
-            action="RESETIMS" if action == "RESET" else action,
             endpoint=self.END_POINT,
-            json=json,
+            json={
+                "action": "RESETIMS" if action == "RESET" else action,
+                "data": json,
+            },
             otp=otp,
         )
 
