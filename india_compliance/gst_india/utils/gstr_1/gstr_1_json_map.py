@@ -2120,6 +2120,9 @@ class BooksDataMapper:
                 GSTR1_DataField.SGST.value: 0,
                 GSTR1_DataField.CESS.value: 0,
                 GSTR1_DataField.DIFF_PERCENTAGE.value: 0,
+                GSTR1_DataField.SHIPPING_PORT_CODE.value: invoice.shipping_port_code,
+                GSTR1_DataField.SHIPPING_BILL_NUMBER.value: invoice.shipping_bill_number,
+                GSTR1_DataField.SHIPPING_BILL_DATE.value: invoice.shipping_bill_date,
                 "items": [],
             },
         )

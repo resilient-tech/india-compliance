@@ -85,10 +85,13 @@ class GSTR1Query:
                 IfNull(self.si.place_of_supply, "").as_("place_of_supply"),
                 self.si.is_reverse_charge,
                 IfNull(self.si.ecommerce_gstin, "").as_("ecommerce_gstin"),
-                self.si.is_export_with_gst,
                 self.si.is_return,
                 self.si.is_debit_note,
                 self.si.return_against,
+                self.si.is_export_with_gst,
+                self.si.port_code.as_("shipping_port_code"),
+                self.si.shipping_bill_number,
+                self.si.shipping_bill_date,
                 IfNull(self.si.base_rounded_total, self.si.base_grand_total).as_(
                     "invoice_total"
                 ),
