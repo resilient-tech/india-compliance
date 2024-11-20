@@ -166,13 +166,23 @@ Object.assign(india_compliance, {
         const user_date = frappe.datetime.str_to_user(datetime);
         const pretty_date = frappe.datetime.prettyDate(datetime);
 
-        const STATUS_COLORS = { Active: "green", Cancelled: "red" };
-        return `<div class="d-flex indicator ${STATUS_COLORS[status] || "orange"}">
-                    Status:&nbsp;<strong>${status}</strong>
-                    <span class="text-right ml-auto gstin-last-updated">
-                        <span title="${user_date}">
-                            ${datetime ? "updated " + pretty_date : ""}
-                        </span>
+        function get_indicator(status) {
+            switch (status) {
+                case "Active":
+                    return "green";
+                case "Cancelled":
+                    return "red";
+                default:
+                    return "orange";
+            }
+        }
+
+        const indicator = get_indicator(status);
+
+        return `<div class="d-flex indicator ${indicator}" style="font-size: 12px">
+                    <strong>${status}</strong>
+                    <span class="gstin-last-updated" title="${user_date}" style="margin-left: auto;">
+                        ${datetime ? "Updated " + pretty_date : ""}
                     </span>
                 </div>`;
     },
@@ -186,11 +196,14 @@ Object.assign(india_compliance, {
         )
             return;
 
-        const refresh_btn = $(`
-            <svg class="icon icon-sm refresh-gstin" style="">
-                <use class="" href="#icon-refresh" style="cursor: pointer"></use>
-            </svg>
-        `).appendTo(field.$wrapper.find(".gstin-last-updated"));
+        const refresh_btn = $(
+            frappe.utils.icon(
+                "refresh",
+                "sm",
+                "refresh-gstin",
+                "cursor: pointer;width:14px;height:14px"
+            )
+        ).appendTo(field.$wrapper.find(".gstin-last-updated"));
 
         refresh_btn.on("click", async function () {
             const force_update = true;
