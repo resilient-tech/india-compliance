@@ -74,7 +74,6 @@ class GSTR2bAPI(ReturnsAPI):
 
     def gen_on_demand(self, return_period):
         return self.put(
-            action="GEN2B",
             json={
                 "action": "GEN2B",
                 "data": {"rtin": self.company_gstin, "itcprd": return_period},
@@ -86,7 +85,6 @@ class GSTR2bAPI(ReturnsAPI):
         return self.get(
             action="GENSTS2B",
             params={
-                "action": "GENSTS2B",
                 "gstin": self.company_gstin,
                 "int_tran_id": transaction_id,
             },
@@ -174,6 +172,156 @@ class GSTR1API(ReturnsAPI):
                 "sid": f"{pan}|{evc_otp}",
             },
             endpoint="returns/gstr1",
+        )
+
+
+class GSTR3bAPI(ReturnsAPI):
+    END_POINT = "returns/gstr3b"
+
+    def setup(self, company_gstin, return_period):
+        self.return_period = return_period
+        super().setup(company_gstin=company_gstin)
+
+    def get_data(self):
+        return self.get(
+            action="RETSUM",
+            return_period=self.return_period,
+            params={"gstin": self.company_gstin, "ret_period": self.return_period},
+            endpoint=self.END_POINT,
+        )
+
+    def save_gstr3b(self, data):
+        return self.put(
+            return_period=self.return_period,
+            json={
+                "action": "RETSAVE",
+                "data": data,
+            },
+            endpoint=self.END_POINT,
+        )
+
+    def submit_gstr3b(self, data):
+        return self.post(
+            return_period=self.return_period,
+            json={
+                "action": "RETSUBMIT",
+                "data": data,
+            },
+            endpoint=self.END_POINT,
+        )
+
+    def save_offset_liability_gstr3b(self, data):
+        return self.put(
+            return_period=self.return_period,
+            json={
+                "action": "RETOFFSET",
+                "data": data,
+            },
+            endpoint=self.END_POINT,
+        )
+
+    def file_gstr_3b(self, data, pan, evc_otp):
+        return self.post(
+            return_period=self.return_period,
+            json={
+                "action": "RETFILE",
+                "data": data,
+                "st": "EVC",
+                "sid": f"{pan}|{evc_otp}",
+            },
+            endpoint=self.END_POINT,
+        )
+
+    def get_itc_liab_data(self):
+        return self.get(
+            action="AUTOLIAB",
+            return_period=self.return_period,
+            params={"gstin": self.company_gstin, "ret_period": self.return_period},
+            endpoint=self.END_POINT,
+        )
+
+    def validate_3b_against_auto_calc(self, data):
+        return self.post(
+            return_period=self.return_period,
+            json={
+                "action": "VALID",
+                "data": data,
+            },
+            endpoint=self.END_POINT,
+        )
+
+    def get_system_calc_interest(self):
+        return self.get(
+            action="RETINT",
+            return_period=self.return_period,
+            params={"gstin": self.company_gstin, "ret_period": self.return_period},
+            endpoint=self.END_POINT,
+        )
+
+    def recompute_interest(self):
+        return self.post(
+            return_period=self.return_period,
+            json={
+                "action": "CMPINT",
+                "data": {"gstn": self.company_gstin, "ret_period": self.return_period},
+            },
+            endpoint=self.END_POINT,
+        )
+
+    def save_past_liab(self, data):
+        return self.put(
+            return_period=self.return_period,
+            json={"action": "RETBKP", "data": data},
+            endpoint=self.END_POINT,
+        )
+
+    def get_itc_reversal_bal(self):
+        return self.get(
+            action="CLOSINGBAL",
+            return_period=self.return_period,
+            params={"gstin": self.company_gstin},
+            endpoint=self.END_POINT,
+        )
+
+    def get_rcm_bal(self):
+        return self.get(
+            action="RCMCLOSINGBAL",
+            return_period=self.return_period,
+            params={"gstin": self.company_gstin},
+            endpoint=self.END_POINT,
+        )
+
+    def get_opening_bal(self):
+        return self.get(
+            action="OPENINGBAL",
+            return_period=self.return_period,
+            params={"gstin": self.company_gstin},
+            endpoint=self.END_POINT,
+        )
+
+    def get_rcm_opening_bal(self):
+        return self.get(
+            action="RCMOPNBAL",
+            return_period=self.return_period,
+            params={"gstin": self.company_gstin},
+            endpoint=self.END_POINT,
+        )
+
+    def save_opening_bal(self, data):
+        return self.post(
+            return_period=self.return_period,
+            json={"action": "SAVEOB", "data": data},
+            endpoint=self.END_POINT,
+        )
+
+    def submit_rcm_opening_bal(self, data):
+        return self.post(
+            return_period=self.return_period,
+            json={
+                "action": "SAVERCMOPNBAL",
+                "data": data,
+            },
+            endpoint=self.END_POINT,
         )
 
 
