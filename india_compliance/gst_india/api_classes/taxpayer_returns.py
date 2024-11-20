@@ -57,6 +57,7 @@ class ReturnsAPI(TaxpayerBaseAPI):
 
 class GSTR2bAPI(ReturnsAPI):
     API_NAME = "GSTR-2B"
+    END_POINT = "returns/gstr2b"
 
     def get_data(self, return_period, otp=None, file_num=None):
         params = {"rtnprd": return_period}
@@ -67,8 +68,29 @@ class GSTR2bAPI(ReturnsAPI):
             action="GET2B",
             return_period=return_period,
             params=params,
-            endpoint="returns/gstr2b",
+            endpoint=self.END_POINT,
             otp=otp,
+        )
+
+    def gen_on_demand(self, return_period):
+        return self.put(
+            action="GEN2B",
+            json={
+                "action": "GEN2B",
+                "data": {"rtin": self.company_gstin, "itcprd": return_period},
+            },
+            endpoint=self.END_POINT,
+        )
+
+    def gen_status(self, transaction_id):
+        return self.get(
+            action="GENSTS2B",
+            params={
+                "action": "GENSTS2B",
+                "gstin": self.company_gstin,
+                "int_tran_id": transaction_id,
+            },
+            endpoint=self.END_POINT,
         )
 
 
