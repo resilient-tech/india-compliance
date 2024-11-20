@@ -109,8 +109,9 @@ def generate_e_invoices(docnames, force=False):
             frappe.clear_last_message()
 
         finally:
-            # each e-Invoice needs to be committed individually
-            frappe.db.commit()  # nosemgrep
+            if not frappe.flags.in_test:
+                # each e-Invoice needs to be committed individually
+                frappe.db.commit()  # nosemgrep
 
 
 @frappe.whitelist()
