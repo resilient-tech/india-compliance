@@ -7,15 +7,24 @@ from datetime import datetime
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import get_datetime, get_datetime_str, get_last_day, getdate
+from frappe.utils import (
+    get_datetime,
+    get_datetime_str,
+    get_last_day,
+    get_link_to_form,
+    getdate,
+)
 
 from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
+    FileGSTR1,
     GenerateGSTR1,
 )
 from india_compliance.gst_india.utils import is_production_api_enabled
 
+DOCTYPE = "GST Return Log"
 
-class GSTReturnLog(GenerateGSTR1, Document):
+
+class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
     @property
     def status(self):
         return self.generation_status
@@ -187,6 +196,24 @@ class GSTReturnLog(GenerateGSTR1, Document):
 
         return fields
 
+    def get_unprocessed_action(self, action):
+        for row in self.get("actions") or []:
+            if row.request_type == action and not row.status:
+                return row
+
+
+@frappe.whitelist()
+def download_file():
+    frappe.has_permission("GST Return Log", "read")
+
+    data = frappe._dict(frappe.local.form_dict)
+    frappe.response["filename"] = data["file_name"]
+
+    file = get_file_doc(data["doctype"], data["name"], data["file_field"])
+    frappe.response["filecontent"] = file.get_content(encodings=[])
+
+    frappe.response["type"] = "download"
+
 
 def process_gstr_1_returns_info(company, gstin, response):
     return_info = {}
@@ -199,7 +226,7 @@ def process_gstr_1_returns_info(company, gstin, response):
     # existing logs
     gstr1_logs = frappe._dict(
         frappe.get_all(
-            "GST Return Log",
+            DOCTYPE,
             filters={"name": ("in", list(return_info.keys()))},
             fields=["name", "acknowledgement_number"],
             as_list=1,
@@ -234,7 +261,7 @@ def process_gstr_1_returns_info(company, gstin, response):
 
         if key in gstr1_logs:
             if gstr1_logs[key] != info["arn"]:
-                frappe.db.set_value("GST Return Log", key, filing_details)
+                frappe.db.set_value(DOCTYPE, key, filing_details)
                 _update_gstr_1_filed_upto(filed_upto)
 
             # No updates if status is same
@@ -242,7 +269,7 @@ def process_gstr_1_returns_info(company, gstin, response):
 
         frappe.get_doc(
             {
-                "doctype": "GST Return Log",
+                "doctype": DOCTYPE,
                 "company": company,
                 "gstin": gstin,
                 "return_period": info["ret_prd"],
@@ -250,6 +277,36 @@ def process_gstr_1_returns_info(company, gstin, response):
             }
         ).insert()
         _update_gstr_1_filed_upto(filed_upto)
+
+
+def get_gst_return_log(posting_date, company_gstin):
+    period = getdate(posting_date).strftime("%m%Y")
+    if name := frappe.db.exists(DOCTYPE, f"GSTR1-{period}-{company_gstin}"):
+        return frappe.get_doc(DOCTYPE, name)
+
+
+def add_comment_to_gst_return_log(doc, action):
+    if not (log := get_gst_return_log(doc.posting_date, doc.company_gstin)):
+        return
+
+    log.add_comment(
+        "Comment",
+        f"{doc.doctype} : {get_link_to_form(doc.doctype, doc.name)} has been {action} by {frappe.session.user}",
+    )
+
+
+def update_is_not_latest_gstr1_data(posting_date, company_gstin):
+    period = posting_date.strftime("%m%Y")
+
+    frappe.db.set_value(
+        "GST Return Log", f"GSTR1-{period}-{company_gstin}", "is_latest_data", 0
+    )
+
+    frappe.publish_realtime(
+        "is_not_latest_data",
+        message={"filters": {"company_gstin": company_gstin, "period": period}},
+        doctype="GSTR-1 Beta",
+    )
 
 
 def get_file_doc(doctype, docname, attached_to_field):
@@ -264,6 +321,7 @@ def get_file_doc(doctype, docname, attached_to_field):
         )
 
     except frappe.DoesNotExistError:
+        frappe.clear_last_message()
         return None
 
 

@@ -288,9 +288,9 @@ function show_generate_e_waybill_dialog(frm) {
                 api_enabled && frm.doc.doctype ? __("Download JSON") : null,
             secondary_action: api_enabled
                 ? () => {
-                      d.hide();
-                      json_action(d.get_values());
-                  }
+                    d.hide();
+                    json_action(d.get_values());
+                }
                 : null,
         },
         frm
@@ -535,6 +535,29 @@ function get_sub_suppy_type_options(frm) {
                 sub_supply_type = ["Job Work", "SKD/CKD", "Others"];
             }
         }
+    } else if (frm.doctype === "Stock Entry") {
+        document_type = "Delivery Challan";
+
+        if (frm.doc.purpose === "Send to Subcontractor") {
+            supply_type = "Outward";
+            sub_supply_type = ["Job Work"];
+        } else if (["Material Transfer", "Material Issue"].includes(frm.doc.purpose)) {
+            const same_gstin = frm.doc.bill_from_gstin === frm.doc.bill_to_gstin;
+
+            if (frm.doc.is_return) {
+                supply_type = "Inward";
+                sub_supply_type = ["Job Work Returns"];
+            } else if (same_gstin) {
+                supply_type = "Outward";
+                sub_supply_type = [
+                    "For Own Use",
+                    "Exhibition or Fairs",
+                    "Line Sales",
+                    "Recipient Not Known",
+                    "Others",
+                ];
+            }
+        }
     } else {
         const key = `${frm.doctype}_${frm.doc.is_return || 0}`;
         const default_supply_types = {
@@ -570,11 +593,6 @@ function get_sub_suppy_type_options(frm) {
                 sub_supply_desc: "Purchase Return",
                 document_type: "Delivery Challan",
             },
-            "Stock Entry_0": {
-                supply_type: "Outward",
-                sub_supply_type: ["Job Work"],
-                document_type: "Delivery Challan",
-            },
             "Subcontracting Receipt_0": {
                 supply_type: "Inward",
                 sub_supply_type: ["Job Work Returns"],
@@ -587,7 +605,7 @@ function get_sub_suppy_type_options(frm) {
             },
         };
 
-        return default_supply_types[key]
+        return default_supply_types[key];
     }
 
     return { supply_type, sub_supply_type, sub_supply_desc, document_type };
@@ -906,7 +924,7 @@ function show_update_transporter_dialog(frm) {
                 reqd: 1,
                 default:
                     frm.doc.gst_transporter_id &&
-                    frm.doc.gst_transporter_id.length === 15
+                        frm.doc.gst_transporter_id.length === 15
                         ? frm.doc.gst_transporter_id
                         : "",
                 onchange: () => validate_gst_transporter_id(d),
@@ -1187,6 +1205,10 @@ function has_e_waybill_threshold_met(frm) {
         return true;
 }
 function is_e_waybill_applicable(frm, show_message) {
+    /**
+     * Defines supported conditions where e-Waybill is applicable
+     * and it's generation is supported.
+     */
     return new E_WAYBILL_CLASS[frm.doctype](frm).is_e_waybill_applicable(show_message);
 }
 
@@ -1195,6 +1217,9 @@ function is_e_waybill_api_enabled(frm) {
 }
 
 function is_e_waybill_generatable(frm, show_message) {
+    /**
+     * Checks if all information required to generate e-Waybill is available.
+     */
     return new E_WAYBILL_CLASS[frm.doctype](frm).is_e_waybill_generatable(show_message);
 }
 
@@ -1383,11 +1408,11 @@ function show_sandbox_mode_indicator() {
             `
             <div class="sidebar-menu ic-sandbox-mode">
                 <p><label class="indicator-pill no-indicator-dot yellow" title="${__(
-                    "Your site has enabled Sandbox Mode in GST Settings."
-                )}">${__("Sandbox Mode")}</label></p>
+                "Your site has enabled Sandbox Mode in GST Settings."
+            )}">${__("Sandbox Mode")}</label></p>
                 <p><a class="small text-muted" href="/app/gst-settings" target="_blank">${__(
-                    "Sandbox Mode is enabled for GST APIs."
-                )}</a></p>
+                "Sandbox Mode is enabled for GST APIs."
+            )}</a></p>
             </div>
             `
         );

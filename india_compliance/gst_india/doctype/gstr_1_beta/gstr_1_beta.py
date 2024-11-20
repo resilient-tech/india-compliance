@@ -1,17 +1,22 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
 
+import json
 from datetime import datetime
 
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.query_builder.functions import Date, Sum
+from frappe.query_builder import Case
+from frappe.query_builder.functions import Date, IfNull, Sum
 from frappe.utils import get_last_day, getdate
 
 from india_compliance.gst_india.api_classes.taxpayer_base import (
     TaxpayerBaseAPI,
     otp_handler,
+)
+from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
+    verify_request_in_progress,
 )
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 from india_compliance.gst_india.utils.gstin_info import get_gstr_1_return_status
@@ -51,7 +56,7 @@ class GSTR1Beta(Document):
 
     @frappe.whitelist()
     @otp_handler
-    def generate_gstr1(self, sync_for=None, recompute_books=False):
+    def generate_gstr1(self, sync_for=None, recompute_books=False, message=None):
         period = get_period(self.month_or_quarter, self.year)
 
         # get gstr1 log
@@ -95,14 +100,10 @@ class GSTR1Beta(Document):
 
         # files are already present
         if gstr1_log.has_all_files(settings):
-            data = gstr1_log.load_data()
+            data = gstr1_log.get_gstr1_data()
 
             if data:
-                data = data
-                data["status"] = gstr1_log.filing_status or "Not Filed"
-                gstr1_log.update_status("Generated")
-                self.on_generate(data)
-                return
+                return data
 
         # validate auth token
         if gstr1_log.is_sek_needed(settings):
@@ -113,7 +114,11 @@ class GSTR1Beta(Document):
         # generate gstr1
         gstr1_log.update_status("In Progress")
         frappe.enqueue(self._generate_gstr1, queue="short")
-        frappe.msgprint(_("GSTR-1 is being prepared"), alert=True)
+
+        if not message:
+            message = "GSTR-1 is being prepared"
+
+        frappe.msgprint(_(message), alert=True)
 
     def _generate_gstr1(self):
         """
@@ -142,7 +147,7 @@ class GSTR1Beta(Document):
 
             raise e
 
-    def on_generate(self, data, filters=None):
+    def on_generate(self, filters=None):
         """
         Once data is generated, update the status and publish the data
         """
@@ -156,10 +161,159 @@ class GSTR1Beta(Document):
 
         frappe.publish_realtime(
             "gstr1_data_prepared",
-            message={"data": data, "filters": filters},
+            message={"filters": filters},
             user=frappe.session.user,
             doctype=self.doctype,
         )
+
+
+@frappe.whitelist()
+@otp_handler
+def perform_gstr1_action(action, month_or_quarter, year, company_gstin, **kwargs):
+    frappe.has_permission("GST Return Log", "write", throw=True)
+
+    gstr_1_log = frappe.get_doc(
+        "GST Return Log",
+        f"GSTR1-{get_period(month_or_quarter, year)}-{company_gstin}",
+    )
+    del kwargs["cmd"]
+
+    if action == "upload_gstr1":
+        from india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export import (
+            get_gstr_1_json,
+        )
+
+        data = get_gstr_1_json(
+            company_gstin,
+            year,
+            month_or_quarter,
+            delete_missing=True,
+        )
+        kwargs["json_data"] = data.get("data")
+
+    return getattr(gstr_1_log, action)(**kwargs)
+
+
+@frappe.whitelist()
+@otp_handler
+def check_action_status(month_or_quarter, year, company_gstin, action):
+    frappe.has_permission("GST Return Log", "write", throw=True)
+
+    gstr_1_log = frappe.get_doc(
+        "GST Return Log",
+        f"GSTR1-{get_period(month_or_quarter, year)}-{company_gstin}",
+    )
+
+    method_name = f"process_{action}_gstr1"
+    data = getattr(gstr_1_log, method_name)()
+
+    if not data:
+        data = {}
+
+    data.update(
+        {
+            "month_or_quarter": month_or_quarter,
+            "year": year,
+            "company_gstin": company_gstin,
+        }
+    )
+    return data
+
+
+@frappe.whitelist()
+def mark_as_unfiled(filters, force):
+    frappe.has_permission("GST Return Log", "write", throw=True)
+
+    filters = frappe._dict(json.loads(filters))
+    log_name = f"GSTR1-{get_period(filters.month_or_quarter, filters.year)}-{filters.company_gstin}"
+
+    force = bool(force)
+    if force:
+        return_log = frappe.get_doc("GST Return Log", log_name)
+        verify_request_in_progress(return_log, force)
+
+    frappe.db.set_value("GST Return Log", log_name, "filing_status", "Not Filed")
+
+
+@frappe.whitelist()
+def get_journal_entries(month_or_quarter, year, company):
+    if not frappe.has_permission("Journal Entry", "create"):
+        return
+
+    from_date, to_date = get_gstr_1_from_and_to_date(month_or_quarter, year)
+
+    gst_accounts = list(
+        get_gst_accounts_by_type(company, "Sales Reverse Charge", throw=False).values()
+    )
+
+    if not gst_accounts:
+        return
+
+    sales_invoice = frappe.qb.DocType("Sales Invoice")
+    sales_invoice_taxes = frappe.qb.DocType("Sales Taxes and Charges")
+
+    data = (
+        frappe.qb.from_(sales_invoice)
+        .join(sales_invoice_taxes)
+        .on(sales_invoice.name == sales_invoice_taxes.parent)
+        .select(
+            sales_invoice_taxes.account_head.as_("account"),
+            Case()
+            .when(
+                sales_invoice_taxes.tax_amount > 0, Sum(sales_invoice_taxes.tax_amount)
+            )
+            .as_("debit_in_account_currency"),
+            Case()
+            .when(
+                sales_invoice_taxes.tax_amount < 0,
+                Sum(sales_invoice_taxes.tax_amount * (-1)),
+            )
+            .as_("credit_in_account_currency"),
+        )
+        .where(sales_invoice.is_reverse_charge == 1)
+        .where(
+            Date(sales_invoice.posting_date).between(
+                getdate(from_date), getdate(to_date)
+            )
+        )
+        .where(IfNull(sales_invoice_taxes.gst_tax_type, "") != "")
+        .where(sales_invoice.docstatus == 1)
+        .groupby(sales_invoice_taxes.account_head)
+        .run(as_dict=True)
+    )
+
+    return {"data": data, "posting_date": to_date}
+
+
+@frappe.whitelist()
+def make_journal_entry(
+    company, company_gstin, month_or_quarter, year, accounts, values
+):
+    if not frappe.has_permission("Journal Entry", "create"):
+        return
+
+    if isinstance(values, str):
+        values = frappe.parse_json(values)
+
+    if isinstance(accounts, str):
+        accounts = frappe.parse_json(accounts)
+
+    journal_entry = frappe.get_doc(
+        {
+            "doctype": "Journal Entry",
+            "company": company,
+            "company_gstin": company_gstin,
+            "posting_date": values.posting_date,
+            "user_remark": f"Reduced Output GST Liability to the extent of Sales Reverse Charge as per GSTR-1 for {month_or_quarter} - {year}",
+            "accounts": accounts,
+        }
+    )
+    journal_entry.save()
+
+    if values.auto_submit == 1:
+        journal_entry.submit()
+
+    return journal_entry.name
 
 
 ####### DATA ######################################################################################
