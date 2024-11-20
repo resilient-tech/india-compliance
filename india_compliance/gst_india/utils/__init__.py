@@ -411,8 +411,9 @@ def get_place_of_supply(party_details, doctype):
             customer_address = party_details.shipping_address_name
             shipping_gstin = frappe.db.get_value("Address", customer_address, "gstin")
 
+        customer_gstin = shipping_gstin or party_details.billing_address_gstin
         # for unregistered
-        if party_details.gst_category == "Unregistered" and customer_address:
+        if not customer_gstin and customer_address:
             gst_state_number, gst_state = frappe.db.get_value(
                 "Address",
                 customer_address,
@@ -422,11 +423,7 @@ def get_place_of_supply(party_details, doctype):
                 return f"{gst_state_number}-{gst_state}"
 
         # for registered
-        pos_gstin = (
-            shipping_gstin
-            or party_details.billing_address_gstin
-            or party_details.company_gstin
-        )
+        pos_gstin = customer_gstin or party_details.company_gstin
 
     elif doctype == "Stock Entry":
         pos_gstin = party_details.bill_to_gstin or party_details.bill_from_gstin
