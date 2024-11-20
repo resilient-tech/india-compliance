@@ -69,8 +69,6 @@ class TestEWaybill(IntegrationTestCase):
             )
         )
 
-    @classmethod
-    def setUp(cls):
         update_dates_for_test_data(cls.e_waybill_test_data)
 
     def test_get_data(self):
