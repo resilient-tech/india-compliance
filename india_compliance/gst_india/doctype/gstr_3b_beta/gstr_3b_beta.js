@@ -97,8 +97,8 @@ frappe.ui.form.on("GSTR-3B Beta", {
             await taxpayer_api.call({
                 method: "india_compliance.gst_india.doctype.gstr_3b_beta.gstr_3b_beta.download_invoices_and_reconcile",
                 args: {
-                    company: frm.doc.company,
                     company_gstin: frm.doc.company_gstin,
+                    company: frm.doc.company,
                 },
             });
 

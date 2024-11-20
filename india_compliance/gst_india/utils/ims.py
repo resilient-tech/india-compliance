@@ -15,7 +15,7 @@ class IMS:
     STATE_MAP = {value: f"{value}-{key}" for key, value in STATE_NUMBERS.items()}
     ACTION_MAP = {"A": "Accept", "R": "Reject", "P": "Pending", "N": "No Action"}
 
-    def __init__(self, company, company_gstin):
+    def __init__(self, company_gstin, company=None):
         self.existing_transactions = self.get_existing_transactions()
         self.company_gstin = company_gstin
         self.company = company
@@ -211,25 +211,25 @@ class B2BCNA(B2BCN):
         return invoice_details
 
 
-def upload_invoices(company, company_gstin, otp=None):
-    json_data = get_gov_data(company, company_gstin)
+def upload_invoices(company_gstin):
+    json_data = get_gov_data(company_gstin)
 
     api = IMSAPI(company_gstin)
-    response = api.save_or_reset_action("SAVE", json_data, otp)
+    response = api.save_ims_action(json_data)
 
     print(response)
 
 
 def reset_invoices(company_gstin):
-    json_data = get_gov_data(is_reset=True)
+    json_data = get_gov_data(company_gstin, is_reset=True)
 
     api = IMSAPI(company_gstin)
-    response = api.save_or_reset_action("RESET", json_data)
+    response = api.reset_ims_action(json_data)
 
     print("IMS Invoices Reset", response.get("reference_id"))
 
 
-def get_gov_data(company, company_gstin, is_reset=False):
+def get_gov_data(company_gstin, is_reset=False):
     category_key_map = {
         "Invoice_0": "b2b",
         "Invoice_1": "b2ba",
@@ -248,7 +248,7 @@ def get_gov_data(company, company_gstin, is_reset=False):
         key = f"{invoice.doc_type}_{invoice.is_amended}"
 
         category = category_key_map[key]
-        _class = getattr(ims, category.upper())(company, company_gstin)
+        _class = getattr(ims, category.upper())(company_gstin)
 
         data = {
             "stin": invoice.supplier_gstin,

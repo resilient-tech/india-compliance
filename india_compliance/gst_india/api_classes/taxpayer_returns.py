@@ -329,20 +329,25 @@ class IMSAPI(ReturnsAPI):
     API_NAME = "IMS"
     END_POINT = "returns/ims"
 
-    def get_data(self, action, params, otp=None):
+    def get_data(self, section):
         return self.get(
-            action=action,
-            params=params,
+            action="GETINV",
+            params={
+                "gstin": self.company_gstin,
+                "section": section,  # section is a list
+            },
             endpoint=self.END_POINT,
-            otp=otp,
         )
 
-    def get_files(self, token, otp=None):
+    def download_files(self, return_period, token):
+        return self.get_files(return_period, token)
+
+    def get_files(self, return_period, token):
         response = self.get(
             action="FILEDET",
+            return_period=return_period,
             params={"gstin": self.company_gstin, "token": token},
             endpoint=self.END_POINT,
-            otp=otp,
         )
 
         if response.error_type == "queued":
@@ -350,22 +355,31 @@ class IMSAPI(ReturnsAPI):
 
         return FilesAPI().get_all(response)
 
-    def save_or_reset_action(self, action, data, otp=None):
-        json = {"rtin": self.company_gstin, "reqtyp": action, "invdata": data}
-
+    def save_ims_action(self, data):
         return self.put(
             endpoint=self.END_POINT,
             json={
-                "action": "RESETIMS" if action == "RESET" else action,
-                "data": json,
+                "action": "SAVE",
+                "data": {"rtin": self.company_gstin, "reqtyp": "SAVE", "invdata": data},
             },
-            otp=otp,
         )
 
-    def get_request_status(self, transaction_id, otp=None):
+    def reset_ims_action(self, data):
+        return self.put(
+            endpoint=self.END_POINT,
+            json={
+                "action": "RESETIMS",
+                "data": {
+                    "rtin": self.company_gstin,
+                    "reqtyp": "RESET",
+                    "invdata": data,
+                },
+            },
+        )
+
+    def get_request_status(self, transaction_id):
         return self.get(
             action="REQSTS",
             endpoint=self.END_POINT,
             params={"gstin": self.company_gstin, "int_tran_id": transaction_id},
-            otp=otp,
         )

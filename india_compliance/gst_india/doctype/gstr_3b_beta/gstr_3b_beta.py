@@ -186,13 +186,11 @@ CATEGORIES = [
 
 @frappe.whitelist()
 @otp_handler
-def download_invoices_and_reconcile(company, company_gstin):
+def download_invoices_and_reconcile(company_gstin, company):
     frappe.has_permission("GSTR-3B Beta", "write", throw=True)
 
-    api = IMSAPI(company_gstin)
-    response = api.get_data(
-        "GETINV", params={"section": ["B2B", "B2BA", "CN", "DN", "CNA", "DNA"]}
-    )  # section is a list
+    section = ["B2B", "B2BA", "CN", "DN", "CNA", "DNA"]
+    response = IMSAPI(company_gstin).get_data(section)
 
     if response.error_type == "no_docs_found":
         return
