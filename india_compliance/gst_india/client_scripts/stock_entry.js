@@ -54,8 +54,7 @@ frappe.ui.form.on(DOCTYPE, {
         on_change_set_address(
             frm,
             "supplier_address",
-            ...get_field_and_label(frm, "party_field"),
-            __("Bill To")
+            ...get_field_and_label(frm, "party_field")
         );
 
         frm.get_docfield("taxes", "charge_type").options = [
@@ -93,8 +92,7 @@ frappe.ui.form.on(DOCTYPE, {
         on_change_set_address(
             frm,
             "supplier_address",
-            ...get_field_and_label(frm, "party_field"),
-            __("Bill To")
+            ...get_field_and_label(frm, "party_field")
         );
     },
 
@@ -222,12 +220,17 @@ function get_field_and_label(frm, field) {
             party_field: [
                 "bill_from_address",
                 __("Bill From (same as Supplier Address)"),
+                __("Bill From"),
             ],
             company_field: ["bill_to_address", __("Bill To")],
         };
     } else {
         field_label_dict = {
-            party_field: ["bill_to_address", __("Bill To (same as Supplier Address)")],
+            party_field: [
+                "bill_to_address",
+                __("Bill To (same as Supplier Address)"),
+                __("Bill To"),
+            ],
             company_field: ["bill_from_address", __("Bill From")],
         };
     }

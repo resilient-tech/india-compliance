@@ -627,9 +627,13 @@ def validate_place_of_supply(doc):
 
 
 def is_inter_state_supply(doc):
-    gst_category = (
-        doc.bill_to_gst_category if doc.doctype == "Stock Entry" else doc.gst_category
-    )
+    if doc.doctype == "Stock Entry":
+        gst_category = (
+            doc.bill_from_gst_category if doc.is_return else doc.bill_to_gst_category
+        )
+
+    else:
+        gst_category = doc.gst_category
 
     return gst_category == "SEZ" or (
         doc.place_of_supply[:2] != get_source_state_code(doc)
@@ -646,6 +650,13 @@ def get_source_state_code(doc):
         return doc.company_gstin[:2]
 
     if doc.doctype == "Stock Entry":
+        if doc.bill_from_gst_category == "Unregistered" and doc.bill_from_address:
+            return frappe.db.get_value(
+                "Address",
+                doc.bill_from_address,
+                "gst_state_number",
+            )
+
         return doc.bill_from_gstin[:2]
 
     if doc.gst_category == "Overseas":
