@@ -179,7 +179,7 @@ def onload(doc, method=None):
 
 
 def validate(doc, method=None):
-    if ignore_gst_validations(doc):
+    if ignore_gst_validations_for_subcontracting(doc):
         return
 
     if not is_e_waybill_applicable(doc):
@@ -252,6 +252,7 @@ def validate_transaction(doc, method=None):
         company_address_field = "bill_from_address"
         gst_category_field = "bill_to_gst_category"
     else:
+        # Subcontracting Receipt and Subcontracting Order
         company_gstin_field = "company_gstin"
         party_gstin_field = "supplier_gstin"
         company_address_field = "billing_address"
@@ -492,3 +493,14 @@ def is_e_waybill_applicable(doc):
         return False
 
     return True
+
+
+def ignore_gst_validations_for_subcontracting(doc):
+    if ignore_gst_validations(doc):
+        return True
+
+    if doc.doctype != "Stock Entry":
+        return False
+
+    if is_outward_stock_entry(doc) and not doc.bill_from_address:
+        return True
