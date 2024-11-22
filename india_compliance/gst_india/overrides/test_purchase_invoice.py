@@ -81,6 +81,6 @@ class TestPurchaseInvoice(IntegrationTestCase):
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            "Transaction Name cannot exceed 16 characters",
+            "Transaction Name must be 16 characters or fewer to meet GST requirements",
             pinv.save,
         )

@@ -936,17 +936,19 @@ def validate_invoice_number(doc, throw=True):
 
     if not is_valid_length:
         frappe.throw(
-            _("Transaction Name cannot exceed 16 characters"),
-            title=_("Invalid Transaction Name"),
+            _(
+                "Transaction Name must be 16 characters or fewer to meet GST requirements"
+            ),
+            title=_("Invalid GST Transaction Name"),
         )
 
     if not is_valid_format:
         frappe.throw(
             _(
                 "Transaction Name should start with an alphanumeric character and can"
-                " only contain alphanumeric characters, dash (-) and slash (/)"
+                " only contain alphanumeric characters, dash (-) and slash (/) to meet GST requirements"
             ),
-            title=_("Invalid Transaction Name"),
+            title=_("Invalid GST Transaction Name"),
         )
 
 
