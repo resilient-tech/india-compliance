@@ -41,7 +41,7 @@ class IMS:
 
     def get_transaction(self, invoice):
         transaction = frappe._dict(
-            # Required??
+            # TODO: Required??
             # gstr_1_filled= invoice.srcfilstatus,
             # source_form = invoice.srcform,
             **self.update_transaction(invoice),
@@ -101,7 +101,7 @@ class B2B(IMS):
             "bill_date": parse_datetime(invoice.idt, day_first=True),
             # "supply_type": "", TODO: Check options
             "classification": "B2B",
-            "doc_type": "Invoice",  # Custom Field
+            "doc_type": "Invoice",
         }
 
     def get_category_details(self, invoice):
@@ -142,7 +142,7 @@ class B2BDN(B2B):
             "bill_date": parse_datetime(invoice.nt_dt, day_first=True),
             # "supply_type": "", TODO: Check options
             "classification": "B2B",
-            "doc_type": "Debit Note",  # Custom Field
+            "doc_type": "Debit Note",
         }
 
     def get_category_details(self, invoice):
@@ -181,7 +181,7 @@ class B2BCN(B2BDN):
         invoice_details = super().get_invoice_details(invoice)
         invoice_details.update(
             {
-                "doc_type": "Credit Note",  # Custom Field
+                "doc_type": "Credit Note",
             }
         )
         return invoice_details

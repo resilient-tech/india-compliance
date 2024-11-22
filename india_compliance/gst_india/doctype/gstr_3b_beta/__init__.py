@@ -35,7 +35,6 @@ class IMSReconciler:
 
     def __init__(self):
         self.inward_supply = frappe.qb.DocType("GST Inward Supply")
-        self.inward_supply_item = frappe.qb.DocType("GST Inward Supply Item")
         self.purchase_invoice = frappe.qb.DocType("Purchase Invoice")
         self.purchase_invoice_item = frappe.qb.DocType("Purchase Invoice Item")
         self.boe = frappe.qb.DocType("Bill of Entry")
@@ -58,7 +57,7 @@ class IMSReconciler:
             # GSTIN Level matching
             _Reconciler.reconcile_for_rules(GSTIN_RULES, purchases, inward_supplies)
 
-            if filters.category == "IMPG":  # Is this required here ??
+            if filters.category == "IMPG":  # TODO: Is this required here ??
                 return
 
             # PAN Level matching
@@ -133,7 +132,7 @@ class IMSReconciler:
 
         return BaseUtil.get_dict_for_key("supplier_gstin", data)
 
-    def get_base_inward_supply_query(self):
+    def get_base_inward_supply_query(self, additional_fields=None):
         additional_fields = [
             "is_pending_action_allowed",
             "igst",
@@ -141,27 +140,21 @@ class IMSReconciler:
             "sgst",
             "cess",
             "taxable_value",
-        ]
+        ] + (additional_fields or [])
+
         fields = self.get_fields(
             additional_fields=additional_fields, table=self.inward_supply
         )
 
-        return (
-            frappe.qb.from_(self.inward_supply)
-            .left_join(self.inward_supply_item)
-            .on(self.inward_supply_item.parent == self.inward_supply.name)
-            .select(
-                *fields,
-                self.inward_supply.link_name,
-                self.inward_supply.link_doctype,
-                self.inward_supply.match_status,
-                self.inward_supply.ims_action,
-                self.inward_supply.supply_type,
-                self.inward_supply.classification,
-                ConstantColumn("GST Inward Supply").as_("doctype"),
-            )
-            .where(self.inward_supply_item.parenttype == "GST Inward Supply")
-            .groupby(self.inward_supply_item.parent)
+        return frappe.qb.from_(self.inward_supply).select(
+            *fields,
+            self.inward_supply.link_name,
+            self.inward_supply.link_doctype,
+            self.inward_supply.match_status,
+            self.inward_supply.ims_action,
+            self.inward_supply.supply_type,
+            self.inward_supply.classification,
+            ConstantColumn("GST Inward Supply").as_("doctype"),
         )
 
     def get_base_purchase_query(self):
