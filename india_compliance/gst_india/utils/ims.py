@@ -62,7 +62,7 @@ class IMS:
             "company": self.company,
             "company_gstin": self.company_gstin,
             "is_pending_action_allowed": invoice.ispendactnallwd,
-            "ims_action": self.ACTION_MAP.get(invoice.action),
+            "previous_ims_action": self.ACTION_MAP.get(invoice.action),
             "cgst": invoice.camt,
             "sgst": invoice.samt,
             "igst": invoice.iamt,
@@ -78,7 +78,7 @@ class IMS:
                 inward_supply.name, inward_supply.supplier_gstin, inward_supply.bill_no
             )
             .where(IfNull(inward_supply.sup_return_period, "") == "")
-            .where(IfNull(inward_supply.ims_action, "") != "")
+            .where(IfNull(inward_supply.previous_ims_action, "") != "")
         ).run(as_dict=True)
 
         return {

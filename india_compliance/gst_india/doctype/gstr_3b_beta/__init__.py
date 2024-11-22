@@ -74,7 +74,7 @@ class IMSReconciler:
 
         data = (
             query.where(IfNull(self.inward_supply.match_status, "") == "")
-            .where(IfNull(self.inward_supply.ims_action, "") != "")
+            .where(IfNull(self.inward_supply.previous_ims_action, "") != "")
             .where(self.inward_supply.classification.isin(categories))
             .run(as_dict=True)
         )
