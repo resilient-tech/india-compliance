@@ -305,42 +305,47 @@ def convert_data_to_gov_format(gst_inward_supply_list, company_gstin, is_reset=F
     }
 
     json_data = {}
+    key_invoice_map = {}
 
     for invoice in gst_inward_supply_list:
         key = f"{invoice.doc_type}_{invoice.is_amended}"
+        if key_invoice_map.get(key):
+            key_invoice_map[key].append(invoice)
+        else:
+            key_invoice_map[key] = [invoice]
 
+    for key, invoices in key_invoice_map.items():
         category = category_key_map[key]
         _class = getattr(ims, category.upper())(company_gstin)
+        result = []
 
-        data = {
-            "stin": invoice.supplier_gstin,
-            # "inv_typ": invoice.supply_type, TODO: Check options
-            "srcform": "",
-            "rtnprd": invoice.sup_return_period,
-            "val": invoice.document_value,
-            "pos": STATE_NUMBERS[invoice.place_of_supply.split("-")[1]],
-            "prev_status": invoice.previous_ims_action,
-            "iamt": invoice.igst,
-            "camt": invoice.cgst,
-            "samt": invoice.sgst,
-            "cess": invoice.cess,
-            "txval": invoice.taxable_value,
-            **_class.get_category_details(invoice),
-        }
-
-        if is_reset:
-            return data
-
-        data.update(
-            {
-                "action": invoice.ims_action,
+        for invoice in invoices:
+            data = {
+                "stin": invoice.supplier_gstin,
+                # "inv_typ": invoice.supply_type, TODO: Check options
+                "srcform": "",
+                "rtnprd": invoice.sup_return_period,
+                "val": invoice.document_value,
+                "pos": STATE_NUMBERS[invoice.place_of_supply.split("-")[1]],
+                "prev_status": invoice.previous_ims_action,
+                "iamt": invoice.igst,
+                "camt": invoice.cgst,
+                "samt": invoice.sgst,
+                "cess": invoice.cess,
+                "txval": invoice.taxable_value,
+                **_class.get_category_details(invoice),
             }
-        )
 
-        if json_data.get(category):
-            json_data[category].append(data)
-        else:
-            json_data[category] = [data]
+            if not is_reset:
+                data.update(
+                    {
+                        "action": invoice.ims_action,
+                    }
+                )
+
+            result.append(data)
+
+        json_data[category] = data
 
     return json_data
 
@@ -394,12 +399,12 @@ def process_upload_ims(return_log):
     return response
 
 
-def get_error_list(error_report):
-    error_list = []
-    for errors in error_report.values():
-        for error in errors:
+def get_error_list(report):
+    error_report = []
+    for error_list in report.values():
+        for error in error_list:
             for invoice in error.get("inv"):
-                error_list.append(
+                error_report.append(
                     {
                         "error_msg": error.get("error_msg"),
                         "error_code": error.get("error_cd"),
@@ -409,4 +414,4 @@ def get_error_list(error_report):
                     }
                 )
 
-    return error_list
+    return error_report
