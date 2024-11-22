@@ -53,7 +53,22 @@ frappe.ui.form.on("GSTR-3B Beta", {
             frm.page.clear_primary_action();
 
             frm.page.set_primary_action(__("Upload Invoices"), async () => {
-                // Do something
+                frappe.show_alert(__("Uploading Invoices"));
+
+                await taxpayer_api.call({
+                    method: "india_compliance.gst_india.doctype.gstr_3b_beta.gstr_3b_beta.upload_invoices",
+                    args: {
+                        company_gstin: frm.doc.company_gstin,
+                        month: frm.doc.month,
+                        year: frm.doc.year,
+                    },
+                    callback: () => frm.gstr3b.check_action_status_with_retry(),
+                });
+
+                frappe.show_alert({
+                    message: "Uploaded Invoices",
+                    indicator: "green",
+                });
             });
 
             frm.add_custom_button(
@@ -99,6 +114,8 @@ frappe.ui.form.on("GSTR-3B Beta", {
                 args: {
                     company_gstin: frm.doc.company_gstin,
                     company: frm.doc.company,
+                    month: frm.doc.month,
+                    year: frm.doc.year,
                 },
             });
 
@@ -111,6 +128,8 @@ frappe.ui.form.on("GSTR-3B Beta", {
 });
 
 class GSTR3B {
+    RETRY_INTERVALS = [2000, 3000, 15000, 30000, 60000, 120000, 300000, 600000, 720000]; // 5 second, 15 second, 30 second, 1 min, 2 min, 5 min, 10 min, 12 min
+
     constructor(frm) {
         this.init(frm);
         this.render_tab_group();
@@ -505,6 +524,41 @@ class GSTR3B {
             if (row[field] && !options.includes(row[field])) options.push(row[field]);
         });
         return options;
+    }
+
+    check_action_status_with_retry(retries = 0, now = false) {
+        setTimeout(
+            async () => {
+                const { message } = await taxpayer_api.call({
+                    method: `india_compliance.gst_india.doctype.gstr_3b_beta.gstr_3b_beta.check_action_status`,
+                    args: {
+                        company_gstin: this.frm.doc.company_gstin,
+                        month: this.frm.doc.month,
+                        year: this.frm.doc.year,
+                    },
+                });
+
+                if (!message.status_cd) return;
+
+                if (
+                    message.status_cd === "IP" &&
+                    retries < this.RETRY_INTERVALS.length
+                ) {
+                    return this.check_action_status_with_retry(retries + 1);
+                }
+
+                // Not IP
+
+                if (message.status_cd == "P") {
+                    // TODO: Do Something
+                } else if (message.status_cd == "PE") {
+                    // TODO: Show error report
+                }
+
+                if (message.status_cd == "ER") frappe.throw(__(message.error.message));
+            },
+            now ? 0 : this.RETRY_INTERVALS[retries]
+        );
     }
 }
 

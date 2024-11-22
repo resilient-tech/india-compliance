@@ -2,13 +2,11 @@ import frappe
 from frappe.query_builder.functions import IfNull
 from frappe.utils.data import format_date
 
-# from india_compliance.gst_india.api_classes.taxpayer_base import otp_handler
-from india_compliance.gst_india.api_classes.taxpayer_returns import IMSAPI
 from india_compliance.gst_india.constants import STATE_NUMBERS
 from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
     create_inward_supply,
 )
-from india_compliance.gst_india.utils import ims, parse_datetime
+from india_compliance.gst_india.utils import parse_datetime
 
 
 class IMS:
@@ -209,73 +207,3 @@ class B2BCNA(B2BCN):
             }
         )
         return invoice_details
-
-
-def upload_invoices(company_gstin):
-    json_data = get_gov_data(company_gstin)
-
-    api = IMSAPI(company_gstin)
-    response = api.save_ims_action(json_data)
-
-    print(response)
-
-
-def reset_invoices(company_gstin):
-    json_data = get_gov_data(company_gstin, is_reset=True)
-
-    api = IMSAPI(company_gstin)
-    response = api.reset_ims_action(json_data)
-
-    print("IMS Invoices Reset", response.get("reference_id"))
-
-
-def get_gov_data(company_gstin, is_reset=False):
-    category_key_map = {
-        "Invoice_0": "b2b",
-        "Invoice_1": "b2ba",
-        "Debit Note_0": "b2bdn",
-        "Debit Note_1": "b2bdna",
-        "Credit Note_0": "b2bcn",
-        "Credit Note_1": "b2bcna",
-    }
-
-    gst_inward_supply_list = frappe.get_all(
-        "GST Inward Supply", filters={"ims_action": ["is", "set"]}, fields=["*"]
-    )
-    json_data = {}
-
-    for invoice in gst_inward_supply_list:
-        key = f"{invoice.doc_type}_{invoice.is_amended}"
-
-        category = category_key_map[key]
-        _class = getattr(ims, category.upper())(company_gstin)
-
-        data = {
-            "stin": invoice.supplier_gstin,
-            # "inv_typ": invoice.supply_type, TODO: Check options
-            "srcform": "",
-            "rtnprd": invoice.sup_return_period,
-            "val": invoice.document_value,
-            "pos": STATE_NUMBERS[invoice.place_of_supply.split("-")[1]],
-            "prev_status": invoice.previous_ims_action,
-            "iamt": invoice.igst,
-            "camt": invoice.cgst,
-            "samt": invoice.sgst,
-            "cess": invoice.cess,
-            "txval": invoice.taxable_value,
-            **_class.get_category_details(invoice),
-        }
-
-        if not is_reset:
-            data.update(
-                {
-                    "action": invoice.ims_action,
-                }
-            )
-
-        if json_data.get(category):
-            json_data[category].append(data)
-        else:
-            json_data[category] = [data]
-
-    return json_data

@@ -3,15 +3,22 @@
 
 import frappe
 from frappe.model.document import Document
+from frappe.query_builder.functions import IfNull
 from frappe.utils import get_date_str, get_first_day, get_last_day
 
 from india_compliance.gst_india.api_classes.taxpayer_base import otp_handler
 from india_compliance.gst_india.api_classes.taxpayer_returns import IMSAPI
+from india_compliance.gst_india.constants import STATE_NUMBERS
+from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
+    enqueue_link_integration_request,
+    enqueue_notification,
+    status_code_map,
+)
 from india_compliance.gst_india.doctype.gstr_3b_beta import IMSReconciler
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     ReconciledData,
 )
-from india_compliance.gst_india.utils import get_month_or_quarter_dict, ims
+from india_compliance.gst_india.utils import get_month_or_quarter_dict, get_period, ims
 
 
 class GSTR3BBeta(Document):
@@ -175,7 +182,7 @@ CATEGORIES = [
 
 @frappe.whitelist()
 @otp_handler
-def download_invoices_and_reconcile(company_gstin, company):
+def download_invoices_and_reconcile(company_gstin, company, year, month):
     frappe.has_permission("GSTR-3B Beta", "write", throw=True)
 
     section = ["B2B", "B2BA", "CN", "DN", "CNA", "DNA"]
@@ -185,10 +192,221 @@ def download_invoices_and_reconcile(company_gstin, company):
         return
 
     for category in CATEGORIES:
-        getattr(ims, category)(company, company_gstin).create_transactions(
+        getattr(ims, category)(company_gstin, company).create_transactions(
             response.get(category.lower(), [])
         )
 
     # Auto_Reconcile Invoices
     filters = frappe._dict({"company": company, "company_gstin": company_gstin})
     IMSReconciler().auto_reconcile_invoices(filters)
+
+    create_return_log(company, company_gstin, month, year)
+
+
+def create_return_log(company, company_gstin, month, year):
+    period = get_period(month, year)
+
+    if log_name := frappe.db.exists("GST Return Log", f"IMS-{period}-{company_gstin}"):
+
+        ims_log = frappe.get_doc("GST Return Log", log_name)
+
+    else:
+        ims_log = frappe.new_doc("GST Return Log")
+        ims_log.company = company
+        ims_log.gstin = company_gstin
+        ims_log.return_period = period
+        ims_log.return_type = "IMS"
+        ims_log.insert()
+
+
+@frappe.whitelist()
+@otp_handler
+def upload_invoices(month, year, company_gstin, **kwargs):
+    frappe.has_permission("GST Return Log", "write", throw=True)
+
+    ims_log = frappe.get_doc(
+        "GST Return Log",
+        f"IMS-{get_period(month, year)}-{company_gstin}",
+    )
+
+    json_data = get_data(company_gstin)
+
+    if not json_data:
+        return
+
+    # TODO: Verify request in progress
+
+    # Make API Request
+    api = IMSAPI(company_gstin)
+    response = api.save_ims_action(json_data)
+    update_return_log(ims_log, response.get("reference_id"), api.request_id)
+
+
+@frappe.whitelist()
+@otp_handler
+def check_action_status(month, year, company_gstin):
+    frappe.has_permission("GST Return Log", "write", throw=True)
+
+    ims_log = frappe.get_doc(
+        "GST Return Log",
+        f"IMS-{get_period(month, year)}-{company_gstin}",
+    )
+
+    return process_upload_ims(ims_log)
+
+
+def reset_invoices(company_gstin):
+    json_data = get_data(company_gstin, is_reset=True)
+
+    api = IMSAPI(company_gstin)
+    response = api.reset_ims_action(json_data)
+
+    print("IMS Invoices Reset", response.get("reference_id"))
+
+
+def get_data(company_gstin, is_reset=False):
+    ims_reconciler = IMSReconciler()
+    additional_fields = [
+        "doc_type",
+        "is_amended",
+        "previous_ims_action",
+        "ims_action",
+        "sup_return_period",
+        "document_value",
+        "place_of_supply",
+        "supply_type",
+    ]
+    query = ims_reconciler.get_base_inward_supply_query(additional_fields)
+    gst_inward_supply_list = (
+        query.where(IfNull(ims_reconciler.inward_supply.ims_action, "") != "")
+        .where(
+            ims_reconciler.inward_supply.ims_action
+            != ims_reconciler.inward_supply.previous_ims_action
+        )
+        .where(ims_reconciler.inward_supply.gstr_1_filled == 1)
+        .run(as_dict=True)
+    )
+
+    json_data = convert_data_to_gov_format(
+        gst_inward_supply_list, company_gstin, is_reset
+    )
+
+    return json_data
+
+
+def convert_data_to_gov_format(gst_inward_supply_list, company_gstin, is_reset=False):
+    category_key_map = {
+        "Invoice_0": "b2b",
+        "Invoice_1": "b2ba",
+        "Debit Note_0": "b2bdn",
+        "Debit Note_1": "b2bdna",
+        "Credit Note_0": "b2bcn",
+        "Credit Note_1": "b2bcna",
+    }
+
+    json_data = {}
+
+    for invoice in gst_inward_supply_list:
+        key = f"{invoice.doc_type}_{invoice.is_amended}"
+
+        category = category_key_map[key]
+        _class = getattr(ims, category.upper())(company_gstin)
+
+        data = {
+            "stin": invoice.supplier_gstin,
+            # "inv_typ": invoice.supply_type, TODO: Check options
+            "srcform": "",
+            "rtnprd": invoice.sup_return_period,
+            "val": invoice.document_value,
+            "pos": STATE_NUMBERS[invoice.place_of_supply.split("-")[1]],
+            "prev_status": invoice.previous_ims_action,
+            "iamt": invoice.igst,
+            "camt": invoice.cgst,
+            "samt": invoice.sgst,
+            "cess": invoice.cess,
+            "txval": invoice.taxable_value,
+            **_class.get_category_details(invoice),
+        }
+
+        if is_reset:
+            return data
+
+        data.update(
+            {
+                "action": invoice.ims_action,
+            }
+        )
+
+        if json_data.get(category):
+            json_data[category].append(data)
+        else:
+            json_data[category] = [data]
+
+    return json_data
+
+
+def update_return_log(doc, token, request_id, status=None):
+    if not token:
+        return
+
+    row = {
+        "request_type": "upload",
+        "token": token,
+        "creation_time": frappe.utils.now_datetime(),
+    }
+
+    if status:
+        row["status"] = status
+
+    doc.append("actions", row)
+    doc.save()
+    enqueue_link_integration_request(token, request_id)
+
+
+def process_upload_ims(return_log):
+    if not return_log.actions:
+        return
+
+    api = IMSAPI(return_log.gstin)
+    response = None
+
+    doc = return_log.get_unprocessed_action("upload")
+
+    if not doc:
+        return
+
+    response = api.get_return_status(return_log.return_period, doc.token)
+    status_cd = response.get("status_cd")
+
+    if status_cd != "IP":
+        doc.db_set({"status": status_code_map.get(status_cd)})
+        enqueue_notification(
+            return_log.return_period,
+            "upload",
+            status_cd,
+            return_log.gstin,
+            api.request_id if status_cd == "ER" else None,
+        )
+
+    if status_cd == "PE":
+        response["error_report"] = get_error_list(response.get("error_report"))
+
+    return response
+
+
+def get_error_list(error_report):
+    error_list = []
+    for errors in error_report.values():
+        for error in errors:
+            for invoice in error.get("inv"):
+                error_list.append(
+                    {
+                        "error_msg": error.get("error_msg"),
+                        "error_code": error.get("error_cd"),
+                        "invoice": invoice.get("inum"),
+                        "return_period": invoice.get("rtnprd"),
+                        "supplier_gstin": error.get("stin"),
+                    }
+                )
+
+    return error_list
