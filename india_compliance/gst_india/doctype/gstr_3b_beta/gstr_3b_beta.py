@@ -13,6 +13,7 @@ from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     enqueue_link_integration_request,
     enqueue_notification,
     status_code_map,
+    verify_request_in_progress,
 )
 from india_compliance.gst_india.doctype.gstr_3b_beta import IMSReconciler
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
@@ -234,7 +235,7 @@ def upload_invoices(month, year, company_gstin, **kwargs):
     if not json_data:
         return
 
-    # TODO: Verify request in progress
+    verify_request_in_progress(ims_log)
 
     # Make API Request
     api = IMSAPI(company_gstin)
@@ -395,6 +396,10 @@ def process_upload_ims(return_log):
 
     if status_cd == "PE":
         response["error_report"] = get_error_list(response.get("error_report"))
+
+    if status_cd == "P":
+        # TODO: Update Previous IMS Action
+        pass
 
     return response
 

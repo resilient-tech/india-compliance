@@ -432,7 +432,7 @@ class GSTR3B {
                 supplier_name_gstin: this.get_supplier_name_gstin(row),
                 invoice_no: row.bill_no,
                 invoice_type: row._inward_supply.supply_type,
-                ims_action: row.ims_action,
+                ims_action: row.ims_action || "",
                 match_status: row.match_status,
                 linked_doc: row.purchase_invoice_name,
                 tax_difference: row.tax_difference,
