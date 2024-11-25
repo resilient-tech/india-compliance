@@ -241,7 +241,7 @@ def upload_invoices(month, year, company_gstin, **kwargs):
     # Make API Request
     api = IMSAPI(company_gstin)
     response = api.save_ims_action(json_data)
-    update_return_log(ims_log, response.get("reference_id"), api.request_id)
+    update_return_log(ims_log, response.get("reference_id"), "upload", api.request_id)
 
 
 @frappe.whitelist()
@@ -257,13 +257,22 @@ def check_action_status(month, year, company_gstin):
     return process_upload_ims(ims_log)
 
 
-def reset_invoices(company_gstin):
+def reset_invoices(company_gstin, month, year):
+    frappe.has_permission("GST Return Log", "write", throw=True)
+
+    ims_log = frappe.get_doc(
+        "GST Return Log",
+        f"IMS-{get_period(month, year)}-{company_gstin}",
+    )
+
     json_data = get_data(company_gstin, is_reset=True)
+
+    verify_request_in_progress(ims_log)
 
     api = IMSAPI(company_gstin)
     response = api.reset_ims_action(json_data)
 
-    print("IMS Invoices Reset", response.get("reference_id"))
+    update_return_log(ims_log, response.get("reference_id"), "reset", api.request_id)
 
 
 def get_data(company_gstin, is_reset=False):
@@ -352,12 +361,12 @@ def convert_data_to_gov_format(gst_inward_supply_list, company_gstin, is_reset=F
     return json_data
 
 
-def update_return_log(doc, token, request_id, status=None):
+def update_return_log(doc, token, request_id, action, status=None):
     if not token:
         return
 
     row = {
-        "request_type": "upload",
+        "request_type": action,
         "token": token,
         "creation_time": frappe.utils.now_datetime(),
     }
