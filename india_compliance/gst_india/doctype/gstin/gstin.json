@@ -14,6 +14,7 @@
   "last_updated_on",
   "cancelled_date",
   "is_blocked",
+  "last_pan_used_for_gstr",
   "section_break_ttzc",
   "gstr_1_filed_upto"
  ],
@@ -77,12 +78,18 @@
    "fieldtype": "Date",
    "hidden": 1,
    "label": "GSTR-1 Filed Upto"
+  },
+  {
+   "fieldname": "last_pan_used_for_gstr",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Last PAN Used for GSTR"
   }
  ],
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-06-14 13:59:53.998262",
+ "modified": "2024-09-04 17:12:30.951878",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTIN",

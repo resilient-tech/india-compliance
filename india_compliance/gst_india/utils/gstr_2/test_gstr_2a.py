@@ -43,10 +43,12 @@ class TestGSTRMixin:
         )
 
 
-class TestGSTR2a(IntegrationTestCase, TestGSTRMixin):
+class TestGSTR2a(TestGSTRMixin, IntegrationTestCase):
     # Tests as per version 2.1 of GSTR2A Dt: 14-10-2020
     @classmethod
     def setUpClass(cls):
+        super().setUpClass()
+
         cls.gstin = "01AABCE2207R1Z5"
         cls.return_period = "032020"
         cls.doctype = "GST Inward Supply"
@@ -58,11 +60,6 @@ class TestGSTR2a(IntegrationTestCase, TestGSTRMixin):
             cls.return_period,
             cls.test_data.copy(),
         )
-
-    @classmethod
-    def tearDownClass(cls):
-        frappe.db.delete(cls.doctype, {"company_gstin": cls.gstin})
-        frappe.db.delete(cls.log_doctype, {"gstin": cls.gstin})
 
     @patch("india_compliance.gst_india.utils.gstr_2.save_gstr")
     @patch("india_compliance.gst_india.utils.gstr_2.GSTR2aAPI")
@@ -260,14 +257,10 @@ class TestGSTR2a(IntegrationTestCase, TestGSTRMixin):
                 "amendment_type": "Receiver GSTIN Amended",
                 "is_amended": 1,
                 "document_value": 80,
-                "items": [
-                    {
-                        "igst": 20,
-                        "cgst": 20,
-                        "sgst": 20,
-                        "cess": 20,
-                    }
-                ],
+                "igst": 20,
+                "cgst": 20,
+                "sgst": 20,
+                "cess": 20,
             },
             doc,
         )
@@ -287,13 +280,9 @@ class TestGSTR2a(IntegrationTestCase, TestGSTRMixin):
                 "doc_type": "Bill of Entry",
                 "is_amended": 0,
                 "document_value": 246.54,
-                "items": [
-                    {
-                        "taxable_value": 123.02,
-                        "igst": 123.02,
-                        "cess": 0.5,
-                    }
-                ],
+                "taxable_value": 123.02,
+                "igst": 123.02,
+                "cess": 0.5,
             },
             doc,
         )
@@ -311,15 +300,11 @@ class TestGSTR2a(IntegrationTestCase, TestGSTRMixin):
                 "supplier_name": "GSTN",
                 "is_amended": 0,
                 "document_value": 246.54,
-                "items": [
-                    {
-                        "taxable_value": 123.02,
-                        "igst": 123.02,
-                        "cgst": 0,
-                        "sgst": 0,
-                        "cess": 0.5,
-                    }
-                ],
+                "taxable_value": 123.02,
+                "igst": 123.02,
+                "cgst": 0,
+                "sgst": 0,
+                "cess": 0.5,
             },
             doc,
         )

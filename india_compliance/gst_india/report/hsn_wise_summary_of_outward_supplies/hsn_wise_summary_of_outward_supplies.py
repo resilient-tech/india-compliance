@@ -270,7 +270,9 @@ def get_item_taxes(item_list, company_currency):
         try:
             item_taxes = json.loads(item_wise_tax_detail)
             for item_code, tax_data in item_taxes.items():
-                tax_rate, tax_amount = tax_data
+                tax_rate = tax_data.get("tax_rate")
+                tax_amount = tax_data.get("tax_amount")
+
                 if not tax_amount:
                     continue
 

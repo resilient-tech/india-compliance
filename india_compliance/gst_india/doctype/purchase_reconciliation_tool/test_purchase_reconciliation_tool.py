@@ -156,8 +156,19 @@ def create_gst_inward_supply(**kwargs):
     args.update(kwargs)
 
     gst_inward_supply = frappe.new_doc("GST Inward Supply")
-
     gst_inward_supply.update(args)
+
+    for field in ["taxable_value", "igst", "cgst", "sgst", "cess"]:
+        gst_inward_supply.set(
+            field,
+            sum(
+                [
+                    row.get(field)
+                    for row in gst_inward_supply.get("items")
+                    if row.get(field)
+                ]
+            ),
+        )
 
     return gst_inward_supply.insert()
 
