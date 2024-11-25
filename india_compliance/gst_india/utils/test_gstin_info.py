@@ -97,6 +97,7 @@ class TestGstinInfo(IntegrationTestCase):
             {
                 "gstin": "24AAUPV7468F1ZW",
                 "business_name": "Shalibhadra Metal Corporation",
+                "company_type": "Proprietorship",
                 "gst_category": "Registered Regular",
                 "status": "Active",
                 "all_addresses": [
@@ -172,6 +173,7 @@ class TestGstinInfo(IntegrationTestCase):
             {
                 "gstin": "29AABCF8078M1C8",
                 "business_name": "Flipkart India Private Limited",
+                "company_type": "Private Limited Company",
                 "gst_category": "Tax Collector",
                 "status": "Active",
                 "all_addresses": [
