@@ -9,13 +9,15 @@ from frappe.utils import get_date_str, get_first_day, get_last_day
 from india_compliance.gst_india.api_classes.taxpayer_base import otp_handler
 from india_compliance.gst_india.api_classes.taxpayer_returns import IMSAPI
 from india_compliance.gst_india.constants import STATE_NUMBERS
+from india_compliance.gst_india.doctype.gst_invoice_management_system import (
+    IMSReconciler,
+)
 from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     enqueue_link_integration_request,
     enqueue_notification,
     status_code_map,
     verify_request_in_progress,
 )
-from india_compliance.gst_india.doctype.gstr_3b_beta import IMSReconciler
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     ReconciledData,
 )
@@ -23,12 +25,12 @@ from india_compliance.gst_india.utils import get_month_or_quarter_dict, get_peri
 from india_compliance.gst_india.utils.gstr_2 import ims
 
 
-class GSTR3BBeta(Document):
+class GSTInvoiceManagementSystem(Document):
     IMS_RECONCILER = IMSReconciler()
 
     @frappe.whitelist()
     def get_invoice_data(self):
-        frappe.has_permission("GSTR-3B Beta", "write", throw=True)
+        frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         filters = self.get_filters()
 
@@ -56,7 +58,7 @@ class GSTR3BBeta(Document):
 
     @frappe.whitelist()
     def update_action(self, invoice_names, action):
-        frappe.has_permission("GSTR-3B Beta", "write", throw=True)
+        frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         invoice_names = frappe.parse_json(invoice_names)
 
@@ -69,7 +71,7 @@ class GSTR3BBeta(Document):
 
     @frappe.whitelist()
     def get_invoice_comparision(self, purchase_name, inward_supply_name):
-        frappe.has_permission("GSTR-3B Beta", "write", throw=True)
+        frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         self._reconciler_class = IMSReconciler()
         inward_supply = self.get_all_inward_supplies(name=inward_supply_name)
@@ -185,7 +187,7 @@ CATEGORIES = [
 @frappe.whitelist()
 @otp_handler
 def download_invoices_and_reconcile(company_gstin, company, year, month):
-    frappe.has_permission("GSTR-3B Beta", "write", throw=True)
+    frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
     section = ["B2B", "B2BA", "CN", "DN", "CNA", "DNA"]
     response = IMSAPI(company_gstin).get_data(section)

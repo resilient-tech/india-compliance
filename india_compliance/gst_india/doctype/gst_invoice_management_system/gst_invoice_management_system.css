@@ -1,18 +1,18 @@
-div[data-page-route="GSTR-3B Beta"] {
+div[data-page-route="GST Invoice Management System"] {
     --dt-row-height: 34px;
 }
 
-div[data-page-route="GSTR-3B Beta"] .section-body {
+div[data-page-route="GST Invoice Management System"] .section-body {
     max-width: 100% !important;
 }
 
-div[data-page-route="GSTR-3B Beta"]
+div[data-page-route="GST Invoice Management System"]
     [data-fieldname="invoice_html"]
     .section-body {
     margin-top: 0;
 }
 
-div[data-page-route="GSTR-3B Beta"]
+div[data-page-route="GST Invoice Management System"]
     [data-fieldname="invoice_html"]
     .form-tabs-list {
     display: flex;
@@ -23,14 +23,14 @@ div[data-page-route="GSTR-3B Beta"]
     position: inherit;
 }
 
-div[data-page-route="GSTR-3B Beta"]
+div[data-page-route="GST Invoice Management System"]
     [data-fieldname="invoice_html"]
     .form-tabs-list
     .custom-button-group {
     display: flex;
 }
 
-div[data-page-route="GSTR-3B Beta"]
+div[data-page-route="GST Invoice Management System"]
     [data-fieldname="invoice_html"]
     .form-tabs-list
     .inner-group-button, .filter-selector {
@@ -38,7 +38,7 @@ div[data-page-route="GSTR-3B Beta"]
     margin-left: 8px;
 }
 
-div[data-page-route="GSTR-3B Beta"]
+div[data-page-route="GST Invoice Management System"]
     [data-fieldname="invoice_html"]
     .form-tabs-list
     .custom-button-group
@@ -46,31 +46,31 @@ div[data-page-route="GSTR-3B Beta"]
     padding: 5px 10px;
 }
 
-div[data-page-route="GSTR-3B Beta"] .title-area .indicator-pill {
+div[data-page-route="GST Invoice Management System"] .title-area .indicator-pill {
     display: none;
 }
 
-div[data-page-route="GSTR-3B Beta"] .datatable .dt-scrollable {
+div[data-page-route="GST Invoice Management System"] .datatable .dt-scrollable {
     overflow-y: auto !important;
     margin-bottom: 2em;
     min-height: calc(100vh - 450px);
 }
 
-div[data-page-route="GSTR-3B Beta"] .datatable .dt-row {
+div[data-page-route="GST Invoice Management System"] .datatable .dt-row {
     height: unset;
 }
 
-div[data-page-route="GSTR-3B Beta"] .datatable .dt-row-filter {
+div[data-page-route="GST Invoice Management System"] .datatable .dt-row-filter {
     height: var(--dt-row-height);
 }
 
-div[data-page-route="GSTR-3B Beta"] .datatable .dt-row-filter .dt-cell {
+div[data-page-route="GST Invoice Management System"] .datatable .dt-row-filter .dt-cell {
     max-height: var(--dt-row-height);
 }
 
-div[data-page-route="GSTR-3B Beta"]
+div[data-page-route="GST Invoice Management System"]
     [data-fieldname="no_invoice_data"],
-div[data-page-route="GSTR-3B Beta"] [data-fieldname="invoice_empty_state"] {
+div[data-page-route="GST Invoice Management System"] [data-fieldname="invoice_empty_state"] {
     min-height: 320px;
     display: flex;
     align-items: center;
@@ -78,17 +78,17 @@ div[data-page-route="GSTR-3B Beta"] [data-fieldname="invoice_empty_state"] {
     flex-direction: column;
 }
 
-div[data-page-route="GSTR-3B Beta"]
+div[data-page-route="GST Invoice Management System"]
     [data-fieldname="no_invoice_data"]
     > img,
-div[data-page-route="GSTR-3B Beta"]
+div[data-page-route="GST Invoice Management System"]
     [data-fieldname="invoice_empty_state"]
     > img {
     margin-bottom: var(--margin-md);
     max-height: 100px;
 }
 
-div[data-page-route="GSTR-3B Beta"] .dropdown-divider {
+div[data-page-route="GST Invoice Management System"] .dropdown-divider {
     height: 0;
     margin: 5px 0;
     border-top: 1px solid var(--border-color);

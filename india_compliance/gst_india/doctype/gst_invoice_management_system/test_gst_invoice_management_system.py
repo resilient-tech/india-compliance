@@ -11,18 +11,18 @@ EXTRA_TEST_RECORD_DEPENDENCIES = []  # eg. ["User"]
 IGNORE_TEST_RECORD_DEPENDENCIES = []  # eg. ["User"]
 
 
-# class TestGSTR3BBeta(UnitTestCase):
+# class TestGSTInvoiceManagementSystem(UnitTestCase):
 #     """
-#     Unit tests for GSTR3BBeta.
+#     Unit tests for GSTInvoiceManagementSystem.
 #     Use this class for testing individual functions and methods.
 #     """
 
 #     pass
 
 
-# class TestGSTR3BBeta(IntegrationTestCase):
+# class TestGSTInvoiceManagementSystem(IntegrationTestCase):
 #     """
-#     Integration tests for GSTR3BBeta.
+#     Integration tests for GSTInvoiceManagementSystem.
 #     Use this class for testing interactions between multiple components.
 #     """
 

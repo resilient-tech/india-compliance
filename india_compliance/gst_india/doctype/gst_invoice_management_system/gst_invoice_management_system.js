@@ -3,10 +3,10 @@
 
 const api_enabled = india_compliance.is_api_enabled();
 
-frappe.ui.form.on("GSTR-3B Beta", {
+frappe.ui.form.on("GST Invoice Management System", {
     async setup(frm) {
-        await frappe.require("gstr3b.bundle.js");
-        frm.gstr3b = new GSTR3B(frm);
+        await frappe.require("ims.bundle.js");
+        frm.ims = new IMS(frm);
 
         set_options_for_year(frm);
         set_options_for_month(frm);
@@ -46,7 +46,7 @@ frappe.ui.form.on("GSTR-3B Beta", {
                 // Toggle HTML fields
                 frm.refresh();
 
-                frm.gstr3b.generate_data();
+                frm.ims.generate_data();
                 frm.doc.is_data_loaded = true;
             });
         } else {
@@ -56,13 +56,13 @@ frappe.ui.form.on("GSTR-3B Beta", {
                 frappe.show_alert(__("Uploading Invoices"));
 
                 await taxpayer_api.call({
-                    method: "india_compliance.gst_india.doctype.gstr_3b_beta.gstr_3b_beta.upload_invoices",
+                    method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.upload_invoices",
                     args: {
                         company_gstin: frm.doc.company_gstin,
                         month: frm.doc.month,
                         year: frm.doc.year,
                     },
-                    callback: () => frm.gstr3b.check_action_status_with_retry(),
+                    callback: () => frm.ims.check_action_status_with_retry(),
                 });
 
                 frappe.show_alert({
@@ -110,7 +110,7 @@ frappe.ui.form.on("GSTR-3B Beta", {
 
         frm.add_custom_button(__("Download Invoices"), async () => {
             await taxpayer_api.call({
-                method: "india_compliance.gst_india.doctype.gstr_3b_beta.gstr_3b_beta.download_invoices_and_reconcile",
+                method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.download_invoices_and_reconcile",
                 args: {
                     company_gstin: frm.doc.company_gstin,
                     company: frm.doc.company,
@@ -127,7 +127,7 @@ frappe.ui.form.on("GSTR-3B Beta", {
     },
 });
 
-class GSTR3B {
+class IMS {
     RETRY_INTERVALS = [2000, 3000, 15000, 30000, 60000, 120000, 300000, 600000, 720000]; // 5 second, 15 second, 30 second, 1 min, 2 min, 5 min, 10 min, 12 min
 
     constructor(frm) {
@@ -216,7 +216,7 @@ class GSTR3B {
 
     setup_filter_button() {
         this.filter_group = new india_compliance.FilterGroup({
-            doctype: "GSTR-3B Beta",
+            doctype: "GST Invoice Management System",
             parent: this.$wrapper.find(".form-tabs-list"),
             filter_options: {
                 fieldname: "supplier_name",
@@ -262,7 +262,7 @@ class GSTR3B {
             },
         ];
 
-        fields.forEach(field => (field.parent = "GSTR-3B Beta"));
+        fields.forEach(field => (field.parent = "GST Invoice Management System"));
         return fields;
     }
 
@@ -331,7 +331,7 @@ class GSTR3B {
             e.preventDefault();
 
             await me.filter_group.push_new_filter([
-                "GSTR-3B Beta",
+                "GST Invoice Management System",
                 field,
                 "=",
                 field_value,
@@ -530,7 +530,7 @@ class GSTR3B {
         setTimeout(
             async () => {
                 const { message } = await taxpayer_api.call({
-                    method: `india_compliance.gst_india.doctype.gstr_3b_beta.gstr_3b_beta.check_action_status`,
+                    method: `india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.check_action_status`,
                     args: {
                         company_gstin: this.frm.doc.company_gstin,
                         month: this.frm.doc.month,
@@ -794,7 +794,7 @@ function render_empty_state(frm) {
 }
 function apply_bulk_action(frm, action) {
     if (frm.get_active_tab()?.df.fieldname != "invoice_tab") return;
-    const { invoice_tab } = frm.gstr3b.tabs;
+    const { invoice_tab } = frm.ims.tabs;
     const checked_invoices = invoice_tab.get_checked_items();
 
     if (!checked_invoices.length)
@@ -812,7 +812,7 @@ function apply_bulk_action(frm, action) {
 async function apply_action(frm, invoice_names, action) {
     // Update action in UI
     let pending_not_allowed = [];
-    const new_data = frm.gstr3b.data.filter(row => {
+    const new_data = frm.ims.data.filter(row => {
         if (!invoice_names.includes(row.inward_supply_name)) return true;
 
         if (!validate_pending_action(row, action)) {
@@ -827,7 +827,7 @@ async function apply_action(frm, invoice_names, action) {
 
     invoice_names = invoice_names.filter(name => !pending_not_allowed.includes(name));
 
-    frm.gstr3b.refresh(new_data);
+    frm.ims.refresh(new_data);
 
     if (pending_not_allowed.length) {
         frappe.msgprint(
