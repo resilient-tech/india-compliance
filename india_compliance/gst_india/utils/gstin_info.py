@@ -79,6 +79,7 @@ def _get_gstin_info(gstin, *, throw_error=True):
         business_name=titlecase(business_name or ""),
         gst_category=GST_CATEGORIES.get(response.dty, ""),
         status=response.sts,
+        company_type=response.ctb,
     )
 
     if permanent_address := response.get("pradr"):

@@ -24,11 +24,11 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 fieldtype: "Section Break",
                 description: this.api_enabled
                     ? __(
-                        `When you enter a GSTIN, the permanent address linked to it is
+                          `When you enter a GSTIN, the permanent address linked to it is
                         autofilled.<br>
                         Change the {0} to autofill other addresses.`,
-                        [frappe.meta.get_label("Address", "pincode")]
-                    )
+                          [frappe.meta.get_label("Address", "pincode")]
+                      )
                     : "",
                 collapsible: 0,
             },
@@ -427,6 +427,14 @@ function update_party_info(doc, gstin_info) {
     doc.gst_category = gstin_info.gst_category;
 
     if (!in_list(frappe.boot.gst_party_types, doc.doctype)) return;
+
+    const company_type = {
+        Proprietorship: "Individual",
+        Partnership: "Partnership",
+    };
+
+    doc[`${doc.doctype.toLowerCase()}_type`] =
+        company_type[gstin_info.company_type] || "Company";
 
     const party_name_field = `${doc.doctype.toLowerCase()}_name`;
     doc[party_name_field] = gstin_info.business_name;
