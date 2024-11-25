@@ -19,7 +19,8 @@ from india_compliance.gst_india.doctype.gstr_3b_beta import IMSReconciler
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     ReconciledData,
 )
-from india_compliance.gst_india.utils import get_month_or_quarter_dict, get_period, ims
+from india_compliance.gst_india.utils import get_month_or_quarter_dict, get_period
+from india_compliance.gst_india.utils.gstr_2 import ims
 
 
 class GSTR3BBeta(Document):
