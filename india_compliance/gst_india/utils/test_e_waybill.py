@@ -1048,6 +1048,8 @@ class TestEWaybill(IntegrationTestCase):
             frappe.get_doc("e-Waybill Log", {"reference_name": stock_entry.name}),
         )
 
+        # TODO: STOCK ENTRY.RUN ONLOAD
+
     @change_settings("GST Settings", {"enable_e_waybill_for_sc": 1})
     @responses.activate
     def test_e_waybill_for_stock_entry_same_gstin(self):
