@@ -713,20 +713,28 @@ function render_empty_state(frm) {
     frm.refresh();
 }
 function apply_bulk_action(frm, action) {
-    if (frm.get_active_tab()?.df.fieldname != "invoice_tab") return;
-    const { invoice_tab } = frm.ims.tabs;
-    const checked_invoices = invoice_tab.get_checked_items();
+    const active_tab = frm.get_active_tab()?.df.fieldname;
+    if (!active_tab) return;
 
-    if (!checked_invoices.length)
+    const tab = frm.ims.tabs[active_tab];
+    affected_invoices = tab.get_checked_items();
+
+    const selected_rows = tab.get_checked_items();
+    const invoice_names = get_affected_rows(
+        active_tab,
+        selected_rows,
+        frm.ims.filtered_data
+    );
+
+    if (!affected_invoices.length)
         return frappe.show_alert({
             message: __("Please select invoices"),
             indicator: "red",
         });
 
-    const invoice_names = checked_invoices.map(row => row.inward_supply_name);
     apply_action(frm, invoice_names, action);
 
-    if (invoice_tab) invoice_tab.clear_checked_items();
+    if (tab) tab.clear_checked_items();
 }
 
 async function apply_action(frm, invoice_names, action) {
@@ -781,4 +789,16 @@ function get_icon(value, column, data) {
     return `<button class="btn eye" data-name="${data.inward_supply_name}">
                 <i class="fa fa-eye"></i>
             </button>`;
+}
+
+function get_affected_rows(tab, selection, data) {
+    let invoices = [];
+    if (tab == "invoice_tab") invoices = selection;
+
+    if (tab == "summary_tab")
+        invoices = data.filter(
+            inv => selection.filter(row => row.match_status == inv.match_status).length
+        );
+
+    return invoices.map(row => row.inward_supply_name);
 }
