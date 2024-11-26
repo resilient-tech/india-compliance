@@ -44,6 +44,7 @@ class GSTInvoiceManagementSystem(Document):
                     {
                         "ims_action": doc.ims_action,
                         "is_pending_action_allowed": doc.is_pending_action_allowed,
+                        "doc_type": doc.doc_type,
                         "_inward_supply": doc,
                         "_purchase_invoice": purchases_and_bill_of_entry.pop(
                             doc.link_name, frappe._dict()
@@ -96,7 +97,7 @@ class GSTInvoiceManagementSystem(Document):
         if not filters:
             filters = {}
 
-        query = self.IMS_RECONCILER.get_base_inward_supply_query()
+        query = self.IMS_RECONCILER.get_base_inward_supply_query(["action", "doc_type"])
 
         if name:
             query = query.where(self.IMS_RECONCILER.inward_supply.name == name)

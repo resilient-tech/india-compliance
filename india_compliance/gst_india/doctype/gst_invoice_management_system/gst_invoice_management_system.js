@@ -127,7 +127,7 @@ class IMS {
         this.data = [];
         this.frm.doc.is_data_loaded = false;
         this.$wrapper = this.frm.get_field("invoice_html").$wrapper;
-        this._tabs = ["invoice", "summary"];
+        this._tabs = ["invoice", "summary", "action"];
     }
 
     generate_data() {
@@ -177,6 +177,15 @@ class IMS {
                 {
                     fieldtype: "HTML",
                     fieldname: "summary_data",
+                },
+                {
+                    label: "Actions Summary",
+                    fieldtype: "Tab Break",
+                    fieldname: "action_tab",
+                },
+                {
+                    fieldtype: "HTML",
+                    fieldname: "action_data",
                 },
                 {
                     label: "Document View",
@@ -396,7 +405,7 @@ class IMS {
             }
             if (row.inward_supply_name) new_row.inward_supply_count += 1;
             if (row.purchase_invoice_name) new_row.purchase_count += 1;
-            if (row.ims_action != "No Action") new_row.action_taken_count += 1;
+            if (row.action != "No Action") new_row.action_taken_count += 1;
             new_row.total_docs += 1;
             new_row.tax_difference += row.tax_difference || 0;
             new_row.taxable_value_difference += row.taxable_value_difference || 0;
@@ -492,6 +501,68 @@ class IMS {
                 width: 150,
             },
         ];
+    }
+
+    get_action_columns() {
+        return [
+            {
+                label: "Category",
+                fieldname: "category",
+                width: 200,
+            },
+            {
+                label: "Accepted",
+                fieldname: "accepted",
+                width: 200,
+            },
+            {
+                label: "Rejected",
+                fieldname: "rejected",
+                width: 200,
+            },
+            {
+                label: "Pending",
+                fieldname: "pending",
+                width: 200,
+            },
+            {
+                label: "No Action",
+                fieldname: "no_action",
+                width: 200,
+            },
+        ];
+    }
+
+    get_action_data() {
+        const action_map = {
+            Accept: "accepted",
+            Reject: "rejected",
+            Pending: "pending",
+            "No Action": "no_action",
+        };
+        const category_map = {
+            Invoice: "B2B-Invoices",
+            "Credit Note": "B2B-Credit Notes",
+            "Debit Note": "B2B-Debit Notes",
+        };
+        let data = {};
+
+        this.filtered_data.forEach(row => {
+            const action = action_map[row.ims_action];
+            const category = category_map[row.doc_type];
+            if (!data[category]) {
+                data[category] = {
+                    category,
+                    accepted: 0,
+                    rejected: 0,
+                    pending: 0,
+                    no_action: 0,
+                };
+            }
+            data[category][action] += 1;
+        });
+
+        return Object.values(data);
     }
 
     get_supplier_name_gstin(row) {

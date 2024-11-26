@@ -133,7 +133,7 @@ class IMSReconciler:
         return BaseUtil.get_dict_for_key("supplier_gstin", data)
 
     def get_base_inward_supply_query(self, additional_fields=None):
-        additional_fields = [
+        tax_fields = [
             "is_pending_action_allowed",
             "igst",
             "cgst",
@@ -142,9 +142,7 @@ class IMSReconciler:
             "taxable_value",
         ] + (additional_fields or [])
 
-        fields = self.get_fields(
-            additional_fields=additional_fields, table=self.inward_supply
-        )
+        fields = self.get_fields(additional_fields=tax_fields, table=self.inward_supply)
 
         return (
             frappe.qb.from_(self.inward_supply)
