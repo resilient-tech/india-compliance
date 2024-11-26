@@ -7,7 +7,6 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     GSTIN_RULES,
     PAN_RULES,
     BaseUtil,
-    BillOfEntry,
     PurchaseInvoice,
     Reconciler,
 )
@@ -20,16 +19,8 @@ class IMSReconciler:
             "amended": "B2BA",
         },
         {
-            "original": "ISD",
-            "amended": "ISDA",
-        },
-        {
-            "original": "IMPG",
-            "amended": "",
-        },
-        {
-            "original": "IMPGSEZ",
-            "amended": "",
+            "original": "CDNR",
+            "amended": "CDNRA",
         },
     )
 
@@ -51,14 +42,11 @@ class IMSReconciler:
             filters["category"] = row["original"]
             filters["amended_category"] = row["amended"] or None
 
-            purchases = self.get_unmatched_purchases(filters)
+            purchases = self.get_unmatched_purchase_invoices(filters)
             inward_supplies = self.get_unmatched_inward_supplies(filters)
 
             # GSTIN Level matching
             _Reconciler.reconcile_for_rules(GSTIN_RULES, purchases, inward_supplies)
-
-            if filters.category == "IMPG":  # TODO: Is this required here ??
-                return
 
             # PAN Level matching
             purchases = _Reconciler.get_pan_level_data(purchases)
@@ -82,12 +70,6 @@ class IMSReconciler:
             doc.fy = BaseUtil.get_fy(doc.bill_date)
 
         return BaseUtil.get_dict_for_key("supplier_gstin", data)
-
-    def get_unmatched_purchases(self, filters):
-        if filters.category in ("IMPG", "IMPGSEZ"):
-            return self.get_unmatched_bill_of_entry(filters)
-
-        return self.get_unmatched_purchase_invoices(filters)
 
     def get_unmatched_purchase_invoices(self, filters):
         gst_category = (
@@ -115,34 +97,10 @@ class IMSReconciler:
 
         return BaseUtil.get_dict_for_key("supplier_gstin", data)
 
-    def get_unmatched_bill_of_entry(self, filters):
-        gst_category = "SEZ" if filters.category == "IMPGSEZ" else "Overseas"
-
-        query = self.get_base_bill_of_entry_query()
-        query = self.get_query_with_filters(self.boe, query, filters)
-
-        data = (
-            query.where(self.purchase_invoice.gst_category == gst_category)
-            .where(self.boe.name.notin(BillOfEntry.query_matched_bill_of_entry()))
-            .run(as_dict=True)
-        )
-
-        for doc in data:
-            doc.fy = BaseUtil.get_fy(doc.bill_date)
-
-        return BaseUtil.get_dict_for_key("supplier_gstin", data)
-
     def get_base_inward_supply_query(self, additional_fields=None):
-        tax_fields = [
-            "is_pending_action_allowed",
-            "igst",
-            "cgst",
-            "sgst",
-            "cess",
-            "taxable_value",
-        ] + (additional_fields or [])
-
-        fields = self.get_fields(additional_fields=tax_fields, table=self.inward_supply)
+        fields = self.get_fields(
+            additional_fields=additional_fields, table=self.inward_supply
+        )
 
         return (
             frappe.qb.from_(self.inward_supply)
@@ -154,6 +112,12 @@ class IMSReconciler:
                 self.inward_supply.ims_action,
                 self.inward_supply.supply_type,
                 self.inward_supply.classification,
+                self.inward_supply.is_pending_action_allowed,
+                self.inward_supply.igst,
+                self.inward_supply.cgst,
+                self.inward_supply.sgst,
+                self.inward_supply.cess,
+                self.inward_supply.taxable_value,
                 ConstantColumn("GST Inward Supply").as_("doctype"),
             )
             .where(IfNull(self.inward_supply.previous_ims_action, "") != "")
@@ -163,7 +127,12 @@ class IMSReconciler:
         fields = self.get_fields(
             table=self.purchase_invoice,
         )
-        tax_fields = self.get_tax_fields(self.purchase_invoice_item)
+        tax_fields = [
+            self.query_tax_amount(self.purchase_invoice_item, f"{tax_type}_amount").as_(
+                tax_type
+            )
+            for tax_type in GST_TAX_TYPES
+        ]
 
         return (
             frappe.qb.from_(self.purchase_invoice)
@@ -176,32 +145,6 @@ class IMSReconciler:
                 ConstantColumn("Purchase Invoice").as_("doctype"),
             )
             .groupby(self.purchase_invoice.name)
-        )
-
-    def get_base_bill_of_entry_query(self):
-        tax_fields = self.get_tax_fields(self.boe_item)
-
-        return (
-            frappe.qb.from_(self.boe)
-            .left_join(self.boe_item)
-            .on(self.boe_item.parent == self.boe.name)
-            .join(self.purchase_invoice)
-            .on(self.boe.purchase_invoice == self.purchase_invoice.name)
-            .select(
-                *tax_fields,
-                self.boe.total_taxable_value.as_("taxable_value"),
-                self.boe.bill_of_entry_no,
-                self.boe.bill_of_entry_date,
-                self.purchase_invoice.supplier_gstin,
-                self.purchase_invoice.supplier,
-                self.boe.name,
-                self.purchase_invoice.is_reverse_charge,
-                self.purchase_invoice.place_of_supply,
-                ConstantColumn("Bill of Entry").as_("doctype"),
-            )
-            .where(self.boe.docstatus == 1)
-            .where(self.boe_item.parenttype == "Bill of Entry")
-            .groupby(self.boe.name)
         )
 
     def get_query_with_filters(self, doc, query, filters):
@@ -232,12 +175,6 @@ class IMSReconciler:
         fields = [table[field] for field in fields]
 
         return fields
-
-    def get_tax_fields(self, table):
-        return [
-            self.query_tax_amount(table, f"{tax_type}_amount").as_(tax_type)
-            for tax_type in GST_TAX_TYPES
-        ]
 
     def query_tax_amount(self, doc, field):
         return Abs(Sum(getattr(doc, field)))

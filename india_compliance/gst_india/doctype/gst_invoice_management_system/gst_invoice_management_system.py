@@ -35,7 +35,7 @@ class GSTInvoiceManagementSystem(Document):
         }
 
         inward_supplies = self.get_all_inward_supplies(filters=filters)
-        purchases_and_bill_of_entry = self.get_all_purchases(filters=filters)
+        purchases = self.get_all_purchases(filters=filters)
 
         invoice_data = []
         for doc in inward_supplies:
@@ -46,7 +46,7 @@ class GSTInvoiceManagementSystem(Document):
                         "is_pending_action_allowed": doc.is_pending_action_allowed,
                         "doc_type": doc.doc_type,
                         "_inward_supply": doc,
-                        "_purchase_invoice": purchases_and_bill_of_entry.pop(
+                        "_purchase_invoice": purchases.pop(
                             doc.link_name, frappe._dict()
                         ),
                     }
@@ -113,7 +113,6 @@ class GSTInvoiceManagementSystem(Document):
             filters = {}
 
         purchases = self.get_all_purchase_invoice(name, filters)
-        purchases.extend(self.get_all_bill_of_entry(name, filters))
 
         return {doc.name: doc for doc in purchases}
 
@@ -128,28 +127,6 @@ class GSTInvoiceManagementSystem(Document):
         )
 
         return query.run(as_dict=True)
-
-    def get_all_bill_of_entry(self, name, filters):
-        query = self.IMS_RECONCILER.get_base_bill_of_entry_query()
-
-        if name:
-            query = query.where(self.IMS_RECONCILER.boe.name == name)
-
-        query = self.IMS_RECONCILER.get_query_with_filters(
-            self.IMS_RECONCILER.boe, query, filters
-        )
-
-        return query.run(as_dict=True)
-
-
-CATEGORIES = [
-    "B2B",
-    "B2BA",
-    "B2BDN",
-    "B2BDNA",
-    "B2BCN",
-    "B2BCNA",
-]
 
 
 @frappe.whitelist()
@@ -253,10 +230,10 @@ def convert_data_to_gov_format(gst_inward_supply_list, company_gstin, is_reset=F
     category_key_map = {
         "Invoice_0": "b2b",
         "Invoice_1": "b2ba",
-        "Debit Note_0": "b2bdn",
-        "Debit Note_1": "b2bdna",
-        "Credit Note_0": "b2bcn",
-        "Credit Note_1": "b2bcna",
+        "Debit Note_0": "dn",
+        "Debit Note_1": "dna",
+        "Credit Note_0": "cn",
+        "Credit Note_1": "cna",
     }
 
     json_data = {}
