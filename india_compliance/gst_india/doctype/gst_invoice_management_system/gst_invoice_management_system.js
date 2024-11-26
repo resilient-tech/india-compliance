@@ -3,6 +3,12 @@
 
 const api_enabled = india_compliance.is_api_enabled();
 
+const category_map = {
+    "B2B-Invoices": "Invoice",
+    "B2B-Credit Notes": "Credit Note",
+    "B2B-Debit Notes": "Debit Note",
+};
+
 frappe.ui.form.on("GST Invoice Management System", {
     async setup(frm) {
         await frappe.require("ims.bundle.js");
@@ -326,11 +332,6 @@ class IMS {
         });
 
         this.tabs.action_tab.$datatable.on("click", ".invoice-category", function (e) {
-            const category_map = {
-                "B2B-Invoices": "Invoice",
-                "B2B-Credit Notes": "Credit Note",
-                "B2B-Debit Notes": "Debit Note",
-            };
             add_filter(e, "doc_type", category_map[$(this).text()], me);
         });
 
@@ -937,6 +938,13 @@ function get_affected_rows(tab, selection, data) {
     if (tab == "summary_tab")
         invoices = data.filter(
             inv => selection.filter(row => row.match_status == inv.match_status).length
+        );
+
+    if (tab == "action_tab")
+        invoices = data.filter(
+            inv =>
+                selection.filter(row => category_map[row.category] == inv.doc_type)
+                    .length
         );
 
     return invoices.map(row => row.inward_supply_name);
