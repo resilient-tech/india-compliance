@@ -146,15 +146,19 @@ class IMSReconciler:
             additional_fields=additional_fields, table=self.inward_supply
         )
 
-        return frappe.qb.from_(self.inward_supply).select(
-            *fields,
-            self.inward_supply.link_name,
-            self.inward_supply.link_doctype,
-            self.inward_supply.match_status,
-            self.inward_supply.ims_action,
-            self.inward_supply.supply_type,
-            self.inward_supply.classification,
-            ConstantColumn("GST Inward Supply").as_("doctype"),
+        return (
+            frappe.qb.from_(self.inward_supply)
+            .select(
+                *fields,
+                self.inward_supply.link_name,
+                self.inward_supply.link_doctype,
+                self.inward_supply.match_status,
+                self.inward_supply.ims_action,
+                self.inward_supply.supply_type,
+                self.inward_supply.classification,
+                ConstantColumn("GST Inward Supply").as_("doctype"),
+            )
+            .where(IfNull(self.inward_supply.previous_ims_action, "") != "")
         )
 
     def get_base_purchase_query(self):
@@ -204,10 +208,10 @@ class IMSReconciler:
 
     def get_query_with_filters(self, doc, query, filters):
         if filters.get("company"):
-            query = query.where(doc.company == filters.company)
+            query = query.where(doc.company == filters["company"])
 
         if filters.get("company_gstin"):
-            query = query.where(doc.company_gstin == filters.company_gstin)
+            query = query.where(doc.company_gstin == filters["company_gstin"])
 
         return query
 

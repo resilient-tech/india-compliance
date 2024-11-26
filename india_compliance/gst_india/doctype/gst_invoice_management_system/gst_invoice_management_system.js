@@ -8,8 +8,7 @@ frappe.ui.form.on("GST Invoice Management System", {
         await frappe.require("ims.bundle.js");
         frm.ims = new IMS(frm);
 
-        set_options_for_year(frm);
-        set_options_for_month(frm);
+        frm.trigger("company");
     },
 
     async company(frm) {
@@ -24,22 +23,13 @@ frappe.ui.form.on("GST Invoice Management System", {
         render_empty_state(frm);
     },
 
-    year(frm) {
-        render_empty_state(frm);
-        set_options_for_month(frm);
-    },
-
-    month(frm) {
-        render_empty_state(frm);
-    },
-
     refresh(frm) {
         // Primary Action
         frm.disable_save();
         if (!frm.doc.is_data_loaded) {
             frm.page.clear_primary_action();
 
-            frm.page.set_primary_action(__("Get Invoices"), async () => {
+            frm.page.set_primary_action(__("Generate"), async () => {
                 const { message } = await frm.call("get_invoice_data");
                 frm.doc.__invoice_data = message;
 
@@ -59,8 +49,6 @@ frappe.ui.form.on("GST Invoice Management System", {
                     method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.upload_invoices",
                     args: {
                         company_gstin: frm.doc.company_gstin,
-                        month: frm.doc.month,
-                        year: frm.doc.year,
                     },
                     callback: () => frm.ims.check_action_status_with_retry(),
                 });
@@ -114,8 +102,6 @@ frappe.ui.form.on("GST Invoice Management System", {
                 args: {
                     company_gstin: frm.doc.company_gstin,
                     company: frm.doc.company,
-                    month: frm.doc.month,
-                    year: frm.doc.year,
                 },
             });
 
@@ -533,8 +519,6 @@ class IMS {
                     method: `india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.check_action_status`,
                     args: {
                         company_gstin: this.frm.doc.company_gstin,
-                        month: this.frm.doc.month,
-                        year: this.frm.doc.year,
                     },
                 });
 
@@ -720,70 +704,6 @@ class DetailViewDialog {
         if (action == "Pending") return "btn-warning not-grey";
         if (action == "No Action") return "btn-secondary";
     }
-}
-
-function set_options_for_year(frm) {
-    const today = new Date();
-    const current_year = today.getFullYear();
-    const start_year = 2017;
-    const year_range = current_year - start_year + 1;
-    let options = Array.from({ length: year_range }, (_, index) => start_year + index);
-    options = options.reverse().map(year => year.toString());
-
-    set_field_options("year", options);
-    frm.set_value("year", current_year.toString());
-}
-
-function set_options_for_month(frm) {
-    /**
-     * Set options for Month based on the year and current date
-     * 1. If the year is current year, then options are till current month
-     * 2. If the year is 2017, then options are from July to December
-     * 3. Else, options are all months
-     *
-     * @param {Object} frm
-     */
-
-    const today = new Date();
-    const current_year = String(today.getFullYear());
-    const current_month_idx = today.getMonth();
-    let options;
-
-    if (!frm.doc.year) frm.doc.year = current_year;
-
-    if (frm.doc.year === current_year) {
-        // Options for current year till current month
-        options = india_compliance.MONTH.slice(0, current_month_idx + 1);
-    } else if (frm.doc.year === "2017") {
-        // Options for 2017 from July to December
-        options = india_compliance.MONTH.slice(6);
-    } else {
-        options = india_compliance.MONTH;
-    }
-
-    set_field_options("month", options);
-
-    let month_to_set;
-
-    // set second last option as default
-    if (frm.doc.year === current_year) month_to_set = options[options.length - 2];
-    // set last option as default
-    else month_to_set = options[options.length - 1];
-
-    if (month_to_set !== frm.doc.month) frm.set_value("month", month_to_set);
-}
-
-function get_first_last_day(year, month) {
-    // Convert the string to a Date object
-    const givenDate = moment(`${year}-${month}-01`);
-
-    // Get the first day of the month
-    const from_date = givenDate.startOf("month").format("YYYY-MM-DD");
-
-    // Get the last day of the month
-    const to_date = givenDate.endOf("month").format("YYYY-MM-DD");
-
-    return { from_date, to_date };
 }
 
 function render_empty_state(frm) {

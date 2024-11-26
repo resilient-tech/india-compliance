@@ -6,13 +6,8 @@
  "engine": "InnoDB",
  "field_order": [
   "company",
-  "is_modified",
   "column_break_2",
   "company_gstin",
-  "column_break_3",
-  "year",
-  "column_break_jufx",
-  "month",
   "section_break_11",
   "invoice_html",
   "invoice_empty_state",
@@ -35,33 +30,8 @@
    "label": "Company GSTIN"
   },
   {
-   "fieldname": "column_break_3",
-   "fieldtype": "Column Break"
-  },
-  {
    "fieldname": "section_break_11",
    "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "year",
-   "fieldtype": "Select",
-   "label": "Year"
-  },
-  {
-   "fieldname": "column_break_jufx",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "month",
-   "fieldtype": "Select",
-   "label": "Month"
-  },
-  {
-   "default": "0",
-   "fieldname": "is_modified",
-   "fieldtype": "Check",
-   "hidden": 1,
-   "label": "Is Modified"
   },
   {
    "depends_on": "eval: doc.__invoice_data && doc.__invoice_data.length",
@@ -85,7 +55,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-11-11 16:48:42.759839",
+ "modified": "2024-11-26 11:37:44.379381",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Invoice Management System",

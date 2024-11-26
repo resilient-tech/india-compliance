@@ -4,7 +4,6 @@
 import frappe
 from frappe.model.document import Document
 from frappe.query_builder.functions import IfNull
-from frappe.utils import get_date_str, get_first_day, get_last_day
 
 from india_compliance.gst_india.api_classes.taxpayer_base import otp_handler
 from india_compliance.gst_india.api_classes.taxpayer_returns import IMSAPI
@@ -14,14 +13,12 @@ from india_compliance.gst_india.doctype.gst_invoice_management_system import (
 )
 from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     enqueue_link_integration_request,
-    enqueue_notification,
     status_code_map,
     verify_request_in_progress,
 )
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     ReconciledData,
 )
-from india_compliance.gst_india.utils import get_month_or_quarter_dict, get_period
 from india_compliance.gst_india.utils.gstr_2 import ims
 
 
@@ -32,7 +29,10 @@ class GSTInvoiceManagementSystem(Document):
     def get_invoice_data(self):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
-        filters = self.get_filters()
+        filters = {
+            "company": self.company,
+            "company_gstin": self.company_gstin,
+        }
 
         inward_supplies = self.get_all_inward_supplies(filters=filters)
         purchases_and_bill_of_entry = self.get_all_purchases(filters=filters)
@@ -105,13 +105,6 @@ class GSTInvoiceManagementSystem(Document):
             self.IMS_RECONCILER.inward_supply, query, filters
         )
 
-        if filters.get("from_date"):
-            query = query.where(
-                self.IMS_RECONCILER.inward_supply.bill_date.between(
-                    filters.from_date, filters.to_date
-                )
-            )
-
         return query.run(as_dict=True)
 
     def get_all_purchases(self, name=None, filters=None):
@@ -133,13 +126,6 @@ class GSTInvoiceManagementSystem(Document):
             self.IMS_RECONCILER.purchase_invoice, query, filters
         )
 
-        if filters.get("from_date"):
-            query = query.where(
-                self.IMS_RECONCILER.purchase_invoice.posting_date.between(
-                    filters.from_date, filters.to_date
-                )
-            )
-
         return query.run(as_dict=True)
 
     def get_all_bill_of_entry(self, name, filters):
@@ -152,26 +138,7 @@ class GSTInvoiceManagementSystem(Document):
             self.IMS_RECONCILER.boe, query, filters
         )
 
-        if filters.get("from_date"):
-            query = query.where(
-                self.IMS_RECONCILER.boe.bill_of_entry_date.between(
-                    filters.from_date, filters.to_date
-                )
-            )
-
         return query.run(as_dict=True)
-
-    def get_filters(self):
-        month = get_month_or_quarter_dict().get(self.month)
-        return frappe._dict(
-            {
-                "company": self.company,
-                "company_gstin": self.company_gstin,
-                "from_date": get_date_str(get_first_day(f"{self.year}-{month}-01")),
-                "to_date": get_date_str(get_last_day(f"{self.year}-{month}-01")),
-                "period": str(month).zfill(2) + str(self.year),
-            }
-        )
 
 
 CATEGORIES = [
@@ -186,7 +153,7 @@ CATEGORIES = [
 
 @frappe.whitelist()
 @otp_handler
-def download_invoices_and_reconcile(company_gstin, company, year, month):
+def download_invoices_and_reconcile(company_gstin, company):
     frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
     section = ["B2B", "B2BA", "CN", "DN", "CNA", "DNA"]
@@ -204,13 +171,11 @@ def download_invoices_and_reconcile(company_gstin, company, year, month):
     filters = frappe._dict({"company": company, "company_gstin": company_gstin})
     IMSReconciler().auto_reconcile_invoices(filters)
 
-    create_return_log(company, company_gstin, month, year)
+    create_return_log(company, company_gstin)
 
 
-def create_return_log(company, company_gstin, month, year):
-    period = get_period(month, year)
-
-    if log_name := frappe.db.exists("GST Return Log", f"IMS-{period}-{company_gstin}"):
+def create_return_log(company, company_gstin):
+    if log_name := frappe.db.exists("GST Return Log", f"IMS-{company_gstin}"):
 
         ims_log = frappe.get_doc("GST Return Log", log_name)
 
@@ -218,19 +183,18 @@ def create_return_log(company, company_gstin, month, year):
         ims_log = frappe.new_doc("GST Return Log")
         ims_log.company = company
         ims_log.gstin = company_gstin
-        ims_log.return_period = period
         ims_log.return_type = "IMS"
         ims_log.insert()
 
 
 @frappe.whitelist()
 @otp_handler
-def upload_invoices(month, year, company_gstin, **kwargs):
+def upload_invoices(company_gstin):
     frappe.has_permission("GST Return Log", "write", throw=True)
 
     ims_log = frappe.get_doc(
         "GST Return Log",
-        f"IMS-{get_period(month, year)}-{company_gstin}",
+        f"IMS-{company_gstin}",
     )
 
     json_data = get_data(company_gstin)
@@ -248,23 +212,23 @@ def upload_invoices(month, year, company_gstin, **kwargs):
 
 @frappe.whitelist()
 @otp_handler
-def check_action_status(month, year, company_gstin):
+def check_action_status(company_gstin):
     frappe.has_permission("GST Return Log", "write", throw=True)
 
     ims_log = frappe.get_doc(
         "GST Return Log",
-        f"IMS-{get_period(month, year)}-{company_gstin}",
+        f"IMS-{company_gstin}",
     )
 
     return process_upload_ims(ims_log)
 
 
-def reset_invoices(company_gstin, month, year):
+def reset_invoices(company_gstin):
     frappe.has_permission("GST Return Log", "write", throw=True)
 
     ims_log = frappe.get_doc(
         "GST Return Log",
-        f"IMS-{get_period(month, year)}-{company_gstin}",
+        f"IMS-{company_gstin}",
     )
 
     json_data = get_data(company_gstin, is_reset=True)
@@ -393,18 +357,12 @@ def process_upload_ims(return_log):
     if not doc:
         return
 
-    response = api.get_return_status(return_log.return_period, doc.token)
+    response = api.get_request_status(doc.token)
     status_cd = response.get("status_cd")
 
     if status_cd != "IP":
         doc.db_set({"status": status_code_map.get(status_cd)})
-        enqueue_notification(
-            return_log.return_period,
-            "upload",
-            status_cd,
-            return_log.gstin,
-            api.request_id if status_cd == "ER" else None,
-        )
+        # TODO: Enqueue Notification
 
     if status_cd == "PE":
         response["error_report"] = get_error_list(response.get("error_report"))
