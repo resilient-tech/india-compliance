@@ -1164,5 +1164,93 @@
             },
             "success": true
         }
+    },
+    "stock_entry_with_same_gstin": {
+        "kwargs": {
+            "stock_entry_type": "Material Transfer",
+            "purpose": "Material Transfer",
+            "bill_from_address": "_Test Indian Registered Company-Billing",
+            "bill_to_address": "_Test Indian Registered Company-Billing",
+            "items":
+                [{
+                    "item_code": "_Test Trading Goods 1",
+                    "qty": 1,
+                    "gst_hsn_code": "61149090",
+                    "s_warehouse": "Finished Goods - _TIRC",
+                    "t_warehouse": "Goods In Transit - _TIRC",
+                    "amount": 100,
+                    "taxable_value": 100
+                }],
+            "company": "_Test Indian Registered Company",
+            "base_grand_total": 100
+        },
+        "values": {
+            "distance": 0.0,
+            "mode_of_transport": "Road",
+            "vehicle_no": "GJ07DL9009",
+            "sub_supply_type": "Job Work"
+        },
+        "request_data": {
+            "userGstin": "05AAACG2115R1ZN",
+            "supplyType": "O",
+            "subSupplyType": 4,
+            "docType": "CHL",
+            "docNo": "test_invoice_no",
+            "docDate": "19/07/2024",
+            "transactionType": 1,
+            "fromTrdName": "_Test Indian Registered Company",
+            "fromGstin": "05AAACG2115R1ZN",
+            "fromAddr1": "Test Address - 1",
+            "fromPlace": "Test City",
+            "fromPincode": 380015,
+            "fromStateCode": 24,
+            "actFromStateCode": 24,
+            "itemList": [
+                {
+                    "itemNo": 1,
+                    "productDesc": "Test Trading Goods 1",
+                    "hsnCode": "61149090",
+                    "qtyUnit": "NOS",
+                    "quantity": 1.0,
+                    "taxableAmount": 100.0,
+                    "sgstRate": 0.0,
+                    "cgstRate": 0.0,
+                    "igstRate": 0.0,
+                    "cessRate": 0.0,
+                    "cessNonAdvol": 0.0
+                }
+            ],
+            "totalValue": 100.0,
+            "cgstValue": 0,
+            "sgstValue": 0,
+            "igstValue": 0,
+            "cessValue": 0,
+            "cessNonAdvolValue": 0,
+            "otherValue": 0.0,
+            "totInvValue": 100.0,
+            "toTrdName": "Test Indian Registered Company",
+            "toGstin": "05AAACG2115R1ZN",
+            "toAddr1": "Test Address - 1",
+            "toPlace": "Test City",
+            "toPincode": 380015,
+            "toStateCode": 24,
+            "actToStateCode": 24,
+            "transMode": 1,
+            "transDistance": 1,
+            "vehicleNo": "GJ07DL9009",
+            "mainHsnCode": "61149090",
+            "vehicleType": "R"
+        },
+        "params": "action=GENEWAYBILL",
+        "response_data": {
+            "message": "E-Way Bill is generated successfully",
+            "result": {
+                "alert": "",
+                "ewayBillDate": "08/08/2023 03:30:00 PM",
+                "ewayBillNo": 341003383265,
+                "validUpto": "09/08/2023 11:59:00 PM"
+            },
+            "success": true
+        }
     }
 }

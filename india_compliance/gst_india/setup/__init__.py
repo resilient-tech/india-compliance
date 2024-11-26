@@ -14,6 +14,7 @@ from india_compliance.gst_india.constants.custom_fields import (
     CUSTOM_FIELDS,
     E_INVOICE_FIELDS,
     E_WAYBILL_FIELDS,
+    EDUCATION_CUSTOM_FIELDS,
     HRMS_CUSTOM_FIELDS,
     SALES_REVERSE_CHARGE_FIELDS,
 )
@@ -45,9 +46,16 @@ def create_custom_fields():
     if "hrms" in frappe.get_installed_apps():
         create_hrms_custom_fields()
 
+    if "education" in frappe.get_installed_apps():
+        create_education_custom_fields()
+
 
 def create_hrms_custom_fields():
     _create_custom_fields(HRMS_CUSTOM_FIELDS, ignore_validate=True)
+
+
+def create_education_custom_fields():
+    _create_custom_fields(EDUCATION_CUSTOM_FIELDS, ignore_validate=True)
 
 
 def create_accounting_dimension_fields():
@@ -239,10 +247,6 @@ def set_default_accounts_settings():
     """
     Accounts Settings overridden by India Compliance
 
-    - Determine Address Tax Category From:
-        This is overriden to be Billing Address, since that's the correct
-        address for determining GST applicablility
-
     - Automatically Add Taxes and Charges from Item Tax Template:
         This is overriden to be "No". Item Tax Templates are designed to have
         all GST Accounts and are primarily used for selection of tax rate.
@@ -252,11 +256,7 @@ def set_default_accounts_settings():
     show_accounts_settings_override_warning()
 
     frappe.db.set_single_value(
-        "Accounts Settings",
-        {
-            "determine_address_tax_category_from": "Billing Address",
-            "add_taxes_from_item_tax_template": 0,
-        },
+        "Accounts Settings", "add_taxes_from_item_tax_template", 0
     )
 
     frappe.db.set_default("add_taxes_from_item_tax_template", 0)

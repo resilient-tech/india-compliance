@@ -4,6 +4,7 @@ from frappe.utils import flt, fmt_money
 
 from india_compliance.gst_india.overrides.payment_entry import get_taxes_summary
 from india_compliance.gst_india.overrides.transaction import (
+    _validate_hsn_codes,
     ignore_gst_validations,
     validate_backdated_transaction,
     validate_mandatory_fields,
@@ -22,7 +23,6 @@ from india_compliance.gst_india.utils import (
 from india_compliance.gst_india.utils.e_invoice import (
     get_e_invoice_info,
     validate_e_invoice_applicability,
-    validate_hsn_codes_for_e_invoice,
 )
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 from india_compliance.gst_india.utils.transaction_data import (
@@ -58,7 +58,6 @@ def validate(doc, method=None):
 
     gst_settings = frappe.get_cached_doc("GST Settings")
 
-    validate_backdated_transaction(doc, gst_settings)
     validate_invoice_number(doc)
     validate_credit_debit_note(doc)
     validate_fields_and_set_status_for_e_invoice(doc, gst_settings)
@@ -100,7 +99,12 @@ def validate_fields_and_set_status_for_e_invoice(doc, gst_settings=None):
         _("{0} is a mandatory field for generating e-Invoices"),
     )
 
-    validate_hsn_codes_for_e_invoice(doc)
+    # Mandatory for e-Invoice before save
+    _validate_hsn_codes(
+        doc,
+        valid_hsn_length=[6, 8],
+        message=_("Since HSN/SAC Code is mandatory for generating e-Invoices.<br>"),
+    )
 
     if is_foreign_doc(doc):
         country = frappe.db.get_value("Address", doc.customer_address, "country")
@@ -139,6 +143,8 @@ def is_shipping_address_in_india(doc):
 
 
 def on_submit(doc, method=None):
+    validate_backdated_transaction(doc)
+
     if getattr(doc, "_submitted_from_ui", None) or validate_transaction(doc) is False:
         return
 

@@ -1,33 +1,31 @@
 from datetime import date
 
-import frappe
 from frappe import parse_json, read_file
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 
 from india_compliance.gst_india.utils import get_data_file_path
 from india_compliance.gst_india.utils.gstr_2 import GSTRCategory, save_gstr_2b
 from india_compliance.gst_india.utils.gstr_2.test_gstr_2a import TestGSTRMixin
 
 
-class TestGSTR2b(FrappeTestCase, TestGSTRMixin):
+class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
+        super().setUpClass()
+
         cls.gstin = "01AABCE2207R1Z5"
         cls.return_period = "032020"
         cls.doctype = "GST Inward Supply"
         cls.log_doctype = "GSTR Import Log"
-        cls.test_data = parse_json(read_file(get_data_file_path("test_gstr_2b.json")))
+        cls.test_data = parse_json(
+            read_file(get_data_file_path("test_gstr_2b_v3_0.json"))
+        )
 
         save_gstr_2b(
             cls.gstin,
             cls.return_period,
             cls.test_data,
         )
-
-    @classmethod
-    def tearDownClass(cls):
-        frappe.db.delete(cls.doctype, {"company_gstin": cls.gstin})
-        frappe.db.delete(cls.log_doctype, {"gstin": cls.gstin})
 
     def test_gstr2b_b2b(self):
         doc = self.get_doc(GSTRCategory.B2B)
@@ -206,14 +204,10 @@ class TestGSTR2b(FrappeTestCase, TestGSTRMixin):
                 "bill_date": date(2016, 3, 3),
                 "itc_availability": "Yes",
                 "document_value": 400,
-                "items": [
-                    {
-                        "igst": 0,
-                        "cgst": 200,
-                        "sgst": 200,
-                        "cess": 0,
-                    }
-                ],
+                "igst": 0,
+                "cgst": 200,
+                "sgst": 200,
+                "cess": 0,
             },
             doc,
         )
@@ -236,14 +230,10 @@ class TestGSTR2b(FrappeTestCase, TestGSTRMixin):
                 "bill_date": date(2016, 3, 3),
                 "itc_availability": "Yes",
                 "document_value": 400,
-                "items": [
-                    {
-                        "igst": 0,
-                        "cgst": 200,
-                        "sgst": 200,
-                        "cess": 0,
-                    }
-                ],
+                "igst": 0,
+                "cgst": 200,
+                "sgst": 200,
+                "cess": 0,
             },
             doc,
         )
@@ -260,13 +250,9 @@ class TestGSTR2b(FrappeTestCase, TestGSTRMixin):
                 "bill_date": date(2019, 11, 18),
                 "is_amended": 0,
                 "document_value": 246.54,
-                "items": [
-                    {
-                        "taxable_value": 123.02,
-                        "igst": 123.02,
-                        "cess": 0.5,
-                    }
-                ],
+                "taxable_value": 123.02,
+                "igst": 123.02,
+                "cess": 0.5,
             },
             doc,
         )
@@ -285,13 +271,9 @@ class TestGSTR2b(FrappeTestCase, TestGSTRMixin):
                 "bill_date": date(2019, 11, 18),
                 "is_amended": 0,
                 "document_value": 246.54,
-                "items": [
-                    {
-                        "taxable_value": 123.02,
-                        "igst": 123.02,
-                        "cess": 0.5,
-                    }
-                ],
+                "taxable_value": 123.02,
+                "igst": 123.02,
+                "cess": 0.5,
             },
             doc,
         )

@@ -10,8 +10,7 @@ india_compliance.taxes_controller = class TaxesController {
 
     setup() {
         this.fetch_round_off_accounts();
-        this.set_item_tax_template_query();
-        this.set_account_head_query();
+        this.setup_queries();
     }
 
     fetch_round_off_accounts() {
@@ -31,17 +30,15 @@ india_compliance.taxes_controller = class TaxesController {
         });
     }
 
-    set_item_tax_template_query() {
-        this.frm.set_query("item_tax_template", "items", () => {
-            return {
-                filters: {
-                    company: this.frm.doc.company,
-                },
-            };
+    setup_queries() {
+        this.frm.set_query("item_tax_template", "items", (doc, cdt, cdn) => {
+            return erpnext.TransactionController.prototype.set_query_for_item_tax_template(
+                doc,
+                cdt,
+                cdn
+            );
         });
-    }
 
-    set_account_head_query() {
         this.frm.set_query("account_head", "taxes", () => {
             return {
                 filters: {
@@ -169,6 +166,7 @@ india_compliance.taxes_controller = class TaxesController {
         });
 
         this.frm.set_value(this.get_fieldname("total_taxes"), total_taxes);
+
         this.update_base_grand_total();
         this.frm.refresh_field("taxes");
     }
@@ -176,7 +174,19 @@ india_compliance.taxes_controller = class TaxesController {
     update_base_grand_total() {
         const grand_total =
             this.calculate_total_taxable_value() + this.get_value("total_taxes");
-        this.frm.set_value(this.get_fieldname("base_grand_total"), grand_total);
+
+        const field_name = this.get_fieldname("base_grand_total");
+        if (this.frm.fields_dict[field_name]) {
+            this.frm.set_value(field_name, grand_total);
+        }
+    }
+
+    update_total_taxes() {
+        const total_taxes = this.frm.doc.taxes.reduce(
+            (total, row) => total + row.tax_amount,
+            0
+        );
+        this.frm.set_value("total_taxes", total_taxes);
     }
 
     get_tax_amount(tax_row) {
@@ -185,21 +195,26 @@ india_compliance.taxes_controller = class TaxesController {
          */
 
         const item_wise_tax_rates = JSON.parse(tax_row.item_wise_tax_rates || "{}");
-        return this.frm.doc.items.reduce((total, item) => {
-            let multiplier =
-                item.charge_type === "On Item Quantity"
-                    ? item.qty
-                    : item.taxable_value / 100;
-            return (
-                total + multiplier * (item_wise_tax_rates[item.name] || tax_row.rate)
-            );
-        }, 0);
+        return (
+            this.frm.doc.items.reduce((total, item) => {
+                let multiplier =
+                    item.charge_type === "On Item Quantity"
+                        ? item.qty
+                        : item.taxable_value / 100;
+                return (
+                    total +
+                    multiplier * (item_wise_tax_rates[item.name] || tax_row.rate)
+                );
+            }, 0) || 0
+        );
     }
 
     calculate_total_taxable_value() {
-        return this.frm.doc.items.reduce((total, item) => {
-            return total + item.taxable_value;
-        }, 0);
+        return (
+            this.frm.doc.items.reduce((total, item) => {
+                return total + item.taxable_value;
+            }, 0) || 0
+        );
     }
 
     get_value(field, doc, default_value) {
@@ -255,7 +270,7 @@ frappe.ui.form.on("India Compliance Taxes and Charges", {
 
     async charge_type(frm, cdt, cdn) {
         const row = locals[cdt][cdn];
-        if (!row.charge_type) {
+        if (!row.charge_type || row.charge_type === "Actual") {
             row.rate = 0;
             row.item_wise_tax_rates = "{}";
             frm.refresh_field("taxes");
@@ -263,5 +278,9 @@ frappe.ui.form.on("India Compliance Taxes and Charges", {
             await frm.taxes_controller.set_item_wise_tax_rates(null, cdn);
             frm.taxes_controller.update_tax_amount(cdt, cdn);
         }
+    },
+
+    taxes_remove(frm) {
+        frm.taxes_controller.update_total_taxes();
     },
 });

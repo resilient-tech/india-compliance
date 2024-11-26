@@ -5,7 +5,7 @@ import json
 import re
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 from frappe.utils import today
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
@@ -18,9 +18,12 @@ from india_compliance.gst_india.utils import get_gst_accounts_by_type
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
 
 
-class TestBillofEntry(FrappeTestCase):
+class TestBillofEntry(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
+        # don't create test objects
+        frappe.local.test_objects["Bill of Entry"] = []
+
         super().setUpClass()
         frappe.db.set_single_value("GST Settings", "enable_overseas_transactions", 1)
 

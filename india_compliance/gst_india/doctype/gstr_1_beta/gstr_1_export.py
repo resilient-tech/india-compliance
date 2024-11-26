@@ -202,7 +202,13 @@ class GovExcel(DataProcessor):
         """
         Add draft count to cancelled count for DOC_ISSUE category
         """
-        for doc in data:
+        for doc in data.copy():
+            if doc.get(GSTR1_DataField.DOC_TYPE.value).startswith(
+                "Excluded from Report"
+            ):
+                data.remove(doc)
+                continue
+
             doc[GSTR1_DataField.CANCELLED_COUNT.value] += doc.get(
                 GSTR1_DataField.DRAFT_COUNT.value, 0
             )
@@ -2037,7 +2043,7 @@ def download_reconcile_as_excel(company_gstin, month_or_quarter, year):
 
 
 @frappe.whitelist()
-def download_gstr_1_json(
+def get_gstr_1_json(
     company_gstin,
     year,
     month_or_quarter,
@@ -2062,6 +2068,7 @@ def download_gstr_1_json(
         if subcategory in {
             GSTR1_SubCategory.NIL_EXEMPT.value,
             GSTR1_SubCategory.HSN.value,
+            GSTR1_SubCategory.DOC_ISSUE.value,
         }:
             continue
 

@@ -270,7 +270,7 @@ class GSTR3BReport(Document):
 
     def update_imports_from_bill_of_entry(self, itc_details):
         boe = frappe.qb.DocType("Bill of Entry")
-        boe_taxes = frappe.qb.DocType("Bill of Entry Taxes")
+        boe_taxes = frappe.qb.DocType("India Compliance Taxes and Charges")
 
         def _get_tax_amount(account_type):
             return (
@@ -443,9 +443,11 @@ class GSTR3BReport(Document):
                 if tax.item_wise_tax_detail:
                     try:
                         item_wise_detail = json.loads(tax.item_wise_tax_detail)
-                        for item_code, tax_amounts in item_wise_detail.items():
+                        for item_code, taxes in item_wise_detail.items():
                             gst_treatment = item_code_gst_treatment_map.get(item_code)
-                            invoice_items[gst_treatment][gst_tax_type] += tax_amounts[1]
+                            invoice_items[gst_treatment][gst_tax_type] += taxes.get(
+                                "tax_amount"
+                            )
 
                     except ValueError:
                         continue
