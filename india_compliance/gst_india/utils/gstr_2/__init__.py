@@ -5,12 +5,16 @@ from frappe import _
 from frappe.query_builder.terms import Criterion
 from frappe.utils import cint
 
-from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR2aAPI, GSTR2bAPI
+from india_compliance.gst_india.api_classes.taxpayer_returns import (
+    IMSAPI,
+    GSTR2aAPI,
+    GSTR2bAPI,
+)
 from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
     create_import_log,
 )
 from india_compliance.gst_india.utils import get_party_for_gstin
-from india_compliance.gst_india.utils.gstr_2 import gstr_2a, gstr_2b
+from india_compliance.gst_india.utils.gstr_2 import gstr_2a, gstr_2b, ims
 from india_compliance.gst_india.utils.gstr_utils import ReturnType
 
 
@@ -34,6 +38,15 @@ ACTIONS = {
     "IMPG": GSTRCategory.IMPG,
     "IMPGSEZ": GSTRCategory.IMPGSEZ,
 }
+
+CATEGORIES = [
+    "B2B",
+    "B2BA",
+    "DN",
+    "DNA",
+    "CN",
+    "CNA",
+]
 
 GSTR_MODULES = {
     ReturnType.GSTR2A.value: gstr_2a,
@@ -328,3 +341,41 @@ def end_transaction_progress(return_period):
         user=frappe.session.user,
         doctype="Purchase Reconciliation Tool",
     )
+
+
+def download_ims_invoices(company_gstin, company):
+    reset_previous_ims_action()
+    api = IMSAPI(company_gstin)
+
+    for category in CATEGORIES:
+        response = api.get_data(category)
+
+        if response.error_type == "no_docs_found":
+            continue
+
+        getattr(ims, category)(company_gstin, company).create_transactions(
+            response.get(category.lower(), [])
+        )
+
+    create_return_log(company, company_gstin)
+
+
+def create_return_log(company, company_gstin):
+    if log_name := frappe.db.exists("GST Return Log", f"IMS-{company_gstin}"):
+        ims_log = frappe.get_doc("GST Return Log", log_name)
+
+    else:
+        ims_log = frappe.new_doc("GST Return Log")
+        ims_log.return_period = "2024"
+        ims_log.company = company
+        ims_log.gstin = company_gstin
+        ims_log.return_type = "IMS"
+        ims_log.insert()
+
+
+def reset_previous_ims_action():
+    inward_supply = frappe.qb.DocType("GST Inward Supply")
+
+    frappe.qb.update(inward_supply).set(inward_supply.previous_ims_action, "").set(
+        inward_supply.ims_action, ""
+    ).run()

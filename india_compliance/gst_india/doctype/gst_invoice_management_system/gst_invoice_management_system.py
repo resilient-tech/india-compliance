@@ -19,7 +19,7 @@ from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     ReconciledData,
 )
-from india_compliance.gst_india.utils.gstr_2 import ims
+from india_compliance.gst_india.utils.gstr_2 import download_ims_invoices, ims
 
 
 class GSTInvoiceManagementSystem(Document):
@@ -156,35 +156,12 @@ CATEGORIES = [
 def download_invoices_and_reconcile(company_gstin, company):
     frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
-    section = ["B2B", "B2BA", "CN", "DN", "CNA", "DNA"]
-    response = IMSAPI(company_gstin).get_data(section)
-
-    if response.error_type == "no_docs_found":
-        return
-
-    for category in CATEGORIES:
-        getattr(ims, category)(company_gstin, company).create_transactions(
-            response.get(category.lower(), [])
-        )
+    # Download Invoices
+    download_ims_invoices(company_gstin, company)
 
     # Auto_Reconcile Invoices
     filters = frappe._dict({"company": company, "company_gstin": company_gstin})
     IMSReconciler().auto_reconcile_invoices(filters)
-
-    create_return_log(company, company_gstin)
-
-
-def create_return_log(company, company_gstin):
-    if log_name := frappe.db.exists("GST Return Log", f"IMS-{company_gstin}"):
-
-        ims_log = frappe.get_doc("GST Return Log", log_name)
-
-    else:
-        ims_log = frappe.new_doc("GST Return Log")
-        ims_log.company = company
-        ims_log.gstin = company_gstin
-        ims_log.return_type = "IMS"
-        ims_log.insert()
 
 
 @frappe.whitelist()
