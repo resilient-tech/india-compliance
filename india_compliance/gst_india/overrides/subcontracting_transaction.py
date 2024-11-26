@@ -247,12 +247,13 @@ def validate_transaction(doc, method=None):
     validate_items(doc)
 
     if doc.doctype == "Stock Entry":
-        company_address_field = "bill_from_address"
         if not doc.is_return:
+            company_address_field = "bill_from_address"
             company_gstin_field = "bill_from_gstin"
             party_gstin_field = "bill_to_gstin"
             gst_category_field = "bill_to_gst_category"
         else:
+            company_address_field = "bill_to_address"
             company_gstin_field = "bill_to_gstin"
             party_gstin_field = "bill_from_gstin"
             gst_category_field = "bill_from_gst_category"
@@ -507,5 +508,9 @@ def ignore_gst_validations_for_subcontracting(doc):
     if doc.doctype != "Stock Entry":
         return False
 
+    # ignore if company address is not set
     if is_outward_stock_entry(doc) and not doc.bill_from_address:
+        return True
+
+    if doc.is_return and not doc.bill_to_address:
         return True

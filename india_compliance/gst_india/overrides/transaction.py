@@ -440,7 +440,9 @@ class GSTAccounts:
         if self.is_sales_transaction:
             company_address_field = "company_address"
         elif self.doc.doctype == "Stock Entry":
-            company_address_field = "bill_from_address"
+            company_address_field = (
+                "bill_to_address" if self.doc.is_return else "bill_from_address"
+            )
         else:
             company_address_field = "billing_address"
 
@@ -628,14 +630,14 @@ def validate_place_of_supply(doc):
 
 def is_inter_state_supply(doc):
     if doc.doctype == "Stock Entry":
-        gst_category = (
+        party_gst_category = (
             doc.bill_from_gst_category if doc.is_return else doc.bill_to_gst_category
         )
 
     else:
-        gst_category = doc.gst_category
+        party_gst_category = doc.gst_category
 
-    return gst_category == "SEZ" or (
+    return party_gst_category == "SEZ" or (
         doc.place_of_supply[:2] != get_source_state_code(doc)
     )
 
@@ -657,7 +659,7 @@ def get_source_state_code(doc):
                 "gst_state_number",
             )
 
-        return doc.bill_from_gstin[:2]
+        return (doc.bill_from_gstin or doc.bill_to_gstin)[:2]
 
     if doc.gst_category == "Overseas":
         return "96"
