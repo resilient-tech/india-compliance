@@ -1,5 +1,4 @@
 import frappe
-from frappe.query_builder.functions import IfNull
 from frappe.utils.data import format_date
 
 from india_compliance.gst_india.constants import STATE_NUMBERS
@@ -14,7 +13,6 @@ class IMS:
     ACTION_MAP = {"A": "Accept", "R": "Reject", "P": "Pending", "N": "No Action"}
 
     def __init__(self, company_gstin, company=None):
-        self.existing_transactions = self.get_existing_transactions()
         self.company_gstin = company_gstin
         self.company = company
 
@@ -23,11 +21,6 @@ class IMS:
 
         for transaction in transactions:
             create_inward_supply(transaction)
-
-            if transaction.get("unique_key") in self.existing_transactions:
-                self.existing_transactions.pop(transaction.get("unique_key"))
-
-        self.delete_missing_transactions()
 
     def get_all_transactions(self, invoices):
         transactions = []
@@ -67,29 +60,6 @@ class IMS:
             "cess": invoice.cess,
             "taxable_value": invoice.txval,
         }
-
-    def get_existing_transactions(self):
-        inward_supply = frappe.qb.DocType("GST Inward Supply")
-        self.existing_transactions = (
-            frappe.qb.from_(inward_supply)
-            .select(
-                inward_supply.name, inward_supply.supplier_gstin, inward_supply.bill_no
-            )
-            .where(IfNull(inward_supply.sup_return_period, "") == "")
-            .where(IfNull(inward_supply.previous_ims_action, "") != "")
-        ).run(as_dict=True)
-
-        return {
-            f"{transaction.get('supplier_gstin', '')}-{transaction.get('bill_no', '')}": transaction.get(
-                "name"
-            )
-            for transaction in self.existing_transactions
-        }
-
-    def delete_missing_transactions(self):
-        if self.existing_transactions:
-            for inward_supply_name in self.existing_transactions.values():
-                frappe.delete_doc("GST Inward Supply", inward_supply_name)
 
 
 class B2B(IMS):
@@ -133,13 +103,13 @@ class B2BA(B2B):
         return invoice_details
 
 
-class B2BDN(B2B):
+class DN(B2B):
     def get_invoice_details(self, invoice):
         return {
             "bill_no": invoice.nt_num,
             "bill_date": parse_datetime(invoice.nt_dt, day_first=True),
             # "supply_type": "", TODO: Check options
-            "classification": "B2B",
+            "classification": "CDNR",
             "doc_type": "Debit Note",
         }
 
@@ -150,7 +120,7 @@ class B2BDN(B2B):
         }
 
 
-class B2BDNA(B2BDN):
+class DNA(DN):
     def get_invoice_details(self, invoice):
         invoice_details = super().get_invoice_details(invoice)
         invoice_details.update(
@@ -174,7 +144,7 @@ class B2BDNA(B2BDN):
         return invoice_details
 
 
-class B2BCN(B2BDN):
+class CN(DN):
     def get_invoice_details(self, invoice):
         invoice_details = super().get_invoice_details(invoice)
         invoice_details.update(
@@ -185,7 +155,7 @@ class B2BCN(B2BDN):
         return invoice_details
 
 
-class B2BCNA(B2BCN):
+class CNA(CN):
     def get_invoice_details(self, invoice):
         invoice_details = super().get_invoice_details(invoice)
         invoice_details.update(
