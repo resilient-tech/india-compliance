@@ -155,6 +155,8 @@ class IMS {
         });
 
         this.rendered_data = this.filtered_data;
+
+        this.set_actions_summary();
     }
 
     refresh_filter_fields() {
@@ -255,6 +257,12 @@ class IMS {
                 fieldtype: "Select",
                 options: ["Accept", "Reject", "Pending", "No Action"],
             },
+            {
+                label: "Document Type",
+                fieldname: "doc_type",
+                fieldtype: "Select",
+                options: ["Invoice", "Credit Note", "Debit Note"],
+            },
         ];
 
         fields.forEach(field => (field.parent = "GST Invoice Management System"));
@@ -315,6 +323,15 @@ class IMS {
 
         this.tabs.invoice_tab.$datatable.on("click", ".ims-action", function (e) {
             add_filter(e, "ims_action", $(this).text(), me);
+        });
+
+        this.tabs.action_tab.$datatable.on("click", ".invoice-category", function (e) {
+            const category_map = {
+                "B2B-Invoices": "Invoice",
+                "B2B-Credit Notes": "Credit Note",
+                "B2B-Debit Notes": "Debit Note",
+            };
+            add_filter(e, "doc_type", category_map[$(this).text()], me);
         });
 
         this.tabs.invoice_tab.$datatable.on("click", ".btn.eye", function (e) {
@@ -509,6 +526,8 @@ class IMS {
                 label: "Category",
                 fieldname: "category",
                 width: 200,
+                _value: (...args) =>
+                    `<a href="#" class='invoice-category'>${args[0]}</a>`,
             },
             {
                 label: "Accepted",
@@ -516,13 +535,13 @@ class IMS {
                 width: 200,
             },
             {
-                label: "Rejected",
-                fieldname: "rejected",
+                label: "Pending",
+                fieldname: "pending",
                 width: 200,
             },
             {
-                label: "Pending",
-                fieldname: "pending",
+                label: "Rejected",
+                fieldname: "rejected",
                 width: 200,
             },
             {
@@ -614,6 +633,55 @@ class IMS {
             },
             now ? 0 : this.RETRY_INTERVALS[retries]
         );
+    }
+
+    async set_actions_summary() {
+        const actions_data = this.get_action_data();
+
+        if ($(".action-performed-summary").length) {
+            $(".action-performed-summary").remove();
+        }
+
+        $(function () {
+            $('[data-toggle="tooltip"]').tooltip();
+        });
+
+        const actions_summary = {
+            accepted: { count: 0, color: "#66f542" },
+            pending: { count: 0, color: "#f5aa42" },
+            rejected: { count: 0, color: "#e0473f" },
+            no_action: { count: 0, color: "#c9c4c3" },
+        };
+
+        actions_data.forEach(row => {
+            actions_summary.accepted.count += row.accepted;
+            actions_summary.pending.count += row.pending;
+            actions_summary.rejected.count += row.rejected;
+            actions_summary.no_action.count += row.no_action;
+        });
+
+        const action_performed_cards = Object.entries(actions_summary)
+            .map(
+                ([action, data]) => `
+            <div>
+                <h5>${convert_to_title_case(action)}</h5>
+                </br>
+                <h4 class="text-center" style="color: ${
+                    data.color
+                }; font-size: x-large;">
+                    ${data.count}</h4>
+            </div>`
+            )
+            .join("");
+
+        const action_performed_html = `
+            <div class="action-performed-summary m-3 d-flex justify-content-around align-items-center" style="border-bottom: 1px solid var(--border-color);">
+                ${action_performed_cards}
+            </div>
+       `;
+
+        let element = $('[data-fieldname="data_section"]');
+        element.prepend(action_performed_html);
     }
 }
 
@@ -872,4 +940,11 @@ function get_affected_rows(tab, selection, data) {
         );
 
     return invoices.map(row => row.inward_supply_name);
+}
+
+function convert_to_title_case(str) {
+    return str
+        .split("_")
+        .map(word => word[0].toUpperCase() + word.slice(1).toLowerCase())
+        .join(" ");
 }

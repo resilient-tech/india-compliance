@@ -8,7 +8,7 @@
   "company",
   "column_break_2",
   "company_gstin",
-  "section_break_11",
+  "data_section",
   "invoice_html",
   "invoice_empty_state",
   "no_invoice_data"
@@ -30,10 +30,6 @@
    "label": "Company GSTIN"
   },
   {
-   "fieldname": "section_break_11",
-   "fieldtype": "Section Break"
-  },
-  {
    "depends_on": "eval: doc.__invoice_data && doc.__invoice_data.length",
    "fieldname": "invoice_html",
    "fieldtype": "HTML"
@@ -49,13 +45,17 @@
    "fieldname": "no_invoice_data",
    "fieldtype": "HTML",
    "options": "<img alt=\"No Data\" src=\"/assets/frappe/images/ui-states/list-empty-state.svg\">\n\t<p class=\"text-muted\">{{ __(\"No data available for selected filters\") }}</p>"
+  },
+  {
+   "fieldname": "data_section",
+   "fieldtype": "Section Break"
   }
  ],
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-11-26 11:37:44.379381",
+ "modified": "2024-11-26 16:02:18.169431",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Invoice Management System",
