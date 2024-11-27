@@ -1063,6 +1063,8 @@ class TestEWaybill(IntegrationTestCase):
             frappe.get_doc("e-Waybill Log", {"reference_name": stock_entry.name}),
         )
 
+        stock_entry.run_method("onload")
+
 
 def update_dates_for_test_data(test_data):
     """Update dates in test data"""
