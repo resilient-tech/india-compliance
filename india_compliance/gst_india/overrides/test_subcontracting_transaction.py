@@ -147,6 +147,29 @@ def make_stock_transfer_entry(**args):
     return doc.submit()
 
 
+def make_stock_entry(**args):
+    items = [
+        {
+            "item_code": "_Test Trading Goods 1",
+            "qty": 1,
+            "s_warehouse": args.get("from_warehouse") or "Stores - _TIRC",
+            "t_warehouse": args.get("to_warehouse") or "Finished Goods - _TIRC",
+            "amount": 100,
+        }
+    ]
+    se = frappe.new_doc("Stock Entry")
+    se.update(
+        {
+            "purpose": args.get("purpose") or "Material Receipt",
+            "stock_entry_type": args.get("purpose") or "Material Receipt",
+            "company": args.get("company") or "_Test Indian Registered Company",
+            "items": args.get("items") or items,
+        }
+    )
+
+    return se
+
+
 SERVICE_ITEM = {
     "item_code": "Subcontracted Service Item 1",
     "qty": 10,
@@ -209,6 +232,30 @@ class TestSubcontractingTransaction(IntegrationTestCase):
         stock_entry.save()
 
         self.assertEqual(stock_entry.select_print_heading, "Credit Note")
+
+    def test_for_unregistered_company(self):
+        po = create_purchase_order(
+            company="_Test Indian Unregistered Company",
+            supplier_warehouse="Finished Goods - _TIUC",
+            **SERVICE_ITEM,
+        )
+
+        sco = create_subcontracting_order(po_name=po.name)
+        self.assertEqual(sco.total_taxes, None)
+
+        rm_items = get_rm_items(sco.supplied_items)
+        args = {
+            "sco_no": sco.name,
+            "rm_items": rm_items,
+            "bill_from_address": "_Test Indian Unregistered Company-Billing",
+            "bill_to_address": "_Test Unregistered Supplier-Billing",
+        }
+        se = make_stock_transfer_entry(**args)
+        self.assertEqual(se.total_taxes, 0.0)
+
+        scr = make_subcontracting_receipt(sco.name)
+        scr.submit()
+        self.assertEqual(scr.total_taxes, 0.0)
 
     def test_validation_for_doc_references(self):
         from india_compliance.gst_india.overrides.subcontracting_transaction import (
