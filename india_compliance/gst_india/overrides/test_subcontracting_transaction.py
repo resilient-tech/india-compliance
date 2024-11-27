@@ -106,7 +106,6 @@ def create_purchase_order(**args):
         {
             "doctype": "Purchase Order",
             "is_subcontracted": 1,
-            "supplier_warehouse": "Finished Goods - _TIRC",
         }
     )
 
@@ -135,8 +134,10 @@ def make_stock_transfer_entry(**args):
     ste_dict = make_rm_stock_entry(args.sco_no, items)
     ste_dict.update(
         {
-            "bill_from_address": "_Test Indian Registered Company-Billing",
-            "bill_to_address": "_Test Registered Supplier-Billing",
+            "bill_from_address": args.bill_from_address
+            or "_Test Indian Registered Company-Billing",
+            "bill_to_address": args.bill_to_address
+            or "_Test Registered Supplier-Billing",
         }
     )
 
@@ -214,7 +215,9 @@ class TestSubcontractingTransaction(IntegrationTestCase):
             get_stock_entry_references,
         )
 
-        po = create_purchase_order(**SERVICE_ITEM)
+        po = create_purchase_order(
+            **SERVICE_ITEM, supplier_warehouse="Finished Goods - _TIRC"
+        )
         sco = create_subcontracting_order(po_name=po.name)
 
         rm_items = get_rm_items(sco.supplied_items)
@@ -268,7 +271,12 @@ class TestSubcontractingTransaction(IntegrationTestCase):
         ]
 
         po = create_purchase_order(
-            items=service_item, supplier="_Test Unregistered Supplier"
+            items=service_item,
+            supplier="_Test Unregistered Supplier",
+            supplier_warhouse="Finished Goods - _TIUC",
         )
 
-        create_subcontracting_order(po_name=po.name)
+        sco = create_subcontracting_order(po_name=po.name, do_not_save=True)
+        sco.supplier_warehouse = "Finished Goods - _TIUC"
+        sco.save()
+        sco.submit()
