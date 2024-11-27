@@ -285,6 +285,32 @@ class TestSubcontractingTransaction(IntegrationTestCase):
         scr.reload()
         self.assertEqual(scr.total_taxes, 252.0)
 
+    def test_standalone_stock_entry(self):
+        purpose = "Send to Subcontractor"
+        se = make_stock_entry(purpose=purpose)
+
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            re.compile(
+                r"^(Please set Bill From to ensure Company GSTIN is fetched in the transaction.*)"
+            ),
+            se.save,
+        )
+
+        se.bill_from_address = "_Test Indian Registered Company-Billing"
+
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            re.compile(
+                r"^(Bill To GST Category is a mandatory field for GST Transactions.*)"
+            ),
+            se.save,
+        )
+
+        se.bill_to_address = "_Test Registered Supplier-Billing"
+
+        se.save()
+
     def test_validation_for_doc_references(self):
         from india_compliance.gst_india.overrides.subcontracting_transaction import (
             get_stock_entry_references,
