@@ -257,6 +257,34 @@ class TestSubcontractingTransaction(IntegrationTestCase):
         scr.submit()
         self.assertEqual(scr.total_taxes, 0.0)
 
+    def test_stock_entry_for_material_receipt(self):
+        se = make_stock_entry()
+        se.save()
+
+        self.assertEqual(se.total_taxes, None)
+
+    def test_subcontracting_validations(self):
+        po = create_purchase_order(
+            **SERVICE_ITEM, supplier_warehouse="Finished Goods - _TIRC"
+        )
+        sco = create_subcontracting_order(po_name=po.name)
+
+        rm_items = get_rm_items(sco.supplied_items)
+        make_stock_transfer_entry(sco_no=sco.name, rm_items=rm_items)
+
+        scr = make_subcontracting_receipt(sco.name)
+        scr.save()
+
+        scr.billing_address = None
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            re.compile(r"^(Please set Select Billing Address to ensure*)"),
+            scr.save,
+        )
+
+        scr.reload()
+        self.assertEqual(scr.total_taxes, 252.0)
+
     def test_validation_for_doc_references(self):
         from india_compliance.gst_india.overrides.subcontracting_transaction import (
             get_stock_entry_references,
