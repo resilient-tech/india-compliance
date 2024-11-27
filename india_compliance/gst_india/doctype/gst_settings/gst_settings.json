@@ -642,11 +642,13 @@
    "read_only_depends_on": "eval: doc.enable_e_invoice"
   },
   {
-   "depends_on": "eval: doc.cancel_e_waybill && (!doc.enable_e_invoice || !doc.cancel_e_invoice)",
+   "default": "Data Entry Mistake",
+   "depends_on": "eval: doc.enable_e_waybill && doc.cancel_e_waybill && (!doc.enable_e_invoice || !doc.cancel_e_invoice)",
    "fieldname": "reason_for_e_waybill_cancel",
-   "fieldtype": "Data",
+   "fieldtype": "Select",
    "label": "Reason for e-Waybill cancel",
-   "mandatory_depends_on": "eval: doc.cancel_e_waybill && (!doc.enable_e_invoice || !doc.cancel_e_invoice)"
+   "mandatory_depends_on": "eval: doc.enable_e_waybill && doc.cancel_e_waybill && (!doc.enable_e_invoice || !doc.cancel_e_invoice)",
+   "options": "Duplicate\nOrder Cancelled\nData Entry Mistake\nOthers"
   },
   {
    "default": "0",
@@ -656,17 +658,19 @@
    "label": "Cancel e-Invoice on cancel of Invoice"
   },
   {
+   "default": "Data Entry Mistake",
    "depends_on": "eval: doc.enable_e_invoice && doc.cancel_e_invoice",
    "fieldname": "reason_for_e_invoice_cancel",
-   "fieldtype": "Data",
+   "fieldtype": "Select",
    "label": "Reason for e-Invoice Cancel",
-   "mandatory_depends_on": "eval: doc.enable_e_invoice && doc.cancel_e_invoice"
+   "mandatory_depends_on": "eval: doc.enable_e_invoice && doc.cancel_e_invoice",
+   "options": "Duplicate\nOrder Cancelled\nData Entry Mistake\nOthers"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-11-26 10:57:40.663239",
+ "modified": "2024-11-27 16:55:43.801462",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

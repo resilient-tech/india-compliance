@@ -1,6 +1,6 @@
 import frappe
 from frappe import _, bold
-from frappe.utils import flt, fmt_money
+from frappe.utils import add_days, days_diff, flt, fmt_money
 
 from india_compliance.gst_india.overrides.payment_entry import get_taxes_summary
 from india_compliance.gst_india.overrides.transaction import (
@@ -25,7 +25,10 @@ from india_compliance.gst_india.utils.e_invoice import (
     get_e_invoice_info,
     validate_e_invoice_applicability,
 )
-from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
+from india_compliance.gst_india.utils.e_waybill import (
+    _cancel_e_waybill,
+    get_e_waybill_info,
+)
 from india_compliance.gst_india.utils.transaction_data import (
     validate_unique_hsn_and_uom,
 )
@@ -208,20 +211,43 @@ def before_cancel(doc, method=None):
 
 
 def on_cancel(doc, method=None):
-    if (
-        not doc.irn
-        or not frappe.form_dict
-        or frappe.form_dict.cmd.endswith("cancel_e_invoice")
-    ):
+    if not frappe.form_dict or frappe.form_dict.cmd.endswith("cancel_e_invoice"):
         return
 
-    values = {
-        "irn": doc.irn,
-        "reason": "Data Entry Mistake",
-        "ewaybill": doc.ewaybill or "",
-        "remark": "",
-    }
-    cancel_e_invoice(doc.name, values, show_msg=False)
+    gst_settings = frappe.get_cached_doc("GST Settings")
+
+    def cancel_document(timestamp, reason, cancel_func, action_type):
+        if not timestamp or days_diff(add_days(timestamp, 1), timestamp) > 1:
+            return
+
+        values = {
+            "irn": doc.irn or "",
+            "reason": reason,
+            "ewaybill": doc.ewaybill or "",
+            "remark": "",
+        }
+        cancel_func(
+            doc.name if action_type == "e_invoice" else doc, values, show_msg=False
+        )
+
+    if doc.irn and gst_settings.enable_e_invoice and gst_settings.cancel_e_invoice:
+        acknowledged_on = get_e_invoice_info(doc).get("acknowledged_on")
+        cancel_document(
+            acknowledged_on,
+            gst_settings.reason_for_e_invoice_cancel,
+            cancel_e_invoice,
+            "e_invoice",
+        )
+        return
+
+    if doc.ewaybill and gst_settings.enable_e_waybill and gst_settings.cancel_e_waybill:
+        created_on = get_e_waybill_info(doc).get("created_on")
+        cancel_document(
+            created_on,
+            gst_settings.reason_for_e_waybill_cancel,
+            _cancel_e_waybill,
+            "e_waybill",
+        )
 
 
 def is_e_waybill_applicable(doc, gst_settings=None):
