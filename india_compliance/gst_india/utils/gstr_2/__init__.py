@@ -39,14 +39,14 @@ ACTIONS = {
     "IMPGSEZ": GSTRCategory.IMPGSEZ,
 }
 
-CATEGORIES = [
-    "B2B",
-    "B2BA",
-    "DN",
-    "DNA",
-    "CN",
-    "CNA",
-]
+CATEGORIES = {
+    "B2B": "b2b",
+    "B2BA": "b2ba",
+    "DN": "b2bdn",
+    "DNA": "b2bdna",
+    "CN": "b2bcn",
+    "CNA": "b2bcna",
+}
 
 GSTR_MODULES = {
     ReturnType.GSTR2A.value: gstr_2a,
@@ -354,7 +354,7 @@ def download_ims_invoices(company_gstin, company):
             continue
 
         getattr(ims, category)(company_gstin, company).create_transactions(
-            response.get(category.lower(), [])
+            response.get(CATEGORIES[category], [])
         )
 
     create_return_log(company, company_gstin)

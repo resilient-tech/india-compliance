@@ -334,7 +334,7 @@ class IMSAPI(ReturnsAPI):
             action="GETINV",
             params={
                 "gstin": self.company_gstin,
-                "section": section,  # section is a list
+                "section": section,
             },
             endpoint=self.END_POINT,
         )
