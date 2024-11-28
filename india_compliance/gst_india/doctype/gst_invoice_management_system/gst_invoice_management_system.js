@@ -65,34 +65,24 @@ frappe.ui.form.on("GST Invoice Management System", {
                 });
             });
 
-            frm.add_custom_button(
-                __("Accept"),
-                () => {
-                    apply_bulk_action(frm, "Accept");
-                },
-                __("Actions")
+            if (frm.get_active_tab()?.df.fieldname == "invoice_tab") {
+                frm.add_custom_button(
+                    __("Unlink"),
+                    () => reconciliation.unlink_documents(frm, frm.ims),
+                    __("Actions")
+                );
+                frm.add_custom_button(__("dropdown-divider"), () => {}, __("Actions"));
+            }
+            ["Accept", "Pending", "Reject"].forEach(action =>
+                frm.add_custom_button(
+                    __(action),
+                    () => apply_bulk_action(frm, action),
+                    __("Actions")
+                )
             );
-            frm.add_custom_button(
-                __("Reject"),
-                () => {
-                    apply_bulk_action(frm, "Reject");
-                },
-                __("Actions")
-            );
-            frm.add_custom_button(
-                __("Pending"),
-                () => {
-                    apply_bulk_action(frm, "Pending");
-                },
-                __("Actions")
-            );
-            frm.add_custom_button(
-                __("No Action"),
-                () => {
-                    apply_bulk_action(frm, "No Action");
-                },
-                __("Actions")
-            );
+            frm.$wrapper
+                .find("[data-label='dropdown-divider']")
+                .addClass("dropdown-divider");
 
             // move actions button next to filters
             for (let button of $(".custom-actions .inner-group-button")) {
@@ -754,6 +744,7 @@ class DetailViewDialog {
         this.dialog = new frappe.ui.Dialog({
             title: `Detail View (${this.comparision_data.classification})`,
             fields: [
+                ...this._get_document_link_fields(),
                 {
                     fieldtype: "HTML",
                     fieldname: "supplier_details",
@@ -769,6 +760,70 @@ class DetailViewDialog {
                 },
             ],
         });
+    }
+
+    _get_document_link_fields() {
+        if (this.row.match_status == "Missing in 2A/2B")
+            this.missing_doctype = "GST Inward Supply";
+        else if (this.row.match_status == "Missing in PI")
+            this.missing_doctype = "Purchase Invoice";
+        else return [];
+
+        return [
+            {
+                label: "GSTIN",
+                fieldtype: "Data",
+                fieldname: "supplier_gstin",
+                default: this.row.supplier_gstin,
+            },
+            {
+                label: "Date Range",
+                fieldtype: "DateRange",
+                fieldname: "date_range",
+                default: [
+                    this.frm.doc.purchase_from_date,
+                    this.frm.doc.purchase_to_date,
+                ],
+            },
+            {
+                fieldtype: "Column Break",
+            },
+            {
+                label: "Document Type",
+                fieldtype: "Autocomplete",
+                fieldname: "doctype",
+                default: this.missing_doctype,
+                options:
+                    this.missing_doctype == "GST Inward Supply"
+                        ? ["GST Inward Supply"]
+                        : ["Purchase Invoice", "Bill of Entry"],
+
+                read_only_depends_on: `eval: ${
+                    this.missing_doctype == "GST Inward Supply"
+                }`,
+
+                onchange: () => {
+                    const doctype = this.dialog.get_value("doctype");
+                    this.dialog
+                        .get_field("show_matched")
+                        .set_label(`Show matched options for linking ${doctype}`);
+                },
+            },
+            {
+                label: `Document Name`,
+                fieldtype: "Autocomplete",
+                fieldname: "link_with",
+                onchange: () => this.refresh_data(),
+            },
+            {
+                label: `Show matched options for linking ${this.missing_doctype}`,
+                fieldtype: "Check",
+                fieldname: "show_matched",
+            },
+            {
+                fieldtype: "Section Break",
+            },
+        ];
     }
 
     render_html() {
@@ -817,15 +872,46 @@ class DetailViewDialog {
                 inward_supply: this.comparision_data._inward_supply,
             })
         );
+
+        detail_table.$wrapper.removeClass("not-matched");
+        this._set_value_color(detail_table.$wrapper);
+    }
+
+    _set_value_color(wrapper) {
+        if (!this.row.purchase_invoice_name || !this.row.inward_supply_name) return;
+
+        ["place_of_supply", "is_reverse_charge"].forEach(field => {
+            if (
+                this.comparision_data._purchase_invoice[field] ==
+                this.comparision_data._inward_supply[field]
+            )
+                return;
+
+            wrapper
+                .find(`[data-label='${field}'], [data-label='${field}']`)
+                .addClass("not-matched");
+        });
     }
 
     setup_actions() {
         // setup actions
-        ["Accept", "Reject", "Pending", "No Action"].forEach(action => {
+        let actions = ["Accept", "Reject", "No Action"];
+        if (this.row.ims_action) actions.pop(this.row.ims_action);
+
+        if (this.row.is_pending_action_allowed) actions.insert(1, "Pending");
+
+        const doctype = this.dialog.get_value("doctype");
+        if (this.row.match_status == "Missing in 2A/2B") actions.push("Link");
+        else if (this.row.match_status == "Missing in PI")
+            if (doctype == "Purchase Invoice") actions.push("Create", "Link");
+            else actions.push("Link");
+        else actions.push("Unlink");
+
+        actions.forEach(action => {
             this.dialog.add_custom_action(
                 action,
                 () => {
-                    apply_action(this.frm, [this.row.inward_supply_name], action);
+                    this._apply_custom_action(action);
                     this.dialog.hide();
                 },
                 `mr-2 ${this._get_button_css(action)}`
@@ -838,11 +924,57 @@ class DetailViewDialog {
         this.dialog.$wrapper.find(".modal-footer").css("flex-direction", "inherit");
     }
 
+    _apply_custom_action(action) {
+        if (action == "Unlink") {
+            reconciliation.unlink_documents(this.frm, this.frm.ims, [this.row]);
+        } else if (action == "Link") {
+            reconciliation.link_documents(
+                this.frm,
+                this.comparision_data.purchase_invoice_name,
+                this.comparision_data.inward_supply_name,
+                this.dialog.get_value("doctype"),
+                this.frm.ims
+            );
+        } else if (action == "Create") {
+            reconciliation.create_new_purchase_invoice(
+                this.comparision_data,
+                this.frm.doc.company,
+                this.frm.doc.company_gstin
+            );
+        } else {
+            apply_action(this.frm, [this.row.inward_supply_name], action);
+        }
+    }
+
     _get_button_css(action) {
         if (action == "Accept") return "btn-success not-grey";
         if (action == "Reject") return "btn-danger not-grey";
         if (action == "Pending") return "btn-warning not-grey";
         if (action == "No Action") return "btn-secondary";
+        if (action == "Create") return "btn-primary not-grey";
+        if (action == "Link") return "btn-primary not-grey btn-link disabled";
+    }
+
+    toggle_link_btn(disabled) {
+        const btn = this.dialog.$wrapper.find(".modal-footer .btn-link");
+        if (disabled) btn.addClass("disabled");
+        else btn.removeClass("disabled");
+    }
+
+    async refresh_data() {
+        this.toggle_link_btn(true);
+        const field = this.dialog.get_field("link_with");
+        if (field.value) this.toggle_link_btn(false);
+
+        if (this.missing_doctype == "GST Inward Supply")
+            this.row.inward_supply_name = field.value;
+        else this.row.purchase_invoice_name = field.value;
+
+        await this.get_invoice_details();
+        this.process_data();
+
+        this.row = this.comparision_data;
+        this.render_html();
     }
 }
 

@@ -19,6 +19,10 @@ from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     ReconciledData,
 )
+from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
+    link_documents,
+    unlink_documents,
+)
 from india_compliance.gst_india.utils.gstr_2 import download_ims_invoices, ims
 
 
@@ -26,7 +30,7 @@ class GSTInvoiceManagementSystem(Document):
     IMS_RECONCILER = IMSReconciler()
 
     @frappe.whitelist()
-    def get_invoice_data(self):
+    def get_invoice_data(self, inward_supply=None, purchase=None):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         filters = {
@@ -34,8 +38,10 @@ class GSTInvoiceManagementSystem(Document):
             "company_gstin": self.company_gstin,
         }
 
-        inward_supplies = self.get_all_inward_supplies(filters=filters)
-        purchases = self.get_all_purchases(filters=filters)
+        inward_supplies = self.get_all_inward_supplies(
+            names=inward_supply, filters=filters
+        )
+        purchases = self.get_all_purchases(names=purchase, filters=filters)
 
         invoice_data = []
         for doc in inward_supplies:
@@ -75,8 +81,8 @@ class GSTInvoiceManagementSystem(Document):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         self._reconciler_class = IMSReconciler()
-        inward_supply = self.get_all_inward_supplies(name=inward_supply_name)
-        purchases = self.get_all_purchases(purchase_name)
+        inward_supply = self.get_all_inward_supplies(names=[inward_supply_name])
+        purchases = self.get_all_purchases(names=[purchase_name])
 
         reconciliation_data = [
             frappe._dict(
@@ -93,14 +99,32 @@ class GSTInvoiceManagementSystem(Document):
 
         return reconciliation_data[0]
 
-    def get_all_inward_supplies(self, name=None, filters=None):
+    @frappe.whitelist()
+    def link_documents(self, purchase_invoice_name, inward_supply_name, link_doctype):
+        frappe.has_permission("GST Invoice Management System", "write", throw=True)
+
+        purchases, inward_supplies = link_documents(
+            purchase_invoice_name, inward_supply_name, link_doctype
+        )
+
+        return self.get_invoice_data(inward_supplies, purchases)
+
+    @frappe.whitelist()
+    def unlink_documents(self, data):
+        frappe.has_permission("GST Invoice Management System", "write", throw=True)
+
+        purchases, inward_supplies = unlink_documents(data)
+
+        return self.get_invoice_data(inward_supplies, purchases)
+
+    def get_all_inward_supplies(self, names=None, filters=None):
         if not filters:
             filters = {}
 
         query = self.IMS_RECONCILER.get_base_inward_supply_query(["action", "doc_type"])
 
-        if name:
-            query = query.where(self.IMS_RECONCILER.inward_supply.name == name)
+        if names:
+            query = query.where(self.IMS_RECONCILER.inward_supply.name.isin(names))
 
         query = self.IMS_RECONCILER.get_query_with_filters(
             self.IMS_RECONCILER.inward_supply, query, filters
@@ -108,19 +132,19 @@ class GSTInvoiceManagementSystem(Document):
 
         return query.run(as_dict=True)
 
-    def get_all_purchases(self, name=None, filters=None):
+    def get_all_purchases(self, names=None, filters=None):
         if not filters:
             filters = {}
 
-        purchases = self.get_all_purchase_invoice(name, filters)
+        purchases = self.get_all_purchase_invoice(names, filters)
 
         return {doc.name: doc for doc in purchases}
 
-    def get_all_purchase_invoice(self, name, filters):
+    def get_all_purchase_invoice(self, names, filters):
         query = self.IMS_RECONCILER.get_base_purchase_query()
 
-        if name:
-            query = query.where(self.IMS_RECONCILER.purchase_invoice.name == name)
+        if names:
+            query = query.where(self.IMS_RECONCILER.purchase_invoice.name.isin(names))
 
         query = self.IMS_RECONCILER.get_query_with_filters(
             self.IMS_RECONCILER.purchase_invoice, query, filters
