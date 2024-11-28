@@ -4,6 +4,10 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
         this.skip_redirect_on_error = true;
         this.api_enabled =
             india_compliance.is_api_enabled() && gst_settings.autofill_party_info;
+        this.gstin_to_party_type_map = {
+            F: "Partnership",
+            C: "Company",
+        };
     }
 
     async setup() {
@@ -92,6 +96,14 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 ignore_validation: true,
                 onchange: () => {
                     const d = this.dialog;
+
+                    if (["Customer", "Supplier"].includes(this.doctype)) {
+                        d.set_value(
+                            `${this.doctype.toLowerCase()}_type`,
+                            this.gstin_to_party_type_map[d.doc._gstin[5]] || "Individual"
+                        );
+                    }
+
                     if (this.api_enabled && !gst_settings.sandbox_mode)
                         return autofill_fields(d);
 
