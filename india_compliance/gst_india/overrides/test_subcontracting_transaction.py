@@ -188,9 +188,8 @@ class TestSubcontractingTransaction(IntegrationTestCase):
         make_subcontracted_items()
         make_boms()
 
-        frappe.db.set_value(
+        frappe.db.set_single_value(
             "GST Settings",
-            None,
             {
                 "enable_api": 1,
                 "enable_e_waybill": 1,
