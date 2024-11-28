@@ -142,12 +142,12 @@ Object.assign(india_compliance, {
             pan_status,
             get_indicator(pan_status),
             datetime,
-            "pan-last-updated"
+            "pan-last-synced"
         );
 
         const refresh_btn = this.get_status_refresh_button(
             "refresh-pan",
-            pan_desc.find(".pan-last-updated")
+            pan_desc.find(".pan-last-synced")
         );
 
         refresh_btn.on("click", async function () {
@@ -184,7 +184,7 @@ Object.assign(india_compliance, {
             status,
             get_indicator(status),
             datetime,
-            "gstin-last-updated"
+            "gstin-last-synced"
         );
     },
 
@@ -199,7 +199,7 @@ Object.assign(india_compliance, {
 
         const refresh_btn = this.get_status_refresh_button(
             "refresh-gstin",
-            field.$wrapper.find(".gstin-last-updated")
+            field.$wrapper.find(".gstin-last-synced")
         );
 
         refresh_btn.on("click", async function () {
