@@ -211,6 +211,7 @@ def get_data(company_gstin, is_reset=False):
     query = ims_reconciler.get_base_inward_supply_query(additional_fields)
     gst_inward_supply_list = (
         query.where(IfNull(ims_reconciler.inward_supply.ims_action, "") != "")
+        .where(IfNull(ims_reconciler.inward_supply.previous_ims_action, "") != "")
         .where(
             ims_reconciler.inward_supply.ims_action
             != ims_reconciler.inward_supply.previous_ims_action

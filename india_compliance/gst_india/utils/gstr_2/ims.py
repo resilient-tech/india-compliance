@@ -2,9 +2,6 @@ import frappe
 from frappe.utils.data import format_date
 
 from india_compliance.gst_india.constants import STATE_NUMBERS
-from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
-    create_inward_supply,
-)
 from india_compliance.gst_india.utils import parse_datetime
 
 
@@ -54,6 +51,7 @@ class IMS:
             "company_gstin": self.company_gstin,
             "is_pending_action_allowed": invoice.ispendactnallwd,
             "previous_ims_action": self.ACTION_MAP.get(invoice.action),
+            "ims_action": self.ACTION_MAP.get(invoice.action),
             "cgst": invoice.camt,
             "sgst": invoice.samt,
             "igst": invoice.iamt,
@@ -177,3 +175,23 @@ class CNA(CN):
             }
         )
         return invoice_details
+
+
+def create_inward_supply(transaction):
+    filters = {
+        "bill_no": transaction.bill_no,
+        "bill_date": transaction.bill_date,
+        "classification": transaction.classification,
+        "supplier_gstin": transaction.supplier_gstin,
+    }
+
+    if name := frappe.get_value("GST Inward Supply", filters):
+        gst_inward_supply = frappe.get_doc("GST Inward Supply", name)
+    else:
+        gst_inward_supply = frappe.new_doc("GST Inward Supply")
+
+    if gst_inward_supply.ims_action:
+        transaction.pop("ims_action")
+
+    gst_inward_supply.update(transaction)
+    return gst_inward_supply.save(ignore_permissions=True)
