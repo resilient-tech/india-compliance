@@ -308,6 +308,7 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
                 "Customer",
                 "Supplier",
                 "Company",
+                "Lead"
             ].includes(doc.doctype)
         )
             return;
