@@ -309,7 +309,7 @@ def validate_company_address_field(doc, company_address_field):
             doc,
             company_address_field,
             _(
-                "Please set {0} to ensure Bill From GSTIN is fetched in the transaction."
+                "Please set {0} to ensure Company GSTIN is fetched in the transaction."
             ).format(bold(doc.meta.get_label(company_address_field))),
         )
         is False
