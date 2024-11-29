@@ -744,7 +744,7 @@ class PurchaseReconciliationTool {
                 label: "GST Inward <br>Supply",
                 fieldname: "inward_supply_name",
                 fieldtype: "Link",
-                doctype: "GST Inward Supply",
+                options: "GST Inward Supply",
                 align: "center",
                 width: 120,
             },
