@@ -748,6 +748,8 @@ class Reconciler(BaseReconciliation):
         """
         Reconcile purchases and inward supplies for given category.
         """
+        self.category = category
+
         # GSTIN Level matching
         purchases = self.get_unmatched_purchase_or_bill_of_entry(category)
         inward_supplies = self.get_unmatched_inward_supply(category, amended_category)
@@ -792,12 +794,13 @@ class Reconciler(BaseReconciliation):
                 for inward_supply_name, inward_supply in (
                     inward_supplies[supplier_gstin].copy().items()
                 ):
-                    if match_status == "Residual Match":
-                        if (
-                            abs((purchase.bill_date - inward_supply.bill_date).days)
-                            > 10
-                        ):
-                            continue
+                    if (
+                        match_status == "Residual Match"
+                        and self.category != "CDNR"
+                        and abs((purchase.bill_date - inward_supply.bill_date).days)
+                        > 10
+                    ):
+                        continue
 
                     if not self.is_doc_matching(purchase, inward_supply, rules):
                         continue
