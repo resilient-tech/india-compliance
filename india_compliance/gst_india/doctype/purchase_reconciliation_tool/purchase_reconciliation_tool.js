@@ -1807,6 +1807,7 @@ async function create_new_purchase_invoice(row, company, company_gstin) {
             bill_no: doc.bill_no,
             bill_date: doc.bill_date,
             is_reverse_charge: ["Yes", 1].includes(doc.is_reverse_charge) ? 1 : 0,
+            is_return: ["CDNR", "CDNRA"].includes(doc.classification) ? 1 : 0,
         };
 
         _set_value({
