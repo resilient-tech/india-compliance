@@ -373,6 +373,12 @@ class PurchaseReconciliationTool {
                 fieldname: "is_reverse_charge",
                 fieldtype: "Check",
             },
+            {
+                label: "DocType",
+                fieldname: "purchase_doctype",
+                fieldtype: "Select",
+                options: ["Purchase Invoice", "Bill of Entry"],
+            },
         ];
 
         fields.forEach(field => (field.parent = "Purchase Reconciliation Tool"));
