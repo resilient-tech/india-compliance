@@ -454,8 +454,9 @@ def download_gstr(
     return_type = ReturnType(return_type)
 
     periods = BaseUtil.get_periods(date_range, return_type)
-    if not force:
-        periods = get_periods_to_download(company_gstin, return_type, periods)
+    periods = get_periods_to_download(
+        company_gstin, return_type, periods, download_all=not force
+    )
 
     if not periods:
         return
@@ -476,12 +477,23 @@ def download_gstr(
         )
 
 
-def get_periods_to_download(company_gstin, return_type, periods):
+def get_periods_to_download(company_gstin, return_type, periods, download_all=False):
+    # check if redownload is useful
+    dont_redownload = get_import_history(
+        company_gstin, return_type, periods, fields=("return_period", "dont_redownload")
+    )
+    dont_redownload = [
+        log.return_period for log in dont_redownload if log.dont_redownload
+    ]
+
+    periods = [period for period in periods if period not in dont_redownload]
+
+    if download_all:
+        return periods
+
+    # get missing periods
     existing_periods = get_import_history(
-        company_gstin,
-        return_type,
-        periods,
-        pluck="return_period",
+        company_gstin, return_type, periods, pluck="return_period"
     )
 
     return [period for period in periods if period not in existing_periods]
