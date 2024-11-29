@@ -220,12 +220,14 @@ def on_cancel(doc, method=None):
         if not timestamp or days_diff(add_days(timestamp, 1), timestamp) > 1:
             return
 
-        values = {
-            "irn": doc.irn or "",
-            "reason": reason,
-            "ewaybill": doc.ewaybill or "",
-            "remark": "",
-        }
+        values = frappe._dict(
+            {
+                "irn": doc.irn or "",
+                "reason": reason,
+                "ewaybill": doc.ewaybill or "",
+                "remark": "",
+            }
+        )
         cancel_func(
             doc.name if action_type == "e_invoice" else doc, values, show_msg=False
         )
@@ -241,9 +243,11 @@ def on_cancel(doc, method=None):
         return
 
     if doc.ewaybill and gst_settings.enable_e_waybill and gst_settings.cancel_e_waybill:
-        created_on = get_e_waybill_info(doc).get("created_on")
+        e_waybill_info = get_e_waybill_info(doc)
+        doc.set("__onload", {"e_waybill_info": e_waybill_info})
+
         cancel_document(
-            created_on,
+            e_waybill_info.get("created_on"),
             gst_settings.reason_for_e_waybill_cancel,
             _cancel_e_waybill,
             "e_waybill",
