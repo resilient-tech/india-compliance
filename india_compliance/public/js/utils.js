@@ -470,7 +470,7 @@ Object.assign(india_compliance, {
         return alert;
     },
 
-    is_e_waybill_generatable_for_subcontracting(doc) {
+    is_e_waybill_applicable_for_subcontracting(doc) {
         if (
             !(
                 gst_settings.enable_api &&
