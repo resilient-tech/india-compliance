@@ -232,7 +232,7 @@ def on_cancel(doc, method=None):
             doc.name if action_type == "e_invoice" else doc, values, show_msg=False
         )
 
-    if doc.irn and gst_settings.enable_e_invoice and gst_settings.cancel_e_invoice:
+    if doc.irn and gst_settings.enable_e_invoice and gst_settings.auto_cancel_e_invoice:
         acknowledged_on = get_e_invoice_info(doc).get("acknowledged_on")
         cancel_document(
             acknowledged_on,
@@ -242,7 +242,11 @@ def on_cancel(doc, method=None):
         )
         return
 
-    if doc.ewaybill and gst_settings.enable_e_waybill and gst_settings.cancel_e_waybill:
+    if (
+        doc.ewaybill
+        and gst_settings.enable_e_waybill
+        and gst_settings.auto_cancel_e_waybill
+    ):
         e_waybill_info = get_e_waybill_info(doc)
         doc.set("__onload", {"e_waybill_info": e_waybill_info})
 
