@@ -16,13 +16,12 @@ const ALERT_HTML = `
         <div>
             You have missing GSTR-2B downloads
         </div>
-        ${
-            api_enabled
-                ? `<a id="download-gstr2b-button" href="#" class="alert-link">
+        ${api_enabled
+        ? `<a id="download-gstr2b-button" href="#" class="alert-link">
                     Download 2B
                 </a>`
-                : ""
-        }
+        : ""
+    }
     </div>
 `;
 
@@ -55,7 +54,7 @@ async function add_gstr2b_alert(frm) {
                 frm,
                 [frm.doc.inward_supply_from_date, frm.doc.inward_supply_to_date],
                 ReturnType.GSTR2B,
-                frm.company_gstin,
+                frm.doc.company_gstin,
                 true
             );
             remove_gstr2b_alert(existing_alert);
@@ -103,9 +102,9 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         api_enabled
             ? frm.add_custom_button(__("Download 2A/2B"), () => new ImportDialog(frm))
             : frm.add_custom_button(
-                  __("Upload 2A/2B"),
-                  () => new ImportDialog(frm, false)
-              );
+                __("Upload 2A/2B"),
+                () => new ImportDialog(frm, false)
+            );
 
         if (!frm.purchase_reconciliation_tool?.data?.length) return;
         if (frm.get_active_tab()?.df.fieldname == "invoice_tab") {
@@ -114,7 +113,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
                 () => unlink_documents(frm),
                 __("Actions")
             );
-            frm.add_custom_button(__("dropdown-divider"), () => {}, __("Actions"));
+            frm.add_custom_button(__("dropdown-divider"), () => { }, __("Actions"));
         }
         ["Accept", "Pending", "Ignore"].forEach(action =>
             frm.add_custom_button(
@@ -193,8 +192,8 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
                 method == "update_api_progress"
                     ? __("Fetching data from GSTN")
                     : __("Updating Inward Supply for Return Period {0}", [
-                          data.return_period,
-                      ]);
+                        data.return_period,
+                    ]);
 
             frm.dashboard.show_progress(
                 "Import GSTR Progress",
@@ -374,6 +373,12 @@ class PurchaseReconciliationTool {
                 fieldname: "is_reverse_charge",
                 fieldtype: "Check",
             },
+            {
+                label: "DocType",
+                fieldname: "purchase_doctype",
+                fieldtype: "Select",
+                options: ["Purchase Invoice", "Bill of Entry"],
+            },
         ];
 
         fields.forEach(field => (field.parent = "Purchase Reconciliation Tool"));
@@ -450,47 +455,39 @@ class PurchaseReconciliationTool {
             me.dm = new EmailDialog(me.frm, row);
         });
 
-        this.tabs.summary_tab.$datatable.on(
-            "click",
-            ".match-status",
-            async function (e) {
-                e.preventDefault();
+        const filter_map = {
+            // TAB: { SELECTOR: FIELDNAME }
+            summary: { ".match-status": "match_status" },
+            supplier: { ".supplier-gstin": "supplier_gstin" },
+            invoice: {
+                ".match-status": "match_status",
+                ".action-performed": "action",
+                ".supplier-gstin": "supplier_gstin",
+            },
+        };
 
-                const match_status = $(this).text();
-                await me.filter_group.push_new_filter([
-                    "Purchase Reconciliation Tool",
-                    "match_status",
-                    "=",
-                    match_status,
-                ]);
-                me.filter_group.apply();
-            }
-        );
+        Object.keys(filter_map).forEach(tab => {
+            Object.keys(filter_map[tab]).forEach(selector => {
+                this.tabs[`${tab}_tab`].$datatable.on(
+                    "click",
+                    selector,
+                    async function (e) {
+                        e.preventDefault();
+                        const value = $(this).text().trim();
+                        const field = filter_map[tab][selector];
 
-        this.tabs.supplier_tab.$datatable.on(
-            "click",
-            ".supplier-gstin",
-            add_supplier_gstin_filter
-        );
+                        await me.filter_group.push_new_filter([
+                            "Purchase Reconciliation Tool",
+                            field,
+                            "=",
+                            value,
+                        ]);
 
-        this.tabs.invoice_tab.$datatable.on(
-            "click",
-            ".supplier-gstin",
-            add_supplier_gstin_filter
-        );
-
-        async function add_supplier_gstin_filter(e) {
-            e.preventDefault();
-
-            const supplier_gstin = $(this).text().trim();
-            await me.filter_group.push_new_filter([
-                "Purchase Reconciliation Tool",
-                "supplier_gstin",
-                "=",
-                supplier_gstin,
-            ]);
-            me.filter_group.apply();
-        }
+                        me.filter_group.apply();
+                    }
+                );
+            });
+        });
     }
 
     export_data(selected_row) {
@@ -740,12 +737,15 @@ class PurchaseReconciliationTool {
                 label: "Match Status",
                 fieldname: "match_status",
                 width: 120,
+                _value: (...args) => {
+                    return `<a href="#" class='match-status'>${args[0]}</a>`;
+                },
             },
             {
                 label: "GST Inward <br>Supply",
                 fieldname: "inward_supply_name",
                 fieldtype: "Link",
-                doctype: "GST Inward Supply",
+                options: "GST Inward Supply",
                 align: "center",
                 width: 120,
             },
@@ -784,6 +784,9 @@ class PurchaseReconciliationTool {
             {
                 label: "Action",
                 fieldname: "action",
+                _value: (...args) => {
+                    return `<a href="#" class='action-performed'>${args[0]}</a>`;
+                },
             },
         ];
     }
@@ -918,9 +921,8 @@ class DetailViewDialog {
                         ? ["GST Inward Supply"]
                         : ["Purchase Invoice", "Bill of Entry"],
 
-                read_only_depends_on: `eval: ${
-                    this.missing_doctype == "GST Inward Supply"
-                }`,
+                read_only_depends_on: `eval: ${this.missing_doctype == "GST Inward Supply"
+                    }`,
 
                 onchange: () => {
                     const doctype = this.dialog.get_value("doctype");
@@ -1182,7 +1184,6 @@ class ImportDialog {
     setup_dialog_actions() {
         if (this.for_download) {
             if (this.return_type === ReturnType.GSTR2A) {
-                this.dialog.$wrapper.find(".btn-secondary").removeClass("hidden");
                 this.dialog.set_primary_action(__("Download All"), () => {
                     this.download_gstr_by_category(false);
                 });
@@ -1191,26 +1192,12 @@ class ImportDialog {
                     this.download_gstr_by_category(true);
                 });
             } else if (this.return_type === ReturnType.GSTR2B) {
-                this.dialog.$wrapper.find(".btn-secondary").addClass("hidden");
-                this.dialog.set_primary_action(__("Download"), () => {
-                    if (this.has_no_pending_download) {
-                        frappe.msgprint({
-                            message:
-                                "There are no pending downloads for the selected period. GSTR2B is static and does not require redownload.",
-                            title: "No Pending Downloads",
-                            indicator: "orange",
-                        });
-                        return;
-                    }
-
-                    download_gstr(
-                        this.frm,
-                        this.date_range,
-                        this.return_type,
-                        this.company_gstin,
-                        true
-                    );
-                    this.dialog.hide();
+                this.dialog.set_primary_action(__("Download All"), () => {
+                    this.download_gstr_by_period(false);
+                });
+                this.dialog.set_secondary_action_label(__("Download Missing"));
+                this.dialog.set_secondary_action(() => {
+                    this.download_gstr_by_period(true);
                 });
             }
         } else {
@@ -1245,6 +1232,27 @@ class ImportDialog {
             only_missing,
             marked_gst_categories
         );
+        this.dialog.hide();
+    }
+
+    download_gstr_by_period(only_missing) {
+        if (only_missing && this.has_no_pending_download) {
+            frappe.msgprint({
+                message: "There are no pending downloads for the selected period.",
+                title: "No Pending Downloads",
+                indicator: "orange",
+            });
+            return;
+        }
+
+        download_gstr(
+            this.frm,
+            this.date_range,
+            this.return_type,
+            this.company_gstin,
+            only_missing
+        );
+
         this.dialog.hide();
     }
 
@@ -1450,7 +1458,6 @@ async function download_gstr(
     let company_gstins;
     if (company_gstin == "All")
         company_gstins = await india_compliance.get_gstin_options(frm.doc.company);
-
     else company_gstins = [company_gstin];
 
     company_gstins.forEach(async gstin => {
@@ -1802,6 +1809,7 @@ async function create_new_purchase_invoice(row, company, company_gstin) {
             bill_no: doc.bill_no,
             bill_date: doc.bill_date,
             is_reverse_charge: ["Yes", 1].includes(doc.is_reverse_charge) ? 1 : 0,
+            is_return: ["CDNR", "CDNRA"].includes(doc.classification) ? 1 : 0,
         };
 
         _set_value({

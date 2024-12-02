@@ -21,9 +21,11 @@
   "section_break_oisv",
   "unfiled",
   "filed",
+  "upload_error",
   "column_break_hxfu",
   "unfiled_summary",
   "filed_summary",
+  "authenticated_summary",
   "computed_data_section",
   "is_latest_data",
   "section_break_emlz",
@@ -33,7 +35,9 @@
   "reconciled_data_section",
   "reconcile",
   "column_break_ndup",
-  "reconcile_summary"
+  "reconcile_summary",
+  "pending_request_info_section",
+  "actions"
  ],
  "fields": [
   {
@@ -192,7 +196,29 @@
   {
    "fieldname": "filing_preference",
    "fieldtype": "Data",
-   "label": "Filing Preference",
+   "label": "Filing Preference"
+  },
+  {
+   "fieldname": "upload_error",
+   "fieldtype": "Attach",
+   "label": "Upload Error Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "authenticated_summary",
+   "fieldtype": "Attach",
+   "label": "Authenticated Summary",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pending_request_info_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "actions",
+   "fieldtype": "Table",
+   "label": "Actions",
+   "options": "GSTR Action",
    "read_only": 1
   }
  ],

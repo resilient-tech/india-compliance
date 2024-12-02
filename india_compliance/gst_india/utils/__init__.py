@@ -387,35 +387,43 @@ def get_place_of_supply(party_details, doctype):
     :param party_details: A frappe._dict or document containing fields related to party
     """
 
-    pos_basis = frappe.get_cached_value(
-        "Accounts Settings", "Accounts Settings", "determine_address_tax_category_from"
-    )
-
-    if pos_basis == "Shipping Address" and doctype in SALES_DOCTYPES:
-        # POS Basis Shipping Address is only applicable for Sales
-        pos_gstin = party_details.company_gstin
-
     # fallback to company GSTIN for sales or supplier GSTIN for purchases
     # (in retail scenarios, customer / company GSTIN may not be set)
-
-    elif doctype in SALES_DOCTYPES or doctype == "Payment Entry":
+    if doctype in SALES_DOCTYPES or doctype == "Payment Entry":
         # for exports, Place of Supply is set using GST category in absence of GSTIN
         if party_details.gst_category == "Overseas":
             return get_overseas_place_of_supply(party_details)
 
+        # customer address based on POS Basis
+        customer_address = party_details.customer_address
+        pos_basis = frappe.get_cached_value(
+            "Accounts Settings",
+            "Accounts Settings",
+            "determine_address_tax_category_from",
+        )
+
+        shipping_gstin = None
         if (
-            party_details.gst_category == "Unregistered"
-            and party_details.customer_address
+            doctype != "Payment Entry"
+            and pos_basis == "Shipping Address"
+            and party_details.shipping_address_name
         ):
+            customer_address = party_details.shipping_address_name
+            shipping_gstin = frappe.db.get_value("Address", customer_address, "gstin")
+
+        customer_gstin = shipping_gstin or party_details.billing_address_gstin
+        # for unregistered
+        if not customer_gstin and customer_address:
             gst_state_number, gst_state = frappe.db.get_value(
                 "Address",
-                party_details.customer_address,
+                customer_address,
                 ("gst_state_number", "gst_state"),
             )
             if gst_state_number and gst_state:
                 return f"{gst_state_number}-{gst_state}"
 
-        pos_gstin = party_details.billing_address_gstin or party_details.company_gstin
+        # for registered
+        pos_gstin = customer_gstin or party_details.company_gstin
 
     elif doctype == "Stock Entry":
         pos_gstin = party_details.bill_to_gstin or party_details.bill_from_gstin
@@ -925,17 +933,19 @@ def validate_invoice_number(doc, throw=True):
 
     if not is_valid_length:
         frappe.throw(
-            _("GST Invoice Number cannot exceed 16 characters"),
-            title=_("Invalid GST Invoice Number"),
+            _(
+                "Transaction Name must be 16 characters or fewer to meet GST requirements"
+            ),
+            title=_("Invalid GST Transaction Name"),
         )
 
     if not is_valid_format:
         frappe.throw(
             _(
-                "GST Invoice Number should start with an alphanumeric character and can"
-                " only contain alphanumeric characters, dash (-) and slash (/)"
+                "Transaction Name should start with an alphanumeric character and can"
+                " only contain alphanumeric characters, dash (-) and slash (/) to meet GST requirements"
             ),
-            title=_("Invalid GST Invoice Number"),
+            title=_("Invalid GST Transaction Name"),
         )
 
 
@@ -1009,3 +1019,12 @@ def get_period(month_or_quarter, year=None):
         return str(month_or_quarter_no[1]).zfill(2) + str(year)
 
     return month_or_quarter_no
+
+
+def is_outward_stock_entry(doc):
+    if (
+        doc.doctype == "Stock Entry"
+        and doc.purpose in ["Material Transfer", "Material Issue"]
+        and not doc.is_return
+    ):
+        return True
