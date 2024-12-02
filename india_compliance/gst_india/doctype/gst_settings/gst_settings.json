@@ -23,6 +23,7 @@
   "is_retry_einv_ewb_generation_pending",
   "column_break_rk3h",
   "sandbox_mode",
+  "reason_for_invoice_cancellation",
   "e_waybill_section",
   "enable_e_waybill",
   "enable_e_waybill_from_dn",
@@ -35,14 +36,12 @@
   "auto_generate_e_waybill",
   "e_waybill_threshold",
   "auto_cancel_e_waybill",
-  "reason_for_e_waybill_cancel",
   "e_invoice_section",
   "enable_e_invoice",
   "auto_generate_e_invoice",
   "generate_e_waybill_with_e_invoice",
   "fetch_e_invoice_details_from_gst_portal",
   "auto_cancel_e_invoice",
-  "reason_for_e_invoice_cancel",
   "column_break_17",
   "apply_e_invoice_only_for_selected_companies",
   "e_invoice_applicable_from",
@@ -634,24 +633,6 @@
    "label": "Fetch e-Invoice details from GST Portal"
   },
   {
-   "default": "Data Entry Mistake",
-   "depends_on": "eval: doc.enable_e_waybill && doc.auto_cancel_e_waybill && (!doc.enable_e_invoice || !doc.auto_cancel_e_invoice)",
-   "fieldname": "reason_for_e_waybill_cancel",
-   "fieldtype": "Select",
-   "label": "Reason for e-Waybill cancel",
-   "mandatory_depends_on": "eval: doc.enable_e_waybill && doc.auto_cancel_e_waybill && (!doc.enable_e_invoice || !doc.auto_cancel_e_invoice)",
-   "options": "Duplicate\nOrder Cancelled\nData Entry Mistake\nOthers"
-  },
-  {
-   "default": "Data Entry Mistake",
-   "depends_on": "eval: doc.enable_e_invoice && doc.auto_cancel_e_invoice",
-   "fieldname": "reason_for_e_invoice_cancel",
-   "fieldtype": "Select",
-   "label": "Reason for e-Invoice Cancel",
-   "mandatory_depends_on": "eval: doc.enable_e_invoice && doc.auto_cancel_e_invoice",
-   "options": "Duplicate\nOrder Cancelled\nData Entry Mistake\nOthers"
-  },
-  {
    "default": "0",
    "depends_on": "eval: doc.enable_e_waybill",
    "fieldname": "auto_cancel_e_waybill",
@@ -665,12 +646,20 @@
    "fieldname": "auto_cancel_e_invoice",
    "fieldtype": "Check",
    "label": "Cancel e-Invoice on cancel of Invoice"
+  },
+  {
+   "default": "Data Entry Mistake",
+   "fieldname": "reason_for_invoice_cancellation",
+   "fieldtype": "Select",
+   "label": "Reason for Invoice Cancellation",
+   "mandatory_depends_on": "eval: doc.auto_cancel_e_waybill || doc.auto_cancel_e_invoice",
+   "options": "Duplicate\nOrder Cancelled\nData Entry Mistake"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-11-30 10:50:18.115216",
+ "modified": "2024-12-02 16:07:02.199154",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

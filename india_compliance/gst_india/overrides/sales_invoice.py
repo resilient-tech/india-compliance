@@ -236,7 +236,7 @@ def on_cancel(doc, method=None):
         acknowledged_on = get_e_invoice_info(doc).get("acknowledged_on")
         cancel_document(
             acknowledged_on,
-            gst_settings.reason_for_e_invoice_cancel,
+            gst_settings.reason_for_invoice_cancellation,
             cancel_e_invoice,
             "e_invoice",
         )
@@ -252,7 +252,7 @@ def on_cancel(doc, method=None):
 
         cancel_document(
             e_waybill_info.get("created_on"),
-            gst_settings.reason_for_e_waybill_cancel,
+            gst_settings.reason_for_invoice_cancellation,
             _cancel_e_waybill,
             "e_waybill",
         )
