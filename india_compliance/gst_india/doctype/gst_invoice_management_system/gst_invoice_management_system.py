@@ -13,6 +13,7 @@ from india_compliance.gst_india.doctype.gst_invoice_management_system import (
 )
 from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     enqueue_link_integration_request,
+    enqueue_notification,
     status_code_map,
     verify_request_in_progress,
 )
@@ -350,7 +351,13 @@ def process_upload_ims(return_log):
     erroneous_invoices = []
     if status_cd != "IP":
         doc.db_set({"status": status_code_map.get(status_cd)})
-        # TODO: Enqueue Notification
+        enqueue_notification(
+            return_log.return_period,
+            doc.request_type,
+            status_cd,
+            return_log.gstin,
+            api.request_id if status_cd == "ER" else None,
+        )
 
     if status_cd == "PE":
         erroneous_invoices, response["error_report"] = get_erroneous_invoices(
