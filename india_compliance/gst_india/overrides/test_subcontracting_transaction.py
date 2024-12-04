@@ -277,7 +277,7 @@ class TestSubcontractingTransaction(IntegrationTestCase):
         scr.billing_address = None
         self.assertRaisesRegex(
             frappe.ValidationError,
-            re.compile(r"(to ensure Bill From GSTIN is fetched in the transaction.$)"),
+            re.compile(r"(to ensure Company GSTIN is fetched in the transaction.$)"),
             scr.save,
         )
 
@@ -290,7 +290,7 @@ class TestSubcontractingTransaction(IntegrationTestCase):
 
         self.assertRaisesRegex(
             frappe.ValidationError,
-            re.compile(r"(to ensure Bill From GSTIN is fetched in the transaction.$)"),
+            re.compile(r"(to ensure Company GSTIN is fetched in the transaction.$)"),
             se.save,
         )
 
