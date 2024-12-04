@@ -89,6 +89,7 @@ class IMSReconciler:
             )
             .where(self.purchase_invoice.gst_category.isin(gst_category))
             .where(self.purchase_invoice.is_return == 0)
+            .where(self.purchase_invoice.is_reverse_charge == 0)
             .run(as_dict=True)
         )
 
