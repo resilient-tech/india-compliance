@@ -2,6 +2,7 @@ frappe.provide("frappe.help.help_links");
 
 const docsUrl = "https://docs.indiacompliance.app/docs/";
 
+//India Compliance Account
 frappe.help.help_links["india-compliance-account"] = [
 	{
 		label: "India Compliance Account",
@@ -9,20 +10,41 @@ frappe.help.help_links["india-compliance-account"] = [
 	},
 ];
 
+//GST Settings
+frappe.help.help_links["Form/GST Settings"] = [
+	{
+		label: "GSTIN Verification",
+		url: docsUrl + "miscellaneous/gstin_verification",
+	},
+];
+
+//Doctypes
+//Sales Invoice
 if (!frappe.help.help_links["Form/Sales Invoice"]) {
 	frappe.help.help_links["Form/Sales Invoice"] = [];
 }
 
-frappe.help.help_links["Form/Sales Invoice"].push({
-	label: "Sales Transaction",
-	url: docsUrl + "configuration/sales_transaction",
-});
+frappe.help.help_links["Form/Sales Invoice"].push(
+	{
+		label: "Sales Transaction",
+		url: docsUrl + "configuration/sales_transaction",
+	},
+	{
+		label: "e-Waybill",
+		url: docsUrl + "ewaybill-and-einvoice/generating_e_waybill",
+	},
+	{
+		label: "e-Invoice",
+		url: docsUrl + "ewaybill-and-einvoice/generating_e_invoice",
+	},
+);
 
 frappe.help.help_links["List/Sales Invoice"].push({
 	label: "Sales Transaction",
 	url: docsUrl + "configuration/sales_transaction",
 });
 
+//Purchase Invoice
 frappe.help.help_links["Form/Purchase Invoice"] = [
 	{
 		label: "Purchase Transaction",
@@ -39,6 +61,43 @@ frappe.help.help_links["List/Purchase Invoice"].push({
 	url: docsUrl + "configuration/purchase_transaction",
 })
 
+//Delivery Note
+frappe.help.help_links["Form/Delivery Note"].push({
+	label: "e-Waybill",
+	url: docsUrl + "ewaybill-and-einvoice/generating_e_waybill",
+})
+
+//Purchase Receipt
+frappe.help.help_links["Form/Purchase Receipt"] = [
+	{
+		label: "e-Waybill",
+		url: docsUrl + "ewaybill-and-einvoice/generating_e_waybill",
+	}
+]
+
+//Stock Entry
+frappe.help.help_links["Form/Stock Entry"].push({
+	label: "e-Waybill",
+	url: docsUrl + "ewaybill-and-einvoice/generating_e_waybill",
+})
+
+//Subcontracting Receipt
+frappe.help.help_links["Form/Subcontracting Receipt"] = [
+	{
+		label: "e-Waybill",
+		url: docsUrl + "ewaybill-and-einvoice/generating_e_waybill",
+	}
+]
+
+//Journal Entry
+frappe.help.help_links["Form/Journal Entry"] = [
+	{
+		label: "Reversal of Input Tax Credit",
+		url: docsUrl + "configuration/other_transaction#reversal-of-input-tax-credit",
+	}
+]
+
+// GST Reports
 frappe.help.help_links["Form/GSTR-1 Beta"] = [
 	{
 		label: "GSTR-1 Beta",
@@ -60,6 +119,8 @@ frappe.help.help_links["List/GSTR 3B Report"] = [
 	},
 ];
 
+
+//Query Reports
 frappe.help.help_links["query-report/GST Job Work Stock Movement"] = [
 	{
 		label: "GST Job Work Stock Movement",
@@ -88,6 +149,7 @@ frappe.help.help_links["query-report/GST Purchase Register"] = [
 	},
 ];
 
+//Purchase Reconciliation
 frappe.help.help_links["Form/Purchase Reconciliation Tool"] = [
 	{
 		label: "Setup Purchase Reconciliation Tool",
@@ -103,6 +165,7 @@ frappe.help.help_links["Form/Purchase Reconciliation Tool"] = [
 	},
 ];
 
+//Miscellaneous
 frappe.help.help_links["Form/Audit Trail"] = [
 	{
 		label: "Audit Trail",
