@@ -8,6 +8,10 @@ div[data-page-route="Purchase Reconciliation Tool"]
     margin-top: 0;
 }
 
+div[data-page-route="Purchase Reconciliation Tool"] .section-body {
+    max-width: 100% !important;
+}
+
 div[data-page-route="Purchase Reconciliation Tool"]
     [data-fieldname="reconciliation_html"]
     .form-tabs-list {
@@ -29,7 +33,8 @@ div[data-page-route="Purchase Reconciliation Tool"]
 div[data-page-route="Purchase Reconciliation Tool"]
     [data-fieldname="reconciliation_html"]
     .form-tabs-list
-    .inner-group-button, .filter-selector {
+    .inner-group-button,
+.filter-selector {
     margin-bottom: 8px;
     margin-left: 8px;
 }

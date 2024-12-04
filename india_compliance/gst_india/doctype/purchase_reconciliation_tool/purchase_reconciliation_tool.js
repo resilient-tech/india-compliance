@@ -373,6 +373,12 @@ class PurchaseReconciliationTool {
                 fieldname: "is_reverse_charge",
                 fieldtype: "Check",
             },
+            {
+                label: "DocType",
+                fieldname: "purchase_doctype",
+                fieldtype: "Select",
+                options: ["Purchase Invoice", "Bill of Entry"],
+            },
         ];
 
         fields.forEach(field => (field.parent = "Purchase Reconciliation Tool"));
@@ -449,47 +455,39 @@ class PurchaseReconciliationTool {
             me.dm = new EmailDialog(me.frm, row);
         });
 
-        this.tabs.summary_tab.$datatable.on(
-            "click",
-            ".match-status",
-            async function (e) {
-                e.preventDefault();
+        const filter_map = {
+            // TAB: { SELECTOR: FIELDNAME }
+            summary: { ".match-status": "match_status" },
+            supplier: { ".supplier-gstin": "supplier_gstin" },
+            invoice: {
+                ".match-status": "match_status",
+                ".action-performed": "action",
+                ".supplier-gstin": "supplier_gstin",
+            },
+        };
 
-                const match_status = $(this).text();
-                await me.filter_group.push_new_filter([
-                    "Purchase Reconciliation Tool",
-                    "match_status",
-                    "=",
-                    match_status,
-                ]);
-                me.filter_group.apply();
-            }
-        );
+        Object.keys(filter_map).forEach(tab => {
+            Object.keys(filter_map[tab]).forEach(selector => {
+                this.tabs[`${tab}_tab`].$datatable.on(
+                    "click",
+                    selector,
+                    async function (e) {
+                        e.preventDefault();
+                        const value = $(this).text().trim();
+                        const field = filter_map[tab][selector];
 
-        this.tabs.supplier_tab.$datatable.on(
-            "click",
-            ".supplier-gstin",
-            add_supplier_gstin_filter
-        );
+                        await me.filter_group.push_new_filter([
+                            "Purchase Reconciliation Tool",
+                            field,
+                            "=",
+                            value,
+                        ]);
 
-        this.tabs.invoice_tab.$datatable.on(
-            "click",
-            ".supplier-gstin",
-            add_supplier_gstin_filter
-        );
-
-        async function add_supplier_gstin_filter(e) {
-            e.preventDefault();
-
-            const supplier_gstin = $(this).text().trim();
-            await me.filter_group.push_new_filter([
-                "Purchase Reconciliation Tool",
-                "supplier_gstin",
-                "=",
-                supplier_gstin,
-            ]);
-            me.filter_group.apply();
-        }
+                        me.filter_group.apply();
+                    }
+                );
+            });
+        });
     }
 
     export_data(selected_row) {
@@ -739,12 +737,15 @@ class PurchaseReconciliationTool {
                 label: "Match Status",
                 fieldname: "match_status",
                 width: 120,
+                _value: (...args) => {
+                    return `<a href="#" class='match-status'>${args[0]}</a>`;
+                },
             },
             {
                 label: "GST Inward <br>Supply",
                 fieldname: "inward_supply_name",
                 fieldtype: "Link",
-                doctype: "GST Inward Supply",
+                options: "GST Inward Supply",
                 align: "center",
                 width: 120,
             },
@@ -783,6 +784,9 @@ class PurchaseReconciliationTool {
             {
                 label: "Action",
                 fieldname: "action",
+                _value: (...args) => {
+                    return `<a href="#" class='action-performed'>${args[0]}</a>`;
+                },
             },
         ];
     }
@@ -1234,8 +1238,7 @@ class ImportDialog {
     download_gstr_by_period(only_missing) {
         if (only_missing && this.has_no_pending_download) {
             frappe.msgprint({
-                message:
-                    "There are no pending downloads for the selected period.",
+                message: "There are no pending downloads for the selected period.",
                 title: "No Pending Downloads",
                 indicator: "orange",
             });
@@ -1455,7 +1458,6 @@ async function download_gstr(
     let company_gstins;
     if (company_gstin == "All")
         company_gstins = await india_compliance.get_gstin_options(frm.doc.company);
-
     else company_gstins = [company_gstin];
 
     company_gstins.forEach(async gstin => {
@@ -1807,6 +1809,7 @@ async function create_new_purchase_invoice(row, company, company_gstin) {
             bill_no: doc.bill_no,
             bill_date: doc.bill_date,
             is_reverse_charge: ["Yes", 1].includes(doc.is_reverse_charge) ? 1 : 0,
+            is_return: ["CDNR", "CDNRA"].includes(doc.classification) ? 1 : 0,
         };
 
         _set_value({
