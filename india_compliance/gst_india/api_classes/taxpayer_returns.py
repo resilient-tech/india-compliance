@@ -72,7 +72,7 @@ class GSTR2bAPI(ReturnsAPI):
             otp=otp,
         )
 
-    def gen_on_demand(self, return_period):
+    def regenerate_2b(self, return_period):
         return self.put(
             json={
                 "action": "GEN2B",
@@ -81,7 +81,7 @@ class GSTR2bAPI(ReturnsAPI):
             endpoint=self.END_POINT,
         )
 
-    def gen_status(self, transaction_id):
+    def get_2b_gen_status(self, transaction_id):
         return self.get(
             action="GENSTS2B",
             params={
