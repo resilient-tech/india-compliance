@@ -41,6 +41,7 @@ class IMSReconciler:
         for row in self.ORIGINAL_VS_AMENDED:
             filters["category"] = row["original"]
             filters["amended_category"] = row["amended"] or None
+            _Reconciler.category = row["original"]
 
             purchases = self.get_unmatched_purchase_invoices(filters)
             inward_supplies = self.get_unmatched_inward_supplies(filters)
