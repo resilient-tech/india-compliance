@@ -132,10 +132,10 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         );
 
         // move actions button next to filters
-        for (let button of $(".custom-actions .inner-group-button")) {
+        for (let button of frm.$wrapper.find(".custom-actions .inner-group-button")) {
             if (button.innerText?.trim() != "Actions") continue;
-            $(".custom-button-group .inner-group-button").remove();
-            $(button).appendTo($(".custom-button-group"));
+            frm.$wrapper.find(".custom-button-group .inner-group-button").remove();
+            $(button).appendTo(frm.$wrapper.find(".custom-button-group"));
         }
     },
 
