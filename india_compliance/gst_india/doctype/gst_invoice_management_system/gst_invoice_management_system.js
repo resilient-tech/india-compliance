@@ -597,13 +597,13 @@ class IMS {
         setTimeout(
             async () => {
                 const { message } = await taxpayer_api.call({
-                    method: `india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.check_action_status`,
+                    method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.check_action_status",
                     args: {
                         company_gstin: this.frm.doc.company_gstin,
                     },
                 });
 
-                if (!message.status_cd) return;
+                if (!message || !message.status_cd) return;
 
                 if (
                     message.status_cd === "IP" &&
@@ -895,10 +895,12 @@ class DetailViewDialog {
 
     setup_actions() {
         // setup actions
-        let actions = ["Accept", "Reject", "No Action"];
-        if (this.row.ims_action) actions.pop(this.row.ims_action);
+        let actions = ["Accept", "Reject", "No Action"].filter(
+            action => action != this.row.ims_action
+        );
 
-        if (this.row.is_pending_action_allowed) actions.insert(1, "Pending");
+        if (this.row.is_pending_action_allowed && this.row.ims_action != "Pending")
+            actions.insert(1, "Pending");
 
         const doctype = this.dialog.get_value("doctype");
         if (this.row.match_status == "Missing in 2A/2B") actions.push("Link");
