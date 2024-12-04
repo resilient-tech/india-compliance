@@ -4,7 +4,6 @@
 import frappe
 from frappe.model.document import Document
 from frappe.query_builder.functions import IfNull
-from india_compliance.gst_india.utils import parse_datetime
 
 from india_compliance.gst_india.api_classes.taxpayer_base import otp_handler
 from india_compliance.gst_india.api_classes.taxpayer_returns import IMSAPI
@@ -24,8 +23,9 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_re
     link_documents,
     unlink_documents,
 )
+from india_compliance.gst_india.utils import parse_datetime
 from india_compliance.gst_india.utils.gstr_2 import download_ims_invoices, ims
-from india_compliance.gst_india.utils.gstr_2.ims import GST_CATEGORY, ACTION_MAP
+from india_compliance.gst_india.utils.gstr_2.ims import ACTION_MAP, GST_CATEGORY
 
 
 class GSTInvoiceManagementSystem(Document):
@@ -303,9 +303,11 @@ def convert_data_to_gov_format(gst_inward_supply_list, company_gstin, is_reset=F
 
             else:
                 reset_invoices.append(data)
+        if upload_invoices:
+            upload_data[category] = upload_invoices
 
-        upload_data[category] = upload_invoices
-        reset_data[category] = reset_invoices
+        if reset_invoices:
+            reset_data[category] = reset_invoices
 
     return upload_data, reset_data
 
@@ -357,7 +359,7 @@ def process_upload_ims(return_log):
 
     if status_cd in ["P", "PE"]:
         # Exclude erroneous invoices from previous IMS action update
-        update_previous_ims_action(doc.integration_request, erroneous_invoices)
+        update_previous_ims_action(doc, erroneous_invoices)
 
     return response
 
@@ -398,7 +400,10 @@ def get_uploaded_invoices(integration_request):
     return invoices
 
 
-def update_previous_ims_action(integration_request, erroneous_invoices):
+def update_previous_ims_action(return_log, erroneous_invoices):
+    integration_request = return_log.integration_request
+    request_type = return_log.request_type
+
     uploded_invoices = get_uploaded_invoices(integration_request)
     invoices_to_update = []
 
@@ -413,7 +418,11 @@ def update_previous_ims_action(integration_request, erroneous_invoices):
                     "bill_no": bill_no,
                     "supplier_gstin": supplier_gstin,
                     "bill_date": parse_datetime(bill_date, day_first=True),
-                    "action": invoice.get("action"),
+                    "action": (
+                        "No Action"
+                        if request_type == "reset"
+                        else ACTION_MAP[invoice.get("action")]
+                    ),
                 }
             )
 
@@ -426,5 +435,5 @@ def update_previous_ims_action(integration_request, erroneous_invoices):
                 "bill_date": invoice["bill_date"],
             },
             "previous_ims_action",
-            ACTION_MAP[invoice["action"]],
+            invoice["action"],
         )
