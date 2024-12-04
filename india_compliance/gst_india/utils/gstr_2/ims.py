@@ -4,10 +4,18 @@ from frappe.utils.data import format_date
 from india_compliance.gst_india.constants import STATE_NUMBERS
 from india_compliance.gst_india.utils import parse_datetime
 
+ACTION_MAP = {"A": "Accept", "R": "Reject", "P": "Pending", "N": "No Action"}
+GST_CATEGORY = {
+    "R": "Regular",
+    "SEZWP": "SEZ supplies with payment of tax",
+    "SEZWOP": "SEZ supplies with out payment of tax",
+    "DE": "Deemed exports",
+    "CBW": "Intra-State Supplies attracting IGST",
+}
+
 
 class IMS:
     STATE_MAP = {value: f"{value}-{key}" for key, value in STATE_NUMBERS.items()}
-    ACTION_MAP = {"A": "Accept", "R": "Reject", "P": "Pending", "N": "No Action"}
 
     def __init__(self, company_gstin, company=None):
         self.company_gstin = company_gstin
@@ -45,13 +53,14 @@ class IMS:
         return {
             "supplier_gstin": invoice.stin,
             "sup_return_period": invoice.rtnprd,
+            "supply_type": GST_CATEGORY[invoice.inv_typ],
             "place_of_supply": self.STATE_MAP[invoice.pos],
             "document_value": invoice.val,
             "company": self.company,
             "company_gstin": self.company_gstin,
             "is_pending_action_allowed": invoice.ispendactnallwd,
-            "previous_ims_action": self.ACTION_MAP.get(invoice.action),
-            "ims_action": self.ACTION_MAP.get(invoice.action),
+            "previous_ims_action": ACTION_MAP.get(invoice.action),
+            "ims_action": ACTION_MAP.get(invoice.action),
             "cgst": invoice.camt,
             "sgst": invoice.samt,
             "igst": invoice.iamt,
@@ -65,7 +74,6 @@ class B2B(IMS):
         return {
             "bill_no": invoice.inum,
             "bill_date": parse_datetime(invoice.idt, day_first=True),
-            # "supply_type": "", TODO: Check options
             "classification": "B2B",
             "doc_type": "Invoice",
         }
@@ -101,12 +109,11 @@ class B2BA(B2B):
         return invoice_details
 
 
-class DN(B2B):
+class B2BDN(B2B):
     def get_invoice_details(self, invoice):
         return {
             "bill_no": invoice.nt_num,
             "bill_date": parse_datetime(invoice.nt_dt, day_first=True),
-            # "supply_type": "", TODO: Check options
             "classification": "CDNR",
             "doc_type": "Debit Note",
         }
@@ -118,7 +125,7 @@ class DN(B2B):
         }
 
 
-class DNA(DN):
+class B2BDNA(B2BDN):
     def get_invoice_details(self, invoice):
         invoice_details = super().get_invoice_details(invoice)
         invoice_details.update(
@@ -142,7 +149,7 @@ class DNA(DN):
         return invoice_details
 
 
-class CN(DN):
+class B2BCN(B2BDN):
     def get_invoice_details(self, invoice):
         invoice_details = super().get_invoice_details(invoice)
         invoice_details.update(
@@ -153,7 +160,7 @@ class CN(DN):
         return invoice_details
 
 
-class CNA(CN):
+class B2BCNA(B2BCN):
     def get_invoice_details(self, invoice):
         invoice_details = super().get_invoice_details(invoice)
         invoice_details.update(

@@ -39,13 +39,13 @@ ACTIONS = {
     "IMPGSEZ": GSTRCategory.IMPGSEZ,
 }
 
-CATEGORIES = {
-    "B2B": "b2b",
-    "B2BA": "b2ba",
-    "DN": "b2bdn",
-    "DNA": "b2bdna",
-    "CN": "b2bcn",
-    "CNA": "b2bcna",
+IMS_CATEGORIES = {
+    "b2b": "B2B",
+    "b2ba": "B2BA",
+    "b2bcn": "CN",
+    "b2bcna": "CNA",
+    "b2bdn": "DN",
+    "b2bdna": "DNA",
 }
 
 GSTR_MODULES = {
@@ -347,14 +347,14 @@ def download_ims_invoices(company_gstin, company):
     reset_previous_ims_action()
     api = IMSAPI(company_gstin)
 
-    for category in CATEGORIES:
-        response = api.get_data(category)
+    for category in IMS_CATEGORIES:
+        response = api.get_data(IMS_CATEGORIES[category])
 
         if response.error_type == "no_docs_found":
             continue
 
-        getattr(ims, category)(company_gstin, company).create_transactions(
-            response.get(CATEGORIES[category], [])
+        getattr(ims, category.upper())(company_gstin, company).create_transactions(
+            response.get(category, [])
         )
 
     create_return_log(company, company_gstin)
