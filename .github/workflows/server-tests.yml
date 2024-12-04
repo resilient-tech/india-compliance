@@ -138,7 +138,7 @@ jobs:
 
         - name: Upload coverage data
           if: github.event.repository.name == 'india-compliance' || env.CODECOV_TOKEN != ''
-          uses: codecov/codecov-action@v4
+          uses: codecov/codecov-action@v5
           env:
             CODECOV_TOKEN: ${{ env.CODECOV_TOKEN }}
           with:

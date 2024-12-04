@@ -74,6 +74,8 @@ class TestGstinInfo(IntegrationTestCase):
 
     @classmethod
     def setUpClass(cls):
+        super().setUpClass()
+
         cls.gstin = "24AAUPV7468F1ZW"
         cls.mock_public_api_patcher = patch(
             "india_compliance.gst_india.utils.gstin_info.PublicAPI"

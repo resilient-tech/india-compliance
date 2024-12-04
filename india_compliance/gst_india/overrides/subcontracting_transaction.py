@@ -179,7 +179,7 @@ def onload(doc, method=None):
 
 
 def validate(doc, method=None):
-    if ignore_gst_validations(doc):
+    if ignore_gst_validations_for_subcontracting(doc):
         return
 
     if not is_e_waybill_applicable(doc):
@@ -247,11 +247,18 @@ def validate_transaction(doc, method=None):
     validate_items(doc)
 
     if doc.doctype == "Stock Entry":
-        company_gstin_field = "bill_from_gstin"
-        party_gstin_field = "bill_to_gstin"
-        company_address_field = "bill_from_address"
-        gst_category_field = "bill_to_gst_category"
+        if not doc.is_return:
+            company_address_field = "bill_from_address"
+            company_gstin_field = "bill_from_gstin"
+            party_gstin_field = "bill_to_gstin"
+            gst_category_field = "bill_to_gst_category"
+        else:
+            company_address_field = "bill_to_address"
+            company_gstin_field = "bill_to_gstin"
+            party_gstin_field = "bill_from_gstin"
+            gst_category_field = "bill_from_gst_category"
     else:
+        # Subcontracting Receipt and Subcontracting Order
         company_gstin_field = "company_gstin"
         party_gstin_field = "supplier_gstin"
         company_address_field = "billing_address"
@@ -302,7 +309,7 @@ def validate_company_address_field(doc, company_address_field):
             doc,
             company_address_field,
             _(
-                "Please set {0} to ensure Bill From GSTIN is fetched in the transaction."
+                "Please set {0} to ensure Company GSTIN is fetched in the transaction."
             ).format(bold(doc.meta.get_label(company_address_field))),
         )
         is False
@@ -332,8 +339,8 @@ class SubcontractingGSTAccounts(GSTAccounts):
         if is_outward_stock_entry(self.doc):
             return
 
-        company_gstin = self.doc.get("company_gstin") or self.doc.bill_from_gstin
-        party_gstin = self.doc.get("supplier_gstin") or self.doc.bill_to_gstin
+        company_gstin = self.doc.get("company_gstin") or self.doc.get("bill_from_gstin")
+        party_gstin = self.doc.get("supplier_gstin") or self.doc.get("bill_to_gstin")
 
         if not party_gstin or company_gstin != party_gstin:
             return
@@ -486,9 +493,24 @@ def is_e_waybill_applicable(doc):
 
     if doc.purpose not in [
         "Material Transfer",
-        "Material Receipt",
+        "Material Issue",
         "Send to Subcontractor",
     ]:
         return False
 
     return True
+
+
+def ignore_gst_validations_for_subcontracting(doc):
+    if ignore_gst_validations(doc):
+        return True
+
+    if doc.doctype != "Stock Entry":
+        return False
+
+    # ignore if company address is not set
+    if is_outward_stock_entry(doc) and not doc.bill_from_address:
+        return True
+
+    if doc.is_return and not doc.bill_to_address:
+        return True

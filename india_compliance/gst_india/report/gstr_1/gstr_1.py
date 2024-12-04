@@ -1476,6 +1476,7 @@ class GSTR1DocumentIssuedSummary:
 
         additional_conditions = [
             self.purchase_invoice.is_reverse_charge == 1,
+            IfNull(self.purchase_invoice.supplier_gstin, "") == "",
         ]
         return self.build_query(
             doctype=self.purchase_invoice,
@@ -2081,6 +2082,7 @@ def get_document_issued_summary_json(data):
         "Invoices for outward supply": 1,
         "Debit Note": 4,
         "Credit Note": 5,
+        "Invoices for inward supply from unregistered person": 2,
     }
 
     document_lists = {document_type: [] for document_type in document_types}
