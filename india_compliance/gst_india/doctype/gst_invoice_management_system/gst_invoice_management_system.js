@@ -56,12 +56,10 @@ frappe.ui.form.on("GST Invoice Management System", {
                     args: {
                         company_gstin: frm.doc.company_gstin,
                     },
-                    callback: () => frm.ims.check_action_status_with_retry(),
-                });
-
-                frappe.show_alert({
-                    message: "Uploaded Invoices",
-                    indicator: "green",
+                    callback: () => {
+                        frm.ims.check_action_status_with_retry(); // For Uploaded Invoices
+                        frm.ims.check_action_status_with_retry(); // For Reset Invoices
+                    },
                 });
             });
 

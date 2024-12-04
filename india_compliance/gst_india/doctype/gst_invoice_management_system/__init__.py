@@ -106,6 +106,7 @@ class IMSReconciler:
             frappe.qb.from_(self.inward_supply)
             .select(
                 *fields,
+                self.inward_supply.name,
                 self.inward_supply.link_name,
                 self.inward_supply.link_doctype,
                 self.inward_supply.match_status,

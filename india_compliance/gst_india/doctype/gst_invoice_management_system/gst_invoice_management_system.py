@@ -4,6 +4,7 @@
 import frappe
 from frappe.model.document import Document
 from frappe.query_builder.functions import IfNull
+from india_compliance.gst_india.utils import parse_datetime
 
 from india_compliance.gst_india.api_classes.taxpayer_base import otp_handler
 from india_compliance.gst_india.api_classes.taxpayer_returns import IMSAPI
@@ -24,6 +25,7 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_re
     unlink_documents,
 )
 from india_compliance.gst_india.utils.gstr_2 import download_ims_invoices, ims
+from india_compliance.gst_india.utils.gstr_2.ims import GST_CATEGORY, ACTION_MAP
 
 
 class GSTInvoiceManagementSystem(Document):
@@ -173,20 +175,31 @@ def upload_invoices(company_gstin):
 
     ims_log = frappe.get_doc(
         "GST Return Log",
-        f"IMS-{company_gstin}",
+        f"IMS-2024-{company_gstin}",
     )
 
-    json_data = get_data(company_gstin)
+    upload_data, reset_data = get_data(company_gstin)
 
-    if not json_data:
+    if not (upload_data or reset_data):
         return
 
-    verify_request_in_progress(ims_log)
+    verify_request_in_progress(ims_log, False)
 
-    # Make API Request
     api = IMSAPI(company_gstin)
-    response = api.save_ims_action(json_data)
-    update_return_log(ims_log, response.get("reference_id"), "upload", api.request_id)
+
+    if upload_data:
+        # Upload invoices where action in ["Accept", "Reject", "Pending"]
+        response = api.save_ims_action(upload_data)
+        update_return_log(
+            ims_log, response.get("reference_id"), "upload", api.request_id
+        )
+
+    if reset_data:
+        # Reset invoices where action is "No Action"
+        response = api.reset_ims_action(reset_data)
+        update_return_log(
+            ims_log, response.get("reference_id"), "reset", api.request_id
+        )
 
 
 @frappe.whitelist()
@@ -196,28 +209,10 @@ def check_action_status(company_gstin):
 
     ims_log = frappe.get_doc(
         "GST Return Log",
-        f"IMS-{company_gstin}",
+        f"IMS-2024-{company_gstin}",
     )
 
     return process_upload_ims(ims_log)
-
-
-def reset_invoices(company_gstin):
-    frappe.has_permission("GST Return Log", "write", throw=True)
-
-    ims_log = frappe.get_doc(
-        "GST Return Log",
-        f"IMS-{company_gstin}",
-    )
-
-    json_data = get_data(company_gstin, is_reset=True)
-
-    verify_request_in_progress(ims_log)
-
-    api = IMSAPI(company_gstin)
-    response = api.reset_ims_action(json_data)
-
-    update_return_log(ims_log, response.get("reference_id"), "reset", api.request_id)
 
 
 def get_data(company_gstin, is_reset=False):
@@ -244,24 +239,28 @@ def get_data(company_gstin, is_reset=False):
         .run(as_dict=True)
     )
 
-    json_data = convert_data_to_gov_format(
+    upload_data, reset_data = convert_data_to_gov_format(
         gst_inward_supply_list, company_gstin, is_reset
     )
 
-    return json_data
+    return upload_data, reset_data
 
 
 def convert_data_to_gov_format(gst_inward_supply_list, company_gstin, is_reset=False):
     category_key_map = {
         "Invoice_0": "b2b",
         "Invoice_1": "b2ba",
-        "Debit Note_0": "dn",
-        "Debit Note_1": "dna",
-        "Credit Note_0": "cn",
-        "Credit Note_1": "cna",
+        "Debit Note_0": "b2bdn",
+        "Debit Note_1": "b2bdna",
+        "Credit Note_0": "b2bcn",
+        "Credit Note_1": "b2bcna",
     }
 
-    json_data = {}
+    gst_category_map = {v: k for k, v in GST_CATEGORY.items()}
+    action_map = {v: k for k, v in ACTION_MAP.items()}
+
+    upload_data = {}
+    reset_data = {}
     key_invoice_map = {}
 
     for invoice in gst_inward_supply_list:
@@ -274,17 +273,18 @@ def convert_data_to_gov_format(gst_inward_supply_list, company_gstin, is_reset=F
     for key, invoices in key_invoice_map.items():
         category = category_key_map[key]
         _class = getattr(ims, category.upper())(company_gstin)
-        result = []
+        upload_invoices = []
+        reset_invoices = []
 
         for invoice in invoices:
             data = {
                 "stin": invoice.supplier_gstin,
-                # "inv_typ": invoice.supply_type, TODO: Check options
-                "srcform": "",
+                "inv_typ": gst_category_map[invoice.supply_type],
+                "srcform": "R1",  # TODO: This field is mandatory (Should we create a new custom field)
                 "rtnprd": invoice.sup_return_period,
                 "val": invoice.document_value,
                 "pos": STATE_NUMBERS[invoice.place_of_supply.split("-")[1]],
-                "prev_status": invoice.previous_ims_action,
+                "prev_status": action_map[invoice.previous_ims_action],
                 "iamt": invoice.igst,
                 "camt": invoice.cgst,
                 "samt": invoice.sgst,
@@ -293,21 +293,24 @@ def convert_data_to_gov_format(gst_inward_supply_list, company_gstin, is_reset=F
                 **_class.get_category_details(invoice),
             }
 
-            if not is_reset:
+            if invoice.ims_action != "No Action":
                 data.update(
                     {
-                        "action": invoice.ims_action,
+                        "action": action_map[invoice.ims_action],
                     }
                 )
+                upload_invoices.append(data)
 
-            result.append(data)
+            else:
+                reset_invoices.append(data)
 
-        json_data[category] = data
+        upload_data[category] = upload_invoices
+        reset_data[category] = reset_invoices
 
-    return json_data
+    return upload_data, reset_data
 
 
-def update_return_log(doc, token, request_id, action, status=None):
+def update_return_log(doc, token, action, request_id, status=None):
     if not token:
         return
 
@@ -333,6 +336,8 @@ def process_upload_ims(return_log):
     response = None
 
     doc = return_log.get_unprocessed_action("upload")
+    if not doc:
+        doc = return_log.get_unprocessed_action("reset")
 
     if not doc:
         return
@@ -340,22 +345,26 @@ def process_upload_ims(return_log):
     response = api.get_request_status(doc.token)
     status_cd = response.get("status_cd")
 
+    erroneous_invoices = []
     if status_cd != "IP":
         doc.db_set({"status": status_code_map.get(status_cd)})
         # TODO: Enqueue Notification
 
     if status_cd == "PE":
-        response["error_report"] = get_error_list(response.get("error_report"))
+        erroneous_invoices, response["error_report"] = get_erroneous_invoices(
+            response.get("error_report")
+        )
 
-    if status_cd == "P":
-        # TODO: Update Previous IMS Action
-        pass
+    if status_cd in ["P", "PE"]:
+        # Exclude erroneous invoices from previous IMS action update
+        update_previous_ims_action(doc.integration_request, erroneous_invoices)
 
     return response
 
 
-def get_error_list(report):
+def get_erroneous_invoices(report):
     error_report = []
+    invoice_names = []
     for error_list in report.values():
         for error in error_list:
             for invoice in error.get("inv"):
@@ -368,5 +377,54 @@ def get_error_list(report):
                         "supplier_gstin": error.get("stin"),
                     }
                 )
+                invoice_names.append(f"{invoice.get('inum')}_{invoice.get('stin')}")
 
-    return error_report
+    return invoice_names, error_report
+
+
+def get_uploaded_invoices(integration_request):
+    request_data = frappe.parse_json(
+        frappe.db.get_value(
+            "Integration Request", {"name": integration_request}, "data"
+        )
+    )
+
+    invoice_data = request_data["body"]["data"]["invdata"]
+    invoices = []
+
+    for row in invoice_data.values():
+        invoices.extend(row)
+
+    return invoices
+
+
+def update_previous_ims_action(integration_request, erroneous_invoices):
+    uploded_invoices = get_uploaded_invoices(integration_request)
+    invoices_to_update = []
+
+    for invoice in uploded_invoices:
+        bill_no = invoice.get("inum") or invoice.get("nt_num")
+        bill_date = invoice.get("idt") or invoice.get("nt_dt")
+        supplier_gstin = invoice.get("stin")
+
+        if f"{bill_no}_{supplier_gstin}" not in erroneous_invoices:
+            invoices_to_update.append(
+                {
+                    "bill_no": bill_no,
+                    "supplier_gstin": supplier_gstin,
+                    "bill_date": parse_datetime(bill_date, day_first=True),
+                    "action": invoice.get("action"),
+                }
+            )
+
+    for invoice in invoices_to_update:
+        frappe.db.set_value(
+            "GST Inward Supply",
+            {
+                "bill_no": invoice["bill_no"],
+                "supplier_gstin": invoice["supplier_gstin"],
+                "bill_date": invoice["bill_date"],
+            },
+            "previous_ims_action",
+            ACTION_MAP[invoice["action"]],
+        )
