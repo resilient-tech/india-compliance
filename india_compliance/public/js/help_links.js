@@ -4,178 +4,178 @@ const docsUrl = "https://docs.indiacompliance.app/docs/";
 
 //India Compliance Account
 frappe.help.help_links["india-compliance-account"] = [
-	{
-		label: "India Compliance Account",
-		url: docsUrl + "getting-started/india_compliance_account",
-	},
+    {
+        label: "India Compliance Account",
+        url: docsUrl + "getting-started/india_compliance_account",
+    },
 ];
 
 //GST Settings
 frappe.help.help_links["Form/GST Settings"] = [
-	{
-		label: "GSTIN Verification",
-		url: docsUrl + "miscellaneous/gstin_verification",
-	},
+    {
+        label: "GSTIN Verification",
+        url: docsUrl + "miscellaneous/gstin_verification",
+    },
 ];
 
 //Doctypes
 //Sales Invoice
 if (!frappe.help.help_links["Form/Sales Invoice"]) {
-	frappe.help.help_links["Form/Sales Invoice"] = [];
+    frappe.help.help_links["Form/Sales Invoice"] = [];
 }
 
 frappe.help.help_links["Form/Sales Invoice"].push(
-	{
-		label: "Sales Transaction",
-		url: docsUrl + "configuration/sales_transaction",
-	},
-	{
-		label: "e-Waybill",
-		url: docsUrl + "ewaybill-and-einvoice/generating_e_waybill",
-	},
-	{
-		label: "e-Invoice",
-		url: docsUrl + "ewaybill-and-einvoice/generating_e_invoice",
-	},
+    {
+        label: "Sales Transaction",
+        url: docsUrl + "configuration/sales_transaction",
+    },
+    {
+        label: "e-Waybill",
+        url: docsUrl + "ewaybill-and-einvoice/generating_e_waybill",
+    },
+    {
+        label: "e-Invoice",
+        url: docsUrl + "ewaybill-and-einvoice/generating_e_invoice",
+    },
 );
 
 frappe.help.help_links["List/Sales Invoice"].push({
-	label: "Sales Transaction",
-	url: docsUrl + "configuration/sales_transaction",
+    label: "Sales Transaction",
+    url: docsUrl + "configuration/sales_transaction",
 });
 
 //Purchase Invoice
 frappe.help.help_links["Form/Purchase Invoice"] = [
-	{
-		label: "Purchase Transaction",
-		url: docsUrl + "configuration/purchase_transaction",
-	},
-	{
-		label: "e-Waybill",
-		url: docsUrl + "ewaybill-and-einvoice/generating_e_waybill",
-	}
+    {
+        label: "Purchase Transaction",
+        url: docsUrl + "configuration/purchase_transaction",
+    },
+    {
+        label: "e-Waybill",
+        url: docsUrl + "ewaybill-and-einvoice/generating_e_waybill",
+    }
 ]
 
 frappe.help.help_links["List/Purchase Invoice"].push({
-	label: "Purchase Transaction",
-	url: docsUrl + "configuration/purchase_transaction",
+    label: "Purchase Transaction",
+    url: docsUrl + "configuration/purchase_transaction",
 })
 
 //Delivery Note
 frappe.help.help_links["Form/Delivery Note"].push({
-	label: "e-Waybill",
-	url: docsUrl + "ewaybill-and-einvoice/generating_e_waybill",
+    label: "e-Waybill",
+    url: docsUrl + "ewaybill-and-einvoice/generating_e_waybill",
 })
 
 //Purchase Receipt
 frappe.help.help_links["Form/Purchase Receipt"] = [
-	{
-		label: "e-Waybill",
-		url: docsUrl + "ewaybill-and-einvoice/generating_e_waybill",
-	}
+    {
+        label: "e-Waybill",
+        url: docsUrl + "ewaybill-and-einvoice/generating_e_waybill",
+    }
 ]
 
 //Stock Entry
 frappe.help.help_links["Form/Stock Entry"].push({
-	label: "e-Waybill",
-	url: docsUrl + "ewaybill-and-einvoice/generating_e_waybill",
+    label: "e-Waybill",
+    url: docsUrl + "ewaybill-and-einvoice/generating_e_waybill",
 })
 
 //Subcontracting Receipt
 frappe.help.help_links["Form/Subcontracting Receipt"] = [
-	{
-		label: "e-Waybill",
-		url: docsUrl + "ewaybill-and-einvoice/generating_e_waybill",
-	}
+    {
+        label: "e-Waybill",
+        url: docsUrl + "ewaybill-and-einvoice/generating_e_waybill",
+    }
 ]
 
 //Journal Entry
 frappe.help.help_links["Form/Journal Entry"] = [
-	{
-		label: "Reversal of Input Tax Credit",
-		url: docsUrl + "configuration/other_transaction#reversal-of-input-tax-credit",
-	}
+    {
+        label: "Reversal of Input Tax Credit",
+        url: docsUrl + "configuration/other_transaction#reversal-of-input-tax-credit",
+    }
 ]
 
 // GST Reports
 frappe.help.help_links["Form/GSTR-1 Beta"] = [
-	{
-		label: "GSTR-1 Beta",
-		url: docsUrl + "gst-reports/gstr1",
-	},
+    {
+        label: "GSTR-1 Beta",
+        url: docsUrl + "gst-reports/gstr1",
+    },
 ];
 
 frappe.help.help_links["Form/GSTR 3B Report"] = [
-	{
-		label: "GSTR 3B Report",
-		url: docsUrl + "gst-reports/gstr3b",
-	},
+    {
+        label: "GSTR 3B Report",
+        url: docsUrl + "gst-reports/gstr3b",
+    },
 ];
 
 frappe.help.help_links["List/GSTR 3B Report"] = [
-	{
-		label: "GSTR 3B Report",
-		url: docsUrl + "gst-reports/gstr3b",
-	},
+    {
+        label: "GSTR 3B Report",
+        url: docsUrl + "gst-reports/gstr3b",
+    },
 ];
 
 
 //Query Reports
 frappe.help.help_links["query-report/GST Job Work Stock Movement"] = [
-	{
-		label: "GST Job Work Stock Movement",
-		url: docsUrl + "gst-reports/miscellaneous_reports#gst-job-work-stock-movement-report",
-	},
+    {
+        label: "GST Job Work Stock Movement",
+        url: docsUrl + "gst-reports/miscellaneous_reports#gst-job-work-stock-movement-report",
+    },
 ];
 
 frappe.help.help_links["query-report/GST Balance"] = [
-	{
-		label: "GST Balance",
-		url: docsUrl + "gst-reports/miscellaneous_reports#gst-balance-report",
-	},
+    {
+        label: "GST Balance",
+        url: docsUrl + "gst-reports/miscellaneous_reports#gst-balance-report",
+    },
 ];
 
 frappe.help.help_links["query-report/GST Sales Register Beta"] = [
-	{
-		label: "GST Sales Register Beta",
-		url: docsUrl + "gst-reports/miscellaneous_reports#gst-sales-register-beta-report",
-	},
+    {
+        label: "GST Sales Register Beta",
+        url: docsUrl + "gst-reports/miscellaneous_reports#gst-sales-register-beta-report",
+    },
 ];
 
 frappe.help.help_links["query-report/GST Purchase Register"] = [
-	{
-		label: "GST Purchase Register",
-		url: docsUrl + "gst-reports/miscellaneous_reports#gst-purchase-register-beta-report",
-	},
+    {
+        label: "GST Purchase Register",
+        url: docsUrl + "gst-reports/miscellaneous_reports#gst-purchase-register-beta-report",
+    },
 ];
 
 //Purchase Reconciliation
 frappe.help.help_links["Form/Purchase Reconciliation Tool"] = [
-	{
-		label: "Setup Purchase Reconciliation Tool",
-		url: docsUrl + "purchase-reconciliation/purchase_reconciliation_setup",
-	},
-	{
-		label: "Reconciling Purchase",
-		url: docsUrl + "purchase-reconciliation/reconciling_purchase",
-	},
-	{
-		label: "Auto Reconcile",
-		url: docsUrl + "purchase-reconciliation/auto_reconcile",
-	},
+    {
+        label: "Setup Purchase Reconciliation Tool",
+        url: docsUrl + "purchase-reconciliation/purchase_reconciliation_setup",
+    },
+    {
+        label: "Reconciling Purchase",
+        url: docsUrl + "purchase-reconciliation/reconciling_purchase",
+    },
+    {
+        label: "Auto Reconcile",
+        url: docsUrl + "purchase-reconciliation/auto_reconcile",
+    },
 ];
 
 //Miscellaneous
 frappe.help.help_links["Form/Audit Trail"] = [
-	{
-		label: "Audit Trail",
-		url: docsUrl + "miscellaneous/audit_trail",
-	},
+    {
+        label: "Audit Trail",
+        url: docsUrl + "miscellaneous/audit_trail",
+    },
 ];
 
 frappe.help.help_links["Form/Lower Deduction Certificate"] = [
-	{
-		label: "Lower Deduction Certificate",
-		url: docsUrl + "miscellaneous/lower_deduction_certificate",
-	},
+    {
+        label: "Lower Deduction Certificate",
+        url: docsUrl + "miscellaneous/lower_deduction_certificate",
+    },
 ];
