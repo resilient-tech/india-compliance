@@ -57,8 +57,16 @@ frappe.ui.form.on("GST Invoice Management System", {
                         company_gstin: frm.doc.company_gstin,
                     },
                     callback: () => {
-                        frm.ims.check_action_status_with_retry(); // For Uploaded Invoices
-                        frm.ims.check_action_status_with_retry(); // For Reset Invoices
+                        // For upload and reset requests
+                        frm.ims.check_action_status_with_retry();
+                        frm.ims.check_action_status_with_retry();
+
+                        // TODO: Handle error report in case of PE and ER and return
+
+                        frappe.show_alert({
+                            message: "Uploaded Invoices Successfully.",
+                            indicator: "green",
+                        });
                     },
                 });
             });
@@ -613,12 +621,13 @@ class IMS {
                 // Not IP
 
                 if (message.status_cd == "P") {
-                    // TODO: Do Something
+                    return { status_cd: "P" };
                 } else if (message.status_cd == "PE") {
-                    // TODO: Show error report
+                    return { status_cd: "PE", error_report: message.error_report };
                 }
 
-                if (message.status_cd == "ER") frappe.throw(__(message.error.message));
+                if (message.status_cd == "ER")
+                    return { status_cd: "ER", error_message: message.err_msg };
             },
             now ? 0 : this.RETRY_INTERVALS[retries]
         );
