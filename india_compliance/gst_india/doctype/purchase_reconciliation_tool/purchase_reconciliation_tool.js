@@ -1464,7 +1464,6 @@ async function download_gstr(
     only_missing = true,
     gst_categories = null
 ) {
-<<<<<<< HEAD
     const authenticated_company_gstins =
         await india_compliance.authenticate_company_gstins(
             frm.doc.company,
@@ -1479,12 +1478,6 @@ async function download_gstr(
         gst_categories,
     };
     frm.events.show_progress(frm, "download");
-=======
-    let company_gstins;
-    if (company_gstin == "All")
-        company_gstins = await india_compliance.get_gstin_options(frm.doc.company);
-    else company_gstins = [company_gstin];
->>>>>>> f9f9bfca (fix: better filters for match status and actions performed)
 
     const { message } = await frm.call("download_gstr", args);
 
