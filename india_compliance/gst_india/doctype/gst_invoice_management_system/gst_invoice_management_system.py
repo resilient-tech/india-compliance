@@ -301,7 +301,6 @@ def convert_data_to_gov_format(gst_inward_supply_list, company_gstin, is_reset=F
                     }
                 )
                 upload_invoices.append(data)
-
             else:
                 reset_invoices.append(data)
 

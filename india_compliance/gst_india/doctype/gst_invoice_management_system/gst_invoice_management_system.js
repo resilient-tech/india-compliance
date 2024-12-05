@@ -565,7 +565,7 @@ class IMS {
         };
         let data = {};
 
-        this.filtered_data.forEach(row => {
+        this.data.forEach(row => {
             const action = action_map[row.ims_action];
             const category = category_map[row.doc_type];
             if (!data[category]) {
