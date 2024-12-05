@@ -361,12 +361,12 @@ def download_ims_invoices(company_gstin, company):
 
 
 def create_return_log(company, company_gstin):
-    if log_name := frappe.db.exists("GST Return Log", f"IMS-2024-{company_gstin}"):
+    if log_name := frappe.db.exists("GST Return Log", f"IMS-ALL-{company_gstin}"):
         ims_log = frappe.get_doc("GST Return Log", log_name)
 
     else:
         ims_log = frappe.new_doc("GST Return Log")
-        ims_log.return_period = "2024"  # TODO: What should be return period ??
+        ims_log.return_period = "ALL"
         ims_log.company = company
         ims_log.gstin = company_gstin
         ims_log.return_type = "IMS"

@@ -177,7 +177,7 @@ def upload_invoices(company_gstin):
 
     ims_log = frappe.get_doc(
         "GST Return Log",
-        f"IMS-2024-{company_gstin}",
+        f"IMS-ALL-{company_gstin}",
     )
 
     upload_data, reset_data = get_invoices_to_upload(company_gstin)
@@ -211,7 +211,7 @@ def check_action_status(company_gstin):
 
     ims_log = frappe.get_doc(
         "GST Return Log",
-        f"IMS-2024-{company_gstin}",
+        f"IMS-ALL-{company_gstin}",
     )
 
     return process_upload_ims(ims_log)
