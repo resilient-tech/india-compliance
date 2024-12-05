@@ -17,6 +17,9 @@ class GSTInwardSupply(Document):
         if self.gstr_1_filing_date:
             self.gstr_1_filled = True
 
+        if self.previous_ims_action and not self.ims_action:
+            self.ims_action = self.previous_ims_action
+
         if self.match_status != "Amended" and (
             self.other_return_period or self.is_amended
         ):
@@ -47,6 +50,22 @@ def create_inward_supply(transaction):
 
     gst_inward_supply.update(transaction)
     return gst_inward_supply.save(ignore_permissions=True)
+
+
+def update_previous_ims_action(transaction):
+    filters = {
+        "bill_no": transaction.bill_no,
+        "bill_date": transaction.bill_date,
+        "classification": transaction.classification,
+        "supplier_gstin": transaction.supplier_gstin,
+    }
+
+    frappe.db.set_value(
+        "GST Inward Supply",
+        filters,
+        "previous_ims_action",
+        transaction.previous_ims_action,
+    )
 
 
 def update_docs_for_amendment(doc):

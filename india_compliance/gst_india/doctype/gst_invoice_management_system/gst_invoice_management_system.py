@@ -172,6 +172,7 @@ def download_invoices_and_reconcile(company_gstin, company):
 @frappe.whitelist()
 @otp_handler
 def upload_invoices(company_gstin):
+    frappe.has_permission("GST Invoice Management System", "write", throw=True)
     frappe.has_permission("GST Return Log", "write", throw=True)
 
     ims_log = frappe.get_doc(
@@ -179,7 +180,7 @@ def upload_invoices(company_gstin):
         f"IMS-2024-{company_gstin}",
     )
 
-    upload_data, reset_data = get_data(company_gstin)
+    upload_data, reset_data = get_invoices_to_upload(company_gstin)
 
     if not (upload_data or reset_data):
         return
@@ -216,7 +217,7 @@ def check_action_status(company_gstin):
     return process_upload_ims(ims_log)
 
 
-def get_data(company_gstin, is_reset=False):
+def get_invoices_to_upload(company_gstin, is_reset=False):
     ims_reconciler = IMSReconciler()
     additional_fields = [
         "doc_type",
@@ -236,7 +237,6 @@ def get_data(company_gstin, is_reset=False):
             ims_reconciler.inward_supply.ims_action
             != ims_reconciler.inward_supply.previous_ims_action
         )
-        .where(ims_reconciler.inward_supply.gstr_1_filled == 1)
         .run(as_dict=True)
     )
 
@@ -286,7 +286,7 @@ def convert_data_to_gov_format(gst_inward_supply_list, company_gstin, is_reset=F
                 "val": invoice.document_value,
                 "pos": STATE_NUMBERS[invoice.place_of_supply.split("-")[1]],
                 "prev_status": action_map[invoice.previous_ims_action],
-                "iamt": invoice.igst,
+                "iamt": 100,
                 "camt": invoice.cgst,
                 "samt": invoice.sgst,
                 "cess": invoice.cess,

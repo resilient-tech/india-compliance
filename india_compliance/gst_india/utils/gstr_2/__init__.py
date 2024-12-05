@@ -374,6 +374,8 @@ def create_return_log(company, company_gstin):
 
 
 def reset_previous_ims_action():
+    # TODO: Think of a way to delete invoices which are not present in new data
+    # while also preserving the match status if any.
     inward_supply = frappe.qb.DocType("GST Inward Supply")
 
     frappe.qb.update(inward_supply).set(inward_supply.previous_ims_action, "").run()

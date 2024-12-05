@@ -2,6 +2,10 @@ import frappe
 from frappe.utils.data import format_date
 
 from india_compliance.gst_india.constants import STATE_NUMBERS
+from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
+    create_inward_supply,
+    update_previous_ims_action,
+)
 from india_compliance.gst_india.utils import parse_datetime
 
 ACTION_MAP = {"A": "Accept", "R": "Reject", "P": "Pending", "N": "No Action"}
@@ -27,6 +31,13 @@ class IMS:
         for transaction in transactions:
             create_inward_supply(transaction)
 
+    def update_previous_ims_action(self, invoices, errors):
+        transactions = self.get_all_transactions(invoices)
+
+        for transaction in transactions:
+            # Error data handeling
+            update_previous_ims_action(transaction)
+
     def get_all_transactions(self, invoices):
         transactions = []
         for invoice in invoices:
@@ -37,7 +48,7 @@ class IMS:
 
     def get_transaction(self, invoice):
         transaction = frappe._dict(
-            # TODO: Required??
+            # TODO: Required?? Create two fields.
             # gstr_1_filled= invoice.srcfilstatus,
             # source_form = invoice.srcform,
             **self.update_transaction(invoice),
@@ -60,7 +71,6 @@ class IMS:
             "company_gstin": self.company_gstin,
             "is_pending_action_allowed": invoice.ispendactnallwd,
             "previous_ims_action": ACTION_MAP.get(invoice.action),
-            "ims_action": ACTION_MAP.get(invoice.action),
             "cgst": invoice.camt,
             "sgst": invoice.samt,
             "igst": invoice.iamt,
@@ -182,23 +192,3 @@ class B2BCNA(B2BCN):
             }
         )
         return invoice_details
-
-
-def create_inward_supply(transaction):
-    filters = {
-        "bill_no": transaction.bill_no,
-        "bill_date": transaction.bill_date,
-        "classification": transaction.classification,
-        "supplier_gstin": transaction.supplier_gstin,
-    }
-
-    if name := frappe.get_value("GST Inward Supply", filters):
-        gst_inward_supply = frappe.get_doc("GST Inward Supply", name)
-    else:
-        gst_inward_supply = frappe.new_doc("GST Inward Supply")
-
-    if gst_inward_supply.ims_action:
-        transaction.pop("ims_action")
-
-    gst_inward_supply.update(transaction)
-    return gst_inward_supply.save(ignore_permissions=True)
