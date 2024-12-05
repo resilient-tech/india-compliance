@@ -1,7 +1,7 @@
 import frappe
 from frappe.utils.data import format_date
 
-from india_compliance.gst_india.constants import STATE_NUMBERS
+from india_compliance.gst_india.constants import GST_CATEGORY_MAP, STATE_NUMBERS
 from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
     create_inward_supply,
     update_previous_ims_action,
@@ -9,13 +9,6 @@ from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply impo
 from india_compliance.gst_india.utils import parse_datetime
 
 ACTION_MAP = {"A": "Accepted", "R": "Rejected", "P": "Pending", "N": "No Action"}
-GST_CATEGORY = {
-    "R": "Regular",
-    "SEZWP": "SEZ supplies with payment of tax",
-    "SEZWOP": "SEZ supplies with out payment of tax",
-    "DE": "Deemed exports",
-    "CBW": "Intra-State Supplies attracting IGST",
-}
 
 
 class IMS:
@@ -64,7 +57,7 @@ class IMS:
         return {
             "supplier_gstin": invoice.stin,
             "sup_return_period": invoice.rtnprd,
-            "supply_type": GST_CATEGORY[invoice.inv_typ],
+            "supply_type": GST_CATEGORY_MAP[invoice.inv_typ],
             "place_of_supply": self.STATE_MAP[invoice.pos],
             "document_value": invoice.val,
             "company": self.company,

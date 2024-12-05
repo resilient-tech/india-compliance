@@ -1,5 +1,6 @@
 import frappe
 
+from india_compliance.gst_india.constants import GST_CATEGORY_MAP
 from india_compliance.gst_india.utils import parse_datetime
 from india_compliance.gst_india.utils.gstr_2.gstr import GSTR, get_mapped_value
 
@@ -40,7 +41,7 @@ class GSTR2bB2B(GSTR2b):
     def get_invoice_details(self, invoice):
         return {
             "bill_no": invoice.inum,
-            "supply_type": get_mapped_value(invoice.typ, self.VALUE_MAPS.gst_category),
+            "supply_type": get_mapped_value(invoice.typ, GST_CATEGORY_MAP),
             "bill_date": parse_datetime(invoice.dt, day_first=True),
             "taxable_value": invoice.txval,
             "igst": invoice.igst,
@@ -98,9 +99,7 @@ class GSTR2bCDNR(GSTR2bB2B):
             {
                 "bill_no": invoice.ntnum,
                 "doc_type": get_mapped_value(invoice.typ, self.VALUE_MAPS.note_type),
-                "supply_type": get_mapped_value(
-                    invoice.suptyp, self.VALUE_MAPS.gst_category
-                ),
+                "supply_type": get_mapped_value(invoice.suptyp, GST_CATEGORY_MAP),
             }
         )
         return invoice_details

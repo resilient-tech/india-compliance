@@ -26,7 +26,7 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_re
 )
 from india_compliance.gst_india.utils import parse_datetime
 from india_compliance.gst_india.utils.gstr_2 import download_ims_invoices, ims
-from india_compliance.gst_india.utils.gstr_2.ims import ACTION_MAP, GST_CATEGORY
+from india_compliance.gst_india.utils.gstr_2.ims import ACTION_MAP, GST_CATEGORY_MAP
 
 
 class GSTInvoiceManagementSystem(Document):
@@ -257,7 +257,7 @@ def convert_data_to_gov_format(gst_inward_supply_list, company_gstin, is_reset=F
         "Credit Note_1": "b2bcna",
     }
 
-    gst_category_map = {v: k for k, v in GST_CATEGORY.items()}
+    gst_category_map = {v: k for k, v in GST_CATEGORY_MAP.items()}
     action_map = {v: k for k, v in ACTION_MAP.items()}
 
     upload_data = {}

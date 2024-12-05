@@ -42,7 +42,7 @@ frappe.ui.form.on("GST Invoice Management System", {
         if (!frm.doc.is_data_loaded) {
             frm.page.clear_primary_action();
 
-            frm.page.set_primary_action(__("Generate"), async () => {
+            frm.page.set_primary_action(__("Show Invoices"), async () => {
                 const { message } = await frm.call("get_invoice_data");
                 frm.doc.__invoice_data = message;
 

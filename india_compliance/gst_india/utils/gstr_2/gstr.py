@@ -19,13 +19,6 @@ class GSTR:
         {
             "Y_N_to_check": {"Y": 1, "N": 0},
             "yes_no": {"Y": "Yes", "N": "No"},
-            "gst_category": {
-                "R": "Regular",
-                "SEZWP": "SEZ supplies with payment of tax",
-                "SEZWOP": "SEZ supplies with out payment of tax",
-                "DE": "Deemed exports",
-                "CBW": "Intra-State Supplies attracting IGST",
-            },
             "states": {value: f"{value}-{key}" for key, value in STATE_NUMBERS.items()},
             "note_type": {"C": "Credit Note", "D": "Debit Note"},
             "isd_type_2a": {"ISDCN": "ISD Credit Note", "ISD": "ISD Invoice"},
