@@ -141,29 +141,10 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
 
             $(".custom-button-group .inner-group-button").remove();
 
-            // to hide `Actions` text on small screens
-            const actions_btn_html = `
-            <div class="d-none d-sm-block">
-                <span class="button-label">${action_group}</span>
-                ${frappe.utils.icon("select")}
-            </div>
-            <div class="d-block d-sm-none">
-                ${frappe.utils.icon("dot-horizontal")}
-            </div>
-            `;
-
-            $(group_div).find("button").html(actions_btn_html);
+            // to hide `Actions` button group on smaller screens
+            $(group_div).addClass("hidden-md");
 
             $(group_div).appendTo($(".custom-button-group"));
-        }
-
-        // remove `Actions` from page actions menu
-        for (const action of frm.$wrapper.find(".user-action")) {
-            const innerText = action?.innerText;
-
-            if (innerText && innerText.includes(action_group)) {
-                $(action).remove();
-            }
         }
     },
 
