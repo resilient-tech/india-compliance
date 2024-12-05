@@ -99,6 +99,7 @@
   {
    "fieldname": "reference_doctype",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Reference Document Type",
    "options": "DocType",
@@ -177,7 +178,7 @@
    "link_fieldname": "ewaybill"
   }
  ],
- "modified": "2024-07-17 12:26:38.069883",
+ "modified": "2024-12-05 09:50:37.014667",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Waybill Log",
