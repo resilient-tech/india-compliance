@@ -8,7 +8,7 @@ from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply impo
 )
 from india_compliance.gst_india.utils import parse_datetime
 
-ACTION_MAP = {"A": "Accept", "R": "Reject", "P": "Pending", "N": "No Action"}
+ACTION_MAP = {"A": "Accepted", "R": "Rejected", "P": "Pending", "N": "No Action"}
 GST_CATEGORY = {
     "R": "Regular",
     "SEZWP": "SEZ supplies with payment of tax",

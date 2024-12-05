@@ -9,6 +9,13 @@ const category_map = {
     "B2B-Debit Notes": "Debit Note",
 };
 
+const ACTION_MAP = {
+    Accept: "Accepted",
+    Pending: "Pending",
+    Reject: "Rejected",
+    "No Action": "No Action",
+};
+
 frappe.ui.form.on("GST Invoice Management System", {
     async setup(frm) {
         await frappe.require("ims.bundle.js");
@@ -79,10 +86,10 @@ frappe.ui.form.on("GST Invoice Management System", {
                 );
                 frm.add_custom_button(__("dropdown-divider"), () => {}, __("Actions"));
             }
-            ["Accept", "Pending", "Reject"].forEach(action =>
+            ["Accept", "Pending", "Reject", "No Action"].forEach(action =>
                 frm.add_custom_button(
                     __(action),
-                    () => apply_bulk_action(frm, action),
+                    () => apply_bulk_action(frm, ACTION_MAP[action]),
                     __("Actions")
                 )
             );
@@ -259,7 +266,7 @@ class IMS {
                 label: "Action",
                 fieldname: "ims_action",
                 fieldtype: "Select",
-                options: ["Accept", "Reject", "Pending", "No Action"],
+                options: ["Accepted", "Rejected", "Pending", "No Action"],
             },
             {
                 label: "Document Type",
@@ -552,12 +559,6 @@ class IMS {
     }
 
     get_action_data() {
-        const action_map = {
-            Accept: "accepted",
-            Reject: "rejected",
-            Pending: "pending",
-            "No Action": "no_action",
-        };
         const category_map = {
             Invoice: "B2B-Invoices",
             "Credit Note": "B2B-Credit Notes",
@@ -566,7 +567,7 @@ class IMS {
         let data = {};
 
         this.data.forEach(row => {
-            const action = action_map[row.ims_action];
+            const action = convert_to_lower_case(row.ims_action);
             const category = category_map[row.doc_type];
             if (!data[category]) {
                 data[category] = {
@@ -905,7 +906,7 @@ class DetailViewDialog {
     setup_actions() {
         // setup actions
         let actions = ["Accept", "Reject", "No Action"].filter(
-            action => action != this.row.ims_action
+            action => ACTION_MAP[action] != this.row.ims_action
         );
 
         if (this.row.is_pending_action_allowed && this.row.ims_action != "Pending")
@@ -953,7 +954,7 @@ class DetailViewDialog {
                 this.frm.doc.company_gstin
             );
         } else {
-            apply_action(this.frm, [this.row.inward_supply_name], action);
+            apply_action(this.frm, [this.row.inward_supply_name], ACTION_MAP[action]);
         }
     }
 
@@ -1098,4 +1099,8 @@ function convert_to_title_case(str) {
         .split("_")
         .map(word => word[0].toUpperCase() + word.slice(1).toLowerCase())
         .join(" ");
+}
+
+function convert_to_lower_case(str) {
+    return str.trim().toLowerCase().replaceAll(" ", "_");
 }

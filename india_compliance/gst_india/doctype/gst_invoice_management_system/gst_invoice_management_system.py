@@ -190,7 +190,7 @@ def upload_invoices(company_gstin):
     api = IMSAPI(company_gstin)
 
     if upload_data:
-        # Upload invoices where action in ["Accept", "Reject", "Pending"]
+        # Upload invoices where action in ["Accepted", "Rejected", "Pending"]
         response = api.save_ims_action(upload_data)
         update_return_log(
             ims_log, response.get("reference_id"), "upload", api.request_id
