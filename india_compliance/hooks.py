@@ -232,17 +232,22 @@ doc_events = {
     "Stock Entry": {
         "onload": "india_compliance.gst_india.overrides.subcontracting_transaction.onload",
         "validate": "india_compliance.gst_india.overrides.subcontracting_transaction.validate",
-        "before_submit": "india_compliance.gst_india.overrides.subcontracting_transaction.before_submit",
+        "before_save": "india_compliance.gst_india.overrides.subcontracting_transaction.before_save",
+        "before_submit": "india_compliance.gst_india.overrides.subcontracting_transaction.validate_doc_references",
         "after_mapping": "india_compliance.gst_india.overrides.subcontracting_transaction.after_mapping_stock_entry",
     },
     "Subcontracting Order": {
         "validate": "india_compliance.gst_india.overrides.subcontracting_transaction.validate",
+        "before_save": "india_compliance.gst_india.overrides.subcontracting_transaction.before_save",
         "after_mapping": "india_compliance.gst_india.overrides.subcontracting_transaction.after_mapping_subcontracting_order",
     },
     "Subcontracting Receipt": {
         "onload": "india_compliance.gst_india.overrides.subcontracting_transaction.onload",
         "validate": "india_compliance.gst_india.overrides.subcontracting_transaction.validate",
-        "before_save": "india_compliance.gst_india.overrides.subcontracting_transaction.before_save",
+        "before_save": [
+            "india_compliance.gst_india.overrides.subcontracting_transaction.before_save",
+            "india_compliance.gst_india.overrides.subcontracting_transaction.validate_doc_references",
+        ],
         "before_mapping": "india_compliance.gst_india.overrides.subcontracting_transaction.before_mapping_subcontracting_receipt",
     },
     "Supplier": {
