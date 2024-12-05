@@ -116,22 +116,12 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
             );
             frm.add_custom_button(__("dropdown-divider"), () => {}, action_group);
         }
-<<<<<<< HEAD
-        ["Accept", "Pending", "Ignore"].forEach(
-            action =>
-                frm.add_custom_button(
-                    __(action),
-                    () => apply_action(frm, action),
-                    __("Actions")
-                )
-=======
         ["Accept", "Pending", "Ignore"].forEach(action =>
             frm.add_custom_button(
                 __(action),
                 () => apply_action(frm, action),
                 action_group
             )
->>>>>>> a82287c2 (fix: handle `Actions` button for smaller screens (#2806))
         );
         frm.$wrapper
             .find("[data-label='dropdown-divider']")
