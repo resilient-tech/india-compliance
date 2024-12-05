@@ -223,10 +223,6 @@ def validate_doc_references(doc, method=None):
     if ignore_gst_validations(doc):
         return
 
-    _validate_doc_references(doc)
-
-
-def _validate_doc_references(doc):
     is_return_material_transfer = (
         doc.doctype == "Stock Entry"
         and doc.purpose == "Material Transfer"
