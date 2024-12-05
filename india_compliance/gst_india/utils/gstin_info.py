@@ -404,13 +404,13 @@ def create_gst_return_log_for_quarter(gstin, log_names, filing_preference):
             }
         ).insert()
 
-    update_logs_without_filing_preference()
+    update_logs_without_filing_preference(gstin)
 
 
-def update_logs_without_filing_preference():
+def update_logs_without_filing_preference(gstin):
     gst_return_logs = frappe.get_all(
         "GST Return Log",
-        filters={"filing_preference": ["is", "not set"]},
+        filters={"filing_preference": ["is", "not set"], "gstin": gstin},
         fields=["name", "return_period", "gstin"],
     )
 
@@ -445,8 +445,8 @@ def update_logs_without_filing_preference():
     gst_return_log = frappe.qb.DocType("GST Return Log")
     case_conditions = Case()
 
-    for name, preference_data in logs_to_update.items():
-        case_conditions.when(gst_return_log.name == name, preference_data)
+    for log_name, filing_preference in logs_to_update.items():
+        case_conditions.when(gst_return_log.name == log_name, filing_preference)
 
     (
         frappe.qb.update(gst_return_log)
