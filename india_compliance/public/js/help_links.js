@@ -13,10 +13,23 @@ frappe.help.help_links["india-compliance-account"] = [
 //GST Settings
 frappe.help.help_links["Form/GST Settings"] = [
     {
+        label: "Setting Up GST accounts",
+        url: docsUrl + "configuration/gst_setup#gst-accounts"
+    },
+    {
         label: "GSTIN Verification",
         url: docsUrl + "miscellaneous/gstin_verification",
     },
 ];
+
+//Company
+frappe.help.help_links["Form/Company"] = [
+    {
+        label: "Print Format",
+        url: docsUrl + "configuration/gst_setup#print-format",
+    }
+];
+
 
 //Doctypes
 //Sales Invoice
