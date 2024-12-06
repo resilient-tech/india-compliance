@@ -226,7 +226,6 @@ class BaseAPI:
         pass
 
     def handle_http_code(self, status_code, response_json):
-
         # GSP connectivity issues
         if status_code == 401 or (
             status_code == 403
@@ -265,22 +264,23 @@ class BaseAPI:
         output = log.output
         data = log.data
         request_body = data and data.get("body")
+        placeholder = "*****"
 
         for key in self.SENSITIVE_INFO:
             if key in request_headers:
-                request_headers[key] = "*****"
+                request_headers[key] = placeholder
 
             if output and key in output:
-                output[key] = "*****"
+                output[key] = placeholder
 
             if not data:
                 continue
 
             if key in data:
-                data[key] = "*****"
+                data[key] = placeholder
 
             if request_body and key in request_body:
-                request_body[key] = "*****"
+                request_body[key] = placeholder
 
 
 def get_public_ip():
