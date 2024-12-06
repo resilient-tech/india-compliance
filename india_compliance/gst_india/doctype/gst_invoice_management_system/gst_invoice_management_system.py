@@ -351,7 +351,7 @@ def process_upload_ims(return_log):
         # Exclude erroneous invoices from previous IMS action update
         # This is enqueued because linking of integration request is enqueued
         frappe.enqueue(
-            "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.update_previous_ims_action",
+            update_previous_ims_action,
             queue="long",
             return_log=doc,
             erroneous_invoices=erroneous_invoices,

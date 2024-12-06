@@ -6,7 +6,7 @@ from india_compliance.gst_india.api_classes.taxpayer_base import (
     TaxpayerBaseAPI,
     otp_handler,
 )
-from india_compliance.gst_india.api_classes.taxpayer_returns import ReturnsAPI
+from india_compliance.gst_india.api_classes.taxpayer_returns import IMSAPI, ReturnsAPI
 from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
     create_import_log,
     toggle_scheduled_jobs,
@@ -15,6 +15,7 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_download import (
     save_gstr_1_filed_data,
     save_gstr_1_unfiled_data,
 )
+from india_compliance.gst_india.utils.gstr_2 import save_ims_invoices
 
 
 class ReturnType(Enum):
@@ -22,6 +23,7 @@ class ReturnType(Enum):
     GSTR2B = "GSTR2b"
     GSTR1 = "GSTR1"
     UnfiledGSTR1 = "Unfiled GSTR1"
+    IMS = "IMS"
 
 
 @frappe.whitelist()
@@ -78,10 +80,19 @@ def _download_queued_request(doc):
         ReturnType.GSTR2B.value: save_gstr_2b,
         ReturnType.GSTR1.value: save_gstr_1_filed_data,
         ReturnType.UnfiledGSTR1.value: save_gstr_1_unfiled_data,
+        ReturnType.IMS.value: save_ims_invoices,
+    }
+
+    API_CLASS = {
+        ReturnType.GSTR2A.value: ReturnsAPI,
+        ReturnType.GSTR2B.value: ReturnsAPI,
+        ReturnType.GSTR1.value: ReturnsAPI,
+        ReturnType.UnfiledGSTR1.value: ReturnsAPI,
+        ReturnType.IMS.value: IMSAPI,
     }
 
     try:
-        api = ReturnsAPI(doc.gstin)
+        api = API_CLASS[doc.return_type](doc.gstin)
         response = api.download_files(
             doc.return_period,
             doc.request_id,

@@ -48,6 +48,15 @@ IMS_CATEGORIES = {
     "b2bdna": "DNA",
 }
 
+CLASSIFICATION_MAP = {
+    "b2b": "B2B",
+    "b2ba": "B2BA",
+    "cn": "CDNR",
+    "cna": "CDNRA",
+    "dn": "CDNR",
+    "dna": "CDNRA",
+}
+
 GSTR_MODULES = {
     ReturnType.GSTR2A.value: gstr_2a,
     ReturnType.GSTR2B.value: gstr_2b,
@@ -351,6 +360,25 @@ def download_ims_invoices(company_gstin, company):
         response = api.get_data(IMS_CATEGORIES[category])
 
         if response.error_type == "no_docs_found":
+            create_import_log(
+                company_gstin,
+                "IMS",
+                "ALL",
+                classification=CLASSIFICATION_MAP[category],
+                data_not_found=True,
+            )
+            continue
+
+        # Queued
+        if response.token:
+            create_import_log(
+                company_gstin,
+                "IMS",
+                "ALL",
+                classification=CLASSIFICATION_MAP[category],
+                request_id=response.token,
+                retry_after_mins=cint(response.est),
+            )
             continue
 
         getattr(ims, category.upper())(company_gstin, company).create_transactions(
@@ -358,6 +386,13 @@ def download_ims_invoices(company_gstin, company):
         )
 
     create_return_log(company, company_gstin)
+
+
+def save_ims_invoices(company_gstin, return_period, json_data):
+    for category in IMS_CATEGORIES:
+        getattr(ims, category.upper())(company_gstin).create_transactions(
+            json_data.get(category, [])
+        )
 
 
 def create_return_log(company, company_gstin):
