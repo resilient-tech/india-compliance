@@ -274,6 +274,11 @@ class IMS {
                 fieldtype: "Select",
                 options: ["Invoice", "Credit Note", "Debit Note"],
             },
+            {
+                label: "Pending Upload",
+                fieldname: "pending_upload",
+                fieldtype: "Check",
+            },
         ];
 
         fields.forEach(field => (field.parent = "GST Invoice Management System"));
@@ -449,13 +454,14 @@ class IMS {
             data.push({
                 supplier_name_gstin: this.get_supplier_name_gstin(row),
                 invoice_no: row.bill_no,
-                invoice_type: row._inward_supply.supply_type,
+                invoice_type: row._inward_supply.classification,
                 ims_action: row.ims_action || "",
                 match_status: row.match_status,
                 linked_doc: row.purchase_invoice_name,
                 tax_difference: row.tax_difference,
                 taxable_value_difference: row.taxable_value_difference,
                 inward_supply_name: row.inward_supply_name,
+                pending_upload: row.pending_upload,
             });
         });
 
@@ -478,10 +484,18 @@ class IMS {
                 width: 220,
             },
             {
+                label: "Invoice Name",
+                fieldname: "inward_supply_name",
+                align: "center",
+                fieldtype: "Link",
+                options: "GST Inward Supply",
+                width: 150,
+            },
+            {
                 label: "Invoice No.",
                 fieldname: "invoice_no",
                 align: "center",
-                width: 180,
+                width: 120,
             },
             {
                 label: "Invoice Type",
@@ -515,13 +529,20 @@ class IMS {
                 label: "Tax Difference",
                 fieldname: "tax_difference",
                 align: "center",
-                width: 150,
+                width: 100,
             },
             {
                 label: "Taxable Value Difference",
                 fieldname: "taxable_value_difference",
                 align: "center",
-                width: 150,
+                width: 100,
+            },
+            {
+                label: "Pending Upload",
+                fieldname: "pending_upload",
+                align: "center",
+                width: 50,
+                fieldtype: "Check",
             },
         ];
     }
@@ -1033,6 +1054,10 @@ async function apply_action(frm, invoice_names, action) {
         }
 
         row.ims_action = action;
+
+        // Update pending upload status
+        if (row.ims_action !== row.previous_ims_action) row.pending_upload = true;
+        else row.pending_upload = false;
 
         return true;
     });

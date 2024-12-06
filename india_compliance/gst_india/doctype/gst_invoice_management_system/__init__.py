@@ -1,4 +1,5 @@
 import frappe
+from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Abs, IfNull, Sum
 
@@ -113,6 +114,7 @@ class IMSReconciler:
                 self.inward_supply.link_doctype,
                 self.inward_supply.match_status,
                 self.inward_supply.ims_action,
+                self.inward_supply.previous_ims_action,
                 self.inward_supply.supply_type,
                 self.inward_supply.classification,
                 self.inward_supply.is_pending_action_allowed,
@@ -122,6 +124,16 @@ class IMSReconciler:
                 self.inward_supply.cess,
                 self.inward_supply.taxable_value,
                 ConstantColumn("GST Inward Supply").as_("doctype"),
+                Case()
+                .when(
+                    (
+                        self.inward_supply.ims_action
+                        == self.inward_supply.previous_ims_action
+                    ),
+                    False,
+                )
+                .else_(True)
+                .as_("pending_upload"),
             )
             .where(IfNull(self.inward_supply.previous_ims_action, "") != "")
         )
