@@ -669,10 +669,10 @@ class IMS {
         });
 
         const actions_summary = {
-            accepted: { count: 0, color: "#66f542" },
-            pending: { count: 0, color: "#f5aa42" },
-            rejected: { count: 0, color: "#e0473f" },
-            no_action: { count: 0, color: "#c9c4c3" },
+            accepted: { count: 0, color: "#28a745" },
+            pending: { count: 0, color: "#ffc107" },
+            rejected: { count: 0, color: "#e03636" },
+            no_action: { count: 0, color: "#7c7c7c" },
         };
 
         actions_data.forEach(row => {
