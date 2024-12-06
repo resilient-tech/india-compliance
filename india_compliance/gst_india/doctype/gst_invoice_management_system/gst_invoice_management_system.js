@@ -29,7 +29,7 @@ frappe.ui.form.on("GST Invoice Management System", {
         if (!frm.doc.company) return;
         const options = await india_compliance.set_gstin_options(frm);
 
-        if (!frm.doc.company_gstin) frm.set_value("company_gstin", options[0]);
+        frm.set_value("company_gstin", options[0]);
     },
 
     company_gstin(frm) {
@@ -1014,6 +1014,8 @@ class DetailViewDialog {
 function render_empty_state(frm) {
     frm.doc.__invoice_data = null;
     frm.doc.is_data_loaded = false;
+
+    $(".action-performed-summary").remove();
 
     frm.refresh();
 }
