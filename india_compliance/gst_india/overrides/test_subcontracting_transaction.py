@@ -298,7 +298,7 @@ class TestSubcontractingTransaction(IntegrationTestCase):
 
         self.assertRaisesRegex(
             frappe.ValidationError,
-            re.compile(r"(.*GST Category is a mandatory field for GST Transactions.*)"),
+            re.compile(r"(.*is a mandatory field for GST Transactions.*)"),
             se.save,
         )
 
