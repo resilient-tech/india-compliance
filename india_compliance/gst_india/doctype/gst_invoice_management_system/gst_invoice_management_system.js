@@ -353,12 +353,14 @@ class IMS {
         async function add_filter(e, field, field_value, me) {
             e.preventDefault();
 
-            await me.filter_group.push_new_filter([
-                "GST Invoice Management System",
-                field,
-                "=",
-                field_value,
-            ]);
+            const filter = ["GST Invoice Management System", field, "=", field_value];
+
+            if (me.filter_group.filter_exists(filter)) {
+                await me.filter_group.remove_filter(filter);
+            } else {
+                await me.filter_group.push_new_filter(filter);
+            }
+
             me.filter_group.apply();
         }
     }
@@ -579,15 +581,16 @@ class IMS {
         ];
     }
 
-    get_action_data() {
+    get_action_data(filtered_data) {
         const category_map = {
             Invoice: "B2B-Invoices",
             "Credit Note": "B2B-Credit Notes",
             "Debit Note": "B2B-Debit Notes",
         };
         let data = {};
+        if (!filtered_data) filtered_data = this.filtered_data;
 
-        this.data.forEach(row => {
+        filtered_data.forEach(row => {
             const action = convert_to_lower_case(row.ims_action);
             const category = category_map[row.doc_type];
             if (!data[category]) {
@@ -658,7 +661,7 @@ class IMS {
     }
 
     async set_actions_summary() {
-        const actions_data = this.get_action_data();
+        const actions_data = this.get_action_data(this.data);
 
         if ($(".action-performed-summary").length) {
             $(".action-performed-summary").remove();
