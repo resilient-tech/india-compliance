@@ -15,7 +15,6 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_download import (
     save_gstr_1_filed_data,
     save_gstr_1_unfiled_data,
 )
-from india_compliance.gst_india.utils.gstr_2 import save_ims_invoices
 
 
 class ReturnType(Enum):
@@ -73,7 +72,11 @@ def download_queued_request():
 
 
 def _download_queued_request(doc):
-    from india_compliance.gst_india.utils.gstr_2 import _download_gstr_2a, save_gstr_2b
+    from india_compliance.gst_india.utils.gstr_2 import (
+        _download_gstr_2a,
+        save_gstr_2b,
+        save_ims_invoices,
+    )
 
     GSTR_FUNCTIONS = {
         ReturnType.GSTR2A.value: _download_gstr_2a,
