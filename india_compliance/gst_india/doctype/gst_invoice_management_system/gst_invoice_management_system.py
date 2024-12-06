@@ -7,9 +7,11 @@ from frappe.query_builder.functions import IfNull
 
 from india_compliance.gst_india.api_classes.taxpayer_base import otp_handler
 from india_compliance.gst_india.api_classes.taxpayer_returns import IMSAPI
-from india_compliance.gst_india.constants import STATE_NUMBERS
 from india_compliance.gst_india.doctype.gst_invoice_management_system import (
     IMSReconciler,
+)
+from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
+    update_previous_ims_action as _update_previous_ims_action,
 )
 from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     enqueue_link_integration_request,
@@ -24,14 +26,10 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_re
     link_documents,
     unlink_documents,
 )
-from india_compliance.gst_india.utils import parse_datetime
 from india_compliance.gst_india.utils.gstr_2 import download_ims_invoices, ims
-from india_compliance.gst_india.utils.gstr_2.ims import ACTION_MAP, GST_CATEGORY_MAP
 
 
 class GSTInvoiceManagementSystem(Document):
-    IMS_RECONCILER = IMSReconciler()
-
     @frappe.whitelist()
     def get_invoice_data(self, inward_supply=None, purchase=None):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
@@ -123,16 +121,18 @@ class GSTInvoiceManagementSystem(Document):
         return self.get_invoice_data(inward_supplies, purchases)
 
     def get_all_inward_supplies(self, names=None, filters=None):
+        IMS_RECONCILER = IMSReconciler()
+
         if not filters:
             filters = {}
 
-        query = self.IMS_RECONCILER.get_base_inward_supply_query(["action", "doc_type"])
+        query = IMS_RECONCILER.get_base_inward_supply_query(["action", "doc_type"])
 
         if names:
-            query = query.where(self.IMS_RECONCILER.inward_supply.name.isin(names))
+            query = query.where(IMS_RECONCILER.inward_supply.name.isin(names))
 
-        query = self.IMS_RECONCILER.get_query_with_filters(
-            self.IMS_RECONCILER.inward_supply, query, filters
+        query = IMS_RECONCILER.get_query_with_filters(
+            IMS_RECONCILER.inward_supply, query, filters
         )
 
         return query.run(as_dict=True)
@@ -146,13 +146,14 @@ class GSTInvoiceManagementSystem(Document):
         return {doc.name: doc for doc in purchases}
 
     def get_all_purchase_invoice(self, names, filters):
-        query = self.IMS_RECONCILER.get_base_purchase_query()
+        IMS_RECONCILER = IMSReconciler()
+        query = IMS_RECONCILER.get_base_purchase_query()
 
         if names:
-            query = query.where(self.IMS_RECONCILER.purchase_invoice.name.isin(names))
+            query = query.where(IMS_RECONCILER.purchase_invoice.name.isin(names))
 
-        query = self.IMS_RECONCILER.get_query_with_filters(
-            self.IMS_RECONCILER.purchase_invoice, query, filters
+        query = IMS_RECONCILER.get_query_with_filters(
+            IMS_RECONCILER.purchase_invoice, query, filters
         )
 
         return query.run(as_dict=True)
@@ -219,7 +220,7 @@ def check_action_status(company_gstin):
     return process_upload_ims(ims_log)
 
 
-def get_invoices_to_upload(company_gstin, is_reset=False):
+def get_invoices_to_upload(company_gstin):
     ims_reconciler = IMSReconciler()
     additional_fields = [
         "doc_type",
@@ -233,8 +234,7 @@ def get_invoices_to_upload(company_gstin, is_reset=False):
     ]
     query = ims_reconciler.get_base_inward_supply_query(additional_fields)
     gst_inward_supply_list = (
-        query.where(IfNull(ims_reconciler.inward_supply.ims_action, "") != "")
-        .where(IfNull(ims_reconciler.inward_supply.previous_ims_action, "") != "")
+        query.where(IfNull(ims_reconciler.inward_supply.previous_ims_action, "") != "")
         .where(
             ims_reconciler.inward_supply.ims_action
             != ims_reconciler.inward_supply.previous_ims_action
@@ -243,13 +243,13 @@ def get_invoices_to_upload(company_gstin, is_reset=False):
     )
 
     upload_data, reset_data = convert_data_to_gov_format(
-        gst_inward_supply_list, company_gstin, is_reset
+        gst_inward_supply_list, company_gstin
     )
 
     return upload_data, reset_data
 
 
-def convert_data_to_gov_format(gst_inward_supply_list, company_gstin, is_reset=False):
+def convert_data_to_gov_format(gst_inward_supply_list, company_gstin):
     category_key_map = {
         "Invoice_0": "b2b",
         "Invoice_1": "b2ba",
@@ -258,9 +258,6 @@ def convert_data_to_gov_format(gst_inward_supply_list, company_gstin, is_reset=F
         "Credit Note_0": "b2bcn",
         "Credit Note_1": "b2bcna",
     }
-
-    gst_category_map = {v: k for k, v in GST_CATEGORY_MAP.items()}
-    action_map = {v: k for k, v in ACTION_MAP.items()}
 
     upload_data = {}
     reset_data = {}
@@ -281,27 +278,11 @@ def convert_data_to_gov_format(gst_inward_supply_list, company_gstin, is_reset=F
 
         for invoice in invoices:
             data = {
-                "stin": invoice.supplier_gstin,
-                "inv_typ": gst_category_map[invoice.supply_type],
-                "srcform": "R1",  # TODO: This field is mandatory (Should we create a new custom field)
-                "rtnprd": invoice.sup_return_period,
-                "val": invoice.document_value,
-                "pos": STATE_NUMBERS[invoice.place_of_supply.split("-")[1]],
-                "prev_status": action_map[invoice.previous_ims_action],
-                "iamt": 100,
-                "camt": invoice.cgst,
-                "samt": invoice.sgst,
-                "cess": invoice.cess,
-                "txval": invoice.taxable_value,
+                **_class.update_transaction_to_gov_format(invoice),
                 **_class.get_category_details(invoice),
             }
 
             if invoice.ims_action != "No Action":
-                data.update(
-                    {
-                        "action": action_map[invoice.ims_action],
-                    }
-                )
                 upload_invoices.append(data)
             else:
                 reset_invoices.append(data)
@@ -368,7 +349,13 @@ def process_upload_ims(return_log):
 
     if status_cd in ["P", "PE"]:
         # Exclude erroneous invoices from previous IMS action update
-        update_previous_ims_action(doc, erroneous_invoices)
+        # This is enqueued because linking of integration request is enqueued
+        frappe.enqueue(
+            "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.update_previous_ims_action",
+            queue="long",
+            return_log=doc,
+            erroneous_invoices=erroneous_invoices,
+        )
 
     return response
 
@@ -388,7 +375,7 @@ def get_erroneous_invoices(report):
                         "supplier_gstin": error.get("stin"),
                     }
                 )
-                invoice_names.append(f"{invoice.get('inum')}_{invoice.get('stin')}")
+                invoice_names.append(f"{invoice.get('inum')}_{error.get('stin')}")
 
     return invoice_names, error_report
 
@@ -400,49 +387,20 @@ def get_uploaded_invoices(integration_request):
         )
     )
 
-    invoice_data = request_data["body"]["data"]["invdata"]
-    invoices = []
-
-    for row in invoice_data.values():
-        invoices.extend(row)
-
-    return invoices
+    return request_data["body"]["data"]["invdata"]
 
 
 def update_previous_ims_action(return_log, erroneous_invoices):
     integration_request = return_log.integration_request
-    request_type = return_log.request_type
-
     uploded_invoices = get_uploaded_invoices(integration_request)
+
     invoices_to_update = []
-
-    for invoice in uploded_invoices:
-        bill_no = invoice.get("inum") or invoice.get("nt_num")
-        bill_date = invoice.get("idt") or invoice.get("nt_dt")
-        supplier_gstin = invoice.get("stin")
-
-        if f"{bill_no}_{supplier_gstin}" not in erroneous_invoices:
-            invoices_to_update.append(
-                {
-                    "bill_no": bill_no,
-                    "supplier_gstin": supplier_gstin,
-                    "bill_date": parse_datetime(bill_date, day_first=True),
-                    "action": (
-                        "No Action"
-                        if request_type == "reset"
-                        else ACTION_MAP[invoice.get("action")]
-                    ),
-                }
-            )
+    for category, invoices in uploded_invoices.items():
+        _class = getattr(ims, category.upper())()
+        invoices_to_update.extend(_class.get_all_transactions(invoices))
 
     for invoice in invoices_to_update:
-        frappe.db.set_value(
-            "GST Inward Supply",
-            {
-                "bill_no": invoice["bill_no"],
-                "supplier_gstin": invoice["supplier_gstin"],
-                "bill_date": invoice["bill_date"],
-            },
-            "previous_ims_action",
-            invoice["action"],
-        )
+        if f"{invoice.bill_no}_{invoice.supplier_gstin}" in erroneous_invoices:
+            continue
+
+        _update_previous_ims_action(invoice)

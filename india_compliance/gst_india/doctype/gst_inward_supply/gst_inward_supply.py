@@ -64,7 +64,7 @@ def update_previous_ims_action(transaction):
         "GST Inward Supply",
         filters,
         "previous_ims_action",
-        transaction.previous_ims_action,
+        transaction.previous_ims_action or "No Action",
     )
 
 

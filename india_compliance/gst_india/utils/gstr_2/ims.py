@@ -4,7 +4,6 @@ from frappe.utils.data import format_date
 from india_compliance.gst_india.constants import GST_CATEGORY_MAP, STATE_NUMBERS
 from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
     create_inward_supply,
-    update_previous_ims_action,
 )
 from india_compliance.gst_india.utils import parse_datetime
 
@@ -14,7 +13,7 @@ ACTION_MAP = {"A": "Accepted", "R": "Rejected", "P": "Pending", "N": "No Action"
 class IMS:
     STATE_MAP = {value: f"{value}-{key}" for key, value in STATE_NUMBERS.items()}
 
-    def __init__(self, company_gstin, company=None):
+    def __init__(self, company_gstin=None, company=None):
         self.company_gstin = company_gstin
         self.company = company
 
@@ -23,13 +22,6 @@ class IMS:
 
         for transaction in transactions:
             create_inward_supply(transaction)
-
-    def update_previous_ims_action(self, invoices, errors):
-        transactions = self.get_all_transactions(invoices)
-
-        for transaction in transactions:
-            # Error data handeling
-            update_previous_ims_action(transaction)
 
     def get_all_transactions(self, invoices):
         transactions = []
@@ -41,10 +33,7 @@ class IMS:
 
     def get_transaction(self, invoice):
         transaction = frappe._dict(
-            # TODO: Required?? Create two fields.
-            # gstr_1_filled= invoice.srcfilstatus,
-            # source_form = invoice.srcform,
-            **self.update_transaction(invoice),
+            **self.update_transaction_to_internal_format(invoice),
             **self.get_invoice_details(invoice),
         )
 
@@ -53,7 +42,7 @@ class IMS:
         )
         return transaction
 
-    def update_transaction(self, invoice):
+    def update_transaction_to_internal_format(self, invoice):
         return {
             "supplier_gstin": invoice.stin,
             "sup_return_period": invoice.rtnprd,
@@ -64,12 +53,38 @@ class IMS:
             "company_gstin": self.company_gstin,
             "is_pending_action_allowed": invoice.ispendactnallwd,
             "previous_ims_action": ACTION_MAP.get(invoice.action),
+            "is_supplier_return_filed": 0 if invoice.srcfilstatus == "Not Filed" else 1,
+            "supplier_ret_frm": invoice.srcform,
             "cgst": invoice.camt,
             "sgst": invoice.samt,
             "igst": invoice.iamt,
             "cess": invoice.cess,
             "taxable_value": invoice.txval,
         }
+
+    def update_transaction_to_gov_format(self, invoice):
+        gst_category_map = {v: k for k, v in GST_CATEGORY_MAP.items()}
+        action_map = {v: k for k, v in ACTION_MAP.items()}
+
+        data = {
+            "stin": invoice.supplier_gstin,
+            "inv_typ": gst_category_map[invoice.supply_type],
+            "srcform": invoice.supplier_ret_frm,
+            "rtnprd": invoice.sup_return_period,
+            "val": invoice.document_value,
+            "pos": STATE_NUMBERS[invoice.place_of_supply.split("-")[1]],
+            "prev_status": action_map[invoice.previous_ims_action],
+            "iamt": invoice.igst,
+            "camt": invoice.cgst,
+            "samt": invoice.sgst,
+            "cess": invoice.cess,
+            "txval": invoice.taxable_value,
+        }
+
+        if invoice.ims_action != "No Action":
+            data["action"] = action_map[invoice.ims_action]
+
+        return data
 
 
 class B2B(IMS):
