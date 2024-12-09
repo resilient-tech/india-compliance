@@ -44,7 +44,7 @@
    "depends_on": "eval: doc.__invoice_data && doc.__invoice_data.length === 0",
    "fieldname": "no_invoice_data",
    "fieldtype": "HTML",
-   "options": "<img alt=\"No Data\" src=\"/assets/frappe/images/ui-states/list-empty-state.svg\">\n\t<p class=\"text-muted\">{{ __(\"No data available for selected filters\") }}</p>"
+   "options": "<img alt=\"No Data\" src=\"/assets/frappe/images/ui-states/list-empty-state.svg\">\n\t<p class=\"text-muted\">{{ __(\"No data available for selected filters. Try Downloading Invoices.\") }}</p>"
   },
   {
    "fieldname": "data_section",
@@ -55,7 +55,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-11-26 16:02:18.169431",
+ "modified": "2024-12-09 10:57:03.913812",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Invoice Management System",

@@ -56,14 +56,22 @@ frappe.ui.form.on("GST Invoice Management System", {
             frm.page.clear_primary_action();
 
             frm.page.set_primary_action(__("Upload Invoices"), async () => {
-                frappe.show_alert(__("Uploading Invoices"));
-
                 await taxpayer_api.call({
                     method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.upload_invoices",
                     args: {
                         company_gstin: frm.doc.company_gstin,
                     },
-                    callback: () => {
+                    callback: r => {
+                        if (!r.message) {
+                            frappe.msgprint({
+                                message: __("No Invoices to Upload"),
+                                indicator: "red",
+                            });
+                            return;
+                        }
+
+                        frappe.show_alert(__("Uploading Invoices"));
+
                         // For upload and reset requests
                         frm.ims.check_action_status_with_retry();
                         frm.ims.check_action_status_with_retry();
@@ -71,7 +79,7 @@ frappe.ui.form.on("GST Invoice Management System", {
                         // TODO: Handle error report in case of PE and ER and return
 
                         frappe.show_alert({
-                            message: "Uploaded Invoices Successfully.",
+                            message: "Uploaded Invoices Successfully",
                             indicator: "green",
                         });
                     },
@@ -117,7 +125,7 @@ frappe.ui.form.on("GST Invoice Management System", {
             });
 
             frappe.show_alert({
-                message: "Downloaded and Reconciled Invoices.",
+                message: "Downloaded and Reconciled Invoices",
                 indicator: "green",
             });
         });

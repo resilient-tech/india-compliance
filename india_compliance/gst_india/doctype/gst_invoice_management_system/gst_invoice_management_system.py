@@ -186,7 +186,7 @@ def upload_invoices(company_gstin):
     upload_data, reset_data = get_invoices_to_upload(company_gstin)
 
     if not (upload_data or reset_data):
-        return
+        return False
 
     verify_request_in_progress(ims_log, False)
 
@@ -205,6 +205,8 @@ def upload_invoices(company_gstin):
         update_return_log(
             ims_log, response.get("reference_id"), "reset", api.request_id
         )
+
+    return True
 
 
 @frappe.whitelist()
