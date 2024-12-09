@@ -70,6 +70,15 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         await frappe.require("purchase_reconciliation_tool.bundle.js");
         frm.trigger("company");
         frm.purchase_reconciliation_tool = new PurchaseReconciliationTool(frm);
+
+        frappe.realtime.on("download_failed", message => {
+            frm.dashboard.hide();
+            frappe.msgprint({
+                title: __("Download Failed"),
+                message: message.error,
+                indicator: "red"
+            });
+        })
     },
 
     onload(frm) {
