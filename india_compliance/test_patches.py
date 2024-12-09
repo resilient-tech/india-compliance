@@ -1,11 +1,19 @@
 import frappe
 from frappe.modules.patch_handler import get_patches_from_app
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
+=======
+from frappe.tests import IntegrationTestCase
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
 
 from india_compliance.install import POST_INSTALL_PATCHES
 
 
+<<<<<<< HEAD
 class TestPatches(FrappeTestCase):
+=======
+class TestPatches(IntegrationTestCase):
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
     def test_post_install_patch_exists(self):
         for patch in POST_INSTALL_PATCHES:
             self.assertTrue(

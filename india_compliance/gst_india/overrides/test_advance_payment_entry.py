@@ -3,7 +3,11 @@ import re
 from contextlib import contextmanager
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
+=======
+from frappe.tests import IntegrationTestCase
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
 from erpnext.accounts.doctype.payment_entry.payment_entry import (
     get_outstanding_reference_documents,
 )
@@ -47,7 +51,11 @@ def toggle_seperate_advance_accounting():
         )
 
 
+<<<<<<< HEAD
 class TestAdvancePaymentEntry(FrappeTestCase):
+=======
+class TestAdvancePaymentEntry(IntegrationTestCase):
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
     EXPECTED_GL = [
         {"account": "Cash - _TIRC", "debit": 590.0, "credit": 0.0},
         {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 500.0},

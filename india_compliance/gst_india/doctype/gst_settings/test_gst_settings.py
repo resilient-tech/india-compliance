@@ -3,11 +3,25 @@
 import re
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils.data import getdate
 
 
 class TestGSTSettings(FrappeTestCase):
+=======
+from frappe.tests import IntegrationTestCase, change_settings
+from frappe.utils.data import getdate
+
+
+class TestGSTSettings(IntegrationTestCase):
+    @classmethod
+    def setUpClass(cls):
+        # don't create test objects
+        frappe.local.test_objects["GST Settings"] = []
+
+        super().setUpClass()
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
 
     @change_settings("GST Settings", {"enable_api": 1})
     def test_api_key_enabled(self):

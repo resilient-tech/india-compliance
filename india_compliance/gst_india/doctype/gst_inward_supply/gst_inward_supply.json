@@ -434,7 +434,11 @@
   }
  ],
  "search_fields": "bill_date, supplier_name, bill_no, document_value",
+<<<<<<< HEAD
  "sort_field": "modified",
+=======
+ "sort_field": "creation",
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
  "sort_order": "DESC",
  "states": [],
  "title_field": "supplier_name",

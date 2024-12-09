@@ -2,11 +2,19 @@ from datetime import date
 from unittest.mock import patch
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import getdate
 
 
 class TestUtils(FrappeTestCase):
+=======
+from frappe.tests import IntegrationTestCase
+from frappe.utils import getdate
+
+
+class TestUtils(IntegrationTestCase):
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
 
     @classmethod
     def setUpClass(cls):

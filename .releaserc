@@ -1,5 +1,9 @@
 {
+<<<<<<< HEAD
 	"branches": ["version-15"],
+=======
+	"branches": ["version-14", "version-15"],
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
 	"plugins": [
 		"@semantic-release/commit-analyzer", {
 			"preset": "angular",

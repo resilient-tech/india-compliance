@@ -85,10 +85,15 @@ function is_gst_invoice(frm) {
         frm.doc.is_opening != "Yes" &&
         frm.doc.company_gstin &&
         frm.doc.company_gstin != frm.doc.billing_address_gstin &&
+<<<<<<< HEAD
         !frm.doc.items.some(item => item.gst_treatment == "Non-GST") &&
         !frm.doc.items.every(
             item =>
                 item.gst_treatment == "Nil-Rated" || item.gst_treatment == "Exempted"
+=======
+        frm.doc.items.some(item =>
+            ["Taxable", "Zero-Rated"].includes(item.gst_treatment)
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
         );
 
     if (frm.doc.items[0].gst_treatment === "Zero-Rated")

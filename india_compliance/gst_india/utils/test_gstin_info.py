@@ -1,16 +1,27 @@
+<<<<<<< HEAD
 import unittest
+=======
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
 from unittest.mock import Mock, patch
 
 import responses
 from responses import matchers
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase, change_settings
+=======
+from frappe.tests import IntegrationTestCase, change_settings
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
 
 from india_compliance.gst_india.utils.gstin_info import get_gstin_info
 
 
+<<<<<<< HEAD
 class TestGstinInfo(unittest.TestCase):
+=======
+class TestGstinInfo(IntegrationTestCase):
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
     MOCK_GSTIN_INFO = frappe._dict(
         {
             "adadr": [
@@ -197,7 +208,11 @@ class TestGstinInfo(unittest.TestCase):
         )
 
 
+<<<<<<< HEAD
 class TestGstinInvalidInfo(FrappeTestCase):
+=======
+class TestGstinInvalidInfo(IntegrationTestCase):
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
     @responses.activate
     @change_settings("GST Settings", {"validate_gstin_status": 1, "sandbox_mode": 0})
     def test_invalid_gstin(self):

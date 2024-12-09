@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase, change_settings
+=======
+from frappe.tests import IntegrationTestCase, change_settings
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
 from frappe.utils import getdate
 
 from india_compliance.gst_india.report.gst_sales_register_beta.gst_sales_register_beta import (
@@ -643,7 +647,11 @@ INVOICES = [
 ]
 
 
+<<<<<<< HEAD
 class TestSalesRegisterBeta(FrappeTestCase):
+=======
+class TestSalesRegisterBeta(IntegrationTestCase):
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

@@ -1,11 +1,20 @@
+<<<<<<< HEAD
 import unittest
 
 import frappe
+=======
+import frappe
+from frappe.tests import IntegrationTestCase
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
 
 from india_compliance.gst_india.utils import validate_invoice_number
 
 
+<<<<<<< HEAD
 class TestSalesInvoice(unittest.TestCase):
+=======
+class TestSalesInvoice(IntegrationTestCase):
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
     def test_validate_invoice_number(self):
         posting_date = "2021-05-01"
 

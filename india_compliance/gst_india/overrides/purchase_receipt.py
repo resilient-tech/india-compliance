@@ -21,7 +21,11 @@ def get_dashboard_data(data):
 
 
 def onload(doc, method=None):
+<<<<<<< HEAD
     if ignore_gst_validations(doc, throw=False):
+=======
+    if ignore_gst_validations(doc):
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
         return
 
     if (

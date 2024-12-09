@@ -3,7 +3,11 @@ from unittest.mock import Mock, patch
 
 import frappe
 from frappe import parse_json, read_file
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
+=======
+from frappe.tests import IntegrationTestCase
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
 from frappe.utils import get_datetime
 
 from india_compliance.gst_india.utils import get_data_file_path
@@ -43,7 +47,11 @@ class TestGSTRMixin:
         )
 
 
+<<<<<<< HEAD
 class TestGSTR2a(TestGSTRMixin, FrappeTestCase):
+=======
+class TestGSTR2a(TestGSTRMixin, IntegrationTestCase):
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
     # Tests as per version 2.1 of GSTR2A Dt: 14-10-2020
     @classmethod
     def setUpClass(cls):

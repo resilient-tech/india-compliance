@@ -167,7 +167,10 @@ class PurchaseInvoiceEwaybill extends EwaybillApplicability {
     }
 }
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
 class PurchaseReceiptEwaybill extends EwaybillApplicability {
     is_e_waybill_applicable(show_message = false) {
         return (

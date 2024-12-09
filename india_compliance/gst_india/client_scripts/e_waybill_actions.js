@@ -1406,7 +1406,11 @@ function show_sandbox_mode_indicator() {
         .find(".form-sidebar .sidebar-image-section")
         .after(
             `
+<<<<<<< HEAD
             <div class="sidebar-menu ic-sandbox-mode">
+=======
+            <div class="sidebar-section ic-sandbox-mode">
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
                 <p><label class="indicator-pill no-indicator-dot yellow" title="${__(
                 "Your site has enabled Sandbox Mode in GST Settings."
             )}">${__("Sandbox Mode")}</label></p>

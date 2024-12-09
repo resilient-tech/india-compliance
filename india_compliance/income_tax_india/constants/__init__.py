@@ -23,6 +23,10 @@ TDS_SECTIONS = [
     "194IA",
     "194N",
     "194Q",
+<<<<<<< HEAD
+=======
+    "206C(1H)",
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
 ]
 
 TDS_ENTITY_TYPE = ["Individual", "Company", "Company Assessee", "No PAN / Invalid PAN"]

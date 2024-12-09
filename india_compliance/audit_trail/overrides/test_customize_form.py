@@ -1,10 +1,17 @@
 import re
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
 
 
 class TestCustomizeFormAuditTrail(FrappeTestCase):
+=======
+from frappe.tests import IntegrationTestCase
+
+
+class TestCustomizeFormAuditTrail(IntegrationTestCase):
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
     def test_validate_customize_form(self):
         customize_frm = self.get_customize_form()
         customize_frm.doc_type = "Purchase Invoice"

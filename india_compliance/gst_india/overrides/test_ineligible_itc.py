@@ -2,7 +2,11 @@ import json
 from contextlib import contextmanager
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase, change_settings
+=======
+from frappe.tests import IntegrationTestCase, change_settings
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
 from frappe.utils import today
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
 from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
@@ -101,7 +105,11 @@ def toggle_provisional_accounting():
         )
 
 
+<<<<<<< HEAD
 class TestIneligibleITC(FrappeTestCase):
+=======
+class TestIneligibleITC(IntegrationTestCase):
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

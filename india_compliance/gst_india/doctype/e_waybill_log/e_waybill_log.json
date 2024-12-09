@@ -141,10 +141,13 @@
    "read_only": 1
   },
   {
+<<<<<<< HEAD
    "fieldname": "column_break1",
    "fieldtype": "Column Break"
   },
   {
+=======
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
    "fieldname": "column_break_grbd",
    "fieldtype": "Column Break"
   },
@@ -232,7 +235,11 @@
    "share": 1
   }
  ],
+<<<<<<< HEAD
  "sort_field": "modified",
+=======
+ "sort_field": "creation",
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
  "sort_order": "DESC",
  "states": [],
  "title_field": "reference_name",

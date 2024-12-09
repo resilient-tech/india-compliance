@@ -1,10 +1,18 @@
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
+=======
+from frappe.tests import IntegrationTestCase
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
 
 from india_compliance.gst_india.overrides.company import get_tax_defaults
 
 
+<<<<<<< HEAD
 class TestCompanyFixtures(FrappeTestCase):
+=======
+class TestCompanyFixtures(IntegrationTestCase):
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
     @classmethod
     def setUpClass(cls):
         frappe.db.savepoint("before_test_company")

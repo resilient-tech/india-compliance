@@ -4,7 +4,11 @@
 import json
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase, change_settings
+=======
+from frappe.tests import IntegrationTestCase, change_settings
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
 from frappe.utils import getdate
 
 from india_compliance.gst_india.utils.tests import (
@@ -13,7 +17,11 @@ from india_compliance.gst_india.utils.tests import (
 )
 
 
+<<<<<<< HEAD
 class TestGSTR3BReport(FrappeTestCase):
+=======
+class TestGSTR3BReport(IntegrationTestCase):
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
     def setUp(self):
         frappe.set_user("Administrator")
         filters = {"company": "_Test Indian Registered Company"}

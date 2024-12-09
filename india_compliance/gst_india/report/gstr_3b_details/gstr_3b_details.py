@@ -422,6 +422,10 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
                     purchase_invoice.company_gstin
                     != IfNull(purchase_invoice.supplier_gstin, "")
                 )
+<<<<<<< HEAD
+=======
+                & (purchase_invoice.gst_category != "Overseas")
+>>>>>>> c95f60da (fix: use bulk insert to ignore validations)
             )
             .groupby(purchase_invoice.name)
         )
