@@ -295,6 +295,7 @@ class GSTR3BReport(Document):
                     & boe.docstatus.eq(1)
                     & boe_taxes.gst_tax_type.eq(account_type)
                 )
+                .where(boe_taxes.parenttype == "Bill of Entry")
                 .run()
             )[0][0] or 0
 

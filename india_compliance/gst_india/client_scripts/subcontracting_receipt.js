@@ -42,28 +42,21 @@ frappe.ui.form.on(DOCTYPE, {
                         ...filters,
                         supplied_items: get_supplied_items(doc),
                     },
-                }
-
+                };
             else if (row.link_doctype == "Subcontracting Receipt")
                 return {
                     query: "india_compliance.gst_india.overrides.subcontracting_transaction.get_subcontracting_receipt_references",
                     filters: {
                         ...filters,
                         received_items: get_received_items(doc),
-                    }
-                }
-
+                    },
+                };
         });
     },
     onload(frm) {
         frm.taxes_controller = new india_compliance.taxes_controller(frm, {
             total_taxable_value: "total",
         });
-
-        frm.get_docfield("taxes", "charge_type").options = [
-            "On Net Total",
-            "On Item Quantity",
-        ];
     },
 
     refresh() {
