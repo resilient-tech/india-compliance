@@ -187,6 +187,7 @@ def on_submit(doc, method=None):
 
 
 def before_cancel(doc, method=None):
+    cancel_e_documents(doc)
     if ignore_gst_validations(doc):
         return
 
@@ -211,7 +212,7 @@ def before_cancel(doc, method=None):
         )
 
 
-def on_cancel(doc, method=None):
+def cancel_e_documents(doc, method=None):
     if (
         not frappe.form_dict
         or frappe.form_dict.cmd.endswith("cancel_e_invoice")

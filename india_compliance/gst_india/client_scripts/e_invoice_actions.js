@@ -107,7 +107,7 @@ frappe.ui.form.on("Sales Invoice", {
 
         frappe.validated = false;
 
-        return new Promise(resolve => {
+        return new Promise(async (resolve) => {
             const continueCancellation = () => {
                 frappe.validated = true;
                 resolve();
@@ -144,6 +144,11 @@ frappe.ui.form.on("Sales Invoice", {
                 return;
             }
 
+            const auto_cancel_e_invoice = await frappe.db.get_single_value("GST Settings", "auto_cancel_e_invoice");
+            if(auto_cancel_e_invoice === 1){
+                continueCancellation()
+                return
+            }
             return show_cancel_e_invoice_dialog(frm, continueCancellation);
         });
     },
@@ -160,7 +165,7 @@ function is_irn_cancellable(frm) {
     );
 }
 
-function show_cancel_e_invoice_dialog(frm, callback) {
+async function show_cancel_e_invoice_dialog(frm, callback) {
     const d = new frappe.ui.Dialog({
         title: frm.doc.ewaybill
             ? __("Cancel e-Invoice and e-Waybill")
@@ -187,6 +192,12 @@ function show_cancel_e_invoice_dialog(frm, callback) {
 
     india_compliance.primary_to_danger_btn(d);
     d.show();
+
+    const auto_cancel_e_invoice = await frappe.db.get_single_value("GST Settings", "auto_cancel_e_invoice");
+    if (auto_cancel_e_invoice) {
+        const reason = await frappe.db.get_single_value("GST Settings", "reason_for_e_invoice_cancellation");
+        d.get_field("reason").set_value(reason);
+    }
 
     $(`
         <div class="alert alert-warning" role="alert">
@@ -243,7 +254,7 @@ function get_generated_e_invoice_dialog_fields() {
     return fields;
 }
 
-function show_mark_e_invoice_as_cancelled_dialog(frm) {
+async function show_mark_e_invoice_as_cancelled_dialog(frm) {
     const d = new frappe.ui.Dialog({
         title: __("Update Cancelled e-Invoice Details"),
         fields: get_cancel_e_invoice_dialog_fields(frm, true),
@@ -265,6 +276,12 @@ function show_mark_e_invoice_as_cancelled_dialog(frm) {
     });
 
     d.show();
+
+    const auto_cancel_e_invoice = await frappe.db.get_single_value("GST Settings", "auto_cancel_e_invoice");
+    if (auto_cancel_e_invoice) {
+        const reason = await frappe.db.get_single_value("GST Settings", "reason_for_e_invoice_cancellation");
+        d.get_field("reason").set_value(reason);
+    }
 }
 
 function get_cancel_e_invoice_dialog_fields(frm, manual_cancel = false) {
