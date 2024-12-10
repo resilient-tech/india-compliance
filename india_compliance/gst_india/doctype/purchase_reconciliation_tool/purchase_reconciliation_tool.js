@@ -70,15 +70,6 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         await frappe.require("purchase_reconciliation_tool.bundle.js");
         frm.trigger("company");
         frm.purchase_reconciliation_tool = new PurchaseReconciliationTool(frm);
-
-        frappe.realtime.on("download_failed", message => {
-            frm.dashboard.hide();
-            frappe.msgprint({
-                title: __("Download Failed"),
-                message: message.error,
-                indicator: "red"
-            });
-        })
     },
 
     onload(frm) {
@@ -198,6 +189,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
                 () => frm.events.update_progress(frm, "update_api_progress"),
                 () => frm.events.update_progress(frm, "update_transactions_progress"),
             ]);
+            frm.events.handle_download_failure(frm);
         } else if (type == "upload") {
             frm.events.update_progress(frm, "update_transactions_progress");
         }
@@ -237,6 +229,17 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
                 }, 1000);
             }
         });
+    },
+
+    handle_download_failure(frm) {
+        frappe.realtime.on("download_failed", message => {
+            frm.dashboard.hide();
+            frappe.msgprint({
+                title: __("Download Failed"),
+                message: message.error,
+                indicator: "red"
+            });
+        })
     },
 });
 
