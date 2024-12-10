@@ -1,5 +1,9 @@
 {
+<<<<<<< HEAD
 	"branches": ["version-15"],
+=======
+	"branches": ["version-14", "version-15"],
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
 	"plugins": [
 		"@semantic-release/commit-analyzer", {
 			"preset": "angular",

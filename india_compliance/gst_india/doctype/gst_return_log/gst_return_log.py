@@ -53,7 +53,11 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
     def get_json_for(self, file_field):
         try:
             if file := get_file_doc(self.doctype, self.name, file_field):
+<<<<<<< HEAD
                 return get_decompressed_data(file.get_content())
+=======
+                return get_decompressed_data(file.get_content(encodings=[]))
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
 
         except FileNotFoundError:
             # say File not restored
@@ -96,7 +100,11 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
             new_json = json_data
 
         else:
+<<<<<<< HEAD
             new_json = get_decompressed_data(file.get_content())
+=======
+            new_json = get_decompressed_data(file.get_content(encodings=[]))
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
             new_json.update(json_data)
 
         content = get_compressed_data(new_json)

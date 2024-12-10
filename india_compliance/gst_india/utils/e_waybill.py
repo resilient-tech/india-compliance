@@ -1236,7 +1236,10 @@ class EWaybillData(GSTTransactionData):
         - Required fields
         - Atleast one item with HSN for goods is required
         - Basic transporter details must be present
+<<<<<<< HEAD
         - Transaction does not have any non-GST items
+=======
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
         - Sales Invoice with same company and billing gstin
         - Inward Stock Transfer with same company and supplier gstin
         - Outward Material Transfer with different company and supplier gstin
@@ -1267,8 +1270,11 @@ class EWaybillData(GSTTransactionData):
         if not self.doc.gst_transporter_id:
             self.validate_mode_of_transport()
 
+<<<<<<< HEAD
         self.validate_non_gst_items()
 
+=======
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
         if is_outward_stock_entry(self.doc):
             self.validate_different_gstin()
         else:

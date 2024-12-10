@@ -422,6 +422,10 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
                     purchase_invoice.company_gstin
                     != IfNull(purchase_invoice.supplier_gstin, "")
                 )
+<<<<<<< HEAD
+=======
+                & (purchase_invoice.gst_category != "Overseas")
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
             )
             .groupby(purchase_invoice.name)
         )

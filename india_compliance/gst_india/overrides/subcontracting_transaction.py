@@ -19,6 +19,10 @@ from india_compliance.gst_india.overrides.transaction import (
     validate_gst_category,
     validate_gst_transporter_id,
     validate_gstin_status,
+<<<<<<< HEAD
+=======
+    validate_items,
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
     validate_mandatory_fields,
     validate_place_of_supply,
 )
@@ -247,6 +251,11 @@ def validate_doc_references(doc, method=None):
 
 
 def validate_transaction(doc, method=None):
+<<<<<<< HEAD
+=======
+    validate_items(doc)
+
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
     if doc.doctype == "Stock Entry":
         if not doc.is_return:
             company_address_field = "bill_from_address"

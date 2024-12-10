@@ -332,6 +332,10 @@ def get_advance_payment_entries_for_regional(
     party_account,
     order_doctype,
     order_list=None,
+<<<<<<< HEAD
+=======
+    default_advance_account=None,
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
     include_unallocated=True,
     against_all_orders=False,
     limit=None,
@@ -347,6 +351,10 @@ def get_advance_payment_entries_for_regional(
         party_account=party_account,
         order_doctype=order_doctype,
         order_list=order_list,
+<<<<<<< HEAD
+=======
+        default_advance_account=default_advance_account,
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
         include_unallocated=include_unallocated,
         against_all_orders=against_all_orders,
         limit=limit,

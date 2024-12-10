@@ -46,10 +46,17 @@ def validate(doc, method=None):
     if validate_transaction(doc) is False:
         return
 
+<<<<<<< HEAD
     if doc.is_reverse_charge and not doc.supplier_gstin:
         validate_invoice_number(doc)
 
     validate_hsn_codes(doc)
+=======
+    validate_hsn_codes(doc)
+    if doc.is_reverse_charge and not doc.supplier_gstin:
+        validate_invoice_number(doc)
+
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
     set_ineligibility_reason(doc)
     update_itc_totals(doc)
     validate_supplier_invoice_number(doc)
@@ -85,7 +92,10 @@ def is_b2b_invoice(doc):
         or doc.gst_category in ["Registered Composition", "Unregistered", "Overseas"]
         or doc.supplier_gstin == doc.company_gstin
         or doc.is_opening == "Yes"
+<<<<<<< HEAD
         or any(row for row in doc.items if row.gst_treatment == "Non-GST")
+=======
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
     )
 
 

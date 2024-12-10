@@ -58,13 +58,21 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
+<<<<<<< HEAD
  "modified": "2022-04-12 17:40:41.914298",
+=======
+ "modified": "2024-03-29 11:54:42.857545",
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Inward Supply Item",
  "owner": "Administrator",
  "permissions": [],
+<<<<<<< HEAD
  "sort_field": "modified",
+=======
+ "sort_field": "creation",
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
  "sort_order": "DESC",
  "states": []
 }

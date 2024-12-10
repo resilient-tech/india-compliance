@@ -1,11 +1,19 @@
 import frappe
 from frappe.modules.patch_handler import get_patches_from_app
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
+=======
+from frappe.tests import IntegrationTestCase
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
 
 from india_compliance.install import POST_INSTALL_PATCHES
 
 
+<<<<<<< HEAD
 class TestPatches(FrappeTestCase):
+=======
+class TestPatches(IntegrationTestCase):
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
     def test_post_install_patch_exists(self):
         for patch in POST_INSTALL_PATCHES:
             self.assertTrue(

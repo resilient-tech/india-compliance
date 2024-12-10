@@ -8,6 +8,13 @@ div[data-page-route="Purchase Reconciliation Tool"]
     margin-top: 0;
 }
 
+<<<<<<< HEAD
+=======
+div[data-page-route="Purchase Reconciliation Tool"] .section-body {
+    max-width: 100% !important;
+}
+
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
 div[data-page-route="Purchase Reconciliation Tool"]
     [data-fieldname="reconciliation_html"]
     .form-tabs-list {
@@ -29,7 +36,12 @@ div[data-page-route="Purchase Reconciliation Tool"]
 div[data-page-route="Purchase Reconciliation Tool"]
     [data-fieldname="reconciliation_html"]
     .form-tabs-list
+<<<<<<< HEAD
     .inner-group-button, .filter-selector {
+=======
+    .inner-group-button,
+.filter-selector {
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
     margin-bottom: 8px;
     margin-left: 8px;
 }

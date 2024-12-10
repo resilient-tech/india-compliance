@@ -5,7 +5,11 @@ import json
 import re
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
+=======
+from frappe.tests import IntegrationTestCase
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
 from frappe.utils import today
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
@@ -18,9 +22,18 @@ from india_compliance.gst_india.utils import get_gst_accounts_by_type
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
 
 
+<<<<<<< HEAD
 class TestBillofEntry(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
+=======
+class TestBillofEntry(IntegrationTestCase):
+    @classmethod
+    def setUpClass(cls):
+        # don't create test objects
+        frappe.local.test_objects["Bill of Entry"] = []
+
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
         super().setUpClass()
         frappe.db.set_single_value("GST Settings", "enable_overseas_transactions", 1)
 

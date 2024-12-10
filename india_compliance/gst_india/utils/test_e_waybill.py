@@ -8,7 +8,11 @@ import time_machine
 from responses import matchers
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase, change_settings
+=======
+from frappe.tests import IntegrationTestCase, change_settings
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
 from frappe.utils import add_to_date, get_datetime, now_datetime, today
 from frappe.utils.data import format_date
 from frappe.www.printview import get_html_and_style
@@ -41,7 +45,11 @@ DATETIME_FORMAT = "%d/%m/%Y %I:%M:%S %p"
 DATE_FORMAT = "dd/mm/yyyy"
 
 
+<<<<<<< HEAD
 class TestEWaybill(FrappeTestCase):
+=======
+class TestEWaybill(IntegrationTestCase):
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -454,6 +462,7 @@ class TestEWaybill(FrappeTestCase):
             {"gst_transporter_id": "05AAACG2140A1ZL", "mode_of_transport": "Road"}
         )
 
+<<<<<<< HEAD
         si.items[0].gst_treatment = "Non-GST"
 
         self.assertRaisesRegex(
@@ -462,6 +471,8 @@ class TestEWaybill(FrappeTestCase):
             EWaybillData(si).validate_applicability,
         )
 
+=======
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
         si.items[0].gst_treatment = "Taxable"
         si.update(
             {

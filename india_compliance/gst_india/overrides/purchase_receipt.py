@@ -21,7 +21,11 @@ def get_dashboard_data(data):
 
 
 def onload(doc, method=None):
+<<<<<<< HEAD
     if ignore_gst_validations(doc, throw=False):
+=======
+    if ignore_gst_validations(doc):
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
         return
 
     if (

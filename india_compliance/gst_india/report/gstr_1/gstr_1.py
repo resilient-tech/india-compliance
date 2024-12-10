@@ -563,9 +563,15 @@ class Gstr1Report:
 
             parent_dict = invoice_item_wise_tax_details.setdefault(parent, {})
             for item_code, invoice_tax_details in item_wise_tax_detail.items():
+<<<<<<< HEAD
                 tax_rate = flt(invoice_tax_details[0])
                 tax_rate = flt(tax_rate * 2 if is_cgst_or_sgst else tax_rate)
                 tax_amount = flt(invoice_tax_details[1])
+=======
+                tax_rate = flt(invoice_tax_details.get("tax_rate"))
+                tax_rate = flt(tax_rate * 2 if is_cgst_or_sgst else tax_rate)
+                tax_amount = flt(invoice_tax_details.get("tax_amount"))
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
 
                 item_dict = parent_dict.setdefault(
                     item_code, {"tax_rate": 0, "cess_amount": 0, "taxable_value": 0}
@@ -1610,7 +1616,10 @@ class GSTR1DocumentIssuedSummary:
             "Excluded from Report (Invalid Invoice Number)": [],
             "Excluded from Report (Same GSTIN Billing)": [],
             "Excluded from Report (Is Opening Entry)": [],
+<<<<<<< HEAD
             "Excluded from Report (Has Non GST Item)": [],
+=======
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
             "Invoices for outward supply": [],
             "Debit Note": [],
             "Credit Note": [],
@@ -1632,10 +1641,13 @@ class GSTR1DocumentIssuedSummary:
                 nature_of_document["Excluded from Report (Same GSTIN Billing)"].append(
                     doc
                 )
+<<<<<<< HEAD
             elif doc.gst_treatment == "Non-GST":
                 nature_of_document["Excluded from Report (Has Non GST Item)"].append(
                     doc
                 )
+=======
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
             elif doctype == "Purchase Invoice":
                 nature_of_document[
                     "Invoices for inward supply from unregistered person"

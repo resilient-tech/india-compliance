@@ -292,9 +292,12 @@ class GSTTransactionData:
             ),
         )
 
+<<<<<<< HEAD
     def validate_non_gst_items(self):
         validate_non_gst_items(self.doc)
 
+=======
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
     def get_all_item_details(self):
         all_item_details = []
 
@@ -400,9 +403,15 @@ class GSTTransactionData:
 
             tax = row.gst_tax_type
             tax_rate = self.rounded(
+<<<<<<< HEAD
                 frappe.parse_json(row.item_wise_tax_detail).get(
                     item.item_code or item.item_name
                 )[0],
+=======
+                frappe.parse_json(row.item_wise_tax_detail)
+                .get(item.item_code or item.item_name)
+                .get("tax_rate"),
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
                 3,
             )
 
@@ -665,6 +674,7 @@ class GSTTransactionData:
         return value[:max_length]
 
 
+<<<<<<< HEAD
 def validate_non_gst_items(doc, throw=True):
     if doc.items[0].gst_treatment == "Non-GST":
         if not throw:
@@ -678,6 +688,8 @@ def validate_non_gst_items(doc, throw=True):
     return True
 
 
+=======
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
 def validate_unique_hsn_and_uom(doc):
     """
     Raise an exception if

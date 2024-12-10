@@ -5,6 +5,13 @@
 Simple, yet powerful compliance solutions for Indian businesses
 
 [![Server Tests](https://github.com/resilient-tech/india-compliance/actions/workflows/server-tests.yml/badge.svg)](https://github.com/resilient-tech/india-compliance/actions/workflows/server-tests.yml)
+<<<<<<< HEAD
+=======
+[![Codecov](https://codecov.io/gh/resilient-tech/india-compliance/branch/develop/graph/badge.svg)](https://codecov.io/gh/resilient-tech/india-compliance)
+
+<br><br>
+![image](https://github.com/resilient-tech/india-compliance/assets/16315650/f442f922-acd4-4676-9ae6-494b09242bdf)
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
 
 </div>
 
@@ -27,6 +34,7 @@ For a detailed overview of these features, please [refer to the documentation](h
 
 ## Installation
 
+<<<<<<< HEAD
 Once you've [set up a Frappe site](https://frappeframework.com/docs/v14/user/en/installation/), installing India Compliance is simple:
 
 1.  Download the app using the Bench CLI.
@@ -43,6 +51,9 @@ If it isn't specified, the `--branch` option will default to **develop**.
     ```bash
     bench --site [site name] install-app india_compliance
     ```
+=======
+For detailed instructions, please [refer to the documentation](https://docs.indiacompliance.app/docs/getting-started/installation)
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
 
 ## In-app Purchases
 

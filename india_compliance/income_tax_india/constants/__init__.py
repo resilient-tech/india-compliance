@@ -23,6 +23,10 @@ TDS_SECTIONS = [
     "194IA",
     "194N",
     "194Q",
+<<<<<<< HEAD
+=======
+    "206C(1H)",
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
 ]
 
 TDS_ENTITY_TYPE = ["Individual", "Company", "Company Assessee", "No PAN / Invalid PAN"]

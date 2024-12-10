@@ -1,14 +1,22 @@
 from datetime import date
 
 from frappe import parse_json, read_file
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
+=======
+from frappe.tests import IntegrationTestCase
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
 
 from india_compliance.gst_india.utils import get_data_file_path
 from india_compliance.gst_india.utils.gstr_2 import GSTRCategory, save_gstr_2b
 from india_compliance.gst_india.utils.gstr_2.test_gstr_2a import TestGSTRMixin
 
 
+<<<<<<< HEAD
 class TestGSTR2b(TestGSTRMixin, FrappeTestCase):
+=======
+class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

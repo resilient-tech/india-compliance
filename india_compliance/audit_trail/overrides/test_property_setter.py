@@ -1,14 +1,33 @@
 import re
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
 
 
 class TestPropertySetter(FrappeTestCase):
+=======
+from frappe.tests import IntegrationTestCase
+
+
+class TestPropertySetter(IntegrationTestCase):
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
     def test_validate_property_setter_where_audit_trail_enabled_and_doc_is_protected(
         self,
     ):
         frappe.db.set_single_value("Accounts Settings", "enable_audit_trail", 1)
+<<<<<<< HEAD
+=======
+        frappe.db.delete(
+            "Property Setter",
+            {
+                "doctype_or_field": "DocType",
+                "doc_type": "Purchase Invoice",
+                "property": "track_changes",
+            },
+        )
+
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
         doc = frappe.get_doc(
             {
                 "doctype": "Property Setter",

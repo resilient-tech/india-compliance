@@ -568,6 +568,18 @@ def get_gst_accounts_by_tax_type(company, tax_type, throw=True):
     )
 
 
+<<<<<<< HEAD
+=======
+@frappe.request_cache
+def get_gst_account_by_item_tax_template(item_tax_template):
+    return frappe.get_all(
+        "Item Tax Template Detail",
+        filters={"parent": item_tax_template},
+        pluck="tax_type",
+    )
+
+
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
 def get_gst_account_gst_tax_type_map():
     """
     - Returns gst_account by tax_type for all the companies

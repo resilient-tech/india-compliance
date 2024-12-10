@@ -1,12 +1,20 @@
 import re
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
+=======
+from frappe.tests import IntegrationTestCase
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
 
 from india_compliance.gst_india.utils.tests import create_sales_invoice
 
 
+<<<<<<< HEAD
 class TestVersion(FrappeTestCase):
+=======
+class TestVersion(IntegrationTestCase):
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
     def test_validate_version_where_audit_trail_enabled(self):
         # enable audit trail
         frappe.db.set_single_value("Accounts Settings", "enable_audit_trail", 1)

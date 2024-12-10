@@ -1,10 +1,17 @@
 import re
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
 
 
 class TestCustomizeFormAuditTrail(FrappeTestCase):
+=======
+from frappe.tests import IntegrationTestCase
+
+
+class TestCustomizeFormAuditTrail(IntegrationTestCase):
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
     def test_validate_customize_form(self):
         customize_frm = self.get_customize_form()
         customize_frm.doc_type = "Purchase Invoice"

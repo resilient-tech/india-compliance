@@ -167,7 +167,10 @@ class PurchaseInvoiceEwaybill extends EwaybillApplicability {
     }
 }
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
 class PurchaseReceiptEwaybill extends EwaybillApplicability {
     is_e_waybill_applicable(show_message = false) {
         return (

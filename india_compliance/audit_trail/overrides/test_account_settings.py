@@ -1,10 +1,17 @@
 import re
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
 
 
 class TestAccountsSettings(FrappeTestCase):
+=======
+from frappe.tests import IntegrationTestCase
+
+
+class TestAccountsSettings(IntegrationTestCase):
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
     def test_validate_change_in_enable_audit_trail_and_validate_delete_linked_ledger_entries(
         self,
     ):

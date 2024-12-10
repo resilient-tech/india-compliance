@@ -1,11 +1,19 @@
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase, change_settings
+=======
+from frappe.tests import IntegrationTestCase, change_settings
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
 from erpnext.accounts.doctype.account.test_account import create_account
 
 from india_compliance.gst_india.utils.tests import append_item, create_purchase_invoice
 
 
+<<<<<<< HEAD
 class TestPurchaseInvoice(FrappeTestCase):
+=======
+class TestPurchaseInvoice(IntegrationTestCase):
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_itc_classification(self):
         pinv = create_purchase_invoice(

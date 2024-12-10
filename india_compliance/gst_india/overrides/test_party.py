@@ -1,8 +1,15 @@
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
 
 
 class TestUtils(FrappeTestCase):
+=======
+from frappe.tests import IntegrationTestCase
+
+
+class TestUtils(IntegrationTestCase):
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
     def test_validate_new_party(self):
         party = frappe.new_doc(
             "Customer", customer_name="Resilient Tech", gstin="24AUTPV8831F1ZZ"

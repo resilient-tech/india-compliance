@@ -434,7 +434,11 @@
   }
  ],
  "search_fields": "bill_date, supplier_name, bill_no, document_value",
+<<<<<<< HEAD
  "sort_field": "modified",
+=======
+ "sort_field": "creation",
+>>>>>>> 3051b0ea (fix: change regional override as per erpnext changes)
  "sort_order": "DESC",
  "states": [],
  "title_field": "supplier_name",
