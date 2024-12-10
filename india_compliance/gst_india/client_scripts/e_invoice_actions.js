@@ -195,11 +195,7 @@ async function show_cancel_e_invoice_dialog(frm, callback) {
     india_compliance.primary_to_danger_btn(d);
     d.show();
 
-    const auto_cancel_e_invoice = await frappe.db.get_single_value("GST Settings", "auto_cancel_e_invoice");
-    if (auto_cancel_e_invoice) {
-        const reason = await frappe.db.get_single_value("GST Settings", "reason_for_e_invoice_cancellation");
-        d.get_field("reason").set_value(reason);
-    }
+    update_reason_for_e_invoice_cancellation(d);
 
     $(`
         <div class="alert alert-warning" role="alert">
@@ -279,6 +275,10 @@ async function show_mark_e_invoice_as_cancelled_dialog(frm) {
 
     d.show();
 
+    update_reason_for_e_invoice_cancellation(d);
+}
+
+async function update_reason_for_e_invoice_cancellation(d) {
     const auto_cancel_e_invoice = await frappe.db.get_single_value("GST Settings", "auto_cancel_e_invoice");
     if (auto_cancel_e_invoice) {
         const reason = await frappe.db.get_single_value("GST Settings", "reason_for_e_invoice_cancellation");

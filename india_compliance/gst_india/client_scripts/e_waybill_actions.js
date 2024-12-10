@@ -692,7 +692,7 @@ function show_mark_e_waybill_as_generated_dialog(frm) {
     d.show();
 }
 
-async function show_cancel_e_waybill_dialog(frm, callback) {
+function show_cancel_e_waybill_dialog(frm, callback) {
     const d = new frappe.ui.Dialog({
         title: __("Cancel e-Waybill"),
         fields: get_cancel_e_waybill_dialog_fields(frm),
@@ -716,15 +716,10 @@ async function show_cancel_e_waybill_dialog(frm, callback) {
 
     india_compliance.primary_to_danger_btn(d);
     d.show();
-
-    const auto_cancel_e_waybill = await frappe.db.get_single_value("GST Settings", "auto_cancel_e_waybill");
-    if (auto_cancel_e_waybill) {
-        const reason = await frappe.db.get_single_value("GST Settings", "reason_for_e_waybill_cancellation");
-        d.get_field("reason").set_value(reason);
-    }
+    update_reason_for_e_invoice_cancellation(d);
 }
 
-async function show_mark_e_waybill_as_cancelled_dialog(frm) {
+function show_mark_e_waybill_as_cancelled_dialog(frm) {
     const fields = get_cancel_e_waybill_dialog_fields(frm);
     fields.push({
         label: "Cancelled On",
@@ -755,7 +750,10 @@ async function show_mark_e_waybill_as_cancelled_dialog(frm) {
     });
 
     d.show();
+    update_reason_for_e_invoice_cancellation(d);
+}
 
+async function update_reason_for_e_invoice_cancellation(d){
     const auto_cancel_e_waybill = await frappe.db.get_single_value("GST Settings", "auto_cancel_e_waybill");
     if (auto_cancel_e_waybill) {
         const reason = await frappe.db.get_single_value("GST Settings", "reason_for_e_waybill_cancellation");
