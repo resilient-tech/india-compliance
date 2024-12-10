@@ -337,11 +337,11 @@ def cancel_e_invoice(docname, values):
     return send_updated_doc(doc)
 
 
-def _cancel_e_invoice(doc, values, show_msg=True):
+def _cancel_e_invoice(doc, values):
     validate_if_e_invoice_can_be_cancelled(doc)
 
     if doc.get("ewaybill"):
-        _cancel_e_waybill(doc, values, show_msg)
+        _cancel_e_waybill(doc, values)
 
     data = {
         "Irn": doc.irn,
@@ -352,15 +352,13 @@ def _cancel_e_invoice(doc, values, show_msg=True):
     result = EInvoiceAPI(doc).cancel_irn(data)
 
     log_and_process_e_invoice_cancellation(
-        doc, values, result, "e-Invoice cancelled successfully", show_msg=show_msg
+        doc, values, result, "e-Invoice cancelled successfully"
     )
 
-    # TODO: Improve this implementation
-    if show_msg:
-        doc.cancel()
+    doc.cancel()
 
 
-def log_and_process_e_invoice_cancellation(doc, values, result, message, show_msg=True):
+def log_and_process_e_invoice_cancellation(doc, values, result, message):
     log_e_invoice(
         doc,
         {
@@ -383,8 +381,7 @@ def log_and_process_e_invoice_cancellation(doc, values, result, message, show_ms
         }
     )
 
-    if show_msg:
-        frappe.msgprint(_(message), indicator="green", alert=True)
+    frappe.msgprint(_(message), indicator="green", alert=True)
 
 
 @frappe.whitelist()

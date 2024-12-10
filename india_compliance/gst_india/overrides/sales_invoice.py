@@ -249,7 +249,7 @@ def cancel_e_documents(doc, method=None):
                 "remark": "",
             }
         )
-        cancel_func(doc, values, show_msg=False)
+        cancel_func(doc, values)
 
     if doc.irn and gst_settings.enable_e_invoice and gst_settings.auto_cancel_e_invoice:
         auto_cancel(_cancel_e_invoice, "e_invoice")

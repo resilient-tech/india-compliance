@@ -198,7 +198,7 @@ function setup_e_waybill_actions(doctype) {
 
             frappe.validated = false;
 
-            return new Promise((resolve) => {
+            return new Promise(resolve => {
                 const continueCancellation = () => {
                     frappe.validated = true;
                     resolve();
