@@ -107,7 +107,7 @@ frappe.ui.form.on("Sales Invoice", {
 
         frappe.validated = false;
 
-        return new Promise(async (resolve) => {
+        return new Promise(resolve => {
             const continueCancellation = () => {
                 frappe.validated = true;
                 resolve();
@@ -144,12 +144,14 @@ frappe.ui.form.on("Sales Invoice", {
                 return;
             }
 
-            const auto_cancel_e_invoice = await frappe.db.get_single_value("GST Settings", "auto_cancel_e_invoice");
-            if(auto_cancel_e_invoice === 1){
-                continueCancellation()
-                return
-            }
-            return show_cancel_e_invoice_dialog(frm, continueCancellation);
+            (async () => {
+                const auto_cancel_e_invoice = await frappe.db.get_single_value("GST Settings", "auto_cancel_e_invoice");
+                if (auto_cancel_e_invoice === 1) {
+                    continueCancellation()
+                    return
+                }
+                return show_cancel_e_invoice_dialog(frm, continueCancellation);
+            })();
         });
     },
 });

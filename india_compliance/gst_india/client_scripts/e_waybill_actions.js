@@ -198,8 +198,7 @@ function setup_e_waybill_actions(doctype) {
 
             frappe.validated = false;
 
-            return new Promise(async (resolve) => {
-                
+            return new Promise((resolve) => {
                 const continueCancellation = () => {
                     frappe.validated = true;
                     resolve();
@@ -222,13 +221,14 @@ function setup_e_waybill_actions(doctype) {
                     return;
                 }
 
-                const auto_cancel_e_waybill = await frappe.db.get_single_value("GST Settings", "auto_cancel_e_waybill");
-                if(auto_cancel_e_waybill === 1){
-                    continueCancellation()
-                    return
-                }
-
-                return show_cancel_e_waybill_dialog(frm, continueCancellation);
+                (async () => {
+                    const auto_cancel_e_waybill = await frappe.db.get_single_value("GST Settings", "auto_cancel_e_waybill");
+                    if (auto_cancel_e_waybill === 1) {
+                        continueCancellation()
+                        return
+                    }
+                    return show_cancel_e_waybill_dialog(frm, continueCancellation);
+                })();
             });
         },
     });
