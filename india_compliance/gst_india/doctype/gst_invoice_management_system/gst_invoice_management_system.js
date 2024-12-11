@@ -76,7 +76,7 @@ frappe.ui.form.on("GST Invoice Management System", {
                         frm.ims.check_action_status_with_retry();
                         frm.ims.check_action_status_with_retry();
 
-                        // TODO: Handle error report in case of PE and ER and return
+                        // TODO: Handle error report in case of PE and ER and then return
 
                         frappe.show_alert({
                             message: "Uploaded Invoices Successfully",
@@ -334,43 +334,43 @@ class IMS {
         const me = this;
 
         this.tabs.invoice_tab.$datatable.on("click", ".supplier-gstin", function (e) {
-            add_filter(e, "supplier_gstin", $(this).text().trim(), me);
+            me.add_filter(e, "supplier_gstin", $(this).text().trim(), me);
         });
 
         this.tabs.invoice_tab.$datatable.on("click", ".match-status", function (e) {
-            add_filter(e, "match_status", $(this).text(), me);
+            me.add_filter(e, "match_status", $(this).text(), me);
         });
 
         this.tabs.summary_tab.$datatable.on("click", ".match-status", function (e) {
-            add_filter(e, "match_status", $(this).text(), me);
+            me.add_filter(e, "match_status", $(this).text(), me);
         });
 
         this.tabs.invoice_tab.$datatable.on("click", ".ims-action", function (e) {
-            add_filter(e, "ims_action", $(this).text(), me);
+            me.add_filter(e, "ims_action", $(this).text(), me);
         });
 
         this.tabs.action_tab.$datatable.on("click", ".invoice-category", function (e) {
-            add_filter(e, "doc_type", category_map[$(this).text()], me);
+            me.add_filter(e, "doc_type", category_map[$(this).text()], me);
         });
 
         this.tabs.invoice_tab.$datatable.on("click", ".btn.eye", function (e) {
             const row = me.mapped_invoice_data[$(this).attr("data-name")];
             me.dm = new DetailViewDialog(me.frm, row);
         });
+    }
 
-        async function add_filter(e, field, field_value, me) {
-            e.preventDefault();
+    async add_filter(e, field, field_value, me) {
+        e.preventDefault();
 
-            const filter = ["GST Invoice Management System", field, "=", field_value];
+        const filter = ["GST Invoice Management System", field, "=", field_value];
 
-            if (me.filter_group.filter_exists(filter)) {
-                await me.filter_group.remove_filter(filter);
-            } else {
-                await me.filter_group.push_new_filter(filter);
-            }
-
-            me.filter_group.apply();
+        if (me.filter_group.filter_exists(filter)) {
+            await me.filter_group.remove_filter(filter);
+        } else {
+            await me.filter_group.push_new_filter(filter);
         }
+
+        me.filter_group.apply();
     }
 
     get_summary_columns() {
@@ -694,17 +694,18 @@ class IMS {
         });
 
         const action_performed_cards = Object.entries(actions_summary)
-            .map(
-                ([action, data]) => `
-            <div>
-                <h5>${convert_to_title_case(action)}</h5>
-                </br>
-                <h4 class="text-center" style="color: ${
-                    data.color
-                }; font-size: x-large;">
-                    ${data.count}</h4>
-            </div>`
-            )
+            .map(([value, data]) => {
+                const action = convert_to_title_case(value);
+                return `<div>
+                            <h5>${action}</h5>
+                            </br>
+                            <a href="#" class="action-summary" data-name="${action}">
+                                <h4 class="text-center" style="color: ${data.color}; font-size: x-large;">
+                                    ${data.count}
+                                </h4>
+                            </a>
+                        </div>`;
+            })
             .join("");
 
         const action_performed_html = `
@@ -715,6 +716,11 @@ class IMS {
 
         let element = $('[data-fieldname="data_section"]');
         element.prepend(action_performed_html);
+
+        const me = this;
+        this.frm.$wrapper.find(".action-summary").click(function (e) {
+            me.add_filter(e, "ims_action", $(this).attr("data-name"), me);
+        });
     }
 }
 
