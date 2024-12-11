@@ -23,6 +23,10 @@ TDS_SECTIONS = [
     "194IA",
     "194N",
     "194Q",
+<<<<<<< HEAD
+=======
+    "206C(1H)",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 ]
 
 TDS_ENTITY_TYPE = ["Individual", "Company", "Company Assessee", "No PAN / Invalid PAN"]

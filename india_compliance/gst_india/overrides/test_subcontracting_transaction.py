@@ -1,7 +1,11 @@
 import re
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
+=======
+from frappe.tests import IntegrationTestCase
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 from erpnext.controllers.subcontracting_controller import (
     get_materials_from_supplier,
     make_rm_stock_entry,
@@ -179,7 +183,11 @@ SERVICE_ITEM = {
 }
 
 
+<<<<<<< HEAD
 class TestSubcontractingTransaction(FrappeTestCase):
+=======
+class TestSubcontractingTransaction(IntegrationTestCase):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -298,9 +306,13 @@ class TestSubcontractingTransaction(FrappeTestCase):
 
         self.assertRaisesRegex(
             frappe.ValidationError,
+<<<<<<< HEAD
             re.compile(
                 r"(.*Please ensure that it is set in the Party and / or Address.*)"
             ),
+=======
+            re.compile(r"(.*is a mandatory field for GST Transactions.*)"),
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             se.save,
         )
 
@@ -324,7 +336,10 @@ class TestSubcontractingTransaction(FrappeTestCase):
         return_se = get_materials_from_supplier(
             sco.name, [d.name for d in sco.supplied_items]
         )
+<<<<<<< HEAD
         return_se.supplier = "_Test Registered Supplier"
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         return_se.save()
 
         scr = make_subcontracting_receipt(sco.name)

@@ -167,7 +167,10 @@ class PurchaseInvoiceEwaybill extends EwaybillApplicability {
     }
 }
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 class PurchaseReceiptEwaybill extends EwaybillApplicability {
     is_e_waybill_applicable(show_message = false) {
         return (

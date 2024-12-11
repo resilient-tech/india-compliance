@@ -292,9 +292,12 @@ class GSTTransactionData:
             ),
         )
 
+<<<<<<< HEAD
     def validate_non_gst_items(self):
         validate_non_gst_items(self.doc)
 
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     def get_all_item_details(self):
         all_item_details = []
 
@@ -400,9 +403,15 @@ class GSTTransactionData:
 
             tax = row.gst_tax_type
             tax_rate = self.rounded(
+<<<<<<< HEAD
                 frappe.parse_json(row.item_wise_tax_detail).get(
                     item.item_code or item.item_name
                 )[0],
+=======
+                frappe.parse_json(row.item_wise_tax_detail)
+                .get(item.item_code or item.item_name)
+                .get("tax_rate"),
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
                 3,
             )
 
@@ -665,6 +674,7 @@ class GSTTransactionData:
         return value[:max_length]
 
 
+<<<<<<< HEAD
 def validate_non_gst_items(doc, throw=True):
     if doc.items[0].gst_treatment == "Non-GST":
         if not throw:
@@ -678,6 +688,8 @@ def validate_non_gst_items(doc, throw=True):
     return True
 
 
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 def validate_unique_hsn_and_uom(doc):
     """
     Raise an exception if

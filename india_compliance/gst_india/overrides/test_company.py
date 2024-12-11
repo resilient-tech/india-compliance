@@ -1,10 +1,18 @@
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
+=======
+from frappe.tests import IntegrationTestCase
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
 from india_compliance.gst_india.overrides.company import get_tax_defaults
 
 
+<<<<<<< HEAD
 class TestCompanyFixtures(FrappeTestCase):
+=======
+class TestCompanyFixtures(IntegrationTestCase):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     @classmethod
     def setUpClass(cls):
         frappe.db.savepoint("before_test_company")

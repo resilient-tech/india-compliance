@@ -1,10 +1,17 @@
 import re
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
 
 
 class TestAccountsSettings(FrappeTestCase):
+=======
+from frappe.tests import IntegrationTestCase
+
+
+class TestAccountsSettings(IntegrationTestCase):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     def test_validate_change_in_enable_audit_trail_and_validate_delete_linked_ledger_entries(
         self,
     ):

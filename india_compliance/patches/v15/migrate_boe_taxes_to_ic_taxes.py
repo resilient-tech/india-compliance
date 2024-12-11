@@ -1,6 +1,9 @@
 import frappe
+<<<<<<< HEAD
 from frappe.model.document import bulk_insert
 from frappe.model.naming import _generate_random_string
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
 
 def execute():
@@ -10,16 +13,20 @@ def execute():
     boe_taxes = frappe.qb.DocType("Bill of Entry Taxes")
     boe_taxes_docs = frappe.qb.from_(boe_taxes).select("*").run(as_dict=True)
 
+<<<<<<< HEAD
     ic_taxes_names = set(
         frappe.get_all("India Compliance Taxes and Charges", pluck="name")
     )
     ic_taxes = []
 
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     for doc in boe_taxes_docs:
         ic_taxes_doc = frappe.get_doc(
             {
                 **doc,
                 "doctype": "India Compliance Taxes and Charges",
+<<<<<<< HEAD
                 "name": set_name(doc.name, ic_taxes_names),
                 "base_total": doc.total,
             }
@@ -40,3 +47,13 @@ def set_name(name, names):
 
     names.add(new_name)
     return new_name
+=======
+                "name": None,
+                "base_total": doc.total,
+            }
+        )
+        ic_taxes_doc.insert(ignore_if_duplicate=True)
+
+    # Drop the old table
+    frappe.db.delete("Bill of Entry Taxes")
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)

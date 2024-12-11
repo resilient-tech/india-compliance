@@ -121,7 +121,11 @@
    "write": 1
   }
  ],
+<<<<<<< HEAD
  "sort_field": "modified",
+=======
+ "sort_field": "creation",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
  "sort_order": "DESC",
  "states": [],
  "track_changes": 1

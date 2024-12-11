@@ -75,14 +75,22 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
+<<<<<<< HEAD
  "modified": "2022-06-19 08:12:56.461774",
+=======
+ "modified": "2024-03-29 11:54:42.333758",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Account",
  "owner": "Administrator",
  "permissions": [],
  "quick_entry": 1,
+<<<<<<< HEAD
  "sort_field": "modified",
+=======
+ "sort_field": "creation",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
  "sort_order": "DESC",
  "states": [],
  "track_changes": 1

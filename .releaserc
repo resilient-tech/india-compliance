@@ -1,5 +1,9 @@
 {
+<<<<<<< HEAD
 	"branches": ["version-15"],
+=======
+	"branches": ["version-14", "version-15"],
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 	"plugins": [
 		"@semantic-release/commit-analyzer", {
 			"preset": "angular",

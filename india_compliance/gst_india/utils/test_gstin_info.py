@@ -1,16 +1,27 @@
+<<<<<<< HEAD
 import unittest
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 from unittest.mock import Mock, patch
 
 import responses
 from responses import matchers
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase, change_settings
+=======
+from frappe.tests import IntegrationTestCase, change_settings
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
 from india_compliance.gst_india.utils.gstin_info import get_gstin_info
 
 
+<<<<<<< HEAD
 class TestGstinInfo(unittest.TestCase):
+=======
+class TestGstinInfo(IntegrationTestCase):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     MOCK_GSTIN_INFO = frappe._dict(
         {
             "adadr": [
@@ -197,7 +208,11 @@ class TestGstinInfo(unittest.TestCase):
         )
 
 
+<<<<<<< HEAD
 class TestGstinInvalidInfo(FrappeTestCase):
+=======
+class TestGstinInvalidInfo(IntegrationTestCase):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     @responses.activate
     @change_settings("GST Settings", {"validate_gstin_status": 1, "sandbox_mode": 0})
     def test_invalid_gstin(self):

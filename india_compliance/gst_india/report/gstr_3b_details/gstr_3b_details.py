@@ -422,6 +422,10 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
                     purchase_invoice.company_gstin
                     != IfNull(purchase_invoice.supplier_gstin, "")
                 )
+<<<<<<< HEAD
+=======
+                & (purchase_invoice.gst_category != "Overseas")
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             )
             .groupby(purchase_invoice.name)
         )

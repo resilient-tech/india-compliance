@@ -1,14 +1,22 @@
 from datetime import date
 
 from frappe import parse_json, read_file
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
+=======
+from frappe.tests import IntegrationTestCase
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
 from india_compliance.gst_india.utils import get_data_file_path
 from india_compliance.gst_india.utils.gstr_2 import GSTRCategory, save_gstr_2b
 from india_compliance.gst_india.utils.gstr_2.test_gstr_2a import TestGSTRMixin
 
 
+<<<<<<< HEAD
 class TestGSTR2b(TestGSTRMixin, FrappeTestCase):
+=======
+class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

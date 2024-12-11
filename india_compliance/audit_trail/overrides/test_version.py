@@ -1,12 +1,20 @@
 import re
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
+=======
+from frappe.tests import IntegrationTestCase
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
 from india_compliance.gst_india.utils.tests import create_sales_invoice
 
 
+<<<<<<< HEAD
 class TestVersion(FrappeTestCase):
+=======
+class TestVersion(IntegrationTestCase):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     def test_validate_version_where_audit_trail_enabled(self):
         # enable audit trail
         frappe.db.set_single_value("Accounts Settings", "enable_audit_trail", 1)

@@ -321,10 +321,13 @@ doc_events = {
 
 regional_overrides = {
     "India": {
+<<<<<<< HEAD
         "erpnext.controllers.taxes_and_totals.get_itemised_tax_breakup_header": (
             "india_compliance.gst_india.overrides.transaction.get_itemised_tax_breakup_header"
         ),
         "erpnext.controllers.taxes_and_totals.get_itemised_tax_breakup_data": "india_compliance.gst_india.overrides.transaction.get_itemised_tax_breakup_data",
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         "erpnext.controllers.taxes_and_totals.get_regional_round_off_accounts": (
             "india_compliance.gst_india.overrides.transaction.get_regional_round_off_accounts"
         ),

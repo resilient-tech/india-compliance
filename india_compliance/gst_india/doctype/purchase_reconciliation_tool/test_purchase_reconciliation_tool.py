@@ -4,8 +4,13 @@
 import datetime
 
 import frappe
+<<<<<<< HEAD
 from frappe.test_runner import make_test_objects
 from frappe.tests.utils import FrappeTestCase
+=======
+from frappe.tests import IntegrationTestCase
+from frappe.tests.utils import make_test_objects
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
@@ -50,9 +55,18 @@ BILL_OF_ENTRY_DEFAULT_ARGS = {
 }
 
 
+<<<<<<< HEAD
 class TestPurchaseReconciliationTool(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
+=======
+class TestPurchaseReconciliationTool(IntegrationTestCase):
+    @classmethod
+    def setUpClass(cls):
+        # don't create test objects
+        frappe.local.test_objects["Purchase Reconciliation Tool"] = []
+
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         super().setUpClass()
 
         # create 2023-2024 fiscal year
