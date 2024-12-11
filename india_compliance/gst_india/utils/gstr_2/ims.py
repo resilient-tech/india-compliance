@@ -13,7 +13,8 @@ ACTION_MAP = {"A": "Accepted", "R": "Rejected", "P": "Pending", "N": "No Action"
 class IMS:
     STATE_MAP = {value: f"{value}-{key}" for key, value in STATE_NUMBERS.items()}
 
-    def __init__(self, company_gstin=None, company=None):
+    def __init__(self, company_gstin=None, company=None, existing_transactions=None):
+        self.existing_transactions = existing_transactions or {}
         self.company_gstin = company_gstin
         self.company = company
 
@@ -22,6 +23,9 @@ class IMS:
 
         for transaction in transactions:
             create_inward_supply(transaction)
+
+            if transaction.get("unique_key") in self.existing_transactions:
+                self.existing_transactions.pop(transaction.get("unique_key"))
 
     def get_all_transactions(self, invoices):
         transactions = []
@@ -40,6 +44,7 @@ class IMS:
         transaction["unique_key"] = (
             f"{transaction.get('supplier_gstin', '')}-{transaction.get('bill_no', '')}"
         )
+
         return transaction
 
     def update_transaction_to_internal_format(self, invoice):
