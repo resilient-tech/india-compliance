@@ -956,7 +956,12 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
     # Taxes Not Applicable
     if (
         (destination_gstin and destination_gstin == source_gstin)  # Internal transfer
-        or (is_sales_transaction and is_export_without_payment_of_gst(party_details))
+        or (
+            is_sales_transaction
+            and is_export_without_payment_of_gst(
+                frappe._dict({**party_details, "doctype": doctype})
+            )
+        )
         or (
             not is_sales_transaction
             and (
