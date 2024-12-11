@@ -20,9 +20,17 @@
   "section_break_oisv",
   "unfiled",
   "filed",
+<<<<<<< HEAD
   "column_break_hxfu",
   "unfiled_summary",
   "filed_summary",
+=======
+  "upload_error",
+  "column_break_hxfu",
+  "unfiled_summary",
+  "filed_summary",
+  "authenticated_summary",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
   "computed_data_section",
   "is_latest_data",
   "section_break_emlz",
@@ -32,7 +40,13 @@
   "reconciled_data_section",
   "reconcile",
   "column_break_ndup",
+<<<<<<< HEAD
   "reconcile_summary"
+=======
+  "reconcile_summary",
+  "pending_request_info_section",
+  "actions"
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
  ],
  "fields": [
   {
@@ -187,12 +201,48 @@
    "label": "Return Type",
    "read_only": 1,
    "reqd": 1
+<<<<<<< HEAD
+=======
+  },
+  {
+   "fieldname": "upload_error",
+   "fieldtype": "Attach",
+   "label": "Upload Error Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "authenticated_summary",
+   "fieldtype": "Attach",
+   "label": "Authenticated Summary",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pending_request_info_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "actions",
+   "fieldtype": "Table",
+   "label": "Actions",
+   "options": "GSTR Action",
+   "read_only": 1
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
   }
  ],
  "in_create": 1,
  "index_web_pages_for_search": 1,
+<<<<<<< HEAD
  "links": [],
  "modified": "2024-07-14 18:35:34.743195",
+=======
+ "links": [
+  {
+   "link_doctype": "Integration Request",
+   "link_fieldname": "reference_docname"
+  }
+ ],
+ "modified": "2024-10-02 12:16:04.271962",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Return Log",

@@ -28,9 +28,13 @@
           <div class="order-summary">
             <div class="sub-heading">
               <p class="title">Order Summary</p>
+<<<<<<< HEAD
               <a @click="$router.go(-1)" class="text-highlight text-right">
                 Edit
               </a>
+=======
+              <a @click="$router.back()" class="text-highlight text-right"> Edit </a>
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             </div>
             <div class="order-summary-body">
               <div class="row">
@@ -85,17 +89,24 @@ export default {
 
   data() {
     return {
+<<<<<<< HEAD
+=======
+      orderDetails: null,
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
       isLoading: true,
       // TODO: fix reactivity of vuex store's state `billingDetails` and use computed property instead
       billingDetails: {},
     };
   },
 
+<<<<<<< HEAD
   beforeRouteEnter(to, from, next) {
     if (to.params.order) return next();
     next({ name: "home", replace: true });
   },
 
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
   computed: {
     billingGstin() {
       return this.billingDetails.billing_gstin;
@@ -129,15 +140,22 @@ export default {
       return this.billingDetails.pincode;
     },
 
+<<<<<<< HEAD
     orderDetails() {
       return this.$route.params.order;
     },
 
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     creditsValidity() {
       return frappe.datetime.str_to_user(this.orderDetails.validity);
     },
   },
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
   methods: {
     getReadableNumber,
     editAddress() {
@@ -189,19 +207,34 @@ export default {
             fieldname: "state",
             fieldtype: "Autocomplete",
             default: this.state,
+<<<<<<< HEAD
             options: this.country.toLowerCase() === "india" ? states : []
+=======
+            options: this.country.toLowerCase() === "india" ? states : [],
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
           },
           {
             label: "Country",
             fieldname: "country",
             fieldtype: "Data",
             default: this.country,
+<<<<<<< HEAD
             onchange(){
               // TODO: fix in frappe needed to update dialog options
               this.value.toLowerCase() === "india" ?
               dialog.set_df_property("state","options", states):
               dialog.set_df_property("state", "options", [])
             }
+=======
+            onchange() {
+              // TODO: fix in frappe needed to update dialog options
+              dialog.set_df_property(
+                "state",
+                "options",
+                this.value.toLowerCase() === "india" ? states : [],
+              );
+            },
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
           },
           {
             label: "Postal Code",
@@ -236,23 +269,38 @@ export default {
     },
 
     redirectToHome(message, color) {
+<<<<<<< HEAD
       this.$router.push({
         name: "home",
         replace: true,
         params: { message: { message, color } },
       });
     },
+=======
+      this.$store.dispatch("setMessage", { message, color });
+      this.$router.replace({ name: "home" });
+    },
+
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     initCashFree(orderToken) {
       const style = getComputedStyle(document.body);
       const primaryColor = style.getPropertyValue("--primary");
       const cardBg = style.getPropertyValue("--card-bg");
+<<<<<<< HEAD
       const theme =
         document.documentElement.getAttribute("data-theme-mode") || "light";
+=======
+      const theme = document.documentElement.getAttribute("data-theme-mode") || "light";
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
       const dropConfig = {
         components: ["card", "netbanking", "app", "upi"],
         orderToken,
+<<<<<<< HEAD
         onSuccess: async (data) => {
+=======
+        onSuccess: async data => {
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
           if (data.order && data.order.status == "PAID") {
             const response = await verify_payment(data.order.orderId);
             if (!response.success || response.error) {
@@ -265,15 +313,23 @@ export default {
             );
           }
         },
+<<<<<<< HEAD
         onFailure: (data) => {
+=======
+        onFailure: data => {
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
           // redirecting on order related errors
           if (data.order.errorText) {
             return this.redirectToHome(data.order.errorText, "red");
           }
 
           frappe.throw(
+<<<<<<< HEAD
             data.transaction?.txMsg ||
               "Something went wrong, please try again later",
+=======
+            data.transaction?.txMsg || "Something went wrong, please try again later",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             "Payment Failed"
           );
         },
@@ -291,13 +347,27 @@ export default {
       const paymentElement = document.getElementById("payment-gateway");
       cashfree.initialiseDropin(paymentElement, dropConfig);
 
+<<<<<<< HEAD
       document
         .querySelector("#payment-gateway iframe")
         .setAttribute("scrolling", "no");
+=======
+      document.querySelector("#payment-gateway iframe").setAttribute("scrolling", "no");
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     },
   },
 
   created() {
+<<<<<<< HEAD
+=======
+    this.orderDetails = this.$store.state.account.orderDetails;
+    this.$store.dispatch("resetOrder");
+
+    if (!this.orderDetails || !this.orderDetails.token) {
+      return this.redirectToHome("Invalid order details", "red");
+    }
+
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     const script = document.createElement("script");
     script.setAttribute(
       "src",
@@ -305,7 +375,11 @@ export default {
     );
     document.head.appendChild(script);
     script.onload = async () => {
+<<<<<<< HEAD
       this.initCashFree(this.$route.params.order.token);
+=======
+      this.initCashFree(this.orderDetails.token);
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
       await this.$store.dispatch("fetchDetails", "billing");
       this.isLoading = false;
       this.billingDetails = this.$store.state.account.billingDetails;

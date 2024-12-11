@@ -1,5 +1,9 @@
 <template>
+<<<<<<< HEAD
   <div class="mail-sent-page contaier text-center">
+=======
+  <div class="mail-sent-page container text-center">
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     <img
       class="mail-box-img"
       src="/assets/india_compliance/images/mail-box.png"
@@ -52,6 +56,7 @@ export default {
     },
 
     async refresh() {
+<<<<<<< HEAD
       await this.$store.dispatch("initAuth");
       this.$router.replace({ name: "auth" });
     }
@@ -64,6 +69,12 @@ export default {
       return next();
     });
   },
+=======
+      await this.$store.dispatch("authenticate");
+      this.$router.replace({ name: "auth" });
+    }
+  },
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 };
 </script>
 

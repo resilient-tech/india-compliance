@@ -6,7 +6,11 @@
     --bg-red: var(--red-100);
 
     .text-highlight {
+<<<<<<< HEAD
         color: var(--primary-color) !important;
+=======
+        color: var(--heading-color) !important;
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     }
 
     /* Page styles */
@@ -30,9 +34,14 @@
         padding: 2em 3.5em;
         flex: 1;
         border-radius: var(--border-radius-md);
+<<<<<<< HEAD
         box-shadow: var(--card-shadow);
         background-color: var(--card-bg);
         border: 0 solid black;
+=======
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     }
 
     .ic-account-page .main-content .card .title {

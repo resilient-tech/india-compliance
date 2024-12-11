@@ -58,7 +58,10 @@ def validate(doc, method=None):
 
     gst_settings = frappe.get_cached_doc("GST Settings")
 
+<<<<<<< HEAD
     validate_backdated_transaction(doc, gst_settings)
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     validate_invoice_number(doc)
     validate_credit_debit_note(doc)
     validate_fields_and_set_status_for_e_invoice(doc, gst_settings)
@@ -144,6 +147,11 @@ def is_shipping_address_in_india(doc):
 
 
 def on_submit(doc, method=None):
+<<<<<<< HEAD
+=======
+    validate_backdated_transaction(doc)
+
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     if getattr(doc, "_submitted_from_ui", None) or validate_transaction(doc) is False:
         return
 
@@ -248,6 +256,10 @@ def update_dashboard_with_gst_logs(doctype, data, *log_doctypes):
             "e-Waybill Log": "reference_name",
             "Integration Request": "reference_docname",
             "GST Inward Supply": "link_name",
+<<<<<<< HEAD
+=======
+            "e-Invoice Log": "reference_name",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         }
     )
 

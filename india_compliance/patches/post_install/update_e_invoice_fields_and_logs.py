@@ -94,7 +94,12 @@ def migrate_e_invoice_fields():
         "owner",
         "modified_by",
         "irn",
+<<<<<<< HEAD
         "sales_invoice",
+=======
+        "reference_doctype",
+        "reference_name",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         "is_cancelled",
         "acknowledgement_number",
         "acknowledged_on",
@@ -120,6 +125,10 @@ def migrate_e_invoice_fields():
                 user,
                 user,
                 doc.irn,
+<<<<<<< HEAD
+=======
+                "Sales Invoice",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
                 doc.name,
                 doc.irn_cancelled,
                 doc.ack_no,

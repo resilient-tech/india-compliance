@@ -11,7 +11,14 @@ from frappe.query_builder.functions import IfNull
 from frappe.utils import add_to_date, cint, now_datetime
 from frappe.utils.response import json_handler
 
+<<<<<<< HEAD
 from india_compliance.gst_india.api_classes.taxpayer_base import TaxpayerBaseAPI
+=======
+from india_compliance.gst_india.api_classes.taxpayer_base import (
+    TaxpayerBaseAPI,
+    otp_handler,
+)
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 from india_compliance.gst_india.constants import ORIGINAL_VS_AMENDED
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     BaseUtil,
@@ -104,9 +111,16 @@ class PurchaseReconciliationTool(Document):
             return save_gstr_2b(self.company_gstin, period, json_data)
 
     @frappe.whitelist()
+<<<<<<< HEAD
     def download_gstr(
         self,
         company_gstins,
+=======
+    @otp_handler
+    def download_gstr(
+        self,
+        company_gstin,
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         date_range,
         return_type=None,
         force=False,
@@ -114,12 +128,26 @@ class PurchaseReconciliationTool(Document):
     ):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
+<<<<<<< HEAD
         return download_gstr(
             company_gstins=company_gstins,
+=======
+        TaxpayerBaseAPI(company_gstin).validate_auth_token()
+
+        frappe.enqueue(
+            download_gstr,
+            company_gstin=company_gstin,
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             date_range=date_range,
             return_type=return_type,
             force=force,
             gst_categories=gst_categories,
+<<<<<<< HEAD
+=======
+            queue="long",
+            now=frappe.flags.in_test,
+            timeout=1800,
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         )
 
     @frappe.whitelist()
@@ -435,6 +463,7 @@ class PurchaseReconciliationTool(Document):
 
 
 def download_gstr(
+<<<<<<< HEAD
     company_gstins,
     date_range,
     return_type=None,
@@ -477,6 +506,16 @@ def download_pending_gstr_2(
     force=False,
     gst_categories=None,
 ):
+=======
+    company_gstin,
+    date_range,
+    return_type,
+    force=False,
+    gst_categories=None,
+):
+    return_type = ReturnType(return_type)
+
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     periods = BaseUtil.get_periods(date_range, return_type)
     if not force:
         periods = get_periods_to_download(company_gstin, return_type, periods)
@@ -642,7 +681,11 @@ class AutoReconcile:
         )
         self.reconciliation_companies = self.get_reconciliation_company_list()
 
+<<<<<<< HEAD
     def download_gstr(self):
+=======
+    def download_gst_returns(self):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         if not self.is_reconciliation_enabled():
             return
 
@@ -650,6 +693,7 @@ class AutoReconcile:
         gst_categories = self.get_gst_categories()
         gstins = self.get_gstins_with_valid_credentials()
 
+<<<<<<< HEAD
         download_gstr(
             date_range=[
                 self.inward_supply_from_date.strftime("%Y-%m-%d"),
@@ -658,6 +702,19 @@ class AutoReconcile:
             company_gstins=gstins,
             gst_categories=gst_categories,
         )
+=======
+        for gstin in gstins:
+            for return_type in (ReturnType.GSTR2A, ReturnType.GSTR2B):
+                download_gstr(
+                    date_range=[
+                        self.inward_supply_from_date.strftime("%Y-%m-%d"),
+                        self.today.strftime("%Y-%m-%d"),
+                    ],
+                    company_gstin=gstin,
+                    gst_categories=gst_categories,
+                    return_type=return_type.value,
+                )
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
     def get_gst_categories(self):
         return [
@@ -732,7 +789,11 @@ class AutoReconcile:
 
 def auto_download_gstr():
     """Auto download GSTR 2A and 2B"""
+<<<<<<< HEAD
     AutoReconcile().download_gstr()
+=======
+    AutoReconcile().download_gst_returns()
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
 
 def auto_reconcile():

@@ -6,12 +6,23 @@ pull_request_rules:
           - author!=vorasmit
           - author!=mergify[bot]
           - author!=dependabot[bot]
+<<<<<<< HEAD
           - base=version-14
+=======
+          - author!=india-compliance-bot
+      - or:
+          - base=version-14
+          - base=version-15
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     actions:
       close:
       comment:
           message: |
+<<<<<<< HEAD
             @{{author}}, thanks for the contribution, but we do not accept pull requests on a stable branch. Please raise PR on the `next` branch.
+=======
+            @{{author}}, thanks for the contribution, but we do not accept pull requests on a stable branch. Please raise PR on the `develop` branch.
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
   - name: Automatic merge on CI success and review
     conditions:
@@ -21,7 +32,11 @@ pull_request_rules:
     actions:
       merge:
         method: merge
+<<<<<<< HEAD
   
+=======
+
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
   - name: Automatic squash on CI success and review
     conditions:
       - label!=dont-merge
@@ -33,6 +48,7 @@ pull_request_rules:
         commit_message_template: |
             {{ title }} (#{{ number }})
             {{ body }}
+<<<<<<< HEAD
   
   - name: backport to develop
     conditions:
@@ -44,6 +60,19 @@ pull_request_rules:
         assignees:
           - "{{ author }}"
           
+=======
+
+  - name: backport to develop
+    conditions:
+      - label="backport develop"
+    actions:
+      backport:
+        branches:
+          - develop
+        assignees:
+          - "{{ author }}"
+
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
   - name: backport to version-14-hotfix
     conditions:
       - label="backport version-14-hotfix"
@@ -54,6 +83,19 @@ pull_request_rules:
         assignees:
           - "{{ author }}"
 
+<<<<<<< HEAD
+=======
+  - name: backport to version-15-hotfix
+    conditions:
+      - label="backport version-15-hotfix"
+    actions:
+      backport:
+        branches:
+          - version-15-hotfix
+        assignees:
+          - "{{ author }}"
+
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
   - name: automatically merge backport if they pass tests
     conditions:
       - author=mergify[bot]

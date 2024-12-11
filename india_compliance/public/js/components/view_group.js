@@ -18,7 +18,11 @@ india_compliance.ViewGroup = class ViewGroup {
 
         this.view_group_container = $(`
             <ul
+<<<<<<< HEAD
                 class= "nav custom-tabs"
+=======
+                class= "nav custom-tabs rounded-sm border d-inline-flex"
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
                 id = "custom-tabs"
                 role = "tablist"
             ></ul>
@@ -39,7 +43,11 @@ india_compliance.ViewGroup = class ViewGroup {
                 `
                 <li class="nav-item show">
                     <a
+<<<<<<< HEAD
                         class="nav-link btn btn-group btn-default ${this.active_view === view ? "active" : ""}"
+=======
+                        class="nav-link ${this.active_view === view ? "active" : ""}"
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
                         id = "gstr-1-__${view}-view"
                         data-toggle="tab"
                         data-fieldname="${view}"

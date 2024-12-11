@@ -236,8 +236,13 @@ class IneligibleITC:
             ):
                 continue
 
+<<<<<<< HEAD
             entry[self.cr_or_dr] -= ineligible_item_tax_amount
             entry[f"{self.cr_or_dr}_in_account_currency"] -= ineligible_item_tax_amount
+=======
+            entry[self.dr_or_cr] += ineligible_item_tax_amount
+            entry[f"{self.dr_or_cr}_in_account_currency"] += ineligible_item_tax_amount
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             break
 
         else:
@@ -319,7 +324,11 @@ class IneligibleITC:
             },
             {
                 "gross_purchase_amount": flt(item.valuation_rate),
+<<<<<<< HEAD
                 "purchase_receipt_amount": flt(item.valuation_rate),
+=======
+                "purchase_amount": flt(item.valuation_rate),
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             },
         )
 

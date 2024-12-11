@@ -7,6 +7,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
+<<<<<<< HEAD
 from frappe.utils import flt, today
 import erpnext
 from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_entries
@@ -14,6 +15,13 @@ from erpnext.controllers.accounts_controller import AccountsController
 from erpnext.controllers.taxes_and_totals import get_round_off_applicable_accounts
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
+=======
+from frappe.utils import today
+import erpnext
+from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_entries
+from erpnext.controllers.accounts_controller import AccountsController
+
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 from india_compliance.gst_india.overrides.ineligible_itc import (
     update_landed_cost_voucher_for_gst_expense,
     update_regional_gl_entries,
@@ -21,6 +29,7 @@ from india_compliance.gst_india.overrides.ineligible_itc import (
 )
 from india_compliance.gst_india.overrides.transaction import (
     GSTAccounts,
+<<<<<<< HEAD
     ItemGSTDetails,
     ItemGSTTreatment,
     set_gst_tax_type,
@@ -87,10 +96,26 @@ def update_gst_details(doc, method=None):
     # TODO: add item tax template validation post exclude from GST
     ItemGSTTreatment().set(doc)
     BOEGSTDetails().update(doc)
+=======
+    set_gst_tax_type,
+)
+from india_compliance.gst_india.utils import get_gst_accounts_by_type
+from india_compliance.gst_india.utils.taxes_controller import (
+    CustomTaxController,
+    update_gst_details,
+)
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
 
 class BillofEntry(Document):
     get_gl_dict = AccountsController.get_gl_dict
+<<<<<<< HEAD
+=======
+    get_value_in_transaction_currency = (
+        AccountsController.get_value_in_transaction_currency
+    )
+    get_voucher_subtype = AccountsController.get_voucher_subtype
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
     def onload(self):
         if self.docstatus != 1:
@@ -171,12 +196,22 @@ class BillofEntry(Document):
         self.customs_payable_account = company.default_customs_payable_account
 
     def set_taxes_and_totals(self):
+<<<<<<< HEAD
         self.set_item_wise_tax_rates()
+=======
+        self.taxes_controller = CustomTaxController(self)
+
+        self.taxes_controller.set_item_wise_tax_rates()
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         self.calculate_totals()
 
     def calculate_totals(self):
         self.set_total_customs_and_taxable_values()
+<<<<<<< HEAD
         self.set_total_taxes()
+=======
+        self.taxes_controller.update_tax_amount()
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         self.total_amount_payable = self.total_customs_duty + self.total_taxes
 
     def set_total_customs_and_taxable_values(self):
@@ -191,6 +226,7 @@ class BillofEntry(Document):
         self.total_customs_duty = total_customs_duty
         self.total_taxable_value = total_taxable_value
 
+<<<<<<< HEAD
     def set_total_taxes(self):
         total_taxes = 0
 
@@ -226,6 +262,8 @@ class BillofEntry(Document):
 
         return tax_amount
 
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     def validate_purchase_invoice(self):
         purchase = frappe.get_doc("Purchase Invoice", self.purchase_invoice)
         if purchase.docstatus != 1:
@@ -262,12 +300,15 @@ class BillofEntry(Document):
 
     def validate_taxes(self):
         input_accounts = get_gst_accounts_by_type(self.company, "Input", throw=True)
+<<<<<<< HEAD
         taxable_value_map = {}
         item_qty_map = {}
 
         for row in self.get("items"):
             taxable_value_map[row.name] = row.taxable_value
             item_qty_map[row.name] = row.qty
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
         for tax in self.taxes:
             if not tax.tax_amount:
@@ -300,6 +341,16 @@ class BillofEntry(Document):
                     title=_("Invalid Charge Type"),
                 )
 
+<<<<<<< HEAD
+=======
+            taxable_value_map = {}
+            item_qty_map = {}
+
+            for row in self.get("items"):
+                taxable_value_map[row.name] = row.taxable_value
+                item_qty_map[row.name] = row.qty
+
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             # validating total tax
             total_tax = 0
             is_non_cess_advol = tax.gst_tax_type == "cess_non_advol"
@@ -382,6 +433,7 @@ class BillofEntry(Document):
             )
         )
 
+<<<<<<< HEAD
     @frappe.whitelist()
     def set_item_wise_tax_rates(self, item_name=None, tax_name=None):
         items, taxes = self.get_rows_to_update(item_name, tax_name)
@@ -451,6 +503,8 @@ class BillofEntry(Document):
 
         return items, taxes
 
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     def get_stock_items(self):
         stock_items = []
         item_codes = list(set(item.item_code for item in self.get("items")))

@@ -7,7 +7,12 @@
  "engine": "InnoDB",
  "field_order": [
   "irn",
+<<<<<<< HEAD
   "sales_invoice",
+=======
+  "reference_doctype",
+  "reference_name",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
   "is_generated_in_sandbox_mode",
   "column_break_1",
   "acknowledgement_number",
@@ -74,6 +79,7 @@
    "read_only": 1
   },
   {
+<<<<<<< HEAD
    "fieldname": "sales_invoice",
    "fieldtype": "Link",
    "label": "Sales Invoice",
@@ -81,6 +87,8 @@
    "read_only": 1
   },
   {
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
    "fieldname": "column_break_1",
    "fieldtype": "Column Break"
   },
@@ -120,6 +128,26 @@
    "fieldname": "is_generated_in_sandbox_mode",
    "fieldtype": "Check",
    "label": "Is Generated in Sandbox Mode"
+<<<<<<< HEAD
+=======
+  },
+  {
+   "fieldname": "reference_doctype",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Reference Document Type",
+   "options": "DocType",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reference_name",
+   "fieldtype": "Dynamic Link",
+   "in_standard_filter": 1,
+   "label": "Reference Document Name",
+   "options": "reference_doctype",
+   "read_only": 1
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
   }
  ],
  "in_create": 1,
@@ -129,7 +157,11 @@
    "link_fieldname": "irn"
   }
  ],
+<<<<<<< HEAD
  "modified": "2023-07-27 15:04:26.931722",
+=======
+ "modified": "2024-09-19 18:59:01.195753",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Invoice Log",
@@ -157,8 +189,15 @@
    "share": 1
   }
  ],
+<<<<<<< HEAD
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
  "title_field": "sales_invoice"
+=======
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "reference_name"
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 }

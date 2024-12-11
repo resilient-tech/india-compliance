@@ -8,3 +8,7 @@ update_gstin_in_other_documents(DOCTYPE);
 show_overseas_disabled_warning(DOCTYPE);
 set_gstin_options_and_status(DOCTYPE);
 set_gst_category(DOCTYPE);
+<<<<<<< HEAD
+=======
+set_pan_status(DOCTYPE)
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)

@@ -19,3 +19,7 @@ export const GSTIN_REGEX = new RegExp(
 );
 
 export const GST_INVOICE_NUMBER_FORMAT = new RegExp("^[^\\W_][A-Za-z\\d\\-/]{0,15}$");
+<<<<<<< HEAD
+=======
+export const PAN_REGEX = new RegExp("^[A-Z]{5}[0-9]{4}[A-Z]{1}$");
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)

@@ -5,6 +5,10 @@ on:
   push:
     branches:
       - version-14
+<<<<<<< HEAD
+=======
+      - version-15
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 jobs:
   release:
     name: Release
@@ -17,7 +21,11 @@ jobs:
           persist-credentials: false
 
       - name: Setup Node.js
+<<<<<<< HEAD
         uses: actions/setup-node@v2
+=======
+        uses: actions/setup-node@v4
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         with:
           node-version: 20
 

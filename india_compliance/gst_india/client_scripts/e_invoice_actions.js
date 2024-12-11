@@ -49,8 +49,20 @@ frappe.ui.form.on("Sales Invoice", {
                     frappe.call({
                         method: "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
                         args: { docname: frm.doc.name, force: true },
+<<<<<<< HEAD
                         callback: () => {
                             return frm.refresh();
+=======
+                        callback: async (r) => {
+                            if (r.message?.error_type == "otp_requested") {
+                                await india_compliance.authenticate_otp(frm.doc.company_gstin);
+                                await frappe.call({
+                                    method: "india_compliance.gst_india.utils.e_invoice.handle_duplicate_irn_error",
+                                    args: r.message
+                                });
+                            }
+                            frm.refresh();
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
                         },
                     });
                 },

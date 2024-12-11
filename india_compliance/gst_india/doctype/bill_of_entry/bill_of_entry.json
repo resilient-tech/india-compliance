@@ -161,7 +161,11 @@
   {
    "fieldname": "taxes",
    "fieldtype": "Table",
+<<<<<<< HEAD
    "options": "Bill of Entry Taxes",
+=======
+   "options": "India Compliance Taxes and Charges",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
    "reqd": 1
   },
   {
@@ -297,7 +301,11 @@
    "link_fieldname": "link_name"
   }
  ],
+<<<<<<< HEAD
  "modified": "2023-12-13 16:43:40.501418",
+=======
+ "modified": "2024-08-12 15:48:43.769450",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Bill of Entry",
@@ -349,7 +357,11 @@
    "role": "Auditor"
   }
  ],
+<<<<<<< HEAD
  "sort_field": "modified",
+=======
+ "sort_field": "creation",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
  "sort_order": "DESC",
  "states": [],
  "track_changes": 1

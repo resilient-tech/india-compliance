@@ -194,6 +194,7 @@ export default {
 
     async proceedToPayment() {
       this.isRedirecting = true;
+<<<<<<< HEAD
       const response = await create_order(this.credits, this.grandTotal);
       this.isRedirecting = false;
 
@@ -218,6 +219,31 @@ export default {
           },
         },
       });
+=======
+
+      const orderDetails = {
+        credits: this.credits,
+        netTotal: this.netTotal,
+        tax: this.tax,
+        taxRate: this.taxRate,
+        grandTotal: this.grandTotal,
+        validity: frappe.datetime.add_months(
+          frappe.datetime.now_date(),
+          this.creditsValidity
+        ),
+      };
+
+      const orderCreated = await this.$store.dispatch("createOrder", orderDetails);
+      this.isRedirecting = false;
+
+      if (!orderCreated) {
+        frappe.throw(
+          "Something went wrong while creating order, please contact support!"
+        );
+      }
+
+      this.$router.push({ name: "paymentPage" });
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     },
 
     updateCredits() {
@@ -237,6 +263,7 @@ export default {
     },
   },
 
+<<<<<<< HEAD
   beforeRouteEnter(to, from, next) {
     next(vm => {
       vm.$store.getters.isLoggedIn ? next() : next({ name: "auth", replace: true });
@@ -245,12 +272,16 @@ export default {
 
   async created() {
     if (!this.$store.getters.isLoggedIn) return;
+=======
+  async created() {
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     await this.$store.dispatch("fetchDetails", "calculator");
     this.isLoading = false;
     this.credits = this.creditsInputValue = this.defaultCalculatorValue;
   },
 };
 
+<<<<<<< HEAD
 // taken from: https://stackoverflow.com/a/58812425
 function bisect_left(sortedList, value) {
   if (!sortedList.length) return 0;
@@ -296,6 +327,8 @@ function bisect_left(sortedList, value) {
     return bisect_left(lbound, rbound);
   }
 }
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 </script>
 
 <style scoped>

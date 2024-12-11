@@ -52,12 +52,15 @@ def create_transaction(**data):
         if not transaction.supplier:
             transaction.supplier = "_Test Registered Supplier"
 
+<<<<<<< HEAD
         if (
             transaction.doctype == "Purchase Invoice"
             and not transaction.itc_classification
         ):
             transaction.itc_classification = "All Other ITC"
 
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     if transaction.doctype == "POS Invoice":
         transaction.append(
             "payments",
@@ -113,6 +116,12 @@ def append_item(transaction, data=None, company_abbr="_TIRC"):
             "gst_hsn_code": data.gst_hsn_code,
             "warehouse": f"Stores - {company_abbr}",
             "expense_account": f"Cost of Goods Sold - {company_abbr}",
+<<<<<<< HEAD
+=======
+            "taxable_value": data.taxable_value or 0,
+            "fg_item": data.fg_item,
+            "fg_item_qty": data.fg_item_qty,
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         },
     )
 

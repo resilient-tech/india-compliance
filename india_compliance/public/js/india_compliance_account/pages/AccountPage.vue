@@ -66,9 +66,16 @@ export default {
     PreLoader,
   },
 
+<<<<<<< HEAD
   data() {
     return {
       isLoading: true,
+=======
+data() {
+    return {
+      isLoading: true,
+      message: null,
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     };
   },
 
@@ -194,6 +201,7 @@ export default {
     valid_upto() {
       return frappe.datetime.str_to_user(this.subscriptionDetails.expiry_date);
     },
+<<<<<<< HEAD
 
     message() {
       return this.$route.params.message;
@@ -212,6 +220,16 @@ export default {
     if (!this.$store.getters.isLoggedIn) return;
     await this.$store.dispatch("fetchDetails", "subscription");
     this.isLoading = false;
+=======
+  },
+
+  async created() {
+    await this.$store.dispatch("fetchDetails", "subscription");
+    this.isLoading = false;
+
+    this.message = this.$store.state.account.message;
+    this.$store.dispatch("resetMessage");
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
   },
 };
 </script>
@@ -264,7 +282,11 @@ export default {
 
 .links a:hover {
   color: var(--text-color);
+<<<<<<< HEAD
   color: var(--primary);
+=======
+  color: var(--heading-color);
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
   text-decoration: none;
 }
 

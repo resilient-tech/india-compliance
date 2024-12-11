@@ -92,7 +92,13 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         frm.disable_save();
         frm.page.set_primary_action(__("Reconcile"), () => {
             if (!frm.doc.company && !frm.doc.company_gstin) {
+<<<<<<< HEAD
                 frappe.throw(__('Please provide either a Company name or Company GSTIN.'));
+=======
+                frappe.throw(
+                    __("Please provide either a Company name or Company GSTIN.")
+                );
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             }
             frm.save();
         });
@@ -358,12 +364,16 @@ class PurchaseReconciliationTool {
                 label: "Action",
                 fieldname: "action",
                 fieldtype: "Select",
+<<<<<<< HEAD
                 options: [
                     "No Action",
                     "Accept",
                     "Ignore",
                     "Pending",
                 ],
+=======
+                options: ["No Action", "Accept", "Ignore", "Pending"],
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             },
             {
                 label: "Classification",
@@ -990,12 +1000,16 @@ class DetailViewDialog {
             if (doctype == "Purchase Invoice")
                 actions.push("Create", "Link", "Pending", "Ignore");
             else actions.push("Link", "Pending", "Ignore");
+<<<<<<< HEAD
         else
             actions.push(
                 "Unlink",
                 "Accept",
                 "Pending"
             );
+=======
+        else actions.push("Unlink", "Accept", "Pending");
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
         // setup actions
         actions.forEach(action => {
@@ -1473,6 +1487,7 @@ async function download_gstr(
     only_missing = true,
     gst_categories = null
 ) {
+<<<<<<< HEAD
     const authenticated_company_gstins =
         await india_compliance.authenticate_company_gstins(
             frm.doc.company,
@@ -1504,6 +1519,24 @@ async function download_gstr(
             );
         });
     }
+=======
+    let company_gstins;
+    if (company_gstin == "All")
+        company_gstins = await india_compliance.get_gstin_options(frm.doc.company);
+    else company_gstins = [company_gstin];
+
+    company_gstins.forEach(async gstin => {
+        const args = {
+            return_type: return_type,
+            company_gstin: gstin,
+            date_range: date_range,
+            force: !only_missing,
+            gst_categories,
+        };
+        frm.events.show_progress(frm, "download");
+        await frm.taxpayer_api_call("download_gstr", args);
+    });
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 }
 
 class EmailDialog {

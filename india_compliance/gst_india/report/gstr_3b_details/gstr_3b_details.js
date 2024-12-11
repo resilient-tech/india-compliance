@@ -30,6 +30,7 @@ frappe.query_reports["GSTR-3B Details"] = {
 			"options": get_year_list(),
 		},
 		{
+<<<<<<< HEAD
 			"fieldname": "month",
 			"label": __("Month"),
 			"fieldtype": "Select",
@@ -48,6 +49,30 @@ frappe.query_reports["GSTR-3B Details"] = {
 				{ "value": "11", "label": __("November") },
 				{ "value": "12", "label": __("December") }
 			],
+=======
+			"fieldname": "month_or_quarter",
+			"label": __("Month or Quarter"),
+			"fieldtype": "Select",
+			"reqd": 1,
+			"options": [
+				"Apr - Jun",
+				"Jul - Sep",
+				"Oct - Dec",
+				"Jan - Mar",
+				"January",
+				"February",
+				"March",
+				"April",
+				"May",
+				"June",
+				"July",
+				"August",
+				"September",
+				"October",
+				"November",
+				"December"
+			  ],
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 		},
 		{
 			"fieldname": "section",

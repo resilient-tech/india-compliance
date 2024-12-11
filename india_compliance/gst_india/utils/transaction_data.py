@@ -8,6 +8,10 @@ from india_compliance.gst_india.constants import (
     E_INVOICE_MASTER_CODES_URL,
     GST_TAX_RATES,
     GST_TAX_TYPES,
+<<<<<<< HEAD
+=======
+    SUBCONTRACTING_DOCTYPES,
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 )
 from india_compliance.gst_india.constants.e_waybill import (
     TRANSPORT_MODES,
@@ -40,22 +44,45 @@ class GSTTransactionData:
         self.party_name_field = "customer_name"
         self.is_purchase_rcm = False
 
+<<<<<<< HEAD
         if self.doc.doctype in ("Purchase Invoice", "Purchase Receipt"):
             self.party_name_field = "supplier_name"
             if self.doc.is_reverse_charge == 1:
+=======
+        if self.doc.doctype in (
+            "Purchase Invoice",
+            "Purchase Receipt",
+            "Subcontracting Receipt",
+            "Stock Entry",
+        ):
+            self.party_name_field = "supplier_name"
+            if self.doc.get("is_reverse_charge") == 1:
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
                 # for with reverse charge in purchase, do not compute taxes
                 self.is_purchase_rcm = True
 
         self.party_name = self.doc.get(self.party_name_field)
 
     def set_transaction_details(self):
+<<<<<<< HEAD
         rounding_adjustment = self.rounded(self.doc.base_rounding_adjustment)
         if self.doc.is_return:
+=======
+        rounding_adjustment = self.rounded(
+            self.doc.get("base_rounding_adjustment") or 0
+        )
+
+        if self.doc.get("is_return"):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             rounding_adjustment = -rounding_adjustment
 
         grand_total_fieldname = (
             "base_grand_total"
+<<<<<<< HEAD
             if self.doc.disable_rounded_total
+=======
+            if self.doc.get("disable_rounded_total", 1)
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             else "base_rounded_total"
         )
 
@@ -87,7 +114,11 @@ class GSTTransactionData:
                 "grand_total": abs(self.rounded(self.doc.get(grand_total_fieldname))),
                 "grand_total_in_foreign_currency": (
                     abs(self.rounded(self.doc.grand_total))
+<<<<<<< HEAD
                     if self.doc.currency != "INR"
+=======
+                    if self.doc.get("currency", "INR") != "INR"
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
                     else ""
                 ),
                 "discount_amount": (
@@ -115,27 +146,48 @@ class GSTTransactionData:
 
         for row in self.doc.taxes:
             if (
+<<<<<<< HEAD
                 not row.base_tax_amount_after_discount_amount
+=======
+                not row.tax_amount
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
                 or self.is_purchase_rcm
                 or row.gst_tax_type not in GST_TAX_TYPES
             ):
                 continue
 
             # eg: Skip reverse charge tax for e-Waybill
+<<<<<<< HEAD
             if self.doc.is_reverse_charge and getattr(
+=======
+            if self.doc.get("is_reverse_charge") and getattr(
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
                 self, "exclude_reverse_charge_tax", False
             ):
                 continue
 
+<<<<<<< HEAD
             tax = row.gst_tax_type
             self.transaction_details[f"total_{tax}_amount"] = abs(
                 self.rounded(row.base_tax_amount_after_discount_amount)
             )
+=======
+            tax_key = f"total_{row.gst_tax_type}_amount"
+            tax_amount = (
+                row.get("base_tax_amount_after_discount_amount") or row.tax_amount
+            )
+            self.transaction_details.setdefault(tax_key, 0)
+            self.transaction_details[tax_key] += abs(self.rounded(tax_amount))
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
         # Other Charges
         current_total = 0
 
+<<<<<<< HEAD
         if self.doc.is_reverse_charge:
+=======
+        if self.doc.get("is_reverse_charge"):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             # Not adding taxes for rcm
             tax_total_keys = tuple()
 
@@ -281,9 +333,12 @@ class GSTTransactionData:
             ),
         )
 
+<<<<<<< HEAD
     def validate_non_gst_items(self):
         validate_non_gst_items(self.doc)
 
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     def get_all_item_details(self):
         all_item_details = []
 
@@ -291,7 +346,11 @@ class GSTTransactionData:
         self.rounding_errors = {f"{tax}_rounding_error": 0 for tax in GST_TAX_TYPES}
 
         items = self.doc.items
+<<<<<<< HEAD
         if self.doc.group_same_items:
+=======
+        if self.doc.get("group_same_items"):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             items = self.group_same_items()
 
         for row in items:
@@ -304,7 +363,11 @@ class GSTTransactionData:
                     "item_name": self.sanitize_value(
                         row.item_name, regex=3, max_length=300
                     ),
+<<<<<<< HEAD
                     "uom": get_gst_uom(row.uom, self.settings),
+=======
+                    "uom": get_gst_uom(row.get("uom") or row.stock_uom, self.settings),
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
                     "gst_treatment": row.gst_treatment,
                 }
             )
@@ -347,6 +410,7 @@ class GSTTransactionData:
         pass
 
     def update_item_tax_details(self, item_details, item):
+<<<<<<< HEAD
         for tax in GST_TAX_TYPES:
             item_details.update({f"{tax}_amount": 0, f"{tax}_rate": 0})
 
@@ -382,6 +446,13 @@ class GSTTransactionData:
                     f"{tax}_amount": tax_amount,
                 }
             )
+=======
+        if self.doc.doctype in SUBCONTRACTING_DOCTYPES:
+            self.update_item_tax_details_using_item_gst_details(item_details, item)
+
+        else:
+            self.update_item_tax_details_using_taxes(item_details, item)
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
         tax_rate = sum(
             self.rounded(item_details.get(f"{tax}_rate", 0), 3)
@@ -405,6 +476,55 @@ class GSTTransactionData:
             }
         )
 
+<<<<<<< HEAD
+=======
+    def update_item_tax_details_using_taxes(self, item_details, item):
+        for tax in GST_TAX_TYPES:
+            item_details.update({f"{tax}_amount": 0, f"{tax}_rate": 0})
+
+        for row in self.doc.taxes:
+            if (
+                not row.tax_amount
+                or self.is_purchase_rcm
+                or row.gst_tax_type not in GST_TAX_TYPES
+            ):
+                continue
+
+            tax = row.gst_tax_type
+            tax_rate = self.rounded(
+                frappe.parse_json(row.item_wise_tax_detail)
+                .get(item.item_code or item.item_name)
+                .get("tax_rate"),
+                3,
+            )
+
+            # considers senarios where same item is there multiple times
+            tax_amount = self.get_progressive_item_tax_amount(
+                (
+                    tax_rate * item.qty
+                    if row.charge_type == "On Item Quantity"
+                    else tax_rate * item.taxable_value / 100
+                ),
+                tax,
+            )
+
+            item_details.update(
+                {
+                    f"{tax}_rate": tax_rate,
+                    f"{tax}_amount": tax_amount,
+                }
+            )
+
+    def update_item_tax_details_using_item_gst_details(self, item_details, item):
+        for tax in GST_TAX_TYPES:
+            item_details.update(
+                {
+                    f"{tax}_amount": item.get(f"{tax}_amount"),
+                    f"{tax}_rate": item.get(f"{tax}_rate"),
+                }
+            )
+
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     def get_progressive_item_tax_amount(self, amount, tax_type):
         """
         Helper function to calculate progressive tax amount for an item to remove
@@ -638,6 +758,7 @@ class GSTTransactionData:
         return value[:max_length]
 
 
+<<<<<<< HEAD
 def validate_non_gst_items(doc, throw=True):
     if doc.items[0].gst_treatment == "Non-GST":
         if not throw:
@@ -651,6 +772,8 @@ def validate_non_gst_items(doc, throw=True):
     return True
 
 
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 def validate_unique_hsn_and_uom(doc):
     """
     Raise an exception if
@@ -680,7 +803,11 @@ def validate_unique_hsn_and_uom(doc):
     item_wise_hsn = {}
 
     for item in doc.items:
+<<<<<<< HEAD
         _validate_unique(item_wise_uom, item.get("uom"), _("UOM"))
+=======
+        _validate_unique(item_wise_uom, item.get("uom") or item.stock_uom, _("UOM"))
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         _validate_unique(item_wise_hsn, item.get("gst_hsn_code"), _("HSN Code"))
 
 

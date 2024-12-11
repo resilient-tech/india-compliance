@@ -33,6 +33,10 @@ GST_CATEGORIES = {
     "UIN Holders": "B2B",
     "Tax Deductor": "B2B",
     "Tax Collector": "B2B",
+<<<<<<< HEAD
+=======
+    "Input Service Distributor": "B2B",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 }
 
 EXPORT_TYPES = (
@@ -1409,6 +1413,10 @@ GSTIN_FORMATS = {
     "UIN Holders": UNBODY,
     "Tax Deductor": TDS,
     "Tax Collector": TCS,
+<<<<<<< HEAD
+=======
+    "Input Service Distributor": REGISTERED,
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 }
 
 PAN_NUMBER = re.compile(r"^[A-Z]{5}[0-9]{4}[A-Z]{1}$")
@@ -1423,6 +1431,14 @@ DISTANCE_REGEX = re.compile(r"\d+")
 
 INVOICE_DOCTYPES = {"Sales Invoice", "Purchase Invoice"}
 SALES_DOCTYPES = set(sales_doctypes)
+<<<<<<< HEAD
+=======
+SUBCONTRACTING_DOCTYPES = (
+    "Subcontracting Order",
+    "Subcontracting Receipt",
+    "Stock Entry",
+)
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
 BUG_REPORT_URL = "https://github.com/resilient-tech/india-compliance/issues/new"
 

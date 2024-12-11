@@ -43,6 +43,10 @@
             "item_name": "_Test Trading Goods 1",
             "valuation_rate": 100,
             "gst_hsn_code": "61149090",
+<<<<<<< HEAD
+=======
+            "stock_uom": "Nos",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             "uoms": [
                 {
                     "conversion_factor": 1,
@@ -70,6 +74,10 @@
             "item_name": "_Test Non GST Item",
             "valuation_rate": 100,
             "gst_hsn_code": "27131100",
+<<<<<<< HEAD
+=======
+            "stock_uom": "Nos",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             "uoms": [
                 {
                     "conversion_factor": 1,
@@ -102,6 +110,10 @@
             "item_name": "_Test Nil Rated Item",
             "valuation_rate": 100,
             "gst_hsn_code": "61149090",
+<<<<<<< HEAD
+=======
+            "stock_uom": "Nos",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             "item_defaults": [
                 {
                     "company": "_Test Indian Registered Company",
@@ -129,6 +141,10 @@
             "valuation_rate": 100,
             "item_group": "Services",
             "gst_hsn_code": "999900",
+<<<<<<< HEAD
+=======
+            "stock_uom": "Nos",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             "uoms": [
                 {
                     "conversion_factor": 1,
@@ -231,6 +247,23 @@
             "gstin": "05AAACG2140A1ZL",
             "gst_category": "Registered Regular",
             "is_transporter": 1
+<<<<<<< HEAD
+=======
+        },
+        {
+            "supplier_name": "Test Internal with ISD Supplier",
+            "name": "Test Internal with ISD Supplier",
+            "supplier_type": "Company",
+            "gstin": "24AABCR6898M1ZN",
+            "gst_category": "Input Service Distributor",
+            "is_internal_supplier": 1,
+            "represents_company": "_Test Indian Registered Company",
+            "companies": [
+                {
+                    "company": "_Test Indian Registered Company"
+                }
+            ]
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         }
     ],
     "Address": [
@@ -438,6 +471,7 @@
                 }
             ]
         }
+<<<<<<< HEAD
     ],
     "POS Profile": [
         {
@@ -482,5 +516,7 @@
                 }
             ]
         }
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     ]
 }

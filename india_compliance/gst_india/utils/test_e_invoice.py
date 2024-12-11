@@ -5,7 +5,11 @@ import responses
 from responses import matchers
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase, change_settings
+=======
+from frappe.tests import IntegrationTestCase, change_settings
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 from frappe.utils import add_to_date, get_datetime, getdate, now_datetime
 from frappe.utils.data import format_date
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
@@ -24,7 +28,11 @@ from india_compliance.gst_india.utils.e_waybill import EWaybillData
 from india_compliance.gst_india.utils.tests import append_item, create_sales_invoice
 
 
+<<<<<<< HEAD
 class TestEInvoice(FrappeTestCase):
+=======
+class TestEInvoice(IntegrationTestCase):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -251,7 +259,11 @@ class TestEInvoice(FrappeTestCase):
 
         self.assertDocumentEqual(
             {"name": test_data.get("response_data").get("result").get("Irn")},
+<<<<<<< HEAD
             frappe.get_doc("e-Invoice Log", {"sales_invoice": si.name}),
+=======
+            frappe.get_doc("e-Invoice Log", {"reference_name": si.name}),
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         )
         self.assertDocumentEqual(
             {"name": test_data.get("response_data").get("result").get("EwbNo")},
@@ -297,7 +309,11 @@ class TestEInvoice(FrappeTestCase):
 
         self.assertDocumentEqual(
             {"name": test_data.get("response_data").get("result").get("Irn")},
+<<<<<<< HEAD
             frappe.get_doc("e-Invoice Log", {"sales_invoice": si.name}),
+=======
+            frappe.get_doc("e-Invoice Log", {"reference_name": si.name}),
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         )
 
         self.assertFalse(
@@ -356,7 +372,11 @@ class TestEInvoice(FrappeTestCase):
 
         self.assertDocumentEqual(
             {"name": test_data.get("response_data").get("result").get("Irn")},
+<<<<<<< HEAD
             frappe.get_doc("e-Invoice Log", {"sales_invoice": si.name}),
+=======
+            frappe.get_doc("e-Invoice Log", {"reference_name": si.name}),
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         )
 
         self.assertFalse(
@@ -430,7 +450,11 @@ class TestEInvoice(FrappeTestCase):
 
         self.assertDocumentEqual(
             {"name": test_data.get("response_data").get("result").get("Irn")},
+<<<<<<< HEAD
             frappe.get_doc("e-Invoice Log", {"sales_invoice": credit_note.name}),
+=======
+            frappe.get_doc("e-Invoice Log", {"reference_name": credit_note.name}),
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         )
 
         self.assertFalse(
@@ -495,7 +519,11 @@ class TestEInvoice(FrappeTestCase):
 
         self.assertDocumentEqual(
             {"name": test_data.get("response_data").get("result").get("Irn")},
+<<<<<<< HEAD
             frappe.get_doc("e-Invoice Log", {"sales_invoice": debit_note.name}),
+=======
+            frappe.get_doc("e-Invoice Log", {"reference_name": debit_note.name}),
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         )
 
         self.assertFalse(
@@ -742,7 +770,11 @@ class TestEInvoice(FrappeTestCase):
         doc.save()
 
         self.assertEqual(
+<<<<<<< HEAD
             json.loads(frappe.message_log[-1]).get("message"),
+=======
+            frappe.parse_json(frappe.message_log[-1]).get("message"),
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             "You have already generated e-Waybill/e-Invoice for this document."
             " This could result in mismatch of item details in e-Waybill/e-Invoice with print format.",
         )
@@ -769,7 +801,11 @@ class TestEInvoice(FrappeTestCase):
         # Assert if Invoice amount has changed
         self.assertRaisesRegex(
             frappe.ValidationError,
+<<<<<<< HEAD
             re.compile(r"^(e-Invoice is already available against Invoice.*)$"),
+=======
+            re.compile(r"^(An e-Invoice already exists for Invoice.*)$"),
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             generate_e_invoice,
             si.name,
         )

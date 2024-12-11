@@ -1,3 +1,9 @@
+<<<<<<< HEAD
+=======
+import frappe
+from frappe import _
+
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 from india_compliance.gst_india.api_classes.taxpayer_base import TaxpayerBaseAPI
 
 
@@ -12,6 +18,25 @@ class EInvoiceAPI(TaxpayerBaseAPI):
         "EINV30109": "queued",
     }
 
+<<<<<<< HEAD
+=======
+    def setup(self, doc=None, *, company_gstin=None):
+        if doc:
+            company_gstin = doc.company_gstin
+            self.default_log_values.update(
+                reference_doctype=doc.doctype,
+                reference_name=doc.name,
+            )
+
+        if self.sandbox_mode:
+            frappe.throw(_("Sandbox mode is not supported for Taxpayer e-Invoice API"))
+
+        if not company_gstin:
+            frappe.throw(_("Company GSTIN is required to use the e-Invoice API"))
+
+        super().setup(company_gstin=company_gstin)
+
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     def get_irn_list(
         self,
         return_period,

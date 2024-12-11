@@ -24,6 +24,22 @@ class EwaybillApplicability {
         }
 
         // at least one item is not a service
+<<<<<<< HEAD
+=======
+        is_ewb_applicable = this.has_goods_item(is_ewb_applicable, message_list);
+
+        this.frm._ewb_message = "";
+        if (show_message) {
+            this.frm._ewb_message = message_list
+                .map(message => `<li>${message}</li>`)
+                .join("");
+        }
+
+        return is_ewb_applicable;
+    }
+
+    has_goods_item(is_ewb_applicable, message_list) {
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         let has_goods_item = false;
         for (const item of this.frm.doc.items) {
             if (
@@ -41,6 +57,7 @@ class EwaybillApplicability {
             message_list.push("All items are service items (HSN code starts with 99).");
         }
 
+<<<<<<< HEAD
         this.frm._ewb_message = "";
         if (show_message) {
             this.frm._ewb_message = message_list
@@ -48,6 +65,8 @@ class EwaybillApplicability {
                 .join("");
         }
 
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         return is_ewb_applicable;
     }
 
@@ -161,7 +180,10 @@ class PurchaseInvoiceEwaybill extends EwaybillApplicability {
     }
 }
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 class PurchaseReceiptEwaybill extends EwaybillApplicability {
     is_e_waybill_applicable(show_message = false) {
         return (
@@ -232,3 +254,135 @@ class DeliveryNoteEwaybill extends EwaybillApplicability {
         );
     }
 }
+<<<<<<< HEAD
+=======
+
+class StockEntryEwaybill extends EwaybillApplicability {
+    is_e_waybill_applicable(show_message = false) {
+        if (
+            !gst_settings.enable_e_waybill ||
+            !gst_settings.enable_e_waybill_for_sc ||
+            !["Material Transfer", "Material Issue", "Send to Subcontractor"].includes(
+                this.frm.doc.purpose
+            )
+        )
+            return false;
+
+        let is_ewb_applicable = true;
+        let message_list = [];
+        const is_return = this.frm.doc.is_return;
+
+        if (is_return && !this.frm.doc.bill_to_gstin) {
+            is_ewb_applicable = false;
+            message_list.push(
+                "Bill To GSTIN is not set. Ensure its set in Bill To Address."
+            );
+        }
+
+        if (!is_return && !this.frm.doc.bill_from_gstin) {
+            is_ewb_applicable = false;
+            message_list.push(
+                "Bill From GSTIN is not set. Ensure its set in Bill From Address."
+            );
+        }
+
+        const same_gstin = this.frm.doc.bill_from_gstin === this.frm.doc.bill_to_gstin;
+        const applicable_for_same_gstin = !(
+            is_return || this.frm.doc.purpose === "Send to Subcontractor"
+        );
+
+        if (same_gstin && !applicable_for_same_gstin) {
+            is_ewb_applicable = false;
+            message_list.push("Bill From GSTIN and Bill To GSTIN are same.");
+        }
+
+        if (!same_gstin && applicable_for_same_gstin) {
+            is_ewb_applicable = false;
+            message_list.push("Bill From GSTIN and Bill To GSTIN are different.");
+        }
+
+        if (this.frm.doc.is_opening === "Yes") {
+            is_ewb_applicable = false;
+            message_list.push(
+                "e-Waybill cannot be generated for transaction with 'Is Opening Entry' set to Yes."
+            );
+        }
+
+        // at least one item is not a service
+        is_ewb_applicable = this.has_goods_item(is_ewb_applicable, message_list);
+
+        this.frm._ewb_message = "";
+
+        if (show_message) {
+            this.frm._ewb_message = message_list
+                .map(message => `<li>${message}</li>`)
+                .join("");
+        }
+
+        return is_ewb_applicable;
+    }
+
+    is_e_waybill_generatable(show_message = false) {
+        let is_ewb_generatable = this.is_e_waybill_applicable(show_message);
+
+        let message_list = [];
+
+        if (!this.frm.doc.bill_to_address) {
+            is_ewb_generatable = false;
+            message_list.push("Bill To address is mandatory to generate e-Waybill.");
+        }
+
+        if (show_message) {
+            this.frm._ewb_message += message_list
+                .map(message => `<li>${message}</li>`)
+                .join("");
+        }
+
+        return is_ewb_generatable;
+    }
+
+    is_e_waybill_api_enabled() {
+        return (
+            ["Material Transfer", "Material Issue", "Send to Subcontractor"].includes(
+                this.frm.doc.purpose
+            ) &&
+            super.is_e_waybill_api_enabled() &&
+            gst_settings.enable_e_waybill_for_sc
+        );
+    }
+}
+
+class SubcontractingReceiptEwaybill extends EwaybillApplicability {
+    is_e_waybill_applicable(show_message = false) {
+        return (
+            super.is_e_waybill_applicable(show_message) &&
+            gst_settings.enable_e_waybill_for_sc
+        );
+    }
+
+    is_e_waybill_generatable(show_message = false) {
+        let is_ewb_generatable = this.is_e_waybill_applicable(show_message);
+
+        let message_list = [];
+
+        if (!this.frm.doc.supplier_address) {
+            is_ewb_generatable = false;
+            message_list.push(
+                "Supplier addresss is mandatory for e-waybill generation."
+            );
+        }
+
+        if (show_message) {
+            this.frm._ewb_message += message_list
+                .map(message => `<li>${message}</li>`)
+                .join("");
+        }
+
+        return is_ewb_generatable;
+    }
+
+    is_e_waybill_api_enabled() {
+        return super.is_e_waybill_api_enabled() && gst_settings.enable_e_waybill_for_sc;
+    }
+}
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)

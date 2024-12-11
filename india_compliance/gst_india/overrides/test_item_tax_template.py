@@ -1,7 +1,11 @@
 import re
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
+=======
+from frappe.tests import IntegrationTestCase
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
 from india_compliance.gst_india.overrides.transaction import get_valid_accounts
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
@@ -10,7 +14,11 @@ from india_compliance.gst_india.utils import get_gst_accounts_by_type
 # Validation of GST Rate
 
 
+<<<<<<< HEAD
 class TestTransaction(FrappeTestCase):
+=======
+class TestTransaction(IntegrationTestCase):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     def test_item_tax_template_for_foreign_company(self):
         doc = create_item_tax_template(
             company="_Test Foreign Company", gst_rate=0, gst_treatment="Exempt"

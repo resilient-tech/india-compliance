@@ -1,6 +1,10 @@
 import copy
 
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
+=======
+from frappe.tests import IntegrationTestCase
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
 from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     GenerateGSTR1,
@@ -47,7 +51,11 @@ def process_mapped_data(data):
     )[0]
 
 
+<<<<<<< HEAD
 class TestB2B(FrappeTestCase):
+=======
+class TestB2B(IntegrationTestCase):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -302,7 +310,11 @@ class TestB2B(FrappeTestCase):
         self.assertListEqual(self.json_data, output)
 
 
+<<<<<<< HEAD
 class TestB2CL(FrappeTestCase):
+=======
+class TestB2CL(IntegrationTestCase):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -508,7 +520,11 @@ class TestB2CL(FrappeTestCase):
         self.assertListEqual(self.json_data, output)
 
 
+<<<<<<< HEAD
 class TestExports(FrappeTestCase):
+=======
+class TestExports(IntegrationTestCase):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -614,7 +630,11 @@ class TestExports(FrappeTestCase):
         self.assertListEqual(self.json_data, output)
 
 
+<<<<<<< HEAD
 class TestB2CS(FrappeTestCase):
+=======
+class TestB2CS(IntegrationTestCase):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -686,7 +706,11 @@ class TestB2CS(FrappeTestCase):
         self.assertListEqual(self.json_data, output)
 
 
+<<<<<<< HEAD
 class TestNilRated(FrappeTestCase):
+=======
+class TestNilRated(IntegrationTestCase):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -741,7 +765,11 @@ class TestNilRated(FrappeTestCase):
         self.assertDictEqual(self.json_data, output)
 
 
+<<<<<<< HEAD
 class TestCDNR(FrappeTestCase):
+=======
+class TestCDNR(IntegrationTestCase):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -839,7 +867,11 @@ class TestCDNR(FrappeTestCase):
         self.assertListEqual(self.json_data, output)
 
 
+<<<<<<< HEAD
 class TestCDNUR(FrappeTestCase):
+=======
+class TestCDNUR(IntegrationTestCase):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -903,7 +935,11 @@ class TestCDNUR(FrappeTestCase):
         self.assertListEqual(self.json_data, output)
 
 
+<<<<<<< HEAD
 class TestHSNSUM(FrappeTestCase):
+=======
+class TestHSNSUM(IntegrationTestCase):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -973,7 +1009,11 @@ class TestHSNSUM(FrappeTestCase):
         self.assertDictEqual(self.json_data, output)
 
 
+<<<<<<< HEAD
 class TestAT(FrappeTestCase):
+=======
+class TestAT(IntegrationTestCase):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -1089,7 +1129,11 @@ class TestAT(FrappeTestCase):
         self.assertListEqual(self.json_data, output)
 
 
+<<<<<<< HEAD
 class TestTXPD(FrappeTestCase):
+=======
+class TestTXPD(IntegrationTestCase):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -1207,7 +1251,11 @@ class TestTXPD(FrappeTestCase):
         self.assertListEqual(self.json_data, output)
 
 
+<<<<<<< HEAD
 class TestDOC_ISSUE(FrappeTestCase):
+=======
+class TestDOC_ISSUE(IntegrationTestCase):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -1305,7 +1353,11 @@ class TestDOC_ISSUE(FrappeTestCase):
         self.assertDictEqual(self.json_data, output)
 
 
+<<<<<<< HEAD
 class TestSUPECOM(FrappeTestCase):
+=======
+class TestSUPECOM(IntegrationTestCase):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

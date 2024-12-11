@@ -1,5 +1,8 @@
 import datetime
+<<<<<<< HEAD
 import json
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 import random
 import re
 
@@ -9,14 +12,22 @@ import time_machine
 from responses import matchers
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase, change_settings
+=======
+from frappe.tests import IntegrationTestCase, change_settings
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 from frappe.utils import add_to_date, get_datetime, now_datetime, today
 from frappe.utils.data import format_date
 from frappe.www.printview import get_html_and_style
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
+<<<<<<< HEAD
 from india_compliance.gst_india.utils import load_doc
+=======
+from india_compliance.gst_india.utils import load_doc, parse_datetime
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 from india_compliance.gst_india.utils.e_invoice import (
     retry_e_invoice_e_waybill_generation,
 )
@@ -42,7 +53,11 @@ DATETIME_FORMAT = "%d/%m/%Y %I:%M:%S %p"
 DATE_FORMAT = "dd/mm/yyyy"
 
 
+<<<<<<< HEAD
 class TestEWaybill(FrappeTestCase):
+=======
+class TestEWaybill(IntegrationTestCase):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -455,6 +470,7 @@ class TestEWaybill(FrappeTestCase):
             {"gst_transporter_id": "05AAACG2140A1ZL", "mode_of_transport": "Road"}
         )
 
+<<<<<<< HEAD
         si.items[0].gst_treatment = "Non-GST"
 
         self.assertRaisesRegex(
@@ -463,6 +479,8 @@ class TestEWaybill(FrappeTestCase):
             EWaybillData(si).validate_applicability,
         )
 
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         si.items[0].gst_treatment = "Taxable"
         si.update(
             {
@@ -472,13 +490,21 @@ class TestEWaybill(FrappeTestCase):
         )
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
+<<<<<<< HEAD
             re.compile(r"^(.*billing GSTIN is same as company GSTIN.*)$"),
+=======
+            re.compile(r"^(.*party GSTIN is same as company GSTIN.*)$"),
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             EWaybillData(si).validate_applicability,
         )
 
     @responses.activate
     def test_validate_if_e_waybill_is_set(self):
+<<<<<<< HEAD
         """Test validdation if e-waybill not found"""
+=======
+        """Test validation if e-waybill not found"""
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         si = self.create_sales_invoice_for("goods_item_with_ewaybill")
         self._generate_e_waybill(si.name)
 
@@ -654,7 +680,11 @@ class TestEWaybill(FrappeTestCase):
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             re.compile(
+<<<<<<< HEAD
                 r"^(Only Sales Invoice, Purchase Invoice, Delivery Note, Purchase Receipt are supported.*)$"
+=======
+                r"""^(Purchase Order is not supported for e-Waybill actions)$"""
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             ),
             EWaybillData,
             purchase_order,
@@ -670,7 +700,11 @@ class TestEWaybill(FrappeTestCase):
         doc.save()
 
         self.assertEqual(
+<<<<<<< HEAD
             json.loads(frappe.message_log[-1]).get("message"),
+=======
+            frappe.parse_json(frappe.message_log[-1]).get("message"),
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             "You have already generated e-Waybill/e-Invoice for this document."
             " This could result in mismatch of item details in e-Waybill/e-Invoice with print format.",
         )
@@ -1034,6 +1068,71 @@ class TestEWaybill(FrappeTestCase):
         delivery_note = create_transaction(**doc_args)
         return delivery_note
 
+<<<<<<< HEAD
+=======
+    def _create_stock_entry(self, test_case):
+        """Generate Stock Entry to test e-Waybill functionalities"""
+        doc_args = self.e_waybill_test_data.get(test_case).get("kwargs")
+        doc_args.update({"doctype": "Stock Entry"})
+
+        stock_entry = create_transaction(**doc_args)
+        return stock_entry
+
+    @change_settings("GST Settings", {"enable_e_waybill_for_sc": 1})
+    @responses.activate
+    def test_e_waybill_for_stock_entry(self):
+        """Test to generate e-waybill for Stock Entry"""
+        se_data = self.e_waybill_test_data.get("stock_entry")
+
+        stock_entry = self._create_stock_entry("stock_entry")
+
+        self._generate_e_waybill(stock_entry.name, "Stock Entry", se_data)
+
+        self.assertDocumentEqual(
+            {"name": se_data.get("response_data").get("result").get("ewayBillNo")},
+            frappe.get_doc("e-Waybill Log", {"reference_name": stock_entry.name}),
+        )
+
+        stock_entry = load_doc("Stock Entry", stock_entry.name, "submit")
+
+        e_waybill_info = stock_entry.get("__onload").e_waybill_info
+
+        self.assertEqual(
+            e_waybill_info.valid_upto,
+            parse_datetime(
+                se_data.get("response_data").get("result").get("validUpto"),
+                day_first=True,
+            ),
+        )
+
+    @change_settings("GST Settings", {"enable_e_waybill_for_sc": 1})
+    @responses.activate
+    def test_e_waybill_for_stock_entry_same_gstin(self):
+        """Test to generate e-waybill for Stock Entry with same gstin"""
+        se_data = self.e_waybill_test_data.get("stock_entry_with_same_gstin")
+
+        stock_entry = self._create_stock_entry("stock_entry_with_same_gstin")
+
+        self._generate_e_waybill(stock_entry.name, "Stock Entry", se_data)
+
+        self.assertDocumentEqual(
+            {"name": se_data.get("response_data").get("result").get("ewayBillNo")},
+            frappe.get_doc("e-Waybill Log", {"reference_name": stock_entry.name}),
+        )
+
+        stock_entry = load_doc("Stock Entry", stock_entry.name, "submit")
+
+        e_waybill_info = stock_entry.get("__onload").e_waybill_info
+
+        self.assertEqual(
+            e_waybill_info.valid_upto,
+            parse_datetime(
+                se_data.get("response_data").get("result").get("validUpto"),
+                day_first=True,
+            ),
+        )
+
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
 def update_dates_for_test_data(test_data):
     """Update dates in test data"""

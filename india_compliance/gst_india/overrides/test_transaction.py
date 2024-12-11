@@ -4,8 +4,13 @@ import re
 from parameterized import parameterized_class
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import today
+=======
+from frappe.tests import IntegrationTestCase, change_settings
+from frappe.utils import add_days, getdate, today
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 from erpnext.accounts.doctype.purchase_invoice.purchase_invoice import (
     make_regional_gl_entries,
 )
@@ -23,7 +28,14 @@ from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
 )
 
 from india_compliance.gst_india.constants import SALES_DOCTYPES
+<<<<<<< HEAD
 from india_compliance.gst_india.overrides.transaction import DOCTYPES_WITH_GST_DETAIL
+=======
+from india_compliance.gst_india.overrides.transaction import (
+    DOCTYPES_WITH_GST_DETAIL,
+    validate_item_tax_template,
+)
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 from india_compliance.gst_india.utils.tests import (
     _append_taxes,
     append_item,
@@ -47,7 +59,11 @@ from india_compliance.gst_india.utils.tests import (
         # ("POS Invoice"),
     ],
 )
+<<<<<<< HEAD
 class TestTransaction(FrappeTestCase):
+=======
+class TestTransaction(IntegrationTestCase):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     @classmethod
     def setUpClass(cls):
         frappe.db.savepoint("before_test_transaction")
@@ -102,15 +118,23 @@ class TestTransaction(FrappeTestCase):
         self.assertDocumentEqual({"gst_category": "Unregistered", "taxes": []}, doc)
 
     def test_transaction_with_gst_and_non_gst_items(self):
+<<<<<<< HEAD
+=======
+        # allowing taxable items with non-taxable items
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         doc = create_transaction(**self.transaction_details, do_not_save=True)
 
         append_item(doc, frappe._dict(item_code="_Test Non GST Item"))
 
+<<<<<<< HEAD
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             re.compile(r"^(Items not covered under GST cannot be clubbed.*)$"),
             doc.insert,
         )
+=======
+        doc.insert()
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
     @change_settings(
         "GST Settings",
@@ -151,6 +175,56 @@ class TestTransaction(FrappeTestCase):
 
         self.assertEqual(return_doc.is_reverse_charge, 1)
 
+<<<<<<< HEAD
+=======
+    def test_non_taxable_items_with_tax(self):
+        doc = create_transaction(
+            **self.transaction_details,
+            is_in_state=True,
+            item_tax_template="GST 28% - _TIRC",
+            do_not_submit=True,
+        )
+
+        for item in doc.items:
+            item.gst_treatment = "Nil-Rated"
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(Cannot charge GST on Non-Taxable Items.*)$"),
+            validate_item_tax_template,
+            doc,
+        )
+
+    def test_validate_item_tax_template(self):
+        item_tax_template = frappe.get_doc("Item Tax Template", "GST 28% - _TIRC")
+        tax_accounts = item_tax_template.get("taxes")
+
+        # Invalidate item tax template
+        item_tax_template.taxes = []
+        item_tax_template.flags.ignore_mandatory = True
+        item_tax_template.save()
+
+        doc = create_transaction(
+            **self.transaction_details,
+            is_in_state=True,
+            item_tax_template="GST 28% - _TIRC",
+            do_not_submit=True,
+        )
+
+        for tax in doc.taxes:
+            tax.rate = 0
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(No GST is being charged on Taxable Items.*)$"),
+            doc.save,
+        )
+
+        # Restore item tax template
+        item_tax_template.taxes = tax_accounts
+        item_tax_template.save()
+
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     def test_transaction_for_items_with_duplicate_taxes(self):
         # Should not allow same item in invoice with multiple taxes
         doc = create_transaction(**self.transaction_details, do_not_save=True)
@@ -542,7 +616,11 @@ class TestTransaction(FrappeTestCase):
 
     def test_invalid_charge_type_as_actual(self):
         doc = create_transaction(**self.transaction_details, do_not_save=True)
+<<<<<<< HEAD
         _append_taxes(doc, ["CGST", "SGST"], charge_type="Actual", tax_amount=9)
+=======
+        _append_taxes(doc, ["CGST", "SGST"], charge_type="Actual", tax_amount=9, rate=0)
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
@@ -559,7 +637,19 @@ class TestTransaction(FrappeTestCase):
             ["CGST", "SGST"],
             charge_type="Actual",
             tax_amount=9,
+<<<<<<< HEAD
             item_wise_tax_detail=json.dumps({"_Test Trading Goods 1": [9, -9]}),
+=======
+            item_wise_tax_detail=json.dumps(
+                {
+                    "_Test Trading Goods 1": {
+                        "tax_rate": 9,
+                        "tax_amount": -9,
+                        "net_amount": -100,
+                    }
+                }
+            ),
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             dont_recompute_tax=1,
         )
 
@@ -835,6 +925,7 @@ class TestTransaction(FrappeTestCase):
             doc.insert,
         )
 
+<<<<<<< HEAD
     def test_onload_for_non_gst_document(self):
         """
         For gst_breakup we are checking for "ignore_gst_validations".
@@ -855,6 +946,8 @@ class TestTransaction(FrappeTestCase):
         print_settings = frappe.get_single("Print Settings").as_dict()
         doc.run_method("before_print", print_settings)
 
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     def test_invalid_item_tax_template(self):
         frappe.clear_messages()
         item_tax_template = frappe.get_doc("Item Tax Template", "GST 28% - _TIRC")
@@ -871,7 +964,11 @@ class TestTransaction(FrappeTestCase):
             do_not_submit=True,
         )
 
+<<<<<<< HEAD
         for message in frappe.get_message_log():
+=======
+        for message in frappe.message_log:
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             if "is missing in Item Tax Template" in message.get("message"):
                 break
 
@@ -892,12 +989,20 @@ class TestTransaction(FrappeTestCase):
             do_not_submit=True,
         )
 
+<<<<<<< HEAD
         for message in frappe.get_message_log():
+=======
+        for message in frappe.message_log:
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             if "is missing in Item Tax Template" in message.get("message"):
                 self.fail("Item Tax Template validation message found")
 
 
+<<<<<<< HEAD
 class TestQuotationTransaction(FrappeTestCase):
+=======
+class TestQuotationTransaction(IntegrationTestCase):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -930,7 +1035,15 @@ def get_lead(first_name):
     return lead.name
 
 
+<<<<<<< HEAD
 class TestSpecificTransactions(FrappeTestCase):
+=======
+class TestSpecificTransactions(IntegrationTestCase):
+    @classmethod
+    def tearDown(cls):
+        frappe.db.rollback()
+
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     def test_copy_e_waybill_fields_from_dn_to_si(self):
         "Make sure e-Waybill fields are copied from Delivery Note to Sales Invoice"
         dn = create_transaction(doctype="Delivery Note", vehicle_no="GJ01AA1111")
@@ -945,6 +1058,66 @@ class TestSpecificTransactions(FrappeTestCase):
 
         self.assertEqual(si_return.vehicle_no, None)
 
+<<<<<<< HEAD
+=======
+    @change_settings("GST Settings", {"restrict_changes_after_gstr_1": 1})
+    def test_backdated_transaction(self):
+        si = create_transaction(doctype="Sales Invoice", do_not_submit=True)
+
+        # update filing date
+        gstin_doc = frappe.new_doc(
+            "GSTIN",
+            gstin=si.company_gstin,
+            status="Active",
+            gstr_1_filed_upto=add_days(today(), 1),
+        )
+        gstin_doc.save(ignore_permissions=True)
+
+        # create user
+        test_user = frappe.get_doc("User", {"email": "test@example.com"})
+        test_user.add_roles("Accounts User")
+        frappe.set_user(test_user.name)
+
+        # submit invoice
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"You are not allowed to submit Sales Invoice"),
+            si.submit,
+        )
+
+    def test_backdated_transaction_with_comment(self):
+        si = create_transaction(doctype="Sales Invoice", do_not_submit=True)
+
+        # create filing log
+        posting_date = getdate(si.posting_date)
+        gst_return_log = frappe.new_doc(
+            "GST Return Log",
+            return_period=f"{posting_date.month:02d}{posting_date.year}",
+            gstin=si.company_gstin,
+            return_type="GSTR1",
+        )
+        gst_return_log.save()
+
+        # update filing date
+        gstin_doc = frappe.new_doc(
+            "GSTIN",
+            gstin=si.company_gstin,
+            status="Active",
+            gstr_1_filed_upto=add_days(today(), 1),
+        )
+        gstin_doc.save(ignore_permissions=True)
+
+        # submit invoice
+        si.submit()
+
+        comment = frappe.get_value(
+            "Comment",
+            {"comment_type": "Comment", "reference_name": gst_return_log.name},
+            ["content"],
+        )
+        self.assertTrue(si.name in comment)
+
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
 def create_cess_accounts():
     input_cess_non_advol_account = create_tax_accounts("Input Tax Cess Non Advol")
@@ -990,7 +1163,11 @@ def create_tax_accounts(account_name):
     ).insert(ignore_if_duplicate=True)
 
 
+<<<<<<< HEAD
 class TestRegionalOverrides(FrappeTestCase):
+=======
+class TestRegionalOverrides(IntegrationTestCase):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     @change_settings(
         "GST Settings",
         {"round_off_gst_values": 1},
@@ -1079,7 +1256,11 @@ class TestRegionalOverrides(FrappeTestCase):
         self.assertTrue(party_details.get("taxes"))
 
 
+<<<<<<< HEAD
 class TestItemUpdate(FrappeTestCase):
+=======
+class TestItemUpdate(IntegrationTestCase):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     DATA = {
         "customer": "_Test Unregistered Customer",
         "item_code": "_Test Trading Goods 1",
@@ -1153,7 +1334,11 @@ class TestItemUpdate(FrappeTestCase):
             )
 
 
+<<<<<<< HEAD
 class TestPlaceOfSupply(FrappeTestCase):
+=======
+class TestPlaceOfSupply(IntegrationTestCase):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     def test_pos_sales_invoice(self):
         # Sales Invoice with Shipping Address
         doc_args = {

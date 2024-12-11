@@ -18,7 +18,11 @@ from india_compliance.gst_india.utils import parse_datetime, titlecase, validate
 
 GST_CATEGORIES = {
     "Regular": "Registered Regular",
+<<<<<<< HEAD
     "Input Service Distributor (ISD)": "Registered Regular",
+=======
+    "Input Service Distributor (ISD)": "Input Service Distributor",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     "Composition": "Registered Composition",
     "Tax Deductor": "Tax Deductor",
     "Tax Collector (Electronic Commerce Operator)": "Tax Collector",
@@ -49,7 +53,11 @@ def _get_gstin_info(gstin, *, throw_error=True):
 
     if not response:
         try:
+<<<<<<< HEAD
             if frappe.cache().get_value("gst_server_error"):
+=======
+            if frappe.cache.get_value("gst_server_error"):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
                 return frappe._dict()
 
             response = PublicAPI().get_gstin_info(gstin)
@@ -61,7 +69,11 @@ def _get_gstin_info(gstin, *, throw_error=True):
 
         except Exception as exc:
             if isinstance(exc, GSPServerError):
+<<<<<<< HEAD
                 frappe.cache().set_value("gst_server_error", True, expires_in_sec=60)
+=======
+                frappe.cache.set_value("gst_server_error", True, expires_in_sec=60)
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
             if throw_error:
                 raise exc
@@ -190,7 +202,11 @@ def fetch_gstin_status(*, gstin=None, throw=True):
     validate_gstin(gstin)
 
     try:
+<<<<<<< HEAD
         if not throw and frappe.cache().get_value("gst_server_error"):
+=======
+        if not throw and frappe.cache.get_value("gst_server_error"):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             return
 
         gst_settings = frappe.get_cached_doc("GST Settings", None)
@@ -216,7 +232,11 @@ def fetch_gstin_status(*, gstin=None, throw=True):
             raise e
 
         if isinstance(e, GSPServerError):
+<<<<<<< HEAD
             frappe.cache().set_value("gst_server_error", True, expires_in_sec=60)
+=======
+            frappe.cache.set_value("gst_server_error", True, expires_in_sec=60)
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
         frappe.log_error(
             title=_("Error fetching GSTIN status"),

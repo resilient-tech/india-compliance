@@ -12,12 +12,29 @@ const TRANSACTION_DOCTYPES = [
     "Purchase Invoice",
 ];
 
+<<<<<<< HEAD
+=======
+const SUBCONTRACTING_DOCTYPES = [
+    "Stock Entry",
+    "Subcontracting Order",
+    "Subcontracting Receipt",
+];
+
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 for (const doctype of TRANSACTION_DOCTYPES) {
     fetch_gst_details(doctype);
     validate_overseas_gst_category(doctype);
     set_and_validate_gstin_status(doctype);
 }
 
+<<<<<<< HEAD
+=======
+for (const doctype of SUBCONTRACTING_DOCTYPES) {
+    fetch_party_details(doctype);
+    fetch_gst_details(doctype);
+}
+
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 for (const doctype of ["Sales Invoice", "Delivery Note"]) {
     ignore_port_code_validation(doctype);
 }
@@ -36,7 +53,19 @@ function fetch_gst_details(doctype) {
 
     // we are using address below to prevent multiple event triggers
     if (in_list(frappe.boot.sales_doctypes, doctype)) {
+<<<<<<< HEAD
         event_fields.push("customer_address", "shipping_address_name", "is_export_with_gst");
+=======
+        event_fields.push(
+            "customer_address",
+            "shipping_address_name",
+            "is_export_with_gst"
+        );
+    } else if (doctype === "Stock Entry") {
+        event_fields.push("bill_from_address", "bill_to_address");
+    } else if (["Subcontracting Order", "Subcontracting Receipt"].includes(doctype)) {
+        event_fields.push("supplier_gstin");
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     } else {
         event_fields.push("supplier_address");
     }
@@ -52,16 +81,42 @@ async function update_gst_details(frm, event) {
     if (
         frm.updating_party_details ||
         !frm.doc.company ||
+<<<<<<< HEAD
         (event === "place_of_supply" && frm.__updating_gst_details)
+=======
+        (["place_of_supply", "bill_to_address"].includes(event) &&
+            frm.__updating_gst_details)
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     )
         return;
 
     const party_type = india_compliance.get_party_type(frm.doc.doctype).toLowerCase();
     const party_fieldname = frm.doc.doctype === "Quotation" ? "party_name" : party_type;
     const party = frm.doc[party_fieldname];
+<<<<<<< HEAD
     if (!party) return;
 
     if (["company_gstin", "customer_address", "shipping_address_name", "supplier_address"].includes(event)) {
+=======
+
+    const same_gstin_stock_entry =
+        frm.doc.doctype === "Stock Entry" &&
+        ["Material Transfer", "Material Issue"].includes(frm.doc.purpose) &&
+        !frm.doc.is_return;
+
+    if (!(party || same_gstin_stock_entry)) return;
+
+    if (
+        [
+            "company_gstin",
+            "bill_from_gstin",
+            "bill_to_address",
+            "customer_address",
+            "shipping_address_name",
+            "supplier_address",
+        ].includes(event)
+    ) {
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         frm.__update_place_of_supply = true;
     }
 
@@ -106,6 +161,20 @@ async function update_gst_details(frm, event) {
             "billing_address_gstin",
             "is_export_with_gst"
         );
+<<<<<<< HEAD
+=======
+    } else if (frm.doc.doctype === "Stock Entry") {
+        fieldnames_to_set.push(
+            "bill_from_gstin",
+            "bill_to_gstin",
+            "bill_from_address",
+            "bill_to_address"
+        );
+
+        party_details["is_outward_stock_entry"] = same_gstin_stock_entry;
+        party_details["is_inward_stock_entry"] =
+            frm.doc.purpose === "Material Transfer" && frm.doc.is_return;
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     } else {
         fieldnames_to_set.push("supplier_address", "supplier_gstin");
     }
@@ -121,7 +190,13 @@ async function update_gst_details(frm, event) {
 
 india_compliance.fetch_and_update_gst_details = function (frm, args, method) {
     frappe.call({
+<<<<<<< HEAD
         method: method || "india_compliance.gst_india.overrides.transaction.get_gst_details",
+=======
+        method:
+            method ||
+            "india_compliance.gst_india.overrides.transaction.get_gst_details",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         args,
         async callback(r) {
             if (!r.message) return;
@@ -131,7 +206,11 @@ india_compliance.fetch_and_update_gst_details = function (frm, args, method) {
             frm.__updating_gst_details = false;
         },
     });
+<<<<<<< HEAD
 }
+=======
+};
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
 function validate_overseas_gst_category(doctype) {
     frappe.ui.form.on(doctype, {
@@ -176,8 +255,12 @@ function set_and_validate_gstin_status(doctype) {
 
     frappe.ui.form.on(doctype, {
         refresh(frm) {
+<<<<<<< HEAD
             if (frm.doc[gstin_field_name])
                 _set_gstin_status(frm, gstin_field_name);
+=======
+            if (frm.doc[gstin_field_name]) _set_gstin_status(frm, gstin_field_name);
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         },
 
         [gstin_field_name](frm) {
@@ -213,16 +296,32 @@ async function _set_gstin_status(frm, gstin_field_name) {
     const date_field =
         frm.get_field("posting_date") || frm.get_field("transaction_date");
 
+<<<<<<< HEAD
 
     let gstin_doc = frm._gstin_doc?.[gstin];
     if (!gstin_doc) {
         gstin_doc = await india_compliance.set_gstin_status(gstin_field, date_field.value);
+=======
+    let gstin_doc = frm._gstin_doc?.[gstin];
+    if (!gstin_doc) {
+        gstin_doc = await india_compliance.set_gstin_status(
+            gstin_field,
+            date_field.value
+        );
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
         frm._gstin_doc = frm._gstin_doc || {};
         frm._gstin_doc[gstin] = gstin_doc;
     } else {
         gstin_field.set_description(
+<<<<<<< HEAD
             india_compliance.get_gstin_status_desc(gstin_doc?.status, gstin_doc?.last_updated_on)
+=======
+            india_compliance.get_gstin_status_desc(
+                gstin_doc?.status,
+                gstin_doc?.last_updated_on
+            )
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         );
     }
 
@@ -307,7 +406,14 @@ function set_e_commerce_ecommerce_supply_type(doctype) {
     const event_fields = ["ecommerce_gstin", "is_reverse_charge"];
 
     const events = Object.fromEntries(
+<<<<<<< HEAD
         event_fields.map(field => [field, frm => _set_e_commerce_ecommerce_supply_type(frm)])
+=======
+        event_fields.map(field => [
+            field,
+            frm => _set_e_commerce_ecommerce_supply_type(frm),
+        ])
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     );
 
     frappe.ui.form.on(doctype, events);
@@ -327,3 +433,57 @@ function _set_e_commerce_ecommerce_supply_type(frm) {
         frm.set_value("ecommerce_supply_type", "Liable to collect tax u/s 52(TCS)");
     }
 }
+<<<<<<< HEAD
+=======
+
+function fetch_party_details(doctype) {
+    let company_gstin_field = "company_gstin";
+    let is_inward_stock_entry = false;
+
+    if (doctype === "Stock Entry") {
+        company_gstin_field = "bill_from_gstin";
+    }
+
+    frappe.ui.form.on(doctype, {
+        supplier(frm) {
+            if (
+                frm.doc.doctype === "Stock Entry" &&
+                frm.doc.purpose === "Material Transfer" &&
+                frm.doc.is_return
+            ) {
+                company_gstin_field = "bill_to_gstin";
+                is_inward_stock_entry = true;
+            }
+
+            setTimeout(() => {
+                const party_details = {
+                    [company_gstin_field]: frm.doc[company_gstin_field],
+                    supplier: frm.doc.supplier,
+                    is_inward_stock_entry,
+                };
+                const args = {
+                    party_details: JSON.stringify(party_details),
+                    posting_date: frm.doc.posting_date || frm.doc.transaction_date,
+                };
+
+                toggle_link_validation(frm, ["supplier_address"], false);
+                erpnext.utils.get_party_details(
+                    frm,
+                    "india_compliance.gst_india.overrides.transaction.get_party_details_for_subcontracting",
+                    args,
+                    () => {
+                        toggle_link_validation(frm, ["supplier_address"], true);
+                    }
+                );
+            }, 0);
+        },
+    });
+}
+
+function toggle_link_validation(frm, fields, validate = true) {
+    fields.forEach(field => {
+        const df = frm.get_field(field).df;
+        if (df) df.ignore_link_validation = !validate;
+    });
+}
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)

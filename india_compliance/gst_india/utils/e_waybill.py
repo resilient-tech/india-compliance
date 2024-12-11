@@ -19,7 +19,15 @@ from frappe.utils.file_manager import save_file
 from india_compliance.exceptions import GSPServerError
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
+<<<<<<< HEAD
 from india_compliance.gst_india.constants import GST_TAX_TYPES, STATE_NUMBERS
+=======
+from india_compliance.gst_india.constants import (
+    GST_TAX_TYPES,
+    SALES_DOCTYPES,
+    STATE_NUMBERS,
+)
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 from india_compliance.gst_india.constants.e_waybill import (
     ADDRESS_FIELDS,
     CANCEL_REASON_CODES,
@@ -34,6 +42,10 @@ from india_compliance.gst_india.constants.e_waybill import (
 from india_compliance.gst_india.utils import (
     handle_server_errors,
     is_foreign_doc,
+<<<<<<< HEAD
+=======
+    is_outward_stock_entry,
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     load_doc,
     parse_datetime,
     send_updated_doc,
@@ -54,9 +66,14 @@ def generate_e_waybill_json(doctype: str, docnames, values=None):
         "billLists": [],
     }
 
+<<<<<<< HEAD
     for doc in docnames:
         doc = frappe.get_doc(doctype, doc)
         doc.check_permission("submit")
+=======
+    for docname in docnames:
+        doc = load_doc(doctype, docname, "submit")
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
         if values:
             update_transaction(doc, frappe.parse_json(values))
@@ -997,8 +1014,14 @@ def update_transaction(doc, values):
 
     doc.db_set(data)
 
+<<<<<<< HEAD
     if doc.doctype == "Delivery Note":
         doc._sub_supply_type = SUB_SUPPLY_TYPES[values.sub_supply_type]
+=======
+    if doc.doctype in ("Delivery Note", "Stock Entry", "Subcontracting Receipt"):
+        doc._sub_supply_type = SUB_SUPPLY_TYPES[values.sub_supply_type]
+    if doc.doctype == "Delivery Note":
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         doc._sub_supply_desc = values.sub_supply_desc
 
 
@@ -1071,7 +1094,11 @@ def get_billing_shipping_address_map(doc):
         else address.ship_to
     )
 
+<<<<<<< HEAD
     if doc.is_return:
+=======
+    if doc.get("is_return"):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         address.bill_from, address.bill_to = address.bill_to, address.bill_from
         address.ship_from, address.ship_to = address.ship_to, address.ship_from
 
@@ -1209,7 +1236,10 @@ class EWaybillData(GSTTransactionData):
         return extension_details
 
     def validate_transaction(self):
+<<<<<<< HEAD
 
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         super().validate_transaction()
 
         if self.doc.ewaybill:
@@ -1232,8 +1262,14 @@ class EWaybillData(GSTTransactionData):
         - Required fields
         - Atleast one item with HSN for goods is required
         - Basic transporter details must be present
+<<<<<<< HEAD
         - Transaction does not have any non-GST items
         - Sales Invoice with same company and billing gstin
+=======
+        - Sales Invoice with same company and billing gstin
+        - Inward Stock Transfer with same company and supplier gstin
+        - Outward Material Transfer with different company and supplier gstin
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         """
 
         address = ADDRESS_FIELDS.get(self.doc.doctype)
@@ -1261,6 +1297,7 @@ class EWaybillData(GSTTransactionData):
         if not self.doc.gst_transporter_id:
             self.validate_mode_of_transport()
 
+<<<<<<< HEAD
         self.validate_non_gst_items()
 
         if (
@@ -1270,6 +1307,35 @@ class EWaybillData(GSTTransactionData):
             frappe.throw(
                 _(
                     "e-Waybill cannot be generated because billing GSTIN is same as"
+=======
+        if is_outward_stock_entry(self.doc):
+            self.validate_different_gstin()
+        else:
+            self.validate_same_gstin()
+
+    def validate_different_gstin(self):
+        if self.doc.company_gstin != self.doc.get("supplier_gstin"):
+            frappe.throw(
+                _(
+                    "e-Waybill cannot be generated because party GSTIN and company GSTIN are different"
+                ),
+                title=_("Invalid Data"),
+            )
+
+    def validate_same_gstin(self):
+        if self.doc.doctype == "Delivery Note":
+            return
+
+        party_gstin_fieldname = (
+            "billing_address_gstin"
+            if self.doc.doctype in SALES_DOCTYPES
+            else "supplier_gstin"
+        )
+        if self.doc.company_gstin == self.doc.get(party_gstin_fieldname):
+            frappe.throw(
+                _(
+                    "e-Waybill cannot be generated because party GSTIN is same as"
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
                     " company GSTIN"
                 ),
                 title=_("Invalid Data"),
@@ -1290,8 +1356,13 @@ class EWaybillData(GSTTransactionData):
     def validate_doctype_for_e_waybill(self):
         if self.doc.doctype not in PERMITTED_DOCTYPES:
             frappe.throw(
+<<<<<<< HEAD
                 _("Only {0} are supported for e-Waybill actions").format(
                     ", ".join(PERMITTED_DOCTYPES)
+=======
+                _("{0} is not supported for e-Waybill actions").format(
+                    self.doc.doctype
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
                 ),
                 title=_("Unsupported DocType"),
             )
@@ -1320,8 +1391,15 @@ class EWaybillData(GSTTransactionData):
         if now < extend_after or now > extend_before:
             frappe.throw(
                 _(
+<<<<<<< HEAD
                     "e-Waybill can be extended between 8 hours before expiry time and 8 hours after expiry time"
                 )
+=======
+                    "e-Waybill can be extended between 8 hours before expiry time and 8 hours after expiry time."
+                    "<br><br>Instead you can schedule the extension of e-Waybill."
+                ),
+                title=_("Cannot Extend Now"),
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             )
 
         if (
@@ -1409,7 +1487,11 @@ class EWaybillData(GSTTransactionData):
         return hsn_wise_items.values()
 
     def update_item_details(self, item_details, item):
+<<<<<<< HEAD
         if not self.doc.is_reverse_charge:
+=======
+        if not self.doc.get("is_reverse_charge"):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             return
 
         for tax in GST_TAX_TYPES:
@@ -1475,10 +1557,37 @@ class EWaybillData(GSTTransactionData):
                 "document_type": "CHL",
                 "sub_supply_desc": "Purchase Return",
             },
+<<<<<<< HEAD
         }
 
         self.transaction_details.update(
             default_supply_types.get((doc.doctype, doc.is_return), {})
+=======
+            ("Stock Entry", 0): {
+                "supply_type": "O",
+                "sub_supply_type": doc.get("_sub_supply_type", ""),
+                "document_type": "CHL",
+            },
+            ("Stock Entry", 1): {
+                "supply_type": "I",
+                "sub_supply_type": doc.get("_sub_supply_type", ""),
+                "document_type": "CHL",
+            },
+            ("Subcontracting Receipt", 0): {
+                "supply_type": "I",
+                "sub_supply_type": doc.get("_sub_supply_type", ""),
+                "document_type": "CHL",
+            },
+            ("Subcontracting Receipt", 1): {
+                "supply_type": "O",
+                "sub_supply_type": doc.get("_sub_supply_type", ""),
+                "document_type": "CHL",
+            },
+        }
+
+        self.transaction_details.update(
+            default_supply_types.get((doc.doctype, doc.get("is_return") or 0), {})
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         )
 
         if is_foreign_doc(self.doc):
@@ -1538,6 +1647,7 @@ class EWaybillData(GSTTransactionData):
         to_party = self.transaction_details.party_name
         from_party = self.transaction_details.company_name
 
+<<<<<<< HEAD
         if self.doc.doctype in ("Purchase Invoice", "Purchase Receipt"):
             to_party, from_party = from_party, to_party
 
@@ -1546,6 +1656,20 @@ class EWaybillData(GSTTransactionData):
 
         self.bill_to.legal_name = to_party
         self.bill_from.legal_name = from_party
+=======
+        if self.doc.doctype in (
+            "Purchase Invoice",
+            "Purchase Receipt",
+            "Subcontracting Receipt",
+        ):
+            to_party, from_party = from_party, to_party
+
+        if self.doc.get("is_return"):
+            to_party, from_party = from_party, to_party
+
+        self.bill_to.legal_name = to_party or self.bill_to.address_title
+        self.bill_from.legal_name = from_party or self.bill_from.address_title
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
         if self.doc.gst_category == "SEZ":
             self.bill_to.state_number = 96
@@ -1606,6 +1730,13 @@ class EWaybillData(GSTTransactionData):
                 ("Purchase Receipt", 1): (REGISTERED_GSTIN, OTHER_GSTIN),
                 ("Delivery Note", 0): (REGISTERED_GSTIN, OTHER_GSTIN),
                 ("Delivery Note", 1): (OTHER_GSTIN, REGISTERED_GSTIN),
+<<<<<<< HEAD
+=======
+                ("Stock Entry", 0): (REGISTERED_GSTIN, OTHER_GSTIN),
+                ("Stock Entry", 1): (OTHER_GSTIN, REGISTERED_GSTIN),
+                ("Subcontracting Receipt", 0): (OTHER_GSTIN, REGISTERED_GSTIN),
+                ("Subcontracting Receipt", 1): (REGISTERED_GSTIN, OTHER_GSTIN),
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             }
 
             if self.bill_from.gstin == self.bill_to.gstin:
@@ -1613,6 +1744,10 @@ class EWaybillData(GSTTransactionData):
                     {
                         ("Delivery Note", 0): (REGISTERED_GSTIN, REGISTERED_GSTIN),
                         ("Delivery Note", 1): (REGISTERED_GSTIN, REGISTERED_GSTIN),
+<<<<<<< HEAD
+=======
+                        ("Stock Entry", 0): (REGISTERED_GSTIN, REGISTERED_GSTIN),
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
                     }
                 )
 
@@ -1620,11 +1755,20 @@ class EWaybillData(GSTTransactionData):
                 if address.gstin == "URP":
                     return address.gstin
 
+<<<<<<< HEAD
                 return sandbox_gstin.get((self.doc.doctype, self.doc.is_return))[key]
 
             self.bill_from.gstin = _get_sandbox_gstin(self.bill_from, 0)
             self.bill_to.gstin = _get_sandbox_gstin(self.bill_to, 1)
 
+=======
+                return sandbox_gstin.get(
+                    (self.doc.doctype, self.doc.get("is_return") or 0)
+                )[key]
+
+            self.bill_from.gstin = _get_sandbox_gstin(self.bill_from, 0)
+            self.bill_to.gstin = _get_sandbox_gstin(self.bill_to, 1)
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         data = {
             "userGstin": self.transaction_details.company_gstin,
             "supplyType": self.transaction_details.supply_type,

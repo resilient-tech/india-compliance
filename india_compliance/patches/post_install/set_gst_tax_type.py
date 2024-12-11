@@ -7,7 +7,10 @@ TAX_DOCTYPES = [
     "Sales Taxes and Charges",
     "Purchase Taxes and Charges",
     "Advance Taxes and Charges",
+<<<<<<< HEAD
     "Bill of Entry Taxes",
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 ]
 
 

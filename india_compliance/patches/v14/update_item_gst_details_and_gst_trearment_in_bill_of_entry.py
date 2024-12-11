@@ -3,8 +3,13 @@ import click
 import frappe
 from frappe.query_builder.functions import IfNull
 
+<<<<<<< HEAD
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import BOEGSTDetails
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
+=======
+from india_compliance.gst_india.utils import get_gst_accounts_by_type
+from india_compliance.gst_india.utils.taxes_controller import CustomItemGSTDetails
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 from india_compliance.patches.post_install.improve_item_tax_template import (
     build_query_and_update_gst_details,
     compile_docs,
@@ -78,7 +83,13 @@ def update_gst_details(company, doctype, docs):
             if not complied_docs:
                 continue
 
+<<<<<<< HEAD
             gst_details = BOEGSTDetails().get(complied_docs.values(), doctype, company)
+=======
+            gst_details = CustomItemGSTDetails().get(
+                complied_docs.values(), doctype, company
+            )
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
             if not gst_details:
                 continue
@@ -88,8 +99,21 @@ def update_gst_details(company, doctype, docs):
 
 
 def get_taxes_for_docs(docs, doctype):
+<<<<<<< HEAD
     taxes_doctype = "Bill of Entry Taxes"
     taxes = frappe.qb.DocType(taxes_doctype)
+=======
+    boe_taxes = frappe.qb.DocType("Bill of Entry Taxes")
+    ic_taxes = frappe.qb.DocType("India Compliance Taxes and Charges")
+
+    return (
+        get_taxes_query(docs, doctype, boe_taxes)
+        + get_taxes_query(docs, doctype, ic_taxes)
+    ).run(as_dict=True)
+
+
+def get_taxes_query(docs, doctype, taxes):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     return (
         frappe.qb.from_(taxes)
         .select(
@@ -100,7 +124,10 @@ def get_taxes_for_docs(docs, doctype):
         )
         .where(taxes.parenttype == doctype)
         .where(taxes.parent.isin(docs))
+<<<<<<< HEAD
         .run(as_dict=True)
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     )
 
 

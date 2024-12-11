@@ -1,11 +1,20 @@
+<<<<<<< HEAD
 import unittest
 
 import frappe
+=======
+import frappe
+from frappe.tests import IntegrationTestCase
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
 from india_compliance.gst_india.utils import validate_invoice_number
 
 
+<<<<<<< HEAD
 class TestSalesInvoice(unittest.TestCase):
+=======
+class TestSalesInvoice(IntegrationTestCase):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     def test_validate_invoice_number(self):
         posting_date = "2021-05-01"
 

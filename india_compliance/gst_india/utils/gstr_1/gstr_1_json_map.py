@@ -98,7 +98,15 @@ class GovDataMapper:
         output = {}
 
         if default_data:
+<<<<<<< HEAD
             output.update(default_data)
+=======
+            for key, value in default_data.items():
+                if not (value or value == 0):
+                    continue
+
+                output[key] = value
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
         key_mapping = self.KEY_MAPPING.copy()
 
@@ -315,6 +323,15 @@ class B2B(GovDataMapper):
                 GSTR1_DataField.CUST_NAME.value: self.guess_customer_name(
                     customer_gstin
                 ),
+<<<<<<< HEAD
+=======
+                GSTR1_DataField.ERROR_CD.value: customer_data.get(
+                    GovDataField.ERROR_CD.value
+                ),
+                GSTR1_DataField.ERROR_MSG.value: customer_data.get(
+                    GovDataField.ERROR_MSG.value
+                ),
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             }
 
             for invoice in customer_data.get(GovDataField.INVOICES.value):
@@ -466,6 +483,15 @@ class B2CL(GovDataMapper):
             default_invoice_data = {
                 GSTR1_DataField.POS.value: pos,
                 GSTR1_DataField.DOC_TYPE.value: self.DOCUMENT_CATEGORY,
+<<<<<<< HEAD
+=======
+                GSTR1_DataField.ERROR_CD.value: pos_data.get(
+                    GovDataField.ERROR_CD.value
+                ),
+                GSTR1_DataField.ERROR_MSG.value: pos_data.get(
+                    GovDataField.ERROR_MSG.value
+                ),
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             }
 
             for invoice in pos_data.get(GovDataField.INVOICES.value):
@@ -600,6 +626,15 @@ class Exports(GovDataMapper):
 
             default_invoice_data = {
                 GSTR1_DataField.DOC_TYPE.value: document_type,
+<<<<<<< HEAD
+=======
+                GSTR1_DataField.ERROR_CD.value: export_category.get(
+                    GovDataField.ERROR_CD.value
+                ),
+                GSTR1_DataField.ERROR_MSG.value: export_category.get(
+                    GovDataField.ERROR_MSG.value
+                ),
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             }
 
             for invoice in export_category.get(GovDataField.INVOICES.value):
@@ -694,6 +729,11 @@ class B2CS(GovDataMapper):
         GovDataField.CGST.value: GSTR1_DataField.CGST.value,
         GovDataField.SGST.value: GSTR1_DataField.SGST.value,
         GovDataField.CESS.value: GSTR1_DataField.CESS.value,
+<<<<<<< HEAD
+=======
+        GovDataField.ERROR_CD.value: GSTR1_DataField.ERROR_CD.value,
+        GovDataField.ERROR_MSG.value: GSTR1_DataField.ERROR_MSG.value,
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     }
 
     def __init__(self):
@@ -804,8 +844,20 @@ class NilRated(GovDataMapper):
     def convert_to_internal_data_format(self, input_data):
         output = {}
 
+<<<<<<< HEAD
         for invoice in input_data[GovDataField.INVOICES.value]:
             invoice_data = self.format_data(invoice)
+=======
+        default_data = {
+            GSTR1_DataField.ERROR_CD.value: input_data.get(GovDataField.ERROR_CD.value),
+            GSTR1_DataField.ERROR_MSG.value: input_data.get(
+                GovDataField.ERROR_MSG.value
+            ),
+        }
+
+        for invoice in input_data[GovDataField.INVOICES.value]:
+            invoice_data = self.format_data(invoice, default_data)
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
             if not invoice_data:
                 continue
@@ -968,6 +1020,15 @@ class CDNR(GovDataMapper):
                         GSTR1_DataField.CUST_NAME.value: self.guess_customer_name(
                             customer_gstin
                         ),
+<<<<<<< HEAD
+=======
+                        GSTR1_DataField.ERROR_CD.value: customer_data.get(
+                            GovDataField.ERROR_CD.value
+                        ),
+                        GSTR1_DataField.ERROR_MSG.value: customer_data.get(
+                            GovDataField.ERROR_MSG.value
+                        ),
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
                     },
                 )
                 self.update_totals(
@@ -1097,6 +1158,11 @@ class CDNUR(GovDataMapper):
         GovDataField.TAXABLE_VALUE.value: GSTR1_ItemField.TAXABLE_VALUE.value,
         GovDataField.IGST.value: GSTR1_ItemField.IGST.value,
         GovDataField.CESS.value: GSTR1_ItemField.CESS.value,
+<<<<<<< HEAD
+=======
+        GovDataField.ERROR_CD.value: GSTR1_DataField.ERROR_CD.value,
+        GovDataField.ERROR_MSG.value: GSTR1_DataField.ERROR_MSG.value,
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     }
     DOCUMENT_TYPES = {
         "C": "Credit Note",
@@ -1239,6 +1305,16 @@ class HSNSUM(GovDataMapper):
     def convert_to_internal_data_format(self, input_data):
         output = {}
 
+<<<<<<< HEAD
+=======
+        default_data = {
+            GSTR1_DataField.ERROR_CD.value: input_data.get(GovDataField.ERROR_CD.value),
+            GSTR1_DataField.ERROR_MSG.value: input_data.get(
+                GovDataField.ERROR_MSG.value
+            ),
+        }
+
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         for invoice in input_data[GovDataField.HSN_DATA.value]:
             output[
                 " - ".join(
@@ -1248,7 +1324,11 @@ class HSNSUM(GovDataMapper):
                         str(flt(invoice.get(GovDataField.TAX_RATE.value))),
                     )
                 )
+<<<<<<< HEAD
             ] = self.format_data(invoice)
+=======
+            ] = self.format_data(invoice, default_data)
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
         return {self.SUBCATEGORY: output}
 
@@ -1345,6 +1425,11 @@ class AT(GovDataMapper):
         GovDataField.CGST.value: GSTR1_DataField.CGST.value,
         GovDataField.SGST.value: GSTR1_DataField.SGST.value,
         GovDataField.CESS.value: GSTR1_DataField.CESS.value,
+<<<<<<< HEAD
+=======
+        GovDataField.ERROR_CD.value: GSTR1_DataField.ERROR_CD.value,
+        GovDataField.ERROR_MSG.value: GSTR1_DataField.ERROR_MSG.value,
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     }
     DEFAULT_ITEM_AMOUNTS = {
         GSTR1_DataField.IGST.value: 0,
@@ -1567,6 +1652,14 @@ class DOC_ISSUE(GovDataMapper):
         doc_nature_wise_data = {}
 
         for invoice in input_data:
+<<<<<<< HEAD
+=======
+            if invoice[GSTR1_DataField.DOC_TYPE.value].startswith(
+                "Excluded from Report"
+            ):
+                continue
+
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             doc_nature_wise_data.setdefault(
                 invoice[GSTR1_DataField.DOC_TYPE.value], []
             ).append(invoice)
@@ -1821,6 +1914,17 @@ class RETSUM(GovDataMapper):
 
         return {"summary": output}
 
+<<<<<<< HEAD
+=======
+    def format_data(self, data, default_data=None, for_gov=False):
+        response = super().format_data(data, default_data, for_gov)
+
+        if data.get("sec_nm") == "DOC_ISSUE":
+            response["no_of_records"] = data.get("net_doc_issued", 0)
+
+        return response
+
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     def format_subsection_data(self, section, subsection_data):
         subsection = subsection_data.get("typ") or subsection_data.get("sec_nm")
         formatted_data = self.format_data(subsection_data)
@@ -1851,7 +1955,11 @@ CLASS_MAP = {
 }
 
 
+<<<<<<< HEAD
 def convert_to_internal_data_format(gov_data):
+=======
+def convert_to_internal_data_format(gov_data, for_errors=False):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     """
     Converts Gov data format to internal data format for all categories
     """
@@ -1865,7 +1973,20 @@ def convert_to_internal_data_format(gov_data):
             mapper_class().convert_to_internal_data_format(gov_data.get(category))
         )
 
+<<<<<<< HEAD
     return output
+=======
+    if not for_errors:
+        return output
+
+    errors = []
+    for category, data in output.items():
+        for row in data.values():
+            row["category"] = category
+            errors.append(row)
+
+    return errors
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
 
 def get_category_wise_data(
@@ -1935,6 +2056,10 @@ def summarize_retsum_data(input_data):
 
     summarized_data = []
     total_values_keys = [
+<<<<<<< HEAD
+=======
+        "no_of_records",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         "total_igst_amount",
         "total_cgst_amount",
         "total_sgst_amount",

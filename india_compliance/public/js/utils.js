@@ -6,6 +6,10 @@ import {
     TDS_REGEX,
     TCS_REGEX,
     GST_INVOICE_NUMBER_FORMAT,
+<<<<<<< HEAD
+=======
+    PAN_REGEX,
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 } from "./regex_constants";
 
 frappe.provide("india_compliance");
@@ -110,6 +114,55 @@ Object.assign(india_compliance, {
         return message;
     },
 
+<<<<<<< HEAD
+=======
+    async set_pan_status(field, force_update = null) {
+        const pan = field.value;
+        field.set_description("");
+        if (!pan || pan.length !== 10) return;
+
+        let { message } = await frappe.call({
+            method: "india_compliance.gst_india.doctype.pan.pan.get_pan_status",
+            args: { pan, force_update },
+        });
+
+        if (!message) return;
+
+        const [pan_status, datetime] = message;
+
+        function get_indicator(status) {
+            switch (status) {
+                case "Valid":
+                    return "green";
+                case "Not Linked":
+                    return "red";
+                case "Invalid":
+                    return "red";
+                default:
+                    return "orange";
+            }
+        }
+
+        const pan_desc = this.get_status_description(
+            pan_status,
+            get_indicator(pan_status),
+            datetime,
+            "pan-last-synced"
+        );
+
+        const refresh_btn = this.get_status_refresh_button(
+            "refresh-pan",
+            pan_desc.find(".pan-last-synced")
+        );
+
+        refresh_btn.on("click", async function () {
+            await india_compliance.set_pan_status(field, true);
+        });
+
+        return field.set_description(pan_desc);
+    },
+
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     validate_gst_transporter_id(transporter_id) {
         if (!transporter_id || transporter_id.length !== 15) return;
 
@@ -121,6 +174,7 @@ Object.assign(india_compliance, {
 
     get_gstin_status_desc(status, datetime) {
         if (!status) return;
+<<<<<<< HEAD
         const user_date = frappe.datetime.str_to_user(datetime);
         const pretty_date = frappe.datetime.prettyDate(datetime);
 
@@ -133,6 +187,26 @@ Object.assign(india_compliance, {
                         </span>
                     </span>
                 </div>`;
+=======
+
+        function get_indicator(status) {
+            switch (status) {
+                case "Active":
+                    return "green";
+                case "Cancelled":
+                    return "red";
+                default:
+                    return "orange";
+            }
+        }
+
+        return this.get_status_description(
+            status,
+            get_indicator(status),
+            datetime,
+            "gstin-last-synced"
+        );
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     },
 
     set_gstin_refresh_btn(field, transaction_date) {
@@ -144,11 +218,18 @@ Object.assign(india_compliance, {
         )
             return;
 
+<<<<<<< HEAD
         const refresh_btn = $(`
             <svg class="icon icon-sm refresh-gstin" style="">
                 <use class="" href="#icon-refresh" style="cursor: pointer"></use>
             </svg>
         `).appendTo(field.$wrapper.find(".gstin-last-updated"));
+=======
+        const refresh_btn = this.get_status_refresh_button(
+            "refresh-gstin",
+            field.$wrapper.find(".gstin-last-synced")
+        );
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
         refresh_btn.on("click", async function () {
             const force_update = true;
@@ -160,6 +241,36 @@ Object.assign(india_compliance, {
         });
     },
 
+<<<<<<< HEAD
+=======
+    get_status_description(status, indicator, datetime, classes) {
+        const user_date = frappe.datetime.str_to_user(datetime);
+        const pretty_date = frappe.datetime.prettyDate(datetime);
+
+        return $(`<div class="d-flex indicator ${indicator}" style="font-size: 12px">
+                    <strong>${status}</strong>
+                    <span class="d-flex justify-content-between align-items-center ${classes}"
+                        title="${user_date}" style="margin-left: auto;gap: 2px">
+                       <span style="text-align: end;"> ${datetime ? "Synced " + pretty_date : ""}</span>
+                    </span>
+                </div>`);
+    },
+
+    get_status_refresh_button(classes, append_to = null, style = null) {
+        if (!style) {
+            style = "cursor: pointer;width: 14px;height: 14px;";
+        }
+
+        const refresh_btn = $(frappe.utils.icon("refresh", "sm", classes, style));
+
+        if (append_to) {
+            refresh_btn.appendTo(append_to);
+        }
+
+        return refresh_btn;
+    },
+
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     set_state_options(frm) {
         const state_field = frm.get_field("state");
         const country = frm.get_field("country").value;
@@ -184,6 +295,25 @@ Object.assign(india_compliance, {
         return india_compliance.is_api_enabled() && gst_settings.enable_e_invoice;
     },
 
+<<<<<<< HEAD
+=======
+    validate_pan(pan) {
+        if (!pan) return;
+
+        pan = pan.trim().toUpperCase();
+
+        if (pan.length != 10) {
+            frappe.throw(__("PAN should be 10 characters long"));
+        }
+
+        if (!PAN_REGEX.test(pan)) {
+            frappe.throw(__("Invalid PAN format"));
+        }
+
+        return pan;
+    },
+
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     validate_gstin(gstin) {
         if (!gstin || gstin.length !== 15) {
             frappe.msgprint(__("GSTIN must be 15 characters long"));
@@ -199,6 +329,7 @@ Object.assign(india_compliance, {
         }
     },
 
+<<<<<<< HEAD
     get_gstin_otp(company_gstin, error_type) {
         let description = `An OTP has been sent to the registered mobile/email for GSTIN ${company_gstin} for further authentication. Please provide OTP.`;
         if (error_type === "invalid_otp")
@@ -240,6 +371,8 @@ Object.assign(india_compliance, {
         });
     },
 
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     guess_gst_category(gstin, country) {
         if (!gstin) {
             if (country && country !== "India") return "Overseas";
@@ -347,6 +480,29 @@ Object.assign(india_compliance, {
         return frappe.datetime.add_days(frappe.datetime.month_start(), -1);
     },
 
+<<<<<<< HEAD
+=======
+    last_half_year(position) {
+        const today = frappe.datetime.now_date(true);
+        const current_month = today.getMonth() + 1;
+        const current_year = today.getFullYear();
+
+        if (current_month <= 3) {
+            return position === "start"
+                ? `${current_year - 1}-03-01`
+                : `${current_year - 1}-09-30`;
+        } else if (current_month <= 9) {
+            return position === "start"
+                ? `${current_year - 1}-10-01`
+                : `${current_year}-03-31`;
+        } else {
+            return position === "start"
+                ? `${current_year}-04-01`
+                : `${current_year}-09-30`;
+        }
+    },
+
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     primary_to_danger_btn(parent) {
         parent.$wrapper
             .find(".btn-primary")
@@ -368,6 +524,7 @@ Object.assign(india_compliance, {
             .addClass("text-danger");
     },
 
+<<<<<<< HEAD
     async authenticate_company_gstins(company, company_gstin) {
         const { message: gstin_authentication_status } = await frappe.call({
             method: "india_compliance.gst_india.utils.gstr_utils.validate_company_gstins",
@@ -420,6 +577,8 @@ Object.assign(india_compliance, {
         }
     },
 
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     show_dismissable_alert(wrapper, message, alert_type = "primary", on_close = null) {
         const alert = $(`
             <div class="container">
@@ -447,6 +606,33 @@ Object.assign(india_compliance, {
 
         return alert;
     },
+<<<<<<< HEAD
+=======
+
+    is_e_waybill_applicable_for_subcontracting(doc) {
+        if (
+            !(
+                gst_settings.enable_api &&
+                gst_settings.enable_e_waybill &&
+                gst_settings.enable_e_waybill_for_sc
+            )
+        ) {
+            return false;
+        }
+
+        if (doc.doctype != "Stock Entry") return true;
+
+        if (
+            !["Material Transfer", "Material Issue", "Send to Subcontractor"].includes(
+                doc.purpose
+            )
+        ) {
+            return false;
+        }
+
+        return true;
+    },
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 });
 
 function is_gstin_check_digit_valid(gstin) {

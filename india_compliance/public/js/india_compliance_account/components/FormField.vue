@@ -15,11 +15,19 @@
         :id="name"
         class="form-control"
         :class="inputClass"
+<<<<<<< HEAD
         :value="value"
         :placeholder="placeholder"
         :required="required"
         v-if="['text', 'email'].includes(inputType)"
         @input="$emit('input', $event.target.value)"
+=======
+        :value="modelValue"
+        :placeholder="placeholder"
+        :required="required"
+        v-if="['text', 'email'].includes(inputType)"
+        @input="$emit('update:modelValue', $event.target.value)"
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         @blur="$emit('blur', $event.target.value.trim())"
       />
       <div class="suffix-icon">
@@ -52,9 +60,15 @@ import Loading from "./Loading.vue";
 import { UiState } from "../constants";
 export default {
   components: { Loading },
+<<<<<<< HEAD
 
   props: {
     value: String,
+=======
+  emits: ["update:modelValue", "blur"],
+  props: {
+    modelValue: String,
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     inputType: {
       type: String,
       validator(value) {

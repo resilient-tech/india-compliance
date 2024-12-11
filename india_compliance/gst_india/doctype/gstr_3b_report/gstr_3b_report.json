@@ -1,12 +1,17 @@
 {
  "actions": [],
+<<<<<<< HEAD
  "autoname": "format:GSTR3B-{month}-{year}-{company_address}",
+=======
+ "autoname": "format:GSTR3B-{month_or_quarter}-{year}-{company_gstin}",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
  "creation": "2019-02-04 11:35:55.964639",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
   "company",
+<<<<<<< HEAD
   "company_address",
   "year",
   "month",
@@ -14,6 +19,18 @@
   "enqueue_report",
   "generation_status",
   "section_break_yqh7",
+=======
+  "enqueue_report",
+  "column_break_pvct",
+  "company_gstin",
+  "generation_status",
+  "column_break_ddqq",
+  "year",
+  "column_break_vtyi",
+  "month_or_quarter",
+  "section_break_yqh7",
+  "gstr3b_form",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
   "json_output",
   "missing_field_invoices"
  ],
@@ -25,17 +42,21 @@
    "options": "Company"
   },
   {
+<<<<<<< HEAD
    "fieldname": "company_address",
    "fieldtype": "Link",
    "label": "Company Address",
    "options": "Address"
   },
   {
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
    "fieldname": "year",
    "fieldtype": "Select",
    "label": "Year"
   },
   {
+<<<<<<< HEAD
    "fieldname": "month",
    "fieldtype": "Select",
    "label": "Month",
@@ -44,6 +65,11 @@
   {
    "fieldname": "json_output",
    "fieldtype": "Code",
+=======
+   "fieldname": "json_output",
+   "fieldtype": "Code",
+   "hidden": 1,
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
    "label": "JSON Output"
   },
   {
@@ -53,10 +79,13 @@
    "read_only": 1
   },
   {
+<<<<<<< HEAD
    "fieldname": "column_break_jhew",
    "fieldtype": "Column Break"
   },
   {
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
    "default": "0",
    "description": "Generate report in the background.",
    "fieldname": "enqueue_report",
@@ -73,12 +102,50 @@
   {
    "fieldname": "generation_status",
    "fieldtype": "Data",
+<<<<<<< HEAD
    "label": "Status",
    "read_only": 1
   }
  ],
  "links": [],
  "modified": "2024-01-02 14:09:31.230340",
+=======
+   "hidden": 1,
+   "label": "Status",
+   "read_only": 1
+  },
+  {
+   "fieldname": "company_gstin",
+   "fieldtype": "Autocomplete",
+   "label": "Company GSTIN"
+  },
+  {
+   "fieldname": "column_break_ddqq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_vtyi",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_pvct",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "gstr3b_form",
+   "fieldtype": "HTML",
+   "label": "GSTR-3B Form"
+  },
+  {
+   "fieldname": "month_or_quarter",
+   "fieldtype": "Select",
+   "label": "Month or Quarter",
+   "options": "Apr - Jun\nJul - Sep\nOct - Dec\nJan - Mar\nJanuary\nFebruary\nMarch\nApril\nMay\nJune\nJuly\nAugust\nSeptember\nOctober\nNovember\nDecember"
+  }
+ ],
+ "links": [],
+ "modified": "2024-11-22 18:36:30.385643",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR 3B Report",
@@ -104,7 +171,11 @@
    "write": 1
   }
  ],
+<<<<<<< HEAD
  "sort_field": "modified",
+=======
+ "sort_field": "creation",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
  "sort_order": "DESC",
  "states": [],
  "track_changes": 1

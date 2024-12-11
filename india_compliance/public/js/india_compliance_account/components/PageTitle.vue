@@ -1,6 +1,10 @@
 <template>
   <h2 class="page-heading">
+<<<<<<< HEAD
     {{ title }}<span class="full-stop-highlight">.</span>
+=======
+    {{ title }}
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
   </h2>
 </template>
 

@@ -126,6 +126,12 @@ class GSTR1_DataField(Enum):
     NET_ISSUE = "net_issue"
     UPLOAD_STATUS = "upload_status"
 
+<<<<<<< HEAD
+=======
+    ERROR_CD = "error_code"
+    ERROR_MSG = "error_message"
+
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 
 class GSTR1_ItemField(Enum):
     INDEX = "idx"
@@ -196,6 +202,12 @@ class GovDataField(Enum):
     SUPECOM_52 = "clttx"
     SUPECOM_9_5 = "paytx"
 
+<<<<<<< HEAD
+=======
+    ERROR_CD = "error_cd"
+    ERROR_MSG = "error_msg"
+
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     FLAG = "flag"
 
 

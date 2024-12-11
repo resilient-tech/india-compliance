@@ -21,7 +21,11 @@ def get_dashboard_data(data):
 
 
 def onload(doc, method=None):
+<<<<<<< HEAD
     if ignore_gst_validations(doc, throw=False):
+=======
+    if ignore_gst_validations(doc):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         return
 
     if (

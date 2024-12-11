@@ -1,10 +1,17 @@
 import re
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
 
 
 class TestCustomizeFormAuditTrail(FrappeTestCase):
+=======
+from frappe.tests import IntegrationTestCase
+
+
+class TestCustomizeFormAuditTrail(IntegrationTestCase):
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     def test_validate_customize_form(self):
         customize_frm = self.get_customize_form()
         customize_frm.doc_type = "Purchase Invoice"

@@ -5,6 +5,11 @@ const E_WAYBILL_CLASS = {
     "Purchase Invoice": PurchaseInvoiceEwaybill,
     "Delivery Note": DeliveryNoteEwaybill,
     "Purchase Receipt": PurchaseReceiptEwaybill,
+<<<<<<< HEAD
+=======
+    "Stock Entry": StockEntryEwaybill,
+    "Subcontracting Receipt": SubcontractingReceiptEwaybill,
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 };
 
 function setup_e_waybill_actions(doctype) {
@@ -413,11 +418,18 @@ function get_generate_e_waybill_dialog(opts, frm) {
             fieldname: "gst_transporter_id",
             fieldtype: "Data",
             default:
+<<<<<<< HEAD
                 frm.doc.gst_transporter_id?.length === 15
                     ? frm.doc.gst_transporter_id
                     : "",
             onchange: () => validate_gst_transporter_id(d),
 
+=======
+                frm.doc.gst_transporter_id?.length == 15
+                    ? frm.doc.gst_transporter_id
+                    : "",
+            onchange: () => validate_gst_transporter_id(d),
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
         },
         {
             label: "Part B",
@@ -534,6 +546,32 @@ function get_sub_suppy_type_options(frm) {
                 sub_supply_type = ["Job Work", "SKD/CKD", "Others"];
             }
         }
+<<<<<<< HEAD
+=======
+    } else if (frm.doctype === "Stock Entry") {
+        document_type = "Delivery Challan";
+
+        if (frm.doc.purpose === "Send to Subcontractor") {
+            supply_type = "Outward";
+            sub_supply_type = ["Job Work"];
+        } else if (["Material Transfer", "Material Issue"].includes(frm.doc.purpose)) {
+            const same_gstin = frm.doc.bill_from_gstin === frm.doc.bill_to_gstin;
+
+            if (frm.doc.is_return) {
+                supply_type = "Inward";
+                sub_supply_type = ["Job Work Returns"];
+            } else if (same_gstin) {
+                supply_type = "Outward";
+                sub_supply_type = [
+                    "For Own Use",
+                    "Exhibition or Fairs",
+                    "Line Sales",
+                    "Recipient Not Known",
+                    "Others",
+                ];
+            }
+        }
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     } else {
         const key = `${frm.doctype}_${frm.doc.is_return || 0}`;
         const default_supply_types = {
@@ -568,10 +606,27 @@ function get_sub_suppy_type_options(frm) {
                 sub_supply_type: ["Others"],
                 sub_supply_desc: "Purchase Return",
                 document_type: "Delivery Challan",
+<<<<<<< HEAD
             }
         };
 
         return default_supply_types[key]
+=======
+            },
+            "Subcontracting Receipt_0": {
+                supply_type: "Inward",
+                sub_supply_type: ["Job Work Returns"],
+                document_type: "Delivery Challan",
+            },
+            "Subcontracting Receipt_1": {
+                supply_type: "Outward",
+                sub_supply_type: ["Job Work"],
+                document_type: "Delivery Challan",
+            },
+        };
+
+        return default_supply_types[key];
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     }
 
     return { supply_type, sub_supply_type, sub_supply_desc, document_type };
@@ -890,7 +945,11 @@ function show_update_transporter_dialog(frm) {
                 reqd: 1,
                 default:
                     frm.doc.gst_transporter_id &&
+<<<<<<< HEAD
                     frm.doc.gst_transporter_id.length === 15
+=======
+                        frm.doc.gst_transporter_id.length === 15
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
                         ? frm.doc.gst_transporter_id
                         : "",
                 onchange: () => validate_gst_transporter_id(d),
@@ -1171,6 +1230,13 @@ function has_e_waybill_threshold_met(frm) {
         return true;
 }
 function is_e_waybill_applicable(frm, show_message) {
+<<<<<<< HEAD
+=======
+    /**
+     * Defines supported conditions where e-Waybill is applicable
+     * and it's generation is supported.
+     */
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     return new E_WAYBILL_CLASS[frm.doctype](frm).is_e_waybill_applicable(show_message);
 }
 
@@ -1179,6 +1245,12 @@ function is_e_waybill_api_enabled(frm) {
 }
 
 function is_e_waybill_generatable(frm, show_message) {
+<<<<<<< HEAD
+=======
+    /**
+     * Checks if all information required to generate e-Waybill is available.
+     */
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
     return new E_WAYBILL_CLASS[frm.doctype](frm).is_e_waybill_generatable(show_message);
 }
 
@@ -1241,7 +1313,13 @@ async function update_gst_tranporter_id(dialog) {
 }
 
 function validate_gst_transporter_id(dialog) {
+<<<<<<< HEAD
     india_compliance.validate_gst_transporter_id(dialog.get_value("gst_transporter_id"));
+=======
+    india_compliance.validate_gst_transporter_id(
+        dialog.get_value("gst_transporter_id")
+    );
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
 }
 
 function update_generation_dialog(dialog, doc) {
@@ -1363,6 +1441,7 @@ function show_sandbox_mode_indicator() {
         .find(".form-sidebar .sidebar-image-section")
         .after(
             `
+<<<<<<< HEAD
             <div class="sidebar-menu ic-sandbox-mode">
                 <p><label class="indicator-pill no-indicator-dot yellow" title="${__(
                     "Your site has enabled Sandbox Mode in GST Settings."
@@ -1370,6 +1449,15 @@ function show_sandbox_mode_indicator() {
                 <p><a class="small text-muted" href="/app/gst-settings" target="_blank">${__(
                     "Sandbox Mode is enabled for GST APIs."
                 )}</a></p>
+=======
+            <div class="sidebar-section ic-sandbox-mode">
+                <p><label class="indicator-pill no-indicator-dot yellow" title="${__(
+                "Your site has enabled Sandbox Mode in GST Settings."
+            )}">${__("Sandbox Mode")}</label></p>
+                <p><a class="small text-muted" href="/app/gst-settings" target="_blank">${__(
+                "Sandbox Mode is enabled for GST APIs."
+            )}</a></p>
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
             </div>
             `
         );

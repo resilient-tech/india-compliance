@@ -15,6 +15,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+<<<<<<< HEAD
    "label": "New Reports",
    "link_count": 1,
    "link_type": "DocType",
@@ -34,6 +35,8 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+=======
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
    "label": "Sales and Purchase Reports",
    "link_count": 6,
    "link_type": "DocType",
@@ -48,6 +51,10 @@
    "link_to": "GSTR-1",
    "link_type": "Report",
    "onboard": 0,
+<<<<<<< HEAD
+=======
+   "report_ref_doctype": "GL Entry",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
    "type": "Link"
   },
   {
@@ -98,6 +105,10 @@
    "link_to": "Bill of Entry Summary",
    "link_type": "Report",
    "onboard": 0,
+<<<<<<< HEAD
+=======
+   "report_ref_doctype": "Bill of Entry",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
    "type": "Link"
   },
   {
@@ -186,6 +197,10 @@
    "link_to": "GSTR-3B Details",
    "link_type": "Report",
    "onboard": 0,
+<<<<<<< HEAD
+=======
+   "report_ref_doctype": "Purchase Invoice",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
    "type": "Link"
   },
   {
@@ -196,6 +211,10 @@
    "link_to": "GST Balance",
    "link_type": "Report",
    "onboard": 0,
+<<<<<<< HEAD
+=======
+   "report_ref_doctype": "GL Entry",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
    "type": "Link"
   },
   {
@@ -216,6 +235,10 @@
    "link_to": "Audit Trail",
    "link_type": "Report",
    "onboard": 0,
+<<<<<<< HEAD
+=======
+   "report_ref_doctype": "Version",
+>>>>>>> ae4792e4 (fix: correct categorisation of is_export and fetching taxes accordingly)
    "type": "Link"
   },
   {
