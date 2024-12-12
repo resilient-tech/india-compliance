@@ -9,12 +9,10 @@ class GSTR2b(GSTR):
         if not self.existing_transaction:
             return
 
-        frappe.db.set_value(
-            "GST Inward Supply",
-            {"name": ["in", self.existing_transaction.values()]},
-            "return_period_2b",
-            "",
-        )
+        inward_supply = frappe.qb.DocType("GST Inward Supply")
+        frappe.qb.update(inward_supply).set(inward_supply.return_period_2b, "").set(
+            inward_supply.is_downloaded_from_2b, 0
+        ).where(inward_supply.name.isin(self.existing_transaction.values())).run()
 
     def get_transaction(self, category, supplier, invoice):
         transaction = super().get_transaction(category, supplier, invoice)
@@ -28,6 +26,7 @@ class GSTR2b(GSTR):
             "supplier_name": supplier.trdnm,
             "gstr_1_filing_date": parse_datetime(supplier.supfildt, day_first=True),
             "sup_return_period": supplier.supprd,
+            "is_downloaded_from_2b": 1,
         }
 
     def get_transaction_item(self, item):
@@ -190,7 +189,9 @@ class GSTR2bIMPGSEZ(GSTR2b):
 
 class GSTR2bIMPG(GSTR2bIMPGSEZ):
     def get_supplier_details(self, supplier):
-        return {}
+        return {
+            "is_downloaded_from_2b": 1,
+        }
 
     # invoice details are included in supplier details
     def get_supplier_transactions(self, category, supplier):
