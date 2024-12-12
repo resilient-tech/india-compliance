@@ -286,6 +286,12 @@ class IMS {
                 fieldname: "pending_upload",
                 fieldtype: "Check",
             },
+            {
+                label: "Classification",
+                fieldname: "classification",
+                fieldtype: "Select",
+                options: ["B2B", "B2BA", "CDNR", "CDNRA"],
+            },
         ];
 
         fields.forEach(field => (field.parent = "GST Invoice Management System"));
@@ -350,6 +356,10 @@ class IMS {
 
         this.tabs.action_tab.$datatable.on("click", ".invoice-category", function (e) {
             me.update_filter(e, "doc_type", category_map[$(this).text()], me);
+        });
+
+        this.tabs.invoice_tab.$datatable.on("click", ".classification", function (e) {
+            me.update_filter(e, "classification", $(this).text(), me);
         });
 
         this.tabs.invoice_tab.$datatable.on("click", ".btn.eye", function (e) {
@@ -462,8 +472,8 @@ class IMS {
 
             data.push({
                 supplier_name_gstin: this.get_supplier_name_gstin(row),
-                invoice_no: row.bill_no,
-                invoice_type: row._inward_supply.classification,
+                bill_no: row.bill_no,
+                classification: row._inward_supply.classification,
                 ims_action: row.ims_action || "",
                 match_status: row.match_status,
                 linked_doc: row.purchase_invoice_name,
@@ -490,27 +500,20 @@ class IMS {
                 label: "Supplier Name",
                 fieldname: "supplier_name_gstin",
                 align: "center",
-                width: 220,
+                width: 200,
             },
             {
-                label: "Invoice Name",
-                fieldname: "inward_supply_name",
-                align: "center",
-                fieldtype: "Link",
-                options: "GST Inward Supply",
-                width: 150,
-            },
-            {
-                label: "Invoice No.",
-                fieldname: "invoice_no",
+                label: "Bill No.",
+                fieldname: "bill_no",
                 align: "center",
                 width: 120,
             },
             {
-                label: "Invoice Type",
-                fieldname: "invoice_type",
+                label: "Match Status",
+                fieldname: "match_status",
                 align: "center",
-                width: 80,
+                width: 120,
+                _value: (...args) => `<a href="#" class='match-status'>${args[0]}</a>`,
             },
             {
                 label: "Action",
@@ -520,11 +523,12 @@ class IMS {
                 _value: (...args) => `<a href="#" class='ims-action'>${args[0]}</a>`,
             },
             {
-                label: "Match Status",
-                fieldname: "match_status",
+                label: "GST Inward <br>Supply",
+                fieldname: "inward_supply_name",
                 align: "center",
-                width: 100,
-                _value: (...args) => `<a href="#" class='match-status'>${args[0]}</a>`,
+                fieldtype: "Link",
+                options: "GST Inward Supply",
+                width: 150,
             },
             {
                 label: "Linked Voucher",
@@ -535,23 +539,26 @@ class IMS {
                 options: "linked_voucher_type",
             },
             {
-                label: "Tax Difference",
+                label: "Tax Difference <br>2A/2B - Purchase",
                 fieldname: "tax_difference",
                 align: "center",
-                width: 100,
+                width: 150,
+                _value: (...args) => format_number(args[0]),
             },
             {
-                label: "Taxable Value Difference",
+                label: "Taxable Amount Diff <br>2A/2B - Purchase",
                 fieldname: "taxable_value_difference",
                 align: "center",
-                width: 100,
+                width: 160,
+                _value: (...args) => format_number(args[0]),
             },
             {
-                label: "Pending Upload",
-                fieldname: "pending_upload",
+                label: "Classification",
+                fieldname: "classification",
                 align: "center",
-                width: 50,
-                fieldtype: "Check",
+                width: 100,
+                _value: (...args) =>
+                    `<a href="#" class='classification'>${args[0]}</a>`,
             },
         ];
     }
