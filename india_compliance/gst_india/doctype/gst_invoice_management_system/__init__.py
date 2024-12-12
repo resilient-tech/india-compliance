@@ -118,7 +118,7 @@ class IMSReconciler:
                 self.inward_supply.supply_type,
                 self.inward_supply.classification,
                 self.inward_supply.is_pending_action_allowed,
-                self.inward_supply.supplier_ret_frm,
+                self.inward_supply.supplier_return_form,
                 self.inward_supply.igst,
                 self.inward_supply.cgst,
                 self.inward_supply.sgst,

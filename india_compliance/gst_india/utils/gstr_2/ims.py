@@ -79,7 +79,7 @@ class IMS:
                 invoice.action, self.VALUE_MAPS.action
             ),
             "is_supplier_return_filed": 0 if invoice.srcfilstatus == "Not Filed" else 1,
-            "supplier_ret_frm": invoice.srcform,
+            "supplier_return_form": invoice.srcform,
             "cgst": invoice.camt,
             "sgst": invoice.samt,
             "igst": invoice.iamt,
@@ -93,7 +93,7 @@ class IMS:
             "inv_typ": get_mapped_value(
                 invoice.supply_type, self.VALUE_MAPS.reverse_gst_category
             ),
-            "srcform": invoice.supplier_ret_frm,
+            "srcform": invoice.supplier_return_form,
             "rtnprd": invoice.sup_return_period,
             "val": invoice.document_value,
             "pos": get_mapped_value(

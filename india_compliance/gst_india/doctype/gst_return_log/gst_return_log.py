@@ -331,3 +331,15 @@ def get_compressed_data(json_data):
 
 def get_decompressed_data(content):
     return frappe.parse_json(frappe.safe_decode(gzip.decompress(content)))
+
+
+def create_ims_return_log(company, company_gstin):
+    if frappe.db.exists("GST Return Log", f"IMS-ALL-{company_gstin}"):
+        return
+
+    ims_log = frappe.new_doc("GST Return Log")
+    ims_log.return_period = "ALL"
+    ims_log.company = company
+    ims_log.gstin = company_gstin
+    ims_log.return_type = "IMS"
+    ims_log.insert()

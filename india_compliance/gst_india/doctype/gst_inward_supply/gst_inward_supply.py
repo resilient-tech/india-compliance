@@ -53,6 +53,10 @@ def create_inward_supply(transaction):
 
 
 def update_previous_ims_action(transaction):
+    """
+    After successfull upload of IMS Invoices,
+    update the ims_action taken in previous_ims_action field.
+    """
     filters = {
         "bill_no": transaction.bill_no,
         "bill_date": transaction.bill_date,

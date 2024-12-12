@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.functions import IfNull
 
@@ -177,6 +178,10 @@ def download_invoices_and_reconcile(company_gstin, company):
 def upload_invoices(company_gstin):
     frappe.has_permission("GST Invoice Management System", "write", throw=True)
     frappe.has_permission("GST Return Log", "write", throw=True)
+
+    if not frappe.db.exists("GST Return Log", f"IMS-ALL-{company_gstin}"):
+        frappe.throw(_("Please download invoices before uploading"))
+        return
 
     ims_log = frappe.get_doc(
         "GST Return Log",

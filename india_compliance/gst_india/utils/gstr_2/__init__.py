@@ -11,6 +11,9 @@ from india_compliance.gst_india.api_classes.taxpayer_returns import (
     GSTR2bAPI,
 )
 from india_compliance.gst_india.constants import CLASSIFICATION_MAP
+from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
+    create_ims_return_log,
+)
 from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
     create_import_log,
 )
@@ -378,7 +381,7 @@ def download_ims_invoices(company_gstin, company):
             response.get(category, [])
         )
 
-    create_return_log(company, company_gstin)
+    create_ims_return_log(company, company_gstin)
 
 
 def save_ims_invoices(company_gstin, return_period, json_data):
@@ -387,19 +390,6 @@ def save_ims_invoices(company_gstin, return_period, json_data):
         getattr(ims, category.upper())(company_gstin=company_gstin).create_transactions(
             json_data.get(category, [])
         )
-
-
-def create_return_log(company, company_gstin):
-    if log_name := frappe.db.exists("GST Return Log", f"IMS-ALL-{company_gstin}"):
-        ims_log = frappe.get_doc("GST Return Log", log_name)
-
-    else:
-        ims_log = frappe.new_doc("GST Return Log")
-        ims_log.return_period = "ALL"
-        ims_log.company = company
-        ims_log.gstin = company_gstin
-        ims_log.return_type = "IMS"
-        ims_log.insert()
 
 
 def reset_previous_ims_action():

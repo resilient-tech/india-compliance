@@ -74,7 +74,7 @@
   "is_pending_action_allowed",
   "previous_ims_action",
   "column_break_ppww",
-  "supplier_ret_frm",
+  "supplier_return_form",
   "is_supplier_return_filed",
   "is_downloaded_from_ims"
  ],
@@ -429,12 +429,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "supplier_ret_frm",
-   "fieldtype": "Data",
-   "label": "Supplier Return Form",
-   "read_only": 1
-  },
-  {
    "default": "0",
    "fieldname": "is_supplier_return_filed",
    "fieldtype": "Check",
@@ -453,11 +447,17 @@
    "fieldname": "ims_details_section",
    "fieldtype": "Section Break",
    "label": "IMS Details"
+  },
+  {
+   "fieldname": "supplier_return_form",
+   "fieldtype": "Data",
+   "label": "Supplier Return Form",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-12-12 16:37:47.379905",
+ "modified": "2024-12-12 18:37:03.051593",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Inward Supply",
