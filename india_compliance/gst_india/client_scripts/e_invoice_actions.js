@@ -164,7 +164,7 @@ function is_irn_cancellable(frm) {
     );
 }
 
-async function show_cancel_e_invoice_dialog(frm, callback) {
+function show_cancel_e_invoice_dialog(frm, callback) {
     const d = new frappe.ui.Dialog({
         title: frm.doc.ewaybill
             ? __("Cancel e-Invoice and e-Waybill")
@@ -247,7 +247,7 @@ function get_generated_e_invoice_dialog_fields() {
     return fields;
 }
 
-async function show_mark_e_invoice_as_cancelled_dialog(frm) {
+function show_mark_e_invoice_as_cancelled_dialog(frm) {
     const d = new frappe.ui.Dialog({
         title: __("Update Cancelled e-Invoice Details"),
         fields: get_cancel_e_invoice_dialog_fields(frm, true),
