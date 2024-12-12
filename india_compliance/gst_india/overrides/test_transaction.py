@@ -466,6 +466,44 @@ class TestTransaction(IntegrationTestCase):
         doc.insert()
         self.assertDocumentEqual({"taxable_value": 100}, doc.items[0])
 
+    def test_credit_note_without_quantity(self):
+        if self.doctype != "Sales Invoice":
+            return
+
+        doc = create_transaction(
+            **self.transaction_details, is_return=True, do_not_save=True
+        )
+        append_item(doc)
+
+        for item in doc.items:
+            item.qty = 0
+            item.rate = 0
+            item.price_list_rate = 0
+
+        # Adding charges
+        doc.append(
+            "taxes",
+            {
+                "charge_type": "Actual",
+                "account_head": "Freight and Forwarding Charges - _TIRC",
+                "description": "Freight",
+                "tax_amount": 20,
+                "cost_center": "Main - _TIRC",
+            },
+        )
+
+        # Adding taxes
+        _append_taxes(
+            doc, ("CGST", "SGST"), charge_type="On Previous Row Total", row_id=1
+        )
+        doc.insert()
+
+        # Ensure correct taxable_value and gst details
+        for item in doc.items:
+            self.assertDocumentEqual(
+                {"taxable_value": 10, "cgst_amount": 0.9, "sgst_amount": 0.9}, item
+            )
+
     def test_validate_place_of_supply(self):
         doc = create_transaction(**self.transaction_details, do_not_save=True)
         doc.place_of_supply = "96-Others"
