@@ -5,7 +5,11 @@ import responses
 from responses import matchers
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase, change_settings
+=======
+from frappe.tests import IntegrationTestCase, change_settings
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
 from frappe.utils import add_to_date, get_datetime, getdate, now_datetime
 from frappe.utils.data import format_date
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
@@ -24,7 +28,11 @@ from india_compliance.gst_india.utils.e_waybill import EWaybillData
 from india_compliance.gst_india.utils.tests import append_item, create_sales_invoice
 
 
+<<<<<<< HEAD
 class TestEInvoice(FrappeTestCase):
+=======
+class TestEInvoice(IntegrationTestCase):
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

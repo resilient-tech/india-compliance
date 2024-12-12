@@ -13,6 +13,14 @@ frappe.ui.form.on("Subcontracting Order", {
         frm.taxes_controller = new india_compliance.taxes_controller(frm, {
             total_taxable_value: "total",
         });
+<<<<<<< HEAD
+=======
+
+        frm.get_docfield("taxes", "charge_type").options = [
+            "On Net Total",
+            "On Item Quantity",
+        ];
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
     },
 
     taxes_and_charges(frm) {

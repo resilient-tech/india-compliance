@@ -99,7 +99,10 @@
   {
    "fieldname": "reference_doctype",
    "fieldtype": "Link",
+<<<<<<< HEAD
    "in_list_view": 1,
+=======
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
    "in_standard_filter": 1,
    "label": "Reference Document Type",
    "options": "DocType",
@@ -141,10 +144,13 @@
    "read_only": 1
   },
   {
+<<<<<<< HEAD
    "fieldname": "column_break1",
    "fieldtype": "Column Break"
   },
   {
+=======
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
    "fieldname": "column_break_grbd",
    "fieldtype": "Column Break"
   },
@@ -182,7 +188,11 @@
    "link_fieldname": "ewaybill"
   }
  ],
+<<<<<<< HEAD
  "modified": "2024-12-05 09:50:37.014667",
+=======
+ "modified": "2024-07-17 12:26:38.069883",
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Waybill Log",
@@ -232,7 +242,11 @@
    "share": 1
   }
  ],
+<<<<<<< HEAD
  "sort_field": "modified",
+=======
+ "sort_field": "creation",
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
  "sort_order": "DESC",
  "states": [],
  "title_field": "reference_name",

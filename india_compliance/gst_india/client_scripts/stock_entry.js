@@ -56,6 +56,14 @@ frappe.ui.form.on(DOCTYPE, {
             "supplier_address",
             ...get_field_and_label(frm, "party_field")
         );
+<<<<<<< HEAD
+=======
+
+        frm.get_docfield("taxes", "charge_type").options = [
+            "On Net Total",
+            "On Item Quantity",
+        ];
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
     },
 
     refresh(frm) {

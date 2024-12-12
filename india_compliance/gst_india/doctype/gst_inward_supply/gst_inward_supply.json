@@ -434,7 +434,11 @@
   }
  ],
  "search_fields": "bill_date, supplier_name, bill_no, document_value",
+<<<<<<< HEAD
  "sort_field": "modified",
+=======
+ "sort_field": "creation",
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
  "sort_order": "DESC",
  "states": [],
  "title_field": "supplier_name",

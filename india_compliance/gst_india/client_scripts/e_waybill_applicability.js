@@ -167,7 +167,10 @@ class PurchaseInvoiceEwaybill extends EwaybillApplicability {
     }
 }
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
 class PurchaseReceiptEwaybill extends EwaybillApplicability {
     is_e_waybill_applicable(show_message = false) {
         return (

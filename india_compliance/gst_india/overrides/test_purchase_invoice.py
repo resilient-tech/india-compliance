@@ -1,11 +1,19 @@
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase, change_settings
+=======
+from frappe.tests import IntegrationTestCase, change_settings
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
 from erpnext.accounts.doctype.account.test_account import create_account
 
 from india_compliance.gst_india.utils.tests import append_item, create_purchase_invoice
 
 
+<<<<<<< HEAD
 class TestPurchaseInvoice(FrappeTestCase):
+=======
+class TestPurchaseInvoice(IntegrationTestCase):
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_itc_classification(self):
         pinv = create_purchase_invoice(

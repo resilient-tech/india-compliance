@@ -332,7 +332,10 @@ def get_advance_payment_entries_for_regional(
     party_account,
     order_doctype,
     order_list=None,
+<<<<<<< HEAD
     default_advance_account=None,
+=======
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
     include_unallocated=True,
     against_all_orders=False,
     limit=None,
@@ -348,7 +351,10 @@ def get_advance_payment_entries_for_regional(
         party_account=party_account,
         order_doctype=order_doctype,
         order_list=order_list,
+<<<<<<< HEAD
         default_advance_account=default_advance_account,
+=======
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
         include_unallocated=include_unallocated,
         against_all_orders=against_all_orders,
         limit=limit,

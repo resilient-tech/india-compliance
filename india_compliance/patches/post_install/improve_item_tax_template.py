@@ -125,7 +125,10 @@ def create_or_update_item_tax_templates(companies):
         elif doc.gst_rate == 0:
             doc.gst_treatment = "Nil-Rated"
 
+<<<<<<< HEAD
         doc.flags.ignore_validate = True  # eg: account_type validation
+=======
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
         doc.save()
 
     # create new templates for nil rated, exempted, non gst
@@ -262,7 +265,10 @@ def remove_old_item_variant_settings():
         if field.field_name in ("is_nil_exempt", "is_non_gst"):
             item_variant.fields.remove(field)
 
+<<<<<<< HEAD
     item_variant.flags.ignore_validate = True
+=======
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
     item_variant.save()
 
 

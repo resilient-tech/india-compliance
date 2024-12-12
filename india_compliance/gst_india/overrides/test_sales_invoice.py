@@ -1,11 +1,20 @@
+<<<<<<< HEAD
 import unittest
 
 import frappe
+=======
+import frappe
+from frappe.tests import IntegrationTestCase
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
 
 from india_compliance.gst_india.utils import validate_invoice_number
 
 
+<<<<<<< HEAD
 class TestSalesInvoice(unittest.TestCase):
+=======
+class TestSalesInvoice(IntegrationTestCase):
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
     def test_validate_invoice_number(self):
         posting_date = "2021-05-01"
 

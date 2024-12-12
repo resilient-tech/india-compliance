@@ -1,5 +1,9 @@
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
+=======
+from frappe.tests import IntegrationTestCase
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
 from frappe.utils import getdate
 
 from india_compliance.gst_india.report.gstr_1.gstr_1 import (
@@ -39,7 +43,11 @@ JSON_OUTPUT = {
 }
 
 
+<<<<<<< HEAD
 class TestGSTR1DocumentIssuedSummary(FrappeTestCase):
+=======
+class TestGSTR1DocumentIssuedSummary(IntegrationTestCase):
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -127,8 +135,22 @@ def create_test_items():
     )
 
     # Sales Invoices with Non GST Items
+<<<<<<< HEAD
     # Excluded from Document Issued Summary
     create_sales_invoices(3, item_code="_Test Non GST Item")
+=======
+    sales_invoices = create_sales_invoices(3, item_code="_Test Non GST Item")
+    invoices_for_outward_supply.append(
+        {
+            "num": 2,
+            "to": sales_invoices[-1].name,
+            "from": sales_invoices[0].name,
+            "totnum": 3,
+            "cancel": 0,
+            "net_issue": 3,
+        }
+    )
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
 
     # Debit Notes
     sales_invoices = create_sales_invoices(5, is_debit_note=1)
@@ -160,7 +182,11 @@ def create_test_items():
 
     invoices_for_outward_supply.append(
         {
+<<<<<<< HEAD
             "num": 2,
+=======
+            "num": 3,
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
             "to": sales_invoices[-1].name,
             "from": sales_invoices[0].name,
             "totnum": 5,

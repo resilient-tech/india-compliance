@@ -168,7 +168,11 @@
    "share": 1
   }
  ],
+<<<<<<< HEAD
  "sort_field": "modified",
+=======
+ "sort_field": "creation",
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
  "sort_order": "DESC",
  "states": [],
  "title_field": "reference_name"

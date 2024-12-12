@@ -1,12 +1,20 @@
 import re
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
+=======
+from frappe.tests import IntegrationTestCase
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
 
 from india_compliance.gst_india.utils.tests import create_sales_invoice
 
 
+<<<<<<< HEAD
 class TestVersion(FrappeTestCase):
+=======
+class TestVersion(IntegrationTestCase):
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
     def test_validate_version_where_audit_trail_enabled(self):
         # enable audit trail
         frappe.db.set_single_value("Accounts Settings", "enable_audit_trail", 1)

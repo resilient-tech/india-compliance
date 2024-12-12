@@ -232,22 +232,33 @@ doc_events = {
     "Stock Entry": {
         "onload": "india_compliance.gst_india.overrides.subcontracting_transaction.onload",
         "validate": "india_compliance.gst_india.overrides.subcontracting_transaction.validate",
+<<<<<<< HEAD
         "before_save": "india_compliance.gst_india.overrides.subcontracting_transaction.before_save",
         "before_submit": "india_compliance.gst_india.overrides.subcontracting_transaction.validate_doc_references",
+=======
+        "before_submit": "india_compliance.gst_india.overrides.subcontracting_transaction.before_submit",
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
         "after_mapping": "india_compliance.gst_india.overrides.subcontracting_transaction.after_mapping_stock_entry",
     },
     "Subcontracting Order": {
         "validate": "india_compliance.gst_india.overrides.subcontracting_transaction.validate",
+<<<<<<< HEAD
         "before_save": "india_compliance.gst_india.overrides.subcontracting_transaction.before_save",
+=======
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
         "after_mapping": "india_compliance.gst_india.overrides.subcontracting_transaction.after_mapping_subcontracting_order",
     },
     "Subcontracting Receipt": {
         "onload": "india_compliance.gst_india.overrides.subcontracting_transaction.onload",
         "validate": "india_compliance.gst_india.overrides.subcontracting_transaction.validate",
+<<<<<<< HEAD
         "before_save": [
             "india_compliance.gst_india.overrides.subcontracting_transaction.before_save",
             "india_compliance.gst_india.overrides.subcontracting_transaction.validate_doc_references",
         ],
+=======
+        "before_save": "india_compliance.gst_india.overrides.subcontracting_transaction.before_save",
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
         "before_mapping": "india_compliance.gst_india.overrides.subcontracting_transaction.before_mapping_subcontracting_receipt",
     },
     "Supplier": {
@@ -321,10 +332,13 @@ doc_events = {
 
 regional_overrides = {
     "India": {
+<<<<<<< HEAD
         "erpnext.controllers.taxes_and_totals.get_itemised_tax_breakup_header": (
             "india_compliance.gst_india.overrides.transaction.get_itemised_tax_breakup_header"
         ),
         "erpnext.controllers.taxes_and_totals.get_itemised_tax_breakup_data": "india_compliance.gst_india.overrides.transaction.get_itemised_tax_breakup_data",
+=======
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
         "erpnext.controllers.taxes_and_totals.get_regional_round_off_accounts": (
             "india_compliance.gst_india.overrides.transaction.get_regional_round_off_accounts"
         ),

@@ -118,7 +118,11 @@
  "is_submittable": 1,
  "links": [],
  "max_attachments": 3,
+<<<<<<< HEAD
  "modified": "2022-04-02 10:07:38.845069",
+=======
+ "modified": "2024-03-29 11:36:18.565227",
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
  "modified_by": "Administrator",
  "module": "VAT India",
  "name": "C-Form",
@@ -152,7 +156,11 @@
    "role": "All"
   }
  ],
+<<<<<<< HEAD
  "sort_field": "modified",
+=======
+ "sort_field": "creation",
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
  "sort_order": "DESC",
  "states": [],
  "timeline_field": "customer"

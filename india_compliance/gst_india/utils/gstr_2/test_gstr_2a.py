@@ -3,7 +3,11 @@ from unittest.mock import Mock, patch
 
 import frappe
 from frappe import parse_json, read_file
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
+=======
+from frappe.tests import IntegrationTestCase
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
 from frappe.utils import get_datetime
 
 from india_compliance.gst_india.utils import get_data_file_path
@@ -43,7 +47,11 @@ class TestGSTRMixin:
         )
 
 
+<<<<<<< HEAD
 class TestGSTR2a(TestGSTRMixin, FrappeTestCase):
+=======
+class TestGSTR2a(TestGSTRMixin, IntegrationTestCase):
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
     # Tests as per version 2.1 of GSTR2A Dt: 14-10-2020
     @classmethod
     def setUpClass(cls):

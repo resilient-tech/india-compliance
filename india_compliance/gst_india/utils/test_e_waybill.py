@@ -8,14 +8,22 @@ import time_machine
 from responses import matchers
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase, change_settings
+=======
+from frappe.tests import IntegrationTestCase, change_settings
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
 from frappe.utils import add_to_date, get_datetime, now_datetime, today
 from frappe.utils.data import format_date
 from frappe.www.printview import get_html_and_style
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
+<<<<<<< HEAD
 from india_compliance.gst_india.utils import load_doc, parse_datetime
+=======
+from india_compliance.gst_india.utils import load_doc
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
 from india_compliance.gst_india.utils.e_invoice import (
     retry_e_invoice_e_waybill_generation,
 )
@@ -41,7 +49,11 @@ DATETIME_FORMAT = "%d/%m/%Y %I:%M:%S %p"
 DATE_FORMAT = "dd/mm/yyyy"
 
 
+<<<<<<< HEAD
 class TestEWaybill(FrappeTestCase):
+=======
+class TestEWaybill(IntegrationTestCase):
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -454,6 +466,7 @@ class TestEWaybill(FrappeTestCase):
             {"gst_transporter_id": "05AAACG2140A1ZL", "mode_of_transport": "Road"}
         )
 
+<<<<<<< HEAD
         si.items[0].gst_treatment = "Non-GST"
 
         self.assertRaisesRegex(
@@ -462,6 +475,8 @@ class TestEWaybill(FrappeTestCase):
             EWaybillData(si).validate_applicability,
         )
 
+=======
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
         si.items[0].gst_treatment = "Taxable"
         si.update(
             {
@@ -1056,6 +1071,7 @@ class TestEWaybill(FrappeTestCase):
             frappe.get_doc("e-Waybill Log", {"reference_name": stock_entry.name}),
         )
 
+<<<<<<< HEAD
         stock_entry = load_doc("Stock Entry", stock_entry.name, "submit")
 
         e_waybill_info = stock_entry.get("__onload").e_waybill_info
@@ -1068,6 +1084,8 @@ class TestEWaybill(FrappeTestCase):
             ),
         )
 
+=======
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
     @change_settings("GST Settings", {"enable_e_waybill_for_sc": 1})
     @responses.activate
     def test_e_waybill_for_stock_entry_same_gstin(self):
@@ -1083,6 +1101,7 @@ class TestEWaybill(FrappeTestCase):
             frappe.get_doc("e-Waybill Log", {"reference_name": stock_entry.name}),
         )
 
+<<<<<<< HEAD
         stock_entry = load_doc("Stock Entry", stock_entry.name, "submit")
 
         e_waybill_info = stock_entry.get("__onload").e_waybill_info
@@ -1095,6 +1114,8 @@ class TestEWaybill(FrappeTestCase):
             ),
         )
 
+=======
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
 
 def update_dates_for_test_data(test_data):
     """Update dates in test data"""

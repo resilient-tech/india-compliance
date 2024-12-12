@@ -21,7 +21,11 @@ def get_dashboard_data(data):
 
 
 def onload(doc, method=None):
+<<<<<<< HEAD
     if ignore_gst_validations(doc, throw=False):
+=======
+    if ignore_gst_validations(doc):
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
         return
 
     if (

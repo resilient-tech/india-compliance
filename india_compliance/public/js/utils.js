@@ -124,6 +124,7 @@ Object.assign(india_compliance, {
         if (!message) return;
 
         const [pan_status, datetime] = message;
+<<<<<<< HEAD
         const STATUS_COLORS = {
             Valid: "green",
             "Not Linked": "red",
@@ -149,6 +150,38 @@ Object.assign(india_compliance, {
         pan_desc.find(".refresh-pan").on("click", async function () {
             await india_compliance.set_pan_status(field, true);
         });
+=======
+
+        function get_indicator(status) {
+            switch (status) {
+                case "Valid":
+                    return "green";
+                case "Not Linked":
+                    return "red";
+                case "Invalid":
+                    return "red";
+                default:
+                    return "orange";
+            }
+        }
+
+        const pan_desc = this.get_status_description(
+            pan_status,
+            get_indicator(pan_status),
+            datetime,
+            "pan-last-synced"
+        );
+
+        const refresh_btn = this.get_status_refresh_button(
+            "refresh-pan",
+            pan_desc.find(".pan-last-synced")
+        );
+
+        refresh_btn.on("click", async function () {
+            await india_compliance.set_pan_status(field, true);
+        });
+
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
         return field.set_description(pan_desc);
     },
 
@@ -163,6 +196,7 @@ Object.assign(india_compliance, {
 
     get_gstin_status_desc(status, datetime) {
         if (!status) return;
+<<<<<<< HEAD
         const user_date = frappe.datetime.str_to_user(datetime);
         const pretty_date = frappe.datetime.prettyDate(datetime);
 
@@ -175,6 +209,26 @@ Object.assign(india_compliance, {
                         </span>
                     </span>
                 </div>`;
+=======
+
+        function get_indicator(status) {
+            switch (status) {
+                case "Active":
+                    return "green";
+                case "Cancelled":
+                    return "red";
+                default:
+                    return "orange";
+            }
+        }
+
+        return this.get_status_description(
+            status,
+            get_indicator(status),
+            datetime,
+            "gstin-last-synced"
+        );
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
     },
 
     set_gstin_refresh_btn(field, transaction_date) {
@@ -186,11 +240,18 @@ Object.assign(india_compliance, {
         )
             return;
 
+<<<<<<< HEAD
         const refresh_btn = $(`
             <svg class="icon icon-sm refresh-gstin" style="">
                 <use class="" href="#icon-refresh" style="cursor: pointer"></use>
             </svg>
         `).appendTo(field.$wrapper.find(".gstin-last-updated"));
+=======
+        const refresh_btn = this.get_status_refresh_button(
+            "refresh-gstin",
+            field.$wrapper.find(".gstin-last-synced")
+        );
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
 
         refresh_btn.on("click", async function () {
             const force_update = true;
@@ -202,6 +263,36 @@ Object.assign(india_compliance, {
         });
     },
 
+<<<<<<< HEAD
+=======
+    get_status_description(status, indicator, datetime, classes) {
+        const user_date = frappe.datetime.str_to_user(datetime);
+        const pretty_date = frappe.datetime.prettyDate(datetime);
+
+        return $(`<div class="d-flex indicator ${indicator}" style="font-size: 12px">
+                    <strong>${status}</strong>
+                    <span class="d-flex justify-content-between align-items-center ${classes}"
+                        title="${user_date}" style="margin-left: auto;gap: 2px">
+                       <span style="text-align: end;"> ${datetime ? "Synced " + pretty_date : ""}</span>
+                    </span>
+                </div>`);
+    },
+
+    get_status_refresh_button(classes, append_to = null, style = null) {
+        if (!style) {
+            style = "cursor: pointer;width: 14px;height: 14px;";
+        }
+
+        const refresh_btn = $(frappe.utils.icon("refresh", "sm", classes, style));
+
+        if (append_to) {
+            refresh_btn.appendTo(append_to);
+        }
+
+        return refresh_btn;
+    },
+
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
     set_state_options(frm) {
         const state_field = frm.get_field("state");
         const country = frm.get_field("country").value;
@@ -433,7 +524,11 @@ Object.assign(india_compliance, {
         return alert;
     },
 
+<<<<<<< HEAD
     is_e_waybill_applicable_for_subcontracting(doc) {
+=======
+    is_e_waybill_generatable_for_subcontracting(doc) {
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
         if (
             !(
                 gst_settings.enable_api &&

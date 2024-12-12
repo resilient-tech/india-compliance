@@ -43,6 +43,10 @@
             "item_name": "_Test Trading Goods 1",
             "valuation_rate": 100,
             "gst_hsn_code": "61149090",
+<<<<<<< HEAD
+=======
+            "stock_uom": "Nos",
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
             "uoms": [
                 {
                     "conversion_factor": 1,
@@ -70,6 +74,10 @@
             "item_name": "_Test Non GST Item",
             "valuation_rate": 100,
             "gst_hsn_code": "27131100",
+<<<<<<< HEAD
+=======
+            "stock_uom": "Nos",
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
             "uoms": [
                 {
                     "conversion_factor": 1,
@@ -102,6 +110,10 @@
             "item_name": "_Test Nil Rated Item",
             "valuation_rate": 100,
             "gst_hsn_code": "61149090",
+<<<<<<< HEAD
+=======
+            "stock_uom": "Nos",
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
             "item_defaults": [
                 {
                     "company": "_Test Indian Registered Company",
@@ -129,6 +141,10 @@
             "valuation_rate": 100,
             "item_group": "Services",
             "gst_hsn_code": "999900",
+<<<<<<< HEAD
+=======
+            "stock_uom": "Nos",
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
             "uoms": [
                 {
                     "conversion_factor": 1,
@@ -452,6 +468,7 @@
                 }
             ]
         }
+<<<<<<< HEAD
     ],
     "POS Profile": [
         {
@@ -496,5 +513,7 @@
                 }
             ]
         }
+=======
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
     ]
 }

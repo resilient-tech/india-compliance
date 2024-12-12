@@ -295,7 +295,10 @@ class GSTR3BReport(Document):
                     & boe.docstatus.eq(1)
                     & boe_taxes.gst_tax_type.eq(account_type)
                 )
+<<<<<<< HEAD
                 .where(boe_taxes.parenttype == "Bill of Entry")
+=======
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
                 .run()
             )[0][0] or 0
 
@@ -316,6 +319,10 @@ class GSTR3BReport(Document):
             and (i.gst_treatment != 'Taxable' or p.gst_category = 'Registered Composition') and
             month(p.posting_date) between %s and %s and year(p.posting_date) = %s
             and p.company = %s and p.company_gstin = %s
+<<<<<<< HEAD
+=======
+            and p.gst_category != "Overseas"
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
             """,
             (
                 self.month_or_quarter_no[0],
@@ -443,9 +450,17 @@ class GSTR3BReport(Document):
                 if tax.item_wise_tax_detail:
                     try:
                         item_wise_detail = json.loads(tax.item_wise_tax_detail)
+<<<<<<< HEAD
                         for item_code, tax_amounts in item_wise_detail.items():
                             gst_treatment = item_code_gst_treatment_map.get(item_code)
                             invoice_items[gst_treatment][gst_tax_type] += tax_amounts[1]
+=======
+                        for item_code, taxes in item_wise_detail.items():
+                            gst_treatment = item_code_gst_treatment_map.get(item_code)
+                            invoice_items[gst_treatment][gst_tax_type] += taxes.get(
+                                "tax_amount"
+                            )
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
 
                     except ValueError:
                         continue

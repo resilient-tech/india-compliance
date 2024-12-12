@@ -2,9 +2,14 @@
 # For license information, please see license.txt
 
 
+<<<<<<< HEAD
 from unittest import TestCase
 
 import frappe
+=======
+import frappe
+from frappe.tests import IntegrationTestCase
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
 
 from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies import (
     execute as run_report,
@@ -12,11 +17,15 @@ from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_
 from india_compliance.gst_india.utils.tests import append_item, create_sales_invoice
 
 
+<<<<<<< HEAD
 class TestHSNWiseSummaryReport(TestCase):
     @classmethod
     def setUpClass(cls):
         pass
 
+=======
+class TestHSNWiseSummaryReport(IntegrationTestCase):
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
     @classmethod
     def tearDownClass(cls):
         frappe.db.rollback()

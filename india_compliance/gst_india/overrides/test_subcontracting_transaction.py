@@ -1,7 +1,11 @@
 import re
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
+=======
+from frappe.tests import IntegrationTestCase, change_settings
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
 from erpnext.controllers.subcontracting_controller import (
     get_materials_from_supplier,
     make_rm_stock_entry,
@@ -102,6 +106,7 @@ def make_item(item_code=None, properties=None):
 
 
 def create_purchase_order(**args):
+<<<<<<< HEAD
     args.update(
         {
             "doctype": "Purchase Order",
@@ -110,6 +115,27 @@ def create_purchase_order(**args):
     )
 
     return create_transaction(**args)
+=======
+    po_dict = {
+        "doctype": "Purchase Order",
+        "supplier": args.get("supplier") or "_Test Registered Supplier",
+        "is_subcontracted": 1,
+        "items": args.get("items"),
+        "supplier_warehouse": "Finished Goods - _TIRC",
+        "do_not_save": 1,
+        "do_not_submit": 1,
+    }
+
+    po = create_transaction(**po_dict)
+
+    if po.is_subcontracted:
+        supp_items = po.get("supplied_items")
+        for d in supp_items:
+            if not d.reserve_warehouse:
+                d.reserve_warehouse = "Stores - _TIRC"
+
+    return po.submit()
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
 
 
 def make_stock_transfer_entry(**args):
@@ -134,10 +160,15 @@ def make_stock_transfer_entry(**args):
     ste_dict = make_rm_stock_entry(args.sco_no, items)
     ste_dict.update(
         {
+<<<<<<< HEAD
             "bill_from_address": args.bill_from_address
             or "_Test Indian Registered Company-Billing",
             "bill_to_address": args.bill_to_address
             or "_Test Registered Supplier-Billing",
+=======
+            "bill_from_address": "_Test Indian Registered Company-Billing",
+            "bill_to_address": "_Test Registered Supplier-Billing",
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
         }
     )
 
@@ -147,6 +178,7 @@ def make_stock_transfer_entry(**args):
     return doc.submit()
 
 
+<<<<<<< HEAD
 def make_stock_entry(**args):
     items = [
         {
@@ -180,6 +212,9 @@ SERVICE_ITEM = {
 
 
 class TestSubcontractingTransaction(FrappeTestCase):
+=======
+class TestSubcontractingTransaction(IntegrationTestCase):
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -188,6 +223,7 @@ class TestSubcontractingTransaction(FrappeTestCase):
         make_subcontracted_items()
         make_boms()
 
+<<<<<<< HEAD
         frappe.db.set_single_value(
             "GST Settings",
             {
@@ -197,6 +233,8 @@ class TestSubcontractingTransaction(FrappeTestCase):
             },
         )
 
+=======
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
     def _create_stock_entry(self, doc_args):
         """Generate Stock Entry to test e-Waybill functionalities"""
         doc_args.update({"doctype": "Stock Entry"})
@@ -208,6 +246,10 @@ class TestSubcontractingTransaction(FrappeTestCase):
         # Create a subcontracting transaction
         args = {
             "stock_entry_type": "Send to Subcontractor",
+<<<<<<< HEAD
+=======
+            "purpose": "Send to Subcontractor",
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
             "bill_from_address": "_Test Indian Registered Company-Billing",
             "bill_to_address": "_Test Registered Supplier-Billing",
             "items": [
@@ -218,9 +260,17 @@ class TestSubcontractingTransaction(FrappeTestCase):
                     "s_warehouse": "Finished Goods - _TIRC",
                     "t_warehouse": "Goods In Transit - _TIRC",
                     "amount": 100,
+<<<<<<< HEAD
                 }
             ],
             "company": "_Test Indian Registered Company",
+=======
+                    "taxable_value": 100,
+                }
+            ],
+            "company": "_Test Indian Registered Company",
+            "base_grand_total": 100,
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
         }
 
         stock_entry = self._create_stock_entry(args)
@@ -232,6 +282,7 @@ class TestSubcontractingTransaction(FrappeTestCase):
 
         self.assertEqual(stock_entry.select_print_heading, "Credit Note")
 
+<<<<<<< HEAD
     def test_for_unregistered_company(self):
         po = create_purchase_order(
             company="_Test Indian Unregistered Company",
@@ -316,6 +367,21 @@ class TestSubcontractingTransaction(FrappeTestCase):
         po = create_purchase_order(
             **SERVICE_ITEM, supplier_warehouse="Finished Goods - _TIRC"
         )
+=======
+    def test_validation_for_doc_references(self):
+        service_item = [
+            {
+                "warehouse": "Stores - _TIRC",
+                "item_code": "Subcontracted Service Item 1",
+                "qty": 10,
+                "rate": 100,
+                "fg_item": "Subcontracted Item SA1",
+                "fg_item_qty": 10,
+            }
+        ]
+
+        po = create_purchase_order(items=service_item)
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
         sco = create_subcontracting_order(po_name=po.name)
 
         rm_items = get_rm_items(sco.supplied_items)
@@ -324,11 +390,17 @@ class TestSubcontractingTransaction(FrappeTestCase):
         return_se = get_materials_from_supplier(
             sco.name, [d.name for d in sco.supplied_items]
         )
+<<<<<<< HEAD
         return_se.supplier = "_Test Registered Supplier"
         return_se.save()
 
         scr = make_subcontracting_receipt(sco.name)
         scr.save()
+=======
+        return_se.save()
+
+        scr = make_subcontracting_receipt(sco.name)
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
         scr.submit()
 
         self.assertRaisesRegex(
@@ -338,6 +410,7 @@ class TestSubcontractingTransaction(FrappeTestCase):
         )
 
         return_se.reload()
+<<<<<<< HEAD
 
         filters = {
             "supplier": return_se.supplier,
@@ -351,12 +424,21 @@ class TestSubcontractingTransaction(FrappeTestCase):
 
         self.assertTrue(se.name in doc_references)
 
+=======
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
         return_se.append(
             "doc_references",
             {"link_doctype": "Stock Entry", "link_name": se.name},
         )
         return_se.submit()
 
+<<<<<<< HEAD
+=======
+    @change_settings(
+        "GST Settings",
+        {"enable_api": 1, "enable_e_waybill": 1, "enable_e_waybill_for_sc": 1},
+    )
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
     def test_validation_when_gstin_field_empty(self):
         service_item = [
             {
@@ -370,6 +452,7 @@ class TestSubcontractingTransaction(FrappeTestCase):
         ]
 
         po = create_purchase_order(
+<<<<<<< HEAD
             items=service_item,
             supplier="_Test Unregistered Supplier",
             supplier_warhouse="Finished Goods - _TIUC",
@@ -379,3 +462,9 @@ class TestSubcontractingTransaction(FrappeTestCase):
         sco.supplier_warehouse = "Finished Goods - _TIUC"
         sco.save()
         sco.submit()
+=======
+            items=service_item, supplier="_Test Unregistered Supplier"
+        )
+
+        create_subcontracting_order(po_name=po.name)
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)

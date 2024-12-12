@@ -19,6 +19,10 @@ from india_compliance.gst_india.overrides.transaction import (
     validate_gst_category,
     validate_gst_transporter_id,
     validate_gstin_status,
+<<<<<<< HEAD
+=======
+    validate_items,
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
     validate_mandatory_fields,
     validate_place_of_supply,
 )
@@ -204,6 +208,7 @@ def validate(doc, method=None):
 
 
 def before_save(doc, method=None):
+<<<<<<< HEAD
     if not is_e_waybill_applicable(doc):
         doc.taxes_and_charges = ""
         doc.taxes = []
@@ -222,6 +227,22 @@ def validate_doc_references(doc, method=None):
     if ignore_gst_validations(doc):
         return
 
+=======
+    if ignore_gst_validations(doc):
+        return
+
+    validate_doc_references(doc)
+
+
+def before_submit(doc, method=None):
+    if ignore_gst_validations(doc):
+        return
+
+    validate_doc_references(doc)
+
+
+def validate_doc_references(doc):
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
     is_return_material_transfer = (
         doc.doctype == "Stock Entry"
         and doc.purpose == "Material Transfer"
@@ -247,6 +268,11 @@ def validate_doc_references(doc, method=None):
 
 
 def validate_transaction(doc, method=None):
+<<<<<<< HEAD
+=======
+    validate_items(doc)
+
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
     if doc.doctype == "Stock Entry":
         if not doc.is_return:
             company_address_field = "bill_from_address"

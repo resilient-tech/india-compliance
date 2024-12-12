@@ -56,7 +56,11 @@ CUSTOM_FIELDS = {
             "fieldtype": "Section Break",
             "insert_after": "total",
             "hide_border": 1,
+<<<<<<< HEAD
             "depends_on": "eval: doc.purchase_order && india_compliance.is_e_waybill_applicable_for_subcontracting(doc)",
+=======
+            "depends_on": "eval: doc.purchase_order && india_compliance.is_e_waybill_generatable_for_subcontracting(doc)",
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
         },
     ],
     "Subcontracting Receipt": [
@@ -66,7 +70,11 @@ CUSTOM_FIELDS = {
             "fieldtype": "Section Break",
             "insert_after": "total",
             "hide_border": 1,
+<<<<<<< HEAD
             "depends_on": "eval: india_compliance.is_e_waybill_applicable_for_subcontracting(doc)",
+=======
+            "depends_on": "eval: india_compliance.is_e_waybill_generatable_for_subcontracting(doc)",
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
         },
         {
             "fieldname": "section_break_ref_doc",
@@ -182,14 +190,22 @@ CUSTOM_FIELDS = {
             "label": "Taxes",
             "fieldtype": "Section Break",
             "insert_after": "get_stock_and_rate",
+<<<<<<< HEAD
             "depends_on": "eval: india_compliance.is_e_waybill_applicable_for_subcontracting(doc)",
+=======
+            "depends_on": "eval: india_compliance.is_e_waybill_generatable_for_subcontracting(doc)",
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
         },
         {
             "label": "E-Waybill Info",
             "fieldname": "tab_break_ewaybill",
             "fieldtype": "Tab Break",
             "insert_after": "address_display",
+<<<<<<< HEAD
             "depends_on": "eval: india_compliance.is_e_waybill_applicable_for_subcontracting(doc)",
+=======
+            "depends_on": "eval: india_compliance.is_e_waybill_generatable_for_subcontracting(doc)",
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
         },
         {
             "label": "e-Waybill Address",

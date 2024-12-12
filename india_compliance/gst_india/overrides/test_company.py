@@ -1,10 +1,18 @@
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
+=======
+from frappe.tests import IntegrationTestCase
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
 
 from india_compliance.gst_india.overrides.company import get_tax_defaults
 
 
+<<<<<<< HEAD
 class TestCompanyFixtures(FrappeTestCase):
+=======
+class TestCompanyFixtures(IntegrationTestCase):
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
     @classmethod
     def setUpClass(cls):
         frappe.db.savepoint("before_test_company")

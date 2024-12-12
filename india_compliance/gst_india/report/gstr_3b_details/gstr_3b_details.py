@@ -208,7 +208,10 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                 & (boe.company == self.company)
                 & (boe.company_gstin == self.company_gstin)
             )
+<<<<<<< HEAD
             .where(boe_taxes.parenttype == "Bill of Entry")
+=======
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
             .groupby(boe.name)
         )
 
@@ -422,6 +425,10 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
                     purchase_invoice.company_gstin
                     != IfNull(purchase_invoice.supplier_gstin, "")
                 )
+<<<<<<< HEAD
+=======
+                & (purchase_invoice.gst_category != "Overseas")
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
             )
             .groupby(purchase_invoice.name)
         )

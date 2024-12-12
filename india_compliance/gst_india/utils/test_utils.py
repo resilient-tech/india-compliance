@@ -2,11 +2,19 @@ from datetime import date
 from unittest.mock import patch
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import getdate
 
 
 class TestUtils(FrappeTestCase):
+=======
+from frappe.tests import IntegrationTestCase
+from frappe.utils import getdate
+
+
+class TestUtils(IntegrationTestCase):
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
 
     @classmethod
     def setUpClass(cls):

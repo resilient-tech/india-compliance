@@ -1,11 +1,19 @@
 import frappe
 from frappe.modules.patch_handler import get_patches_from_app
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
+=======
+from frappe.tests import IntegrationTestCase
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
 
 from india_compliance.install import POST_INSTALL_PATCHES
 
 
+<<<<<<< HEAD
 class TestPatches(FrappeTestCase):
+=======
+class TestPatches(IntegrationTestCase):
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
     def test_post_install_patch_exists(self):
         for patch in POST_INSTALL_PATCHES:
             self.assertTrue(

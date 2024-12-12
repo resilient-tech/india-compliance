@@ -460,6 +460,7 @@ def download_gstr(
     if not periods:
         return
 
+<<<<<<< HEAD
     try:
         if return_type == ReturnType.GSTR2A:
             return download_gstr_2a(company_gstin, periods, gst_categories)
@@ -474,6 +475,13 @@ def download_gstr(
             user=frappe.session.user,
             doctype="Purchase Reconciliation Tool",
         )
+=======
+    if return_type == ReturnType.GSTR2A:
+        return download_gstr_2a(company_gstin, periods, gst_categories)
+
+    if return_type == ReturnType.GSTR2B:
+        return download_gstr_2b(company_gstin, periods)
+>>>>>>> b2fd0249 (chore: compatibiltiy for erpnext)
 
 
 def get_periods_to_download(company_gstin, return_type, periods):
