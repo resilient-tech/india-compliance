@@ -5,6 +5,17 @@ from india_compliance.gst_india.utils.gstr_2.gstr import GSTR, get_mapped_value
 
 
 class GSTR2b(GSTR):
+    def delete_missing_transactions(self):
+        if not self.existing_transaction:
+            return
+
+        frappe.db.set_value(
+            "GST Inward Supply",
+            {"name": ["in", self.existing_transaction.values()]},
+            "return_period_2b",
+            "",
+        )
+
     def get_transaction(self, category, supplier, invoice):
         transaction = super().get_transaction(category, supplier, invoice)
         transaction.return_period_2b = self.return_period

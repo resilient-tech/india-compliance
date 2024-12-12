@@ -47,8 +47,7 @@ class GSTR:
         self.setup()
 
     def setup(self):
-        self.existing_transaction = {}
-        pass
+        self.existing_transaction = self.get_existing_transaction()
 
     def create_transactions(self, category, suppliers):
         if not suppliers:
@@ -127,6 +126,25 @@ class GSTR:
             transaction[field] = sum(
                 [row.get(field) for row in transaction.get("items") if row.get(field)]
             )
+
+    def get_existing_transaction(self):
+        category = type(self).__name__[6:]
+
+        gst_is = frappe.qb.DocType("GST Inward Supply")
+        existing_transactions = (
+            frappe.qb.from_(gst_is)
+            .select(gst_is.name, gst_is.supplier_gstin, gst_is.bill_no)
+            .where(gst_is.sup_return_period == self.return_period)
+            .where(gst_is.classification == category)
+            .where(gst_is.gstr_1_filled == 0)
+        ).run(as_dict=True)
+
+        return {
+            f"{transaction.get('supplier_gstin', '')}-{transaction.get('bill_no', '')}": transaction.get(
+                "name"
+            )
+            for transaction in existing_transactions
+        }
 
     def get_supplier_details(self, supplier):
         return {}
