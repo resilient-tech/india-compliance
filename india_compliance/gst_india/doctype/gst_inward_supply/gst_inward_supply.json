@@ -69,13 +69,14 @@
   "column_break_47",
   "gstr_1_filing_date",
   "registration_cancel_date",
-  "gstr_3b_details_section",
+  "ims_details_section",
   "ims_action",
   "is_pending_action_allowed",
   "previous_ims_action",
   "column_break_ppww",
   "supplier_ret_frm",
-  "is_supplier_return_filed"
+  "is_supplier_return_filed",
+  "is_downloaded_from_ims"
  ],
  "fields": [
   {
@@ -403,11 +404,6 @@
    "label": "Taxable Value"
   },
   {
-   "fieldname": "gstr_3b_details_section",
-   "fieldtype": "Section Break",
-   "label": "IMS Details"
-  },
-  {
    "fieldname": "ims_action",
    "fieldtype": "Data",
    "label": "IMS Action",
@@ -444,11 +440,24 @@
    "fieldtype": "Check",
    "label": "Is Supplier Return Filed",
    "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_downloaded_from_ims",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Downloaded from IMS",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ims_details_section",
+   "fieldtype": "Section Break",
+   "label": "IMS Details"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-12-06 16:04:32.643989",
+ "modified": "2024-12-12 16:37:47.379905",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Inward Supply",

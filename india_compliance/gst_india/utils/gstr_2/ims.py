@@ -1,20 +1,34 @@
 import frappe
+from frappe.query_builder.functions import IfNull
 from frappe.utils.data import format_date
 
-from india_compliance.gst_india.constants import GST_CATEGORY_MAP, STATE_NUMBERS
+from india_compliance.gst_india.constants import (
+    ACTION_MAP,
+    CLASSIFICATION_MAP,
+    GST_CATEGORY_MAP,
+    STATE_NUMBERS,
+)
 from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
     create_inward_supply,
 )
 from india_compliance.gst_india.utils import parse_datetime
-
-ACTION_MAP = {"A": "Accepted", "R": "Rejected", "P": "Pending", "N": "No Action"}
+from india_compliance.gst_india.utils.gstr_2.gstr import get_mapped_value
 
 
 class IMS:
-    STATE_MAP = {value: f"{value}-{key}" for key, value in STATE_NUMBERS.items()}
+    VALUE_MAPS = frappe._dict(
+        {
+            "states": {value: f"{value}-{key}" for key, value in STATE_NUMBERS.items()},
+            "action": ACTION_MAP,
+            "reverse_action": {v: k for k, v in ACTION_MAP.items()},
+            "gst_category": GST_CATEGORY_MAP,
+            "reverse_gst_category": {v: k for k, v in GST_CATEGORY_MAP.items()},
+            "classification": CLASSIFICATION_MAP,
+        }
+    )
 
-    def __init__(self, company_gstin=None, company=None, existing_transactions=None):
-        self.existing_transactions = existing_transactions or {}
+    def __init__(self, company_gstin=None, company=None):
+        self.existing_transactions = self.get_existing_transactions()
         self.company_gstin = company_gstin
         self.company = company
 
@@ -26,6 +40,8 @@ class IMS:
 
             if transaction.get("unique_key") in self.existing_transactions:
                 self.existing_transactions.pop(transaction.get("unique_key"))
+
+        self.handle_missing_transactions()
 
     def get_all_transactions(self, invoices):
         transactions = []
@@ -51,13 +67,17 @@ class IMS:
         return {
             "supplier_gstin": invoice.stin,
             "sup_return_period": invoice.rtnprd,
-            "supply_type": GST_CATEGORY_MAP[invoice.inv_typ],
-            "place_of_supply": self.STATE_MAP[invoice.pos],
+            "supply_type": get_mapped_value(
+                invoice.inv_typ, self.VALUE_MAPS.gst_category
+            ),
+            "place_of_supply": get_mapped_value(invoice.pos, self.VALUE_MAPS.states),
             "document_value": invoice.val,
             "company": self.company,
             "company_gstin": self.company_gstin,
             "is_pending_action_allowed": invoice.ispendactnallwd,
-            "previous_ims_action": ACTION_MAP.get(invoice.action),
+            "previous_ims_action": get_mapped_value(
+                invoice.action, self.VALUE_MAPS.action
+            ),
             "is_supplier_return_filed": 0 if invoice.srcfilstatus == "Not Filed" else 1,
             "supplier_ret_frm": invoice.srcform,
             "cgst": invoice.camt,
@@ -68,17 +88,20 @@ class IMS:
         }
 
     def update_transaction_to_gov_format(self, invoice):
-        gst_category_map = {v: k for k, v in GST_CATEGORY_MAP.items()}
-        action_map = {v: k for k, v in ACTION_MAP.items()}
-
         data = {
             "stin": invoice.supplier_gstin,
-            "inv_typ": gst_category_map[invoice.supply_type],
+            "inv_typ": get_mapped_value(
+                invoice.supply_type, self.VALUE_MAPS.reverse_gst_category
+            ),
             "srcform": invoice.supplier_ret_frm,
             "rtnprd": invoice.sup_return_period,
             "val": invoice.document_value,
-            "pos": STATE_NUMBERS[invoice.place_of_supply.split("-")[1]],
-            "prev_status": action_map[invoice.previous_ims_action],
+            "pos": get_mapped_value(
+                invoice.place_of_supply.split("-")[1], self.VALUE_MAPS.states
+            ),
+            "prev_status": get_mapped_value(
+                invoice.previous_ims_action, self.VALUE_MAPS.reverse_action
+            ),
             "iamt": invoice.igst,
             "camt": invoice.cgst,
             "samt": invoice.sgst,
@@ -87,9 +110,44 @@ class IMS:
         }
 
         if invoice.ims_action != "No Action":
-            data["action"] = action_map[invoice.ims_action]
+            data["action"] = get_mapped_value(
+                invoice.ims_action, self.VALUE_MAPS.reverse_action
+            )
 
         return data
+
+    def get_existing_transactions(self):
+        category = get_mapped_value(
+            type(self).__name__.lower(), self.VALUE_MAPS.classification
+        )
+
+        inward_supply = frappe.qb.DocType("GST Inward Supply")
+        existing_transactions = (
+            frappe.qb.from_(inward_supply)
+            .select(
+                inward_supply.name, inward_supply.supplier_gstin, inward_supply.bill_no
+            )
+            .where(IfNull(inward_supply.ims_action, "") != "")
+            .where(inward_supply.classification == category)
+        ).run(as_dict=True)
+
+        return {
+            f"{transaction.get('supplier_gstin', '')}-{transaction.get('bill_no', '')}": transaction.get(
+                "name"
+            )
+            for transaction in existing_transactions
+        }
+
+    def handle_missing_transactions(self):
+        if self.existing_transactions:
+            frappe.db.delete(
+                "GST Inward Supply",
+                {
+                    "previous_ims_action": ["is", "set"],
+                    "is_supplier_return_filed": 0,
+                    "name": ["in", self.existing_transactions.values()],
+                },
+            )
 
 
 class B2B(IMS):

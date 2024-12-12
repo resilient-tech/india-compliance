@@ -2,7 +2,6 @@ from enum import Enum
 
 import frappe
 from frappe import _
-from frappe.query_builder.functions import IfNull
 from frappe.query_builder.terms import Criterion
 from frappe.utils import cint
 
@@ -11,6 +10,7 @@ from india_compliance.gst_india.api_classes.taxpayer_returns import (
     GSTR2aAPI,
     GSTR2bAPI,
 )
+from india_compliance.gst_india.constants import CLASSIFICATION_MAP
 from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
     create_import_log,
 )
@@ -49,14 +49,6 @@ IMS_CATEGORIES = {
     "b2bdna": "DNA",
 }
 
-CLASSIFICATION_MAP = {
-    "b2b": "B2B",
-    "b2ba": "B2BA",
-    "b2bcn": "CDNR",
-    "b2bcna": "CDNRA",
-    "b2bdn": "CDNR",
-    "b2bdna": "CDNRA",
-}
 
 GSTR_MODULES = {
     ReturnType.GSTR2A.value: gstr_2a,
@@ -355,7 +347,7 @@ def end_transaction_progress(return_period):
 
 def download_ims_invoices(company_gstin, company):
     api = IMSAPI(company_gstin)
-    existing_transactions = get_existing_transactions()
+    reset_previous_ims_action()
 
     for category in IMS_CATEGORIES:
         response = api.get_data(IMS_CATEGORIES[category])
@@ -382,22 +374,19 @@ def download_ims_invoices(company_gstin, company):
             )
             continue
 
-        getattr(ims, category.upper())(
-            company_gstin, company, existing_transactions
-        ).create_transactions(response.get(category, []))
+        getattr(ims, category.upper())(company_gstin, company).create_transactions(
+            response.get(category, [])
+        )
 
     create_return_log(company, company_gstin)
-    delete_missing_transactions(existing_transactions)
 
 
 def save_ims_invoices(company_gstin, return_period, json_data):
-    existing_transactions = get_existing_transactions()
+    reset_previous_ims_action()
     for category in IMS_CATEGORIES:
-        getattr(ims, category.upper())(
-            company_gstin=company_gstin, existing_transactions=existing_transactions
-        ).create_transactions(json_data.get(category, []))
-
-    delete_missing_transactions(existing_transactions)
+        getattr(ims, category.upper())(company_gstin=company_gstin).create_transactions(
+            json_data.get(category, [])
+        )
 
 
 def create_return_log(company, company_gstin):
@@ -413,25 +402,7 @@ def create_return_log(company, company_gstin):
         ims_log.insert()
 
 
-def get_existing_transactions():
+def reset_previous_ims_action():
     inward_supply = frappe.qb.DocType("GST Inward Supply")
-    existing_transactions = (
-        frappe.qb.from_(inward_supply)
-        .select(inward_supply.name, inward_supply.supplier_gstin, inward_supply.bill_no)
-        .where(IfNull(inward_supply.ims_action, "") != "")
-    ).run(as_dict=True)
 
-    return {
-        f"{transaction.get('supplier_gstin', '')}-{transaction.get('bill_no', '')}": transaction.get(
-            "name"
-        )
-        for transaction in existing_transactions
-    }
-
-
-# TODO: Think of a way to delete invoices which are not present in new data
-# while also preserving the match status if any.
-def delete_missing_transactions(existing_transactions):
-    if existing_transactions:
-        for inward_supply_name in existing_transactions.values():
-            frappe.delete_doc("GST Inward Supply", inward_supply_name)
+    frappe.qb.update(inward_supply).set(inward_supply.previous_ims_action, "").run()
