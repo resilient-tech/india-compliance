@@ -346,7 +346,7 @@ def process_upload_ims(return_log):
 
     if status_cd == "PE":
         erroneous_invoices, response["error_report"] = get_erroneous_invoices(
-            response.get("error_report")
+            response.get("error_report"), doc.integration_request
         )
 
     if status_cd in ["P", "PE"]:
@@ -359,10 +359,19 @@ def process_upload_ims(return_log):
             erroneous_invoices=erroneous_invoices,
         )
 
+    if status_cd == "ER":
+        response["error_report"] = [
+            {
+                "error_msg": response.get("err_msg"),
+                "error_code": response.get("err_cd"),
+                "integration_request": doc.integration_request,
+            }
+        ]
+
     return response
 
 
-def get_erroneous_invoices(report):
+def get_erroneous_invoices(report, integration_request):
     error_report = []
     invoice_names = []
     for error_list in report.values():
@@ -375,6 +384,7 @@ def get_erroneous_invoices(report):
                         "invoice": invoice.get("inum"),
                         "return_period": invoice.get("rtnprd"),
                         "supplier_gstin": error.get("stin"),
+                        "integration_request": integration_request,
                     }
                 )
                 invoice_names.append(f"{invoice.get('inum')}_{error.get('stin')}")

@@ -69,19 +69,9 @@ frappe.ui.form.on("GST Invoice Management System", {
                             });
                             return;
                         }
-
                         frappe.show_alert(__("Uploading Invoices"));
 
-                        // For upload and reset requests
                         frm.ims.check_action_status_with_retry();
-                        frm.ims.check_action_status_with_retry();
-
-                        // TODO: Handle error report in case of PE and ER and then return
-
-                        frappe.show_alert({
-                            message: "Uploaded Invoices Successfully",
-                            indicator: "green",
-                        });
                     },
                 });
             });
@@ -146,7 +136,7 @@ class IMS {
         this.data = [];
         this.frm.doc.is_data_loaded = false;
         this.$wrapper = this.frm.get_field("invoice_html").$wrapper;
-        this._tabs = ["invoice", "summary", "action"];
+        this._tabs = ["invoice", "summary", "action", "error"];
     }
 
     generate_data() {
@@ -216,6 +206,15 @@ class IMS {
                 {
                     fieldtype: "HTML",
                     fieldname: "invoice_data",
+                },
+                {
+                    label: "Upload Errors",
+                    fieldtype: "Tab Break",
+                    fieldname: "error_tab",
+                },
+                {
+                    fieldtype: "HTML",
+                    fieldname: "error_data",
                 },
             ],
             body: this.$wrapper,
@@ -616,6 +615,47 @@ class IMS {
         return Object.values(data);
     }
 
+    get_error_columns() {
+        return [
+            {
+                name: "Error Code",
+                fieldname: "error_code",
+                width: 100,
+            },
+            {
+                name: "Error Message",
+                fieldname: "error_msg",
+                width: 325,
+            },
+            {
+                name: "Invoice Number",
+                fieldname: "invoice",
+                width: 150,
+            },
+            {
+                name: "Party GSTIN",
+                fieldname: "supplier_gstin",
+                width: 160,
+            },
+            {
+                name: "Return Period",
+                fieldname: "return_period",
+                width: 150,
+            },
+            {
+                name: "Integration Request",
+                fieldname: "integration_request",
+                fieldtype: "Link",
+                options: "Integration Request",
+                width: 250,
+            },
+        ];
+    }
+
+    get_error_data() {
+        return [];
+    }
+
     get_supplier_name_gstin(row) {
         return `
         ${row.supplier_name}
@@ -634,7 +674,8 @@ class IMS {
         return options;
     }
 
-    check_action_status_with_retry(retries = 0, now = false) {
+    check_action_status_with_retry(request_status, retries = 0, now = false) {
+        if (!request_status) request_status = [];
         setTimeout(
             async () => {
                 const { message } = await taxpayer_api.call({
@@ -644,28 +685,71 @@ class IMS {
                     },
                 });
 
-                if (!message || !message.status_cd) return;
+                if (!message || !message.status_cd) {
+                    if (request_status.length) {
+                        return this.update_request_status(request_status);
+                    }
+                }
 
                 if (
                     message.status_cd === "IP" &&
                     retries < this.RETRY_INTERVALS.length
                 ) {
-                    return this.check_action_status_with_retry(retries + 1);
+                    return this.check_action_status_with_retry(
+                        request_status,
+                        retries + 1
+                    );
                 }
 
                 // Not IP
+                if (message.status_cd === "P") {
+                    request_status.push({ status_cd: "P" });
+                } else if (message.status_cd === "PE") {
+                    request_status.push({
+                        status_cd: "PE",
+                        error_report: message.error_report,
+                    });
+                } else if (message.status_cd === "ER")
+                    request_status.push({
+                        status_cd: "ER",
+                        error_report: message.error_report,
+                    });
 
-                if (message.status_cd == "P") {
-                    return { status_cd: "P" };
-                } else if (message.status_cd == "PE") {
-                    return { status_cd: "PE", error_report: message.error_report };
+                // If both upload and reset processed then update request status
+                if (request_status.length === 2) {
+                    return this.update_request_status(request_status);
                 }
 
-                if (message.status_cd == "ER")
-                    return { status_cd: "ER", error_message: message.err_msg };
+                // Check for unprocessed requests again
+                return this.check_action_status_with_retry(request_status);
             },
             now ? 0 : this.RETRY_INTERVALS[retries]
         );
+    }
+
+    update_request_status(request_status) {
+        let error_report = [];
+        request_status.forEach(error_status => {
+            if (error_status.status_cd !== "P") {
+                error_report.push(...error_status.error_report);
+            }
+        });
+
+        if (error_report.length) {
+            this.frm.ims.show_errors(error_report);
+            frappe.msgprint({
+                message: __(
+                    "Error while uploading invoices. Try dowloading again and reuploading."
+                ),
+                indicator: "red",
+            });
+            return;
+        }
+
+        frappe.show_alert({
+            message: "Uploaded Invoices Successfully",
+            indicator: "green",
+        });
     }
 
     async set_actions_summary() {
@@ -721,6 +805,10 @@ class IMS {
         this.frm.$wrapper.find(".action-summary").click(function (e) {
             me.add_filter(e, "ims_action", $(this).attr("data-name"), me);
         });
+    }
+
+    show_errors(message) {
+        this.tabs["error_tab"].refresh(message);
     }
 }
 
