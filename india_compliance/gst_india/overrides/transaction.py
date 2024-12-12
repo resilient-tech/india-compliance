@@ -71,6 +71,7 @@ def update_taxable_values(doc):
     total_charges = 0
     apportioned_charges = 0
     tax_witholding_amount = 0
+    has_no_qty_value = False
 
     if doc.taxes:
         if any(
@@ -105,8 +106,10 @@ def update_taxable_values(doc):
     # base net total may be zero if invoice has zero rated items + shipping
     total_value = doc.base_net_total if doc.base_net_total else doc.total_qty
 
+    # credit note without item qty and value but with charges
     if not total_value:
-        return
+        total_value = len(doc.items)
+        has_no_qty_value = True
 
     for item in doc.items:
         item.taxable_value = item.base_net_amount
@@ -114,7 +117,12 @@ def update_taxable_values(doc):
         if not total_charges:
             continue
 
-        proportionate_value = item.base_net_amount if doc.base_net_total else item.qty
+        if has_no_qty_value:
+            proportionate_value = 1
+        elif doc.base_net_total:
+            proportionate_value = item.base_net_amount
+        else:
+            proportionate_value = item.qty
 
         applicable_charges = flt(
             proportionate_value * (total_charges / total_value),
@@ -499,7 +507,7 @@ class GSTAccounts:
                 )
 
             if row.charge_type == "On Previous Row Total":
-                previous_row_references.add(row.row_id)
+                previous_row_references.add(flt(row.row_id))
 
             # validating charge type "On Item Quantity" and non_cess_advol_account
             self.validate_charge_type_for_cess_non_advol_accounts(row)
@@ -956,7 +964,12 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
     # Taxes Not Applicable
     if (
         (destination_gstin and destination_gstin == source_gstin)  # Internal transfer
-        or (is_sales_transaction and is_export_without_payment_of_gst(party_details))
+        or (
+            is_sales_transaction
+            and is_export_without_payment_of_gst(
+                frappe._dict({**party_details, "doctype": doctype})
+            )
+        )
         or (
             not is_sales_transaction
             and (
