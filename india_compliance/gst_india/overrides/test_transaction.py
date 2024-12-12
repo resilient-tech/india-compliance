@@ -589,7 +589,7 @@ class TestTransaction(IntegrationTestCase):
 
     def test_invalid_charge_type_as_actual(self):
         doc = create_transaction(**self.transaction_details, do_not_save=True)
-        _append_taxes(doc, ["CGST", "SGST"], charge_type="Actual", tax_amount=9)
+        _append_taxes(doc, ["CGST", "SGST"], charge_type="Actual", tax_amount=9, rate=0)
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,

@@ -23,6 +23,7 @@ from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
 from india_compliance.gst_india.doctype.gstin.gstin import get_and_validate_gstin_status
 from india_compliance.gst_india.utils import (
     get_all_gst_accounts,
+    get_gst_account_by_item_tax_template,
     get_gst_account_gst_tax_type_map,
     get_gst_accounts_by_type,
     get_hsn_settings,
@@ -545,8 +546,10 @@ class GSTAccounts:
             if not row.item_tax_template:
                 continue
 
+            template_rows = get_gst_account_by_item_tax_template(row.item_tax_template)
+
             for account in self.used_accounts:
-                if account in row.item_tax_rate:
+                if account in template_rows:
                     continue
 
                 frappe.msgprint(
