@@ -221,14 +221,12 @@ function setup_e_waybill_actions(doctype) {
                     return;
                 }
 
-                (async () => {
-                    const auto_cancel_e_waybill = await frappe.db.get_single_value("GST Settings", "auto_cancel_e_waybill");
-                    if (auto_cancel_e_waybill === 1) {
-                        continueCancellation()
-                        return
-                    }
-                    return show_cancel_e_waybill_dialog(frm, continueCancellation);
-                })();
+                if (gst_settings.auto_cancel_e_waybill === 1) {
+                    continueCancellation();
+                    return;
+                }
+
+                return show_cancel_e_waybill_dialog(frm, continueCancellation);
             });
         },
     });
@@ -716,7 +714,6 @@ function show_cancel_e_waybill_dialog(frm, callback) {
 
     india_compliance.primary_to_danger_btn(d);
     d.show();
-    update_reason_for_e_invoice_cancellation(d);
 }
 
 function show_mark_e_waybill_as_cancelled_dialog(frm) {
@@ -750,15 +747,6 @@ function show_mark_e_waybill_as_cancelled_dialog(frm) {
     });
 
     d.show();
-    update_reason_for_e_invoice_cancellation(d);
-}
-
-async function update_reason_for_e_invoice_cancellation(d){
-    const auto_cancel_e_waybill = await frappe.db.get_single_value("GST Settings", "auto_cancel_e_waybill");
-    if (auto_cancel_e_waybill) {
-        const reason = await frappe.db.get_single_value("GST Settings", "reason_for_e_waybill_cancellation");
-        d.get_field("reason").set_value(reason);
-    }
 }
 
 function get_cancel_e_waybill_dialog_fields(frm) {
@@ -775,7 +763,8 @@ function get_cancel_e_waybill_dialog_fields(frm) {
             fieldname: "reason",
             fieldtype: "Select",
             reqd: 1,
-            default: "Data Entry Mistake",
+            default:
+                gst_settings.reason_for_e_waybill_cancellation || "Data Entry Mistake",
             options: ["Duplicate", "Order Cancelled", "Data Entry Mistake", "Others"],
         },
         {

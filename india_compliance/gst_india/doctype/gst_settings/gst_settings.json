@@ -657,7 +657,8 @@
    "fieldtype": "Select",
    "label": "Default Reason for e-Waybill Cancellation",
    "mandatory_depends_on": "eval: doc.auto_cancel_e_waybill",
-   "options": "Duplicate\nOrder Cancelled\nData Entry Mistake"
+   "options": "Duplicate\nOrder Cancelled\nData Entry Mistake",
+   "read_only_depends_on": "eval: doc.enable_e_invoice"
   },
   {
    "default": "Data Entry Mistake",
@@ -672,7 +673,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-12-06 12:43:06.963007",
+ "modified": "2024-12-12 19:09:07.185191",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

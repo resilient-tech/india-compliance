@@ -21,7 +21,7 @@ frappe.ui.form.on("Sales Invoice", {
         )
             return;
 
-        if(frm.doc.docstatus === 2) return;
+        if (frm.doc.docstatus === 2) return;
 
         const is_einv_generatable = is_e_invoice_generatable(frm, true);
 
@@ -144,14 +144,11 @@ frappe.ui.form.on("Sales Invoice", {
                 return;
             }
 
-            (async () => {
-                const auto_cancel_e_invoice = await frappe.db.get_single_value("GST Settings", "auto_cancel_e_invoice");
-                if (auto_cancel_e_invoice === 1) {
-                    continueCancellation()
-                    return
-                }
-                return show_cancel_e_invoice_dialog(frm, continueCancellation);
-            })();
+            if (gst_settings.auto_cancel_e_invoice === 1) {
+                continueCancellation();
+                return;
+            }
+            return show_cancel_e_invoice_dialog(frm, continueCancellation);
         });
     },
 });
@@ -194,8 +191,6 @@ async function show_cancel_e_invoice_dialog(frm, callback) {
 
     india_compliance.primary_to_danger_btn(d);
     d.show();
-
-    update_reason_for_e_invoice_cancellation(d);
 
     $(`
         <div class="alert alert-warning" role="alert">
@@ -274,16 +269,6 @@ async function show_mark_e_invoice_as_cancelled_dialog(frm) {
     });
 
     d.show();
-
-    update_reason_for_e_invoice_cancellation(d);
-}
-
-async function update_reason_for_e_invoice_cancellation(d) {
-    const auto_cancel_e_invoice = await frappe.db.get_single_value("GST Settings", "auto_cancel_e_invoice");
-    if (auto_cancel_e_invoice) {
-        const reason = await frappe.db.get_single_value("GST Settings", "reason_for_e_invoice_cancellation");
-        d.get_field("reason").set_value(reason);
-    }
 }
 
 function get_cancel_e_invoice_dialog_fields(frm, manual_cancel = false) {
@@ -300,7 +285,10 @@ function get_cancel_e_invoice_dialog_fields(frm, manual_cancel = false) {
             fieldname: "reason",
             fieldtype: "Select",
             reqd: 1,
-            default: manual_cancel ? "Others" : "Data Entry Mistake",
+            default: manual_cancel
+                ? "Others"
+                : gst_settings.reason_for_e_invoice_cancellation ||
+                "Data Entry Mistake",
             options: ["Duplicate", "Data Entry Mistake", "Order Cancelled", "Others"],
         },
         {
