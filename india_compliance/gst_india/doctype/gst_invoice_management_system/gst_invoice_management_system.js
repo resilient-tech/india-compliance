@@ -333,23 +333,23 @@ class IMS {
         const me = this;
 
         this.tabs.invoice_tab.$datatable.on("click", ".supplier-gstin", function (e) {
-            me.add_filter(e, "supplier_gstin", $(this).text().trim(), me);
+            me.update_filter(e, "supplier_gstin", $(this).text().trim(), me);
         });
 
         this.tabs.invoice_tab.$datatable.on("click", ".match-status", function (e) {
-            me.add_filter(e, "match_status", $(this).text(), me);
+            me.update_filter(e, "match_status", $(this).text(), me);
         });
 
         this.tabs.summary_tab.$datatable.on("click", ".match-status", function (e) {
-            me.add_filter(e, "match_status", $(this).text(), me);
+            me.update_filter(e, "match_status", $(this).text(), me);
         });
 
         this.tabs.invoice_tab.$datatable.on("click", ".ims-action", function (e) {
-            me.add_filter(e, "ims_action", $(this).text(), me);
+            me.update_filter(e, "ims_action", $(this).text(), me);
         });
 
         this.tabs.action_tab.$datatable.on("click", ".invoice-category", function (e) {
-            me.add_filter(e, "doc_type", category_map[$(this).text()], me);
+            me.update_filter(e, "doc_type", category_map[$(this).text()], me);
         });
 
         this.tabs.invoice_tab.$datatable.on("click", ".btn.eye", function (e) {
@@ -358,7 +358,7 @@ class IMS {
         });
     }
 
-    async add_filter(e, field, field_value, me) {
+    async update_filter(e, field, field_value, me) {
         e.preventDefault();
 
         const filter = ["GST Invoice Management System", field, "=", field_value];
@@ -803,7 +803,7 @@ class IMS {
 
         const me = this;
         this.frm.$wrapper.find(".action-summary").click(function (e) {
-            me.add_filter(e, "ims_action", $(this).attr("data-name"), me);
+            me.update_filter(e, "ims_action", $(this).attr("data-name"), me);
         });
     }
 
