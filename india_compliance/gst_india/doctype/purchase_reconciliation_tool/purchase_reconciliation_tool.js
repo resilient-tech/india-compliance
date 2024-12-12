@@ -191,7 +191,6 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
                 () => frm.events.update_progress(frm, "update_api_progress"),
                 () => frm.events.update_progress(frm, "update_transactions_progress"),
             ]);
-            frm.events.handle_download_failure(frm);
         } else if (type == "upload") {
             frm.events.update_progress(frm, "update_transactions_progress");
         }
