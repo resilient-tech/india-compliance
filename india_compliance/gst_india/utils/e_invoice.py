@@ -331,6 +331,13 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False, messag
 def cancel_e_invoice(docname, values):
     doc = load_doc("Sales Invoice", docname, "cancel")
     values = frappe.parse_json(values)
+
+    _cancel_e_invoice(doc, values)
+
+    return send_updated_doc(doc)
+
+
+def _cancel_e_invoice(doc, values):
     validate_if_e_invoice_can_be_cancelled(doc)
 
     if doc.get("ewaybill"):
@@ -349,7 +356,6 @@ def cancel_e_invoice(docname, values):
     )
 
     doc.cancel()
-    return send_updated_doc(doc)
 
 
 def log_and_process_e_invoice_cancellation(doc, values, result, message):

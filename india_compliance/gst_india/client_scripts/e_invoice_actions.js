@@ -21,7 +21,7 @@ frappe.ui.form.on("Sales Invoice", {
         )
             return;
 
-        if(frm.doc.docstatus === 2) return;
+        if (frm.doc.docstatus === 2) return;
 
         const is_einv_generatable = is_e_invoice_generatable(frm, true);
 
@@ -144,6 +144,10 @@ frappe.ui.form.on("Sales Invoice", {
                 return;
             }
 
+            if (gst_settings.auto_cancel_e_invoice === 1) {
+                continueCancellation();
+                return;
+            }
             return show_cancel_e_invoice_dialog(frm, continueCancellation);
         });
     },
@@ -281,7 +285,10 @@ function get_cancel_e_invoice_dialog_fields(frm, manual_cancel = false) {
             fieldname: "reason",
             fieldtype: "Select",
             reqd: 1,
-            default: manual_cancel ? "Others" : "Data Entry Mistake",
+            default: manual_cancel
+                ? "Others"
+                : gst_settings.reason_for_e_invoice_cancellation ||
+                "Data Entry Mistake",
             options: ["Duplicate", "Data Entry Mistake", "Order Cancelled", "Others"],
         },
         {
