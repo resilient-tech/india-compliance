@@ -466,7 +466,7 @@ class TestTransaction(IntegrationTestCase):
         doc.insert()
         self.assertDocumentEqual({"taxable_value": 100}, doc.items[0])
 
-    def test_credit_not_without_quantity(self):
+    def test_credit_note_without_quantity(self):
         if self.doctype != "Sales Invoice":
             return
 
@@ -498,8 +498,11 @@ class TestTransaction(IntegrationTestCase):
         )
         doc.insert()
 
+        # Ensure correct taxable_value and gst details
         for item in doc.items:
-            self.assertDocumentEqual({"taxable_value": 10}, item)
+            self.assertDocumentEqual(
+                {"taxable_value": 10, "cgst_amount": 0.9, "sgst_amount": 0.9}, item
+            )
 
     def test_validate_place_of_supply(self):
         doc = create_transaction(**self.transaction_details, do_not_save=True)
