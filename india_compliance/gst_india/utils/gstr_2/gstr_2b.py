@@ -5,7 +5,25 @@ from india_compliance.gst_india.utils.gstr_2.gstr import GSTR, get_mapped_value
 
 
 class GSTR2b(GSTR):
-    def delete_missing_transactions(self):
+    def get_existing_transaction(self):
+        category = type(self).__name__[6:]
+
+        gst_is = frappe.qb.DocType("GST Inward Supply")
+        existing_transactions = (
+            frappe.qb.from_(gst_is)
+            .select(gst_is.name, gst_is.supplier_gstin, gst_is.bill_no)
+            .where(gst_is.return_period_2b == self.return_period)
+            .where(gst_is.classification == category)
+        ).run(as_dict=True)
+
+        return {
+            f"{transaction.get('supplier_gstin', '')}-{transaction.get('bill_no', '')}": transaction.get(
+                "name"
+            )
+            for transaction in existing_transactions
+        }
+
+    def handle_missing_transactions(self):
         if not self.existing_transaction:
             return
 

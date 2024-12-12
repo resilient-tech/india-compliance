@@ -74,9 +74,9 @@ class GSTR:
             if transaction.get("unique_key") in self.existing_transaction:
                 self.existing_transaction.pop(transaction.get("unique_key"))
 
-        self.delete_missing_transactions()
+        self.handle_missing_transactions()
 
-    def delete_missing_transactions(self):
+    def handle_missing_transactions(self):
         """
         For GSTR2a, transactions are reflected immediately after it's pushed to GSTR-1.
         At times, it may later be removed from GSTR-1.
@@ -126,25 +126,6 @@ class GSTR:
             transaction[field] = sum(
                 [row.get(field) for row in transaction.get("items") if row.get(field)]
             )
-
-    def get_existing_transaction(self):
-        category = type(self).__name__[6:]
-
-        gst_is = frappe.qb.DocType("GST Inward Supply")
-        existing_transactions = (
-            frappe.qb.from_(gst_is)
-            .select(gst_is.name, gst_is.supplier_gstin, gst_is.bill_no)
-            .where(gst_is.sup_return_period == self.return_period)
-            .where(gst_is.classification == category)
-            .where(gst_is.gstr_1_filled == 0)
-        ).run(as_dict=True)
-
-        return {
-            f"{transaction.get('supplier_gstin', '')}-{transaction.get('bill_no', '')}": transaction.get(
-                "name"
-            )
-            for transaction in existing_transactions
-        }
 
     def get_supplier_details(self, supplier):
         return {}
