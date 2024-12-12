@@ -460,11 +460,20 @@ def download_gstr(
     if not periods:
         return
 
-    if return_type == ReturnType.GSTR2A:
-        return download_gstr_2a(company_gstin, periods, gst_categories)
+    try:
+        if return_type == ReturnType.GSTR2A:
+            return download_gstr_2a(company_gstin, periods, gst_categories)
 
-    if return_type == ReturnType.GSTR2B:
-        return download_gstr_2b(company_gstin, periods)
+        if return_type == ReturnType.GSTR2B:
+            return download_gstr_2b(company_gstin, periods)
+
+    except Exception as e:
+        frappe.publish_realtime(
+            "gstr_2a_2b_download_failed",
+            {"error": str(e)},
+            user=frappe.session.user,
+            doctype="Purchase Reconciliation Tool",
+        )
 
 
 def get_periods_to_download(company_gstin, return_type, periods):
