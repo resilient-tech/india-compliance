@@ -469,7 +469,7 @@ def download_gstr(
 
     except Exception as e:
         frappe.publish_realtime(
-            "download_failed",
+            "gstr_2a_2b_download_failed",
             {"error": str(e)},
             user=frappe.session.user,
             doctype="Purchase Reconciliation Tool",
