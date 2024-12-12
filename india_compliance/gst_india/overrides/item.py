@@ -6,10 +6,28 @@ from india_compliance.gst_india.doctype.gst_hsn_code.gst_hsn_code import (
 
 
 def validate(doc, method=None):
+<<<<<<< HEAD
+=======
+    update_hsn_code(doc)
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     validate_hsn_code(doc)
     set_taxes_from_hsn_code(doc)
 
 
+<<<<<<< HEAD
+=======
+def update_hsn_code(doc):
+    """
+    Update HSN Code from Fee Category (education)
+    """
+    if not frappe.flags.category_hsn_code:
+        return
+
+    doc.gst_hsn_code = frappe.flags.category_hsn_code
+    del frappe.flags.category_hsn_code
+
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 def validate_hsn_code(doc):
     # HSN Code is being validated only for sales items
     if not doc.is_sales_item:

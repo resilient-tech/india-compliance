@@ -99,6 +99,10 @@
   {
    "fieldname": "reference_doctype",
    "fieldtype": "Link",
+<<<<<<< HEAD
+=======
+   "in_list_view": 1,
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
    "in_standard_filter": 1,
    "label": "Reference Document Type",
    "options": "DocType",
@@ -140,10 +144,13 @@
    "read_only": 1
   },
   {
+<<<<<<< HEAD
    "fieldname": "column_break1",
    "fieldtype": "Column Break"
   },
   {
+=======
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
    "fieldname": "column_break_grbd",
    "fieldtype": "Column Break"
   },
@@ -181,7 +188,11 @@
    "link_fieldname": "ewaybill"
   }
  ],
+<<<<<<< HEAD
  "modified": "2024-01-17 14:46:29.964817",
+=======
+ "modified": "2024-12-05 09:50:37.014667",
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Waybill Log",
@@ -231,7 +242,11 @@
    "share": 1
   }
  ],
+<<<<<<< HEAD
  "sort_field": "modified",
+=======
+ "sort_field": "creation",
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
  "sort_order": "DESC",
  "states": [],
  "title_field": "reference_name",

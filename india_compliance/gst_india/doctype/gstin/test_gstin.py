@@ -3,7 +3,12 @@
 import responses
 from responses import matchers
 
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase, change_settings
+=======
+import frappe
+from frappe.tests import IntegrationTestCase, change_settings
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
 from india_compliance.gst_india.doctype.gstin.gstin import validate_gst_transporter_id
 
@@ -24,7 +29,18 @@ TRANSPORTER_ID_API_RESPONSE = {
 }
 
 
+<<<<<<< HEAD
 class TestGSTIN(FrappeTestCase):
+=======
+class TestGSTIN(IntegrationTestCase):
+    @classmethod
+    def setUpClass(cls):
+        # don't create test objects
+        frappe.local.test_objects["GSTIN"] = []
+
+        super().setUpClass()
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     @responses.activate
     @change_settings("GST Settings", {"validate_gstin_status": 1, "sandbox_mode": 0})
     def test_validate_gst_transporter_id(self):

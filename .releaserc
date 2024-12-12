@@ -1,5 +1,9 @@
 {
+<<<<<<< HEAD
 	"branches": ["version-14"],
+=======
+	"branches": ["version-14", "version-15"],
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 	"plugins": [
 		"@semantic-release/commit-analyzer", {
 			"preset": "angular",
@@ -21,4 +25,8 @@
 		],
 		"@semantic-release/github"
 	]
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)

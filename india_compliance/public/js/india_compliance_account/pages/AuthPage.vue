@@ -49,6 +49,7 @@ export default {
   methods: {
     toggleAuthView() {
       this.isAccountRegistered = !this.isAccountRegistered;
+<<<<<<< HEAD
     },
 
     async checkAccountRegisted(value) {
@@ -66,6 +67,9 @@ export default {
 
       next();
     });
+=======
+    }
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
   },
 };
 </script>
@@ -104,8 +108,13 @@ export default {
   justify-content: space-between;
   padding: 45px 0;
   border-radius: var(--border-radius-md);
+<<<<<<< HEAD
   box-shadow: var(--card-shadow);
   background-color: var(--card-bg);
+=======
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 }
 
 .auth-form .title {

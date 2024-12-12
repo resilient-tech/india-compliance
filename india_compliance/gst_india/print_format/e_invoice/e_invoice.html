@@ -97,6 +97,7 @@
 <h5 class="section-heading">2. Party Details</h5>
 <div class="row section-break info-section">
 	<div class="col-xs-6 column-break">
+<<<<<<< HEAD
 		{%- set is_dispatch_address_different = invoice_data.DispDtls and (
 			invoice_data.DispDtls.Addr1 != invoice_data.SellerDtls.Addr1
 			or invoice_data.DispDtls.Pin != invoice_data.SellerDtls.Pin
@@ -104,6 +105,10 @@
 
 		<h6 class="address-heading">
 			{% if is_dispatch_address_different %}
+=======
+		<h6 class="address-heading">
+			{% if invoice_data.DispDtls %}
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 				Seller Details
 			{% else %}
 				Seller and Dispatch Details
@@ -111,12 +116,17 @@
 		</h6>
 		{{ get_address_html(invoice_data.SellerDtls) }}
 
+<<<<<<< HEAD
 		{%- if is_dispatch_address_different -%}
+=======
+		{%- if invoice_data.DispDtls -%}
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 		<h6 class="address-heading">Dispatched From</h6>
 			{{ get_address_html(invoice_data.DispDtls) }}
 		{% endif %}
 	</div>
 	<div class="col-xs-6 column-break">
+<<<<<<< HEAD
 		{%- set is_shipping_address_different = invoice_data.ShipDtls and (
 			invoice_data.ShipDtls.Addr1 != invoice_data.BuyerDtls.Addr1
 			or invoice_data.ShipDtls.Pin != invoice_data.BuyerDtls.Pin
@@ -124,6 +134,10 @@
 
 		<h6 class="address-heading">
 			{% if is_shipping_address_different %}
+=======
+		<h6 class="address-heading">
+			{% if invoice_data.ShipDtls %}
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 				Buyer Details
 			{% else %}
 				Buyer and Shipping Details
@@ -131,7 +145,11 @@
 		</h6>
 		{{ get_address_html(invoice_data.BuyerDtls) }}
 
+<<<<<<< HEAD
 		{%- if is_shipping_address_different -%}
+=======
+		{%- if invoice_data.ShipDtls -%}
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 			<h6 class="address-heading">Shipped To</h6>
 			{{ get_address_html(invoice_data.ShipDtls) }}
 		{% endif %}

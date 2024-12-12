@@ -27,6 +27,10 @@ def set_bootinfo(bootinfo):
 
     set_trigger_for_audit_trail_notification(bootinfo)
     set_trigger_for_item_tax_template_notification(bootinfo)
+<<<<<<< HEAD
+=======
+    set_trigger_for_new_gst_category_notification(bootinfo)
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
 
 def set_trigger_for_audit_trail_notification(bootinfo):
@@ -49,3 +53,15 @@ def set_trigger_for_item_tax_template_notification(bootinfo):
         return
 
     bootinfo["needs_item_tax_template_notification"] = True
+<<<<<<< HEAD
+=======
+
+
+def set_trigger_for_new_gst_category_notification(bootinfo):
+    if not bootinfo.sysdefaults or not cint(
+        bootinfo.sysdefaults.get("needs_new_gst_category_notification", 0)
+    ):
+        return
+
+    bootinfo["needs_new_gst_category_notification"] = True
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)

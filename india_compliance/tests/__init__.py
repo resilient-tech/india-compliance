@@ -2,7 +2,11 @@ from functools import partial
 
 import frappe
 from frappe.desk.page.setup_wizard.setup_wizard import setup_complete
+<<<<<<< HEAD
 from frappe.test_runner import make_test_objects
+=======
+from frappe.tests.utils import make_test_objects
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 from frappe.utils import getdate
 from frappe.utils.nestedset import get_root_of
 from erpnext.accounts.utils import get_fiscal_year
@@ -31,6 +35,12 @@ def before_tests():
                 "email": "test@example.com",
                 "password": "test",
                 "chart_of_accounts": "Standard",
+<<<<<<< HEAD
+=======
+                "company_gstin": "29MUMB22923F1D",
+                "default_gst_rate": "18.0",
+                "enable_audit_trail": 0,
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
             }
         )
 

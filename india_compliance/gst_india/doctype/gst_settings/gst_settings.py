@@ -13,6 +13,13 @@ from india_compliance.gst_india.constants.custom_fields import (
     E_WAYBILL_FIELDS,
     SALES_REVERSE_CHARGE_FIELDS,
 )
+<<<<<<< HEAD
+=======
+from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
+    add_comment_to_gst_return_log,
+    update_is_not_latest_gstr1_data,
+)
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 from india_compliance.gst_india.doctype.gstin.gstin import get_gstr_1_filed_upto
 from india_compliance.gst_india.page.india_compliance_account import (
     _disable_api_promo,
@@ -77,7 +84,11 @@ class GSTSettings(Document):
     def on_update(self):
         self.update_custom_fields()
         # clear session boot cache
+<<<<<<< HEAD
         frappe.cache().delete_keys("bootinfo")
+=======
+        frappe.cache.delete_keys("bootinfo")
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
     def update_retry_e_invoice_e_waybill_scheduled_job(self):
         if not self.has_value_changed("enable_retry_einv_ewb_generation"):
@@ -496,12 +507,20 @@ def update_not_applicable_status(e_invoice_applicability_date=None, company=None
     query.run()
 
 
+<<<<<<< HEAD
 def restrict_gstr_1_transaction_for(posting_date, company_gstin, gst_settings=None):
+=======
+def restrict_gstr_1_transaction_for(doc, gst_settings=None, action="submit"):
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     """
     Check if the user is allowed to modify transactions before the GSTR-1 filing date
     Additionally, update the `is_not_latest_gstr1_data` field in the GST Return Log
     """
+<<<<<<< HEAD
     posting_date = getdate(posting_date)
+=======
+    posting_date = getdate(doc.posting_date)
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
     if not gst_settings:
         gst_settings = frappe.get_cached_doc("GST Settings")
@@ -511,7 +530,11 @@ def restrict_gstr_1_transaction_for(posting_date, company_gstin, gst_settings=No
     if not gst_settings.restrict_changes_after_gstr_1:
         restrict = False
 
+<<<<<<< HEAD
     gstr_1_filed_upto = get_gstr_1_filed_upto(company_gstin)
+=======
+    gstr_1_filed_upto = get_gstr_1_filed_upto(doc.company_gstin)
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
     if not gstr_1_filed_upto:
         restrict = False
@@ -528,6 +551,7 @@ def restrict_gstr_1_transaction_for(posting_date, company_gstin, gst_settings=No
     if restrict:
         return gstr_1_filed_upto
 
+<<<<<<< HEAD
     update_is_not_latest_gstr1_data(posting_date, company_gstin)
 
     return None
@@ -545,3 +569,10 @@ def update_is_not_latest_gstr1_data(posting_date, company_gstin):
         message={"filters": {"company_gstin": company_gstin, "period": period}},
         doctype="GSTR-1 Beta",
     )
+=======
+    # postprocess
+    update_is_not_latest_gstr1_data(posting_date, doc.company_gstin)
+
+    if posting_date <= getdate(gstr_1_filed_upto):
+        add_comment_to_gst_return_log(doc, action)
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)

@@ -2,7 +2,14 @@ import click
 
 from india_compliance.gst_india.constants import BUG_REPORT_URL
 from india_compliance.gst_india.uninstall import before_uninstall as remove_gst
+<<<<<<< HEAD
 from india_compliance.gst_india.uninstall import delete_hrms_custom_fields
+=======
+from india_compliance.gst_india.uninstall import (
+    delete_education_custom_fields,
+    delete_hrms_custom_fields,
+)
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 from india_compliance.income_tax_india.uninstall import (
     before_uninstall as remove_income_tax,
 )
@@ -31,3 +38,9 @@ def before_uninstall():
 def before_app_uninstall(app_name):
     if app_name == "hrms":
         delete_hrms_custom_fields()
+<<<<<<< HEAD
+=======
+
+    if app_name == "education":
+        delete_education_custom_fields()
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)

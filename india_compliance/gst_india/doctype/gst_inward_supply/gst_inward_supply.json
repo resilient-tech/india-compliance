@@ -434,7 +434,11 @@
   }
  ],
  "search_fields": "bill_date, supplier_name, bill_no, document_value",
+<<<<<<< HEAD
  "sort_field": "modified",
+=======
+ "sort_field": "creation",
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
  "sort_order": "DESC",
  "states": [],
  "title_field": "supplier_name",

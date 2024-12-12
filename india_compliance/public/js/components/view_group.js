@@ -18,7 +18,11 @@ india_compliance.ViewGroup = class ViewGroup {
 
         this.view_group_container = $(`
             <ul
+<<<<<<< HEAD
                 class= "nav custom-tabs"
+=======
+                class= "nav custom-tabs rounded-sm border d-inline-flex"
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
                 id = "custom-tabs"
                 role = "tablist"
             ></ul>
@@ -39,7 +43,11 @@ india_compliance.ViewGroup = class ViewGroup {
                 `
                 <li class="nav-item show">
                     <a
+<<<<<<< HEAD
                         class="nav-link btn btn-group btn-default ${this.active_view === view ? "active" : ""}"
+=======
+                        class="nav-link ${this.active_view === view ? "active" : ""}"
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
                         id = "gstr-1-__${view}-view"
                         data-toggle="tab"
                         data-fieldname="${view}"

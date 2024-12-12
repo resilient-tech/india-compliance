@@ -94,7 +94,12 @@ def migrate_e_invoice_fields():
         "owner",
         "modified_by",
         "irn",
+<<<<<<< HEAD
         "sales_invoice",
+=======
+        "reference_doctype",
+        "reference_name",
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
         "is_cancelled",
         "acknowledgement_number",
         "acknowledged_on",
@@ -120,6 +125,10 @@ def migrate_e_invoice_fields():
                 user,
                 user,
                 doc.irn,
+<<<<<<< HEAD
+=======
+                "Sales Invoice",
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
                 doc.name,
                 doc.irn_cancelled,
                 doc.ack_no,

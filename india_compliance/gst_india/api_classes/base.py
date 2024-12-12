@@ -85,6 +85,12 @@ class BaseAPI:
     def post(self, *args, **kwargs):
         return self._make_request("POST", *args, **kwargs)
 
+<<<<<<< HEAD
+=======
+    def put(self, *args, **kwargs):
+        return self._make_request("PUT", *args, **kwargs)
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     def _make_request(
         self,
         method,
@@ -94,7 +100,11 @@ class BaseAPI:
         json=None,
     ):
         method = method.upper()
+<<<<<<< HEAD
         if method not in ("GET", "POST"):
+=======
+        if method not in ("GET", "POST", "PUT"):
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
             frappe.throw(_("Invalid method {0}").format(method))
 
         request_args = frappe._dict(
@@ -108,7 +118,10 @@ class BaseAPI:
         )
 
         log_headers = request_args.headers.copy()
+<<<<<<< HEAD
 
+=======
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
         log = frappe._dict(
             **self.default_log_values,
             url=request_args.url,
@@ -116,7 +129,11 @@ class BaseAPI:
             request_headers=log_headers,
         )
 
+<<<<<<< HEAD
         if method == "POST" and json:
+=======
+        if method in ["POST", "PUT"] and json:
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
             request_args.json = json
 
             json_data = json.copy()
@@ -135,6 +152,10 @@ class BaseAPI:
 
             response = requests.request(method, **request_args)
             if api_request_id := response.headers.get("x-amzn-RequestId"):
+<<<<<<< HEAD
+=======
+                self.request_id = api_request_id
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
                 log.request_id = api_request_id
 
             try:
@@ -257,7 +278,11 @@ class BaseAPI:
             raise GatewayTimeoutError
 
     def generate_request_id(self, length=12):
+<<<<<<< HEAD
         return frappe.generate_hash(length=length)
+=======
+        return f"IC{frappe.generate_hash(length=length - 2)}".upper()
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
     def mask_sensitive_info(self, log):
         request_headers = log.request_headers

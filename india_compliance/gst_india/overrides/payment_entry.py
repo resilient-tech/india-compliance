@@ -19,12 +19,20 @@ from india_compliance.gst_india.utils import get_all_gst_accounts
 
 
 @frappe.whitelist()
+<<<<<<< HEAD
 def get_outstanding_reference_documents(args):
+=======
+def get_outstanding_reference_documents(args, validate=False):
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     from erpnext.accounts.doctype.payment_entry.payment_entry import (
         get_outstanding_reference_documents,
     )
 
+<<<<<<< HEAD
     reference_documents = get_outstanding_reference_documents(args)
+=======
+    reference_documents = get_outstanding_reference_documents(args, validate)
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
     invoice_list = [
         item["voucher_no"]
@@ -83,8 +91,11 @@ def validate(doc, method=None):
         return
 
     if doc.party_type == "Customer":
+<<<<<<< HEAD
         validate_backdated_transaction(doc)
 
+=======
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
         # Presume is export with GST if GST accounts are present
         doc.is_export_with_gst = 1
         validate_transaction_for_advance_payment(doc, method)
@@ -98,6 +109,12 @@ def validate(doc, method=None):
 
 
 def on_submit(doc, method=None):
+<<<<<<< HEAD
+=======
+    if doc.party_type == "Customer":
+        validate_backdated_transaction(doc)
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     make_gst_revesal_entry_from_advance_payment(doc)
 
 
@@ -112,7 +129,11 @@ def before_cancel(doc, method=None):
     validate_backdated_transaction(doc, action="cancel")
 
 
+<<<<<<< HEAD
 def validate_backdated_transaction(doc, action="create"):
+=======
+def validate_backdated_transaction(doc, action="submit"):
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     for row in doc.taxes:
         if row.gst_tax_type in TAX_TYPES and row.tax_amount != 0:
             _validate_backdated_transaction(doc, action=action)
@@ -202,7 +223,11 @@ def _get_gl_for_advance_gst_reversal(payment_entry, reference_row):
     # Reduce receivables
     gl_entry = payment_entry.get_gl_dict(
         {
+<<<<<<< HEAD
             "account": reference_row.get("account") or payment_entry.paid_from,
+=======
+            "account": reference_row.account,
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
             "credit": total_amount,
             "credit_in_account_currency": total_amount,
             "party_type": payment_entry.party_type,
@@ -335,7 +360,10 @@ def get_advance_payment_entries_for_regional(
     against_all_orders=False,
     limit=None,
     condition=None,
+<<<<<<< HEAD
     payment_name=None,
+=======
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 ):
     """
     Get Advance Payment Entries with GST Taxes
@@ -351,7 +379,10 @@ def get_advance_payment_entries_for_regional(
         against_all_orders=against_all_orders,
         limit=limit,
         condition=condition,
+<<<<<<< HEAD
         payment_name=payment_name,
+=======
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     )
 
     # if not Sales Invoice and is Payment Reconciliation

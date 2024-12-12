@@ -6,6 +6,13 @@ div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_html"] .section-body {
     margin-top: 0;
 }
 
+<<<<<<< HEAD
+=======
+div[data-page-route="GSTR-1 Beta"] .section-body {
+    max-width: 100% !important;
+}
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_html"] .form-tabs-list {
     margin-top: var(--margin-sm);
     display: flex;
@@ -93,6 +100,7 @@ div[data-page-route="GSTR-1 Beta"] .frappe-control [data-fieldtype="HTML"] {
 
 div[data-page-route="GSTR-1 Beta"] .custom-tabs > .nav-item > .nav-link {
     padding: 4px 8px;
+<<<<<<< HEAD
     outline: 1px solid var(--dark-border-color);
 }
 
@@ -114,11 +122,37 @@ div[data-page-route="GSTR-1 Beta"] .custom-tabs > .nav-item:first-child:not(:has
 
 div[data-page-route="GSTR-1 Beta"] .custom-tabs > .nav-item:last-child:not(:has(.disabled)):hover {
     background-color: var(--fg-hover-color);
+=======
+}
+
+div[data-page-route="GSTR-1 Beta"] .custom-tabs > .nav-item > .nav-link.active {
+    background-color: #e2e2e2;
+    color: var(--primary);
+}
+
+div[data-page-route="GSTR-1 Beta"]
+    .custom-tabs
+    > .nav-item:first-child:not(:has(.disabled)):hover {
+    background-color: var(--btn-default-hover-bg);
+    border-radius: 0.4rem 0 0 0.4rem;
+    color: var(--text-color);
+}
+
+div[data-page-route="GSTR-1 Beta"]
+    .custom-tabs
+    > .nav-item:last-child:not(:has(.disabled)):hover {
+    background-color: var(--btn-default-hover-bg);
+    border-radius: 0 0.4rem 0.4rem 0;
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     color: var(--text-color);
 }
 
 div[data-page-route="GSTR-1 Beta"] .custom-tabs > .nav-item > .nav-link.active:hover {
+<<<<<<< HEAD
     background-color: var(--fg-hover-color);
+=======
+    background-color: #ededed;
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     color: var(--primary);
 }
 

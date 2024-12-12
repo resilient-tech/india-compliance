@@ -6,7 +6,11 @@
     --bg-red: var(--red-100);
 
     .text-highlight {
+<<<<<<< HEAD
         color: var(--primary-color) !important;
+=======
+        color: var(--heading-color) !important;
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     }
 
     /* Page styles */
@@ -30,9 +34,14 @@
         padding: 2em 3.5em;
         flex: 1;
         border-radius: var(--border-radius-md);
+<<<<<<< HEAD
         box-shadow: var(--card-shadow);
         background-color: var(--card-bg);
         border: 0 solid black;
+=======
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     }
 
     .ic-account-page .main-content .card .title {

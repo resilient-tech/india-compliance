@@ -24,10 +24,13 @@ export default {
     },
 
     actions: {
+<<<<<<< HEAD
         async initAuth({ dispatch }) {
             await dispatch("authenticate");
         },
 
+=======
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
         async authenticate({ state, dispatch, commit }) {
             const api_secret = await get_api_secret();
             if (api_secret) return commit("SET_API_SECRET", api_secret);
@@ -70,5 +73,14 @@ export default {
         hasSession(state) {
             return !!state.session;
         },
+<<<<<<< HEAD
+=======
+
+        guessRouteName(state) {
+            if (state.api_secret) return "home";
+            if (state.session) return "mailSent";
+            return "auth";
+        }
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     },
 };

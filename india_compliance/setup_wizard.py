@@ -62,7 +62,11 @@ def setup_company_taxes(params):
     try:
         validate_gstin(params.company_gstin)
     except frappe.ValidationError:
+<<<<<<< HEAD
         params.company_gstin = ""
+=======
+        params.company_gstin = None
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
     gstin_info = frappe._dict()
     if can_fetch_gstin_info():

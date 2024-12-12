@@ -2,7 +2,11 @@ import json
 from contextlib import contextmanager
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase, change_settings
+=======
+from frappe.tests import IntegrationTestCase, change_settings
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 from frappe.utils import today
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
 from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
@@ -101,7 +105,11 @@ def toggle_provisional_accounting():
         )
 
 
+<<<<<<< HEAD
 class TestIneligibleITC(FrappeTestCase):
+=======
+class TestIneligibleITC(IntegrationTestCase):
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -602,6 +610,14 @@ class TestIneligibleITC(FrappeTestCase):
                     "debit": 0.0,
                     "credit": 267.26,  # 257 + 10.26
                 },
+<<<<<<< HEAD
+=======
+                {
+                    "account": "Cost of Goods Sold - _TIRC",
+                    "debit": 10.26,
+                    "credit": 10.26,
+                },
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
             ],
         )
 

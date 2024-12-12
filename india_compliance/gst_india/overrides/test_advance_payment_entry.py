@@ -1,8 +1,15 @@
 import json
 import re
+<<<<<<< HEAD
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
+=======
+from contextlib import contextmanager
+
+import frappe
+from frappe.tests import IntegrationTestCase
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 from erpnext.accounts.doctype.payment_entry.payment_entry import (
     get_outstanding_reference_documents,
 )
@@ -15,11 +22,45 @@ from erpnext.accounts.doctype.unreconcile_payment.unreconcile_payment import (
 from erpnext.controllers.accounts_controller import (
     get_advance_payment_entries_for_regional,
 )
+<<<<<<< HEAD
+=======
+from erpnext.controllers.stock_controller import show_accounting_ledger_preview
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
 from india_compliance.gst_india.utils.tests import create_transaction
 
 
+<<<<<<< HEAD
 class TestAdvancePaymentEntry(FrappeTestCase):
+=======
+@contextmanager
+def toggle_seperate_advance_accounting():
+    # Enable Provisional Expense
+    frappe.db.set_value(
+        "Company",
+        "_Test Indian Registered Company",
+        {
+            "book_advance_payments_in_separate_party_account": 1,
+            "default_advance_received_account": "Creditors - _TIRC",
+        },
+    )
+
+    try:
+        yield
+
+    finally:
+        frappe.db.set_value(
+            "Company",
+            "_Test Indian Registered Company",
+            {
+                "book_advance_payments_in_separate_party_account": 0,
+                "default_advance_received_account": None,
+            },
+        )
+
+
+class TestAdvancePaymentEntry(IntegrationTestCase):
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     EXPECTED_GL = [
         {"account": "Cash - _TIRC", "debit": 590.0, "credit": 0.0},
         {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 500.0},
@@ -150,6 +191,40 @@ class TestAdvancePaymentEntry(FrappeTestCase):
             ],
         )
 
+<<<<<<< HEAD
+=======
+    def test_preview_gl_entries(self):
+        invoice_doc, payment_doc = self._create_invoice_then_payment()
+
+        # Preview payment GL Entry
+        preview_data = show_accounting_ledger_preview(
+            payment_doc.company, payment_doc.doctype, payment_doc.name
+        )["gl_data"]
+
+        preview_data = [
+            {"account": row[1], "debit": row[2], "credit": row[3]}
+            for row in preview_data
+        ]
+
+        out_str = json.dumps(sorted(preview_data, key=json.dumps))
+        expected_str = json.dumps(
+            sorted(
+                [
+                    {"account": "Cash - _TIRC", "debit": 590.0, "credit": ""},
+                    {"account": "Debtors - _TIRC", "debit": "", "credit": 100.0},
+                    {"account": "Debtors - _TIRC", "debit": "", "credit": 18.0},
+                    {"account": "Debtors - _TIRC", "debit": "", "credit": 400.0},
+                    {"account": "Output Tax CGST - _TIRC", "debit": "", "credit": 45.0},
+                    {"account": "Output Tax CGST - _TIRC", "debit": 9.0, "credit": ""},
+                    {"account": "Output Tax SGST - _TIRC", "debit": "", "credit": 45.0},
+                    {"account": "Output Tax SGST - _TIRC", "debit": 9.0, "credit": ""},
+                ],
+                key=json.dumps,
+            )
+        )
+        self.assertEqual(out_str, expected_str)
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     def validate_payment_entry_allocation(self):
         invoice_doc = self._create_sales_invoice()
         payment_doc = self._create_payment_entry(do_not_submit=True)
@@ -191,6 +266,44 @@ class TestAdvancePaymentEntry(FrappeTestCase):
             payment_doc.submit,
         )
 
+<<<<<<< HEAD
+=======
+    @toggle_seperate_advance_accounting()
+    def test_advance_payment_entry_with_seperate_account(self):
+        payment_doc = self._create_payment_entry()
+        invoice_doc = self._create_sales_invoice(payment_doc)
+
+        # Verify outstanding amount
+        outstanding_amount = frappe.db.get_value(
+            "Sales Invoice", invoice_doc.name, "outstanding_amount"
+        )
+        self.assertEqual(outstanding_amount, 0)
+
+        self.assertGLEntries(
+            payment_doc,
+            [
+                {"account": "Cash - _TIRC", "debit": 590.0, "credit": 0.0},
+                {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 500.0},
+                {"account": "Output Tax CGST - _TIRC", "debit": 0.0, "credit": 45.0},
+                {"account": "Output Tax SGST - _TIRC", "debit": 0.0, "credit": 45.0},
+                {"account": "Creditors - _TIRC", "debit": 100.0, "credit": 0.0},
+                {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 100.0},
+                {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 18.0},
+                {"account": "Output Tax CGST - _TIRC", "debit": 9.0, "credit": 0.0},
+                {"account": "Output Tax SGST - _TIRC", "debit": 9.0, "credit": 0.0},
+            ],
+        )
+        self.assertPLEntries(
+            payment_doc,
+            [
+                {"amount": -100.0, "against_voucher_no": invoice_doc.name},
+                {"amount": -18.0, "against_voucher_no": invoice_doc.name},
+                {"amount": -100.0, "against_voucher_no": payment_doc.name},
+                {"amount": 500.0, "against_voucher_no": payment_doc.name},
+            ],
+        )
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     def test_payment_entry_allocation(self):
         payment_doc = self._create_payment_entry()
         invoice_doc = self._create_sales_invoice()
@@ -369,13 +482,21 @@ class TestRegionalOverrides(TestAdvancePaymentEntry):
         payment_doc = self._create_payment_entry()
         invoice_doc = self._create_sales_invoice(payment_doc)
 
+<<<<<<< HEAD
         pe = frappe.qb.DocType("Payment Entry")
         conditions = [pe.company == payment_doc.company]
+=======
+        conditions = frappe._dict({"company": invoice_doc.get("company")})
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
         payment_entry = get_advance_payment_entries_for_regional(
             party_type="Customer",
             party=invoice_doc.customer,
+<<<<<<< HEAD
             party_account=invoice_doc.debit_to,
+=======
+            party_account=[invoice_doc.debit_to],
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
             order_list=[],
             order_doctype="Sales Order",
             include_unallocated=True,

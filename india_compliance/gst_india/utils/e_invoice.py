@@ -134,6 +134,7 @@ def generate_e_invoice(docname, throw=True, force=False):
 
         # Handle Duplicate IRN
         if result.InfCd == "DUPIRN":
+<<<<<<< HEAD
             response = api.get_e_invoice_by_irn(result.Desc.Irn)
 
             if signed_data := response.SignedInvoice:
@@ -158,6 +159,17 @@ def generate_e_invoice(docname, throw=True, force=False):
             # Handle error 2283:
             # IRN details cannot be provided as it is generated more than 2 days ago
             result = result.Desc if response.error_code == "2283" else response
+=======
+            current_gstin = data.get("BuyerDtls").get("Gstin")
+            current_invoice_amount = data.get("ValDtls").get("TotInvVal")
+
+            return handle_duplicate_irn_error(
+                irn_data=result.Desc,
+                current_gstin=current_gstin,
+                current_invoice_amount=current_invoice_amount,
+                doc=doc,
+            )
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
         # Handle Invalid GSTIN Error
         if result.error_code in ("3028", "3029", "3001"):
@@ -317,7 +329,12 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False, messag
         doc,
         {
             "irn": doc.irn,
+<<<<<<< HEAD
             "sales_invoice": doc.name,
+=======
+            "reference_doctype": doc.doctype,
+            "reference_name": doc.name,
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
             "acknowledgement_number": result.AckNo,
             "acknowledged_on": parse_datetime(result.AckDt),
             "signed_invoice": result.SignedInvoice,

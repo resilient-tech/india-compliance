@@ -57,6 +57,21 @@ doctype_js = {
         "gst_india/client_scripts/e_waybill_actions.js",
         "gst_india/client_scripts/sales_invoice.js",
     ],
+<<<<<<< HEAD
+=======
+    "Stock Entry": [
+        "gst_india/client_scripts/stock_entry.js",
+        "gst_india/client_scripts/e_waybill_actions.js",
+    ],
+    "Subcontracting Order": [
+        "gst_india/client_scripts/subcontracting_order.js",
+        "gst_india/client_scripts/e_waybill_actions.js",
+    ],
+    "Subcontracting Receipt": [
+        "gst_india/client_scripts/subcontracting_receipt.js",
+        "gst_india/client_scripts/e_waybill_actions.js",
+    ],
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     "Supplier": "gst_india/client_scripts/supplier.js",
     "Accounts Settings": "audit_trail/client_scripts/accounts_settings.js",
     "Customize Form": "audit_trail/client_scripts/customize_form.js",
@@ -96,9 +111,12 @@ doc_events = {
         ),
     },
     "Delivery Note": {
+<<<<<<< HEAD
         "on_trash": (
             "india_compliance.gst_india.overrides.transaction.ignore_logs_on_trash"
         ),
+=======
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
         "onload": [
             "india_compliance.gst_india.overrides.delivery_note.onload",
             "india_compliance.gst_india.overrides.transaction.onload",
@@ -186,9 +204,12 @@ doc_events = {
         ],
     },
     "Sales Invoice": {
+<<<<<<< HEAD
         "on_trash": (
             "india_compliance.gst_india.overrides.transaction.ignore_logs_on_trash"
         ),
+=======
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
         "onload": [
             "india_compliance.gst_india.overrides.sales_invoice.onload",
             "india_compliance.gst_india.overrides.transaction.onload",
@@ -223,6 +244,30 @@ doc_events = {
     "Sales Order Item": {
         "on_change": "india_compliance.gst_india.overrides.transaction.on_change_item",
     },
+<<<<<<< HEAD
+=======
+    "Stock Entry": {
+        "onload": "india_compliance.gst_india.overrides.subcontracting_transaction.onload",
+        "validate": "india_compliance.gst_india.overrides.subcontracting_transaction.validate",
+        "before_save": "india_compliance.gst_india.overrides.subcontracting_transaction.before_save",
+        "before_submit": "india_compliance.gst_india.overrides.subcontracting_transaction.validate_doc_references",
+        "after_mapping": "india_compliance.gst_india.overrides.subcontracting_transaction.after_mapping_stock_entry",
+    },
+    "Subcontracting Order": {
+        "validate": "india_compliance.gst_india.overrides.subcontracting_transaction.validate",
+        "before_save": "india_compliance.gst_india.overrides.subcontracting_transaction.before_save",
+        "after_mapping": "india_compliance.gst_india.overrides.subcontracting_transaction.after_mapping_subcontracting_order",
+    },
+    "Subcontracting Receipt": {
+        "onload": "india_compliance.gst_india.overrides.subcontracting_transaction.onload",
+        "validate": "india_compliance.gst_india.overrides.subcontracting_transaction.validate",
+        "before_save": [
+            "india_compliance.gst_india.overrides.subcontracting_transaction.before_save",
+            "india_compliance.gst_india.overrides.subcontracting_transaction.validate_doc_references",
+        ],
+        "before_mapping": "india_compliance.gst_india.overrides.subcontracting_transaction.before_mapping_subcontracting_receipt",
+    },
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     "Supplier": {
         "validate": [
             "india_compliance.gst_india.overrides.supplier.validate",
@@ -285,15 +330,25 @@ doc_events = {
         "validate": "india_compliance.audit_trail.overrides.version.validate",
         "on_trash": "india_compliance.audit_trail.overrides.version.on_trash",
     },
+<<<<<<< HEAD
+=======
+    "Fee Category": {
+        "before_insert": "india_compliance.gst_india.overrides.fee_category.before_update",
+        "before_validate": "india_compliance.gst_india.overrides.fee_category.before_update",
+    },
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 }
 
 
 regional_overrides = {
     "India": {
+<<<<<<< HEAD
         "erpnext.controllers.taxes_and_totals.get_itemised_tax_breakup_header": (
             "india_compliance.gst_india.overrides.transaction.get_itemised_tax_breakup_header"
         ),
         "erpnext.controllers.taxes_and_totals.get_itemised_tax_breakup_data": "india_compliance.gst_india.overrides.transaction.get_itemised_tax_breakup_data",
+=======
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
         "erpnext.controllers.taxes_and_totals.get_regional_round_off_accounts": (
             "india_compliance.gst_india.overrides.transaction.get_regional_round_off_accounts"
         ),
@@ -321,11 +376,19 @@ regional_overrides = {
         "erpnext.accounts.party.get_regional_address_details": (
             "india_compliance.gst_india.overrides.transaction.update_party_details"
         ),
+<<<<<<< HEAD
         "erpnext.assets.doctype.asset.asset.get_wdv_or_dd_depr_amount": (
             "india_compliance.income_tax_india.overrides.asset.get_wdv_or_dd_depr_amount"
         ),
         "erpnext.assets.doctype.asset.depreciation.cancel_depreciation_entries": (
             "india_compliance.income_tax_india.overrides.asset.cancel_depreciation_entries"
+=======
+        "erpnext.assets.doctype.asset_depreciation_schedule.asset_depreciation_schedule.get_wdv_or_dd_depr_amount": (
+            "india_compliance.income_tax_india.overrides.asset_depreciation_schedule.get_wdv_or_dd_depr_amount"
+        ),
+        "erpnext.assets.doctype.asset.depreciation.cancel_depreciation_entries": (
+            "india_compliance.income_tax_india.overrides.asset_depreciation_schedule.cancel_depreciation_entries"
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
         ),
     }
 }
@@ -360,6 +423,15 @@ override_doctype_dashboards = {
     "Purchase Receipt": (
         "india_compliance.gst_india.overrides.purchase_receipt.get_dashboard_data"
     ),
+<<<<<<< HEAD
+=======
+    "Stock Entry": (
+        "india_compliance.gst_india.overrides.subcontracting_transaction.get_dashboard_data"
+    ),
+    "Subcontracting Receipt": (
+        "india_compliance.gst_india.overrides.subcontracting_transaction.get_dashboard_data"
+    ),
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 }
 
 override_doctype_class = {
@@ -393,12 +465,15 @@ audit_trail_doctypes = [
     "Asset",
     "Asset Capitalization",
     "Asset Repair",
+<<<<<<< HEAD
     "Loan Balance Adjustment",
     "Loan Disbursement",
     "Loan Interest Accrual",
     "Loan Refund",
     "Loan Repayment",
     "Loan Write Off",
+=======
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     "Delivery Note",
     "Landed Cost Voucher",
     "Purchase Receipt",

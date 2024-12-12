@@ -2,8 +2,15 @@
 # See license.txt
 
 # import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
 
 
 class TestGSTRImportLog(FrappeTestCase):
+=======
+from frappe.tests import IntegrationTestCase
+
+
+class TestGSTRImportLog(IntegrationTestCase):
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     pass

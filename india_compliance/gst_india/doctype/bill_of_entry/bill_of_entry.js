@@ -99,6 +99,7 @@ frappe.ui.form.on("Bill of Entry Item", {
     },
 });
 
+<<<<<<< HEAD
 frappe.ui.form.on("Bill of Entry Taxes", {
     rate(frm, cdt, cdn) {
         frm.taxes_controller.update_tax_rate(cdt, cdn);
@@ -134,6 +135,12 @@ class BillOfEntryController {
     constructor(frm) {
         this.frm = frm;
         this.frm.taxes_controller = new TaxesController(frm);
+=======
+class BillOfEntryController {
+    constructor(frm) {
+        this.frm = frm;
+        this.frm.taxes_controller = new india_compliance.taxes_controller(frm);
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
         this.setup();
     }
 
@@ -191,6 +198,7 @@ class BillOfEntryController {
         );
     }
 
+<<<<<<< HEAD
     update_total_taxes() {
         const total_taxes = this.frm.doc.taxes.reduce(
             (total, row) => total + row.tax_amount,
@@ -199,6 +207,8 @@ class BillOfEntryController {
         this.frm.set_value("total_taxes", total_taxes);
     }
 
+=======
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     update_total_amount_payable() {
         this.frm.set_value(
             "total_amount_payable",
@@ -206,6 +216,7 @@ class BillOfEntryController {
         );
     }
 }
+<<<<<<< HEAD
 
 class TaxesController {
     constructor(frm) {
@@ -390,3 +401,5 @@ class TaxesController {
         }, 0);
     }
 }
+=======
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)

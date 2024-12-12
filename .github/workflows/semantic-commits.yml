@@ -19,7 +19,11 @@ jobs:
               with:
                   fetch-depth: 200
 
+<<<<<<< HEAD
             - uses: actions/setup-node@v3
+=======
+            - uses: actions/setup-node@v4
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
               with:
                   node-version: 20
                   check-latest: true

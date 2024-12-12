@@ -1,11 +1,20 @@
+<<<<<<< HEAD
 import unittest
 
 import frappe
+=======
+import frappe
+from frappe.tests import IntegrationTestCase
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
 from india_compliance.gst_india.utils import validate_invoice_number
 
 
+<<<<<<< HEAD
 class TestSalesInvoice(unittest.TestCase):
+=======
+class TestSalesInvoice(IntegrationTestCase):
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     def test_validate_invoice_number(self):
         posting_date = "2021-05-01"
 

@@ -1,7 +1,11 @@
 import re
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
+=======
+from frappe.tests import IntegrationTestCase
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 from frappe.utils import add_to_date, getdate
 from frappe.utils.data import format_date
 
@@ -10,6 +14,7 @@ from india_compliance.gst_india.utils.tests import (
     append_item,
     create_sales_invoice,
 )
+<<<<<<< HEAD
 from india_compliance.gst_india.utils.transaction_data import (
     GSTTransactionData,
     validate_non_gst_items,
@@ -17,6 +22,12 @@ from india_compliance.gst_india.utils.transaction_data import (
 
 
 class TestTransactionData(FrappeTestCase):
+=======
+from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
+
+
+class TestTransactionData(IntegrationTestCase):
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     @classmethod
     def setUpClass(cls):
         frappe.db.savepoint("before_test_transaction_data")
@@ -60,6 +71,7 @@ class TestTransactionData(FrappeTestCase):
             GSTTransactionData(doc).validate_mode_of_transport,
         )
 
+<<<<<<< HEAD
     def test_validate_non_gst_items(self):
         doc = create_sales_invoice(item_code="_Test Non GST Item", do_not_submit=True)
         self.assertRaisesRegex(
@@ -69,6 +81,8 @@ class TestTransactionData(FrappeTestCase):
             doc,
         )
 
+=======
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     def test_check_missing_address_fields(self):
         doc = create_sales_invoice(do_not_submit=True)
 

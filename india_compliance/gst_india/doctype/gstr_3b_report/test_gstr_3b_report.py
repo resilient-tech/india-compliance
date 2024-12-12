@@ -4,7 +4,11 @@
 import json
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase, change_settings
+=======
+from frappe.tests import IntegrationTestCase, change_settings
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 from frappe.utils import getdate
 
 from india_compliance.gst_india.utils.tests import (
@@ -13,7 +17,11 @@ from india_compliance.gst_india.utils.tests import (
 )
 
 
+<<<<<<< HEAD
 class TestGSTR3BReport(FrappeTestCase):
+=======
+class TestGSTR3BReport(IntegrationTestCase):
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     def setUp(self):
         frappe.set_user("Administrator")
         filters = {"company": "_Test Indian Registered Company"}
@@ -57,9 +65,15 @@ class TestGSTR3BReport(FrappeTestCase):
             {
                 "doctype": "GSTR 3B Report",
                 "company": "_Test Indian Registered Company",
+<<<<<<< HEAD
                 "company_address": "_Test Indian Registered Company-Billing",
                 "year": today.year,
                 "month": month_number_mapping.get(today.month),
+=======
+                "company_gstin": "24AAQCA8719H1ZC",
+                "year": today.year,
+                "month_or_quarter": month_number_mapping.get(today.month),
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
             }
         ).insert()
 

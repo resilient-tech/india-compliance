@@ -28,9 +28,13 @@
           <div class="order-summary">
             <div class="sub-heading">
               <p class="title">Order Summary</p>
+<<<<<<< HEAD
               <a @click="$router.go(-1)" class="text-highlight text-right">
                 Edit
               </a>
+=======
+              <a @click="$router.back()" class="text-highlight text-right"> Edit </a>
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
             </div>
             <div class="order-summary-body">
               <div class="row">
@@ -85,17 +89,24 @@ export default {
 
   data() {
     return {
+<<<<<<< HEAD
+=======
+      orderDetails: null,
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
       isLoading: true,
       // TODO: fix reactivity of vuex store's state `billingDetails` and use computed property instead
       billingDetails: {},
     };
   },
 
+<<<<<<< HEAD
   beforeRouteEnter(to, from, next) {
     if (to.params.order) return next();
     next({ name: "home", replace: true });
   },
 
+=======
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
   computed: {
     billingGstin() {
       return this.billingDetails.billing_gstin;
@@ -129,15 +140,22 @@ export default {
       return this.billingDetails.pincode;
     },
 
+<<<<<<< HEAD
     orderDetails() {
       return this.$route.params.order;
     },
 
+=======
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     creditsValidity() {
       return frappe.datetime.str_to_user(this.orderDetails.validity);
     },
   },
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
   methods: {
     getReadableNumber,
     editAddress() {
@@ -189,19 +207,34 @@ export default {
             fieldname: "state",
             fieldtype: "Autocomplete",
             default: this.state,
+<<<<<<< HEAD
             options: this.country.toLowerCase() === "india" ? states : []
+=======
+            options: this.country.toLowerCase() === "india" ? states : [],
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
           },
           {
             label: "Country",
             fieldname: "country",
             fieldtype: "Data",
             default: this.country,
+<<<<<<< HEAD
             onchange(){
               // TODO: fix in frappe needed to update dialog options
               this.value.toLowerCase() === "india" ?
               dialog.set_df_property("state","options", states):
               dialog.set_df_property("state", "options", [])
             }
+=======
+            onchange() {
+              // TODO: fix in frappe needed to update dialog options
+              dialog.set_df_property(
+                "state",
+                "options",
+                this.value.toLowerCase() === "india" ? states : [],
+              );
+            },
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
           },
           {
             label: "Postal Code",
@@ -236,23 +269,38 @@ export default {
     },
 
     redirectToHome(message, color) {
+<<<<<<< HEAD
       this.$router.push({
         name: "home",
         replace: true,
         params: { message: { message, color } },
       });
     },
+=======
+      this.$store.dispatch("setMessage", { message, color });
+      this.$router.replace({ name: "home" });
+    },
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     initCashFree(orderToken) {
       const style = getComputedStyle(document.body);
       const primaryColor = style.getPropertyValue("--primary");
       const cardBg = style.getPropertyValue("--card-bg");
+<<<<<<< HEAD
       const theme =
         document.documentElement.getAttribute("data-theme-mode") || "light";
+=======
+      const theme = document.documentElement.getAttribute("data-theme-mode") || "light";
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
       const dropConfig = {
         components: ["card", "netbanking", "app", "upi"],
         orderToken,
+<<<<<<< HEAD
         onSuccess: async (data) => {
+=======
+        onSuccess: async data => {
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
           if (data.order && data.order.status == "PAID") {
             const response = await verify_payment(data.order.orderId);
             if (!response.success || response.error) {
@@ -265,15 +313,23 @@ export default {
             );
           }
         },
+<<<<<<< HEAD
         onFailure: (data) => {
+=======
+        onFailure: data => {
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
           // redirecting on order related errors
           if (data.order.errorText) {
             return this.redirectToHome(data.order.errorText, "red");
           }
 
           frappe.throw(
+<<<<<<< HEAD
             data.transaction?.txMsg ||
               "Something went wrong, please try again later",
+=======
+            data.transaction?.txMsg || "Something went wrong, please try again later",
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
             "Payment Failed"
           );
         },
@@ -291,13 +347,27 @@ export default {
       const paymentElement = document.getElementById("payment-gateway");
       cashfree.initialiseDropin(paymentElement, dropConfig);
 
+<<<<<<< HEAD
       document
         .querySelector("#payment-gateway iframe")
         .setAttribute("scrolling", "no");
+=======
+      document.querySelector("#payment-gateway iframe").setAttribute("scrolling", "no");
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     },
   },
 
   created() {
+<<<<<<< HEAD
+=======
+    this.orderDetails = this.$store.state.account.orderDetails;
+    this.$store.dispatch("resetOrder");
+
+    if (!this.orderDetails || !this.orderDetails.token) {
+      return this.redirectToHome("Invalid order details", "red");
+    }
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     const script = document.createElement("script");
     script.setAttribute(
       "src",
@@ -305,7 +375,11 @@ export default {
     );
     document.head.appendChild(script);
     script.onload = async () => {
+<<<<<<< HEAD
       this.initCashFree(this.$route.params.order.token);
+=======
+      this.initCashFree(this.orderDetails.token);
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
       await this.$store.dispatch("fetchDetails", "billing");
       this.isLoading = false;
       this.billingDetails = this.$store.state.account.billingDetails;

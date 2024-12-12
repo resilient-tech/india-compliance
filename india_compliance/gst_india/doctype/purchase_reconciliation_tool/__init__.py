@@ -376,7 +376,11 @@ class PurchaseInvoice:
 
     def get_unmatched(self, category):
         gst_category = (
+<<<<<<< HEAD
             ("Registered Regular", "Tax Deductor")
+=======
+            ("Registered Regular", "Tax Deductor", "Input Service Distributor")
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
             if category in ("B2B", "CDNR", "ISD")
             else ("SEZ", "Overseas", "UIN Holders")
         )
@@ -447,6 +451,10 @@ class PurchaseInvoice:
             "bill_no",
             "place_of_supply",
             "is_reverse_charge",
+<<<<<<< HEAD
+=======
+            "itc_classification",
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
             Abs(Sum(self.PI_ITEM.taxable_value)).as_("taxable_value"),
             *tax_fields,
         ]
@@ -1226,6 +1234,10 @@ class ReconciledData(BaseReconciliation):
             "Overseas": "IMPG",
             "UIN Holders": "B2B",
             "Tax Deductor": "B2B",
+<<<<<<< HEAD
+=======
+            "Input Service Distributor": "B2B",
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
         }
 
         classification = GST_CATEGORIES.get(doc.gst_category)
@@ -1235,6 +1247,12 @@ class ReconciledData(BaseReconciliation):
         if not classification and doc.get("doctype") == "Bill of Entry":
             classification = "IMPG"
 
+<<<<<<< HEAD
+=======
+        if doc.itc_classification == "Input Service Distributor":
+            classification = "ISD"
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
         return classification
 
     @staticmethod

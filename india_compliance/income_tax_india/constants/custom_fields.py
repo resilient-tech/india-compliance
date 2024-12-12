@@ -25,7 +25,12 @@ CUSTOM_FIELDS = {
             "fieldtype": "Check",
             "insert_after": "finance_book_name",
             "description": (
+<<<<<<< HEAD
                 "If the asset is put to use for less than 180 days in the first year, the first year's depreciation rate will be reduced by 50%."
+=======
+                "If the asset is put to use for less than 180 days in the first year, the first year's"
+                " Depreciation Rate will be reduced by 50%."
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
             ),
         }
     ],

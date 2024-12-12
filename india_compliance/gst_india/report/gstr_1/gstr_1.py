@@ -26,6 +26,10 @@ from india_compliance.gst_india.utils import (
     get_escaped_name,
     get_gst_accounts_by_type,
     get_gstin_list,
+<<<<<<< HEAD
+=======
+    validate_invoice_number,
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 )
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr_1 import SUPECOM, get_b2c_limit
@@ -52,7 +56,11 @@ def execute(filters=None):
     return Gstr1Report(filters).run()
 
 
+<<<<<<< HEAD
 class Gstr1Report(object):
+=======
+class Gstr1Report:
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     def __init__(self, filters=None):
         self.filters = frappe._dict(filters or {})
         self.columns = []
@@ -562,9 +570,15 @@ class Gstr1Report(object):
 
             parent_dict = invoice_item_wise_tax_details.setdefault(parent, {})
             for item_code, invoice_tax_details in item_wise_tax_detail.items():
+<<<<<<< HEAD
                 tax_rate = flt(invoice_tax_details[0])
                 tax_rate = flt(tax_rate * 2 if is_cgst_or_sgst else tax_rate)
                 tax_amount = flt(invoice_tax_details[1])
+=======
+                tax_rate = flt(invoice_tax_details.get("tax_rate"))
+                tax_rate = flt(tax_rate * 2 if is_cgst_or_sgst else tax_rate)
+                tax_amount = flt(invoice_tax_details.get("tax_amount"))
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
                 item_dict = parent_dict.setdefault(
                     item_code, {"tax_rate": 0, "cess_amount": 0, "taxable_value": 0}
@@ -1367,8 +1381,13 @@ class GSTR1DocumentIssuedSummary:
         self.queries = {
             "Sales Invoice": self.get_query_for_sales_invoice,
             "Purchase Invoice": self.get_query_for_purchase_invoice,
+<<<<<<< HEAD
             # "Stock Entry": self.get_query_for_stock_entry, Not supported in v14.
             # "Subcontracting Receipt": self.get_query_for_subcontracting_receipt,
+=======
+            "Stock Entry": self.get_query_for_stock_entry,
+            "Subcontracting Receipt": self.get_query_for_subcontracting_receipt,
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
         }
 
     def get_data(self) -> list:
@@ -1606,9 +1625,15 @@ class GSTR1DocumentIssuedSummary:
 
     def seperate_data_by_nature_of_document(self, data, doctype):
         nature_of_document = {
+<<<<<<< HEAD
             "Excluded from Report (Same GSTIN Billing)": [],
             "Excluded from Report (Is Opening Entry)": [],
             "Excluded from Report (Has Non GST Item)": [],
+=======
+            "Excluded from Report (Invalid Invoice Number)": [],
+            "Excluded from Report (Same GSTIN Billing)": [],
+            "Excluded from Report (Is Opening Entry)": [],
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
             "Invoices for outward supply": [],
             "Debit Note": [],
             "Credit Note": [],
@@ -1617,7 +1642,16 @@ class GSTR1DocumentIssuedSummary:
         }
 
         for doc in data:
+<<<<<<< HEAD
             if doc.is_opening == "Yes":
+=======
+            if not validate_invoice_number(doc, throw=False):
+                nature_of_document[
+                    "Excluded from Report (Invalid Invoice Number)"
+                ].append(doc)
+
+            elif doc.is_opening == "Yes":
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
                 nature_of_document["Excluded from Report (Is Opening Entry)"].append(
                     doc
                 )
@@ -1625,10 +1659,13 @@ class GSTR1DocumentIssuedSummary:
                 nature_of_document["Excluded from Report (Same GSTIN Billing)"].append(
                     doc
                 )
+<<<<<<< HEAD
             elif doc.gst_treatment == "Non-GST":
                 nature_of_document["Excluded from Report (Has Non GST Item)"].append(
                     doc
                 )
+=======
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
             elif doctype == "Purchase Invoice":
                 nature_of_document[
                     "Invoices for inward supply from unregistered person"
@@ -2170,6 +2207,11 @@ def get_invoice_type_for_excel(row):
             "Tax Deductor": "Regular B2B",
             "UIN Holders": "Regular B2B",
             "Unregistered": "B2CL",
+<<<<<<< HEAD
+=======
+            "Tax Collector": "Regular B2B",
+            "Input Service Distributor": "Regular B2B",
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
         }
     ).get(gst_category)
 

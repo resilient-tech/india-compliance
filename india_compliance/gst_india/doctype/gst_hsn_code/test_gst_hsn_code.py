@@ -3,14 +3,29 @@
 import re
 
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase, change_settings
+=======
+from frappe.tests import IntegrationTestCase, change_settings
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
 from india_compliance.gst_india.doctype.gst_hsn_code.gst_hsn_code import (
     update_taxes_in_item_master,
 )
 
 
+<<<<<<< HEAD
 class TestGSTHSNCode(FrappeTestCase):
+=======
+class TestGSTHSNCode(IntegrationTestCase):
+    @classmethod
+    def setUpClass(cls):
+        # don't create test objects
+        frappe.local.test_objects["GST HSN Code"] = []
+
+        super().setUpClass()
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     @change_settings("GST Settings", {"validate_hsn_code": 0})
     def test_validate_hsn_when_validate_hsn_code_disabled(self):
         doc = frappe.get_doc({"doctype": "GST HSN Code", "hsn_code": "1"})

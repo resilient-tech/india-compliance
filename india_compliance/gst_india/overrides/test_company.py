@@ -1,10 +1,18 @@
 import frappe
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase
+=======
+from frappe.tests import IntegrationTestCase
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
 from india_compliance.gst_india.overrides.company import get_tax_defaults
 
 
+<<<<<<< HEAD
 class TestCompanyFixtures(FrappeTestCase):
+=======
+class TestCompanyFixtures(IntegrationTestCase):
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     @classmethod
     def setUpClass(cls):
         frappe.db.savepoint("before_test_company")

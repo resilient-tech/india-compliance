@@ -14,6 +14,10 @@ from india_compliance.gst_india.constants.custom_fields import (
     CUSTOM_FIELDS,
     E_INVOICE_FIELDS,
     E_WAYBILL_FIELDS,
+<<<<<<< HEAD
+=======
+    EDUCATION_CUSTOM_FIELDS,
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     HRMS_CUSTOM_FIELDS,
     SALES_REVERSE_CHARGE_FIELDS,
 )
@@ -32,6 +36,10 @@ def after_install():
     create_email_template()
     set_default_gst_settings()
     set_default_accounts_settings()
+<<<<<<< HEAD
+=======
+    set_default_print_settings()
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     create_hsn_codes()
     add_fields_to_item_variant_settings()
 
@@ -44,11 +52,24 @@ def create_custom_fields():
     if "hrms" in frappe.get_installed_apps():
         create_hrms_custom_fields()
 
+<<<<<<< HEAD
+=======
+    if "education" in frappe.get_installed_apps():
+        create_education_custom_fields()
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
 def create_hrms_custom_fields():
     _create_custom_fields(HRMS_CUSTOM_FIELDS, ignore_validate=True)
 
 
+<<<<<<< HEAD
+=======
+def create_education_custom_fields():
+    _create_custom_fields(EDUCATION_CUSTOM_FIELDS, ignore_validate=True)
+
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 def create_accounting_dimension_fields():
     doctypes = frappe.get_hooks(
         "accounting_dimension_doctypes",
@@ -203,6 +224,10 @@ def set_default_gst_settings():
         "auto_generate_e_invoice": 1,
         "generate_e_waybill_with_e_invoice": 1,
         "e_invoice_applicable_from": nowdate(),
+<<<<<<< HEAD
+=======
+        "fetch_e_invoice_details_from_gst_portal": 1,
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
         "autofill_party_info": 1,
         "archive_party_info_days": 7,
         "validate_gstin_status": 1,
@@ -252,6 +277,31 @@ def set_default_accounts_settings():
     frappe.db.set_default("add_taxes_from_item_tax_template", 0)
 
 
+<<<<<<< HEAD
+=======
+def set_default_print_settings():
+    sales_invoice_format = frappe.get_meta("Sales Invoice").default_print_format
+
+    if sales_invoice_format:
+        return
+
+    # print style
+    frappe.db.set_single_value("Print Settings", "print_style", "Modern")
+
+    # print format
+    frappe.make_property_setter(
+        {
+            "doctype": "Sales Invoice",
+            "doctype_or_field": "DocType",
+            "property": "default_print_format",
+            "value": "GST Tax Invoice",
+        },
+        validate_fields_for_doctype=False,
+        is_system_generated=False,
+    )
+
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 def show_accounts_settings_override_warning():
     """
     Show warning if Determine Address Tax Category From is set to something

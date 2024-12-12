@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase, change_settings
+=======
+from frappe.tests import IntegrationTestCase, change_settings
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 from frappe.utils import getdate
 
 from india_compliance.gst_india.report.gst_sales_register_beta.gst_sales_register_beta import (
@@ -643,7 +647,11 @@ INVOICES = [
 ]
 
 
+<<<<<<< HEAD
 class TestSalesRegisterBeta(FrappeTestCase):
+=======
+class TestSalesRegisterBeta(IntegrationTestCase):
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

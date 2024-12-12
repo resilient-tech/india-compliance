@@ -5,7 +5,14 @@ import frappe
 from india_compliance.audit_trail.setup import setup_fixtures as setup_audit_trail
 from india_compliance.gst_india.constants import BUG_REPORT_URL
 from india_compliance.gst_india.setup import after_install as setup_gst
+<<<<<<< HEAD
 from india_compliance.gst_india.setup import create_hrms_custom_fields
+=======
+from india_compliance.gst_india.setup import (
+    create_education_custom_fields,
+    create_hrms_custom_fields,
+)
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 from india_compliance.income_tax_india.setup import after_install as setup_income_tax
 
 # list of filenames (without extension) in sequence of execution
@@ -45,6 +52,10 @@ POST_INSTALL_PATCHES = (
     "update_reconciliation_status",
     "update_vehicle_no_field_in_purchase_receipt",
     "update_gst_treatment_for_taxable_nil_transaction_item",  # it should be always after improve item tax template
+<<<<<<< HEAD
+=======
+    "migrate_fields_for_gstr3b",
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 )
 
 
@@ -106,3 +117,9 @@ def disable_ic_account_page():
 def after_app_install(app_name):
     if app_name == "hrms":
         create_hrms_custom_fields()
+<<<<<<< HEAD
+=======
+
+    if app_name == "education":
+        create_education_custom_fields()
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)

@@ -12,11 +12,19 @@ from frappe.query_builder import DatePart
 from frappe.query_builder.functions import Extract, IfNull, Sum
 from frappe.utils import cstr, flt, get_date_str, get_first_day, get_last_day
 
+<<<<<<< HEAD
 from india_compliance.gst_india.constants import INVOICE_DOCTYPES
+=======
+from india_compliance.gst_india.constants import INVOICE_DOCTYPES, STATE_NUMBERS
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 from india_compliance.gst_india.overrides.transaction import is_inter_state_supply
 from india_compliance.gst_india.report.gstr_3b_details.gstr_3b_details import (
     IneligibleITC,
 )
+<<<<<<< HEAD
+=======
+from india_compliance.gst_india.utils import get_period
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
 VALUES_TO_UPDATE = ["iamt", "camt", "samt", "csamt"]
 
@@ -40,8 +48,15 @@ class GSTR3BReport(Document):
 
             self.gst_details = self.get_company_gst_details()
             self.report_dict["gstin"] = self.gst_details.get("gstin")
+<<<<<<< HEAD
             self.report_dict["ret_period"] = get_period(self.month, self.year)
             self.month_no = get_period(self.month)
+=======
+            self.report_dict["ret_period"] = get_period(
+                self.month_or_quarter, self.year
+            )
+            self.month_or_quarter_no = get_period(self.month_or_quarter)
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
             self.get_outward_supply_details("Sales Invoice")
             self.set_outward_taxable_supplies()
@@ -126,7 +141,14 @@ class GSTR3BReport(Document):
 
     def update_itc_reversal_for_purchase_due_to_pos(self):
         ineligible_credit = IneligibleITC(
+<<<<<<< HEAD
             self.company, self.gst_details.get("gstin"), self.month_no, self.year
+=======
+            self.company,
+            self.gst_details.get("gstin"),
+            self.month_or_quarter_no,
+            self.year,
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
         ).get_for_purchase(
             "ITC restricted due to PoS rules", group_by="ineligibility_reason"
         )
@@ -135,7 +157,14 @@ class GSTR3BReport(Document):
 
     def update_itc_reversal_for_purchase_us_17_4(self):
         ineligible_credit = IneligibleITC(
+<<<<<<< HEAD
             self.company, self.gst_details.get("gstin"), self.month_no, self.year
+=======
+            self.company,
+            self.gst_details.get("gstin"),
+            self.month_or_quarter_no,
+            self.year,
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
         ).get_for_purchase(
             "Ineligible As Per Section 17(5)", group_by="ineligibility_reason"
         )
@@ -144,7 +173,14 @@ class GSTR3BReport(Document):
 
     def update_itc_reversal_from_bill_of_entry(self):
         ineligible_credit = IneligibleITC(
+<<<<<<< HEAD
             self.company, self.gst_details.get("gstin"), self.month_no, self.year
+=======
+            self.company,
+            self.gst_details.get("gstin"),
+            self.month_or_quarter_no,
+            self.year,
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
         ).get_for_bill_of_entry()
 
         self.process_ineligible_credit(ineligible_credit)
@@ -226,11 +262,25 @@ class GSTR3BReport(Document):
             WHERE docstatus = 1
             and is_opening = 'No'
             and company_gstin != IFNULL(supplier_gstin, "")
+<<<<<<< HEAD
             and month(posting_date) = %s and year(posting_date) = %s and company = %s
             and company_gstin = %s
             GROUP BY itc_classification
         """,
             (self.month_no, self.year, self.company, self.gst_details.get("gstin")),
+=======
+            and month(posting_date) between %s and %s and year(posting_date) = %s and company = %s
+            and company_gstin = %s
+            GROUP BY itc_classification
+        """,
+            (
+                self.month_or_quarter_no[0],
+                self.month_or_quarter_no[1],
+                self.year,
+                self.company,
+                self.gst_details.get("gstin"),
+            ),
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
             as_dict=1,
         )
 
@@ -252,7 +302,11 @@ class GSTR3BReport(Document):
 
     def update_imports_from_bill_of_entry(self, itc_details):
         boe = frappe.qb.DocType("Bill of Entry")
+<<<<<<< HEAD
         boe_taxes = frappe.qb.DocType("Bill of Entry Taxes")
+=======
+        boe_taxes = frappe.qb.DocType("India Compliance Taxes and Charges")
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
         def _get_tax_amount(account_type):
             return (
@@ -262,13 +316,30 @@ class GSTR3BReport(Document):
                 .on(boe_taxes.parent == boe.name)
                 .where(
                     boe.posting_date.between(
+<<<<<<< HEAD
                         get_date_str(get_first_day(f"{self.year}-{self.month_no}-01")),
                         get_date_str(get_last_day(f"{self.year}-{self.month_no}-01")),
+=======
+                        get_date_str(
+                            get_first_day(
+                                f"{self.year}-{self.month_or_quarter_no[0]}-01"
+                            )
+                        ),
+                        get_date_str(
+                            get_last_day(
+                                f"{self.year}-{self.month_or_quarter_no[1]}-01"
+                            )
+                        ),
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
                     )
                     & boe.company_gstin.eq(self.gst_details.get("gstin"))
                     & boe.docstatus.eq(1)
                     & boe_taxes.gst_tax_type.eq(account_type)
                 )
+<<<<<<< HEAD
+=======
+                .where(boe_taxes.parenttype == "Bill of Entry")
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
                 .run()
             )[0][0] or 0
 
@@ -287,10 +358,24 @@ class GSTR3BReport(Document):
             and p.is_opening = 'No'
             and p.company_gstin != IFNULL(p.supplier_gstin, "")
             and (i.gst_treatment != 'Taxable' or p.gst_category = 'Registered Composition') and
+<<<<<<< HEAD
             month(p.posting_date) = %s and year(p.posting_date) = %s
             and p.company = %s and p.company_gstin = %s
             """,
             (self.month_no, self.year, self.company, self.gst_details.get("gstin")),
+=======
+            month(p.posting_date) between %s and %s and year(p.posting_date) = %s
+            and p.company = %s and p.company_gstin = %s
+            and p.gst_category != "Overseas"
+            """,
+            (
+                self.month_or_quarter_no[0],
+                self.month_or_quarter_no[1],
+                self.year,
+                self.company,
+                self.gst_details.get("gstin"),
+            ),
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
             as_dict=1,
         )
 
@@ -410,9 +495,17 @@ class GSTR3BReport(Document):
                 if tax.item_wise_tax_detail:
                     try:
                         item_wise_detail = json.loads(tax.item_wise_tax_detail)
+<<<<<<< HEAD
                         for item_code, tax_amounts in item_wise_detail.items():
                             gst_treatment = item_code_gst_treatment_map.get(item_code)
                             invoice_items[gst_treatment][gst_tax_type] += tax_amounts[1]
+=======
+                        for item_code, taxes in item_wise_detail.items():
+                            gst_treatment = item_code_gst_treatment_map.get(item_code)
+                            invoice_items[gst_treatment][gst_tax_type] += taxes.get(
+                                "tax_amount"
+                            )
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
                     except ValueError:
                         continue
@@ -472,7 +565,15 @@ class GSTR3BReport(Document):
     def get_query_with_conditions(self, invoice, query, party_gstin):
         return (
             query.where(invoice.docstatus == 1)
+<<<<<<< HEAD
             .where(Extract(DatePart.month, invoice.posting_date).eq(self.month_no))
+=======
+            .where(
+                Extract(DatePart.month, invoice.posting_date).between(
+                    self.month_or_quarter_no[0], self.month_or_quarter_no[1]
+                )
+            )
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
             .where(Extract(DatePart.year, invoice.posting_date).eq(self.year))
             .where(invoice.company == self.company)
             .where(invoice.company_gstin == self.gst_details.get("gstin"))
@@ -623,6 +724,7 @@ class GSTR3BReport(Document):
                 self.report_dict["inter_sup"][section].append(value)
 
     def get_company_gst_details(self):
+<<<<<<< HEAD
         gst_details = frappe.get_all(
             "Address",
             fields=["gstin", "gst_state", "gst_state_number"],
@@ -637,6 +739,22 @@ class GSTR3BReport(Document):
                     self.company_address
                 )
             )
+=======
+        if not self.company_gstin:
+            frappe.throw(_("Please enter GSTIN for Company {0}").format(self.company))
+
+        return {
+            "gstin": self.company_gstin,
+            "gst_state": next(
+                (
+                    key
+                    for key, value in STATE_NUMBERS.items()
+                    if value == self.company_gstin[:2]
+                ),
+                None,
+            ),
+        }
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
     def get_missing_field_invoices(self):
         missing_field_invoices = []
@@ -651,12 +769,25 @@ class GSTR3BReport(Document):
                 f"""
                     SELECT name FROM `tab{doctype}`
                     WHERE docstatus = 1 and is_opening = 'No'
+<<<<<<< HEAD
                     and month(posting_date) = %s and year(posting_date) = %s
+=======
+                    and month(posting_date) between %s and %s and year(posting_date) = %s
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
                     and company = %s and place_of_supply IS NULL
                     and company_gstin != IFNULL({party_gstin},"")
                     and gst_category != 'Overseas'
                 """,
+<<<<<<< HEAD
                 (self.month_no, self.year, self.company),
+=======
+                (
+                    self.month_or_quarter_no[0],
+                    self.month_or_quarter_no[1],
+                    self.year,
+                    self.company,
+                ),
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
                 as_dict=1,
             )  # nosec
 
@@ -680,6 +811,7 @@ def get_json(template):
         return cstr(f.read())
 
 
+<<<<<<< HEAD
 def get_period(month, year=None):
     month_no = {
         "January": 1,
@@ -702,6 +834,8 @@ def get_period(month, year=None):
         return month_no
 
 
+=======
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 def format_values(data, precision=2):
     if isinstance(data, dict):
         for key, value in data.items():

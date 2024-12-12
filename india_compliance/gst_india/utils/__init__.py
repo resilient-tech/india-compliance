@@ -306,6 +306,10 @@ def guess_gst_category(
             "Registered Composition",
             "SEZ",
             "Deemed Export",
+<<<<<<< HEAD
+=======
+            "Input Service Distributor",
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
         ):
             return gst_category
 
@@ -567,6 +571,18 @@ def get_gst_accounts_by_tax_type(company, tax_type, throw=True):
     )
 
 
+<<<<<<< HEAD
+=======
+@frappe.request_cache
+def get_gst_account_by_item_tax_template(item_tax_template):
+    return frappe.get_all(
+        "Item Tax Template Detail",
+        filters={"parent": item_tax_template},
+        pluck="tax_type",
+    )
+
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 def get_gst_account_gst_tax_type_map():
     """
     - Returns gst_account by tax_type for all the companies
@@ -916,10 +932,28 @@ def disable_item_tax_template_notification():
     frappe.defaults.clear_user_default("needs_item_tax_template_notification")
 
 
+<<<<<<< HEAD
 def validate_invoice_number(doc):
     """Validate GST invoice number requirements."""
 
     if len(doc.name) > 16:
+=======
+@frappe.whitelist(methods=["POST"])
+def disable_new_gst_category_notification():
+    frappe.defaults.clear_user_default("needs_new_gst_category_notification")
+
+
+def validate_invoice_number(doc, throw=True):
+    """Validate GST invoice number requirements."""
+
+    is_valid_length = len(doc.name) <= 16
+    is_valid_format = GST_INVOICE_NUMBER_FORMAT.match(doc.name)
+
+    if not throw:
+        return is_valid_length and is_valid_format
+
+    if not is_valid_length:
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
         frappe.throw(
             _(
                 "Transaction Name must be 16 characters or fewer to meet GST requirements"
@@ -927,7 +961,11 @@ def validate_invoice_number(doc):
             title=_("Invalid GST Transaction Name"),
         )
 
+<<<<<<< HEAD
     if not GST_INVOICE_NUMBER_FORMAT.match(doc.name):
+=======
+    if not is_valid_format:
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
         frappe.throw(
             _(
                 "Transaction Name should start with an alphanumeric character and can"
@@ -974,3 +1012,48 @@ def handle_server_errors(settings, doc, document_type, error):
         title=error_message_title.get(type(error)),
         indicator="yellow",
     )
+<<<<<<< HEAD
+=======
+
+
+def get_month_or_quarter_dict():
+    return {
+        "Jan - Mar": (1, 3),
+        "Apr - Jun": (4, 6),
+        "Jul - Sep": (7, 9),
+        "Oct - Dec": (10, 12),
+        "January": 1,
+        "February": 2,
+        "March": 3,
+        "April": 4,
+        "May": 5,
+        "June": 6,
+        "July": 7,
+        "August": 8,
+        "September": 9,
+        "October": 10,
+        "November": 11,
+        "December": 12,
+    }
+
+
+def get_period(month_or_quarter, year=None):
+    month_or_quarter_no = get_month_or_quarter_dict().get(month_or_quarter)
+
+    if isinstance(month_or_quarter_no, int):
+        month_or_quarter_no = (month_or_quarter_no, month_or_quarter_no)
+
+    if year:
+        return str(month_or_quarter_no[1]).zfill(2) + str(year)
+
+    return month_or_quarter_no
+
+
+def is_outward_stock_entry(doc):
+    if (
+        doc.doctype == "Stock Entry"
+        and doc.purpose in ["Material Transfer", "Material Issue"]
+        and not doc.is_return
+    ):
+        return True
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)

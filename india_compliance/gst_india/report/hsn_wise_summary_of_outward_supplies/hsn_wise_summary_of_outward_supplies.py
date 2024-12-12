@@ -270,7 +270,13 @@ def get_item_taxes(item_list, company_currency):
         try:
             item_taxes = json.loads(item_wise_tax_detail)
             for item_code, tax_data in item_taxes.items():
+<<<<<<< HEAD
                 tax_rate, tax_amount = tax_data
+=======
+                tax_rate = tax_data.get("tax_rate")
+                tax_amount = tax_data.get("tax_amount")
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
                 if not tax_amount:
                     continue
 

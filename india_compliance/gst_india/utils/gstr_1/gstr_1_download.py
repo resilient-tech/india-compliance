@@ -37,7 +37,11 @@ def download_gstr1_json_data(gstr1_log):
 
     is_queued = False
     json_data = frappe._dict()
+<<<<<<< HEAD
     api = GSTR1API(gstin)
+=======
+    api = GSTR1API(gstr1_log)
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
     if gstr1_log.filing_status == "Filed":
         return_type = "GSTR1"
@@ -53,9 +57,12 @@ def download_gstr1_json_data(gstr1_log):
     for action in actions:
         response = api.get_gstr_1_data(action, return_period)
 
+<<<<<<< HEAD
         if response.error_type in ["otp_requested", "invalid_otp"]:
             return response, None
 
+=======
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
         if response.error_type == "no_docs_found":
             continue
 
@@ -113,6 +120,10 @@ def save_gstr_1(gstin, return_period, json_data, return_type):
 
     gstr1_log = frappe.get_doc("GST Return Log", f"GSTR1-{return_period}-{gstin}")
     gstr1_log.update_json_for(data_field, mapped_data, overwrite=False)
+<<<<<<< HEAD
+=======
+    gstr1_log.update_status("Generated")
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
 
 def save_gstr_1_filed_data(gstin, return_period, json_data):

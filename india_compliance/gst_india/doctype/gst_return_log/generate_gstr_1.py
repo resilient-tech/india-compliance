@@ -3,14 +3,26 @@
 import itertools
 
 import frappe
+<<<<<<< HEAD
 from frappe import unscrub
 from frappe.utils import flt
 
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategory
+=======
+from frappe import _, unscrub
+from frappe.utils import flt
+
+from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
+from india_compliance.gst_india.utils.gstr_1 import GovJsonKey, GSTR1_SubCategory
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 from india_compliance.gst_india.utils.gstr_1.__init__ import (
     CATEGORY_SUB_CATEGORY_MAPPING,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
+<<<<<<< HEAD
+=======
+    GSTR1_Category,
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     GSTR1_DataField,
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_download import (
@@ -18,9 +30,23 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_download import (
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     GSTR1BooksData,
+<<<<<<< HEAD
     summarize_retsum_data,
 )
 from india_compliance.gst_india.utils.gstr_utils import request_otp
+=======
+    convert_to_internal_data_format,
+    summarize_retsum_data,
+)
+
+status_code_map = {
+    "P": "Processed",
+    "PE": "Processed with Errors",
+    "ER": "Error",
+    "IP": "In Progress",
+}
+MAXIMUM_UPLOAD_SIZE = 5200000
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
 
 class SummarizeGSTR1:
@@ -175,9 +201,17 @@ class SummarizeGSTR1:
 
     @staticmethod
     def count_doc_issue_summary(summary_row, data_row):
+<<<<<<< HEAD
         summary_row["no_of_records"] += data_row.get(
             GSTR1_DataField.TOTAL_COUNT.value, 0
         ) - data_row.get(GSTR1_DataField.CANCELLED_COUNT.value, 0)
+=======
+        summary_row["no_of_records"] += (
+            data_row.get(GSTR1_DataField.TOTAL_COUNT.value, 0)
+            - data_row.get(GSTR1_DataField.CANCELLED_COUNT.value, 0)
+            - data_row.get(GSTR1_DataField.DRAFT_COUNT.value, 0)
+        )
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
     @staticmethod
     def count_hsn_summary(summary_row):
@@ -226,15 +260,25 @@ class ReconcileGSTR1:
             if not books_subdata and not gov_subdata:
                 continue
 
+<<<<<<< HEAD
             is_list = False  # Object Type for the subdata_value
+=======
+            # Object Type for the subdata_value
+            is_list = self.is_list(books_subdata, gov_subdata)
+
+            self.sanitize_books_data(books_subdata, is_list)
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
             reconcile_subdata = {}
 
             # Books vs Gov
             for key, books_value in books_subdata.items():
+<<<<<<< HEAD
                 if not reconcile_subdata:
                     is_list = isinstance(books_value, list)
 
+=======
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
                 gov_value = gov_subdata.get(key)
 
                 reconcile_row = self.get_reconciled_row(books_value, gov_value)
@@ -249,9 +293,12 @@ class ReconcileGSTR1:
 
                 # Update each row in Books Data
                 for row in books_values:
+<<<<<<< HEAD
                     if row.get("upload_status") == "Missing in Books":
                         continue
 
+=======
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
                     if not gov_value:
                         row["upload_status"] = "Not Uploaded"
                         continue
@@ -266,9 +313,12 @@ class ReconcileGSTR1:
                 if key in books_subdata:
                     continue
 
+<<<<<<< HEAD
                 if not reconcile_subdata:
                     is_list = isinstance(gov_value, list)
 
+=======
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
                 reconcile_subdata[key] = self.get_reconciled_row(None, gov_value)
 
                 if not update_books_match:
@@ -287,13 +337,30 @@ class ReconcileGSTR1:
             if reconcile_subdata:
                 reconciled_data[subcategory] = reconcile_subdata
 
+<<<<<<< HEAD
         if update_books_match:
             self.update_json_for("books", books_data)
 
+=======
+        self.update_json_for("books", books_data)
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
         self.update_json_for("reconcile", reconciled_data)
 
         return reconciled_data
 
+<<<<<<< HEAD
+=======
+    def sanitize_books_data(self, books_subdata, is_list):
+        for key, value in books_subdata.copy().items():
+            values = value if is_list else [value]
+            if values[0].get("upload_status") == "Missing in Books":
+                del books_subdata[key]
+                continue
+
+            for row in values:
+                row.pop("upload_status", None)
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     @staticmethod
     def get_reconciled_row(books_row, gov_row):
         """
@@ -402,6 +469,16 @@ class ReconcileGSTR1:
 
         return empty_row
 
+<<<<<<< HEAD
+=======
+    @staticmethod
+    def is_list(books_subdata: dict, gov_subdata: dict):
+        book_row = next(iter(books_subdata.values()), None)
+        gov_row = next(iter(gov_subdata.values()), None)
+
+        return isinstance(book_row or gov_row, list)
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
 class AggregateInvoices:
     IGNORED_FIELDS = {GSTR1_DataField.TAX_RATE.value, GSTR1_DataField.DOC_VALUE.value}
@@ -484,6 +561,33 @@ class AggregateInvoices:
 
 
 class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
+<<<<<<< HEAD
+=======
+    def get_gstr1_data(self):
+        data = self.load_data()
+
+        if not data:
+            return
+
+        data = data
+        data["status"] = self.filing_status or "Not Filed"
+        if error_data := self.get_json_for("upload_error"):
+            data["errors"] = error_data
+
+        data["pending_actions"] = set(
+            [
+                row.request_type
+                for row in self.actions
+                if not row.status
+                and row.request_type in ["reset", "upload", "proceed_to_file"]
+            ]
+        )
+
+        self.update_status("Generated")
+
+        return data
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     def generate_gstr1_data(self, filters, callback=None):
         """
         Generate GSTR-1 Data
@@ -513,6 +617,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         # Get Data
         gov_data, is_enqueued = self.get_gov_gstr1_data()
 
+<<<<<<< HEAD
         if error_type := gov_data.get("error_type"):
             # otp_requested, invalid_otp
 
@@ -522,6 +627,8 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
             data = "otp_requested"
             return callback and callback(data, filters)
 
+=======
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
         books_data = self.get_books_gstr1_data(filters)
 
         if is_enqueued:
@@ -541,7 +648,11 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         data["books"] = self.normalize_data(books_data)
 
         self.summarize_data(data)
+<<<<<<< HEAD
         return callback and callback(data, filters)
+=======
+        return callback and callback(filters)
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
     def generate_only_books_data(self, data, filters, callback=None):
         status = "Not Filed"
@@ -552,7 +663,11 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         data["status"] = status
 
         self.summarize_data(data)
+<<<<<<< HEAD
         return callback and callback(data, filters)
+=======
+        return callback and callback(filters)
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
     # GET DATA
     def get_gov_gstr1_data(self):
@@ -669,3 +784,411 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
                 data[subcategory] = [*subcategory_data.values()]
 
         return data
+<<<<<<< HEAD
+=======
+
+
+class FileGSTR1:
+    def reset_gstr1(self, force):
+        verify_request_in_progress(self, force)
+
+        # reset called after proceed to file
+        self.db_set({"filing_status": "Not Filed"})
+
+        api = GSTR1API(self)
+        response = api.reset_gstr_1_data(self.return_period)
+
+        set_gstr1_actions(self, "reset", response.get("reference_id"), api.request_id)
+
+    def process_reset_gstr1(self):
+        if not self.actions:
+            return
+
+        api = GSTR1API(self)
+        response = None
+
+        doc = self.get_unprocessed_action("reset")
+
+        if not doc:
+            return
+
+        response = api.get_return_status(self.return_period, doc.token)
+
+        if response.get("status_cd") != "IP":
+            doc.db_set({"status": status_code_map.get(response.get("status_cd"))})
+            enqueue_notification(
+                self.return_period,
+                "reset",
+                response.get("status_cd"),
+                self.gstin,
+            )
+
+        if response.get("status_cd") == "P":
+            self.update_json_for("unfiled", {}, reset_reconcile=True)
+
+        return response
+
+    def upload_gstr1(self, json_data, force):
+        if not json_data:
+            return
+
+        verify_request_in_progress(self, force)
+
+        keys = {category.value for category in GovJsonKey}
+        if all(key not in json_data for key in keys):
+            frappe.msgprint(_("No data to upload"), indicator="red")
+            return
+
+        # upload data after proceed to file
+        self.db_set({"filing_status": "Not Filed"})
+
+        # remove error file if it exists
+        self.remove_json_for("upload_error")
+
+        # Make API Request
+        api = GSTR1API(self)
+        response = api.save_gstr_1_data(self.return_period, json_data)
+
+        set_gstr1_actions(self, "upload", response.get("reference_id"), api.request_id)
+
+    def process_upload_gstr1(self):
+        if not self.actions:
+            return
+
+        api = GSTR1API(self)
+        response = None
+
+        doc = self.get_unprocessed_action("upload")
+
+        if not doc:
+            return
+
+        response = api.get_return_status(self.return_period, doc.token)
+        status_cd = response.get("status_cd")
+
+        if status_cd != "IP":
+            doc.db_set({"status": status_code_map.get(status_cd)})
+            enqueue_notification(
+                self.return_period,
+                "upload",
+                status_cd,
+                self.gstin,
+                api.request_id if status_cd == "ER" else None,
+            )
+
+        if status_cd == "PE":
+            response["error_report"] = convert_to_internal_data_format(
+                response.get("error_report"), True
+            )
+            self.update_json_for("upload_error", response)
+
+        if status_cd == "P":
+            self.db_set({"filing_status": "Uploaded"})
+
+            self.update_json_for("unfiled", self.get_json_for("books"))
+            self.update_json_for("unfiled_summary", self.get_json_for("books_summary"))
+
+            self.update_json_for("reconcile", {})
+            self.update_json_for("reconcile_summary", {})
+
+        return response
+
+    def proceed_to_file_gstr1(self, force):
+        verify_request_in_progress(self, force)
+
+        api = GSTR1API(self)
+        response = api.proceed_to_file("GSTR1", self.return_period)
+
+        # Return Form already ready to be filed
+        if response.error and response.error.error_cd == "RET00003":
+            return self.fetch_and_compare_summary(api)
+
+        set_gstr1_actions(
+            self, "proceed_to_file", response.get("reference_id"), api.request_id
+        )
+
+    def process_proceed_to_file_gstr1(self):
+        if not self.actions:
+            return
+
+        api = GSTR1API(self)
+        response = None
+
+        doc = self.get_unprocessed_action("proceed_to_file")
+
+        if not doc:
+            return
+
+        response = api.get_return_status(self.return_period, doc.token)
+
+        if response.get("status_cd") == "IP":
+            return response
+
+        doc.db_set({"status": status_code_map.get(response.get("status_cd"))})
+
+        return self.fetch_and_compare_summary(api, response)
+
+    def fetch_and_compare_summary(self, api, response=None):
+        if response is None:
+            response = {}
+
+        summary = api.get_gstr_1_data("RETSUM", self.return_period)
+        if summary.error:
+            return
+
+        self.update_json_for("authenticated_summary", summary)
+
+        mapped_summary = self.get_json_for("books_summary")
+        gov_summary = convert_to_internal_data_format(summary).get("summary")
+        gov_summary = summarize_retsum_data(gov_summary.values())
+
+        differing_categories = get_differing_categories(mapped_summary, gov_summary)
+
+        if not differing_categories:
+            self.db_set({"filing_status": "Ready to File"})
+            response["filing_status"] = "Ready to File"
+
+        else:
+            self.db_set({"filing_status": "Not Filed"})
+            response.update(
+                {
+                    "filing_status": "Not Filed",
+                    "differing_categories": differing_categories,
+                }
+            )
+            enqueue_notification(
+                self.return_period,
+                "proceed_to_file",
+                response.get("status_cd"),
+                self.gstin,
+                api.request_id,
+            )
+
+        return response
+
+    def file_gstr1(self, pan, otp, force):
+        verify_request_in_progress(self, force)
+
+        summary = self.get_json_for("authenticated_summary")
+        api = GSTR1API(self)
+        response = api.file_gstr_1(self.return_period, summary, pan, otp)
+
+        # Latest Summary is not available. Please generate summary and try again.
+        if response.error and response.error.error_cd == "RET09001":
+            self.db_set({"filing_status": "Not Filed"})
+            self.update_json_for("authenticated_summary", None)
+
+        if response.get("ack_num"):
+            frappe.db.set_value("GSTIN", self.gstin, "last_pan_used_for_gstr", pan)
+            self.db_set(
+                {
+                    "filing_status": "Filed",
+                    "filing_date": frappe.utils.nowdate(),
+                    "acknowledgement_number": response.get("ack_num"),
+                }
+            )
+
+            set_gstr1_actions(
+                self,
+                "file",
+                response.get("ack_num"),
+                api.request_id,
+                status="Processed",
+            )
+
+        return response
+
+    def get_amendment_data(self):
+        authenticated_summary = convert_to_internal_data_format(
+            self.get_json_for("authenticated_summary")
+        ).get("summary")
+        authenticated_summary = summarize_retsum_data(authenticated_summary.values())
+
+        non_amended_entries = {
+            "total_igst_amount": 0,
+            "total_cgst_amount": 0,
+            "total_sgst_amount": 0,
+            "total_cess_amount": 0,
+        }
+        amended_liability = {}
+
+        for data in authenticated_summary:
+            if "Net Liability from Amendments" == data["description"]:
+                amended_liability = data
+            elif data.get("consider_in_total_taxable_value") or data.get(
+                "consider_in_total_tax"
+            ):
+                for key, value in data.items():
+                    if key not in non_amended_entries:
+                        continue
+
+                    non_amended_entries[key] += value
+
+        return {
+            "non_amended_liability": non_amended_entries,
+            "amended_liability": amended_liability,
+        }
+
+
+def verify_request_in_progress(return_log, force):
+    for row in return_log.actions:
+        if row.status:
+            continue
+
+        if force:
+            row.db_set({"status": "Ignored"})
+            continue
+
+        frappe.throw(
+            _(
+                "There is a {0} request in progress. Please wait for the process to complete."
+            ).format(row.request_type)
+        )
+
+
+def get_differing_categories(mapped_summary, gov_summary):
+    KEYS_TO_COMPARE = {
+        "total_cess_amount",
+        "total_cgst_amount",
+        "total_igst_amount",
+        "total_sgst_amount",
+        "total_taxable_value",
+    }
+
+    # TODO: Check this for all categories
+    CATEGORY_KEYS = {
+        (GSTR1_Category.NIL_EXEMPT.value): {
+            "total_exempted_amount",
+            "total_nil_rated_amount",
+            "total_non_gst_amount",
+        },
+        (GSTR1_Category.DOC_ISSUE.value): {
+            "no_of_records",
+        },
+    }
+
+    IGNORED_CATEGORIES = {"Net Liability from Amendments"}
+
+    gov_summary = {row["description"]: row for row in gov_summary if row["indent"] == 0}
+    compared_categories = set()
+    differing_categories = set()
+
+    # This will intentionally skip the row in govt_summary with amended data
+    for row in mapped_summary:
+        if row["indent"] != 0:
+            continue
+
+        category = row["description"]
+        if category in IGNORED_CATEGORIES:
+            continue
+
+        compared_categories.add(category)
+        gov_entry = gov_summary.get(category, {})
+
+        keys_to_compare = CATEGORY_KEYS.get(category, KEYS_TO_COMPARE)
+
+        for key in keys_to_compare:
+            if gov_entry.get(key, 0) != row.get(key):
+                differing_categories.add(category)
+                break
+
+    for row in gov_summary.values():
+        # Amendments are with indent 1. Hence auto-skipped
+        category = row["description"]
+        if category in IGNORED_CATEGORIES:
+            continue
+
+        if category in compared_categories:
+            continue
+
+        keys_to_compare = CATEGORY_KEYS.get(row["description"], KEYS_TO_COMPARE)
+
+        for key in keys_to_compare:
+            if row.get(key, 0) != 0:
+                differing_categories.add(row["description"])
+                break
+
+    return differing_categories
+
+
+def set_gstr1_actions(doc, request_type, token, request_id, status=None):
+    if not token:
+        return
+
+    row = {
+        "request_type": request_type,
+        "token": token,
+        "creation_time": frappe.utils.now_datetime(),
+    }
+
+    if status:
+        row["status"] = status
+
+    doc.append("actions", row)
+    doc.save()
+    enqueue_link_integration_request(token, request_id)
+
+
+def enqueue_link_integration_request(token, request_id):
+    """
+    Integration request is enqueued. Hence, it's name is not available immediately.
+    Hence, link it after the request is processed.
+    """
+    frappe.enqueue(
+        link_integration_request, queue="long", token=token, request_id=request_id
+    )
+
+
+def link_integration_request(token, request_id):
+    doc_name = frappe.db.get_value("Integration Request", {"request_id": request_id})
+    if doc_name:
+        frappe.db.set_value(
+            "GSTR Action", {"token": token}, {"integration_request": doc_name}
+        )
+
+
+def enqueue_notification(
+    return_period, request_type, status_cd, gstin, request_id=None
+):
+    frappe.enqueue(
+        create_notification,
+        queue="long",
+        return_period=return_period,
+        request_type=request_type,
+        status_cd=status_cd,
+        gstin=gstin,
+        request_id=request_id,
+    )
+
+
+def create_notification(return_period, request_type, status_cd, gstin, request_id=None):
+    # request_id shows failure response
+    status_message_map = {
+        "P": f"Data {request_type} for GSTIN {gstin} and return period {return_period} has been successfully completed.",
+        "PE": f"Data {request_type} for GSTIN {gstin} and return period {return_period} is completed with errors",
+        "ER": f"Data {request_type} for GSTIN {gstin} and return period {return_period} has encountered errors",
+    }
+
+    if request_id and (
+        doc_name := frappe.db.get_value(
+            "Integration Request", {"request_id": request_id}
+        )
+    ):
+        document_type = "Integration Request"
+        document_name = doc_name
+    else:
+        document_type = document_name = "GSTR-1 Beta"
+
+    notification = frappe.get_doc(
+        {
+            "doctype": "Notification Log",
+            "for_user": frappe.session.user,
+            "type": "Alert",
+            "document_type": document_type,
+            "document_name": document_name,
+            "subject": f"Data {request_type} for GSTIN {gstin} and return period {return_period}",
+            "email_content": status_message_map.get(status_cd),
+        }
+    )
+    notification.insert()
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)

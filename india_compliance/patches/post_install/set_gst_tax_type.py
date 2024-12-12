@@ -7,7 +7,10 @@ TAX_DOCTYPES = [
     "Sales Taxes and Charges",
     "Purchase Taxes and Charges",
     "Advance Taxes and Charges",
+<<<<<<< HEAD
     "Bill of Entry Taxes",
+=======
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 ]
 
 

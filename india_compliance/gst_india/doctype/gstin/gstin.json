@@ -14,6 +14,10 @@
   "last_updated_on",
   "cancelled_date",
   "is_blocked",
+<<<<<<< HEAD
+=======
+  "last_pan_used_for_gstr",
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
   "section_break_ttzc",
   "gstr_1_filed_upto"
  ],
@@ -77,12 +81,25 @@
    "fieldtype": "Date",
    "hidden": 1,
    "label": "GSTR-1 Filed Upto"
+<<<<<<< HEAD
+=======
+  },
+  {
+   "fieldname": "last_pan_used_for_gstr",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Last PAN Used for GSTR"
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
   }
  ],
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
+<<<<<<< HEAD
  "modified": "2024-06-14 13:59:53.998262",
+=======
+ "modified": "2024-09-04 17:12:30.951878",
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTIN",

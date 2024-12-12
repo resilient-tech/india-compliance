@@ -73,8 +73,11 @@ def download_gstr_2a(gstin, return_periods, gst_categories=None):
                 continue
 
             response = api.get_data(action, return_period)
+<<<<<<< HEAD
             if response.error_type in ["otp_requested", "invalid_otp"]:
                 return response
+=======
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
             if response.error_type == "no_docs_found":
                 create_import_log(
@@ -146,8 +149,11 @@ def download_gstr_2b(gstin, return_periods):
         )
 
         response = api.get_data(return_period)
+<<<<<<< HEAD
         if response.error_type in ["otp_requested", "invalid_otp"]:
             return response
+=======
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
         if response.error_type == "not_generated":
             frappe.msgprint(
@@ -247,6 +253,7 @@ def save_gstr_2b(gstin, return_period, json_data):
     update_import_history(return_period)
 
 
+<<<<<<< HEAD
 def save_gstr(gstin, return_type, return_period, json_data, gen_date_2b=None):
     frappe.enqueue(
         _save_gstr,
@@ -262,6 +269,11 @@ def save_gstr(gstin, return_type, return_period, json_data, gen_date_2b=None):
 
 
 def _save_gstr(gstin, return_type, return_period, json_data, gen_date_2b=None):
+=======
+def save_gstr(
+    gstin, return_type: ReturnType, return_period, json_data, gen_date_2b=None
+):
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     """Save GSTR data to Inward Supply
 
     :param return_period: str
@@ -271,7 +283,11 @@ def _save_gstr(gstin, return_type, return_period, json_data, gen_date_2b=None):
 
     company = get_party_for_gstin(gstin, "Company")
     for category in GSTRCategory:
+<<<<<<< HEAD
         gstr = get_data_handler(return_type, category)
+=======
+        gstr = get_data_handler(return_type.value, category)
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
         gstr(company, gstin, return_period, json_data, gen_date_2b).create_transactions(
             category,
             json_data.get(category.value.lower()),

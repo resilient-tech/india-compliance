@@ -1,16 +1,27 @@
 from enum import Enum
 
 import frappe
+<<<<<<< HEAD
 from frappe import _
 from frappe.utils import add_to_date, now_datetime
 
 from india_compliance.gst_india.api_classes.taxpayer_base import TaxpayerBaseAPI
+=======
+
+from india_compliance.gst_india.api_classes.taxpayer_base import (
+    TaxpayerBaseAPI,
+    otp_handler,
+)
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 from india_compliance.gst_india.api_classes.taxpayer_returns import ReturnsAPI
 from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
     create_import_log,
     toggle_scheduled_jobs,
 )
+<<<<<<< HEAD
 from india_compliance.gst_india.utils import get_gstin_list
+=======
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 from india_compliance.gst_india.utils.gstr_1.gstr_1_download import (
     save_gstr_1_filed_data,
     save_gstr_1_unfiled_data,
@@ -25,6 +36,7 @@ class ReturnType(Enum):
 
 
 @frappe.whitelist()
+<<<<<<< HEAD
 def validate_company_gstins(company=None, company_gstin=None):
     """
     Checks the validity of the company's GSTIN authentication.
@@ -90,6 +102,8 @@ def get_company_gstin_credentials(company=None, company_gstin=None):
 
 
 @frappe.whitelist()
+=======
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 def request_otp(company_gstin):
     frappe.has_permission("GST Settings", throw=True)
 
@@ -97,6 +111,10 @@ def request_otp(company_gstin):
 
 
 @frappe.whitelist()
+<<<<<<< HEAD
+=======
+@otp_handler
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 def authenticate_otp(company_gstin, otp):
     frappe.has_permission("GST Settings", throw=True)
 
@@ -106,6 +124,15 @@ def authenticate_otp(company_gstin, otp):
     return api.process_response(response)
 
 
+<<<<<<< HEAD
+=======
+@frappe.whitelist()
+def generate_evc_otp(company_gstin, pan, request_type):
+    frappe.has_permission("GSTR-1 Beta", "write", throw=True)
+    return TaxpayerBaseAPI(company_gstin).initiate_otp_for_evc(pan, request_type)
+
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 def download_queued_request():
     queued_requests = frappe.get_all(
         "GSTR Import Log",
@@ -149,9 +176,12 @@ def _download_queued_request(doc):
         frappe.db.delete("GSTR Import Log", doc.name)
         raise e
 
+<<<<<<< HEAD
     if response.error_type in ["otp_requested", "invalid_otp"]:
         return toggle_scheduled_jobs(stopped=True)
 
+=======
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     if response.error_type == "no_docs_found":
         return create_import_log(
             doc.gstin,

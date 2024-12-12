@@ -71,6 +71,12 @@ function validate_gstin(doctype) {
                 frm.doc.pan = pan;
                 frm.refresh_field("pan");
                 set_party_type(frm);
+<<<<<<< HEAD
+=======
+                if(doctype != "Address"){
+                    india_compliance.set_pan_status(frm.get_field("pan"));
+                }
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
             }
         },
     });
@@ -82,6 +88,7 @@ function validate_pan(doctype) {
             let { pan } = frm.doc;
             if (!pan || pan.length < 10) return;
 
+<<<<<<< HEAD
             if (pan.length > 10) {
                 frappe.throw(__("PAN should be 10 characters long"));
             }
@@ -91,6 +98,9 @@ function validate_pan(doctype) {
             if (!PAN_REGEX.test(pan)) {
                 frappe.throw(__("Invalid PAN format"));
             }
+=======
+            pan = india_compliance.validate_pan(pan);
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
             frm.doc.pan = pan;
             frm.refresh_field("pan");
@@ -130,6 +140,20 @@ function set_gstin_options_and_status(doctype) {
     });
 }
 
+<<<<<<< HEAD
+=======
+function set_pan_status(doctype) {
+    frappe.ui.form.on(doctype, {
+        refresh(frm) {
+            india_compliance.set_pan_status(frm.get_field("pan"));
+        },
+        pan(frm) {
+            india_compliance.set_pan_status(frm.get_field("pan"));
+        },
+    });
+}
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 async function set_gstin_options(frm) {
     if (frm.is_new() || frm._gstin_options_set_for === frm.doc.name) return;
 

@@ -188,7 +188,11 @@
    "write": 1
   }
  ],
+<<<<<<< HEAD
  "sort_field": "modified",
+=======
+ "sort_field": "creation",
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
  "sort_order": "DESC",
  "states": []
 }

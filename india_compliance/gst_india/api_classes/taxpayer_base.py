@@ -1,13 +1,29 @@
 import json
 from base64 import b64decode, b64encode
+<<<<<<< HEAD
+=======
+from functools import wraps
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 
 import frappe
+<<<<<<< HEAD
 from frappe import _
 from frappe.utils import add_to_date, cint, now_datetime
 
+=======
+import frappe.utils
+from frappe import _
+from frappe.utils import add_to_date, cint, now_datetime
+
+from india_compliance.exceptions import (
+    InvalidAuthTokenError,
+    InvalidOTPError,
+    OTPRequestedError,
+)
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 from india_compliance.gst_india.api_classes.base import BaseAPI, get_public_ip
 from india_compliance.gst_india.utils import merge_dicts, tar_gz_bytes_to_data
 from india_compliance.gst_india.utils.cryptography import (
@@ -19,6 +35,28 @@ from india_compliance.gst_india.utils.cryptography import (
 )
 
 
+<<<<<<< HEAD
+=======
+def otp_handler(func):
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+
+        except OTPRequestedError as e:
+            return e.response
+
+        except InvalidOTPError as e:
+            return e.response
+
+        except Exception as e:
+            raise e
+
+    return wrapper
+
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 class PublicCertificate(BaseAPI):
     BASE_PATH = "static"
 
@@ -84,11 +122,21 @@ class TaxpayerAuthenticate(BaseAPI):
     IGNORED_ERROR_CODES = {
         "RETOTPREQUEST": "otp_requested",
         "EVCREQUEST": "otp_requested",
+<<<<<<< HEAD
         "AUTH158": "invalid_otp",  # Invalid OTP
+=======
+        "AUTH158": "authorization_failed",  # GSTR1
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
         "AUTH4033": "invalid_otp",  # Invalid Session
         # "AUTH4034": "invalid_otp",  # Invalid OTP
         "AUTH4038": "authorization_failed",  # Session Expired
         "TEC4002": "invalid_public_key",
+<<<<<<< HEAD
+=======
+        "RET13506": "OTP is either expired or incorrect",
+        "RET00003": "Return Form already ready to be filed",  # Actions performed on portal directly
+        "RET09001": "Latest Summary is not available. Please generate summary and try again.",  # Actions performed on portal directly
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     }
 
     def request_otp(self):
@@ -104,12 +152,26 @@ class TaxpayerAuthenticate(BaseAPI):
         if response.status_cd != 1:
             return
 
+<<<<<<< HEAD
         return response.update(
             {"error_type": "otp_requested", "gstin": self.company_gstin}
         )
 
     def autheticate_with_otp(self, otp=None):
         if not otp:
+=======
+        response.update({"error_type": "otp_requested", "gstin": self.company_gstin})
+
+        raise OTPRequestedError(response=response)
+
+    def autheticate_with_otp(self, otp=None):
+        if not otp:
+            # in enqueue / cron job
+            if getattr(frappe.local, "job", None):
+                frappe.local.job.after_job.add(self.reset_auth_token)
+                raise InvalidAuthTokenError
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
             # reset auth token
             frappe.db.set_value(
                 "GST Credential",
@@ -124,7 +186,11 @@ class TaxpayerAuthenticate(BaseAPI):
             self.auth_token = None
             return self.request_otp()
 
+<<<<<<< HEAD
         return super().post(
+=======
+        response = super().post(
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
             json={
                 "action": "AUTHTOKEN",
                 "app_key": self.app_key,
@@ -134,6 +200,17 @@ class TaxpayerAuthenticate(BaseAPI):
             endpoint="authenticate",
         )
 
+<<<<<<< HEAD
+=======
+        frappe.cache.set_value(
+            f"authenticated_gstin:{self.company_gstin}",
+            True,
+            expires_in_sec=60 * 15,
+        )
+
+        return response
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     def refresh_auth_token(self):
         auth_token = self.get_auth_token()
 
@@ -150,6 +227,16 @@ class TaxpayerAuthenticate(BaseAPI):
             endpoint="authenticate",
         )
 
+<<<<<<< HEAD
+=======
+    def initiate_otp_for_evc(self, pan, form_type):
+        return self.get(
+            action="EVCOTP",
+            params={"pan": pan, "form_type": form_type},
+            endpoint="authenticate",
+        )
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     def decrypt_response(self, response):
         values = {}
 
@@ -181,7 +268,11 @@ class TaxpayerAuthenticate(BaseAPI):
             )
 
             # cache of parent doctype GST Settings is not cleared by default so clear it manually
+<<<<<<< HEAD
             frappe.clear_document_cache("GST Settings", "GST Settings")
+=======
+            frappe.clear_document_cache("GST Settings")
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
         return response
 
@@ -227,10 +318,38 @@ class TaxpayerAuthenticate(BaseAPI):
 
         return self.auth_token
 
+<<<<<<< HEAD
+=======
+    def reset_auth_token(self):
+        """
+        Reset after job to clear the auth token
+        """
+        frappe.db.set_value(
+            "GST Credential",
+            {
+                "gstin": self.company_gstin,
+                "username": self.username,
+                "service": "Returns",
+            },
+            {"auth_token": None},
+        )
+
+        if not frappe.flags.in_test:
+            frappe.db.commit()  # nosemgrep - executed in after enqueue
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
 class TaxpayerBaseAPI(TaxpayerAuthenticate):
     BASE_PATH = "standard/gstn"
 
+<<<<<<< HEAD
+=======
+    IGNORED_ERROR_CODES = {
+        **TaxpayerAuthenticate.IGNORED_ERROR_CODES,
+        "RT-R1R3BAV-1007": "authorization_failed",  # Either auth-token or username is invalid. Raised in get_filing_preference
+    }
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     def setup(self, company_gstin):
         if self.sandbox_mode:
             frappe.throw(_("Sandbox mode not supported for Returns API"))
@@ -242,7 +361,11 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
                 "gstin": self.company_gstin,
                 "state-cd": self.company_gstin[:2],
                 "username": self.username,
+<<<<<<< HEAD
                 "ip-usr": frappe.cache().hget("public_ip", "public_ip", get_public_ip),
+=======
+                "ip-usr": frappe.cache.hget("public_ip", "public_ip", get_public_ip),
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
                 "txn": self.generate_request_id(length=32),
             }
         )
@@ -257,6 +380,10 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
         self,
         method,
         action=None,
+<<<<<<< HEAD
+=======
+        return_type=None,
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
         return_period=None,
         params=None,
         endpoint=None,
@@ -271,6 +398,13 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
                 return response
 
         headers = {"auth-token": auth_token}
+<<<<<<< HEAD
+=======
+        if return_type:
+            headers["rtn_typ"] = return_type
+            headers["userrole"] = return_type
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
         if return_period:
             headers["ret_period"] = return_period
 
@@ -293,6 +427,12 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
     def post(self, *args, **kwargs):
         return self._request("post", *args, **kwargs)
 
+<<<<<<< HEAD
+=======
+    def put(self, *args, **kwargs):
+        return self._request("put", *args, **kwargs)
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     def before_request(self, request_args):
         self.encrypt_request(request_args.get("json"))
 
@@ -322,6 +462,26 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
 
         return response
 
+<<<<<<< HEAD
+=======
+    def encrypt_request(self, json):
+        if not json:
+            return
+
+        super().encrypt_request(json)
+
+        if json.get("data"):
+            b64_data = b64encode(frappe.as_json(json.get("data")).encode())
+            json["data"] = aes_encrypt_data(b64_data.decode(), self.session_key)
+
+            if json.get("st") == "EVC":
+                sid_key = json.get("sid").encode()
+                json["sign"] = hmac_sha256(b64_data, sid_key)
+
+            else:
+                json["hmac"] = hmac_sha256(b64_data, self.session_key)
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     def handle_error_response(self, response):
         success_value = response.get("status_cd") != 0
 
@@ -347,6 +507,16 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
         if error_code in self.IGNORED_ERROR_CODES:
             response.error_type = self.IGNORED_ERROR_CODES[error_code]
             response.gstin = self.company_gstin
+<<<<<<< HEAD
+=======
+
+            if response.error_type == "otp_requested":
+                raise OTPRequestedError(response=response)
+
+            if response.error_type == "invalid_otp":
+                raise InvalidOTPError(response=response)
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
             return True
 
     def generate_app_key(self):
@@ -376,3 +546,42 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
             return response
 
         return FilesAPI().get_all(response)
+<<<<<<< HEAD
+=======
+
+    def validate_auth_token(self):
+        """
+        Try refreshing the auth token without error
+        to check if the auth token is valid
+
+        Generates a new OTP if the auth token is invalid
+        """
+        if frappe.cache.get_value(f"authenticated_gstin:{self.company_gstin}"):
+            return
+
+        # Dummy request
+        self.get_filing_preference()
+
+        frappe.cache.set_value(
+            f"authenticated_gstin:{self.company_gstin}",
+            True,
+            expires_in_sec=60 * 15,
+        )
+
+        return
+
+    def get_filing_preference(self):
+        return self.get(
+            action="GETPREF", params={"fy": self.get_fy()}, endpoint="returns"
+        )
+
+    @staticmethod
+    def get_fy():
+        date = frappe.utils.getdate()
+
+        # Standard for India as per GST
+        if date.month < 4:
+            return f"{date.year - 1}-{str(date.year)[2:]}"
+
+        return f"{date.year}-{str(date.year + 1)[2:]}"
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)

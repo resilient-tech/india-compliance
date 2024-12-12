@@ -5,6 +5,10 @@ on:
   push:
     branches:
       - version-14
+<<<<<<< HEAD
+=======
+      - version-15
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 jobs:
   release:
     name: Release
@@ -17,7 +21,11 @@ jobs:
           persist-credentials: false
 
       - name: Setup Node.js
+<<<<<<< HEAD
         uses: actions/setup-node@v2
+=======
+        uses: actions/setup-node@v4
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
         with:
           node-version: 20
 

@@ -126,6 +126,12 @@ class GSTR1_DataField(Enum):
     NET_ISSUE = "net_issue"
     UPLOAD_STATUS = "upload_status"
 
+<<<<<<< HEAD
+=======
+    ERROR_CD = "error_code"
+    ERROR_MSG = "error_message"
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
 class GSTR1_ItemField(Enum):
     INDEX = "idx"
@@ -196,6 +202,12 @@ class GovDataField(Enum):
     SUPECOM_52 = "clttx"
     SUPECOM_9_5 = "paytx"
 
+<<<<<<< HEAD
+=======
+    ERROR_CD = "error_cd"
+    ERROR_MSG = "error_msg"
+
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     FLAG = "flag"
 
 

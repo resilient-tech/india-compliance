@@ -5,6 +5,12 @@ from frappe.utils import flt
 from india_compliance.gst_india.overrides.sales_invoice import (
     update_dashboard_with_gst_logs,
 )
+<<<<<<< HEAD
+=======
+from india_compliance.gst_india.overrides.transaction import (
+    validate_hsn_codes as _validate_hsn_codes,
+)
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 from india_compliance.gst_india.overrides.transaction import validate_transaction
 from india_compliance.gst_india.utils import is_api_enabled, validate_invoice_number
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
@@ -43,6 +49,10 @@ def validate(doc, method=None):
     if validate_transaction(doc) is False:
         return
 
+<<<<<<< HEAD
+=======
+    validate_hsn_codes(doc)
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     if doc.is_reverse_charge and not doc.supplier_gstin:
         validate_invoice_number(doc)
 
@@ -54,7 +64,10 @@ def validate(doc, method=None):
 
 
 def on_cancel(doc, method=None):
+<<<<<<< HEAD
 
+=======
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     frappe.db.set_value(
         "GST Inward Supply",
         {"link_doctype": "Purchase Invoice", "link_name": doc.name},
@@ -82,13 +95,20 @@ def is_b2b_invoice(doc):
         or doc.gst_category in ["Registered Composition", "Unregistered", "Overseas"]
         or doc.supplier_gstin == doc.company_gstin
         or doc.is_opening == "Yes"
+<<<<<<< HEAD
         or any(row for row in doc.items if row.gst_treatment == "Non-GST")
+=======
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
     )
 
 
 def update_itc_totals(doc, method=None):
     # Set default value
     set_itc_classification(doc)
+<<<<<<< HEAD
+=======
+    validate_reverse_charge(doc)
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
     # Initialize values
     doc.itc_integrated_tax = 0
@@ -114,6 +134,7 @@ def update_itc_totals(doc, method=None):
 
 
 def set_itc_classification(doc):
+<<<<<<< HEAD
     default_classification = "All Other ITC"
     reverse_charge_classification = "ITC on Reverse Charge"
 
@@ -127,6 +148,24 @@ def set_itc_classification(doc):
 
     if not doc.itc_classification:
         doc.itc_classification = default_classification
+=======
+    if doc.gst_category == "Overseas":
+        for item in doc.items:
+            if not item.gst_hsn_code.startswith("99"):
+                doc.itc_classification = "Import Of Goods"
+                break
+        else:
+            doc.itc_classification = "Import Of Service"
+
+    elif doc.is_reverse_charge:
+        doc.itc_classification = "ITC on Reverse Charge"
+
+    elif doc.gst_category == "Input Service Distributor" and doc.is_internal_transfer():
+        doc.itc_classification = "Input Service Distributor"
+
+    else:
+        doc.itc_classification = "All Other ITC"
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
 
 
 def validate_supplier_invoice_number(doc):
@@ -161,6 +200,10 @@ def get_dashboard_data(data):
         "Purchase Invoice",
         data,
         "e-Waybill Log",
+<<<<<<< HEAD
+=======
+        "e-Invoice Log",
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
         "Integration Request",
         "GST Inward Supply",
     )
@@ -255,3 +298,25 @@ def set_ineligibility_reason(doc, show_alert=True):
             alert=True,
             indicator="orange",
         )
+<<<<<<< HEAD
+=======
+
+
+def validate_reverse_charge(doc):
+    if doc.itc_classification != "Import Of Goods" or not doc.is_reverse_charge:
+        return
+
+    frappe.throw(_("Reverse Charge is not applicable on Import of Goods"))
+
+
+def validate_hsn_codes(doc):
+    # To determine whether BOE is applicable or not.
+    if doc.gst_category != "Overseas":
+        return
+
+    _validate_hsn_codes(
+        doc,
+        throw=True,
+        message="GST HSN Code is mandatory for Overseas Purchase Invoice.<br>",
+    )
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)

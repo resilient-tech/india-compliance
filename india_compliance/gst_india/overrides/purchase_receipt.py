@@ -21,7 +21,11 @@ def get_dashboard_data(data):
 
 
 def onload(doc, method=None):
+<<<<<<< HEAD
     if ignore_gst_validations(doc, throw=False):
+=======
+    if ignore_gst_validations(doc):
+>>>>>>> 159ed757 (test: additionally test gst details for credit note with zero value)
         return
 
     if (
