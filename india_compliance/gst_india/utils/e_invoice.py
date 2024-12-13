@@ -766,11 +766,7 @@ class EInvoiceData(GSTTransactionData):
             self.doc.company_address, validate_gstin=True
         )
 
-        ship_to_address = (
-            self.doc.port_address
-            if (is_foreign_doc(self.doc) and self.doc.port_address)
-            else self.doc.shipping_address_name
-        )
+        ship_to_address = self.doc.shipping_address_name
 
         # Defaults
         self.shipping_address = None

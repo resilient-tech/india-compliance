@@ -664,15 +664,6 @@
                 "Stcd": "02",
                 "TrdNm": "_Test Indian Registered Company"
             },
-            "ShipDtls": {
-                "Gstin": "URP",
-                "LglNm": "Test Indian Unregistered Company",
-                "TrdNm": "Test Indian Unregistered Company",
-                "Addr1": "Test Address - 2",
-                "Loc": "Test City",
-                "Pin": 380015,
-                "Stcd": "24"
-            },
             "TranDtls": {
                 "RegRev": "N",
                 "SupTyp": "EXPWOP",
