@@ -1,10 +1,65 @@
 import frappe
+from frappe.query_builder.functions import IfNull
 
 from india_compliance.gst_india.utils import parse_datetime
 from india_compliance.gst_india.utils.gstr_2.gstr import GSTR, get_mapped_value
 
 
 class GSTR2b(GSTR):
+    def get_existing_transaction(self):
+        category = type(self).__name__[6:]
+
+        gst_is = frappe.qb.DocType("GST Inward Supply")
+        existing_transactions = (
+            frappe.qb.from_(gst_is)
+            .select(gst_is.name, gst_is.supplier_gstin, gst_is.bill_no)
+            .where(gst_is.return_period_2b == self.return_period)
+            .where(gst_is.classification == category)
+        ).run(as_dict=True)
+
+        return {
+            f"{transaction.get('supplier_gstin', '')}-{transaction.get('bill_no', '')}": transaction.get(
+                "name"
+            )
+            for transaction in existing_transactions
+        }
+
+    def handle_missing_transactions(self):
+        """
+        For GSTR2b, only filed transactions are reported. They may be removed from GSTR-2b later
+        if marked as pending / rejected from IMS Dashboard.
+
+        In such cases,
+        1) we need to clear the return_period_2b as this could change in future.
+        2) safer to clear delete them as well if no matching transactions are found (possibly rejected).
+        """
+        if not self.existing_transaction:
+            return
+
+        missing_transactions = list(self.existing_transaction.values())
+
+        # clear return_period_2b
+        inward_supply = frappe.qb.DocType("GST Inward Supply")
+        (
+            frappe.qb.update(inward_supply)
+            .set(inward_supply.return_period_2b, "")
+            .set(inward_supply.is_downloaded_from_2b, 0)
+            .where(inward_supply.name.isin(missing_transactions))
+            .run()
+        )
+
+        # delete unmatched transactions
+        unmatched_transactions = (
+            frappe.qb.from_(inward_supply)
+            .select(inward_supply.name)
+            .where(inward_supply.name.isin(missing_transactions))
+            .where(IfNull(inward_supply.link_name, "") == "")
+            .run(pluck=True)
+        )
+
+        for transaction_name in unmatched_transactions:
+            frappe.delete_doc("GST Inward Supply", transaction_name)
+
     def get_transaction(self, category, supplier, invoice):
         transaction = super().get_transaction(category, supplier, invoice)
         transaction.return_period_2b = self.return_period
@@ -18,6 +73,9 @@ class GSTR2b(GSTR):
             "gstr_1_filing_date": parse_datetime(supplier.supfildt, day_first=True),
             "sup_return_period": supplier.supprd,
         }
+
+    def get_download_details(self):
+        return {"is_downloaded_from_2b": 1}
 
     def get_transaction_item(self, item):
         return {
