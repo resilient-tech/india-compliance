@@ -955,11 +955,10 @@ def validate_invoice_number(doc, throw=True):
             " only contain alphanumeric characters, dash (-) and slash (/) to meet GST requirements"
         )
 
-    if doc.doctype == "Purchase Invoice":
-        frappe.msgprint(message, title=title)
-        return
+    if doc.doctype == "Sales Invoice":
+        frappe.throw(message, title=title)
 
-    frappe.throw(message, title=title)
+    frappe.msgprint(message, title=title)
 
 
 def handle_server_errors(settings, doc, document_type, error):
