@@ -919,29 +919,8 @@ def disable_item_tax_template_notification():
 def validate_invoice_number(doc):
     """Validate GST invoice number requirements."""
 
-<<<<<<< HEAD
-    if len(doc.name) > 16:
-        frappe.throw(
-            _(
-                "Transaction Name must be 16 characters or fewer to meet GST requirements"
-            ),
-            title=_("Invalid GST Transaction Name"),
-        )
-
-    if not GST_INVOICE_NUMBER_FORMAT.match(doc.name):
-        frappe.throw(
-            _(
-                "Transaction Name should start with an alphanumeric character and can"
-                " only contain alphanumeric characters, dash (-) and slash (/) to meet GST requirements"
-            ),
-            title=_("Invalid GST Transaction Name"),
-        )
-=======
     is_valid_length = len(doc.name) <= 16
     is_valid_format = GST_INVOICE_NUMBER_FORMAT.match(doc.name)
-
-    if not throw:
-        return is_valid_length and is_valid_format
 
     if is_valid_length and is_valid_format:
         return
@@ -962,7 +941,6 @@ def validate_invoice_number(doc):
         frappe.throw(message, title=title)
 
     frappe.msgprint(message, title=title)
->>>>>>> a8e54900 (fix: show error message instead of throw during Purchase Invoice name validation  (#2864))
 
 
 def handle_server_errors(settings, doc, document_type, error):
