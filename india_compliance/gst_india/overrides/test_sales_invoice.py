@@ -17,7 +17,9 @@ class TestSalesInvoice(unittest.TestCase):
             "PI2021 - 001",
         ]
         for name in invalid_names:
-            doc = frappe._dict(name=name, posting_date=posting_date)
+            doc = frappe._dict(
+                name=name, posting_date=posting_date, doctype="Sales Invoice"
+            )
             self.assertRaises(frappe.ValidationError, validate_invoice_number, doc)
 
         valid_names = [
