@@ -79,8 +79,9 @@ class TestPurchaseInvoice(IntegrationTestCase):
         setattr(pinv, "__newname", "INV/2022/00001/asdfsadg")  # NOQA
         pinv.meta.autoname = "prompt"
 
-        self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
+        pinv.save()
+
+        self.assertEqual(
+            frappe.parse_json(frappe.message_log[-1]).get("message"),
             "Transaction Name must be 16 characters or fewer to meet GST requirements",
-            pinv.save,
         )
