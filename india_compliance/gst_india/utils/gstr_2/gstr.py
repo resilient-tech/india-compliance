@@ -77,13 +77,10 @@ class GSTR:
         self.handle_missing_transactions()
 
     def handle_missing_transactions(self):
-        """
-        For GSTR2a, transactions are reflected immediately after it's pushed to GSTR-1.
-        At times, it may later be removed from GSTR-1.
-
-        In such cases, we need to delete such unfilled transactions not present in the latest data.
-        """
         return
+
+    def get_existing_transaction(self):
+        return {}
 
     def get_all_transactions(self, category, suppliers):
         transactions = []
