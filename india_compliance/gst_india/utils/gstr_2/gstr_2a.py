@@ -61,12 +61,14 @@ class GSTR2a(GSTR):
             "gstr_1_filing_date": parse_datetime(supplier.fldtr1),
             "registration_cancel_date": parse_datetime(supplier.dtcancel),
             "sup_return_period": map_date_format(supplier.flprdr1, "%b-%y", "%m%Y"),
-            "is_downloaded_from_2a": 1,
         }
 
         self.update_gstins_list(supplier_details)
 
         return supplier_details
+
+    def get_download_details(self):
+        return {"is_downloaded_from_2a": 1}
 
     def update_gstins_list(self, supplier_details):
         self.all_gstins.add(supplier_details.get("supplier_gstin"))
@@ -242,9 +244,7 @@ class GSTR2aISDA(GSTR2aISD):
 
 class GSTR2aIMPG(GSTR2a):
     def get_supplier_details(self, supplier):
-        return {
-            "is_downloaded_from_2a": 1,
-        }
+        return {}
 
     def get_invoice_details(self, invoice):
         return {

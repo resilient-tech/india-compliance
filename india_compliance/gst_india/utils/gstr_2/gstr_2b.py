@@ -72,8 +72,10 @@ class GSTR2b(GSTR):
             "supplier_name": supplier.trdnm,
             "gstr_1_filing_date": parse_datetime(supplier.supfildt, day_first=True),
             "sup_return_period": supplier.supprd,
-            "is_downloaded_from_2b": 1,
         }
+
+    def get_download_details(self):
+        return {"is_downloaded_from_2b": 1}
 
     def get_transaction_item(self, item):
         return {
@@ -235,9 +237,7 @@ class GSTR2bIMPGSEZ(GSTR2b):
 
 class GSTR2bIMPG(GSTR2bIMPGSEZ):
     def get_supplier_details(self, supplier):
-        return {
-            "is_downloaded_from_2b": 1,
-        }
+        return {}
 
     # invoice details are included in supplier details
     def get_supplier_transactions(self, category, supplier):

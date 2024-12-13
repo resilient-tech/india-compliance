@@ -106,6 +106,7 @@ class GSTR:
             classification=category.value,
             **self.get_supplier_details(supplier),
             **self.get_invoice_details(invoice),
+            **self.get_download_details(),
             items=self.get_transaction_items(invoice),
         )
 
@@ -128,6 +129,9 @@ class GSTR:
         return {}
 
     def get_invoice_details(self, invoice):
+        return {}
+
+    def get_download_details(self):
         return {}
 
     def get_transaction_items(self, invoice):
