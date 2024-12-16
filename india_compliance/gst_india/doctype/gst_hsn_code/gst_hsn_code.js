@@ -16,7 +16,7 @@ frappe.ui.form.on('GST HSN Code', {
 							method: 'india_compliance.gst_india.doctype.gst_hsn_code.gst_hsn_code.update_taxes_in_item_master',
 							callback: function(r) {
 								if(r.message){
-									frappe.show_alert(__('Item taxes updated'));
+									frappe.show_alert(__('Items with this HSN code will be updated shortly'));
 								}
 							}
 						});
