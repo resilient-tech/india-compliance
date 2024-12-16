@@ -106,17 +106,16 @@ frappe.ui.form.on("GST Invoice Management System", {
         }
 
         frm.add_custom_button(__("Download Invoices"), async () => {
+            frappe.show_alert({
+                message: __("Downloading Invoices"),
+            });
+
             await taxpayer_api.call({
                 method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.download_invoices_and_reconcile",
                 args: {
                     company_gstin: frm.doc.company_gstin,
                     company: frm.doc.company,
                 },
-            });
-
-            frappe.show_alert({
-                message: "Downloaded and Reconciled Invoices",
-                indicator: "green",
             });
         });
     },

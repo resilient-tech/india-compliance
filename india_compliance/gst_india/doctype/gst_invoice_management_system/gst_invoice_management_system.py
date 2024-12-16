@@ -168,10 +168,6 @@ def download_invoices_and_reconcile(company_gstin, company):
     # Download Invoices
     download_ims_invoices(company_gstin, company)
 
-    # Auto_Reconcile Invoices
-    filters = frappe._dict({"company": company, "company_gstin": company_gstin})
-    IMSReconciler().auto_reconcile_invoices(filters)
-
 
 @frappe.whitelist()
 @otp_handler

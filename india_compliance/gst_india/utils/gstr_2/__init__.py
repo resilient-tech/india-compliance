@@ -349,8 +349,10 @@ def end_transaction_progress(return_period):
 
 
 def download_ims_invoices(company_gstin, company):
-    api = IMSAPI(company_gstin)
     reset_previous_ims_action()
+    api = IMSAPI(company_gstin)
+    has_queued_invoices = False
+    has_non_queued_invoices = False
 
     for category in IMS_CATEGORIES:
         response = api.get_data(IMS_CATEGORIES[category])
@@ -375,21 +377,56 @@ def download_ims_invoices(company_gstin, company):
                 request_id=response.token,
                 retry_after_mins=cint(response.est),
             )
+            has_queued_invoices = True
             continue
 
+        has_non_queued_invoices = True
         getattr(ims, category.upper())(company_gstin, company).create_transactions(
             response.get(category, [])
         )
 
     create_ims_return_log(company, company_gstin)
 
+    if has_queued_invoices:
+        frappe.msgprint(
+            _(
+                "Some categories are queued for download at GSTN as there may be large data."
+                " We will retry download every few minutes until it succeeds."
+            )
+        )
+
+    if has_non_queued_invoices:
+        from india_compliance.gst_india.doctype.gst_invoice_management_system import (
+            IMSReconciler,
+        )
+
+        # Auto_Reconcile Invoices
+        IMSReconciler().auto_reconcile_invoices(
+            frappe._dict({"company": company, "company_gstin": company_gstin})
+        )
+
+        frappe.msgprint(
+            _("Downloaded and Reconciled Invoices"),
+            alert=True,
+            indicator="green",
+        )
+
 
 def save_ims_invoices(company_gstin, return_period, json_data):
-    reset_previous_ims_action()
+    from india_compliance.gst_india.doctype.gst_invoice_management_system import (
+        IMSReconciler,
+    )
+
+    company = get_party_for_gstin(company_gstin, "Company")
     for category in IMS_CATEGORIES:
-        getattr(ims, category.upper())(company_gstin=company_gstin).create_transactions(
+        getattr(ims, category.upper())(company_gstin, company).create_transactions(
             json_data.get(category, [])
         )
+
+    # Auto_Reconcile Invoices
+    IMSReconciler().auto_reconcile_invoices(
+        frappe._dict({"company": company, "company_gstin": company_gstin})
+    )
 
 
 def reset_previous_ims_action():

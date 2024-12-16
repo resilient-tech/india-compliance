@@ -145,7 +145,7 @@ class IMS:
                 {
                     "previous_ims_action": ["is", "set"],
                     "is_supplier_return_filed": 0,
-                    "name": ["in", self.existing_transactions.values()],
+                    "name": ["in", list(self.existing_transactions.values())],
                 },
             )
 
