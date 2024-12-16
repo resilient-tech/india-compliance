@@ -133,6 +133,7 @@ def download_gstr_2b(gstin, return_periods):
         is_last_period = return_periods[-1] == return_period
         requests_made += 1
         frappe.publish_realtime(
+            # TODO: specific event name for purchase reconciliation tool
             "update_api_progress",
             {
                 "current_progress": requests_made * 100 / total_expected_requests,
@@ -140,6 +141,7 @@ def download_gstr_2b(gstin, return_periods):
                 "is_last_period": is_last_period,
             },
             user=frappe.session.user,
+            # TODO: doctype not respected
             doctype="Purchase Reconciliation Tool",
         )
 
@@ -168,6 +170,8 @@ def download_gstr_2b(gstin, return_periods):
             )
             queued_message = True
             continue
+
+        # TODO: if requires regenration, publish realtime and regenerate
 
         if response.error_type:
             continue
@@ -303,6 +307,7 @@ def _download_gstr_2a(gstin, return_period, json_data):
 
 
 def show_queued_message():
+    # TODO: publish realtime may be required
     frappe.msgprint(
         _(
             "Some returns are queued for download at GSTN as there may be large data."
@@ -328,3 +333,38 @@ def end_transaction_progress(return_period):
         user=frappe.session.user,
         doctype="Purchase Reconciliation Tool",
     )
+
+
+@frappe.whitelist()
+def regenerate_gstr_2b(gstin, return_period):
+    frappe.has_permission("Purchase Reconciliation Tool", throw=True)
+
+    if not return_period:
+        # TODO: calculate return period that needs to be regenerated
+        pass
+
+    try:
+        api = GSTR2bAPI(gstin)
+        return api.regenerate(return_period)
+
+    except frappe.ValidationError as e:
+        frappe.clear_last_message()
+        frappe.throw(
+            str(e), title=_("GSTR 2B Regeneration Failed for {0}".format(return_period))
+        )
+
+
+@frappe.whitelist()
+def check_regenerate_status(gstin, reference_id):
+    frappe.has_permission("Purchase Reconciliation Tool", throw=True)
+
+    if not reference_id:
+        return
+
+    try:
+        api = GSTR2bAPI(gstin)
+        return api.generation_status(reference_id)
+
+    except frappe.ValidationError as e:
+        frappe.clear_last_message()
+        frappe.throw(str(e), title=_("GSTR 2B Regeneration Failed"))

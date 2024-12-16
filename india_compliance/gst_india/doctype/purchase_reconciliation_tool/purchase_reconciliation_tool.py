@@ -478,15 +478,8 @@ def download_gstr(
 
 
 def get_periods_to_download(company_gstin, return_type, periods, download_all=False):
-    # check if redownload is useful
-    dont_redownload = get_import_history(
-        company_gstin, return_type, periods, fields=("return_period", "dont_redownload")
-    )
-    dont_redownload = [
-        log.return_period for log in dont_redownload if log.dont_redownload
-    ]
-
-    periods = [period for period in periods if period not in dont_redownload]
+    if return_type == ReturnType.GSTR2B:
+        periods = filter_redownload_periods(company_gstin, return_type, periods)
 
     if download_all:
         return periods
@@ -497,6 +490,18 @@ def get_periods_to_download(company_gstin, return_type, periods, download_all=Fa
     )
 
     return [period for period in periods if period not in existing_periods]
+
+
+def filter_redownload_periods(company_gstin, return_type, periods):
+    # check if redownload is useful. not useful if data is downloaded after 3B is filed
+    dont_redownload = get_import_history(
+        company_gstin, return_type, periods, fields=("return_period", "dont_redownload")
+    )
+    dont_redownload = [
+        log.return_period for log in dont_redownload if log.dont_redownload
+    ]
+
+    return [period for period in periods if period not in dont_redownload]
 
 
 def get_import_history(
