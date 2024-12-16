@@ -10,10 +10,10 @@ const category_map = {
 };
 
 const ACTION_MAP = {
+    "No Action": "No Action",
     Accept: "Accepted",
     Pending: "Pending",
     Reject: "Rejected",
-    "No Action": "No Action",
 };
 
 frappe.ui.form.on("GST Invoice Management System", {
@@ -84,7 +84,7 @@ frappe.ui.form.on("GST Invoice Management System", {
                 );
                 frm.add_custom_button(__("dropdown-divider"), () => {}, __("Actions"));
             }
-            ["Accept", "Pending", "Reject", "No Action"].forEach(action =>
+            ["No Action", "Accept", "Pending", "Reject"].forEach(action =>
                 frm.add_custom_button(
                     __(action),
                     () => apply_bulk_action(frm, ACTION_MAP[action]),
@@ -273,7 +273,7 @@ class IMS {
                 label: "Action",
                 fieldname: "ims_action",
                 fieldtype: "Select",
-                options: ["Accepted", "Rejected", "Pending", "No Action"],
+                options: ["No Action", "Accepted", "Rejected", "Pending"],
             },
             {
                 label: "Document Type",
@@ -573,6 +573,11 @@ class IMS {
                     `<a href="#" class='invoice-category'>${args[0]}</a>`,
             },
             {
+                label: "No Action",
+                fieldname: "no_action",
+                width: 200,
+            },
+            {
                 label: "Accepted",
                 fieldname: "accepted",
                 width: 200,
@@ -585,11 +590,6 @@ class IMS {
             {
                 label: "Rejected",
                 fieldname: "rejected",
-                width: 200,
-            },
-            {
-                label: "No Action",
-                fieldname: "no_action",
                 width: 200,
             },
         ];
@@ -610,10 +610,10 @@ class IMS {
             if (!data[category]) {
                 data[category] = {
                     category,
+                    no_action: 0,
                     accepted: 0,
                     rejected: 0,
                     pending: 0,
-                    no_action: 0,
                 };
             }
             data[category][action] += 1;
@@ -771,10 +771,10 @@ class IMS {
         });
 
         const actions_summary = {
+            no_action: { count: 0, color: "#7c7c7c" },
             accepted: { count: 0, color: "#28a745" },
             pending: { count: 0, color: "#ffc107" },
             rejected: { count: 0, color: "#e03636" },
-            no_action: { count: 0, color: "#7c7c7c" },
         };
 
         actions_data.forEach(row => {
@@ -1038,12 +1038,12 @@ class DetailViewDialog {
 
     setup_actions() {
         // setup actions
-        let actions = ["Accept", "Reject", "No Action"].filter(
+        let actions = ["No Action", "Accept", "Reject"].filter(
             action => ACTION_MAP[action] != this.row.ims_action
         );
 
         if (this.row.is_pending_action_allowed && this.row.ims_action != "Pending")
-            actions.insert(1, "Pending");
+            actions.insert(2, "Pending");
 
         const doctype = this.dialog.get_value("doctype");
         if (this.row.match_status == "Missing in 2A/2B") actions.push("Link");
@@ -1092,10 +1092,10 @@ class DetailViewDialog {
     }
 
     _get_button_css(action) {
+        if (action == "No Action") return "btn-secondary";
         if (action == "Accept") return "btn-success not-grey";
         if (action == "Reject") return "btn-danger not-grey";
         if (action == "Pending") return "btn-warning not-grey";
-        if (action == "No Action") return "btn-secondary";
         if (action == "Create") return "btn-primary not-grey";
         if (action == "Link") return "btn-primary not-grey btn-link disabled";
     }
