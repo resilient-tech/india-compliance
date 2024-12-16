@@ -99,7 +99,7 @@ frappe.ui.form.on("GST Invoice Management System", {
             for (let button of frm.$wrapper.find(
                 ".custom-actions .inner-group-button"
             )) {
-                if (button.innerText?.trim() != "Actions") continue;
+                if (button.innerText?.trim() != __("Actions")) continue;
                 frm.$wrapper.find(".custom-button-group .inner-group-button").remove();
                 $(button).appendTo(frm.$wrapper.find(".custom-button-group"));
             }
@@ -1087,7 +1087,7 @@ class DetailViewDialog {
                 this.frm.doc.company_gstin
             );
         } else {
-            apply_action(this.frm, [this.row.inward_supply_name], ACTION_MAP[action]);
+            apply_action(this.frm, [this.row], ACTION_MAP[action]);
         }
     }
 
@@ -1136,27 +1136,35 @@ function apply_bulk_action(frm, action) {
     if (!active_tab) return;
 
     const tab = frm.ims.tabs[active_tab];
-    affected_invoices = tab.get_checked_items();
 
     const selected_rows = tab.get_checked_items();
-    const invoice_names = get_affected_rows(
-        active_tab,
-        selected_rows,
-        frm.ims.filtered_data
-    );
-
-    if (!affected_invoices.length)
+    if (!selected_rows.length)
         return frappe.show_alert({
             message: __("Please select invoices"),
             indicator: "red",
         });
 
-    apply_action(frm, invoice_names, action);
+    const affected_rows = get_affected_rows(
+        active_tab,
+        selected_rows,
+        frm.ims.filtered_data
+    );
+
+    apply_action(frm, affected_rows, action);
 
     if (tab) tab.clear_checked_items();
 }
 
-async function apply_action(frm, invoice_names, action) {
+async function apply_action(frm, affected_rows, action) {
+    // "Accept" not allowed for Missing in PI
+    let invoice_names = affected_rows.map(row => {
+        if (row.match_status === "Missing in PI" && action === "Accepted")
+            frappe.throw(
+                __("Cannot Accept invoices where there is no linked purchase.")
+            );
+        return row.inward_supply_name;
+    });
+
     // Update action in UI
     let pending_not_allowed = [];
     const new_data = frm.ims.data.filter(row => {
@@ -1230,7 +1238,7 @@ function get_affected_rows(tab, selection, data) {
                     .length
         );
 
-    return invoices.map(row => row.inward_supply_name);
+    return invoices;
 }
 
 function convert_to_title_case(str) {
