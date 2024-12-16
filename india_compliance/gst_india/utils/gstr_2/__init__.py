@@ -419,8 +419,11 @@ def save_ims_invoices(company_gstin, return_period, json_data):
 
     company = get_party_for_gstin(company_gstin, "Company")
     for category in IMS_CATEGORIES:
+        if not json_data.get(category):
+            continue
+
         getattr(ims, category.upper())(company_gstin, company).create_transactions(
-            json_data.get(category, [])
+            json_data.get(category)
         )
 
     # Auto_Reconcile Invoices
