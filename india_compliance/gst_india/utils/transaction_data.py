@@ -284,13 +284,7 @@ class GSTTransactionData:
                 title=_("Invalid Data"),
             )
 
-        _validate_hsn_codes(
-            self.doc,
-            valid_hsn_length=[6, 8],
-            message=_(
-                "Since HSN/SAC Code is mandatory for generating e-Waybill/e-Invoices.<br>"
-            ),
-        )
+        _validate_hsn_codes(self.doc, valid_hsn_length=[6, 8])
 
     def get_all_item_details(self):
         all_item_details = []
