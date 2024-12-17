@@ -648,7 +648,14 @@ class GSTR1 {
     }
 
     filter_detailed_view = async (fieldname, value) => {
-        await this.filter_group.push_new_filter([DOCTYPE, fieldname, "=", value]);
+        const filter = [DOCTYPE, fieldname, "=", value.trim()];
+
+        if (this.filter_group.filter_exists(filter)) {
+            await this.filter_group.remove_filter(filter);
+        } else {
+            await this.filter_group.push_new_filter(filter);
+        }
+
         this.filter_group.apply();
     };
 
@@ -1135,10 +1142,10 @@ class TabManager {
             args[2]?.indent == 0
                 ? `<strong>${value}</strong>`
                 : isDescriptionCell
-                    ? `<a href="#" class="description">
+                ? `<a href="#" class="description">
                     <p style="padding-left: 15px">${value}</p>
                     </a>`
-                    : value;
+                : value;
 
         return value;
     }
@@ -1893,9 +1900,9 @@ class FiledTab extends GSTR1_TabManager {
             const { include_uploaded, delete_missing } = dialog
                 ? dialog.get_values()
                 : {
-                    include_uploaded: true,
-                    delete_missing: false,
-                };
+                      include_uploaded: true,
+                      delete_missing: false,
+                  };
 
             const doc = me.instance.frm.doc;
 
@@ -2139,7 +2146,7 @@ class ReconcileTab extends FiledTab {
         });
     }
 
-    get_creation_time_string() { } // pass
+    get_creation_time_string() {} // pass
 
     get_detail_view_column() {
         return [
@@ -2213,8 +2220,8 @@ class ErrorsTab extends TabManager {
         ];
     }
 
-    setup_actions() { }
-    set_creation_time_string() { }
+    setup_actions() {}
+    set_creation_time_string() {}
 
     refresh_data(data) {
         data = data.error_report;
@@ -2851,7 +2858,7 @@ function is_gstr1_api_enabled() {
 }
 
 function patch_set_indicator(frm) {
-    frm.toolbar.set_indicator = function () { };
+    frm.toolbar.set_indicator = function () {};
 }
 
 async function set_default_company_gstin(frm) {
