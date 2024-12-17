@@ -50,83 +50,10 @@ frappe.ui.form.on("GST Invoice Management System", {
     company_gstin: render_empty_state,
 
     refresh(frm) {
-        // Primary Action
-        frm.disable_save();
-        if (!frm.doc.is_data_loaded) {
-            frm.page.set_primary_action(__("Show Invoices"), async () => {
-                const { message } = await frm.call("get_invoice_data");
-                frm.doc.__invoice_data = message;
+        this.ims_action = new IMSAction(frm);
 
-                frm.ims.generate_data();
-                frm.doc.is_data_loaded = true;
-
-                // Toggle HTML fields
-                frm.refresh();
-            });
-        } else {
-            frm.page.set_primary_action(__("Upload Invoices"), async () => {
-                await taxpayer_api.call({
-                    method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.upload_invoices",
-                    args: {
-                        company_gstin: frm.doc.company_gstin,
-                    },
-                    callback: r => {
-                        if (!r.message) {
-                            frappe.msgprint({
-                                message: __("No Invoices to Upload"),
-                                indicator: "red",
-                            });
-                            return;
-                        }
-                        frappe.show_alert(__("Uploading Invoices"));
-
-                        frm.ims.check_action_status_with_retry();
-                    },
-                });
-            });
-
-            if (frm.get_active_tab()?.df.fieldname == "invoice_tab") {
-                frm.add_custom_button(
-                    __("Unlink"),
-                    () => reconciliation.unlink_documents(frm, frm.ims),
-                    __("Actions")
-                );
-                frm.add_custom_button(__("dropdown-divider"), () => {}, __("Actions"));
-            }
-            ["No Action", "Accept", "Pending", "Reject"].forEach(action =>
-                frm.add_custom_button(
-                    __(action),
-                    () => apply_bulk_action(frm, ACTION_MAP[action]),
-                    __("Actions")
-                )
-            );
-            frm.$wrapper
-                .find("[data-label='dropdown-divider']")
-                .addClass("dropdown-divider");
-
-            // move actions button next to filters
-            for (let button of frm.$wrapper.find(
-                ".custom-actions .inner-group-button"
-            )) {
-                if (button.innerText?.trim() != __("Actions")) continue;
-                frm.$wrapper.find(".custom-button-group .inner-group-button").remove();
-                $(button).appendTo(frm.$wrapper.find(".custom-button-group"));
-            }
-        }
-
-        frm.add_custom_button(__("Download Invoices"), async () => {
-            await taxpayer_api.call({
-                method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.download_invoices_and_reconcile",
-                args: {
-                    company_gstin: frm.doc.company_gstin,
-                    company: frm.doc.company,
-                },
-            });
-
-            frappe.show_alert({
-                message: __("Downloading Invoices"),
-            });
-        });
+        this.ims_action.setup_primary_actions();
+        this.ims_action.setup_custom_buttons();
     },
 });
 
@@ -827,6 +754,111 @@ class IMS {
     }
 }
 
+class IMSAction {
+    constructor(frm) {
+        this.frm = frm;
+    }
+
+    setup_primary_actions() {
+        // Primary Action
+        this.frm.disable_save();
+        if (!this.frm.doc.is_data_loaded) {
+            this.frm.page.set_primary_action(__("Show Invoices"), () =>
+                this.get_ims_data(this.frm)
+            );
+        } else {
+            this.frm.page.set_primary_action(__("Upload Invoices"), () =>
+                this.upload_ims_data(this.frm)
+            );
+        }
+
+        this.frm.add_custom_button(__("Download Invoices"), () =>
+            this.download_ims_data(this.frm)
+        );
+    }
+
+    setup_custom_buttons() {
+        // Setup Custom Buttons
+        if (this.frm.get_active_tab()?.df.fieldname == "invoice_tab") {
+            this.frm.add_custom_button(
+                __("Unlink"),
+                () => reconciliation.unlink_documents(this.frm, this.frm.ims),
+                __("Actions")
+            );
+            this.frm.add_custom_button(__("dropdown-divider"), () => {}, __("Actions"));
+        }
+
+        // Setup Bulk Actions
+        ["No Action", "Accept", "Pending", "Reject"].forEach(action =>
+            this.frm.add_custom_button(
+                __(action),
+                () => apply_bulk_action(this.frm, ACTION_MAP[action]),
+                __("Actions")
+            )
+        );
+
+        // Add Dropdown Divider to differentiate between IMS and Reconciliation Actions
+        this.frm.$wrapper
+            .find("[data-label='dropdown-divider']")
+            .addClass("dropdown-divider");
+
+        // move actions button next to filters
+        for (let button of this.frm.$wrapper.find(
+            ".custom-actions .inner-group-button"
+        )) {
+            if (button.innerText?.trim() != __("Actions")) continue;
+            this.frm.$wrapper.find(".custom-button-group .inner-group-button").remove();
+            $(button).appendTo(this.frm.$wrapper.find(".custom-button-group"));
+        }
+    }
+
+    async get_ims_data(frm) {
+        const { message } = await frm.call("get_invoice_data");
+        frm.doc.__invoice_data = message;
+
+        frm.ims.generate_data();
+        frm.doc.is_data_loaded = true;
+
+        // Toggle HTML fields
+        frm.refresh();
+    }
+
+    async upload_ims_data(frm) {
+        await taxpayer_api.call({
+            method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.upload_invoices",
+            args: {
+                company_gstin: frm.doc.company_gstin,
+            },
+            callback: r => {
+                if (!r.message) {
+                    frappe.msgprint({
+                        message: __("No Invoices to Upload"),
+                        indicator: "red",
+                    });
+                    return;
+                }
+                frappe.show_alert(__("Uploading Invoices"));
+
+                frm.ims.check_action_status_with_retry();
+            },
+        });
+    }
+
+    async download_ims_data(frm) {
+        await taxpayer_api.call({
+            method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.download_invoices_and_reconcile",
+            args: {
+                company_gstin: frm.doc.company_gstin,
+                company: frm.doc.company,
+            },
+        });
+
+        frappe.show_alert({
+            message: __("Downloading Invoices"),
+        });
+    }
+}
+
 class DetailViewDialog {
     table_fields = [
         "name",
@@ -884,7 +916,8 @@ class DetailViewDialog {
     init_dialog() {
         const supplier_details = `
         <h5>${this.comparision_data.supplier_name}
-        ${this.comparision_data.supplier_gstin
+        ${
+            this.comparision_data.supplier_gstin
                 ? ` (${this.comparision_data.supplier_gstin})`
                 : ""
         }
@@ -948,7 +981,8 @@ class DetailViewDialog {
                         ? ["GST Inward Supply"]
                         : ["Purchase Invoice", "Bill of Entry"],
 
-                read_only_depends_on: `eval: ${this.missing_doctype == "GST Inward Supply"
+                read_only_depends_on: `eval: ${
+                    this.missing_doctype == "GST Inward Supply"
                 }`,
 
                 onchange: () => {
