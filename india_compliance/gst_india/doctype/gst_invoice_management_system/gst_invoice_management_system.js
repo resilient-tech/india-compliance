@@ -32,29 +32,25 @@ frappe.ui.form.on("GST Invoice Management System", {
         frm.set_value("company_gstin", options[0]);
     },
 
-    company_gstin(frm) {
-        render_empty_state(frm);
-    },
+    company_gstin: render_empty_state,
 
     refresh(frm) {
+        console.log("refresh");
         // Primary Action
         frm.disable_save();
         if (!frm.doc.is_data_loaded) {
-            frm.page.clear_primary_action();
-
             frm.page.set_primary_action(__("Show Invoices"), async () => {
                 const { message } = await frm.call("get_invoice_data");
                 frm.doc.__invoice_data = message;
 
+                frm.ims.generate_data();
+                frm.doc.is_data_loaded = true;
+
                 // Toggle HTML fields
                 frm.refresh();
 
-                frm.ims.generate_data();
-                frm.doc.is_data_loaded = true;
             });
         } else {
-            frm.page.clear_primary_action();
-
             frm.page.set_primary_action(__("Upload Invoices"), async () => {
                 await taxpayer_api.call({
                     method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.upload_invoices",
@@ -82,7 +78,7 @@ frappe.ui.form.on("GST Invoice Management System", {
                     () => reconciliation.unlink_documents(frm, frm.ims),
                     __("Actions")
                 );
-                frm.add_custom_button(__("dropdown-divider"), () => {}, __("Actions"));
+                frm.add_custom_button(__("dropdown-divider"), () => { }, __("Actions"));
             }
             ["No Action", "Accept", "Pending", "Reject"].forEach(action =>
                 frm.add_custom_button(
@@ -604,7 +600,7 @@ class IMS {
         if (!filtered_data) filtered_data = this.filtered_data;
 
         filtered_data.forEach(row => {
-            const action = convert_to_lower_case(row.ims_action);
+            const action = frappe.scrub(row.ims_action);
             const category = category_map[row.doc_type];
             if (!data[category]) {
                 data[category] = {
@@ -785,7 +781,7 @@ class IMS {
 
         const action_performed_cards = Object.entries(actions_summary)
             .map(([value, data]) => {
-                const action = convert_to_title_case(value);
+                const action = frappe.unscrub(value);
                 return `<div>
                             <h5>${action}</h5>
                             </br>
@@ -875,11 +871,10 @@ class DetailViewDialog {
     init_dialog() {
         const supplier_details = `
         <h5>${this.comparision_data.supplier_name}
-        ${
-            this.comparision_data.supplier_gstin
+        ${this.comparision_data.supplier_gstin
                 ? ` (${this.comparision_data.supplier_gstin})`
                 : ""
-        }
+            }
         </h5>
         `;
 
@@ -940,9 +935,8 @@ class DetailViewDialog {
                         ? ["GST Inward Supply"]
                         : ["Purchase Invoice", "Bill of Entry"],
 
-                read_only_depends_on: `eval: ${
-                    this.missing_doctype == "GST Inward Supply"
-                }`,
+                read_only_depends_on: `eval: ${this.missing_doctype == "GST Inward Supply"
+                    }`,
 
                 onchange: () => {
                     const doctype = this.dialog.get_value("doctype");
@@ -1130,12 +1124,14 @@ function render_empty_state(frm) {
 
     frm.refresh();
 }
+
 function apply_bulk_action(frm, action) {
     const active_tab = frm.get_active_tab()?.df.fieldname;
     if (!active_tab) return;
 
     const tab = frm.ims.tabs[active_tab];
 
+    // from current tab
     const selected_rows = tab.get_checked_items();
     if (!selected_rows.length)
         return frappe.show_alert({
@@ -1143,6 +1139,7 @@ function apply_bulk_action(frm, action) {
             indicator: "red",
         });
 
+    // summary => invoice
     const affected_rows = get_affected_rows(
         active_tab,
         selected_rows,
@@ -1164,7 +1161,7 @@ async function apply_action(frm, affected_rows, action) {
         return row.inward_supply_name;
     });
 
-    // Update action in UI
+    // Validate and Update JS
     let pending_not_allowed = [];
     const new_data = frm.ims.data.filter(row => {
         if (!invoice_names.includes(row.inward_supply_name)) return true;
@@ -1183,10 +1180,6 @@ async function apply_action(frm, affected_rows, action) {
         return true;
     });
 
-    invoice_names = invoice_names.filter(name => !pending_not_allowed.includes(name));
-
-    frm.ims.refresh(new_data);
-
     if (pending_not_allowed.length) {
         frappe.msgprint(
             `The following invoices are not allowed to be marked as Pending: ${pending_not_allowed.join(
@@ -1195,19 +1188,14 @@ async function apply_action(frm, affected_rows, action) {
         );
     }
 
+    invoice_names = invoice_names.filter(name => !pending_not_allowed.includes(name));
     if (!invoice_names.length) return;
 
-    // Update action in database
-    await frappe.call({
-        method: "update_action",
-        doc: frm,
-        args: { invoice_names, action },
-    });
+    // Update
 
-    frappe.show_alert({
-        message: "Action applied successfully",
-        indicator: "green",
-    });
+    frappe.call({ method: "update_action", doc: frm, args: { invoice_names, action } });
+    frm.ims.refresh(new_data);
+    frappe.show_alert({ message: "Action applied successfully", indicator: "green" });
 }
 
 function validate_pending_action(row, action) {
@@ -1238,15 +1226,4 @@ function get_affected_rows(tab, selection, data) {
         );
 
     return invoices;
-}
-
-function convert_to_title_case(str) {
-    return str
-        .split("_")
-        .map(word => word[0].toUpperCase() + word.slice(1).toLowerCase())
-        .join(" ");
-}
-
-function convert_to_lower_case(str) {
-    return str.trim().toLowerCase().replaceAll(" ", "_");
 }
