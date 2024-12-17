@@ -166,7 +166,12 @@ def download_invoices_and_reconcile(company_gstin, company):
     frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
     # Download Invoices
-    download_ims_invoices(company_gstin, company)
+    frappe.enqueue(
+        download_ims_invoices,
+        queue="long",
+        company_gstin=company_gstin,
+        company=company,
+    )
 
 
 @frappe.whitelist()

@@ -388,11 +388,15 @@ def download_ims_invoices(company_gstin, company):
     create_ims_return_log(company, company_gstin)
 
     if has_queued_invoices:
-        frappe.msgprint(
-            _(
-                "Some categories are queued for download at GSTN as there may be large data."
-                " We will retry download every few minutes until it succeeds."
-            )
+        frappe.publish_realtime(
+            "ims_download_queued",
+            message={
+                "message": _(
+                    "Some categories are queued for download at GSTN as there may be large data."
+                    " We will retry download every few minutes until it succeeds."
+                )
+            },
+            user=frappe.session.user,
         )
 
     if has_non_queued_invoices:
@@ -405,10 +409,10 @@ def download_ims_invoices(company_gstin, company):
             frappe._dict({"company": company, "company_gstin": company_gstin})
         )
 
-        frappe.msgprint(
-            _("Downloaded and Reconciled Invoices"),
-            alert=True,
-            indicator="green",
+        frappe.publish_realtime(
+            "ims_download_completed",
+            message={"message": _("Downloaded and Reconciled Invoices successfully")},
+            user=frappe.session.user,
         )
 
 

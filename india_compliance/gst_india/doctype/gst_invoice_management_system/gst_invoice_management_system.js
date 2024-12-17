@@ -22,6 +22,21 @@ frappe.ui.form.on("GST Invoice Management System", {
         frm.ims = new IMS(frm);
 
         frm.trigger("company");
+
+        // Setup Listeners
+
+        // Download Queued
+        frappe.realtime.on("ims_download_queued", message => {
+            frappe.msgprint(message["message"]);
+        });
+
+        // Downloaded and Reconciled Invoices
+        frappe.realtime.on("ims_download_completed", message => {
+            frappe.show_alert({
+                message: message["message"],
+                indicator: "green",
+            });
+        });
     },
 
     async company(frm) {
@@ -35,7 +50,6 @@ frappe.ui.form.on("GST Invoice Management System", {
     company_gstin: render_empty_state,
 
     refresh(frm) {
-        console.log("refresh");
         // Primary Action
         frm.disable_save();
         if (!frm.doc.is_data_loaded) {
@@ -48,7 +62,6 @@ frappe.ui.form.on("GST Invoice Management System", {
 
                 // Toggle HTML fields
                 frm.refresh();
-
             });
         } else {
             frm.page.set_primary_action(__("Upload Invoices"), async () => {
@@ -78,7 +91,7 @@ frappe.ui.form.on("GST Invoice Management System", {
                     () => reconciliation.unlink_documents(frm, frm.ims),
                     __("Actions")
                 );
-                frm.add_custom_button(__("dropdown-divider"), () => { }, __("Actions"));
+                frm.add_custom_button(__("dropdown-divider"), () => {}, __("Actions"));
             }
             ["No Action", "Accept", "Pending", "Reject"].forEach(action =>
                 frm.add_custom_button(
@@ -102,16 +115,16 @@ frappe.ui.form.on("GST Invoice Management System", {
         }
 
         frm.add_custom_button(__("Download Invoices"), async () => {
-            frappe.show_alert({
-                message: __("Downloading Invoices"),
-            });
-
             await taxpayer_api.call({
                 method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.download_invoices_and_reconcile",
                 args: {
                     company_gstin: frm.doc.company_gstin,
                     company: frm.doc.company,
                 },
+            });
+
+            frappe.show_alert({
+                message: __("Downloading Invoices"),
             });
         });
     },
@@ -874,7 +887,7 @@ class DetailViewDialog {
         ${this.comparision_data.supplier_gstin
                 ? ` (${this.comparision_data.supplier_gstin})`
                 : ""
-            }
+        }
         </h5>
         `;
 
@@ -936,7 +949,7 @@ class DetailViewDialog {
                         : ["Purchase Invoice", "Bill of Entry"],
 
                 read_only_depends_on: `eval: ${this.missing_doctype == "GST Inward Supply"
-                    }`,
+                }`,
 
                 onchange: () => {
                     const doctype = this.dialog.get_value("doctype");
@@ -1165,16 +1178,16 @@ async function apply_action(frm, invoice_names, action) {
     frm.ims.data.forEach(row => {
         if (invoice_names.includes(row.inward_supply_name)) {
             if (!is_pending_allowed(row, action)) {
-            pending_not_allowed.push(row.inward_supply_name);
+                pending_not_allowed.push(row.inward_supply_name);
             } else if (!is_accept_allowed(row, action)) {
                 accept_not_allowed.push(row.inward_supply_name);
             } else {
-        row.ims_action = action;
+                row.ims_action = action;
 
-        // Update pending upload status
+                // Update pending upload status
                 if (row.ims_action !== row.previous_ims_action)
                     row.pending_upload = true;
-        else row.pending_upload = false;
+                else row.pending_upload = false;
             }
         }
 
