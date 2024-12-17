@@ -1031,12 +1031,18 @@ class DetailViewDialog {
 
     setup_actions() {
         // setup actions
-        let actions = ["No Action", "Accept", "Reject"].filter(
+        let actions = ["No Action", "Reject"].filter(
             action => ACTION_MAP[action] != this.row.ims_action
         );
 
+        if (
+            this.row.match_status !== "Missing in PI" &&
+            this.row.ims_action != "Accepted"
+        )
+            actions.push("Accept");
+
         if (this.row.is_pending_action_allowed && this.row.ims_action != "Pending")
-            actions.insert(2, "Pending");
+            actions.push("Pending");
 
         const doctype = this.dialog.get_value("doctype");
         if (this.row.match_status == "Missing in 2A/2B") actions.push("Link");
@@ -1080,7 +1086,7 @@ class DetailViewDialog {
                 this.frm.doc.company_gstin
             );
         } else {
-            apply_action(this.frm, [this.row], ACTION_MAP[action]);
+            apply_action(this.frm, [this.row.inward_supply_name], ACTION_MAP[action]);
         }
     }
 
@@ -1151,55 +1157,69 @@ function apply_bulk_action(frm, action) {
     if (tab) tab.clear_checked_items();
 }
 
-async function apply_action(frm, affected_rows, action) {
-    // "Accept" not allowed for Missing in PI
-    let invoice_names = affected_rows.map(row => {
-        if (row.match_status === "Missing in PI" && action === "Accepted")
-            frappe.throw(
-                __("Cannot Accept invoices where there is no linked purchase.")
-            );
-        return row.inward_supply_name;
-    });
-
+async function apply_action(frm, invoice_names, action) {
     // Validate and Update JS
     let pending_not_allowed = [];
-    const new_data = frm.ims.data.filter(row => {
-        if (!invoice_names.includes(row.inward_supply_name)) return true;
-
-        if (!validate_pending_action(row, action)) {
+    let accept_not_allowed = [];
+    let new_data = [];
+    frm.ims.data.forEach(row => {
+        if (invoice_names.includes(row.inward_supply_name)) {
+            if (!is_pending_allowed(row, action)) {
             pending_not_allowed.push(row.inward_supply_name);
-            return true;
-        }
-
+            } else if (!is_accept_allowed(row, action)) {
+                accept_not_allowed.push(row.inward_supply_name);
+            } else {
         row.ims_action = action;
 
         // Update pending upload status
-        if (row.ims_action !== row.previous_ims_action) row.pending_upload = true;
+                if (row.ims_action !== row.previous_ims_action)
+                    row.pending_upload = true;
         else row.pending_upload = false;
+            }
+        }
 
-        return true;
+        new_data.push({ ...row });
     });
 
+    invoice_names = invoice_names.filter(
+        name =>
+            !pending_not_allowed.includes(name) && !accept_not_allowed.includes(name)
+    );
+
     if (pending_not_allowed.length) {
-        frappe.msgprint(
-            `The following invoices are not allowed to be marked as Pending: ${pending_not_allowed.join(
-                ", "
-            )}`
-        );
+        frappe.msgprint({
+            message: __(
+                "Some invoices are not allowed to be marked as <strong>Pending</strong>."
+            ),
+            indicator: "red",
+        });
+    } else if (accept_not_allowed.length) {
+        frappe.msgprint({
+            message: __(
+                "Some invoices cannot be <strong>Accepted</strong>. Please ensure they are linked to a purchase."
+            ),
+            indicator: "red",
+        });
     }
 
     invoice_names = invoice_names.filter(name => !pending_not_allowed.includes(name));
     if (!invoice_names.length) return;
 
     // Update
-
     frappe.call({ method: "update_action", doc: frm, args: { invoice_names, action } });
+
     frm.ims.refresh(new_data);
     frappe.show_alert({ message: "Action applied successfully", indicator: "green" });
 }
 
-function validate_pending_action(row, action) {
+function is_pending_allowed(row, action) {
     if (action === "Pending" && !row.is_pending_action_allowed) return false;
+    return true;
+}
+
+function is_accept_allowed(row, action) {
+    // "Accept" not allowed for Missing in PI
+    if (action === "Accepted" && row.match_status === "Missing in PI") return false;
     return true;
 }
 
@@ -1225,5 +1245,5 @@ function get_affected_rows(tab, selection, data) {
                     .length
         );
 
-    return invoices;
+    return invoices.map(row => row.inward_supply_name);
 }
