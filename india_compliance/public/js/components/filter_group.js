@@ -100,17 +100,23 @@ india_compliance.FilterGroup = class FilterGroup extends frappe.ui.FilterGroup {
 
     remove_filter(filter_value) {
         // filter_value of form: [doctype, fieldname, condition, value]
-
         this.filters = this.filters.filter(f => {
             let f_value = f.get_value();
-            if (filter_value.length === 2) {
-                return filter_value[0] === f_value[0] && filter_value[1] === f_value[1];
-            }
+
             return !frappe.utils.arrays_equal(
                 f_value.slice(0, 4),
                 filter_value.slice(0, 4)
             );
         });
+    }
+
+    async add_or_remove_filter(filter_value) {
+        // filter_value of form: [doctype, fieldname, condition, value]
+        if (this.filter_exists(filter_value)) {
+            this.remove_filter(filter_value);
+        } else {
+            await this.push_new_filter(filter_value);
+        }
     }
 };
 

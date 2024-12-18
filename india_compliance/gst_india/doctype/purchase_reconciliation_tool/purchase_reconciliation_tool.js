@@ -496,19 +496,13 @@ class PurchaseReconciliationTool {
                     selector,
                     async function (e) {
                         e.preventDefault();
-                        const filter = [
+
+                        await me.filter_group.add_or_remove_filter([
                             DOCTYPE,
                             filter_map[tab][selector],
                             "=",
                             $(this).text().trim(),
-                        ];
-
-                        if (me.filter_group.filter_exists(filter)) {
-                            await me.filter_group.remove_filter(filter);
-                        } else {
-                            await me.filter_group.push_new_filter(filter);
-                        }
-
+                        ]);
                         me.filter_group.apply();
                     }
                 );

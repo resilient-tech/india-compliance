@@ -648,14 +648,12 @@ class GSTR1 {
     }
 
     filter_detailed_view = async (fieldname, value) => {
-        const filter = [DOCTYPE, fieldname, "=", value.trim()];
-
-        if (this.filter_group.filter_exists(filter)) {
-            await this.filter_group.remove_filter(filter);
-        } else {
-            await this.filter_group.push_new_filter(filter);
-        }
-
+        await this.filter_group.add_or_remove_filter([
+            DOCTYPE,
+            fieldname,
+            "=",
+            value.trim(),
+        ]);
         this.filter_group.apply();
     };
 
@@ -2477,10 +2475,18 @@ class FileGSTR1Dialog {
         return `
             <tr>
                 <td>${description}</td>
-                <td style="text-align: right;">${format_currency(liability.total_igst_amount)}</td>
-                <td style="text-align: right;">${format_currency(liability.total_cgst_amount)}</td>
-                <td style="text-align: right;">${format_currency(liability.total_sgst_amount)}</td>
-                <td style="text-align: right;">${format_currency(liability.total_cess_amount)}</td>
+                <td style="text-align: right;">${format_currency(
+                    liability.total_igst_amount
+                )}</td>
+                <td style="text-align: right;">${format_currency(
+                    liability.total_cgst_amount
+                )}</td>
+                <td style="text-align: right;">${format_currency(
+                    liability.total_sgst_amount
+                )}</td>
+                <td style="text-align: right;">${format_currency(
+                    liability.total_cess_amount
+                )}</td>
             </tr>
         `;
     }
@@ -2588,8 +2594,7 @@ class GSTR1Action extends FileGSTR1Dialog {
         const draft_invoices = this.frm.gstr1.data.books["Document Issued"]?.filter(
             row => row.draft_count > 0
         );
-        if (!draft_invoices?.length)
-            return upload();
+        if (!draft_invoices?.length) return upload();
 
         frappe.confirm(
             __(
