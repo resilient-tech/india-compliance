@@ -4,7 +4,6 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.query_builder.functions import IfNull
 
 from india_compliance.gst_india.api_classes.taxpayer_base import (
     TaxpayerBaseAPI,
@@ -245,14 +244,10 @@ def get_invoices_to_upload(company_gstin):
         "supply_type",
     ]
     query = ims_reconciler.get_base_inward_supply_query(additional_fields)
-    gst_inward_supply_list = (
-        query.where(IfNull(ims_reconciler.inward_supply.previous_ims_action, "") != "")
-        .where(
-            ims_reconciler.inward_supply.ims_action
-            != ims_reconciler.inward_supply.previous_ims_action
-        )
-        .run(as_dict=True)
-    )
+    gst_inward_supply_list = query.where(
+        ims_reconciler.inward_supply.ims_action
+        != ims_reconciler.inward_supply.previous_ims_action
+    ).run(as_dict=True)
 
     upload_data, reset_data = convert_data_to_gov_format(
         gst_inward_supply_list, company_gstin

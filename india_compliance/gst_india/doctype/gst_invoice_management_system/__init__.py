@@ -63,7 +63,6 @@ class IMSReconciler:
 
         data = (
             query.where(IfNull(self.inward_supply.match_status, "") == "")
-            .where(IfNull(self.inward_supply.previous_ims_action, "") != "")
             .where(self.inward_supply.classification.isin(categories))
             .run(as_dict=True)
         )
@@ -75,21 +74,17 @@ class IMSReconciler:
 
     def get_unmatched_purchase_invoices(self, filters):
         gst_category = (
-            ("Registered Regular", "Tax Deductor", "Input Service Distributor")
-            if filters.category in ("B2B", "ISD")
-            else ("SEZ", "Overseas", "UIN Holders")
+            "Registered Regular",
+            "Tax Deductor",
+            "Input Service Distributor",
         )
 
         query = self.get_base_purchase_query()
         query = self.get_query_with_filters(self.purchase_invoice, query, filters)
 
         data = (
-            query.where(
-                self.purchase_invoice.name.notin(
-                    PurchaseInvoice.query_matched_purchase_invoice()
-                )
-            )
-            .where(self.purchase_invoice.gst_category.isin(gst_category))
+            query.where(self.purchase_invoice.gst_category.isin(gst_category))
+            .where(self.purchase_invoice.reconciliation_status == "Unreconciled")
             .where(self.purchase_invoice.is_return == 0)
             .where(self.purchase_invoice.is_reverse_charge == 0)
             .run(as_dict=True)
