@@ -6,7 +6,10 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.functions import IfNull
 
-from india_compliance.gst_india.api_classes.taxpayer_base import otp_handler
+from india_compliance.gst_india.api_classes.taxpayer_base import (
+    TaxpayerBaseAPI,
+    otp_handler,
+)
 from india_compliance.gst_india.api_classes.taxpayer_returns import IMSAPI
 from india_compliance.gst_india.doctype.gst_invoice_management_system import (
     IMSReconciler,
@@ -27,7 +30,10 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_re
     link_documents,
     unlink_documents,
 )
-from india_compliance.gst_india.utils.gstr_2 import download_ims_invoices, ims
+from india_compliance.gst_india.utils.gstr_2 import (
+    download_ims_invoices_and_reconcile,
+    ims,
+)
 
 
 class GSTInvoiceManagementSystem(Document):
@@ -165,9 +171,10 @@ class GSTInvoiceManagementSystem(Document):
 def download_invoices_and_reconcile(company_gstin, company):
     frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
-    # Download Invoices
+    TaxpayerBaseAPI(company_gstin).validate_auth_token()
+
     frappe.enqueue(
-        download_ims_invoices,
+        download_ims_invoices_and_reconcile,
         queue="long",
         company_gstin=company_gstin,
         company=company,

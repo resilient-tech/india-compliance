@@ -348,8 +348,7 @@ def end_transaction_progress(return_period):
     )
 
 
-def download_ims_invoices(company_gstin, company):
-    reset_previous_ims_action()
+def download_ims_invoices_and_reconcile(company_gstin, company):
     api = IMSAPI(company_gstin)
     has_queued_invoices = False
     has_non_queued_invoices = False
@@ -416,7 +415,7 @@ def download_ims_invoices(company_gstin, company):
         )
 
 
-def save_ims_invoices(company_gstin, return_period, json_data):
+def save_ims_invoices_and_reconcile(company_gstin, return_period, json_data):
     from india_compliance.gst_india.doctype.gst_invoice_management_system import (
         IMSReconciler,
     )
@@ -434,9 +433,3 @@ def save_ims_invoices(company_gstin, return_period, json_data):
     IMSReconciler().auto_reconcile_invoices(
         frappe._dict({"company": company, "company_gstin": company_gstin})
     )
-
-
-def reset_previous_ims_action():
-    inward_supply = frappe.qb.DocType("GST Inward Supply")
-
-    frappe.qb.update(inward_supply).set(inward_supply.previous_ims_action, "").run()

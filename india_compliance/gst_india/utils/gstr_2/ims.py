@@ -1,5 +1,4 @@
 import frappe
-from frappe.query_builder.functions import IfNull
 from frappe.utils.data import format_date
 
 from india_compliance.gst_india.constants import (
@@ -33,6 +32,7 @@ class IMS:
         self.company = company
 
     def create_transactions(self, invoices):
+        self.reset_previous_ims_action()
         transactions = self.get_all_transactions(invoices)
 
         for transaction in transactions:
@@ -78,6 +78,7 @@ class IMS:
             "previous_ims_action": get_mapped_value(
                 invoice.action, self.VALUE_MAPS.action
             ),
+            "is_downloaded_from_ims": 1,
             "is_supplier_return_filed": 0 if invoice.srcfilstatus == "Not Filed" else 1,
             "supplier_return_form": invoice.srcform,
             "cgst": invoice.camt,
@@ -127,7 +128,10 @@ class IMS:
             .select(
                 inward_supply.name, inward_supply.supplier_gstin, inward_supply.bill_no
             )
-            .where(IfNull(inward_supply.ims_action, "") != "")
+            .where(inward_supply.is_downloaded_from_2b == 0)
+            .where(inward_supply.is_downloaded_from_2a == 0)
+            .where(inward_supply.is_downloaded_from_ims == 1)
+            .where(inward_supply.gstr_1_filled == 0)  # TODO: Is this correctly done ??
             .where(inward_supply.classification == category)
         ).run(as_dict=True)
 
@@ -139,15 +143,21 @@ class IMS:
         }
 
     def handle_missing_transactions(self):
-        if self.existing_transactions:
-            frappe.db.delete(
-                "GST Inward Supply",
-                {
-                    "previous_ims_action": ["is", "set"],
-                    "is_supplier_return_filed": 0,
-                    "name": ["in", list(self.existing_transactions.values())],
-                },
-            )
+        if not self.existing_transactions:
+            return
+
+        for inward_supply_name in self.existing_transactions.values():
+            frappe.delete_doc("GST Inward Supply", inward_supply_name)
+
+    def reset_previous_ims_action(self):
+        category = get_mapped_value(
+            type(self).__name__.lower(), self.VALUE_MAPS.classification
+        )
+        inward_supply = frappe.qb.DocType("GST Inward Supply")
+
+        frappe.qb.update(inward_supply).set(
+            inward_supply.previous_ims_action, ""
+        ).where(inward_supply.classification == category).run()
 
 
 class B2B(IMS):

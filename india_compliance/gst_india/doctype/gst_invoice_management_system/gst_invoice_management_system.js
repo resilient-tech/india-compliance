@@ -50,10 +50,10 @@ frappe.ui.form.on("GST Invoice Management System", {
     company_gstin: render_empty_state,
 
     refresh(frm) {
-        this.ims_action = new IMSAction(frm);
+        this.ims_actions = new IMSAction(frm);
 
-        this.ims_action.setup_primary_actions();
-        this.ims_action.setup_custom_buttons();
+        this.ims_actions.setup_primary_actions();
+        this.ims_actions.setup_custom_buttons();
     },
 });
 
