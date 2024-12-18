@@ -3,6 +3,7 @@
 
 frappe.provide("purchase_reconciliation_tool");
 
+const DOCTYPE = "Purchase Reconciliation Tool";
 const tooltip_info = {
     purchase_period: "Returns purchases during this period where no match is found.",
     inward_supply_period:
@@ -62,7 +63,7 @@ async function add_gstr2b_alert(frm) {
         });
 }
 
-frappe.ui.form.on("Purchase Reconciliation Tool", {
+frappe.ui.form.on(DOCTYPE, {
     async setup(frm) {
         patch_set_active_tab(frm);
         new india_compliance.quick_info_popover(frm, tooltip_info);
@@ -238,9 +239,9 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
             frappe.msgprint({
                 title: __("2A/2B Download Failed"),
                 message: message.error,
-                indicator: "red"
+                indicator: "red",
             });
-        })
+        });
     },
 });
 
@@ -330,7 +331,7 @@ class PurchaseReconciliationTool {
 
     setup_filter_button() {
         this.filter_group = new india_compliance.FilterGroup({
-            doctype: "Purchase Reconciliation Tool",
+            doctype: DOCTYPE,
             parent: this.$wrapper.find(".form-tabs-list"),
             filter_options: {
                 fieldname: "supplier_name",
@@ -403,7 +404,7 @@ class PurchaseReconciliationTool {
             },
         ];
 
-        fields.forEach(field => (field.parent = "Purchase Reconciliation Tool"));
+        fields.forEach(field => (field.parent = DOCTYPE));
         return fields;
     }
 
@@ -495,16 +496,13 @@ class PurchaseReconciliationTool {
                     selector,
                     async function (e) {
                         e.preventDefault();
-                        const value = $(this).text().trim();
-                        const field = filter_map[tab][selector];
 
-                        await me.filter_group.push_new_filter([
-                            "Purchase Reconciliation Tool",
-                            field,
+                        await me.filter_group.add_or_remove_filter([
+                            DOCTYPE,
+                            filter_map[tab][selector],
                             "=",
-                            value,
+                            $(this).text().trim(),
                         ]);
-
                         me.filter_group.apply();
                     }
                 );
