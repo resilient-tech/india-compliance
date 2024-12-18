@@ -753,7 +753,7 @@ class IMS {
                 return `<div>
                             <h5>${action}</h5>
                             </br>
-                            <a href="#" class="action-summary" data-name="${action}">
+                            <a href="#" class="action-summary" data-name="${action}-${data.count}">
                                 <h4 class="text-center" style="color: ${data.color}; font-size: x-large;">
                                     ${data.count}
                                 </h4>
@@ -773,7 +773,10 @@ class IMS {
 
         const me = this;
         this.frm.$wrapper.find(".action-summary").click(function (e) {
-            me.update_filter(e, "ims_action", $(this).attr("data-name"), me);
+            const [action, action_count] = $(this).attr("data-name").split("-");
+
+            if (action_count === "0") return;
+            me.update_filter(e, "ims_action", action, me);
         });
     }
 
