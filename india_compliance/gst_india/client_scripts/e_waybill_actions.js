@@ -221,6 +221,11 @@ function setup_e_waybill_actions(doctype) {
                     return;
                 }
 
+                if (gst_settings.auto_cancel_e_waybill === 1) {
+                    continueCancellation();
+                    return;
+                }
+
                 return show_cancel_e_waybill_dialog(frm, continueCancellation);
             });
         },
@@ -758,7 +763,8 @@ function get_cancel_e_waybill_dialog_fields(frm) {
             fieldname: "reason",
             fieldtype: "Select",
             reqd: 1,
-            default: "Data Entry Mistake",
+            default:
+                gst_settings.reason_for_e_waybill_cancellation || "Data Entry Mistake",
             options: ["Duplicate", "Order Cancelled", "Data Entry Mistake", "Others"],
         },
         {

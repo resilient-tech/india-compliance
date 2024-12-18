@@ -66,3 +66,4 @@ india_compliance.patches.v15.update_action_for_gst_inward_supply
 india_compliance.patches.v15.set_default_for_new_gst_category_notification
 india_compliance.patches.v15.make_e_invoice_log_extensible
 india_compliance.patches.v15.migrate_boe_taxes_to_ic_taxes
+india_compliance.patches.v15.set_download_document_for_2a_2b

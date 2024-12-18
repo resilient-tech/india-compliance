@@ -43,5 +43,7 @@ def set_taxes_from_hsn_code(doc):
                 "item_tax_template": tax.item_tax_template,
                 "tax_category": tax.tax_category,
                 "valid_from": tax.valid_from,
+                "minimum_net_rate": tax.minimum_net_rate,
+                "maximum_net_rate": tax.maximum_net_rate,
             },
         )
