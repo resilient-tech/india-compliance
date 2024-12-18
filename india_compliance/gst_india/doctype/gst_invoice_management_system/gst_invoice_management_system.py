@@ -148,11 +148,6 @@ class GSTInvoiceManagementSystem(Document):
         if not filters:
             filters = {}
 
-        purchases = self.get_all_purchase_invoice(names, filters)
-
-        return {doc.name: doc for doc in purchases}
-
-    def get_all_purchase_invoice(self, names, filters):
         IMS_RECONCILER = IMSReconciler()
         query = IMS_RECONCILER.get_base_purchase_query()
 
@@ -163,7 +158,9 @@ class GSTInvoiceManagementSystem(Document):
             IMS_RECONCILER.purchase_invoice, query, filters
         )
 
-        return query.run(as_dict=True)
+        purchases = query.run(as_dict=True)
+
+        return {doc.name: doc for doc in purchases}
 
 
 @frappe.whitelist()

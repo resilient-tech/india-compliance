@@ -770,9 +770,11 @@ class IMSAction {
             );
         }
 
-        this.frm.add_custom_button(__("Download Invoices"), () =>
-            this.download_ims_data(this.frm)
-        );
+        this.frm.add_custom_button(__("Download Invoices"), async () => {
+            render_empty_state(this.frm)
+            await this.download_ims_data(this.frm)
+            this.get_ims_data(this.frm)
+        });
     }
 
     setup_custom_buttons() {
@@ -783,7 +785,7 @@ class IMSAction {
                 () => reconciliation.unlink_documents(this.frm, this.frm.ims),
                 __("Actions")
             );
-            this.frm.add_custom_button(__("dropdown-divider"), () => {}, __("Actions"));
+            this.frm.add_custom_button(__("dropdown-divider"), () => { }, __("Actions"));
         }
 
         // Setup Bulk Actions
@@ -914,11 +916,10 @@ class DetailViewDialog {
     init_dialog() {
         const supplier_details = `
         <h5>${this.comparision_data.supplier_name}
-        ${
-            this.comparision_data.supplier_gstin
+        ${this.comparision_data.supplier_gstin
                 ? ` (${this.comparision_data.supplier_gstin})`
                 : ""
-        }
+            }
         </h5>
         `;
 
@@ -979,9 +980,8 @@ class DetailViewDialog {
                         ? ["GST Inward Supply"]
                         : ["Purchase Invoice", "Bill of Entry"],
 
-                read_only_depends_on: `eval: ${
-                    this.missing_doctype == "GST Inward Supply"
-                }`,
+                read_only_depends_on: `eval: ${this.missing_doctype == "GST Inward Supply"
+                    }`,
 
                 onchange: () => {
                     const doctype = this.dialog.get_value("doctype");
