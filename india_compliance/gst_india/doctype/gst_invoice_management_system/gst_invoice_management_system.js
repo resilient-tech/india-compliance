@@ -306,14 +306,12 @@ class IMS {
     async update_filter(e, field, field_value, me) {
         e.preventDefault();
 
-        const filter = ["GST Invoice Management System", field, "=", field_value];
-
-        if (me.filter_group.filter_exists(filter)) {
-            await me.filter_group.remove_filter(filter);
-        } else {
-            await me.filter_group.push_new_filter(filter);
-        }
-
+        await me.filter_group.add_or_remove_filter([
+            "GST Invoice Management System",
+            field,
+            "=",
+            field_value,
+        ]);
         me.filter_group.apply();
     }
 
