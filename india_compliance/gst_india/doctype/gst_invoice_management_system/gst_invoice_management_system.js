@@ -71,7 +71,7 @@ class IMS {
         this.data = [];
         this.frm.doc.is_data_loaded = false;
         this.$wrapper = this.frm.get_field("invoice_html").$wrapper;
-        this._tabs = ["invoice", "summary", "action", "error"];
+        this._tabs = ["invoice", "match_summary", "action_summary", "error"];
     }
 
     generate_data() {
@@ -117,21 +117,21 @@ class IMS {
                 {
                     label: "Match Summary",
                     fieldtype: "Tab Break",
-                    fieldname: "summary_tab",
+                    fieldname: "match_summary_tab",
                     active: 1,
                 },
                 {
                     fieldtype: "HTML",
-                    fieldname: "summary_data",
+                    fieldname: "match_summary_data",
                 },
                 {
                     label: "Actions Summary",
                     fieldtype: "Tab Break",
-                    fieldname: "action_tab",
+                    fieldname: "action_summary_tab",
                 },
                 {
                     fieldtype: "HTML",
-                    fieldname: "action_data",
+                    fieldname: "action_summary_data",
                 },
                 {
                     label: "Document View",
@@ -289,7 +289,7 @@ class IMS {
             }
         );
 
-        this.tabs.summary_tab.datatable.$datatable.on(
+        this.tabs.match_summary_tab.datatable.$datatable.on(
             "click",
             ".match-status",
             function (e) {
@@ -305,7 +305,7 @@ class IMS {
             }
         );
 
-        this.tabs.action_tab.datatable.$datatable.on(
+        this.tabs.action_summary_tab.datatable.$datatable.on(
             "click",
             ".invoice-category",
             function (e) {
@@ -345,7 +345,7 @@ class IMS {
         me.filter_group.apply();
     }
 
-    get_summary_columns() {
+    get_match_summary_columns() {
         return [
             {
                 label: "Match Status",
@@ -396,7 +396,7 @@ class IMS {
         ];
     }
 
-    get_summary_data() {
+    get_match_summary_data() {
         if (!this.data.length) return [];
 
         const data = {};
@@ -422,32 +422,6 @@ class IMS {
         });
 
         return Object.values(data);
-    }
-
-    get_invoice_data() {
-        if (!this.data.length) return [];
-
-        const data = [];
-        this.mapped_invoice_data = {};
-
-        this.filtered_data.forEach(row => {
-            this.mapped_invoice_data[row.inward_supply_name] = row;
-
-            data.push({
-                supplier_name_gstin: this.get_supplier_name_gstin(row),
-                bill_no: row.bill_no,
-                classification: row._inward_supply.classification,
-                ims_action: row.ims_action || "",
-                match_status: row.match_status,
-                linked_doc: row.purchase_invoice_name,
-                tax_difference: row.tax_difference,
-                taxable_value_difference: row.taxable_value_difference,
-                inward_supply_name: row.inward_supply_name,
-                pending_upload: row.pending_upload,
-            });
-        });
-
-        return data;
     }
 
     get_invoice_columns() {
@@ -526,7 +500,33 @@ class IMS {
         ];
     }
 
-    get_action_columns() {
+    get_invoice_data() {
+        if (!this.data.length) return [];
+
+        const data = [];
+        this.mapped_invoice_data = {};
+
+        this.filtered_data.forEach(row => {
+            this.mapped_invoice_data[row.inward_supply_name] = row;
+
+            data.push({
+                supplier_name_gstin: this.get_supplier_name_gstin(row),
+                bill_no: row.bill_no,
+                classification: row._inward_supply.classification,
+                ims_action: row.ims_action || "",
+                match_status: row.match_status,
+                linked_doc: row.purchase_invoice_name,
+                tax_difference: row.tax_difference,
+                taxable_value_difference: row.taxable_value_difference,
+                inward_supply_name: row.inward_supply_name,
+                pending_upload: row.pending_upload,
+            });
+        });
+
+        return data;
+    }
+
+    get_action_summary_columns() {
         return [
             {
                 label: "Category",
@@ -558,7 +558,7 @@ class IMS {
         ];
     }
 
-    get_action_data(filtered_data) {
+    get_action_summary_data(filtered_data) {
         const category_map = {
             Invoice: "B2B-Invoices",
             "Credit Note": "B2B-Credit Notes",
@@ -723,7 +723,7 @@ class IMS {
     }
 
     async set_actions_summary() {
-        const actions_data = this.get_action_data(this.data);
+        const actions_data = this.get_action_summary_data(this.data);
 
         if ($(".action-performed-summary").length) {
             $(".action-performed-summary").remove();
