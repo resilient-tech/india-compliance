@@ -95,7 +95,7 @@ class IMS {
         if (this.rendered_data == this.filtered_data) return;
 
         this._tabs.forEach(tab => {
-            this.tabs[`${tab}_tab`].refresh(this[`get_${tab}_data`]());
+            this.tabs[`${tab}_tab`].datatable?.refresh(this[`get_${tab}_data`]());
         });
 
         this.rendered_data = this.filtered_data;
@@ -258,7 +258,7 @@ class IMS {
 
     render_data_tables() {
         this._tabs.forEach(tab => {
-            this.tabs[`${tab}_tab`] = new india_compliance.DataTableManager({
+            this.tabs[`${tab}_tab`].datatable = new india_compliance.DataTableManager({
                 $wrapper: this.tab_group.get_field(`${tab}_data`).$wrapper,
                 columns: this[`get_${tab}_columns`](),
                 data: this[`get_${tab}_data`](),
@@ -273,34 +273,64 @@ class IMS {
     set_listeners() {
         const me = this;
 
-        this.tabs.invoice_tab.$datatable.on("click", ".supplier-gstin", function (e) {
-            me.update_filter(e, "supplier_gstin", $(this).text().trim(), me);
-        });
+        this.tabs.invoice_tab.datatable.$datatable.on(
+            "click",
+            ".supplier-gstin",
+            function (e) {
+                me.update_filter(e, "supplier_gstin", $(this).text().trim(), me);
+            }
+        );
 
-        this.tabs.invoice_tab.$datatable.on("click", ".match-status", function (e) {
-            me.update_filter(e, "match_status", $(this).text(), me);
-        });
+        this.tabs.invoice_tab.datatable.$datatable.on(
+            "click",
+            ".match-status",
+            function (e) {
+                me.update_filter(e, "match_status", $(this).text(), me);
+            }
+        );
 
-        this.tabs.summary_tab.$datatable.on("click", ".match-status", function (e) {
-            me.update_filter(e, "match_status", $(this).text(), me);
-        });
+        this.tabs.summary_tab.datatable.$datatable.on(
+            "click",
+            ".match-status",
+            function (e) {
+                me.update_filter(e, "match_status", $(this).text(), me);
+            }
+        );
 
-        this.tabs.invoice_tab.$datatable.on("click", ".ims-action", function (e) {
-            me.update_filter(e, "ims_action", $(this).text(), me);
-        });
+        this.tabs.invoice_tab.datatable.$datatable.on(
+            "click",
+            ".ims-action",
+            function (e) {
+                me.update_filter(e, "ims_action", $(this).text(), me);
+            }
+        );
 
-        this.tabs.action_tab.$datatable.on("click", ".invoice-category", function (e) {
-            me.update_filter(e, "doc_type", category_map[$(this).text()], me);
-        });
+        this.tabs.action_tab.datatable.$datatable.on(
+            "click",
+            ".invoice-category",
+            function (e) {
+                me.update_filter(e, "doc_type", category_map[$(this).text()], me);
+            }
+        );
 
-        this.tabs.invoice_tab.$datatable.on("click", ".classification", function (e) {
-            me.update_filter(e, "classification", $(this).text(), me);
-        });
+        this.tabs.invoice_tab.datatable.$datatable.on(
+            "click",
+            ".classification",
+            function (e) {
+                me.update_filter(e, "classification", $(this).text(), me);
+            }
+        );
 
-        this.tabs.invoice_tab.$datatable.on("click", ".btn.eye", function (e) {
-            const row = me.mapped_invoice_data[$(this).attr("data-name")];
-            me.dm = new DetailViewDialog(me.frm, row);
-        });
+        this.tabs.invoice_tab.datatable.$datatable.on(
+            "click",
+            ".btn.eye",
+            function (e) {
+                const row = me.mapped_invoice_data[$(this).attr("data-name")];
+                console.log(row);
+
+                me.dm = new DetailViewDialog(me.frm, row);
+            }
+        );
     }
 
     async update_filter(e, field, field_value, me) {
