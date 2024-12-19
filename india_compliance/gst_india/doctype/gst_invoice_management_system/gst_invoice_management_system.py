@@ -12,6 +12,8 @@ from india_compliance.gst_india.api_classes.taxpayer_base import (
 from india_compliance.gst_india.api_classes.taxpayer_returns import IMSAPI
 from india_compliance.gst_india.doctype.gst_invoice_management_system import (
     IMSReconciler,
+    InwardSupply,
+    PurchaseInvoice,
 )
 from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
     update_previous_ims_action as _update_previous_ims_action,
@@ -29,15 +31,12 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_re
     link_documents,
     unlink_documents,
 )
-from india_compliance.gst_india.utils.gstr_2 import (
-    download_ims_invoices_and_reconcile,
-    ims,
-)
+from india_compliance.gst_india.utils.gstr_2 import download_ims_invoices, ims
 
 
 class GSTInvoiceManagementSystem(Document):
     @frappe.whitelist()
-    def get_invoice_data(self, inward_supply=None, purchase=None):
+    def autoreconcile_and_get_data(self, inward_supply=None, purchase=None):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         filters = {
@@ -45,10 +44,22 @@ class GSTInvoiceManagementSystem(Document):
             "company_gstin": self.company_gstin,
         }
 
-        inward_supplies = self.get_all_inward_supplies(
+        # Auto-Reconcile invoices
+        IMSReconciler().auto_reconcile_invoices(filters)
+
+        return self.get_invoice_data(inward_supply, purchase, filters)
+
+    def get_invoice_data(self, inward_supply=None, purchase=None, filters=None):
+        if not filters:
+            filters = {
+                "company": self.company,
+                "company_gstin": self.company_gstin,
+            }
+
+        inward_supplies = InwardSupply().get_all_inward_supplies(
             names=inward_supply, filters=filters
         )
-        purchases = self.get_all_purchases(names=purchase, filters=filters)
+        purchases = PurchaseInvoice().get_all_purchases(names=purchase, filters=filters)
 
         invoice_data = []
         for doc in inward_supplies:
@@ -89,9 +100,10 @@ class GSTInvoiceManagementSystem(Document):
     def get_invoice_comparision(self, purchase_name, inward_supply_name):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
-        self._reconciler_class = IMSReconciler()
-        inward_supply = self.get_all_inward_supplies(names=[inward_supply_name])
-        purchases = self.get_all_purchases(names=[purchase_name])
+        inward_supply = InwardSupply().get_all_inward_supplies(
+            names=[inward_supply_name]
+        )
+        purchases = PurchaseInvoice().get_all_purchases(names=[purchase_name])
 
         reconciliation_data = [
             frappe._dict(
@@ -126,51 +138,16 @@ class GSTInvoiceManagementSystem(Document):
 
         return self.get_invoice_data(inward_supplies, purchases)
 
-    def get_all_inward_supplies(self, names=None, filters=None):
-        IMS_RECONCILER = IMSReconciler()
-
-        if not filters:
-            filters = {}
-
-        query = IMS_RECONCILER.get_base_inward_supply_query(["action", "doc_type"])
-
-        if names:
-            query = query.where(IMS_RECONCILER.inward_supply.name.isin(names))
-
-        query = IMS_RECONCILER.get_query_with_filters(
-            IMS_RECONCILER.inward_supply, query, filters
-        )
-
-        return query.run(as_dict=True)
-
-    def get_all_purchases(self, names=None, filters=None):
-        if not filters:
-            filters = {}
-
-        IMS_RECONCILER = IMSReconciler()
-        query = IMS_RECONCILER.get_base_purchase_query()
-
-        if names:
-            query = query.where(IMS_RECONCILER.purchase_invoice.name.isin(names))
-
-        query = IMS_RECONCILER.get_query_with_filters(
-            IMS_RECONCILER.purchase_invoice, query, filters
-        )
-
-        purchases = query.run(as_dict=True)
-
-        return {doc.name: doc for doc in purchases}
-
 
 @frappe.whitelist()
 @otp_handler
-def download_invoices_and_reconcile(company_gstin, company):
+def download_invoices(company_gstin, company):
     frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
     TaxpayerBaseAPI(company_gstin).validate_auth_token()
 
     frappe.enqueue(
-        download_ims_invoices_and_reconcile,
+        download_ims_invoices,
         queue="long",
         company_gstin=company_gstin,
         company=company,
@@ -232,21 +209,17 @@ def check_action_status(company_gstin):
 
 
 def get_invoices_to_upload(company_gstin):
-    ims_reconciler = IMSReconciler()
+    _InwardSupply = InwardSupply()
     additional_fields = [
         "doc_type",
         "is_amended",
-        "previous_ims_action",
-        "ims_action",
         "sup_return_period",
         "document_value",
-        "place_of_supply",
-        "supply_type",
     ]
-    query = ims_reconciler.get_base_inward_supply_query(additional_fields)
+    query = _InwardSupply.get_base_inward_supply_query(additional_fields)
     gst_inward_supply_list = query.where(
-        ims_reconciler.inward_supply.ims_action
-        != ims_reconciler.inward_supply.previous_ims_action
+        _InwardSupply.inward_supply.ims_action
+        != _InwardSupply.inward_supply.previous_ims_action
     ).run(as_dict=True)
 
     upload_data, reset_data = convert_data_to_gov_format(

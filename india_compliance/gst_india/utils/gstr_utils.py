@@ -75,7 +75,7 @@ def _download_queued_request(doc):
     from india_compliance.gst_india.utils.gstr_2 import (
         _download_gstr_2a,
         save_gstr_2b,
-        save_ims_invoices_and_reconcile,
+        save_ims_invoices,
     )
 
     GSTR_FUNCTIONS = {
@@ -83,7 +83,7 @@ def _download_queued_request(doc):
         ReturnType.GSTR2B.value: save_gstr_2b,
         ReturnType.GSTR1.value: save_gstr_1_filed_data,
         ReturnType.UnfiledGSTR1.value: save_gstr_1_unfiled_data,
-        ReturnType.IMS.value: save_ims_invoices_and_reconcile,
+        ReturnType.IMS.value: save_ims_invoices,
     }
 
     API_CLASS = {

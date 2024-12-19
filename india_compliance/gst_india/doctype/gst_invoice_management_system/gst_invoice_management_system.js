@@ -806,7 +806,7 @@ class IMSAction {
         this.frm.add_custom_button(__("Download Invoices"), async () => {
             render_empty_state(this.frm);
             await this.download_ims_data(this.frm);
-            this.get_ims_data(this.frm);
+            this.get_ims_data(this.frm); // TODO: Required ??
         });
     }
 
@@ -846,7 +846,7 @@ class IMSAction {
     }
 
     async get_ims_data(frm) {
-        const { message } = await frm.call("get_invoice_data");
+        const { message } = await frm.call("autoreconcile_and_get_data");
         frm.doc.__invoice_data = message;
 
         frm.ims.generate_data();
@@ -879,7 +879,7 @@ class IMSAction {
 
     async download_ims_data(frm) {
         await taxpayer_api.call({
-            method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.download_invoices_and_reconcile",
+            method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.download_invoices",
             args: {
                 company_gstin: frm.doc.company_gstin,
                 company: frm.doc.company,

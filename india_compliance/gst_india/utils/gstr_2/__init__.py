@@ -348,7 +348,7 @@ def end_transaction_progress(return_period):
     )
 
 
-def download_ims_invoices_and_reconcile(company_gstin, company):
+def download_ims_invoices(company_gstin, company):
     api = IMSAPI(company_gstin)
     has_queued_invoices = False
     has_non_queued_invoices = False
@@ -399,27 +399,14 @@ def download_ims_invoices_and_reconcile(company_gstin, company):
         )
 
     if has_non_queued_invoices:
-        from india_compliance.gst_india.doctype.gst_invoice_management_system import (
-            IMSReconciler,
-        )
-
-        # Auto_Reconcile Invoices
-        IMSReconciler().auto_reconcile_invoices(
-            frappe._dict({"company": company, "company_gstin": company_gstin})
-        )
-
         frappe.publish_realtime(
             "ims_download_completed",
-            message={"message": _("Downloaded and Reconciled Invoices successfully")},
+            message={"message": _("Downloaded Invoices successfully")},
             user=frappe.session.user,
         )
 
 
-def save_ims_invoices_and_reconcile(company_gstin, return_period, json_data):
-    from india_compliance.gst_india.doctype.gst_invoice_management_system import (
-        IMSReconciler,
-    )
-
+def save_ims_invoices(company_gstin, return_period, json_data):
     company = get_party_for_gstin(company_gstin, "Company")
     for category in IMS_CATEGORIES:
         if not json_data.get(category):
@@ -428,8 +415,3 @@ def save_ims_invoices_and_reconcile(company_gstin, return_period, json_data):
         getattr(ims, category.upper())(company_gstin, company).create_transactions(
             json_data.get(category)
         )
-
-    # Auto_Reconcile Invoices
-    IMSReconciler().auto_reconcile_invoices(
-        frappe._dict({"company": company, "company_gstin": company_gstin})
-    )
