@@ -602,6 +602,7 @@ def validate_items(doc, throw):
     has_gst_items = False
 
     for row in doc.items:
+<<<<<<< HEAD
         # Collect data to validate that non-GST items are not used with GST items
         if row.gst_treatment == "Non-GST":
             non_gst_items.append(row.idx)
@@ -609,13 +610,16 @@ def validate_items(doc, throw):
 
         has_gst_items = True
 
+=======
+        item_key = row.item_code or row.item_name
+>>>>>>> ad1a99c5 (fix: validate item tax template item_name wise if item_code is not set)
         # Different Item Tax Templates should not be used for the same Item Code
-        if row.item_code not in item_tax_templates:
-            item_tax_templates[row.item_code] = row.item_tax_template
+        if item_key not in item_tax_templates:
+            item_tax_templates[item_key] = row.item_tax_template
             continue
 
-        if row.item_tax_template != item_tax_templates[row.item_code]:
-            items_with_duplicate_taxes.append(bold(row.item_code))
+        if row.item_tax_template != item_tax_templates[item_key]:
+            items_with_duplicate_taxes.append(bold(item_key))
 
     if not has_gst_items:
         update_taxable_values(doc)
