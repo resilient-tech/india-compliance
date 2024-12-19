@@ -39,10 +39,12 @@ class GSTInvoiceManagementSystem(Document):
     def autoreconcile_and_get_data(self, inward_supply=None, purchase=None):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
-        filters = {
-            "company": self.company,
-            "company_gstin": self.company_gstin,
-        }
+        filters = frappe._dict(
+            {
+                "company": self.company,
+                "company_gstin": self.company_gstin,
+            }
+        )
 
         # Auto-Reconcile invoices
         IMSReconciler().auto_reconcile_invoices(filters)
@@ -51,10 +53,12 @@ class GSTInvoiceManagementSystem(Document):
 
     def get_invoice_data(self, inward_supply=None, purchase=None, filters=None):
         if not filters:
-            filters = {
-                "company": self.company,
-                "company_gstin": self.company_gstin,
-            }
+            filters = frappe._dict(
+                {
+                    "company": self.company,
+                    "company_gstin": self.company_gstin,
+                }
+            )
 
         inward_supplies = InwardSupply().get_all_inward_supplies(
             names=inward_supply, filters=filters
@@ -210,13 +214,14 @@ def check_action_status(company_gstin):
 
 def get_invoices_to_upload(company_gstin):
     _InwardSupply = InwardSupply()
-    additional_fields = [
-        "doc_type",
-        "is_amended",
-        "sup_return_period",
-        "document_value",
-    ]
-    query = _InwardSupply.get_base_inward_supply_query(additional_fields)
+    query = _InwardSupply.get_base_inward_supply_query(
+        additional_fields=[
+            "doc_type",
+            "is_amended",
+            "sup_return_period",
+            "document_value",
+        ]
+    )
     gst_inward_supply_list = query.where(
         _InwardSupply.inward_supply.ims_action
         != _InwardSupply.inward_supply.previous_ims_action

@@ -17,10 +17,17 @@ class IMSReconciler(Reconciler):
         {
             "original": "B2B",
             "amended": "B2BA",
+            "doc_type": "Invoice",
         },
         {
             "original": "CDNR",
             "amended": "CDNRA",
+            "doc_type": "Credit Note",
+        },
+        {
+            "original": "CDNR",
+            "amended": "CDNRA",
+            "doc_type": "Debit Note",
         },
     )
 
@@ -50,7 +57,7 @@ class InwardSupply:
 
     def get_all_inward_supplies(self, names=None, filters=None):
         if not filters:
-            filters = {}
+            filters = frappe._dict()
 
         query = self.get_base_inward_supply_query(["action", "doc_type"])
 
@@ -62,7 +69,7 @@ class InwardSupply:
         return query.run(as_dict=True)
 
     def get_unmatched_inward_supplies(self, filters):
-        categories = [filters["original"], filters["amended"]]
+        categories = [filters.original, filters.amended]
 
         query = self.get_base_inward_supply_query()
         query = get_query_with_filters(self.inward_supply, query, filters)
@@ -70,6 +77,7 @@ class InwardSupply:
         data = (
             query.where(IfNull(self.inward_supply.match_status, "") == "")
             .where(self.inward_supply.classification.isin(categories))
+            .where(self.inward_supply.doc_type == filters.doc_type)
             .run(as_dict=True)
         )
 
@@ -141,7 +149,7 @@ class PurchaseInvoice:
 
     def get_all_purchases(self, names=None, filters=None):
         if not filters:
-            filters = {}
+            filters = frappe._dict()
 
         query = self.get_base_purchase_query()
 
@@ -160,6 +168,12 @@ class PurchaseInvoice:
             "Tax Deductor",
             "Input Service Distributor",
         )
+        is_return = (
+            1
+            if filters.category in ["CDNR", "CDNRA"]
+            and filters.doc_type == "Credit Note"
+            else 0
+        )
 
         query = self.get_base_purchase_query()
         query = get_query_with_filters(self.purchase_invoice, query, filters)
@@ -167,8 +181,12 @@ class PurchaseInvoice:
         data = (
             query.where(self.purchase_invoice.gst_category.isin(gst_category))
             .where(self.purchase_invoice.reconciliation_status == "Unreconciled")
-            .where(self.purchase_invoice.is_return == 0)
+            .where(self.purchase_invoice.is_return == is_return)
             .where(self.purchase_invoice.is_reverse_charge == 0)
+            .where(
+                self.purchase_invoice.ineligibility_reason
+                != "ITC restricted due to PoS rules"
+            )
             .run(as_dict=True)
         )
 
@@ -224,10 +242,10 @@ class PurchaseInvoice:
 
 def get_query_with_filters(doc, query, filters):
     if filters.get("company"):
-        query = query.where(doc.company == filters["company"])
+        query = query.where(doc.company == filters.company)
 
     if filters.get("company_gstin"):
-        query = query.where(doc.company_gstin == filters["company_gstin"])
+        query = query.where(doc.company_gstin == filters.company_gstin)
 
     return query
 
