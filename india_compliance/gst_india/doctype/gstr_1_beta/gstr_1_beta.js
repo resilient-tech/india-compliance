@@ -111,7 +111,7 @@ frappe.ui.form.on(DOCTYPE, {
         // Set Default Values
         set_default_company_gstin(frm);
         set_options_for_year(frm);
-        set_options_for_month_or_quarter(frm);
+        set_options_for_month_or_quarter(frm, true);
 
         frm.__setup_complete = true;
 
@@ -197,7 +197,7 @@ frappe.ui.form.on(DOCTYPE, {
 
     year(frm) {
         render_empty_state(frm);
-        set_options_for_month_or_quarter(frm);
+        set_options_for_month_or_quarter(frm, true);
     },
 
     is_quarterly(frm) {
@@ -2918,20 +2918,20 @@ async function update_fields_based_on_filing_preference(frm) {
 }
 
 function update_month_or_quarter(frm) {
-    set_options_for_month_or_quarter(frm, set_only_options = true)
+    set_options_for_month_or_quarter(frm)
 
     if (frm.doc.is_quarterly === 1) {
-        const quarter = cint(india_compliance.MONTH.indexOf(frm.doc.month_or_quarter) / 3)
-        frm.doc.month_or_quarter = india_compliance.QUARTER[quarter]
+        const quarter_index = cint(india_compliance.MONTH.indexOf(frm.doc.month_or_quarter) / 3)
+        frm.doc.month_or_quarter = india_compliance.QUARTER[quarter_index]
     } else {
         const quarter_index = india_compliance.QUARTER.indexOf(frm.doc.month_or_quarter)
-        //  added 2 to set month_or_quarter as last month of that quarter
+        // last month of that quarter
         frm.doc.month_or_quarter = india_compliance.MONTH[(quarter_index * 3) + 2]
     }
     frm.refresh_field("month_or_quarter")
 }
 
-function set_options_for_month_or_quarter(frm, set_only_options = false) {
+function set_options_for_month_or_quarter(frm, with_update = false) {
     /**
      * Set options for Month or Quarter based on the year and current date
      * 1. If the year is current year, then options are till current month
@@ -2972,7 +2972,8 @@ function set_options_for_month_or_quarter(frm, set_only_options = false) {
     }
 
     set_field_options("month_or_quarter", options);
-    if (set_only_options) return
+
+    if (!with_update) return
 
     if (frm.doc.year === current_year)
         // set second last option as default

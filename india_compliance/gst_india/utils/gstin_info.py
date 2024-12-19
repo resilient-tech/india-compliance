@@ -4,8 +4,7 @@ from string import whitespace
 
 import frappe
 from frappe import _
-from frappe.query_builder import Case
-from frappe.utils import cint, get_last_day, getdate
+from frappe.utils import cint, getdate
 
 from india_compliance.exceptions import GSPServerError
 from india_compliance.gst_india.api_classes.base import BASE_URL
@@ -338,50 +337,49 @@ def get_gstr_1_return_status(
     return "Not Filed"
 
 
-def get_filing_preference(gstin, period):
-    month = cint(period[:2])
-    year = cint(period[2:])
+####################################################################################################
+#### GSTIN FILING PREFERENCE ######################################################################
+####################################################################################################
 
-    start_month = (month - 1) // 3 * 3 + 1
-    quarter = (month - 1) // 3
 
-    start_date = getdate(f"{year}-{start_month}-01")
-    months_of_quarter = [start_month + i for i in range(3)]
-    log_names = [f"GSTR1-{month:02d}{year}-{gstin}" for month in months_of_quarter]
+def get_filing_preference(gstin, period, force=False):
+    if not force:
+        log_name = f"GSTR1-{period}-{gstin}"
 
-    if filing_preference := frappe.get_list(
-        "GST Return Log",
-        filters={"name": ["in", log_names]},
-        fields=["filing_preference"],
-    ):
-        for record in filing_preference:
-            if not record.get("filing_preference"):
-                continue
+        filing_preference = frappe.db.get_value(
+            "GST Return Log", log_name, "filing_preference"
+        )
 
-            return record.get("filing_preference")
+        if filing_preference:
+            return filing_preference
 
-    if frappe.db.get_value(
-        "GST Return Log", log_names[0], "filing_status"
-    ) != "Filed" and getdate() < get_last_day(start_date):
-        return
+    filing_preference = fetch_filing_preference(gstin, period)
 
-    api = GSTR1API(company_gstin=gstin)
-    response = api.get_filing_preference(date=start_date).response
-
-    filing_preference = (
-        "Quarterly" if response[quarter].get("preference") == "Q" else "Monthly"
-    )
+    # update GST Return Log
     frappe.enqueue(
-        create_gst_return_log_for_quarter,
+        create_or_update_logs_for_quarter,
         gstin=gstin,
-        log_names=log_names,
+        period=period,
         filing_preference=filing_preference,
     )
 
     return filing_preference
 
 
-def create_gst_return_log_for_quarter(gstin, log_names, filing_preference):
+def fetch_filing_preference(gstin, period):
+    api = GSTR1API(company_gstin=gstin)
+    response = api.get_filing_preference(fy=get_fy(period))
+
+    quarter = get_financial_quarter(cint(period[:2]))
+    filing_preference = (
+        "Quarterly" if response[quarter - 1].get("preference") == "Q" else "Monthly"
+    )
+
+    return filing_preference
+
+
+def create_or_update_logs_for_quarter(gstin, period, filing_preference):
+    log_names = get_logs_for_quarter(gstin, period)
     existing_log = frappe.get_all(
         "GST Return Log", filters={"name": ["in", log_names]}, pluck="name"
     )
@@ -404,56 +402,28 @@ def create_gst_return_log_for_quarter(gstin, log_names, filing_preference):
             }
         ).insert()
 
-    update_logs_without_filing_preference(gstin)
-
-
-def update_logs_without_filing_preference(gstin):
-    gst_return_logs = frappe.get_all(
-        "GST Return Log",
-        filters={"filing_preference": ["is", "not set"], "gstin": gstin},
-        fields=["name", "return_period", "gstin"],
+    # patch
+    from india_compliance.patches.v15.update_return_logs_with_filing_preference import (
+        patch_filing_preference,
     )
 
-    if not gst_return_logs:
-        return
+    patch_filing_preference(gstin)
 
-    filing_preferences = {}
-    logs_to_update = {}
 
-    for log in gst_return_logs:
-        return_period = log.get("return_period")
-        gstin = log.get("gstin")
-        financial_year = get_fy(return_period)
-        key = f"{financial_year}:{gstin}"
+def get_logs_for_quarter(gstin, period):
+    quarter = get_financial_quarter(cint(period[:2]))
+    start_month = quarter * 3 + 1
+    year = period[2:]
 
-        if key not in filing_preferences:
-            start_date = getdate(f"{return_period[2:]}-{return_period[:2]}-01")
-            api = GSTR1API(company_gstin=gstin)
-            filing_preferences[key] = api.get_filing_preference(
-                date=start_date
-            ).response
-
-        month = cint(return_period[:2])
-        quarter = (month - 1) // 3
-        preference_data = filing_preferences.get(key)
-        logs_to_update[log.get("name")] = (
-            "Quarterly"
-            if preference_data[quarter].get("preference") == "Q"
-            else "Monthly"
-        )
-
-    gst_return_log = frappe.qb.DocType("GST Return Log")
-    case_conditions = Case()
-
-    for log_name, filing_preference in logs_to_update.items():
-        case_conditions.when(gst_return_log.name == log_name, filing_preference)
-
-    (
-        frappe.qb.update(gst_return_log)
-        .set(gst_return_log.filing_preference, case_conditions)
-        .where(gst_return_log.name.isin(list(logs_to_update.keys())))
-        .run()
+    return (
+        f"GSTR1-{month:02d}{year}-{gstin}"
+        for month in range(start_month, start_month + 3)
     )
+
+
+####################################################################################################
+#### GSTIN UTILITIES ###############################################################################
+####################################################################################################
 
 
 def get_fy(period, year_increment=0):
@@ -470,3 +440,16 @@ def get_fy(period, year_increment=0):
 def get_current_fy():
     period = getdate().strftime("%m%Y")
     return get_fy(period)
+
+
+def get_financial_quarter(month):
+    if month in [4, 5, 6]:
+        return 1  # April, May, June
+    elif month in [7, 8, 9]:
+        return 2  # July, August, September
+    elif month in [10, 11, 12]:
+        return 3  # October, November, December
+    elif month in [1, 2, 3]:
+        return 4  # January, February, March
+    else:
+        raise ValueError("Month must be between 1 and 12")

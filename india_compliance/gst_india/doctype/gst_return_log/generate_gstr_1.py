@@ -552,9 +552,17 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         # APIs Enabled
         status = self.get_return_status()
 
-        from india_compliance.gst_india.utils.gstin_info import get_filing_preference
+        # TODO: only if status is unfiled and first month or filing pref is not set
+        if True:
+            from india_compliance.gst_india.utils.gstin_info import (
+                get_filing_preference,
+            )
 
-        filing_preference = get_filing_preference(self.gstin, self.return_period)
+            filing_preference = get_filing_preference(
+                self.gstin, self.return_period, force=True
+            )
+        else:
+            filing_preference = self.filing_preference
 
         if filing_preference and self.filing_preference is None:
             self.db_set({"filing_preference": filing_preference})

@@ -502,10 +502,10 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
         return
 
     @request_cache
-    def get_filing_preference(self, date=None):
+    def get_filing_preference(self, date=None, fy=None):
         return self.get(
-            action="GETPREF", params={"fy": self.get_fy(date)}, endpoint="returns"
-        )
+            action="GETPREF", params={"fy": fy or self.get_fy(date)}, endpoint="returns"
+        ).response
 
     @staticmethod
     def get_fy(date=None):

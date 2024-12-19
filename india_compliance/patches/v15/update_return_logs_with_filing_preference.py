@@ -1,0 +1,22 @@
+import frappe
+
+from india_compliance.gst_india.utils.gstin_info import fetch_filing_preference
+
+
+def patch_filing_preference(gstin):
+    logs = frappe.get_all(
+        "GST Return Log",
+        filters={
+            "filing_preference": ["is", "not set"],
+            "gstin": gstin,
+            "return_perid": ["!=", "ALL"],
+        },
+        fields=["name", "return_period", "gstin"],
+    )
+
+    if not logs:
+        return
+
+    for log in logs:
+        preference = fetch_filing_preference(log.gstin, log.return_period)
+        frappe.db.set_value("GST Return Log", log.name, "filing_preference", preference)

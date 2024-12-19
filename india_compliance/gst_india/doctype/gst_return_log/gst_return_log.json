@@ -196,7 +196,8 @@
   {
    "fieldname": "filing_preference",
    "fieldtype": "Data",
-   "label": "Filing Preference"
+   "label": "Filing Preference",
+   "read_only": 1
   },
   {
    "fieldname": "upload_error",
@@ -230,7 +231,7 @@
    "link_fieldname": "reference_docname"
   }
  ],
- "modified": "2024-11-07 23:12:55.966658",
+ "modified": "2024-12-19 13:28:20.406478",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Return Log",
