@@ -267,6 +267,9 @@ class PurchaseReconciliationTool(Document):
         inward_supplies.append(inward_supply_name)
 
         self.db_set("is_modified", 1)
+        self.set_reconciliation_status(
+            link_doctype, [purchase_invoice_name], "Match Found"
+        )
 
         return self.ReconciledData.get(purchases, inward_supplies)
 
