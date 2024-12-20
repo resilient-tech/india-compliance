@@ -238,6 +238,7 @@ def create_default_company_account(
         }
     )
     account.flags.ignore_permissions = True
+    account.flags.ignore_root_company_validation = True
     account.insert(ignore_if_duplicate=True)
 
     if default_fieldname and not frappe.db.get_value(
