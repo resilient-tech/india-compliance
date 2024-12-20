@@ -11,6 +11,9 @@ from india_compliance.gst_india.api_classes.taxpayer_returns import (
     GSTR2bAPI,
 )
 from india_compliance.gst_india.constants import CLASSIFICATION_MAP
+from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
+    verify_request_in_progress,
+)
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
     create_ims_return_log,
 )
@@ -405,6 +408,8 @@ def download_ims_invoices(company_gstin, company):
             user=frappe.session.user,
         )
 
+    return has_queued_invoices
+
 
 def save_ims_invoices(company_gstin, return_period, json_data):
     company = get_party_for_gstin(company_gstin, "Company")
@@ -415,3 +420,66 @@ def save_ims_invoices(company_gstin, return_period, json_data):
         getattr(ims, category.upper())(company_gstin, company).create_transactions(
             json_data.get(category)
         )
+
+
+def upload_ims_invoices(company_gstin):
+    from india_compliance.gst_india.doctype.gst_invoice_management_system import (
+        get_invoices_to_upload,
+        update_return_log,
+    )
+
+    if not frappe.db.exists("GST Return Log", f"IMS-ALL-{company_gstin}"):
+        frappe.throw(_("Please download invoices before uploading"))
+        return
+
+    ims_log = frappe.get_doc(
+        "GST Return Log",
+        f"IMS-ALL-{company_gstin}",
+    )
+
+    upload_data, reset_data = get_invoices_to_upload(company_gstin)
+
+    if not (upload_data or reset_data):
+        return False
+
+    verify_request_in_progress(ims_log, False)
+
+    api = IMSAPI(company_gstin)
+
+    if upload_data:
+        # Upload invoices where action in ["Accepted", "Rejected", "Pending"]
+        response = api.save_ims_action(upload_data)
+        update_return_log(
+            ims_log, response.get("reference_id"), "upload", api.request_id
+        )
+
+    if reset_data:
+        # Reset invoices where action is "No Action"
+        response = api.reset_ims_action(reset_data)
+        update_return_log(
+            ims_log, response.get("reference_id"), "reset", api.request_id
+        )
+
+    return True
+
+
+def download_and_upload_ims_invoices(company_gstin, company):
+    """
+    1. This function will download invoices from GST Portal,
+       and if there are some queued invoices then upload will be skipped.
+
+    2. If there are no queued invoices, then it will upload the invoices to GST Portal.
+
+    3. It will check the status regardless of whether any data was uploaded or not.(To notify user that process is completed successfully).
+    """
+
+    has_queued_invoices = download_ims_invoices(company_gstin, company)
+    if has_queued_invoices:
+        return
+
+    upload_ims_invoices(company_gstin)
+
+    frappe.publish_realtime(
+        "check_ims_upload_status",
+        user=frappe.session.user,
+    )

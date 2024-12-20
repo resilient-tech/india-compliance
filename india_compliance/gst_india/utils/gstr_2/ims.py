@@ -18,6 +18,7 @@ class IMS:
     VALUE_MAPS = frappe._dict(
         {
             "states": {value: f"{value}-{key}" for key, value in STATE_NUMBERS.items()},
+            "reverse_states": STATE_NUMBERS,
             "action": ACTION_MAP,
             "reverse_action": {v: k for k, v in ACTION_MAP.items()},
             "gst_category": GST_CATEGORY_MAP,
@@ -27,9 +28,9 @@ class IMS:
     )
 
     def __init__(self, company_gstin=None, company=None):
-        self.existing_transactions = self.get_existing_transactions()
         self.company_gstin = company_gstin
         self.company = company
+        self.existing_transactions = self.get_existing_transactions()
 
     def create_transactions(self, invoices):
         self.reset_previous_ims_action()
@@ -98,7 +99,7 @@ class IMS:
             "rtnprd": invoice.sup_return_period,
             "val": invoice.document_value,
             "pos": get_mapped_value(
-                invoice.place_of_supply.split("-")[1], self.VALUE_MAPS.states
+                invoice.place_of_supply.split("-")[1], self.VALUE_MAPS.reverse_states
             ),
             "prev_status": get_mapped_value(
                 invoice.previous_ims_action, self.VALUE_MAPS.reverse_action
@@ -133,6 +134,9 @@ class IMS:
             .where(inward_supply.is_downloaded_from_ims == 1)
             .where(inward_supply.gstr_1_filled == 0)  # TODO: Is this correctly done ??
             .where(inward_supply.classification == category)
+            .where(
+                inward_supply.company_gstin == self.company_gstin
+            )  # TODO: Is this required ??
         ).run(as_dict=True)
 
         return {

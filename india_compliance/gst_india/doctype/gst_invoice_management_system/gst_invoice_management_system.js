@@ -37,6 +37,11 @@ frappe.ui.form.on("GST Invoice Management System", {
                 indicator: "green",
             });
         });
+
+        //
+        frappe.realtime.on("check_ims_upload_status", message => {
+            this.ims_actions.handle_upload_and_reset_request();
+        });
     },
 
     async company(frm) {
@@ -644,57 +649,42 @@ class IMS {
         return options;
     }
 
-    check_action_status_with_retry(request_status, retries = 0, now = false) {
-        if (!request_status) request_status = [];
-        setTimeout(
-            async () => {
-                const { message } = await taxpayer_api.call({
-                    method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.check_action_status",
-                    args: {
-                        company_gstin: this.frm.doc.company_gstin,
-                    },
-                });
+    check_action_status_with_retry(action, retries = 0, now = false) {
+        return new Promise(resolve => {
+            setTimeout(
+                async () => {
+                    const { message } = await taxpayer_api.call({
+                        method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.check_action_status",
+                        args: {
+                            company_gstin: this.frm.doc.company_gstin,
+                            action,
+                        },
+                    });
 
-                if (!message || !message.status_cd) {
-                    if (request_status.length) {
-                        return this.update_request_status(request_status);
+                    if (!message.status_cd) {
+                        resolve({ status_cd: "ER" });
+                        return;
                     }
-                }
 
-                if (
-                    message.status_cd === "IP" &&
-                    retries < this.RETRY_INTERVALS.length
-                ) {
-                    return this.check_action_status_with_retry(
-                        request_status,
-                        retries + 1
-                    );
-                }
+                    if (
+                        message.status_cd === "IP" &&
+                        retries < this.RETRY_INTERVALS.length
+                    ) {
+                        resolve(
+                            await this.check_action_status_with_retry(
+                                action,
+                                retries + 1
+                            )
+                        );
+                        return;
+                    }
 
-                // Not IP
-                if (message.status_cd === "P") {
-                    request_status.push({ status_cd: "P" });
-                } else if (message.status_cd === "PE") {
-                    request_status.push({
-                        status_cd: "PE",
-                        error_report: message.error_report,
-                    });
-                } else if (message.status_cd === "ER")
-                    request_status.push({
-                        status_cd: "ER",
-                        error_report: message.error_report,
-                    });
-
-                // If both upload and reset processed then update request status
-                if (request_status.length === 2) {
-                    return this.update_request_status(request_status);
-                }
-
-                // Check for unprocessed requests again
-                return this.check_action_status_with_retry(request_status);
-            },
-            now ? 0 : this.RETRY_INTERVALS[retries]
-        );
+                    // Not IP
+                    resolve(message);
+                },
+                now ? 0 : this.RETRY_INTERVALS[retries]
+            );
+        });
     }
 
     update_request_status(request_status) {
@@ -862,9 +852,10 @@ class IMSAction {
             args: {
                 company_gstin: frm.doc.company_gstin,
             },
-            callback: r => {
+            callback: async r => {
                 if (!r.message) {
                     frappe.msgprint({
+                        title: __("No Data Found"),
                         message: __("No Invoices to Upload"),
                         indicator: "red",
                     });
@@ -872,8 +863,50 @@ class IMSAction {
                 }
                 frappe.show_alert(__("Uploading Invoices"));
 
-                frm.ims.check_action_status_with_retry();
+                this.handle_upload_and_reset_request();
             },
+        });
+    }
+
+    async handle_upload_and_reset_request() {
+        const upload_request_status = await this.frm.ims.check_action_status_with_retry(
+            "upload"
+        );
+        const reset_request_status = await this.frm.ims.check_action_status_with_retry(
+            "reset"
+        );
+
+        const error_statuses = ["ER", "PE"];
+        if (
+            error_statuses.includes(upload_request_status.status_cd) ||
+            error_statuses.includes(reset_request_status.status_cd)
+        ) {
+            frappe.msgprint({
+                message:
+                    "An error occurred while uploading the data. Please try downloading the data again and re-uploading it.",
+                indicator: "red",
+                title: __("GSTN Sync Required"),
+                primary_action: {
+                    label: __("Sync and Reupload"),
+                    action: () => {
+                        frappe.hide_msgprint();
+                        render_empty_state(this.frm);
+                        taxpayer_api.call({
+                            method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.sync_with_gstn_and_reupload",
+                            args: {
+                                company_gstin: this.frm.doc.company_gstin,
+                                company: this.frm.doc.company,
+                            },
+                        });
+                    },
+                },
+            });
+            return;
+        }
+
+        frappe.show_alert({
+            message: __("Uploaded Invoices Successfully"),
+            indicator: "green",
         });
     }
 
