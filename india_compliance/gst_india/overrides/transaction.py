@@ -737,9 +737,13 @@ def _validate_hsn_codes(doc, valid_hsn_length, throw=False, message=None):
         frappe.throw(
             _(
                 "{0}"
-                "Please enter a valid HSN/SAC code for the following row numbers:"
-                " <br>{1}"
-            ).format(message or "", frappe.bold(", ".join(rows_with_invalid_hsn))),
+                "HSN/SAC must exist and should be {1} digits long"
+                " for the following row numbers: <br>{2}"
+            ).format(
+                message or "",
+                join_list_with_custom_separators(valid_hsn_length),
+                frappe.bold(", ".join(rows_with_invalid_hsn)),
+            ),
             title=_("Invalid HSN/SAC"),
         )
 
