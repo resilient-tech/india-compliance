@@ -38,7 +38,7 @@ frappe.ui.form.on("GST Invoice Management System", {
             });
         });
 
-        //
+        // Check Upload Status
         frappe.realtime.on("check_ims_upload_status", message => {
             this.ims_actions.handle_upload_and_reset_request();
         });
@@ -1172,7 +1172,7 @@ function apply_bulk_action(frm, action) {
     const tab = frm.ims.tabs[active_tab];
 
     // from current tab
-    const selected_rows = tab.get_checked_items();
+    const selected_rows = tab.datatable.get_checked_items();
     if (!selected_rows.length)
         return frappe.show_alert({
             message: __("Please select invoices"),
@@ -1188,7 +1188,7 @@ function apply_bulk_action(frm, action) {
 
     apply_action(frm, affected_rows, action);
 
-    if (tab) tab.clear_checked_items();
+    if (tab) tab.datatable.clear_checked_items();
 }
 
 async function apply_action(frm, invoice_names, action) {
