@@ -20,6 +20,7 @@ class ReturnsAPI(TaxpayerBaseAPI):
         "RTN_24": "queued",
         "RET11402": "authorization_failed",  # API Authorization Failed for 2A
         "RET2B1010": "authorization_failed",  # API Authorization Failed for 2B
+        "GTR2B-001": "not_applicable",  # GSTR2B form is not applicable for given return period
     }
 
     def download_files(self, return_period, token, otp=None):

@@ -160,6 +160,16 @@ def download_gstr_2b(gstin, return_periods):
             )
             continue
 
+        if response.error_type == "not_applicable":
+            create_import_log(
+                gstin,
+                ReturnType.GSTR2B.value,
+                return_period,
+                data_not_found=True,
+                dont_redownload=True,
+            )
+            continue
+
         if response.error_type == "queued":
             create_import_log(
                 gstin,
@@ -340,7 +350,7 @@ def regenerate_gstr_2b(gstin, return_period):
     frappe.has_permission("Purchase Reconciliation Tool", throw=True)
 
     if not return_period:
-        # TODO: calculate return period that needs to be regenerated
+        return_period = get_period_for_2b_regeneration()
         pass
 
     try:
@@ -368,3 +378,10 @@ def check_regenerate_status(gstin, reference_id):
     except frappe.ValidationError as e:
         frappe.clear_last_message()
         frappe.throw(str(e), title=_("GSTR 2B Regeneration Failed"))
+
+
+def get_period_for_2b_regeneration():
+    # Last 3b filing period + 1 month
+    # consider filing preference (Quarterly/Monthly)
+    # save this information in GST Return Log
+    pass

@@ -455,7 +455,7 @@ def download_gstr(
 
     periods = BaseUtil.get_periods(date_range, return_type)
     periods = get_periods_to_download(
-        company_gstin, return_type, periods, download_all=not force
+        company_gstin, return_type, periods, download_all=force
     )
 
     if not periods:
