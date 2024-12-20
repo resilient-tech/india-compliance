@@ -9,6 +9,7 @@ class ReturnsAPI(TaxpayerBaseAPI):
     IGNORED_ERROR_CODES = {
         **TaxpayerBaseAPI.IGNORED_ERROR_CODES,
         "RET11416": "no_docs_found",
+        "RET12501": "no_docs_found",  # random `system failure` for CDNR
         "RET13508": "no_docs_found",
         "RET13509": "no_docs_found",
         "RET13510": "no_docs_found",
