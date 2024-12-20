@@ -205,8 +205,8 @@ class PurchaseInvoice:
 
         return BaseUtil.get_dict_for_key("supplier_gstin", data)
 
-    def get_base_purchase_query(self):
-        fields = self.get_fields()
+    def get_base_purchase_query(self, additional_fields=None):
+        fields = self.get_fields(additional_fields)
 
         return (
             frappe.qb.from_(self.purchase_invoice)

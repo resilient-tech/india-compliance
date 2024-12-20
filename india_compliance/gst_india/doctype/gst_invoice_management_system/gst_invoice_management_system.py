@@ -18,6 +18,7 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     ReconciledData,
 )
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
+    _get_link_options,
     link_documents,
     unlink_documents,
 )
@@ -135,6 +136,26 @@ class GSTInvoiceManagementSystem(Document):
         purchases, inward_supplies = unlink_documents(data)
 
         return self.get_invoice_data(inward_supplies, purchases)
+
+    @frappe.whitelist()
+    def get_link_options(self, filters):
+        frappe.has_permission("GST Invoice Management System", "write", throw=True)
+
+        if isinstance(filters, dict):
+            filters = frappe._dict(filters)
+
+        PI = frappe.qb.DocType("Purchase Invoice")
+        query = (
+            PurchaseInvoice()
+            .get_base_purchase_query(["gst_category", "is_return"])
+            .where(PI.supplier_gstin.like(f"%{filters.supplier_gstin}%"))
+            .where(PI.bill_date[filters.bill_from_date : filters.bill_to_date])
+        )
+
+        if not filters.show_matched:
+            query = query.where(PI.reconciliation_status == "Unreconciled")
+
+        return _get_link_options(query.run(as_dict=True))
 
 
 @frappe.whitelist()

@@ -1,5 +1,10 @@
 import frappe
 
+from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
+    BaseUtil,
+    ReconciledData,
+)
+
 
 def link_documents(purchase_invoice_name, inward_supply_name, link_doctype):
     purchases = []
@@ -84,6 +89,22 @@ def _unlink_documents(inward_supplies):
         .where(GSTR2.action.notin(("Ignore", "Pending")))
         .run()
     )
+
+
+def _get_link_options(data):
+    for row in data:
+        row.value = row.label = row.name
+        if not row.get("classification"):
+            row.classification = ReconciledData.guess_classification(row)
+
+        row.description = (
+            f"{row.bill_no}, {row.bill_date}, Taxable Amount: {row.taxable_value}"
+        )
+        row.description += (
+            f", Tax Amount: {BaseUtil.get_total_tax(row)}, {row.classification}"
+        )
+
+    return data
 
 
 def set_reconciliation_status(doctype, names, status):

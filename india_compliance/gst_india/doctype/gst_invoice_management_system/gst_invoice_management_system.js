@@ -322,8 +322,6 @@ class IMS {
             ".btn.eye",
             function (e) {
                 const row = me.mapped_invoice_data[$(this).attr("data-name")];
-                console.log(row);
-
                 me.dm = new DetailViewDialog(me.frm, row);
             }
         );
@@ -930,12 +928,11 @@ class DetailViewDialog {
                 },
             ],
         });
+        this.set_link_options();
     }
 
     _get_document_link_fields() {
-        if (this.row.match_status == "Missing in 2A/2B")
-            this.missing_doctype = "GST Inward Supply";
-        else if (this.row.match_status == "Missing in PI")
+        if (this.row.match_status == "Missing in PI")
             this.missing_doctype = "Purchase Invoice";
         else return [];
 
@@ -945,33 +942,27 @@ class DetailViewDialog {
                 fieldtype: "Data",
                 fieldname: "supplier_gstin",
                 default: this.row.supplier_gstin,
+                onchange: () => this.set_link_options(),
             },
             {
                 label: "Date Range",
                 fieldtype: "DateRange",
                 fieldname: "date_range",
                 default: [
-                    this.frm.doc.purchase_from_date,
-                    this.frm.doc.purchase_to_date,
+                    india_compliance.last_month_start(),
+                    india_compliance.last_month_end(),
                 ],
+                onchange: () => this.set_link_options(),
             },
             {
                 fieldtype: "Column Break",
             },
             {
                 label: "Document Type",
-                fieldtype: "Autocomplete",
+                fieldtype: "Data",
                 fieldname: "doctype",
-                default: this.missing_doctype,
-                options:
-                    this.missing_doctype == "GST Inward Supply"
-                        ? ["GST Inward Supply"]
-                        : ["Purchase Invoice", "Bill of Entry"],
-
-                read_only_depends_on: `eval: ${
-                    this.missing_doctype == "GST Inward Supply"
-                }`,
-
+                default: "Purchase Invoice",
+                read_only: 1,
                 onchange: () => {
                     const doctype = this.dialog.get_value("doctype");
                     this.dialog
@@ -982,13 +973,14 @@ class DetailViewDialog {
             {
                 label: `Document Name`,
                 fieldtype: "Autocomplete",
-                fieldname: "link_with", // TODO: get link options
+                fieldname: "link_with",
                 onchange: () => this.refresh_data(),
             },
             {
                 label: `Show matched options for linking ${this.missing_doctype}`,
                 fieldtype: "Check",
                 fieldname: "show_matched",
+                onchange: () => this.set_link_options(),
             },
             {
                 fieldtype: "Section Break",
@@ -1063,6 +1055,26 @@ class DetailViewDialog {
         });
     }
 
+    async set_link_options() {
+        this.filters = {
+            supplier_gstin: this.dialog.get_value("supplier_gstin"),
+            bill_from_date: this.dialog.get_value("date_range")[0],
+            bill_to_date: this.dialog.get_value("date_range")[1],
+            show_matched: this.dialog.get_value("show_matched"),
+            purchase_doctype: this.comparision_data.purchase_doctype,
+        };
+
+        const { message } = await frappe.call({
+            method: "get_link_options",
+            doc: this.frm,
+            args: {
+                filters: this.filters,
+            },
+        });
+
+        this.dialog.get_field("link_with").set_data(message);
+    }
+
     setup_actions() {
         // setup actions
         let actions = ["No Action", "Reject"].filter(
@@ -1078,11 +1090,7 @@ class DetailViewDialog {
         if (this.row.is_pending_action_allowed && this.row.ims_action != "Pending")
             actions.push("Pending");
 
-        const doctype = this.dialog.get_value("doctype");
-        if (this.row.match_status == "Missing in 2A/2B") actions.push("Link");
-        else if (this.row.match_status == "Missing in PI")
-            if (doctype == "Purchase Invoice") actions.push("Create", "Link");
-            else actions.push("Link");
+        if (this.row.match_status == "Missing in PI") actions.push("Create", "Link");
         else actions.push("Unlink");
 
         actions.forEach(action => {
