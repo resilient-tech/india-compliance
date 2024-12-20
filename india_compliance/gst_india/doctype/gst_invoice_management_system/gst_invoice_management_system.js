@@ -76,7 +76,7 @@ class IMS {
         this.data = [];
         this.frm.doc.is_data_loaded = false;
         this.$wrapper = this.frm.get_field("invoice_html").$wrapper;
-        this._tabs = ["invoice", "match_summary", "action_summary", "error"];
+        this._tabs = ["invoice", "match_summary", "action_summary"];
     }
 
     generate_data() {
@@ -146,15 +146,6 @@ class IMS {
                 {
                     fieldtype: "HTML",
                     fieldname: "invoice_data",
-                },
-                {
-                    label: "Upload Errors",
-                    fieldtype: "Tab Break",
-                    fieldname: "error_tab",
-                },
-                {
-                    fieldtype: "HTML",
-                    fieldname: "error_data",
                 },
             ],
             body: this.$wrapper,
@@ -590,47 +581,6 @@ class IMS {
         return Object.values(data);
     }
 
-    get_error_columns() {
-        return [
-            {
-                name: "Error Code",
-                fieldname: "error_code",
-                width: 100,
-            },
-            {
-                name: "Error Message",
-                fieldname: "error_msg",
-                width: 325,
-            },
-            {
-                name: "Invoice Number",
-                fieldname: "invoice",
-                width: 150,
-            },
-            {
-                name: "Party GSTIN",
-                fieldname: "supplier_gstin",
-                width: 160,
-            },
-            {
-                name: "Return Period",
-                fieldname: "return_period",
-                width: 150,
-            },
-            {
-                name: "Integration Request",
-                fieldname: "integration_request",
-                fieldtype: "Link",
-                options: "Integration Request",
-                width: 250,
-            },
-        ];
-    }
-
-    get_error_data() {
-        return [];
-    }
-
     get_supplier_name_gstin(row) {
         return `
         ${row.supplier_name}
@@ -684,31 +634,6 @@ class IMS {
                 },
                 now ? 0 : this.RETRY_INTERVALS[retries]
             );
-        });
-    }
-
-    update_request_status(request_status) {
-        let error_report = [];
-        request_status.forEach(error_status => {
-            if (error_status.status_cd !== "P") {
-                error_report.push(...error_status.error_report);
-            }
-        });
-
-        if (error_report.length) {
-            this.frm.ims.show_errors(error_report);
-            frappe.msgprint({
-                message: __(
-                    "Error while uploading invoices. Try dowloading again and reuploading."
-                ),
-                indicator: "red",
-            });
-            return;
-        }
-
-        frappe.show_alert({
-            message: "Uploaded Invoices Successfully",
-            indicator: "green",
         });
     }
 
@@ -768,10 +693,6 @@ class IMS {
             if (action_count === "0") return;
             me.update_filter(e, "ims_action", action, me);
         });
-    }
-
-    show_errors(message) {
-        this.tabs["error_tab"].refresh(message);
     }
 }
 

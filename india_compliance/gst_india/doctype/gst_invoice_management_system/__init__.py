@@ -392,9 +392,9 @@ def process_upload_or_reset_ims(return_log, action):
     return response
 
 
-def get_erroneous_invoices(report):
+def get_erroneous_invoices(error_report):
     invoice_names = []
-    for error_list in report.values():
+    for error_list in error_report.values():
         for error in error_list:
             for invoice in error.get("inv"):
                 invoice_names.append(f"{invoice.get('inum')}_{error.get('stin')}")
