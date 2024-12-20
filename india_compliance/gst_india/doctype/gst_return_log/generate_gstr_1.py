@@ -556,7 +556,19 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
             gov_data_field = "unfiled"
 
         # Get Data
-        gov_data, is_enqueued = self.get_gov_gstr1_data()
+        try:
+            gov_data, is_enqueued = self.get_gov_gstr1_data()
+        except frappe.ValidationError as e:
+            frappe.throw(str(e))
+        except Exception as e:
+            doc = frappe.get_doc(
+                doctype="Error Log",
+                error=frappe.get_traceback(),
+                method=str(e),
+                reference_doctype="GSTR-1 Beta",
+            ).save()
+
+            return self.generate_only_books_data(data, filters, callback, doc.name)
 
         books_data = self.get_books_gstr1_data(filters)
 
@@ -579,7 +591,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         self.summarize_data(data)
         return callback and callback(filters)
 
-    def generate_only_books_data(self, data, filters, callback=None):
+    def generate_only_books_data(self, data, filters, callback=None, error_log=None):
         status = "Not Filed"
 
         books_data = self.get_books_gstr1_data(filters, aggregate=True)
@@ -588,7 +600,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         data["status"] = status
 
         self.summarize_data(data)
-        return callback and callback(filters)
+        return callback and callback(filters, error_log)
 
     # GET DATA
     def get_gov_gstr1_data(self):

@@ -33,11 +33,11 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
         self.db_set("generation_status", status, commit=commit)
 
     # FILE UTILITY
-    def load_data(self, file_field=None):
+    def load_data(self, *file_field):
         data = {}
 
         if file_field:
-            file_fields = [file_field]
+            file_fields = list(file_field)
         else:
             file_fields = self.get_applicable_file_fields()
 

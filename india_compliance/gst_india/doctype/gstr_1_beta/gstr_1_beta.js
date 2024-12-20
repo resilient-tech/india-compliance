@@ -158,7 +158,7 @@ frappe.ui.form.on(DOCTYPE, {
         });
 
         frappe.realtime.on("gstr1_data_prepared", message => {
-            const { filters } = message;
+            const { filters, error_log } = message;
 
             if (
                 frm.doc.company_gstin !== filters.company_gstin ||
@@ -167,7 +167,17 @@ frappe.ui.form.on(DOCTYPE, {
             )
                 return;
 
-            frm.taxpayer_api_call("generate_gstr1").then(r => {
+            const only_books_data = error_log != null ;
+            if (error_log) {
+                frappe.msgprint({
+                    message: __("Error while preparing GSTR-1 data, Please Check {0} for more deatils",
+                        [`<a href='/app/error-log/${error_log}' class='variant-click'>Error Log</a>`]),
+                    title: "GSTR-1 Download Failed",
+                    indicator: "red",
+                })
+            }
+
+            frm.taxpayer_api_call("generate_gstr1", {only_books_data}).then(r => {
                 frm.doc.__gst_data = r.message;
                 frm.trigger("load_gstr1_data");
             });
