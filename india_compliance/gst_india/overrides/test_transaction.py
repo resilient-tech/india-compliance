@@ -262,7 +262,9 @@ class TestTransaction(FrappeTestCase):
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(r"^(Please enter a valid HSN/SAC code for.*)$"),
+            re.compile(
+                r"^(HSN/SAC must exist and should be 6 or 8 digits long for.*)$"
+            ),
             doc.submit,
         )
 
@@ -277,7 +279,9 @@ class TestTransaction(FrappeTestCase):
         doc.save()
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(r"^(Please enter a valid HSN/SAC code for.*)$"),
+            re.compile(
+                r"^(HSN/SAC must exist and should be 6 or 8 digits long for.*)$"
+            ),
             doc.submit,
         )
 

@@ -609,13 +609,14 @@ def validate_items(doc, throw):
 
         has_gst_items = True
 
+        item_key = row.item_code or row.item_name
         # Different Item Tax Templates should not be used for the same Item Code
-        if row.item_code not in item_tax_templates:
-            item_tax_templates[row.item_code] = row.item_tax_template
+        if item_key not in item_tax_templates:
+            item_tax_templates[item_key] = row.item_tax_template
             continue
 
-        if row.item_tax_template != item_tax_templates[row.item_code]:
-            items_with_duplicate_taxes.append(bold(row.item_code))
+        if row.item_tax_template != item_tax_templates[item_key]:
+            items_with_duplicate_taxes.append(bold(item_key))
 
     if not has_gst_items:
         update_taxable_values(doc)
@@ -763,9 +764,13 @@ def _validate_hsn_codes(doc, valid_hsn_length, message=None):
         frappe.throw(
             _(
                 "{0}"
-                "Please enter a valid HSN/SAC code for the following row numbers:"
-                " <br>{1}"
-            ).format(message or "", frappe.bold(", ".join(rows_with_invalid_hsn))),
+                "HSN/SAC must exist and should be {1} digits long"
+                " for the following row numbers: <br>{2}"
+            ).format(
+                message or "",
+                join_list_with_custom_separators(valid_hsn_length),
+                frappe.bold(", ".join(rows_with_invalid_hsn)),
+            ),
             title=_("Invalid HSN/SAC"),
         )
 
