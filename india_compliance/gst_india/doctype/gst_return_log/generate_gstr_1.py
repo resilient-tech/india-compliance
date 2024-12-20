@@ -552,8 +552,10 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         # APIs Enabled
         status = self.get_return_status()
 
-        # TODO: only if status is unfiled and first month or filing pref is not set
-        if True:
+        if (
+            status != "Filed"
+            and filters.month_or_quarter in ["January", "April", "July", "October"]
+        ) or not self.filing_preference:
             from india_compliance.gst_india.utils.gstin_info import (
                 get_filing_preference,
             )
@@ -564,9 +566,11 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         else:
             filing_preference = self.filing_preference
 
-        if filing_preference and self.filing_preference is None:
-            self.db_set({"filing_preference": filing_preference})
-            update_filters(filters, filing_preference)
+        if (
+            self.filing_preference is None
+            or filters.is_quarterly != self.filing_preference
+        ):
+            filters.is_quarterly = self.filing_preference = filing_preference
 
         if status == "Filed":
             gov_data_field = "filed"
@@ -723,21 +727,6 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
                 data[subcategory] = [*subcategory_data.values()]
 
         return data
-
-
-def update_filters(filters, filing_preference):
-    is_quarterly = 1 if filing_preference == "Quarterly" else 0
-
-    if filters.is_quarterly == is_quarterly:
-        return
-
-    filters.is_quarterly = is_quarterly
-    if filters.is_quarterly == 1:
-        quarter = MONTH.index(filters.month_or_quarter) // 3
-        filters.month_or_quarter = QUARTER[quarter]
-    else:
-        quarter_idx = QUARTER.index(filters.month_or_quarter)
-        filters.month_or_quarter = MONTH[(quarter_idx * 3) + 2]
 
 
 class FileGSTR1:

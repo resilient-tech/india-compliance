@@ -113,6 +113,10 @@ frappe.ui.form.on(DOCTYPE, {
         set_options_for_year(frm);
         set_options_for_month_or_quarter(frm, true);
 
+        if (is_gstr1_api_enabled()) {
+            frm.set_df_property("is_quarterly", "read_only", 1);
+        }
+
         frm.__setup_complete = true;
 
         // Setup Listeners
@@ -120,7 +124,7 @@ frappe.ui.form.on(DOCTYPE, {
             const { filters } = message;
 
             const [month_or_quarter, year] =
-                india_compliance.get_month_year_from_period(filters.period, frm.doc.is_quarterly);
+                india_compliance.get_month_year_from_period(filters.period);
 
             if (
                 frm.doc.company_gstin !== filters.company_gstin ||
@@ -165,7 +169,6 @@ frappe.ui.form.on(DOCTYPE, {
                 return;
 
             if (frm.doc.is_quarterly != filters.is_quarterly) {
-                frm.set_value("month_or_quarter", filters.month_or_quarter)
                 frm.set_value("is_quarterly", filters.is_quarterly)
             }
 
@@ -198,11 +201,6 @@ frappe.ui.form.on(DOCTYPE, {
     year(frm) {
         render_empty_state(frm);
         set_options_for_month_or_quarter(frm, true);
-    },
-
-    is_quarterly(frm) {
-        render_empty_state(frm);
-        update_month_or_quarter(frm)
     },
 
     refresh(frm) {
@@ -2899,36 +2897,10 @@ async function update_fields_based_on_filing_preference(frm) {
         args: { month_or_quarter: frm.doc.month_or_quarter, year: frm.doc.year, company_gstin: frm.doc.company_gstin },
     })
 
-    if (preference === undefined) {
-        frm.set_df_property("is_quarterly", "read_only", 0);
-        return
-    }
-
-    preference = cint(preference)
-    if (preference === frm.doc.is_quarterly) {
-        frm.set_df_property("is_quarterly", "read_only", 1);
-        return
-    }
+    if (preference === undefined || preference === frm.doc.is_quarterly) return;
 
     frm.doc.is_quarterly = preference
-    frm.set_df_property("is_quarterly", "read_only", 1)
     frm.refresh_field("is_quarterly")
-
-    update_month_or_quarter(frm)
-}
-
-function update_month_or_quarter(frm) {
-    set_options_for_month_or_quarter(frm)
-
-    if (frm.doc.is_quarterly === 1) {
-        const quarter_index = cint(india_compliance.MONTH.indexOf(frm.doc.month_or_quarter) / 3)
-        frm.doc.month_or_quarter = india_compliance.QUARTER[quarter_index]
-    } else {
-        const quarter_index = india_compliance.QUARTER.indexOf(frm.doc.month_or_quarter)
-        // last month of that quarter
-        frm.doc.month_or_quarter = india_compliance.MONTH[(quarter_index * 3) + 2]
-    }
-    frm.refresh_field("month_or_quarter")
 }
 
 function set_options_for_month_or_quarter(frm, with_update = false) {
@@ -2950,25 +2922,12 @@ function set_options_for_month_or_quarter(frm, with_update = false) {
 
     if (frm.doc.year === current_year) {
         // Options for current year till current month
-        if (frm.doc.is_quarterly === 0)
-            options = india_compliance.MONTH.slice(0, current_month_idx + 1);
-        else {
-            let quarter_idx;
-            if (current_month_idx <= 2) quarter_idx = 1;
-            else if (current_month_idx <= 5) quarter_idx = 2;
-            else if (current_month_idx <= 8) quarter_idx = 3;
-            else quarter_idx = 4;
-
-            options = india_compliance.QUARTER.slice(0, quarter_idx);
-        }
+        options = india_compliance.MONTH.slice(0, current_month_idx + 1);
     } else if (frm.doc.year === "2017") {
         // Options for 2017 from July to December
-        if (frm.doc.is_quarterly === 0)
-            options = india_compliance.MONTH.slice(6);
-        else options = india_compliance.QUARTER.slice(2);
+        options = india_compliance.MONTH.slice(6);
     } else {
-        if (frm.doc.is_quarterly === 0) options = india_compliance.MONTH;
-        else options = india_compliance.QUARTER;
+        options = india_compliance.MONTH;
     }
 
     set_field_options("month_or_quarter", options);

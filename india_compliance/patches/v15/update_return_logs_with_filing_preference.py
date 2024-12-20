@@ -9,7 +9,7 @@ def patch_filing_preference(gstin):
         filters={
             "filing_preference": ["is", "not set"],
             "gstin": gstin,
-            "return_perid": ["!=", "ALL"],
+            "return_period": ["!=", "ALL"],
         },
         fields=["name", "return_period", "gstin"],
     )
@@ -17,6 +17,9 @@ def patch_filing_preference(gstin):
     if not logs:
         return
 
+    gst_return_log = {}
     for log in logs:
         preference = fetch_filing_preference(log.gstin, log.return_period)
-        frappe.db.set_value("GST Return Log", log.name, "filing_preference", preference)
+        gst_return_log[log.name] = {"filing_preference": preference}
+
+    frappe.db.bulk_update("GST Return Log", gst_return_log, update_modified=False)

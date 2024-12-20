@@ -9,13 +9,14 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder import Case
 from frappe.query_builder.functions import Date, IfNull, Sum
-from frappe.utils import cint, get_last_day, getdate
+from frappe.utils import get_last_day, getdate
 
 from india_compliance.gst_india.api_classes.taxpayer_base import (
     TaxpayerBaseAPI,
     otp_handler,
 )
 from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
+    MONTH,
     verify_request_in_progress,
 )
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
@@ -393,8 +394,12 @@ def get_gstr_1_from_and_to_date(
     Returns the from and to date for the given month or quarter and year
     This is used to filter the data for the given period in Books
     """
-    if cint(is_quarterly):
-        start_month, end_month = month_or_quarter.split("-")
+    if is_quarterly == "Quarterly":
+        month_index = MONTH.index(month_or_quarter)
+
+        start_month = month_index // 3 * 3 + 1
+        end_month = start_month + 2
+
         from_date = getdate(f"{year}-{start_month}-01")
         to_date = get_last_day(f"{year}-{end_month}-01")
     else:
@@ -415,4 +420,4 @@ def get_filing_preference_from_log(month_or_quarter: str, year: str, company_gst
     if not filing_preference:
         return None
 
-    return 1 if filing_preference == "Quarterly" else 0
+    return filing_preference
