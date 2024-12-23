@@ -167,7 +167,7 @@ frappe.ui.form.on(DOCTYPE, {
             )
                 return;
 
-            const only_books_data = error_log != null ;
+            const only_books_data = error_log != undefined ;
             if (error_log) {
                 frappe.msgprint({
                     message: __("Error while preparing GSTR-1 data, Please Check {0} for more deatils",

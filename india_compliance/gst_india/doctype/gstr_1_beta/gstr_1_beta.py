@@ -154,7 +154,7 @@ class GSTR1Beta(Document):
 
             raise e
 
-    def on_generate(self, filters=None, error_log=None):
+    def on_generate(self, filters=None):
         """
         Once data is generated, update the status and publish the data
         """
@@ -168,7 +168,7 @@ class GSTR1Beta(Document):
 
         frappe.publish_realtime(
             "gstr1_data_prepared",
-            message={"filters": filters, "error_log": error_log},
+            message={"filters": filters},
             user=frappe.session.user,
             doctype=self.doctype,
         )

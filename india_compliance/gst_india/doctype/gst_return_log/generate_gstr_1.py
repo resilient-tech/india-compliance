@@ -558,17 +558,8 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         # Get Data
         try:
             gov_data, is_enqueued = self.get_gov_gstr1_data()
-        except frappe.ValidationError as e:
-            frappe.throw(str(e))
-        except Exception as e:
-            doc = frappe.get_doc(
-                doctype="Error Log",
-                error=frappe.get_traceback(),
-                method=str(e),
-                reference_doctype="GSTR-1 Beta",
-            ).save()
-
-            return self.generate_only_books_data(data, filters, callback, doc.name)
+        except frappe.ValidationError as error:
+            return self.handle_gstr1_gov_failure(data, filters, error)
 
         books_data = self.get_books_gstr1_data(filters)
 
@@ -591,7 +582,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         self.summarize_data(data)
         return callback and callback(filters)
 
-    def generate_only_books_data(self, data, filters, callback=None, error_log=None):
+    def generate_only_books_data(self, data, filters, callback=None):
         status = "Not Filed"
 
         books_data = self.get_books_gstr1_data(filters, aggregate=True)
@@ -600,7 +591,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         data["status"] = status
 
         self.summarize_data(data)
-        return callback and callback(filters, error_log)
+        return callback and callback(filters)
 
     # GET DATA
     def get_gov_gstr1_data(self):
@@ -618,6 +609,24 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
 
         # download data
         return download_gstr1_json_data(self)
+
+    def handle_gstr1_gov_failure(self, data, filters, error):
+        self.generate_only_books_data(data, filters)
+        error_log = frappe.log_error(
+            title="GSTR-1 Generation Failed",
+            message=str(error),
+            reference_doctype="GSTR-1 Beta",
+        )
+        self.update_status("Failed", commit=True)
+        frappe.publish_realtime(
+            "gstr1_data_prepared",
+            message={
+                "filters": filters,
+                "error_log": error_log.name,
+            },
+            user=frappe.session.user,
+            doctype=self.doctype,
+        )
 
     def get_books_gstr1_data(self, filters, aggregate=False):
         from india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta import (
