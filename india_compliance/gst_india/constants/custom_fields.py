@@ -135,10 +135,18 @@ CUSTOM_FIELDS = {
     ],
     ("Subcontracting Order", "Subcontracting Receipt", "Stock Entry"): [
         {
+            "fieldname": "tax_category",
+            "label": "Tax Category",
+            "fieldtype": "Link",
+            "insert_after": "section_break_taxes",
+            "options": "Tax Category",
+            "print_hide": 1,
+        },
+        {
             "fieldname": "taxes_and_charges",
             "label": "Taxes and Charges Template",
             "fieldtype": "Link",
-            "insert_after": "section_break_taxes",
+            "insert_after": "tax_category",
             "options": "Sales Taxes and Charges Template",
             "print_hide": 1,
         },
