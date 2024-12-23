@@ -189,11 +189,11 @@ frappe.ui.form.on(DOCTYPE, {
     show_progress(frm, type) {
         if (type == "download") {
             frappe.run_serially([
-                () => frm.events.update_progress(frm, "update_api_progress"),
-                () => frm.events.update_progress(frm, "update_transactions_progress"),
+                () => frm.events.update_progress(frm, "update_2a_2b_api_progress"),
+                () => frm.events.update_progress(frm, "update_2a_2b_transactions_progress"),
             ]);
         } else if (type == "upload") {
-            frm.events.update_progress(frm, "update_transactions_progress");
+            frm.events.update_progress(frm, "update_2a_2b_transactions_progress");
         }
     },
 
@@ -201,7 +201,7 @@ frappe.ui.form.on(DOCTYPE, {
         frappe.realtime.on(method, data => {
             const { current_progress } = data;
             const message =
-                method == "update_api_progress"
+                method == "update_2a_2b_api_progress"
                     ? __("Fetching data from GSTN")
                     : __("Updating Inward Supply for Return Period {0}", [
                           data.return_period,
@@ -217,7 +217,7 @@ frappe.ui.form.on(DOCTYPE, {
             }
             if (
                 current_progress === 100 &&
-                method != "update_api_progress" &&
+                method != "update_2a_2b_api_progress" &&
                 frm.flag_last_return_period == data.return_period
             ) {
                 setTimeout(() => {

@@ -475,7 +475,6 @@ def download_gstr(
             "gstr_2a_2b_download_failed",
             {"error": str(e)},
             user=frappe.session.user,
-            doctype="Purchase Reconciliation Tool",
         )
 
 

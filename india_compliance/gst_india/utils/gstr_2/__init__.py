@@ -59,14 +59,13 @@ def download_gstr_2a(gstin, return_periods, gst_categories=None):
             requests_made += 1
 
             frappe.publish_realtime(
-                "update_api_progress",
+                "update_2a_2b_api_progress",
                 {
                     "current_progress": requests_made * 100 / total_expected_requests,
                     "return_period": return_period,
                     "is_last_period": is_last_period,
                 },
                 user=frappe.session.user,
-                doctype="Purchase Reconciliation Tool",
             )
 
             if gst_categories and category.value not in gst_categories:
@@ -133,14 +132,13 @@ def download_gstr_2b(gstin, return_periods):
         is_last_period = return_periods[-1] == return_period
         requests_made += 1
         frappe.publish_realtime(
-            "update_api_progress",
+            "update_2a_2b_api_progress",
             {
                 "current_progress": requests_made * 100 / total_expected_requests,
                 "return_period": return_period,
                 "is_last_period": is_last_period,
             },
             user=frappe.session.user,
-            doctype="Purchase Reconciliation Tool",
         )
 
         response = api.get_data(return_period)
@@ -319,12 +317,11 @@ def end_transaction_progress(return_period):
     """
 
     frappe.publish_realtime(
-        "update_transactions_progress",
+        "update_2a_2b_transactions_progress",
         {
             "current_progress": 100,
             "return_period": return_period,
             "is_last_period": True,
         },
         user=frappe.session.user,
-        doctype="Purchase Reconciliation Tool",
     )
