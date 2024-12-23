@@ -28,6 +28,14 @@ UNFILED_ACTIONS = [
 FILED_ACTIONS = [*UNFILED_ACTIONS, "RETSUM"]
 
 
+def test_download_gstr1_json_data(return_period):
+    gstin = "27CHKPM0032M1Z8"
+    return_period = return_period
+
+    api = GSTR1API(company_gstin=gstin)
+    return api.get_gstr_1_data("CDNUR", return_period)
+
+
 def download_gstr1_json_data(gstr1_log):
     """
     Download GSTR-1 and Unfiled GSTR1 data from GST Portal

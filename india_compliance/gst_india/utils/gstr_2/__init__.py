@@ -383,5 +383,4 @@ def check_regenerate_status(gstin, reference_id):
 def get_period_for_2b_regeneration():
     # Last 3b filing period + 1 month
     # consider filing preference (Quarterly/Monthly)
-    # save this information in GST Return Log
     pass

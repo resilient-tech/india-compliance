@@ -2,8 +2,11 @@ import json
 from datetime import timedelta
 from string import whitespace
 
+from pypika import Order
+
 import frappe
 from frappe import _
+from frappe.query_builder.functions import Concat, Substring
 from frappe.utils import getdate
 
 from india_compliance.exceptions import GSPServerError
@@ -334,6 +337,36 @@ def get_gstr_1_return_status(
         )
 
     return "Not Filed"
+
+
+def get_last_gstr_3b_filing_period(company, gstin):
+    log = frappe.qb.DocType("GST Return Log")
+
+    latest_period = (
+        frappe.qb.from_(log)
+        .select(log.return_period)
+        .where(log.company == company)
+        .where(log.gstin == gstin)
+        .where(log.return_type == "GSTR3B")
+        .where(log.filing_status == "Filed")
+        .orderby(
+            # eg: 202411
+            Concat(
+                Substring(log.return_period, 3, 4),  # year
+                Substring(log.return_period, 1, 2),  # month
+            ),
+            order=Order.desc,
+        )
+        .limit(1)
+        .run(debug=True)
+    )
+
+    latest_period = latest_period[0][0] if latest_period else None
+
+    # TODO: when to make API request for checking the latest period
+    # Make request for checking the latest 3B period
+
+    return latest_period
 
 
 def get_fy(period, year_increment=0):
