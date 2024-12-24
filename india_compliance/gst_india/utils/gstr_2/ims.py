@@ -119,7 +119,7 @@ class IMS:
         return data
 
     def get_existing_transactions(self):
-        category = get_mapped_value(
+        category, doc_type = get_mapped_value(
             type(self).__name__.lower(), self.VALUE_MAPS.classification
         )
 
@@ -134,9 +134,8 @@ class IMS:
             .where(inward_supply.is_downloaded_from_ims == 1)
             .where(inward_supply.gstr_1_filled == 0)  # TODO: Is this correctly done ??
             .where(inward_supply.classification == category)
-            .where(
-                inward_supply.company_gstin == self.company_gstin
-            )  # TODO: Is this required ??
+            .where(inward_supply.doc_type == doc_type)
+            .where(inward_supply.company_gstin == self.company_gstin)
         ).run(as_dict=True)
 
         return {
@@ -154,14 +153,18 @@ class IMS:
             frappe.delete_doc("GST Inward Supply", inward_supply_name)
 
     def reset_previous_ims_action(self):
-        category = get_mapped_value(
+        category, doc_type = get_mapped_value(
             type(self).__name__.lower(), self.VALUE_MAPS.classification
         )
         inward_supply = frappe.qb.DocType("GST Inward Supply")
 
         frappe.qb.update(inward_supply).set(
             inward_supply.previous_ims_action, ""
-        ).where(inward_supply.classification == category).run()
+        ).where(inward_supply.classification == category).where(
+            inward_supply.doc_type == doc_type
+        ).where(
+            inward_supply.company_gstin == self.company_gstin
+        ).run()
 
 
 class B2B(IMS):
@@ -188,7 +191,7 @@ class B2BA(B2B):
                 "original_bill_no": invoice.oinum,
                 "original_bill_date": parse_datetime(invoice.oidt, day_first=True),
                 "is_amended": True,
-                "original_doc_type": "Invoice",
+                "classification": "B2BA",
             }
         )
         return invoice_details
@@ -229,6 +232,7 @@ class B2BDNA(B2BDN):
                 "original_bill_date": parse_datetime(invoice.ont_dt, day_first=True),
                 "is_amended": True,
                 "original_doc_type": "Debit Note",
+                "classification": "CDNRA",
             }
         )
         return invoice_details
@@ -255,14 +259,12 @@ class B2BCN(B2BDN):
         return invoice_details
 
 
-class B2BCNA(B2BCN):
+class B2BCNA(B2BDNA):
     def get_invoice_details(self, invoice):
         invoice_details = super().get_invoice_details(invoice)
         invoice_details.update(
             {
-                "original_bill_no": invoice.ont_num,
-                "original_bill_date": parse_datetime(invoice.ont_dt, day_first=True),
-                "is_amended": True,
+                "doc_type": "Credit Note",
                 "original_doc_type": "Credit Note",
             }
         )

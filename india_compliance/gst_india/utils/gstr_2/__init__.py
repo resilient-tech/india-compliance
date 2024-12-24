@@ -364,7 +364,7 @@ def download_ims_invoices(company_gstin, company):
                 company_gstin,
                 "IMS",
                 "ALL",
-                classification=CLASSIFICATION_MAP[category],
+                classification=CLASSIFICATION_MAP[category][0],
                 data_not_found=True,
             )
             continue
@@ -375,7 +375,7 @@ def download_ims_invoices(company_gstin, company):
                 company_gstin,
                 "IMS",
                 "ALL",
-                classification=CLASSIFICATION_MAP[category],
+                classification=CLASSIFICATION_MAP[category][0],
                 request_id=response.token,
                 retry_after_mins=cint(response.est),
             )

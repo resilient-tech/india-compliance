@@ -45,12 +45,12 @@ GST_CATEGORY_MAP = {
 }
 
 CLASSIFICATION_MAP = {
-    "b2b": "B2B",
-    "b2ba": "B2BA",
-    "b2bcn": "CDNR",
-    "b2bcna": "CDNRA",
-    "b2bdn": "CDNR",
-    "b2bdna": "CDNRA",
+    "b2b": ["B2B", "Invoice"],
+    "b2ba": ["B2BA", "Invoice"],
+    "b2bcn": ["CDNR", "Credit Note"],
+    "b2bcna": ["CDNRA", "Credit Note"],
+    "b2bdn": ["CDNR", "Debit Note"],
+    "b2bdna": ["CDNRA", "Debit Note"],
 }
 
 ACTION_MAP = {"A": "Accepted", "R": "Rejected", "P": "Pending", "N": "No Action"}
