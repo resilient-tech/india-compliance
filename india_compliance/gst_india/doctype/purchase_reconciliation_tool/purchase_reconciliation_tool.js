@@ -73,6 +73,7 @@ frappe.ui.form.on(DOCTYPE, {
         frm.purchase_reconciliation_tool = new PurchaseReconciliationTool(frm);
 
         frm.events.handle_download_failure(frm);
+        frm.events.handle_queued_download();
     },
 
     onload(frm) {
@@ -240,6 +241,15 @@ frappe.ui.form.on(DOCTYPE, {
                 title: __("2A/2B Download Failed"),
                 message: message.error,
                 indicator: "red",
+            });
+        });
+    },
+
+    handle_queued_download() {
+        frappe.realtime.on("gstr_2a_2b_download_queued", message => {
+            frappe.msgprint({
+                title: __("2A/2B Download Queued"),
+                message: message.msg,
             });
         });
     },

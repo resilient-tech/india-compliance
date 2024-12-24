@@ -115,7 +115,7 @@ def download_gstr_2a(gstin, return_periods, gst_categories=None):
         save_gstr_2a(gstin, return_period, json_data)
 
     if queued_message:
-        show_queued_message()
+        publish_queued_message()
 
     if not has_data:
         end_transaction_progress(return_period)
@@ -183,7 +183,7 @@ def download_gstr_2b(gstin, return_periods):
         save_gstr_2b(gstin, return_period, response)
 
     if queued_message:
-        show_queued_message()
+        publish_queued_message()
 
     if not has_data:
         end_transaction_progress(return_period)
@@ -300,13 +300,17 @@ def _download_gstr_2a(gstin, return_period, json_data):
     save_gstr_2a(gstin, return_period, json_data)
 
 
-def show_queued_message():
-    frappe.msgprint(
-        _(
-            "Some returns are queued for download at GSTN as there may be large data."
-            " We will retry download every few minutes until it succeeds.<br><br>"
-            "You can track download status from download dialog."
-        )
+def publish_queued_message():
+    frappe.publish_realtime(
+        "gstr_2a_2b_download_queued",
+        {
+            "msg": _(
+                "Some returns are queued for download at GSTN as there may be large data."
+                " We will retry download every few minutes until it succeeds.<br><br>"
+                "You can track download status from download dialog."
+            ),
+        },
+        user=frappe.session.user,
     )
 
 
