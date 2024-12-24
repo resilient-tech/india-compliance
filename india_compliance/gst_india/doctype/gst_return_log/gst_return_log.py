@@ -184,6 +184,9 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
 
     def get_applicable_file_fields(self, settings=None):
         # Books aggregated data stored in filed (as to file)
+        if not settings:
+            settings = frappe.get_cached_doc("GST Settings")
+
         fields = ["books", "books_summary"]
 
         if self.is_gstr1_api_enabled(settings):
@@ -192,7 +195,8 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
             if self.filing_status == "Filed":
                 fields.extend(["filed", "filed_summary"])
             else:
-                fields.extend(["unfiled", "unfiled_summary"])
+                if settings.compare_for_pre_upload:
+                    fields.extend(["unfiled", "unfiled_summary"])
 
         return fields
 
