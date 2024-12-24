@@ -645,7 +645,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
                 return books_data
 
         from_date, to_date = get_gstr_1_from_and_to_date(
-            filters.month_or_quarter, filters.year, filters.is_quarterly
+            filters.month_or_quarter, filters.year
         )
 
         _filters = frappe._dict(

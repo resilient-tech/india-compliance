@@ -10,6 +10,7 @@ def patch_filing_preference(gstin):
             "filing_preference": ["is", "not set"],
             "gstin": gstin,
             "return_period": ["!=", "ALL"],
+            "return_type": "GSTR1",
         },
         fields=["name", "return_period", "gstin"],
     )

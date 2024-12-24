@@ -329,9 +329,7 @@ def get_net_gst_liability(company, company_gstin, month_or_quarter, year, is_qua
 
     frappe.has_permission("GSTR-1 Beta", throw=True)
 
-    from_date, to_date = get_gstr_1_from_and_to_date(
-        month_or_quarter, year, is_quarterly
-    )
+    from_date, to_date = get_gstr_1_from_and_to_date(month_or_quarter, year)
 
     filters = frappe._dict(
         {
@@ -387,25 +385,17 @@ def get_period(month_or_quarter: str, year: str) -> str:
     return f"{month_number}{year}"
 
 
-def get_gstr_1_from_and_to_date(
-    month_or_quarter: str, year: str, is_quarterly: str
-) -> tuple:
+def get_gstr_1_from_and_to_date(month_or_quarter: str, year: str) -> tuple:
     """
     Returns the from and to date for the given month or quarter and year
     This is used to filter the data for the given period in Books
     """
-    if is_quarterly == "Quarterly":
-        month_index = MONTH.index(month_or_quarter)
+    start_month = end_month = MONTH.index(month_or_quarter) + 1
+    if start_month % 3 == 0:
+        start_month -= 2
 
-        start_month = month_index // 3 * 3 + 1
-        end_month = start_month + 2
-
-        from_date = getdate(f"{year}-{start_month}-01")
-        to_date = get_last_day(f"{year}-{end_month}-01")
-    else:
-        # Monthly (default)
-        from_date = getdate(f"{year}-{month_or_quarter}-01")
-        to_date = get_last_day(from_date)
+    from_date = getdate(f"{year}-{start_month}-01")
+    to_date = get_last_day(f"{year}-{end_month}-01")
 
     return from_date, to_date
 
