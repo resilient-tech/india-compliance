@@ -5,6 +5,7 @@ from india_compliance.gst_india.utils.itc_04 import (
     GovDataField_SE,
     GovJsonKey,
     ITC04_DataField,
+    ITC04_ItemField,
     ITC04JsonKey,
 )
 
@@ -21,11 +22,11 @@ class ITC04DataMapper(GovDataMapper):
     """
 
     DEFAULT_ITEM_AMOUNTS = {
-        ITC04_DataField.TAXABLE_VALUE.value: 0,
-        ITC04_DataField.IGST.value: 0,
-        ITC04_DataField.CGST.value: 0,
-        ITC04_DataField.SGST.value: 0,
-        ITC04_DataField.CESS_AMOUNT.value: 0,
+        ITC04_ItemField.TAXABLE_VALUE.value: 0,
+        ITC04_ItemField.IGST.value: 0,
+        ITC04_ItemField.CGST.value: 0,
+        ITC04_ItemField.SGST.value: 0,
+        ITC04_ItemField.CESS_AMOUNT.value: 0,
     }
 
     FLOAT_FIELDS = {
@@ -35,7 +36,6 @@ class ITC04DataMapper(GovDataMapper):
         GovDataField.SGST.value,
         GovDataField.CESS_AMOUNT.value,
         GovDataField.QUANTITY.value,
-        GovDataField.LOSS_QTY.value,
     }
 
     def __init__(self):
@@ -73,12 +73,10 @@ class TABLE5A(ITC04DataMapper):
         GovDataField.ITEMS.value: ITC04_DataField.ITEMS.value,
         GovDataField.ORIGINAL_CHALLAN_DATE.value: ITC04_DataField.ORIGINAL_CHALLAN_DATE.value,
         GovDataField.JOB_WORK_CHALLAN_DATE.value: ITC04_DataField.JOB_WORK_CHALLAN_DATE.value,
-        GovDataField.NATURE_OF_JOB.value: ITC04_DataField.NATURE_OF_JOB.value,
-        GovDataField.UOM.value: ITC04_DataField.UOM.value,
-        GovDataField.QUANTITY.value: ITC04_DataField.QUANTITY.value,
-        GovDataField.DESCRIPTION.value: ITC04_DataField.DESCRIPTION.value,
-        GovDataField.LOSS_UOM.value: ITC04_DataField.LOSS_UOM.value,
-        GovDataField.LOSS_QTY.value: ITC04_DataField.LOSS_QTY.value,
+        GovDataField.NATURE_OF_JOB.value: ITC04_ItemField.NATURE_OF_JOB.value,
+        GovDataField.UOM.value: ITC04_ItemField.UOM.value,
+        GovDataField.QUANTITY.value: ITC04_ItemField.QUANTITY.value,
+        GovDataField.DESCRIPTION.value: ITC04_ItemField.DESCRIPTION.value,
         GovDataField.FLAG.value: ITC04_DataField.FLAG.value,
     }
 
@@ -88,14 +86,12 @@ class TABLE5A(ITC04DataMapper):
         self.value_formatters_for_internal = {
             GovDataField.ITEMS.value: self.format_item_for_internal,
             GovDataField.UOM.value: self.map_uom,
-            GovDataField.LOSS_UOM.value: self.map_uom,
             GovDataField.JOB_WORKER_STATE_CODE.value: self.map_place_of_supply,
         }
 
         self.value_formatters_for_gov = {
             ITC04_DataField.ITEMS.value: self.format_item_for_gov,
-            ITC04_DataField.UOM.value: self.map_uom,
-            ITC04_DataField.LOSS_UOM.value: self.map_uom,
+            ITC04_ItemField.UOM.value: self.map_uom,
             ITC04_DataField.JOB_WORKER_STATE_CODE.value: self.map_place_of_supply,
         }
 
@@ -166,15 +162,15 @@ class STOCK_ENTRY(ITC04DataMapper):
         GovDataField_SE.ITEMS.value: ITC04_DataField.ITEMS.value,
         GovDataField_SE.ORIGINAL_CHALLAN_NUMBER.value: ITC04_DataField.ORIGINAL_CHALLAN_NUMBER.value,
         GovDataField_SE.ORIGINAL_CHALLAN_DATE.value: ITC04_DataField.ORIGINAL_CHALLAN_DATE.value,
-        GovDataField.UOM.value: ITC04_DataField.UOM.value,
-        GovDataField.QUANTITY.value: ITC04_DataField.QUANTITY.value,
-        GovDataField.DESCRIPTION.value: ITC04_DataField.DESCRIPTION.value,
-        GovDataField.TAXABLE_VALUE.value: ITC04_DataField.TAXABLE_VALUE.value,
-        GovDataField.GOODS_TYPE.value: ITC04_DataField.GOODS_TYPE.value,
-        GovDataField.IGST.value: ITC04_DataField.IGST.value,
-        GovDataField.CGST.value: ITC04_DataField.CGST.value,
-        GovDataField.SGST.value: ITC04_DataField.SGST.value,
-        GovDataField.CESS_AMOUNT.value: ITC04_DataField.CESS_AMOUNT.value,
+        GovDataField.UOM.value: ITC04_ItemField.UOM.value,
+        GovDataField.QUANTITY.value: ITC04_ItemField.QUANTITY.value,
+        GovDataField.DESCRIPTION.value: ITC04_ItemField.DESCRIPTION.value,
+        GovDataField.TAXABLE_VALUE.value: ITC04_ItemField.TAXABLE_VALUE.value,
+        GovDataField.GOODS_TYPE.value: ITC04_ItemField.GOODS_TYPE.value,
+        GovDataField.IGST.value: ITC04_ItemField.IGST.value,
+        GovDataField.CGST.value: ITC04_ItemField.CGST.value,
+        GovDataField.SGST.value: ITC04_ItemField.SGST.value,
+        GovDataField.CESS_AMOUNT.value: ITC04_ItemField.CESS_AMOUNT.value,
         GovDataField.FLAG.value: ITC04_DataField.FLAG.value,
     }
 
@@ -189,7 +185,7 @@ class STOCK_ENTRY(ITC04DataMapper):
 
         self.value_formatters_for_gov = {
             ITC04_DataField.ITEMS.value: self.format_item_for_gov,
-            ITC04_DataField.UOM.value: self.map_uom,
+            ITC04_ItemField.UOM.value: self.map_uom,
             ITC04_DataField.JOB_WORKER_STATE_CODE.value: self.map_place_of_supply,
         }
 
