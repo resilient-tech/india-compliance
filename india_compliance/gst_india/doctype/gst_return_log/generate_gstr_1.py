@@ -747,7 +747,7 @@ class FileGSTR1:
 
         return response
 
-    def upload_gstr1(self, json_data, is_nil_rated, force):
+    def upload_gstr1(self, json_data, is_nil_return, force):
         if not json_data:
             return
 
@@ -755,7 +755,7 @@ class FileGSTR1:
 
         keys = {category.value for category in GovJsonKey}
         if all(key not in json_data for key in keys):
-            if not cint(is_nil_rated):
+            if not cint(is_nil_return):
                 frappe.msgprint(
                     _(
                         'No data to upload.To file Nil Return Select "File Nil GSTR-1" checkbox.'
@@ -820,11 +820,11 @@ class FileGSTR1:
 
         return response
 
-    def proceed_to_file_gstr1(self, is_nil_rated, force):
+    def proceed_to_file_gstr1(self, is_nil_return, force):
         verify_request_in_progress(self, force)
 
         api = GSTR1API(self)
-        response = api.proceed_to_file("GSTR1", self.return_period, is_nil_rated)
+        response = api.proceed_to_file("GSTR1", self.return_period, is_nil_return)
 
         # Return Form already ready to be filed
         if response.error and response.error.error_cd == "RET00003":
