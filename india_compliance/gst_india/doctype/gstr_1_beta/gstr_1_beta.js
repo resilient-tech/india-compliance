@@ -2570,7 +2570,16 @@ class GSTR1Action extends FileGSTR1Dialog {
             r.message.pending_actions.forEach(request_type =>
                 this.check_action_status_with_retry(request_type, 0, true)
             );
+
+            this.check_for_nil_rated();
         });
+    }
+
+    check_for_nil_rated() {
+        const data = this.frm.doc.__gst_data;
+        if (Object.keys(data.unfiled).length == 1 && data.status == "Not Filed") {
+            this.frm.set_df_property("file_nil_gstr1", "hidden", 0)
+        }
     }
 
     async upload_gstr1_data() {
@@ -2578,16 +2587,22 @@ class GSTR1Action extends FileGSTR1Dialog {
         if (await this.is_request_in_progress(action)) return;
 
         const upload = () => {
-            frappe.show_alert(__("Uploading data to GSTN"));
             this.perform_gstr1_action(action, response => {
                 // No data to upload
-                if (response._server_messages && response._server_messages.length) {
+                if(response._server_messages){
+                    this.toggle_actions(true);
+                    return;
+                }
+                if (response.message == "upload nil reated gstr1"){
+                    frappe.show_alert(__("Proceeding to file Nil Rated GSTR-1"));
                     this.proceed_to_file();
                     return;
                 }
 
+                frappe.show_alert(__("Uploading data to GSTN"));
                 this.check_action_status_with_retry(action);
-            });
+            },
+            { is_nil_rated : this.frm.doc.file_nil_gstr1 });
         };
 
         // has draft invoices
@@ -2625,9 +2640,15 @@ class GSTR1Action extends FileGSTR1Dialog {
         const action = "proceed_to_file";
         this.perform_gstr1_action(action, r => {
             // already proceed to file
-            if (r.message) this.handle_proceed_to_file_response(r.message);
+            if (r.message){
+                this.toggle_actions(true);
+                this.handle_proceed_to_file_response(r.message);
+                this.check_for_nil_rated();
+            }
             else this.check_action_status_with_retry(action);
-        });
+            // TODO: this.check_for_nil_rated should also go after else condition
+        },
+        { is_nil_rated : this.frm.doc.file_nil_gstr1 });
     }
 
     async mark_as_unfiled() {
@@ -2646,8 +2667,10 @@ class GSTR1Action extends FileGSTR1Dialog {
             args: { filters: filters, force: this.frm.__action_performed == undefined },
             callback: () => {
                 this.frm.gstr1.status = "Not Filed";
+                this.frm.doc.__gst_data.status = "Not Filed";
                 this.frm.refresh();
                 this.frm.gstr1.refresh_data();
+                this.check_for_nil_rated();
             },
         });
     }

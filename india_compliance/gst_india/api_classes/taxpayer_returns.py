@@ -37,7 +37,7 @@ class ReturnsAPI(TaxpayerBaseAPI):
             otp=otp,
         )
 
-    def proceed_to_file(self, return_type, return_period, otp=None):
+    def proceed_to_file(self, return_type, return_period, is_nil_rated, otp=None):
         return self.post(
             return_type=return_type,
             return_period=return_period,
@@ -46,7 +46,8 @@ class ReturnsAPI(TaxpayerBaseAPI):
                 "data": {
                     "gstin": self.company_gstin,
                     "ret_period": return_period,
-                },  # "isnil": "N" / "Y"
+                    "isnil": "Y" if is_nil_rated else "N",
+                },
             },
             endpoint="returns/gstrptf",
             otp=otp,

@@ -4,7 +4,7 @@ import itertools
 
 import frappe
 from frappe import _, unscrub
-from frappe.utils import flt
+from frappe.utils import cint, flt
 
 from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
 from india_compliance.gst_india.utils.gstr_1 import GovJsonKey, GSTR1_SubCategory
@@ -747,7 +747,7 @@ class FileGSTR1:
 
         return response
 
-    def upload_gstr1(self, json_data, force):
+    def upload_gstr1(self, json_data, is_nil_rated, force):
         if not json_data:
             return
 
@@ -755,8 +755,14 @@ class FileGSTR1:
 
         keys = {category.value for category in GovJsonKey}
         if all(key not in json_data for key in keys):
-            frappe.msgprint(_("No data to upload"), indicator="red")
-            return
+            if not cint(is_nil_rated):
+                frappe.msgprint(
+                    _("No data to upload. To file Nil Return, mark the checkbox."),
+                    indicator="red",
+                )
+                return
+
+            return "upload nil return gstr1"
 
         # upload data after proceed to file
         self.db_set({"filing_status": "Not Filed"})
@@ -812,11 +818,11 @@ class FileGSTR1:
 
         return response
 
-    def proceed_to_file_gstr1(self, force):
+    def proceed_to_file_gstr1(self, is_nil_rated, force):
         verify_request_in_progress(self, force)
 
         api = GSTR1API(self)
-        response = api.proceed_to_file("GSTR1", self.return_period)
+        response = api.proceed_to_file("GSTR1", self.return_period, is_nil_rated)
 
         # Return Form already ready to be filed
         if response.error and response.error.error_cd == "RET00003":
@@ -843,6 +849,10 @@ class FileGSTR1:
         if response.get("status_cd") == "IP":
             return response
 
+        if response.error and response.error.error_cd == "RET13510":
+            # here it is giving status code as 0
+            response.status_cd = "P"
+
         doc.db_set({"status": status_code_map.get(response.get("status_cd"))})
 
         return self.fetch_and_compare_summary(api, response)
@@ -858,7 +868,7 @@ class FileGSTR1:
         self.update_json_for("authenticated_summary", summary)
 
         mapped_summary = self.get_json_for("books_summary")
-        gov_summary = convert_to_internal_data_format(summary).get("summary")
+        gov_summary = convert_to_internal_data_format(summary).get("summary", {})
         gov_summary = summarize_retsum_data(gov_summary.values())
 
         differing_categories = get_differing_categories(mapped_summary, gov_summary)
