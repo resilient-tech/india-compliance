@@ -48,7 +48,7 @@
   "e_invoice_applicable_from",
   "e_invoice_applicable_companies",
   "gstr_1_section_break",
-  "compare_for_pre_upload",
+  "pre_filing_and_upload_invoices",
   "compare_gstr_1_data",
   "filing_frequency",
   "column_break_cxmn",
@@ -672,8 +672,9 @@
   },
   {
    "default": "1",
-   "description": "Use API to compare records with GST Portal Before Filing and upload Invoices ",
-   "fieldname": "compare_for_pre_upload",
+   "depends_on": "eval: india_compliance.is_api_enabled(doc)",
+   "description": "Use API to compare records with GST Portal Before Filing and upload Invoices",
+   "fieldname": "pre_filing_and_upload_invoices",
    "fieldtype": "Check",
    "label": "Compare Data with GST Portal and Upload Invoices"
   }
@@ -681,7 +682,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-12-24 11:00:01.686079",
+ "modified": "2024-12-26 22:44:14.011319",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
