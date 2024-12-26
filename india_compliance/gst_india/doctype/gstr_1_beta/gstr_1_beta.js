@@ -143,7 +143,7 @@ frappe.ui.form.on(DOCTYPE, {
             );
         });
 
-        frappe.realtime.on("show_missing_credentials_message", message => {
+        frappe.realtime.on("show_missing_gst_credentials_message", message => {
             frappe.msgprint(message);
         });
 
