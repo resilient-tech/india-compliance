@@ -757,7 +757,9 @@ class FileGSTR1:
         if all(key not in json_data for key in keys):
             if not cint(is_nil_rated):
                 frappe.msgprint(
-                    _("No data to upload. To file Nil Return, mark the checkbox."),
+                    _(
+                        'No data to upload.To file Nil Return Select "File Nil GSTR-1" checkbox.'
+                    ),
                     indicator="red",
                 )
                 return

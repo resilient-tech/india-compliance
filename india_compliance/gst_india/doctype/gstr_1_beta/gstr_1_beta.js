@@ -2590,6 +2590,7 @@ class GSTR1Action extends FileGSTR1Dialog {
             this.perform_gstr1_action(action, response => {
                 // No data to upload
                 if(response._server_messages){
+                    this.frm.scroll_to_field("file_nil_gstr1");
                     this.toggle_actions(true);
                     return;
                 }
