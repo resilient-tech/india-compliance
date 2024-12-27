@@ -43,6 +43,7 @@
   "column_break_wxlx",
   "total_taxable_value",
   "section_break_biay",
+  "tax_category",
   "taxes",
   "section_break_zcnz",
   "total_customs_duty",
@@ -279,6 +280,13 @@
    "options": "\nNot Applicable\nReconciled\nUnreconciled\nIgnored",
    "print_hide": 1,
    "read_only": 1
+  },
+  {
+   "fieldname": "tax_category",
+   "fieldtype": "Link",
+   "label": "Tax Category",
+   "options": "Tax Category",
+   "print_hide": 1
   }
  ],
  "in_create": 1,
@@ -297,7 +305,7 @@
    "link_fieldname": "link_name"
   }
  ],
- "modified": "2024-08-12 15:48:43.769450",
+ "modified": "2024-12-20 15:17:36.898844",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Bill of Entry",
