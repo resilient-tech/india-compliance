@@ -7,7 +7,7 @@ from pypika import Order
 import frappe
 from frappe import _
 from frappe.query_builder.functions import Concat, Substring
-from frappe.utils import getdate
+from frappe.utils import add_to_date, getdate
 
 from india_compliance.exceptions import GSPServerError
 from india_compliance.gst_india.api_classes.base import BASE_URL
@@ -15,6 +15,7 @@ from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
 from india_compliance.gst_india.api_classes.public import PublicAPI
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
+    create_gstr3b_return_log,
     process_gstr_1_returns_info,
 )
 from india_compliance.gst_india.utils import parse_datetime, titlecase, validate_gstin
@@ -310,7 +311,7 @@ def fetch_transporter_id_status(transporter_id, throw=True):
 def get_gstr_1_return_status(
     company, gstin, period, process_info=True, year_increment=0
 ):
-    """Returns Returns info for the given period"""
+    """Returns Returns-info for the given period"""
     fy = get_fy(period, year_increment=year_increment)
 
     response = PublicAPI().get_returns_info(gstin, fy)
@@ -342,7 +343,7 @@ def get_gstr_1_return_status(
 def get_last_gstr_3b_filing_period(company, gstin):
     log = frappe.qb.DocType("GST Return Log")
 
-    latest_period = (
+    latest_filed_period = (
         frappe.qb.from_(log)
         .select(log.return_period)
         .where(log.company == company)
@@ -358,15 +359,44 @@ def get_last_gstr_3b_filing_period(company, gstin):
             order=Order.desc,
         )
         .limit(1)
-        .run(debug=True)
+        .run()
     )
 
-    latest_period = latest_period[0][0] if latest_period else None
+    latest_filed_period = latest_filed_period[0][0] if latest_filed_period else None
 
-    # TODO: when to make API request for checking the latest period
-    # Make request for checking the latest 3B period
+    latest_period = add_to_date(None, months=-1).strftime("%m%Y")
 
-    return latest_period
+    if latest_filed_period and latest_filed_period >= latest_period:
+        return latest_filed_period
+
+    return get_3b_return_period(company, gstin, latest_period)
+
+
+def get_3b_return_period(company, gstin, period, decrement=0):
+    fy = get_fy(period, decrement)
+    response = PublicAPI().get_returns_info(gstin, fy)
+
+    if not response:
+        return
+
+    filed_gstr3b_returns = [
+        d
+        for d in response.get("EFiledlist")
+        if d.get("rtntype") == "GSTR3B" and d.get("status") == "Filed"
+    ]
+
+    if not filed_gstr3b_returns:
+        return get_3b_return_period(company, gstin, period, decrement=decrement - 1)
+
+    sorted_filed_gstr3b_returns = sorted(
+        filed_gstr3b_returns, key=lambda x: x.get("ret_prd")
+    )
+
+    for transaction in sorted_filed_gstr3b_returns:
+        transaction.update({"company": company, "company_gstin": gstin})
+        create_gstr3b_return_log(transaction)
+
+    return sorted_filed_gstr3b_returns[-1].get("ret_prd")
 
 
 def get_fy(period, year_increment=0):

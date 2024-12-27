@@ -331,3 +331,19 @@ def get_compressed_data(json_data):
 
 def get_decompressed_data(content):
     return frappe.parse_json(frappe.safe_decode(gzip.decompress(content)))
+
+
+def create_gstr3b_return_log(transaction):
+    if frappe.db.exists(
+        "GST Return Log",
+        f'GSTR3B-{transaction["ret_prd"]}-{transaction["company_gstin"]}',
+    ):
+        return
+
+    gstr3b_log = frappe.new_doc("GST Return Log")
+    gstr3b_log.return_period = transaction["ret_prd"]
+    gstr3b_log.company = transaction["company"]
+    gstr3b_log.gstin = transaction["company_gstin"]
+    gstr3b_log.return_type = "GSTR3B"
+    gstr3b_log.filing_status = "Filed"
+    gstr3b_log.insert()

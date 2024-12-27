@@ -22,7 +22,7 @@ class ReturnsAPI(TaxpayerBaseAPI):
         "RET2B1010": "authorization_failed",  # API Authorization Failed for 2B
         "GTR2B-001": "not_applicable",  # GSTR2B form is not applicable for given return period
         # "IMS2B007": "not_applicable", # Either the entered ITC period is incorrect or it has 3B filed
-        # "IMS2005": "not_needed", # 2B cannot be generated as there are no changes
+        "IMS2005": "not_needed",  # 2B cannot be generated as there are no changes
         # "IMSSAV0015": # Previous Save or Reset request is already under progress. Please try after some time.
     }
 
