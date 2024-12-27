@@ -490,6 +490,11 @@ class GSTR1 {
             });
         }
 
+        if(
+            gst_settings.pre_filing_and_upload_invoices === 0
+            && primary_button_label == "Upload"
+        ) return;
+
         this.frm.page.set_primary_action(__(primary_button_label), () =>
             actions[primary_button_label].call(this.gstr1_action)
         );
