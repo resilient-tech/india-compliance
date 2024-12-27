@@ -238,9 +238,9 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
             frappe.msgprint({
                 title: __("2A/2B Download Failed"),
                 message: message.error,
-                indicator: "red"
+                indicator: "red",
             });
-        })
+        });
     },
 });
 
@@ -1215,12 +1215,19 @@ class ImportDialog {
                     this.download_gstr_by_category(true);
                 });
             } else if (this.return_type === ReturnType.GSTR2B) {
+                const args = {
+                    gstin: this.company_gstin,
+                    callback: this.download_gstr_by_period.bind(this),
+                    company: this.frm.doc.company,
+                };
                 this.dialog.set_primary_action(__("Download All"), () => {
-                    this.download_gstr_by_period(false);
+                    args.only_missing = false;
+                    gstr_2b.regenerate(args);
                 });
                 this.dialog.set_secondary_action_label(__("Download Missing"));
                 this.dialog.set_secondary_action(() => {
-                    this.download_gstr_by_period(true);
+                    args.only_missing = true;
+                    gstr_2b.regenerate(args);
                 });
             }
         } else {

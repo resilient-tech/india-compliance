@@ -5,6 +5,7 @@ from frappe import _
 from frappe.query_builder.terms import Criterion
 from frappe.utils import cint
 
+from india_compliance.gst_india.api_classes.taxpayer_base import otp_handler
 from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR2aAPI, GSTR2bAPI
 from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
     create_import_log,
@@ -134,7 +135,6 @@ def download_gstr_2b(gstin, return_periods):
         is_last_period = return_periods[-1] == return_period
         requests_made += 1
         frappe.publish_realtime(
-            # TODO: specific event name for purchase reconciliation tool
             "update_api_progress",
             {
                 "current_progress": requests_made * 100 / total_expected_requests,
@@ -142,7 +142,6 @@ def download_gstr_2b(gstin, return_periods):
                 "is_last_period": is_last_period,
             },
             user=frappe.session.user,
-            # TODO: doctype not respected
             doctype="Purchase Reconciliation Tool",
         )
 
@@ -318,7 +317,6 @@ def _download_gstr_2a(gstin, return_period, json_data):
 
 
 def show_queued_message():
-    # TODO: publish realtime may be required
     frappe.msgprint(
         _(
             "Some returns are queued for download at GSTN as there may be large data."
@@ -347,12 +345,11 @@ def end_transaction_progress(return_period):
 
 
 @frappe.whitelist()
-def regenerate_gstr_2b(gstin, return_period):
+@otp_handler
+def regenerate_gstr_2b(company, gstin):
     frappe.has_permission("Purchase Reconciliation Tool", throw=True)
 
-    if not return_period:
-        return_period = get_period_for_2b_regeneration()
-        pass
+    return_period = get_period_for_2b_regeneration(company, gstin)
 
     try:
         api = GSTR2bAPI(gstin)
