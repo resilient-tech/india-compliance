@@ -170,6 +170,7 @@ frappe.ui.form.on(DOCTYPE, {
             frm.taxpayer_api_call("generate_gstr1").then(r => {
                 frm.doc.__gst_data = r.message;
                 frm.trigger("load_gstr1_data");
+                frm.gstr1.gstr1_action?.check_for_nil_return();
             });
         });
     },
@@ -2564,20 +2565,21 @@ class GSTR1Action extends FileGSTR1Dialog {
             if (!r.message) return;
             this.frm.doc.__gst_data = r.message;
             this.frm.trigger("load_gstr1_data");
+            this.check_for_nil_return();
 
             if (!r.message.pending_actions) return;
 
             r.message.pending_actions.forEach(request_type =>
                 this.check_action_status_with_retry(request_type, 0, true)
             );
-
-            this.check_for_nil_return();
         });
     }
 
     check_for_nil_return() {
         const data = this.frm.doc.__gst_data;
-        if (Object.keys(data.unfiled).length == 1 && data.status == "Not Filed") {
+        if(!data || !is_gstr1_api_enabled()) return;
+
+        if (Object.keys(data.unfiled).length === 1 && data.status == "Not Filed") {
             this.frm.set_df_property("file_nil_gstr1", "hidden", 0)
         }
     }
@@ -2588,20 +2590,20 @@ class GSTR1Action extends FileGSTR1Dialog {
 
         const upload = () => {
             this.perform_gstr1_action(action, response => {
+                if(response.message != "nil_return_for_gstr1"){
+                    frappe.show_alert(__("Uploading data to GSTN"));
+                    this.check_action_status_with_retry(action);
+                    return;
+                }
+
                 // No data to upload
                 if(response._server_messages){
                     this.frm.scroll_to_field("file_nil_gstr1");
                     this.toggle_actions(true);
                     return;
                 }
-                if (response.message == "upload nil reated gstr1"){
-                    frappe.show_alert(__("Proceeding to file Nil Rated GSTR-1"));
-                    this.proceed_to_file();
-                    return;
-                }
-
-                frappe.show_alert(__("Uploading data to GSTN"));
-                this.check_action_status_with_retry(action);
+                frappe.show_alert(__("Proceeding to file Nil Rated GSTR-1"));
+                this.proceed_to_file();
             },
             { is_nil_return : this.frm.doc.file_nil_gstr1 });
         };

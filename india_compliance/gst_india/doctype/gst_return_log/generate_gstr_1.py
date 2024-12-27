@@ -762,9 +762,7 @@ class FileGSTR1:
                     ),
                     indicator="red",
                 )
-                return
-
-            return "upload nil return gstr1"
+            return "nil_return_for_gstr1"
 
         # upload data after proceed to file
         self.db_set({"filing_status": "Not Filed"})
