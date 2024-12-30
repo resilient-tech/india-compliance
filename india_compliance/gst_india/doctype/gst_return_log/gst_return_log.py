@@ -195,7 +195,7 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
             if self.filing_status == "Filed":
                 fields.extend(["filed", "filed_summary"])
             else:
-                if settings.pre_filing_and_upload_invoices:
+                if settings.compare_unfiled_data:
                     fields.extend(["unfiled", "unfiled_summary"])
 
         return fields

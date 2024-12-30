@@ -595,12 +595,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
 
     # GET DATA
     def get_gov_gstr1_data(self):
-        if (
-            frappe.get_cached_value(
-                "GST Settings", None, "pre_filing_and_upload_invoices"
-            )
-            != 1
-        ):
+        if frappe.get_cached_value("GST Settings", None, "compare_unfiled_data") != 1:
             return frappe._dict(), False
 
         if self.filing_status == "Filed":
