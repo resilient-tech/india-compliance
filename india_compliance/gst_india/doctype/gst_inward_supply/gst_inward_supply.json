@@ -23,6 +23,8 @@
   "supply_type",
   "classification",
   "is_reverse_charge",
+  "is_downloaded_from_2a",
+  "is_downloaded_from_2b",
   "section_break_16",
   "items",
   "section_break_ykls",
@@ -394,11 +396,27 @@
    "fieldname": "taxable_value",
    "fieldtype": "Float",
    "label": "Taxable Value"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_downloaded_from_2b",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Downloaded from 2B",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_downloaded_from_2a",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Downloaded from 2A",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-11-16 16:23:13.402870",
+ "modified": "2024-12-12 17:28:52.668508",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Inward Supply",

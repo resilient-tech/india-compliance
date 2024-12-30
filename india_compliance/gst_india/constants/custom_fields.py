@@ -56,7 +56,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Section Break",
             "insert_after": "total",
             "hide_border": 1,
-            "depends_on": "eval: doc.purchase_order && india_compliance.is_e_waybill_generatable_for_subcontracting(doc)",
+            "depends_on": "eval: doc.purchase_order && india_compliance.is_e_waybill_applicable_for_subcontracting(doc)",
         },
     ],
     "Subcontracting Receipt": [
@@ -66,7 +66,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Section Break",
             "insert_after": "total",
             "hide_border": 1,
-            "depends_on": "eval: india_compliance.is_e_waybill_generatable_for_subcontracting(doc)",
+            "depends_on": "eval: india_compliance.is_e_waybill_applicable_for_subcontracting(doc)",
         },
         {
             "fieldname": "section_break_ref_doc",
@@ -135,10 +135,18 @@ CUSTOM_FIELDS = {
     ],
     ("Subcontracting Order", "Subcontracting Receipt", "Stock Entry"): [
         {
+            "fieldname": "tax_category",
+            "label": "Tax Category",
+            "fieldtype": "Link",
+            "insert_after": "section_break_taxes",
+            "options": "Tax Category",
+            "print_hide": 1,
+        },
+        {
             "fieldname": "taxes_and_charges",
             "label": "Taxes and Charges Template",
             "fieldtype": "Link",
-            "insert_after": "section_break_taxes",
+            "insert_after": "tax_category",
             "options": "Sales Taxes and Charges Template",
             "print_hide": 1,
         },
@@ -182,14 +190,14 @@ CUSTOM_FIELDS = {
             "label": "Taxes",
             "fieldtype": "Section Break",
             "insert_after": "get_stock_and_rate",
-            "depends_on": "eval: india_compliance.is_e_waybill_generatable_for_subcontracting(doc)",
+            "depends_on": "eval: india_compliance.is_e_waybill_applicable_for_subcontracting(doc)",
         },
         {
             "label": "E-Waybill Info",
             "fieldname": "tab_break_ewaybill",
             "fieldtype": "Tab Break",
             "insert_after": "address_display",
-            "depends_on": "eval: india_compliance.is_e_waybill_generatable_for_subcontracting(doc)",
+            "depends_on": "eval: india_compliance.is_e_waybill_applicable_for_subcontracting(doc)",
         },
         {
             "label": "e-Waybill Address",

@@ -11,6 +11,7 @@ from frappe.utils import today
 import erpnext
 from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_entries
 from erpnext.controllers.accounts_controller import AccountsController
+from erpnext.stock.get_item_details import ItemDetailsCtx, _get_item_tax_template
 
 from india_compliance.gst_india.overrides.ineligible_itc import (
     update_landed_cost_voucher_for_gst_expense,
@@ -114,6 +115,7 @@ class BillofEntry(Document):
         self.customs_payable_account = company.default_customs_payable_account
 
     def set_taxes_and_totals(self):
+        self.validate_item_tax_template()
         self.taxes_controller = CustomTaxController(self)
 
         self.taxes_controller.set_item_wise_tax_rates()
@@ -233,6 +235,47 @@ class BillofEntry(Document):
                         " is incorrect. Try setting the Charge Type to {2}."
                     ).format(row.idx, tax.tax_amount, column)
                 )
+
+    def validate_item_tax_template(self):
+        for item in self.items:
+            if item.item_code and item.get("item_tax_template"):
+                item_doc = frappe.get_cached_doc("Item", item.item_code)
+                item_details = ItemDetailsCtx(
+                    {
+                        "net_rate": item.get("taxable_value"),
+                        "base_net_rate": item.get("taxable_value"),
+                        "tax_category": self.get("tax_category"),
+                        "bill_date": self.bill_of_entry_date,
+                        "company": self.get("company"),
+                    }
+                )
+
+                item_group = item_doc.item_group
+                item_group_taxes = []
+
+                while item_group:
+                    item_group_doc = frappe.get_cached_doc("Item Group", item_group)
+                    item_group_taxes += item_group_doc.taxes or []
+                    item_group = item_group_doc.parent_item_group
+
+                item_taxes = item_doc.taxes or []
+
+                if not item_group_taxes and (not item_taxes):
+                    # No validation if no taxes in item or item group
+                    continue
+
+                taxes = _get_item_tax_template(
+                    item_details, item_taxes + item_group_taxes, for_validate=True
+                )
+
+                if taxes:
+                    if item.item_tax_template not in taxes:
+                        item.item_tax_template = taxes[0]
+                        frappe.msgprint(
+                            _(
+                                "Row {0}: Item Tax template updated as per validity and rate applied"
+                            ).format(item.idx, frappe.bold(item.item_code))
+                        )
 
     def get_gl_entries(self):
         # company_currency is required by get_gl_dict

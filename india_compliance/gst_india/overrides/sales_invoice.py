@@ -1,6 +1,7 @@
 import frappe
 from frappe import _, bold
-from frappe.utils import flt, fmt_money
+from frappe.desk.form.load import run_onload
+from frappe.utils import add_days, days_diff, flt, fmt_money
 
 from india_compliance.gst_india.overrides.payment_entry import get_taxes_summary
 from india_compliance.gst_india.overrides.transaction import (
@@ -21,10 +22,14 @@ from india_compliance.gst_india.utils import (
     validate_invoice_number,
 )
 from india_compliance.gst_india.utils.e_invoice import (
+    _cancel_e_invoice,
     get_e_invoice_info,
     validate_e_invoice_applicability,
 )
-from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
+from india_compliance.gst_india.utils.e_waybill import (
+    _cancel_e_waybill,
+    get_e_waybill_info,
+)
 from india_compliance.gst_india.utils.transaction_data import (
     validate_unique_hsn_and_uom,
 )
@@ -182,6 +187,7 @@ def on_submit(doc, method=None):
 
 
 def before_cancel(doc, method=None):
+    cancel_e_waybill_e_invoice(doc)
     if ignore_gst_validations(doc):
         return
 
@@ -204,6 +210,50 @@ def before_cancel(doc, method=None):
         reverse_gst_adjusted_against_payment_entry(
             reference.voucher_detail_no, reference.payment_name
         )
+
+
+def cancel_e_waybill_e_invoice(doc, method=None):
+    gst_settings = frappe.get_cached_doc("GST Settings")
+
+    if not is_api_enabled(gst_settings):
+        return
+
+    def auto_cancel(cancel_func, action_type):
+        run_onload(doc)
+
+        if action_type == "e_invoice":
+            generated_on = (
+                doc.get_onload().get("e_invoice_info", {}).get("acknowledged_on")
+            )
+            reason = gst_settings.reason_for_e_invoice_cancellation
+
+        else:
+            generated_on = doc.get_onload().get("e_waybill_info", {}).get("created_on")
+            reason = gst_settings.reason_for_e_waybill_cancellation
+
+        if not generated_on or days_diff(add_days(generated_on, 1), generated_on) > 1:
+            return
+
+        values = frappe._dict(
+            {
+                "irn": doc.irn or "",
+                "reason": reason,
+                "ewaybill": doc.ewaybill or "",
+                "remark": "",
+            }
+        )
+        cancel_func(doc, values)
+
+    if doc.irn and gst_settings.enable_e_invoice and gst_settings.auto_cancel_e_invoice:
+        auto_cancel(_cancel_e_invoice, "e_invoice")
+        return
+
+    if (
+        doc.ewaybill
+        and gst_settings.enable_e_waybill
+        and gst_settings.auto_cancel_e_waybill
+    ):
+        auto_cancel(_cancel_e_waybill, "e_waybill")
 
 
 def is_e_waybill_applicable(doc, gst_settings=None):

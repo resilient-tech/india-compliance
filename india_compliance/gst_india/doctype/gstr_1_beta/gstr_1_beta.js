@@ -657,7 +657,12 @@ class GSTR1 {
     }
 
     filter_detailed_view = async (fieldname, value) => {
-        await this.filter_group.push_new_filter([DOCTYPE, fieldname, "=", value]);
+        await this.filter_group.add_or_remove_filter([
+            DOCTYPE,
+            fieldname,
+            "=",
+            value.trim(),
+        ]);
         this.filter_group.apply();
     };
 
@@ -1144,10 +1149,10 @@ class TabManager {
             args[2]?.indent == 0
                 ? `<strong>${value}</strong>`
                 : isDescriptionCell
-                    ? `<a href="#" class="description">
+                ? `<a href="#" class="description">
                     <p style="padding-left: 15px">${value}</p>
                     </a>`
-                    : value;
+                : value;
 
         return value;
     }
@@ -1902,9 +1907,9 @@ class FiledTab extends GSTR1_TabManager {
             const { include_uploaded, delete_missing } = dialog
                 ? dialog.get_values()
                 : {
-                    include_uploaded: true,
-                    delete_missing: false,
-                };
+                      include_uploaded: true,
+                      delete_missing: false,
+                  };
 
             const doc = me.instance.frm.doc;
 
@@ -2148,7 +2153,7 @@ class ReconcileTab extends FiledTab {
         });
     }
 
-    get_creation_time_string() { } // pass
+    get_creation_time_string() {} // pass
 
     get_detail_view_column() {
         return [
@@ -2222,8 +2227,8 @@ class ErrorsTab extends TabManager {
         ];
     }
 
-    setup_actions() { }
-    set_creation_time_string() { }
+    setup_actions() {}
+    set_creation_time_string() {}
 
     refresh_data(data) {
         data = data.error_report;
@@ -2479,10 +2484,18 @@ class FileGSTR1Dialog {
         return `
             <tr>
                 <td>${description}</td>
-                <td style="text-align: right;">${format_currency(liability.total_igst_amount)}</td>
-                <td style="text-align: right;">${format_currency(liability.total_cgst_amount)}</td>
-                <td style="text-align: right;">${format_currency(liability.total_sgst_amount)}</td>
-                <td style="text-align: right;">${format_currency(liability.total_cess_amount)}</td>
+                <td style="text-align: right;">${format_currency(
+                    liability.total_igst_amount
+                )}</td>
+                <td style="text-align: right;">${format_currency(
+                    liability.total_cgst_amount
+                )}</td>
+                <td style="text-align: right;">${format_currency(
+                    liability.total_sgst_amount
+                )}</td>
+                <td style="text-align: right;">${format_currency(
+                    liability.total_cess_amount
+                )}</td>
             </tr>
         `;
     }
@@ -2590,8 +2603,7 @@ class GSTR1Action extends FileGSTR1Dialog {
         const draft_invoices = this.frm.gstr1.data.books["Document Issued"]?.filter(
             row => row.draft_count > 0
         );
-        if (!draft_invoices?.length)
-            return upload();
+        if (!draft_invoices?.length) return upload();
 
         frappe.confirm(
             __(
@@ -2860,7 +2872,7 @@ function is_gstr1_api_enabled() {
 }
 
 function patch_set_indicator(frm) {
-    frm.toolbar.set_indicator = function () { };
+    frm.toolbar.set_indicator = function () {};
 }
 
 async function set_default_company_gstin(frm) {

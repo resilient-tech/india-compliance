@@ -331,6 +331,13 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False, messag
 def cancel_e_invoice(docname, values):
     doc = load_doc("Sales Invoice", docname, "cancel")
     values = frappe.parse_json(values)
+
+    _cancel_e_invoice(doc, values)
+
+    return send_updated_doc(doc)
+
+
+def _cancel_e_invoice(doc, values):
     validate_if_e_invoice_can_be_cancelled(doc)
 
     if doc.get("ewaybill"):
@@ -349,7 +356,6 @@ def cancel_e_invoice(docname, values):
     )
 
     doc.cancel()
-    return send_updated_doc(doc)
 
 
 def log_and_process_e_invoice_cancellation(doc, values, result, message):
@@ -760,11 +766,7 @@ class EInvoiceData(GSTTransactionData):
             self.doc.company_address, validate_gstin=True
         )
 
-        ship_to_address = (
-            self.doc.port_address
-            if (is_foreign_doc(self.doc) and self.doc.port_address)
-            else self.doc.shipping_address_name
-        )
+        ship_to_address = self.doc.shipping_address_name
 
         # Defaults
         self.shipping_address = None

@@ -208,6 +208,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                 & (boe.company == self.company)
                 & (boe.company_gstin == self.company_gstin)
             )
+            .where(boe_taxes.parenttype == "Bill of Entry")
             .groupby(boe.name)
         )
 
