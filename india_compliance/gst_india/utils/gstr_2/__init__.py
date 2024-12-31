@@ -10,7 +10,7 @@ from india_compliance.gst_india.api_classes.taxpayer_returns import (
     GSTR2aAPI,
     GSTR2bAPI,
 )
-from india_compliance.gst_india.constants import CLASSIFICATION_MAP
+from india_compliance.gst_india.constants import IMS_CLASSIFICATION_MAP
 from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     verify_request_in_progress,
 )
@@ -36,7 +36,7 @@ class GSTRCategory(Enum):
     IMPGSEZ = "IMPGSEZ"
 
 
-ACTIONS = {
+GSTR_2A_ACTIONS = {
     "B2B": GSTRCategory.B2B,
     "B2BA": GSTRCategory.B2BA,
     "CDN": GSTRCategory.CDNR,
@@ -46,7 +46,7 @@ ACTIONS = {
     "IMPGSEZ": GSTRCategory.IMPGSEZ,
 }
 
-IMS_CATEGORIES = {
+IMS_ACTIONS = {
     "b2b": "B2B",
     "b2ba": "B2BA",
     "b2bcn": "CN",
@@ -65,7 +65,7 @@ IMPORT_CATEGORY = ("IMPG", "IMPGSEZ")
 
 
 def download_gstr_2a(gstin, return_periods, gst_categories=None):
-    total_expected_requests = len(return_periods) * len(ACTIONS)
+    total_expected_requests = len(return_periods) * len(GSTR_2A_ACTIONS)
     requests_made = 0
     queued_message = False
 
@@ -76,7 +76,7 @@ def download_gstr_2a(gstin, return_periods, gst_categories=None):
 
         json_data = frappe._dict({"gstin": gstin, "fp": return_period})
         has_data = False
-        for action, category in ACTIONS.items():
+        for action, category in GSTR_2A_ACTIONS.items():
             requests_made += 1
 
             frappe.publish_realtime(
@@ -227,7 +227,7 @@ def save_gstr_2a(gstin, return_period, json_data):
             title=_("Invalid Response Received."),
         )
 
-    for action, category in ACTIONS.items():
+    for action, category in GSTR_2A_ACTIONS.items():
         if action.lower() not in json_data:
             continue
 
@@ -356,15 +356,15 @@ def download_ims_invoices(company_gstin, company):
     has_queued_invoices = False
     has_non_queued_invoices = False
 
-    for category in IMS_CATEGORIES:
-        response = api.get_data(IMS_CATEGORIES[category])
+    for category in IMS_ACTIONS:
+        response = api.get_data(IMS_ACTIONS[category])
 
         if response.error_type == "no_docs_found":
             create_import_log(
                 company_gstin,
                 "IMS",
                 "ALL",
-                classification=CLASSIFICATION_MAP[category][0],
+                classification=IMS_CLASSIFICATION_MAP[category][0],
                 data_not_found=True,
             )
             continue
@@ -375,7 +375,7 @@ def download_ims_invoices(company_gstin, company):
                 company_gstin,
                 "IMS",
                 "ALL",
-                classification=CLASSIFICATION_MAP[category][0],
+                classification=IMS_CLASSIFICATION_MAP[category][0],
                 request_id=response.token,
                 retry_after_mins=cint(response.est),
             )
@@ -413,7 +413,7 @@ def download_ims_invoices(company_gstin, company):
 
 def save_ims_invoices(company_gstin, return_period, json_data):
     company = get_party_for_gstin(company_gstin, "Company")
-    for category in IMS_CATEGORIES:
+    for category in IMS_ACTIONS:
         if not json_data.get(category):
             continue
 

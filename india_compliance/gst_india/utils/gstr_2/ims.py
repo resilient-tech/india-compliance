@@ -3,8 +3,8 @@ from frappe.utils.data import format_date
 
 from india_compliance.gst_india.constants import (
     ACTION_MAP,
-    CLASSIFICATION_MAP,
     GST_CATEGORY_MAP,
+    IMS_CLASSIFICATION_MAP,
     STATE_NUMBERS,
 )
 from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
@@ -23,7 +23,7 @@ class IMS:
             "reverse_action": {v: k for k, v in ACTION_MAP.items()},
             "gst_category": GST_CATEGORY_MAP,
             "reverse_gst_category": {v: k for k, v in GST_CATEGORY_MAP.items()},
-            "classification": CLASSIFICATION_MAP,
+            "classification": IMS_CLASSIFICATION_MAP,
         }
     )
 

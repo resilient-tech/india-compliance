@@ -31,7 +31,7 @@ from india_compliance.gst_india.utils import (
 )
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr_2 import (
-    ACTIONS,
+    GSTR_2A_ACTIONS,
     IMPORT_CATEGORY,
     ReturnType,
     download_gstr_2a,
@@ -650,7 +650,7 @@ class AutoReconcile:
     def get_gst_categories(self):
         return [
             category.value
-            for category in ACTIONS.values()
+            for category in GSTR_2A_ACTIONS.values()
             if getattr(self.gst_settings, "reconcile_for_" + category.value.lower())
         ]
 

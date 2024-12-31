@@ -44,7 +44,7 @@ GST_CATEGORY_MAP = {
     "CBW": "Intra-State Supplies attracting IGST",
 }
 
-CLASSIFICATION_MAP = {
+IMS_CLASSIFICATION_MAP = {
     "b2b": ["B2B", "Invoice"],
     "b2ba": ["B2BA", "Invoice"],
     "b2bcn": ["CDNR", "Credit Note"],
