@@ -2577,7 +2577,7 @@ class GSTR1Action extends FileGSTR1Dialog {
 
     check_for_nil_return() {
         const data = this.frm.doc.__gst_data;
-        if(!data || !is_gstr1_api_enabled()) return;
+        if(!data || !data.unfiled || !is_gstr1_api_enabled()) return;
 
         if (Object.keys(data.unfiled).length === 1 && data.status == "Not Filed") {
             this.frm.set_df_property("file_nil_gstr1", "hidden", 0)
