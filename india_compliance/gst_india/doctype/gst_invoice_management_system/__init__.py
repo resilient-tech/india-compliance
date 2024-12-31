@@ -19,7 +19,6 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     BaseUtil,
     Reconciler,
 )
-from india_compliance.gst_india.utils.gstr_2 import ims
 
 
 class IMSReconciler(Reconciler):
@@ -50,7 +49,9 @@ class IMSReconciler(Reconciler):
             self.category = row["original"]
 
             purchases = PurchaseInvoice().get_unmatched_purchase_invoices(filters)
-            inward_supplies = InwardSupply().get_unmatched_inward_supplies(filters)
+            inward_supplies = InwardSupply(
+                filters.company_gstin
+            ).get_unmatched_inward_supplies(filters)
 
             # GSTIN Level matching
             self.reconcile_for_rules(GSTIN_RULES, purchases, inward_supplies)
@@ -64,6 +65,7 @@ class IMSReconciler(Reconciler):
 class InwardSupply:
     def __init__(self, **kwargs):
         self.inward_supply = frappe.qb.DocType("GST Inward Supply")
+        self.company_gstin = kwargs.get("company_gstin")
 
     def get_all_inward_supplies(self, names=None, filters=None):
         if not filters:
@@ -74,16 +76,12 @@ class InwardSupply:
         if names:
             query = query.where(self.inward_supply.name.isin(names))
 
-        query = get_query_with_filters(self.inward_supply, query, filters)
-
         return query.run(as_dict=True)
 
     def get_unmatched_inward_supplies(self, filters):
         categories = [filters.original, filters.amended]
 
         query = self.get_base_inward_supply_query()
-        query = get_query_with_filters(self.inward_supply, query, filters)
-
         data = (
             query.where(IfNull(self.inward_supply.match_status, "") == "")
             .where(self.inward_supply.classification.isin(categories))
@@ -116,6 +114,7 @@ class InwardSupply:
                 .as_("pending_upload"),
             )
             .where(IfNull(self.inward_supply.previous_ims_action, "") != "")
+            .where(self.inward_supply.company_gstin == self.company_gstin)
         )
 
     def get_fields(self, additional_fields=None):
@@ -264,8 +263,8 @@ def query_tax_amount(doc, field):
     return Abs(Sum(getattr(doc, field)))
 
 
-def get_invoices_to_upload(company_gstin):
-    _InwardSupply = InwardSupply()
+def get_inward_supplies_to_upload(company_gstin):
+    _InwardSupply = InwardSupply(company_gstin=company_gstin)
     query = _InwardSupply.get_base_inward_supply_query(
         additional_fields=[
             "doc_type",
@@ -274,63 +273,10 @@ def get_invoices_to_upload(company_gstin):
             "document_value",
         ]
     )
-    gst_inward_supply_list = query.where(
+    return query.where(
         _InwardSupply.inward_supply.ims_action
         != _InwardSupply.inward_supply.previous_ims_action
     ).run(as_dict=True)
-
-    upload_data, reset_data = convert_data_to_gov_format(
-        gst_inward_supply_list, company_gstin
-    )
-
-    return upload_data, reset_data
-
-
-def convert_data_to_gov_format(gst_inward_supply_list, company_gstin):
-    category_key_map = {
-        "Invoice_0": "b2b",
-        "Invoice_1": "b2ba",
-        "Debit Note_0": "b2bdn",
-        "Debit Note_1": "b2bdna",
-        "Credit Note_0": "b2bcn",
-        "Credit Note_1": "b2bcna",
-    }
-
-    upload_data = {}
-    reset_data = {}
-    key_invoice_map = {}
-
-    for invoice in gst_inward_supply_list:
-        key = f"{invoice.doc_type}_{invoice.is_amended}"
-        if key_invoice_map.get(key):
-            key_invoice_map[key].append(invoice)
-        else:
-            key_invoice_map[key] = [invoice]
-
-    for key, invoices in key_invoice_map.items():
-        category = category_key_map[key]
-        _class = getattr(ims, category.upper())(company_gstin)
-        upload_invoices = []
-        reset_invoices = []
-
-        for invoice in invoices:
-            data = {
-                **_class.update_transaction_to_gov_format(invoice),
-                **_class.get_category_details(invoice),
-            }
-
-            if invoice.ims_action != "No Action":
-                upload_invoices.append(data)
-            else:
-                reset_invoices.append(data)
-
-        if upload_invoices:
-            upload_data[category] = upload_invoices
-
-        if reset_invoices:
-            reset_data[category] = reset_invoices
-
-    return upload_data, reset_data
 
 
 def update_return_log(doc, token, action, request_id, status=None):
@@ -382,6 +328,7 @@ def process_upload_or_reset_ims(return_log, action):
     if status_cd in ["P", "PE"]:
         # Exclude erroneous invoices from previous IMS action update
         # This is enqueued because linking of integration request is enqueued
+        # TODO: flag for re-upload?
         frappe.enqueue(
             update_previous_ims_action,
             queue="long",
@@ -413,12 +360,17 @@ def get_uploaded_invoices(integration_request):
 
 
 def update_previous_ims_action(return_log, erroneous_invoices):
+    from india_compliance.gst_india.utils.gstr_2.__init__ import (
+        ReturnType,
+        get_data_handler,
+    )
+
     integration_request = return_log.integration_request
     uploded_invoices = get_uploaded_invoices(integration_request)
 
     invoices_to_update = []
     for category, invoices in uploded_invoices.items():
-        _class = getattr(ims, category.upper())()
+        _class = get_data_handler(ReturnType.IMS.value, category.upper())
         invoices_to_update.extend(_class.get_all_transactions(invoices))
 
     for invoice in invoices_to_update:

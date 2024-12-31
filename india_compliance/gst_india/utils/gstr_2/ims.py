@@ -27,12 +27,15 @@ class IMS:
         }
     )
 
-    def __init__(self, company_gstin=None, company=None):
-        self.company_gstin = company_gstin
+    def __init__(self, company=None, gstin=None, **kwargs):
+        self.company_gstin = gstin
         self.company = company
         self.existing_transactions = self.get_existing_transactions()
 
-    def create_transactions(self, invoices):
+    def create_transactions(self, category, invoices):
+        if not invoices:
+            return
+
         self.reset_previous_ims_action()
         transactions = self.get_all_transactions(invoices)
 
@@ -54,7 +57,7 @@ class IMS:
 
     def get_transaction(self, invoice):
         transaction = frappe._dict(
-            **self.update_transaction_to_internal_format(invoice),
+            **self.convert_data_to_internal_format(invoice),
             **self.get_invoice_details(invoice),
         )
 
@@ -64,7 +67,7 @@ class IMS:
 
         return transaction
 
-    def update_transaction_to_internal_format(self, invoice):
+    def convert_data_to_internal_format(self, invoice):
         return {
             "supplier_gstin": invoice.stin,
             "sup_return_period": invoice.rtnprd,
@@ -89,7 +92,7 @@ class IMS:
             "taxable_value": invoice.txval,
         }
 
-    def update_transaction_to_gov_format(self, invoice):
+    def convert_data_to_gov_format(self, invoice):
         data = {
             "stin": invoice.supplier_gstin,
             "inv_typ": get_mapped_value(
@@ -120,7 +123,7 @@ class IMS:
 
     def get_existing_transactions(self):
         category, doc_type = get_mapped_value(
-            type(self).__name__.lower(), self.VALUE_MAPS.classification
+            self.ims_category(), self.VALUE_MAPS.classification
         )
 
         inward_supply = frappe.qb.DocType("GST Inward Supply")
@@ -154,7 +157,7 @@ class IMS:
 
     def reset_previous_ims_action(self):
         category, doc_type = get_mapped_value(
-            type(self).__name__.lower(), self.VALUE_MAPS.classification
+            self.ims_category(), self.VALUE_MAPS.classification
         )
         inward_supply = frappe.qb.DocType("GST Inward Supply")
 
@@ -166,8 +169,11 @@ class IMS:
             inward_supply.company_gstin == self.company_gstin
         ).run()
 
+    def ims_category(self):
+        return type(self).__name__.removeprefix("IMS")
 
-class B2B(IMS):
+
+class IMSB2B(IMS):
     def get_invoice_details(self, invoice):
         return {
             "bill_no": invoice.inum,
@@ -183,7 +189,7 @@ class B2B(IMS):
         }
 
 
-class B2BA(B2B):
+class IMSB2BA(IMSB2B):
     def get_invoice_details(self, invoice):
         invoice_details = super().get_invoice_details(invoice)
         invoice_details.update(
@@ -207,7 +213,7 @@ class B2BA(B2B):
         return invoice_details
 
 
-class B2BDN(B2B):
+class IMSB2BDN(IMSB2B):
     def get_invoice_details(self, invoice):
         return {
             "bill_no": invoice.nt_num,
@@ -223,7 +229,7 @@ class B2BDN(B2B):
         }
 
 
-class B2BDNA(B2BDN):
+class IMSB2BDNA(IMSB2BDN):
     def get_invoice_details(self, invoice):
         invoice_details = super().get_invoice_details(invoice)
         invoice_details.update(
@@ -248,7 +254,7 @@ class B2BDNA(B2BDN):
         return invoice_details
 
 
-class B2BCN(B2BDN):
+class IMSB2BCN(IMSB2BDN):
     def get_invoice_details(self, invoice):
         invoice_details = super().get_invoice_details(invoice)
         invoice_details.update(
@@ -259,7 +265,7 @@ class B2BCN(B2BDN):
         return invoice_details
 
 
-class B2BCNA(B2BDNA):
+class IMSB2BCNA(IMSB2BDNA):
     def get_invoice_details(self, invoice):
         invoice_details = super().get_invoice_details(invoice)
         invoice_details.update(

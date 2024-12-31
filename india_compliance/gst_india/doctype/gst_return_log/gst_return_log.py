@@ -19,7 +19,10 @@ from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     FileGSTR1,
     GenerateGSTR1,
 )
-from india_compliance.gst_india.utils import is_production_api_enabled
+from india_compliance.gst_india.utils import (
+    get_party_for_gstin,
+    is_production_api_enabled,
+)
 
 DOCTYPE = "GST Return Log"
 
@@ -333,7 +336,9 @@ def get_decompressed_data(content):
     return frappe.parse_json(frappe.safe_decode(gzip.decompress(content)))
 
 
-def create_ims_return_log(company, company_gstin):
+def create_ims_return_log(company_gstin):
+    company = get_party_for_gstin(company_gstin, "Company")
+
     if frappe.db.exists("GST Return Log", f"IMS-ALL-{company_gstin}"):
         return
 

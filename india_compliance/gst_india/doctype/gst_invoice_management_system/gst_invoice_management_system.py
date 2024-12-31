@@ -169,7 +169,6 @@ def download_invoices(company_gstin, company):
         download_ims_invoices,
         queue="long",
         company_gstin=company_gstin,
-        company=company,
     )
 
 
@@ -194,7 +193,6 @@ def sync_with_gstn_and_reupload(company_gstin, company):
         download_and_upload_ims_invoices,
         queue="long",
         company_gstin=company_gstin,
-        company=company,
     )
 
 

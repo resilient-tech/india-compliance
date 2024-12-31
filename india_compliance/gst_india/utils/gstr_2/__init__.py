@@ -11,6 +11,10 @@ from india_compliance.gst_india.api_classes.taxpayer_returns import (
     GSTR2bAPI,
 )
 from india_compliance.gst_india.constants import IMS_CLASSIFICATION_MAP
+from india_compliance.gst_india.doctype.gst_invoice_management_system import (
+    get_inward_supplies_to_upload,
+    update_return_log,
+)
 from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     verify_request_in_progress,
 )
@@ -35,6 +39,12 @@ class GSTRCategory(Enum):
     IMPG = "IMPG"
     IMPGSEZ = "IMPGSEZ"
 
+    # IMS
+    B2BCN = "B2BCN"
+    B2BCNA = "B2BCNA"
+    B2BDN = "B2BDN"
+    B2BDNA = "B2BDNA"
+
 
 GSTR_2A_ACTIONS = {
     "B2B": GSTRCategory.B2B,
@@ -47,18 +57,19 @@ GSTR_2A_ACTIONS = {
 }
 
 IMS_ACTIONS = {
-    "b2b": "B2B",
-    "b2ba": "B2BA",
-    "b2bcn": "CN",
-    "b2bcna": "CNA",
-    "b2bdn": "DN",
-    "b2bdna": "DNA",
+    "B2B": GSTRCategory.B2B,
+    "B2BA": GSTRCategory.B2BA,
+    "CN": GSTRCategory.B2BCN,
+    "CNA": GSTRCategory.B2BCNA,
+    "DN": GSTRCategory.B2BDN,
+    "DNA": GSTRCategory.B2BDNA,
 }
 
 
 GSTR_MODULES = {
     ReturnType.GSTR2A.value: gstr_2a,
     ReturnType.GSTR2B.value: gstr_2b,
+    ReturnType.IMS.value: ims,
 }
 
 IMPORT_CATEGORY = ("IMPG", "IMPGSEZ")
@@ -212,6 +223,60 @@ def download_gstr_2b(gstin, return_periods):
         end_transaction_progress(return_period)
 
 
+def download_ims_invoices(gstin):
+    api = IMSAPI(gstin)
+    has_queued_invoices = False
+    has_non_queued_invoices = False
+    # TODO: JSON data preparation for one period
+
+    for action, category in IMS_ACTIONS.items():
+        response = api.get_data(action)
+        category = category.value
+
+        if response.error_type == "no_docs_found":
+            continue
+
+        # Queued
+        if response.token:
+            create_import_log(
+                gstin,
+                "IMS",
+                "ALL",
+                classification=IMS_CLASSIFICATION_MAP[category][0],
+                # TODO: classification as data field and used directly
+                request_id=response.token,
+                retry_after_mins=cint(response.est),
+            )
+            has_queued_invoices = True
+            continue
+
+        has_non_queued_invoices = True
+        save_ims_invoices(gstin, None, response)
+
+    create_ims_return_log(gstin)
+
+    if has_queued_invoices:
+        frappe.publish_realtime(
+            "ims_download_queued",
+            message={
+                "message": _(
+                    "Some categories are queued for download at GSTN as there may be large data."
+                    " We will retry download every few minutes until it succeeds."
+                )
+            },
+            user=frappe.session.user,
+        )
+
+    if has_non_queued_invoices:
+        frappe.publish_realtime(
+            "ims_download_completed",
+            message={"message": _("Downloaded Invoices successfully")},
+            user=frappe.session.user,
+        )
+
+    return has_queued_invoices
+
+
 def save_gstr_2a(gstin, return_period, json_data):
     return_type = ReturnType.GSTR2A
     if (
@@ -264,6 +329,10 @@ def save_gstr_2b(gstin, return_period, json_data):
     update_import_history(return_period)
 
 
+def save_ims_invoices(gstin, return_period, json_data):
+    save_gstr(gstin, ReturnType.IMS, return_period, json_data)
+
+
 def save_gstr(
     gstin, return_type: ReturnType, return_period, json_data, gen_date_2b=None
 ):
@@ -276,7 +345,10 @@ def save_gstr(
 
     company = get_party_for_gstin(gstin, "Company")
     for category in GSTRCategory:
-        gstr = get_data_handler(return_type.value, category)
+        gstr = get_data_handler(return_type.value, category.value)
+        if not gstr:
+            continue
+
         gstr(company, gstin, return_period, json_data, gen_date_2b).create_transactions(
             category,
             json_data.get(category.value.lower()),
@@ -284,8 +356,8 @@ def save_gstr(
 
 
 def get_data_handler(return_type, category):
-    class_name = return_type + category.value
-    return getattr(GSTR_MODULES[return_type], class_name)
+    class_name = return_type + category
+    return getattr(GSTR_MODULES[return_type], class_name, None)
 
 
 def update_import_history(return_periods):
@@ -351,83 +423,12 @@ def end_transaction_progress(return_period):
     )
 
 
-def download_ims_invoices(company_gstin, company):
-    api = IMSAPI(company_gstin)
-    has_queued_invoices = False
-    has_non_queued_invoices = False
-
-    for category in IMS_ACTIONS:
-        response = api.get_data(IMS_ACTIONS[category])
-
-        if response.error_type == "no_docs_found":
-            create_import_log(
-                company_gstin,
-                "IMS",
-                "ALL",
-                classification=IMS_CLASSIFICATION_MAP[category][0],
-                data_not_found=True,
-            )
-            continue
-
-        # Queued
-        if response.token:
-            create_import_log(
-                company_gstin,
-                "IMS",
-                "ALL",
-                classification=IMS_CLASSIFICATION_MAP[category][0],
-                request_id=response.token,
-                retry_after_mins=cint(response.est),
-            )
-            has_queued_invoices = True
-            continue
-
-        has_non_queued_invoices = True
-        getattr(ims, category.upper())(company_gstin, company).create_transactions(
-            response.get(category, [])
-        )
-
-    create_ims_return_log(company, company_gstin)
-
-    if has_queued_invoices:
-        frappe.publish_realtime(
-            "ims_download_queued",
-            message={
-                "message": _(
-                    "Some categories are queued for download at GSTN as there may be large data."
-                    " We will retry download every few minutes until it succeeds."
-                )
-            },
-            user=frappe.session.user,
-        )
-
-    if has_non_queued_invoices:
-        frappe.publish_realtime(
-            "ims_download_completed",
-            message={"message": _("Downloaded Invoices successfully")},
-            user=frappe.session.user,
-        )
-
-    return has_queued_invoices
-
-
-def save_ims_invoices(company_gstin, return_period, json_data):
-    company = get_party_for_gstin(company_gstin, "Company")
-    for category in IMS_ACTIONS:
-        if not json_data.get(category):
-            continue
-
-        getattr(ims, category.upper())(company_gstin, company).create_transactions(
-            json_data.get(category)
-        )
+###################################################################################################################
+### IMS Upload ####################################################################################################
+###################################################################################################################
 
 
 def upload_ims_invoices(company_gstin):
-    from india_compliance.gst_india.doctype.gst_invoice_management_system import (
-        get_invoices_to_upload,
-        update_return_log,
-    )
-
     if not frappe.db.exists("GST Return Log", f"IMS-ALL-{company_gstin}"):
         frappe.throw(_("Please download invoices before uploading"))
         return
@@ -437,7 +438,7 @@ def upload_ims_invoices(company_gstin):
         f"IMS-ALL-{company_gstin}",
     )
 
-    upload_data, reset_data = get_invoices_to_upload(company_gstin)
+    upload_data, reset_data = get_data_for_upload(company_gstin)
 
     if not (upload_data or reset_data):
         return False
@@ -463,7 +464,7 @@ def upload_ims_invoices(company_gstin):
     return True
 
 
-def download_and_upload_ims_invoices(company_gstin, company):
+def download_and_upload_ims_invoices(company_gstin):
     """
     1. This function will download invoices from GST Portal,
        and if there are some queued invoices then upload will be skipped.
@@ -473,7 +474,9 @@ def download_and_upload_ims_invoices(company_gstin, company):
     3. It will check the status regardless of whether any data was uploaded or not.(To notify user that process is completed successfully).
     """
 
-    has_queued_invoices = download_ims_invoices(company_gstin, company)
+    has_queued_invoices = download_ims_invoices(company_gstin)
+
+    # TODO: flag for pending upload and cron job for queued invoices
     if has_queued_invoices:
         return
 
@@ -483,3 +486,49 @@ def download_and_upload_ims_invoices(company_gstin, company):
         "check_ims_upload_status",
         user=frappe.session.user,
     )
+
+
+def get_data_for_upload(company_gstin):
+    category_key_map = {
+        "Invoice_0": GSTRCategory.B2B.value,
+        "Invoice_1": GSTRCategory.B2BA.value,
+        "Debit Note_0": GSTRCategory.B2BDN.value,
+        "Debit Note_1": GSTRCategory.B2BDNA.value,
+        "Credit Note_0": GSTRCategory.B2BCN.value,
+        "Credit Note_1": GSTRCategory.B2BCNA.value,
+    }
+
+    upload_data = {}
+    reset_data = {}
+    key_invoice_map = {}
+
+    gst_inward_supply_list = get_inward_supplies_to_upload(company_gstin)
+
+    for invoice in gst_inward_supply_list:
+        key = f"{invoice.doc_type}_{invoice.is_amended}"
+        key_invoice_map.setdefault(key, []).append(invoice)
+
+    for key, invoices in key_invoice_map.items():
+        category = category_key_map[key]
+        _class = get_data_handler(ReturnType.IMS.value, category)
+        upload_invoices = []
+        reset_invoices = []
+
+        for invoice in invoices:
+            data = {
+                **_class.convert_data_to_gov_format(invoice),
+                **_class.get_category_details(invoice),
+            }
+
+            if invoice.ims_action != "No Action":
+                upload_invoices.append(data)
+            else:
+                reset_invoices.append(data)
+
+        if upload_invoices:
+            upload_data[category.lower()] = upload_invoices
+
+        if reset_invoices:
+            reset_data[category.lower()] = reset_invoices
+
+    return upload_data, reset_data
