@@ -933,7 +933,9 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
         or (
             is_sales_transaction
             and is_export_without_payment_of_gst(
-                frappe._dict({**party_details, "doctype": doctype})
+                party_details.copy().update(
+                    doctype=doctype, place_of_supply=gst_details.place_of_supply
+                )
             )
         )
         or (
