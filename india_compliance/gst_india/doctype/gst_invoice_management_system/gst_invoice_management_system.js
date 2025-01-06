@@ -814,7 +814,6 @@ class IMSAction {
                             method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.sync_with_gstn_and_reupload",
                             args: {
                                 company_gstin: this.frm.doc.company_gstin,
-                                company: this.frm.doc.company,
                             },
                         });
                     },
@@ -834,7 +833,6 @@ class IMSAction {
             method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.download_invoices",
             args: {
                 company_gstin: frm.doc.company_gstin,
-                company: frm.doc.company,
             },
         });
 

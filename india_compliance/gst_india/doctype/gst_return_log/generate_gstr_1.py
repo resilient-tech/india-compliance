@@ -717,7 +717,7 @@ class FileGSTR1:
         api = GSTR1API(self)
         response = api.reset_gstr_1_data(self.return_period)
 
-        set_gstr1_actions(self, "reset", response.get("reference_id"), api.request_id)
+        set_gstr_actions(self, "reset", response.get("reference_id"), api.request_id)
 
     def process_reset_gstr1(self):
         if not self.actions:
@@ -768,7 +768,7 @@ class FileGSTR1:
         api = GSTR1API(self)
         response = api.save_gstr_1_data(self.return_period, json_data)
 
-        set_gstr1_actions(self, "upload", response.get("reference_id"), api.request_id)
+        set_gstr_actions(self, "upload", response.get("reference_id"), api.request_id)
 
     def process_upload_gstr1(self):
         if not self.actions:
@@ -822,7 +822,7 @@ class FileGSTR1:
         if response.error and response.error.error_cd == "RET00003":
             return self.fetch_and_compare_summary(api)
 
-        set_gstr1_actions(
+        set_gstr_actions(
             self, "proceed_to_file", response.get("reference_id"), api.request_id
         )
 
@@ -907,7 +907,7 @@ class FileGSTR1:
                 }
             )
 
-            set_gstr1_actions(
+            set_gstr_actions(
                 self,
                 "file",
                 response.get("ack_num"),
@@ -1030,7 +1030,7 @@ def get_differing_categories(mapped_summary, gov_summary):
     return differing_categories
 
 
-def set_gstr1_actions(doc, request_type, token, request_id, status=None):
+def set_gstr_actions(doc, request_type, token, request_id, status=None):
     if not token:
         return
 

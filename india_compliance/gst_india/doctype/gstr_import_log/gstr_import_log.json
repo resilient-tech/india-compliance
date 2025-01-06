@@ -24,10 +24,9 @@
   },
   {
    "fieldname": "classification",
-   "fieldtype": "Select",
+   "fieldtype": "Data",
    "in_standard_filter": 1,
-   "label": "Classification",
-   "options": "\nB2B\nB2BA\nCDNR\nCDNRA\nISD\nISDA\nIMPG\nIMPGSEZ"
+   "label": "Classification"
   },
   {
    "fieldname": "return_period",
@@ -68,7 +67,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-03-29 11:54:43.449587",
+ "modified": "2024-12-31 18:32:42.409478",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR Import Log",

@@ -4,7 +4,6 @@ from frappe.utils.data import format_date
 from india_compliance.gst_india.constants import (
     ACTION_MAP,
     GST_CATEGORY_MAP,
-    IMS_CLASSIFICATION_MAP,
     STATE_NUMBERS,
 )
 from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
@@ -12,6 +11,15 @@ from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply impo
 )
 from india_compliance.gst_india.utils import parse_datetime
 from india_compliance.gst_india.utils.gstr_2.gstr import get_mapped_value
+
+CLASSIFICATION_MAP = {
+    "B2B": ["B2B", "Invoice"],
+    "B2BA": ["B2BA", "Invoice"],
+    "B2BCN": ["CDNR", "Credit Note"],
+    "B2BCNA": ["CDNRA", "Credit Note"],
+    "B2BDN": ["CDNR", "Debit Note"],
+    "B2BDNA": ["CDNRA", "Debit Note"],
+}
 
 
 class IMS:
@@ -23,11 +31,11 @@ class IMS:
             "reverse_action": {v: k for k, v in ACTION_MAP.items()},
             "gst_category": GST_CATEGORY_MAP,
             "reverse_gst_category": {v: k for k, v in GST_CATEGORY_MAP.items()},
-            "classification": IMS_CLASSIFICATION_MAP,
+            "classification": CLASSIFICATION_MAP,
         }
     )
 
-    def __init__(self, company=None, gstin=None, **kwargs):
+    def __init__(self, company=None, gstin=None, *args):
         self.company_gstin = gstin
         self.company = company
         self.existing_transactions = self.get_existing_transactions()

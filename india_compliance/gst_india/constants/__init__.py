@@ -44,15 +44,6 @@ GST_CATEGORY_MAP = {
     "CBW": "Intra-State Supplies attracting IGST",
 }
 
-IMS_CLASSIFICATION_MAP = {
-    "B2B": ["B2B", "Invoice"],
-    "B2BA": ["B2BA", "Invoice"],
-    "B2BCN": ["CDNR", "Credit Note"],
-    "B2BCNA": ["CDNRA", "Credit Note"],
-    "B2BDN": ["CDNR", "Debit Note"],
-    "B2BDNA": ["CDNRA", "Debit Note"],
-}
-
 ACTION_MAP = {"A": "Accepted", "R": "Rejected", "P": "Pending", "N": "No Action"}
 
 EXPORT_TYPES = (
