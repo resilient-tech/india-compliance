@@ -11,7 +11,6 @@ from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
     create_import_log,
 )
 from india_compliance.gst_india.utils import get_party_for_gstin
-from india_compliance.gst_india.utils.gstin_info import get_last_gstr_3b_filing_period
 from india_compliance.gst_india.utils.gstr_2 import gstr_2a, gstr_2b
 from india_compliance.gst_india.utils.gstr_utils import ReturnType
 
@@ -380,30 +379,3 @@ def check_regenerate_status(gstin, reference_id):
     except frappe.ValidationError as e:
         frappe.clear_last_message()
         frappe.throw(str(e), title=_("GSTR 2B Regeneration Failed"))
-
-
-def get_period_for_2b_regeneration(company, gstin):
-    # Last 3b filing period + 1 month
-
-    filing_frequency = get_3b_filing_frequency()
-    last_3b_filed_period = get_last_gstr_3b_filing_period(
-        company, gstin, filing_frequency
-    )
-
-    last_3b_period = int(last_3b_filed_period[:2])
-    year = int(last_3b_filed_period[2:])
-
-    if filing_frequency == "Quarterly":
-        last_3b_period += 3
-    else:
-        last_3b_period += 1
-
-    if last_3b_period > 12:
-        last_3b_period %= 12
-        year += 1
-
-    return f"{str(last_3b_period).zfill(2)}{year}"
-
-
-def get_3b_filing_frequency():
-    pass

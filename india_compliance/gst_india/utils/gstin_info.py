@@ -2,12 +2,9 @@ import json
 from datetime import timedelta
 from string import whitespace
 
-from pypika import Order
-
 import frappe
 from frappe import _
-from frappe.query_builder.functions import Concat, Substring
-from frappe.utils import add_to_date, getdate
+from frappe.utils import getdate
 
 from india_compliance.exceptions import GSPServerError
 from india_compliance.gst_india.api_classes.base import BASE_URL
@@ -15,7 +12,6 @@ from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
 from india_compliance.gst_india.api_classes.public import PublicAPI
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
-    create_gstr3b_return_log,
     process_gstr_1_returns_info,
 )
 from india_compliance.gst_india.utils import parse_datetime, titlecase, validate_gstin
@@ -340,76 +336,6 @@ def get_gstr_1_return_status(
     return "Not Filed"
 
 
-def get_last_gstr_3b_filing_period(company, gstin, filing_frequency):
-    log = frappe.qb.DocType("GST Return Log")
-
-    latest_filed_period = (
-        frappe.qb.from_(log)
-        .select(log.return_period)
-        .where(log.company == company)
-        .where(log.gstin == gstin)
-        .where(log.return_type == "GSTR3B")
-        .where(log.filing_status == "Filed")
-        .orderby(
-            # eg: 202411
-            Concat(
-                Substring(log.return_period, 3, 4),  # year
-                Substring(log.return_period, 1, 2),  # month
-            ),
-            order=Order.desc,
-        )
-        .limit(1)
-        .run()
-    )
-
-    if latest_filed_period:
-        latest_filed_period = get_last_month_in_quarter(latest_filed_period[0][0])
-    else:
-        latest_filed_period = None
-
-    # Calculate the latest period based on filing frequency
-    if filing_frequency == "Quarterly":
-        latest_period = get_last_month_in_quarter(
-            add_to_date(None, months=-3).strftime("%m%Y")
-        )
-    else:
-        latest_period = add_to_date(None, months=-1).strftime("%m%Y")
-
-    # Compare periods and return the appropriate value
-    if latest_filed_period and latest_filed_period >= latest_period:
-        return latest_filed_period
-
-    return get_3b_return_period(company, gstin, latest_period)
-
-
-def get_3b_return_period(company, gstin, period, decrement=0):
-    while True:
-        fy = get_fy(period, decrement)
-        response = PublicAPI().get_returns_info(gstin, fy)
-
-        if not response:
-            return
-
-        filed_gstr3b_returns = [
-            d
-            for d in response.get("EFiledlist", [])
-            if d.get("rtntype") == "GSTR3B" and d.get("status") == "Filed"
-        ]
-
-        if filed_gstr3b_returns:
-            break
-
-        decrement -= 1
-
-    latest_filed_period = max(filed_gstr3b_returns, key=lambda x: x.get("ret_prd"))
-
-    for transaction in filed_gstr3b_returns:
-        transaction.update({"company": company, "company_gstin": gstin})
-        create_gstr3b_return_log(transaction)
-
-    return latest_filed_period.get("ret_prd")
-
-
 def get_fy(period, year_increment=0):
     month, year = period[:2], period[2:]
     year = str(int(year) + year_increment)
@@ -424,13 +350,3 @@ def get_fy(period, year_increment=0):
 def get_current_fy():
     period = getdate().strftime("%m%Y")
     return get_fy(period)
-
-
-def get_last_month_in_quarter(period):
-    month = int(period[:2])
-    if month in (1, 4, 7, 10):
-        month += 2
-    elif month in (2, 5, 8, 11):
-        month += 1
-
-    return f"{month:02d}{period[2:]}"
