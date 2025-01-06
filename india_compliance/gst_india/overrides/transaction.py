@@ -937,11 +937,12 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
             gst_details.update(party_gst_details)
 
     # POS
-    gst_details.place_of_supply = (
-        party_details.place_of_supply
-        if (not update_place_of_supply and party_details.place_of_supply)
-        else get_place_of_supply(party_details, doctype)
-    )
+    if not update_place_of_supply and party_details.place_of_supply:
+        gst_details.place_of_supply = party_details.place_of_supply
+    else:
+        place_of_supply = get_place_of_supply(party_details, doctype)
+        gst_details.place_of_supply = place_of_supply
+        party_details.place_of_supply = place_of_supply
 
     if is_sales_transaction:
         source_gstin = party_details.company_gstin
@@ -972,9 +973,7 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
         or (
             is_sales_transaction
             and is_export_without_payment_of_gst(
-                party_details.copy().update(
-                    doctype=doctype, place_of_supply=gst_details.place_of_supply
-                )
+                frappe._dict({**party_details, "doctype": doctype})
             )
         )
         or (
@@ -1018,6 +1017,7 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
     if default_tax := get_tax_template(
         master_doctype,
         company,
+<<<<<<< HEAD
         is_inter_state_supply(
             party_details.copy().update(
                 doctype=doctype,
@@ -1025,6 +1025,10 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
             )
         ),
         party_details.company_gstin[:2],
+=======
+        is_inter_state_supply(frappe._dict({**party_details, "doctype": doctype})),
+        party_details.get(company_gstin_field)[:2],
+>>>>>>> ca895350 (chore: consistent implementation)
         party_details.is_reverse_charge,
     ):
         gst_details.taxes_and_charges = default_tax
