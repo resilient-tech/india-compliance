@@ -128,6 +128,7 @@ def download_gstr_2b(gstin, return_periods):
     total_expected_requests = len(return_periods)
     requests_made = 0
     queued_message = False
+    regeneration_period = None
 
     api = GSTR2bAPI(gstin)
     for return_period in return_periods:
@@ -148,11 +149,8 @@ def download_gstr_2b(gstin, return_periods):
         response = api.get_data(return_period)
 
         if response.error_type == "not_generated":
-            frappe.msgprint(
-                _("No record is found in GSTR-2B or generation is still in progress"),
-                title=_("Not Generated"),
-            )
-            continue
+            regeneration_period = return_period
+            break
 
         if response.error_type == "no_docs_found":
             create_import_log(
@@ -181,8 +179,6 @@ def download_gstr_2b(gstin, return_periods):
             queued_message = True
             continue
 
-        # TODO: if requires regenration, publish realtime and regenerate
-
         if response.error_type:
             continue
 
@@ -203,6 +199,16 @@ def download_gstr_2b(gstin, return_periods):
 
     if not has_data:
         end_transaction_progress(return_period)
+
+    if regeneration_period:
+        frappe.publish_realtime(
+            "regenerate_gstr_2b",
+            {
+                "gstin": gstin,
+                "return_period": regeneration_period,
+            },
+            user=frappe.session.user,
+        )
 
 
 def save_gstr_2a(gstin, return_period, json_data):
@@ -346,10 +352,8 @@ def end_transaction_progress(return_period):
 
 @frappe.whitelist()
 @otp_handler
-def regenerate_gstr_2b(company, gstin):
+def regenerate_gstr_2b(gstin, return_period):
     frappe.has_permission("Purchase Reconciliation Tool", throw=True)
-
-    return_period = get_period_for_2b_regeneration(company, gstin)
 
     try:
         api = GSTR2bAPI(gstin)

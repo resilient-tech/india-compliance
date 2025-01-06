@@ -8,16 +8,20 @@ Object.assign(gstr_2b, {
     regenerate: function (args) {
         taxpayer_api.call({
             method: "india_compliance.gst_india.utils.gstr_2.regenerate_gstr_2b",
-            args: { company: args.company, gstin: args.gstin },
+            args: { gstin: args.gstin, return_period: args.return_period },
             callback: async function (r) {
                 if (r.exc) return;
 
+                let regeneration_status = null;
                 if (r && r.message) {
                     const { reference_id } = r.message;
-                    await gstr_2b.check_regenerate_status(args.gstin, reference_id);
+                    regeneration_status = await gstr_2b.check_regenerate_status(
+                        args.gstin,
+                        reference_id
+                    );
                 }
 
-                args.callback && args.callback(args.only_missing);
+                args.callback && args.callback(regeneration_status, args);
             },
         });
     },
@@ -28,14 +32,9 @@ Object.assign(gstr_2b, {
         });
     },
 
-    _check_regenerate_status: function (gstin, reference_id, callback, retries = 0) {
+    _check_regenerate_status: function (gstin, reference_id, retries = 0) {
         if (retries >= RETRY_INTERVALS.length) {
-            frappe.show_alert({
-                message: __("Failed to regenerate GSTR-2B"),
-                indicator: "red",
-            });
-            callback && callback();
-            return;
+            return { status: "ER", error: "Failed to regenerate GSTR-2B" };
         }
 
         setTimeout(() => {
@@ -46,14 +45,14 @@ Object.assign(gstr_2b, {
                     if (r.exc) return;
                     const { status_cd: status, err_msg: error } = r.message;
                     if (status === "IP")
-                        gstr_2b._check_regenerate_status(
+                        return gstr_2b._check_regenerate_status(
                             gstin,
                             reference_id,
                             callback,
                             retries + 1
                         );
 
-                    callback && callback();
+                    return { status, error };
                 },
             });
         }, RETRY_INTERVALS[retries]);

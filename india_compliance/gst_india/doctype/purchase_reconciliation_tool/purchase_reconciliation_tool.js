@@ -56,6 +56,7 @@ async function add_gstr2b_alert(frm) {
                 [frm.doc.inward_supply_from_date, frm.doc.inward_supply_to_date],
                 ReturnType.GSTR2B,
                 frm.doc.company_gstin,
+                null,
                 true
             );
             remove_gstr2b_alert(existing_alert);
@@ -72,6 +73,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         frm.purchase_reconciliation_tool = new PurchaseReconciliationTool(frm);
 
         frm.events.handle_download_failure(frm);
+        frm.events.handle_regeneration_and_redownload(frm);
     },
 
     onload(frm) {
@@ -241,6 +243,45 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
                 indicator: "red",
             });
         });
+    },
+
+    handle_regeneration_and_redownload(frm) {
+        frappe.realtime.on("regenerate_gstr_2b", args => {
+            // This has to be done because frm is refreshed after download completes
+            setTimeout(() => {
+                frappe.show_alert({
+                    message: __(
+                        `GSTR 2B download for period ${args.return_period} is in progress,
+                             due to pending regeneration.`
+                    ),
+                    indicator: "orange",
+                });
+
+                gstr_2b.regenerate({
+                    gstin: args.gstin,
+                    return_period: args.return_period,
+                    callback: frm.events.check_regeneration_status_and_redownload,
+                    frm: frm,
+                });
+            }, 1000);
+        });
+    },
+
+    check_regeneration_status_and_redownload(regeneration_status, args) {
+        if (regeneration_status.status === "ER") {
+            frappe.msgprint({
+                message: __(regeneration_status.error),
+                indicator: "red",
+            });
+        } else if (regeneration_status.status === "P") {
+            download_gstr(
+                args.frm,
+                null,
+                ReturnType.GSTR2B,
+                args.gstin,
+                args.return_period
+            );
+        }
     },
 });
 
@@ -1215,19 +1256,12 @@ class ImportDialog {
                     this.download_gstr_by_category(true);
                 });
             } else if (this.return_type === ReturnType.GSTR2B) {
-                const args = {
-                    gstin: this.company_gstin,
-                    callback: this.download_gstr_by_period.bind(this),
-                    company: this.frm.doc.company,
-                };
                 this.dialog.set_primary_action(__("Download All"), () => {
-                    args.only_missing = false;
-                    gstr_2b.regenerate(args);
+                    this.download_gstr_by_period(false);
                 });
                 this.dialog.set_secondary_action_label(__("Download Missing"));
                 this.dialog.set_secondary_action(() => {
-                    args.only_missing = true;
-                    gstr_2b.regenerate(args);
+                    this.download_gstr_by_period(true);
                 });
             }
         } else {
@@ -1259,6 +1293,7 @@ class ImportDialog {
             this.date_range,
             this.return_type,
             this.company_gstin,
+            null,
             only_missing,
             marked_gst_categories
         );
@@ -1280,6 +1315,7 @@ class ImportDialog {
             this.date_range,
             this.return_type,
             this.company_gstin,
+            null,
             only_missing
         );
 
@@ -1482,6 +1518,7 @@ async function download_gstr(
     date_range,
     return_type,
     company_gstin,
+    return_period,
     only_missing = true,
     gst_categories = null
 ) {
@@ -1492,9 +1529,10 @@ async function download_gstr(
 
     company_gstins.forEach(async gstin => {
         const args = {
-            return_type: return_type,
+            return_type,
             company_gstin: gstin,
-            date_range: date_range,
+            date_range,
+            return_period,
             force: !only_missing,
             gst_categories,
         };

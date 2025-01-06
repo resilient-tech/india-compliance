@@ -20,6 +20,7 @@ class ReturnsAPI(TaxpayerBaseAPI):
         "RTN_24": "queued",
         "RET11402": "authorization_failed",  # API Authorization Failed for 2A
         "RET2B1010": "authorization_failed",  # API Authorization Failed for 2B
+        "GTR2B-002": "not_generated",  # GSTR2B form is not generated for given return period
         "GTR2B-001": "not_applicable",  # GSTR2B form is not applicable for given return period
         # "IMS2B007": "not_applicable", # Either the entered ITC period is incorrect or it has 3B filed
         "IMS2005": "not_needed",  # 2B cannot be generated as there are no changes
