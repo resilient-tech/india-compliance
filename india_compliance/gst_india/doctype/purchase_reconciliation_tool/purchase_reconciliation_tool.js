@@ -252,8 +252,8 @@ frappe.ui.form.on(DOCTYPE, {
             setTimeout(() => {
                 frappe.show_alert({
                     message: __(
-                        `GSTR 2B download for period ${args.return_period} is in progress,
-                             due to pending regeneration.`
+                        "GSTR 2B download for period {0} is in progress, due to pending regeneration.",
+                        [args.return_period]
                     ),
                     indicator: "orange",
                 });

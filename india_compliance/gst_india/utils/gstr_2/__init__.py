@@ -361,7 +361,7 @@ def regenerate_gstr_2b(gstin, return_period):
     except frappe.ValidationError as e:
         frappe.clear_last_message()
         frappe.throw(
-            str(e), title=_("GSTR 2B Regeneration Failed for {0}".format(return_period))
+            str(e), title=_("GSTR 2B Regeneration Failed for {0}").format(return_period)
         )
 
 
