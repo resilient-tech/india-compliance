@@ -1017,18 +1017,8 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
     if default_tax := get_tax_template(
         master_doctype,
         company,
-<<<<<<< HEAD
-        is_inter_state_supply(
-            party_details.copy().update(
-                doctype=doctype,
-                place_of_supply=gst_details.place_of_supply,
-            )
-        ),
-        party_details.company_gstin[:2],
-=======
         is_inter_state_supply(frappe._dict({**party_details, "doctype": doctype})),
-        party_details.get(company_gstin_field)[:2],
->>>>>>> ca895350 (chore: consistent implementation)
+        party_details.company_gstin[:2],
         party_details.is_reverse_charge,
     ):
         gst_details.taxes_and_charges = default_tax
