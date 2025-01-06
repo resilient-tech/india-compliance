@@ -5,6 +5,8 @@ import unittest
 
 # test_records = frappe.get_test_records('C-Form')
 
+IGNORE_TEST_RECORD_DEPENDENCIES = ["Company", "Customer", "Sales Invoice", "Territory"]
+
 
 class TestCForm(unittest.TestCase):
     pass
