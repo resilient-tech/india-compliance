@@ -219,7 +219,7 @@ def download_ims_invoices(gstin):
     api = IMSAPI(gstin)
     has_queued_invoices = False
     has_non_queued_invoices = False
-    # TODO: JSON data preparation for one period
+    json_data = {}
 
     for action, category in IMS_ACTIONS.items():
         response = api.get_data(action)
@@ -241,8 +241,10 @@ def download_ims_invoices(gstin):
             has_queued_invoices = True
             continue
 
+        json_data[category.lower()] = response.get(category.lower())
         has_non_queued_invoices = True
-        save_ims_invoices(gstin, None, response)
+
+    save_ims_invoices(gstin, None, json_data)
 
     create_ims_return_log(gstin)
 
