@@ -53,7 +53,7 @@ class GSTInvoiceManagementSystem(Document):
         )
 
         # Auto-Reconcile invoices
-        IMSReconciler().auto_reconcile_invoices(filters)
+        IMSReconciler().reconcile(filters)
 
         return self.get_invoice_data(inward_supply, purchase, filters)
 
@@ -66,10 +66,11 @@ class GSTInvoiceManagementSystem(Document):
                 }
             )
 
-        inward_supplies = InwardSupply(
-            company_gstin=self.company_gstin
-        ).get_all_inward_supplies(names=inward_supply)
-        purchases = PurchaseInvoice().get_all_purchases(names=purchase, filters=filters)
+        inward_supplies = InwardSupply().get_all(
+            company_gstin=self.company_gstin, names=inward_supply
+        )
+        # TODO: filter by link name
+        purchases = PurchaseInvoice().get_all(names=purchase, filters=filters)
 
         invoice_data = []
         for doc in inward_supplies:
@@ -109,10 +110,10 @@ class GSTInvoiceManagementSystem(Document):
     def get_invoice_comparision(self, purchase_name, inward_supply_name):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
-        inward_supply = InwardSupply(
-            company_gstin=self.company_gstin
-        ).get_all_inward_supplies(names=[inward_supply_name])
-        purchases = PurchaseInvoice().get_all_purchases(names=[purchase_name])
+        inward_supply = InwardSupply().get_all(
+            self.company_gstin, names=[inward_supply_name]
+        )
+        purchases = PurchaseInvoice().get_all(names=[purchase_name])
 
         reconciliation_data = [
             frappe._dict(
@@ -157,7 +158,7 @@ class GSTInvoiceManagementSystem(Document):
         PI = frappe.qb.DocType("Purchase Invoice")
         query = (
             PurchaseInvoice()
-            .get_base_purchase_query(["gst_category", "is_return"])
+            .get_query(additional_fields=["gst_category", "is_return"])
             .where(PI.supplier_gstin.like(f"%{filters.supplier_gstin}%"))
             .where(PI.bill_date[filters.bill_from_date : filters.bill_to_date])
         )
@@ -292,7 +293,7 @@ def get_data_for_upload(company_gstin):
     reset_data = {}
     key_invoice_map = {}
 
-    gst_inward_supply_list = get_inward_supplies_to_upload(company_gstin)
+    gst_inward_supply_list = InwardSupply().get_for_upload(company_gstin)
 
     for invoice in gst_inward_supply_list:
         key = f"{invoice.doc_type}_{invoice.is_amended}"
@@ -322,22 +323,6 @@ def get_data_for_upload(company_gstin):
             reset_data[category.lower()] = reset_invoices
 
     return upload_data, reset_data
-
-
-def get_inward_supplies_to_upload(company_gstin):
-    _InwardSupply = InwardSupply(company_gstin=company_gstin)
-    query = _InwardSupply.get_base_inward_supply_query(
-        additional_fields=[
-            "doc_type",
-            "is_amended",
-            "sup_return_period",
-            "document_value",
-        ]
-    )
-    return query.where(
-        _InwardSupply.inward_supply.ims_action
-        != _InwardSupply.inward_supply.previous_ims_action
-    ).run(as_dict=True)
 
 
 def process_upload_or_reset_ims(return_log, action):

@@ -13,36 +13,20 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
 
 
 class IMSReconciler(Reconciler):
-    ORIGINAL_VS_AMENDED = (
-        {
-            "original": "B2B",
-            "amended": "B2BA",
-            "doc_type": "Invoice",
-        },
-        {
-            "original": "CDNR",
-            "amended": "CDNRA",
-            "doc_type": "Credit Note",
-        },
-        {
-            "original": "CDNR",
-            "amended": "CDNRA",
-            "doc_type": "Debit Note",
-        },
+    CATEGORIES = (
+        {"doc_type": ["Invoice", "Debit Note"]},
+        {"doc_type": ["Credit Note"]},
     )
 
-    def auto_reconcile_invoices(self, filters):
+    def reconcile(self, filters):
         """
         Reconcile purchases and inward supplies.
         """
-        for row in self.ORIGINAL_VS_AMENDED:
+        for row in self.CATEGORIES:
             filters.update(row)
-            self.category = row["original"]
 
-            purchases = PurchaseInvoice().get_unmatched_purchase_invoices(filters)
-            inward_supplies = InwardSupply(
-                company_gstin=filters.company_gstin
-            ).get_unmatched_inward_supplies(filters)
+            purchases = PurchaseInvoice().get_unmatched(filters)
+            inward_supplies = InwardSupply().get_unmatched(filters)
 
             # GSTIN Level matching
             self.reconcile_for_rules(GSTIN_RULES, purchases, inward_supplies)
@@ -54,26 +38,36 @@ class IMSReconciler(Reconciler):
 
 
 class InwardSupply:
-    def __init__(self, **kwargs):
-        self.inward_supply = frappe.qb.DocType("GST Inward Supply")
-        self.company_gstin = kwargs.get("company_gstin")
+    def __init__(self):
+        self.IMS = frappe.qb.DocType("GST Inward Supply")
 
-    def get_all_inward_supplies(self, names=None):
-        query = self.get_base_inward_supply_query(["action", "doc_type"])
+    def get_all(self, company_gstin, names=None):
+        query = self.get_query(company_gstin, ["action", "doc_type"])
 
         if names:
-            query = query.where(self.inward_supply.name.isin(names))
+            query = query.where(self.IMS.name.isin(names))
 
         return query.run(as_dict=True)
 
-    def get_unmatched_inward_supplies(self, filters):
-        categories = [filters.original, filters.amended]
+    def get_for_upload(self, company_gstin):
+        query = self.get_query(
+            company_gstin,
+            additional_fields=[
+                "doc_type",
+                "is_amended",
+                "sup_return_period",
+                "document_value",
+            ],
+        )
+        return query.where(self.IMS.ims_action != self.IMS.previous_ims_action).run(
+            as_dict=True
+        )
 
-        query = self.get_base_inward_supply_query()
+    def get_unmatched(self, filters):
+        query = self.get_query(filters.company_gstin)
         data = (
-            query.where(IfNull(self.inward_supply.match_status, "") == "")
-            .where(self.inward_supply.classification.isin(categories))
-            .where(self.inward_supply.doc_type == filters.doc_type)
+            query.where(IfNull(self.IMS.match_status, "") == "")
+            .where(self.IMS.doc_type.isin(filters.doc_type))
             .run(as_dict=True)
         )
 
@@ -82,27 +76,24 @@ class InwardSupply:
 
         return BaseUtil.get_dict_for_key("supplier_gstin", data)
 
-    def get_base_inward_supply_query(self, additional_fields=None):
+    def get_query(self, company_gstin, additional_fields=None):
         fields = self.get_fields(additional_fields=additional_fields)
 
         return (
-            frappe.qb.from_(self.inward_supply)
+            frappe.qb.from_(self.IMS)
             .select(
                 *fields,
                 ConstantColumn("GST Inward Supply").as_("doctype"),
                 Case()
                 .when(
-                    (
-                        self.inward_supply.ims_action
-                        == self.inward_supply.previous_ims_action
-                    ),
+                    (self.IMS.ims_action == self.IMS.previous_ims_action),
                     False,
                 )
                 .else_(True)
                 .as_("pending_upload"),
             )
-            .where(IfNull(self.inward_supply.previous_ims_action, "") != "")
-            .where(self.inward_supply.company_gstin == self.company_gstin)
+            .where(IfNull(self.IMS.previous_ims_action, "") != "")
+            .where(self.IMS.company_gstin == company_gstin)
         )
 
     def get_fields(self, additional_fields=None):
@@ -129,61 +120,46 @@ class InwardSupply:
         if additional_fields:
             fields += additional_fields
 
-        fields = [self.inward_supply[field] for field in fields]
+        fields = [self.IMS[field] for field in fields]
         fields += self.get_tax_fields()
 
         return fields
 
     def get_tax_fields(self):
         fields = GST_TAX_TYPES[:-1] + ("taxable_value",)
-        return [self.inward_supply[field] for field in fields]
+        return [self.IMS[field] for field in fields]
 
 
 class PurchaseInvoice:
     def __init__(self):
-        self.purchase_invoice = frappe.qb.DocType("Purchase Invoice")
-        self.purchase_invoice_item = frappe.qb.DocType("Purchase Invoice Item")
+        self.PI = frappe.qb.DocType("Purchase Invoice")
+        self.PI_ITEM = frappe.qb.DocType("Purchase Invoice Item")
 
-    def get_all_purchases(self, names=None, filters=None):
-        if not filters:
-            filters = frappe._dict()
-
-        query = self.get_base_purchase_query()
+    def get_all(self, names=None, filters=None):
+        query = self.get_query(filters=filters)
 
         if names:
-            query = query.where(self.purchase_invoice.name.isin(names))
-
-        query = self.get_query_with_filters(query, filters)
+            query = query.where(self.PI.name.isin(names))
 
         purchases = query.run(as_dict=True)
 
         return {doc.name: doc for doc in purchases}
 
-    def get_unmatched_purchase_invoices(self, filters):
+    def get_unmatched(self, filters):
         gst_category = (
             "Registered Regular",
             "Tax Deductor",
+            "Tax Collector",
             "Input Service Distributor",
         )
-        is_return = (
-            1
-            if filters.category in ["CDNR", "CDNRA"]
-            and filters.doc_type == "Credit Note"
-            else 0
-        )
-
-        query = self.get_base_purchase_query()
-        query = self.get_query_with_filters(query, filters)
+        is_return = 1 if "Credit Note" in filters.doc_type else 0
 
         data = (
-            query.where(self.purchase_invoice.gst_category.isin(gst_category))
-            .where(self.purchase_invoice.reconciliation_status == "Unreconciled")
-            .where(self.purchase_invoice.is_return == is_return)
-            .where(self.purchase_invoice.is_reverse_charge == 0)
-            .where(
-                self.purchase_invoice.ineligibility_reason
-                != "ITC restricted due to PoS rules"
-            )
+            self.get_query(filters=filters)
+            .where(self.PI.gst_category.isin(gst_category))
+            .where(self.PI.reconciliation_status == "Unreconciled")
+            .where(self.PI.is_return == is_return)
+            .where(self.PI.ineligibility_reason != "ITC restricted due to PoS rules")
             .run(as_dict=True)
         )
 
@@ -192,20 +168,39 @@ class PurchaseInvoice:
 
         return BaseUtil.get_dict_for_key("supplier_gstin", data)
 
-    def get_base_purchase_query(self, additional_fields=None):
+    def get_query(self, filters, additional_fields=None):
         fields = self.get_fields(additional_fields)
 
-        return (
-            frappe.qb.from_(self.purchase_invoice)
-            .left_join(self.purchase_invoice_item)
-            .on(self.purchase_invoice_item.parent == self.purchase_invoice.name)
+        query = (
+            frappe.qb.from_(self.PI)
+            .left_join(self.PI_ITEM)
+            .on(self.PI_ITEM.parent == self.PI.name)
             .select(
-                Abs(Sum(self.purchase_invoice_item.taxable_value)).as_("taxable_value"),
+                Abs(Sum(self.PI_ITEM.taxable_value)).as_("taxable_value"),
                 *fields,
                 ConstantColumn("Purchase Invoice").as_("doctype"),
             )
-            .groupby(self.purchase_invoice.name)
+            .where(self.PI.docstatus == 1)
+            .where(IfNull(self.PI.reconciliation_status, "") != "Not Applicable")
+            .where(self.PI.is_opening == "No")
+            .where(self.PI_ITEM.parenttype == "Purchase Invoice")
+            .where(self.PI.is_reverse_charge == 0)  # for IMS
+            .groupby(self.PI.name)
         )
+
+        if filters:
+            query = self.apply_filters(query, filters)
+
+        return query
+
+    def apply_filters(self, query, filters):
+        if filters.get("company"):
+            query = query.where(self.PI.company == filters.company)
+
+        if filters.get("company_gstin"):
+            query = query.where(self.PI.company_gstin == filters.company_gstin)
+
+        return query
 
     def get_fields(self, additional_fields=None):
         fields = [
@@ -223,7 +218,7 @@ class PurchaseInvoice:
         if additional_fields:
             fields += additional_fields
 
-        fields = [self.purchase_invoice[field] for field in fields]
+        fields = [self.PI[field] for field in fields]
         fields += self.get_tax_fields()
 
         return fields
@@ -234,16 +229,5 @@ class PurchaseInvoice:
             for tax_type in GST_TAX_TYPES
         ]
 
-    def get_query_with_filters(self, query, filters):
-        if filters.get("company"):
-            query = query.where(self.purchase_invoice.company == filters.company)
-
-        if filters.get("company_gstin"):
-            query = query.where(
-                self.purchase_invoice.company_gstin == filters.company_gstin
-            )
-
-        return query
-
     def query_tax_amount(self, field):
-        return Abs(Sum(getattr(self.purchase_invoice_item, field)))
+        return Abs(Sum(getattr(self.PI_ITEM, field)))
