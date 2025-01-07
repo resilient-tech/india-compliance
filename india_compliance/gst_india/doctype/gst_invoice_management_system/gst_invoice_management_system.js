@@ -727,7 +727,7 @@ class IMSAction {
                 () => reconciliation.unlink_documents(this.frm, this.frm.ims),
                 __("Actions")
             );
-            this.frm.add_custom_button(__("dropdown-divider"), () => {}, __("Actions"));
+            this.frm.add_custom_button(__("dropdown-divider"), () => { }, __("Actions"));
         }
 
         // Setup Bulk Actions
@@ -780,7 +780,7 @@ class IMSAction {
                     });
                     return;
                 }
-                frappe.show_alert(__("Uploading Invoices"));
+                frappe.show_alert(__("Checking Upload Status"));
 
                 this.handle_upload_and_reset_request();
             },
@@ -788,17 +788,17 @@ class IMSAction {
     }
 
     async handle_upload_and_reset_request() {
-        const upload_request_status = await this.frm.ims.check_action_status_with_retry(
+        const upload_status = await this.frm.ims.check_action_status_with_retry(
             "upload"
         );
-        const reset_request_status = await this.frm.ims.check_action_status_with_retry(
+        const reset_status = await this.frm.ims.check_action_status_with_retry(
             "reset"
         );
 
         const error_statuses = ["ER", "PE"];
         if (
-            error_statuses.includes(upload_request_status.status_cd) ||
-            error_statuses.includes(reset_request_status.status_cd)
+            error_statuses.includes(upload_status.status_cd) ||
+            error_statuses.includes(reset_status.status_cd)
         ) {
             frappe.msgprint({
                 message:
@@ -899,11 +899,10 @@ class DetailViewDialog {
     init_dialog() {
         const supplier_details = `
         <h5>${this.comparision_data.supplier_name}
-        ${
-            this.comparision_data.supplier_gstin
+        ${this.comparision_data.supplier_gstin
                 ? ` (${this.comparision_data.supplier_gstin})`
                 : ""
-        }
+            }
         </h5>
         `;
 
@@ -1063,7 +1062,7 @@ class DetailViewDialog {
         };
 
         const { message } = await frappe.call({
-            method: "get_link_options",
+            method: "get_purchase_invoice_options",
             doc: this.frm,
             args: {
                 filters: this.filters,

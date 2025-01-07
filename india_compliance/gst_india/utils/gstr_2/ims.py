@@ -9,6 +9,9 @@ from india_compliance.gst_india.constants import (
 from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
     create_inward_supply,
 )
+from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
+    update_previous_ims_action as _update_previous_ims_action,
+)
 from india_compliance.gst_india.utils import parse_datetime
 from india_compliance.gst_india.utils.gstr_2.gstr import get_mapped_value
 
@@ -62,6 +65,24 @@ class IMS:
             transactions.append(self.get_transaction(invoice))
 
         return transactions
+
+    def update_previous_ims_action(self, uploaded_invoices, error_invoices):
+        errors = set()
+
+        for supplier in error_invoices:
+            for invoice in supplier.get("inv"):
+
+                # same key across categories
+                errors.add(f"{invoice.get('inum')}_{supplier.get('stin')}")
+
+        for invoice in uploaded_invoices:
+            invoice = self.get_transaction(frappe._dict(invoice))
+
+            # different keys across categories
+            if f"{invoice.get('bill_no')}_{invoice.get('supplier_gstin')}" in errors:
+                continue
+
+            _update_previous_ims_action(invoice)
 
     def get_transaction(self, invoice):
         transaction = frappe._dict(

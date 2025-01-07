@@ -1232,6 +1232,7 @@ class ReconciledData(BaseReconciliation):
             "Overseas": "IMPG",
             "UIN Holders": "B2B",
             "Tax Deductor": "B2B",
+            "Tax Collector": "B2B",
             "Input Service Distributor": "B2B",
         }
 

@@ -355,7 +355,7 @@ class IMSAPI(ReturnsAPI):
 
         return FilesAPI().get_all(response)
 
-    def save_ims_action(self, data):
+    def save(self, data):
         return self.put(
             endpoint=self.END_POINT,
             json={
@@ -364,7 +364,7 @@ class IMSAPI(ReturnsAPI):
             },
         )
 
-    def reset_ims_action(self, data):
+    def reset(self, data):
         return self.put(
             endpoint=self.END_POINT,
             json={

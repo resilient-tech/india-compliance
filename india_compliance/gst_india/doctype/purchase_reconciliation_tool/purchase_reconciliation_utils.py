@@ -17,6 +17,7 @@ def link_documents(purchase_invoice_name, inward_supply_name, link_doctype):
     if isup_linked_with := frappe.db.get_value(
         "GST Inward Supply", inward_supply_name, "link_name"
     ):
+        set_reconciliation_status(link_doctype, (isup_linked_with,), "Unreconciled")
         _unlink_documents((inward_supply_name,))
         purchases.append(isup_linked_with)
 
@@ -33,11 +34,9 @@ def link_documents(purchase_invoice_name, inward_supply_name, link_doctype):
     link_doc["match_status"] = "Manual Match"
 
     # link documents
-    frappe.db.set_value(
-        "GST Inward Supply",
-        inward_supply_name,
-        link_doc,
-    )
+    frappe.db.set_value("GST Inward Supply", inward_supply_name, link_doc)
+    set_reconciliation_status(link_doctype, (purchase_invoice_name,), "Match Found")
+
     purchases.append(purchase_invoice_name)
     inward_supplies.append(inward_supply_name)
 

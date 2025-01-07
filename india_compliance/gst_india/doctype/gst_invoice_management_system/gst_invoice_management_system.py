@@ -15,9 +15,6 @@ from india_compliance.gst_india.doctype.gst_invoice_management_system import (
     InwardSupply,
     PurchaseInvoice,
 )
-from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
-    update_previous_ims_action as _update_previous_ims_action,
-)
 from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     enqueue_notification,
     status_code_map,
@@ -90,7 +87,10 @@ class GSTInvoiceManagementSystem(Document):
                 )
             )
 
+        # Missing in 2A/2B is ignored for IMS
+
         ReconciledData().process_data(invoice_data, retain_doc=True)
+
         return invoice_data
 
     @frappe.whitelist()
@@ -149,7 +149,7 @@ class GSTInvoiceManagementSystem(Document):
         return self.get_invoice_data(inward_supplies, purchases)
 
     @frappe.whitelist()
-    def get_link_options(self, filters):
+    def get_purchase_invoice_options(self, filters):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         if isinstance(filters, dict):
@@ -176,11 +176,7 @@ def download_invoices(company_gstin):
 
     TaxpayerBaseAPI(company_gstin).validate_auth_token()
 
-    frappe.enqueue(
-        download_ims_invoices,
-        queue="long",
-        gstin=company_gstin,
-    )
+    frappe.enqueue(download_ims_invoices, queue="long", gstin=company_gstin)
 
 
 @frappe.whitelist()
@@ -220,40 +216,6 @@ def check_action_status(company_gstin, action):
     return process_upload_or_reset_ims(ims_log, action)
 
 
-def upload_ims_invoices(company_gstin):
-    if not frappe.db.exists("GST Return Log", f"IMS-ALL-{company_gstin}"):
-        frappe.throw(_("Please download invoices before uploading"))
-        return
-
-    ims_log = frappe.get_doc(
-        "GST Return Log",
-        f"IMS-ALL-{company_gstin}",
-    )
-
-    upload_data, reset_data = get_data_for_upload(company_gstin)
-
-    if not (upload_data or reset_data):
-        return False
-
-    verify_request_in_progress(ims_log, False)
-
-    api = IMSAPI(company_gstin)
-
-    if upload_data:
-        # Upload invoices where action in ["Accepted", "Rejected", "Pending"]
-        response = api.save_ims_action(upload_data)
-        set_gstr_actions(
-            ims_log, "upload", response.get("reference_id"), api.request_id
-        )
-
-    if reset_data:
-        # Reset invoices where action is "No Action"
-        response = api.reset_ims_action(reset_data)
-        set_gstr_actions(ims_log, "reset", response.get("reference_id"), api.request_id)
-
-    return True
-
-
 def download_and_upload_ims_invoices(company_gstin):
     """
     1. This function will download invoices from GST Portal,
@@ -277,6 +239,39 @@ def download_and_upload_ims_invoices(company_gstin):
         "check_ims_upload_status",
         user=frappe.session.user,
     )
+
+
+def upload_ims_invoices(company_gstin):
+    if not frappe.db.exists("GST Return Log", f"IMS-ALL-{company_gstin}"):
+        frappe.throw(_("Please download invoices before uploading"))
+
+    ims_log = frappe.get_doc(
+        "GST Return Log",
+        f"IMS-ALL-{company_gstin}",
+    )
+
+    upload_data, reset_data = get_data_for_upload(company_gstin)
+
+    if not (upload_data or reset_data):
+        return False
+
+    verify_request_in_progress(ims_log, False)
+
+    api = IMSAPI(company_gstin)
+
+    if upload_data:
+        # Upload invoices where action in ["Accepted", "Rejected", "Pending"]
+        response = api.save(upload_data)
+        set_gstr_actions(
+            ims_log, "upload", response.get("reference_id"), api.request_id
+        )
+
+    if reset_data:
+        # Reset invoices where action is "No Action"
+        response = api.reset(reset_data)
+        set_gstr_actions(ims_log, "reset", response.get("reference_id"), api.request_id)
+
+    return True
 
 
 def get_data_for_upload(company_gstin):
@@ -327,19 +322,15 @@ def get_data_for_upload(company_gstin):
 
 def process_upload_or_reset_ims(return_log, action):
     response = {"status_cd": "P"}  # dummy_response
-    if not return_log.actions:
-        return response
-
-    api = IMSAPI(return_log.gstin)
-
     doc = return_log.get_unprocessed_action(action)
     if not doc:
         return response
 
+    api = IMSAPI(return_log.gstin)
     response = api.get_request_status(doc.token)
+
     status_cd = response.get("status_cd")
 
-    erroneous_invoices = []
     if status_cd != "IP":
         doc.db_set({"status": status_code_map.get(status_cd)})
         enqueue_notification(
@@ -350,9 +341,6 @@ def process_upload_or_reset_ims(return_log, action):
             api.request_id if status_cd == "ER" else None,
         )
 
-    if status_cd == "PE":
-        erroneous_invoices = get_erroneous_invoices(response.get("error_report"))
-
     if status_cd in ["P", "PE"]:
         # Exclude erroneous invoices from previous IMS action update
         # This is enqueued because linking of integration request is enqueued
@@ -360,21 +348,21 @@ def process_upload_or_reset_ims(return_log, action):
         frappe.enqueue(
             update_previous_ims_action,
             queue="long",
-            return_log=doc,
-            erroneous_invoices=erroneous_invoices,
+            integration_request=doc.integration_request,
+            error_report=response.get("error_report") or dict(),
         )
 
     return response
 
 
-def get_erroneous_invoices(error_report):
-    invoice_names = []
-    for error_list in error_report.values():
-        for error in error_list:
-            for invoice in error.get("inv"):
-                invoice_names.append(f"{invoice.get('inum')}_{error.get('stin')}")
+def update_previous_ims_action(integration_request, error_report=None):
+    from india_compliance.gst_india.utils.gstr_2 import ReturnType, get_data_handler
 
-    return invoice_names
+    uploded_invoices = get_uploaded_invoices(integration_request)
+
+    for category, invoices in uploded_invoices.items():
+        _class = get_data_handler(ReturnType.IMS.value, category.upper())
+        _class().update_previous_ims_action(invoices, error_report.get(category, []))
 
 
 def get_uploaded_invoices(integration_request):
@@ -384,22 +372,10 @@ def get_uploaded_invoices(integration_request):
         )
     )
 
+    if not request_data:
+        return {}
+
+    if isinstance(request_data, str):
+        request_data = frappe.parse_json(request_data)
+
     return request_data["body"]["data"]["invdata"]
-
-
-def update_previous_ims_action(return_log, erroneous_invoices):
-    from india_compliance.gst_india.utils.gstr_2 import ReturnType, get_data_handler
-
-    integration_request = return_log.integration_request
-    uploded_invoices = get_uploaded_invoices(integration_request)
-
-    invoices_to_update = []
-    for category, invoices in uploded_invoices.items():
-        _class = get_data_handler(ReturnType.IMS.value, category.upper())
-        invoices_to_update.extend(_class.get_all_transactions(invoices))
-
-    for invoice in invoices_to_update:
-        if f"{invoice.bill_no}_{invoice.supplier_gstin}" in erroneous_invoices:
-            continue
-
-        _update_previous_ims_action(invoice)
