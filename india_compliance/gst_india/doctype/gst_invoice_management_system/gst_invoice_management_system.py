@@ -39,7 +39,7 @@ from india_compliance.gst_india.utils.gstr_utils import ReturnType
 
 class GSTInvoiceManagementSystem(Document):
     @frappe.whitelist()
-    def autoreconcile_and_get_data(self, inward_supply=None, purchase=None):
+    def autoreconcile_and_get_data(self):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         filters = frappe._dict(
@@ -52,7 +52,7 @@ class GSTInvoiceManagementSystem(Document):
         # Auto-Reconcile invoices
         IMSReconciler().reconcile(filters)
 
-        return self.get_invoice_data(inward_supply, purchase, filters)
+        return self.get_invoice_data(filters=filters)
 
     def get_invoice_data(self, inward_supply=None, purchase=None, filters=None):
         if not filters:
@@ -66,7 +66,10 @@ class GSTInvoiceManagementSystem(Document):
         inward_supplies = InwardSupply().get_all(
             company_gstin=self.company_gstin, names=inward_supply
         )
-        # TODO: filter by link name
+
+        if not purchase:
+            purchase = [doc.link_name for doc in inward_supplies]
+
         purchases = PurchaseInvoice().get_all(names=purchase, filters=filters)
 
         invoice_data = []

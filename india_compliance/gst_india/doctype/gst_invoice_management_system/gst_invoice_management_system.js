@@ -32,6 +32,7 @@ frappe.ui.form.on("GST Invoice Management System", {
 
         // Downloaded and Reconciled Invoices
         frappe.realtime.on("ims_download_completed", message => {
+            this.ims_actions.get_ims_data(frm);
             frappe.show_alert({
                 message: message["message"],
                 indicator: "green",
@@ -715,7 +716,6 @@ class IMSAction {
         this.frm.add_custom_button(__("Download Invoices"), async () => {
             render_empty_state(this.frm);
             await this.download_ims_data(this.frm);
-            this.get_ims_data(this.frm); // TODO: Required ??
         });
     }
 
@@ -727,7 +727,7 @@ class IMSAction {
                 () => reconciliation.unlink_documents(this.frm, this.frm.ims),
                 __("Actions")
             );
-            this.frm.add_custom_button(__("dropdown-divider"), () => { }, __("Actions"));
+            this.frm.add_custom_button(__("dropdown-divider"), () => {}, __("Actions"));
         }
 
         // Setup Bulk Actions
@@ -791,9 +791,7 @@ class IMSAction {
         const upload_status = await this.frm.ims.check_action_status_with_retry(
             "upload"
         );
-        const reset_status = await this.frm.ims.check_action_status_with_retry(
-            "reset"
-        );
+        const reset_status = await this.frm.ims.check_action_status_with_retry("reset");
 
         const error_statuses = ["ER", "PE"];
         if (
@@ -899,10 +897,11 @@ class DetailViewDialog {
     init_dialog() {
         const supplier_details = `
         <h5>${this.comparision_data.supplier_name}
-        ${this.comparision_data.supplier_gstin
+        ${
+            this.comparision_data.supplier_gstin
                 ? ` (${this.comparision_data.supplier_gstin})`
                 : ""
-            }
+        }
         </h5>
         `;
 
