@@ -167,17 +167,17 @@ frappe.ui.form.on(DOCTYPE, {
             )
                 return;
 
-            const only_books_data = error_log != undefined ;
+            const only_books_data = error_log != undefined;
             if (error_log) {
                 frappe.msgprint({
-                    message: __("Error while preparing GSTR-1 data, Please Check {0} for more deatils",
+                    message: __("Error while preparing GSTR-1 data, please check {0} for more deatils.",
                         [`<a href='/app/error-log/${error_log}' class='variant-click'>Error Log</a>`]),
                     title: "GSTR-1 Download Failed",
                     indicator: "red",
                 })
             }
 
-            frm.taxpayer_api_call("generate_gstr1", {only_books_data}).then(r => {
+            frm.taxpayer_api_call("generate_gstr1", { only_books_data }).then(r => {
                 frm.doc.__gst_data = r.message;
                 frm.trigger("load_gstr1_data");
             });
@@ -1150,10 +1150,10 @@ class TabManager {
             args[2]?.indent == 0
                 ? `<strong>${value}</strong>`
                 : isDescriptionCell
-                ? `<a href="#" class="description">
+                    ? `<a href="#" class="description">
                     <p style="padding-left: 15px">${value}</p>
                     </a>`
-                : value;
+                    : value;
 
         return value;
     }
@@ -1908,9 +1908,9 @@ class FiledTab extends GSTR1_TabManager {
             const { include_uploaded, delete_missing } = dialog
                 ? dialog.get_values()
                 : {
-                      include_uploaded: true,
-                      delete_missing: false,
-                  };
+                    include_uploaded: true,
+                    delete_missing: false,
+                };
 
             const doc = me.instance.frm.doc;
 
@@ -2154,7 +2154,7 @@ class ReconcileTab extends FiledTab {
         });
     }
 
-    get_creation_time_string() {} // pass
+    get_creation_time_string() { } // pass
 
     get_detail_view_column() {
         return [
@@ -2228,8 +2228,8 @@ class ErrorsTab extends TabManager {
         ];
     }
 
-    setup_actions() {}
-    set_creation_time_string() {}
+    setup_actions() { }
+    set_creation_time_string() { }
 
     refresh_data(data) {
         data = data.error_report;
@@ -2486,17 +2486,17 @@ class FileGSTR1Dialog {
             <tr>
                 <td>${description}</td>
                 <td style="text-align: right;">${format_currency(
-                    liability.total_igst_amount
-                )}</td>
+            liability.total_igst_amount
+        )}</td>
                 <td style="text-align: right;">${format_currency(
-                    liability.total_cgst_amount
-                )}</td>
+            liability.total_cgst_amount
+        )}</td>
                 <td style="text-align: right;">${format_currency(
-                    liability.total_sgst_amount
-                )}</td>
+            liability.total_sgst_amount
+        )}</td>
                 <td style="text-align: right;">${format_currency(
-                    liability.total_cess_amount
-                )}</td>
+            liability.total_cess_amount
+        )}</td>
             </tr>
         `;
     }
@@ -2873,7 +2873,7 @@ function is_gstr1_api_enabled() {
 }
 
 function patch_set_indicator(frm) {
-    frm.toolbar.set_indicator = function () {};
+    frm.toolbar.set_indicator = function () { };
 }
 
 async function set_default_company_gstin(frm) {

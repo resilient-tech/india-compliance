@@ -566,7 +566,16 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         try:
             gov_data, is_enqueued = self.get_gov_gstr1_data()
         except frappe.ValidationError as error:
-            return self.handle_gstr1_gov_failure(data, filters, error)
+            self.generate_only_books_data(data, filters)
+            self.update_status("Failed", commit=True)
+
+            error_log = frappe.log_error(
+                title="GSTR-1 Generation Failed",
+                message=str(error),
+                reference_doctype="GSTR-1 Beta",
+            )
+            callback and callback(filters, error_log.name)
+            return
 
         books_data = self.get_books_gstr1_data(filters)
 
@@ -616,23 +625,6 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
 
         # download data
         return download_gstr1_json_data(self)
-
-    def handle_gstr1_gov_failure(self, data, filters, error):
-        self.generate_only_books_data(data, filters)
-        error_log = frappe.log_error(
-            title="GSTR-1 Generation Failed",
-            message=str(error),
-            reference_doctype="GSTR-1 Beta",
-        )
-        self.update_status("Failed", commit=True)
-        frappe.publish_realtime(
-            "gstr1_data_prepared",
-            message={
-                "filters": filters,
-                "error_log": error_log.name,
-            },
-            user=frappe.session.user,
-        )
 
     def get_books_gstr1_data(self, filters, aggregate=False):
         from india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta import (

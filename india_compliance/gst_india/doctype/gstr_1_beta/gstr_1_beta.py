@@ -100,10 +100,10 @@ class GSTR1Beta(Document):
         if recompute_books:
             gstr1_log.remove_json_for("books")
 
-        # files are already present
+        # failed while downloading gov data
         if only_books_data:
             data = gstr1_log.load_data("books", "books_summary")
-            data["status"] = "Error While Generation"
+            data["status"] = gstr1_log.filing_status
             return data
 
         if gstr1_log.has_all_files(settings):
@@ -154,7 +154,7 @@ class GSTR1Beta(Document):
 
             raise e
 
-    def on_generate(self, filters=None):
+    def on_generate(self, filters=None, error_log=None):
         """
         Once data is generated, update the status and publish the data
         """
@@ -168,7 +168,7 @@ class GSTR1Beta(Document):
 
         frappe.publish_realtime(
             "gstr1_data_prepared",
-            message={"filters": filters},
+            message={"filters": filters, "error_log": error_log},
             user=frappe.session.user,
             doctype=self.doctype,
         )
