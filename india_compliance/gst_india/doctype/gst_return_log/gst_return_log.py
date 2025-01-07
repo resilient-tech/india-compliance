@@ -190,13 +190,14 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
         fields = ["books", "books_summary"]
 
         if self.is_gstr1_api_enabled(settings):
-            fields.extend(["reconcile", "reconcile_summary"])
-
             if self.filing_status == "Filed":
-                fields.extend(["filed", "filed_summary"])
-            else:
-                if settings.compare_unfiled_data:
-                    fields.extend(["unfiled", "unfiled_summary"])
+                fields.extend(
+                    ["reconcile", "reconcile_summary", "filed", "filed_summary"]
+                )
+            elif settings.compare_unfiled_data:
+                fields.extend(
+                    ["reconcile", "reconcile_summary", "unfiled", "unfiled_summary"]
+                )
 
         return fields
 
