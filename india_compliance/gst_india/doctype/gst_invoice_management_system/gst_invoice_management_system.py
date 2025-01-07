@@ -10,14 +10,13 @@ from india_compliance.gst_india.api_classes.taxpayer_base import (
     otp_handler,
 )
 from india_compliance.gst_india.api_classes.taxpayer_returns import IMSAPI
+from india_compliance.gst_india.constants import STATUS_CODE_MAP
 from india_compliance.gst_india.doctype.gst_invoice_management_system import (
     IMSReconciler,
     InwardSupply,
     PurchaseInvoice,
 )
 from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
-    enqueue_notification,
-    status_code_map,
     verify_request_in_progress,
 )
 from india_compliance.gst_india.doctype.gstr_action.gstr_action import set_gstr_actions
@@ -29,6 +28,7 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_re
     link_documents,
     unlink_documents,
 )
+from india_compliance.gst_india.utils import enqueue_notification
 from india_compliance.gst_india.utils.gstr_2 import (
     GSTRCategory,
     download_ims_invoices,
@@ -335,12 +335,13 @@ def process_upload_or_reset_ims(return_log, action):
     status_cd = response.get("status_cd")
 
     if status_cd != "IP":
-        doc.db_set({"status": status_code_map.get(status_cd)})
+        doc.db_set({"status": STATUS_CODE_MAP.get(status_cd)})
         enqueue_notification(
             return_log.return_period,
             doc.request_type,
             status_cd,
             return_log.gstin,
+            "GST Invoice Management System",
             api.request_id if status_cd == "ER" else None,
         )
 

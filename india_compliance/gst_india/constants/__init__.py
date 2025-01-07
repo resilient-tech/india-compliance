@@ -46,6 +46,13 @@ GST_CATEGORY_MAP = {
 
 ACTION_MAP = {"A": "Accepted", "R": "Rejected", "P": "Pending", "N": "No Action"}
 
+STATUS_CODE_MAP = {
+    "P": "Processed",
+    "PE": "Processed with Errors",
+    "ER": "Error",
+    "IP": "In Progress",
+}
+
 EXPORT_TYPES = (
     "WOP",  # Without Payment of Tax [0]
     "WP",  # With Payment of Tax [1]
