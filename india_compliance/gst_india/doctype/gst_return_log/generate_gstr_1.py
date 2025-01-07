@@ -7,6 +7,7 @@ from frappe import _, unscrub
 from frappe.utils import flt
 
 from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
+from india_compliance.gst_india.doctype.gstr_action.gstr_action import set_gstr_actions
 from india_compliance.gst_india.utils.gstr_1 import GovJsonKey, GSTR1_SubCategory
 from india_compliance.gst_india.utils.gstr_1.__init__ import (
     CATEGORY_SUB_CATEGORY_MAPPING,
@@ -1028,42 +1029,6 @@ def get_differing_categories(mapped_summary, gov_summary):
                 break
 
     return differing_categories
-
-
-def set_gstr_actions(doc, request_type, token, request_id, status=None):
-    if not token:
-        return
-
-    row = {
-        "request_type": request_type,
-        "token": token,
-        "creation_time": frappe.utils.now_datetime(),
-    }
-
-    if status:
-        row["status"] = status
-
-    doc.append("actions", row)
-    doc.save()
-    enqueue_link_integration_request(token, request_id)
-
-
-def enqueue_link_integration_request(token, request_id):
-    """
-    Integration request is enqueued. Hence, it's name is not available immediately.
-    Hence, link it after the request is processed.
-    """
-    frappe.enqueue(
-        link_integration_request, queue="long", token=token, request_id=request_id
-    )
-
-
-def link_integration_request(token, request_id):
-    doc_name = frappe.db.get_value("Integration Request", {"request_id": request_id})
-    if doc_name:
-        frappe.db.set_value(
-            "GSTR Action", {"token": token}, {"integration_request": doc_name}
-        )
 
 
 def enqueue_notification(

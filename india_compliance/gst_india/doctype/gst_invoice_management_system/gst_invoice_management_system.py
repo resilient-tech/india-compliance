@@ -20,10 +20,10 @@ from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply impo
 )
 from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     enqueue_notification,
-    set_gstr_actions,
     status_code_map,
     verify_request_in_progress,
 )
+from india_compliance.gst_india.doctype.gstr_action.gstr_action import set_gstr_actions
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     ReconciledData,
 )
