@@ -128,7 +128,7 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
         if not is_production_api_enabled(settings):
             return False
 
-        if not settings.compare_gstr_1_data:
+        if not settings.enable_gstr_1_api:
             return False
 
         if not settings.has_valid_credentials(self.gstin, "Returns"):
