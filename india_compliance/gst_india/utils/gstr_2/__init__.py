@@ -139,7 +139,7 @@ def download_gstr_2a(gstin, return_periods, gst_categories=None):
         save_gstr_2a(gstin, return_period, json_data)
 
     if queued_message:
-        publish_queued_message()
+        publish_2a_2b_queued_message()
 
     if not has_data:
         end_transaction_progress(return_period)
@@ -207,13 +207,13 @@ def download_gstr_2b(gstin, return_periods):
         save_gstr_2b(gstin, return_period, response)
 
     if queued_message:
-        publish_queued_message()
+        publish_2a_2b_queued_message()
 
     if not has_data:
         end_transaction_progress(return_period)
 
 
-def download_ims_invoices(gstin):
+def download_ims_invoices(gstin, for_upload=False):
     api = IMSAPI(gstin)
     has_queued_invoices = False
     has_non_queued_invoices = False
@@ -247,16 +247,7 @@ def download_ims_invoices(gstin):
     create_ims_return_log(gstin)
 
     if has_queued_invoices:
-        frappe.publish_realtime(
-            "ims_download_queued",
-            message={
-                "message": _(
-                    "Some categories are queued for download at GSTN as there may be large data."
-                    " We will retry download every few minutes until it succeeds."
-                )
-            },
-            user=frappe.session.user,
-        )
+        publish_ims_queued_message(for_upload)
 
     if has_non_queued_invoices:
         frappe.publish_realtime(
@@ -386,7 +377,7 @@ def _download_gstr_2a(gstin, return_period, json_data):
     save_gstr_2a(gstin, return_period, json_data)
 
 
-def publish_queued_message():
+def publish_2a_2b_queued_message():
     frappe.publish_realtime(
         "gstr_2a_2b_download_message",
         {
@@ -397,6 +388,25 @@ def publish_queued_message():
                 "You can track download status from download dialog."
             ),
         },
+        user=frappe.session.user,
+    )
+
+
+def publish_ims_queued_message(for_upload):
+    message = _(
+        "Some categories are queued for download at GSTN as there may be large data."
+        " We will retry downloading every few minutes until it succeeds."
+    )
+    if for_upload:
+        message = _(
+            "Some categories are queued for download at GSTN as there may be large data."
+            " We will retry downloading every few minutes until it succeeds.<br><br>"
+            " Please try uploading the data again after a few minutes."
+        )
+
+    frappe.publish_realtime(
+        "ims_download_queued",
+        message={"message": message},
         user=frappe.session.user,
     )
 

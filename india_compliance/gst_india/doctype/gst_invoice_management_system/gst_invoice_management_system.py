@@ -234,7 +234,7 @@ def download_and_upload_ims_invoices(company_gstin):
        (To notify user that process is completed successfully).
     """
 
-    has_queued_invoices = download_ims_invoices(company_gstin)
+    has_queued_invoices = download_ims_invoices(company_gstin, for_upload=True)
 
     # TODO: flag for pending upload and cron job for queued invoices
     if has_queued_invoices:
