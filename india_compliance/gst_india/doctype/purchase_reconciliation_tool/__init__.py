@@ -376,7 +376,16 @@ class PurchaseInvoice:
 
     def get_unmatched(self, category):
         gst_category = (
+<<<<<<< HEAD
             ("Registered Regular", "Tax Deductor")
+=======
+            (
+                "Registered Regular",
+                "Tax Deductor",
+                "Tax Collector",
+                "Input Service Distributor",
+            )
+>>>>>>> fc9e366f (fix: support purchases from tax collector in purchae reco tool)
             if category in ("B2B", "CDNR", "ISD")
             else ("SEZ", "Overseas", "UIN Holders")
         )
@@ -412,7 +421,7 @@ class PurchaseInvoice:
             .on(self.PI_ITEM.parent == self.PI.name)
             .where(self.PI.docstatus == 1)
             .where(IfNull(self.PI.reconciliation_status, "") != "Not Applicable")
-            .where(self.PI.is_opening == "NO")
+            .where(self.PI.is_opening == "No")
             .where(self.PI_ITEM.parenttype == "Purchase Invoice")
             .groupby(self.PI.name)
             .select(
@@ -1226,6 +1235,11 @@ class ReconciledData(BaseReconciliation):
             "Overseas": "IMPG",
             "UIN Holders": "B2B",
             "Tax Deductor": "B2B",
+<<<<<<< HEAD
+=======
+            "Tax Collector": "B2B",
+            "Input Service Distributor": "B2B",
+>>>>>>> fc9e366f (fix: support purchases from tax collector in purchae reco tool)
         }
 
         classification = GST_CATEGORIES.get(doc.gst_category)
