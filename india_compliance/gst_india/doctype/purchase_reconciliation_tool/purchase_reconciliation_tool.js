@@ -233,17 +233,8 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
     handle_download_message(frm) {
         frappe.realtime.on("gstr_2a_2b_download_message", message => {
             frm.dashboard.hide();
-<<<<<<< HEAD
-            frappe.msgprint({
-                title: __("2A/2B Download Failed"),
-                message: message.error,
-                indicator: "red"
-            });
-        })
-=======
             frappe.msgprint(message);
         });
->>>>>>> dc0be5df (fix: unique name for events and doctype parameter alone is redundant (#2903))
     },
 });
 
