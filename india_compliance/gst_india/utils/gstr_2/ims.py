@@ -44,10 +44,11 @@ class IMS:
         self.existing_transactions = self.get_existing_transactions()
 
     def create_transactions(self, category, invoices):
+        self.reset_previous_ims_action()
+
         if not invoices:
             return
 
-        self.reset_previous_ims_action()
         transactions = self.get_all_transactions(invoices)
 
         for transaction in transactions:
@@ -164,7 +165,7 @@ class IMS:
             .where(inward_supply.is_downloaded_from_2b == 0)
             .where(inward_supply.is_downloaded_from_2a == 0)
             .where(inward_supply.is_downloaded_from_ims == 1)
-            .where(inward_supply.gstr_1_filled == 0)  # TODO: Is this correctly done ??
+            .where(inward_supply.is_supplier_return_filed == 0)
             .where(inward_supply.classification == category)
             .where(inward_supply.doc_type == doc_type)
             .where(inward_supply.company_gstin == self.company_gstin)
