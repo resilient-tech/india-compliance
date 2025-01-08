@@ -72,8 +72,7 @@ frappe.ui.form.on(DOCTYPE, {
         frm.trigger("company");
         frm.purchase_reconciliation_tool = new PurchaseReconciliationTool(frm);
 
-        frm.events.handle_download_failure(frm);
-        frm.events.handle_queued_download();
+        frm.events.handle_download_message(frm);
     },
 
     onload(frm) {
@@ -234,23 +233,10 @@ frappe.ui.form.on(DOCTYPE, {
         });
     },
 
-    handle_download_failure(frm) {
-        frappe.realtime.on("gstr_2a_2b_download_failed", message => {
+    handle_download_message(frm) {
+        frappe.realtime.on("gstr_2a_2b_download_message", message => {
             frm.dashboard.hide();
-            frappe.msgprint({
-                title: __("2A/2B Download Failed"),
-                message: message.error,
-                indicator: "red",
-            });
-        });
-    },
-
-    handle_queued_download() {
-        frappe.realtime.on("gstr_2a_2b_download_queued", message => {
-            frappe.msgprint({
-                title: __("2A/2B Download Queued"),
-                message: message.msg,
-            });
+            frappe.msgprint(message);
         });
     },
 });

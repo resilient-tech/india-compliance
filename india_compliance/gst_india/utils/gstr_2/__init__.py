@@ -302,9 +302,10 @@ def _download_gstr_2a(gstin, return_period, json_data):
 
 def publish_queued_message():
     frappe.publish_realtime(
-        "gstr_2a_2b_download_queued",
+        "gstr_2a_2b_download_message",
         {
-            "msg": _(
+            "title": _("2A/2B Download Queued"),
+            "message": _(
                 "Some returns are queued for download at GSTN as there may be large data."
                 " We will retry download every few minutes until it succeeds.<br><br>"
                 "You can track download status from download dialog."
