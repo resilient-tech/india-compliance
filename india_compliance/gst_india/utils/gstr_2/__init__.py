@@ -59,14 +59,13 @@ def download_gstr_2a(gstin, return_periods, gst_categories=None):
             requests_made += 1
 
             frappe.publish_realtime(
-                "update_api_progress",
+                "update_2a_2b_api_progress",
                 {
                     "current_progress": requests_made * 100 / total_expected_requests,
                     "return_period": return_period,
                     "is_last_period": is_last_period,
                 },
                 user=frappe.session.user,
-                doctype="Purchase Reconciliation Tool",
             )
 
             if gst_categories and category.value not in gst_categories:
@@ -116,7 +115,7 @@ def download_gstr_2a(gstin, return_periods, gst_categories=None):
         save_gstr_2a(gstin, return_period, json_data)
 
     if queued_message:
-        show_queued_message()
+        publish_queued_message()
 
     if not has_data:
         end_transaction_progress(return_period)
@@ -133,14 +132,13 @@ def download_gstr_2b(gstin, return_periods):
         is_last_period = return_periods[-1] == return_period
         requests_made += 1
         frappe.publish_realtime(
-            "update_api_progress",
+            "update_2a_2b_api_progress",
             {
                 "current_progress": requests_made * 100 / total_expected_requests,
                 "return_period": return_period,
                 "is_last_period": is_last_period,
             },
             user=frappe.session.user,
-            doctype="Purchase Reconciliation Tool",
         )
 
         response = api.get_data(return_period)
@@ -185,7 +183,7 @@ def download_gstr_2b(gstin, return_periods):
         save_gstr_2b(gstin, return_period, response)
 
     if queued_message:
-        show_queued_message()
+        publish_queued_message()
 
     if not has_data:
         end_transaction_progress(return_period)
@@ -302,13 +300,18 @@ def _download_gstr_2a(gstin, return_period, json_data):
     save_gstr_2a(gstin, return_period, json_data)
 
 
-def show_queued_message():
-    frappe.msgprint(
-        _(
-            "Some returns are queued for download at GSTN as there may be large data."
-            " We will retry download every few minutes until it succeeds.<br><br>"
-            "You can track download status from download dialog."
-        )
+def publish_queued_message():
+    frappe.publish_realtime(
+        "gstr_2a_2b_download_message",
+        {
+            "title": _("2A/2B Download Queued"),
+            "message": _(
+                "Some returns are queued for download at GSTN as there may be large data."
+                " We will retry download every few minutes until it succeeds.<br><br>"
+                "You can track download status from download dialog."
+            ),
+        },
+        user=frappe.session.user,
     )
 
 
@@ -319,12 +322,11 @@ def end_transaction_progress(return_period):
     """
 
     frappe.publish_realtime(
-        "update_transactions_progress",
+        "update_2a_2b_transactions_progress",
         {
             "current_progress": 100,
             "return_period": return_period,
             "is_last_period": True,
         },
         user=frappe.session.user,
-        doctype="Purchase Reconciliation Tool",
     )

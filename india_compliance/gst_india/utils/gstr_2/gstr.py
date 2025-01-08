@@ -62,13 +62,12 @@ class GSTR:
 
             current_transaction += 1
             frappe.publish_realtime(
-                "update_transactions_progress",
+                "update_2a_2b_transactions_progress",
                 {
                     "current_progress": current_transaction * 100 / total_transactions,
                     "return_period": self.return_period,
                 },
                 user=frappe.session.user,
-                doctype="Purchase Reconciliation Tool",
             )
 
             if transaction.get("unique_key") in self.existing_transaction:

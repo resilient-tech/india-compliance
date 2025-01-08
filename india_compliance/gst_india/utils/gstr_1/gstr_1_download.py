@@ -84,7 +84,6 @@ def download_gstr1_json_data(gstr1_log):
             "gstr1_queued",
             message={"gstin": gstin, "return_period": return_period},
             user=frappe.session.user,
-            doctype="GSTR-1 Beta",
         )
 
     return mapped_data, is_queued

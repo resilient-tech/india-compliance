@@ -134,7 +134,7 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
         if not settings.has_valid_credentials(self.gstin, "Returns"):
             if warn_for_missing_credentials:
                 frappe.publish_realtime(
-                    "show_message",
+                    "show_missing_gst_credentials_message",
                     dict(
                         message=_(
                             "Credentials are missing for GSTIN {0} for service"
@@ -308,9 +308,10 @@ def update_is_not_latest_gstr1_data(posting_date, company_gstin):
     )
 
     frappe.publish_realtime(
-        "is_not_latest_data",
+        "is_not_latest_gstr1_data",
         message={"filters": {"company_gstin": company_gstin, "period": period}},
         doctype="GSTR-1 Beta",
+        docname="GSTR-1 Beta",
     )
 
 
