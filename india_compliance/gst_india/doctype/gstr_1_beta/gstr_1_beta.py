@@ -103,7 +103,7 @@ class GSTR1Beta(Document):
         # failed while downloading gov data
         if only_books_data:
             data = gstr1_log.load_data("books", "books_summary")
-            data["status"] = gstr1_log.filing_status
+            data["status"] = gstr1_log.filing_status or "Not Filed"
             return data
 
         if gstr1_log.has_all_files(settings):
