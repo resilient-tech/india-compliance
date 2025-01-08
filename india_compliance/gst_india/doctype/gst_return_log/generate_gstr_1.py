@@ -574,8 +574,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
                 message=str(error),
                 reference_doctype="GSTR-1 Beta",
             )
-            callback and callback(filters, error_log.name)
-            return
+            return callback and callback(filters, error_log.name)
 
         books_data = self.get_books_gstr1_data(filters)
 
