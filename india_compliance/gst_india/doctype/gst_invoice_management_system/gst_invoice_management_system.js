@@ -1052,6 +1052,8 @@ class DetailViewDialog {
     }
 
     async set_link_options() {
+        if (!this.dialog.get_value("doctype")) return; // No need after transaction is linked
+
         this.filters = {
             supplier_gstin: this.dialog.get_value("supplier_gstin"),
             bill_from_date: this.dialog.get_value("date_range")[0],
@@ -1115,7 +1117,8 @@ class DetailViewDialog {
                 this.comparision_data.purchase_invoice_name,
                 this.comparision_data.inward_supply_name,
                 this.dialog.get_value("doctype"),
-                this.frm.ims
+                this.frm.ims,
+                true
             );
         } else if (action == "Create") {
             reconciliation.create_new_purchase_invoice(

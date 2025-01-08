@@ -25,8 +25,12 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
 )
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
     _get_link_options,
-    link_documents,
-    unlink_documents,
+)
+from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
+    link_documents as _link_documents,
+)
+from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
+    unlink_documents as _unlink_documents,
 )
 from india_compliance.gst_india.utils import enqueue_notification
 from india_compliance.gst_india.utils.gstr_2 import (
@@ -137,7 +141,7 @@ class GSTInvoiceManagementSystem(Document):
     def link_documents(self, purchase_invoice_name, inward_supply_name, link_doctype):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
-        purchases, inward_supplies = link_documents(
+        purchases, inward_supplies = _link_documents(
             purchase_invoice_name, inward_supply_name, link_doctype
         )
 
@@ -147,7 +151,7 @@ class GSTInvoiceManagementSystem(Document):
     def unlink_documents(self, data):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
-        purchases, inward_supplies = unlink_documents(data)
+        purchases, inward_supplies = _unlink_documents(data)
 
         return self.get_invoice_data(inward_supplies, purchases)
 

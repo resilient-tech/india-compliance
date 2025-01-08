@@ -14,7 +14,7 @@ Object.assign(reconciliation, {
     async unlink_documents(frm, _class, selected_rows) {
         if (frm.get_active_tab()?.df.fieldname != "invoice_tab") return;
         const { invoice_tab } = _class.tabs;
-        if (!selected_rows) selected_rows = invoice_tab.get_checked_items();
+        if (!selected_rows) selected_rows = invoice_tab.datatable.get_checked_items();
 
         if (!selected_rows.length)
             return frappe.show_alert({
@@ -52,6 +52,7 @@ Object.assign(reconciliation, {
 
         new_data.push(...r);
         _class.refresh(new_data);
+        reconciliation.after_successful_action(invoice_tab);
     },
 
     async link_documents(
@@ -59,7 +60,8 @@ Object.assign(reconciliation, {
         purchase_invoice_name,
         inward_supply_name,
         link_doctype,
-        _class
+        _class,
+        alert = true
     ) {
         if (frm.get_active_tab()?.df.fieldname != "invoice_tab") return;
 
@@ -85,6 +87,7 @@ Object.assign(reconciliation, {
         new_data.push(...r);
 
         _class.refresh(new_data);
+        if (alert) reconciliation.after_successful_action(_class.tabs.invoice_tab);
     },
 
     async create_new_purchase_invoice(row, company, company_gstin) {
@@ -145,5 +148,13 @@ Object.assign(reconciliation, {
         };
 
         frappe.new_doc("Purchase Invoice");
+    },
+
+    after_successful_action(tab) {
+        if (tab) tab.datatable.clear_checked_items();
+        frappe.show_alert({
+            message: "Action applied successfully",
+            indicator: "green",
+        });
     },
 });

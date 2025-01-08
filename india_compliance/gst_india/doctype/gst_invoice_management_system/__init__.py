@@ -168,7 +168,7 @@ class PurchaseInvoice:
 
         return BaseUtil.get_dict_for_key("supplier_gstin", data)
 
-    def get_query(self, filters, additional_fields=None):
+    def get_query(self, filters=None, additional_fields=None):
         fields = self.get_fields(additional_fields)
 
         query = (

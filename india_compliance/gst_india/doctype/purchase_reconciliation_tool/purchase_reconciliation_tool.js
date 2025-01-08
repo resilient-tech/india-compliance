@@ -116,7 +116,11 @@ frappe.ui.form.on(DOCTYPE, {
         if (frm.get_active_tab()?.df.fieldname == "invoice_tab") {
             frm.add_custom_button(
                 __("Unlink"),
-                () => unlink_documents(frm),
+                () =>
+                    reconciliation.unlink_documents(
+                        frm,
+                        frm.purchase_reconciliation_tool
+                    ),
                 action_group
             );
             frm.add_custom_button(__("dropdown-divider"), () => {}, action_group);
@@ -459,24 +463,36 @@ class PurchaseReconciliationTool {
 
     set_listeners() {
         const me = this;
-        this.tabs.invoice_tab.datatable.$datatable.on("click", ".btn.eye", function (e) {
-            const row = me.mapped_invoice_data[$(this).attr("data-name")];
-            me.dm = new DetailViewDialog(me.frm, row);
-        });
+        this.tabs.invoice_tab.datatable.$datatable.on(
+            "click",
+            ".btn.eye",
+            function (e) {
+                const row = me.mapped_invoice_data[$(this).attr("data-name")];
+                me.dm = new DetailViewDialog(me.frm, row);
+            }
+        );
 
-        this.tabs.supplier_tab.datatable.$datatable.on("click", ".btn.download", function (e) {
-            const row = me.tabs.supplier_tab.datatable.data.find(
-                r => r.supplier_gstin === $(this).attr("data-name")
-            );
-            me.export_data(row);
-        });
+        this.tabs.supplier_tab.datatable.$datatable.on(
+            "click",
+            ".btn.download",
+            function (e) {
+                const row = me.tabs.supplier_tab.datatable.data.find(
+                    r => r.supplier_gstin === $(this).attr("data-name")
+                );
+                me.export_data(row);
+            }
+        );
 
-        this.tabs.supplier_tab.datatable.$datatable.on("click", ".btn.envelope", function (e) {
-            const row = me.tabs.supplier_tab.datatable.data.find(
-                r => r.supplier_gstin === $(this).attr("data-name")
-            );
-            me.dm = new EmailDialog(me.frm, row);
-        });
+        this.tabs.supplier_tab.datatable.$datatable.on(
+            "click",
+            ".btn.envelope",
+            function (e) {
+                const row = me.tabs.supplier_tab.datatable.data.find(
+                    r => r.supplier_gstin === $(this).attr("data-name")
+                );
+                me.dm = new EmailDialog(me.frm, row);
+            }
+        );
 
         const filter_map = {
             // TAB: { SELECTOR: FIELDNAME }
@@ -1020,17 +1036,22 @@ class DetailViewDialog {
 
     _apply_custom_action(action) {
         if (action == "Unlink") {
-            unlink_documents(this.frm, [this.row]);
+            reconciliation.unlink_documents(
+                this.frm,
+                this.frm.purchase_reconciliation_tool,
+                [this.row]
+            );
         } else if (action == "Link") {
-            purchase_reconciliation_tool.link_documents(
+            reconciliation.link_documents(
                 this.frm,
                 this.data.purchase_invoice_name,
                 this.data.inward_supply_name,
                 this.dialog.get_value("doctype"),
+                this.frm.purchase_reconciliation_tool,
                 true
             );
         } else if (action == "Create") {
-            create_new_purchase_invoice(
+            reconciliation.create_new_purchase_invoice(
                 this.data,
                 this.frm.doc.company,
                 this.frm.doc.company_gstin
@@ -1626,84 +1647,6 @@ function patch_set_active_tab(frm) {
     };
 }
 
-purchase_reconciliation_tool.link_documents = async function (
-    frm,
-    purchase_invoice_name,
-    inward_supply_name,
-    link_doctype,
-    alert = true
-) {
-    if (frm.get_active_tab()?.df.fieldname != "invoice_tab") return;
-
-    // link documents & update data.
-    const { message: r } = await frm.call("link_documents", {
-        purchase_invoice_name,
-        inward_supply_name,
-        link_doctype,
-    });
-    const reco_tool = frm.purchase_reconciliation_tool;
-    const new_data = reco_tool.data.filter(
-        row =>
-            !(
-                row.purchase_invoice_name == purchase_invoice_name ||
-                row.inward_supply_name == inward_supply_name
-            )
-    );
-    new_data.push(...r);
-
-    reco_tool.refresh(new_data);
-    if (alert)
-        after_successful_action(frm.purchase_reconciliation_tool.tabs.invoice_tab);
-};
-
-async function unlink_documents(frm, selected_rows) {
-    if (frm.get_active_tab()?.df.fieldname != "invoice_tab") return;
-    const { invoice_tab } = frm.purchase_reconciliation_tool.tabs;
-    if (!selected_rows) selected_rows = invoice_tab.datatable.get_checked_items();
-
-    if (!selected_rows.length)
-        return frappe.show_alert({
-            message: __("Please select rows to unlink"),
-            indicator: "red",
-        });
-
-    // validate selected rows
-    selected_rows.forEach(row => {
-        if (row.match_status.includes("Missing"))
-            frappe.throw(
-                __(
-                    "You have selected rows where no match is available. Please remove them before unlinking."
-                )
-            );
-    });
-
-    // unlink documents & update table
-    const { message: r } = await frm.call("unlink_documents", selected_rows);
-    const unlinked_docs = get_unlinked_docs(selected_rows);
-
-    const reco_tool = frm.purchase_reconciliation_tool;
-    const new_data = reco_tool.data.filter(
-        row =>
-            !(
-                unlinked_docs.has(row.purchase_invoice_name) ||
-                unlinked_docs.has(row.inward_supply_name)
-            )
-    );
-    new_data.push(...r);
-    reco_tool.refresh(new_data);
-    after_successful_action(invoice_tab);
-}
-
-function get_unlinked_docs(selected_rows) {
-    const unlinked_docs = new Set();
-    selected_rows.forEach(row => {
-        unlinked_docs.add(row.purchase_invoice_name);
-        unlinked_docs.add(row.inward_supply_name);
-    });
-
-    return unlinked_docs;
-}
-
 function deepcopy(array) {
     return JSON.parse(JSON.stringify(array));
 }
@@ -1768,15 +1711,7 @@ function apply_action(frm, action, selected_rows) {
     });
 
     frm.purchase_reconciliation_tool.refresh(new_data);
-    after_successful_action(tab);
-}
-
-function after_successful_action(tab) {
-    if (tab) tab.datatable.clear_checked_items();
-    frappe.show_alert({
-        message: "Action applied successfully",
-        indicator: "green",
-    });
+    reconciliation.after_successful_action(tab);
 }
 
 function has_matching_row(row, array) {
@@ -1796,65 +1731,4 @@ function get_affected_rows(tab, selection, data) {
         return data.filter(
             inv => selection.filter(row => row.match_status == inv.match_status).length
         );
-}
-
-async function create_new_purchase_invoice(row, company, company_gstin) {
-    if (row.match_status != "Missing in PI") return;
-    const doc = row._inward_supply;
-
-    const { message: supplier } = await frappe.call({
-        method: "india_compliance.gst_india.utils.get_party_for_gstin",
-        args: {
-            gstin: row.supplier_gstin,
-        },
-    });
-
-    let company_address;
-    await frappe.model.get_value(
-        "Address",
-        { gstin: company_gstin, is_your_company_address: 1 },
-        "name",
-        r => (company_address = r.name)
-    );
-
-    frappe.route_hooks.after_load = frm => {
-        function _set_value(values) {
-            for (const key in values) {
-                if (values[key] == frm.doc[key]) continue;
-                frm.set_value(key, values[key]);
-            }
-        }
-
-        const values = {
-            company: company,
-            bill_no: doc.bill_no,
-            bill_date: doc.bill_date,
-            is_reverse_charge: ["Yes", 1].includes(doc.is_reverse_charge) ? 1 : 0,
-            is_return: ["CDNR", "CDNRA"].includes(doc.classification) ? 1 : 0,
-        };
-
-        _set_value({
-            ...values,
-            supplier: supplier,
-            shipping_address: company_address,
-            billing_address: company_address,
-        });
-
-        // validated this on save
-        frm._inward_supply = {
-            ...values,
-            name: row.inward_supply_name,
-            company_gstin: company_gstin,
-            inward_supply: row.inward_supply,
-            supplier_gstin: row.supplier_gstin,
-            place_of_supply: doc.place_of_supply,
-            cgst: doc.cgst,
-            sgst: doc.sgst,
-            igst: doc.igst,
-            cess: doc.cess,
-            taxable_value: doc.taxable_value,
-        };
-    };
-
-    frappe.new_doc("Purchase Invoice");
 }
