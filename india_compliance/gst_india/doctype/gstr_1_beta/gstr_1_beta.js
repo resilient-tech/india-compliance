@@ -118,7 +118,7 @@ frappe.ui.form.on(DOCTYPE, {
         frm.__setup_complete = true;
 
         // Setup Listeners
-        frappe.realtime.on("is_not_latest_data", message => {
+        frappe.realtime.on("is_not_latest_gstr1_data", message => {
             const { filters } = message;
 
             const [month_or_quarter, year] =
@@ -143,7 +143,7 @@ frappe.ui.form.on(DOCTYPE, {
             );
         });
 
-        frappe.realtime.on("show_message", message => {
+        frappe.realtime.on("show_missing_gst_credentials_message", message => {
             frappe.msgprint(message);
         });
 
