@@ -275,7 +275,7 @@ class PurchaseReconciliationTool {
         if (this.rendered_data == this.filtered_data) return;
 
         this._tabs.forEach(tab => {
-            this.tabs[`${tab}_tab`].refresh(this[`get_${tab}_data`]());
+            this.tabs[`${tab}_tab`].datatable?.refresh(this[`get_${tab}_data`]());
         });
 
         this.rendered_data = this.filtered_data;
@@ -445,7 +445,7 @@ class PurchaseReconciliationTool {
 
     render_data_tables() {
         this._tabs.forEach(tab => {
-            this.tabs[`${tab}_tab`] = new india_compliance.DataTableManager({
+            this.tabs[`${tab}_tab`].datatable = new india_compliance.DataTableManager({
                 $wrapper: this.tab_group.get_field(`${tab}_data`).$wrapper,
                 columns: this[`get_${tab}_columns`](),
                 data: this[`get_${tab}_data`](),
@@ -459,20 +459,20 @@ class PurchaseReconciliationTool {
 
     set_listeners() {
         const me = this;
-        this.tabs.invoice_tab.$datatable.on("click", ".btn.eye", function (e) {
+        this.tabs.invoice_tab.datatable.$datatable.on("click", ".btn.eye", function (e) {
             const row = me.mapped_invoice_data[$(this).attr("data-name")];
             me.dm = new DetailViewDialog(me.frm, row);
         });
 
-        this.tabs.supplier_tab.$datatable.on("click", ".btn.download", function (e) {
-            const row = me.tabs.supplier_tab.data.find(
+        this.tabs.supplier_tab.datatable.$datatable.on("click", ".btn.download", function (e) {
+            const row = me.tabs.supplier_tab.datatable.data.find(
                 r => r.supplier_gstin === $(this).attr("data-name")
             );
             me.export_data(row);
         });
 
-        this.tabs.supplier_tab.$datatable.on("click", ".btn.envelope", function (e) {
-            const row = me.tabs.supplier_tab.data.find(
+        this.tabs.supplier_tab.datatable.$datatable.on("click", ".btn.envelope", function (e) {
+            const row = me.tabs.supplier_tab.datatable.data.find(
                 r => r.supplier_gstin === $(this).attr("data-name")
             );
             me.dm = new EmailDialog(me.frm, row);
@@ -491,7 +491,7 @@ class PurchaseReconciliationTool {
 
         Object.keys(filter_map).forEach(tab => {
             Object.keys(filter_map[tab]).forEach(selector => {
-                this.tabs[`${tab}_tab`].$datatable.on(
+                this.tabs[`${tab}_tab`].datatable.$datatable.on(
                     "click",
                     selector,
                     async function (e) {
@@ -1659,7 +1659,7 @@ purchase_reconciliation_tool.link_documents = async function (
 async function unlink_documents(frm, selected_rows) {
     if (frm.get_active_tab()?.df.fieldname != "invoice_tab") return;
     const { invoice_tab } = frm.purchase_reconciliation_tool.tabs;
-    if (!selected_rows) selected_rows = invoice_tab.get_checked_items();
+    if (!selected_rows) selected_rows = invoice_tab.datatable.get_checked_items();
 
     if (!selected_rows.length)
         return frappe.show_alert({
@@ -1713,7 +1713,7 @@ function apply_action(frm, action, selected_rows) {
     if (!active_tab) return;
 
     const tab = frm.purchase_reconciliation_tool.tabs[active_tab];
-    if (!selected_rows) selected_rows = tab.get_checked_items();
+    if (!selected_rows) selected_rows = tab.datatable.get_checked_items();
 
     // get affected rows
     const { filtered_data, data } = frm.purchase_reconciliation_tool;
@@ -1772,7 +1772,7 @@ function apply_action(frm, action, selected_rows) {
 }
 
 function after_successful_action(tab) {
-    if (tab) tab.clear_checked_items();
+    if (tab) tab.datatable.clear_checked_items();
     frappe.show_alert({
         message: "Action applied successfully",
         indicator: "green",

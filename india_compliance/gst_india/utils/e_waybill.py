@@ -170,6 +170,11 @@ def _generate_e_waybill(doc, throw=True, force=False):
         if result.error_code == "4002":
             result = api(doc).get_e_waybill_by_irn(doc.get("irn"))
 
+        if result.error_code == "2148":
+            with_irn = False
+            data = EWaybillData(doc).get_data(with_irn=with_irn)
+            result = EWaybillAPI(doc).generate_e_waybill(data)
+
     except GSPServerError as e:
         handle_server_errors(settings, doc, "e-Waybill", e)
         return
