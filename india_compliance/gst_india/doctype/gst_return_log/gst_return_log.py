@@ -125,7 +125,7 @@ class GSTReturnLog(GenerateGSTR1, Document):
         if not settings.has_valid_credentials(self.gstin, "Returns"):
             if warn_for_missing_credentials:
                 frappe.publish_realtime(
-                    "show_message",
+                    "show_missing_gst_credentials_message",
                     dict(
                         message=_(
                             "Credentials are missing for GSTIN {0} for service"
@@ -252,6 +252,40 @@ def process_gstr_1_returns_info(company, gstin, response):
         _update_gstr_1_filed_upto(filed_upto)
 
 
+<<<<<<< HEAD
+=======
+def get_gst_return_log(posting_date, company_gstin):
+    period = getdate(posting_date).strftime("%m%Y")
+    if name := frappe.db.exists(DOCTYPE, f"GSTR1-{period}-{company_gstin}"):
+        return frappe.get_doc(DOCTYPE, name)
+
+
+def add_comment_to_gst_return_log(doc, action):
+    if not (log := get_gst_return_log(doc.posting_date, doc.company_gstin)):
+        return
+
+    log.add_comment(
+        "Comment",
+        f"{doc.doctype} : {get_link_to_form(doc.doctype, doc.name)} has been {action} by {frappe.session.user}",
+    )
+
+
+def update_is_not_latest_gstr1_data(posting_date, company_gstin):
+    period = posting_date.strftime("%m%Y")
+
+    frappe.db.set_value(
+        "GST Return Log", f"GSTR1-{period}-{company_gstin}", "is_latest_data", 0
+    )
+
+    frappe.publish_realtime(
+        "is_not_latest_gstr1_data",
+        message={"filters": {"company_gstin": company_gstin, "period": period}},
+        doctype="GSTR-1 Beta",
+        docname="GSTR-1 Beta",
+    )
+
+
+>>>>>>> dc0be5df (fix: unique name for events and doctype parameter alone is redundant (#2903))
 def get_file_doc(doctype, docname, attached_to_field):
     try:
         return frappe.get_doc(
