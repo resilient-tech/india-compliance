@@ -47,7 +47,14 @@ class GSTR1Beta(Document):
         self.generate_gstr1()
 
     @frappe.whitelist()
+<<<<<<< HEAD
     def generate_gstr1(self, sync_for=None, recompute_books=False):
+=======
+    @otp_handler
+    def generate_gstr1(
+        self, sync_for=None, recompute_books=False, only_books_data=None, message=None
+    ):
+>>>>>>> 49a431e9 (fix(gstr-1): handle gov api error when downloading and make it optional for unfiled returns (#2897))
         period = get_period(self.month_or_quarter, self.year)
 
         # get gstr1 log
@@ -89,7 +96,12 @@ class GSTR1Beta(Document):
         if recompute_books:
             gstr1_log.remove_json_for("books")
 
-        # files are already present
+        # failed while downloading gov data
+        if only_books_data:
+            data = gstr1_log.load_data("books", "books_summary")
+            data["status"] = gstr1_log.filing_status or "Not Filed"
+            return data
+
         if gstr1_log.has_all_files(settings):
             data = gstr1_log.load_data()
 
@@ -143,7 +155,11 @@ class GSTR1Beta(Document):
 
             raise e
 
+<<<<<<< HEAD
     def on_generate(self, data, filters=None):
+=======
+    def on_generate(self, filters=None, error_log=None):
+>>>>>>> 49a431e9 (fix(gstr-1): handle gov api error when downloading and make it optional for unfiled returns (#2897))
         """
         Once data is generated, update the status and publish the data
         """
@@ -157,7 +173,11 @@ class GSTR1Beta(Document):
 
         frappe.publish_realtime(
             "gstr1_data_prepared",
+<<<<<<< HEAD
             message={"data": data, "filters": filters},
+=======
+            message={"filters": filters, "error_log": error_log},
+>>>>>>> 49a431e9 (fix(gstr-1): handle gov api error when downloading and make it optional for unfiled returns (#2897))
             user=frappe.session.user,
             doctype=self.doctype,
         )

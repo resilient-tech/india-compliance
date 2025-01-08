@@ -155,7 +155,11 @@ frappe.ui.form.on(DOCTYPE, {
         });
 
         frappe.realtime.on("gstr1_data_prepared", message => {
+<<<<<<< HEAD
             const { data, filters } = message;
+=======
+            const { filters, error_log } = message;
+>>>>>>> 49a431e9 (fix(gstr-1): handle gov api error when downloading and make it optional for unfiled returns (#2897))
 
             if (
                 frm.doc.company_gstin !== filters.company_gstin ||
@@ -164,8 +168,23 @@ frappe.ui.form.on(DOCTYPE, {
             )
                 return;
 
+<<<<<<< HEAD
             frappe.after_ajax(() => {
                 frm.doc.__gst_data = data ;
+=======
+            const only_books_data = error_log != undefined;
+            if (error_log) {
+                frappe.msgprint({
+                    message: __("Error while preparing GSTR-1 data, please check {0} for more deatils.",
+                        [`<a href='/app/error-log/${error_log}' class='variant-click'>error log</a>`]),
+                    title: "GSTR-1 Download Failed",
+                    indicator: "red",
+                })
+            }
+
+            frm.taxpayer_api_call("generate_gstr1", { only_books_data }).then(r => {
+                frm.doc.__gst_data = r.message;
+>>>>>>> 49a431e9 (fix(gstr-1): handle gov api error when downloading and make it optional for unfiled returns (#2897))
                 frm.trigger("load_gstr1_data");
             });
         });
@@ -992,7 +1011,7 @@ class TabManager {
                     ? `<a href="#" class="description">
                     <p style="padding-left: 15px">${value}</p>
                     </a>`
-                : value;
+                    : value;
 
         return value;
     }
@@ -1742,9 +1761,9 @@ class FiledTab extends GSTR1_TabManager {
             const { include_uploaded, delete_missing } = dialog
                 ? dialog.get_values()
                 : {
-                      include_uploaded: true,
-                      delete_missing: false,
-                  };
+                    include_uploaded: true,
+                    delete_missing: false,
+                };
 
             const doc = me.instance.frm.doc;
 
@@ -1984,7 +2003,7 @@ class ReconcileTab extends FiledTab {
         });
     }
 
-    get_creation_time_string() {} // pass
+    get_creation_time_string() { } // pass
 
     get_detail_view_column() {
         return [
@@ -2014,6 +2033,78 @@ class ReconcileTab extends FiledTab {
     }
 }
 
+<<<<<<< HEAD
+=======
+class ErrorsTab extends TabManager {
+    DEFAULT_SUBTITLE = "Fix these errors and upload again";
+    set_default_title() {
+        this.DEFAULT_TITLE = "Error Summary";
+        TabManager.prototype.set_default_title.call(this);
+    }
+
+    get_summary_columns() {
+        return [
+            {
+                name: "Category",
+                fieldname: "category",
+                width: 150,
+            },
+            {
+                name: "Error Code",
+                fieldname: "error_code",
+                width: 100,
+            },
+            {
+                name: "Error Message",
+                fieldname: "error_message",
+                width: 325,
+            },
+            {
+                name: "Invoice Number",
+                fieldname: GSTR1_DataField.DOC_NUMBER,
+                fieldtype: "Link",
+                options: "Sales Invoice",
+                width: 150,
+            },
+            {
+                name: "Party GSTIN",
+                fieldname: GSTR1_DataField.CUST_GSTIN,
+                width: 160,
+            },
+            {
+                name: "Place Of Supply",
+                fieldname: GSTR1_DataField.POS,
+                width: 150,
+            },
+        ];
+    }
+
+    setup_actions() { }
+    set_creation_time_string() { }
+
+    refresh_data(data) {
+        data = data.error_report;
+        super.refresh_data(data, data, "Error Summary");
+        $(".dt-footer").remove();
+    }
+
+    setup_wrapper() {
+        this.wrapper.append(`
+            <div class="m-3 d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                    <div>
+                        <div class="tab-title-text">&nbsp</div>
+                        <div class="tab-subtitle-text"></div>
+                    </div>
+                </div>
+                <div class="custom-button-group page-actions custom-actions hidden-xs hidden-md"></div>
+            </div>
+            <div class="data-table"></div>
+        `);
+    }
+}
+
+>>>>>>> 49a431e9 (fix(gstr-1): handle gov api error when downloading and make it optional for unfiled returns (#2897))
 class DetailViewDialog {
     CURRENCY_FIELD_MAP = {
         [GSTR1_DataField.TAXABLE_VALUE]: "Taxable Value",
@@ -2088,17 +2179,556 @@ class DetailViewDialog {
     }
 }
 
+<<<<<<< HEAD
+=======
+class FileGSTR1Dialog {
+    constructor(frm) {
+        this.frm = frm;
+        this.filing_dialog = null;
+    }
+
+    async file_gstr1_data() {
+        if (await this.is_request_in_progress("File")) return;
+
+        // TODO: EVC Generation, Resend, and Filing
+        this.filing_dialog = new frappe.ui.Dialog({
+            title: "File GSTR-1",
+            fields: [
+                {
+                    label: "Company GSTIN",
+                    fieldname: "company_gstin",
+                    fieldtype: "Data",
+                    read_only: 1,
+                    default: this.frm.doc.company_gstin,
+                },
+                {
+                    label: "Period",
+                    fieldname: "period",
+                    fieldtype: "Data",
+                    read_only: 1,
+                    default: `${this.frm.doc.month_or_quarter} - ${this.frm.doc.year}`,
+                },
+                {
+                    label: "Total Liability",
+                    fieldtype: "Section Break",
+                    fieldname: "total_liability_section",
+                },
+                {
+                    fieldname: "liability_breakup_html",
+                    fieldtype: "HTML",
+                    hidden: 1,
+                },
+                {
+                    label: "Sign using EVC",
+                    fieldtype: "Section Break",
+                },
+                {
+                    label: "Authorised PAN",
+                    fieldname: "pan",
+                    fieldtype: "Data",
+                    reqd: 1,
+                },
+                {
+                    label: "EVC OTP",
+                    fieldname: "otp",
+                    fieldtype: "Data",
+                    read_only: 1,
+                },
+                {
+                    label: "I confirm that this GSTR-1 filing cannot be undone and that all details are correct to the best of my knowledge.",
+                    fieldname: "acknowledged",
+                    fieldtype: "Check",
+                    default: 0,
+                    read_only: 1,
+                },
+            ],
+            size: "large",
+            primary_action_label: "Get OTP",
+            primary_action: async () => {
+                const pan = this.filing_dialog.get_value("pan");
+                india_compliance.validate_pan(pan);
+
+                // generate otp
+                await india_compliance.generate_evc_otp(
+                    this.frm.doc.company_gstin,
+                    pan,
+                    "R1"
+                );
+
+                // show otp field
+                this.filing_dialog.set_df_property("otp", "read_only", 0);
+                this.filing_dialog.set_df_property("otp", "reqd", 1);
+
+                this.filing_dialog.set_df_property("acknowledged", "read_only", 0);
+                this.filing_dialog.set_df_property("acknowledged", "reqd", 1);
+
+                this.update_actions_for_filing(pan);
+            },
+        });
+
+        // get last used pan
+        frappe.db
+            .get_value("GSTIN", this.frm.doc.company_gstin, ["last_pan_used_for_gstr"])
+            .then(({ message }) => {
+                const pan_no =
+                    message.last_pan_used_for_gstr ||
+                    this.frm.doc.company_gstin.substr(2, 10);
+
+                this.filing_dialog.set_value("pan", pan_no);
+            });
+
+        // update total amendes
+        taxpayer_api.call({
+            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.perform_gstr1_action",
+            args: {
+                action: "get_amendment_data",
+                month_or_quarter: this.frm.doc.month_or_quarter,
+                year: this.frm.doc.year,
+                company_gstin: this.frm.doc.company_gstin,
+            },
+            callback: r => {
+                if (!r.message) return;
+                const { amended_liability, non_amended_liability } = r.message;
+                const liability_html = this.generate_liability_table(
+                    amended_liability,
+                    non_amended_liability
+                );
+                const field = this.filing_dialog.get_field("liability_breakup_html");
+
+                if (!liability_html) return;
+                field.toggle(true);
+
+                field.df.options = liability_html;
+                this.filing_dialog.refresh();
+            },
+        });
+
+        this.filing_dialog.show();
+    }
+
+    generate_liability_table(amended_liability, non_amended_liability) {
+        let table_html = `
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Total IGST</th>
+                        <th>Total CGST</th>
+                        <th>Total SGST</th>
+                        <th>Total Cess</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        table_html += this.generate_table_row(
+            "For current period",
+            non_amended_liability
+        );
+        table_html += this.generate_table_row("From amendments", amended_liability);
+        // TODO: Add total row
+        table_html += `
+                </tbody>
+            </table>
+        `;
+
+        return table_html;
+    }
+
+    generate_table_row(description, liability) {
+        return `
+            <tr>
+                <td>${description}</td>
+                <td style="text-align: right;">${format_currency(
+            liability.total_igst_amount
+        )}</td>
+                <td style="text-align: right;">${format_currency(
+            liability.total_cgst_amount
+        )}</td>
+                <td style="text-align: right;">${format_currency(
+            liability.total_sgst_amount
+        )}</td>
+                <td style="text-align: right;">${format_currency(
+            liability.total_cess_amount
+        )}</td>
+            </tr>
+        `;
+    }
+
+    update_actions_for_filing(pan) {
+        this.filing_dialog.set_primary_action("File", () => {
+            this.perform_gstr1_action(
+                "file",
+                r => this.handle_filing_response(r.message),
+                { pan: pan, otp: this.filing_dialog.get_value("otp") }
+            );
+
+            this.toggle_actions(true);
+        });
+
+        this.filing_dialog.set_secondary_action_label("Resend OTP");
+        this.filing_dialog.set_secondary_action(() => {
+            india_compliance.generate_evc_otp(this.frm.doc.company_gstin, pan, "R1");
+        });
+    }
+
+    handle_filing_response(response) {
+        if (response.error?.error_cd === "RET13506") {
+            this.filing_dialog
+                .get_field("otp")
+                .set_description(
+                    `<p style="color: red">OTP is either expired or incorrect.</p>`
+                );
+
+            return;
+        }
+
+        this.filing_dialog.hide();
+
+        if (response.error?.error_cd === "RET09001") {
+            this.frm.page.set_primary_action("Upload", () => this.upload_gstr1_data());
+            this.frm.page.set_indicator("Not Filed", "orange");
+            this.frm.gstr1.status = "Not Filed";
+            frappe.msgprint(
+                __(
+                    "Latest Summary is not available. Please generate summary and try again."
+                )
+            );
+        }
+
+        if (response.ack_num) {
+            this.frm
+                .taxpayer_api_call("generate_gstr1", {
+                    message: "Verifying filed GSTR-1",
+                })
+                .then(r => {
+                    this.frm.doc.__gst_data = r.message;
+                    this.frm.trigger("load_gstr1_data");
+                    this.frm.gstr1.show_suggested_jv_dialog();
+                });
+        }
+    }
+}
+
+class GSTR1Action extends FileGSTR1Dialog {
+    RETRY_INTERVALS = [2000, 3000, 15000, 30000, 60000, 120000, 300000, 600000, 720000]; // 5 second, 15 second, 30 second, 1 min, 2 min, 5 min, 10 min, 12 min
+
+    constructor(frm) {
+        super(frm);
+        this.frm = frm;
+        this.defaults = {
+            month_or_quarter: frm.doc.month_or_quarter,
+            year: frm.doc.year,
+            company_gstin: frm.doc.company_gstin,
+        };
+    }
+
+    generate_gstr1_data() {
+        this.frm.taxpayer_api_call("generate_gstr1").then(r => {
+            if (!r.message) return;
+            this.frm.doc.__gst_data = r.message;
+            this.frm.trigger("load_gstr1_data");
+
+            if (!r.message.pending_actions) return;
+
+            r.message.pending_actions.forEach(request_type =>
+                this.check_action_status_with_retry(request_type, 0, true)
+            );
+        });
+    }
+
+    async upload_gstr1_data() {
+        const action = "upload";
+        if (await this.is_request_in_progress(action)) return;
+
+        const upload = () => {
+            frappe.show_alert(__("Uploading data to GSTN"));
+            this.perform_gstr1_action(action, response => {
+                // No data to upload
+                if (response._server_messages && response._server_messages.length) {
+                    this.proceed_to_file();
+                    return;
+                }
+
+                this.check_action_status_with_retry(action);
+            });
+        };
+
+        // has draft invoices
+        const draft_invoices = this.frm.gstr1.data.books["Document Issued"]?.filter(
+            row => row.draft_count > 0
+        );
+        if (!draft_invoices?.length) return upload();
+
+        frappe.confirm(
+            __(
+                "There are <b>draft</b> invoices in books which are <b>excluded</b> in upload. Do you want to proceed with uploading?"
+            ),
+            () => upload()
+        );
+    }
+
+    async reset_gstr1_data() {
+        const action = "reset";
+        if (await this.is_request_in_progress(action)) return;
+
+        frappe.confirm(
+            __(
+                "All the details saved in different tables shall be deleted after reset.<br>Are you sure, you want to reset the already saved data?"
+            ),
+            () => {
+                frappe.show_alert(__("Resetting GSTR-1 data"));
+                this.perform_gstr1_action(action, () =>
+                    this.check_action_status_with_retry(action)
+                );
+            }
+        );
+    }
+
+    proceed_to_file() {
+        const action = "proceed_to_file";
+        this.perform_gstr1_action(action, r => {
+            // already proceed to file
+            if (r.message) this.handle_proceed_to_file_response(r.message);
+            else this.check_action_status_with_retry(action);
+        });
+    }
+
+    async mark_as_unfiled() {
+        if (await this.is_request_in_progress("Mark as Unfiled")) return;
+
+        const { company, company_gstin, month_or_quarter, year } = this.frm.doc;
+        const filters = {
+            company: company,
+            company_gstin: company_gstin,
+            month_or_quarter: month_or_quarter,
+            year: year,
+        };
+
+        frappe.call({
+            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.mark_as_unfiled",
+            args: { filters: filters, force: this.frm.__action_performed == undefined },
+            callback: () => {
+                this.frm.gstr1.status = "Not Filed";
+                this.frm.refresh();
+                this.frm.gstr1.refresh_data();
+            },
+        });
+    }
+
+    perform_gstr1_action(action, callback, additional_args = {}) {
+        this.toggle_actions(false, action);
+        const args = {
+            ...this.defaults,
+            ...additional_args,
+            action: `${action}_gstr1`,
+            force: this.frm.force_action ? this.frm.force_action : false,
+        };
+
+        taxpayer_api.call({
+            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.perform_gstr1_action",
+            args: args,
+            callback: response => callback && callback(response),
+        });
+    }
+
+    check_action_status_with_retry(action, retries = 0, now = false) {
+        setTimeout(
+            async () => {
+                const { message } = await taxpayer_api.call({
+                    method: `india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.check_action_status`,
+                    args: { ...this.defaults, action },
+                });
+
+                if (!message.status_cd) return;
+
+                if (
+                    message.status_cd === "IP" &&
+                    retries < this.RETRY_INTERVALS.length
+                ) {
+                    return this.check_action_status_with_retry(action, retries + 1);
+                }
+
+                // Not IP
+
+                if (action == "upload") {
+                    if (message.status_cd == "P") return this.proceed_to_file();
+                    else if (message.status_cd == "PE") this.show_errors(message);
+                }
+
+                this.toggle_actions(true);
+
+                if (message.status_cd == "ER")
+                    frappe.throw(__(message.error_report.error_msg));
+
+                if (action == "reset") {
+                    render_empty_state(this.frm);
+                    this.frm.taxpayer_api_call("generate_gstr1").then(r => {
+                        this.frm.doc.__gst_data = r.message;
+                        this.frm.trigger("load_gstr1_data");
+                    });
+                }
+
+                if (action == "proceed_to_file") {
+                    this.handle_proceed_to_file_response(message);
+                    action = "upload"; // for notification
+                }
+
+                this.handle_notification(message, action);
+            },
+            now ? 0 : this.RETRY_INTERVALS[retries]
+        );
+    }
+
+    show_errors(message) {
+        this.frm.gstr1.tabs.errors_tab.show();
+        this.frm.gstr1.tabs.errors_tab.set_active();
+        this.frm.gstr1.tabs["errors_tab"].tabmanager.refresh_data(message);
+    }
+
+    handle_proceed_to_file_response(response) {
+        const filing_status = response.filing_status;
+        if (!filing_status) return;
+
+        // summary matched
+        if (filing_status == "Ready to File") {
+            // only show filed tab
+            ["books", "unfiled", "reconcile"].map(tab =>
+                this.frm.gstr1.tabs[`${tab}_tab`].hide()
+            );
+            this.frm.gstr1.tabs.filed_tab.set_active();
+
+            this.frm.gstr1.status = "Ready to File";
+            this.frm.refresh();
+            return;
+        }
+
+        // summary not matched
+        this.frm.page.set_primary_action("Upload", () => this.upload_gstr1_data());
+
+        const differing_categories = response.differing_categories
+            .map(item => `<li>${item}</li>`)
+            .join("");
+
+        const message = `
+        <p>${__(
+            "Summary for the following categories has not matched. Please sync with GSTIN."
+        )}</p>
+        <ul>${differing_categories}</ul>
+    `;
+
+        frappe.msgprint({
+            message: message,
+            indicator: "red",
+            title: __("GSTIN Sync Required"),
+            primary_action: {
+                label: __("Sync with GSTIN"),
+                action: () => {
+                    render_empty_state(this.frm);
+                    this.frm.taxpayer_api_call("sync_with_gstn", {
+                        sync_for: "unfiled",
+                    });
+                },
+            },
+        });
+    }
+
+    handle_notification(response, action) {
+        const request_status =
+            action === "proceed_to_file" ? "Proceed to file" : `Data ${action}ing`;
+
+        const status_message_map = {
+            P: `${request_status} has been successfully completed.`,
+            PE: `${request_status} is completed with errors`,
+            ER: `${request_status} has encountered errors`,
+            IP: `The request for ${request_status} is currently in progress`,
+        };
+
+        const alert_message = status_message_map[response.status_cd];
+
+        const doc = this.frm.doc;
+        const on_current_document =
+            window.location.pathname.includes("gstr-1-beta") &&
+            doc.company_gstin == response.company_gstin &&
+            doc.month_or_quarter == response.month_or_quarter &&
+            doc.year == response.year;
+
+        if (!on_current_document) return;
+
+        frappe.show_alert(__(alert_message));
+    }
+
+    is_request_in_progress(action) {
+        let in_progress = this.frm.__action_performed;
+
+        if (!in_progress) return false;
+        else if (in_progress == "proceed_to_file") in_progress = "upload";
+
+        const capitalize_first_letter = str =>
+            str.charAt(0).toUpperCase() + str.slice(1);
+
+        const in_progress_action = capitalize_first_letter(in_progress);
+        action = capitalize_first_letter(action);
+
+        return new Promise(resolve => {
+            const d = frappe.msgprint({
+                message:
+                    `${in_progress_action} ` +
+                    __("is in progress. Do you want to perform") +
+                    ` ${action}?`,
+                indicator: "red",
+                title: __("Process in Progress"),
+                primary_action: {
+                    label: `${action}`,
+                    action: () => {
+                        this.toggle_actions(true, in_progress);
+                        this.frm.force_action = true;
+                        resolve(false);
+                        d.hide();
+                    },
+                },
+                secondary_action: {
+                    label: __("Cancel"),
+                    action: () => {
+                        resolve(true);
+                        d.hide();
+                    },
+                },
+            });
+
+            d.onhide = () => {
+                resolve(true);
+                frappe.msg_dialog.msg_area.empty();
+            };
+        });
+    }
+
+    toggle_actions(show, action) {
+        const actions = ["Upload", "Reset", "File", "Mark%20as%20Unfiled"];
+        const btns = $(actions.map(action => `[data-label="${action}"]`).join(","));
+
+        if (show) {
+            this.frm.__action_performed = null;
+            btns && btns.removeClass("disabled");
+        } else {
+            this.frm.__action_performed = action;
+            btns && btns.addClass("disabled");
+        }
+    }
+}
+
+>>>>>>> 49a431e9 (fix(gstr-1): handle gov api error when downloading and make it optional for unfiled returns (#2897))
 // UTILITY FUNCTIONS
 function is_gstr1_api_enabled() {
     return (
         india_compliance.is_api_enabled() &&
         !gst_settings.sandbox_mode &&
-        gst_settings.compare_gstr_1_data
+        gst_settings.enable_gstr_1_api
     );
 }
 
 function patch_set_indicator(frm) {
-    frm.toolbar.set_indicator = function () {};
+    frm.toolbar.set_indicator = function () { };
 }
 
 async function set_default_company_gstin(frm) {
