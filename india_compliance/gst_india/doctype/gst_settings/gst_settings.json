@@ -48,7 +48,8 @@
   "e_invoice_applicable_from",
   "e_invoice_applicable_companies",
   "gstr_1_section_break",
-  "compare_gstr_1_data",
+  "enable_gstr_1_api",
+  "compare_unfiled_data",
   "filing_frequency",
   "column_break_cxmn",
   "restrict_changes_after_gstr_1",
@@ -612,14 +613,6 @@
   },
   {
    "default": "0",
-   "depends_on": "eval: india_compliance.is_api_enabled(doc)",
-   "description": "Use APIs to compare records with GST Portal Data Before and After Filing",
-   "fieldname": "compare_gstr_1_data",
-   "fieldtype": "Check",
-   "label": "Compare Data with GST Portal"
-  },
-  {
-   "default": "0",
    "depends_on": "eval: doc.enable_e_waybill",
    "fieldname": "enable_e_waybill_for_sc",
    "fieldtype": "Check",
@@ -668,12 +661,28 @@
    "label": "Default Reason for e-Invoice Cancellation",
    "mandatory_depends_on": "eval: doc.auto_cancel_e_invoice",
    "options": "Duplicate\nOrder Cancelled\nData Entry Mistake"
+  },
+  {
+   "default": "1",
+   "depends_on": "eval: india_compliance.is_api_enabled(doc) && doc.enable_gstr_1_api",
+   "description": "Use API to compare records with GST Portal Before Filing.",
+   "fieldname": "compare_unfiled_data",
+   "fieldtype": "Check",
+   "label": "Compare Data with GST Portal Before Filing"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval: india_compliance.is_api_enabled(doc)",
+   "description": "Use APIs to compare records with GST Portal and File GST Returns",
+   "fieldname": "enable_gstr_1_api",
+   "fieldtype": "Check",
+   "label": "Enable GSTR-1 API Features"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-12-12 19:09:07.185191",
+ "modified": "2025-01-07 16:34:55.885085",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
