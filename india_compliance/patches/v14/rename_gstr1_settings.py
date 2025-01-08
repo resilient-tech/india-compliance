@@ -1,9 +1,10 @@
 import frappe
+from frappe.utils import sbool
 
 
 def execute():
     settings = frappe.get_cached_doc("GST Settings")
-    if not settings.compare_gstr_1_data:
+    if not sbool(settings.get("compare_gstr_1_data")):
         return
 
     frappe.db.set_value(
