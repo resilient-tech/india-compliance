@@ -2,6 +2,20 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Bill of Entry", {
+    setup(frm) {
+        frm.fields_dict.purchase_invoices.grid.get_field("purchase_invoice").get_query = () => {
+            return {
+                filters: {
+                    docstatus: 1,
+                    gst_category: "Overseas",
+                },
+            };
+        };
+        frm.add_fetch("purchase_invoice", "supplier", "supplier");
+        frm.add_fetch("purchase_invoice", "posting_date", "posting_date");
+        frm.add_fetch("purchase_invoice", "base_grand_total", "grand_total");
+    },
+
     onload(frm) {
         frm.fields_dict.items.grid.cannot_add_rows = true;
         frm.bill_of_entry_controller = new BillOfEntryController(frm);
@@ -61,6 +75,18 @@ frappe.ui.form.on("Bill of Entry", {
             },
             __("View")
         );
+    },
+
+    get_items_from_purchase_invoice(frm) {
+        if (!frm.doc.purchase_invoices.length) {
+            frappe.msgprint(__("Please enter Purchase Invoice first"));
+            return;
+        }
+
+        frm.call({
+            doc: frm.doc,
+            method: "get_items_from_purchase_invoice",
+        });
     },
 
     total_taxable_value(frm) {

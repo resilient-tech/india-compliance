@@ -7,6 +7,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
+from frappe.query_builder.custom import ConstantColumn
 from frappe.utils import today
 import erpnext
 from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_entries
@@ -362,46 +363,63 @@ class BillofEntry(Document):
 
         return asset_items
 
+    @frappe.whitelist()
+    def get_items_from_purchase_invoice(self):
+        frappe.has_permission("Bill Of Entry", "write")
+        frappe.has_permission("Purchase Invoice", "read")
+
+        self.set("items", [])
+
+        for pi in self.get("purchase_invoices"):
+            if not pi.purchase_invoice:
+                continue
+
+            for item in get_pi_items(pi.purchase_invoice):
+                self.append("items", {**item})
+
+        set_missing_values(self)
+
+
+def set_missing_values(source, target=None):
+    if not target:
+        target = source
+
+    target.set_defaults()
+
+    # Add default tax
+    input_igst_account = get_gst_accounts_by_type(source.company, "Input").igst_account
+
+    if not input_igst_account:
+        return
+
+    rate, description = frappe.db.get_value(
+        "Purchase Taxes and Charges",
+        {
+            "parenttype": "Purchase Taxes and Charges Template",
+            "account_head": input_igst_account,
+        },
+        ("rate", "description"),
+    ) or (0, input_igst_account)
+
+    target.append(
+        "taxes",
+        {
+            "charge_type": "On Net Total",
+            "account_head": input_igst_account,
+            "rate": rate,
+            "gst_tax_type": "igst",
+            "description": description,
+        },
+    )
+
+    target.set_taxes_and_totals()
+
 
 @frappe.whitelist()
 def make_bill_of_entry(source_name, target_doc=None):
     """
     Permission checked in get_mapped_doc
     """
-
-    def set_missing_values(source, target):
-        target.set_defaults()
-
-        # Add default tax
-        input_igst_account = get_gst_accounts_by_type(
-            source.company, "Input"
-        ).igst_account
-
-        if not input_igst_account:
-            return
-
-        rate, description = frappe.db.get_value(
-            "Purchase Taxes and Charges",
-            {
-                "parenttype": "Purchase Taxes and Charges Template",
-                "account_head": input_igst_account,
-            },
-            ("rate", "description"),
-        ) or (0, input_igst_account)
-
-        target.append(
-            "taxes",
-            {
-                "charge_type": "On Net Total",
-                "account_head": input_igst_account,
-                "rate": rate,
-                "gst_tax_type": "igst",
-                "description": description,
-            },
-        )
-
-        target.set_taxes_and_totals()
-
     doc = get_mapped_doc(
         "Purchase Invoice",
         source_name,
@@ -424,6 +442,23 @@ def make_bill_of_entry(source_name, target_doc=None):
         },
         target_doc,
         postprocess=set_missing_values,
+    )
+
+    source_details = frappe.db.get_values(
+        "Purchase Invoice",
+        source_name,
+        fieldname=["supplier", "posting_date", "grand_total"],
+        as_dict=True,
+    )[0]
+
+    doc.append(
+        "purchase_invoice",
+        {
+            "purchase_invoice": source_name,
+            "supplier": source_details.supplier,
+            "posting_date": source_details.posting_date,
+            "grand_total": source_details.grand_total,
+        },
     )
 
     return doc
@@ -609,3 +644,39 @@ def get_items_for_landed_cost_voucher(boe):
         pr_item.boe_detail = item_name_map.get(pr_item.purchase_invoice_item)
 
     return _item_dict(pr_items)
+
+
+def get_pi_items(purchase_invoice):
+    pi = frappe.qb.DocType("Purchase Invoice")
+    pi_item = frappe.qb.DocType("Purchase Invoice Item")
+
+    return (
+        frappe.qb.from_(pi)
+        .join(pi_item)
+        .on(pi.name == pi_item.parent)
+        .select(
+            pi_item.item_code,
+            pi_item.item_name,
+            pi_item.qty,
+            pi_item.uom,
+            pi_item.cost_center,
+            pi_item.item_tax_template,
+            pi_item.gst_treatment,
+            pi_item.taxable_value.as_("assessable_value"),
+            pi_item.taxable_value,
+            pi_item.project,
+            pi_item.igst_rate,
+            pi_item.cgst_rate,
+            pi_item.sgst_rate,
+            pi_item.cess_rate,
+            pi_item.cess_non_advol_rate,
+            pi_item.igst_amount,
+            pi_item.cgst_amount,
+            pi_item.sgst_amount,
+            pi_item.cess_amount,
+            pi_item.cess_non_advol_amount,
+            ConstantColumn(purchase_invoice).as_("purchase_invoice"),
+        )
+        .where(pi.name == purchase_invoice)
+        .run(as_dict=True)
+    )
