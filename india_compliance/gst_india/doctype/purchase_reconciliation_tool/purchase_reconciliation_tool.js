@@ -71,7 +71,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         frm.trigger("company");
         frm.purchase_reconciliation_tool = new PurchaseReconciliationTool(frm);
 
-        frm.events.handle_download_failure(frm);
+        frm.events.handle_download_message(frm);
     },
 
     onload(frm) {
@@ -186,11 +186,11 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
     show_progress(frm, type) {
         if (type == "download") {
             frappe.run_serially([
-                () => frm.events.update_progress(frm, "update_api_progress"),
-                () => frm.events.update_progress(frm, "update_transactions_progress"),
+                () => frm.events.update_progress(frm, "update_2a_2b_api_progress"),
+                () => frm.events.update_progress(frm, "update_2a_2b_transactions_progress"),
             ]);
         } else if (type == "upload") {
-            frm.events.update_progress(frm, "update_transactions_progress");
+            frm.events.update_progress(frm, "update_2a_2b_transactions_progress");
         }
     },
 
@@ -198,7 +198,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         frappe.realtime.on(method, data => {
             const { current_progress } = data;
             const message =
-                method == "update_api_progress"
+                method == "update_2a_2b_api_progress"
                     ? __("Fetching data from GSTN")
                     : __("Updating Inward Supply for Return Period {0}", [
                           data.return_period,
@@ -214,7 +214,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
             }
             if (
                 current_progress === 100 &&
-                method != "update_api_progress" &&
+                method != "update_2a_2b_api_progress" &&
                 frm.flag_last_return_period == data.return_period
             ) {
                 setTimeout(() => {
@@ -230,15 +230,11 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         });
     },
 
-    handle_download_failure(frm) {
-        frappe.realtime.on("gstr_2a_2b_download_failed", message => {
+    handle_download_message(frm) {
+        frappe.realtime.on("gstr_2a_2b_download_message", message => {
             frm.dashboard.hide();
-            frappe.msgprint({
-                title: __("2A/2B Download Failed"),
-                message: message.error,
-                indicator: "red"
-            });
-        })
+            frappe.msgprint(message);
+        });
     },
 });
 
