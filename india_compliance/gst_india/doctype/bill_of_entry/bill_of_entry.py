@@ -140,28 +140,42 @@ class BillofEntry(Document):
         self.total_taxable_value = total_taxable_value
 
     def validate_purchase_invoice(self):
-        purchase = frappe.get_doc("Purchase Invoice", self.purchase_invoice)
-        if purchase.docstatus != 1:
-            frappe.throw(
-                _("Purchase Invoice must be submitted when creating a Bill of Entry")
-            )
+        pi_names = [row.purchase_invoice for row in self.purchase_invoices]
+        purchase_invoices = frappe.get_all(
+            "Purchase Invoice",
+            filters={"name": ["in", pi_names]},
+            fields=["docstatus", "gst_category", "name"],
+        )
 
-        if purchase.gst_category != "Overseas":
-            frappe.throw(
-                _(
-                    "GST Category must be set to Overseas in Purchase Invoice to create"
-                    " a Bill of Entry"
+        for invoice in purchase_invoices:
+            if invoice.docstatus != 1:
+                frappe.throw(
+                    _(
+                        "Purchase Invoice {0} must be submitted when creating a Bill of Entry"
+                    ).format(invoice.name)
                 )
-            )
 
-        pi_items = {item.name for item in purchase.items}
+            if invoice.gst_category != "Overseas":
+                frappe.throw(
+                    _(
+                        "GST Category must be set to Overseas in Purchase Invoice {0} to create"
+                        " a Bill of Entry"
+                    ).format(invoice.name)
+                )
+
+        pi_item_names = frappe.get_all(
+            "Purchase Invoice Item",
+            filters={"parent": ["in", pi_names]},
+            pluck="name",
+        )
+
         for item in self.items:
             if not item.pi_detail:
                 frappe.throw(
                     _("Row #{0}: Purchase Invoice Item is required").format(item.idx)
                 )
 
-            if item.pi_detail not in pi_items:
+            if item.pi_detail not in pi_item_names:
                 frappe.throw(
                     _(
                         "Row #{0}: Purchase Invoice Item {1} not found in Purchase"
@@ -169,7 +183,7 @@ class BillofEntry(Document):
                     ).format(
                         item.idx,
                         frappe.bold(item.pi_detail),
-                        frappe.bold(self.purchase_invoice),
+                        frappe.bold(item.purchase_invoice),
                     )
                 )
 
@@ -369,6 +383,7 @@ class BillofEntry(Document):
         frappe.has_permission("Purchase Invoice", "read")
 
         self.set("items", [])
+        self.set("taxes", [])
 
         for pi in self.get("purchase_invoices"):
             if not pi.purchase_invoice:
@@ -452,7 +467,7 @@ def make_bill_of_entry(source_name, target_doc=None):
     )[0]
 
     doc.append(
-        "purchase_invoice",
+        "purchase_invoices",
         {
             "purchase_invoice": source_name,
             "supplier": source_details.supplier,
@@ -597,53 +612,87 @@ def get_items_for_landed_cost_voucher(boe):
 
     NOTE: Assuming business has consistent practice of creating PR and PI
     """
-    pi = frappe.get_doc("Purchase Invoice", boe.purchase_invoice)
+    pi_names = [row.purchase_invoice for row in boe.purchase_invoices]
+
+    purchase_invoices = frappe.get_all(
+        "Purchase Invoice",
+        filters={"name": ["in", pi_names]},
+        fields=["update_stock", "name"],
+    )
+
+    # Fetch items from the Purchase Invoices
+    purchase_invoice_items = frappe.get_all(
+        "Purchase Invoice Item",
+        filters={"parent": ["in", pi_names]},
+        fields=["*"],
+    )
+
+    # Map items to their corresponding Purchase Invoices
+    invoice_items_map = {}
+    for item in purchase_invoice_items:
+        invoice_items_map.setdefault(item.parent, []).append(item)
+
+    # Create a map of Purchase Invoice details, including their items
+    invoice_details_map = []
+    for pi in purchase_invoices:
+        details = frappe._dict(
+            {
+                "name": pi.name,
+                "update_stock": pi.update_stock,
+                "item": invoice_items_map.get(pi.name, []),
+            }
+        )
+        invoice_details_map.append(details)
+
     item_customs_map = {item.pi_detail: item.customs_duty for item in boe.items}
     item_name_map = {item.pi_detail: item.name for item in boe.items}
 
-    def _item_dict(items):
-        return frappe._dict({item.name: item for item in items})
-
     # No PR
-    if pi.update_stock:
-        pi_items = [pi_item.as_dict() for pi_item in pi.items]
-        for pi_item in pi_items:
-            pi_item.customs_duty = item_customs_map.get(pi_item.name)
-            pi_item.boe_detail = item_name_map.get(pi_item.name)
+    all_items = []
+    for pi in invoice_details_map:
+        if pi.update_stock:
+            for pi_item in pi.item:
+                pi_item.customs_duty = item_customs_map.get(pi_item.name)
+                pi_item.boe_detail = item_name_map.get(pi_item.name)
 
-        return _item_dict(pi_items)
+            all_items.extend(pi.item)
 
-    # Creating PI from PR
-    if pi.items[0].purchase_receipt:
-        pr_pi_map = {pi_item.pr_detail: pi_item.name for pi_item in pi.items}
-        pr_items = frappe.get_all(
-            "Purchase Receipt Item",
-            fields="*",
-            filters={"name": ["in", pr_pi_map.keys()], "docstatus": 1},
-        )
+        # Creating PI from PR
+        elif pi.item[0].purchase_receipt:
+            pr_pi_map = {pi_item.pr_detail: pi_item.name for pi_item in pi.item}
+            pr_items = frappe.get_all(
+                "Purchase Receipt Item",
+                fields="*",
+                filters={"name": ["in", pr_pi_map.keys()], "docstatus": 1},
+            )
 
-        for pr_item in pr_items:
-            pr_item.customs_duty = item_customs_map.get(pr_pi_map.get(pr_item.name))
-            pr_item.boe_detail = item_name_map.get(pr_pi_map.get(pr_item.name))
+            for pr_item in pr_items:
+                pr_item.customs_duty = item_customs_map.get(pr_pi_map.get(pr_item.name))
+                pr_item.boe_detail = item_name_map.get(pr_pi_map.get(pr_item.name))
 
-        return _item_dict(pr_items)
+            all_items.extend(pr_items)
 
-    # Creating PR from PI (Qty split possible in PR)
-    pr_items = frappe.get_all(
-        "Purchase Receipt Item",
-        fields="*",
-        filters={"purchase_invoice": pi.name, "docstatus": 1},
-    )
+        else:
+            # Creating PR from PI (Qty split possible in PR)
+            pr_items = frappe.get_all(
+                "Purchase Receipt Item",
+                fields="*",
+                filters={"purchase_invoice": pi.name, "docstatus": 1},
+            )
 
-    item_qty_map = {item.name: item.qty for item in pi.items}
+            item_qty_map = {item.name: item.qty for item in pi.item}
 
-    for pr_item in pr_items:
-        customs_duty_for_item = item_customs_map.get(pr_item.purchase_invoice_item)
-        total_qty = item_qty_map.get(pr_item.purchase_invoice_item)
-        pr_item.customs_duty = customs_duty_for_item * pr_item.qty / total_qty
-        pr_item.boe_detail = item_name_map.get(pr_item.purchase_invoice_item)
+            for pr_item in pr_items:
+                customs_duty_for_item = item_customs_map.get(
+                    pr_item.purchase_invoice_item
+                )
+                total_qty = item_qty_map.get(pr_item.purchase_invoice_item)
+                pr_item.customs_duty = customs_duty_for_item * pr_item.qty / total_qty
+                pr_item.boe_detail = item_name_map.get(pr_item.purchase_invoice_item)
 
-    return _item_dict(pr_items)
+            all_items.extend(pr_items)
+
+    return frappe._dict({item.name: item for item in all_items if item})
 
 
 def get_pi_items(purchase_invoice):
@@ -676,6 +725,7 @@ def get_pi_items(purchase_invoice):
             pi_item.cess_amount,
             pi_item.cess_non_advol_amount,
             ConstantColumn(purchase_invoice).as_("purchase_invoice"),
+            pi_item.name.as_("pi_detail"),
         )
         .where(pi.name == purchase_invoice)
         .run(as_dict=True)
