@@ -2,6 +2,7 @@
 // For license information, please see license.txt
 
 const api_enabled = india_compliance.is_api_enabled();
+const DOCTYPE = "GST Invoice Management System";
 
 const category_map = {
     "B2B-Invoices": "Invoice",
@@ -16,7 +17,7 @@ const ACTION_MAP = {
     Reject: "Rejected",
 };
 
-frappe.ui.form.on("GST Invoice Management System", {
+frappe.ui.form.on(DOCTYPE, {
     async setup(frm) {
         await frappe.require("ims.bundle.js");
         frm.ims = new IMS(frm);
@@ -163,7 +164,7 @@ class IMS {
 
     setup_filter_button() {
         this.filter_group = new india_compliance.FilterGroup({
-            doctype: "GST Invoice Management System",
+            doctype: DOCTYPE,
             parent: this.$wrapper.find(".form-tabs-list"),
             filter_options: {
                 fieldname: "supplier_name",
@@ -226,7 +227,7 @@ class IMS {
             },
         ];
 
-        fields.forEach(field => (field.parent = "GST Invoice Management System"));
+        fields.forEach(field => (field.parent = DOCTYPE));
         return fields;
     }
 
@@ -332,7 +333,7 @@ class IMS {
         e.preventDefault();
 
         await me.filter_group.add_or_remove_filter([
-            "GST Invoice Management System",
+            DOCTYPE,
             field,
             "=",
             field_value,
@@ -553,16 +554,16 @@ class IMS {
         ];
     }
 
-    get_action_summary_data(filtered_data) {
+    get_action_summary_data(data) {
         const category_map = {
             Invoice: "B2B-Invoices",
             "Credit Note": "B2B-Credit Notes",
             "Debit Note": "B2B-Debit Notes",
         };
         let data = {};
-        if (!filtered_data) filtered_data = this.filtered_data;
+        if (!data) data = this.filtered_data;
 
-        filtered_data.forEach(row => {
+        data.forEach(row => {
             const action = frappe.scrub(row.ims_action);
             const category = category_map[row.doc_type];
             if (!data[category]) {
@@ -727,7 +728,7 @@ class IMSAction {
                 () => reconciliation.unlink_documents(this.frm, this.frm.ims),
                 __("Actions")
             );
-            this.frm.add_custom_button(__("dropdown-divider"), () => {}, __("Actions"));
+            this.frm.add_custom_button(__("dropdown-divider"), () => { }, __("Actions"));
         }
 
         // Setup Bulk Actions
@@ -897,11 +898,10 @@ class DetailViewDialog {
     init_dialog() {
         const supplier_details = `
         <h5>${this.comparision_data.supplier_name}
-        ${
-            this.comparision_data.supplier_gstin
+        ${this.comparision_data.supplier_gstin
                 ? ` (${this.comparision_data.supplier_gstin})`
                 : ""
-        }
+            }
         </h5>
         `;
 
@@ -1224,9 +1224,10 @@ async function apply_action(frm, invoice_names, action) {
 
     invoice_names = invoice_names.filter(
         name =>
-            !pending_not_allowed.includes(name) && !accept_not_allowed.includes(name)
+            !(pending_not_allowed.includes(name) || accept_not_allowed.includes(name))
     );
 
+    // TODO: Better UX? Invoices details where such actions are not performed
     if (pending_not_allowed.length) {
         frappe.msgprint({
             message: __(
@@ -1243,7 +1244,6 @@ async function apply_action(frm, invoice_names, action) {
         });
     }
 
-    invoice_names = invoice_names.filter(name => !pending_not_allowed.includes(name));
     if (!invoice_names.length) return;
 
     // Update

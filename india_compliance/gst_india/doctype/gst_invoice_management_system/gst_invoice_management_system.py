@@ -39,8 +39,8 @@ from india_compliance.gst_india.utils.gstr_2 import (
     GSTRCategory,
     download_ims_invoices,
     get_data_handler,
+    ReturnType,
 )
-from india_compliance.gst_india.utils.gstr_utils import ReturnType
 
 
 class GSTInvoiceManagementSystem(Document):
@@ -366,8 +366,6 @@ def process_upload_or_reset_ims(return_log, action):
 
 
 def update_previous_ims_action(integration_request, error_report=None):
-    from india_compliance.gst_india.utils.gstr_2 import ReturnType, get_data_handler
-
     uploded_invoices = get_uploaded_invoices(integration_request)
 
     for category, invoices in uploded_invoices.items():
