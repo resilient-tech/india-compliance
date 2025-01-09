@@ -15,6 +15,7 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_download import (
     save_gstr_1_filed_data,
     save_gstr_1_unfiled_data,
 )
+from india_compliance.gst_india.utils import create_notification
 
 
 class ReturnType(Enum):
@@ -122,3 +123,31 @@ def _download_queued_request(doc):
 
     frappe.db.set_value("GSTR Import Log", doc.name, "request_id", None)
     GSTR_FUNCTIONS[doc.return_type](doc.gstin, doc.return_period, response)
+
+
+def publish_action_status_notification(
+    return_type, return_period, request_type, status_cd, gstin, request_id=None
+):
+    status_message_map = {
+        "P": f"Success: {return_type} data {request_type} for GSTIN {gstin} and return period {return_period}",
+        "PE": f"Partial Success: {return_type} data {request_type} for GSTIN {gstin} and return period {return_period}",
+        "ER": f"Error: {return_type} data {request_type} for GSTIN {gstin} and return period {return_period}",
+    }
+
+    message_content = {
+        "subject": status_message_map.get(status_cd),
+        "body": status_message_map.get(status_cd),
+    }
+
+    if return_type == "GSTR-1":
+        document_type = "GSTR-1 Beta"
+    elif return_type == "IMS":
+        document_type = "GST Invoice Management System"
+
+    return frappe.enqueue(
+        create_notification,
+        queue="long",
+        message_content=message_content,
+        document_type=document_type,
+        request_id=request_id,
+    )

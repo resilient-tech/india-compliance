@@ -169,7 +169,8 @@ class IMS:
             .where(inward_supply.classification == category)
             .where(inward_supply.doc_type == doc_type)
             .where(inward_supply.company_gstin == self.company_gstin)
-        ).run(as_dict=True)
+            .run(as_dict=True)
+        )
 
         return {
             f"{transaction.get('supplier_gstin', '')}-{transaction.get('bill_no', '')}": transaction.get(
@@ -191,13 +192,14 @@ class IMS:
         )
         inward_supply = frappe.qb.DocType("GST Inward Supply")
 
-        frappe.qb.update(inward_supply).set(
-            inward_supply.previous_ims_action, ""
-        ).where(inward_supply.classification == category).where(
-            inward_supply.doc_type == doc_type
-        ).where(
-            inward_supply.company_gstin == self.company_gstin
-        ).run()
+        (
+            frappe.qb.update(inward_supply)
+            .set(inward_supply.previous_ims_action, "")
+            .where(inward_supply.classification == category)
+            .where(inward_supply.doc_type == doc_type)
+            .where(inward_supply.company_gstin == self.company_gstin)
+            .run()
+        )
 
     def ims_category(self):
         return type(self).__name__.removeprefix("IMS")

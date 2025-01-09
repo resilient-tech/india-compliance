@@ -1043,34 +1043,9 @@ def is_outward_stock_entry(doc):
         return True
 
 
-def get_message_content(request_type, gstin, return_period, status_cd):
-    status_message_map = {
-        "P": f"Data {request_type} for GSTIN {gstin} and return period {return_period} has been successfully completed.",
-        "PE": f"Data {request_type} for GSTIN {gstin} and return period {return_period} is completed with errors",
-        "ER": f"Data {request_type} for GSTIN {gstin} and return period {return_period} has encountered errors",
-    }
-
-    return {
-        "subject": f"Data {request_type} for GSTIN {gstin} and return period {return_period}",
-        "body": status_message_map.get(status_cd),
-    }
-
-
-def enqueue_notification(
-    return_period, request_type, status_cd, gstin, document_name, request_id=None
+def create_notification(
+    message_content, document_type, document_name=None, request_id=None
 ):
-    message_content = get_message_content(request_type, gstin, return_period, status_cd)
-
-    frappe.enqueue(
-        create_notification,
-        queue="long",
-        message_content=message_content,
-        document_name=document_name,
-        request_id=request_id,
-    )
-
-
-def create_notification(message_content, document_name, request_id=None):
     # request_id shows failure response
     if request_id and (
         doc_name := frappe.db.get_value(
@@ -1079,8 +1054,6 @@ def create_notification(message_content, document_name, request_id=None):
     ):
         document_type = "Integration Request"
         document_name = doc_name
-    else:
-        document_type = document_name
 
     notification = frappe.get_doc(
         {
@@ -1088,7 +1061,7 @@ def create_notification(message_content, document_name, request_id=None):
             "for_user": frappe.session.user,
             "type": "Alert",
             "document_type": document_type,
-            "document_name": document_name,
+            "document_name": document_name or document_type,
             "subject": message_content.get("subject"),
             "email_content": message_content.get("body"),
         }

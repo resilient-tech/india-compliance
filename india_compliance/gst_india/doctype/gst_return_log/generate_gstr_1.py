@@ -9,7 +9,9 @@ from frappe.utils import flt
 from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
 from india_compliance.gst_india.constants import STATUS_CODE_MAP
 from india_compliance.gst_india.doctype.gstr_action.gstr_action import set_gstr_actions
-from india_compliance.gst_india.utils import enqueue_notification
+from india_compliance.gst_india.utils.gstr_utils import (
+    publish_action_status_notification,
+)
 from india_compliance.gst_india.utils.gstr_1 import (
     CATEGORY_SUB_CATEGORY_MAPPING,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX,
@@ -751,12 +753,12 @@ class FileGSTR1:
 
         if response.get("status_cd") != "IP":
             doc.db_set({"status": STATUS_CODE_MAP.get(response.get("status_cd"))})
-            enqueue_notification(
+            publish_action_status_notification(
+                "GSTR-1",
                 self.return_period,
                 "reset",
                 response.get("status_cd"),
                 self.gstin,
-                "GSTR-1 Beta",
             )
 
         if response.get("status_cd") == "P":
@@ -804,12 +806,12 @@ class FileGSTR1:
 
         if status_cd != "IP":
             doc.db_set({"status": STATUS_CODE_MAP.get(status_cd)})
-            enqueue_notification(
+            publish_action_status_notification(
+                "GSTR-1",
                 self.return_period,
                 "upload",
                 status_cd,
                 self.gstin,
-                "GSTR-1 Beta",
                 api.request_id if status_cd == "ER" else None,
             )
 
@@ -893,12 +895,12 @@ class FileGSTR1:
                     "differing_categories": differing_categories,
                 }
             )
-            enqueue_notification(
+            publish_action_status_notification(
+                "GSTR-1",
                 self.return_period,
                 "proceed_to_file",
                 response.get("status_cd"),
                 self.gstin,
-                "GSTR-1 Beta",
                 api.request_id,
             )
 

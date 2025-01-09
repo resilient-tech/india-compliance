@@ -32,7 +32,9 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_re
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
     unlink_documents as _unlink_documents,
 )
-from india_compliance.gst_india.utils import enqueue_notification
+from india_compliance.gst_india.utils.gstr_utils import (
+    publish_action_status_notification,
+)
 from india_compliance.gst_india.utils.gstr_2 import (
     GSTRCategory,
     download_ims_invoices,
@@ -340,12 +342,12 @@ def process_upload_or_reset_ims(return_log, action):
 
     if status_cd != "IP":
         doc.db_set({"status": STATUS_CODE_MAP.get(status_cd)})
-        enqueue_notification(
+        publish_action_status_notification(
+            "IMS",
             return_log.return_period,
             doc.request_type,
             status_cd,
             return_log.gstin,
-            "GST Invoice Management System",
             api.request_id if status_cd == "ER" else None,
         )
 
