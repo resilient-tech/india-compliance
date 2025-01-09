@@ -4,7 +4,7 @@ import itertools
 
 import frappe
 from frappe import _, unscrub
-from frappe.utils import cint, flt
+from frappe.utils import flt
 
 from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
 from india_compliance.gst_india.utils.gstr_1 import GovJsonKey, GSTR1_SubCategory
@@ -747,7 +747,7 @@ class FileGSTR1:
 
         return response
 
-    def upload_gstr1(self, json_data, is_nil_return, force):
+    def upload_gstr1(self, json_data, force):
         if not json_data:
             return
 
@@ -755,14 +755,13 @@ class FileGSTR1:
 
         keys = {category.value for category in GovJsonKey}
         if all(key not in json_data for key in keys):
-            if not cint(is_nil_return):
-                frappe.msgprint(
-                    _(
-                        'No data to upload.To file Nil Return Select "File Nil GSTR-1" checkbox.'
-                    ),
-                    indicator="red",
-                )
-            return "nil_return_for_gstr1"
+            frappe.msgprint(
+                _(
+                    'No data to upload.To file Nil Return Select "File Nil GSTR-1" checkbox.'
+                ),
+                indicator="red",
+            )
+            return
 
         # upload data after proceed to file
         self.db_set({"filing_status": "Not Filed"})

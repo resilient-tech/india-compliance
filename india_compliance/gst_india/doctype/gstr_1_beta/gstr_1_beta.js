@@ -481,6 +481,11 @@ class GSTR1 {
             });
         }
 
+        const data = this.frm.doc.__gst_data;
+        if(data && Object.keys(data.books.aggregate_data).length == 0){
+            primary_button_label = "Proceed to File"
+        }
+
         this.frm.page.set_primary_action(__(primary_button_label), () =>
             actions[primary_button_label].call(this.gstr1_action)
         );
@@ -2577,10 +2582,12 @@ class GSTR1Action extends FileGSTR1Dialog {
 
     check_for_nil_return() {
         const data = this.frm.doc.__gst_data;
-        if(!data || !data.unfiled || !is_gstr1_api_enabled()) return;
+        // check this that books data is present or not
+        if(!data || !is_gstr1_api_enabled()) return;
 
-        if (Object.keys(data.unfiled).length === 1 && data.status == "Not Filed") {
-            this.frm.set_df_property("file_nil_gstr1", "hidden", 0)
+        if (Object.keys(data.books.aggregate_data).length === 0 && data.status == "Not Filed") {
+            this.frm.set_df_property("file_nil_gstr1", "hidden", 0);
+            this.frm.remove_custom_button('Upload');
         }
     }
 
@@ -2589,23 +2596,16 @@ class GSTR1Action extends FileGSTR1Dialog {
         if (await this.is_request_in_progress(action)) return;
 
         const upload = () => {
+            frappe.show_alert(__("Uploading data to GSTN"));
             this.perform_gstr1_action(action, response => {
-                if(response.message != "nil_return_for_gstr1"){
-                    frappe.show_alert(__("Uploading data to GSTN"));
-                    this.check_action_status_with_retry(action);
+                // No data to upload
+                if (response._server_messages && response._server_messages.length) {
+                    this.proceed_to_file();
                     return;
                 }
 
-                // No data to upload
-                if(response._server_messages){
-                    this.frm.scroll_to_field("file_nil_gstr1");
-                    this.toggle_actions(true);
-                    return;
-                }
-                frappe.show_alert(__("Proceeding to file Nil Rated GSTR-1"));
-                this.proceed_to_file();
-            },
-            { is_nil_return : this.frm.doc.file_nil_gstr1 });
+                this.check_action_status_with_retry(action);
+            });
         };
 
         // has draft invoices
@@ -2649,7 +2649,6 @@ class GSTR1Action extends FileGSTR1Dialog {
                 this.check_for_nil_return();
             }
             else this.check_action_status_with_retry(action);
-            // TODO: this.check_for_nil_return should also go after else condition
         },
         { is_nil_return : this.frm.doc.file_nil_gstr1 });
     }
