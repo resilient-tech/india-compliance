@@ -1,8 +1,6 @@
 // Copyright (c) 2022, Resilient Tech and contributors
 // For license information, please see license.txt
 
-frappe.provide("purchase_reconciliation_tool");
-
 const DOCTYPE = "Purchase Reconciliation Tool";
 const tooltip_info = {
     purchase_period: "Returns purchases during this period where no match is found.",
@@ -194,7 +192,11 @@ frappe.ui.form.on(DOCTYPE, {
         if (type == "download") {
             frappe.run_serially([
                 () => frm.events.update_progress(frm, "update_2a_2b_api_progress"),
-                () => frm.events.update_progress(frm, "update_2a_2b_transactions_progress"),
+                () =>
+                    frm.events.update_progress(
+                        frm,
+                        "update_2a_2b_transactions_progress"
+                    ),
             ]);
         } else if (type == "upload") {
             frm.events.update_progress(frm, "update_2a_2b_transactions_progress");
@@ -1050,7 +1052,8 @@ class DetailViewDialog {
             reconciliation.create_new_purchase_invoice(
                 this.data,
                 this.frm.doc.company,
-                this.frm.doc.company_gstin
+                this.frm.doc.company_gstin,
+                DOCTYPE
             );
         } else {
             apply_action(this.frm, action, [this.row]);

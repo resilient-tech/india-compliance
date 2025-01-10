@@ -74,22 +74,21 @@ frappe.ui.form.on(DOCTYPE, {
 
     on_submit: function (frm) {
         if (!frm._inward_supply) return;
-
         // go back to previous page and match the invoice with the inward supply
-        // TODO: how to know if previous page is reco tool or IMS?
         setTimeout(() => {
-            frappe.route_hooks.after_load = reco_frm => {
-                if (!reco_frm.purchase_reconciliation_tool) return;
+            frappe.route_hooks.after_load = source_frm => {
+                if (!(source_frm.purchase_reconciliation_tool || source_frm.ims))
+                    return;
                 reconciliation.link_documents(
-                    reco_frm,
+                    source_frm,
                     frm.doc.name,
                     frm._inward_supply.name,
                     "Purchase Invoice",
-                    reco_frm.purchase_reconciliation_tool,
+                    source_frm.purchase_reconciliation_tool || source_frm.ims,
                     false
                 );
             };
-            frappe.set_route("Form", "Purchase Reconciliation Tool");
+            frappe.set_route("Form", frm._inward_supply.source_doc);
         }, 2000);
     },
 });

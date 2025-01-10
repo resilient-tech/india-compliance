@@ -332,12 +332,7 @@ class IMS {
     async update_filter(e, field, field_value, me) {
         e.preventDefault();
 
-        await me.filter_group.add_or_remove_filter([
-            DOCTYPE,
-            field,
-            "=",
-            field_value,
-        ]);
+        await me.filter_group.add_or_remove_filter([DOCTYPE, field, "=", field_value]);
         me.filter_group.apply();
     }
 
@@ -728,7 +723,7 @@ class IMSAction {
                 () => reconciliation.unlink_documents(this.frm, this.frm.ims),
                 __("Actions")
             );
-            this.frm.add_custom_button(__("dropdown-divider"), () => { }, __("Actions"));
+            this.frm.add_custom_button(__("dropdown-divider"), () => {}, __("Actions"));
         }
 
         // Setup Bulk Actions
@@ -898,10 +893,11 @@ class DetailViewDialog {
     init_dialog() {
         const supplier_details = `
         <h5>${this.comparison_data.supplier_name}
-        ${this.comparison_data.supplier_gstin
+        ${
+            this.comparison_data.supplier_gstin
                 ? ` (${this.comparison_data.supplier_gstin})`
                 : ""
-            }
+        }
         </h5>
         `;
 
@@ -1124,7 +1120,8 @@ class DetailViewDialog {
             reconciliation.create_new_purchase_invoice(
                 this.comparison_data,
                 this.frm.doc.company,
-                this.frm.doc.company_gstin
+                this.frm.doc.company_gstin,
+                DOCTYPE
             );
         } else {
             apply_action(this.frm, [this.row.inward_supply_name], ACTION_MAP[action]);

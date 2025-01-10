@@ -90,7 +90,7 @@ Object.assign(reconciliation, {
         if (alert) reconciliation.after_successful_action(_class.tabs.invoice_tab);
     },
 
-    async create_new_purchase_invoice(row, company, company_gstin) {
+    async create_new_purchase_invoice(row, company, company_gstin, source_doc) {
         if (row.match_status != "Missing in PI") return;
         const doc = row._inward_supply;
 
@@ -144,6 +144,7 @@ Object.assign(reconciliation, {
                 igst: doc.igst,
                 cess: doc.cess,
                 taxable_value: doc.taxable_value,
+                source_doc,
             };
         };
 
