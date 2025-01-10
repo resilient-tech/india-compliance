@@ -164,23 +164,8 @@ frappe.ui.form.on(DOCTYPE, {
             )
                 return;
 
-<<<<<<< HEAD
             frappe.after_ajax(() => {
                 frm.doc.__gst_data = data ;
-=======
-            const only_books_data = error_log != undefined;
-            if (error_log) {
-                frappe.msgprint({
-                    message: __("Error while preparing GSTR-1 data, please check {0} for more deatils.",
-                        [`<a href='/app/error-log/${error_log}' class='variant-click'>error log</a>`]),
-                    title: "GSTR-1 Download Failed",
-                    indicator: "red",
-                });
-            }
-
-            frm.taxpayer_api_call("generate_gstr1", { only_books_data }).then(r => {
-                frm.doc.__gst_data = r.message;
->>>>>>> 117151ab (fix: suggest default return period correct when in first period)
                 frm.trigger("load_gstr1_data");
             });
         });
