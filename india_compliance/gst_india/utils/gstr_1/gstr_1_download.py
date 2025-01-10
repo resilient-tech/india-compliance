@@ -6,6 +6,7 @@ from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
 from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
     create_import_log,
 )
+from india_compliance.gst_india.utils.gstr_1 import GovJsonKey
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     convert_to_internal_data_format,
 )
@@ -123,4 +124,33 @@ def save_gstr_1_unfiled_data(gstin, return_period, json_data):
 
 
 def get_sections_to_download(summary):
-    return ACTIONS
+    if summary.isnil:
+        return []
+
+    SECTION_ACTION_MAP = {
+        "B2B": "B2B",
+        "B2CL": "B2CL",
+        "B2CS": "B2CS",
+        "CDNR": "CDNR",
+        "CDNUR": "CDNUR",
+        "EXP": "EXP",
+        "NIL": "NIL",
+        "AT": "AT",
+        "TXPD": "TXP",
+        "HSN": "HSNSUM",
+        "DOC_ISSUE": "DOCISS",
+    }
+
+    actions = set()
+
+    for row in summary.get(GovJsonKey.RET_SUM.value):
+        section = row.get("sec_nm")
+
+        # total no of records
+        if row.get("ttl_rec") == 0:
+            continue
+
+        if section in SECTION_ACTION_MAP:
+            actions.add(SECTION_ACTION_MAP[section])
+
+    return list(actions)
