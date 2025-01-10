@@ -2119,11 +2119,18 @@ async function set_default_company_gstin(frm) {
 
 function set_options_for_year(frm) {
     const today = new Date();
-    const current_year = today.getFullYear();
+    let current_year = today.getFullYear();
+    const current_month_idx = today.getMonth();
     const start_year = 2017;
     const year_range = current_year - start_year + 1;
     let options = Array.from({ length: year_range }, (_, index) => start_year + index);
     options = options.reverse().map(year => year.toString());
+
+    if (
+        (frm.filing_frequency === "Monthly" && current_month_idx === 0) ||
+        (frm.filing_frequency === "Quarterly" && current_month_idx < 3)
+    )
+        current_year--;
 
     frm.get_field("year").set_data(options);
     frm.set_value("year", current_year.toString());
@@ -2170,7 +2177,7 @@ function set_options_for_month_or_quarter(frm) {
     }
 
     set_field_options("month_or_quarter", options);
-    if (frm.doc.year === current_year)
+    if (frm.doc.year === current_year && options.length > 1)
         // set second last option as default
         frm.set_value("month_or_quarter", options[options.length - 2]);
     // set last option as default
