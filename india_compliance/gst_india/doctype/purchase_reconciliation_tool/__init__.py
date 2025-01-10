@@ -500,6 +500,7 @@ class BillOfEntry:
 
         self.BOE = frappe.qb.DocType("Bill of Entry")
         self.BOE_ITEM = frappe.qb.DocType("Bill of Entry Item")
+        self.BOE_PI = frappe.qb.DocType("BOE Purchase Invoice")
         self.PI = frappe.qb.DocType("Purchase Invoice")
 
     def get_all(self, additional_fields=None, names=None, only_names=False):
@@ -559,8 +560,10 @@ class BillOfEntry:
             frappe.qb.from_(self.BOE)
             .left_join(self.BOE_ITEM)
             .on(self.BOE_ITEM.parent == self.BOE.name)
+            .join(self.BOE_PI)
+            .on(self.BOE_PI.parent == self.BOE.name)
             .join(self.PI)
-            .on(self.BOE.purchase_invoice == self.PI.name)
+            .on(self.BOE_PI.purchase_invoice == self.PI.name)
             .where(self.BOE.docstatus == 1)
             .where(IfNull(self.BOE.reconciliation_status, "") != "Not Applicable")
             .where(self.BOE_ITEM.parenttype == "Bill of Entry")
