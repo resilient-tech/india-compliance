@@ -14,6 +14,8 @@ from india_compliance.gst_india.utils.tests import (
     create_purchase_invoice as _create_purchase_invoice,
 )
 
+IGNORE_TEST_RECORD_DEPENDENCIES = ["Company"]
+
 PURCHASE_INVOICE_DEFAULT_ARGS = {
     "bill_no": "BILL-23-00001",
     "bill_date": "2023-12-11",
@@ -53,9 +55,6 @@ BILL_OF_ENTRY_DEFAULT_ARGS = {
 class TestPurchaseReconciliationTool(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
-        # don't create test objects
-        frappe.local.test_objects["Purchase Reconciliation Tool"] = []
-
         super().setUpClass()
 
         # create 2023-2024 fiscal year

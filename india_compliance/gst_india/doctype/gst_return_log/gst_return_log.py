@@ -178,7 +178,7 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
                 self.gstin,
                 self.return_period,
             )
-            self.filing_status = status
+            self.db_set("filing_status", status)
 
         return status
 

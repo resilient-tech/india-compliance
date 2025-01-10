@@ -6,13 +6,12 @@ import frappe
 from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils.data import getdate
 
+IGNORE_TEST_RECORD_DEPENDENCIES = ["Company", "Account"]
+
 
 class TestGSTSettings(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
-        # don't create test objects
-        frappe.local.test_objects["GST Settings"] = []
-
         super().setUpClass()
 
     @change_settings("GST Settings", {"enable_api": 1})

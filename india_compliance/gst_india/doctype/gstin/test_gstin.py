@@ -3,7 +3,6 @@
 import responses
 from responses import matchers
 
-import frappe
 from frappe.tests import IntegrationTestCase, change_settings
 
 from india_compliance.gst_india.doctype.gstin.gstin import validate_gst_transporter_id
@@ -28,9 +27,6 @@ TRANSPORTER_ID_API_RESPONSE = {
 class TestGSTIN(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
-        # don't create test objects
-        frappe.local.test_objects["GSTIN"] = []
-
         super().setUpClass()
 
     @responses.activate
