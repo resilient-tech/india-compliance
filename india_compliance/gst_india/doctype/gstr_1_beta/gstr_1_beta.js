@@ -186,6 +186,8 @@ frappe.ui.form.on(DOCTYPE, {
 
     company_gstin: render_empty_state,
 
+    file_nil_gstr1: file_nil_return,
+
     month_or_quarter(frm) {
         render_empty_state(frm);
     },
@@ -479,11 +481,6 @@ class GSTR1 {
             this.frm.add_custom_button(__("Mark as Unfiled"), () => {
                 this.gstr1_action.mark_as_unfiled();
             });
-        }
-
-        const data = this.frm.doc.__gst_data;
-        if(data && Object.keys(data.books.aggregate_data).length == 0){
-            primary_button_label = "Proceed to File"
         }
 
         this.frm.page.set_primary_action(__(primary_button_label), () =>
@@ -2583,7 +2580,7 @@ class GSTR1Action extends FileGSTR1Dialog {
     check_for_nil_return() {
         const data = this.frm.doc.__gst_data;
         // check this that books data is present or not
-        if(!data || !is_gstr1_api_enabled()) return;
+        if (!data || !is_gstr1_api_enabled()) return;
 
         if (Object.keys(data.books.aggregate_data).length === 0 && data.status == "Not Filed") {
             this.frm.set_df_property("file_nil_gstr1", "hidden", 0);
@@ -2965,6 +2962,17 @@ function set_options_for_month_or_quarter(frm) {
         frm.set_value("month_or_quarter", options[options.length - 2]);
     // set last option as default
     else frm.set_value("month_or_quarter", options[options.length - 1]);
+}
+
+function file_nil_return(frm){
+    if(frm.doc.file_nil_gstr1){
+        frm.page.set_primary_action(__("Proceed to File"), () =>
+            frm.gstr1.gstr1_action.proceed_to_file()
+        );
+    }else{
+        frm.doc.__gst_data.status = "Not Filed";
+        frm.gstr1?.render_form_actions();
+    }
 }
 
 function render_empty_state(frm) {

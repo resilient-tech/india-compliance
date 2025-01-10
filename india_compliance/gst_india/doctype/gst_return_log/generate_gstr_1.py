@@ -755,12 +755,7 @@ class FileGSTR1:
 
         keys = {category.value for category in GovJsonKey}
         if all(key not in json_data for key in keys):
-            frappe.msgprint(
-                _(
-                    'No data to upload.To file Nil Return Select "File Nil GSTR-1" checkbox.'
-                ),
-                indicator="red",
-            )
+            frappe.msgprint(_("No data to upload"), indicator="red")
             return
 
         # upload data after proceed to file
