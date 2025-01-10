@@ -560,14 +560,14 @@ class IMS {
             "Credit Note": "B2B-Credit Notes",
             "Debit Note": "B2B-Debit Notes",
         };
-        let data = {};
+        let summary_data = {};
         if (!data) data = this.filtered_data;
 
         data.forEach(row => {
             const action = frappe.scrub(row.ims_action);
             const category = category_map[row.doc_type];
-            if (!data[category]) {
-                data[category] = {
+            if (!summary_data[category]) {
+                summary_data[category] = {
                     category,
                     no_action: 0,
                     accepted: 0,
@@ -575,10 +575,10 @@ class IMS {
                     pending: 0,
                 };
             }
-            data[category][action] += 1;
+            summary_data[category][action] += 1;
         });
 
-        return Object.values(data);
+        return Object.values(summary_data);
     }
 
     get_supplier_name_gstin(row) {
@@ -872,7 +872,7 @@ class DetailViewDialog {
 
     async get_invoice_details() {
         const { message } = await frappe.call({
-            method: "get_invoice_comparision",
+            method: "get_invoice_comparison",
             doc: this.frm,
             args: {
                 purchase_name: this.row.purchase_invoice_name,
@@ -880,12 +880,12 @@ class DetailViewDialog {
             },
         });
 
-        this.comparision_data = message;
+        this.comparison_data = message;
     }
 
     process_data() {
         for (let key of ["_purchase_invoice", "_inward_supply"]) {
-            const doc = this.comparision_data[key];
+            const doc = this.comparison_data[key];
             if (!doc) continue;
 
             this.table_fields.forEach(field => {
@@ -897,16 +897,16 @@ class DetailViewDialog {
 
     init_dialog() {
         const supplier_details = `
-        <h5>${this.comparision_data.supplier_name}
-        ${this.comparision_data.supplier_gstin
-                ? ` (${this.comparision_data.supplier_gstin})`
+        <h5>${this.comparison_data.supplier_name}
+        ${this.comparison_data.supplier_gstin
+                ? ` (${this.comparison_data.supplier_gstin})`
                 : ""
             }
         </h5>
         `;
 
         this.dialog = new frappe.ui.Dialog({
-            title: `Detail View (${this.comparision_data.classification})`,
+            title: `Detail View (${this.comparison_data.classification})`,
             fields: [
                 ...this._get_document_link_fields(),
                 {
@@ -992,22 +992,22 @@ class DetailViewDialog {
     render_cards() {
         let cards = [
             {
-                value: this.comparision_data.tax_difference,
+                value: this.comparison_data.tax_difference,
                 label: "Tax Difference",
                 datatype: "Currency",
                 currency: frappe.boot.sysdefaults.currency,
                 indicator:
-                    this.comparision_data.tax_difference === 0
+                    this.comparison_data.tax_difference === 0
                         ? "text-success"
                         : "text-danger",
             },
             {
-                value: this.comparision_data.taxable_value_difference,
+                value: this.comparison_data.taxable_value_difference,
                 label: "Taxable Amount Difference",
                 datatype: "Currency",
                 currency: frappe.boot.sysdefaults.currency,
                 indicator:
-                    this.comparision_data.taxable_value_difference === 0
+                    this.comparison_data.taxable_value_difference === 0
                         ? "text-success"
                         : "text-danger",
             },
@@ -1025,9 +1025,9 @@ class DetailViewDialog {
         const detail_table = this.dialog.fields_dict.detail_table;
 
         detail_table.html(
-            frappe.render_template("invoice_detail_comparision", {
-                purchase: this.comparision_data._purchase_invoice,
-                inward_supply: this.comparision_data._inward_supply,
+            frappe.render_template("invoice_detail_comparison", {
+                purchase: this.comparison_data._purchase_invoice,
+                inward_supply: this.comparison_data._inward_supply,
             })
         );
 
@@ -1040,8 +1040,8 @@ class DetailViewDialog {
 
         ["place_of_supply", "is_reverse_charge"].forEach(field => {
             if (
-                this.comparision_data._purchase_invoice[field] ==
-                this.comparision_data._inward_supply[field]
+                this.comparison_data._purchase_invoice[field] ==
+                this.comparison_data._inward_supply[field]
             )
                 return;
 
@@ -1059,7 +1059,7 @@ class DetailViewDialog {
             bill_from_date: this.dialog.get_value("date_range")[0],
             bill_to_date: this.dialog.get_value("date_range")[1],
             show_matched: this.dialog.get_value("show_matched"),
-            purchase_doctype: this.comparision_data.purchase_doctype,
+            purchase_doctype: this.comparison_data.purchase_doctype,
         };
 
         const { message } = await frappe.call({
@@ -1114,15 +1114,15 @@ class DetailViewDialog {
         } else if (action == "Link") {
             reconciliation.link_documents(
                 this.frm,
-                this.comparision_data.purchase_invoice_name,
-                this.comparision_data.inward_supply_name,
+                this.comparison_data.purchase_invoice_name,
+                this.comparison_data.inward_supply_name,
                 this.dialog.get_value("doctype"),
                 this.frm.ims,
                 true
             );
         } else if (action == "Create") {
             reconciliation.create_new_purchase_invoice(
-                this.comparision_data,
+                this.comparison_data,
                 this.frm.doc.company,
                 this.frm.doc.company_gstin
             );
@@ -1158,7 +1158,7 @@ class DetailViewDialog {
         await this.get_invoice_details();
         this.process_data();
 
-        this.row = this.comparision_data;
+        this.row = this.comparison_data;
         this.render_html();
     }
 }

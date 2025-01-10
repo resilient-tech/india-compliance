@@ -116,7 +116,7 @@ class GSTInvoiceManagementSystem(Document):
         )
 
     @frappe.whitelist()
-    def get_invoice_comparision(self, purchase_name, inward_supply_name):
+    def get_invoice_comparison(self, purchase_name, inward_supply_name):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         inward_supply = InwardSupply().get_all(
@@ -366,9 +366,9 @@ def process_upload_or_reset_ims(return_log, action):
 
 
 def update_previous_ims_action(integration_request, error_report=None):
-    uploded_invoices = get_uploaded_invoices(integration_request)
+    uploaded_invoices = get_uploaded_invoices(integration_request)
 
-    for category, invoices in uploded_invoices.items():
+    for category, invoices in uploaded_invoices.items():
         _class = get_data_handler(ReturnType.IMS.value, category.upper())
         _class().update_previous_ims_action(invoices, error_report.get(category, []))
 
