@@ -1141,7 +1141,7 @@ class DetailViewDialog {
         const detail_table = this.dialog.fields_dict.detail_table;
 
         detail_table.html(
-            frappe.render_template("purchase_detail_comparision", {
+            frappe.render_template("purchase_detail_comparison", {
                 purchase: this.data._purchase_invoice,
                 inward_supply: this.data._inward_supply,
             })
