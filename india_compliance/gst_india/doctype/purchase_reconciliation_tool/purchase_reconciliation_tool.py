@@ -266,7 +266,6 @@ class PurchaseReconciliationTool(Document):
         purchases.append(purchase_invoice_name)
         inward_supplies.append(inward_supply_name)
 
-        self.db_set("is_modified", 1)
         self.set_reconciliation_status(
             link_doctype, (purchase_invoice_name,), "Match Found"
         )
@@ -295,8 +294,6 @@ class PurchaseReconciliationTool(Document):
         self.set_reconciliation_status("Purchase Invoice", purchases, "Unreconciled")
         self.set_reconciliation_status("Bill of Entry", boe, "Unreconciled")
         self._unlink_documents(inward_supplies)
-
-        self.db_set("is_modified", 1)
 
         return self.ReconciledData.get(purchases.union(boe), inward_supplies)
 
@@ -366,8 +363,6 @@ class PurchaseReconciliationTool(Document):
 
         self.set_reconciliation_status("Purchase Invoice", purchases, status)
         self.set_reconciliation_status("Bill of Entry", boe, status)
-
-        self.db_set("is_modified", 1)
 
     @frappe.whitelist()
     def get_link_options(self, doctype, filters):
