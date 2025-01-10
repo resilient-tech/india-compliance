@@ -76,6 +76,9 @@ def download_gstr1_json_data(gstr1_log):
 
         json_data.update(response)
 
+    if json_data.isnil == "Y":
+        gstr1_log.db_set("is_nil", 1)
+
     mapped_data = convert_to_internal_data_format(json_data)
     gstr1_log.update_json_for(data_field, mapped_data, reset_reconcile=True)
 

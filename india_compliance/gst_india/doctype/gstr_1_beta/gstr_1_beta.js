@@ -873,7 +873,7 @@ class TabManager {
         this.status = status;
         this.remove_tab_custom_buttons();
         this.setup_actions();
-        this.datatable.refresh(this.summary);
+        this.datatable.refresh(this.summary, null, this.get_no_data_message());
         this.set_default_title();
         this.set_creation_time_string();
     }
@@ -989,7 +989,7 @@ class TabManager {
                 showTotalRow: true,
                 checkboxColumn: false,
                 treeView: treeView,
-                noDataMessage: this.DEFAULT_NO_DATA_MESSAGE,
+                noDataMessage: this.get_no_data_message(),
                 headerDropdown: [
                     {
                         label: "Collapse All Node",
@@ -1033,7 +1033,6 @@ class TabManager {
                     },
                 },
             },
-            no_data_message: __("No data found"),
         });
 
         this.setup_datatable_listeners(treeView);
@@ -1185,6 +1184,10 @@ class TabManager {
         >
             <i class="fa fa-${icon}"></i>
         </button>`;
+    }
+
+    get_no_data_message() {
+        return this.DEFAULT_NO_DATA_MESSAGE;
     }
 }
 
@@ -2108,6 +2111,11 @@ class FiledTab extends GSTR1_TabManager {
             },
         ];
     }
+
+    get_no_data_message() {
+        if (this.instance.data?.is_nil)
+            return __("You have filed a Nil GSTR-1 for this period");
+    }
 }
 
 class UnfiledTab extends FiledTab {
@@ -2126,8 +2134,6 @@ class UnfiledTab extends FiledTab {
 }
 
 class ReconcileTab extends FiledTab {
-    DEFAULT_NO_DATA_MESSAGE = __("No differences found");
-
     set_default_title() {
         if (this.instance.data.status === "Filed")
             this.DEFAULT_TITLE = "Books vs Filed";
@@ -2181,6 +2187,10 @@ class ReconcileTab extends FiledTab {
                 width: 150,
             },
         ];
+    }
+
+    get_no_data_message() {
+        return __("No differences found");
     }
 }
 
