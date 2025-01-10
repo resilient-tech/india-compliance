@@ -717,6 +717,7 @@ class IMSAction {
 
     setup_custom_buttons() {
         // Setup Custom Buttons
+        if (!this.frm.doc?.__invoice_data?.length) return;
         if (this.frm.get_active_tab()?.df.fieldname == "invoice_tab") {
             this.frm.add_custom_button(
                 __("Unlink"),
