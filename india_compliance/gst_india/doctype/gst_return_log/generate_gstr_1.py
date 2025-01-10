@@ -484,6 +484,35 @@ class AggregateInvoices:
 
 
 class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
+<<<<<<< HEAD
+=======
+    def get_gstr1_data(self):
+        data = self.load_data()
+
+        if not data:
+            return
+
+        data = data
+        data["status"] = self.filing_status or "Not Filed"
+        data["is_nil"] = self.is_nil
+
+        if error_data := self.get_json_for("upload_error"):
+            data["errors"] = error_data
+
+        data["pending_actions"] = set(
+            [
+                row.request_type
+                for row in self.actions
+                if not row.status
+                and row.request_type in ["reset", "upload", "proceed_to_file"]
+            ]
+        )
+
+        self.update_status("Generated")
+
+        return data
+
+>>>>>>> 7813727d (fix: save nil filing information in gst return log)
     def generate_gstr1_data(self, filters, callback=None):
         """
         Generate GSTR-1 Data

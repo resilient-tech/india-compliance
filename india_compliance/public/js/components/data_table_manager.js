@@ -23,8 +23,11 @@ india_compliance.DataTableManager = class DataTableManager {
         }
     }
 
-    refresh(data, columns) {
+    refresh(data, columns, noDataMessage) {
         this.data = data;
+        if (noDataMessage)
+            this.datatable.noDataMessage = noDataMessage;
+
         this.datatable.refresh(data, columns);
     }
 
