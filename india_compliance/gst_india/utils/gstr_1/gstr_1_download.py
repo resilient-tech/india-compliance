@@ -6,11 +6,12 @@ from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
 from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
     create_import_log,
 )
+from india_compliance.gst_india.utils.gstr_1 import GovJsonKey
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     convert_to_internal_data_format,
 )
 
-UNFILED_ACTIONS = [
+ACTIONS = [
     "B2B",
     "B2CL",
     "B2CS",
@@ -25,8 +26,6 @@ UNFILED_ACTIONS = [
     "DOCISS",
 ]
 
-FILED_ACTIONS = [*UNFILED_ACTIONS, "RETSUM"]
-
 
 def download_gstr1_json_data(gstr1_log):
     """
@@ -39,15 +38,18 @@ def download_gstr1_json_data(gstr1_log):
     json_data = frappe._dict()
     api = GSTR1API(gstr1_log)
 
+    summary = api.get_gstr_1_data("RETSUM", return_period)
+
     if gstr1_log.filing_status == "Filed":
         return_type = "GSTR1"
-        actions = FILED_ACTIONS
         data_field = "filed"
+        json_data.update(summary)
 
     else:
         return_type = "Unfiled GSTR1"
-        actions = UNFILED_ACTIONS
         data_field = "unfiled"
+
+    actions = get_sections_to_download(summary)
 
     # download data
     for action in actions:
@@ -118,3 +120,36 @@ def save_gstr_1_filed_data(gstin, return_period, json_data):
 
 def save_gstr_1_unfiled_data(gstin, return_period, json_data):
     save_gstr_1(gstin, return_period, json_data, "Unfiled GSTR1")
+
+
+def get_sections_to_download(summary):
+    if summary.isnil:
+        return []
+
+    SECTION_ACTION_MAP = {
+        "B2B": "B2B",
+        "B2CL": "B2CL",
+        "B2CS": "B2CS",
+        "CDNR": "CDNR",
+        "CDNUR": "CDNUR",
+        "EXP": "EXP",
+        "NIL": "NIL",
+        "AT": "AT",
+        "TXPD": "TXP",
+        "HSN": "HSNSUM",
+        "DOC_ISSUE": "DOCISS",
+    }
+
+    actions = set()
+
+    for row in summary.get(GovJsonKey.RET_SUM.value):
+        section = row.get("sec_nm")
+
+        # total no of records
+        if row.get("ttl_rec") == 0:
+            continue
+
+        if section in SECTION_ACTION_MAP:
+            actions.add(SECTION_ACTION_MAP[section])
+
+    return list(actions)
