@@ -76,92 +76,45 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     onload(frm) {
-        if (frm.doc.is_modified) frm.doc.reconciliation_data = null;
         add_gstr2b_alert(frm);
 
         frm.trigger("purchase_period");
         frm.trigger("inward_supply_period");
     },
 
+    refresh(frm) {
+        this.reco_tool_actions = new PurchaseReconciliationToolAction(frm);
+
+        this.reco_tool_actions.setup_primary_actions();
+        this.reco_tool_actions.setup_custom_buttons();
+    },
+
     async company(frm) {
+        render_empty_state(frm);
         if (!frm.doc.company) return;
         const options = await india_compliance.set_gstin_options(frm, true);
 
         if (!frm.doc.company_gstin) frm.set_value("company_gstin", options[0]);
     },
 
-    refresh(frm) {
-        // Primary Action
-        frm.disable_save();
-        frm.page.set_primary_action(__("Reconcile"), () => {
-            if (!frm.doc.company && !frm.doc.company_gstin) {
-                frappe.throw(
-                    __("Please provide either a Company name or Company GSTIN.")
-                );
-            }
-            frm.save();
-        });
-
-        const action_group = __("Actions");
-
-        // add custom buttons
-        api_enabled
-            ? frm.add_custom_button(__("Download 2A/2B"), () => new ImportDialog(frm))
-            : frm.add_custom_button(
-                  __("Upload 2A/2B"),
-                  () => new ImportDialog(frm, false)
-              );
-
-        if (!frm.purchase_reconciliation_tool?.data?.length) return;
-        if (frm.get_active_tab()?.df.fieldname == "invoice_tab") {
-            frm.add_custom_button(
-                __("Unlink"),
-                () => unlink_documents(frm),
-                action_group
-            );
-            frm.add_custom_button(__("dropdown-divider"), () => {}, action_group);
-        }
-        ["Accept", "Pending", "Ignore"].forEach(action =>
-            frm.add_custom_button(
-                __(action),
-                () => apply_action(frm, action),
-                action_group
-            )
+    async company_gstin(frm) {
+        render_empty_state(frm);
+        await fetch_date_range(
+            frm,
+            "inward_supply",
+            "get_date_range_and_check_missing_documents"
         );
-        frm.$wrapper
-            .find("[data-label='dropdown-divider']")
-            .addClass("dropdown-divider");
-
-        // Export button
-        frm.add_custom_button(__("Export"), () =>
-            frm.purchase_reconciliation_tool.export_data()
-        );
-
-        // move actions button next to filters
-        for (const group_div of $(".custom-actions .inner-group-button")) {
-            const btn_label = group_div.querySelector("button").innerText?.trim();
-            if (btn_label != action_group) continue;
-
-            $(".custom-button-group .inner-group-button").remove();
-
-            // to hide `Actions` button group on smaller screens
-            $(group_div).addClass("hidden-md");
-
-            $(group_div).appendTo($(".custom-button-group"));
-        }
-    },
-
-    before_save(frm) {
-        frm.doc.__unsaved = true;
-        frm.doc.reconciliation_data = null;
+        add_gstr2b_alert(frm);
     },
 
     async purchase_period(frm) {
+        render_empty_state(frm);
         await fetch_date_range(frm, "purchase");
         set_date_range_description(frm, "purchase");
     },
 
     async inward_supply_period(frm) {
+        render_empty_state(frm);
         await fetch_date_range(
             frm,
             "inward_supply",
@@ -171,20 +124,9 @@ frappe.ui.form.on(DOCTYPE, {
         add_gstr2b_alert(frm);
     },
 
-    async company_gstin(frm) {
-        await fetch_date_range(
-            frm,
-            "inward_supply",
-            "get_date_range_and_check_missing_documents"
-        );
-        add_gstr2b_alert(frm);
-    },
+    gst_return: render_empty_state,
 
-    after_save(frm) {
-        frm.purchase_reconciliation_tool.refresh(
-            frm.doc.reconciliation_data ? JSON.parse(frm.doc.reconciliation_data) : []
-        );
-    },
+    include_ignored: render_empty_state,
 
     show_progress(frm, type) {
         if (type == "download") {
@@ -246,17 +188,23 @@ class PurchaseReconciliationTool {
         this.init(frm);
         this.render_tab_group();
         this.setup_filter_button();
-        this.render_data_tables();
     }
 
     init(frm) {
         this.frm = frm;
-        this.data = frm.doc.reconciliation_data
-            ? JSON.parse(frm.doc.reconciliation_data)
-            : [];
-        this.filtered_data = this.data;
+        this.data = [];
+        this.frm.doc.is_data_loaded = false;
         this.$wrapper = this.frm.get_field("reconciliation_html").$wrapper;
         this._tabs = ["invoice", "supplier", "summary"];
+    }
+
+    generate_data() {
+        this.data = this.frm.doc.reconciliation_data;
+        this.filtered_data = this.frm.doc.reconciliation_data;
+
+        // clear filters
+        this.filter_group.filter_x_button.click();
+        this.render_data_tables();
     }
 
     refresh(data) {
@@ -464,7 +412,7 @@ class PurchaseReconciliationTool {
             const row = me.tabs.supplier_tab.datatable.data.find(
                 r => r.supplier_gstin === $(this).attr("data-name")
             );
-            me.export_data(row);
+            reco_tool_actions.export_data(row);
         });
 
         this.tabs.supplier_tab.datatable.$datatable.on("click", ".btn.envelope", function (e) {
@@ -503,20 +451,6 @@ class PurchaseReconciliationTool {
                     }
                 );
             });
-        });
-    }
-
-    export_data(selected_row) {
-        this.data_to_export = this.get_filtered_data(selected_row);
-        if (selected_row) delete this.data_to_export.supplier_summary;
-
-        const url =
-            "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.download_excel_report";
-
-        open_url_post(`/api/method/${url}`, {
-            data: JSON.stringify(this.data_to_export),
-            doc: JSON.stringify(this.frm.doc),
-            is_supplier_specific: !!selected_row,
         });
     }
 
@@ -815,6 +749,107 @@ class PurchaseReconciliationTool {
             ${row.supplier_gstin || ""}
         </a>
         `;
+    }
+}
+
+class PurchaseReconciliationToolAction {
+    constructor(frm) {
+        this.frm = frm;
+    }
+
+    setup_primary_actions() {
+        // Primary Action
+        this.frm.disable_save();
+        this.frm.page.set_primary_action(__("Generate"), async () => {
+            if (!this.frm.doc.company && !this.frm.doc.company_gstin) {
+                frappe.throw(
+                    __("Please provide either a Company name or Company GSTIN.")
+                );
+            }
+
+            this.get_reconciliation_data(this.frm);
+        });
+
+        // Download Button
+        api_enabled
+            ? this.frm.add_custom_button(
+                  __("Download 2A/2B"),
+                  () => new ImportDialog(frm)
+              )
+            : this.frm.add_custom_button(
+                  __("Upload 2A/2B"),
+                  () => new ImportDialog(this.frm, false)
+              );
+
+        // Export button
+        this.frm.add_custom_button(__("Export"), () => this.export_data());
+    }
+
+    setup_custom_buttons() {
+        const action_group = __("Actions");
+
+        if (!this.frm.purchase_reconciliation_tool?.data?.length) return;
+        if (this.frm.get_active_tab()?.df.fieldname == "invoice_tab") {
+            this.frm.add_custom_button(
+                __("Unlink"),
+                () => unlink_documents(this.frm),
+                action_group
+            );
+            this.frm.add_custom_button(__("dropdown-divider"), () => {}, action_group);
+        }
+
+        // Setup Actions
+        ["Accept", "Pending", "Ignore"].forEach(action =>
+            this.frm.add_custom_button(
+                __(action),
+                () => apply_action(this.frm, action),
+                action_group
+            )
+        );
+
+        // Add Dropdown Divider to differentiate between Actions
+        this.frm.$wrapper
+            .find("[data-label='dropdown-divider']")
+            .addClass("dropdown-divider");
+
+        // move actions button next to filters
+        for (const group_div of $(".custom-actions .inner-group-button")) {
+            const btn_label = group_div.querySelector("button").innerText?.trim();
+            if (btn_label != action_group) continue;
+
+            $(".custom-button-group .inner-group-button").remove();
+
+            // to hide `Actions` button group on smaller screens
+            $(group_div).addClass("hidden-md");
+
+            $(group_div).appendTo($(".custom-button-group"));
+        }
+    }
+
+    async get_reconciliation_data(frm) {
+        const { message } = await frm.call("reconcile_and_generate_data");
+        frm.doc.reconciliation_data = message;
+
+        frm.purchase_reconciliation_tool.generate_data();
+        frm.doc.is_data_loaded = true;
+
+        // Toggle HTML fields
+        frm.refresh();
+    }
+
+    export_data(selected_row) {
+        this.data_to_export =
+            this.frm.purchase_reconciliation_tool.get_filtered_data(selected_row);
+        if (selected_row) delete this.data_to_export.supplier_summary;
+
+        const url =
+            "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.download_excel_report";
+
+        open_url_post(`/api/method/${url}`, {
+            data: JSON.stringify(this.data_to_export),
+            doc: JSON.stringify(this.frm.doc),
+            is_supplier_specific: !!selected_row,
+        });
     }
 }
 
@@ -1853,4 +1888,11 @@ async function create_new_purchase_invoice(row, company, company_gstin) {
     };
 
     frappe.new_doc("Purchase Invoice");
+}
+
+function render_empty_state(frm) {
+    frm.doc.reconciliation_data = null;
+    frm.doc.is_data_loaded = false;
+
+    frm.refresh();
 }
