@@ -16,7 +16,7 @@ echo "Setting Up System Dependencies..."
 sudo apt update
 
 sudo apt remove mysql-server mysql-client
-sudo apt install libcups2-dev redis-server mariadb-client-10.6
+sudo apt install libcups2-dev redis-server mariadb-client
 
 install_whktml() {
     if [ "$(lsb_release -rs)" = "22.04" ]; then
