@@ -38,18 +38,18 @@ def download_gstr1_json_data(gstr1_log):
     json_data = frappe._dict()
     api = GSTR1API(gstr1_log)
 
-    summary = api.get_gstr_1_data("RETSUM", return_period)
-
     if gstr1_log.filing_status == "Filed":
         return_type = "GSTR1"
         data_field = "filed"
+
+        summary = api.get_gstr_1_data("RETSUM", return_period)
+        actions = get_sections_to_download(summary)
         json_data.update(summary)
 
     else:
         return_type = "Unfiled GSTR1"
         data_field = "unfiled"
-
-    actions = get_sections_to_download(summary)
+        actions = ACTIONS
 
     # download data
     for action in actions:
@@ -145,7 +145,7 @@ def get_sections_to_download(summary):
 
     actions = set()
 
-    for row in summary.get(GovJsonKey.RET_SUM.value):
+    for row in summary.get(GovJsonKey.RET_SUM.value, []):
         section = row.get("sec_nm")
 
         # total no of records

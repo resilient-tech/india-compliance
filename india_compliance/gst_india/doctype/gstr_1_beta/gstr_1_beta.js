@@ -2115,6 +2115,8 @@ class FiledTab extends GSTR1_TabManager {
     get_no_data_message() {
         if (this.instance.data?.is_nil)
             return __("You have filed a Nil GSTR-1 for this period");
+
+        return this.DEFAULT_NO_DATA_MESSAGE;
     }
 }
 
