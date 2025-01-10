@@ -382,15 +382,15 @@ class BillofEntry(Document):
         frappe.has_permission("Bill Of Entry", "write")
         frappe.has_permission("Purchase Invoice", "read")
 
-        self.set("items", [])
-        self.set("taxes", [])
+        existing_items = [item.pi_detail for item in self.get("items")]
 
         for pi in self.get("purchase_invoices"):
             if not pi.purchase_invoice:
                 continue
 
             for item in get_pi_items(pi.purchase_invoice):
-                self.append("items", {**item})
+                if item.pi_detail not in existing_items:
+                    self.append("items", {**item})
 
         set_missing_values(self)
 
@@ -403,29 +403,36 @@ def set_missing_values(source, target=None):
 
     # Add default tax
     input_igst_account = get_gst_accounts_by_type(source.company, "Input").igst_account
-
     if not input_igst_account:
         return
 
-    rate, description = frappe.db.get_value(
-        "Purchase Taxes and Charges",
-        {
-            "parenttype": "Purchase Taxes and Charges Template",
-            "account_head": input_igst_account,
-        },
-        ("rate", "description"),
-    ) or (0, input_igst_account)
-
-    target.append(
-        "taxes",
-        {
-            "charge_type": "On Net Total",
-            "account_head": input_igst_account,
-            "rate": rate,
-            "gst_tax_type": "igst",
-            "description": description,
-        },
+    rate = (
+        frappe.db.get_value(
+            "Purchase Taxes and Charges",
+            {
+                "parenttype": "Purchase Taxes and Charges Template",
+                "account_head": input_igst_account,
+            },
+            "rate",
+        )
+        or 0
     )
+
+    taxes = target.get("taxes")
+    if not taxes or (
+        taxes[0].charge_type != "On Net Total"
+        or taxes[0].account_head != input_igst_account
+        or taxes[0].rate != rate
+    ):
+        target.append(
+            "taxes",
+            {
+                "charge_type": "On Net Total",
+                "account_head": input_igst_account,
+                "rate": rate,
+                "gst_tax_type": "igst",
+            },
+        )
 
     target.set_taxes_and_totals()
 
