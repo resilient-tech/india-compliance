@@ -513,6 +513,8 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
 
         data = data
         data["status"] = self.filing_status or "Not Filed"
+        data["is_nil"] = self.is_nil
+
         if error_data := self.get_json_for("upload_error"):
             data["errors"] = error_data
 
@@ -555,8 +557,26 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         else:
             gov_data_field = "unfiled"
 
+        if (
+            status != "Filed"
+            and frappe.get_cached_value("GST Settings", None, "compare_unfiled_data")
+            != 1
+        ):
+            return self.generate_only_books_data(data, filters, callback)
+
         # Get Data
-        gov_data, is_enqueued = self.get_gov_gstr1_data()
+        try:
+            gov_data, is_enqueued = self.get_gov_gstr1_data()
+        except frappe.ValidationError as error:
+            self.generate_only_books_data(data, filters)
+            self.update_status("Failed", commit=True)
+
+            error_log = frappe.log_error(
+                title="GSTR-1 Generation Failed",
+                message=str(error),
+                reference_doctype="GSTR-1 Beta",
+            )
+            return callback and callback(filters, error_log.name)
 
         books_data = self.get_books_gstr1_data(filters)
 

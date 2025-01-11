@@ -6,6 +6,7 @@ from collections import defaultdict
 from typing import List
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.functions import IfNull
 from frappe.utils import add_to_date, cint, now_datetime
@@ -242,6 +243,9 @@ class PurchaseReconciliationTool(Document):
         if isup_linked_with := frappe.db.get_value(
             "GST Inward Supply", inward_supply_name, "link_name"
         ):
+            self.set_reconciliation_status(
+                link_doctype, (isup_linked_with,), "Unreconciled"
+            )
             self._unlink_documents((inward_supply_name,))
             purchases.append(isup_linked_with)
 
@@ -268,7 +272,7 @@ class PurchaseReconciliationTool(Document):
 
         self.db_set("is_modified", 1)
         self.set_reconciliation_status(
-            link_doctype, [purchase_invoice_name], "Match Found"
+            link_doctype, (purchase_invoice_name,), "Match Found"
         )
 
         return self.ReconciledData.get(purchases, inward_supplies)
@@ -472,10 +476,13 @@ def download_gstr(
 
     except Exception as e:
         frappe.publish_realtime(
-            "gstr_2a_2b_download_failed",
-            {"error": str(e)},
+            "gstr_2a_2b_download_message",
+            {
+                "title": _("2A/2B Download Failed"),
+                "message": str(e),
+                "indicator": "red",
+            },
             user=frappe.session.user,
-            doctype="Purchase Reconciliation Tool",
         )
 
 

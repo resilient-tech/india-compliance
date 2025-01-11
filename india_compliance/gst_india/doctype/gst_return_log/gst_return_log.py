@@ -33,11 +33,11 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
         self.db_set("generation_status", status, commit=commit)
 
     # FILE UTILITY
-    def load_data(self, file_field=None):
+    def load_data(self, *file_field):
         data = {}
 
         if file_field:
-            file_fields = [file_field]
+            file_fields = list(file_field)
         else:
             file_fields = self.get_applicable_file_fields()
 
@@ -128,13 +128,13 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
         if not is_production_api_enabled(settings):
             return False
 
-        if not settings.compare_gstr_1_data:
+        if not settings.enable_gstr_1_api:
             return False
 
         if not settings.has_valid_credentials(self.gstin, "Returns"):
             if warn_for_missing_credentials:
                 frappe.publish_realtime(
-                    "show_message",
+                    "show_missing_gst_credentials_message",
                     dict(
                         message=_(
                             "Credentials are missing for GSTIN {0} for service"
@@ -184,15 +184,20 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
 
     def get_applicable_file_fields(self, settings=None):
         # Books aggregated data stored in filed (as to file)
+        if not settings:
+            settings = frappe.get_cached_doc("GST Settings")
+
         fields = ["books", "books_summary"]
 
         if self.is_gstr1_api_enabled(settings):
-            fields.extend(["reconcile", "reconcile_summary"])
-
             if self.filing_status == "Filed":
-                fields.extend(["filed", "filed_summary"])
-            else:
-                fields.extend(["unfiled", "unfiled_summary"])
+                fields.extend(
+                    ["reconcile", "reconcile_summary", "filed", "filed_summary"]
+                )
+            elif settings.compare_unfiled_data:
+                fields.extend(
+                    ["reconcile", "reconcile_summary", "unfiled", "unfiled_summary"]
+                )
 
         return fields
 
@@ -303,9 +308,10 @@ def update_is_not_latest_gstr1_data(posting_date, company_gstin):
     )
 
     frappe.publish_realtime(
-        "is_not_latest_data",
+        "is_not_latest_gstr1_data",
         message={"filters": {"company_gstin": company_gstin, "period": period}},
         doctype="GSTR-1 Beta",
+        docname="GSTR-1 Beta",
     )
 
 
