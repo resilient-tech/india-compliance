@@ -486,6 +486,7 @@ class GSTR1 {
             File: this.gstr1_action.file_gstr1_data,
         };
 
+        // No need to upload if nil gstr1
         const status =
             this.frm.doc.file_nil_gstr1 && this.status == "Not Filed"
                 ? "Uploaded"
@@ -2673,7 +2674,7 @@ class GSTR1Action extends FileGSTR1Dialog {
             action,
             r => {
                 // already proceed to file
-                if (r.message) this.handle_proceed_to_file_response(r.message);
+                if (r.message) this.handle_proceed_to_file_response(r.message) && this.toggle_actions(true);
                 else this.check_action_status_with_retry(action);
             },
             { is_nil_return: this.frm.doc.file_nil_gstr1 }

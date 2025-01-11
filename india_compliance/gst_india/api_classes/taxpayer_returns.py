@@ -38,17 +38,18 @@ class ReturnsAPI(TaxpayerBaseAPI):
         )
 
     def proceed_to_file(self, return_type, return_period, is_nil_return, otp=None):
+        data = {
+            "gstin": self.company_gstin,
+            "ret_period": return_period,
+        }
+
+        if is_nil_return:
+            data["isnil"] = "Y"
+
         return self.post(
             return_type=return_type,
             return_period=return_period,
-            json={
-                "action": "RETNEWPTF",
-                "data": {
-                    "gstin": self.company_gstin,
-                    "ret_period": return_period,
-                    "isnil": "Y" if is_nil_return else "N",
-                },
-            },
+            json={"action": "RETNEWPTF", "data": data},
             endpoint="returns/gstrptf",
             otp=otp,
         )

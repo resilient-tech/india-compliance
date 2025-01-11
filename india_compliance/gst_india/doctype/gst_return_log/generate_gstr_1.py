@@ -4,7 +4,7 @@ import itertools
 
 import frappe
 from frappe import _, unscrub
-from frappe.utils import flt
+from frappe.utils import flt, sbool
 
 from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
 from india_compliance.gst_india.utils.gstr_1 import GovJsonKey, GSTR1_SubCategory
@@ -835,11 +835,20 @@ class FileGSTR1:
     def proceed_to_file_gstr1(self, is_nil_return, force):
         verify_request_in_progress(self, force)
 
+        is_nil_return = sbool(is_nil_return)
+
         api = GSTR1API(self)
         response = api.proceed_to_file("GSTR1", self.return_period, is_nil_return)
 
         # Return Form already ready to be filed
         if response.error and response.error.error_cd == "RET00003" or is_nil_return:
+            set_gstr1_actions(
+                self,
+                "proceed_to_file",
+                response.get("reference_id"),
+                api.request_id,
+                status="Processed",
+            )
             return self.fetch_and_compare_summary(api)
 
         set_gstr1_actions(
