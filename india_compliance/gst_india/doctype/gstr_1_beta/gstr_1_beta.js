@@ -170,8 +170,12 @@ frappe.ui.form.on(DOCTYPE, {
             const only_books_data = error_log != undefined;
             if (error_log) {
                 frappe.msgprint({
-                    message: __("Error while preparing GSTR-1 data, please check {0} for more deatils.",
-                        [`<a href='/app/error-log/${error_log}' class='variant-click'>error log</a>`]),
+                    message: __(
+                        "Error while preparing GSTR-1 data, please check {0} for more deatils.",
+                        [
+                            `<a href='/app/error-log/${error_log}' class='variant-click'>error log</a>`,
+                        ]
+                    ),
                     title: "GSTR-1 Download Failed",
                     indicator: "red",
                 });
@@ -194,6 +198,10 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     company_gstin: render_empty_state,
+
+    file_nil_gstr1(frm) {
+        frm.gstr1.render_form_actions();
+    },
 
     month_or_quarter(frm) {
         render_empty_state(frm);
@@ -220,6 +228,8 @@ frappe.ui.form.on(DOCTYPE, {
     load_gstr1_data(frm) {
         const data = frm.doc.__gst_data;
         if (!data?.status) return;
+
+        frm.doc.file_nil_gstr1 = data.is_nil
 
         // Toggle HTML fields
         frm.refresh();
@@ -300,6 +310,7 @@ class GSTR1 {
         }
 
         this.set_output_gst_balances();
+        this.toggle_file_nil_gstr1();
 
         // refresh tabs
         this.TABS.forEach(_tab => {
@@ -354,6 +365,10 @@ class GSTR1 {
                 detailed_view_filters
             );
         });
+    }
+
+    refresh_no_data_message() {
+        this.tabs.filed_tab.tabmanager.refresh_no_data_message();
     }
 
     // RENDER
@@ -477,14 +492,20 @@ class GSTR1 {
             File: this.gstr1_action.file_gstr1_data,
         };
 
+        // No need to upload if nil gstr1
+        const status =
+            this.frm.doc.file_nil_gstr1 && this.status == "Not Filed"
+                ? "Uploaded"
+                : this.status;
+
         let primary_button_label =
             {
                 "Not Filed": "Upload",
                 Uploaded: "Proceed to File",
                 "Ready to File": "File",
-            }[this.status] || "Generate";
+            }[status] || "Generate";
 
-        if (this.status === "Ready to File") {
+        if (status === "Ready to File") {
             this.frm.add_custom_button(__("Mark as Unfiled"), () => {
                 this.gstr1_action.mark_as_unfiled();
             });
@@ -687,6 +708,16 @@ class GSTR1 {
         else this.$wrapper.find(".filter-selector").hide();
     }
 
+    toggle_file_nil_gstr1() {
+        if (!this.data || !is_gstr1_api_enabled()) return;
+
+        const has_records = this.data.books_summary?.some(row => row.no_of_records > 0);
+
+        if (!has_records && this.data.status != "Filed")
+            this.frm.set_df_property("file_nil_gstr1", "hidden", 0);
+        else this.frm.set_df_property("file_nil_gstr1", "hidden", 1);
+    }
+
     async set_output_gst_balances() {
         //Checks if gst-ledger-difference element is there and removes if already present
         const gst_liability = await get_net_gst_liability(this.frm);
@@ -743,7 +774,7 @@ class GSTR1 {
             args: { month_or_quarter, year, company },
         });
 
-        if (!je_details || !je_details.data) return;
+        if (!je_details) return;
 
         this.create_journal_entry_dialog(je_details);
     }
@@ -876,6 +907,10 @@ class TabManager {
         this.datatable.refresh(this.summary, null, this.get_no_data_message());
         this.set_default_title();
         this.set_creation_time_string();
+    }
+
+    refresh_no_data_message() {
+        this.datatable.refresh(null, null, this.get_no_data_message());
     }
 
     refresh_view(view, category, filters) {
@@ -2114,7 +2149,10 @@ class FiledTab extends GSTR1_TabManager {
 
     get_no_data_message() {
         if (this.instance.data?.is_nil)
-            return __("You have filed a Nil GSTR-1 for this period");
+            if (this.status === "Filed")
+                return __("You have filed a Nil GSTR-1 for this period");
+            else
+                return __("You are filing a Nil GSTR-1 for this period");
 
         return this.DEFAULT_NO_DATA_MESSAGE;
     }
@@ -2645,11 +2683,18 @@ class GSTR1Action extends FileGSTR1Dialog {
 
     proceed_to_file() {
         const action = "proceed_to_file";
-        this.perform_gstr1_action(action, r => {
-            // already proceed to file
-            if (r.message) this.handle_proceed_to_file_response(r.message);
-            else this.check_action_status_with_retry(action);
-        });
+        this.frm.gstr1.data.is_nil = this.frm.doc.file_nil_gstr1;
+        this.frm.gstr1.refresh_no_data_message();
+
+        this.perform_gstr1_action(
+            action,
+            r => {
+                // already proceed to file
+                if (r.message) this.handle_proceed_to_file_response(r.message);
+                else this.check_action_status_with_retry(action);
+            },
+            { is_nil_return: this.frm.doc.file_nil_gstr1 }
+        );
     }
 
     async mark_as_unfiled() {
