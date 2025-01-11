@@ -287,6 +287,9 @@ def get_journal_entries(month_or_quarter, year, company):
         .run(as_dict=True)
     )
 
+    if not data:
+        return
+
     return {"data": data, "posting_date": to_date}
 
 

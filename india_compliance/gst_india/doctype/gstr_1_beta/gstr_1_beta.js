@@ -774,7 +774,7 @@ class GSTR1 {
             args: { month_or_quarter, year, company },
         });
 
-        if (!je_details || !je_details.data) return;
+        if (!je_details) return;
 
         this.create_journal_entry_dialog(je_details);
     }
