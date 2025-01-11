@@ -229,6 +229,8 @@ frappe.ui.form.on(DOCTYPE, {
         const data = frm.doc.__gst_data;
         if (!data?.status) return;
 
+        frm.doc.file_nil_gstr1 = data.is_nil
+
         // Toggle HTML fields
         frm.refresh();
 
@@ -363,6 +365,10 @@ class GSTR1 {
                 detailed_view_filters
             );
         });
+    }
+
+    refresh_no_data_message() {
+        this.tabs.filed_tab.tabmanager.refresh_no_data_message();
     }
 
     // RENDER
@@ -901,6 +907,10 @@ class TabManager {
         this.datatable.refresh(this.summary, null, this.get_no_data_message());
         this.set_default_title();
         this.set_creation_time_string();
+    }
+
+    refresh_no_data_message() {
+        this.datatable.refresh(null, null, this.get_no_data_message());
     }
 
     refresh_view(view, category, filters) {
@@ -2139,7 +2149,10 @@ class FiledTab extends GSTR1_TabManager {
 
     get_no_data_message() {
         if (this.instance.data?.is_nil)
-            return __("You have filed a Nil GSTR-1 for this period");
+            if (this.status === "Filed")
+                return __("You have filed a Nil GSTR-1 for this period");
+            else
+                return __("You are filing a Nil GSTR-1 for this period");
 
         return this.DEFAULT_NO_DATA_MESSAGE;
     }
@@ -2670,11 +2683,14 @@ class GSTR1Action extends FileGSTR1Dialog {
 
     proceed_to_file() {
         const action = "proceed_to_file";
+        this.frm.gstr1.data.is_nil = this.frm.doc.file_nil_gstr1;
+        this.frm.gstr1.refresh_no_data_message();
+
         this.perform_gstr1_action(
             action,
             r => {
                 // already proceed to file
-                if (r.message) this.handle_proceed_to_file_response(r.message) && this.toggle_actions(true);
+                if (r.message) this.handle_proceed_to_file_response(r.message);
                 else this.check_action_status_with_retry(action);
             },
             { is_nil_return: this.frm.doc.file_nil_gstr1 }

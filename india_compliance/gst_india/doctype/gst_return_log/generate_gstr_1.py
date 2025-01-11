@@ -881,6 +881,8 @@ class FileGSTR1:
             response = {}
 
         summary = api.get_gstr_1_data("RETSUM", self.return_period)
+        self.db_set("is_nil", summary.isnil == "Y")
+
         if summary.error:
             return
 
