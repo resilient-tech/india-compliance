@@ -170,8 +170,12 @@ frappe.ui.form.on(DOCTYPE, {
             const only_books_data = error_log != undefined;
             if (error_log) {
                 frappe.msgprint({
-                    message: __("Error while preparing GSTR-1 data, please check {0} for more deatils.",
-                        [`<a href='/app/error-log/${error_log}' class='variant-click'>error log</a>`]),
+                    message: __(
+                        "Error while preparing GSTR-1 data, please check {0} for more deatils.",
+                        [
+                            `<a href='/app/error-log/${error_log}' class='variant-click'>error log</a>`,
+                        ]
+                    ),
                     title: "GSTR-1 Download Failed",
                     indicator: "red",
                 });
@@ -180,7 +184,6 @@ frappe.ui.form.on(DOCTYPE, {
             frm.taxpayer_api_call("generate_gstr1", { only_books_data }).then(r => {
                 frm.doc.__gst_data = r.message;
                 frm.trigger("load_gstr1_data");
-                frm.gstr1.gstr1_action?.check_for_nil_return();
             });
         });
     },
@@ -483,7 +486,10 @@ class GSTR1 {
             File: this.gstr1_action.file_gstr1_data,
         };
 
-        const status = this.frm.doc.file_nil_gstr1 && this.status == "Not Filed" ? "Uploaded" : this.status;
+        const status =
+            this.frm.doc.file_nil_gstr1 && this.status == "Not Filed"
+                ? "Uploaded"
+                : this.status;
 
         let primary_button_label =
             {
@@ -2604,7 +2610,6 @@ class GSTR1Action extends FileGSTR1Dialog {
             if (!r.message) return;
             this.frm.doc.__gst_data = r.message;
             this.frm.trigger("load_gstr1_data");
-            this.check_for_nil_return();
 
             if (!r.message.pending_actions) return;
 
@@ -2612,20 +2617,6 @@ class GSTR1Action extends FileGSTR1Dialog {
                 this.check_action_status_with_retry(request_type, 0, true)
             );
         });
-    }
-
-    check_for_nil_return() {
-        const data = this.frm.doc.__gst_data;
-        // check this that books data is present or not
-        if (!data || !is_gstr1_api_enabled()) return;
-
-        if (
-            Object.keys(data.books.aggregate_data).length === 0 &&
-            data.status == "Not Filed"
-        ) {
-            this.frm.set_df_property("file_nil_gstr1", "hidden", 0);
-            this.frm.remove_custom_button("Upload");
-        }
     }
 
     async upload_gstr1_data() {
@@ -2682,12 +2673,10 @@ class GSTR1Action extends FileGSTR1Dialog {
             action,
             r => {
                 // already proceed to file
-                if (r.message) {
-                    this.toggle_actions(true);
-                    this.handle_proceed_to_file_response(r.message);
-                } else this.check_action_status_with_retry(action);
+                if (r.message) this.handle_proceed_to_file_response(r.message);
+                else this.check_action_status_with_retry(action);
             },
-            { is_nil_return: this.frm.doc.file_nil_gstr1 },
+            { is_nil_return: this.frm.doc.file_nil_gstr1 }
         );
     }
 
@@ -2707,10 +2696,8 @@ class GSTR1Action extends FileGSTR1Dialog {
             args: { filters: filters, force: this.frm.__action_performed == undefined },
             callback: () => {
                 this.frm.gstr1.status = "Not Filed";
-                this.frm.doc.__gst_data.status = "Not Filed";
                 this.frm.refresh();
                 this.frm.gstr1.refresh_data();
-                this.check_for_nil_return();
             },
         });
     }
