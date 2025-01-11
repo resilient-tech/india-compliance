@@ -2556,7 +2556,7 @@ class FileGSTR1Dialog {
             this.perform_gstr1_action(
                 "file",
                 r => this.handle_filing_response(r.message),
-                { pan: pan, otp: this.filing_dialog.get_value("otp") }
+                { pan: pan, otp: this.filing_dialog.get_value("otp").trim() }
             );
 
             this.toggle_actions(true);
