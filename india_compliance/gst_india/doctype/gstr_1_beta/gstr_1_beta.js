@@ -196,7 +196,9 @@ frappe.ui.form.on(DOCTYPE, {
 
     company_gstin: render_empty_state,
 
-    file_nil_gstr1: file_nil_return,
+    file_nil_gstr1(frm) {
+        frm.gstr1.render_form_actions();
+    },
 
     month_or_quarter(frm) {
         render_empty_state(frm);
@@ -303,6 +305,7 @@ class GSTR1 {
         }
 
         this.set_output_gst_balances();
+        this.toggle_file_nil_gstr1();
 
         // refresh tabs
         this.TABS.forEach(_tab => {
@@ -480,14 +483,16 @@ class GSTR1 {
             File: this.gstr1_action.file_gstr1_data,
         };
 
+        const status = this.frm.doc.file_nil_gstr1 && this.status == "Not Filed" ? "Uploaded" : this.status;
+
         let primary_button_label =
             {
                 "Not Filed": "Upload",
                 Uploaded: "Proceed to File",
                 "Ready to File": "File",
-            }[this.status] || "Generate";
+            }[status] || "Generate";
 
-        if (this.status === "Ready to File") {
+        if (status === "Ready to File") {
             this.frm.add_custom_button(__("Mark as Unfiled"), () => {
                 this.gstr1_action.mark_as_unfiled();
             });
@@ -688,6 +693,16 @@ class GSTR1 {
         if (this.active_view === "Detailed" && this.filter_fields.length)
             this.$wrapper.find(".filter-selector").show();
         else this.$wrapper.find(".filter-selector").hide();
+    }
+
+    toggle_file_nil_gstr1() {
+        if (!this.data || !is_gstr1_api_enabled()) return;
+
+        const has_records = this.data.books_summary?.some(row => row.no_of_records > 0);
+
+        if (!has_records && this.data.status != "Filed")
+            this.frm.set_df_property("file_nil_gstr1", "hidden", 0);
+        else this.frm.set_df_property("file_nil_gstr1", "hidden", 1);
     }
 
     async set_output_gst_balances() {
@@ -2604,9 +2619,12 @@ class GSTR1Action extends FileGSTR1Dialog {
         // check this that books data is present or not
         if (!data || !is_gstr1_api_enabled()) return;
 
-        if (Object.keys(data.books.aggregate_data).length === 0 && data.status == "Not Filed") {
+        if (
+            Object.keys(data.books.aggregate_data).length === 0 &&
+            data.status == "Not Filed"
+        ) {
             this.frm.set_df_property("file_nil_gstr1", "hidden", 0);
-            this.frm.remove_custom_button('Upload');
+            this.frm.remove_custom_button("Upload");
         }
     }
 
@@ -2660,16 +2678,17 @@ class GSTR1Action extends FileGSTR1Dialog {
 
     proceed_to_file() {
         const action = "proceed_to_file";
-        this.perform_gstr1_action(action, r => {
-            // already proceed to file
-            if (r.message){
-                this.toggle_actions(true);
-                this.handle_proceed_to_file_response(r.message);
-                this.check_for_nil_return();
-            }
-            else this.check_action_status_with_retry(action);
-        },
-        { is_nil_return : this.frm.doc.file_nil_gstr1 });
+        this.perform_gstr1_action(
+            action,
+            r => {
+                // already proceed to file
+                if (r.message) {
+                    this.toggle_actions(true);
+                    this.handle_proceed_to_file_response(r.message);
+                } else this.check_action_status_with_retry(action);
+            },
+            { is_nil_return: this.frm.doc.file_nil_gstr1 },
+        );
     }
 
     async mark_as_unfiled() {
@@ -2991,17 +3010,6 @@ function set_options_for_month_or_quarter(frm) {
         frm.set_value("month_or_quarter", options[options.length - 2]);
     // set last option as default
     else frm.set_value("month_or_quarter", options[options.length - 1]);
-}
-
-function file_nil_return(frm){
-    if(frm.doc.file_nil_gstr1){
-        frm.page.set_primary_action(__("Proceed to File"), () =>
-            frm.gstr1.gstr1_action.proceed_to_file()
-        );
-    }else{
-        frm.doc.__gst_data.status = "Not Filed";
-        frm.gstr1?.render_form_actions();
-    }
 }
 
 function render_empty_state(frm) {

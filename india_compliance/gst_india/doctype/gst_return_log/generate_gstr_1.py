@@ -839,7 +839,7 @@ class FileGSTR1:
         response = api.proceed_to_file("GSTR1", self.return_period, is_nil_return)
 
         # Return Form already ready to be filed
-        if response.error and response.error.error_cd == "RET00003":
+        if response.error and response.error.error_cd == "RET00003" or is_nil_return:
             return self.fetch_and_compare_summary(api)
 
         set_gstr1_actions(
@@ -862,10 +862,6 @@ class FileGSTR1:
 
         if response.get("status_cd") == "IP":
             return response
-
-        if response.error and response.error.error_cd == "RET13510":
-            # here it is giving status code as 0
-            response.status_cd = "P"
 
         doc.db_set({"status": status_code_map.get(response.get("status_cd"))})
 
@@ -944,7 +940,7 @@ class FileGSTR1:
     def get_amendment_data(self):
         authenticated_summary = convert_to_internal_data_format(
             self.get_json_for("authenticated_summary")
-        ).get("summary")
+        ).get("summary", {})
         authenticated_summary = summarize_retsum_data(authenticated_summary.values())
 
         non_amended_entries = {
