@@ -535,6 +535,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
 
         # Compile Data
         data["status"] = status
+        data["is_nil"] = self.is_nil
 
         data["reconcile"] = self.normalize_data(reconcile_data)
         data[gov_data_field] = self.normalize_data(gov_data)
