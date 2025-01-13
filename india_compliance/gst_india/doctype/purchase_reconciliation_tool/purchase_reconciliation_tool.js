@@ -132,7 +132,11 @@ frappe.ui.form.on(DOCTYPE, {
         if (type == "download") {
             frappe.run_serially([
                 () => frm.events.update_progress(frm, "update_2a_2b_api_progress"),
-                () => frm.events.update_progress(frm, "update_2a_2b_transactions_progress"),
+                () =>
+                    frm.events.update_progress(
+                        frm,
+                        "update_2a_2b_transactions_progress"
+                    ),
             ]);
         } else if (type == "upload") {
             frm.events.update_progress(frm, "update_2a_2b_transactions_progress");
@@ -199,8 +203,8 @@ class PurchaseReconciliationTool {
     }
 
     generate_data() {
-        this.data = this.frm.doc.reconciliation_data;
-        this.filtered_data = this.frm.doc.reconciliation_data;
+        this.data = this.frm.doc.__reconciliation_data;
+        this.filtered_data = this.frm.doc.__reconciliation_data;
 
         // clear filters
         this.filter_group.filter_x_button.click();
@@ -403,24 +407,36 @@ class PurchaseReconciliationTool {
 
     set_listeners() {
         const me = this;
-        this.tabs.invoice_tab.datatable.$datatable.on("click", ".btn.eye", function (e) {
-            const row = me.mapped_invoice_data[$(this).attr("data-name")];
-            me.dm = new DetailViewDialog(me.frm, row);
-        });
+        this.tabs.invoice_tab.datatable.$datatable.on(
+            "click",
+            ".btn.eye",
+            function (e) {
+                const row = me.mapped_invoice_data[$(this).attr("data-name")];
+                me.dm = new DetailViewDialog(me.frm, row);
+            }
+        );
 
-        this.tabs.supplier_tab.datatable.$datatable.on("click", ".btn.download", function (e) {
-            const row = me.tabs.supplier_tab.datatable.data.find(
-                r => r.supplier_gstin === $(this).attr("data-name")
-            );
-            reco_tool_actions.export_data(row);
-        });
+        this.tabs.supplier_tab.datatable.$datatable.on(
+            "click",
+            ".btn.download",
+            function (e) {
+                const row = me.tabs.supplier_tab.datatable.data.find(
+                    r => r.supplier_gstin === $(this).attr("data-name")
+                );
+                reco_tool_actions.export_data(row);
+            }
+        );
 
-        this.tabs.supplier_tab.datatable.$datatable.on("click", ".btn.envelope", function (e) {
-            const row = me.tabs.supplier_tab.datatable.data.find(
-                r => r.supplier_gstin === $(this).attr("data-name")
-            );
-            me.dm = new EmailDialog(me.frm, row);
-        });
+        this.tabs.supplier_tab.datatable.$datatable.on(
+            "click",
+            ".btn.envelope",
+            function (e) {
+                const row = me.tabs.supplier_tab.datatable.data.find(
+                    r => r.supplier_gstin === $(this).attr("data-name")
+                );
+                me.dm = new EmailDialog(me.frm, row);
+            }
+        );
 
         const filter_map = {
             // TAB: { SELECTOR: FIELDNAME }
@@ -828,7 +844,7 @@ class PurchaseReconciliationToolAction {
 
     async get_reconciliation_data(frm) {
         const { message } = await frm.call("reconcile_and_generate_data");
-        frm.doc.reconciliation_data = message;
+        frm.doc.__reconciliation_data = message;
 
         frm.purchase_reconciliation_tool.generate_data();
         frm.doc.is_data_loaded = true;
@@ -838,15 +854,15 @@ class PurchaseReconciliationToolAction {
     }
 
     export_data(selected_row) {
-        this.data_to_export =
+        const data_to_export =
             this.frm.purchase_reconciliation_tool.get_filtered_data(selected_row);
-        if (selected_row) delete this.data_to_export.supplier_summary;
+        if (selected_row) delete data_to_export.supplier_summary;
 
         const url =
             "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.download_excel_report";
 
         open_url_post(`/api/method/${url}`, {
-            data: JSON.stringify(this.data_to_export),
+            data: JSON.stringify(data_to_export),
             doc: JSON.stringify(this.frm.doc),
             is_supplier_specific: !!selected_row,
         });
@@ -1891,7 +1907,7 @@ async function create_new_purchase_invoice(row, company, company_gstin) {
 }
 
 function render_empty_state(frm) {
-    frm.doc.reconciliation_data = null;
+    frm.doc.__reconciliation_data = null;
     frm.doc.is_data_loaded = false;
 
     frm.refresh();
