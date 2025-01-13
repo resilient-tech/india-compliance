@@ -790,7 +790,7 @@ class PurchaseReconciliationToolAction {
         api_enabled
             ? this.frm.add_custom_button(
                   __("Download 2A/2B"),
-                  () => new ImportDialog(frm)
+                  () => new ImportDialog(this.frm)
               )
             : this.frm.add_custom_button(
                   __("Upload 2A/2B"),
@@ -843,7 +843,8 @@ class PurchaseReconciliationToolAction {
     }
 
     async get_reconciliation_data(frm) {
-        const { message } = await frm.call("reconcile_and_generate_data");
+        const message = await frappe_call(frm, "reconcile_and_generate_data");
+
         frm.doc.__reconciliation_data = message;
 
         frm.purchase_reconciliation_tool.generate_data();
@@ -899,12 +900,10 @@ class DetailViewDialog {
     }
 
     async get_invoice_details() {
-        const { message } = await this.frm.call("get_invoice_details", {
+        this.data = await frappe_call(this.frm, "get_invoice_details", {
             purchase_name: this.row.purchase_invoice_name,
             inward_supply_name: this.row.inward_supply_name,
         });
-
-        this.data = message;
     }
 
     process_data() {
@@ -1028,7 +1027,7 @@ class DetailViewDialog {
             purchase_doctype: this.data.purchase_doctype,
         };
 
-        const { message } = await this.frm.call("get_link_options", {
+        const message = await frappe_call(this.frm, "get_link_options", {
             doctype: this.dialog.get_value("doctype"),
             filters: this.filters,
         });
@@ -1328,7 +1327,7 @@ class ImportDialog {
         if (!this.company_gstin) return;
 
         // fetch history
-        const { message } = await this.frm.call("get_import_history", {
+        const message = await frappe_call(this.frm, "get_import_history", {
             company_gstin: this.company_gstin,
             return_type: this.return_type,
             date_range: this.date_range,
@@ -1361,7 +1360,7 @@ class ImportDialog {
 
     async update_return_period() {
         const file_path = this.dialog.get_value("attach_file");
-        const { message } = await this.frm.call("get_return_period_from_file", {
+        const message = await frappe_call(this.frm, "get_return_period_from_file", {
             return_type: this.return_type,
             file_path,
         });
@@ -1382,7 +1381,7 @@ class ImportDialog {
 
     upload_gstr(period, file_path) {
         this.frm.events.show_progress(this.frm, "upload");
-        this.frm.call("upload_gstr", {
+        frappe_call(this.frm, "upload_gstr", {
             return_type: this.return_type,
             period,
             file_path,
@@ -1434,13 +1433,14 @@ class ImportDialog {
                 fieldtype: "Select",
                 options: this.frm.get_field("inward_supply_period").df.options,
                 default: this.frm.doc.inward_supply_period,
-                onchange: () => {
+                onchange: async () => {
                     const period = this.dialog.get_value("period");
-                    this.frm.call("get_date_range", { period }).then(({ message }) => {
-                        this.date_range =
-                            message || this.dialog.get_value("date_range");
-                        this.fetch_import_history();
+                    const message = await frappe_call(this.frm, "get_date_range", {
+                        period,
                     });
+
+                    this.date_range = message || this.dialog.get_value("date_range");
+                    this.fetch_import_history();
                 },
             },
             {
@@ -1621,8 +1621,9 @@ async function fetch_date_range(frm, field_prefix, method) {
     const period = frm.doc[field_prefix + "_period"];
     if (!period || period == "Custom") return;
 
-    const { message } = await frm.call(method || "get_date_range", { period });
-
+    const message = await frappe_call(frm, method || "get_date_range", {
+        period,
+    });
     frm.set_value(from_date_field, message[0]);
     frm.set_value(to_date_field, message[1]);
 }
@@ -1683,7 +1684,7 @@ purchase_reconciliation_tool.link_documents = async function (
     if (frm.get_active_tab()?.df.fieldname != "invoice_tab") return;
 
     // link documents & update data.
-    const { message: r } = await frm.call("link_documents", {
+    const r = await frappe_call(frm, "link_documents", {
         purchase_invoice_name,
         inward_supply_name,
         link_doctype,
@@ -1725,7 +1726,9 @@ async function unlink_documents(frm, selected_rows) {
     });
 
     // unlink documents & update table
-    const { message: r } = await frm.call("unlink_documents", selected_rows);
+    const r = await frappe_call(frm, "unlink_documents", {
+        data: selected_rows,
+    });
     const unlinked_docs = get_unlinked_docs(selected_rows);
 
     const reco_tool = frm.purchase_reconciliation_tool;
@@ -1808,7 +1811,10 @@ function apply_action(frm, action, selected_rows) {
     }
 
     // update affected rows to backend and frontend
-    frm.call("apply_action", { data: affected_rows, action });
+    frappe_call(frm, "apply_action", {
+        data: affected_rows,
+        action,
+    });
     const new_data = data.filter(row => {
         if (has_matching_row(row, affected_rows)) row.action = action;
         return true;
@@ -1911,4 +1917,18 @@ function render_empty_state(frm) {
     frm.doc.is_data_loaded = false;
 
     frm.refresh();
+}
+
+async function frappe_call(frm, method, args = {}) {
+    const reconciliation_data = frm.doc.__reconciliation_data;
+    delete frm.doc.__reconciliation_data;
+
+    const { message } = await frappe.call({
+        method,
+        doc: frm,
+        args,
+    });
+
+    frm.doc.__reconciliation_data = reconciliation_data;
+    return message;
 }
