@@ -83,10 +83,8 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     refresh(frm) {
-        this.reco_tool_actions = new PurchaseReconciliationToolAction(frm);
-
-        this.reco_tool_actions.setup_primary_actions();
-        this.reco_tool_actions.setup_custom_buttons();
+        frm.reco_tool_actions = new PurchaseReconciliationToolAction(frm);
+        frm.reco_tool_actions.setup_actions();
     },
 
     async company(frm) {
@@ -423,7 +421,7 @@ class PurchaseReconciliationTool {
                 const row = me.tabs.supplier_tab.datatable.data.find(
                     r => r.supplier_gstin === $(this).attr("data-name")
                 );
-                reco_tool_actions.export_data(row);
+                me.frm.reco_tool_actions.export_data(row);
             }
         );
 
@@ -771,6 +769,11 @@ class PurchaseReconciliationTool {
 class PurchaseReconciliationToolAction {
     constructor(frm) {
         this.frm = frm;
+    }
+
+    setup_actions() {
+        this.setup_primary_actions();
+        this.setup_custom_buttons();
     }
 
     setup_primary_actions() {
