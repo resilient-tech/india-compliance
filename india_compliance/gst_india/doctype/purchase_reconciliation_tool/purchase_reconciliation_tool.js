@@ -846,7 +846,7 @@ class PurchaseReconciliationToolAction {
     }
 
     async get_reconciliation_data(frm) {
-        const message = await frappe_call(frm, "reconcile_and_generate_data");
+        const message = await frappe_call(frm, "reconcile_and_generate_data", "__reconciliation_data");
 
         frm.doc.__reconciliation_data = message;
 
@@ -903,7 +903,7 @@ class DetailViewDialog {
     }
 
     async get_invoice_details() {
-        this.data = await frappe_call(this.frm, "get_invoice_details", {
+        this.data = await frappe_call(this.frm, "get_invoice_details", "__reconciliation_data", {
             purchase_name: this.row.purchase_invoice_name,
             inward_supply_name: this.row.inward_supply_name,
         });
@@ -1030,7 +1030,7 @@ class DetailViewDialog {
             purchase_doctype: this.data.purchase_doctype,
         };
 
-        const message = await frappe_call(this.frm, "get_link_options", {
+        const message = await frappe_call(this.frm, "get_link_options", "__reconciliation_data", {
             doctype: this.dialog.get_value("doctype"),
             filters: this.filters,
         });
@@ -1330,7 +1330,7 @@ class ImportDialog {
         if (!this.company_gstin) return;
 
         // fetch history
-        const message = await frappe_call(this.frm, "get_import_history", {
+        const message = await frappe_call(this.frm, "get_import_history", "__reconciliation_data", {
             company_gstin: this.company_gstin,
             return_type: this.return_type,
             date_range: this.date_range,
@@ -1363,7 +1363,7 @@ class ImportDialog {
 
     async update_return_period() {
         const file_path = this.dialog.get_value("attach_file");
-        const message = await frappe_call(this.frm, "get_return_period_from_file", {
+        const message = await frappe_call(this.frm, "get_return_period_from_file", "__reconciliation_data", {
             return_type: this.return_type,
             file_path,
         });
@@ -1384,7 +1384,7 @@ class ImportDialog {
 
     upload_gstr(period, file_path) {
         this.frm.events.show_progress(this.frm, "upload");
-        frappe_call(this.frm, "upload_gstr", {
+        frappe_call(this.frm, "upload_gstr", "__reconciliation_data", {
             return_type: this.return_type,
             period,
             file_path,
@@ -1438,7 +1438,7 @@ class ImportDialog {
                 default: this.frm.doc.inward_supply_period,
                 onchange: async () => {
                     const period = this.dialog.get_value("period");
-                    const message = await frappe_call(this.frm, "get_date_range", {
+                    const message = await frappe_call(this.frm, "get_date_range", "__reconciliation_data", {
                         period,
                     });
 
@@ -1624,7 +1624,7 @@ async function fetch_date_range(frm, field_prefix, method) {
     const period = frm.doc[field_prefix + "_period"];
     if (!period || period == "Custom") return;
 
-    const message = await frappe_call(frm, method || "get_date_range", {
+    const message = await frappe_call(frm, method || "get_date_range", "__reconciliation_data", {
         period,
     });
     frm.set_value(from_date_field, message[0]);
@@ -1687,7 +1687,7 @@ purchase_reconciliation_tool.link_documents = async function (
     if (frm.get_active_tab()?.df.fieldname != "invoice_tab") return;
 
     // link documents & update data.
-    const r = await frappe_call(frm, "link_documents", {
+    const r = await frappe_call(frm, "link_documents", "__reconciliation_data", {
         purchase_invoice_name,
         inward_supply_name,
         link_doctype,
@@ -1729,7 +1729,7 @@ async function unlink_documents(frm, selected_rows) {
     });
 
     // unlink documents & update table
-    const r = await frappe_call(frm, "unlink_documents", {
+    const r = await frappe_call(frm, "unlink_documents", "__reconciliation_data", {
         data: selected_rows,
     });
     const unlinked_docs = get_unlinked_docs(selected_rows);
@@ -1814,7 +1814,7 @@ function apply_action(frm, action, selected_rows) {
     }
 
     // update affected rows to backend and frontend
-    frappe_call(frm, "apply_action", {
+    frappe_call(frm, "apply_action", "__reconciliation_data", {
         data: affected_rows,
         action,
     });
@@ -1922,9 +1922,9 @@ function render_empty_state(frm) {
     frm.refresh();
 }
 
-async function frappe_call(frm, method, args = {}) {
-    const reconciliation_data = frm.doc.__reconciliation_data;
-    delete frm.doc.__reconciliation_data;
+async function frappe_call(frm, method, data_key, args = {}) {
+    const data = frm.doc[data_key];
+    delete frm.doc[data_key];
 
     const { message } = await frappe.call({
         method,
@@ -1932,6 +1932,6 @@ async function frappe_call(frm, method, args = {}) {
         args,
     });
 
-    frm.doc.__reconciliation_data = reconciliation_data;
+    frm.doc[data_key] = data;
     return message;
 }
