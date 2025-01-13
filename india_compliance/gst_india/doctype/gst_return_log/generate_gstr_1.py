@@ -728,11 +728,13 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
 
 
 class FileGSTR1:
-    def reset_gstr1(self, force):
+
+    def reset_gstr1(self, is_nil_return, force):
         verify_request_in_progress(self, force)
 
         # reset called after proceed to file
         self.db_set({"filing_status": "Not Filed"})
+        self.db_set({"is_nil": sbool(is_nil_return)})
 
         api = GSTR1API(self)
         response = api.reset_gstr_1_data(self.return_period)
