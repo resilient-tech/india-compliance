@@ -229,7 +229,7 @@ frappe.ui.form.on(DOCTYPE, {
         const data = frm.doc.__gst_data;
         if (!data?.status) return;
 
-        frm.doc.file_nil_gstr1 = data.is_nil
+        frm.doc.file_nil_gstr1 = data.is_nil;
 
         // Toggle HTML fields
         frm.refresh();
@@ -486,26 +486,32 @@ class GSTR1 {
 
         // Primary Button
         const actions = {
+            Reset: this.gstr1_action.reset_gstr1_data,
             Generate: this.gstr1_action.generate_gstr1_data,
             Upload: this.gstr1_action.upload_gstr1_data,
             "Proceed to File": this.gstr1_action.proceed_to_file,
             File: this.gstr1_action.file_gstr1_data,
         };
 
-        // No need to upload if nil gstr1
-        const status =
-            this.frm.doc.file_nil_gstr1 && this.status == "Not Filed"
-                ? "Uploaded"
-                : this.status;
-
         let primary_button_label =
             {
                 "Not Filed": "Upload",
                 Uploaded: "Proceed to File",
                 "Ready to File": "File",
-            }[status] || "Generate";
+            }[this.status] || "Generate";
 
-        if (status === "Ready to File") {
+        // No need to upload if nil gstr1
+        if (this.frm.doc.__gst_data) {
+            if (this.frm.doc.file_nil_gstr1 != this.frm.doc.__gst_data.is_nil)
+                primary_button_label = "Reset";
+
+            if (this.status == "Not Filed")
+                if (this.frm.doc.file_nil_gstr1) primary_button_label = "Proceed to File";
+                else primary_button_label = "Upload";
+
+        }
+
+        if (this.status === "Ready to File") {
             this.frm.add_custom_button(__("Mark as Unfiled"), () => {
                 this.gstr1_action.mark_as_unfiled();
             });
@@ -2151,8 +2157,7 @@ class FiledTab extends GSTR1_TabManager {
         if (this.instance.data?.is_nil)
             if (this.status === "Filed")
                 return __("You have filed a Nil GSTR-1 for this period");
-            else
-                return __("You are filing a Nil GSTR-1 for this period");
+            else return __("You are filing a Nil GSTR-1 for this period");
 
         return this.DEFAULT_NO_DATA_MESSAGE;
     }
@@ -2556,7 +2561,7 @@ class FileGSTR1Dialog {
             this.perform_gstr1_action(
                 "file",
                 r => this.handle_filing_response(r.message),
-                { pan: pan, otp: this.filing_dialog.get_value("otp") }
+                { pan: pan, otp: this.filing_dialog.get_value("otp").trim() }
             );
 
             this.toggle_actions(true);
@@ -2674,8 +2679,10 @@ class GSTR1Action extends FileGSTR1Dialog {
             ),
             () => {
                 frappe.show_alert(__("Resetting GSTR-1 data"));
-                this.perform_gstr1_action(action, () =>
-                    this.check_action_status_with_retry(action)
+                this.perform_gstr1_action(
+                    action,
+                    () => this.check_action_status_with_retry(action),
+                    { is_nil_return: this.frm.doc.file_nil_gstr1 }
                 );
             }
         );

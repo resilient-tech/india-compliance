@@ -249,7 +249,7 @@ def process_gstr_1_returns_info(company, gstin, response):
             gstin_doc.gstr_1_filed_upto
         ):
             gstin_doc.gstr_1_filed_upto = filing_date
-            gstin_doc.save()
+            gstin_doc.save(ignore_permissions=True)
 
     # create or update filed logs
     for key, info in return_info.items():

@@ -30,7 +30,7 @@ Object.assign(india_compliance, {
                 ],
                 primary_action_label: __("Submit"),
                 primary_action(values) {
-                    resolve(values.otp);
+                    resolve(values.otp.trim());
                     prompt.hide();
                 },
                 secondary_action_label: __("Resend OTP"),

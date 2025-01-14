@@ -2332,6 +2332,45 @@ class BooksDataMapper:
             GSTR1_DataField.CESS.value: invoice.total_cess_amount,
         }
 
+    def round_values(self, data):
+        """
+        Progressively round off the values in the data
+        to ensure that the total values match the sum of the individual values
+        """
+
+        if isinstance(data[0], list):
+            for row in data:
+                self.round_values(row)
+
+        fields = (
+            GSTR1_DataField.TAXABLE_VALUE.value,
+            GSTR1_DataField.IGST.value,
+            GSTR1_DataField.CGST.value,
+            GSTR1_DataField.SGST.value,
+            GSTR1_DataField.CESS.value,
+        )
+
+        for field in fields:
+            if field not in data[0]:
+                continue
+
+            differece = 0
+            last_row_with_value = None
+
+            for row in data:
+                if not row[field]:  # zero values
+                    continue
+
+                rounded = flt(row[field], 2)
+                differece += row[field] - rounded
+
+                row[field] = flt(rounded, 2)
+
+                last_row_with_value = row
+
+            if flt(differece, 2) != 0:
+                last_row_with_value[field] += differece
+
 
 class GSTR1BooksData(BooksDataMapper):
     def __init__(self, filters):
@@ -2371,6 +2410,12 @@ class GSTR1BooksData(BooksDataMapper):
         for category, data in other_categories.items():
             if data:
                 prepared_data[category] = data
+
+        for data in prepared_data.values():
+            if not isinstance(data, dict):
+                continue
+
+            self.round_values(list(data.values()))
 
         return prepared_data
 
