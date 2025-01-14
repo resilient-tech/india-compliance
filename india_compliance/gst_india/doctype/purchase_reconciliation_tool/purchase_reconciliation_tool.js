@@ -772,11 +772,11 @@ class PurchaseReconciliationToolAction {
     }
 
     setup_actions() {
-        this.setup_primary_actions();
-        this.setup_custom_buttons();
+        this.setup_document_actions();
+        this.setup_row_actions();
     }
 
-    setup_primary_actions() {
+    setup_document_actions() {
         // Primary Action
         this.frm.disable_save();
         this.frm.page.set_primary_action(__("Generate"), async () => {
@@ -804,7 +804,7 @@ class PurchaseReconciliationToolAction {
         this.frm.add_custom_button(__("Export"), () => this.export_data());
     }
 
-    setup_custom_buttons() {
+    setup_row_actions() {
         const action_group = __("Actions");
 
         if (!this.frm.purchase_reconciliation_tool?.data?.length) return;
