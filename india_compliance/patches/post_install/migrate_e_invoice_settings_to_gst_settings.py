@@ -1,6 +1,7 @@
 import click
 
 import frappe
+from frappe import _
 from frappe.utils import sbool
 from frappe.utils.password import decrypt
 
@@ -63,7 +64,18 @@ def get_credentials_from_e_invoice_user():
     )
 
     for credential in old_credentials:
-        credential.password = credential.password and decrypt(credential.password)
+        try:
+            password = credential.password and decrypt(credential.password)
+        except Exception as e:
+            password = None
+            frappe.log_error(
+                title=_(
+                    "Failed to decrypt password for E Invoice User {0} - {1}"
+                ).format(credential.company, credential.gstin),
+                message=e,
+            )
+
+        credential.password = password
         credential.service = "e-Waybill / e-Invoice"
 
     return old_credentials
