@@ -53,7 +53,7 @@ frappe.ui.form.on("Sales Invoice", {
                             if (r.message?.error_type == "otp_requested") {
                                 await india_compliance.authenticate_otp(frm.doc.company_gstin);
                                 await frappe.call({
-                                    method: "india_compliance.gst_india.utils.e_invoice.handle_duplicate_irn_error",
+                                    method: "india_compliance.gst_india.utils.e_invoice.fetch_irn_details_compare_invoice",
                                     args: r.message
                                 });
                             }
@@ -212,7 +212,14 @@ function show_mark_e_invoice_as_generated_dialog(frm) {
                     docname: frm.doc.name,
                     values,
                 },
-                callback: () => {
+                callback: async (r) => {
+                    if (r.message?.error_type == "otp_requested") {
+                        await india_compliance.authenticate_otp(frm.doc.company_gstin);
+                        await frappe.call({
+                            method: "india_compliance.gst_india.utils.e_invoice.fetch_irn_details_compare_invoice",
+                            args: r.message
+                        });
+                    }
                     d.hide();
                     frm.refresh();
                 },
@@ -230,19 +237,7 @@ function get_generated_e_invoice_dialog_fields() {
             fieldname: "irn",
             fieldtype: "Data",
             reqd: 1,
-        },
-        {
-            label: "Acknowledgement Number",
-            fieldname: "ack_no",
-            fieldtype: "Data",
-            reqd: 1,
-        },
-        {
-            label: "Acknowledged On",
-            fieldname: "ack_dt",
-            fieldtype: "Datetime",
-            reqd: 1,
-        },
+        }
     ];
     return fields;
 }
