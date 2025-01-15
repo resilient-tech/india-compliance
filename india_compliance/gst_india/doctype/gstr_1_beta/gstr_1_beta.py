@@ -138,7 +138,6 @@ class GSTR1Beta(Document):
                 "gstr1_generation_failed",
                 message={"error": str(e), "filters": filters},
                 user=frappe.session.user,
-                doctype=self.doctype,
             )
 
             raise e
@@ -159,7 +158,6 @@ class GSTR1Beta(Document):
             "gstr1_data_prepared",
             message={"data": data, "filters": filters},
             user=frappe.session.user,
-            doctype=self.doctype,
         )
 
 

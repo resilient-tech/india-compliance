@@ -107,6 +107,8 @@ def get_and_validate_gstin_status(gstin, transaction_date):
         validate_gstin_status(doc, transaction_date, throw=True)
 
     else:
+        now = get_datetime()
+
         # Don't delay the response if API is required
         frappe.enqueue(
             create_or_update_gstin_status,
@@ -115,6 +117,7 @@ def get_and_validate_gstin_status(gstin, transaction_date):
             gstin=gstin,
             transaction_date=transaction_date,
             callback=validate_gstin_status,
+            job_id=f"create_or_update_gstin_status_{gstin}_{now.date()}_{now.hour}",
         )
 
 

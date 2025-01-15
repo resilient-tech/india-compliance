@@ -125,7 +125,7 @@ class GSTReturnLog(GenerateGSTR1, Document):
         if not settings.has_valid_credentials(self.gstin, "Returns"):
             if warn_for_missing_credentials:
                 frappe.publish_realtime(
-                    "show_message",
+                    "show_missing_gst_credentials_message",
                     dict(
                         message=_(
                             "Credentials are missing for GSTIN {0} for service"
