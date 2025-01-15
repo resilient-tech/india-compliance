@@ -58,7 +58,9 @@ class GSTR2b(GSTR):
         )
 
         for transaction_name in unmatched_transactions:
-            frappe.delete_doc("GST Inward Supply", transaction_name)
+            frappe.delete_doc(
+                "GST Inward Supply", transaction_name, ignore_permissions=True
+            )
 
     def get_transaction(self, category, supplier, invoice):
         transaction = super().get_transaction(category, supplier, invoice)
