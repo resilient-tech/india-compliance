@@ -95,12 +95,12 @@
    "fieldtype": "Column Break"
   },
   {
-   "depends_on": "eval: doc.__reconciliation_data?.length",
+   "depends_on": "eval: doc.data_state === \"available\"",
    "fieldname": "reconciliation_html",
    "fieldtype": "HTML"
   },
   {
-   "depends_on": "eval: doc.__reconciliation_data && !doc.__reconciliation_data.length",
+   "depends_on": "eval: doc.data_state === \"unavailable\"",
    "fieldname": "no_reconciliation_data",
    "fieldtype": "HTML",
    "options": "<img alt=\"No Data\" src=\"/assets/frappe/images/ui-states/list-empty-state.svg\">\n\t<p class=\"text-muted\">{{ __(\"No data available for selected filters\") }}</p>"
@@ -116,7 +116,7 @@
    "options": "GSTR 2B\nBoth GSTR 2A & 2B"
   },
   {
-   "depends_on": "eval: !doc.__reconciliation_data",
+   "depends_on": "eval: !doc.data_state",
    "fieldname": "not_reconciled",
    "fieldtype": "HTML",
    "options": "<img alt=\"No Data\" src=\"/assets/frappe/images/ui-states/list-empty-state.svg\">\n\t<p class=\"text-muted\">{{ __(\"Generate to view the data\") }}</p>"
@@ -132,7 +132,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-01-10 16:02:56.302029",
+ "modified": "2025-01-16 11:43:52.167256",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Purchase Reconciliation Tool",
