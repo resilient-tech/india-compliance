@@ -22,10 +22,7 @@
   "section_break_11",
   "reconciliation_html",
   "not_reconciled",
-  "no_reconciliation_data",
-  "is_modified",
-  "section_break_cmfa",
-  "reconciliation_data"
+  "no_reconciliation_data"
  ],
  "fields": [
   {
@@ -98,12 +95,12 @@
    "fieldtype": "Column Break"
   },
   {
-   "depends_on": "eval: doc.reconciliation_data?.length",
+   "depends_on": "eval: doc.data_state === \"available\"",
    "fieldname": "reconciliation_html",
    "fieldtype": "HTML"
   },
   {
-   "depends_on": "eval: doc.reconciliation_data && !doc.reconciliation_data.length",
+   "depends_on": "eval: doc.data_state === \"unavailable\"",
    "fieldname": "no_reconciliation_data",
    "fieldtype": "HTML",
    "options": "<img alt=\"No Data\" src=\"/assets/frappe/images/ui-states/list-empty-state.svg\">\n\t<p class=\"text-muted\">{{ __(\"No data available for selected filters\") }}</p>"
@@ -119,27 +116,10 @@
    "options": "GSTR 2B\nBoth GSTR 2A & 2B"
   },
   {
-   "depends_on": "eval: !doc.reconciliation_data",
+   "depends_on": "eval: !doc.data_state",
    "fieldname": "not_reconciled",
    "fieldtype": "HTML",
-   "options": "<img alt=\"No Data\" src=\"/assets/frappe/images/ui-states/list-empty-state.svg\">\n\t<p class=\"text-muted\">{{ __(\"Reconcile to view the data\") }}</p>"
-  },
-  {
-   "fieldname": "section_break_cmfa",
-   "fieldtype": "Section Break",
-   "hidden": 1
-  },
-  {
-   "fieldname": "reconciliation_data",
-   "fieldtype": "JSON",
-   "label": "Reconciliation Data"
-  },
-  {
-   "default": "0",
-   "fieldname": "is_modified",
-   "fieldtype": "Check",
-   "hidden": 1,
-   "label": "Is Modified"
+   "options": "<img alt=\"No Data\" src=\"/assets/frappe/images/ui-states/list-empty-state.svg\">\n\t<p class=\"text-muted\">{{ __(\"Generate to view the data\") }}</p>"
   },
   {
    "default": "0",
@@ -152,7 +132,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-08-09 17:57:55.801686",
+ "modified": "2025-01-16 11:43:52.167256",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Purchase Reconciliation Tool",

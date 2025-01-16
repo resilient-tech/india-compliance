@@ -1,6 +1,5 @@
 # Copyright (c) 2022, Resilient Tech and contributors
 # For license information, please see license.txt
-import json
 import re
 from collections import defaultdict
 from typing import List
@@ -10,7 +9,6 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.functions import IfNull
 from frappe.utils import add_to_date, cint, now_datetime
-from frappe.utils.response import json_handler
 
 from india_compliance.gst_india.api_classes.taxpayer_base import (
     TaxpayerBaseAPI,
@@ -79,7 +77,8 @@ class PurchaseReconciliationTool(Document):
             ),
         )
 
-    def validate(self):
+    @frappe.whitelist()
+    def reconcile_and_generate_data(self):
         # reconcile purchases and inward supplies
         if frappe.flags.in_install or frappe.flags.in_migrate:
             return
@@ -89,11 +88,8 @@ class PurchaseReconciliationTool(Document):
             _Reconciler.reconcile(row["original"], row["amended"])
 
         self.ReconciledData = ReconciledData(**self.get_reco_doc())
-        self.reconciliation_data = json.dumps(
-            self.ReconciledData.get(), default=json_handler
-        )
 
-        self.db_set("is_modified", 0)
+        return self.ReconciledData.get()
 
     @frappe.whitelist()
     def upload_gstr(self, return_type, period, file_path):
@@ -270,7 +266,6 @@ class PurchaseReconciliationTool(Document):
         purchases.append(purchase_invoice_name)
         inward_supplies.append(inward_supply_name)
 
-        self.db_set("is_modified", 1)
         self.set_reconciliation_status(
             link_doctype, (purchase_invoice_name,), "Match Found"
         )
@@ -299,8 +294,6 @@ class PurchaseReconciliationTool(Document):
         self.set_reconciliation_status("Purchase Invoice", purchases, "Unreconciled")
         self.set_reconciliation_status("Bill of Entry", boe, "Unreconciled")
         self._unlink_documents(inward_supplies)
-
-        self.db_set("is_modified", 1)
 
         return self.ReconciledData.get(purchases.union(boe), inward_supplies)
 
@@ -370,8 +363,6 @@ class PurchaseReconciliationTool(Document):
 
         self.set_reconciliation_status("Purchase Invoice", purchases, status)
         self.set_reconciliation_status("Bill of Entry", boe, status)
-
-        self.db_set("is_modified", 1)
 
     @frappe.whitelist()
     def get_link_options(self, doctype, filters):

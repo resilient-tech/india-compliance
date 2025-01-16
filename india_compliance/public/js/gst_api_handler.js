@@ -4,11 +4,12 @@ frappe.provide("india_compliance");
 taxpayer_api.call = async function (...args) {
     const response = await frappe.call(...args);
     const { message } = response;
-    if (!["otp_requested", "invalid_otp"].includes(message?.error_type)) return response;
+    if (!["otp_requested", "invalid_otp"].includes(message?.error_type))
+        return response;
 
     await india_compliance.authenticate_otp(message.gstin, message.error_type);
     return taxpayer_api.call(...args);
-}
+};
 
 Object.assign(india_compliance, {
     get_gstin_otp(company_gstin, error_type) {
@@ -97,16 +98,36 @@ class IndiaComplianceForm extends frappe.ui.form.Form {
             method: method,
             doc: this.doc,
             args: args,
-            callback: callback
-        }
+            callback: callback,
+        };
 
         opts.original_callback = opts.callback;
-        opts.callback = (r) => {
+        opts.callback = r => {
             if (!r.exc) this.refresh_fields();
             opts.original_callback && opts.original_callback(r);
-        }
+        };
 
         return taxpayer_api.call(opts);
+    }
+
+    _call(method, args, callback) {
+        const data_state = this.doc.data_state;
+
+        // similar to frappe.ui.form.Form.prototype.call
+        const opts = {
+            method: method,
+            doc: this.doc,
+            args: args,
+            callback: callback,
+        };
+
+        opts.original_callback = opts.callback;
+        opts.callback = r => {
+            if (!r.exc) this.doc.data_state = data_state;
+            opts.original_callback && opts.original_callback(r);
+        };
+
+        return frappe.call(opts);
     }
 }
 
