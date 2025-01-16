@@ -1364,7 +1364,7 @@ class ImportDialog {
         );
 
         let download_history = {
-            columns: ["Period", "Downloded On"],
+            columns: ["Period", "Downloaded On"],
             data: message.download_history,
         };
         let html =
@@ -1665,11 +1665,11 @@ async function fetch_date_range(frm, field_prefix, method) {
     frm.set_value(to_date_field, message[1]);
 }
 
-function set_date_range_description(frm, field_prefixs) {
-    if (!field_prefixs) field_prefixs = ["inward_supply", "purchase"];
-    else field_prefixs = [field_prefixs];
+function set_date_range_description(frm, field_prefixes) {
+    if (!field_prefixes) field_prefixes = ["inward_supply", "purchase"];
+    else field_prefixes = [field_prefixes];
 
-    field_prefixs.forEach(prefix => {
+    field_prefixes.forEach(prefix => {
         const period_field = prefix + "_period";
         const period = frm.doc[period_field];
 
