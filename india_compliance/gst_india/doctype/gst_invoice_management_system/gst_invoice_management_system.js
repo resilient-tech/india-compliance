@@ -76,14 +76,13 @@ class IMS {
     init(frm) {
         this.frm = frm;
         this.data = [];
-        this.frm.doc.is_data_loaded = false;
         this.$wrapper = this.frm.get_field("invoice_html").$wrapper;
         this._tabs = ["invoice", "match_summary", "action_summary"];
     }
 
     generate_data() {
-        this.data = this.frm.doc.__invoice_data;
-        this.filtered_data = this.frm.doc.__invoice_data;
+        this.data = this.frm.__invoice_data;
+        this.filtered_data = this.frm.__invoice_data;
 
         // clear filters
         this.filter_group.filter_x_button.click();
@@ -699,7 +698,7 @@ class IMSAction {
     setup_primary_actions() {
         // Primary Action
         this.frm.disable_save();
-        if (!this.frm.doc.is_data_loaded) {
+        if (!this.frm.doc.data_state) {
             this.frm.page.set_primary_action(__("Show Invoices"), () =>
                 this.get_ims_data(this.frm)
             );
@@ -717,7 +716,7 @@ class IMSAction {
 
     setup_custom_buttons() {
         // Setup Custom Buttons
-        if (!this.frm.doc?.__invoice_data?.length) return;
+        if (!this.frm.ims?.data?.length) return;
         if (this.frm.get_active_tab()?.df.fieldname == "invoice_tab") {
             this.frm.add_custom_button(
                 __("Unlink"),
@@ -753,10 +752,10 @@ class IMSAction {
 
     async get_ims_data(frm) {
         const { message } = await frm.call("autoreconcile_and_get_data");
-        frm.doc.__invoice_data = message;
+        frm.__invoice_data = message;
 
         frm.ims.generate_data();
-        frm.doc.is_data_loaded = true;
+        frm.doc.data_state = message.length ? "available" : "unavailable";
 
         // Toggle HTML fields
         frm.refresh();
@@ -867,13 +866,9 @@ class DetailViewDialog {
     }
 
     async get_invoice_details() {
-        const { message } = await frappe.call({
-            method: "get_invoice_comparison",
-            doc: this.frm,
-            args: {
-                purchase_name: this.row.purchase_invoice_name,
-                inward_supply_name: this.row.inward_supply_name,
-            },
+        const { message } = await this.frm._call("get_invoice_comparison", {
+            purchase_name: this.row.purchase_invoice_name,
+            inward_supply_name: this.row.inward_supply_name,
         });
 
         this.comparison_data = message;
@@ -1059,12 +1054,8 @@ class DetailViewDialog {
             purchase_doctype: this.comparison_data.purchase_doctype,
         };
 
-        const { message } = await frappe.call({
-            method: "get_purchase_invoice_options",
-            doc: this.frm,
-            args: {
-                filters: this.filters,
-            },
+        const { message } = await this.frm._call("get_purchase_invoice_options", {
+            filters: this.filters,
         });
 
         this.dialog.get_field("link_with").set_data(message);
@@ -1162,8 +1153,8 @@ class DetailViewDialog {
 }
 
 function render_empty_state(frm) {
-    frm.doc.__invoice_data = null;
-    frm.doc.is_data_loaded = false;
+    frm.__invoice_data = null;
+    frm.doc.data_state = null;
 
     $(".action-performed-summary").remove();
 
@@ -1245,7 +1236,7 @@ async function apply_action(frm, invoice_names, action) {
     if (!invoice_names.length) return;
 
     // Update
-    frappe.call({ method: "update_action", doc: frm, args: { invoice_names, action } });
+    frm._call("update_action", { invoice_names, action });
 
     frm.ims.refresh(new_data);
     frappe.show_alert({ message: "Action applied successfully", indicator: "green" });

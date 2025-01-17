@@ -33,13 +33,10 @@ Object.assign(reconciliation, {
         });
 
         // unlink documents & update table
-        const { message: r } = await frappe.call({
-            method: "unlink_documents",
-            doc: frm,
-            args: {
-                data: selected_rows,
-            },
+        const { message: r } = await frm._call("unlink_documents", {
+            data: selected_rows,
         });
+
         const unlinked_docs = reconciliation.get_unlinked_docs(selected_rows);
 
         const new_data = _class.data.filter(
@@ -66,14 +63,10 @@ Object.assign(reconciliation, {
         if (frm.get_active_tab()?.df.fieldname != "invoice_tab") return;
 
         // link documents & update data.
-        const { message: r } = await frappe.call({
-            method: "link_documents",
-            doc: frm,
-            args: {
-                purchase_invoice_name,
-                inward_supply_name,
-                link_doctype,
-            },
+        const { message: r } = await frm._call("link_documents", {
+            purchase_invoice_name,
+            inward_supply_name,
+            link_doctype,
         });
 
         const new_data = _class.data.filter(
