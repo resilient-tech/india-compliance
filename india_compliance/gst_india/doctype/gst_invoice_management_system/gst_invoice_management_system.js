@@ -57,8 +57,9 @@ frappe.ui.form.on(DOCTYPE, {
     company_gstin: render_empty_state,
 
     refresh(frm) {
-        this.ims_actions = new IMSAction(frm);
+        show_download_invoices_message(frm);
 
+        this.ims_actions = new IMSAction(frm);
         this.ims_actions.setup_primary_actions();
         this.ims_actions.setup_custom_buttons();
     },
@@ -1276,4 +1277,20 @@ function get_affected_rows(tab, selection, data) {
         );
 
     return invoices.map(row => row.inward_supply_name);
+}
+
+function show_download_invoices_message(frm) {
+    if (!api_enabled) return;
+
+    const msg_tag = frm
+        .get_field("no_invoice_data")
+        .$wrapper.find("#download-invoices-alert");
+
+    // show alert
+    msg_tag.removeClass("hidden");
+
+    // setup listener
+    msg_tag.on("click", () => {
+        this.ims_actions.download_ims_data(frm);
+    });
 }
