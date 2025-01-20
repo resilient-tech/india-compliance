@@ -1,21 +1,19 @@
 frappe.provide("india_compliance");
 
-india_compliance.summary_view = class SummaryView {
-    constructor(frm, doctype) {
-        this.init(frm);
-        this.render_tab_group();
-        this.setup_filter_button(doctype);
-    }
-
-    init(frm, tabs) {
+india_compliance.reconciliation_tool = class ReconciliationTool {
+    constructor(frm, tabs, data_field) {
         this.frm = frm;
         this.data = [];
         this._tabs = tabs;
+        this.$wrapper = frm.get_field(data_field).$wrapper;
+
+        this.render_tab_group();
+        this.setup_filter_button(frm.doctype);
     }
 
-    generate_data(data_key) {
-        this.data = this.frm[data_key];
-        this.filtered_data = this.frm[data_key];
+    render_data(data) {
+        this.data = data;
+        this.filtered_data = data;
 
         // clear filters
         this.filter_group.filter_x_button.click();
@@ -40,7 +38,9 @@ india_compliance.summary_view = class SummaryView {
         this.rendered_data = this.filtered_data;
     }
 
-    render_tab_group(fields) {
+    render_tab_group() {
+        const fields = this.get_tab_group_fields();
+
         this.tab_group = new frappe.ui.FieldGroup({
             fields,
             body: this.$wrapper,
@@ -53,6 +53,10 @@ india_compliance.summary_view = class SummaryView {
         this.tabs = Object.fromEntries(
             this.tab_group.tabs.map(tab => [tab.df.fieldname, tab])
         );
+    }
+
+    get_tab_group_fields() {
+        return [];
     }
 
     setup_filter_button(doctype) {
@@ -69,7 +73,9 @@ india_compliance.summary_view = class SummaryView {
         });
     }
 
-    get_filter_fields() {}
+    get_filter_fields() {
+        return [];
+    }
 
     apply_filters(force, supplier_filter) {
         const has_filters = this.filter_group.filters.length > 0 || supplier_filter;
@@ -160,7 +166,14 @@ india_compliance.detail_view_dialog = class DetailViewDialog {
         this.dialog.show();
     }
 
-    async get_invoice_details() {}
+    async get_invoice_details() {
+        const { message } = await this.frm._call("get_invoice_details", {
+            purchase_name: this.row.purchase_invoice_name,
+            inward_supply_name: this.row.inward_supply_name,
+        });
+
+        this.data = message;
+    }
 
     process_data() {
         for (let key of ["_purchase_invoice", "_inward_supply"]) {
@@ -203,9 +216,62 @@ india_compliance.detail_view_dialog = class DetailViewDialog {
         this.set_link_options();
     }
 
-    _get_document_link_fields() {}
+    _get_document_link_fields() {
+        this._set_missing_doctype();
+        if (!this.missing_doctype) return [];
 
-    async set_link_options(method, args = {}) {
+        return [
+            {
+                label: "GSTIN",
+                fieldtype: "Data",
+                fieldname: "supplier_gstin",
+                default: this.row.supplier_gstin,
+                onchange: () => this.set_link_options(),
+            },
+            {
+                label: "Date Range",
+                fieldtype: "DateRange",
+                fieldname: "date_range",
+                default: this._get_default_date_range(),
+                onchange: () => this.set_link_options(),
+            },
+            {
+                fieldtype: "Column Break",
+            },
+            {
+                label: "Document Type",
+                fieldtype: "Autocomplete",
+                fieldname: "doctype",
+                default: this.missing_doctype,
+                options: this.doctype_options,
+                read_only_depends_on: this.doctype_options.length == 1,
+
+                onchange: () => {
+                    const doctype = this.dialog.get_value("doctype");
+                    this.dialog
+                        .get_field("show_matched")
+                        .set_label(`Show matched options for linking ${doctype}`);
+                },
+            },
+            {
+                label: `Document Name`,
+                fieldtype: "Autocomplete",
+                fieldname: "link_with",
+                onchange: () => this.refresh_data(),
+            },
+            {
+                label: `Show matched options for linking ${this.missing_doctype}`,
+                fieldtype: "Check",
+                fieldname: "show_matched",
+                onchange: () => this.set_link_options(),
+            },
+            {
+                fieldtype: "Section Break",
+            },
+        ];
+    }
+
+    async set_link_options(method) {
         if (!this.dialog.get_value("doctype")) return;
 
         this.filters = {
@@ -216,14 +282,24 @@ india_compliance.detail_view_dialog = class DetailViewDialog {
             purchase_doctype: this.data.purchase_doctype,
         };
 
-        args["filters"] = this.filters;
-
-        const { message } = await this.frm._call(method, args);
+        const { message } = await this.frm._call("get_link_options", {
+            doctype: this.dialog.get_value("doctype"),
+            filters: this.filters,
+        });
 
         this.dialog.get_field("link_with").set_data(message);
     }
 
-    setup_actions(actions) {
+    _set_missing_doctype() {}
+
+    _get_default_date_range() {
+        // TODO: fiscal year start till date
+        return [india_compliance.last_month_start(), india_compliance.last_month_end()];
+    }
+
+    setup_actions() {
+        const actions = this._get_custom_actions();
+
         actions.forEach(action => {
             this.dialog.add_custom_action(
                 action,
@@ -241,31 +317,15 @@ india_compliance.detail_view_dialog = class DetailViewDialog {
         this.dialog.$wrapper.find(".modal-footer").css("flex-direction", "inherit");
     }
 
-    _apply_custom_action(_class, action, doc_name, apply_action_method) {
-        if (action == "Unlink") {
-            reconciliation.unlink_documents(this.frm, _class, [this.row]);
-        } else if (action == "Link") {
-            reconciliation.link_documents(
-                this.frm,
-                this.data.purchase_invoice_name,
-                this.data.inward_supply_name,
-                this.dialog.get_value("doctype"),
-                _class,
-                true
-            );
-        } else if (action == "Create") {
-            reconciliation.create_new_purchase_invoice(
-                this.data,
-                this.frm.doc.company,
-                this.frm.doc.company_gstin,
-                DOCTYPE
-            );
-        } else {
-            apply_action_method(this.frm, action, [doc_name]);
-        }
+    _get_custom_actions() {
+        return [];
     }
 
-    _get_button_css(action) {}
+    _apply_custom_action(action) {}
+
+    _get_button_css(action) {
+        return "btn-secondary";
+    }
 
     toggle_link_btn(disabled) {
         const btn = this.dialog.$wrapper.find(".modal-footer .btn-link");
@@ -324,11 +384,11 @@ india_compliance.detail_view_dialog = class DetailViewDialog {
         });
     }
 
-    render_table(template) {
+    render_table() {
         const detail_table = this.dialog.fields_dict.detail_table;
 
         detail_table.html(
-            frappe.render_template(template, {
+            frappe.render_template("invoice_detail_comparison", {
                 purchase: this.data._purchase_invoice,
                 inward_supply: this.data._inward_supply,
             })

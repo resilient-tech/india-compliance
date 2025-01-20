@@ -745,61 +745,12 @@ class DetailViewDialog extends india_compliance.detail_view_dialog {
         this.data = message;
     }
 
-    _get_document_link_fields() {
+    _set_missing_doctype() {
         if (this.row.match_status == "Missing in PI")
             this.missing_doctype = "Purchase Invoice";
-        else return [];
+        else return;
 
-        return [
-            {
-                label: "GSTIN",
-                fieldtype: "Data",
-                fieldname: "supplier_gstin",
-                default: this.row.supplier_gstin,
-                onchange: () => this.set_link_options(),
-            },
-            {
-                label: "Date Range",
-                fieldtype: "DateRange",
-                fieldname: "date_range",
-                default: [
-                    india_compliance.last_month_start(),
-                    india_compliance.last_month_end(),
-                ],
-                onchange: () => this.set_link_options(),
-            },
-            {
-                fieldtype: "Column Break",
-            },
-            {
-                label: "Document Type",
-                fieldtype: "Data",
-                fieldname: "doctype",
-                default: "Purchase Invoice",
-                read_only: 1,
-                onchange: () => {
-                    const doctype = this.dialog.get_value("doctype");
-                    this.dialog
-                        .get_field("show_matched")
-                        .set_label(`Show matched options for linking ${doctype}`);
-                },
-            },
-            {
-                label: `Document Name`,
-                fieldtype: "Autocomplete",
-                fieldname: "link_with",
-                onchange: () => this.refresh_data(),
-            },
-            {
-                label: `Show matched options for linking ${this.missing_doctype}`,
-                fieldtype: "Check",
-                fieldname: "show_matched",
-                onchange: () => this.set_link_options(),
-            },
-            {
-                fieldtype: "Section Break",
-            },
-        ];
+        this.doctype_options = ["Purchase Invoice"];
     }
 
     async set_link_options() {
