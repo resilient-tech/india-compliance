@@ -68,7 +68,7 @@ frappe.ui.form.on(DOCTYPE, {
 
         await frappe.require("purchase_reconciliation_tool.bundle.js");
         frm.trigger("company");
-        frm.reconciliation_tool = new PurchaseReconciliationTool(
+        frm.reconciliation_tabs = new PurchaseReconciliationTool(
             frm,
             ["invoice", "supplier", "summary"],
             "reconciliation_html"
@@ -684,7 +684,7 @@ class PurchaseReconciliationToolAction {
     setup_row_actions() {
         const action_group = __("Actions");
 
-        if (!this.frm.reconciliation_tool?.data?.length) return;
+        if (!this.frm.reconciliation_tabs?.data?.length) return;
         if (this.frm.get_active_tab()?.df.fieldname == "invoice_tab") {
             this.frm.add_custom_button(
                 __("Unlink"),
@@ -727,7 +727,7 @@ class PurchaseReconciliationToolAction {
 
         frm.__reconciliation_data = message;
 
-        frm.reconciliation_tool.render_data(frm.__reconciliation_data);
+        frm.reconciliation_tabs.render_data(frm.__reconciliation_data);
         frm.doc.data_state = message.length ? "available" : "unavailable";
 
         // Toggle HTML fields
@@ -736,7 +736,7 @@ class PurchaseReconciliationToolAction {
 
     export_data(selected_row) {
         const data_to_export =
-            this.frm.reconciliation_tool.get_filtered_data(selected_row);
+            this.frm.reconciliation_tabs.get_filtered_data(selected_row);
         if (selected_row) delete data_to_export.supplier_summary;
 
         const url =
@@ -1182,7 +1182,7 @@ class EmailDialog {
     }
 
     get_attachment() {
-        const export_data = this.frm.reconciliation_tool.get_filtered_data(this.data);
+        const export_data = this.frm.reconciliation_tabs.get_filtered_data(this.data);
 
         frappe.call({
             method: "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.generate_excel_attachment",
@@ -1312,11 +1312,11 @@ function apply_action(frm, action, selected_rows) {
     const active_tab = frm.get_active_tab()?.df.fieldname;
     if (!active_tab) return;
 
-    const tab = frm.reconciliation_tool.tabs[active_tab];
+    const tab = frm.reconciliation_tabs.tabs[active_tab];
     if (!selected_rows) selected_rows = tab.datatable.get_checked_items();
 
     // get affected rows
-    const { filtered_data, data } = frm.reconciliation_tool;
+    const { filtered_data, data } = frm.reconciliation_tabs;
     let affected_rows = get_affected_rows(active_tab, selected_rows, filtered_data);
 
     if (!affected_rows.length)
@@ -1368,7 +1368,7 @@ function apply_action(frm, action, selected_rows) {
         return true;
     });
 
-    frm.reconciliation_tool.refresh(new_data);
+    frm.reconciliation_tabs.refresh(new_data);
     reconciliation.after_successful_action(tab);
 }
 

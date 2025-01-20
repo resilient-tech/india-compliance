@@ -13,7 +13,7 @@ Object.assign(reconciliation, {
 
     async unlink_documents(frm, selected_rows) {
         if (frm.get_active_tab()?.df.fieldname != "invoice_tab") return;
-        const _class = frm.reconciliation_tool;
+        const _class = frm.reconciliation_tabs;
         const { invoice_tab } = _class.tabs;
         if (!selected_rows) selected_rows = invoice_tab.datatable.get_checked_items();
 
@@ -69,7 +69,7 @@ Object.assign(reconciliation, {
             link_doctype,
         });
 
-        const _class = frm.reconciliation_tool;
+        const _class = frm.reconciliation_tabs;
         const new_data = _class.data.filter(
             row =>
                 !(

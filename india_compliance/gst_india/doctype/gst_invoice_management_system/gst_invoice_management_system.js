@@ -21,7 +21,7 @@ frappe.ui.form.on(DOCTYPE, {
     async setup(frm) {
         await frappe.require("ims.bundle.js");
 
-        frm.reconciliation_tool = new IMS(
+        frm.reconciliation_tabs = new IMS(
             frm,
             ["invoice", "match_summary", "action_summary"],
             "invoice_html"
@@ -601,7 +601,7 @@ class IMSAction {
 
     setup_custom_buttons() {
         // Setup Custom Buttons
-        if (!this.frm.reconciliation_tool?.data?.length) return;
+        if (!this.frm.reconciliation_tabs?.data?.length) return;
         if (this.frm.get_active_tab()?.df.fieldname == "invoice_tab") {
             this.frm.add_custom_button(
                 __("Unlink"),
@@ -639,7 +639,7 @@ class IMSAction {
         const { message } = await frm.call("autoreconcile_and_get_data");
         frm.__invoice_data = message;
 
-        frm.reconciliation_tool.render_data(frm.__invoice_data);
+        frm.reconciliation_tabs.render_data(frm.__invoice_data);
         frm.doc.data_state = message.length ? "available" : "unavailable";
 
         // Toggle HTML fields
@@ -670,9 +670,9 @@ class IMSAction {
 
     async handle_upload_and_reset_request() {
         const upload_status =
-            await this.frm.reconciliation_tool.check_action_status_with_retry("upload");
+            await this.frm.reconciliation_tabs.check_action_status_with_retry("upload");
         const reset_status =
-            await this.frm.reconciliation_tool.check_action_status_with_retry("reset");
+            await this.frm.reconciliation_tabs.check_action_status_with_retry("reset");
 
         const error_statuses = ["ER", "PE"];
         if (
@@ -797,7 +797,7 @@ function apply_bulk_action(frm, action) {
     const active_tab = frm.get_active_tab()?.df.fieldname;
     if (!active_tab) return;
 
-    const tab = frm.reconciliation_tool.tabs[active_tab];
+    const tab = frm.reconciliation_tabs.tabs[active_tab];
 
     // from current tab
     const selected_rows = tab.datatable.get_checked_items();
@@ -811,7 +811,7 @@ function apply_bulk_action(frm, action) {
     const affected_rows = get_affected_rows(
         active_tab,
         selected_rows,
-        frm.reconciliation_tool.filtered_data
+        frm.reconciliation_tabs.filtered_data
     );
 
     apply_action(frm, action, affected_rows);
@@ -824,7 +824,7 @@ async function apply_action(frm, action, invoice_names) {
     let pending_not_allowed = [];
     let accept_not_allowed = [];
     let new_data = [];
-    frm.reconciliation_tool.data.forEach(row => {
+    frm.reconciliation_tabs.data.forEach(row => {
         if (invoice_names.includes(row.inward_supply_name)) {
             if (!is_pending_allowed(row, action)) {
                 pending_not_allowed.push(row.inward_supply_name);
@@ -870,7 +870,7 @@ async function apply_action(frm, action, invoice_names) {
     // Update
     frm._call("update_action", { invoice_names, action });
 
-    frm.reconciliation_tool.refresh(new_data);
+    frm.reconciliation_tabs.refresh(new_data);
     frappe.show_alert({ message: "Action applied successfully", indicator: "green" });
 }
 
