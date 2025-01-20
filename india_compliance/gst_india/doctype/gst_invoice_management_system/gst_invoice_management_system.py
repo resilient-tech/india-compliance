@@ -24,7 +24,7 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     ReconciledData,
 )
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
-    _get_link_options,
+    get_formatted_options,
 )
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
     link_documents as _link_documents,
@@ -175,7 +175,7 @@ class GSTInvoiceManagementSystem(Document):
         if not filters.show_matched:
             query = query.where(PI.reconciliation_status == "Unreconciled")
 
-        return _get_link_options(query.run(as_dict=True))
+        return get_formatted_options(query.run(as_dict=True))
 
 
 @frappe.whitelist()

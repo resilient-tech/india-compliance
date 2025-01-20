@@ -23,7 +23,7 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     Reconciler,
 )
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
-    _get_link_options,
+    get_formatted_options,
 )
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
     link_documents as _link_documents,
@@ -91,6 +91,8 @@ class PurchaseReconciliationTool(Document):
 
     @frappe.whitelist()
     def reconcile_and_generate_data(self):
+        frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
+
         # reconcile purchases and inward supplies
         if frappe.flags.in_install or frappe.flags.in_migrate:
             return
@@ -322,7 +324,7 @@ class PurchaseReconciliationTool(Document):
                 PI.name.notin(PurchaseInvoice.query_matched_purchase_invoice())
             )
 
-        return _get_link_options(query.run(as_dict=True))
+        return get_formatted_options(query.run(as_dict=True))
 
     def get_inward_supply_options(self, filters):
         GSTR2 = frappe.qb.DocType("GST Inward Supply")
@@ -340,7 +342,7 @@ class PurchaseReconciliationTool(Document):
         if not filters.show_matched:
             query = query.where(IfNull(GSTR2.link_name, "") == "")
 
-        return _get_link_options(query.run(as_dict=True))
+        return get_formatted_options(query.run(as_dict=True))
 
     def get_bill_of_entry_options(self, filters):
         BOE = frappe.qb.DocType("Bill of Entry")
@@ -353,7 +355,7 @@ class PurchaseReconciliationTool(Document):
                 BOE.name.notin(BillOfEntry.query_matched_bill_of_entry())
             )
 
-        return _get_link_options(query.run(as_dict=True))
+        return get_formatted_options(query.run(as_dict=True))
 
 
 def download_gstr(

@@ -90,7 +90,7 @@ def _unlink_documents(inward_supplies):
     )
 
 
-def _get_link_options(data):
+def get_formatted_options(data):
     for row in data:
         row.value = row.label = row.name
         if not row.get("classification"):
