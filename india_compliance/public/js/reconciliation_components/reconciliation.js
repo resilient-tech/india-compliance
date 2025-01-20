@@ -223,7 +223,23 @@ india_compliance.detail_view_dialog = class DetailViewDialog {
         this.dialog.get_field("link_with").set_data(message);
     }
 
-    setup_actions() {}
+    setup_actions(actions) {
+        actions.forEach(action => {
+            this.dialog.add_custom_action(
+                action,
+                () => {
+                    this._apply_custom_action(action);
+                    this.dialog.hide();
+                },
+                `mr-2 ${this._get_button_css(action)}`
+            );
+        });
+
+        this.dialog.$wrapper
+            .find(".btn.btn-secondary.not-grey")
+            .removeClass("btn-secondary");
+        this.dialog.$wrapper.find(".modal-footer").css("flex-direction", "inherit");
+    }
 
     _apply_custom_action(_class, action, doc_name, apply_action_method) {
         if (action == "Unlink") {

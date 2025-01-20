@@ -824,21 +824,7 @@ class DetailViewDialog extends india_compliance.detail_view_dialog {
         if (this.row.match_status == "Missing in PI") actions.push("Create", "Link");
         else actions.push("Unlink");
 
-        actions.forEach(action => {
-            this.dialog.add_custom_action(
-                action,
-                () => {
-                    this._apply_custom_action(action);
-                    this.dialog.hide();
-                },
-                `mr-2 ${this._get_button_css(action)}`
-            );
-        });
-
-        this.dialog.$wrapper
-            .find(".btn.btn-secondary.not-grey")
-            .removeClass("btn-secondary");
-        this.dialog.$wrapper.find(".modal-footer").css("flex-direction", "inherit");
+        super.setup_actions(actions);
     }
 
     _apply_custom_action(action) {
