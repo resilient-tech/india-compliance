@@ -38,7 +38,7 @@ frappe.ui.form.on(DOCTYPE, {
 
         // Downloaded and Reconciled Invoices
         frappe.realtime.on("ims_download_completed", message => {
-            this.ims_actions.get_ims_data(frm);
+            frm.ims_actions.get_ims_data(frm);
             frappe.show_alert({
                 message: message["message"],
                 indicator: "green",
@@ -47,7 +47,7 @@ frappe.ui.form.on(DOCTYPE, {
 
         // Check Upload Status
         frappe.realtime.on("check_ims_upload_status", message => {
-            this.ims_actions.handle_upload_and_reset_request();
+            frm.ims_actions.handle_upload_and_reset_request();
         });
     },
 
@@ -64,15 +64,12 @@ frappe.ui.form.on(DOCTYPE, {
     refresh(frm) {
         show_download_invoices_message(frm);
 
-        this.ims_actions = new IMSAction(frm);
-        this.ims_actions.setup_primary_actions();
-        this.ims_actions.setup_custom_buttons();
+        frm.ims_actions = new IMSAction(frm);
+        frm.ims_actions.setup_actions();
     },
 });
 
 class IMS extends reconciliation.reconciliation_tabs {
-    RETRY_INTERVALS = [2000, 3000, 15000, 30000, 60000, 120000, 300000, 600000, 720000]; // 5 second, 15 second, 30 second, 1 min, 2 min, 5 min, 10 min, 12 min
-
     refresh(data) {
         super.refresh(data);
         this.set_actions_summary();
@@ -172,6 +169,8 @@ class IMS extends reconciliation.reconciliation_tabs {
 
     set_listeners() {
         const me = this;
+
+        // TODO: Refactor like purchase_reconciliation.js
 
         this.tabs.invoice_tab.datatable.$datatable.on(
             "click",
@@ -478,44 +477,6 @@ class IMS extends reconciliation.reconciliation_tabs {
         return Object.values(summary_data);
     }
 
-    check_action_status_with_retry(action, retries = 0, now = false) {
-        return new Promise(resolve => {
-            setTimeout(
-                async () => {
-                    const { message } = await taxpayer_api.call({
-                        method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.check_action_status",
-                        args: {
-                            company_gstin: this.frm.doc.company_gstin,
-                            action,
-                        },
-                    });
-
-                    if (!message.status_cd) {
-                        resolve({ status_cd: "ER" });
-                        return;
-                    }
-
-                    if (
-                        message.status_cd === "IP" &&
-                        retries < this.RETRY_INTERVALS.length
-                    ) {
-                        resolve(
-                            await this.check_action_status_with_retry(
-                                action,
-                                retries + 1
-                            )
-                        );
-                        return;
-                    }
-
-                    // Not IP
-                    resolve(message);
-                },
-                now ? 0 : this.RETRY_INTERVALS[retries]
-            );
-        });
-    }
-
     async set_actions_summary() {
         const actions_data = this.get_action_summary_data(this.data);
 
@@ -576,11 +537,18 @@ class IMS extends reconciliation.reconciliation_tabs {
 }
 
 class IMSAction {
+    RETRY_INTERVALS = [2000, 3000, 15000, 30000, 60000, 120000, 300000, 600000, 720000]; // 5 second, 15 second, 30 second, 1 min, 2 min, 5 min, 10 min, 12 min
+
     constructor(frm) {
         this.frm = frm;
     }
 
-    setup_primary_actions() {
+    setup_actions() {
+        this.setup_document_actions();
+        this.setup_row_actions();
+    }
+
+    setup_document_actions() {
         // Primary Action
         this.frm.disable_save();
         if (!this.frm.doc.data_state) {
@@ -599,7 +567,7 @@ class IMSAction {
         });
     }
 
-    setup_custom_buttons() {
+    setup_row_actions() {
         // Setup Custom Buttons
         if (!this.frm.reconciliation_tabs?.data?.length) return;
         if (this.frm.get_active_tab()?.df.fieldname == "invoice_tab") {
@@ -633,6 +601,19 @@ class IMSAction {
             this.frm.$wrapper.find(".custom-button-group .inner-group-button").remove();
             $(button).appendTo(this.frm.$wrapper.find(".custom-button-group"));
         }
+    }
+
+    async download_ims_data(frm) {
+        await taxpayer_api.call({
+            method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.download_invoices",
+            args: {
+                company_gstin: frm.doc.company_gstin,
+            },
+        });
+
+        frappe.show_alert({
+            message: __("Downloading Invoices"),
+        });
     }
 
     async get_ims_data(frm) {
@@ -707,16 +688,41 @@ class IMSAction {
         });
     }
 
-    async download_ims_data(frm) {
-        await taxpayer_api.call({
-            method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.download_invoices",
-            args: {
-                company_gstin: frm.doc.company_gstin,
-            },
-        });
+    check_action_status_with_retry(action, retries = 0, now = false) {
+        return new Promise(resolve => {
+            setTimeout(
+                async () => {
+                    const { message } = await taxpayer_api.call({
+                        method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.check_action_status",
+                        args: {
+                            company_gstin: this.frm.doc.company_gstin,
+                            action,
+                        },
+                    });
 
-        frappe.show_alert({
-            message: __("Downloading Invoices"),
+                    if (!message.status_cd) {
+                        resolve({ status_cd: "ER" });
+                        return;
+                    }
+
+                    if (
+                        message.status_cd === "IP" &&
+                        retries < this.RETRY_INTERVALS.length
+                    ) {
+                        resolve(
+                            await this.check_action_status_with_retry(
+                                action,
+                                retries + 1
+                            )
+                        );
+                        return;
+                    }
+
+                    // Not IP
+                    resolve(message);
+                },
+                now ? 0 : this.RETRY_INTERVALS[retries]
+            );
         });
     }
 }
@@ -922,6 +928,6 @@ function show_download_invoices_message(frm) {
 
     // setup listener
     msg_tag.on("click", () => {
-        this.ims_actions.download_ims_data(frm);
+        frm.ims_actions.download_ims_data(frm);
     });
 }

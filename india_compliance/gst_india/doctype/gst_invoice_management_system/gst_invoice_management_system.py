@@ -155,6 +155,8 @@ class GSTInvoiceManagementSystem(Document):
 
         purchases, inward_supplies = _unlink_documents(data)
 
+        # TODO: reset IMS action in inward supplies where action is "Accepted"
+
         return self.get_invoice_data(inward_supplies, purchases)
 
     @frappe.whitelist()
