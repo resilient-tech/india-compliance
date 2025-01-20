@@ -160,7 +160,7 @@ class GSTInvoiceManagementSystem(Document):
         return self.get_invoice_data(inward_supplies, purchases)
 
     @frappe.whitelist()
-    def get_link_options(self, filters):
+    def get_link_options(self, doctype, filters):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         if isinstance(filters, dict):
