@@ -4,7 +4,6 @@
 
 {% set data = _dict(json.loads(doc.data)) %}
 {%- set irn = frappe.db.get_value("Sales Invoice", {"ewaybill": data.ewbNo}, "irn") -%}
-{%- set irn = data.irn -%} {#temp#}
 
 {% if data.supplyType == "O" %}
     {% set generated_by = data.fromTrdName %}
