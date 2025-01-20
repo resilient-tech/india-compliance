@@ -116,7 +116,7 @@ class GSTInvoiceManagementSystem(Document):
         )
 
     @frappe.whitelist()
-    def get_invoice_comparison(self, purchase_name, inward_supply_name):
+    def get_invoice_details(self, purchase_name, inward_supply_name):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         inward_supply = InwardSupply().get_all(
@@ -158,7 +158,7 @@ class GSTInvoiceManagementSystem(Document):
         return self.get_invoice_data(inward_supplies, purchases)
 
     @frappe.whitelist()
-    def get_purchase_invoice_options(self, filters):
+    def get_link_options(self, filters):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         if isinstance(filters, dict):

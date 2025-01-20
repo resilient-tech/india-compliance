@@ -15,16 +15,17 @@ const ACTION_MAP = {
     Accept: "Accepted",
     Pending: "Pending",
     Reject: "Rejected",
-    Link: "Link",
-    Create: "Create",
-    Unlink: "Unlink",
 };
 
 frappe.ui.form.on(DOCTYPE, {
     async setup(frm) {
         await frappe.require("ims.bundle.js");
 
-        frm.ims = new IMS(frm);
+        frm.reconciliation_tool = new IMS(
+            frm,
+            ["invoice", "match_summary", "action_summary"],
+            "invoice_html"
+        );
 
         frm.trigger("company");
 
@@ -69,29 +70,16 @@ frappe.ui.form.on(DOCTYPE, {
     },
 });
 
-class IMS extends india_compliance.summary_view {
+class IMS extends india_compliance.reconciliation_tool {
     RETRY_INTERVALS = [2000, 3000, 15000, 30000, 60000, 120000, 300000, 600000, 720000]; // 5 second, 15 second, 30 second, 1 min, 2 min, 5 min, 10 min, 12 min
-
-    constructor(frm) {
-        super(frm, DOCTYPE);
-    }
-
-    init(frm) {
-        super.init(frm, ["invoice", "match_summary", "action_summary"]);
-        this.$wrapper = this.frm.get_field("invoice_html").$wrapper;
-    }
-
-    generate_data() {
-        super.generate_data("__invoice_data");
-    }
 
     refresh(data) {
         super.refresh(data);
         this.set_actions_summary();
     }
 
-    render_tab_group() {
-        const fields = [
+    get_tab_group_fields() {
+        return [
             {
                 //hack: for the FieldGroup(Layout) to avoid rendering default "details" tab
                 fieldtype: "Section Break",
@@ -125,8 +113,6 @@ class IMS extends india_compliance.summary_view {
                 fieldname: "invoice_data",
             },
         ];
-
-        super.render_tab_group(fields);
     }
 
     get_filter_fields() {
@@ -615,11 +601,11 @@ class IMSAction {
 
     setup_custom_buttons() {
         // Setup Custom Buttons
-        if (!this.frm.ims?.data?.length) return;
+        if (!this.frm.reconciliation_tool?.data?.length) return;
         if (this.frm.get_active_tab()?.df.fieldname == "invoice_tab") {
             this.frm.add_custom_button(
                 __("Unlink"),
-                () => reconciliation.unlink_documents(this.frm, this.frm.ims),
+                () => reconciliation.unlink_documents(this.frm),
                 __("Actions")
             );
             this.frm.add_custom_button(__("dropdown-divider"), () => {}, __("Actions"));
@@ -653,7 +639,7 @@ class IMSAction {
         const { message } = await frm.call("autoreconcile_and_get_data");
         frm.__invoice_data = message;
 
-        frm.ims.generate_data();
+        frm.reconciliation_tool.render_data(frm.__invoice_data);
         frm.doc.data_state = message.length ? "available" : "unavailable";
 
         // Toggle HTML fields
@@ -683,10 +669,10 @@ class IMSAction {
     }
 
     async handle_upload_and_reset_request() {
-        const upload_status = await this.frm.ims.check_action_status_with_retry(
-            "upload"
-        );
-        const reset_status = await this.frm.ims.check_action_status_with_retry("reset");
+        const upload_status =
+            await this.frm.reconciliation_tool.check_action_status_with_retry("upload");
+        const reset_status =
+            await this.frm.reconciliation_tool.check_action_status_with_retry("reset");
 
         const error_statuses = ["ER", "PE"];
         if (
@@ -736,28 +722,7 @@ class IMSAction {
 }
 
 class DetailViewDialog extends india_compliance.detail_view_dialog {
-    async get_invoice_details() {
-        const { message } = await this.frm._call("get_invoice_comparison", {
-            purchase_name: this.row.purchase_invoice_name,
-            inward_supply_name: this.row.inward_supply_name,
-        });
-
-        this.data = message;
-    }
-
-    _set_missing_doctype() {
-        if (this.row.match_status == "Missing in PI")
-            this.missing_doctype = "Purchase Invoice";
-        else return;
-
-        this.doctype_options = ["Purchase Invoice"];
-    }
-
-    async set_link_options() {
-        super.set_link_options("get_purchase_invoice_options");
-    }
-
-    setup_actions() {
+    _get_custom_actions() {
         // setup actions
         let actions = ["No Action", "Reject"].filter(
             action => ACTION_MAP[action] != this.row.ims_action
@@ -775,16 +740,30 @@ class DetailViewDialog extends india_compliance.detail_view_dialog {
         if (this.row.match_status == "Missing in PI") actions.push("Create", "Link");
         else actions.push("Unlink");
 
-        super.setup_actions(actions);
+        return actions;
     }
 
     _apply_custom_action(action) {
-        super._apply_custom_action(
-            this.frm.ims,
-            ACTION_MAP[action],
-            this.row.inward_supply_name,
-            apply_action
-        );
+        if (action == "Unlink") {
+            reconciliation.unlink_documents(this.frm, [this.row]);
+        } else if (action == "Link") {
+            reconciliation.link_documents(
+                this.frm,
+                this.data.purchase_invoice_name,
+                this.data.inward_supply_name,
+                this.dialog.get_value("doctype"),
+                true
+            );
+        } else if (action == "Create") {
+            reconciliation.create_new_purchase_invoice(
+                this.data,
+                this.frm.doc.company,
+                this.frm.doc.company_gstin,
+                DOCTYPE
+            );
+        } else {
+            apply_action(this.frm, ACTION_MAP[action], [this.row.inward_supply_name]);
+        }
     }
 
     _get_button_css(action) {
@@ -796,8 +775,12 @@ class DetailViewDialog extends india_compliance.detail_view_dialog {
         if (action == "Link") return "btn-primary not-grey btn-link disabled";
     }
 
-    render_table() {
-        super.render_table("invoice_detail_comparison");
+    _set_missing_doctype() {
+        if (this.row.match_status == "Missing in PI")
+            this.missing_doctype = "Purchase Invoice";
+        else return;
+
+        this.doctype_options = ["Purchase Invoice"];
     }
 }
 
@@ -814,7 +797,7 @@ function apply_bulk_action(frm, action) {
     const active_tab = frm.get_active_tab()?.df.fieldname;
     if (!active_tab) return;
 
-    const tab = frm.ims.tabs[active_tab];
+    const tab = frm.reconciliation_tool.tabs[active_tab];
 
     // from current tab
     const selected_rows = tab.datatable.get_checked_items();
@@ -828,7 +811,7 @@ function apply_bulk_action(frm, action) {
     const affected_rows = get_affected_rows(
         active_tab,
         selected_rows,
-        frm.ims.filtered_data
+        frm.reconciliation_tool.filtered_data
     );
 
     apply_action(frm, action, affected_rows);
@@ -841,7 +824,7 @@ async function apply_action(frm, action, invoice_names) {
     let pending_not_allowed = [];
     let accept_not_allowed = [];
     let new_data = [];
-    frm.ims.data.forEach(row => {
+    frm.reconciliation_tool.data.forEach(row => {
         if (invoice_names.includes(row.inward_supply_name)) {
             if (!is_pending_allowed(row, action)) {
                 pending_not_allowed.push(row.inward_supply_name);
@@ -887,7 +870,7 @@ async function apply_action(frm, action, invoice_names) {
     // Update
     frm._call("update_action", { invoice_names, action });
 
-    frm.ims.refresh(new_data);
+    frm.reconciliation_tool.refresh(new_data);
     frappe.show_alert({ message: "Action applied successfully", indicator: "green" });
 }
 

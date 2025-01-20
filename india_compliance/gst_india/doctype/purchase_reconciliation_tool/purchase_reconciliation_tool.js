@@ -691,7 +691,6 @@ class PurchaseReconciliationToolAction {
                 () =>
                     reconciliation.unlink_documents(
                         this.frm,
-                        this.frm.reconciliation_tool
                     ),
                 action_group
             );
