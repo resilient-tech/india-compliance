@@ -12,6 +12,7 @@ from frappe import scrub
 from frappe.utils import flt
 
 from india_compliance.gst_india.constants.e_waybill import (
+    DOCUMENT_TYPES,
     SUB_SUPPLY_TYPES,
     SUPPLY_TYPES,
     TRANSPORT_MODES,
@@ -79,6 +80,12 @@ def get_transport_mode(code):
 
 def get_transport_type(code):
     return TRANSPORT_TYPES[int(code)]
+
+
+def get_e_waybill_document_type(short_document_type):
+    for full_document_type, document_type in DOCUMENT_TYPES.items():
+        if short_document_type == document_type:
+            return full_document_type
 
 
 def get_e_waybill_qr_code(e_waybill, gstin, ewaybill_date):
