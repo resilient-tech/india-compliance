@@ -26,9 +26,9 @@ class ReturnsAPI(TaxpayerBaseAPI):
         "RET2B1010": "authorization_failed",  # API Authorization Failed for 2B
     }
 
-    def download_files(self, return_period, token, otp=None):
+    def download_files(self, return_period, token):
         return super().get_files(
-            return_period, token, action="FILEDET", endpoint="returns", otp=otp
+            return_period, token, action="FILEDET", endpoint="returns"
         )
 
     def get_return_status(self, return_period, reference_id, otp=None):
@@ -343,14 +343,16 @@ class IMSAPI(ReturnsAPI):
         )
 
     def download_files(self, return_period, token):
-        return self.get_files(return_period, token)
+        return self.get_files(
+            return_period, token, action="FILEDET", endpoint=self.END_POINT
+        )
 
-    def get_files(self, return_period, token):
+    def get_files(self, return_period, token, action, endpoint):
         response = self.get(
-            action="FILEDET",
+            action=action,
             return_period=return_period,
             params={"gstin": self.company_gstin, "token": token},
-            endpoint=self.END_POINT,
+            endpoint=endpoint,
         )
 
         if response.error_type == "queued":

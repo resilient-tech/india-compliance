@@ -828,7 +828,12 @@ class DetailViewDialog extends india_compliance.detail_view_dialog {
     }
 
     _apply_custom_action(action) {
-        super._apply_custom_action(this.frm.ims, ACTION_MAP[action], this.row.inward_supply_name, apply_action);
+        super._apply_custom_action(
+            this.frm.ims,
+            ACTION_MAP[action],
+            this.row.inward_supply_name,
+            apply_action
+        );
     }
 
     _get_button_css(action) {
