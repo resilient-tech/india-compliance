@@ -70,7 +70,7 @@ frappe.ui.form.on(DOCTYPE, {
     },
 });
 
-class IMS extends india_compliance.reconciliation_tool {
+class IMS extends reconciliation.reconciliation_tabs {
     RETRY_INTERVALS = [2000, 3000, 15000, 30000, 60000, 120000, 300000, 600000, 720000]; // 5 second, 15 second, 30 second, 1 min, 2 min, 5 min, 10 min, 12 min
 
     refresh(data) {
@@ -721,7 +721,7 @@ class IMSAction {
     }
 }
 
-class DetailViewDialog extends india_compliance.detail_view_dialog {
+class DetailViewDialog extends reconciliation.detail_view_dialog {
     _get_custom_actions() {
         // setup actions
         let actions = ["No Action", "Reject"].filter(

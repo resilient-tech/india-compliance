@@ -1,6 +1,6 @@
-frappe.provide("india_compliance");
+frappe.provide("reconciliation");
 
-india_compliance.reconciliation_tool = class ReconciliationTool {
+reconciliation.reconciliation_tabs = class ReconciliationTabs {
     constructor(frm, tabs, data_field) {
         this.frm = frm;
         this.data = [];
@@ -137,7 +137,7 @@ india_compliance.reconciliation_tool = class ReconciliationTool {
     }
 };
 
-india_compliance.detail_view_dialog = class DetailViewDialog {
+reconciliation.detail_view_dialog = class DetailViewDialog {
     table_fields = [
         "name",
         "bill_no",

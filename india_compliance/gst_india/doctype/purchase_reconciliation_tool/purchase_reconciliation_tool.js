@@ -187,7 +187,7 @@ frappe.ui.form.on(DOCTYPE, {
     },
 });
 
-class PurchaseReconciliationTool extends india_compliance.reconciliation_tool {
+class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
     get_tab_group_fields() {
         return [
             {
@@ -688,10 +688,7 @@ class PurchaseReconciliationToolAction {
         if (this.frm.get_active_tab()?.df.fieldname == "invoice_tab") {
             this.frm.add_custom_button(
                 __("Unlink"),
-                () =>
-                    reconciliation.unlink_documents(
-                        this.frm,
-                    ),
+                () => reconciliation.unlink_documents(this.frm),
                 action_group
             );
             this.frm.add_custom_button(__("dropdown-divider"), () => {}, action_group);
@@ -753,7 +750,7 @@ class PurchaseReconciliationToolAction {
     }
 }
 
-class DetailViewDialog extends india_compliance.detail_view_dialog {
+class DetailViewDialog extends reconciliation.detail_view_dialog {
     _get_custom_actions() {
         const doctype = this.dialog.get_value("doctype");
         if (this.row.match_status == "Missing in 2A/2B") return ["Link", "Ignore"];
