@@ -43,10 +43,7 @@ frappe.ui.form.on("GSTR 3B Report", {
             });
         }
 
-        let current_year = new Date().getFullYear();
-        let options = [current_year, current_year - 1, current_year - 2];
-        frm.set_df_property("year", "options", options);
-        frm.set_value("year", options[0]);
+        set_options_for_year_gstr3b(frm);
 
         frappe.realtime.on("gstr3b_report_generation", function () {
             frm.reload_doc();
@@ -63,6 +60,8 @@ frappe.ui.form.on("GSTR 3B Report", {
         if (!frm.doc.company) return;
         const options = await india_compliance.set_gstin_options(frm);
         frm.set_value("company_gstin", options[0]);
+
+        set_options_for_year_gstr3b(frm);
     },
 
     company: async function (frm) {
@@ -85,4 +84,11 @@ function append_form(frm) {
             data: JSON.parse(frm.doc.json_output),
         })
     ).appendTo(frm.fields_dict.gstr3b_form.wrapper);
+}
+
+function set_options_for_year_gstr3b(frm){
+    let current_year = new Date().getFullYear();
+    let options = [current_year, current_year - 1, current_year - 2];
+    frm.set_df_property("year", "options", options);
+    frm.set_value("year", frm.is_new() ? options[0] : frm.doc.year);
 }
