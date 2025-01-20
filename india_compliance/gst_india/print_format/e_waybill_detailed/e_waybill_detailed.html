@@ -3,7 +3,7 @@
 </style>
 
 {% set data = _dict(json.loads(doc.data)) %}
-{%- set irn = frappe.db.get_value("Sales Invoice", {"ewaybill": data.ewbNo}, "irn") -%} 
+{%- set irn = frappe.db.get_value("Sales Invoice", {"ewaybill": data.ewbNo}, "irn") -%}
 {%- set irn = data.irn -%} {#temp#}
 
 {% if data.supplyType == "O" %}
@@ -23,13 +23,13 @@
                         </td>
                         <td class="text-right align-middle">
                             <img
-                                src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg"
+                                src="data:image/png;base64,{{ get_e_waybill_qr_code(data.ewbNo,data.userGstin, data.ewayBillDate) }}"
                                 class="qr-code"
                             />
                         </td>
                     </tr>
                 </tbody>
-            </table> 
+            </table>
 
             <div class="table-heading" >E-Way Bill Details</div>
             <table class="table">
@@ -50,8 +50,9 @@
                     </tr>
                     <tr>
                         <td>
+                            {% set lastVehicleDetails = data.VehiclListDetails | last %}
                             <span class="attribute">Mode: </span>
-                            <span class="attribute-value">where??</span>
+                            <span class="attribute-value">{{ get_transport_mode(lastVehicleDetails.transMode)  }}</span>
                         </td>
                         <td>
                             <span class="attribute">Approx Distance: </span>
@@ -69,7 +70,7 @@
                         </td>
                         <td>
                             <span class="attribute">Document Details: </span>
-                            <span class="attribute-value">{{ data.docType }} - {{ data.docNo }} - {{ data.docDate }}</span>
+                            <span class="attribute-value">{{ get_e_waybill_document_type(data.docType) }} - {{ data.docNo }} - {{ data.docDate }}</span>
                         </td>
                         <td>
                             <span class="attribute">Transaction type: </span>
@@ -84,17 +85,17 @@
                     </tr>
                 </tbody>
             </table>
-            
+
             <div class="table-heading" >Address Details</div>
             <table class="table">
                 <tbody class="table-element">
                     <tr>
                         <td style="width: 50%;">
                             {% set from_state = get_state(data.fromStateCode) %}
-                            
+
                             <div class="bold mb-2">From</div>
                             <div>
-                                <div>
+                                <div style="margin-bottom: 10px;">
                                     <div>GSTIN: {{ add_spacing(data.fromGstin,5) }}</div>
                                     <div>{{data.fromTrdName}}</div>
                                     <div>{{ from_state }}</div> {# get_state_by_state_code #}
@@ -111,7 +112,7 @@
                             {% set to_state = get_state(data.toStateCode) %}
                             <div class="bold mb-2">To</div>
                             <div>
-                                <div>
+                                <div style="margin-bottom: 10px;">
                                     <div>GSTIN: {{ add_spacing(data.toGstin,5) }}</div>
                                     <div>{{data.toTrdName}}</div>
                                     <div>{{ to_state }}</div> {# get_state_by_state_code #}
@@ -124,8 +125,8 @@
                                 </div>
                             </div>
                         </td>
-                    </tr>   
-                                    
+                    </tr>
+
                 </tbody>
             </table>
 
@@ -135,7 +136,7 @@
                 <tbody class="table-element">
                     <tr class="bold">
                         <td>
-                           HSN Code 
+                           HSN Code
                         </td>
                         <td>
                            Product Name & Desc.
@@ -149,7 +150,7 @@
                         <td>
                            Tax Rate (C + S + I + Cess + Cess Non. Advol)
                         </td>
-                    </tr>   
+                    </tr>
                     {% for item in data.itemList %}
                         <tr>
                             <td>
@@ -159,56 +160,36 @@
                                 {{item.productDesc}}
                             </td>
                             <td>
-                                {{item.qtyUnit}} {{item.qtyUnit}}
+                                {{item.quantity}} {{item.qtyUnit}}
                             </td>
                             <td>
                                 {{ item.taxableAmount }} {# taxable amt. #}
                             </td>
                             <td>
                                 <span>
-                                    {% if item.cgstRate is defined %}
-                                        {{ item.cgstRate }}
-                                    {% else %}
-                                        NE
-                                    {% endif %}
+                                   {{ item.cgstRate | default('NE') }}
                                 </span>
                                 +
                                 <span>
-                                    {% if item.sgstRate is defined %}
-                                        {{ item.sgstRate }}
-                                    {% else %}
-                                        NE
-                                    {% endif %}
+                                   {{ item.sgstRate | default('NE') }}
                                 </span>
                                 +
                                 <span>
-                                    {% if item.igstRate is defined %}
-                                        {{ item.igstRate }}
-                                    {% else %}
-                                        NE
-                                    {% endif %}
+                                    {{ item.igstRate | default('NE') }}
                                 </span>
                                 +
                                 <span>
-                                    {% if item.cessRate is defined %}
-                                        {{ item.cessRate }}
-                                    {% else %}
-                                        NE
-                                    {% endif %}
+                                   {{ item.cessRate | default('NE') }}
                                 </span>
                                 +
                                 <span>
-                                    {% if item.cessNonAdvol is defined %}
-                                        {{ item.cessNonAdvol }}
-                                    {% else %}
-                                        NE
-                                    {% endif %}
+                                   {{ item.cessNonAdvol | default('NE') }}
                                 </span>
-                                
+
                             </td>
-                        </tr>        
-                
-                    {% endfor %}       
+                        </tr>
+
+                    {% endfor %}
                 </tbody>
             </table>
 
@@ -239,7 +220,7 @@
                         <td>
                            Total Inv. Amt.
                         </td>
-                    </tr>   
+                    </tr>
                     <tr class="border">
                         <td>
                             <div><span>{{ data.totalValue }}</span></div>
@@ -265,8 +246,8 @@
                         <td>
                            <div><span>{{ data.totInvValue }}</span></div>
                         </td>
-                    </tr>        
-     
+                    </tr>
+
                 </tbody>
             </table>
 
@@ -281,9 +262,9 @@
                         </td>
                         <td style="width: 50%;">
                             <span class="attribute">Transporter Doc. No & Date:</span>
-                            <span class="attribute-value"> where?? </span>
+                            <span class="attribute-value"> {{ data.transDocNo|default('') }} - {{ data.transDocDate|default('') }} </span>
                         </td>
-                    </tr>  
+                    </tr>
                 </tbody>
             </table>
 
@@ -313,7 +294,7 @@
                         <td>
                             Multi Veh. Info (If any)
                         </td>
-                    </tr>  
+                    </tr>
                     <tr>
                         {% for item in data.VehiclListDetails %}
                             <tr>
@@ -333,21 +314,13 @@
                                     {{ item.userGSTINTransin }}
                                 </td>
                                 <td>
-                                    {% if item.cewbNo is defined %}
-                                        {{ item.cewbNo }}
-                                    {% else %}
-                                        -
-                                    {% endif %}
+                                    {{ item.cebwNo | default('-') }}
                                 </td>
                                 <td>
-                                    {% if item.multiVehInfo is defined %}
-                                        {{ item.multiVehInfo }}
-                                    {% else %}
-                                        -
-                                    {% endif %}
+                                    {{ item.multiVehInfo | default('-') }}
                                 </td>
-        
-                            </tr>    
+
+                            </tr>
                         {% endfor %}
                     </tr>
                 </tbody>
@@ -366,13 +339,13 @@
                 </tbody>
             </table>
 
-           
 
 
-            
 
 
-            
+
+
+
             {#<div class="borderless" style="width: 100%;">
                 <span class="text-left float-left">
                     <h1 class="title">e-Waybill</h1>
@@ -383,7 +356,7 @@
                         class="qr-code"
                     />
                 </span>
-            </div> 
+            </div>
             #}
 
         </div>
