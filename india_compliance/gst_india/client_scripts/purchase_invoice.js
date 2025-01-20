@@ -84,7 +84,6 @@ frappe.ui.form.on(DOCTYPE, {
                     frm.doc.name,
                     frm._inward_supply.name,
                     "Purchase Invoice",
-                    source_frm.purchase_reconciliation_tool || source_frm.ims,
                     false
                 );
             };
