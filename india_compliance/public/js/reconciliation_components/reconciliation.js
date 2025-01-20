@@ -225,20 +225,16 @@ india_compliance.detail_view_dialog = class DetailViewDialog {
 
     setup_actions() {}
 
-    _apply_custom_action(action, doc_name) {
+    _apply_custom_action(_class, action, doc_name, apply_action_method) {
         if (action == "Unlink") {
-            reconciliation.unlink_documents(
-                this.frm,
-                this.frm.purchase_reconciliation_tool,
-                [this.row]
-            );
+            reconciliation.unlink_documents(this.frm, _class, [this.row]);
         } else if (action == "Link") {
             reconciliation.link_documents(
                 this.frm,
                 this.data.purchase_invoice_name,
                 this.data.inward_supply_name,
                 this.dialog.get_value("doctype"),
-                this.frm.purchase_reconciliation_tool,
+                _class,
                 true
             );
         } else if (action == "Create") {
@@ -249,7 +245,7 @@ india_compliance.detail_view_dialog = class DetailViewDialog {
                 DOCTYPE
             );
         } else {
-            apply_action(this.frm, action, [doc_name]);
+            apply_action_method(this.frm, action, [doc_name]);
         }
     }
 

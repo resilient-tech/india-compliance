@@ -15,6 +15,9 @@ const ACTION_MAP = {
     Accept: "Accepted",
     Pending: "Pending",
     Reject: "Rejected",
+    Link: "Link",
+    Create: "Create",
+    Unlink: "Unlink",
 };
 
 frappe.ui.form.on(DOCTYPE, {
@@ -839,7 +842,7 @@ class DetailViewDialog extends india_compliance.detail_view_dialog {
     }
 
     _apply_custom_action(action) {
-        super._apply_custom_action(ACTION_MAP[action], this.row.inward_supply_name);
+        super._apply_custom_action(this.frm.ims, ACTION_MAP[action], this.row.inward_supply_name, apply_action);
     }
 
     _get_button_css(action) {
@@ -886,12 +889,12 @@ function apply_bulk_action(frm, action) {
         frm.ims.filtered_data
     );
 
-    apply_action(frm, affected_rows, action);
+    apply_action(frm, action, affected_rows);
 
     if (tab) tab.datatable.clear_checked_items();
 }
 
-async function apply_action(frm, invoice_names, action) {
+async function apply_action(frm, action, invoice_names) {
     // Validate and Update JS
     let pending_not_allowed = [];
     let accept_not_allowed = [];

@@ -93,6 +93,16 @@ frappe.ui.form.on(DOCTYPE, {
         if (!frm.doc.company_gstin) frm.set_value("company_gstin", options[0]);
     },
 
+    async company_gstin(frm) {
+        render_empty_state(frm);
+        await fetch_date_range(
+            frm,
+            "inward_supply",
+            "get_date_range_and_check_missing_documents"
+        );
+        add_gstr2b_alert(frm);
+    },
+
     async purchase_period(frm) {
         render_empty_state(frm);
         await fetch_date_range(frm, "purchase");
@@ -869,7 +879,12 @@ class DetailViewDialog extends india_compliance.detail_view_dialog {
     }
 
     _apply_custom_action(action) {
-        super._apply_custom_action(action, this.row);
+        super._apply_custom_action(
+            this.frm.purchase_reconciliation_tool,
+            action,
+            this.row,
+            apply_action
+        );
     }
 
     _get_button_css(action) {
