@@ -14,8 +14,9 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
 
 class IMSReconciler(Reconciler):
     CATEGORIES = (
-        {"doc_type": ["Invoice", "Debit Note"]},
-        {"doc_type": ["Credit Note"]},
+        {"doc_type": "Invoice", "category": "B2B"},
+        {"doc_type": "Debit Note", "category": "CDNR"},
+        {"doc_type": "Credit Note", "category": "CDNR"},
     )
 
     def reconcile(self, filters):
@@ -23,7 +24,7 @@ class IMSReconciler(Reconciler):
         Reconcile purchases and inward supplies.
         """
         for row in self.CATEGORIES:
-            filters.update(row)
+            filters["doc_type"], self.category = row.values()
 
             purchases = PurchaseInvoice().get_unmatched(filters)
             inward_supplies = InwardSupply().get_unmatched(filters)
@@ -67,7 +68,7 @@ class InwardSupply:
         query = self.get_query(filters.company_gstin)
         data = (
             query.where(IfNull(self.IMS.match_status, "") == "")
-            .where(self.IMS.doc_type.isin(filters.doc_type))
+            .where(self.IMS.doc_type == filters.doc_type)
             .run(as_dict=True)
         )
 
@@ -152,7 +153,7 @@ class PurchaseInvoice:
             "Tax Collector",
             "Input Service Distributor",
         )
-        is_return = 1 if "Credit Note" in filters.doc_type else 0
+        is_return = 1 if filters.doc_type == "Credit Note" else 0
 
         data = (
             self.get_query(filters=filters)
