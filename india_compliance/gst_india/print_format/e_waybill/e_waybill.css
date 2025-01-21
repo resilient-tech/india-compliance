@@ -1,6 +1,28 @@
+
+.table-element {
+    font-size: 12px;
+}
+
+.bold {
+    font-weight: bold;
+}
+
+.no-border {
+    border: none !important;
+}
+
+.no-border > * {
+    border: none;
+}
+
 .print-format {
     padding: 0.25in;
     color: black;
+}
+
+table, th, td {
+    border: 1px solid #d1d8dd;
+    border-collapse: collapse;
 }
 
 @media print {
@@ -51,10 +73,6 @@
 .print-format .vehicle-info th {
     border: 0 !important;
     border-top: 1px solid black !important;
-}
-
-.print-format .ewb-no-span {
-    font-size: 13px;
 }
 
 .print-format .section-separator {
