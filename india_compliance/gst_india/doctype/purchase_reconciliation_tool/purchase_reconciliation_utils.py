@@ -80,12 +80,21 @@ def _unlink_documents(inward_supplies):
         .run()
     )
 
-    # Revert action performed
+    # Revert Purchase Reconciliation action performed
     (
         frappe.qb.update(GSTR2)
         .set("action", "No Action")
         .where(GSTR2.name.isin(inward_supplies))
         .where(GSTR2.action.notin(("Ignore", "Pending")))
+        .run()
+    )
+
+    # Revert IMS action performed
+    (
+        frappe.qb.update(GSTR2)
+        .set("ims_action", "No Action")
+        .where(GSTR2.name.isin(inward_supplies))
+        .where(GSTR2.ims_action == "Accepted")
         .run()
     )
 
