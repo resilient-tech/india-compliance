@@ -38,16 +38,16 @@ frappe.ui.form.on(DOCTYPE, {
 
         // Downloaded and Reconciled Invoices
         frappe.realtime.on("ims_download_completed", message => {
-            frm.ims_actions.get_ims_data(frm);
+            frm.ims_actions.get_ims_data();
             frappe.show_alert({
                 message: message["message"],
                 indicator: "green",
             });
         });
 
-        // Check Upload Status
-        frappe.realtime.on("check_ims_upload_status", message => {
-            frm.ims_actions.handle_upload_and_reset_request();
+        // Upload and Check Status
+        frappe.realtime.on("upload_data_and_check_status", message => {
+            frm.ims_actions.upload_ims_data();
         });
     },
 
@@ -565,17 +565,17 @@ class IMSAction {
         this.frm.disable_save();
         if (!this.frm.doc.data_state) {
             this.frm.page.set_primary_action(__("Show Invoices"), () =>
-                this.get_ims_data(this.frm)
+                this.get_ims_data()
             );
         } else {
             this.frm.page.set_primary_action(__("Upload Invoices"), () =>
-                this.upload_ims_data(this.frm)
+                this.upload_ims_data()
             );
         }
 
         this.frm.add_custom_button(__("Download Invoices"), async () => {
             render_empty_state(this.frm);
-            await this.download_ims_data(this.frm);
+            await this.download_ims_data();
         });
     }
 
@@ -615,11 +615,11 @@ class IMSAction {
         }
     }
 
-    async download_ims_data(frm) {
+    async download_ims_data() {
         await taxpayer_api.call({
             method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.download_invoices",
             args: {
-                company_gstin: frm.doc.company_gstin,
+                company_gstin: this.frm.doc.company_gstin,
             },
         });
 
@@ -628,54 +628,78 @@ class IMSAction {
         });
     }
 
-    async get_ims_data(frm) {
-        const { message } = await frm.call("autoreconcile_and_get_data");
-        frm.__invoice_data = message.invoice_data;
+    async get_ims_data() {
+        const { message } = await this.frm.call("autoreconcile_and_get_data");
+        this.frm.__invoice_data = message.invoice_data;
 
-        frm.reconciliation_tabs.render_data(frm.__invoice_data);
-        frm.doc.data_state = frm.__invoice_data.length ? "available" : "unavailable";
+        this.frm.reconciliation_tabs.render_data(this.frm.__invoice_data);
+        this.frm.doc.data_state = this.frm.__invoice_data.length
+            ? "available"
+            : "unavailable";
 
         if (message.pending_actions.length) {
-            this.handle_upload_and_reset_request();
+            this.handle_save_and_reset_request();
         }
 
         // Toggle HTML fields
-        frm.refresh();
+        this.frm.refresh();
     }
 
-    async upload_ims_data(frm) {
-        await taxpayer_api.call({
-            method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.upload_invoices",
-            args: {
-                company_gstin: frm.doc.company_gstin,
-            },
-            callback: async r => {
-                if (!r.message) {
-                    frappe.msgprint({
-                        title: __("No Data Found"),
-                        message: __("No Invoices to Upload"),
-                        indicator: "red",
-                    });
-                    return;
-                }
-                frappe.show_alert(__("Checking Upload Status"));
+    async upload_ims_data() {
+        if (!this.filter_invoices_to_upload().length) {
+            frappe.msgprint({
+                title: __("No Data Found"),
+                message: __("No Invoices to Upload"),
+                indicator: "red",
+            });
+            return;
+        }
 
-                this.handle_upload_and_reset_request();
+        frappe.show_alert(__("Checking Upload Status"));
+
+        const save_status = await this.save_and_check_status();
+        const reset_status = await this.reset_and_check_status();
+
+        this.handle_save_and_reset_request(save_status, reset_status);
+    }
+
+    async save_and_check_status() {
+        await taxpayer_api.call({
+            method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.save_invoices",
+            args: {
+                company_gstin: this.frm.doc.company_gstin,
             },
         });
+
+        return this.frm.ims_actions.check_action_status_with_retry("save");
     }
 
-    async handle_upload_and_reset_request() {
-        const upload_status = await this.frm.ims_actions.check_action_status_with_retry(
-            "upload"
-        );
-        const reset_status = await this.frm.ims_actions.check_action_status_with_retry(
-            "reset"
-        );
+    async reset_and_check_status() {
+        await taxpayer_api.call({
+            method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.reset_invoices",
+            args: {
+                company_gstin: this.frm.doc.company_gstin,
+            },
+        });
+
+        return this.frm.ims_actions.check_action_status_with_retry("reset");
+    }
+
+    async handle_save_and_reset_request(save_status, reset_status) {
+        if (!save_status) {
+            save_status = await this.frm.ims_actions.check_action_status_with_retry(
+                "save"
+            );
+        }
+        if (!reset_status) {
+            reset_status = await this.frm.ims_actions.check_action_status_with_retry(
+                "reset"
+            );
+        }
 
         const error_statuses = ["ER", "PE"];
         if (
-            error_statuses.includes(upload_status.status_cd) ||
+            error_statuses.includes(save_status.status_cd) ||
             error_statuses.includes(reset_status.status_cd)
         ) {
             frappe.msgprint({
@@ -742,6 +766,10 @@ class IMSAction {
                 now ? 0 : this.RETRY_INTERVALS[retries]
             );
         });
+    }
+
+    filter_invoices_to_upload() {
+        return this.frm.reconciliation_tabs.data.filter(row => row.pending_upload);
     }
 }
 
@@ -945,6 +973,6 @@ function show_download_invoices_message(frm) {
 
     // setup listener
     msg_tag.on("click", () => {
-        frm.ims_actions.download_ims_data(frm);
+        frm.ims_actions.download_ims_data();
     });
 }

@@ -50,18 +50,36 @@ class InwardSupply:
 
         return query.run(as_dict=True)
 
-    def get_for_upload(self, company_gstin):
-        query = self.get_query(
-            company_gstin,
-            additional_fields=[
-                "doc_type",
-                "is_amended",
-                "sup_return_period",
-                "document_value",
-            ],
+    def get_for_save(self, company_gstin):
+        return (
+            self.get_query(
+                company_gstin,
+                additional_fields=[
+                    "doc_type",
+                    "is_amended",
+                    "sup_return_period",
+                    "document_value",
+                ],
+            )
+            .where(self.IMS.ims_action != self.IMS.previous_ims_action)
+            .where(self.IMS.ims_action != "No Action")
+            .run(as_dict=True)
         )
-        return query.where(self.IMS.ims_action != self.IMS.previous_ims_action).run(
-            as_dict=True
+
+    def get_for_reset(self, company_gstin):
+        return (
+            self.get_query(
+                company_gstin,
+                additional_fields=[
+                    "doc_type",
+                    "is_amended",
+                    "sup_return_period",
+                    "document_value",
+                ],
+            )
+            .where(self.IMS.ims_action != self.IMS.previous_ims_action)
+            .where(self.IMS.ims_action == "No Action")
+            .run(as_dict=True)
         )
 
     def get_unmatched(self, filters):

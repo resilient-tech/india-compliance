@@ -42,6 +42,15 @@ from india_compliance.gst_india.utils.gstr_utils import (
     publish_action_status_notification,
 )
 
+CATEGORY_MAP = {
+    "Invoice_0": GSTRCategory.B2B.value,
+    "Invoice_1": GSTRCategory.B2BA.value,
+    "Debit Note_0": GSTRCategory.B2BDN.value,
+    "Debit Note_1": GSTRCategory.B2BDNA.value,
+    "Credit Note_0": GSTRCategory.B2BCN.value,
+    "Credit Note_1": GSTRCategory.B2BCNA.value,
+}
+
 
 class GSTInvoiceManagementSystem(Document):
     @frappe.whitelist()
@@ -205,11 +214,20 @@ def download_invoices(company_gstin):
 
 @frappe.whitelist()
 @otp_handler
-def upload_invoices(company_gstin):
+def save_invoices(company_gstin):
     frappe.has_permission("GST Invoice Management System", "write", throw=True)
     frappe.has_permission("GST Return Log", "write", throw=True)
 
-    return upload_ims_invoices(company_gstin)
+    return save_ims_invoices(company_gstin)
+
+
+@frappe.whitelist()
+@otp_handler
+def reset_invoices(company_gstin):
+    frappe.has_permission("GST Invoice Management System", "write", throw=True)
+    frappe.has_permission("GST Return Log", "write", throw=True)
+
+    return reset_ims_invoices(company_gstin)
 
 
 @frappe.whitelist()
@@ -237,7 +255,7 @@ def check_action_status(company_gstin, action):
         f"IMS-ALL-{company_gstin}",
     )
 
-    return process_upload_or_reset_ims(ims_log, action)
+    return process_save_or_reset_ims(ims_log, action)
 
 
 def download_and_upload_ims_invoices(company_gstin):
@@ -257,15 +275,13 @@ def download_and_upload_ims_invoices(company_gstin):
     if has_queued_invoices:
         return
 
-    upload_ims_invoices(company_gstin)
-
     frappe.publish_realtime(
-        "check_ims_upload_status",
+        "upload_data_and_check_status",
         user=frappe.session.user,
     )
 
 
-def upload_ims_invoices(company_gstin):
+def save_ims_invoices(company_gstin):
     if not frappe.db.exists("GST Return Log", f"IMS-ALL-{company_gstin}"):
         frappe.throw(_("Please download invoices before uploading"))
 
@@ -274,77 +290,76 @@ def upload_ims_invoices(company_gstin):
         f"IMS-ALL-{company_gstin}",
     )
 
-    upload_data, reset_data = get_data_for_upload(company_gstin)
+    save_data = get_data_for_upload(company_gstin, "save")
 
-    if not (upload_data or reset_data):
-        return False
+    if not save_data:
+        return
 
     verify_request_in_progress(ims_log, False)
 
     api = IMSAPI(company_gstin)
 
-    if upload_data:
-        # Upload invoices where action in ["Accepted", "Rejected", "Pending"]
-        response = api.save(upload_data)
-        set_gstr_actions(
-            ims_log, "upload", response.get("reference_id"), api.request_id
-        )
-
-    if reset_data:
-        # Reset invoices where action is "No Action"
-        response = api.reset(reset_data)
-        set_gstr_actions(ims_log, "reset", response.get("reference_id"), api.request_id)
-
-    return True
+    # Upload invoices where action in ["Accepted", "Rejected", "Pending"]
+    response = api.save(save_data)
+    set_gstr_actions(ims_log, "save", response.get("reference_id"), api.request_id)
 
 
-def get_data_for_upload(company_gstin):
-    category_key_map = {
-        "Invoice_0": GSTRCategory.B2B.value,
-        "Invoice_1": GSTRCategory.B2BA.value,
-        "Debit Note_0": GSTRCategory.B2BDN.value,
-        "Debit Note_1": GSTRCategory.B2BDNA.value,
-        "Credit Note_0": GSTRCategory.B2BCN.value,
-        "Credit Note_1": GSTRCategory.B2BCNA.value,
-    }
+def reset_ims_invoices(company_gstin):
+    if not frappe.db.exists("GST Return Log", f"IMS-ALL-{company_gstin}"):
+        frappe.throw(_("Please download invoices before uploading"))
 
+    ims_log = frappe.get_doc(
+        "GST Return Log",
+        f"IMS-ALL-{company_gstin}",
+    )
+
+    reset_data = get_data_for_upload(company_gstin, "reset")
+
+    if not reset_data:
+        return
+
+    verify_request_in_progress(ims_log, False)
+
+    api = IMSAPI(company_gstin)
+
+    # Reset invoices where action is "No Action"
+    response = api.reset(reset_data)
+    set_gstr_actions(ims_log, "reset", response.get("reference_id"), api.request_id)
+
+
+def get_data_for_upload(company_gstin, request_type):
     upload_data = {}
-    reset_data = {}
     key_invoice_map = {}
 
-    gst_inward_supply_list = InwardSupply().get_for_upload(company_gstin)
+    if request_type == "save":
+        gst_inward_supply_list = InwardSupply().get_for_save(company_gstin)
+    else:
+        gst_inward_supply_list = InwardSupply().get_for_reset(company_gstin)
 
     for invoice in gst_inward_supply_list:
         key = f"{invoice.doc_type}_{invoice.is_amended}"
         key_invoice_map.setdefault(key, []).append(invoice)
 
     for key, invoices in key_invoice_map.items():
-        category = category_key_map[key]
+        category = CATEGORY_MAP[key]
         _class = get_data_handler(ReturnType.IMS.value, category)()
         upload_invoices = []
-        reset_invoices = []
 
         for invoice in invoices:
-            data = {
-                **_class.convert_data_to_gov_format(invoice),
-                **_class.get_category_details(invoice),
-            }
-
-            if invoice.ims_action != "No Action":
-                upload_invoices.append(data)
-            else:
-                reset_invoices.append(data)
+            upload_invoices.append(
+                {
+                    **_class.convert_data_to_gov_format(invoice),
+                    **_class.get_category_details(invoice),
+                }
+            )
 
         if upload_invoices:
             upload_data[category.lower()] = upload_invoices
 
-        if reset_invoices:
-            reset_data[category.lower()] = reset_invoices
-
-    return upload_data, reset_data
+    return upload_data
 
 
-def process_upload_or_reset_ims(return_log, action):
+def process_save_or_reset_ims(return_log, action):
     response = {"status_cd": "P"}  # dummy_response
     doc = return_log.get_unprocessed_action(action)
     if not doc:
