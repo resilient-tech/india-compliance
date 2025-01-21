@@ -401,6 +401,15 @@ Object.assign(india_compliance, {
         return frappe.datetime.add_days(frappe.datetime.month_start(), -1);
     },
 
+    current_fy_start() {
+        const today = frappe.datetime.now_date(true);
+        const current_month = today.getMonth() + 1;
+        const current_fy =
+            current_month <= 3 ? today.getFullYear() - 1 : today.getFullYear();
+
+        return `${current_fy}-04-01`;
+    },
+
     last_half_year(position) {
         const today = frappe.datetime.now_date(true);
         const current_month = today.getMonth() + 1;

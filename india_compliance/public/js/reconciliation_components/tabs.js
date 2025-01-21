@@ -293,8 +293,7 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
     _set_missing_doctype() {}
 
     _get_default_date_range() {
-        // TODO: fiscal year start till date
-        return [india_compliance.last_month_start(), india_compliance.last_month_end()];
+        return [india_compliance.current_fy_start(), frappe.datetime.now_date()];
     }
 
     setup_actions() {
