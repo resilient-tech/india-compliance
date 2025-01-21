@@ -151,8 +151,13 @@ class IMS extends reconciliation.reconciliation_tabs {
                 options: ["Invoice", "Credit Note", "Debit Note"],
             },
             {
-                label: "Pending Upload",
+                label: "Upload Pending",
                 fieldname: "pending_upload",
+                fieldtype: "Check",
+            },
+            {
+                label: "Is Pending Action Allowed",
+                fieldname: "is_pending_action_allowed",
                 fieldtype: "Check",
             },
             {
