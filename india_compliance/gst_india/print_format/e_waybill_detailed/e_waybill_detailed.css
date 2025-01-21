@@ -44,12 +44,12 @@ thead > th {
 table,
 th,
 td {
-    border: 1px solid black;
+    border: 1px solid #d1d8dd;
     border-collapse: collapse;
 }
 
 .table-element .border div {
-    border: 1px solid black !important;
+    border: 1px solid #d1d8dd !important;
     width: 100%;
     padding: 5px;
 }
