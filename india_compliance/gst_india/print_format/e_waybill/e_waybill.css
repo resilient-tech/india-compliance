@@ -1,6 +1,28 @@
+
+.table-element {
+    font-size: 12px;
+}
+
+.bold {
+    font-weight: bold;
+}
+
+.no-border {
+    border: none !important;
+}
+
+.no-border > * {
+    border: none;
+}
+
 .print-format {
     padding: 0.25in;
     color: black;
+}
+
+table, th, td {
+    border: 1px solid black;
+    border-collapse: collapse;
 }
 
 @media print {
