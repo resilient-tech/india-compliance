@@ -76,12 +76,14 @@
                             <span class="attribute-value">{{ get_transport_type(data.transactionType) }}</span>
                         </td>
                     </tr>
+                    {% if irn %}
                     <tr>
                         <td colspan="3">
                             <span class="attribute">Irn: </span>
-                            <span class="attribute-value">{{data.irn}}</span>
+                            <span class="attribute-value">{{irn}}</span>
                         </td>
                     </tr>
+                    {% endif %}
                 </tbody>
             </table>
 
@@ -90,37 +92,34 @@
                 <tbody class="table-element">
                     <tr>
                         <td style="width: 50%;">
-                            {% set from_state = get_state(data.fromStateCode) %}
-
                             <div class="bold mb-2">From</div>
                             <div>
                                 <div style="margin-bottom: 10px;">
                                     <div>GSTIN: {{ add_spacing(data.fromGstin,5) }}</div>
                                     <div>{{data.fromTrdName}}</div>
-                                    <div>{{ from_state }}</div> {# get_state_by_state_code #}
+                                    <div>{{ get_state(data.fromStateCode) }}</div> {# get_state_by_state_code #}
                                 </div>
                                 <div>
                                     :: Dispatch From ::
                                     <div>{{ data.fromAddr1 }}</div>
                                     <div>{{ data.fromAddr2 }}</div>
-                                    <div>{{ data.fromPlace }}, {{ from_state }}-{{ data.fromPincode }}</div>
+                                    <div>{{ data.fromPlace }}, {{ get_state(data.actFromStateCode) }}-{{ data.fromPincode }}</div>
                                 </div>
                             </div>
                         </td>
                         <td style="width: 50%;">
-                            {% set to_state = get_state(data.toStateCode) %}
                             <div class="bold mb-2">To</div>
                             <div>
                                 <div style="margin-bottom: 10px;">
                                     <div>GSTIN: {{ add_spacing(data.toGstin,5) }}</div>
                                     <div>{{data.toTrdName}}</div>
-                                    <div>{{ to_state }}</div> {# get_state_by_state_code #}
+                                    <div>{{ get_state(data.toStateCode) }}</div> {# get_state_by_state_code #}
                                 </div>
                                 <div>
                                     :: Ship to ::
                                     <div>{{ data.toAddr1 }}</div>
                                     <div>{{ data.toAddr2 }}</div>
-                                    <div>{{ data.toPlace }}, {{ to_state }}-{{ data.toPincode }}</div>
+                                    <div>{{ data.toPlace }}, {{ get_state(data.actToStateCode) }}-{{ data.toPincode }}</div>
                                 </div>
                             </div>
                         </td>
@@ -257,11 +256,11 @@
                     <tr>
                         <td style="width: 50%;">
                             <span class="attribute">Transporter ID & Name: </span>
-                            <span class="attribute-value">{{ data.transporterId }} & {{ data.transporterName }} </span>
+                            <span class="attribute-value">{{ add_spacing(data.transporterId, 5) or "None" }} & {{ data.transporterName or "None" }} </span>
                         </td>
                         <td style="width: 50%;">
                             <span class="attribute">Transporter Doc. No & Date:</span>
-                            <span class="attribute-value"> {{ data.transDocNo|default('') }} - {{ data.transDocDate|default('') }} </span>
+                            <span class="attribute-value"> {{ data.transDocNo or "None" }} & {{ data.transDocDate or "None" }} </span>
                         </td>
                     </tr>
                 </tbody>
@@ -295,28 +294,28 @@
                         </td>
                     </tr>
                     <tr>
-                        {% for item in data.VehiclListDetails %}
+                        {% for detail in data.VehiclListDetails %}
                             <tr>
                                 <td>
-                                    {{ get_transport_mode(item.transMode) }}
+                                    {{ get_transport_mode(detail.transMode) }}
                                 </td>
                                 <td>
-                                    {{ item.vehicleNo }}
+                                    {{ detail.vehicleNo }}
                                 </td>
                                 <td>
-                                    {{ item.fromPlace }}
+                                    {{ detail.fromPlace }}
                                 </td>
                                 <td>
-                                    {{ item.enteredDate }}
+                                    {{ detail.enteredDate }}
                                 </td>
                                 <td>
-                                    {{ item.userGSTINTransin }}
+                                    {{ detail.userGSTINTransin }}
                                 </td>
                                 <td>
-                                    {{ item.cebwNo | default('-') }}
+                                    {{ detail.cebwNo | default('-') }}
                                 </td>
                                 <td>
-                                    {{ item.multiVehInfo | default('-') }}
+                                    {{ detail.multiVehInfo | default('-') }}
                                 </td>
 
                             </tr>
@@ -337,27 +336,6 @@
                     </tr>
                 </tbody>
             </table>
-
-
-
-
-
-
-
-
-            {#<div class="borderless" style="width: 100%;">
-                <span class="text-left float-left">
-                    <h1 class="title">e-Waybill</h1>
-                </span>
-                <span class="text-right float-right">
-                    <img
-                        src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg"
-                        class="qr-code"
-                    />
-                </span>
-            </div>
-            #}
-
         </div>
     </body>
 </html>
