@@ -108,7 +108,7 @@ class IMS:
             "document_value": invoice.val,
             "company": self.company,
             "company_gstin": self.company_gstin,
-            "is_pending_action_allowed": invoice.ispendactnallwd,
+            "is_pending_action_allowed": invoice.ispendactblocked == "N",
             "previous_ims_action": get_mapped_value(
                 invoice.action, self.VALUE_MAPS.action
             ),
