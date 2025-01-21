@@ -77,8 +77,7 @@ frappe.ui.form.on(DOCTYPE, {
         // go back to previous page and match the invoice with the inward supply
         setTimeout(() => {
             frappe.route_hooks.after_load = source_frm => {
-                if (!(source_frm.purchase_reconciliation_tool || source_frm.ims))
-                    return;
+                if (!source_frm.reconciliation_tabs) return;
                 reconciliation.link_documents(
                     source_frm,
                     frm.doc.name,
