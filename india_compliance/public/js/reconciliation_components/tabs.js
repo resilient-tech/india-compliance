@@ -293,7 +293,8 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
     _set_missing_doctype() {}
 
     _get_default_date_range() {
-        return [india_compliance.current_fy_start(), frappe.datetime.now_date()];
+        const now = frappe.datetime.now_date();
+        return [frappe.datetime.add_months(now, -12), now];
     }
 
     setup_actions() {

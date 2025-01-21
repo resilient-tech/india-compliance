@@ -307,7 +307,7 @@ class IMS extends reconciliation.reconciliation_tabs {
             }
             if (row.inward_supply_name) new_row.inward_supply_count += 1;
             if (row.purchase_invoice_name) new_row.purchase_count += 1;
-            if (row.action != "No Action") new_row.action_taken_count += 1;
+            if (row.ims_action != "No Action") new_row.action_taken_count += 1;
             new_row.total_docs += 1;
             new_row.tax_difference += row.tax_difference || 0;
             new_row.taxable_value_difference += row.taxable_value_difference || 0;
@@ -901,12 +901,12 @@ function get_affected_rows(tab, selection, data) {
     let invoices = [];
     if (tab == "invoice_tab") invoices = selection;
 
-    if (tab == "summary_tab")
+    if (tab == "match_summary_tab")
         invoices = data.filter(
             inv => selection.filter(row => row.match_status == inv.match_status).length
         );
 
-    if (tab == "action_tab")
+    if (tab == "action_summary_tab")
         invoices = data.filter(
             inv =>
                 selection.filter(row => category_map[row.category] == inv.doc_type)
