@@ -527,10 +527,17 @@ class IMS extends reconciliation.reconciliation_tabs {
         element.prepend(action_performed_html);
 
         const me = this;
-        this.frm.$wrapper.find(".action-summary").click(function (e) {
+        this.frm.$wrapper.find(".action-summary").click(async function (e) {
             const [action, action_count] = $(this).attr("data-name").split("-");
 
             if (action_count === "0") return;
+
+            const fg = me.filter_group;
+            const filter = [DOCTYPE, "ims_action", "=", action];
+
+            if (fg.filter_exists(filter.slice(0, 2)) && !fg.filter_exists(filter))
+                await me.filter_group.remove_filter([DOCTYPE, "ims_action"]);
+
             me.update_filter(e, "ims_action", action, me);
         });
     }
@@ -618,10 +625,14 @@ class IMSAction {
 
     async get_ims_data(frm) {
         const { message } = await frm.call("autoreconcile_and_get_data");
-        frm.__invoice_data = message;
+        frm.__invoice_data = message.invoice_data;
 
         frm.reconciliation_tabs.render_data(frm.__invoice_data);
-        frm.doc.data_state = message.length ? "available" : "unavailable";
+        frm.doc.data_state = frm.__invoice_data.length ? "available" : "unavailable";
+
+        if (message.pending_actions.length) {
+            this.handle_upload_and_reset_request();
+        }
 
         // Toggle HTML fields
         frm.refresh();
@@ -650,10 +661,12 @@ class IMSAction {
     }
 
     async handle_upload_and_reset_request() {
-        const upload_status =
-            await this.frm.reconciliation_tabs.check_action_status_with_retry("upload");
-        const reset_status =
-            await this.frm.reconciliation_tabs.check_action_status_with_retry("reset");
+        const upload_status = await this.frm.ims_actions.check_action_status_with_retry(
+            "upload"
+        );
+        const reset_status = await this.frm.ims_actions.check_action_status_with_retry(
+            "reset"
+        );
 
         const error_statuses = ["ER", "PE"];
         if (

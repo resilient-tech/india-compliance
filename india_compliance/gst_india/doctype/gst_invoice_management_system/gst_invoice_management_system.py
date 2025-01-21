@@ -58,7 +58,10 @@ class GSTInvoiceManagementSystem(Document):
         # Auto-Reconcile invoices
         IMSReconciler().reconcile(filters)
 
-        return self.get_invoice_data(filters=filters)
+        return {
+            "invoice_data": self.get_invoice_data(filters=filters),
+            "pending_actions": self.get_pending_actions(),
+        }
 
     def get_invoice_data(self, inward_supply=None, purchase=None, filters=None):
         if not filters:
@@ -101,6 +104,18 @@ class GSTInvoiceManagementSystem(Document):
         ReconciledData().process_data(invoice_data, retain_doc=True)
 
         return invoice_data
+
+    def get_pending_actions(self):
+        return frappe.get_all(
+            "GSTR Action",
+            {
+                "parent": f"IMS-ALL-{self.company_gstin}",
+                "parenttype": "GST Return Log",
+                "status": ["is", "not set"],
+                "token": ["is", "set"],
+            },
+            pluck="request_type",
+        )
 
     @frappe.whitelist()
     def update_action(self, invoice_names, action):
