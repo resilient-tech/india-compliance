@@ -872,7 +872,6 @@ async function apply_action(frm, action, invoice_names) {
             !(pending_not_allowed.includes(name) || accept_not_allowed.includes(name))
     );
 
-    // TODO: Better UX? Invoices details where such actions are not performed
     if (pending_not_allowed.length) {
         frappe.msgprint({
             message: __(

@@ -26,7 +26,7 @@ reconciliation.reconciliation_tabs = class ReconciliationTabs {
             this.refresh_filter_fields();
         }
 
-        this.apply_filters(!!data); // TODO: Is this required in IMS ??
+        this.apply_filters(!!data);
 
         // data unchanged!
         if (this.rendered_data == this.filtered_data) return;
