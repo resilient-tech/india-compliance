@@ -3,6 +3,8 @@
 
 const api_enabled = india_compliance.is_api_enabled();
 const DOCTYPE = "GST Invoice Management System";
+const DOC_PATH =
+    "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system";
 
 const category_map = {
     "B2B-Invoices": "Invoice",
@@ -39,14 +41,12 @@ frappe.ui.form.on(DOCTYPE, {
         // Downloaded and Reconciled Invoices
         frappe.realtime.on("ims_download_completed", message => {
             frm.ims_actions.get_ims_data();
-            frappe.show_alert({
-                message: message["message"],
-                indicator: "green",
-            });
+            frappe.show_alert({ message: message["message"], indicator: "green" });
         });
 
         // Upload and Check Status
-        frappe.realtime.on("upload_data_and_check_status", message => {
+        frappe.realtime.on("upload_data_and_check_status", async message => {
+            await frm.ims_actions.get_ims_data();
             frm.ims_actions.upload_ims_data();
         });
     },
@@ -617,10 +617,8 @@ class IMSAction {
 
     async download_ims_data() {
         await taxpayer_api.call({
-            method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.download_invoices",
-            args: {
-                company_gstin: this.frm.doc.company_gstin,
-            },
+            method: `${DOC_PATH}.download_invoices`,
+            args: { company_gstin: this.frm.doc.company_gstin },
         });
 
         frappe.show_alert({
@@ -638,7 +636,7 @@ class IMSAction {
             : "unavailable";
 
         if (message.pending_actions.length) {
-            this.handle_save_and_reset_request();
+            this.handle_upload_status();
         }
 
         // Toggle HTML fields
@@ -657,45 +655,26 @@ class IMSAction {
 
         frappe.show_alert(__("Checking Upload Status"));
 
-        const save_status = await this.save_and_check_status();
-        const reset_status = await this.reset_and_check_status();
+        const save_status = await this.upload_and_check_status("save");
+        const reset_status = await this.upload_and_check_status("reset");
 
-        this.handle_save_and_reset_request(save_status, reset_status);
+        this.handle_upload_status(save_status, reset_status);
     }
 
-    async save_and_check_status() {
+    async upload_and_check_status(action) {
         await taxpayer_api.call({
-            method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.save_invoices",
-            args: {
-                company_gstin: this.frm.doc.company_gstin,
-            },
+            method: `${DOC_PATH}.${action}_invoices`,
+            args: { company_gstin: this.frm.doc.company_gstin },
         });
 
-        return this.frm.ims_actions.check_action_status_with_retry("save");
+        return this.get_upload_status_with_retry(action);
     }
 
-    async reset_and_check_status() {
-        await taxpayer_api.call({
-            method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.reset_invoices",
-            args: {
-                company_gstin: this.frm.doc.company_gstin,
-            },
-        });
+    async handle_upload_status(save_status, reset_status) {
+        if (!save_status) save_status = await this.get_upload_status_with_retry("save");
 
-        return this.frm.ims_actions.check_action_status_with_retry("reset");
-    }
-
-    async handle_save_and_reset_request(save_status, reset_status) {
-        if (!save_status) {
-            save_status = await this.frm.ims_actions.check_action_status_with_retry(
-                "save"
-            );
-        }
-        if (!reset_status) {
-            reset_status = await this.frm.ims_actions.check_action_status_with_retry(
-                "reset"
-            );
-        }
+        if (!reset_status)
+            reset_status = await this.get_upload_status_with_retry("reset");
 
         const error_statuses = ["ER", "PE"];
         if (
@@ -712,11 +691,10 @@ class IMSAction {
                     action: () => {
                         frappe.hide_msgprint();
                         render_empty_state(this.frm);
+
                         taxpayer_api.call({
-                            method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.sync_with_gstn_and_reupload",
-                            args: {
-                                company_gstin: this.frm.doc.company_gstin,
-                            },
+                            method: `${DOC_PATH}.sync_with_gstn_and_reupload`,
+                            args: { company_gstin: this.frm.doc.company_gstin },
                         });
                     },
                 },
@@ -730,16 +708,13 @@ class IMSAction {
         });
     }
 
-    check_action_status_with_retry(action, retries = 0, now = false) {
+    get_upload_status_with_retry(action, retries = 0, now = false) {
         return new Promise(resolve => {
             setTimeout(
                 async () => {
                     const { message } = await taxpayer_api.call({
-                        method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.check_action_status",
-                        args: {
-                            company_gstin: this.frm.doc.company_gstin,
-                            action,
-                        },
+                        method: `${DOC_PATH}.check_action_status`,
+                        args: { company_gstin: this.frm.doc.company_gstin, action },
                     });
 
                     if (!message.status_cd) {
@@ -752,10 +727,7 @@ class IMSAction {
                         retries < this.RETRY_INTERVALS.length
                     ) {
                         resolve(
-                            await this.check_action_status_with_retry(
-                                action,
-                                retries + 1
-                            )
+                            await this.get_upload_status_with_retry(action, retries + 1)
                         );
                         return;
                     }
