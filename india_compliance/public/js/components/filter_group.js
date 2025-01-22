@@ -103,7 +103,7 @@ india_compliance.FilterGroup = class FilterGroup extends frappe.ui.FilterGroup {
         this.filters = this.filters.filter(f => {
             let f_value = f.get_value();
 
-            if (filter_value.length == 2) f_value = f_value.slice(0, 2);
+            if (filter_value.length === 2) f_value = f_value.slice(0, 2);
 
             return !frappe.utils.arrays_equal(
                 f_value.slice(0, 4),

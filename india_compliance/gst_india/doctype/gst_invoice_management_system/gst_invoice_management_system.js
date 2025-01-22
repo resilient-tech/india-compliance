@@ -853,11 +853,10 @@ function apply_bulk_action(frm, action) {
 
     // from current tab
     const selected_rows = tab.datatable.get_checked_items();
-    if (!selected_rows.length)
-        return frappe.show_alert({
-            message: __("Please select invoices"),
-            indicator: "red",
-        });
+    if (!selected_rows.length) {
+        frappe.show_alert({ message: __("Please select invoices"), indicator: "red" });
+        return;
+    }
 
     // summary => invoice
     const affected_rows = get_affected_rows(

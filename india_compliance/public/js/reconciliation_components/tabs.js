@@ -244,7 +244,7 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
                 fieldname: "doctype",
                 default: this.missing_doctype,
                 options: this.doctype_options,
-                read_only_depends_on: this.doctype_options.length == 1,
+                read_only_depends_on: this.doctype_options.length === 1,
 
                 onchange: () => {
                     const doctype = this.dialog.get_value("doctype");
