@@ -384,31 +384,29 @@ def process_save_or_reset_ims(return_log, action):
 
     if status_cd in ["P", "PE"]:
         # Exclude erroneous invoices from previous IMS action update
-        # This is enqueued because linking of integration request is enqueued
+        # This is enqueued because creation of integration request is enqueued
         # TODO: flag for re-upload?
         frappe.enqueue(
             update_previous_ims_action,
             queue="long",
-            integration_request=doc.integration_request,
+            request_id=doc.request_id,
             error_report=response.get("error_report") or dict(),
         )
 
     return response
 
 
-def update_previous_ims_action(integration_request, error_report=None):
-    uploaded_invoices = get_uploaded_invoices(integration_request)
+def update_previous_ims_action(request_id, error_report=None):
+    uploaded_invoices = get_uploaded_invoices(request_id)
 
     for category, invoices in uploaded_invoices.items():
         _class = get_data_handler(ReturnType.IMS.value, category.upper())
         _class().update_previous_ims_action(invoices, error_report.get(category, []))
 
 
-def get_uploaded_invoices(integration_request):
+def get_uploaded_invoices(request_id):
     request_data = frappe.parse_json(
-        frappe.db.get_value(
-            "Integration Request", {"name": integration_request}, "data"
-        )
+        frappe.db.get_value("Integration Request", {"request_id": request_id}, "data")
     )
 
     if not request_data:

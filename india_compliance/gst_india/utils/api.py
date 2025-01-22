@@ -17,8 +17,9 @@ def create_integration_request(
     error=None,
     reference_doctype=None,
     reference_name=None,
+    update_gstr_action=False,
 ):
-    return frappe.get_doc(
+    doc = frappe.get_doc(
         {
             "doctype": "Integration Request",
             "integration_request_service": "India Compliance API",
@@ -32,7 +33,17 @@ def create_integration_request(
             "reference_doctype": reference_doctype,
             "reference_docname": reference_name,
         }
-    ).insert(ignore_permissions=True)
+    )
+    doc.insert(ignore_permissions=True)
+
+    if update_gstr_action:
+        link_integration_request(request_id, doc.name)
+
+
+def link_integration_request(request_id, doc_name):
+    frappe.db.set_value(
+        "GSTR Action", {"request_id": request_id}, {"integration_request": doc_name}
+    )
 
 
 def pretty_json(obj):
