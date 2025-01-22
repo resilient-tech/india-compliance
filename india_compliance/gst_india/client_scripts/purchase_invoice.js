@@ -74,20 +74,19 @@ frappe.ui.form.on(DOCTYPE, {
 
     on_submit: function (frm) {
         if (!frm._inward_supply) return;
-
         // go back to previous page and match the invoice with the inward supply
         setTimeout(() => {
-            frappe.route_hooks.after_load = reco_frm => {
-                if (!reco_frm.purchase_reconciliation_tool) return;
-                purchase_reconciliation_tool.link_documents(
-                    reco_frm,
+            frappe.route_hooks.after_load = source_frm => {
+                if (!source_frm.reconciliation_tabs) return;
+                reconciliation.link_documents(
+                    source_frm,
                     frm.doc.name,
                     frm._inward_supply.name,
                     "Purchase Invoice",
                     false
                 );
             };
-            frappe.set_route("Form", "Purchase Reconciliation Tool");
+            frappe.set_route("Form", frm._inward_supply.source_doc);
         }, 2000);
     },
 });

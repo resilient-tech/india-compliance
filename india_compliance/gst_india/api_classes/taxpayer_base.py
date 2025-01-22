@@ -466,13 +466,12 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
 
         return app_key
 
-    def get_files(self, return_period, token, action, endpoint, otp=None):
+    def get_files(self, return_period, token, action, endpoint):
         response = self.get(
             action=action,
             return_period=return_period,
             params={"ret_period": return_period, "token": token},
             endpoint=endpoint,
-            otp=otp,
         )
 
         if response.error_type == "queued":

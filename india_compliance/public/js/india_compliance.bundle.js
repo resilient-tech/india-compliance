@@ -9,3 +9,4 @@ import "./quick_info_popover";
 import "./custom_number_card";
 import "./taxes_controller";
 import "./help_links";
+import "./reconciliation_components/tabs";

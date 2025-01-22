@@ -70,7 +70,15 @@
   "gstr_3b_filled",
   "column_break_47",
   "gstr_1_filing_date",
-  "registration_cancel_date"
+  "registration_cancel_date",
+  "ims_details_section",
+  "ims_action",
+  "is_pending_action_allowed",
+  "previous_ims_action",
+  "column_break_ppww",
+  "supplier_return_form",
+  "is_supplier_return_filed",
+  "is_downloaded_from_ims"
  ],
  "fields": [
   {
@@ -396,6 +404,57 @@
    "fieldname": "taxable_value",
    "fieldtype": "Float",
    "label": "Taxable Value"
+  },
+  {
+   "fieldname": "ims_action",
+   "fieldtype": "Data",
+   "label": "IMS Action",
+   "read_only": 1
+  },
+  {
+   "default": "No Action",
+   "fieldname": "previous_ims_action",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Previous IMS Action",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_pending_action_allowed",
+   "fieldtype": "Check",
+   "label": "Is Pending Action Allowed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_ppww",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_supplier_return_filed",
+   "fieldtype": "Check",
+   "label": "Is Supplier Return Filed",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_downloaded_from_ims",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Downloaded from IMS",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ims_details_section",
+   "fieldtype": "Section Break",
+   "label": "IMS Details"
+  },
+  {
+   "fieldname": "supplier_return_form",
+   "fieldtype": "Data",
+   "label": "Supplier Return Form",
+   "read_only": 1
   },
   {
    "default": "0",

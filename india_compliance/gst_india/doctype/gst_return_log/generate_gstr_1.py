@@ -7,13 +7,16 @@ from frappe import _, unscrub
 from frappe.utils import flt, sbool
 
 from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
-from india_compliance.gst_india.utils.gstr_1 import GovJsonKey, GSTR1_SubCategory
-from india_compliance.gst_india.utils.gstr_1.__init__ import (
+from india_compliance.gst_india.constants import STATUS_CODE_MAP
+from india_compliance.gst_india.doctype.gstr_action.gstr_action import set_gstr_actions
+from india_compliance.gst_india.utils.gstr_1 import (
     CATEGORY_SUB_CATEGORY_MAPPING,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
+    GovJsonKey,
     GSTR1_Category,
     GSTR1_DataField,
+    GSTR1_SubCategory,
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_download import (
     download_gstr1_json_data,
@@ -23,13 +26,10 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     convert_to_internal_data_format,
     summarize_retsum_data,
 )
+from india_compliance.gst_india.utils.gstr_utils import (
+    publish_action_status_notification,
+)
 
-status_code_map = {
-    "P": "Processed",
-    "PE": "Processed with Errors",
-    "ER": "Error",
-    "IP": "In Progress",
-}
 MAXIMUM_UPLOAD_SIZE = 5200000
 
 
@@ -739,7 +739,7 @@ class FileGSTR1:
         api = GSTR1API(self)
         response = api.reset_gstr_1_data(self.return_period)
 
-        set_gstr1_actions(self, "reset", response.get("reference_id"), api.request_id)
+        set_gstr_actions(self, "reset", response.get("reference_id"), api.request_id)
 
     def process_reset_gstr1(self):
         if not self.actions:
@@ -756,8 +756,9 @@ class FileGSTR1:
         response = api.get_return_status(self.return_period, doc.token)
 
         if response.get("status_cd") != "IP":
-            doc.db_set({"status": status_code_map.get(response.get("status_cd"))})
-            enqueue_notification(
+            doc.db_set({"status": STATUS_CODE_MAP.get(response.get("status_cd"))})
+            publish_action_status_notification(
+                "GSTR-1",
                 self.return_period,
                 "reset",
                 response.get("status_cd"),
@@ -790,7 +791,7 @@ class FileGSTR1:
         api = GSTR1API(self)
         response = api.save_gstr_1_data(self.return_period, json_data)
 
-        set_gstr1_actions(self, "upload", response.get("reference_id"), api.request_id)
+        set_gstr_actions(self, "upload", response.get("reference_id"), api.request_id)
 
     def process_upload_gstr1(self):
         if not self.actions:
@@ -808,8 +809,9 @@ class FileGSTR1:
         status_cd = response.get("status_cd")
 
         if status_cd != "IP":
-            doc.db_set({"status": status_code_map.get(status_cd)})
-            enqueue_notification(
+            doc.db_set({"status": STATUS_CODE_MAP.get(status_cd)})
+            publish_action_status_notification(
+                "GSTR-1",
                 self.return_period,
                 "upload",
                 status_cd,
@@ -844,7 +846,7 @@ class FileGSTR1:
 
         # Return Form already ready to be filed
         if response.error and response.error.error_cd == "RET00003" or is_nil_return:
-            set_gstr1_actions(
+            set_gstr_actions(
                 self,
                 "proceed_to_file",
                 response.get("reference_id"),
@@ -853,7 +855,7 @@ class FileGSTR1:
             )
             return self.fetch_and_compare_summary(api)
 
-        set_gstr1_actions(
+        set_gstr_actions(
             self, "proceed_to_file", response.get("reference_id"), api.request_id
         )
 
@@ -874,7 +876,7 @@ class FileGSTR1:
         if response.get("status_cd") == "IP":
             return response
 
-        doc.db_set({"status": status_code_map.get(response.get("status_cd"))})
+        doc.db_set({"status": STATUS_CODE_MAP.get(response.get("status_cd"))})
 
         return self.fetch_and_compare_summary(api, response)
 
@@ -908,7 +910,8 @@ class FileGSTR1:
                     "differing_categories": differing_categories,
                 }
             )
-            enqueue_notification(
+            publish_action_status_notification(
+                "GSTR-1",
                 self.return_period,
                 "proceed_to_file",
                 response.get("status_cd"),
@@ -940,7 +943,7 @@ class FileGSTR1:
                 }
             )
 
-            set_gstr1_actions(
+            set_gstr_actions(
                 self,
                 "file",
                 response.get("ack_num"),
@@ -1061,85 +1064,3 @@ def get_differing_categories(mapped_summary, gov_summary):
                 break
 
     return differing_categories
-
-
-def set_gstr1_actions(doc, request_type, token, request_id, status=None):
-    if not token:
-        return
-
-    row = {
-        "request_type": request_type,
-        "token": token,
-        "creation_time": frappe.utils.now_datetime(),
-    }
-
-    if status:
-        row["status"] = status
-
-    doc.append("actions", row)
-    doc.save()
-    enqueue_link_integration_request(token, request_id)
-
-
-def enqueue_link_integration_request(token, request_id):
-    """
-    Integration request is enqueued. Hence, it's name is not available immediately.
-    Hence, link it after the request is processed.
-    """
-    frappe.enqueue(
-        link_integration_request, queue="long", token=token, request_id=request_id
-    )
-
-
-def link_integration_request(token, request_id):
-    doc_name = frappe.db.get_value("Integration Request", {"request_id": request_id})
-    if doc_name:
-        frappe.db.set_value(
-            "GSTR Action", {"token": token}, {"integration_request": doc_name}
-        )
-
-
-def enqueue_notification(
-    return_period, request_type, status_cd, gstin, request_id=None
-):
-    frappe.enqueue(
-        create_notification,
-        queue="long",
-        return_period=return_period,
-        request_type=request_type,
-        status_cd=status_cd,
-        gstin=gstin,
-        request_id=request_id,
-    )
-
-
-def create_notification(return_period, request_type, status_cd, gstin, request_id=None):
-    # request_id shows failure response
-    status_message_map = {
-        "P": f"Data {request_type} for GSTIN {gstin} and return period {return_period} has been successfully completed.",
-        "PE": f"Data {request_type} for GSTIN {gstin} and return period {return_period} is completed with errors",
-        "ER": f"Data {request_type} for GSTIN {gstin} and return period {return_period} has encountered errors",
-    }
-
-    if request_id and (
-        doc_name := frappe.db.get_value(
-            "Integration Request", {"request_id": request_id}
-        )
-    ):
-        document_type = "Integration Request"
-        document_name = doc_name
-    else:
-        document_type = document_name = "GSTR-1 Beta"
-
-    notification = frappe.get_doc(
-        {
-            "doctype": "Notification Log",
-            "for_user": frappe.session.user,
-            "type": "Alert",
-            "document_type": document_type,
-            "document_name": document_name,
-            "subject": f"Data {request_type} for GSTIN {gstin} and return period {return_period}",
-            "email_content": status_message_map.get(status_cd),
-        }
-    )
-    notification.insert()

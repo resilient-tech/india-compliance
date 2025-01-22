@@ -22,6 +22,18 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     ReconciledData,
     Reconciler,
 )
+from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
+    get_formatted_options,
+)
+from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
+    link_documents as _link_documents,
+)
+from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
+    set_reconciliation_status,
+)
+from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
+    unlink_documents as _unlink_documents,
+)
 from india_compliance.gst_india.utils import (
     get_gstin_list,
     get_json_from_file,
@@ -30,7 +42,7 @@ from india_compliance.gst_india.utils import (
 )
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr_2 import (
-    ACTIONS,
+    GSTR_2A_ACTIONS,
     IMPORT_CATEGORY,
     ReturnType,
     download_gstr_2a,
@@ -79,6 +91,8 @@ class PurchaseReconciliationTool(Document):
 
     @frappe.whitelist()
     def reconcile_and_generate_data(self):
+        frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
+
         # reconcile purchases and inward supplies
         if frappe.flags.in_install or frappe.flags.in_migrate:
             return
@@ -229,46 +243,11 @@ class PurchaseReconciliationTool(Document):
     def link_documents(self, purchase_invoice_name, inward_supply_name, link_doctype):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
-        if not purchase_invoice_name or not inward_supply_name:
-            return
-
-        purchases = []
-        inward_supplies = []
-
-        # silently handle existing links
-        if isup_linked_with := frappe.db.get_value(
-            "GST Inward Supply", inward_supply_name, "link_name"
-        ):
-            self.set_reconciliation_status(
-                link_doctype, (isup_linked_with,), "Unreconciled"
-            )
-            self._unlink_documents((inward_supply_name,))
-            purchases.append(isup_linked_with)
-
-        link_doc = {
-            "link_doctype": link_doctype,
-            "link_name": purchase_invoice_name,
-        }
-        if pur_linked_with := frappe.db.get_all(
-            "GST Inward Supply", link_doc, pluck="name"
-        ):
-            self._unlink_documents((pur_linked_with))
-            inward_supplies.extend(pur_linked_with)
-
-        link_doc["match_status"] = "Manual Match"
-
-        # link documents
-        frappe.db.set_value(
-            "GST Inward Supply",
-            inward_supply_name,
-            link_doc,
+        purchases, inward_supplies = _link_documents(
+            purchase_invoice_name, inward_supply_name, link_doctype
         )
-        purchases.append(purchase_invoice_name)
-        inward_supplies.append(inward_supply_name)
 
-        self.set_reconciliation_status(
-            link_doctype, (purchase_invoice_name,), "Match Found"
-        )
+        set_reconciliation_status(link_doctype, (purchase_invoice_name,), "Match Found")
 
         return self.ReconciledData.get(purchases, inward_supplies)
 
@@ -276,57 +255,9 @@ class PurchaseReconciliationTool(Document):
     def unlink_documents(self, data):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
-        data = frappe.parse_json(data)
-        inward_supplies = set()
-        purchases = set()
-        boe = set()
+        purchases, inward_supplies = _unlink_documents(data)
 
-        for doc in data:
-            inward_supplies.add(doc.get("inward_supply_name"))
-
-            purchase_doctype = doc.get("purchase_doctype")
-            if purchase_doctype == "Purchase Invoice":
-                purchases.add(doc.get("purchase_invoice_name"))
-
-            elif purchase_doctype == "Bill of Entry":
-                boe.add(doc.get("purchase_invoice_name"))
-
-        self.set_reconciliation_status("Purchase Invoice", purchases, "Unreconciled")
-        self.set_reconciliation_status("Bill of Entry", boe, "Unreconciled")
-        self._unlink_documents(inward_supplies)
-
-        return self.ReconciledData.get(purchases.union(boe), inward_supplies)
-
-    def set_reconciliation_status(self, doctype, names, status):
-        if not names:
-            return
-
-        frappe.db.set_value(
-            doctype, {"name": ("in", names)}, "reconciliation_status", status
-        )
-
-    def _unlink_documents(self, inward_supplies):
-        if not inward_supplies:
-            return
-
-        GSTR2 = frappe.qb.DocType("GST Inward Supply")
-        (
-            frappe.qb.update(GSTR2)
-            .set("link_doctype", "")
-            .set("link_name", "")
-            .set("match_status", "Unlinked")
-            .where(GSTR2.name.isin(inward_supplies))
-            .run()
-        )
-
-        # Revert action performed
-        (
-            frappe.qb.update(GSTR2)
-            .set("action", "No Action")
-            .where(GSTR2.name.isin(inward_supplies))
-            .where(GSTR2.action.notin(("Ignore", "Pending")))
-            .run()
-        )
+        return self.ReconciledData.get(purchases, inward_supplies)
 
     @frappe.whitelist()
     def apply_action(self, data, action):
@@ -361,8 +292,8 @@ class PurchaseReconciliationTool(Document):
                 "GST Inward Supply", {"name": ("in", inward_supplies)}, "action", action
             )
 
-        self.set_reconciliation_status("Purchase Invoice", purchases, status)
-        self.set_reconciliation_status("Bill of Entry", boe, status)
+        set_reconciliation_status("Purchase Invoice", purchases, status)
+        set_reconciliation_status("Bill of Entry", boe, status)
 
     @frappe.whitelist()
     def get_link_options(self, doctype, filters):
@@ -393,7 +324,7 @@ class PurchaseReconciliationTool(Document):
                 PI.name.notin(PurchaseInvoice.query_matched_purchase_invoice())
             )
 
-        return self._get_link_options(query.run(as_dict=True))
+        return get_formatted_options(query.run(as_dict=True))
 
     def get_inward_supply_options(self, filters):
         GSTR2 = frappe.qb.DocType("GST Inward Supply")
@@ -411,7 +342,7 @@ class PurchaseReconciliationTool(Document):
         if not filters.show_matched:
             query = query.where(IfNull(GSTR2.link_name, "") == "")
 
-        return self._get_link_options(query.run(as_dict=True))
+        return get_formatted_options(query.run(as_dict=True))
 
     def get_bill_of_entry_options(self, filters):
         BOE = frappe.qb.DocType("Bill of Entry")
@@ -424,22 +355,7 @@ class PurchaseReconciliationTool(Document):
                 BOE.name.notin(BillOfEntry.query_matched_bill_of_entry())
             )
 
-        return self._get_link_options(query.run(as_dict=True))
-
-    def _get_link_options(self, data):
-        for row in data:
-            row.value = row.label = row.name
-            if not row.get("classification"):
-                row.classification = self.ReconciledData.guess_classification(row)
-
-            row.description = (
-                f"{row.bill_no}, {row.bill_date}, Taxable Amount: {row.taxable_value}"
-            )
-            row.description += (
-                f", Tax Amount: {BaseUtil.get_total_tax(row)}, {row.classification}"
-            )
-
-        return data
+        return get_formatted_options(query.run(as_dict=True))
 
 
 def download_gstr(
@@ -651,7 +567,7 @@ class AutoReconcile:
     def get_gst_categories(self):
         return [
             category.value
-            for category in ACTIONS.values()
+            for category in GSTR_2A_ACTIONS.values()
             if getattr(self.gst_settings, "reconcile_for_" + category.value.lower())
         ]
 

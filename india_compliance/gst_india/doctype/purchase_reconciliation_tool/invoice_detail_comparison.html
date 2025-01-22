@@ -15,7 +15,7 @@
 			</tr>
 			<tr>
 				<th>Document Links</td>
-				{% if inward_supply.name %}
+					{% if inward_supply.name %}
 				<td data-label="name">{{ frappe.utils.get_form_link("GST Inward Supply",
 					inward_supply.name, true) }}</td>
 				{% else %}
