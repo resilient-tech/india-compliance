@@ -17,13 +17,23 @@ from india_compliance.gst_india.overrides.test_transaction import create_cess_ac
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
 
+IGNORE_TEST_RECORD_DEPENDENCIES = [
+    "Bill of Entry",
+    "Purchase Invoice",
+    "Cost Center",
+    # "Tax Category",
+    "Item",
+    # "UOM",
+    "Item Tax Template",
+    "Project",
+    "Company",
+    "Account",
+]
+
 
 class TestBillofEntry(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
-        # don't create test objects
-        frappe.local.test_objects["Bill of Entry"] = []
-
         super().setUpClass()
         frappe.db.set_single_value("GST Settings", "enable_overseas_transactions", 1)
 

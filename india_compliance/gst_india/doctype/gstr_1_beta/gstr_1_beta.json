@@ -7,6 +7,7 @@
  "field_order": [
   "form",
   "company",
+  "file_nil_gstr1",
   "column_break_ejve",
   "company_gstin",
   "column_break_ldkv",
@@ -92,13 +93,20 @@
    "fieldname": "is_quarterly",
    "fieldtype": "Data",
    "label": "Filing Preference"
+  },
+  {
+   "default": "0",
+   "fieldname": "file_nil_gstr1",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "File Nil GSTR-1"
   }
  ],
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-12-19 17:25:00.805422",
+ "modified": "2024-12-27 12:43:21.979607",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR-1 Beta",

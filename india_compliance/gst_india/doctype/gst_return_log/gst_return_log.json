@@ -13,6 +13,7 @@
   "company",
   "return_type",
   "filing_preference",
+  "is_nil",
   "column_break_sqwh",
   "filing_date",
   "acknowledgement_number",
@@ -221,6 +222,13 @@
    "label": "Actions",
    "options": "GSTR Action",
    "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_nil",
+   "fieldtype": "Check",
+   "label": "Is Nil Return",
+   "read_only": 1
   }
  ],
  "in_create": 1,
@@ -231,7 +239,7 @@
    "link_fieldname": "reference_docname"
   }
  ],
- "modified": "2024-12-19 13:28:20.406478",
+ "modified": "2025-01-11 08:19:45.848389",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Return Log",
