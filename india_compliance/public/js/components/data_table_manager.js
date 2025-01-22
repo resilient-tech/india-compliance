@@ -82,7 +82,7 @@ india_compliance.DataTableManager = class DataTableManager {
 
             value = frappe.format(value, column, { always_show_decimals: true }, data);
 
-            if (column.post_format) {
+            if (column._after_format) {
                 value = column._after_format(value, column, data);
             }
 

@@ -348,6 +348,11 @@ class IMS extends reconciliation.reconciliation_tabs {
                 width: 120,
             },
             {
+                label: "Date",
+                fieldname: "bill_date",
+                _value: (...args) => frappe.datetime.str_to_user(args[0]),
+            },
+            {
                 label: "Match Status",
                 fieldname: "match_status",
                 align: "center",
@@ -415,6 +420,7 @@ class IMS extends reconciliation.reconciliation_tabs {
             data.push({
                 supplier_name_gstin: this.get_supplier_name_gstin(row),
                 bill_no: row.bill_no,
+                bill_date: row.bill_date,
                 classification: row._inward_supply.classification,
                 ims_action: row.ims_action || "",
                 match_status: row.match_status,
@@ -424,6 +430,7 @@ class IMS extends reconciliation.reconciliation_tabs {
                 inward_supply_name: row.inward_supply_name,
                 pending_upload: row.pending_upload,
                 is_supplier_return_filed: row.is_supplier_return_filed,
+                linked_voucher_type: row._purchase_invoice.doctype,
             });
         });
 
