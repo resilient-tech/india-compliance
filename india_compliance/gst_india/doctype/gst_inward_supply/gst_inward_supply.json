@@ -412,7 +412,6 @@
    "read_only": 1
   },
   {
-   "default": "No Action",
    "fieldname": "previous_ims_action",
    "fieldtype": "Data",
    "hidden": 1,
