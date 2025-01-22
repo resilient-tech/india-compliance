@@ -680,32 +680,10 @@ class IMSAction {
         if (
             error_statuses.includes(save_status.status_cd) ||
             error_statuses.includes(reset_status.status_cd)
-        ) {
-            frappe.msgprint({
-                message:
-                    "An error occurred while uploading the data. Please try downloading the data again and re-uploading it.",
-                indicator: "red",
-                title: __("GSTN Sync Required"),
-                primary_action: {
-                    label: __("Sync and Reupload"),
-                    action: () => {
-                        frappe.hide_msgprint();
-                        render_empty_state(this.frm);
+        )
+            return this.on_failed_upload();
 
-                        taxpayer_api.call({
-                            method: `${DOC_PATH}.sync_with_gstn_and_reupload`,
-                            args: { company_gstin: this.frm.doc.company_gstin },
-                        });
-                    },
-                },
-            });
-            return;
-        }
-
-        frappe.show_alert({
-            message: __("Uploaded Invoices Successfully"),
-            indicator: "green",
-        });
+        return this.on_successful_upload();
     }
 
     get_upload_status_with_retry(action, retries = 0, now = false) {
@@ -742,6 +720,45 @@ class IMSAction {
 
     filter_invoices_to_upload() {
         return this.frm.reconciliation_tabs.data.filter(row => row.pending_upload);
+    }
+
+    on_failed_upload() {
+        frappe.msgprint({
+            message:
+                "An error occurred while uploading the data. Please try downloading the data again and re-uploading it.",
+            indicator: "red",
+            title: __("GSTN Sync Required"),
+            primary_action: {
+                label: __("Sync and Reupload"),
+                action: () => {
+                    frappe.hide_msgprint();
+                    render_empty_state(this.frm);
+
+                    taxpayer_api.call({
+                        method: `${DOC_PATH}.sync_with_gstn_and_reupload`,
+                        args: { company_gstin: this.frm.doc.company_gstin },
+                    });
+                },
+            },
+        });
+    }
+
+    on_successful_upload() {
+        // refresh existing data
+        const data = this.frm.reconciliation_tabs.data;
+        data.forEach(row => {
+            if (!row.pending_upload) return;
+
+            row.pending_upload = false;
+            row.previous_ims_action = row.ims_action;
+        });
+
+        this.frm.reconciliation_tabs.refresh(data);
+
+        frappe.show_alert({
+            message: __("Uploaded Invoices Successfully"),
+            indicator: "green",
+        });
     }
 }
 
