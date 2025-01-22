@@ -99,6 +99,7 @@ class GSTInvoiceManagementSystem(Document):
                         "pending_upload": doc.pending_upload,
                         "previous_ims_action": doc.previous_ims_action,
                         "is_pending_action_allowed": doc.is_pending_action_allowed,
+                        "is_supplier_return_filed": doc.is_supplier_return_filed,
                         "doc_type": doc.doc_type,
                         "_inward_supply": doc,
                         "_purchase_invoice": purchases.pop(

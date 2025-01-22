@@ -166,6 +166,11 @@ class IMS extends reconciliation.reconciliation_tabs {
                 fieldtype: "Select",
                 options: ["B2B", "B2BA", "CDNR", "CDNRA"],
             },
+            {
+                label: "Is Supplier Return Filed",
+                fieldname: "is_supplier_return_filed",
+                fieldtype: "Check",
+            },
         ];
 
         fields.forEach(field => (field.parent = DOCTYPE));
@@ -363,6 +368,7 @@ class IMS extends reconciliation.reconciliation_tabs {
                 fieldtype: "Link",
                 options: "GST Inward Supply",
                 width: 150,
+                _after_format: (...args) => get_value_with_indicator(...args),
             },
             {
                 label: "Linked Voucher",
@@ -417,6 +423,7 @@ class IMS extends reconciliation.reconciliation_tabs {
                 taxable_value_difference: row.taxable_value_difference,
                 inward_supply_name: row.inward_supply_name,
                 pending_upload: row.pending_upload,
+                is_supplier_return_filed: row.is_supplier_return_filed,
             });
         });
 
@@ -928,6 +935,23 @@ function get_icon(value, column, data) {
     return `<button class="btn eye" data-name="${data.inward_supply_name}">
                 <i class="fa fa-eye"></i>
             </button>`;
+}
+
+function get_value_with_indicator(value, column, data) {
+    let color = "green";
+    let title = "Supplier Return: Filed";
+
+    if (!data.is_supplier_return_filed) {
+        color = "red";
+        title = "Supplier Return: Not Filed";
+    }
+
+    value = $(value)
+        .addClass(`indicator ${color}`)
+        .attr("title", title)
+        .prop("outerHTML");
+
+    return value;
 }
 
 function get_affected_rows(tab, selection, data) {

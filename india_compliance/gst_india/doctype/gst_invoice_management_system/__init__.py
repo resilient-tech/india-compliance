@@ -127,6 +127,7 @@ class InwardSupply:
             "classification",
             "is_pending_action_allowed",
             "supplier_return_form",
+            "is_supplier_return_filed",
         ]
 
         if additional_fields:
