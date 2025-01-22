@@ -530,7 +530,7 @@ class IMS extends reconciliation.reconciliation_tabs {
             .join("");
 
         const action_performed_html = `
-            <div class="action-performed-summary m-3 d-flex justify-content-around align-items-center" style="border-bottom: 1px solid var(--border-color);">
+            <div class="action-performed-summary mt-3 mb-3 w-100 d-flex justify-content-around align-items-center" style="border-bottom: 1px solid var(--border-color);">
                 ${action_performed_cards}
             </div>
        `;
