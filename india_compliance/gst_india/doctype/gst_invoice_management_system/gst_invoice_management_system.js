@@ -573,9 +573,9 @@ class IMSAction {
             );
         }
 
-        this.frm.add_custom_button(__("Download Invoices"), async () => {
+        this.frm.add_custom_button(__("Download Invoices"), () => {
             render_empty_state(this.frm);
-            await this.download_ims_data();
+            this.download_ims_data();
         });
     }
 
