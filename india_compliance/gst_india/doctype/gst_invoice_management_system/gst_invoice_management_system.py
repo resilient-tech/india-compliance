@@ -410,7 +410,7 @@ def get_uploaded_invoices(request_id):
     )
 
     if not request_data:
-        return {}
+        frappe.throw(_("Request data not found"))
 
     if isinstance(request_data, str):
         request_data = frappe.parse_json(request_data)
