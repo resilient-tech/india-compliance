@@ -23,6 +23,9 @@ from india_compliance.gst_india.doctype.gstr_action.gstr_action import set_gstr_
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     ReconciledData,
 )
+from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool import (
+    BuildExcel,
+)
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
     get_formatted_options,
 )
@@ -32,6 +35,7 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_re
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
     unlink_documents as _unlink_documents,
 )
+from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr_2 import (
     GSTRCategory,
     ReturnType,
@@ -259,6 +263,14 @@ def check_action_status(company_gstin, action):
     return process_save_or_reset_ims(ims_log, action)
 
 
+@frappe.whitelist()
+def download_excel_report(data, doc):
+    frappe.has_permission("GST Invoice Management System", "export", throw=True)
+
+    build_data = BuildExcelIMS(doc, data)
+    build_data.export_data()
+
+
 def download_and_upload_ims_invoices(company_gstin):
     """
     1. This function will download invoices from GST Portal,
@@ -416,3 +428,116 @@ def get_uploaded_invoices(request_id):
         request_data = frappe.parse_json(request_data)
 
     return request_data["body"]["data"]["invdata"]
+
+
+class BuildExcelIMS(BuildExcel):
+    def export_data(self):
+        """Exports data to an excel file"""
+        excel = ExcelExporter()
+        excel.create_sheet(
+            sheet_name="Invoice Data",
+            filters=self.filters,
+            headers=self.invoice_header,
+            data=self.data,
+            default_data_format={"bg_color": self.COLOR_PALLATE.light_gray},
+            default_header_format={"bg_color": self.COLOR_PALLATE.dark_gray},
+        )
+
+        excel.remove_sheet("Sheet")
+        file_name = self.get_file_name()
+        excel.export(file_name)
+
+    def set_headers(self):
+        """Sets headers for the excel file"""
+        self.invoice_header = self.get_invoice_columns()
+
+    def set_filters(self):
+        """Add filters to the sheet"""
+        self.filters = frappe._dict(
+            {
+                "Company Name": self.doc.company,
+                "GSTIN": self.doc.company_gstin,
+            }
+        )
+
+    def get_file_name(self):
+        """Returns file name for the excel file"""
+        return f"{self.doc.company}_{self.doc.company_gstin}_report"
+
+    def get_invoice_columns(self):
+        return [
+            {
+                "label": "Supplier Name",
+                "fieldname": "supplier_name",
+                "data_format": {"horizontal": "center"},
+            },
+            {
+                "label": "Supplier GSTIN",
+                "fieldname": "supplier_gstin",
+                "data_format": {"horizontal": "center"},
+            },
+            {
+                "label": "Bill No",
+                "fieldname": "bill_no",
+                "data_format": {
+                    "horizontal": "center",
+                    "bg_color": self.COLOR_PALLATE.light_green,
+                },
+            },
+            {
+                "label": "Bill Date",
+                "fieldname": "bill_date",
+                "data_format": {
+                    "horizontal": "center",
+                    "bg_color": self.COLOR_PALLATE.light_blue,
+                },
+            },
+            {
+                "label": "Match Status",
+                "fieldname": "match_status",
+                "data_format": {"horizontal": "center"},
+            },
+            {
+                "label": "IMS Action",
+                "fieldname": "ims_action",
+                "data_format": {"horizontal": "center"},
+            },
+            {
+                "label": "Inward Supply Name",
+                "fieldname": "inward_supply_name",
+                "data_format": {"horizontal": "center"},
+            },
+            {
+                "label": "Linked Voucher",
+                "fieldname": "purchase_invoice_name",
+                "data_format": {"horizontal": "center"},
+            },
+            {
+                "label": "Taxable Amount Diff \n 2A/2B - Purchase",
+                "fieldname": "taxable_value_difference",
+                "fieldtype": "Float",
+                "data_format": {
+                    "bg_color": self.COLOR_PALLATE.light_pink,
+                    "number_format": "0.00",
+                    "horizontal": "center",
+                },
+            },
+            {
+                "label": "Tax Difference \n 2A/2B - Purchase",
+                "fieldname": "tax_difference",
+                "fieldtype": "Float",
+                "data_format": {
+                    "bg_color": self.COLOR_PALLATE.light_pink,
+                    "number_format": "0.00",
+                    "horizontal": "center",
+                },
+            },
+            {
+                "label": "Classification",
+                "fieldname": "classification",
+                "data_format": {"horizontal": "center"},
+                "header_format": {
+                    "width": 11,
+                },
+            },
+        ]

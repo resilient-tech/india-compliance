@@ -589,10 +589,14 @@ class IMSAction {
             );
         }
 
+        // Download Button
         this.frm.add_custom_button(__("Download Invoices"), () => {
             render_empty_state(this.frm);
             this.download_ims_data();
         });
+
+        // Export button
+        this.frm.add_custom_button(__("Export"), () => this.export_data());
     }
 
     setup_row_actions() {
@@ -774,6 +778,21 @@ class IMSAction {
         frappe.show_alert({
             message: __("Uploaded Invoices Successfully"),
             indicator: "green",
+        });
+    }
+
+    async export_data() {
+        if (!this.frm.reconciliation_tabs.filtered_data) {
+            await this.frm.ims_actions.get_ims_data();
+        }
+
+        const url = `${DOC_PATH}.download_excel_report`;
+        open_url_post(`/api/method/${url}`, {
+            data: JSON.stringify(this.frm.reconciliation_tabs.filtered_data),
+            doc: JSON.stringify({
+                company: this.frm.doc.company,
+                company_gstin: this.frm.doc.company_gstin,
+            }),
         });
     }
 }
