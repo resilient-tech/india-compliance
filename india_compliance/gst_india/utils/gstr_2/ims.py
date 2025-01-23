@@ -43,19 +43,17 @@ class IMS:
         self.company = company
         self.existing_transactions = self.get_existing_transactions()
 
-    def create_transactions(self, category, invoices):
+    def create_transactions(self, invoices):
         self.reset_previous_ims_action()
 
-        if not invoices:
-            return
+        if invoices:
+            transactions = self.get_all_transactions(invoices)
 
-        transactions = self.get_all_transactions(invoices)
+            for transaction in transactions:
+                create_inward_supply(transaction)
 
-        for transaction in transactions:
-            create_inward_supply(transaction)
-
-            if transaction.get("unique_key") in self.existing_transactions:
-                self.existing_transactions.pop(transaction.get("unique_key"))
+                if transaction.get("unique_key") in self.existing_transactions:
+                    self.existing_transactions.pop(transaction.get("unique_key"))
 
         self.handle_missing_transactions()
 

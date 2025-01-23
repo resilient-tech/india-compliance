@@ -306,6 +306,7 @@ def save_gstr_2b(gstin, return_period, json_data):
         return_type,
         return_period,
         json_data.get("docdata"),
+        json_data.get("docRejdata"),
         json_data.get("gendt"),
     )
     update_import_history(return_period)
@@ -316,7 +317,12 @@ def save_ims_invoices(gstin, return_period, json_data):
 
 
 def save_gstr(
-    gstin, return_type: ReturnType, return_period, json_data, gen_date_2b=None
+    gstin,
+    return_type: ReturnType,
+    return_period,
+    json_data,
+    rejected_data=None,
+    gen_date_2b=None,
 ):
     """Save GSTR data to Inward Supply
 
@@ -324,6 +330,8 @@ def save_gstr(
     :param json_data: dict of list (GSTR category: suppliers)
     :param gen_date_2b: str (Date when GSTR 2B was generated)
     """
+    if not rejected_data:
+        rejected_data = {}
 
     company = get_party_for_gstin(gstin, "Company")
     for category in GSTRCategory:
@@ -331,8 +339,14 @@ def save_gstr(
         if not gstr:
             continue
 
-        gstr(company, gstin, return_period, json_data, gen_date_2b).create_transactions(
-            category,
+        gstr(
+            company,
+            gstin,
+            return_period,
+            json_data,
+            rejected_data.get(category.value.lower()),
+            gen_date_2b,
+        ).create_transactions(
             json_data.get(category.value.lower()),
         )
 
