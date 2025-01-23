@@ -24,6 +24,8 @@ frappe.ui.form.on(DOCTYPE, {
     async refresh(frm) {
         india_compliance.set_state_options(frm);
 
+        update_address_info(frm);
+
         // set default values for GST fields
         if (!frm.is_new() || !frm.doc.links || !frm.doc.links.length || frm.doc.gstin) return;
 
@@ -52,3 +54,18 @@ frappe.ui.form.on(DOCTYPE, {
         frm.set_value("gst_category", doc.gst_category || "");
     },
 });
+
+function update_address_info(frm) {
+    frm.add_custom_button(__("Update Address"), function () {
+        const doc = frappe.get_doc(DOCTYPE, frm.doc.name);
+        doc._gstin = frm.doc.gstin;
+        doc._pincode = frm.doc.pincode;
+
+        const Address = frappe.ui.form.AddressQuickEntryForm;
+        frappe.ui.form.AddressQuickEntryForm = class extends frappe.ui.form.AddressQuickEntryForm {
+            get_dynamic_link_fields() { return []; }
+        }
+        frappe.ui.form.make_quick_entry(DOCTYPE,null,null,doc);
+        frappe.ui.form.AddressQuickEntryForm = Address;
+    });
+}
