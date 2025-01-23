@@ -343,14 +343,9 @@ class IMS extends reconciliation.reconciliation_tabs {
             },
             {
                 label: "Bill No.",
-                fieldname: "bill_no",
+                fieldname: "bill_no_date",
                 align: "center",
                 width: 120,
-            },
-            {
-                label: "Date",
-                fieldname: "bill_date",
-                _value: (...args) => frappe.datetime.str_to_user(args[0]),
             },
             {
                 label: "Match Status",
@@ -419,8 +414,7 @@ class IMS extends reconciliation.reconciliation_tabs {
 
             data.push({
                 supplier_name_gstin: this.get_supplier_name_gstin(row),
-                bill_no: row.bill_no,
-                bill_date: row.bill_date,
+                bill_no_date: this.get_bill_no_bill_date(row),
                 classification: row._inward_supply.classification,
                 ims_action: row.ims_action || "",
                 match_status: row.match_status,
@@ -559,6 +553,14 @@ class IMS extends reconciliation.reconciliation_tabs {
 
             me.update_filter(e, "ims_action", action, me);
         });
+    }
+
+    get_bill_no_bill_date(row) {
+        return `
+            ${row.bill_no}
+            <br/>
+            ${frappe.datetime.str_to_user(row.bill_date) || ""}
+        `;
     }
 }
 
