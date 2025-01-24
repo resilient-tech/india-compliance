@@ -339,15 +339,9 @@ def save_gstr(
         if not gstr:
             continue
 
-        gstr(
-            company,
-            gstin,
-            return_period,
-            json_data,
-            rejected_data.get(category.value.lower()),
-            gen_date_2b,
-        ).create_transactions(
+        gstr(company, gstin, return_period, gen_date_2b).create_transactions(
             json_data.get(category.value.lower()),
+            rejected_data.get(category.value.lower()),
         )
 
 

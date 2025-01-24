@@ -32,12 +32,10 @@ class GSTR:
         }
     )
 
-    def __init__(self, company, gstin, return_period, data, rejected_data, gen_date_2b):
+    def __init__(self, company, gstin, return_period, gen_date_2b):
         self.company = company
         self.gstin = gstin
         self.return_period = return_period
-        self._data = data
-        self.rejected_data = rejected_data
         self.gen_date_2b = gen_date_2b
         self.category = type(self).__name__[6:]
         self.setup()
@@ -45,29 +43,32 @@ class GSTR:
     def setup(self):
         self.existing_transaction = self.get_existing_transaction()
 
-    def create_transactions(self, suppliers):
-        if suppliers:
-            transactions = self.get_all_transactions(suppliers)
-            total_transactions = len(transactions)
-            current_transaction = 0
+    def create_transactions(self, suppliers, rejected_data):
+        self.rejected_data = rejected_data
 
-            for transaction in transactions:
-                create_inward_supply(transaction)
+        if not suppliers:
+            self.handle_missing_transactions()
+            return
 
-                current_transaction += 1
-                frappe.publish_realtime(
-                    "update_2a_2b_transactions_progress",
-                    {
-                        "current_progress": current_transaction
-                        * 100
-                        / total_transactions,
-                        "return_period": self.return_period,
-                    },
-                    user=frappe.session.user,
-                )
+        transactions = self.get_all_transactions(suppliers)
+        total_transactions = len(transactions)
+        current_transaction = 0
 
-                if transaction.get("unique_key") in self.existing_transaction:
-                    self.existing_transaction.pop(transaction.get("unique_key"))
+        for transaction in transactions:
+            create_inward_supply(transaction)
+
+            current_transaction += 1
+            frappe.publish_realtime(
+                "update_2a_2b_transactions_progress",
+                {
+                    "current_progress": current_transaction * 100 / total_transactions,
+                    "return_period": self.return_period,
+                },
+                user=frappe.session.user,
+            )
+
+            if transaction.get("unique_key") in self.existing_transaction:
+                self.existing_transaction.pop(transaction.get("unique_key"))
 
         self.handle_missing_transactions()
 

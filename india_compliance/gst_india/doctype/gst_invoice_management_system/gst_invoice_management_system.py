@@ -422,7 +422,11 @@ def get_uploaded_invoices(request_id):
     )
 
     if not request_data:
-        frappe.throw(_("Request data not found"))
+        frappe.throw(
+            _(
+                "Integration Request linked with data upload not found for request id {0}"
+            ).format(request_id)
+        )
 
     if isinstance(request_data, str):
         request_data = frappe.parse_json(request_data)
@@ -439,8 +443,8 @@ class BuildExcelIMS(BuildExcel):
             filters=self.filters,
             headers=self.invoice_header,
             data=self.data,
-            default_data_format={"bg_color": self.COLOR_PALLATE.light_gray},
-            default_header_format={"bg_color": self.COLOR_PALLATE.dark_gray},
+            default_data_format={},
+            default_header_format={},
         )
 
         excel.remove_sheet("Sheet")
@@ -536,8 +540,6 @@ class BuildExcelIMS(BuildExcel):
                 "label": "Classification",
                 "fieldname": "classification",
                 "data_format": {"horizontal": "center"},
-                "header_format": {
-                    "width": 11,
-                },
+                "header_format": {"width": 11},
             },
         ]
