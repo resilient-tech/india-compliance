@@ -34,7 +34,7 @@ class GSTR2b(GSTR):
             return
 
         missing_transactions = list(self.existing_transaction.values())
-        rejected_transactions = self.get_all_transactions(self.rejected_data or [])
+        rejected_transactions = self.get_all_transactions(self.rejected_data)
 
         # clear return_period_2b
         inward_supply = frappe.qb.DocType("GST Inward Supply")

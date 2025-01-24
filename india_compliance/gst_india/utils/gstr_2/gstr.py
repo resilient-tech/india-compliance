@@ -44,7 +44,7 @@ class GSTR:
         self.existing_transaction = self.get_existing_transaction()
 
     def create_transactions(self, suppliers, rejected_data):
-        self.rejected_data = rejected_data
+        self.rejected_data = rejected_data or []
 
         if not suppliers:
             self.handle_missing_transactions()

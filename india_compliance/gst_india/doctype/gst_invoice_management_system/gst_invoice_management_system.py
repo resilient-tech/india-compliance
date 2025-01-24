@@ -443,8 +443,8 @@ class BuildExcelIMS(BuildExcel):
             filters=self.filters,
             headers=self.invoice_header,
             data=self.data,
-            default_data_format={},
-            default_header_format={},
+            default_data_format={"horizontal": "center"},
+            default_header_format={"bg_color": self.COLOR_PALLATE.dark_gray},
         )
 
         excel.remove_sheet("Sheet")
@@ -473,48 +473,35 @@ class BuildExcelIMS(BuildExcel):
             {
                 "label": "Supplier Name",
                 "fieldname": "supplier_name",
-                "data_format": {"horizontal": "center"},
+                "header_format": {"width": 35},
             },
             {
                 "label": "Supplier GSTIN",
                 "fieldname": "supplier_gstin",
-                "data_format": {"horizontal": "center"},
             },
             {
                 "label": "Bill No",
                 "fieldname": "bill_no",
-                "data_format": {
-                    "horizontal": "center",
-                    "bg_color": self.COLOR_PALLATE.light_green,
-                },
             },
             {
                 "label": "Bill Date",
                 "fieldname": "bill_date",
-                "data_format": {
-                    "horizontal": "center",
-                    "bg_color": self.COLOR_PALLATE.light_blue,
-                },
             },
             {
                 "label": "Match Status",
                 "fieldname": "match_status",
-                "data_format": {"horizontal": "center"},
             },
             {
                 "label": "IMS Action",
                 "fieldname": "ims_action",
-                "data_format": {"horizontal": "center"},
             },
             {
                 "label": "Inward Supply Name",
                 "fieldname": "inward_supply_name",
-                "data_format": {"horizontal": "center"},
             },
             {
                 "label": "Linked Voucher",
                 "fieldname": "purchase_invoice_name",
-                "data_format": {"horizontal": "center"},
             },
             {
                 "label": "Taxable Amount Diff \n 2A/2B - Purchase",
@@ -523,7 +510,7 @@ class BuildExcelIMS(BuildExcel):
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_pink,
                     "number_format": "0.00",
-                    "horizontal": "center",
+                    "horizontal": "right",
                 },
             },
             {
@@ -533,13 +520,12 @@ class BuildExcelIMS(BuildExcel):
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_pink,
                     "number_format": "0.00",
-                    "horizontal": "center",
+                    "horizontal": "right",
                 },
             },
             {
                 "label": "Classification",
                 "fieldname": "classification",
-                "data_format": {"horizontal": "center"},
                 "header_format": {"width": 11},
             },
         ]
