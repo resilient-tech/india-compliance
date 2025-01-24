@@ -4,6 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import format_date
 
 from india_compliance.gst_india.api_classes.taxpayer_base import (
     TaxpayerBaseAPI,
@@ -96,6 +97,8 @@ class GSTInvoiceManagementSystem(Document):
 
         invoice_data = []
         for doc in inward_supplies:
+            _purchase_invoice = purchases.pop(doc.link_name, frappe._dict())
+
             invoice_data.append(
                 frappe._dict(
                     {
@@ -105,10 +108,11 @@ class GSTInvoiceManagementSystem(Document):
                         "is_pending_action_allowed": doc.is_pending_action_allowed,
                         "is_supplier_return_filed": doc.is_supplier_return_filed,
                         "doc_type": doc.doc_type,
-                        "_inward_supply": doc,
-                        "_purchase_invoice": purchases.pop(
-                            doc.link_name, frappe._dict()
+                        "posting_date": format_date(
+                            _purchase_invoice.pop("posting_date", None)
                         ),
+                        "_inward_supply": doc,
+                        "_purchase_invoice": _purchase_invoice,
                     }
                 )
             )
@@ -502,6 +506,10 @@ class BuildExcelIMS(BuildExcel):
             {
                 "label": "Linked Voucher",
                 "fieldname": "purchase_invoice_name",
+            },
+            {
+                "label": "Posting Date",
+                "fieldname": "posting_date",
             },
             {
                 "label": "Taxable Amount Diff \n 2A/2B - Purchase",
