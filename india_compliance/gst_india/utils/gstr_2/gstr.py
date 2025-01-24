@@ -32,22 +32,25 @@ class GSTR:
         }
     )
 
-    def __init__(self, company, gstin, return_period, data, gen_date_2b):
+    def __init__(self, company, gstin, return_period, gen_date_2b):
         self.company = company
         self.gstin = gstin
         self.return_period = return_period
-        self._data = data
         self.gen_date_2b = gen_date_2b
+        self.category = type(self).__name__[6:]
         self.setup()
 
     def setup(self):
         self.existing_transaction = self.get_existing_transaction()
 
-    def create_transactions(self, category, suppliers):
+    def create_transactions(self, suppliers, rejected_data):
+        self.rejected_data = rejected_data or []
+
         if not suppliers:
+            self.handle_missing_transactions()
             return
 
-        transactions = self.get_all_transactions(category, suppliers)
+        transactions = self.get_all_transactions(suppliers)
         total_transactions = len(transactions)
         current_transaction = 0
 
@@ -75,28 +78,26 @@ class GSTR:
     def get_existing_transaction(self):
         return {}
 
-    def get_all_transactions(self, category, suppliers):
+    def get_all_transactions(self, suppliers):
         transactions = []
         for supplier in suppliers:
-            transactions.extend(self.get_supplier_transactions(category, supplier))
+            transactions.extend(self.get_supplier_transactions(supplier))
 
         self.update_gstins()
 
         return transactions
 
-    def get_supplier_transactions(self, category, supplier):
+    def get_supplier_transactions(self, supplier):
         return [
-            self.get_transaction(
-                category, frappe._dict(supplier), frappe._dict(invoice)
-            )
+            self.get_transaction(frappe._dict(supplier), frappe._dict(invoice))
             for invoice in supplier.get(self.get_key("invoice_key"))
         ]
 
-    def get_transaction(self, category, supplier, invoice):
+    def get_transaction(self, supplier, invoice):
         transaction = frappe._dict(
             company=self.company,
             company_gstin=self.gstin,
-            classification=category.value,
+            classification=self.category,
             **self.get_supplier_details(supplier),
             **self.get_invoice_details(invoice),
             **self.get_download_details(),

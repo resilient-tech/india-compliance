@@ -1,5 +1,4 @@
 import frappe
-from frappe.query_builder.functions import IfNull
 
 from india_compliance.gst_india.utils import parse_datetime
 from india_compliance.gst_india.utils.gstr_2.gstr import GSTR, get_mapped_value
@@ -7,14 +6,12 @@ from india_compliance.gst_india.utils.gstr_2.gstr import GSTR, get_mapped_value
 
 class GSTR2b(GSTR):
     def get_existing_transaction(self):
-        category = type(self).__name__[6:]
-
         gst_is = frappe.qb.DocType("GST Inward Supply")
         existing_transactions = (
             frappe.qb.from_(gst_is)
             .select(gst_is.name, gst_is.supplier_gstin, gst_is.bill_no)
             .where(gst_is.return_period_2b == self.return_period)
-            .where(gst_is.classification == category)
+            .where(gst_is.classification == self.category)
         ).run(as_dict=True)
 
         return {
@@ -31,12 +28,13 @@ class GSTR2b(GSTR):
 
         In such cases,
         1) we need to clear the return_period_2b as this could change in future.
-        2) safer to clear delete them as well if no matching transactions are found (possibly rejected).
+        2) and delete the rejected transactions.
         """
         if not self.existing_transaction:
             return
 
         missing_transactions = list(self.existing_transaction.values())
+        rejected_transactions = self.get_all_transactions(self.rejected_data)
 
         # clear return_period_2b
         inward_supply = frappe.qb.DocType("GST Inward Supply")
@@ -48,22 +46,19 @@ class GSTR2b(GSTR):
             .run()
         )
 
-        # delete unmatched transactions
-        unmatched_transactions = (
-            frappe.qb.from_(inward_supply)
-            .select(inward_supply.name)
-            .where(inward_supply.name.isin(missing_transactions))
-            .where(IfNull(inward_supply.link_name, "") == "")
-            .run(pluck=True)
-        )
+        # delete rejected transactions
+        for transaction in rejected_transactions:
+            filters = {
+                "bill_no": transaction.bill_no,
+                "bill_date": transaction.bill_date,
+                "classification": transaction.classification,
+                "supplier_gstin": transaction.supplier_gstin,
+            }
 
-        for transaction_name in unmatched_transactions:
-            frappe.delete_doc(
-                "GST Inward Supply", transaction_name, ignore_permissions=True
-            )
+            frappe.delete_doc("GST Inward Supply", filters, ignore_permissions=True)
 
-    def get_transaction(self, category, supplier, invoice):
-        transaction = super().get_transaction(category, supplier, invoice)
+    def get_transaction(self, supplier, invoice):
+        transaction = super().get_transaction(supplier, invoice)
         transaction.return_period_2b = self.return_period
         transaction.gen_date_2b = parse_datetime(self.gen_date_2b, day_first=True)
         return transaction
@@ -242,9 +237,5 @@ class GSTR2bIMPG(GSTR2bIMPGSEZ):
         return {}
 
     # invoice details are included in supplier details
-    def get_supplier_transactions(self, category, supplier):
-        return [
-            self.get_transaction(
-                category, frappe._dict(supplier), frappe._dict(supplier)
-            )
-        ]
+    def get_supplier_transactions(self, supplier):
+        return [self.get_transaction(frappe._dict(supplier), frappe._dict(supplier))]

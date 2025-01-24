@@ -43,10 +43,11 @@ class IMS:
         self.company = company
         self.existing_transactions = self.get_existing_transactions()
 
-    def create_transactions(self, category, invoices):
+    def create_transactions(self, invoices, rejected_data):
         self.reset_previous_ims_action()
 
         if not invoices:
+            self.handle_missing_transactions()
             return
 
         transactions = self.get_all_transactions(invoices)

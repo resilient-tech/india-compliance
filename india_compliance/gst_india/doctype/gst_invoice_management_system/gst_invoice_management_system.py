@@ -4,6 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import format_date
 
 from india_compliance.gst_india.api_classes.taxpayer_base import (
     TaxpayerBaseAPI,
@@ -23,6 +24,9 @@ from india_compliance.gst_india.doctype.gstr_action.gstr_action import set_gstr_
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     ReconciledData,
 )
+from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool import (
+    BuildExcel,
+)
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
     get_formatted_options,
 )
@@ -32,6 +36,7 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_re
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
     unlink_documents as _unlink_documents,
 )
+from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr_2 import (
     GSTRCategory,
     ReturnType,
@@ -92,6 +97,8 @@ class GSTInvoiceManagementSystem(Document):
 
         invoice_data = []
         for doc in inward_supplies:
+            _purchase_invoice = purchases.pop(doc.link_name, frappe._dict())
+
             invoice_data.append(
                 frappe._dict(
                     {
@@ -101,10 +108,11 @@ class GSTInvoiceManagementSystem(Document):
                         "is_pending_action_allowed": doc.is_pending_action_allowed,
                         "is_supplier_return_filed": doc.is_supplier_return_filed,
                         "doc_type": doc.doc_type,
-                        "_inward_supply": doc,
-                        "_purchase_invoice": purchases.pop(
-                            doc.link_name, frappe._dict()
+                        "posting_date": format_date(
+                            _purchase_invoice.pop("posting_date", None)
                         ),
+                        "_inward_supply": doc,
+                        "_purchase_invoice": _purchase_invoice,
                     }
                 )
             )
@@ -259,6 +267,14 @@ def check_action_status(company_gstin, action):
     return process_save_or_reset_ims(ims_log, action)
 
 
+@frappe.whitelist()
+def download_excel_report(data, doc):
+    frappe.has_permission("GST Invoice Management System", "export", throw=True)
+
+    build_data = BuildExcelIMS(doc, data)
+    build_data.export_data()
+
+
 def download_and_upload_ims_invoices(company_gstin):
     """
     1. This function will download invoices from GST Portal,
@@ -384,37 +400,140 @@ def process_save_or_reset_ims(return_log, action):
 
     if status_cd in ["P", "PE"]:
         # Exclude erroneous invoices from previous IMS action update
-        # This is enqueued because linking of integration request is enqueued
+        # This is enqueued because creation of integration request is enqueued
         # TODO: flag for re-upload?
         frappe.enqueue(
             update_previous_ims_action,
             queue="long",
-            integration_request=doc.integration_request,
+            request_id=doc.request_id,
             error_report=response.get("error_report") or dict(),
         )
 
     return response
 
 
-def update_previous_ims_action(integration_request, error_report=None):
-    uploaded_invoices = get_uploaded_invoices(integration_request)
+def update_previous_ims_action(request_id, error_report=None):
+    uploaded_invoices = get_uploaded_invoices(request_id)
 
     for category, invoices in uploaded_invoices.items():
         _class = get_data_handler(ReturnType.IMS.value, category.upper())
         _class().update_previous_ims_action(invoices, error_report.get(category, []))
 
 
-def get_uploaded_invoices(integration_request):
+def get_uploaded_invoices(request_id):
     request_data = frappe.parse_json(
-        frappe.db.get_value(
-            "Integration Request", {"name": integration_request}, "data"
-        )
+        frappe.db.get_value("Integration Request", {"request_id": request_id}, "data")
     )
 
     if not request_data:
-        return {}
+        frappe.throw(
+            _(
+                "Integration Request linked with data upload not found for request id {0}"
+            ).format(request_id)
+        )
 
     if isinstance(request_data, str):
         request_data = frappe.parse_json(request_data)
 
     return request_data["body"]["data"]["invdata"]
+
+
+class BuildExcelIMS(BuildExcel):
+    def export_data(self):
+        """Exports data to an excel file"""
+        excel = ExcelExporter()
+        excel.create_sheet(
+            sheet_name="Invoice Data",
+            filters=self.filters,
+            headers=self.invoice_header,
+            data=self.data,
+            default_data_format={"horizontal": "center"},
+            default_header_format={"bg_color": self.COLOR_PALLATE.dark_gray},
+        )
+
+        excel.remove_sheet("Sheet")
+        file_name = self.get_file_name()
+        excel.export(file_name)
+
+    def set_headers(self):
+        """Sets headers for the excel file"""
+        self.invoice_header = self.get_invoice_columns()
+
+    def set_filters(self):
+        """Add filters to the sheet"""
+        self.filters = frappe._dict(
+            {
+                "Company Name": self.doc.company,
+                "GSTIN": self.doc.company_gstin,
+            }
+        )
+
+    def get_file_name(self):
+        """Returns file name for the excel file"""
+        return f"{self.doc.company}_{self.doc.company_gstin}_report"
+
+    def get_invoice_columns(self):
+        return [
+            {
+                "label": "Supplier Name",
+                "fieldname": "supplier_name",
+                "header_format": {"width": 35},
+            },
+            {
+                "label": "Supplier GSTIN",
+                "fieldname": "supplier_gstin",
+            },
+            {
+                "label": "Bill No",
+                "fieldname": "bill_no",
+            },
+            {
+                "label": "Bill Date",
+                "fieldname": "bill_date",
+            },
+            {
+                "label": "Match Status",
+                "fieldname": "match_status",
+            },
+            {
+                "label": "IMS Action",
+                "fieldname": "ims_action",
+            },
+            {
+                "label": "Inward Supply Name",
+                "fieldname": "inward_supply_name",
+            },
+            {
+                "label": "Linked Voucher",
+                "fieldname": "purchase_invoice_name",
+            },
+            {
+                "label": "Posting Date",
+                "fieldname": "posting_date",
+            },
+            {
+                "label": "Taxable Amount Diff \n 2A/2B - Purchase",
+                "fieldname": "taxable_value_difference",
+                "fieldtype": "Float",
+                "data_format": {
+                    "bg_color": self.COLOR_PALLATE.light_pink,
+                    "number_format": "0.00",
+                    "horizontal": "right",
+                },
+            },
+            {
+                "label": "Tax Difference \n 2A/2B - Purchase",
+                "fieldname": "tax_difference",
+                "fieldtype": "Float",
+                "data_format": {
+                    "bg_color": self.COLOR_PALLATE.light_pink,
+                    "number_format": "0.00",
+                    "horizontal": "right",
+                },
+            },
+            {
+                "label": "Classification",
+                "fieldname": "classification",
+                "header_format": {"width": 11},
+            },
+        ]

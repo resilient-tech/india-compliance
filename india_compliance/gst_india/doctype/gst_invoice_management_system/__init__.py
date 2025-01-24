@@ -149,7 +149,7 @@ class PurchaseInvoice:
         self.PI_ITEM = frappe.qb.DocType("Purchase Invoice Item")
 
     def get_all(self, names=None, filters=None):
-        query = self.get_query(filters=filters)
+        query = self.get_query(filters=filters, additional_fields=["posting_date"])
 
         if names:
             query = query.where(self.PI.name.isin(names))

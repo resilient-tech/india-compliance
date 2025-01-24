@@ -343,7 +343,7 @@ class IMS extends reconciliation.reconciliation_tabs {
             },
             {
                 label: "Bill No.",
-                fieldname: "bill_no",
+                fieldname: "bill_no_date",
                 align: "center",
                 width: 120,
             },
@@ -414,7 +414,7 @@ class IMS extends reconciliation.reconciliation_tabs {
 
             data.push({
                 supplier_name_gstin: this.get_supplier_name_gstin(row),
-                bill_no: row.bill_no,
+                bill_no_date: this.get_bill_no_bill_date(row),
                 classification: row._inward_supply.classification,
                 ims_action: row.ims_action || "",
                 match_status: row.match_status,
@@ -424,6 +424,7 @@ class IMS extends reconciliation.reconciliation_tabs {
                 inward_supply_name: row.inward_supply_name,
                 pending_upload: row.pending_upload,
                 is_supplier_return_filed: row.is_supplier_return_filed,
+                linked_voucher_type: row._purchase_invoice.doctype,
             });
         });
 
@@ -530,7 +531,7 @@ class IMS extends reconciliation.reconciliation_tabs {
             .join("");
 
         const action_performed_html = `
-            <div class="action-performed-summary m-3 d-flex justify-content-around align-items-center" style="border-bottom: 1px solid var(--border-color);">
+            <div class="action-performed-summary mt-3 mb-3 w-100 d-flex justify-content-around align-items-center" style="border-bottom: 1px solid var(--border-color);">
                 ${action_performed_cards}
             </div>
        `;
@@ -552,6 +553,14 @@ class IMS extends reconciliation.reconciliation_tabs {
 
             me.update_filter(e, "ims_action", action, me);
         });
+    }
+
+    get_bill_no_bill_date(row) {
+        return `
+            ${row.bill_no}
+            <br/>
+            ${frappe.datetime.str_to_user(row.bill_date) || ""}
+        `;
     }
 }
 
@@ -580,10 +589,14 @@ class IMSAction {
             );
         }
 
+        // Download Button
         this.frm.add_custom_button(__("Download Invoices"), () => {
             render_empty_state(this.frm);
             this.download_ims_data();
         });
+
+        // Export button
+        this.frm.add_custom_button(__("Export"), () => this.export_data());
     }
 
     setup_row_actions() {
@@ -765,6 +778,21 @@ class IMSAction {
         frappe.show_alert({
             message: __("Uploaded Invoices Successfully"),
             indicator: "green",
+        });
+    }
+
+    async export_data() {
+        if (!this.frm.reconciliation_tabs.filtered_data) {
+            await this.frm.ims_actions.get_ims_data();
+        }
+
+        const url = `${DOC_PATH}.download_excel_report`;
+        open_url_post(`/api/method/${url}`, {
+            data: JSON.stringify(this.frm.reconciliation_tabs.filtered_data),
+            doc: JSON.stringify({
+                company: this.frm.doc.company,
+                company_gstin: this.frm.doc.company_gstin,
+            }),
         });
     }
 }

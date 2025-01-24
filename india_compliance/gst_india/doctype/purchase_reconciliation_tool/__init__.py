@@ -1137,6 +1137,7 @@ class ReconciledData(BaseReconciliation):
             "differences": "",
             "action": "",
             "classification": "",
+            "is_reverse_charge": "",
         }
 
         for data in reconciliation_data:
@@ -1154,7 +1155,13 @@ class ReconciledData(BaseReconciliation):
                 BaseUtil.update_cess_amount(purchase)
 
     def update_fields(self, data, purchase, inward_supply):
-        for field in ("supplier_name", "supplier_gstin", "bill_no", "bill_date"):
+        for field in (
+            "supplier_name",
+            "supplier_gstin",
+            "bill_no",
+            "bill_date",
+            "is_reverse_charge",
+        ):
             data[field] = purchase.get(field) or inward_supply.get(field)
 
         data.update(
