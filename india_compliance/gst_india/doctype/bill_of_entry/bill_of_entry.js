@@ -2,7 +2,7 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Bill of Entry", {
-    async onload(frm) {
+    onload(frm) {
         frm.fields_dict.items.grid.cannot_add_rows = true;
         frm.bill_of_entry_controller = new BillOfEntryController(frm);
 
@@ -18,10 +18,6 @@ frappe.ui.form.on("Bill of Entry", {
         frm.add_fetch("purchase_invoice", "supplier", "supplier");
         frm.add_fetch("purchase_invoice", "posting_date", "posting_date");
         frm.add_fetch("purchase_invoice", "base_grand_total", "grand_total");
-
-        if (!frm.doc.company) return;
-        const options = await india_compliance.set_gstin_options(frm);
-        frm.set_value("company_gstin", options[0]);
     },
 
     refresh(frm) {
@@ -90,7 +86,12 @@ frappe.ui.form.on("Bill of Entry", {
         const options = await india_compliance.set_gstin_options(frm);
         frm.set_value("company_gstin", options[0]);
 
-        const { message } = await frappe.db.get_value("Company", frm.doc.company, ["default_customs_payable_account", "default_customs_expense_account"]);
+        const { message } = await frappe.db.get_value(
+            "Company",
+            frm.doc.company,
+            ["default_customs_payable_account", "default_customs_expense_account"]
+        );
+
         frm.set_value("customs_expense_account", message.default_customs_expense_account);
         frm.set_value("customs_payable_account", message.default_customs_payable_account);
     },

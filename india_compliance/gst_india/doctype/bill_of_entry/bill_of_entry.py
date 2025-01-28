@@ -110,9 +110,6 @@ class BillofEntry(Document):
             item.customs_duty = 0
 
     def set_default_accounts(self):
-        if self.customs_expense_account and self.customs_payable_account:
-            return
-
         company = frappe.get_cached_doc("Company", self.company)
         self.customs_expense_account = company.default_customs_expense_account
         self.customs_payable_account = company.default_customs_payable_account
