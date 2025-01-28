@@ -297,17 +297,19 @@ def process_gstr_3b_returns_info(company, gstin, e_filed_list):
         if info["status"] != "Filed":
             continue
 
-        if not frappe.db.exists(
+        if frappe.db.exists(
             "GST Return Log",
             f'GSTR3B-{info["ret_prd"]}-{gstin}',
         ):
-            gstr3b_log = frappe.new_doc("GST Return Log")
-            gstr3b_log.return_period = info["ret_prd"]
-            gstr3b_log.company = company
-            gstr3b_log.gstin = gstin
-            gstr3b_log.return_type = "GSTR3B"
-            gstr3b_log.filing_status = "Filed"
-            gstr3b_log.insert()
+            continue
+
+        gstr3b_log = frappe.new_doc("GST Return Log")
+        gstr3b_log.return_period = info["ret_prd"]
+        gstr3b_log.company = company
+        gstr3b_log.gstin = gstin
+        gstr3b_log.return_type = "GSTR3B"
+        gstr3b_log.filing_status = "Filed"
+        gstr3b_log.insert()
 
 
 def get_gst_return_log(posting_date, company_gstin):
