@@ -118,8 +118,7 @@
    "fieldname": "company",
    "fieldtype": "Link",
    "label": "Company",
-   "options": "Company",
-   "read_only": 1
+   "options": "Company"
   },
   {
    "fieldname": "column_break_4zp5",
@@ -127,9 +126,8 @@
   },
   {
    "fieldname": "company_gstin",
-   "fieldtype": "Data",
-   "label": "Company GSTIN",
-   "read_only": 1
+   "fieldtype": "Autocomplete",
+   "label": "Company GSTIN"
   },
   {
    "fieldname": "column_break_hbfk",
@@ -304,7 +302,6 @@
    "options": "BOE Purchase Invoice"
   }
  ],
- "in_create": 1,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [
@@ -320,7 +317,7 @@
    "link_fieldname": "link_name"
   }
  ],
- "modified": "2025-01-08 12:02:50.514937",
+ "modified": "2025-01-28 15:02:02.340281",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Bill of Entry",

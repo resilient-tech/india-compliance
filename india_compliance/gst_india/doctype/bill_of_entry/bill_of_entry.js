@@ -2,26 +2,30 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Bill of Entry", {
-    setup(frm) {
+    async onload(frm) {
+        frm.fields_dict.items.grid.cannot_add_rows = true;
+        frm.bill_of_entry_controller = new BillOfEntryController(frm);
+
         frm.fields_dict.purchase_invoices.grid.get_field("purchase_invoice").get_query = () => {
             return {
                 filters: {
                     docstatus: 1,
                     gst_category: "Overseas",
+                    company_gstin: frm.doc.company_gstin,
                 },
             };
         };
         frm.add_fetch("purchase_invoice", "supplier", "supplier");
         frm.add_fetch("purchase_invoice", "posting_date", "posting_date");
         frm.add_fetch("purchase_invoice", "base_grand_total", "grand_total");
-    },
 
-    onload(frm) {
-        frm.fields_dict.items.grid.cannot_add_rows = true;
-        frm.bill_of_entry_controller = new BillOfEntryController(frm);
+        if (!frm.doc.company) return;
+        const options = await india_compliance.set_gstin_options(frm);
+        frm.set_value("company_gstin", options[0]);
     },
 
     refresh(frm) {
+        frm.set_df_property("reconciliation_status", "hidden", frm.is_new());
         india_compliance.set_reconciliation_status(frm, "bill_of_entry_no");
 
         if (frm.doc.docstatus === 0) return;
@@ -77,16 +81,27 @@ frappe.ui.form.on("Bill of Entry", {
         );
     },
 
+    async company(frm) {
+        if (!frm.doc.company) {
+            frm.set_value("company_gstin", "");
+            return;
+        }
+
+        const options = await india_compliance.set_gstin_options(frm);
+        frm.set_value("company_gstin", options[0]);
+
+        const { message } = await frappe.db.get_value("Company", frm.doc.company, ["default_customs_payable_account", "default_customs_expense_account"]);
+        frm.set_value("customs_expense_account", message.default_customs_expense_account);
+        frm.set_value("customs_payable_account", message.default_customs_payable_account);
+    },
+
     get_items_from_purchase_invoice(frm) {
         if (!frm.doc.purchase_invoices.length) {
             frappe.msgprint(__("Please enter Purchase Invoice first"));
             return;
         }
 
-        frm.call({
-            doc: frm.doc,
-            method: "get_items_from_purchase_invoice",
-        });
+        frm.call("get_items_from_purchase_invoice")
     },
 
     total_taxable_value(frm) {

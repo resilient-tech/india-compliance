@@ -7,7 +7,6 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
-from frappe.query_builder.custom import ConstantColumn
 from frappe.utils import today
 import erpnext
 from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_entries
@@ -111,6 +110,9 @@ class BillofEntry(Document):
             item.customs_duty = 0
 
     def set_default_accounts(self):
+        if self.customs_expense_account and self.customs_payable_account:
+            return
+
         company = frappe.get_cached_doc("Company", self.company)
         self.customs_expense_account = company.default_customs_expense_account
         self.customs_payable_account = company.default_customs_payable_account
@@ -383,14 +385,17 @@ class BillofEntry(Document):
         frappe.has_permission("Purchase Invoice", "read")
 
         existing_items = [item.pi_detail for item in self.get("items")]
+        purchase_invoices = [
+            pi.purchase_invoice for pi in self.get("purchase_invoices")
+        ]
+        item_to_add = get_pi_items(purchase_invoices)
 
-        for pi in self.get("purchase_invoices"):
-            if not pi.purchase_invoice:
-                continue
+        if not existing_items[0]:
+            self.items = []
 
-            for item in get_pi_items(pi.purchase_invoice):
-                if item.pi_detail not in existing_items:
-                    self.append("items", {**item})
+        for item in item_to_add:
+            if item.pi_detail not in existing_items:
+                self.append("items", {**item})
 
         set_missing_values(self)
 
@@ -418,12 +423,15 @@ def set_missing_values(source, target=None):
         or 0
     )
 
-    taxes = target.get("taxes")
-    if not taxes or (
-        taxes[0].charge_type != "On Net Total"
-        or taxes[0].account_head != input_igst_account
-        or taxes[0].rate != rate
-    ):
+    has_igst_tax = any(
+        tax.charge_type == "On Net Total"
+        and tax.account_head == input_igst_account
+        and tax.rate == rate
+        and tax.gst_tax_type == "igst"
+        for tax in source.taxes
+    )
+
+    if not has_igst_tax:
         target.append(
             "taxes",
             {
@@ -442,6 +450,20 @@ def make_bill_of_entry(source_name, target_doc=None):
     """
     Permission checked in get_mapped_doc
     """
+
+    def postprocess(source_doc, target_doc):
+        set_missing_values(source_doc, target_doc)
+
+        target_doc.append(
+            "purchase_invoices",
+            {
+                "purchase_invoice": source_name,
+                "supplier": source_doc.supplier,
+                "posting_date": source_doc.posting_date,
+                "grand_total": source_doc.grand_total,
+            },
+        )
+
     doc = get_mapped_doc(
         "Purchase Invoice",
         source_name,
@@ -463,24 +485,7 @@ def make_bill_of_entry(source_name, target_doc=None):
             },
         },
         target_doc,
-        postprocess=set_missing_values,
-    )
-
-    source_details = frappe.db.get_values(
-        "Purchase Invoice",
-        source_name,
-        fieldname=["supplier", "posting_date", "grand_total"],
-        as_dict=True,
-    )[0]
-
-    doc.append(
-        "purchase_invoices",
-        {
-            "purchase_invoice": source_name,
-            "supplier": source_details.supplier,
-            "posting_date": source_details.posting_date,
-            "grand_total": source_details.grand_total,
-        },
+        postprocess=postprocess,
     )
 
     return doc
@@ -702,7 +707,7 @@ def get_items_for_landed_cost_voucher(boe):
     return frappe._dict({item.name: item for item in all_items if item})
 
 
-def get_pi_items(purchase_invoice):
+def get_pi_items(purchase_invoices):
     pi = frappe.qb.DocType("Purchase Invoice")
     pi_item = frappe.qb.DocType("Purchase Invoice Item")
 
@@ -713,6 +718,7 @@ def get_pi_items(purchase_invoice):
         .select(
             pi_item.item_code,
             pi_item.item_name,
+            pi_item.parent.as_("purchase_invoice"),
             pi_item.qty,
             pi_item.uom,
             pi_item.cost_center,
@@ -731,9 +737,8 @@ def get_pi_items(purchase_invoice):
             pi_item.sgst_amount,
             pi_item.cess_amount,
             pi_item.cess_non_advol_amount,
-            ConstantColumn(purchase_invoice).as_("purchase_invoice"),
             pi_item.name.as_("pi_detail"),
         )
-        .where(pi.name == purchase_invoice)
+        .where(pi.name.isin(purchase_invoices))
         .run(as_dict=True)
     )

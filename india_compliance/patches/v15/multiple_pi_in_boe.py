@@ -6,7 +6,7 @@ def execute():
     boe = frappe.qb.DocType("Bill of Entry", alias="boe")
     boe_item = frappe.qb.DocType("Bill of Entry Item", alias="boe_item")
 
-    # link BOE item to it's purchase invoice
+    # link BOE Item to it's purchase invoice
     (
         frappe.qb.update(boe_item)
         .join(boe)
@@ -32,7 +32,7 @@ def add_purchase_invoices():
 
     purchase_invoices = frappe.get_all(
         "Purchase Invoice",
-        filters={"name": ["in", list(linked_purchase_invoices)]},
+        filters={"name": ["in", list(linked_purchase_invoices)], "docstatus": 1},
         fields=["name", "supplier", "posting_date", "grand_total"],
     )
     purchase_invoice_map = {pi["name"]: pi for pi in purchase_invoices}
