@@ -47,7 +47,9 @@ class GSTR2a(GSTR):
 
         if self.existing_transaction:
             for inward_supply_name in self.existing_transaction.values():
-                frappe.delete_doc("GST Inward Supply", inward_supply_name)
+                frappe.delete_doc(
+                    "GST Inward Supply", inward_supply_name, ignore_permissions=True
+                )
 
     def get_supplier_details(self, supplier):
         supplier_details = {

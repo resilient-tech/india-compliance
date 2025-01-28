@@ -118,7 +118,7 @@ frappe.ui.form.on(DOCTYPE, {
         frm.__setup_complete = true;
 
         // Setup Listeners
-        frappe.realtime.on("is_not_latest_data", message => {
+        frappe.realtime.on("is_not_latest_gstr1_data", message => {
             const { filters } = message;
 
             const [month_or_quarter, year] =
@@ -143,7 +143,7 @@ frappe.ui.form.on(DOCTYPE, {
             );
         });
 
-        frappe.realtime.on("show_message", message => {
+        frappe.realtime.on("show_missing_gst_credentials_message", message => {
             frappe.msgprint(message);
         });
 
@@ -158,7 +158,7 @@ frappe.ui.form.on(DOCTYPE, {
         });
 
         frappe.realtime.on("gstr1_data_prepared", message => {
-            const { filters } = message;
+            const { filters, error_log } = message;
 
             if (
                 frm.doc.company_gstin !== filters.company_gstin ||
@@ -167,7 +167,21 @@ frappe.ui.form.on(DOCTYPE, {
             )
                 return;
 
-            frm.taxpayer_api_call("generate_gstr1").then(r => {
+            const only_books_data = error_log != undefined;
+            if (error_log) {
+                frappe.msgprint({
+                    message: __(
+                        "Error while preparing GSTR-1 data, please check {0} for more deatils.",
+                        [
+                            `<a href='/app/error-log/${error_log}' class='variant-click'>error log</a>`,
+                        ]
+                    ),
+                    title: "GSTR-1 Download Failed",
+                    indicator: "red",
+                });
+            }
+
+            frm.taxpayer_api_call("generate_gstr1", { only_books_data }).then(r => {
                 frm.doc.__gst_data = r.message;
                 frm.trigger("load_gstr1_data");
             });
@@ -184,6 +198,10 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     company_gstin: render_empty_state,
+
+    file_nil_gstr1(frm) {
+        frm.gstr1.render_form_actions();
+    },
 
     month_or_quarter(frm) {
         render_empty_state(frm);
@@ -210,6 +228,8 @@ frappe.ui.form.on(DOCTYPE, {
     load_gstr1_data(frm) {
         const data = frm.doc.__gst_data;
         if (!data?.status) return;
+
+        frm.doc.file_nil_gstr1 = data.is_nil;
 
         // Toggle HTML fields
         frm.refresh();
@@ -290,6 +310,7 @@ class GSTR1 {
         }
 
         this.set_output_gst_balances();
+        this.toggle_file_nil_gstr1();
 
         // refresh tabs
         this.TABS.forEach(_tab => {
@@ -344,6 +365,10 @@ class GSTR1 {
                 detailed_view_filters
             );
         });
+    }
+
+    refresh_no_data_message() {
+        this.tabs.filed_tab.tabmanager.refresh_no_data_message();
     }
 
     // RENDER
@@ -461,6 +486,7 @@ class GSTR1 {
 
         // Primary Button
         const actions = {
+            Reset: this.gstr1_action.reset_gstr1_data,
             Generate: this.gstr1_action.generate_gstr1_data,
             Upload: this.gstr1_action.upload_gstr1_data,
             "Proceed to File": this.gstr1_action.proceed_to_file,
@@ -473,6 +499,17 @@ class GSTR1 {
                 Uploaded: "Proceed to File",
                 "Ready to File": "File",
             }[this.status] || "Generate";
+
+        // No need to upload if nil gstr1
+        if (this.frm.doc.__gst_data) {
+            if (this.frm.doc.file_nil_gstr1 != this.frm.doc.__gst_data.is_nil)
+                primary_button_label = "Reset";
+
+            if (this.status == "Not Filed")
+                if (this.frm.doc.file_nil_gstr1) primary_button_label = "Proceed to File";
+                else primary_button_label = "Upload";
+
+        }
 
         if (this.status === "Ready to File") {
             this.frm.add_custom_button(__("Mark as Unfiled"), () => {
@@ -677,6 +714,16 @@ class GSTR1 {
         else this.$wrapper.find(".filter-selector").hide();
     }
 
+    toggle_file_nil_gstr1() {
+        if (!this.data || !is_gstr1_api_enabled()) return;
+
+        const has_records = this.data.books_summary?.some(row => row.no_of_records > 0);
+
+        if (!has_records && this.data.status != "Filed")
+            this.frm.set_df_property("file_nil_gstr1", "hidden", 0);
+        else this.frm.set_df_property("file_nil_gstr1", "hidden", 1);
+    }
+
     async set_output_gst_balances() {
         //Checks if gst-ledger-difference element is there and removes if already present
         const gst_liability = await get_net_gst_liability(this.frm);
@@ -733,7 +780,7 @@ class GSTR1 {
             args: { month_or_quarter, year, company },
         });
 
-        if (!je_details || !je_details.data) return;
+        if (!je_details) return;
 
         this.create_journal_entry_dialog(je_details);
     }
@@ -863,9 +910,13 @@ class TabManager {
         this.status = status;
         this.remove_tab_custom_buttons();
         this.setup_actions();
-        this.datatable.refresh(this.summary);
+        this.datatable.refresh(this.summary, null, this.get_no_data_message());
         this.set_default_title();
         this.set_creation_time_string();
+    }
+
+    refresh_no_data_message() {
+        this.datatable.refresh(null, null, this.get_no_data_message());
     }
 
     refresh_view(view, category, filters) {
@@ -979,7 +1030,7 @@ class TabManager {
                 showTotalRow: true,
                 checkboxColumn: false,
                 treeView: treeView,
-                noDataMessage: this.DEFAULT_NO_DATA_MESSAGE,
+                noDataMessage: this.get_no_data_message(),
                 headerDropdown: [
                     {
                         label: "Collapse All Node",
@@ -1023,7 +1074,6 @@ class TabManager {
                     },
                 },
             },
-            no_data_message: __("No data found"),
         });
 
         this.setup_datatable_listeners(treeView);
@@ -1140,10 +1190,10 @@ class TabManager {
             args[2]?.indent == 0
                 ? `<strong>${value}</strong>`
                 : isDescriptionCell
-                ? `<a href="#" class="description">
+                    ? `<a href="#" class="description">
                     <p style="padding-left: 15px">${value}</p>
                     </a>`
-                : value;
+                    : value;
 
         return value;
     }
@@ -1175,6 +1225,10 @@ class TabManager {
         >
             <i class="fa fa-${icon}"></i>
         </button>`;
+    }
+
+    get_no_data_message() {
+        return this.DEFAULT_NO_DATA_MESSAGE;
     }
 }
 
@@ -1898,9 +1952,9 @@ class FiledTab extends GSTR1_TabManager {
             const { include_uploaded, delete_missing } = dialog
                 ? dialog.get_values()
                 : {
-                      include_uploaded: true,
-                      delete_missing: false,
-                  };
+                    include_uploaded: true,
+                    delete_missing: false,
+                };
 
             const doc = me.instance.frm.doc;
 
@@ -2098,6 +2152,15 @@ class FiledTab extends GSTR1_TabManager {
             },
         ];
     }
+
+    get_no_data_message() {
+        if (this.instance.data?.is_nil)
+            if (this.status === "Filed")
+                return __("You have filed a Nil GSTR-1 for this period");
+            else return __("You are filing a Nil GSTR-1 for this period");
+
+        return this.DEFAULT_NO_DATA_MESSAGE;
+    }
 }
 
 class UnfiledTab extends FiledTab {
@@ -2116,8 +2179,6 @@ class UnfiledTab extends FiledTab {
 }
 
 class ReconcileTab extends FiledTab {
-    DEFAULT_NO_DATA_MESSAGE = __("No differences found");
-
     set_default_title() {
         if (this.instance.data.status === "Filed")
             this.DEFAULT_TITLE = "Books vs Filed";
@@ -2144,7 +2205,7 @@ class ReconcileTab extends FiledTab {
         });
     }
 
-    get_creation_time_string() {} // pass
+    get_creation_time_string() { } // pass
 
     get_detail_view_column() {
         return [
@@ -2171,6 +2232,10 @@ class ReconcileTab extends FiledTab {
                 width: 150,
             },
         ];
+    }
+
+    get_no_data_message() {
+        return __("No differences found");
     }
 }
 
@@ -2218,8 +2283,8 @@ class ErrorsTab extends TabManager {
         ];
     }
 
-    setup_actions() {}
-    set_creation_time_string() {}
+    setup_actions() { }
+    set_creation_time_string() { }
 
     refresh_data(data) {
         data = data.error_report;
@@ -2476,17 +2541,17 @@ class FileGSTR1Dialog {
             <tr>
                 <td>${description}</td>
                 <td style="text-align: right;">${format_currency(
-                    liability.total_igst_amount
-                )}</td>
+            liability.total_igst_amount
+        )}</td>
                 <td style="text-align: right;">${format_currency(
-                    liability.total_cgst_amount
-                )}</td>
+            liability.total_cgst_amount
+        )}</td>
                 <td style="text-align: right;">${format_currency(
-                    liability.total_sgst_amount
-                )}</td>
+            liability.total_sgst_amount
+        )}</td>
                 <td style="text-align: right;">${format_currency(
-                    liability.total_cess_amount
-                )}</td>
+            liability.total_cess_amount
+        )}</td>
             </tr>
         `;
     }
@@ -2496,7 +2561,7 @@ class FileGSTR1Dialog {
             this.perform_gstr1_action(
                 "file",
                 r => this.handle_filing_response(r.message),
-                { pan: pan, otp: this.filing_dialog.get_value("otp") }
+                { pan: pan, otp: this.filing_dialog.get_value("otp").trim() }
             );
 
             this.toggle_actions(true);
@@ -2614,8 +2679,10 @@ class GSTR1Action extends FileGSTR1Dialog {
             ),
             () => {
                 frappe.show_alert(__("Resetting GSTR-1 data"));
-                this.perform_gstr1_action(action, () =>
-                    this.check_action_status_with_retry(action)
+                this.perform_gstr1_action(
+                    action,
+                    () => this.check_action_status_with_retry(action),
+                    { is_nil_return: this.frm.doc.file_nil_gstr1 }
                 );
             }
         );
@@ -2623,11 +2690,18 @@ class GSTR1Action extends FileGSTR1Dialog {
 
     proceed_to_file() {
         const action = "proceed_to_file";
-        this.perform_gstr1_action(action, r => {
-            // already proceed to file
-            if (r.message) this.handle_proceed_to_file_response(r.message);
-            else this.check_action_status_with_retry(action);
-        });
+        this.frm.gstr1.data.is_nil = this.frm.doc.file_nil_gstr1;
+        this.frm.gstr1.refresh_no_data_message();
+
+        this.perform_gstr1_action(
+            action,
+            r => {
+                // already proceed to file
+                if (r.message) this.handle_proceed_to_file_response(r.message);
+                else this.check_action_status_with_retry(action);
+            },
+            { is_nil_return: this.frm.doc.file_nil_gstr1 }
+        );
     }
 
     async mark_as_unfiled() {
@@ -2858,12 +2932,12 @@ function is_gstr1_api_enabled() {
     return (
         india_compliance.is_api_enabled() &&
         !gst_settings.sandbox_mode &&
-        gst_settings.compare_gstr_1_data
+        gst_settings.enable_gstr_1_api
     );
 }
 
 function patch_set_indicator(frm) {
-    frm.toolbar.set_indicator = function () {};
+    frm.toolbar.set_indicator = function () { };
 }
 
 async function set_default_company_gstin(frm) {
@@ -2884,11 +2958,18 @@ async function set_default_company_gstin(frm) {
 
 function set_options_for_year(frm) {
     const today = new Date();
-    const current_year = today.getFullYear();
+    let current_year = today.getFullYear();
+    const current_month_idx = today.getMonth();
     const start_year = 2017;
     const year_range = current_year - start_year + 1;
     let options = Array.from({ length: year_range }, (_, index) => start_year + index);
     options = options.reverse().map(year => year.toString());
+
+    if (
+        (frm.filing_frequency === "Monthly" && current_month_idx === 0) ||
+        (frm.filing_frequency === "Quarterly" && current_month_idx < 3)
+    )
+        current_year--;
 
     frm.get_field("year").set_data(options);
     frm.set_value("year", current_year.toString());
@@ -2935,7 +3016,7 @@ function set_options_for_month_or_quarter(frm) {
     }
 
     set_field_options("month_or_quarter", options);
-    if (frm.doc.year === current_year)
+    if (frm.doc.year === current_year && options.length > 1)
         // set second last option as default
         frm.set_value("month_or_quarter", options[options.length - 2]);
     // set last option as default

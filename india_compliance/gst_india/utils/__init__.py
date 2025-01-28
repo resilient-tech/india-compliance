@@ -116,6 +116,7 @@ def get_gstin_list(party, party_type="Company"):
 
 
 @frappe.whitelist()
+@frappe.request_cache
 def get_party_for_gstin(gstin, party_type="Supplier"):
     if not gstin:
         return
@@ -1040,3 +1041,29 @@ def is_outward_stock_entry(doc):
         and not doc.is_return
     ):
         return True
+
+
+def create_notification(
+    message_content, document_type, document_name=None, request_id=None
+):
+    # request_id shows failure response
+    if request_id and (
+        doc_name := frappe.db.get_value(
+            "Integration Request", {"request_id": request_id}
+        )
+    ):
+        document_type = "Integration Request"
+        document_name = doc_name
+
+    notification = frappe.get_doc(
+        {
+            "doctype": "Notification Log",
+            "for_user": frappe.session.user,
+            "type": "Alert",
+            "document_type": document_type,
+            "document_name": document_name or document_type,
+            "subject": message_content.get("subject"),
+            "email_content": message_content.get("body"),
+        }
+    )
+    notification.insert()

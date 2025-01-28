@@ -23,8 +23,10 @@ india_compliance.DataTableManager = class DataTableManager {
         }
     }
 
-    refresh(data, columns) {
+    refresh(data, columns, noDataMessage) {
         this.data = data;
+        if (noDataMessage) this.datatable.options.noDataMessage = noDataMessage;
+
         this.datatable.refresh(data, columns);
     }
 
@@ -78,7 +80,13 @@ india_compliance.DataTableManager = class DataTableManager {
                 value = column._value(value, column, data);
             }
 
-            return frappe.format(value, column, { always_show_decimals: true }, data);
+            value = frappe.format(value, column, { always_show_decimals: true }, data);
+
+            if (column.post_format) {
+                value = column._after_format(value, column, data);
+            }
+
+            return value;
         };
 
         return {

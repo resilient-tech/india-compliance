@@ -1,6 +1,6 @@
 import frappe
 
-from india_compliance.gst_india.constants import STATE_NUMBERS
+from india_compliance.gst_india.constants import GST_CATEGORY_MAP, STATE_NUMBERS
 from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
     create_inward_supply,
 )
@@ -19,13 +19,7 @@ class GSTR:
         {
             "Y_N_to_check": {"Y": 1, "N": 0},
             "yes_no": {"Y": "Yes", "N": "No"},
-            "gst_category": {
-                "R": "Regular",
-                "SEZWP": "SEZ supplies with payment of tax",
-                "SEZWOP": "SEZ supplies with out payment of tax",
-                "DE": "Deemed exports",
-                "CBW": "Intra-State Supplies attracting IGST",
-            },
+            "gst_category": GST_CATEGORY_MAP,
             "states": {value: f"{value}-{key}" for key, value in STATE_NUMBERS.items()},
             "note_type": {"C": "Credit Note", "D": "Debit Note"},
             "isd_type_2a": {"ISDCN": "ISD Credit Note", "ISD": "ISD Invoice"},
@@ -62,13 +56,12 @@ class GSTR:
 
             current_transaction += 1
             frappe.publish_realtime(
-                "update_transactions_progress",
+                "update_2a_2b_transactions_progress",
                 {
                     "current_progress": current_transaction * 100 / total_transactions,
                     "return_period": self.return_period,
                 },
                 user=frappe.session.user,
-                doctype="Purchase Reconciliation Tool",
             )
 
             if transaction.get("unique_key") in self.existing_transaction:
