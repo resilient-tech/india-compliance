@@ -18,7 +18,6 @@ frappe.ui.form.on("Bill of Entry", {
     },
 
     refresh(frm) {
-        frm.set_df_property("reconciliation_status", "hidden", frm.is_new());
         india_compliance.set_reconciliation_status(frm, "bill_of_entry_no");
 
         if (frm.doc.docstatus === 0) return;
@@ -42,7 +41,7 @@ frappe.ui.form.on("Bill of Entry", {
         );
 
         if (
-            (frm.doc.docstatus === 1 && frm.doc.total_customs_duty > 0) ||
+            (frm.doc.docstatus === 1) ||
             has_ineligible_items
         ) {
             frm.add_custom_button(
