@@ -2,8 +2,11 @@
 # For license information, please see license.txt
 
 import frappe
+import frappe.query_builder
 from frappe import _
 from frappe.query_builder import Case, Order
+
+from india_compliance.gst_india.doctype.gstin.gstin import create_or_update_gstin_status
 
 
 def execute(filters: dict | None = None):
@@ -26,7 +29,7 @@ class GSTINDetailedReport:
         self.filters = frappe._dict(filters or {})
         self.doctypes = (
             [self.filters.reference_party]
-            if self.filters.reference_party != "All"
+            if self.filters.reference_party
             else ["Customer", "Supplier"]
         )
 
@@ -87,83 +90,88 @@ class GSTINDetailedReport:
         return columns
 
     def get_data(self):
-        GSTIN = frappe.qb.DocType("GSTIN")
-        Address = frappe.qb.DocType("Address")
-        DynamicLink = frappe.qb.DocType("Dynamic Link")
-        Customer = frappe.qb.DocType("Customer")
-        Supplier = frappe.qb.DocType("Supplier")
+        gstin = frappe.qb.DocType("GSTIN")
+        address = frappe.qb.DocType("Address")
+        dynamic_link = frappe.qb.DocType("Dynamic Link")
+        customer = frappe.qb.DocType("Customer")
+        supplier = frappe.qb.DocType("Supplier")
 
         customer_query = None
         supplier_query = None
         address_query = None
 
-        if self.filters.reference_party in ["All", "Customer"]:
+        if self.filters.reference_party in ["Customer"]:
             customer_query = (
-                frappe.qb.from_(Customer)
+                frappe.qb.from_(customer)
                 .select(
-                    Customer.gstin,
+                    customer.gstin,
                     frappe.qb.terms.LiteralValue("'Customer'").as_("reference_party"),
-                    Customer.name.as_("party_name"),
+                    customer.name.as_("party_name"),
                 )
-                .where(Customer.gstin != "")
+                .where(customer.gstin != "")
             )
 
-        if self.filters.reference_party in ["All", "Supplier"]:
+        if self.filters.reference_party in ["", "Supplier"]:
             supplier_query = (
-                frappe.qb.from_(Supplier)
+                frappe.qb.from_(supplier)
                 .select(
-                    Supplier.gstin,
+                    supplier.gstin,
                     frappe.qb.terms.LiteralValue("'Supplier'").as_("reference_party"),
-                    Supplier.name.as_("party_name"),
+                    supplier.name.as_("party_name"),
                 )
-                .where(Supplier.gstin != "")
+                .where(supplier.gstin != "")
             )
 
         address_query = (
-            frappe.qb.from_(Address)
-            .inner_join(DynamicLink)
-            .on(Address.name == DynamicLink.parent)
+            frappe.qb.from_(address)
+            .inner_join(dynamic_link)
+            .on(address.name == dynamic_link.parent)
             .select(
-                Address.gstin,
-                DynamicLink.link_doctype.as_("reference_party"),
-                DynamicLink.link_name.as_("party_name"),
+                address.gstin,
+                dynamic_link.link_doctype.as_("reference_party"),
+                dynamic_link.link_name.as_("party_name"),
             )
-            .where(DynamicLink.link_doctype.isin(self.doctypes))
+            .where(dynamic_link.link_doctype.isin(self.doctypes))
         )
 
-        if customer_query:
-            party_query = customer_query
-        else:
-            party_query = supplier_query
+        party_query = address_query
 
-        if customer_query and supplier_query:
+        if customer_query:
+            party_query = party_query.union(customer_query)
+
+        if supplier_query:
             party_query = party_query.union(supplier_query)
 
-        party_query = party_query.union(address_query)
         party_query = party_query.as_("party")
-
-        # Main query to join GSTIN with the combined party_query
 
         gstin_query = (
             frappe.qb.from_(party_query)
-            .left_join(GSTIN)
-            .on(GSTIN.gstin == party_query.gstin)
+            .left_join(gstin)
+            .on(gstin.gstin == party_query.gstin)
             .select(
-                GSTIN.gstin,
-                GSTIN.status,
-                GSTIN.registration_date,
-                GSTIN.last_updated_on,
-                GSTIN.cancelled_date,
-                Case().when(GSTIN.is_blocked == 0, "No").else_("Yes").as_("is_blocked"),
+                gstin.gstin,
+                gstin.status,
+                gstin.registration_date,
+                gstin.last_updated_on,
+                gstin.cancelled_date,
+                Case().when(gstin.is_blocked == 0, "No").else_("Yes").as_("is_blocked"),
                 party_query.reference_party,
                 party_query.party_name,
-                GSTIN.modified,
+                gstin.modified,
             )
         )
 
-        if self.filters.status != "All":
-            gstin_query = gstin_query.where(GSTIN.status == self.filters.status)
+        if self.filters.status:
+            gstin_query = gstin_query.where(gstin.status == self.filters.status)
 
-        gstin_query = gstin_query.orderby(GSTIN.modified, order=Order.desc)
+        gstin_query = gstin_query.orderby(gstin.modified, order=Order.desc)
 
         return gstin_query.run()
+
+
+@frappe.whitelist()
+def update_gstin_status(gstin):
+    updated_doc = create_or_update_gstin_status(gstin=gstin, throw=True)
+    updated_doc.is_blocked = "Yes" if updated_doc.is_blocked else "No"
+
+    return updated_doc
