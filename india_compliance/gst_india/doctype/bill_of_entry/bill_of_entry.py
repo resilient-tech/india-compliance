@@ -381,13 +381,15 @@ class BillofEntry(Document):
         frappe.has_permission("Bill Of Entry", "write")
         frappe.has_permission("Purchase Invoice", "read")
 
-        existing_items = [item.pi_detail for item in self.get("items")]
+        existing_items = [
+            item.pi_detail for item in self.get("items") if item.pi_detail
+        ]
         purchase_invoices = [
             pi.purchase_invoice for pi in self.get("purchase_invoices")
         ]
         item_to_add = get_pi_items(purchase_invoices)
 
-        if not existing_items[0]:
+        if not existing_items:
             self.items = []
 
         for item in item_to_add:
@@ -429,6 +431,12 @@ def set_missing_values(source, target=None):
     )
 
     if not has_igst_tax:
+        valid_tax_row = {
+            tax_row.account_head for tax_row in target.taxes if tax_row.account_head
+        }
+        if not valid_tax_row:
+            target.taxes = []
+
         target.append(
             "taxes",
             {

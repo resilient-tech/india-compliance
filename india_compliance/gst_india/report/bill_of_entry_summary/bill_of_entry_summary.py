@@ -44,7 +44,6 @@ def get_data(filters):
         frappe.qb.from_(bill_of_entry)
         .select(
             bill_of_entry.name,
-            bill_of_entry.purchase_invoice,
             bill_of_entry.bill_of_entry_no,
             bill_of_entry.bill_of_entry_date,
             bill_of_entry.bill_of_lading_no,
@@ -82,13 +81,14 @@ def update_journal_entry_for_payment(query):
 
 def update_purchase_invoice_query(query):
     bill_of_entry = frappe.qb.DocType("Bill of Entry")
-    purchase_invoice = frappe.qb.DocType("Purchase Invoice")
+    boe_purchase_invoice = frappe.qb.DocType("BOE Purchase Invoice")
 
     return (
-        query.left_join(purchase_invoice)
-        .on(purchase_invoice.name == bill_of_entry.purchase_invoice)
+        query.left_join(boe_purchase_invoice)
+        .on(boe_purchase_invoice.parent == bill_of_entry.name)
         .select(
-            purchase_invoice.supplier,
+            boe_purchase_invoice.purchase_invoice,
+            boe_purchase_invoice.supplier,
         )
     )
 

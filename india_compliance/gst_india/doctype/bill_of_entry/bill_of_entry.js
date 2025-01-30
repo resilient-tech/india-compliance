@@ -15,9 +15,6 @@ frappe.ui.form.on("Bill of Entry", {
                 },
             };
         };
-        frm.add_fetch("purchase_invoice", "supplier", "supplier");
-        frm.add_fetch("purchase_invoice", "posting_date", "posting_date");
-        frm.add_fetch("purchase_invoice", "base_grand_total", "grand_total");
     },
 
     refresh(frm) {
