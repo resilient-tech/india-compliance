@@ -2,8 +2,8 @@
 # For license information, please see license.txt
 
 import frappe
-import frappe.query_builder
 from frappe import _
+from frappe.query_builder import Case, Order
 
 
 def execute(filters: dict | None = None):
@@ -29,15 +29,6 @@ class GSTINDetailedReport:
             if self.filters.reference_party != "All"
             else ["Customer", "Supplier"]
         )
-        print("Doctypes", self.doctypes)
-        self.gstin_fields = [
-            "gstin",
-            "status",
-            "registration_date",
-            "last_updated_on",
-            "cancelled_date",
-            "is_blocked",
-        ]
 
     def get_columns(self) -> list[dict]:
         """Return columns for the report.
@@ -89,97 +80,90 @@ class GSTINDetailedReport:
                 "label": _("Update GSTIN Details"),
                 "fieldname": "update_gstin_details_btn",
                 "fieldtype": "Button",
-                "width": 160,
+                "width": 100,
             },
         ]
 
         return columns
 
-    def get_data(self) -> list[list]:
-        """Return data for the report.
-
-        The report data is a list of rows, with each row being a list of cell values.
-        """
-        all_references = self.get_all_references()
-        reference_gstins = [reference[0] for reference in all_references]
-        gstins_details = self.get_all_gstins_details(reference_gstins)
-
-        all_references = list(
-            filter(lambda reference: reference[0] in gstins_details, all_references)
-        )
-        rows = self.convert_to_rows(
-            all_references=all_references, gstins_details=gstins_details
-        )
-        rows.sort(key=lambda row: row[-1], reverse=True)
-        return rows
-
-    def get_all_gstins_details(self, gstins):
-        filters = {"name": ["in", gstins]}
-
-        if self.filters.status != "All":
-            filters["status"] = self.filters.status
-
-        gstins_details = frappe.get_list(
-            "GSTIN", filters=filters, fields=[*self.gstin_fields, "modified"]
-        )
-
-        return {detail.gstin: detail for detail in gstins_details}
-
-    def get_all_references(self):
-        all_references = set()
-        for doctype in self.doctypes:
-            reference = frappe.get_list(
-                doctype=doctype,
-                filters={"gstin": ["is", "set"]},
-                fields=["name", "gstin"],
-            )
-
-            all_references.update(
-                [(detail.gstin, doctype, detail.name) for detail in reference]
-            )
-
+    def get_data(self):
+        GSTIN = frappe.qb.DocType("GSTIN")
         Address = frappe.qb.DocType("Address")
         DynamicLink = frappe.qb.DocType("Dynamic Link")
+        Customer = frappe.qb.DocType("Customer")
+        Supplier = frappe.qb.DocType("Supplier")
 
-        query = (
+        customer_query = None
+        supplier_query = None
+        address_query = None
+
+        if self.filters.reference_party in ["All", "Customer"]:
+            customer_query = (
+                frappe.qb.from_(Customer)
+                .select(
+                    Customer.gstin,
+                    frappe.qb.terms.LiteralValue("'Customer'").as_("reference_party"),
+                    Customer.name.as_("party_name"),
+                )
+                .where(Customer.gstin != "")
+            )
+
+        if self.filters.reference_party in ["All", "Supplier"]:
+            supplier_query = (
+                frappe.qb.from_(Supplier)
+                .select(
+                    Supplier.gstin,
+                    frappe.qb.terms.LiteralValue("'Supplier'").as_("reference_party"),
+                    Supplier.name.as_("party_name"),
+                )
+                .where(Supplier.gstin != "")
+            )
+
+        address_query = (
             frappe.qb.from_(Address)
             .inner_join(DynamicLink)
             .on(Address.name == DynamicLink.parent)
-            .select(Address.gstin, DynamicLink.link_doctype, DynamicLink.link_name)
+            .select(
+                Address.gstin,
+                DynamicLink.link_doctype.as_("reference_party"),
+                DynamicLink.link_name.as_("party_name"),
+            )
             .where(DynamicLink.link_doctype.isin(self.doctypes))
         )
 
-        address_references = query.run()
-        all_references.update(address_references)
-        return all_references
+        if customer_query:
+            party_query = customer_query
+        else:
+            party_query = supplier_query
 
-    def convert_to_rows(self, all_references, gstins_details):
-        rows = []
+        if customer_query and supplier_query:
+            party_query = party_query.union(supplier_query)
 
-        for reference in all_references:
-            gstin = reference[0]
-            status = gstins_details[gstin]["status"]
-            registration_date = gstins_details[gstin]["registration_date"]
-            last_updated_on = gstins_details[gstin]["last_updated_on"]
-            cancelled_date = gstins_details[gstin]["cancelled_date"]
-            is_blocked = "Yes" if gstins_details[gstin]["is_blocked"] else "No"
-            reference_party = reference[1]
-            party_name = reference[2]
-            modified = gstins_details[gstin]["modified"]
+        party_query = party_query.union(address_query)
+        party_query = party_query.as_("party")
 
-            row = [
-                gstin,
-                status,
-                registration_date,
-                last_updated_on,
-                cancelled_date,
-                is_blocked,
-                reference_party,
-                party_name,
-                "Update",
-                modified,
-            ]
+        # Main query to join GSTIN with the combined party_query
 
-            rows.append(row)
+        gstin_query = (
+            frappe.qb.from_(party_query)
+            .left_join(GSTIN)
+            .on(GSTIN.gstin == party_query.gstin)
+            .select(
+                GSTIN.gstin,
+                GSTIN.status,
+                GSTIN.registration_date,
+                GSTIN.last_updated_on,
+                GSTIN.cancelled_date,
+                Case().when(GSTIN.is_blocked == 0, "No").else_("Yes").as_("is_blocked"),
+                party_query.reference_party,
+                party_query.party_name,
+                GSTIN.modified,
+            )
+        )
 
-        return rows
+        if self.filters.status != "All":
+            gstin_query = gstin_query.where(GSTIN.status == self.filters.status)
+
+        gstin_query = gstin_query.orderby(GSTIN.modified, order=Order.desc)
+
+        return gstin_query.run()
