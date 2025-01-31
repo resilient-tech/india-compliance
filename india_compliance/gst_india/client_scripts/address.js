@@ -63,8 +63,13 @@ function update_address_fields(frm) {
     const original_quick_entry_form = frappe.ui.form.AddressQuickEntryForm;
 
     frappe.ui.form.AddressQuickEntryForm = class extends frappe.ui.form.AddressQuickEntryForm {
+        title = "Update Address"
         get_dynamic_link_fields() { return []; }
-        update_doc() { frm.refresh(); }
+        update_doc() {
+            const doc = super.update_doc();
+            frm.refresh();
+            return doc;
+        }
     }
     frappe.ui.form.make_quick_entry(DOCTYPE, null, null, doc);
 
