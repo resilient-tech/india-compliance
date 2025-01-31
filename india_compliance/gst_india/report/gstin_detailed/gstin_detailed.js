@@ -2,7 +2,7 @@
 // For license information, please see license.txt
 
 
-const COLUMNS = {
+const COLUMN_MAPPING = {
 	2 : "status",
 	3 : "registration_date",
 	4 : "last_updated_on",
@@ -46,12 +46,18 @@ frappe.query_reports["GSTIN Detailed"] = {
 			if (column.fieldname == "update_gstin_details_btn") {
 				value = create_btn_with_gstin_attr(data.gstin);
 			}
+			if(column.fieldtype === "Date"){
+				return value;
+			}
 		}
 
 		return default_formatter(value, row, column, data);
 	},
 
 	add_on_click_listner(gstin) {
+		let btn = $(`button[data-gstin='${gstin}']`)
+		btn.prop('disabled', true)
+
 		frappe.call({
 			method: "india_compliance.gst_india.report.gstin_detailed.gstin_detailed.update_gstin_status",
 			type: "GET",
@@ -59,19 +65,26 @@ frappe.query_reports["GSTIN Detailed"] = {
 				gstin: gstin,
 			},
 			callback: function (r) {
-				console.log(r);
 				if (r.message) {
 					let data = r.message;
 					$(`[class="dt-cell__content dt-cell__content--col-1"][title='${gstin}']`)
 						.each(function () {
 							row = this.parentElement.attributes["data-row-index"].value;
-							for (let col in COLUMNS) {
-								update_value(row, col, COLUMNS[col])
+							for (let col in COLUMN_MAPPING) {
+								if(COLUMN_MAPPING[col]=="is_blocked"){
+									update_value(row, col, data[COLUMN_MAPPING[col]]==0?"No":"Yes")
+								}else{
+									update_value(row, col,data[COLUMN_MAPPING[col]])
+								}
 							}
 						})
 
 				}
+				else{
+					btn.prop('disabled', false)
+				}
 			}
+
 		})
 	},
 };

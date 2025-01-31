@@ -5,8 +5,13 @@ import frappe
 import frappe.query_builder
 from frappe import _
 from frappe.query_builder import Case, Order
+from frappe.query_builder.functions import Function
 
 from india_compliance.gst_india.doctype.gstin.gstin import create_or_update_gstin_status
+
+
+def DATE_FORMAT(field, format_str="%y-%m-%d"):
+    return Function("DATE_FORMAT", field, format_str)
 
 
 def execute(filters: dict | None = None):
@@ -100,27 +105,11 @@ class GSTINDetailedReport:
         supplier_query = None
         address_query = None
 
-        if self.filters.reference_party in ["Customer"]:
-            customer_query = (
-                frappe.qb.from_(customer)
-                .select(
-                    customer.gstin,
-                    frappe.qb.terms.LiteralValue("'Customer'").as_("reference_party"),
-                    customer.name.as_("party_name"),
-                )
-                .where(customer.gstin != "")
-            )
+        if self.filters.reference_party == "Customer":
+            customer_query = get_doctype_query("Customer", customer)
 
-        if self.filters.reference_party in ["", "Supplier"]:
-            supplier_query = (
-                frappe.qb.from_(supplier)
-                .select(
-                    supplier.gstin,
-                    frappe.qb.terms.LiteralValue("'Supplier'").as_("reference_party"),
-                    supplier.name.as_("party_name"),
-                )
-                .where(supplier.gstin != "")
-            )
+        if self.filters.reference_party == "Supplier":
+            supplier_query = get_doctype_query("Supplier", supplier)
 
         address_query = (
             frappe.qb.from_(address)
@@ -151,9 +140,9 @@ class GSTINDetailedReport:
             .select(
                 gstin.gstin,
                 gstin.status,
-                gstin.registration_date,
-                gstin.last_updated_on,
-                gstin.cancelled_date,
+                DATE_FORMAT(gstin.registration_date).as_("registration_date"),
+                DATE_FORMAT(gstin.last_updated_on).as_("last_updated_on"),
+                DATE_FORMAT(gstin.cancelled_date).as_("cancelled_date"),
                 Case().when(gstin.is_blocked == 0, "No").else_("Yes").as_("is_blocked"),
                 party_query.reference_party,
                 party_query.party_name,
@@ -169,9 +158,34 @@ class GSTINDetailedReport:
         return gstin_query.run()
 
 
+def get_doctype_query(doctype_name, doctype_table):
+    query = (
+        frappe.qb.from_(doctype_table)
+        .select(
+            doctype_table.gstin,
+            frappe.qb.terms.LiteralValue(f"'{doctype_name}'").as_("reference_party"),
+            doctype_table.name.as_("party_name"),
+        )
+        .where(doctype_table.gstin != "")
+    )
+
+    return query
+
+
 @frappe.whitelist()
 def update_gstin_status(gstin):
     updated_doc = create_or_update_gstin_status(gstin=gstin, throw=True)
-    updated_doc.is_blocked = "Yes" if updated_doc.is_blocked else "No"
+    if updated_doc.registration_date:
+        updated_doc.registration_date = updated_doc.registration_date.strftime(
+            "%d-%m-%Y"
+        )
+
+    if updated_doc.last_updated_on:
+        updated_doc.last_updated_on = updated_doc.last_updated_on.strftime("%d-%m-%Y")
+
+    if updated_doc.cancelled_date:
+        updated_doc.cancelled_date = updated_doc.cancelled_date.strftime("%d-%m-%Y")
+
+    updated_doc.is_blocked = "Yes" if updated_doc.is_blocked != 0 else "No"
 
     return updated_doc
