@@ -60,25 +60,21 @@ frappe.query_reports["GSTIN Detailed"] = {
 
 		frappe.call({
 			method: "india_compliance.gst_india.report.gstin_detailed.gstin_detailed.update_gstin_status",
-			type: "GET",
 			args: {
 				gstin: gstin,
 			},
 			callback: function (r) {
 				if (r.message) {
+					console.log(r);
+
 					let data = r.message;
 					$(`[class="dt-cell__content dt-cell__content--col-1"][title='${gstin}']`)
 						.each(function () {
 							row = this.parentElement.attributes["data-row-index"].value;
 							for (let col in COLUMN_MAPPING) {
-								if(COLUMN_MAPPING[col]=="is_blocked"){
-									update_value(row, col, data[COLUMN_MAPPING[col]]==0?"No":"Yes")
-								}else{
-									update_value(row, col,data[COLUMN_MAPPING[col]])
-								}
+								update_value(row, col, data[COLUMN_MAPPING[col]])
 							}
 						})
-
 				}
 				else{
 					btn.prop('disabled', false)

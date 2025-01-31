@@ -174,7 +174,7 @@ def get_doctype_query(doctype_name, doctype_table):
 
 @frappe.whitelist()
 def update_gstin_status(gstin):
-    updated_doc = create_or_update_gstin_status(gstin=gstin, throw=True)
+    updated_doc = create_or_update_gstin_status(gstin=gstin, throw=True).as_dict()
     if updated_doc.registration_date:
         updated_doc.registration_date = updated_doc.registration_date.strftime(
             "%d-%m-%Y"
