@@ -11,6 +11,9 @@ const COLUMN_MAPPING = {
 }
 
 frappe.query_reports["GSTIN Detailed"] = {
+
+	html_enabled: true,
+
 	filters: [
 		{
 			"fieldname": "status",
@@ -26,8 +29,8 @@ frappe.query_reports["GSTIN Detailed"] = {
 			],
 		},
 		{
-			"fieldname": "reference_party",
-			"label": __("Reference Party"),
+			"fieldname": "party_type",
+			"label": __("Party Type"),
 			"fieldtype": "Select",
 			"options": [
 				"",
@@ -40,9 +43,17 @@ frappe.query_reports["GSTIN Detailed"] = {
 	],
 
 	formatter: function (value, row, column, data, default_formatter) {
-		value = default_formatter(value, row, column, data);
-
 		if (data) {
+			if(column.fieldname=="party_name"){
+				column.options = data.party_type;
+			}
+
+			value = default_formatter(value, row, column, data);
+
+			if(column.fieldtype === "Link"){
+				return value;
+			}
+
 			if (column.fieldname == "update_gstin_details_btn") {
 				value = create_btn_with_gstin_attr(data.gstin);
 			}
@@ -51,12 +62,13 @@ frappe.query_reports["GSTIN Detailed"] = {
 			}
 		}
 
-		return default_formatter(value, row, column, data);
+		return value;
 	},
 
 	add_on_click_listner(gstin) {
-		let btn = $(`button[data-gstin='${gstin}']`)
-		btn.prop('disabled', true)
+		toggle_gstin_update_btn(gstin, disabled=true);
+		const affectedElements = $(`[class="dt-cell__content dt-cell__content--col-1"][title='${gstin}']`);
+		toggle_rows_opacity(affectedElements, opacity=0.5)
 
 		frappe.call({
 			method: "india_compliance.gst_india.report.gstin_detailed.gstin_detailed.update_gstin_status",
@@ -65,25 +77,44 @@ frappe.query_reports["GSTIN Detailed"] = {
 			},
 			callback: function (r) {
 				if (r.message) {
-					console.log(r);
-
 					let data = r.message;
-					$(`[class="dt-cell__content dt-cell__content--col-1"][title='${gstin}']`)
-						.each(function () {
-							row = this.parentElement.attributes["data-row-index"].value;
-							for (let col in COLUMN_MAPPING) {
-								update_value(row, col, data[COLUMN_MAPPING[col]])
-							}
-						})
+					affectedElements.each(function () {
+						row = this.parentElement.attributes["data-row-index"].value;
+						for (let col in COLUMN_MAPPING) {
+							update_value(row, col, data[COLUMN_MAPPING[col]])
+						}
+					})
 				}
 				else{
-					btn.prop('disabled', false)
+					toggle_gstin_update_btn(gstin, disabled=false);
 				}
+				toggle_rows_opacity(affectedElements, opacity=1)
 			}
 
 		})
 	},
 };
+
+function toggle_rows_opacity(elements, opacity=null){
+	elements.each(function(){
+		let row = this.parentElement.parentElement;
+		if(opacity==null){
+			opacity = row.style["opacity"];
+			opacity = opacity===1?0.5:1;
+		}
+		row.style["opacity"] = opacity
+	})
+}
+
+function toggle_gstin_update_btn(gstin, disabled=null){
+	let btn = $(`button[data-gstin='${gstin}']`)
+	if(disabled==null){
+		disabled = btn.prop('disabled')
+		disabled = !disabled
+	}
+
+	btn.prop("disabled", disabled)
+}
 
 function create_btn_with_gstin_attr(gstin) {
 	const BUTTON_HTML = `<button data-fieldname="gstin_update_btn" class="btn btn-xs btn-primary center" data-gstin="${gstin}" onclick="frappe.query_reports['GSTIN Detailed'].add_on_click_listner('${gstin}')">Update</button>`;

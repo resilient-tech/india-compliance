@@ -10,7 +10,7 @@ from frappe.query_builder.functions import Function
 from india_compliance.gst_india.doctype.gstin.gstin import create_or_update_gstin_status
 
 
-def DATE_FORMAT(field, format_str="%y-%m-%d"):
+def DATE_FORMAT(field, format_str="%Y-%m-%d"):
     return Function("DATE_FORMAT", field, format_str)
 
 
@@ -33,8 +33,8 @@ class GSTINDetailedReport:
     def __init__(self, filters: dict | None = None):
         self.filters = frappe._dict(filters or {})
         self.doctypes = (
-            [self.filters.reference_party]
-            if self.filters.reference_party
+            [self.filters.party_type]
+            if self.filters.party_type
             else ["Customer", "Supplier"]
         )
 
@@ -47,7 +47,8 @@ class GSTINDetailedReport:
             {
                 "label": _("GSTIN"),
                 "fieldname": "gstin",
-                "fieldtype": "Data",
+                "fieldtype": "Link",
+                "options": "GSTIN",
             },
             {
                 "label": _("Status"),
@@ -75,14 +76,16 @@ class GSTINDetailedReport:
                 "fieldtype": "Data",
             },
             {
-                "label": _("Reference Party"),
-                "fieldname": "reference_party",
-                "fieldtype": "Data",
+                "label": _("Party Type"),
+                "fieldname": "party_type",
+                "fieldtype": "Link",
+                "options": "DocType",
             },
             {
                 "label": _("Party Name"),
                 "fieldname": "party_name",
-                "fieldtype": "Data",
+                "fieldtype": "Link",
+                "options": "Customer",
             },
             {
                 "label": _("Update GSTIN Details"),
@@ -105,10 +108,10 @@ class GSTINDetailedReport:
         supplier_query = None
         address_query = None
 
-        if self.filters.reference_party == "Customer":
+        if self.filters.party_type == "Customer":
             customer_query = get_doctype_query("Customer", customer)
 
-        if self.filters.reference_party == "Supplier":
+        if self.filters.party_type == "Supplier":
             supplier_query = get_doctype_query("Supplier", supplier)
 
         address_query = (
@@ -117,7 +120,7 @@ class GSTINDetailedReport:
             .on(address.name == dynamic_link.parent)
             .select(
                 address.gstin,
-                dynamic_link.link_doctype.as_("reference_party"),
+                dynamic_link.link_doctype.as_("party_type"),
                 dynamic_link.link_name.as_("party_name"),
             )
             .where(dynamic_link.link_doctype.isin(self.doctypes))
@@ -144,7 +147,7 @@ class GSTINDetailedReport:
                 DATE_FORMAT(gstin.last_updated_on).as_("last_updated_on"),
                 DATE_FORMAT(gstin.cancelled_date).as_("cancelled_date"),
                 Case().when(gstin.is_blocked == 0, "No").else_("Yes").as_("is_blocked"),
-                party_query.reference_party,
+                party_query.party_type,
                 party_query.party_name,
                 gstin.modified,
             )
@@ -163,7 +166,7 @@ def get_doctype_query(doctype_name, doctype_table):
         frappe.qb.from_(doctype_table)
         .select(
             doctype_table.gstin,
-            frappe.qb.terms.LiteralValue(f"'{doctype_name}'").as_("reference_party"),
+            frappe.qb.terms.LiteralValue(f"'{doctype_name}'").as_("party_type"),
             doctype_table.name.as_("party_name"),
         )
         .where(doctype_table.gstin != "")
