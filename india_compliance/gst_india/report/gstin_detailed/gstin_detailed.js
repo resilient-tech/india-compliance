@@ -44,21 +44,10 @@ frappe.query_reports["GSTIN Detailed"] = {
 
 	formatter: function (value, row, column, data, default_formatter) {
 		if (data) {
-			if(column.fieldname=="party_name"){
-				column.options = data.party_type;
-			}
-
 			value = default_formatter(value, row, column, data);
-
-			if(column.fieldtype === "Link"){
-				return value;
-			}
 
 			if (column.fieldname == "update_gstin_details_btn") {
 				value = create_btn_with_gstin_attr(data.gstin);
-			}
-			if(column.fieldtype === "Date"){
-				return value;
 			}
 		}
 
@@ -71,9 +60,10 @@ frappe.query_reports["GSTIN Detailed"] = {
 		toggle_rows_opacity(affectedElements, opacity=0.5)
 
 		frappe.call({
-			method: "india_compliance.gst_india.report.gstin_detailed.gstin_detailed.update_gstin_status",
+			method: "india_compliance.gst_india.doctype.gstin.gstin.get_gstin_status",
 			args: {
 				gstin: gstin,
+				force_update: true,
 			},
 			callback: function (r) {
 				if (r.message) {

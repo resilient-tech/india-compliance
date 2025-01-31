@@ -2,16 +2,9 @@
 # For license information, please see license.txt
 
 import frappe
-import frappe.query_builder
 from frappe import _
 from frappe.query_builder import Case, Order
-from frappe.query_builder.functions import Function
-
-from india_compliance.gst_india.doctype.gstin.gstin import create_or_update_gstin_status
-
-
-def DATE_FORMAT(field, format_str="%Y-%m-%d"):
-    return Function("DATE_FORMAT", field, format_str)
+from frappe.query_builder.functions import IfNull
 
 
 def execute(filters: dict | None = None):
@@ -45,6 +38,18 @@ class GSTINDetailedReport:
         """
         columns = [
             {
+                "label": _("Party Type"),
+                "fieldname": "party_type",
+                "fieldtype": "Link",
+                "options": "DocType",
+            },
+            {
+                "label": _("Party Name"),
+                "fieldname": "party_name",
+                "fieldtype": "Dynamic Link",
+                "options": "party_type",
+            },
+            {
                 "label": _("GSTIN"),
                 "fieldname": "gstin",
                 "fieldtype": "Link",
@@ -63,7 +68,7 @@ class GSTINDetailedReport:
             {
                 "label": _("Last Updated On"),
                 "fieldname": "last_updated_on",
-                "fieldtype": "Date",
+                "fieldtype": "Datetime",
             },
             {
                 "label": _("Cancelled Date"),
@@ -74,18 +79,6 @@ class GSTINDetailedReport:
                 "label": _("Is Blocked"),
                 "fieldname": "is_blocked",
                 "fieldtype": "Data",
-            },
-            {
-                "label": _("Party Type"),
-                "fieldname": "party_type",
-                "fieldtype": "Link",
-                "options": "DocType",
-            },
-            {
-                "label": _("Party Name"),
-                "fieldname": "party_name",
-                "fieldtype": "Link",
-                "options": "Customer",
             },
             {
                 "label": _("Update GSTIN Details"),
@@ -101,20 +94,8 @@ class GSTINDetailedReport:
         gstin = frappe.qb.DocType("GSTIN")
         address = frappe.qb.DocType("Address")
         dynamic_link = frappe.qb.DocType("Dynamic Link")
-        customer = frappe.qb.DocType("Customer")
-        supplier = frappe.qb.DocType("Supplier")
 
-        customer_query = None
-        supplier_query = None
-        address_query = None
-
-        if self.filters.party_type == "Customer":
-            customer_query = get_doctype_query("Customer", customer)
-
-        if self.filters.party_type == "Supplier":
-            supplier_query = get_doctype_query("Supplier", supplier)
-
-        address_query = (
+        party_query = (
             frappe.qb.from_(address)
             .inner_join(dynamic_link)
             .on(address.name == dynamic_link.parent)
@@ -124,17 +105,11 @@ class GSTINDetailedReport:
                 dynamic_link.link_name.as_("party_name"),
             )
             .where(dynamic_link.link_doctype.isin(self.doctypes))
-        )
+            .where(IfNull(address.gstin, "") != "")
+        ).as_("party")
 
-        party_query = address_query
-
-        if customer_query:
-            party_query = party_query.union(customer_query)
-
-        if supplier_query:
-            party_query = party_query.union(supplier_query)
-
-        party_query = party_query.as_("party")
+        for doctype in self.doctypes:
+            party_query.union(get_party_query(doctype))
 
         gstin_query = (
             frappe.qb.from_(party_query)
@@ -143,52 +118,33 @@ class GSTINDetailedReport:
             .select(
                 gstin.gstin,
                 gstin.status,
-                DATE_FORMAT(gstin.registration_date).as_("registration_date"),
-                DATE_FORMAT(gstin.last_updated_on).as_("last_updated_on"),
-                DATE_FORMAT(gstin.cancelled_date).as_("cancelled_date"),
+                gstin.registration_date,
+                gstin.last_updated_on,
+                gstin.cancelled_date,
                 Case().when(gstin.is_blocked == 0, "No").else_("Yes").as_("is_blocked"),
                 party_query.party_type,
                 party_query.party_name,
-                gstin.modified,
             )
+            .orderby(gstin.modified, order=Order.desc)
         )
 
         if self.filters.status:
             gstin_query = gstin_query.where(gstin.status == self.filters.status)
 
-        gstin_query = gstin_query.orderby(gstin.modified, order=Order.desc)
-
-        return gstin_query.run()
+        return gstin_query.run(as_dict=True)
 
 
-def get_doctype_query(doctype_name, doctype_table):
+def get_party_query(doctype):
+    dt = frappe.qb.DocType(doctype)
+
     query = (
-        frappe.qb.from_(doctype_table)
+        frappe.qb.from_(dt)
         .select(
-            doctype_table.gstin,
-            frappe.qb.terms.LiteralValue(f"'{doctype_name}'").as_("party_type"),
-            doctype_table.name.as_("party_name"),
+            dt.gstin,
+            dt.doctype.as_("party_type"),
+            dt.name.as_("party_name"),
         )
-        .where(doctype_table.gstin != "")
+        .where(IfNull(dt.gstin, "") != "")
     )
 
     return query
-
-
-@frappe.whitelist()
-def update_gstin_status(gstin):
-    updated_doc = create_or_update_gstin_status(gstin=gstin, throw=True).as_dict()
-    if updated_doc.registration_date:
-        updated_doc.registration_date = updated_doc.registration_date.strftime(
-            "%d-%m-%Y"
-        )
-
-    if updated_doc.last_updated_on:
-        updated_doc.last_updated_on = updated_doc.last_updated_on.strftime("%d-%m-%Y")
-
-    if updated_doc.cancelled_date:
-        updated_doc.cancelled_date = updated_doc.cancelled_date.strftime("%d-%m-%Y")
-
-    updated_doc.is_blocked = "Yes" if updated_doc.is_blocked != 0 else "No"
-
-    return updated_doc
