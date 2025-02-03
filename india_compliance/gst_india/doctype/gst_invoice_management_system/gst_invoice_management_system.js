@@ -62,8 +62,10 @@ frappe.ui.form.on(DOCTYPE, {
 
     company_gstin(frm) {
         render_empty_state(frm);
-        if (frm.doc.company_gstin) set_period_options(frm);
+        set_period_options(frm);
     },
+
+    period: render_empty_state,
 
     refresh(frm) {
         show_download_invoices_message(frm);
@@ -587,7 +589,7 @@ class IMS extends reconciliation.reconciliation_tabs {
         for (const row of data) {
             if (!row._purchase_invoice?.posting_date) continue;
 
-            const bill_date = str_to_obj(row.bill_date);
+            const bill_date = str_to_obj(row._inward_supply.bill_date);
             const posting_date = str_to_obj(row._purchase_invoice.posting_date);
 
             if (posting_date > reference_date && bill_date <= reference_date) {
@@ -1051,6 +1053,8 @@ function show_download_invoices_message(frm) {
 }
 
 async function set_period_options(frm) {
+    if (!(frm.doc.company && frm.doc.company_gstin)) return;
+
     const { message: period_options } = await frappe.call({
         method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.get_period_options",
         args: { company: frm.doc.company, company_gstin: frm.doc.company_gstin },

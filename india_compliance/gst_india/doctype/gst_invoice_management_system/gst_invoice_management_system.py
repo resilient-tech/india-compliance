@@ -300,9 +300,12 @@ def get_period_options(company, company_gstin):
     # Generate last six months of valid periods
     periods = []
     date = getdate()
-    for i in range(6):
+
+    while True:
         period = date.strftime("%m%Y")
-        if format_period(period) <= latest_3b_filed_period:
+        formatted_period = format_period(period)
+
+        if formatted_period <= latest_3b_filed_period or formatted_period < "201707":
             break
 
         periods.append(period)

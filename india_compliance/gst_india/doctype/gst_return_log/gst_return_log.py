@@ -309,6 +309,8 @@ def process_gstr_3b_returns_info(company, gstin, e_filed_list):
         gstr3b_log.gstin = gstin
         gstr3b_log.return_type = "GSTR3B"
         gstr3b_log.filing_status = "Filed"
+        gstr3b_log.acknowledgement_number = info["arn"]
+        gstr3b_log.filing_date = datetime.strptime(info["dof"], "%d-%m-%Y").date()
         gstr3b_log.insert()
 
 
