@@ -11,12 +11,13 @@ class GovDataMapper:
     DEFAULT_ITEM_AMOUNTS = {}
 
     def __init__(self):
-        # value formatting constants
+        self.set_total_defaults()
+
         self.value_formatters_for_internal = {}
         self.value_formatters_for_gov = {}
 
+        # value formatting constants
         self.STATE_NUMBERS = self.reverse_dict(STATE_NUMBERS)
-        self.set_total_defaults()
 
     def format_data(
         self, data: dict, default_data: dict = None, for_gov: bool = False
@@ -39,7 +40,11 @@ class GovDataMapper:
         output = {}
 
         if default_data:
-            output.update(default_data)
+            for key, value in default_data.items():
+                if not (value or value == 0):
+                    continue
+
+                output[key] = value
 
         key_mapping = self.KEY_MAPPING.copy()
 
@@ -79,16 +84,6 @@ class GovDataMapper:
 
     # common utils
 
-    def reverse_dict(self, data):
-        return {v: k for k, v in data.items()}
-
-    # common value formatters
-    def map_place_of_supply(self, pos, *args):
-        if pos.isnumeric():
-            return f"{pos}-{self.STATE_NUMBERS.get(pos)}"
-
-        return pos.split("-")[0]
-
     def update_totals(self, invoice, items):
         """
         Update item totals to the invoice row
@@ -108,3 +103,13 @@ class GovDataMapper:
         self.TOTAL_DEFAULTS = {
             f"total_{key}": 0 for key in self.DEFAULT_ITEM_AMOUNTS.keys()
         }
+
+    def reverse_dict(self, data):
+        return {v: k for k, v in data.items()}
+
+    # common value formatters
+    def map_place_of_supply(self, pos, *args):
+        if pos.isnumeric():
+            return f"{pos}-{self.STATE_NUMBERS.get(pos)}"
+
+        return pos.split("-")[0]

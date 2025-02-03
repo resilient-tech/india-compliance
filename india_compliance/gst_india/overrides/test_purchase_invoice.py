@@ -1,11 +1,11 @@
 import frappe
-from frappe.tests.utils import FrappeTestCase, change_settings
+from frappe.tests import IntegrationTestCase, change_settings
 from erpnext.accounts.doctype.account.test_account import create_account
 
 from india_compliance.gst_india.utils.tests import append_item, create_purchase_invoice
 
 
-class TestPurchaseInvoice(FrappeTestCase):
+class TestPurchaseInvoice(IntegrationTestCase):
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_itc_classification(self):
         pinv = create_purchase_invoice(
@@ -58,3 +58,31 @@ class TestPurchaseInvoice(FrappeTestCase):
             "Reverse Charge is not applicable on Import of Goods",
             pinv.save,
         )
+
+    def test_validate_invoice_length(self):
+        # No error for registered supplier
+        pinv = create_purchase_invoice(
+            supplier="_Test Registered Supplier",
+            is_reverse_charge=True,
+            do_not_save=True,
+        )
+        setattr(pinv, "__newname", "INV/2022/00001/asdfsadf")  # NOQA
+        pinv.meta.autoname = "prompt"
+        pinv.save()
+
+        # Error for unregistered supplier
+        pinv = create_purchase_invoice(
+            supplier="_Test Unregistered Supplier",
+            is_reverse_charge=True,
+            do_not_save=True,
+        )
+        setattr(pinv, "__newname", "INV/2022/00001/asdfsadg")  # NOQA
+        pinv.save()
+
+        self.assertEqual(
+            frappe.parse_json(frappe.message_log[-1]).get("message"),
+            "Transaction Name must be 16 characters or fewer to meet GST requirements",
+        )
+
+        # Reset autoname (as it's cached)
+        pinv.meta.autoname = "naming_series:"

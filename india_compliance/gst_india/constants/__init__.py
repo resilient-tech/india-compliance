@@ -36,6 +36,23 @@ GST_CATEGORIES = {
     "Input Service Distributor": "B2B",
 }
 
+GST_CATEGORY_MAP = {
+    "R": "Regular",
+    "SEZWP": "SEZ supplies with payment of tax",
+    "SEZWOP": "SEZ supplies with out payment of tax",
+    "DE": "Deemed exports",
+    "CBW": "Intra-State Supplies attracting IGST",
+}
+
+ACTION_MAP = {"A": "Accepted", "R": "Rejected", "P": "Pending", "N": "No Action"}
+
+STATUS_CODE_MAP = {
+    "P": "Processed",
+    "PE": "Processed with Errors",
+    "ER": "Error",
+    "IP": "In Progress",
+}
+
 EXPORT_TYPES = (
     "WOP",  # Without Payment of Tax [0]
     "WP",  # With Payment of Tax [1]
@@ -146,7 +163,7 @@ STATE_PINCODE_MAPPING = {
     "Jammu and Kashmir": (180, 194),
     "Himachal Pradesh": (171, 177),
     "Punjab": (140, 160),
-    "Chandigarh": (160, 160),
+    "Chandigarh": ((140, 140), (160, 160)),
     "Uttarakhand": (244, 263),
     "Haryana": (121, 136),
     "Delhi": (110, 110),

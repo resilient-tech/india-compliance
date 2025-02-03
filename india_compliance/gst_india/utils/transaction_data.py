@@ -14,6 +14,7 @@ from india_compliance.gst_india.constants.e_waybill import (
     TRANSPORT_MODES,
     VEHICLE_TYPES,
 )
+from india_compliance.gst_india.overrides.transaction import _validate_hsn_codes
 from india_compliance.gst_india.utils import (
     get_gst_uom,
     get_validated_country_code,
@@ -283,6 +284,14 @@ class GSTTransactionData:
                 title=_("Invalid Data"),
             )
 
+        _validate_hsn_codes(
+            self.doc,
+            valid_hsn_length=[6, 8],
+            message=_(
+                "Since HSN/SAC Code is mandatory for generating e-Waybill/e-Invoices.<br>"
+            ),
+        )
+
     def get_all_item_details(self):
         all_item_details = []
 
@@ -388,9 +397,9 @@ class GSTTransactionData:
 
             tax = row.gst_tax_type
             tax_rate = self.rounded(
-                frappe.parse_json(row.item_wise_tax_detail).get(
-                    item.item_code or item.item_name
-                )[0],
+                frappe.parse_json(row.item_wise_tax_detail)
+                .get(item.item_code or item.item_name)
+                .get("tax_rate"),
                 3,
             )
 

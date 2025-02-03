@@ -32,10 +32,7 @@ from india_compliance.gst_india.constants.e_invoice import (
 from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
     get_e_invoice_applicability_date,
 )
-from india_compliance.gst_india.overrides.transaction import (
-    _validate_hsn_codes,
-    validate_mandatory_fields,
-)
+from india_compliance.gst_india.overrides.transaction import validate_mandatory_fields
 from india_compliance.gst_india.utils import (
     are_goods_supplied,
     handle_server_errors,
@@ -112,8 +109,9 @@ def generate_e_invoices(docnames, force=False):
             frappe.clear_last_message()
 
         finally:
-            # each e-Invoice needs to be committed individually
-            frappe.db.commit()  # nosemgrep
+            if not frappe.flags.in_test:
+                # each e-Invoice needs to be committed individually
+                frappe.db.commit()  # nosemgrep
 
 
 @frappe.whitelist()
@@ -147,7 +145,7 @@ def generate_e_invoice(docname, throw=True, force=False):
             )
 
         # Handle Invalid GSTIN Error
-        if result.error_code in ("3028", "3029"):
+        if result.error_code in ("3028", "3029", "3001"):
             gstin = data.get("BuyerDtls").get("Gstin")
             response = api.sync_gstin_info(gstin)
 
@@ -333,6 +331,13 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False, messag
 def cancel_e_invoice(docname, values):
     doc = load_doc("Sales Invoice", docname, "cancel")
     values = frappe.parse_json(values)
+
+    _cancel_e_invoice(doc, values)
+
+    return send_updated_doc(doc)
+
+
+def _cancel_e_invoice(doc, values):
     validate_if_e_invoice_can_be_cancelled(doc)
 
     if doc.get("ewaybill"):
@@ -351,7 +356,6 @@ def cancel_e_invoice(docname, values):
     )
 
     doc.cancel()
-    return send_updated_doc(doc)
 
 
 def log_and_process_e_invoice_cancellation(doc, values, result, message):
@@ -498,14 +502,6 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
     return True
 
 
-def validate_hsn_codes_for_e_invoice(doc):
-    _validate_hsn_codes(
-        doc,
-        valid_hsn_length=[6, 8],
-        message=_("Since HSN/SAC Code is mandatory for generating e-Invoices.<br>"),
-    )
-
-
 def validate_taxable_item(doc, throw=True):
     """
     Validates that the document contains at least one GST taxable item.
@@ -621,8 +617,6 @@ class EInvoiceData(GSTTransactionData):
             "customer_address",
             _("{0} is a mandatory field for generating e-Invoices"),
         )
-
-        validate_hsn_codes_for_e_invoice(self.doc)
 
         if len(self.doc.items) > ITEM_LIMIT:
             frappe.throw(
@@ -772,11 +766,7 @@ class EInvoiceData(GSTTransactionData):
             self.doc.company_address, validate_gstin=True
         )
 
-        ship_to_address = (
-            self.doc.port_address
-            if (is_foreign_doc(self.doc) and self.doc.port_address)
-            else self.doc.shipping_address_name
-        )
+        ship_to_address = self.doc.shipping_address_name
 
         # Defaults
         self.shipping_address = None

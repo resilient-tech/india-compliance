@@ -3,7 +3,7 @@ import re
 from contextlib import contextmanager
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 from erpnext.accounts.doctype.payment_entry.payment_entry import (
     get_outstanding_reference_documents,
 )
@@ -47,7 +47,7 @@ def toggle_seperate_advance_accounting():
         )
 
 
-class TestAdvancePaymentEntry(FrappeTestCase):
+class TestAdvancePaymentEntry(IntegrationTestCase):
     EXPECTED_GL = [
         {"account": "Cash - _TIRC", "debit": 590.0, "credit": 0.0},
         {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 500.0},

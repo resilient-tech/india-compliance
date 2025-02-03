@@ -3,11 +3,16 @@
 import re
 
 import frappe
-from frappe.tests.utils import FrappeTestCase, change_settings
+from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils.data import getdate
 
+IGNORE_TEST_RECORD_DEPENDENCIES = ["Company", "Account"]
 
-class TestGSTSettings(FrappeTestCase):
+
+class TestGSTSettings(IntegrationTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
 
     @change_settings("GST Settings", {"enable_api": 1})
     def test_api_key_enabled(self):

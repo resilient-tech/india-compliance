@@ -1,0 +1,1734 @@
+{
+	"chksum": "ADFADRGA4GADFADGERER",
+	"data": {
+		"gstin": "01AABCE2207R1Z5",
+		"rtnprd": "032020",
+		"version": "1.0",
+		"gendt": "14-04-2020",
+		"itcsumm": {
+			"itcavl": {
+				"nonrevsup": {
+					"igst": 1600,
+					"cgst": 800,
+					"sgst": 800,
+					"cess": 400,
+					"b2b": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"b2ba": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"cdnr": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"cdnra": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"ecom": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"ecoma": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					}
+				},
+				"isdsup": {
+					"igst": 800,
+					"cgst": 400,
+					"sgst": 400,
+					"cess": 200,
+					"isd": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"isda": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					}
+				},
+				"revsup": {
+					"igst": 1600,
+					"cgst": 800,
+					"sgst": 800,
+					"cess": 400,
+					"b2b": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"b2ba": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"cdnr": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"cdnra": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					}
+				},
+				"imports": {
+					"igst": 800,
+					"cgst": 400,
+					"sgst": 400,
+					"cess": 200,
+					"impg": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"impgsez": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"impga": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"impgasez": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					}
+				},
+				"othersup": {
+					"igst": 1600,
+					"cgst": 800,
+					"sgst": 800,
+					"cess": 400,
+					"cdnr": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"cdnra": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"cdnrrev": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"cdnrarev": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"isd": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"isda": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					}
+				}
+			},
+			"itcunavl": {
+				"nonrevsup": {
+					"igst": 1600,
+					"cgst": 800,
+					"sgst": 800,
+					"cess": 400,
+					"b2b": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"b2ba": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"cdnr": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"cdnra": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"ecom": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"ecoma": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					}
+				},
+				"isdsup": {
+					"igst": 800,
+					"cgst": 400,
+					"sgst": 400,
+					"cess": 200,
+					"isd": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"isda": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					}
+				},
+				"revsup": {
+					"igst": 1600,
+					"cgst": 800,
+					"sgst": 800,
+					"cess": 400,
+					"b2b": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"b2ba": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"cdnr": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"cdnra": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					}
+				},
+				"imports": {
+					"igst": 800,
+					"cgst": 400,
+					"sgst": 400,
+					"cess": 200,
+					"impg": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"impgsez": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"impga": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"impgasez": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					}
+				},
+				"othersup": {
+					"igst": 1600,
+					"cgst": 800,
+					"sgst": 800,
+					"cess": 400,
+					"cdnr": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"cdnra": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"cdnrrev": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"cdnrarev": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"isd": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"isda": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					}
+				}
+			},
+			"itcrev": {
+				"nonrevsup": {
+					"igst": 1600,
+					"cgst": 800,
+					"sgst": 800,
+					"cess": 400,
+					"b2b": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"b2ba": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"cdnr": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"cdnra": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					}
+				},
+				"isdsup": {
+					"igst": 0,
+					"cgst": 0,
+					"sgst": 0,
+					"cess": 0,
+					"isd": {
+						"igst": 0,
+						"cgst": 0,
+						"sgst": 0,
+						"cess": 0
+					},
+					"isda": {
+						"igst": 0,
+						"cgst": 0,
+						"sgst": 0,
+						"cess": 0
+					}
+				},
+				"imports": {
+					"igst": 0,
+					"cgst": 0,
+					"sgst": 0,
+					"cess": 0,
+					"impg": {
+						"igst": 0,
+						"cgst": 0,
+						"sgst": 0,
+						"cess": 0
+					},
+					"impgsez": {
+						"igst": 0,
+						"cgst": 0,
+						"sgst": 0,
+						"cess": 0
+					},
+					"impga": {
+						"igst": 0,
+						"cgst": 0,
+						"sgst": 0,
+						"cess": 0
+					},
+					"impgasez": {
+						"igst": 0,
+						"cgst": 0,
+						"sgst": 0,
+						"cess": 0
+					}
+				},
+				"othersup": {
+					"igst": 1600,
+					"cgst": 800,
+					"sgst": 800,
+					"cess": 400,
+					"cdnr": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"cdnra": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"cdnrrev": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"cdnrarev": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"isd": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"isda": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					}
+				}
+			},
+			"itcRejected": {
+				"nonrevsup": {
+					"igst": 1600,
+					"cgst": 800,
+					"sgst": 800,
+					"cess": 400,
+					"b2b": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"b2ba": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"cdnr": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"cdnra": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"ecom": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"ecoma": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					}
+				},
+				"isdsup": {
+					"igst": 800,
+					"cgst": 400,
+					"sgst": 400,
+					"cess": 200,
+					"isd": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"isda": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					}
+				},
+				"revsup": {
+					"igst": 1600,
+					"cgst": 800,
+					"sgst": 800,
+					"cess": 400,
+					"b2b": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"b2ba": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"cdnr": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"cdnra": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					}
+				},
+				"imports": {
+					"igst": 800,
+					"cgst": 400,
+					"sgst": 400,
+					"cess": 200,
+					"impg": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"impgsez": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"impga": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"impgasez": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					}
+				},
+				"othersup": {
+					"igst": 1600,
+					"cgst": 800,
+					"sgst": 800,
+					"cess": 400,
+					"cdnr": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"cdnra": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"cdnrrev": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"cdnrarev": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"isd": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					},
+					"isda": {
+						"igst": 400,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 100
+					}
+				}
+			}
+		},
+		"cpsumm": {
+			"b2b": [
+				{
+					"ctin": "00AABCE2207R1Z5",
+					"trdnm": "GSTN",
+					"supprd": "022020",
+					"supfildt": "02-03-2020",
+					"ttldocs": 3,
+					"txval": 500,
+					"igst": 400,
+					"cgst": 0,
+					"sgst": 0,
+					"cess": 100
+				}
+			],
+			"b2ba": [
+				{
+					"ctin": "00AABCE2207R1Z5",
+					"trdnm": "GSTN",
+					"supprd": "022020",
+					"supfildt": "02-03-2020",
+					"ttldocs": 3,
+					"txval": 500,
+					"igst": 400,
+					"cgst": 0,
+					"sgst": 0,
+					"cess": 100
+				}
+			],
+			"cdnr": [
+				{
+					"ctin": "00AABCE2207R1Z5",
+					"trdnm": "GSTN",
+					"supprd": "022020",
+					"supfildt": "02-03-2020",
+					"nttyp": "C",
+					"ttldocs": 3,
+					"txval": 400,
+					"igst": 0,
+					"cgst": 200,
+					"sgst": 200,
+					"cess": 0
+				}
+			],
+			"cdnra": [
+				{
+					"ctin": "00AABCE2207R1Z5",
+					"trdnm": "GSTN",
+					"supprd": "022020",
+					"supfildt": "02-03-2020",
+					"nttyp": "C",
+					"ttldocs": 3,
+					"txval": 400,
+					"igst": 0,
+					"cgst": 200,
+					"sgst": 200,
+					"cess": 0
+				}
+			],
+			"isd": [
+				{
+					"ctin": "00AABCE2207R1Z5",
+					"trdnm": "GSTN",
+					"supprd": "022020",
+					"supfildt": "02-03-2020",
+					"doctyp": "ISDI",
+					"ttldocs": 3,
+					"igst": 0,
+					"cgst": 200,
+					"sgst": 200,
+					"cess": 0
+				}
+			],
+			"isda": [
+				{
+					"ctin": "00AABCE2207R1Z5",
+					"trdnm": "GSTN",
+					"supprd": "022020",
+					"supfildt": "02-03-2020",
+					"doctyp": "ISDC",
+					"ttldocs": 3,
+					"igst": 0,
+					"cgst": 200,
+					"sgst": 200,
+					"cess": 0
+				}
+			],
+			"impgsez": [
+				{
+					"ctin": "00AABCE2207R1Z5",
+					"trdnm": "GSTN",
+					"portcode": "18272A",
+					"ttldocs": 3,
+					"txval": 500,
+					"igst": 400,
+					"cess": 100
+				}
+			],
+			"ecom": [
+				{
+					"sgst": 0,
+					"ttldocs": 1,
+					"trdnm": "GSTN",
+					"supprd": "012023",
+					"supfildt": "26-08-2023",
+					"txval": 12324,
+					"ctin": "07USERR0205A1ZS",
+					"cgst": 0,
+					"cess": 0,
+					"igst": 123.24
+				},
+				{
+					"sgst": 0,
+					"ttldocs": 1,
+					"trdnm": "GSTN",
+					"supprd": "052023",
+					"supfildt": "26-08-2023",
+					"txval": 443,
+					"ctin": "07USERR0205A1ZS",
+					"cgst": 0,
+					"cess": 0,
+					"igst": 4.43
+				}
+			],
+			"ecoma": [
+				{
+					"sgst": 0,
+					"ttldocs": 1,
+					"trdnm": "GSTN",
+					"supprd": "012023",
+					"supfildt": "26-08-2023",
+					"txval": 12324,
+					"ctin": "07USERR0205A1ZS",
+					"cgst": 0,
+					"cess": 0,
+					"igst": 123.24
+				},
+				{
+					"sgst": 0,
+					"ttldocs": 1,
+					"trdnm": "GSTN",
+					"supprd": "052023",
+					"supfildt": "26-08-2023",
+					"txval": 443,
+					"ctin": "07USERR0205A1ZS",
+					"cgst": 0,
+					"cess": 0,
+					"igst": 4.43
+				}
+			],
+			"itcrev": [
+				{
+					"b2b": {
+						"ctin": "00AABCE2207R1Z5",
+						"trdnm": "GSTN",
+						"supprd": "022020",
+						"supfildt": "02-03-2020",
+						"ttldocs": 3,
+						"txval": 500,
+						"igst": 400,
+						"cgst": 0,
+						"sgst": 0,
+						"cess": 100
+					},
+					"b2ba": {
+						"ctin": "00AABCE2207R1Z5",
+						"trdnm": "GSTN",
+						"supprd": "022020",
+						"supfildt": "02-03-2020",
+						"ttldocs": 3,
+						"txval": 500,
+						"igst": 400,
+						"cgst": 0,
+						"sgst": 0,
+						"cess": 100
+					},
+					"cdnr": {
+						"ctin": "00AABCE2207R1Z5",
+						"trdnm": "GSTN",
+						"supprd": "022020",
+						"supfildt": "02-03-2020",
+						"nttyp": "D",
+						"ttldocs": 3,
+						"txval": 400,
+						"igst": 0,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 0
+					},
+					"cdnra": {
+						"ctin": "00AABCE2207R1Z5",
+						"trdnm": "GSTN",
+						"supprd": "022020",
+						"supfildt": "02-03-2020",
+						"nttyp": "D",
+						"ttldocs": 3,
+						"txval": 400,
+						"igst": 0,
+						"cgst": 200,
+						"sgst": 200,
+						"cess": 0
+					}
+				}
+			]
+		},
+		"docdata": {
+			"b2b": [
+				{
+					"ctin": "01AABCE2207R1Z5",
+					"trdnm": "GSTN",
+					"supfildt": "18-11-2019",
+					"supprd": "112019",
+					"inv": [
+						{
+							"inum": "S008400",
+							"typ": "R",
+							"txval": 12200,
+							"sgst": 0,
+							"cgst": 0,
+							"cess": 0,
+							"igst": 183,
+							"dt": "24-11-2016",
+							"val": 729248.16,
+							"pos": "06",
+							"rev": "N",
+							"itcavl": "N",
+							"rsn": "P",
+							"diffprcnt": 1,
+							"srctyp": "e-Invoice",
+							"irn": "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR",
+							"irngendate": "24-12-2019"
+						}
+					]
+				}
+			],
+			"b2ba": [
+				{
+					"ctin": "01AABCE2207R1Z5",
+					"trdnm": "GSTN",
+					"supfildt": "18-11-2019",
+					"supprd": "112019",
+					"inv": [
+						{
+							"oinum": "S008400",
+							"oidt": "24-11-2016",
+							"inum": "S008400",
+							"typ": "R",
+							"txval": 12200,
+							"sgst": 0,
+							"cgst": 0,
+							"cess": 0,
+							"igst": 183,
+							"dt": "24-11-2016",
+							"val": 729248.16,
+							"pos": "06",
+							"rev": "N",
+							"itcavl": "N",
+							"rsn": "P",
+							"diffprcnt": 1
+						}
+					]
+				}
+			],
+			"cdnr": [
+				{
+					"ctin": "01AAAAP1208Q1ZS",
+					"trdnm": "GSTN",
+					"supfildt": "18-11-2019",
+					"supprd": "112019",
+					"nt": [
+						{
+							"ntnum": "533515",
+							"typ": "C",
+							"suptyp": "R",
+							"dt": "23-09-2016",
+							"val": 729248.16,
+							"txval": 12200,
+							"sgst": 0,
+							"cgst": 0,
+							"cess": 0,
+							"igst": 183,
+							"pos": "01",
+							"rev": "N",
+							"itcavl": "N",
+							"rsn": "C",
+							"diffprcnt": 1,
+							"srctyp": "e-Invoice",
+							"irn": "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR",
+							"irngendate": "24-12-2019"
+						}
+					]
+				}
+			],
+			"cdnra": [
+				{
+					"ctin": "01AAAAP1208Q1ZS",
+					"trdnm": "GSTN",
+					"supfildt": "18-11-2019",
+					"supprd": "112019",
+					"nt": [
+						{
+							"onttyp": "C",
+							"ontnum": "533515",
+							"ontdt": "23-09-2016",
+							"ntnum": "533515",
+							"typ": "C",
+							"txval": 12200,
+							"suptyp": "R",
+							"sgst": 0,
+							"cgst": 0,
+							"cess": 0,
+							"igst": 183,
+							"dt": "23-09-2016",
+							"val": 729248.16,
+							"pos": "01",
+							"rev": "N",
+							"itcavl": "N",
+							"rsn": "C",
+							"diffprcnt": 1
+						}
+					]
+				}
+			],
+			"isd": [
+				{
+					"ctin": "16DEFPS8555D1Z7",
+					"trdnm": "GSTN",
+					"supprd": "022020",
+					"supfildt": "02-03-2020",
+					"doclist": [
+						{
+							"doctyp": "ISDI",
+							"docnum": "S0080",
+							"docdt": "03-03-2016",
+							"oinvnum": "P0079",
+							"oinvdt": "03-03-2016",
+							"igst": 0,
+							"cgst": 200,
+							"sgst": 200,
+							"cess": 0,
+							"itcelg": "Y"
+						}
+					]
+				}
+			],
+			"isda": [
+				{
+					"ctin": "16DEFPS8555D1Z7",
+					"trdnm": "GSTN",
+					"supprd": "022020",
+					"supfildt": "02-03-2020",
+					"doclist": [
+						{
+							"odoctyp": "ISDC",
+							"odocnum": "1004",
+							"odocdt": "02-03-2016",
+							"doctyp": "ISDI",
+							"docnum": "S0080",
+							"docdt": "03-03-2016",
+							"oinvnum": "P0079",
+							"oinvdt": "03-03-2016",
+							"igst": 0,
+							"cgst": 200,
+							"sgst": 200,
+							"cess": 0,
+							"itcelg": "Y"
+						}
+					]
+				}
+			],
+			"impg": [
+				{
+					"refdt": "28-11-2019",
+					"recdt": "30-11-2019",
+					"portcode": "18272A",
+					"boenum": "2566282",
+					"boedt": "18-11-2019",
+					"isamd": "N",
+					"txval": 123.02,
+					"igst": 123.02,
+					"cess": 0.5
+				}
+			],
+			"impgsez": [
+				{
+					"ctin": "01AABCE2207R1Z5",
+					"trdnm": "GSTN",
+					"boe": [
+						{
+							"refdt": "28-11-2019",
+							"recdt": "30-11-2019",
+							"portcode": "18272A",
+							"boenum": "2566282",
+							"boedt": "18-11-2019",
+							"isamd": "N",
+							"txval": 123.02,
+							"igst": 123.02,
+							"cess": 0.5
+						}
+					]
+				}
+			],
+			"ecom": [
+				{
+					"inv": [
+						{
+							"dt": "01-01-2023",
+							"val": 343242,
+							"sgst": 0,
+							"cgst": 0,
+							"cess": 0,
+							"igst": 183,
+							"txval": 12200,
+							"rev": "N",
+							"itcavl": "Y",
+							"pos": "23",
+							"typ": "R",
+							"inum": "doc1",
+							"rsn": "",
+							"srctyp": "e-Invoice",
+							"irn": "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR",
+							"irngendate": "24-12-2019"
+						}
+					],
+					"trdnm": "GSTN",
+					"supfildt": "26-08-2023",
+					"supprd": "012023",
+					"ctin": "07USERR0205A1ZS"
+				},
+				{
+					"inv": [
+						{
+							"dt": "01-05-2023",
+							"val": 234324234,
+							"sgst": 0,
+							"cgst": 0,
+							"cess": 0,
+							"igst": 183,
+							"txval": 12200,
+							"rev": "N",
+							"itcavl": "Y",
+							"pos": "23",
+							"typ": "R",
+							"inum": "E123",
+							"rsn": "",
+							"srctyp": "e-Invoice",
+							"irn": "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR",
+							"irngendate": "24-12-2019"
+						}
+					],
+					"trdnm": "GSTN",
+					"supfildt": "26-08-2023",
+					"supprd": "052023",
+					"ctin": "07USERR0205A1ZS"
+				}
+			],
+			"ecoma": [
+				{
+					"inv": [
+						{
+							"dt": "01-01-2023",
+							"oinum": "S008400",
+							"oidt": "24-11-2016",
+							"val": 343242,
+							"sgst": 0,
+							"cgst": 0,
+							"cess": 0,
+							"igst": 183,
+							"txval": 12200,
+							"rev": "N",
+							"itcavl": "Y",
+							"pos": "23",
+							"typ": "R",
+							"inum": "doc1",
+							"rsn": "",
+							"srctyp": "e-Invoice",
+							"irn": "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR",
+							"irngendate": "24-12-2019"
+						}
+					],
+					"trdnm": "GSTN",
+					"supfildt": "26-08-2023",
+					"supprd": "012023",
+					"ctin": "07USERR0205A1ZS"
+				},
+				{
+					"inv": [
+						{
+							"dt": "01-05-2023",
+							"val": 234324234,
+							"sgst": 0,
+							"cgst": 0,
+							"cess": 0,
+							"igst": 183,
+							"txval": 12200,
+							"rev": "N",
+							"itcavl": "Y",
+							"pos": "23",
+							"typ": "R",
+							"inum": "E123",
+							"rsn": "",
+							"srctyp": "e-Invoice",
+							"irn": "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR",
+							"irngendate": "24-12-2019"
+						}
+					],
+					"trdnm": "GSTN",
+					"supfildt": "26-08-2023",
+					"supprd": "052023",
+					"ctin": "07USERR0205A1ZS"
+				}
+			],
+			"itcrev": [
+				{
+					"b2b": [
+						{
+							"ctin": "01AABCE2207R1Z5",
+							"trdnm": "GSTN",
+							"supfildt": "18-11-2019",
+							"supprd": "112019",
+							"inv": [
+								{
+									"inum": "S008400",
+									"typ": "R",
+									"dt": "24-11-2016",
+									"val": 729248.16,
+									"pos": "06",
+									"rev": "N",
+									"itcavl": "N",
+									"rsn": "P",
+									"diffprcnt": 1,
+									"srctyp": "e-Invoice",
+									"irn": "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR",
+									"irngendate": "24-12-2019"
+								}
+							]
+						}
+					],
+					"b2ba": [
+						{
+							"ctin": "01AABCE2207R1Z5",
+							"trdnm": "GSTN",
+							"supfildt": "18-11-2019",
+							"supprd": "112019",
+							"inv": [
+								{
+									"oinum": "S008400",
+									"oidt": "24-11-2016",
+									"inum": "S008400",
+									"typ": "R",
+									"dt": "24-11-2016",
+									"val": 729248.16,
+									"pos": "06",
+									"rev": "N",
+									"itcavl": "N",
+									"rsn": "P",
+									"diffprcnt": 1
+								}
+							]
+						}
+					],
+					"cdnr": [
+						{
+							"ctin": "01AAAAP1208Q1ZS",
+							"trdnm": "GSTN",
+							"supfildt": "18-11-2019",
+							"supprd": "112019",
+							"nt": [
+								{
+									"ntnum": "533515",
+									"typ": "D",
+									"suptyp": "R",
+									"dt": "23-09-2016",
+									"val": 729248.16,
+									"pos": "01",
+									"rev": "N",
+									"itcavl": "N",
+									"rsn": "C",
+									"diffprcnt": 1,
+									"srctyp": "e-Invoice",
+									"irn": "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR",
+									"irngendate": "24-12-2019"
+								}
+							]
+						}
+					],
+					"cdnra": [
+						{
+							"ctin": "01AAAAP1208Q1ZS",
+							"trdnm": "GSTN",
+							"supfildt": "18-11-2019",
+							"supprd": "112019",
+							"nt": [
+								{
+									"onttyp": "D",
+									"ontnum": "533515",
+									"ontdt": "23-09-2016",
+									"ntnum": "533515",
+									"typ": "D",
+									"suptyp": "R",
+									"dt": "23-09-2016",
+									"val": 729248.16,
+									"pos": "01",
+									"rev": "N",
+									"itcavl": "N",
+									"rsn": "C",
+									"diffprcnt": 1
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		"docRejdata": {
+			"b2b": [
+				{
+					"ctin": "01AABCE2207R1Z5",
+					"trdnm": "GSTN",
+					"supfildt": "18-11-2019",
+					"supprd": "112019",
+					"inv": [
+						{
+							"inum": "S008400",
+							"typ": "R",
+							"txval": 12200,
+							"sgst": 0,
+							"cgst": 0,
+							"cess": 0,
+							"igst": 183,
+							"dt": "24-11-2016",
+							"val": 729248.16,
+							"pos": "06",
+							"rev": "N",
+							"itcavl": "N",
+							"rsn": "P",
+							"diffprcnt": 1,
+							"srctyp": "e-Invoice",
+							"irn": "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR",
+							"irngendate": "24-12-2019"
+						}
+					]
+				}
+			],
+			"b2ba": [
+				{
+					"ctin": "01AABCE2207R1Z5",
+					"trdnm": "GSTN",
+					"supfildt": "18-11-2019",
+					"supprd": "112019",
+					"inv": [
+						{
+							"oinum": "S008400",
+							"oidt": "24-11-2016",
+							"inum": "S008400",
+							"typ": "R",
+							"txval": 12200,
+							"sgst": 0,
+							"cgst": 0,
+							"cess": 0,
+							"igst": 183,
+							"dt": "24-11-2016",
+							"val": 729248.16,
+							"pos": "06",
+							"rev": "N",
+							"itcavl": "N",
+							"rsn": "P",
+							"diffprcnt": 1
+						}
+					]
+				}
+			],
+			"cdnr": [
+				{
+					"ctin": "01AAAAP1208Q1ZS",
+					"trdnm": "GSTN",
+					"supfildt": "18-11-2019",
+					"supprd": "112019",
+					"nt": [
+						{
+							"ntnum": "533515",
+							"typ": "C",
+							"suptyp": "R",
+							"dt": "23-09-2016",
+							"val": 729248.16,
+							"txval": 12200,
+							"sgst": 0,
+							"cgst": 0,
+							"cess": 0,
+							"igst": 183,
+							"pos": "01",
+							"rev": "N",
+							"itcavl": "N",
+							"rsn": "C",
+							"diffprcnt": 1,
+							"srctyp": "e-Invoice",
+							"irn": "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR",
+							"irngendate": "24-12-2019"
+						}
+					]
+				}
+			],
+			"cdnra": [
+				{
+					"ctin": "01AAAAP1208Q1ZS",
+					"trdnm": "GSTN",
+					"supfildt": "18-11-2019",
+					"supprd": "112019",
+					"nt": [
+						{
+							"onttyp": "C",
+							"ontnum": "533515",
+							"ontdt": "23-09-2016",
+							"ntnum": "533515",
+							"typ": "C",
+							"txval": 12200,
+							"suptyp": "R",
+							"sgst": 0,
+							"cgst": 0,
+							"cess": 0,
+							"igst": 183,
+							"dt": "23-09-2016",
+							"val": 729248.16,
+							"pos": "01",
+							"rev": "N",
+							"itcavl": "N",
+							"rsn": "C",
+							"diffprcnt": 1
+						}
+					]
+				}
+			],
+			"isd": [
+				{
+					"ctin": "16DEFPS8555D1Z7",
+					"trdnm": "GSTN",
+					"supprd": "022020",
+					"supfildt": "02-03-2020",
+					"doclist": [
+						{
+							"doctyp": "ISDI",
+							"docnum": "S0080",
+							"docdt": "03-03-2016",
+							"oinvnum": "P0079",
+							"oinvdt": "03-03-2016",
+							"igst": 0,
+							"cgst": 200,
+							"sgst": 200,
+							"cess": 0,
+							"itcelg": "Y"
+						}
+					]
+				}
+			],
+			"isda": [
+				{
+					"ctin": "16DEFPS8555D1Z7",
+					"trdnm": "GSTN",
+					"supprd": "022020",
+					"supfildt": "02-03-2020",
+					"doclist": [
+						{
+							"odoctyp": "ISDC",
+							"odocnum": "1004",
+							"odocdt": "02-03-2016",
+							"doctyp": "ISDI",
+							"docnum": "S0080",
+							"docdt": "03-03-2016",
+							"oinvnum": "P0079",
+							"oinvdt": "03-03-2016",
+							"igst": 0,
+							"cgst": 200,
+							"sgst": 200,
+							"cess": 0,
+							"itcelg": "Y"
+						}
+					]
+				}
+			],
+			"impg": [
+				{
+					"refdt": "28-11-2019",
+					"recdt": "30-11-2019",
+					"portcode": "18272A",
+					"boenum": "2566282",
+					"boedt": "18-11-2019",
+					"isamd": "N",
+					"txval": 123.02,
+					"igst": 123.02,
+					"cess": 0.5
+				}
+			],
+			"impgsez": [
+				{
+					"ctin": "01AABCE2207R1Z5",
+					"trdnm": "GSTN",
+					"boe": [
+						{
+							"refdt": "28-11-2019",
+							"recdt": "30-11-2019",
+							"portcode": "18272A",
+							"boenum": "2566282",
+							"boedt": "18-11-2019",
+							"isamd": "N",
+							"txval": 123.02,
+							"igst": 123.02,
+							"cess": 0.5
+						}
+					]
+				}
+			],
+			"ecom": [
+				{
+					"inv": [
+						{
+							"dt": "01-01-2023",
+							"val": 343242,
+							"sgst": 0,
+							"cgst": 0,
+							"cess": 0,
+							"igst": 183,
+							"txval": 12200,
+							"rev": "N",
+							"itcavl": "Y",
+							"pos": "23",
+							"typ": "R",
+							"inum": "doc1",
+							"rsn": "",
+							"srctyp": "e-Invoice",
+							"irn": "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR",
+							"irngendate": "24-12-2019"
+						}
+					],
+					"trdnm": "GSTN",
+					"supfildt": "26-08-2023",
+					"supprd": "012023",
+					"ctin": "07USERR0205A1ZS"
+				},
+				{
+					"inv": [
+						{
+							"dt": "01-05-2023",
+							"val": 234324234,
+							"sgst": 0,
+							"cgst": 0,
+							"cess": 0,
+							"igst": 183,
+							"txval": 12200,
+							"rev": "N",
+							"itcavl": "Y",
+							"pos": "23",
+							"typ": "R",
+							"inum": "E123",
+							"rsn": "",
+							"srctyp": "e-Invoice",
+							"irn": "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR",
+							"irngendate": "24-12-2019"
+						}
+					],
+					"trdnm": "GSTN",
+					"supfildt": "26-08-2023",
+					"supprd": "052023",
+					"ctin": "07USERR0205A1ZS"
+				}
+			],
+			"ecoma": [
+				{
+					"inv": [
+						{
+							"dt": "01-01-2023",
+							"oinum": "S008400",
+							"oidt": "24-11-2016",
+							"val": 343242,
+							"sgst": 0,
+							"cgst": 0,
+							"cess": 0,
+							"igst": 183,
+							"txval": 12200,
+							"rev": "N",
+							"itcavl": "Y",
+							"pos": "23",
+							"typ": "R",
+							"inum": "doc1",
+							"rsn": "",
+							"srctyp": "e-Invoice",
+							"irn": "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR",
+							"irngendate": "24-12-2019"
+						}
+					],
+					"trdnm": "GSTN",
+					"supfildt": "26-08-2023",
+					"supprd": "012023",
+					"ctin": "07USERR0205A1ZS"
+				},
+				{
+					"inv": [
+						{
+							"dt": "01-05-2023",
+							"val": 234324234,
+							"sgst": 0,
+							"cgst": 0,
+							"cess": 0,
+							"igst": 183,
+							"txval": 12200,
+							"rev": "N",
+							"itcavl": "Y",
+							"pos": "23",
+							"typ": "R",
+							"inum": "E123",
+							"rsn": "",
+							"srctyp": "e-Invoice",
+							"irn": "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR",
+							"irngendate": "24-12-2019"
+						}
+					],
+					"trdnm": "GSTN",
+					"supfildt": "26-08-2023",
+					"supprd": "052023",
+					"ctin": "07USERR0205A1ZS"
+				}
+			],
+			"itcrev": [
+				{
+					"b2b": [
+						{
+							"ctin": "01AABCE2207R1Z5",
+							"trdnm": "GSTN",
+							"supfildt": "18-11-2019",
+							"supprd": "112019",
+							"inv": [
+								{
+									"inum": "S008400",
+									"typ": "R",
+									"dt": "24-11-2016",
+									"val": 729248.16,
+									"pos": "06",
+									"rev": "N",
+									"itcavl": "N",
+									"rsn": "P",
+									"diffprcnt": 1,
+									"srctyp": "e-Invoice",
+									"irn": "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR",
+									"irngendate": "24-12-2019"
+								}
+							]
+						}
+					],
+					"b2ba": [
+						{
+							"ctin": "01AABCE2207R1Z5",
+							"trdnm": "GSTN",
+							"supfildt": "18-11-2019",
+							"supprd": "112019",
+							"inv": [
+								{
+									"oinum": "S008400",
+									"oidt": "24-11-2016",
+									"inum": "S008400",
+									"typ": "R",
+									"dt": "24-11-2016",
+									"val": 729248.16,
+									"pos": "06",
+									"rev": "N",
+									"itcavl": "N",
+									"rsn": "P",
+									"diffprcnt": 1
+								}
+							]
+						}
+					],
+					"cdnr": [
+						{
+							"ctin": "01AAAAP1208Q1ZS",
+							"trdnm": "GSTN",
+							"supfildt": "18-11-2019",
+							"supprd": "112019",
+							"nt": [
+								{
+									"ntnum": "533515",
+									"typ": "D",
+									"suptyp": "R",
+									"dt": "23-09-2016",
+									"val": 729248.16,
+									"pos": "01",
+									"rev": "N",
+									"itcavl": "N",
+									"rsn": "C",
+									"diffprcnt": 1,
+									"srctyp": "e-Invoice",
+									"irn": "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR",
+									"irngendate": "24-12-2019"
+								}
+							]
+						}
+					],
+					"cdnra": [
+						{
+							"ctin": "01AAAAP1208Q1ZS",
+							"trdnm": "GSTN",
+							"supfildt": "18-11-2019",
+							"supprd": "112019",
+							"nt": [
+								{
+									"onttyp": "D",
+									"ontnum": "533515",
+									"ontdt": "23-09-2016",
+									"ntnum": "533515",
+									"typ": "D",
+									"suptyp": "R",
+									"dt": "23-09-2016",
+									"val": 729248.16,
+									"pos": "01",
+									"rev": "N",
+									"itcavl": "N",
+									"rsn": "C",
+									"diffprcnt": 1
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		"cpSummRej": {
+			"b2ba": [
+				{
+					"sgst": 0,
+					"ttldocs": 1,
+					"trdnm": "GSTN",
+					"supprd": "042024",
+					"supfildt": "30-09-2024",
+					"txval": 12200,
+					"ctin": "32REDDY9009U1ZT",
+					"cgst": 0,
+					"cess": 0,
+					"igst": 183
+				}
+			],
+			"ecom": [
+				{
+					"sgst": 0,
+					"ttldocs": 2,
+					"trdnm": "GSTN",
+					"supprd": "052024",
+					"supfildt": "18-09-2024",
+					"txval": 1332220,
+					"ctin": "33CHAND5868I1ZG",
+					"cgst": 0,
+					"cess": 0,
+					"igst": 19983.3
+				}
+			],
+			"b2b": [
+				{
+					"sgst": 0,
+					"ttldocs": 1,
+					"trdnm": "GSTN",
+					"supprd": "052024",
+					"supfildt": "18-09-2024",
+					"txval": 110000,
+					"ctin": "33CHAND5868I1ZG",
+					"cgst": 0,
+					"cess": 0,
+					"igst": 1650
+				}
+			],
+			"ecoma": [
+				{
+					"sgst": 0,
+					"ttldocs": 1,
+					"trdnm": "GSTN",
+					"supprd": "042024",
+					"supfildt": "30-09-2024",
+					"txval": 123200,
+					"ctin": "32REDDY9009U1ZT",
+					"cgst": 0,
+					"cess": 0,
+					"igst": 1848
+				}
+			],
+			"cdnra": [
+				{
+					"sgst": 0,
+					"nttyp": "D",
+					"ttldocs": 1,
+					"trdnm": "GSTN",
+					"supprd": "062024",
+					"supfildt": "01-10-2024",
+					"txval": 1220055,
+					"ctin": "32REDDY9009U1ZT",
+					"cgst": 0,
+					"cess": 0,
+					"igst": 18300.83
+				},
+				{
+					"sgst": 0,
+					"nttyp": "C",
+					"ttldocs": 1,
+					"trdnm": "GSTN",
+					"supprd": "042024",
+					"supfildt": "30-09-2024",
+					"txval": 1200111,
+					"ctin": "32REDDY9009U1ZT",
+					"cgst": 0,
+					"cess": 0,
+					"igst": 18001.67
+				}
+			]
+		}
+	}
+}

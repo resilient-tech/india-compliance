@@ -2,7 +2,7 @@ import json
 from contextlib import contextmanager
 
 import frappe
-from frappe.tests.utils import FrappeTestCase, change_settings
+from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import today
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
 from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
@@ -101,7 +101,7 @@ def toggle_provisional_accounting():
         )
 
 
-class TestIneligibleITC(FrappeTestCase):
+class TestIneligibleITC(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

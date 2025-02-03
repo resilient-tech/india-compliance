@@ -172,7 +172,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
 
     def get_itc_from_boe(self):
         boe = frappe.qb.DocType("Bill of Entry")
-        boe_taxes = frappe.qb.DocType("Bill of Entry Taxes")
+        boe_taxes = frappe.qb.DocType("India Compliance Taxes and Charges")
 
         query = (
             frappe.qb.from_(boe)
@@ -208,6 +208,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                 & (boe.company == self.company)
                 & (boe.company_gstin == self.company_gstin)
             )
+            .where(boe_taxes.parenttype == "Bill of Entry")
             .groupby(boe.name)
         )
 

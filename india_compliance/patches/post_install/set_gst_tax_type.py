@@ -7,7 +7,6 @@ TAX_DOCTYPES = [
     "Sales Taxes and Charges",
     "Purchase Taxes and Charges",
     "Advance Taxes and Charges",
-    "Bill of Entry Taxes",
 ]
 
 

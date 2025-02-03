@@ -3,7 +3,7 @@ from unittest.mock import Mock, patch
 
 import frappe
 from frappe import parse_json, read_file
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 from frappe.utils import get_datetime
 
 from india_compliance.gst_india.utils import get_data_file_path
@@ -43,10 +43,12 @@ class TestGSTRMixin:
         )
 
 
-class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
+class TestGSTR2a(TestGSTRMixin, IntegrationTestCase):
     # Tests as per version 2.1 of GSTR2A Dt: 14-10-2020
     @classmethod
     def setUpClass(cls):
+        super().setUpClass()
+
         cls.gstin = "01AABCE2207R1Z5"
         cls.return_period = "032020"
         cls.doctype = "GST Inward Supply"
@@ -58,11 +60,6 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
             cls.return_period,
             cls.test_data.copy(),
         )
-
-    @classmethod
-    def tearDownClass(cls):
-        frappe.db.delete(cls.doctype, {"company_gstin": cls.gstin})
-        frappe.db.delete(cls.log_doctype, {"gstin": cls.gstin})
 
     @patch("india_compliance.gst_india.utils.gstr_2.save_gstr")
     @patch("india_compliance.gst_india.utils.gstr_2.GSTR2aAPI")
@@ -118,6 +115,7 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
                 "gstr_3b_filled": 1,
                 "gstr_1_filing_date": date(2019, 11, 18),
                 "registration_cancel_date": date(2019, 8, 27),
+                "is_downloaded_from_2a": 1,
             },
             doc,
         )
@@ -165,6 +163,7 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
                 "gstr_3b_filled": 1,
                 "gstr_1_filing_date": date(2020, 5, 12),
                 "registration_cancel_date": date(2019, 8, 27),
+                "is_downloaded_from_2a": 1,
             },
             doc,
         )
@@ -205,6 +204,7 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
                     "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR"
                 ),
                 "irn_gen_date": date(2019, 12, 24),
+                "is_downloaded_from_2a": 1,
             },
             doc,
         )
@@ -242,6 +242,7 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
                 "gstr_3b_filled": 1,
                 "gstr_1_filing_date": date(2019, 11, 18),
                 "registration_cancel_date": date(2019, 8, 27),
+                "is_downloaded_from_2a": 1,
             },
             doc,
         )
@@ -260,14 +261,11 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
                 "amendment_type": "Receiver GSTIN Amended",
                 "is_amended": 1,
                 "document_value": 80,
-                "items": [
-                    {
-                        "igst": 20,
-                        "cgst": 20,
-                        "sgst": 20,
-                        "cess": 20,
-                    }
-                ],
+                "igst": 20,
+                "cgst": 20,
+                "sgst": 20,
+                "cess": 20,
+                "is_downloaded_from_2a": 1,
             },
             doc,
         )
@@ -287,13 +285,10 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
                 "doc_type": "Bill of Entry",
                 "is_amended": 0,
                 "document_value": 246.54,
-                "items": [
-                    {
-                        "taxable_value": 123.02,
-                        "igst": 123.02,
-                        "cess": 0.5,
-                    }
-                ],
+                "taxable_value": 123.02,
+                "igst": 123.02,
+                "cess": 0.5,
+                "is_downloaded_from_2a": 1,
             },
             doc,
         )
@@ -311,15 +306,12 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
                 "supplier_name": "GSTN",
                 "is_amended": 0,
                 "document_value": 246.54,
-                "items": [
-                    {
-                        "taxable_value": 123.02,
-                        "igst": 123.02,
-                        "cgst": 0,
-                        "sgst": 0,
-                        "cess": 0.5,
-                    }
-                ],
+                "taxable_value": 123.02,
+                "igst": 123.02,
+                "cgst": 0,
+                "sgst": 0,
+                "cess": 0.5,
+                "is_downloaded_from_2a": 1,
             },
             doc,
         )

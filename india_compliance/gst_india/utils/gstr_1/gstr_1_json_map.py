@@ -221,6 +221,12 @@ class B2B(GSTR1DataMapper):
                 GSTR1_DataField.CUST_NAME.value: self.guess_customer_name(
                     customer_gstin
                 ),
+                GSTR1_DataField.ERROR_CD.value: customer_data.get(
+                    GovDataField.ERROR_CD.value
+                ),
+                GSTR1_DataField.ERROR_MSG.value: customer_data.get(
+                    GovDataField.ERROR_MSG.value
+                ),
             }
 
             for invoice in customer_data.get(GovDataField.INVOICES.value):
@@ -372,6 +378,12 @@ class B2CL(GSTR1DataMapper):
             default_invoice_data = {
                 GSTR1_DataField.POS.value: pos,
                 GSTR1_DataField.DOC_TYPE.value: self.DOCUMENT_CATEGORY,
+                GSTR1_DataField.ERROR_CD.value: pos_data.get(
+                    GovDataField.ERROR_CD.value
+                ),
+                GSTR1_DataField.ERROR_MSG.value: pos_data.get(
+                    GovDataField.ERROR_MSG.value
+                ),
             }
 
             for invoice in pos_data.get(GovDataField.INVOICES.value):
@@ -506,6 +518,12 @@ class Exports(GSTR1DataMapper):
 
             default_invoice_data = {
                 GSTR1_DataField.DOC_TYPE.value: document_type,
+                GSTR1_DataField.ERROR_CD.value: export_category.get(
+                    GovDataField.ERROR_CD.value
+                ),
+                GSTR1_DataField.ERROR_MSG.value: export_category.get(
+                    GovDataField.ERROR_MSG.value
+                ),
             }
 
             for invoice in export_category.get(GovDataField.INVOICES.value):
@@ -600,6 +618,8 @@ class B2CS(GSTR1DataMapper):
         GovDataField.CGST.value: GSTR1_DataField.CGST.value,
         GovDataField.SGST.value: GSTR1_DataField.SGST.value,
         GovDataField.CESS.value: GSTR1_DataField.CESS.value,
+        GovDataField.ERROR_CD.value: GSTR1_DataField.ERROR_CD.value,
+        GovDataField.ERROR_MSG.value: GSTR1_DataField.ERROR_MSG.value,
     }
 
     def __init__(self):
@@ -710,8 +730,15 @@ class NilRated(GSTR1DataMapper):
     def convert_to_internal_data_format(self, input_data):
         output = {}
 
+        default_data = {
+            GSTR1_DataField.ERROR_CD.value: input_data.get(GovDataField.ERROR_CD.value),
+            GSTR1_DataField.ERROR_MSG.value: input_data.get(
+                GovDataField.ERROR_MSG.value
+            ),
+        }
+
         for invoice in input_data[GovDataField.INVOICES.value]:
-            invoice_data = self.format_data(invoice)
+            invoice_data = self.format_data(invoice, default_data)
 
             if not invoice_data:
                 continue
@@ -874,6 +901,12 @@ class CDNR(GSTR1DataMapper):
                         GSTR1_DataField.CUST_NAME.value: self.guess_customer_name(
                             customer_gstin
                         ),
+                        GSTR1_DataField.ERROR_CD.value: customer_data.get(
+                            GovDataField.ERROR_CD.value
+                        ),
+                        GSTR1_DataField.ERROR_MSG.value: customer_data.get(
+                            GovDataField.ERROR_MSG.value
+                        ),
                     },
                 )
                 self.update_totals(
@@ -1003,6 +1036,8 @@ class CDNUR(GSTR1DataMapper):
         GovDataField.TAXABLE_VALUE.value: GSTR1_ItemField.TAXABLE_VALUE.value,
         GovDataField.IGST.value: GSTR1_ItemField.IGST.value,
         GovDataField.CESS.value: GSTR1_ItemField.CESS.value,
+        GovDataField.ERROR_CD.value: GSTR1_DataField.ERROR_CD.value,
+        GovDataField.ERROR_MSG.value: GSTR1_DataField.ERROR_MSG.value,
     }
     DOCUMENT_TYPES = {
         "C": "Credit Note",
@@ -1145,6 +1180,13 @@ class HSNSUM(GSTR1DataMapper):
     def convert_to_internal_data_format(self, input_data):
         output = {}
 
+        default_data = {
+            GSTR1_DataField.ERROR_CD.value: input_data.get(GovDataField.ERROR_CD.value),
+            GSTR1_DataField.ERROR_MSG.value: input_data.get(
+                GovDataField.ERROR_MSG.value
+            ),
+        }
+
         for invoice in input_data[GovDataField.HSN_DATA.value]:
             output[
                 " - ".join(
@@ -1154,7 +1196,7 @@ class HSNSUM(GSTR1DataMapper):
                         str(flt(invoice.get(GovDataField.TAX_RATE.value))),
                     )
                 )
-            ] = self.format_data(invoice)
+            ] = self.format_data(invoice, default_data)
 
         return {self.SUBCATEGORY: output}
 
@@ -1251,6 +1293,8 @@ class AT(GSTR1DataMapper):
         GovDataField.CGST.value: GSTR1_DataField.CGST.value,
         GovDataField.SGST.value: GSTR1_DataField.SGST.value,
         GovDataField.CESS.value: GSTR1_DataField.CESS.value,
+        GovDataField.ERROR_CD.value: GSTR1_DataField.ERROR_CD.value,
+        GovDataField.ERROR_MSG.value: GSTR1_DataField.ERROR_MSG.value,
     }
     DEFAULT_ITEM_AMOUNTS = {
         GSTR1_DataField.IGST.value: 0,
@@ -1473,6 +1517,11 @@ class DOC_ISSUE(GSTR1DataMapper):
         doc_nature_wise_data = {}
 
         for invoice in input_data:
+            if invoice[GSTR1_DataField.DOC_TYPE.value].startswith(
+                "Excluded from Report"
+            ):
+                continue
+
             doc_nature_wise_data.setdefault(
                 invoice[GSTR1_DataField.DOC_TYPE.value], []
             ).append(invoice)
@@ -1765,7 +1814,7 @@ CLASS_MAP = {
 }
 
 
-def convert_to_internal_data_format(gov_data):
+def convert_to_internal_data_format(gov_data, for_errors=False):
     """
     Converts Gov data format to internal data format for all categories
     """
@@ -1779,7 +1828,16 @@ def convert_to_internal_data_format(gov_data):
             mapper_class().convert_to_internal_data_format(gov_data.get(category))
         )
 
-    return output
+    if not for_errors:
+        return output
+
+    errors = []
+    for category, data in output.items():
+        for row in data.values():
+            row["category"] = category
+            errors.append(row)
+
+    return errors
 
 
 def get_category_wise_data(
@@ -1964,6 +2022,9 @@ class BooksDataMapper:
                 GSTR1_DataField.SGST.value: 0,
                 GSTR1_DataField.CESS.value: 0,
                 GSTR1_DataField.DIFF_PERCENTAGE.value: 0,
+                GSTR1_DataField.SHIPPING_PORT_CODE.value: invoice.shipping_port_code,
+                GSTR1_DataField.SHIPPING_BILL_NUMBER.value: invoice.shipping_bill_number,
+                GSTR1_DataField.SHIPPING_BILL_DATE.value: invoice.shipping_bill_date,
                 "items": [],
             },
         )
@@ -2173,6 +2234,45 @@ class BooksDataMapper:
             GSTR1_DataField.CESS.value: invoice.total_cess_amount,
         }
 
+    def round_values(self, data):
+        """
+        Progressively round off the values in the data
+        to ensure that the total values match the sum of the individual values
+        """
+
+        if isinstance(data[0], list):
+            for row in data:
+                self.round_values(row)
+
+        fields = (
+            GSTR1_DataField.TAXABLE_VALUE.value,
+            GSTR1_DataField.IGST.value,
+            GSTR1_DataField.CGST.value,
+            GSTR1_DataField.SGST.value,
+            GSTR1_DataField.CESS.value,
+        )
+
+        for field in fields:
+            if field not in data[0]:
+                continue
+
+            differece = 0
+            last_row_with_value = None
+
+            for row in data:
+                if not row[field]:  # zero values
+                    continue
+
+                rounded = flt(row[field], 2)
+                differece += row[field] - rounded
+
+                row[field] = flt(rounded, 2)
+
+                last_row_with_value = row
+
+            if flt(differece, 2) != 0:
+                last_row_with_value[field] += differece
+
 
 class GSTR1BooksData(BooksDataMapper):
     def __init__(self, filters):
@@ -2212,6 +2312,12 @@ class GSTR1BooksData(BooksDataMapper):
         for category, data in other_categories.items():
             if data:
                 prepared_data[category] = data
+
+        for data in prepared_data.values():
+            if not isinstance(data, dict):
+                continue
+
+            self.round_values(list(data.values()))
 
         return prepared_data
 

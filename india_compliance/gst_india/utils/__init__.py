@@ -116,6 +116,7 @@ def get_gstin_list(party, party_type="Company"):
 
 
 @frappe.whitelist()
+@frappe.request_cache
 def get_party_for_gstin(gstin, party_type="Supplier"):
     if not gstin:
         return
@@ -389,36 +390,52 @@ def get_place_of_supply(party_details, doctype):
 
     # fallback to company GSTIN for sales or supplier GSTIN for purchases
     # (in retail scenarios, customer / company GSTIN may not be set)
-
     if doctype in SALES_DOCTYPES or doctype == "Payment Entry":
         # for exports, Place of Supply is set using GST category in absence of GSTIN
         if party_details.gst_category == "Overseas":
             return get_overseas_place_of_supply(party_details)
 
+        # customer address based on POS Basis
+        customer_address = party_details.customer_address
+        pos_basis = frappe.get_cached_value(
+            "Accounts Settings",
+            "Accounts Settings",
+            "determine_address_tax_category_from",
+        )
+
+        shipping_gstin = None
         if (
-            party_details.gst_category == "Unregistered"
-            and party_details.customer_address
+            doctype != "Payment Entry"
+            and pos_basis == "Shipping Address"
+            and party_details.shipping_address_name
         ):
+            customer_address = party_details.shipping_address_name
+            shipping_gstin = frappe.db.get_value("Address", customer_address, "gstin")
+
+        customer_gstin = shipping_gstin or party_details.billing_address_gstin
+        # for unregistered
+        if not customer_gstin and customer_address:
             gst_state_number, gst_state = frappe.db.get_value(
                 "Address",
-                party_details.customer_address,
+                customer_address,
                 ("gst_state_number", "gst_state"),
             )
             if gst_state_number and gst_state:
                 return f"{gst_state_number}-{gst_state}"
 
-        party_gstin = party_details.billing_address_gstin or party_details.company_gstin
+        # for registered
+        pos_gstin = customer_gstin or party_details.company_gstin
 
     elif doctype == "Stock Entry":
-        party_gstin = party_details.bill_to_gstin or party_details.bill_from_gstin
+        pos_gstin = party_details.bill_to_gstin or party_details.bill_from_gstin
     else:
         # for purchase, subcontracting order and receipt
-        party_gstin = party_details.company_gstin or party_details.supplier_gstin
+        pos_gstin = party_details.company_gstin or party_details.supplier_gstin
 
-    if not party_gstin:
+    if not pos_gstin:
         return
 
-    state_code = party_gstin[:2]
+    state_code = pos_gstin[:2]
 
     if state := get_state(state_code):
         return f"{state_code}-{state}"
@@ -549,6 +566,15 @@ def get_gst_accounts_by_tax_type(company, tax_type, throw=True):
             "Could not retrieve GST Accounts of type {0} from GST Settings for"
             " Company {1}"
         ).format(frappe.bold(tax_type), frappe.bold(company)),
+    )
+
+
+@frappe.request_cache
+def get_gst_account_by_item_tax_template(item_tax_template):
+    return frappe.get_all(
+        "Item Tax Template Detail",
+        filters={"parent": item_tax_template},
+        pluck="tax_type",
     )
 
 
@@ -906,23 +932,34 @@ def disable_new_gst_category_notification():
     frappe.defaults.clear_user_default("needs_new_gst_category_notification")
 
 
-def validate_invoice_number(doc):
+def validate_invoice_number(doc, throw=True):
     """Validate GST invoice number requirements."""
 
-    if len(doc.name) > 16:
-        frappe.throw(
-            _("GST Invoice Number cannot exceed 16 characters"),
-            title=_("Invalid GST Invoice Number"),
+    is_valid_length = len(doc.name) <= 16
+    is_valid_format = GST_INVOICE_NUMBER_FORMAT.match(doc.name)
+
+    if not throw:
+        return is_valid_length and is_valid_format
+
+    if is_valid_length and is_valid_format:
+        return
+
+    title = _("Invalid GST Transaction Name")
+
+    if not is_valid_length:
+        message = _(
+            "Transaction Name must be 16 characters or fewer to meet GST requirements"
+        )
+    else:
+        message = _(
+            "Transaction Name should start with an alphanumeric character and can"
+            " only contain alphanumeric characters, dash (-) and slash (/) to meet GST requirements"
         )
 
-    if not GST_INVOICE_NUMBER_FORMAT.match(doc.name):
-        frappe.throw(
-            _(
-                "GST Invoice Number should start with an alphanumeric character and can"
-                " only contain alphanumeric characters, dash (-) and slash (/)"
-            ),
-            title=_("Invalid GST Invoice Number"),
-        )
+    if doc.doctype == "Sales Invoice":
+        frappe.throw(message, title=title)
+
+    frappe.msgprint(message, title=title)
 
 
 def handle_server_errors(settings, doc, document_type, error):
@@ -995,3 +1032,38 @@ def get_period(month_or_quarter, year=None):
         return str(month_or_quarter_no[1]).zfill(2) + str(year)
 
     return month_or_quarter_no
+
+
+def is_outward_stock_entry(doc):
+    if (
+        doc.doctype == "Stock Entry"
+        and doc.purpose in ["Material Transfer", "Material Issue"]
+        and not doc.is_return
+    ):
+        return True
+
+
+def create_notification(
+    message_content, document_type, document_name=None, request_id=None
+):
+    # request_id shows failure response
+    if request_id and (
+        doc_name := frappe.db.get_value(
+            "Integration Request", {"request_id": request_id}
+        )
+    ):
+        document_type = "Integration Request"
+        document_name = doc_name
+
+    notification = frappe.get_doc(
+        {
+            "doctype": "Notification Log",
+            "for_user": frappe.session.user,
+            "type": "Alert",
+            "document_type": document_type,
+            "document_name": document_name or document_type,
+            "subject": message_content.get("subject"),
+            "email_content": message_content.get("body"),
+        }
+    )
+    notification.insert()

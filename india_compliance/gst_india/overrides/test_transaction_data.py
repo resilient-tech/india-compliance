@@ -1,7 +1,7 @@
 import re
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 from frappe.utils import add_to_date, getdate
 from frappe.utils.data import format_date
 
@@ -13,7 +13,7 @@ from india_compliance.gst_india.utils.tests import (
 from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
 
 
-class TestTransactionData(FrappeTestCase):
+class TestTransactionData(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         frappe.db.savepoint("before_test_transaction_data")

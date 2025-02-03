@@ -5,7 +5,7 @@ import json
 import re
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 from frappe.utils import today
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
@@ -17,8 +17,21 @@ from india_compliance.gst_india.overrides.test_transaction import create_cess_ac
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
 
+IGNORE_TEST_RECORD_DEPENDENCIES = [
+    "Bill of Entry",
+    "Purchase Invoice",
+    "Cost Center",
+    # "Tax Category",
+    "Item",
+    # "UOM",
+    "Item Tax Template",
+    "Project",
+    "Company",
+    "Account",
+]
 
-class TestBillofEntry(FrappeTestCase):
+
+class TestBillofEntry(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

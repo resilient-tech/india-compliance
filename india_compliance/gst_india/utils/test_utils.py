@@ -2,11 +2,11 @@ from datetime import date
 from unittest.mock import patch
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 from frappe.utils import getdate
 
 
-class TestUtils(FrappeTestCase):
+class TestUtils(IntegrationTestCase):
 
     @classmethod
     def setUpClass(cls):

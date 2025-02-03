@@ -58,6 +58,7 @@ def _get_gstin_info(gstin, *, throw_error=True):
                 queue="long",
                 response=get_formatted_response_for_status(response),
             )
+
         except Exception as exc:
             if isinstance(exc, GSPServerError):
                 frappe.cache.set_value("gst_server_error", True, expires_in_sec=60)
@@ -75,7 +76,7 @@ def _get_gstin_info(gstin, *, throw_error=True):
 
     gstin_info = frappe._dict(
         gstin=response.gstin,
-        business_name=titlecase(business_name),
+        business_name=titlecase(business_name or ""),
         gst_category=GST_CATEGORIES.get(response.dty, ""),
         status=response.sts,
     )
