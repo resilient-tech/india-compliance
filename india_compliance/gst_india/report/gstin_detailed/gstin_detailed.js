@@ -2,12 +2,12 @@
 // For license information, please see license.txt
 
 
-const COLUMN_MAPPING = {
-	2 : "status",
-	3 : "registration_date",
-	4 : "last_updated_on",
-	5 : "cancelled_date",
-	6 : "is_blocked",
+const GSTIN_FIELDNAME_TO_FIELDTYPE_MAPPING = {
+	"status": "Data",
+	"registration_date": "Date",
+	"last_updated_on": "Datetime",
+	"cancelled_date": "Date",
+	"is_blocked": "Data",
 }
 
 frappe.query_reports["GSTIN Detailed"] = {
@@ -43,8 +43,13 @@ frappe.query_reports["GSTIN Detailed"] = {
 	],
 
 	formatter: function (value, row, column, data, default_formatter) {
+		console.log(row)
+		console.log(column)
+		console.log(data)
 		if (data) {
 			value = default_formatter(value, row, column, data);
+
+			value = `<span fieldname="${column.fieldname}">${value}</span>`
 
 			if (column.fieldname == "update_gstin_details_btn") {
 				value = create_btn_with_gstin_attr(data.gstin);
@@ -54,9 +59,9 @@ frappe.query_reports["GSTIN Detailed"] = {
 		return value;
 	},
 
-	add_on_click_listner(gstin) {
+	add_on_click_listner(gstin, default_formatter) {
 		toggle_gstin_update_btn(gstin, disabled=true);
-		const affectedElements = $(`[class="dt-cell__content dt-cell__content--col-1"][title='${gstin}']`);
+		const affectedElements = $(`div.dt-cell__content[title='${gstin}']`);
 		toggle_rows_opacity(affectedElements, opacity=0.5)
 
 		frappe.call({
@@ -70,8 +75,8 @@ frappe.query_reports["GSTIN Detailed"] = {
 					let data = r.message;
 					affectedElements.each(function () {
 						row = this.parentElement.attributes["data-row-index"].value;
-						for (let col in COLUMN_MAPPING) {
-							update_value(row, col, data[COLUMN_MAPPING[col]])
+						for (let fieldname in GSTIN_FIELDNAME_TO_FIELDTYPE_MAPPING) {
+							update_value(row, fieldname, GSTIN_FIELDNAME_TO_FIELDTYPE_MAPPING[fieldname], data[fieldname]);
 						}
 					})
 				}
@@ -112,8 +117,13 @@ function create_btn_with_gstin_attr(gstin) {
 	return BUTTON_HTML
 }
 
-function update_value(row, col, value) {
-	let ele = $(`[class="dt-row dt-row-${row} vrow"] > [data-row-index="${row}"][data-col-index="${col}"] > div:first-child`);
-	ele.attr("title", value)
-	ele.text(value)
+function update_value(row, fieldname,fieldtype, value) {
+	let ele = $(`.dt-row.dt-row-${row}.vrow > div > div > span[fieldname='${fieldname}']`);
+	const formatter = frappe.form.get_formatter(fieldtype);
+	value = formatter(value);
+	if (fieldname == "is_blocked"){
+		value = value==0?"No":"Yes";
+	}
+	ele.text(value);
+	ele.parent().attr("title", value);
 }
