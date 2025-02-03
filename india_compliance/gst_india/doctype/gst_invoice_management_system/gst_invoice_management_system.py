@@ -4,7 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import add_to_date, format_date, getdate
+from frappe.utils import add_to_date, format_date
 
 from india_compliance.gst_india.api_classes.taxpayer_base import (
     TaxpayerBaseAPI,
@@ -285,7 +285,7 @@ def get_period_options(company, company_gstin):
         return period[2:] + period[:2]
 
     # Calculate six months ago as fallback
-    six_months_ago = add_to_date(None, months=-6).strftime("%m%Y")
+    six_months_ago = add_to_date(None, months=-7).strftime("%m%Y")
     latest_3b_filed_period = get_latest_3b_filed_period(company, company_gstin) or (
         six_months_ago,
     )
@@ -299,7 +299,7 @@ def get_period_options(company, company_gstin):
 
     # Generate last six months of valid periods
     periods = []
-    date = getdate()
+    date = add_to_date(None, months=-1)
 
     while True:
         period = date.strftime("%m%Y")
