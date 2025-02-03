@@ -49,7 +49,7 @@ class GSTINDetailedReport:
                 "fieldname": "party_name",
                 "fieldtype": "Dynamic Link",
                 "options": "party_type",
-                "width": 180,
+                "width": 220,
             },
             {
                 "label": _("GSTIN"),
@@ -71,10 +71,10 @@ class GSTINDetailedReport:
                 "width": 150,
             },
             {
-                "label": _("Last Updated On"),
+                "label": _("Last Updated"),
                 "fieldname": "last_updated_on",
                 "fieldtype": "Datetime",
-                "width": 200,
+                "width": 150,
             },
             {
                 "label": _("Cancelled Date"),
