@@ -4,7 +4,7 @@
 import frappe
 from frappe import _
 from frappe.query_builder import Case, Order
-from frappe.query_builder.functions import IfNull
+from frappe.query_builder.functions import IfNull, IsNull
 
 
 def execute(filters: dict | None = None):
@@ -116,12 +116,16 @@ class GSTINDetailedReport:
             .left_join(gstin)
             .on(gstin.gstin == party_query.gstin)
             .select(
-                gstin.gstin,
+                party_query.gstin,
                 gstin.status,
                 gstin.registration_date,
                 gstin.last_updated_on,
                 gstin.cancelled_date,
-                Case().when(gstin.is_blocked == 0, "No").else_("Yes").as_("is_blocked"),
+                Case()
+                .when(IsNull(gstin.is_blocked), "")
+                .when(gstin.is_blocked == 0, "No")
+                .else_("Yes")
+                .as_("is_blocked"),
                 party_query.party_type,
                 party_query.party_name,
             )
