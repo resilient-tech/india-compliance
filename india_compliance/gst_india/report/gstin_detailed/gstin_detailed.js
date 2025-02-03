@@ -50,7 +50,7 @@ frappe.query_reports["GSTIN Detailed"] = {
         return value;
     },
 
-    add_on_click_listner(gstin, default_formatter) {
+    add_on_click_listner(gstin) {
         toggle_gstin_update_btn(gstin, (disabled = true));
         const affectedElements = $(`div.dt-cell__content[title='${gstin}']`);
         set_btn_text(gstin, "Updating");
@@ -70,10 +70,10 @@ frappe.query_reports["GSTIN Detailed"] = {
                             update_value(row, fieldname, data[fieldname]);
                         }
                     });
+                    set_btn_text(gstin, "Updated");
                 } else {
                     toggle_gstin_update_btn(gstin, (disabled = false));
                 }
-                set_btn_text(gstin, "Updated");
             },
         });
     },
