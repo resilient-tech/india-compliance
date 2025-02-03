@@ -42,49 +42,57 @@ class GSTINDetailedReport:
                 "fieldname": "party_type",
                 "fieldtype": "Link",
                 "options": "DocType",
+                "width": 100,
             },
             {
                 "label": _("Party Name"),
                 "fieldname": "party_name",
                 "fieldtype": "Dynamic Link",
                 "options": "party_type",
+                "width": 180,
             },
             {
                 "label": _("GSTIN"),
                 "fieldname": "gstin",
                 "fieldtype": "Link",
                 "options": "GSTIN",
+                "width": 180,
             },
             {
                 "label": _("Status"),
                 "fieldname": "status",
                 "fieldtype": "Data",
+                "width": 120,
             },
             {
                 "label": _("Registration Date"),
                 "fieldname": "registration_date",
                 "fieldtype": "Date",
+                "width": 150,
             },
             {
                 "label": _("Last Updated On"),
                 "fieldname": "last_updated_on",
                 "fieldtype": "Datetime",
+                "width": 200,
             },
             {
                 "label": _("Cancelled Date"),
                 "fieldname": "cancelled_date",
                 "fieldtype": "Date",
+                "width": 150,
             },
             {
                 "label": _("Is Blocked"),
                 "fieldname": "is_blocked",
                 "fieldtype": "Data",
+                "width": 80,
             },
             {
                 "label": _("Update GSTIN Details"),
                 "fieldname": "update_gstin_details_btn",
                 "fieldtype": "Button",
-                "width": 100,
+                "width": 120,
             },
         ]
 
