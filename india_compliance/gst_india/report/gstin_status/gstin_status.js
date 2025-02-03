@@ -9,7 +9,7 @@ const GSTIN_FIELDNAME = [
     "is_blocked",
 ];
 
-frappe.query_reports["GSTIN Status Report"] = {
+frappe.query_reports["GSTIN Status"] = {
     html_enabled: true,
 
     filters: [
@@ -120,7 +120,7 @@ function create_btn_with_gstin_attr(gstin) {
 		data-fieldname="gstin_update_btn"
 		class="btn btn-xs btn-primary center"
 		data-gstin="${gstin}"
-		onclick="frappe.query_reports['GSTIN Status Report'].add_on_click_listner('${gstin}')"
+		onclick="frappe.query_reports['GSTIN Status'].add_on_click_listner('${gstin}')"
 	>
 		Update
 	</button>`;

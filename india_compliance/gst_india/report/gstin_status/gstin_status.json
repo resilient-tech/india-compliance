@@ -13,11 +13,11 @@
  "modified": "2025-01-29 13:02:30.885362",
  "modified_by": "Administrator",
  "module": "GST India",
- "name": "GSTIN Status Report",
+ "name": "GSTIN Status",
  "owner": "Administrator",
  "prepared_report": 0,
  "ref_doctype": "GSTIN",
- "report_name": "GSTIN Status Report",
+ "report_name": "GSTIN Status",
  "report_type": "Script Report",
  "roles": [
   {
