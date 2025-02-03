@@ -223,11 +223,16 @@ def download_file():
     frappe.response["type"] = "download"
 
 
-def process_gstr_1_returns_info(company, gstin, response):
+def process_gstr_returns_info(company, gstin, e_filed_list):
+    process_gstr_1_returns_info(company, gstin, e_filed_list)
+    process_gstr_3b_returns_info(company, gstin, e_filed_list)
+
+
+def process_gstr_1_returns_info(company, gstin, e_filed_list):
     return_info = {}
 
     # compile gstr-1 returns info
-    for info in response.get("EFiledlist"):
+    for info in e_filed_list:
         if info["rtntype"] == "GSTR1":
             return_info[f"GSTR1-{info['ret_prd']}-{gstin}"] = info
 
@@ -285,6 +290,28 @@ def process_gstr_1_returns_info(company, gstin, response):
             }
         ).insert()
         _update_gstr_1_filed_upto(filed_upto)
+
+
+def process_gstr_3b_returns_info(company, gstin, e_filed_list):
+    for info in e_filed_list:
+        if info["status"] != "Filed":
+            continue
+
+        if frappe.db.exists(
+            "GST Return Log",
+            f'GSTR3B-{info["ret_prd"]}-{gstin}',
+        ):
+            continue
+
+        gstr3b_log = frappe.new_doc("GST Return Log")
+        gstr3b_log.return_period = info["ret_prd"]
+        gstr3b_log.company = company
+        gstr3b_log.gstin = gstin
+        gstr3b_log.return_type = "GSTR3B"
+        gstr3b_log.filing_status = "Filed"
+        gstr3b_log.acknowledgement_number = info["arn"]
+        gstr3b_log.filing_date = datetime.strptime(info["dof"], "%d-%m-%Y").date()
+        gstr3b_log.insert()
 
 
 def get_gst_return_log(posting_date, company_gstin):
