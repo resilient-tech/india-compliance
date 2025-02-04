@@ -55,11 +55,17 @@ frappe.ui.form.on(DOCTYPE, {
         render_empty_state(frm);
         if (!frm.doc.company) return;
         const options = await india_compliance.set_gstin_options(frm);
-
         frm.set_value("company_gstin", options[0]);
+
+        set_period_options(frm);
     },
 
-    company_gstin: render_empty_state,
+    company_gstin(frm) {
+        render_empty_state(frm);
+        set_period_options(frm);
+    },
+
+    period: render_empty_state,
 
     refresh(frm) {
         show_download_invoices_message(frm);
@@ -70,7 +76,13 @@ frappe.ui.form.on(DOCTYPE, {
 });
 
 class IMS extends reconciliation.reconciliation_tabs {
+    render_data(data) {
+        this.process_data(data);
+        super.render_data(data);
+    }
+
     refresh(data) {
+        this.process_data(data);
         super.refresh(data);
         this.set_actions_summary();
     }
@@ -136,6 +148,7 @@ class IMS extends reconciliation.reconciliation_tabs {
                     "Mismatch",
                     "Manual Match",
                     "Missing in PI",
+                    "Suggested Mark as Pending",
                 ],
             },
             {
@@ -561,6 +574,28 @@ class IMS extends reconciliation.reconciliation_tabs {
             <br/>
             ${frappe.datetime.str_to_user(row.bill_date) || ""}
         `;
+    }
+
+    process_data(data = this.frm.__invoice_data) {
+        if (!data || !this.frm?.doc?.period) return;
+
+        const { period } = this.frm.doc;
+        const month = period.slice(0, 2);
+        const year = period.slice(2);
+        const reference_date = new Date(year, month, 0);
+
+        // Change match status of invoices in which purchase is booked in next period
+        // but supplier has filed return in current period
+        for (const row of data) {
+            if (!row._purchase_invoice?.posting_date) continue;
+
+            const bill_date = str_to_obj(row._inward_supply.bill_date);
+            const posting_date = str_to_obj(row._purchase_invoice.posting_date);
+
+            if (posting_date > reference_date && bill_date <= reference_date) {
+                row.match_status = "Suggested Mark as Pending";
+            }
+        }
     }
 }
 
@@ -1015,4 +1050,20 @@ function show_download_invoices_message(frm) {
     msg_tag.on("click", () => {
         frm.ims_actions.download_ims_data();
     });
+}
+
+async function set_period_options(frm) {
+    if (!(frm.doc.company && frm.doc.company_gstin)) return;
+
+    const { message: period_options } = await frappe.call({
+        method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.get_period_options",
+        args: { company: frm.doc.company, company_gstin: frm.doc.company_gstin },
+    });
+
+    frm.get_field("period").set_data(period_options);
+    frm.set_value("period", period_options[0]);
+}
+
+function str_to_obj(d) {
+    return frappe.datetime.user_to_obj(frappe.datetime.str_to_user(d));
 }

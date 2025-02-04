@@ -4,7 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import format_date
+from frappe.utils import add_to_date, format_date
 
 from india_compliance.gst_india.api_classes.taxpayer_base import (
     TaxpayerBaseAPI,
@@ -37,6 +37,10 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_re
     unlink_documents as _unlink_documents,
 )
 from india_compliance.gst_india.utils.exporter import ExcelExporter
+from india_compliance.gst_india.utils.gstin_info import (
+    get_latest_3b_filed_period,
+    update_gstr_returns_info,
+)
 from india_compliance.gst_india.utils.gstr_2 import (
     GSTRCategory,
     ReturnType,
@@ -109,7 +113,7 @@ class GSTInvoiceManagementSystem(Document):
                         "is_supplier_return_filed": doc.is_supplier_return_filed,
                         "doc_type": doc.doc_type,
                         "posting_date": format_date(
-                            _purchase_invoice.pop("posting_date", None)
+                            _purchase_invoice.get("posting_date")
                         ),
                         "_inward_supply": doc,
                         "_purchase_invoice": _purchase_invoice,
@@ -273,6 +277,41 @@ def download_excel_report(data, doc):
 
     build_data = BuildExcelIMS(doc, data)
     build_data.export_data()
+
+
+@frappe.whitelist()
+def get_period_options(company, company_gstin):
+    def format_period(period):
+        return period[2:] + period[:2]
+
+    # Calculate six months ago as fallback
+    six_months_ago = add_to_date(None, months=-7).strftime("%m%Y")
+    latest_3b_filed_period = get_latest_3b_filed_period(company, company_gstin) or (
+        six_months_ago,
+    )
+
+    # Fetch latest GSTR3B filing or default to six months ago
+    latest_3b_filed_period = format_period(latest_3b_filed_period[0])
+    six_months_ago = format_period(six_months_ago)
+
+    if latest_3b_filed_period <= six_months_ago:
+        update_gstr_returns_info(company, company_gstin)
+
+    # Generate last six months of valid periods
+    periods = []
+    date = add_to_date(None, months=-1)
+
+    while True:
+        period = date.strftime("%m%Y")
+        formatted_period = format_period(period)
+
+        if formatted_period <= latest_3b_filed_period or formatted_period < "201707":
+            break
+
+        periods.append(period)
+        date = add_to_date(date, months=-1)
+
+    return periods
 
 
 def download_and_upload_ims_invoices(company_gstin):

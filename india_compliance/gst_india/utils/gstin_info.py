@@ -2,8 +2,11 @@ import json
 from datetime import timedelta
 from string import whitespace
 
+from pypika import Order
+
 import frappe
 from frappe import _
+from frappe.query_builder.functions import Concat, Substring
 from frappe.utils import getdate
 
 from india_compliance.exceptions import GSPServerError
@@ -12,7 +15,7 @@ from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
 from india_compliance.gst_india.api_classes.public import PublicAPI
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
-    process_gstr_1_returns_info,
+    process_gstr_returns_info,
 )
 from india_compliance.gst_india.utils import parse_datetime, titlecase, validate_gstin
 
@@ -304,36 +307,65 @@ def fetch_transporter_id_status(transporter_id, throw=True):
 ####################################################################################################
 
 
-def get_gstr_1_return_status(
-    company, gstin, period, process_info=True, year_increment=0
-):
-    """Returns Returns info for the given period"""
+def get_gstr_1_return_status(company, gstin, period, year_increment=0):
+    """Returns Returns-info for the given period"""
     fy = get_fy(period, year_increment=year_increment)
+    e_filed_list = update_gstr_returns_info(company, gstin, fy)
 
-    response = PublicAPI().get_returns_info(gstin, fy)
-    if not response:
-        return
-
-    if process_info:
-        frappe.enqueue(
-            process_gstr_1_returns_info,
-            company=company,
-            gstin=gstin,
-            response=response,
-            enqueue_after_commit=True,
-        )
-
-    for info in response.get("EFiledlist"):
+    for info in e_filed_list:
         if info["rtntype"] == "GSTR1" and info["ret_prd"] == period:
             return info["status"]
 
     # late filing possibility (limitation: only checks for the next FY: good enough)
     if not year_increment and get_current_fy() != fy:
-        get_gstr_1_return_status(
-            company, gstin, period, process_info=process_info, year_increment=1
-        )
+        get_gstr_1_return_status(company, gstin, period, year_increment=1)
 
     return "Not Filed"
+
+
+def update_gstr_returns_info(company, gstin, fy=None):
+    if not fy:
+        fy = get_current_fy()
+
+    response = PublicAPI().get_returns_info(gstin, fy)
+    if not response:
+        return
+
+    e_filed_list = response.get("EFiledlist")
+
+    # If api call is made then update logs for GSTR1 AND GSTR3B
+    frappe.enqueue(
+        process_gstr_returns_info,
+        company=company,
+        gstin=gstin,
+        e_filed_list=e_filed_list,
+        enqueue_after_commit=True,
+    )
+
+    return e_filed_list
+
+
+def get_latest_3b_filed_period(company, company_gstin):
+    log = frappe.qb.DocType("GST Return Log")
+
+    return (
+        frappe.qb.from_(log)
+        .select(log.return_period)
+        .where(log.company == company)
+        .where(log.gstin == company_gstin)
+        .where(log.return_type == "GSTR3B")
+        .where(log.filing_status == "Filed")
+        .orderby(
+            # eg: 202411
+            Concat(
+                Substring(log.return_period, 3, 4),  # year
+                Substring(log.return_period, 1, 2),  # month
+            ),
+            order=Order.desc,
+        )
+        .limit(1)
+        .run(pluck=True)
+    )
 
 
 def get_fy(period, year_increment=0):
