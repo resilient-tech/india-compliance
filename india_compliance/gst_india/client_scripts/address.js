@@ -56,22 +56,22 @@ frappe.ui.form.on(DOCTYPE, {
 });
 
 function update_address_fields(frm) {
-    const doc = frappe.get_doc(DOCTYPE, frm.doc.name);
-    doc._gstin = frm.doc.gstin;
-    doc._pincode = frm.doc.pincode;
-
     const original_quick_entry_form = frappe.ui.form.AddressQuickEntryForm;
 
     frappe.ui.form.AddressQuickEntryForm = class extends frappe.ui.form.AddressQuickEntryForm {
         title = "Update Address"
+
         get_dynamic_link_fields() { return []; }
-        update_doc() {
+
+        update_doc(){
             const doc = super.update_doc();
             frm.refresh();
             return doc;
         }
     }
-    frappe.ui.form.make_quick_entry(DOCTYPE, null, null, doc);
+
+    const doc = frappe.get_doc(DOCTYPE, frm.doc.name);
+    frappe.ui.form.make_quick_entry(DOCTYPE, null, (dialog) => dialog.set_value("_gstin", frm.doc.gstin), doc);
 
     frappe.ui.form.AddressQuickEntryForm = original_quick_entry_form;
 }
