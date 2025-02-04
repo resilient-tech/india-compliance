@@ -14,6 +14,7 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool.test_purcha
     create_gst_inward_supply,
 )
 from india_compliance.gst_india.utils.api import create_integration_request
+from india_compliance.gst_india.utils.tests import create_purchase_invoice
 
 EXTRA_TEST_RECORD_DEPENDENCIES = []
 IGNORE_TEST_RECORD_DEPENDENCIES = []
@@ -151,6 +152,28 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
             "_Test Indian Registered Company", "24AAQCA8719H1ZC"
         )
         self.assertListEqual(period_options, periods[:2])
+
+    def test_auto_reconciliation(self):
+        pinv = create_purchase_invoice(
+            **{
+                "bill_no": "BILL-24-00001",
+                "bill_date": "2024-12-11",
+                "items": [
+                    {
+                        "item_code": "_Test Trading Goods 1",
+                        "qty": 1,
+                    }
+                ],
+                "supplier": "_Test Registered Supplier",
+                "supplier_gstin": "24AABCR6898M1ZN",
+            }
+        )
+
+        invoice_data = self.gst_ims.autoreconcile_and_get_data().get("invoice_data")
+
+        for data in invoice_data:
+            if data._inward_supply.bill_no == "BILL-24-00001":
+                self.assertEqual(data._purchase_invoice.name, pinv.name)
 
     def get_periods(self):
         periods = []
