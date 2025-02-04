@@ -5,9 +5,15 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_to_date
 
+from india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system import (
+    get_data_for_upload,
+    get_period_options,
+    update_previous_ims_action,
+)
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.test_purchase_reconciliation_tool import (
     create_gst_inward_supply,
 )
+from india_compliance.gst_india.utils.api import create_integration_request
 
 EXTRA_TEST_RECORD_DEPENDENCIES = []
 IGNORE_TEST_RECORD_DEPENDENCIES = []
@@ -50,6 +56,101 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         cls.invoice_name_2 = frappe.get_value(
             "GST Inward Supply", {"bill_no": "BILL-24-00002"}
         )
+
+    def test_update_action(self):
+        self.gst_ims.update_action((self.invoice_name_1,), "Accepted")
+
+        self.assertEqual(
+            frappe.get_value("GST Inward Supply", self.invoice_name_1, "ims_action"),
+            "Accepted",
+        )
+
+    def test_data_for_upload(self):
+        # Empty data
+        upload_data = get_data_for_upload("24AAQCA8719H1ZC", "save")
+        self.assertDictEqual(upload_data, {})
+
+        # Data for save request
+        self.gst_ims.update_action((self.invoice_name_1,), "Accepted")
+
+        upload_data = get_data_for_upload("24AAQCA8719H1ZC", "save")
+        self.assertEqual("BILL-24-00001", upload_data["b2b"][0]["inum"])
+
+        # Data for reset request
+        self.gst_ims.update_action((self.invoice_name_2,), "No Action")
+
+        upload_data = get_data_for_upload("24AAQCA8719H1ZC", "reset")
+        self.assertEqual("BILL-24-00002", upload_data["b2b"][0]["inum"])
+
+    def test_update_previous_ims_action(self):
+        self.gst_ims.update_action((self.invoice_name_1,), "Accepted")
+        self.gst_ims.update_action((self.invoice_name_2,), "No Action")
+
+        upload_data = get_data_for_upload("24AAQCA8719H1ZC", "save")
+        data = {
+            "body": {
+                "action": "SAVE",
+                "data": {
+                    "invdata": upload_data,
+                },
+            },
+        }
+
+        create_integration_request(
+            data=data,
+            reference_doctype="GST Invoice Management System",
+            reference_name="GST Invoice Management System",
+            request_id="12345",
+        )
+        error_report = {
+            "b2b": [
+                {
+                    "stin": "24AABCR6898M1ZN",
+                    "inv": [{"rtnprd": "122024", "inum": "BILL-24-00002"}],
+                }
+            ],
+        }
+
+        update_previous_ims_action("12345", error_report)
+
+        # Previous IMS Action updated
+        self.assertEqual(
+            frappe.get_value(
+                "GST Inward Supply", self.invoice_name_1, "previous_ims_action"
+            ),
+            "Accepted",
+        )
+
+        # Previous IMS Action not updated
+        self.assertEqual(
+            frappe.get_value(
+                "GST Inward Supply", self.invoice_name_2, "previous_ims_action"
+            ),
+            "Accepted",
+        )
+
+    def test_get_period_options(self):
+        periods = self.get_periods()
+
+        # When there are no GSTR 3B return logs
+        period_options = get_period_options(
+            "_Test Indian Registered Company", "24AAQCA8719H1ZC"
+        )
+        self.assertListEqual(period_options, periods[:6])
+
+        # When GSTR 3B filed period is more than 6 months
+        self.create_gstr_3b_return_log(periods[-1])
+        period_options = get_period_options(
+            "_Test Indian Registered Company", "24AAQCA8719H1ZC"
+        )
+        self.assertListEqual(period_options, periods[:-1])
+
+        # When GSTR 3B filed period is less than 6 months
+        self.create_gstr_3b_return_log(periods[2])
+        period_options = get_period_options(
+            "_Test Indian Registered Company", "24AAQCA8719H1ZC"
+        )
+        self.assertListEqual(period_options, periods[:2])
 
     def get_periods(self):
         periods = []
