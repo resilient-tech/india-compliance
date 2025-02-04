@@ -294,7 +294,7 @@ def get_period_options(company, company_gstin):
     latest_3b_filed_period = format_period(latest_3b_filed_period[0])
     six_months_ago = format_period(six_months_ago)
 
-    if latest_3b_filed_period <= six_months_ago:
+    if latest_3b_filed_period <= six_months_ago and not frappe.flags.in_test:
         update_gstr_returns_info(company, company_gstin)
 
     # Generate last six months of valid periods
