@@ -49,9 +49,14 @@ def get_filters(
     year,
 ):
     filters = {}
+    year = cint(year)
     quarter_no = get_month_or_quarter_dict().get(period)
-    filters["from_date"] = get_first_day(f"{cint(year)}-{quarter_no[0]}-01")
-    filters["to_date"] = get_last_day(f"{cint(year)}-{quarter_no[1]}-01")
+    filters["from_date"] = get_first_day(f"{year}-{quarter_no[0]}-01")
+
+    if quarter_no[1] < quarter_no[0]:
+        year += 1
+
+    filters["to_date"] = get_last_day(f"{year}-{quarter_no[1]}-01")
     filters["company_gstin"] = company_gstin
     filters["company"] = company
 

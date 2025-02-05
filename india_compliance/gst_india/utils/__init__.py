@@ -1007,6 +1007,8 @@ def get_month_or_quarter_dict():
         "Apr - Jun": (4, 6),
         "Jul - Sep": (7, 9),
         "Oct - Dec": (10, 12),
+        "Apr - Sep": (4, 9),
+        "Oct - Mar": (10, 3),
         "January": 1,
         "February": 2,
         "March": 3,

@@ -68,21 +68,15 @@ frappe.query_reports["GST Job Work Stock Movement"] = {
                         fieldtype: "Select",
                         options: get_options_for_year(),
                         onchange: () => {
-                            if (this.dialog.get_value("year") === "2017") {
-                                this.dialog.fields_dict.period.df.options = [
-                                    "Jul - Sep",
-                                    "Oct - Dec",
-                                    "Jan - Mar",
-                                ];
-                                this.dialog.refresh();
-                            }
+                            this.dialog.fields_dict.period.df.options =
+                                get_options_for_month(this.dialog.get_value("year"));
+                            this.dialog.refresh();
                         },
                     },
                     {
                         fieldname: "period",
                         label: __("Return Filing Period"),
                         fieldtype: "Select",
-                        options: ["Apr - Jun", "Jul - Sep", "Oct - Dec", "Jan - Mar"],
                     },
                 ],
                 primary_action_label: "Export JSON",
@@ -120,4 +114,16 @@ function get_options_for_year() {
     const year_range = current_year - start_year + 1;
     let options = Array.from({ length: year_range }, (_, index) => start_year + index);
     return options.reverse().map(year => year.toString());
+}
+
+function get_options_for_month(year) {
+    if (!year) return [];
+
+    const year = parseInt(year);
+
+    if (year > 2021) return ["Apr - Sep", "Oct - Mar"];
+    else if (year === 2017) return ["Jul - Sep", "Oct - Dec", "Jan - Mar"];
+    else if (year === 2021) return ["Apr - Jun", "Jul - Sep", "Oct - Mar"];
+
+    return ["Apr - Jun", "Jul - Sep", "Oct - Dec", "Jan - Mar"];
 }
