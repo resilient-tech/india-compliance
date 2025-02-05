@@ -40,7 +40,7 @@ frappe.ui.form.on("GST Return Log", {
                     company_gstin: frm.doc.gstin,
                     year: year,
                     month_or_quarter: month_or_quarter,
-                    is_quarterly: frm.doc.filing_preference,
+                    filing_preference: frm.doc.filing_preference,
                 });
                 cur_frm.save();
             });

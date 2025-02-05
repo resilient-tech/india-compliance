@@ -114,7 +114,7 @@ frappe.ui.form.on(DOCTYPE, {
         set_options_for_month_or_quarter(frm, true);
 
         if (is_gstr1_api_enabled()) {
-            frm.set_df_property("is_quarterly", "read_only", 1);
+            frm.set_df_property("filing_preference", "read_only", 1);
         }
 
         frm.__setup_complete = true;
@@ -182,8 +182,8 @@ frappe.ui.form.on(DOCTYPE, {
                 });
             }
 
-            if (frm.doc.is_quarterly != filters.is_quarterly) {
-                frm.set_value("is_quarterly", filters.is_quarterly);
+            if (frm.doc.filing_preference != filters.filing_preference) {
+                frm.set_value("filing_preference", filters.filing_preference);
             }
 
             frm.taxpayer_api_call("generate_gstr1", { only_books_data }).then(r => {
@@ -2994,10 +2994,10 @@ async function update_fields_based_on_filing_preference(frm) {
         },
     });
 
-    if (preference === undefined || preference === frm.doc.is_quarterly) return;
+    if (preference === undefined || preference === frm.doc.filing_preference) return;
 
-    frm.doc.is_quarterly = preference;
-    frm.refresh_field("is_quarterly");
+    frm.doc.filing_preference = preference;
+    frm.refresh_field("filing_preference");
 }
 
 function set_options_for_month_or_quarter(frm, with_update = false) {
@@ -3060,7 +3060,7 @@ async function get_net_gst_liability(frm) {
             year: frm.doc.year,
             company_gstin: frm.doc.company_gstin,
             company: frm.doc.company,
-            is_quarterly: frm.doc.is_quarterly,
+            filing_preference: frm.doc.filing_preference,
         },
     });
 

@@ -567,9 +567,9 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
 
         if (
             self.filing_preference is None
-            or filters.is_quarterly != self.filing_preference
+            or filters.filing_preference != self.filing_preference
         ):
-            filters.is_quarterly = self.filing_preference = filing_preference
+            filters.filing_preference = self.filing_preference = filing_preference
 
         if status == "Filed":
             gov_data_field = "filed"

@@ -138,7 +138,7 @@ class GSTR1Beta(Document):
             company_gstin=self.company_gstin,
             month_or_quarter=self.month_or_quarter,
             year=self.year,
-            is_quarterly=self.is_quarterly,
+            filing_preference=self.filing_preference,
         )
 
         try:
@@ -330,7 +330,9 @@ def make_journal_entry(
 
 
 @frappe.whitelist()
-def get_net_gst_liability(company, company_gstin, month_or_quarter, year, is_quarterly):
+def get_net_gst_liability(
+    company, company_gstin, month_or_quarter, year, filing_preference
+):
     """
     Returns the net output balance for the given return period as per ledger entries
     """

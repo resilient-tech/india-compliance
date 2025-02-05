@@ -15,7 +15,7 @@
   "column_break_qcor",
   "month_or_quarter",
   "column_break_auof",
-  "is_quarterly",
+  "filing_preference",
   "data_section",
   "tabs_html",
   "tabs_empty_state",
@@ -90,7 +90,7 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "is_quarterly",
+   "fieldname": "filing_preference",
    "fieldtype": "Data",
    "label": "Filing Preference"
   },
