@@ -139,7 +139,7 @@ class BillofEntry(Document):
         self.total_taxable_value = total_taxable_value
 
     def validate_purchase_invoice(self):
-        pi_names = [row.purchase_invoice for row in self.purchase_invoices]
+        pi_names = {row.purchase_invoice for row in self.purchase_invoices}
         purchase_invoices = frappe.get_all(
             "Purchase Invoice",
             filters={"name": ["in", pi_names]},
@@ -629,7 +629,8 @@ def get_items_for_landed_cost_voucher(boe):
 
     NOTE: Assuming business has consistent practice of creating PR and PI
     """
-    pi_names = [row.purchase_invoice for row in boe.purchase_invoices]
+    pi_names = {row.purchase_invoice for row in boe.purchase_invoices}
+    pi_item_names = {row.pi_detail for row in boe.items}
 
     purchase_invoices = frappe.get_all(
         "Purchase Invoice",
@@ -640,7 +641,7 @@ def get_items_for_landed_cost_voucher(boe):
     # Fetch items from the Purchase Invoices
     purchase_invoice_items = frappe.get_all(
         "Purchase Invoice Item",
-        filters={"parent": ["in", pi_names]},
+        filters={"name": ["in", pi_item_names]},
         fields=["*"],
     )
 
@@ -713,13 +714,10 @@ def get_items_for_landed_cost_voucher(boe):
 
 
 def get_pi_items(purchase_invoices):
-    pi = frappe.qb.DocType("Purchase Invoice")
     pi_item = frappe.qb.DocType("Purchase Invoice Item")
 
     return (
-        frappe.qb.from_(pi)
-        .join(pi_item)
-        .on(pi.name == pi_item.parent)
+        frappe.qb.from_(pi_item)
         .select(
             pi_item.item_code,
             pi_item.item_name,
@@ -732,18 +730,8 @@ def get_pi_items(purchase_invoices):
             pi_item.taxable_value.as_("assessable_value"),
             pi_item.taxable_value,
             pi_item.project,
-            pi_item.igst_rate,
-            pi_item.cgst_rate,
-            pi_item.sgst_rate,
-            pi_item.cess_rate,
-            pi_item.cess_non_advol_rate,
-            pi_item.igst_amount,
-            pi_item.cgst_amount,
-            pi_item.sgst_amount,
-            pi_item.cess_amount,
-            pi_item.cess_non_advol_amount,
             pi_item.name.as_("pi_detail"),
         )
-        .where(pi.name.isin(purchase_invoices))
+        .where(pi_item.parent.isin(purchase_invoices))
         .run(as_dict=True)
     )

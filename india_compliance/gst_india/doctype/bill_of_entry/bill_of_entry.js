@@ -41,7 +41,7 @@ frappe.ui.form.on("Bill of Entry", {
         );
 
         if (
-            (frm.doc.docstatus === 1) ||
+            (frm.doc.docstatus === 1 && frm.doc.total_customs_duty > 0) ||
             has_ineligible_items
         ) {
             frm.add_custom_button(

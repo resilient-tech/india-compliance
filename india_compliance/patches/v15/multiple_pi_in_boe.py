@@ -32,7 +32,7 @@ def add_purchase_invoices():
 
     purchase_invoices = frappe.get_all(
         "Purchase Invoice",
-        filters={"name": ["in", list(linked_purchase_invoices)], "docstatus": 1},
+        filters={"name": ["in", list(linked_purchase_invoices)]},
         fields=["name", "supplier", "posting_date", "grand_total"],
     )
     purchase_invoice_map = {pi["name"]: pi for pi in purchase_invoices}
@@ -58,6 +58,7 @@ def get_records_to_insert(bill_of_entry, purchase_invoice_map):
                 "grand_total": pi.grand_total,
                 "parent": boe.name,
                 "parentfield": "purchase_invoices",
+                "docstatus": boe.docstatus,
                 "parenttype": "Bill of Entry",
             }
         )
