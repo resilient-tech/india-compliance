@@ -12,6 +12,10 @@ div[data-page-route="GST Invoice Management System"]
     margin-top: 0;
 }
 
+div[data-page-route="GST Invoice Management System"] [data-fieldname="data_section"] {
+    padding-top: 0;
+}
+
 div[data-page-route="GST Invoice Management System"]
     [data-fieldname="invoice_html"]
     .form-tabs-list {
