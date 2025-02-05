@@ -48,7 +48,6 @@
   "e_invoice_applicable_from",
   "e_invoice_applicable_companies",
   "gstr_1_section_break",
-  "compare_gstr_1_data",
   "enable_gstr_1_api",
   "compare_unfiled_data",
   "filing_frequency",
