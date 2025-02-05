@@ -1,4 +1,5 @@
 import copy
+import functools
 import io
 import tarfile
 
@@ -980,3 +981,89 @@ def handle_server_errors(settings, doc, document_type, error):
         title=error_message_title.get(type(error)),
         indicator="yellow",
     )
+<<<<<<< HEAD
+=======
+
+
+def get_month_or_quarter_dict():
+    return {
+        "Jan - Mar": (1, 3),
+        "Apr - Jun": (4, 6),
+        "Jul - Sep": (7, 9),
+        "Oct - Dec": (10, 12),
+        "January": 1,
+        "February": 2,
+        "March": 3,
+        "April": 4,
+        "May": 5,
+        "June": 6,
+        "July": 7,
+        "August": 8,
+        "September": 9,
+        "October": 10,
+        "November": 11,
+        "December": 12,
+    }
+
+
+def get_period(month_or_quarter, year=None):
+    month_or_quarter_no = get_month_or_quarter_dict().get(month_or_quarter)
+
+    if isinstance(month_or_quarter_no, int):
+        month_or_quarter_no = (month_or_quarter_no, month_or_quarter_no)
+
+    if year:
+        return str(month_or_quarter_no[1]).zfill(2) + str(year)
+
+    return month_or_quarter_no
+
+
+def is_outward_stock_entry(doc):
+    if (
+        doc.doctype == "Stock Entry"
+        and doc.purpose in ["Material Transfer", "Material Issue"]
+        and not doc.is_return
+    ):
+        return True
+
+
+def create_notification(
+    message_content, document_type, document_name=None, request_id=None
+):
+    # request_id shows failure response
+    if request_id and (
+        doc_name := frappe.db.get_value(
+            "Integration Request", {"request_id": request_id}
+        )
+    ):
+        document_type = "Integration Request"
+        document_name = doc_name
+
+    notification = frappe.get_doc(
+        {
+            "doctype": "Notification Log",
+            "for_user": frappe.session.user,
+            "type": "Alert",
+            "document_type": document_type,
+            "document_name": document_name or document_type,
+            "subject": message_content.get("subject"),
+            "email_content": message_content.get("body"),
+        }
+    )
+    notification.insert()
+
+
+def enable_autocommit(fn):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        db = frappe.local.db
+        autocommit = db.auto_commit_on_many_writes
+        db.auto_commit_on_many_writes = 1
+
+        try:
+            return fn(*args, **kwargs)
+        finally:
+            db.auto_commit_on_many_writes = autocommit
+
+    return wrapper
+>>>>>>> bf3716a1 (fix: autocommit instead of assumption)
