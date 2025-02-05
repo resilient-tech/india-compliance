@@ -509,11 +509,10 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
         ).response
 
     @staticmethod
-    def get_fy(date=None):
-        # Standard for India as per GST
-        if not date:
-            date = frappe.utils.getdate()
+    def get_fy():
+        date = frappe.utils.getdate()
 
+        # Standard for India as per GST
         if date.month < 4:
             return f"{date.year - 1}-{str(date.year)[2:]}"
 
