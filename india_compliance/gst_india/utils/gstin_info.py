@@ -374,7 +374,7 @@ def get_latest_3b_filed_period(company, company_gstin):
 ####################################################################################################
 
 
-def get_filing_preference(gstin, period, force=False):
+def get_and_update_filing_preference(gstin, period, force=False):
     if not force:
         log_name = f"GSTR1-{period}-{gstin}"
 
@@ -385,7 +385,7 @@ def get_filing_preference(gstin, period, force=False):
         if filing_preference:
             return filing_preference
 
-    filing_preference = fetch_filing_preference(gstin, period)
+    filing_preference = get_filing_preference(gstin, period)
 
     # update GST Return Log
     frappe.enqueue(
@@ -398,9 +398,9 @@ def get_filing_preference(gstin, period, force=False):
     return filing_preference
 
 
-def fetch_filing_preference(gstin, period):
+def get_filing_preference(gstin, period):
     api = GSTR1API(company_gstin=gstin)
-    response = api.get_filing_preference(fy=get_fy(period))
+    response = api.fetch_filing_preference(fy=get_fy(period))
 
     quarter = get_financial_quarter(cint(period[:2]))
     filing_preference = (

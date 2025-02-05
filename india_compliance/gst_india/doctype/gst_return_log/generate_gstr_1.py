@@ -9,7 +9,6 @@ from frappe.utils import flt, sbool
 from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
 from india_compliance.gst_india.constants import STATUS_CODE_MAP
 from india_compliance.gst_india.doctype.gstr_action.gstr_action import set_gstr_actions
-from india_compliance.gst_india.utils.__init__ import get_month_or_quarter_dict
 from india_compliance.gst_india.utils.gstr_1 import (
     CATEGORY_SUB_CATEGORY_MAPPING,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX,
@@ -30,16 +29,6 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
 from india_compliance.gst_india.utils.gstr_utils import (
     publish_action_status_notification,
 )
-
-MONTH = list(get_month_or_quarter_dict().keys())[4:]
-QUARTER = ["Jan-Mar", "Apr-Jun", "Jul-Sep", "Oct-Dec"]
-status_code_map = {
-    "P": "Processed",
-    "PE": "Processed with Errors",
-    "ER": "Error",
-    "IP": "In Progress",
-}
-MAXIMUM_UPLOAD_SIZE = 5200000
 
 
 class SummarizeGSTR1:
@@ -563,13 +552,14 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
 
         if (
             status != "Filed"
+            # filing pref is determined in the first month of the quarter
             and filters.month_or_quarter in ["January", "April", "July", "October"]
         ) or not self.filing_preference:
             from india_compliance.gst_india.utils.gstin_info import (
-                get_filing_preference,
+                get_and_update_filing_preference,
             )
 
-            filing_preference = get_filing_preference(
+            filing_preference = get_and_update_filing_preference(
                 self.gstin, self.return_period, force=True
             )
         else:
