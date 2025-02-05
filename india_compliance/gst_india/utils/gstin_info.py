@@ -376,10 +376,10 @@ def get_latest_3b_filed_period(company, company_gstin):
 
 def get_and_update_filing_preference(gstin, period, force=False):
     if not force:
-        log_name = f"GSTR1-{period}-{gstin}"
+        log_names = get_logs_for_quarter(gstin, period)
 
         filing_preference = frappe.db.get_value(
-            "GST Return Log", log_name, "filing_preference"
+            "GST Return Log", {"name": ["in", log_names]}, "filing_preference"
         )
 
         if filing_preference:
@@ -427,7 +427,7 @@ def create_or_update_logs_for_quarter(gstin, period, filing_preference):
             {
                 "doctype": "GST Return Log",
                 "name": log_name,
-                "return_type": "GSTR1",
+                "return_type": log_name.split("-")[0],
                 "filing_preference": filing_preference,
                 "return_period": log_name.split("-")[1],
                 "gstin": gstin,
@@ -440,17 +440,6 @@ def create_or_update_logs_for_quarter(gstin, period, filing_preference):
     )
 
     patch_filing_preference(gstin)
-
-
-def get_logs_for_quarter(gstin, period):
-    quarter = get_financial_quarter(cint(period[:2]))
-    start_month = quarter * 3 + 1
-    year = period[2:]
-
-    return (
-        f"GSTR1-{month:02d}{year}-{gstin}"
-        for month in range(start_month, start_month + 3)
-    )
 
 
 ####################################################################################################
@@ -472,6 +461,20 @@ def get_fy(period, year_increment=0):
 def get_current_fy():
     period = getdate().strftime("%m%Y")
     return get_fy(period)
+
+
+def get_logs_for_quarter(gstin, period):
+    quarter = get_financial_quarter(cint(period[:2]))
+    start_month = quarter * 3 + 1
+    year = period[2:]
+
+    logs = []
+
+    for return_type in ["GSTR1", "GSTR3B"]:
+        for month in range(start_month, start_month + 3):
+            logs.append(f"{return_type}-{month:02d}{year}-{gstin}")
+
+    return logs
 
 
 def get_financial_quarter(month):
