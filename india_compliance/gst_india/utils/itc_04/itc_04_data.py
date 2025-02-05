@@ -48,6 +48,9 @@ class ITC04Query:
                 (doc_item.cgst_rate + doc_item.sgst_rate + doc_item.igst_rate).as_(
                     "gst_rate"
                 ),
+                doc_item.cgst_rate,
+                doc_item.sgst_rate,
+                doc_item.igst_rate,
                 doc_item.taxable_value,
                 doc_item.cgst_amount,
                 doc_item.sgst_amount,

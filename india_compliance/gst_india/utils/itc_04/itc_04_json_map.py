@@ -68,7 +68,7 @@ class TABLE5A(ITC04DataMapper):
     CATEGORY = ITC04JsonKey.TABLE5A.value
 
     KEY_MAPPING = {
-        GovDataField.COMPANY_GSTIN.value: ITC04_DataField.COMPANY_GSTIN.value,
+        GovDataField.JOB_WORKER_GSTIN.value: ITC04_DataField.JOB_WORKER_GSTIN.value,
         GovDataField.JOB_WORKER_STATE_CODE.value: ITC04_DataField.JOB_WORKER_STATE_CODE.value,
         GovDataField.ITEMS.value: ITC04_DataField.ITEMS.value,
         GovDataField.ORIGINAL_CHALLAN_DATE.value: ITC04_DataField.ORIGINAL_CHALLAN_DATE.value,
@@ -78,6 +78,8 @@ class TABLE5A(ITC04DataMapper):
         GovDataField.QUANTITY.value: ITC04_ItemField.QUANTITY.value,
         GovDataField.DESCRIPTION.value: ITC04_ItemField.DESCRIPTION.value,
         GovDataField.FLAG.value: ITC04_DataField.FLAG.value,
+        GovDataField.LOST_QUANTITY.value: ITC04_ItemField.LOST_QUANTITY.value,
+        GovDataField.LOST_UOM.value: ITC04_ItemField.LOST_UOM.value,
     }
 
     def __init__(self):
@@ -86,12 +88,14 @@ class TABLE5A(ITC04DataMapper):
         self.value_formatters_for_internal = {
             GovDataField.ITEMS.value: self.format_item_for_internal,
             GovDataField.UOM.value: self.map_uom,
+            GovDataField.LOST_UOM.value: self.map_uom,
             GovDataField.JOB_WORKER_STATE_CODE.value: self.map_place_of_supply,
         }
 
         self.value_formatters_for_gov = {
             ITC04_DataField.ITEMS.value: self.format_item_for_gov,
             ITC04_ItemField.UOM.value: self.map_uom,
+            ITC04_ItemField.LOST_UOM.value: self.map_uom,
             ITC04_DataField.JOB_WORKER_STATE_CODE.value: self.map_place_of_supply,
         }
 
@@ -157,7 +161,7 @@ class STOCK_ENTRY(ITC04DataMapper):
     CATEGORY = ITC04JsonKey.STOCK_ENTRY.value
 
     KEY_MAPPING = {
-        GovDataField.COMPANY_GSTIN.value: ITC04_DataField.COMPANY_GSTIN.value,
+        GovDataField.JOB_WORKER_GSTIN.value: ITC04_DataField.JOB_WORKER_GSTIN.value,
         GovDataField.JOB_WORKER_STATE_CODE.value: ITC04_DataField.JOB_WORKER_STATE_CODE.value,
         GovDataField_SE.ITEMS.value: ITC04_DataField.ITEMS.value,
         GovDataField_SE.ORIGINAL_CHALLAN_NUMBER.value: ITC04_DataField.ORIGINAL_CHALLAN_NUMBER.value,

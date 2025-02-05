@@ -20,7 +20,7 @@ class ITC04JsonKey(Enum):
 
 
 class GovDataField(Enum):
-    COMPANY_GSTIN = "ctin"
+    JOB_WORKER_GSTIN = "ctin"
     JOB_WORKER_STATE_CODE = "jw_stcd"
     ITEMS = "items"
     ORIGINAL_CHALLAN_NUMBER = "o_chnum"
@@ -38,6 +38,8 @@ class GovDataField(Enum):
     SGST = "tx_s"
     CESS_AMOUNT = "tx_cs"
     FLAG = "flag"
+    LOST_QUANTITY = "lwqty"
+    LOST_UOM = "lwuqc"
 
 
 class GovDataField_SE(Enum):
@@ -47,7 +49,7 @@ class GovDataField_SE(Enum):
 
 
 class ITC04_DataField(Enum):
-    COMPANY_GSTIN = "company_gstin"
+    JOB_WORKER_GSTIN = "supplier_gstin"
     JOB_WORKER_STATE_CODE = "jw_state_code"
     ITEMS = "items"
     ORIGINAL_CHALLAN_NUMBER = "original_challan_number"
@@ -73,3 +75,5 @@ class ITC04_ItemField(Enum):
     CGST = "cgst_rate"
     SGST = "sgst_rate"
     CESS_AMOUNT = "cess_amount"
+    LOST_QUANTITY = "lost_qty"
+    LOST_UOM = "lost_uom"

@@ -26,7 +26,7 @@ class TestTable5A(IntegrationTestCase):
         cls.json_data = [
             {
                 GovDataField.JOB_WORKER_STATE_CODE.value: "24",
-                GovDataField.COMPANY_GSTIN.value: "24AABCD8856A8FG",
+                GovDataField.JOB_WORKER_GSTIN.value: "24AABCD8856A8FG",
                 GovDataField.ITEMS.value: [
                     {
                         GovDataField.JOB_WORK_CHALLAN_DATE.value: "12-06-2024",
@@ -56,7 +56,7 @@ class TestTable5A(IntegrationTestCase):
                 "124 - 1236": {
                     ITC04_DataField.ORIGINAL_CHALLAN_NUMBER.value: "124",
                     ITC04_DataField.JOB_WORK_CHALLAN_NUMBER.value: "1236",
-                    ITC04_DataField.COMPANY_GSTIN.value: "24AABCD8856A8FG",
+                    ITC04_DataField.JOB_WORKER_GSTIN.value: "24AABCD8856A8FG",
                     ITC04_DataField.JOB_WORKER_STATE_CODE.value: "24-Gujarat",
                     ITC04_DataField.ITEMS.value: [
                         {

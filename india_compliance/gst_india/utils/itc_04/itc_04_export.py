@@ -6,6 +6,7 @@ from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     GenerateGSTR1,
 )
 from india_compliance.gst_india.utils import get_month_or_quarter_dict
+from india_compliance.gst_india.utils.itc_04 import ITC04_DataField, ITC04_ItemField
 from india_compliance.gst_india.utils.itc_04.itc_04_data import ITC04Query
 from india_compliance.gst_india.utils.itc_04.itc_04_json_map import (
     convert_to_gov_data_format,
@@ -83,15 +84,15 @@ def get_data(filters):
 def process_table_4_data(invoice_data):
     def create_item(invoice, uom):
         return {
-            "taxable_value": invoice.taxable_value,
-            "igst_rate": invoice.igst_amount,
-            "cgst_rate": invoice.cgst_amount,
-            "sgst_rate": invoice.sgst_amount,
-            "cess_amount": invoice.total_cess_amount,
-            "uom": f"{uom}-{UOM_MAP[uom]}",
-            "qty": invoice.qty,
-            "desc": invoice.description,
-            "goods_type": "7b",
+            ITC04_ItemField.TAXABLE_VALUE.value: abs(invoice.taxable_value),
+            ITC04_ItemField.IGST.value: invoice.igst_rate,
+            ITC04_ItemField.CGST.value: invoice.cgst_rate,
+            ITC04_ItemField.SGST.value: invoice.sgst_rate,
+            ITC04_ItemField.CESS_AMOUNT.value: abs(invoice.total_cess_amount),
+            ITC04_ItemField.UOM.value: f"{uom}-{UOM_MAP[uom]}",
+            ITC04_ItemField.QUANTITY.value: abs(invoice.qty),
+            ITC04_ItemField.DESCRIPTION.value: invoice.description,
+            ITC04_ItemField.GOODS_TYPE.value: invoice.item_type,
         }
 
     res = {}
@@ -103,25 +104,14 @@ def process_table_4_data(invoice_data):
 
         if key not in res:
             res[key] = {
-                "jw_state_code": invoice.place_of_supply,
-                "flag": "",
-                "items": [create_item(invoice, uom)],
-                "original_challan_number": invoice.invoice_no,
-                "original_challan_date": challan_date,
-                "total_taxable_value": invoice.taxable_value,
-                "total_igst_rate": invoice.igst_amount,
-                "total_cgst_rate": invoice.cgst_amount,
-                "total_sgst_rate": invoice.sgst_amount,
-                "total_cess_amount": invoice.total_cess_amount,
+                ITC04_DataField.JOB_WORKER_STATE_CODE.value: invoice.place_of_supply,
+                ITC04_DataField.FLAG.value: "N",
+                ITC04_DataField.ITEMS.value: [create_item(invoice, uom)],
+                ITC04_DataField.ORIGINAL_CHALLAN_NUMBER.value: invoice.invoice_no,
+                ITC04_DataField.ORIGINAL_CHALLAN_DATE.value: challan_date,
             }
         else:
-            current_invoice = res[key]
-            current_invoice["total_taxable_value"] += invoice.taxable_value
-            current_invoice["total_igst_rate"] += invoice.igst_amount
-            current_invoice["total_cgst_rate"] += invoice.cgst_amount
-            current_invoice["total_sgst_rate"] += invoice.sgst_amount
-            current_invoice["total_cess_amount"] += invoice.total_cess_amount
-            current_invoice["items"].append(create_item(invoice, uom))
+            res[key][ITC04_DataField.ITEMS.value].append(create_item(invoice, uom))
 
     return res
 
@@ -129,12 +119,12 @@ def process_table_4_data(invoice_data):
 def process_table_5a_data(invoice_data):
     def create_item(invoice, uom, jw_challan_date, challan_date):
         return {
-            "original_challan_date": challan_date,
-            "jw_challan_date": jw_challan_date,
-            "nature_of_job": "Work",
-            "uom": f"{uom}-{UOM_MAP[uom]}",
-            "qty": invoice.qty,
-            "desc": invoice.description,
+            ITC04_DataField.ORIGINAL_CHALLAN_DATE.value: challan_date,
+            ITC04_DataField.JOB_WORK_CHALLAN_DATE.value: jw_challan_date,
+            ITC04_ItemField.NATURE_OF_JOB.value: "Job Work",  # TODO: What should this be?
+            ITC04_ItemField.UOM.value: f"{uom}-{UOM_MAP[uom]}",
+            ITC04_ItemField.QUANTITY.value: invoice.qty,
+            ITC04_ItemField.DESCRIPTION.value: invoice.description,
         }
 
     res = {}
@@ -150,15 +140,17 @@ def process_table_5a_data(invoice_data):
 
         if key not in res:
             res[key] = {
-                "original_challan_number": invoice.original_challan_no,
-                "jw_challan_number": invoice.invoice_no,
-                "company_gstin": invoice.company_gstin,
-                "jw_state_code": invoice.place_of_supply,
-                "flag": "",
-                "items": [create_item(invoice, uom, jw_challan_date, challan_date)],
+                ITC04_DataField.ORIGINAL_CHALLAN_NUMBER.value: invoice.original_challan_no,
+                ITC04_DataField.JOB_WORK_CHALLAN_NUMBER.value: invoice.invoice_no,
+                ITC04_DataField.JOB_WORKER_GSTIN.value: invoice.supplier_gstin,
+                ITC04_DataField.JOB_WORKER_STATE_CODE.value: invoice.place_of_supply,
+                ITC04_DataField.FLAG.value: "N",
+                ITC04_DataField.ITEMS.value: [
+                    create_item(invoice, uom, jw_challan_date, challan_date)
+                ],
             }
         else:
-            res[key]["items"].append(
+            res[key][ITC04_DataField.ITEMS.value].append(
                 create_item(invoice, uom, jw_challan_date, challan_date)
             )
 
@@ -171,4 +163,6 @@ def get_return_period(month_or_quarter, year):
         "Jul - Sep": "14",
         "Oct - Dec": "15",
         "Jan - Mar": "16",
+        "Apr - Sep": "17",
+        "Oct - Mar": "18",
     }.get(month_or_quarter) + str(year)
