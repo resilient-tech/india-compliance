@@ -119,7 +119,7 @@ function get_options_for_year() {
 function get_options_for_month(year) {
     if (!year) return [];
 
-    const year = parseInt(year);
+    year = parseInt(year, 10);
 
     if (year > 2021) return ["Apr - Sep", "Oct - Mar"];
     else if (year === 2017) return ["Jul - Sep", "Oct - Dec", "Jan - Mar"];

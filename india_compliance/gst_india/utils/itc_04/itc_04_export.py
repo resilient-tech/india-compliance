@@ -92,7 +92,9 @@ def process_table_4_data(invoice_data):
             ITC04_ItemField.UOM.value: f"{uom}-{UOM_MAP[uom]}",
             ITC04_ItemField.QUANTITY.value: abs(invoice.qty),
             ITC04_ItemField.DESCRIPTION.value: invoice.description,
-            ITC04_ItemField.GOODS_TYPE.value: invoice.item_type,
+            ITC04_ItemField.GOODS_TYPE.value: (
+                "8b" if invoice.item_type == "Inputs" else "7b"
+            ),
         }
 
     res = {}
