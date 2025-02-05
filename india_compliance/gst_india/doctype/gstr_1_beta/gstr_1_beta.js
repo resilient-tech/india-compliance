@@ -783,10 +783,10 @@ class GSTR1 {
     async show_suggested_jv_dialog() {
         if (!frappe.perm.has_perm("Journal Entry")) return;
 
-        const { month_or_quarter, year, company } = this.frm.doc;
+        const { month_or_quarter, year, company, filing_preference } = this.frm.doc;
         const { message: je_details } = await frappe.call({
             method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_journal_entries",
-            args: { month_or_quarter, year, company },
+            args: { month_or_quarter, year, company, filing_preference },
         });
 
         if (!je_details) return;
@@ -3053,14 +3053,17 @@ function render_empty_state(frm) {
 }
 
 async function get_net_gst_liability(frm) {
+    const { month_or_quarter, year, company, company_gstin, filing_preference } =
+        frm.doc;
+
     const response = await frappe.call({
         method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_net_gst_liability",
         args: {
-            month_or_quarter: frm.doc.month_or_quarter,
-            year: frm.doc.year,
-            company_gstin: frm.doc.company_gstin,
-            company: frm.doc.company,
-            filing_preference: frm.doc.filing_preference,
+            month_or_quarter,
+            year,
+            company,
+            company_gstin,
+            filing_preference,
         },
     });
 

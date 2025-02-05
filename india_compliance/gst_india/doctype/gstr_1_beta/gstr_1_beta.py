@@ -16,11 +16,15 @@ from india_compliance.gst_india.api_classes.taxpayer_base import (
     otp_handler,
 )
 from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
-    MONTH,
     verify_request_in_progress,
 )
-from india_compliance.gst_india.utils import get_gst_accounts_by_type
+from india_compliance.gst_india.utils import (
+    get_gst_accounts_by_type,
+    get_month_or_quarter_dict,
+)
 from india_compliance.gst_india.utils.gstin_info import get_gstr_1_return_status
+
+MONTH = list(get_month_or_quarter_dict().keys())[4:]
 
 
 class GSTR1Beta(Document):
@@ -243,11 +247,13 @@ def mark_as_unfiled(filters, force):
 
 
 @frappe.whitelist()
-def get_journal_entries(month_or_quarter, year, company):
+def get_journal_entries(month_or_quarter, year, company, filing_preference):
     if not frappe.has_permission("Journal Entry", "create"):
         return
 
-    from_date, to_date = get_gstr_1_from_and_to_date(month_or_quarter, year)
+    from_date, to_date = get_gstr_1_from_and_to_date(
+        month_or_quarter, year, filing_preference
+    )
 
     gst_accounts = list(
         get_gst_accounts_by_type(company, "Sales Reverse Charge", throw=False).values()
@@ -339,7 +345,9 @@ def get_net_gst_liability(
 
     frappe.has_permission("GSTR-1 Beta", throw=True)
 
-    from_date, to_date = get_gstr_1_from_and_to_date(month_or_quarter, year)
+    from_date, to_date = get_gstr_1_from_and_to_date(
+        month_or_quarter, year, filing_preference
+    )
 
     filters = frappe._dict(
         {
@@ -395,13 +403,15 @@ def get_period(month_or_quarter: str, year: str) -> str:
     return f"{month_number}{year}"
 
 
-def get_gstr_1_from_and_to_date(month_or_quarter: str, year: str) -> tuple:
+def get_gstr_1_from_and_to_date(
+    month_or_quarter: str, year: str, filing_preference: str
+) -> tuple:
     """
     Returns the from and to date for the given month or quarter and year
     This is used to filter the data for the given period in Books
     """
     start_month = end_month = MONTH.index(month_or_quarter) + 1
-    if start_month % 3 == 0:
+    if filing_preference == "Quarterly":
         start_month -= 2
 
     from_date = getdate(f"{year}-{start_month}-01")
