@@ -554,7 +554,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
             status != "Filed"
             # filing pref is determined in the first month of the quarter
             and filters.month_or_quarter in ["January", "April", "July", "October"]
-        ) or not self.filing_preference:
+        ) or not self.get("filing_preference"):
             from india_compliance.gst_india.utils.gstin_info import (
                 get_and_update_filing_preference,
             )
@@ -565,9 +565,8 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         else:
             filing_preference = self.filing_preference
 
-        if (
-            self.filing_preference is None
-            or filters.filing_preference != self.filing_preference
+        if self.filing_preference is None or filters.filing_preference != self.get(
+            "filing_preference"
         ):
             filters.filing_preference = self.filing_preference = filing_preference
 
