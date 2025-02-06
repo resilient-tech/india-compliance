@@ -14,25 +14,16 @@ from india_compliance.gst_india.utils.itc_04.itc_04_json_map import (
 
 
 @frappe.whitelist()
-def download_itc_04_json(
-    company,
-    company_gstin,
-    period,
-    year,
-):
+def download_itc_04_json(company, company_gstin, year, period=None, return_type=None):
     frappe.has_permission("GST Job Work Stock Movement", "export", throw=True)
 
-    filters = get_filters(
-        company,
-        company_gstin,
-        period,
-        year,
-    )
-    ret_period = get_return_period(period, year)
+    filters = get_filters(company, company_gstin, year, period, return_type)
+
     data = get_data(filters)
 
     GenerateGSTR1().normalize_data(data)
 
+    ret_period = get_return_period(period, year, return_type)
     return {
         "data": {
             "gstin": company_gstin,
@@ -43,17 +34,17 @@ def download_itc_04_json(
     }
 
 
-def get_filters(
-    company,
-    company_gstin,
-    period,
-    year,
-):
+def get_filters(company, company_gstin, year, period, return_type=None):
     filters = {}
     year = cint(year)
-    quarter_no = get_month_or_quarter_dict().get(period)
+
+    quarter_no = (4, 3)
+    if return_type != "Annual":
+        quarter_no = get_month_or_quarter_dict().get(period)
+
     filters["from_date"] = get_first_day(f"{year}-{quarter_no[0]}-01")
 
+    # Adjust year if the quarter spans two calendar years
     if quarter_no[1] < quarter_no[0]:
         year += 1
 
@@ -159,7 +150,10 @@ def process_table_5a_data(invoice_data):
     return res
 
 
-def get_return_period(month_or_quarter, year):
+def get_return_period(month_or_quarter, year, return_type=None):
+    if return_type == "Annual":
+        return "19" + str(year)
+
     return {
         "Apr - Jun": "13",
         "Jul - Sep": "14",

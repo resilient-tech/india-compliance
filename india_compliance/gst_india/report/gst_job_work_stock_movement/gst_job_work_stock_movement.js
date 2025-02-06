@@ -68,28 +68,44 @@ frappe.query_reports["GST Job Work Stock Movement"] = {
                         fieldtype: "Select",
                         options: get_options_for_year(),
                         onchange: () => {
+                            parseInt(this.dialog.get_value("year")) <= 2021 &&
+                                this.dialog.set_value("return_type", ""); // Annual return not available before 2022
+
                             this.dialog.fields_dict.period.df.options =
                                 get_options_for_month(this.dialog.get_value("year"));
                             this.dialog.refresh();
                         },
+                        reqd: 1,
+                    },
+                    {
+                        fieldname: "return_type",
+                        label: __("Return Type"),
+                        fieldtype: "Select",
+                        options: ["", "Annual", "Half Yearly"],
+                        depends_on: "eval: parseInt(doc.year) > 2021",
                     },
                     {
                         fieldname: "period",
                         label: __("Return Filing Period"),
                         fieldtype: "Select",
+                        depends_on: "eval: doc.return_type !== 'Annual'",
                     },
                 ],
                 primary_action_label: "Export JSON",
                 primary_action: () => {
+                    const filters = {
+                        company: frappe.query_report.get_filter_value("company"),
+                        company_gstin:
+                            frappe.query_report.get_filter_value("company_gstin"),
+                        period: this.dialog.get_value("period"),
+                        year: this.dialog.get_value("year"),
+                        return_type: this.dialog.get_value("return_type"),
+                    };
+                    validate_filters(filters);
+
                     frappe.call({
                         method: "india_compliance.gst_india.utils.itc_04.itc_04_export.download_itc_04_json",
-                        args: {
-                            company: frappe.query_report.get_filter_value("company"),
-                            company_gstin:
-                                frappe.query_report.get_filter_value("company_gstin"),
-                            period: this.dialog.get_value("period"),
-                            year: this.dialog.get_value("year"),
-                        },
+                        args: filters,
                         callback: r => {
                             this.dialog.hide();
                             india_compliance.trigger_file_download(
@@ -126,4 +142,19 @@ function get_options_for_month(year) {
     else if (year === 2021) return ["Apr - Jun", "Jul - Sep", "Oct - Mar"];
 
     return ["Apr - Jun", "Jul - Sep", "Oct - Dec", "Jan - Mar"];
+}
+
+function validate_filters(filters) {
+    const year = parseInt(filters.year, 10);
+    if (year > 2021 && !filters.return_type) {
+        frappe.throw(__("Please select Return Type"));
+    }
+
+    if (year > 2021 && filters.return_type === "Half Yearly" && !filters.period) {
+        frappe.throw(__("Please select period"));
+    }
+
+    if (year <= 2021 && !filters.period) {
+        frappe.throw(__("Please select period"));
+    }
 }
