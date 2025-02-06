@@ -465,7 +465,7 @@ def get_current_fy():
 
 def get_logs_for_quarter(gstin, period):
     quarter = get_financial_quarter(cint(period[:2]))
-    start_month = quarter * 3 + 1
+    start_month = ((quarter - 1) * 3 + 4) % 12
     year = period[2:]
 
     logs = []
