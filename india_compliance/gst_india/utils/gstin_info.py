@@ -15,9 +15,6 @@ from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
 from india_compliance.gst_india.api_classes.public import PublicAPI
 from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
-from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
-    process_gstr_returns_info,
-)
 from india_compliance.gst_india.utils import parse_datetime, titlecase, validate_gstin
 
 GST_CATEGORIES = {
@@ -333,6 +330,10 @@ def update_gstr_returns_info(company, gstin, fy=None):
         return
 
     e_filed_list = response.get("EFiledlist")
+
+    from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
+        process_gstr_returns_info,
+    )
 
     # If api call is made then update logs for GSTR1 AND GSTR3B
     frappe.enqueue(
