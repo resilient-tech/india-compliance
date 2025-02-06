@@ -68,7 +68,7 @@ frappe.query_reports["GST Job Work Stock Movement"] = {
                         fieldtype: "Select",
                         options: get_options_for_year(),
                         onchange: () => {
-                            parseInt(this.dialog.get_value("year")) <= 2021 &&
+                            parseInt(this.dialog.get_value("year"), 10) <= 2021 &&
                                 this.dialog.set_value("return_type", ""); // Annual return not available before 2022
 
                             this.dialog.fields_dict.period.df.options =
