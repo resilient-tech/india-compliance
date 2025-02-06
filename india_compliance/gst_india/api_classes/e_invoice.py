@@ -1,35 +1,26 @@
+import base64
+import json
 import re
+from datetime import datetime
+
+from cryptography.hazmat.primitives.asymmetric import padding as asym_padding
+from cryptography.hazmat.primitives.serialization import load_pem_public_key
 
 import frappe
 from frappe import _
 
 from india_compliance.gst_india.api_classes.base import BaseAPI, check_scheduler_status
+from india_compliance.gst_india.api_classes.taxpayer_base import PublicCertificate
 from india_compliance.gst_india.constants import DISTANCE_REGEX
+from india_compliance.gst_india.utils.cryptography import aes_decrypt_data
 
 
-class EInvoiceAPI(BaseAPI):
-    API_NAME = "e-Invoice"
-    BASE_PATH = "ei/api"
-    SENSITIVE_INFO = BaseAPI.SENSITIVE_INFO + ("password",)
-    IGNORED_ERROR_CODES = {
-        # Generate IRN errors
-        "2150": "Duplicate IRN",
-        # Get e-Invoice by IRN errors
-        "2283": (
-            "IRN details cannot be provided as it is generated more than 2 days ago"
-        ),
-        # Cancel IRN errors
-        "9999": "Invoice is not active",
-        "4002": "EwayBill is already generated for this IRN",
-        # IRN Generated in different Portal
-        "2148": "Requested IRN data is not available",
-        # Invalid GSTIN error
-        "3028": "GSTIN is invalid",
-        "3029": "GSTIN is not active",
-        "3001": "Requested data is not available",
-    }
+class EInvoiceAuth(BaseAPI):
+    API_NAME = "e-Invoice Auth"
 
     def setup(self, doc=None, *, company_gstin=None):
+        self.company_gstin = company_gstin
+
         if not self.settings.enable_e_invoice:
             frappe.throw(_("Please enable e-Invoicing in GST Settings first"))
 
@@ -61,6 +52,137 @@ class EInvoiceAPI(BaseAPI):
                 "requestid": self.generate_request_id(),
             }
         )
+
+    def _fetch_credentials(self, row, require_password=True):
+        self.password = row.get_password(raise_exception=require_password)
+        self.app_key = row.app_key or self.generate_app_key()
+
+    def generate_app_key(self):
+        app_key = frappe.generate_hash(length=32).encode()
+        app_key = base64.b64encode(app_key).decode()
+
+        frappe.db.set_value(
+            "GST Credential",
+            {
+                "gstin": self.company_gstin,
+                "username": self.username,
+                "service": "e-Waybill / e-Invoice",
+            },
+            {"app_key": app_key},
+        )
+
+        return app_key
+
+    def before_request(self, request_args):
+        self.encrypt_request(request_args)
+
+    def process_response(self, response):
+        self.handle_error_response(response)
+        response = self.decrypt_response(response)
+        return response
+
+    def encrypt_request(self, request_args):
+        if not (json_data := request_args.get("json")):
+            return
+
+        json_data = json_data.get("Data")
+
+        if not json_data:
+            return
+
+        json_data = json.dumps(json_data)
+        json_data = base64.b64encode(json_data.encode())
+
+        encrypted_json = encrypt_using_public_key(
+            json_data,
+            self.get_public_key(),
+        )
+
+        request_args["json"]["Data"] = encrypted_json
+
+    def decrypt_response(self, response):
+        values = {}
+        response_data = response.get("Data")
+
+        if not response_data:
+            return response
+
+        if response_data.get("AuthToken"):
+            self.auth_token = response_data.AuthToken
+            values["auth_token"] = response_data.AuthToken
+
+        if response_data.get("TokenExpiry"):
+            # TokenExpiry is like '2025-02-06 18:41:48'
+            session_expiry = datetime.strptime(
+                response_data.TokenExpiry, "%Y-%m-%d %H:%M:%S"
+            )
+            self.session_expiry = session_expiry
+            values["session_expiry"] = session_expiry
+
+        if response_data.get("Sek"):
+            session_key = aes_decrypt_data(
+                response_data.Sek, base64.b64decode(self.app_key.encode())
+            )
+            self.session_key = session_key
+            values["session_key"] = base64.b64encode(session_key).decode()
+
+        if values:
+            frappe.db.set_value(
+                "GST Credential",
+                {
+                    "gstin": self.company_gstin,
+                    "username": self.username,
+                    "service": "e-Waybill / e-Invoice",
+                },
+                values,
+            )
+
+            # cache of parent doctype GST Settings is not cleared by default so clear it manually
+            frappe.clear_document_cache("GST Settings")
+
+        return response
+
+    def get_public_key(self):
+        key = self.settings.einvoice_public_key
+        if not key:
+            key = PublicCertificate().get_einvoice_public_key()
+
+        return key.encode()
+
+    def authenticate(self):
+        json_data = {
+            "Data": {
+                "UserName": self.username,
+                "Password": self.password,
+                "AppKey": self.app_key,
+                "ForceRefreshAccessToken": False,
+            }
+        }
+
+        return self.post(endpoint="auth", json=json_data)
+
+
+class EInvoiceAPI(EInvoiceAuth):
+    API_NAME = "e-Invoice"
+    BASE_PATH = "standard/ei/api"
+    SENSITIVE_INFO = BaseAPI.SENSITIVE_INFO + ("password",)
+    IGNORED_ERROR_CODES = {
+        # Generate IRN errors
+        "2150": "Duplicate IRN",
+        # Get e-Invoice by IRN errors
+        "2283": (
+            "IRN details cannot be provided as it is generated more than 2 days ago"
+        ),
+        # Cancel IRN errors
+        "9999": "Invoice is not active",
+        "4002": "EwayBill is already generated for this IRN",
+        # IRN Generated in different Portal
+        "2148": "Requested IRN data is not available",
+        # Invalid GSTIN error
+        "3028": "GSTIN is invalid",
+        "3029": "GSTIN is not active",
+        "3001": "Requested data is not available",
+    }
 
     def is_ignored_error(self, response_json):
         message = response_json.get("message", "").strip()
@@ -115,3 +237,12 @@ class EInvoiceAPI(BaseAPI):
 
     def sync_gstin_info(self, gstin):
         return self.get(endpoint="master/syncgstin", params={"gstin": gstin})
+
+
+def encrypt_using_public_key(data: str, public_key: bytes) -> str:
+    public_key = load_pem_public_key(public_key)
+
+    encrypted_msg = public_key.encrypt(plaintext=data, padding=asym_padding.PKCS1v15())
+    encoded_encrypted_msg = base64.b64encode(encrypted_msg).decode()
+
+    return encoded_encrypted_msg

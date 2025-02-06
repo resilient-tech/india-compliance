@@ -95,7 +95,8 @@
   "credentials_tab",
   "credentials",
   "api_secret",
-  "gstn_public_certificate"
+  "gstn_public_certificate",
+  "einvoice_public_key"
  ],
  "fields": [
   {
@@ -677,6 +678,12 @@
    "fieldname": "enable_gstr_1_api",
    "fieldtype": "Check",
    "label": "Enable GSTR-1 API Features"
+  },
+  {
+    "fieldname": "einvoice_public_key",
+    "fieldtype": "Code",
+    "hidden": 1,
+    "label": "E-Invoice Public Key"
   }
  ],
  "index_web_pages_for_search": 1,

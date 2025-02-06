@@ -58,6 +58,16 @@ class PublicCertificate(BaseAPI):
 
         return response.certificate
 
+    def get_einvoice_public_key(self, error_message=None) -> str:
+        response = self.get(endpoint="nic_prod_public")
+
+        if response.certificate == self.settings.einvoice_public_key:
+            frappe.throw(error_message or _("Public Key is already up to date"))
+
+        self.settings.db_set("einvoice_public_key", response.certificate)
+
+        return response.certificate
+
 
 class FilesAPI(BaseAPI):
     BASE_PATH = "standard/gstn/files"
