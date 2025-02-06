@@ -2995,7 +2995,7 @@ async function update_fields_based_on_filing_preference(frm) {
         },
     });
 
-    if (preference === undefined || preference === frm.doc.filing_preference) return;
+    if (preference === frm.doc.filing_preference) return;
 
     frm.set_value("filing_preference", preference);
 }
@@ -3057,10 +3057,10 @@ async function get_net_gst_liability(frm) {
     const response = await frappe.call({
         method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_net_gst_liability",
         args: {
-            month_or_quarter,
-            year,
             company,
             company_gstin,
+            month_or_quarter,
+            year,
             filing_preference,
         },
     });

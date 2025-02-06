@@ -7,7 +7,7 @@ from cryptography.hazmat.backends import default_backend
 
 import frappe
 import frappe.utils
-from frappe import _, request_cache
+from frappe import _
 from frappe.utils import add_to_date, cint, now_datetime
 
 from india_compliance.exceptions import (
@@ -502,7 +502,6 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
 
         return
 
-    @request_cache
     def fetch_filing_preference(self, fy):
         return self.get(
             action="GETPREF", params={"fy": fy}, endpoint="returns"

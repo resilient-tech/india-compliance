@@ -337,7 +337,7 @@ def make_journal_entry(
 
 @frappe.whitelist()
 def get_net_gst_liability(
-    company, company_gstin, month_or_quarter, year, filing_preference
+    company, company_gstin, month_or_quarter, year, filing_preference=None
 ):
     """
     Returns the net output balance for the given return period as per ledger entries

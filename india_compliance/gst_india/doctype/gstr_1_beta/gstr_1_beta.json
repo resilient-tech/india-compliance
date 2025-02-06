@@ -91,8 +91,9 @@
   },
   {
    "fieldname": "filing_preference",
-   "fieldtype": "Data",
-   "label": "Filing Preference"
+   "fieldtype": "Select",
+   "label": "Filing Preference",
+   "options": "\nMonthly\nQuarterly"
   },
   {
    "default": "0",
@@ -106,7 +107,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-12-27 12:43:21.979607",
+ "modified": "2025-02-06 12:26:08.792234",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR-1 Beta",

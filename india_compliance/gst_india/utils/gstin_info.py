@@ -5,7 +5,7 @@ from string import whitespace
 from pypika import Order
 
 import frappe
-from frappe import _
+from frappe import _, request_cache
 from frappe.query_builder.functions import Concat, Substring
 from frappe.utils import cint, getdate
 
@@ -389,19 +389,13 @@ def get_and_update_filing_preference(gstin, period, force=False):
     filing_preference = get_filing_preference(gstin, period)
 
     # update GST Return Log
-    frappe.enqueue(
-        create_or_update_logs_for_quarter,
-        gstin=gstin,
-        period=period,
-        filing_preference=filing_preference,
-    )
+    create_or_update_logs_for_quarter(gstin, period, filing_preference)
 
     return filing_preference
 
 
 def get_filing_preference(gstin, period):
-    api = GSTR1API(company_gstin=gstin)
-    response = api.fetch_filing_preference(fy=get_fy(period))
+    response = fetch_filing_preference(gstin, get_fy(period))
 
     quarter = get_financial_quarter(cint(period[:2]))
     filing_preference = (
@@ -409,6 +403,14 @@ def get_filing_preference(gstin, period):
     )
 
     return filing_preference
+
+
+@request_cache
+def fetch_filing_preference(gstin, fy):
+    api = GSTR1API(company_gstin=gstin)
+    response = api.fetch_filing_preference(fy=fy)
+
+    return response
 
 
 def create_or_update_logs_for_quarter(gstin, period, filing_preference):
