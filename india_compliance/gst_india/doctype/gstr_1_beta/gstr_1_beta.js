@@ -108,12 +108,14 @@ frappe.ui.form.on(DOCTYPE, {
             frm.trigger("company");
         });
 
-        frm.filing_frequency = gst_settings.filing_frequency;
-
         // Set Default Values
         set_default_company_gstin(frm);
         set_options_for_year(frm);
         set_options_for_month_or_quarter(frm);
+
+        if (is_gstr1_api_enabled()) {
+            frm.set_df_property("filing_preference", "read_only", 1);
+        }
 
         frm.__setup_complete = true;
 
@@ -181,6 +183,10 @@ frappe.ui.form.on(DOCTYPE, {
                 });
             }
 
+            if (frm.doc.filing_preference != filters.filing_preference) {
+                frm.set_value("filing_preference", filters.filing_preference);
+            }
+
             frm.taxpayer_api_call("generate_gstr1", { only_books_data }).then(r => {
                 frm.doc.__gst_data = r.message;
                 frm.trigger("load_gstr1_data");
@@ -197,7 +203,10 @@ frappe.ui.form.on(DOCTYPE, {
         frm.set_value("company_gstin", options[0]);
     },
 
-    company_gstin: render_empty_state,
+    company_gstin(frm) {
+        render_empty_state(frm);
+        update_fields_based_on_filing_preference(frm);
+    },
 
     file_nil_gstr1(frm) {
         frm.gstr1.render_form_actions();
@@ -205,6 +214,7 @@ frappe.ui.form.on(DOCTYPE, {
 
     month_or_quarter(frm) {
         render_empty_state(frm);
+        update_fields_based_on_filing_preference(frm);
     },
 
     year(frm) {
@@ -506,9 +516,9 @@ class GSTR1 {
                 primary_button_label = "Reset";
 
             if (this.status == "Not Filed")
-                if (this.frm.doc.file_nil_gstr1) primary_button_label = "Proceed to File";
+                if (this.frm.doc.file_nil_gstr1)
+                    primary_button_label = "Proceed to File";
                 else primary_button_label = "Upload";
-
         }
 
         if (this.status === "Ready to File") {
@@ -774,10 +784,10 @@ class GSTR1 {
     async show_suggested_jv_dialog() {
         if (!frappe.perm.has_perm("Journal Entry")) return;
 
-        const { month_or_quarter, year, company } = this.frm.doc;
+        const { month_or_quarter, year, company, filing_preference } = this.frm.doc;
         const { message: je_details } = await frappe.call({
             method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_journal_entries",
-            args: { month_or_quarter, year, company },
+            args: { month_or_quarter, year, company, filing_preference },
         });
 
         if (!je_details) return;
@@ -1190,10 +1200,10 @@ class TabManager {
             args[2]?.indent == 0
                 ? `<strong>${value}</strong>`
                 : isDescriptionCell
-                    ? `<a href="#" class="description">
+                ? `<a href="#" class="description">
                     <p style="padding-left: 15px">${value}</p>
                     </a>`
-                    : value;
+                : value;
 
         return value;
     }
@@ -1952,9 +1962,9 @@ class FiledTab extends GSTR1_TabManager {
             const { include_uploaded, delete_missing } = dialog
                 ? dialog.get_values()
                 : {
-                    include_uploaded: true,
-                    delete_missing: false,
-                };
+                      include_uploaded: true,
+                      delete_missing: false,
+                  };
 
             const doc = me.instance.frm.doc;
 
@@ -2205,7 +2215,7 @@ class ReconcileTab extends FiledTab {
         });
     }
 
-    get_creation_time_string() { } // pass
+    get_creation_time_string() {} // pass
 
     get_detail_view_column() {
         return [
@@ -2283,8 +2293,8 @@ class ErrorsTab extends TabManager {
         ];
     }
 
-    setup_actions() { }
-    set_creation_time_string() { }
+    setup_actions() {}
+    set_creation_time_string() {}
 
     refresh_data(data) {
         data = data.error_report;
@@ -2541,17 +2551,17 @@ class FileGSTR1Dialog {
             <tr>
                 <td>${description}</td>
                 <td style="text-align: right;">${format_currency(
-            liability.total_igst_amount
-        )}</td>
+                    liability.total_igst_amount
+                )}</td>
                 <td style="text-align: right;">${format_currency(
-            liability.total_cgst_amount
-        )}</td>
+                    liability.total_cgst_amount
+                )}</td>
                 <td style="text-align: right;">${format_currency(
-            liability.total_sgst_amount
-        )}</td>
+                    liability.total_sgst_amount
+                )}</td>
                 <td style="text-align: right;">${format_currency(
-            liability.total_cess_amount
-        )}</td>
+                    liability.total_cess_amount
+                )}</td>
             </tr>
         `;
     }
@@ -2937,7 +2947,7 @@ function is_gstr1_api_enabled() {
 }
 
 function patch_set_indicator(frm) {
-    frm.toolbar.set_indicator = function () { };
+    frm.toolbar.set_indicator = function () {};
 }
 
 async function set_default_company_gstin(frm) {
@@ -2975,6 +2985,21 @@ function set_options_for_year(frm) {
     frm.set_value("year", current_year.toString());
 }
 
+async function update_fields_based_on_filing_preference(frm) {
+    let { message: preference } = await frappe.call({
+        method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_filing_preference_from_log",
+        args: {
+            month_or_quarter: frm.doc.month_or_quarter,
+            year: frm.doc.year,
+            company_gstin: frm.doc.company_gstin,
+        },
+    });
+
+    if (preference === frm.doc.filing_preference) return;
+
+    frm.set_value("filing_preference", preference);
+}
+
 function set_options_for_month_or_quarter(frm) {
     /**
      * Set options for Month or Quarter based on the year and current date
@@ -2994,28 +3019,16 @@ function set_options_for_month_or_quarter(frm) {
 
     if (frm.doc.year === current_year) {
         // Options for current year till current month
-        if (frm.filing_frequency === "Monthly")
-            options = india_compliance.MONTH.slice(0, current_month_idx + 1);
-        else {
-            let quarter_idx;
-            if (current_month_idx <= 2) quarter_idx = 1;
-            else if (current_month_idx <= 5) quarter_idx = 2;
-            else if (current_month_idx <= 8) quarter_idx = 3;
-            else quarter_idx = 4;
-
-            options = india_compliance.QUARTER.slice(0, quarter_idx);
-        }
+        options = india_compliance.MONTH.slice(0, current_month_idx + 1);
     } else if (frm.doc.year === "2017") {
         // Options for 2017 from July to December
-        if (frm.filing_frequency === "Monthly")
-            options = india_compliance.MONTH.slice(6);
-        else options = india_compliance.QUARTER.slice(2);
+        options = india_compliance.MONTH.slice(6);
     } else {
-        if (frm.filing_frequency === "Monthly") options = india_compliance.MONTH;
-        else options = india_compliance.QUARTER;
+        options = india_compliance.MONTH;
     }
 
     set_field_options("month_or_quarter", options);
+
     if (frm.doc.year === current_year && options.length > 1)
         // set second last option as default
         frm.set_value("month_or_quarter", options[options.length - 2]);
@@ -3038,13 +3051,17 @@ function render_empty_state(frm) {
 }
 
 async function get_net_gst_liability(frm) {
+    const { month_or_quarter, year, company, company_gstin, filing_preference } =
+        frm.doc;
+
     const response = await frappe.call({
         method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_net_gst_liability",
         args: {
-            month_or_quarter: frm.doc.month_or_quarter,
-            year: frm.doc.year,
-            company_gstin: frm.doc.company_gstin,
-            company: frm.doc.company,
+            company,
+            company_gstin,
+            month_or_quarter,
+            year,
+            filing_preference,
         },
     });
 

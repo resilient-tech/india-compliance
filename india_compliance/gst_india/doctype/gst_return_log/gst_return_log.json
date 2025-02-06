@@ -12,6 +12,7 @@
   "return_period",
   "company",
   "return_type",
+  "filing_preference",
   "is_nil",
   "column_break_sqwh",
   "filing_date",
@@ -194,6 +195,12 @@
    "reqd": 1
   },
   {
+   "fieldname": "filing_preference",
+   "fieldtype": "Data",
+   "label": "Filing Preference",
+   "read_only": 1
+  },
+  {
    "fieldname": "upload_error",
    "fieldtype": "Attach",
    "label": "Upload Error Data",
@@ -232,7 +239,7 @@
    "link_fieldname": "reference_docname"
   }
  ],
- "modified": "2025-01-10 08:19:45.848389",
+ "modified": "2025-01-11 08:19:45.848389",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Return Log",

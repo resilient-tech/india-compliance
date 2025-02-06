@@ -5,18 +5,16 @@ from string import whitespace
 from pypika import Order
 
 import frappe
-from frappe import _
+from frappe import _, request_cache
 from frappe.query_builder.functions import Concat, Substring
-from frappe.utils import getdate
+from frappe.utils import cint, getdate
 
 from india_compliance.exceptions import GSPServerError
 from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
 from india_compliance.gst_india.api_classes.public import PublicAPI
-from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
-    process_gstr_returns_info,
-)
+from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
 from india_compliance.gst_india.utils import parse_datetime, titlecase, validate_gstin
 
 GST_CATEGORIES = {
@@ -333,6 +331,10 @@ def update_gstr_returns_info(company, gstin, fy=None):
 
     e_filed_list = response.get("EFiledlist")
 
+    from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
+        process_gstr_returns_info,
+    )
+
     # If api call is made then update logs for GSTR1 AND GSTR3B
     frappe.enqueue(
         process_gstr_returns_info,
@@ -368,6 +370,86 @@ def get_latest_3b_filed_period(company, company_gstin):
     )
 
 
+####################################################################################################
+#### GSTIN FILING PREFERENCE ######################################################################
+####################################################################################################
+
+
+def get_and_update_filing_preference(gstin, period, force=False):
+    if not force:
+        log_names = get_logs_for_quarter(gstin, period)
+
+        filing_preference = frappe.db.get_value(
+            "GST Return Log", {"name": ["in", log_names]}, "filing_preference"
+        )
+
+        if filing_preference:
+            return filing_preference
+
+    filing_preference = get_filing_preference(gstin, period)
+
+    # update GST Return Log
+    create_or_update_logs_for_quarter(gstin, period, filing_preference)
+
+    return filing_preference
+
+
+def get_filing_preference(gstin, period):
+    response = fetch_filing_preference(gstin, get_fy(period))
+
+    quarter = get_financial_quarter(cint(period[:2]))
+    filing_preference = (
+        "Quarterly" if response[quarter - 1].get("preference") == "Q" else "Monthly"
+    )
+
+    return filing_preference
+
+
+@request_cache
+def fetch_filing_preference(gstin, fy):
+    api = GSTR1API(company_gstin=gstin)
+    response = api.fetch_filing_preference(fy=fy)
+
+    return response
+
+
+def create_or_update_logs_for_quarter(gstin, period, filing_preference):
+    log_names = get_logs_for_quarter(gstin, period)
+    existing_log = frappe.get_all(
+        "GST Return Log", filters={"name": ["in", log_names]}, pluck="name"
+    )
+
+    for log_name in log_names:
+        if log_name in existing_log:
+            frappe.db.set_value(
+                "GST Return Log", log_name, "filing_preference", filing_preference
+            )
+            continue
+
+        frappe.get_doc(
+            {
+                "doctype": "GST Return Log",
+                "name": log_name,
+                "return_type": log_name.split("-")[0],
+                "filing_preference": filing_preference,
+                "return_period": log_name.split("-")[1],
+                "gstin": gstin,
+            }
+        ).insert()
+
+    # patch
+    from india_compliance.patches.v15.update_return_logs_with_filing_preference import (
+        patch_filing_preference,
+    )
+
+    patch_filing_preference(gstin)
+
+
+####################################################################################################
+#### GSTIN UTILITIES ###############################################################################
+####################################################################################################
+
+
 def get_fy(period, year_increment=0):
     month, year = period[:2], period[2:]
     year = str(int(year) + year_increment)
@@ -382,3 +464,30 @@ def get_fy(period, year_increment=0):
 def get_current_fy():
     period = getdate().strftime("%m%Y")
     return get_fy(period)
+
+
+def get_logs_for_quarter(gstin, period):
+    quarter = get_financial_quarter(cint(period[:2]))
+    start_month = ((quarter - 1) * 3 + 4) % 12
+    year = period[2:]
+
+    logs = []
+
+    for return_type in ["GSTR1", "GSTR3B"]:
+        for month in range(start_month, start_month + 3):
+            logs.append(f"{return_type}-{month:02d}{year}-{gstin}")
+
+    return logs
+
+
+def get_financial_quarter(month):
+    if month in [4, 5, 6]:
+        return 1  # April, May, June
+    elif month in [7, 8, 9]:
+        return 2  # July, August, September
+    elif month in [10, 11, 12]:
+        return 3  # October, November, December
+    elif month in [1, 2, 3]:
+        return 4  # January, February, March
+    else:
+        raise ValueError("Month must be between 1 and 12")

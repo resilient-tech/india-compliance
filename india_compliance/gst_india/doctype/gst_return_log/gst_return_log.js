@@ -21,9 +21,7 @@ frappe.ui.form.on("GST Return Log", {
         });
     },
     refresh(frm) {
-        const [month_or_quarter, year] = india_compliance.get_month_year_from_period(
-            frm.doc.return_period
-        );
+        const [month_or_quarter, year] = india_compliance.get_month_year_from_period(frm.doc.return_period);
 
         frm.add_custom_button(__("View GSTR-1"), () => {
             frappe.set_route("Form", "GSTR-1 Beta");
@@ -35,13 +33,14 @@ frappe.ui.form.on("GST Return Log", {
                         clearInterval(interval);
                         resolve();
                     }
-                }, 100);
+                }, 200);
             }).then(async () => {
                 await cur_frm.set_value({
                     company: frm.doc.company,
                     company_gstin: frm.doc.gstin,
                     year: year,
                     month_or_quarter: month_or_quarter,
+                    filing_preference: frm.doc.filing_preference,
                 });
                 cur_frm.save();
             });

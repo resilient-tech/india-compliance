@@ -18,8 +18,13 @@ from india_compliance.gst_india.api_classes.taxpayer_base import (
 from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     verify_request_in_progress,
 )
-from india_compliance.gst_india.utils import get_gst_accounts_by_type
+from india_compliance.gst_india.utils import (
+    get_gst_accounts_by_type,
+    get_month_or_quarter_dict,
+)
 from india_compliance.gst_india.utils.gstin_info import get_gstr_1_return_status
+
+MONTH = list(get_month_or_quarter_dict().keys())[4:]
 
 
 class GSTR1Beta(Document):
@@ -137,6 +142,7 @@ class GSTR1Beta(Document):
             company_gstin=self.company_gstin,
             month_or_quarter=self.month_or_quarter,
             year=self.year,
+            filing_preference=self.filing_preference,
         )
 
         try:
@@ -241,11 +247,13 @@ def mark_as_unfiled(filters, force):
 
 
 @frappe.whitelist()
-def get_journal_entries(month_or_quarter, year, company):
+def get_journal_entries(month_or_quarter, year, company, filing_preference):
     if not frappe.has_permission("Journal Entry", "create"):
         return
 
-    from_date, to_date = get_gstr_1_from_and_to_date(month_or_quarter, year)
+    from_date, to_date = get_gstr_1_from_and_to_date(
+        month_or_quarter, year, filing_preference
+    )
 
     gst_accounts = list(
         get_gst_accounts_by_type(company, "Sales Reverse Charge", throw=False).values()
@@ -328,14 +336,18 @@ def make_journal_entry(
 
 
 @frappe.whitelist()
-def get_net_gst_liability(company, company_gstin, month_or_quarter, year):
+def get_net_gst_liability(
+    company, company_gstin, month_or_quarter, year, filing_preference=None
+):
     """
     Returns the net output balance for the given return period as per ledger entries
     """
 
     frappe.has_permission("GSTR-1 Beta", throw=True)
 
-    from_date, to_date = get_gstr_1_from_and_to_date(month_or_quarter, year)
+    from_date, to_date = get_gstr_1_from_and_to_date(
+        month_or_quarter, year, filing_preference
+    )
 
     filters = frappe._dict(
         {
@@ -391,21 +403,33 @@ def get_period(month_or_quarter: str, year: str) -> str:
     return f"{month_number}{year}"
 
 
-def get_gstr_1_from_and_to_date(month_or_quarter: str, year: str) -> tuple:
+def get_gstr_1_from_and_to_date(
+    month_or_quarter: str, year: str, filing_preference: str
+) -> tuple:
     """
     Returns the from and to date for the given month or quarter and year
     This is used to filter the data for the given period in Books
     """
+    start_month = end_month = MONTH.index(month_or_quarter) + 1
 
-    filing_frequency = frappe.get_cached_value("GST Settings", None, "filing_frequency")
+    # only for quarter ending month
+    if filing_preference == "Quarterly" and start_month % 3 == 0:
+        start_month -= 2
 
-    if filing_frequency == "Quarterly":
-        start_month, end_month = month_or_quarter.split("-")
-        from_date = getdate(f"{year}-{start_month}-01")
-        to_date = get_last_day(f"{year}-{end_month}-01")
-    else:
-        # Monthly (default)
-        from_date = getdate(f"{year}-{month_or_quarter}-01")
-        to_date = get_last_day(from_date)
+    from_date = getdate(f"{year}-{start_month}-01")
+    to_date = get_last_day(f"{year}-{end_month}-01")
 
     return from_date, to_date
+
+
+@frappe.whitelist()
+def get_filing_preference_from_log(month_or_quarter: str, year: str, company_gstin):
+    period = get_period(month_or_quarter, year)
+    filing_preference = frappe.db.get_value(
+        "GST Return Log", f"GSTR1-{period}-{company_gstin}", "filing_preference"
+    )
+
+    if not filing_preference:
+        return None
+
+    return filing_preference
