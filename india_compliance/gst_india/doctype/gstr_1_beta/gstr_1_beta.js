@@ -111,7 +111,7 @@ frappe.ui.form.on(DOCTYPE, {
         // Set Default Values
         set_default_company_gstin(frm);
         set_options_for_year(frm);
-        set_options_for_month_or_quarter(frm, true);
+        set_options_for_month_or_quarter(frm);
 
         if (is_gstr1_api_enabled()) {
             frm.set_df_property("filing_preference", "read_only", 1);
@@ -164,6 +164,7 @@ frappe.ui.form.on(DOCTYPE, {
 
             if (
                 frm.doc.company_gstin !== filters.company_gstin ||
+                frm.doc.month_or_quarter != filters.month_or_quarter ||
                 frm.doc.year != filters.year
             )
                 return;
@@ -218,7 +219,7 @@ frappe.ui.form.on(DOCTYPE, {
 
     year(frm) {
         render_empty_state(frm);
-        set_options_for_month_or_quarter(frm, true);
+        set_options_for_month_or_quarter(frm);
     },
 
     refresh(frm) {
@@ -2996,11 +2997,10 @@ async function update_fields_based_on_filing_preference(frm) {
 
     if (preference === undefined || preference === frm.doc.filing_preference) return;
 
-    frm.doc.filing_preference = preference;
-    frm.refresh_field("filing_preference");
+    frm.set_value("filing_preference", preference);
 }
 
-function set_options_for_month_or_quarter(frm, with_update = false) {
+function set_options_for_month_or_quarter(frm) {
     /**
      * Set options for Month or Quarter based on the year and current date
      * 1. If the year is current year, then options are till current month
@@ -3028,8 +3028,6 @@ function set_options_for_month_or_quarter(frm, with_update = false) {
     }
 
     set_field_options("month_or_quarter", options);
-
-    if (!with_update) return;
 
     if (frm.doc.year === current_year && options.length > 1)
         // set second last option as default
