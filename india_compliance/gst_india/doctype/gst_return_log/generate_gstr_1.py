@@ -9,6 +9,7 @@ from frappe.utils import flt, sbool
 from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
 from india_compliance.gst_india.constants import STATUS_CODE_MAP
 from india_compliance.gst_india.doctype.gstr_action.gstr_action import set_gstr_actions
+from india_compliance.gst_india.utils.gstin_info import get_and_update_filing_preference
 from india_compliance.gst_india.utils.gstr_1 import (
     CATEGORY_SUB_CATEGORY_MAPPING,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX,
@@ -550,25 +551,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         # APIs Enabled
         status = self.get_return_status()
 
-        if (
-            status != "Filed"
-            # filing pref is determined in the first month of the quarter
-            and filters.month_or_quarter in ["January", "April", "July", "October"]
-        ) or not self.get("filing_preference"):
-            from india_compliance.gst_india.utils.gstin_info import (
-                get_and_update_filing_preference,
-            )
-
-            filing_preference = get_and_update_filing_preference(
-                self.gstin, self.return_period, force=True
-            )
-        else:
-            filing_preference = self.filing_preference
-
-        if self.filing_preference is None or filters.filing_preference != self.get(
-            "filing_preference"
-        ):
-            filters.filing_preference = self.filing_preference = filing_preference
+        self.set_filing_preference(filters, status)
 
         if status == "Filed":
             gov_data_field = "filed"
@@ -616,6 +599,27 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
 
         self.summarize_data(data)
         return callback and callback(filters)
+
+    def set_filing_preference(self, filters, status):
+        """
+        Args:
+            filters (dict): Filters containing month_or_quarter and filing_preference.
+            status (str): The current filing status.
+        """
+        should_update = False
+
+        if not self.get("filing_preference"):
+            should_update = True
+
+        # filing pref is determined in the first month of the quarter
+        first_month = ["January", "April", "July", "October"]
+        if status != "Filed" and filters.month_or_quarter in first_month:
+            should_update = True
+
+        if should_update:
+            filters.filing_preference = get_and_update_filing_preference(
+                self.gstin, self.return_period, force=True
+            )
 
     def generate_only_books_data(self, data, filters, callback=None):
         status = "Not Filed"

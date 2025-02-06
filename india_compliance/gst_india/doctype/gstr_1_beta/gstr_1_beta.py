@@ -411,7 +411,9 @@ def get_gstr_1_from_and_to_date(
     This is used to filter the data for the given period in Books
     """
     start_month = end_month = MONTH.index(month_or_quarter) + 1
-    if filing_preference == "Quarterly":
+
+    # only for quarter ending month
+    if filing_preference == "Quarterly" and start_month % 3 == 0:
         start_month -= 2
 
     from_date = getdate(f"{year}-{start_month}-01")
