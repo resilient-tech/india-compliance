@@ -139,7 +139,7 @@ class BillofEntry(Document):
         self.total_taxable_value = total_taxable_value
 
     def validate_purchase_invoice(self):
-        pi_names = {row.purchase_invoice for row in self.purchase_invoices}
+        pi_names = {row.purchase_invoice for row in self.items}
         purchase_invoices = frappe.get_all(
             "Purchase Invoice",
             filters={"name": ["in", pi_names]},
@@ -377,15 +377,12 @@ class BillofEntry(Document):
         return asset_items
 
     @frappe.whitelist()
-    def get_items_from_purchase_invoice(self):
+    def get_items_from_purchase_invoice(self, purchase_invoices):
         frappe.has_permission("Bill Of Entry", "write")
         frappe.has_permission("Purchase Invoice", "read")
 
         existing_items = [
             item.pi_detail for item in self.get("items") if item.pi_detail
-        ]
-        purchase_invoices = [
-            pi.purchase_invoice for pi in self.get("purchase_invoices")
         ]
         item_to_add = get_pi_items(purchase_invoices)
 
@@ -455,20 +452,6 @@ def make_bill_of_entry(source_name, target_doc=None):
     """
     Permission checked in get_mapped_doc
     """
-
-    def postprocess(source_doc, target_doc):
-        set_missing_values(source_doc, target_doc)
-
-        target_doc.append(
-            "purchase_invoices",
-            {
-                "purchase_invoice": source_name,
-                "supplier": source_doc.supplier,
-                "posting_date": source_doc.posting_date,
-                "grand_total": source_doc.grand_total,
-            },
-        )
-
     doc = get_mapped_doc(
         "Purchase Invoice",
         source_name,
@@ -490,7 +473,7 @@ def make_bill_of_entry(source_name, target_doc=None):
             },
         },
         target_doc,
-        postprocess=postprocess,
+        postprocess=set_missing_values,
     )
 
     return doc
@@ -629,8 +612,10 @@ def get_items_for_landed_cost_voucher(boe):
 
     NOTE: Assuming business has consistent practice of creating PR and PI
     """
-    pi_names = {row.purchase_invoice for row in boe.purchase_invoices}
-    pi_item_names = {row.pi_detail for row in boe.items}
+    pi_names, pi_item_names = set(), set()
+    for item in boe.items:
+        pi_names.add(item.purchase_invoice)
+        pi_item_names.add(item.pi_detail)
 
     purchase_invoices = frappe.get_all(
         "Purchase Invoice",

@@ -5,16 +5,6 @@ frappe.ui.form.on("Bill of Entry", {
     onload(frm) {
         frm.fields_dict.items.grid.cannot_add_rows = true;
         frm.bill_of_entry_controller = new BillOfEntryController(frm);
-
-        frm.fields_dict.purchase_invoices.grid.get_field("purchase_invoice").get_query = () => {
-            return {
-                filters: {
-                    docstatus: 1,
-                    gst_category: "Overseas",
-                    company_gstin: frm.doc.company_gstin,
-                },
-            };
-        };
     },
 
     refresh(frm) {
@@ -93,12 +83,37 @@ frappe.ui.form.on("Bill of Entry", {
     },
 
     get_items_from_purchase_invoice(frm) {
-        if (!frm.doc.purchase_invoices.length) {
-            frappe.msgprint(__("Please enter Purchase Invoice first"));
-            return;
+        if (!(frm.doc.company && frm.doc.company_gstin)) {
+            frappe.msgprint("Please Select Company and Company GSTIN First")
+            return
         }
 
-        frm.call("get_items_from_purchase_invoice")
+        const d = new frappe.ui.form.MultiSelectDialog({
+            doctype: "Purchase Invoice",
+            target: frm,
+            setters: {
+                company: frm.doc.company,
+                company_gstin: frm.doc.company_gstin
+            },
+            read_only_setters: ["company", "company_gstin"],
+            get_query() {
+                return {
+                    filters: {
+                        docstatus: 1,
+                        company: frm.doc.company,
+                        company_gstin: frm.doc.company_gstin,
+                        gst_category: "Overseas"
+                    }
+                }
+            },
+            add_filters_group: 1,
+            action: function (selections, args) {
+                frm.call('get_items_from_purchase_invoice', { purchase_invoices: selections }).then(
+                    d.dialog.hide()
+                )
+            }
+        })
+
     },
 
     total_taxable_value(frm) {

@@ -13,7 +13,6 @@
   "amended_from",
   "column_break_2wjs",
   "section_break_fqdh",
-  "column_break_xtbi",
   "column_break_epap",
   "company",
   "column_break_4zp5",
@@ -35,10 +34,8 @@
   "accounting_dimensions_section",
   "cost_center",
   "dimension_col_break",
-  "section_break_bira",
-  "purchase_invoices",
-  "get_items_from_purchase_invoice",
   "section_break_nlqh",
+  "get_items_from_purchase_invoice",
   "items",
   "section_break_ujtl",
   "column_break_cnrv",
@@ -284,23 +281,13 @@
    "print_hide": 1
   },
   {
-   "fieldname": "column_break_xtbi",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "section_break_bira",
-   "fieldtype": "Section Break"
-  },
-  {
    "fieldname": "get_items_from_purchase_invoice",
    "fieldtype": "Button",
    "label": "Get Items From Purchase Invoice"
   },
   {
-   "fieldname": "purchase_invoices",
-   "fieldtype": "Table",
-   "label": "Purchase Invoices",
-   "options": "BOE Purchase Invoice"
+   "fieldname": "column_break_tzdn",
+   "fieldtype": "Column Break"
   }
  ],
  "index_web_pages_for_search": 1,
@@ -318,7 +305,7 @@
    "link_fieldname": "link_name"
   }
  ],
- "modified": "2025-01-30 16:39:25.466324",
+ "modified": "2025-02-06 18:45:23.478878",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Bill of Entry",

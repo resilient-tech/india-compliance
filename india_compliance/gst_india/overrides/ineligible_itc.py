@@ -402,7 +402,7 @@ class BillOfEntry(IneligibleITC):
         # Update fixed assets
         asset_items = self.doc.get_asset_items()
 
-        purchase_invoices = [row.purchase_invoice for row in self.doc.purchase_invoices]
+        purchase_invoices = [item.purchase_invoice for item in self.doc.items]
         expense_account = frappe.db.get_values(
             "Purchase Invoice Item",
             {"parent": ["in", purchase_invoices]},
