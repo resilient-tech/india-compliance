@@ -9,6 +9,7 @@ from frappe.utils import flt, sbool
 from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
 from india_compliance.gst_india.constants import STATUS_CODE_MAP
 from india_compliance.gst_india.doctype.gstr_action.gstr_action import set_gstr_actions
+from india_compliance.gst_india.utils import MONTHS
 from india_compliance.gst_india.utils.gstin_info import get_and_update_filing_preference
 from india_compliance.gst_india.utils.gstr_1 import (
     CATEGORY_SUB_CATEGORY_MAPPING,
@@ -40,6 +41,11 @@ class SummarizeGSTR1:
         "total_sgst_amount": 0,
         "total_cess_amount": 0,
     }
+
+    QUARTERLY_KEYS = (
+        "already_included_docs_for_quarterly",
+        "excluded_docs_for_quarterly",
+    )
 
     def get_summarized_data(self, data, is_filed=False):
         """
@@ -98,6 +104,12 @@ class SummarizeGSTR1:
             if remove_category_row:
                 cateogory_summary.remove(summary_row)
 
+        for key in self.QUARTERLY_KEYS:
+            if key not in subcategory_summary:
+                continue
+
+            cateogory_summary.append(subcategory_summary.get(key))
+
         # Round Values
         for row in cateogory_summary:
             for key, value in row.items():
@@ -149,6 +161,39 @@ class SummarizeGSTR1:
                 summary_row["no_of_records"] = count
 
             summary_row.pop("unique_records")
+
+        # summarize included / excluded docs
+        for key in self.QUARTERLY_KEYS:
+            if key not in data:
+                continue
+
+            summary_row = subcategory_summary.setdefault(
+                key, self.default_subcategory_summary(frappe.unscrub(key))
+            )
+            summary_row.update(
+                {
+                    "indent": 0,
+                    "consider_in_total_taxable_value": True,
+                    "consider_in_total_tax": True,
+                }
+            )
+
+            for row in data[key]:
+                if (
+                    row.get("sub_category")
+                    in SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE
+                ):
+                    continue
+
+                for field in self.AMOUNT_FIELDS:
+                    if (
+                        field != "total_taxable_value"
+                        and row.get("sub_category")
+                        in SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX
+                    ):
+                        continue
+
+                    summary_row[field] += row.get(field, 0)
 
         return subcategory_summary
 
@@ -674,6 +719,8 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
                 "company_gstin": filters.company_gstin,
                 "from_date": from_date,
                 "to_date": to_date,
+                "month": MONTHS.index(filters.month_or_quarter) + 1,
+                "filing_preference": filters.filing_preference,
             }
         )
 
@@ -1044,7 +1091,11 @@ def get_differing_categories(mapped_summary, gov_summary):
         },
     }
 
-    IGNORED_CATEGORIES = {"Net Liability from Amendments"}
+    IGNORED_CATEGORIES = {
+        "Net Liability from Amendments",
+        frappe.unscrub("already_included_docs_for_quarterly"),
+        frappe.unscrub("excluded_docs_for_quarterly"),
+    }
 
     gov_summary = {row["description"]: row for row in gov_summary if row["indent"] == 0}
     compared_categories = set()

@@ -222,6 +222,8 @@ frappe.ui.form.on(DOCTYPE, {
         set_options_for_month_or_quarter(frm);
     },
 
+    filing_preference: render_empty_state,
+
     refresh(frm) {
         frm.disable_save();
 
@@ -1066,7 +1068,6 @@ class TabManager {
                         if (!this.summary) return null;
 
                         const total = this.summary.reduce((acc, row) => {
-                            if (row.indent !== 1) return acc;
                             if (
                                 row.consider_in_total_taxable_value &&
                                 ["no_of_records", "total_taxable_value"].includes(

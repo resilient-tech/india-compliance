@@ -19,12 +19,10 @@ from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     verify_request_in_progress,
 )
 from india_compliance.gst_india.utils import (
+    MONTHS,
     get_gst_accounts_by_type,
-    get_month_or_quarter_dict,
 )
 from india_compliance.gst_india.utils.gstin_info import get_gstr_1_return_status
-
-MONTH = list(get_month_or_quarter_dict().keys())[4:]
 
 
 class GSTR1Beta(Document):
@@ -410,7 +408,7 @@ def get_gstr_1_from_and_to_date(
     Returns the from and to date for the given month or quarter and year
     This is used to filter the data for the given period in Books
     """
-    start_month = end_month = MONTH.index(month_or_quarter) + 1
+    start_month = end_month = MONTHS.index(month_or_quarter) + 1
 
     # only for quarter ending month
     if filing_preference == "Quarterly" and start_month % 3 == 0:

@@ -2417,6 +2417,8 @@ class GSTR1BooksData(BooksDataMapper):
 
             self.round_values(list(data.values()))
 
+        self.process_for_quarterly(prepared_data)
+
         return prepared_data
 
     def prepare_document_issued_data(self):
@@ -2478,3 +2480,75 @@ class GSTR1BooksData(BooksDataMapper):
             )
 
         return advances_data
+
+    def process_for_quarterly(self, data):
+        if self.filters.filing_preference != "Quarterly":
+            return
+
+        is_m3 = self.filters.month % 3 == 0
+        m1_m2_subcategories = (
+            GSTR1_SubCategory.B2B_REGULAR.value,
+            GSTR1_SubCategory.B2B_REVERSE_CHARGE.value,
+            GSTR1_SubCategory.SEZWP.value,
+            GSTR1_SubCategory.SEZWOP.value,
+            GSTR1_SubCategory.DE.value,
+            GSTR1_SubCategory.CDNR.value,
+            GSTR1_SubCategory.SUPECOM_9_5.value,
+        )
+
+        if is_m3:
+            self.process_included_docs_for_quarterly(data, m1_m2_subcategories)
+        else:
+            self.process_excluded_docs_for_quarterly(data, m1_m2_subcategories)
+
+    def process_included_docs_for_quarterly(self, data, m1_m2_subcategories):
+        included_docs = self.get_already_filed_docs(self.from_date)
+
+        for category in data.copy():
+            if category not in m1_m2_subcategories:
+                continue
+
+            included = data.setdefault("already_included_docs_for_quarterly", [])
+
+            for key, row in data[category].items():
+                if key in included_docs:
+                    continue
+
+                row["sub_category"] = category
+                included.append(row)
+                del data[category][key]
+
+    def process_excluded_docs_for_quarterly(self, data, m1_m2_subcategories):
+        for category in data.copy():
+            if category in m1_m2_subcategories:
+                continue
+
+            if category in (
+                GSTR1_SubCategory.HSN.value,
+                GSTR1_SubCategory.DOC_ISSUE.value,
+            ):
+                del data[category]
+                continue
+
+            excluded = data.setdefault("excluded_docs_for_quarterly", [])
+
+            for row in data[category].values():
+                if isinstance(row, dict):
+                    row["sub_category"] = category
+                    excluded.append(row)
+
+                elif isinstance(row, list):
+                    for item in row:
+                        item["sub_category"] = category
+
+                    excluded.extend(row)
+
+            del data[category]
+
+        return data
+
+    def get_already_filed_docs(self, from_date):
+        # get already filed docs
+        # TODO: generate GSTR-1 if missing
+
+        return []

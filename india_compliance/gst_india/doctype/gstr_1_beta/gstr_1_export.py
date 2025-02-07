@@ -77,7 +77,7 @@ class DataProcessor:
         Apply transformations to row fields
         """
         for field, modifier in self.FIELD_TRANSFORMATIONS.items():
-            if field in row:
+            if row.get(field):
                 row[field] = modifier(row[field])
 
         return row
@@ -2069,6 +2069,8 @@ def get_gstr_1_json(
             GSTR1_SubCategory.NIL_EXEMPT.value,
             GSTR1_SubCategory.HSN.value,
             GSTR1_SubCategory.DOC_ISSUE.value,
+            "already_included_docs_for_quarterly",
+            "excluded_docs_for_quarterly",
         }:
             continue
 
