@@ -377,7 +377,7 @@ def get_latest_3b_filed_period(company, company_gstin):
 
 def get_and_update_filing_preference(gstin, period, force=False):
     if not force:
-        log_names = get_logs_for_quarter(gstin, period)
+        log_names = get_logs_for_year(gstin, period)
 
         filing_preference = frappe.db.get_value(
             "GST Return Log", {"name": ["in", log_names]}, "filing_preference"
@@ -389,7 +389,7 @@ def get_and_update_filing_preference(gstin, period, force=False):
     filing_preference = get_filing_preference(gstin, period)
 
     # update GST Return Log
-    create_or_update_logs_for_quarter(gstin, period, filing_preference)
+    create_or_update_logs_for_year(gstin, period, filing_preference)
 
     return filing_preference
 
@@ -413,8 +413,8 @@ def fetch_filing_preference(gstin, fy):
     return response
 
 
-def create_or_update_logs_for_quarter(gstin, period, filing_preference):
-    log_names = get_logs_for_quarter(gstin, period)
+def create_or_update_logs_for_year(gstin, period, filing_preference):
+    log_names = get_logs_for_year(gstin, period)
     existing_log = frappe.get_all(
         "GST Return Log", filters={"name": ["in", log_names]}, pluck="name"
     )
@@ -466,7 +466,8 @@ def get_current_fy():
     return get_fy(period)
 
 
-def get_logs_for_quarter(gstin, period):
+def get_logs_for_year(gstin, period):
+    # TODO: Update this to get logs for the entire FY
     quarter = get_financial_quarter(cint(period[:2]))
     start_month = ((quarter - 1) * 3 + 4) % 12
     year = period[2:]

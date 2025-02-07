@@ -596,7 +596,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         # APIs Enabled
         status = self.get_return_status()
 
-        self.set_filing_preference(filters, status)
+        self.set_filing_preference()
 
         if status == "Filed":
             gov_data_field = "filed"
@@ -645,24 +645,15 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         self.summarize_data(data)
         return callback and callback(filters)
 
-    def set_filing_preference(self, filters, status):
+    def set_filing_preference(self):
         """
         Args:
             filters (dict): Filters containing month_or_quarter and filing_preference.
             status (str): The current filing status.
         """
-        should_update = False
 
         if not self.get("filing_preference"):
-            should_update = True
-
-        # filing pref is determined in the first month of the quarter
-        first_month = ["January", "April", "July", "October"]
-        if status != "Filed" and filters.month_or_quarter in first_month:
-            should_update = True
-
-        if should_update:
-            filters.filing_preference = get_and_update_filing_preference(
+            self.filing_preference = get_and_update_filing_preference(
                 self.gstin, self.return_period, force=True
             )
 
@@ -710,7 +701,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
                 return books_data
 
         from_date, to_date = get_gstr_1_from_and_to_date(
-            filters.month_or_quarter, filters.year, filters.filing_preference
+            filters.month_or_quarter, filters.year, self.filing_preference
         )
 
         _filters = frappe._dict(
@@ -720,7 +711,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
                 "from_date": from_date,
                 "to_date": to_date,
                 "month": MONTHS.index(filters.month_or_quarter) + 1,
-                "filing_preference": filters.filing_preference,
+                "filing_preference": self.filing_preference,
             }
         )
 
