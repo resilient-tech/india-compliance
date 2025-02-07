@@ -194,7 +194,7 @@ function show_cancel_e_invoice_dialog(frm, callback) {
 
     $(`
         <div class="alert alert-warning" role="alert">
-            Sales invoice will be cancelled along with the IRN.
+            ${__("Sales invoice will be cancelled along with the IRN.")}
         </div>
     `).prependTo(d.wrapper);
 }
