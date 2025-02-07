@@ -1215,12 +1215,18 @@ class TabManager {
          *
          * This is used to simplify filtering of data
          */
+        console.log(args);
+
         let value = frappe.format(...args);
 
         if (this.filter_fieldnames.includes(args[1]?.id))
             value = `
                 <a href="#" class="${args[1]?.id}">
-                    ${value}
+                    ${
+                        args[1]?.id === "customer_gstin"
+                            ? india_compliance.format_gstin(value)
+                            : value
+                    }
                 </a>`;
 
         return value;
@@ -1329,6 +1335,8 @@ class GSTR1_TabManager extends TabManager {
                 name: "Customer Name",
                 fieldname: GSTR1_DataField.CUST_NAME,
                 width: 200,
+                _value: (...args) =>
+                    india_compliance.format_name(frappe.format(...args)),
             },
             {
                 name: "Invoice Type",

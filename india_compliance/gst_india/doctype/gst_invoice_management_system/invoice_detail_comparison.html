@@ -10,8 +10,12 @@
 		<tbody data-label="detail-view-content">
 			<tr>
 				<th>Company GSTIN</th>
-				<td data-label="company_gstin">{{ inward_supply.company_gstin || '-' }}</td>
-				<td data-label="company_gstin">{{ purchase.company_gstin || '-' }}</td>
+				<td data-label="company_gstin">{{ india_compliance.format_gstin(inward_supply.company_gstin) || '-' }}</td>
+				{% if purchase.company_gstin %}
+				<td data-label="company_gstin">{{ india_compliance.format_gstin(purchase.company_gstin) }}</td>
+				{% else %}
+				<td data-label="company_gstin">{{ '-' }}</td>
+				{% endif %}
 			</tr>
 			<tr>
 				<th>Document Links</td>

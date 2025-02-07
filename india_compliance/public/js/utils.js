@@ -218,7 +218,9 @@ Object.assign(india_compliance, {
                     <strong>${status}</strong>
                     <span class="d-flex justify-content-between align-items-center ${classes}"
                         title="${user_date}" style="margin-left: auto;gap: 2px">
-                       <span style="text-align: end;"> ${datetime ? "Synced " + pretty_date : ""}</span>
+                       <span style="text-align: end;"> ${
+                           datetime ? "Synced " + pretty_date : ""
+                       }</span>
                     </span>
                 </div>`);
     },
@@ -490,6 +492,14 @@ Object.assign(india_compliance, {
         }
 
         return true;
+    },
+
+    format_gstin(gstin) {
+        return gstin.slice(0, 2) + "XXXXXXXXXX" + gstin.slice(12, 15);
+    },
+
+    format_name(name) {
+        return name.slice(0, 2) + "XXXXXX";
     },
 });
 
