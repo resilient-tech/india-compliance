@@ -8,7 +8,7 @@ from india_compliance.gst_india.report.gstr_1.gstr_1 import (
     GSTR1DocumentIssuedSummary,
     GSTR11A11BData,
 )
-from india_compliance.gst_india.utils import get_gst_accounts_by_type
+from india_compliance.gst_india.utils import MONTHS, get_gst_accounts_by_type
 from india_compliance.gst_india.utils.__init__ import get_party_for_gstin
 from india_compliance.gst_india.utils.gstr_1 import (
     CATEGORY_SUB_CATEGORY_MAPPING,
@@ -2375,6 +2375,7 @@ class BooksDataMapper:
 class GSTR1BooksData(BooksDataMapper):
     def __init__(self, filters):
         self.filters = filters
+        self.current_month = MONTHS.index(filters.month_or_quarter) + 1
 
     def prepare_mapped_data(self):
         prepared_data = {}
@@ -2485,7 +2486,7 @@ class GSTR1BooksData(BooksDataMapper):
         if self.filters.filing_preference != "Quarterly":
             return
 
-        is_m3 = self.filters.month % 3 == 0
+        is_m3 = self.current_month % 3 == 0
         m1_m2_subcategories = (
             GSTR1_SubCategory.B2B_REGULAR.value,
             GSTR1_SubCategory.B2B_REVERSE_CHARGE.value,
@@ -2547,32 +2548,29 @@ class GSTR1BooksData(BooksDataMapper):
         return data
 
     def get_already_filed_docs(self, m1_m2_subcategories):
-        current_month = self.filters.month
+        from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
+            get_gst_return_log,
+        )
+
         company_gstin = self.filters.company_gstin
         year = self.filters.year
 
         log_names = [
-            f"GSTR1-{(current_month-1):02d}{year}-{company_gstin}",
-            f"GSTR1-{(current_month-2):02d}{year}-{company_gstin}",
+            f"GSTR1-{(self.current_month-1):02d}{year}-{company_gstin}",
+            f"GSTR1-{(self.current_month-2):02d}{year}-{company_gstin}",
         ]
 
         filed_invoices = set()
 
         for log_name in log_names:
-            doc = frappe.db.exists("GST Return Log", log_name)
-            if not doc:
-                gstr1_log = frappe.new_doc("GST Return Log")
-                gstr1_log.company = self.filters.company
-                gstr1_log.gstin = self.filters.company_gstin
-                gstr1_log.return_period = log_name.split("-")[1]
-                gstr1_log.return_type = "GSTR1"
-                gstr1_log.filing_preference = self.filters.filing_preference
-                gstr1_log.insert()
+            gstr1_log = get_gst_return_log(
+                log_name,
+                company=self.filters.company,
+                filing_preference=self.filters.filing_preference,
+            )
 
+            if not gstr1_log.filed:
                 gstr1_log.generate_gstr1_data(self.filters)
-
-            else:
-                gstr1_log = frappe.get_doc("GST Return Log", log_name)
 
             filed_data = gstr1_log.get_json_for("filed")
 

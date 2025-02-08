@@ -9,7 +9,6 @@ from frappe.utils import flt, sbool
 from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
 from india_compliance.gst_india.constants import STATUS_CODE_MAP
 from india_compliance.gst_india.doctype.gstr_action.gstr_action import set_gstr_actions
-from india_compliance.gst_india.utils import MONTHS
 from india_compliance.gst_india.utils.gstin_info import get_and_update_filing_preference
 from india_compliance.gst_india.utils.gstr_1 import (
     CATEGORY_SUB_CATEGORY_MAPPING,
@@ -706,14 +705,10 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
 
         _filters = frappe._dict(
             {
-                "company": filters.company,
-                "company_gstin": filters.company_gstin,
                 "from_date": from_date,
                 "to_date": to_date,
-                "month": MONTHS.index(filters.month_or_quarter) + 1,
-                "month_or_quarter": filters.month_or_quarter,
-                "year": filters.year,
                 "filing_preference": self.filing_preference,
+                **filters,
             }
         )
 
