@@ -346,7 +346,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                             DOCTYPE,
                             filter_map[tab][selector],
                             "=",
-                            $(this).text().trim(),
+                            $(this).attr("value") || $(this).text(),
                         ]);
                         me.filter_group.apply();
                     }

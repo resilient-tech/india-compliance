@@ -199,7 +199,7 @@ class IMS extends reconciliation.reconciliation_tabs {
             "click",
             ".supplier-gstin",
             function (e) {
-                me.update_filter(e, "supplier_gstin", $(this).text().trim(), me);
+                me.update_filter(e, "supplier_gstin", $(this).attr("value").trim(), me);
             }
         );
 

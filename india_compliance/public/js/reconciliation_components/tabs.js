@@ -130,7 +130,9 @@ reconciliation.reconciliation_tabs = class ReconciliationTabs {
         return `
         ${india_compliance.format_name(row.supplier_name)}
         <br />
-        <a href="#" style="font-size: 0.9em;" class="supplier-gstin">
+        <a href="#" style="font-size: 0.9em;" class="supplier-gstin" value=${
+            row.supplier_gstin
+        }>
             ${
                 row.supplier_gstin
                     ? india_compliance.format_gstin(row.supplier_gstin)

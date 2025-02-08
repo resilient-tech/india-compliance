@@ -1110,7 +1110,7 @@ class TabManager {
                 e.preventDefault();
 
                 const fieldname = field.fieldname;
-                const value = $(this).text();
+                const value = $(this).attr("value") || $(this).text();
                 me.detailed_view_callback &&
                     me.detailed_view_callback(fieldname, value);
             });
@@ -1215,13 +1215,11 @@ class TabManager {
          *
          * This is used to simplify filtering of data
          */
-        console.log(args);
-
         let value = frappe.format(...args);
 
         if (this.filter_fieldnames.includes(args[1]?.id))
             value = `
-                <a href="#" class="${args[1]?.id}">
+                <a href="#" class="${args[1]?.id}" value=${value}>
                     ${
                         args[1]?.id === "customer_gstin"
                             ? india_compliance.format_gstin(value)
