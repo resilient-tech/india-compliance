@@ -3073,9 +3073,24 @@ async function get_net_gst_liability(frm) {
 }
 
 function refresh_filing_preference(frm) {
-    const ref_btn_html = frappe.utils.icon("refresh", "sm", "update-filing-preference", "float:right");
-    $('[data-fieldname="filing_preference"] .control-value.like-disabled-input').append(ref_btn_html);
+    // update html/css to show refresh button next to filing preference
+    const $pref_wrapper = $(
+        '[data-fieldname="filing_preference"] .control-value.like-disabled-input'
+    );
+    if (!$pref_wrapper.length) return;
 
+    const text = $pref_wrapper.text().trim();
+    const ref_btn_html = frappe.utils.icon("refresh", "xs", "update-filing-preference");
+
+    $pref_wrapper
+        .empty()
+        .addClass("flex align-center justify-content-between")
+        .append(`<span>${text}</span>`)
+        .append(
+            `<span title="Refresh Filing Preference from GSTN">${ref_btn_html}</span>`
+        );
+
+    // bind click event
     frm.$wrapper.find(".update-filing-preference").click(async function (e) {
         const {
             filing_preference: old_preference,
@@ -3095,8 +3110,7 @@ function refresh_filing_preference(frm) {
         if (new_preference === old_preference)
             return frappe.show_alert(__("No change in filing preference"));
 
-        frappe.show_alert(__("Filing preference updated. Regenerating data..."));
+        frappe.show_alert(__("Filing preference updated. Regenerate data."));
         frm.set_value("filing_preference", new_preference);
-        frm.gstr1_action.generate_gstr1_data();
     });
 }
