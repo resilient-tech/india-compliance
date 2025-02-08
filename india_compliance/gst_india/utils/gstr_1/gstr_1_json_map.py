@@ -2504,13 +2504,13 @@ class GSTR1BooksData(BooksDataMapper):
     def process_included_docs_for_quarterly(self, data, m1_m2_subcategories):
         included_docs = self.get_already_filed_docs(m1_m2_subcategories)
 
-        for category in data.copy():
+        for category in data:
             if category not in m1_m2_subcategories:
                 continue
 
             included = data.setdefault("already_included_docs_for_quarterly", [])
 
-            for key, row in data[category].items():
+            for key, row in data[category].copy().items():
                 if key in included_docs:
                     continue
 
