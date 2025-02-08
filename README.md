@@ -47,7 +47,7 @@ https://github.com/user-attachments/assets/3691dea0-953e-404d-be0b-7453a56ab6c7
  Maximize ITC claims with automated reconciliation based on GSTR-2B and GSTR-2A
 
 - **🔗 E-Invoice & E-Waybill Integration**  
-  Seamless integration with NIC e-invoice portal (IRP)
+  Seamless integration with NIC portal (IRP)
 
 - **⚡ Real-time Validation**  
   Instant GSTIN verification and document validation against government APIs
