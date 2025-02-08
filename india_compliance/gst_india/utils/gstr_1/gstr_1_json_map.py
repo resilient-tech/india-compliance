@@ -2502,7 +2502,7 @@ class GSTR1BooksData(BooksDataMapper):
             self.process_excluded_docs_for_quarterly(data, m1_m2_subcategories)
 
     def process_included_docs_for_quarterly(self, data, m1_m2_subcategories):
-        included_docs = self.get_already_filed_docs(self.from_date)
+        included_docs = self.get_already_filed_docs(m1_m2_subcategories)
 
         for category in data.copy():
             if category not in m1_m2_subcategories:
@@ -2547,8 +2547,40 @@ class GSTR1BooksData(BooksDataMapper):
 
         return data
 
-    def get_already_filed_docs(self, from_date):
-        # get already filed docs
-        # TODO: generate GSTR-1 if missing
+    def get_already_filed_docs(self, m1_m2_subcategories):
+        current_month = self.filters.month
+        company_gstin = self.filters.company_gstin
+        year = self.filters.year
 
-        return []
+        log_names = [
+            f"GSTR1-{(current_month-1):02d}{year}-{company_gstin}",
+            f"GSTR1-{(current_month-2):02d}{year}-{company_gstin}",
+        ]
+
+        filed_invoices = set()
+
+        for log_name in log_names:
+            doc = frappe.db.exists("GST Return Log", log_name)
+            if not doc:
+                gstr1_log = frappe.new_doc("GST Return Log")
+                gstr1_log.company = self.filters.company
+                gstr1_log.gstin = self.filters.company_gstin
+                gstr1_log.return_period = log_name.split("-")[1]
+                gstr1_log.return_type = "GSTR1"
+                gstr1_log.filing_preference = self.filters.filing_preference
+                gstr1_log.insert()
+
+                gstr1_log.generate_gstr1_data(self.filters)
+
+            else:
+                gstr1_log = frappe.get_doc("GST Return Log", log_name)
+
+            filed_data = gstr1_log.get_json_for("filed")
+
+            for category, invoices in filed_data.items():
+                if category not in m1_m2_subcategories:
+                    continue
+
+                filed_invoices.update(invoices.keys())
+
+        return filed_invoices

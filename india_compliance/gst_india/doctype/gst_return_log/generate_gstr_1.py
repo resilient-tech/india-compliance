@@ -711,6 +711,8 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
                 "from_date": from_date,
                 "to_date": to_date,
                 "month": MONTHS.index(filters.month_or_quarter) + 1,
+                "month_or_quarter": filters.month_or_quarter,
+                "year": filters.year,
                 "filing_preference": self.filing_preference,
             }
         )
