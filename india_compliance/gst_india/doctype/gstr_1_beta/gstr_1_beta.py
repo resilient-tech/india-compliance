@@ -100,7 +100,9 @@ class GSTR1Beta(Document):
 
         if self.filing_preference != gstr1_log.filing_preference:
             recompute_books = True
-            gstr1_log.db_set("filing_preference", self.filing_preference)
+            self.filing_preference = gstr1_log.filing_preference
+            # gstr1_log.db_set("filing_preference", self.filing_preference)
+            # will this be self.filing_preference or gstr1_log.filing_preference
 
         if sync_for:
             gstr1_log.remove_json_for(sync_for)

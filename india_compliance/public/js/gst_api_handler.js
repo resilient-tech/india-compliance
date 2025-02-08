@@ -92,14 +92,16 @@ Object.assign(india_compliance, {
 });
 
 class IndiaComplianceForm extends frappe.ui.form.Form {
-    taxpayer_api_call(method, args, callback) {
+    taxpayer_api_call(method, args, callback, doc_method = true) {
         // similar to frappe.ui.form.Form.prototype.call
         const opts = {
             method: method,
-            doc: this.doc,
             args: args,
             callback: callback,
         };
+
+        if(doc_method)
+            opts.doc = this.doc
 
         opts.original_callback = opts.callback;
         opts.callback = r => {

@@ -115,6 +115,7 @@ frappe.ui.form.on(DOCTYPE, {
 
         if (is_gstr1_api_enabled()) {
             frm.set_df_property("filing_preference", "read_only", 1);
+            update_filing_preference(frm);
         }
 
         frm.__setup_complete = true;
@@ -3067,4 +3068,30 @@ async function get_net_gst_liability(frm) {
     });
 
     return response?.message;
+}
+
+function update_filing_preference(frm) {
+    frm.set_df_property('filing_preference', 'description',
+        `<button class="btn btn-secondary update-filing-preference">Refresh</button>`
+    );
+
+    frm.fields_dict.filing_preference.$wrapper.on('click', '.update-filing-preference', async function () {
+        const { filing_preference: currentPreference, month_or_quarter, year, company_gstin } = frm.doc;
+
+        const month = india_compliance.MONTH.indexOf(month_or_quarter) + 1;
+        const period = `${String(month).padStart(2, '0')}${year}`;
+
+        const { message: newPreference } = await frm.taxpayer_api_call(
+            'india_compliance.gst_india.utils.gstin_info.get_and_update_filing_preference',
+            { gstin: company_gstin, period, force: true },
+            null,
+            false
+        );
+
+        if (newPreference === currentPreference) return;
+
+        const response = await frm.taxpayer_api_call("generate_gstr1");
+        frm.doc.__gst_data = response.message;
+        frm.trigger("load_gstr1_data");
+    });
 }

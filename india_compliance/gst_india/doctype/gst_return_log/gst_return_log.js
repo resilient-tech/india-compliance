@@ -14,7 +14,7 @@ frappe.ui.form.on("GST Return Log", {
                     file_field: field,
                     name: frm.doc.name,
                     doctype: frm.doc.doctype,
-                    file_name: `${field}.gz`
+                    file_name: `${field}.json.gz`
                 };
                 open_url_post(frappe.request.url, args);
             });

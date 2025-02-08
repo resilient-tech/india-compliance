@@ -14,6 +14,9 @@ from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
 from india_compliance.gst_india.api_classes.public import PublicAPI
+from india_compliance.gst_india.api_classes.taxpayer_base import (
+    otp_handler,
+)
 from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
 from india_compliance.gst_india.utils import parse_datetime, titlecase, validate_gstin
 
@@ -375,7 +378,11 @@ def get_latest_3b_filed_period(company, company_gstin):
 ####################################################################################################
 
 
+@frappe.whitelist()
+@otp_handler
 def get_and_update_filing_preference(gstin, period, force=False):
+    frappe.has_permission("GST Return Log", "write", throw=True)
+
     if not force:
         log_names = get_logs_for_year(gstin, period)
 
@@ -386,23 +393,22 @@ def get_and_update_filing_preference(gstin, period, force=False):
         if filing_preference:
             return filing_preference
 
-    filing_preference = get_filing_preference(gstin, period)
+    response = fetch_filing_preference(gstin, get_fy(period))
 
     # update GST Return Log
-    create_or_update_logs_for_year(gstin, period, filing_preference)
+    create_or_update_logs_for_year(gstin, period, response)
 
-    return filing_preference
+    return _get_filing_preference(period, response)
 
 
 def get_filing_preference(gstin, period):
     response = fetch_filing_preference(gstin, get_fy(period))
+    return _get_filing_preference(period, response)
 
+
+def _get_filing_preference(period, response):
     quarter = get_financial_quarter(cint(period[:2]))
-    filing_preference = (
-        "Quarterly" if response[quarter - 1].get("preference") == "Q" else "Monthly"
-    )
-
-    return filing_preference
+    return "Quarterly" if response[quarter - 1].get("preference") == "Q" else "Monthly"
 
 
 @request_cache
@@ -413,13 +419,16 @@ def fetch_filing_preference(gstin, fy):
     return response
 
 
-def create_or_update_logs_for_year(gstin, period, filing_preference):
+def create_or_update_logs_for_year(gstin, period, response):
     log_names = get_logs_for_year(gstin, period)
     existing_log = frappe.get_all(
         "GST Return Log", filters={"name": ["in", log_names]}, pluck="name"
     )
 
     for log_name in log_names:
+        period = log_name.split("-")[1]
+        filing_preference = _get_filing_preference(period, response)
+
         if log_name in existing_log:
             frappe.db.set_value(
                 "GST Return Log", log_name, "filing_preference", filing_preference
@@ -467,16 +476,18 @@ def get_current_fy():
 
 
 def get_logs_for_year(gstin, period):
-    # TODO: Update this to get logs for the entire FY
-    quarter = get_financial_quarter(cint(period[:2]))
-    start_month = ((quarter - 1) * 3 + 4) % 12
-    year = period[2:]
-
+    year = cint(period[2:])
+    month = cint(period[:2])
     logs = []
 
+    if month <= 3:
+        year -= 1
+
     for return_type in ["GSTR1", "GSTR3B"]:
-        for month in range(start_month, start_month + 3):
-            logs.append(f"{return_type}-{month:02d}{year}-{gstin}")
+        for month_offset in range(12):
+            current_month = (4 + month_offset - 1) % 12 + 1
+            current_year = year if current_month >= 4 else year + 1
+            logs.append(f"{return_type}-{current_month:02d}{current_year}-{gstin}")
 
     return logs
 
