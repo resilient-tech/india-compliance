@@ -115,7 +115,6 @@ frappe.ui.form.on(DOCTYPE, {
 
         if (is_gstr1_api_enabled()) {
             frm.set_df_property("filing_preference", "read_only", 1);
-            refresh_filing_preference(frm);
         }
 
         frm.__setup_complete = true;
@@ -227,6 +226,9 @@ frappe.ui.form.on(DOCTYPE, {
 
     refresh(frm) {
         frm.disable_save();
+        if (is_gstr1_api_enabled()) {
+            refresh_filing_preference(frm);
+        }
 
         frm.gstr1?.render_form_actions();
 
@@ -3071,34 +3073,30 @@ async function get_net_gst_liability(frm) {
 }
 
 function refresh_filing_preference(frm) {
-    const ref_btn = frappe.utils.icon("refresh", "sm", "update-filing-preference");
-    frm.set_df_property("filing_preference", "description", `${ref_btn}`);
+    const ref_btn_html = frappe.utils.icon("refresh", "sm", "update-filing-preference", "float:right");
+    $('[data-fieldname="filing_preference"] .control-value.like-disabled-input').append(ref_btn_html);
 
-    frm.fields_dict.filing_preference.$wrapper.on(
-        "click",
-        ".update-filing-preference",
-        async function () {
-            const {
-                filing_preference: old_preference,
-                month_or_quarter,
-                year,
-                company_gstin,
-            } = frm.doc;
+    frm.$wrapper.find(".update-filing-preference").click(async function (e) {
+        const {
+            filing_preference: old_preference,
+            month_or_quarter,
+            year,
+            company_gstin,
+        } = frm.doc;
 
-            const month = india_compliance.MONTH.indexOf(month_or_quarter) + 1;
-            const period = `${String(month).padStart(2, "0")}${year}`;
+        const month = india_compliance.MONTH.indexOf(month_or_quarter) + 1;
+        const period = `${String(month).padStart(2, "0")}${year}`;
 
-            const { message: new_preference } = await taxpayer_api.call({
-                method: "india_compliance.gst_india.utils.gstin_info.get_and_update_filing_preference",
-                args: { gstin: company_gstin, period },
-            });
+        const { message: new_preference } = await taxpayer_api.call({
+            method: "india_compliance.gst_india.utils.gstin_info.get_and_update_filing_preference",
+            args: { gstin: company_gstin, period },
+        });
 
-            if (new_preference === old_preference)
-                return frappe.show_alert(__("No change in filing preference"));
+        if (new_preference === old_preference)
+            return frappe.show_alert(__("No change in filing preference"));
 
-            frappe.show_alert(__("Filing preference updated. Regenerating data..."));
-            frm.set_value("filing_preference", new_preference);
-            frm.gstr1_action.generate_gstr1_data();
-        }
-    );
+        frappe.show_alert(__("Filing preference updated. Regenerating data..."));
+        frm.set_value("filing_preference", new_preference);
+        frm.gstr1_action.generate_gstr1_data();
+    });
 }
