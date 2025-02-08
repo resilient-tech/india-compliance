@@ -14,6 +14,7 @@ from india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta import get_perio
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr_1 import (
     JSON_CATEGORY_EXCEL_CATEGORY_MAPPING,
+    QUARTERLY_KEYS,
     GovExcelField,
     GovExcelSheetName,
     GovJsonKey,
@@ -2069,8 +2070,7 @@ def get_gstr_1_json(
             GSTR1_SubCategory.NIL_EXEMPT.value,
             GSTR1_SubCategory.HSN.value,
             GSTR1_SubCategory.DOC_ISSUE.value,
-            "already_included_docs_for_quarterly",
-            "excluded_docs_for_quarterly",
+            *QUARTERLY_KEYS,
         }:
             continue
 

@@ -12,6 +12,7 @@ from india_compliance.gst_india.doctype.gstr_action.gstr_action import set_gstr_
 from india_compliance.gst_india.utils.gstin_info import get_and_update_filing_preference
 from india_compliance.gst_india.utils.gstr_1 import (
     CATEGORY_SUB_CATEGORY_MAPPING,
+    QUARTERLY_KEYS,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
     GovJsonKey,
@@ -40,11 +41,6 @@ class SummarizeGSTR1:
         "total_sgst_amount": 0,
         "total_cess_amount": 0,
     }
-
-    QUARTERLY_KEYS = (
-        "already_included_docs_for_quarterly",
-        "excluded_docs_for_quarterly",
-    )
 
     def get_summarized_data(self, data, is_filed=False):
         """
@@ -103,7 +99,7 @@ class SummarizeGSTR1:
             if remove_category_row:
                 cateogory_summary.remove(summary_row)
 
-        for key in self.QUARTERLY_KEYS:
+        for key in QUARTERLY_KEYS:
             if key not in subcategory_summary:
                 continue
 
@@ -162,7 +158,7 @@ class SummarizeGSTR1:
             summary_row.pop("unique_records")
 
         # summarize included / excluded docs
-        for key in self.QUARTERLY_KEYS:
+        for key in QUARTERLY_KEYS:
             if key not in data:
                 continue
 
@@ -1081,8 +1077,7 @@ def get_differing_categories(mapped_summary, gov_summary):
 
     IGNORED_CATEGORIES = {
         "Net Liability from Amendments",
-        frappe.unscrub("already_included_docs_for_quarterly"),
-        frappe.unscrub("excluded_docs_for_quarterly"),
+        *[frappe.unscrub(key) for key in QUARTERLY_KEYS],
     }
 
     gov_summary = {row["description"]: row for row in gov_summary if row["indent"] == 0}
