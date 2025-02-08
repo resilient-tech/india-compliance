@@ -115,7 +115,7 @@ frappe.ui.form.on(DOCTYPE, {
 
         if (is_gstr1_api_enabled()) {
             frm.set_df_property("filing_preference", "read_only", 1);
-            update_filing_preference(frm);
+            refresh_filing_preference(frm);
         }
 
         frm.__setup_complete = true;
@@ -206,7 +206,7 @@ frappe.ui.form.on(DOCTYPE, {
 
     company_gstin(frm) {
         render_empty_state(frm);
-        update_fields_based_on_filing_preference(frm);
+        update_filing_preference(frm);
     },
 
     file_nil_gstr1(frm) {
@@ -215,7 +215,7 @@ frappe.ui.form.on(DOCTYPE, {
 
     month_or_quarter(frm) {
         render_empty_state(frm);
-        update_fields_based_on_filing_preference(frm);
+        update_filing_preference(frm);
     },
 
     year(frm) {
@@ -2987,19 +2987,19 @@ function set_options_for_year(frm) {
     frm.set_value("year", current_year.toString());
 }
 
-async function update_fields_based_on_filing_preference(frm) {
-    let { message: preference } = await frappe.call({
+function update_filing_preference(frm) {
+    frappe.call({
         method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_filing_preference_from_log",
         args: {
             month_or_quarter: frm.doc.month_or_quarter,
             year: frm.doc.year,
             company_gstin: frm.doc.company_gstin,
         },
+        callback: r => {
+            if (!r.message) return;
+            frm.set_value("filing_preference", r.message);
+        },
     });
-
-    if (preference === frm.doc.filing_preference) return;
-
-    frm.set_value("filing_preference", preference);
 }
 
 function set_options_for_month_or_quarter(frm) {
@@ -3070,28 +3070,35 @@ async function get_net_gst_liability(frm) {
     return response?.message;
 }
 
-function update_filing_preference(frm) {
-    frm.set_df_property('filing_preference', 'description',
-        `<button class="btn btn-secondary update-filing-preference">Refresh</button>`
+function refresh_filing_preference(frm) {
+    const ref_btn = frappe.utils.icon("refresh", "sm", "update-filing-preference");
+    frm.set_df_property("filing_preference", "description", `${ref_btn}`);
+
+    frm.fields_dict.filing_preference.$wrapper.on(
+        "click",
+        ".update-filing-preference",
+        async function () {
+            const {
+                filing_preference: old_preference,
+                month_or_quarter,
+                year,
+                company_gstin,
+            } = frm.doc;
+
+            const month = india_compliance.MONTH.indexOf(month_or_quarter) + 1;
+            const period = `${String(month).padStart(2, "0")}${year}`;
+
+            const { message: new_preference } = await taxpayer_api.call({
+                method: "india_compliance.gst_india.utils.gstin_info.get_and_update_filing_preference",
+                args: { gstin: company_gstin, period, force: true },
+            });
+
+            if (new_preference === old_preference)
+                return frappe.show_alert(__("No change in filing preference"));
+
+            frappe.show_alert(__("Filing preference updated. Regenerating data..."));
+            frm.set_value("filing_preference", new_preference);
+            frm.gstr1_action.generate_gstr1_data();
+        }
     );
-
-    frm.fields_dict.filing_preference.$wrapper.on('click', '.update-filing-preference', async function () {
-        const { filing_preference: currentPreference, month_or_quarter, year, company_gstin } = frm.doc;
-
-        const month = india_compliance.MONTH.indexOf(month_or_quarter) + 1;
-        const period = `${String(month).padStart(2, '0')}${year}`;
-
-        const { message: newPreference } = await frm.taxpayer_api_call(
-            'india_compliance.gst_india.utils.gstin_info.get_and_update_filing_preference',
-            { gstin: company_gstin, period, force: true },
-            null,
-            false
-        );
-
-        if (newPreference === currentPreference) return;
-
-        const response = await frm.taxpayer_api_call("generate_gstr1");
-        frm.doc.__gst_data = response.message;
-        frm.trigger("load_gstr1_data");
-    });
 }

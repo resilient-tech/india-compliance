@@ -421,8 +421,13 @@ def fetch_filing_preference(gstin, fy):
 
 def create_or_update_logs_for_year(gstin, period, response):
     log_names = get_logs_for_year(gstin, period)
-    existing_log = frappe.get_all(
-        "GST Return Log", filters={"name": ["in", log_names]}, pluck="name"
+    existing_log = frappe._dict(
+        frappe.get_all(
+            "GST Return Log",
+            filters={"name": ["in", log_names]},
+            fields=["name", "filing_preference"],
+            as_list=True,
+        )
     )
 
     for log_name in log_names:
@@ -430,8 +435,14 @@ def create_or_update_logs_for_year(gstin, period, response):
         filing_preference = _get_filing_preference(period, response)
 
         if log_name in existing_log:
+            if existing_log[log_name] == filing_preference:
+                continue
+
+            # books may need a refresh
             frappe.db.set_value(
-                "GST Return Log", log_name, "filing_preference", filing_preference
+                "GST Return Log",
+                log_name,
+                {"filing_preference": filing_preference, "is_latest_data": 0},
             )
             continue
 
