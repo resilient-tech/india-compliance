@@ -6,46 +6,68 @@ Simple, yet powerful compliance solutions for Indian businesses
 
 [![Server Tests](https://github.com/resilient-tech/india-compliance/actions/workflows/server-tests.yml/badge.svg)](https://github.com/resilient-tech/india-compliance/actions/workflows/server-tests.yml)
 [![Codecov](https://codecov.io/gh/resilient-tech/india-compliance/branch/develop/graph/badge.svg)](https://codecov.io/gh/resilient-tech/india-compliance)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 <br><br>
 ![image](https://github.com/resilient-tech/india-compliance/assets/16315650/f442f922-acd4-4676-9ae6-494b09242bdf)
 
 </div>
 
-## Introduction
+<div align="center">
+ <a href="https://indiacompliance.app/">Website</a>
+ &nbsp;|&nbsp;
+ <a href="https://docs.indiacompliance.app/">Docs</a>
+ &nbsp;|&nbsp;
+<a href="https://erpnext-demo.frappe.cloud/app/home">Demo</a>
+</div>
+
+## 🌱 Introduction
 
 India Compliance has been designed to make compliance with Indian rules and regulations simple, swift and reliable. To this end, it has been carefully integrated with GST APIs to simplify recurring compliance processes.
 
-It builds on top of [ERPNext](https://github.com/frappe/erpnext) and the [Frappe Framework](https://github.com/frappe/frappe) - incredible FOSS projects built and maintained by the incredible folks at Frappe. Go check these out if you haven't already!
+It builds on top of [ERPNext](https://github.com/frappe/erpnext) and the [Frappe Framework](https://github.com/frappe/frappe) - incredible FOSS projects built and maintained by the folks at Frappe. Go check these out if you haven't already!
 
-## Key Features
+## ✨ Key Features
 
--   End-to-end GST e-Waybill management
--   Automated GST e-Invoice generation and cancellation
--   Advanced purchase reconciliation based on GSTR-2B and GSTR-2A
--   Autofill Party and Address details by entering their GSTIN
--   Configurable features based on business needs
--   Powerful validations to ensure correct compliance
+### File GSTR-1 like a Pro
 
-For a detailed overview of these features, please [refer to the documentation](https://docs.indiacompliance.app/).
+![GSTR-1 Filing](https://github.com/user-attachments/assets/b64e25ee-58bb-4b9f-a03e-27b7edfb6460)
 
-## Installation
+ *Automated return preparation with intelligent data mapping and error validation*
+
+### Effortless purchase reconciliation
+
+ *Maximize ITC claims with automated reconciliation based on GSTR-2B and GSTR-2A*
+
+### Smart GST Invoice Management (IMS)
+
+![IMS Dashboard](https://github.com/user-attachments/assets/7d25f072-c8f1-4970-8ee0-47d6eccbcb5b)
+
+ *Simplify invoice actions to ensure accurate and efficient GSTR-3B submissions*
+
+### End-to-end GST e-Waybill management
+
+### Automated GST e-Invoice generation and cancellation
+
+## 🚀 Quick Start
+
+### Installation
 
 For detailed instructions, please [refer to the documentation](https://docs.indiacompliance.app/docs/getting-started/installation)
 
-## In-app Purchases
+### In-app Purchases
 
 Some of the automation features available in India Compliance require access to [GST APIs](https://discuss.erpnext.com/t/introducing-india-compliance/86335#a-note-on-gst-apis-3). Since there are some costs associated with these APIs, they can be accessed by signing up for an India Compliance Account after installing this app.
 
-## Planned Features
+## 🤝 Contributing
 
--   Quick and easy filing process for GSTR-1 and GSTR-3B
+- [Issue Guidelines](https://github.com/frappe/erpnext/wiki/Issue-Guidelines)
+- [Pull Request Requirements](https://github.com/frappe/erpnext/wiki/Contribution-Guidelines)
 
-## Contributing
+## 📄 License
 
--   [Issue Guidelines](https://github.com/frappe/erpnext/wiki/Issue-Guidelines)
--   [Pull Request Requirements](https://github.com/frappe/erpnext/wiki/Contribution-Guidelines)
+This project is licensed under [GNU General Public License (v3)](https://github.com/resilient-tech/india-compliance/blob/develop/license.txt)
 
-## License
-
-[GNU General Public License (v3)](https://github.com/resilient-tech/india-compliance/blob/develop/license.txt)
+---
+**Empowering Businesses | Simplifying Compliance**<br>
+*Part of the [Resilient Tech](https://www.resilient.tech/) Initiative - Making India compliance accessible for all*
