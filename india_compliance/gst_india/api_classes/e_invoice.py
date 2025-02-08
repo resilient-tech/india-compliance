@@ -10,7 +10,7 @@ import frappe
 from frappe import _
 
 from india_compliance.gst_india.api_classes.base import BaseAPI, check_scheduler_status
-from india_compliance.gst_india.api_classes.taxpayer_base import PublicCertificate
+from india_compliance.gst_india.api_classes.taxpayer_base import StaticResourcesAPI
 from india_compliance.gst_india.constants import DISTANCE_REGEX
 from india_compliance.gst_india.utils.cryptography import aes_decrypt_data
 
@@ -145,7 +145,7 @@ class EInvoiceAuth(BaseAPI):
     def get_public_key(self):
         key = self.settings.einvoice_public_key
         if not key:
-            key = PublicCertificate().get_einvoice_public_key()
+            key = StaticResourcesAPI().get_nic_public_key()
 
         return key.encode()
 
