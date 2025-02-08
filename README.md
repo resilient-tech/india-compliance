@@ -18,7 +18,7 @@ Simple, yet powerful compliance solutions for Indian businesses
  &nbsp;|&nbsp;
  <a href="https://docs.indiacompliance.app/">Docs</a>
  &nbsp;|&nbsp;
-<a href="https://erpnext-demo.frappe.cloud/app/home">Demo</a>
+<a href="https://india-compliance.frappe.cloud/">Demo</a>
 </div>
 
 ## 🌱 Introduction
@@ -29,19 +29,19 @@ It builds on top of [ERPNext](https://github.com/frappe/erpnext) and the [Frappe
 
 ## ✨ Key Features
 
-### 🚀 File GSTR-1 like a Pro
-
-<https://github.com/user-attachments/assets/b64e25ee-58bb-4b9f-a03e-27b7edfb6460>
+### File GSTR-1 like a Pro
 
  *Automated return preparation with intelligent data mapping and error validation*
+ 
+https://github.com/user-attachments/assets/ab6abee5-e880-473e-a248-09f795a408d0
 
-### 📑 Smart GST Invoice Management (IMS)
-
-<https://github.com/user-attachments/assets/7d25f072-c8f1-4970-8ee0-47d6eccbcb5b>
+### Smart GST Invoice Management (IMS)
 
  *Simplify invoice actions to ensure accurate and efficient GSTR-3B submissions*
+ 
+https://github.com/user-attachments/assets/3691dea0-953e-404d-be0b-7453a56ab6c7
 
-### 🌟 Other Features
+### Other Features
 
 - **📊 Advanced Purchase Reconciliation**  
  Maximize ITC claims with automated reconciliation based on GSTR-2B and GSTR-2A
