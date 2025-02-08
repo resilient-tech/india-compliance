@@ -2493,7 +2493,6 @@ class GSTR1BooksData(BooksDataMapper):
             GSTR1_SubCategory.SEZWOP.value,
             GSTR1_SubCategory.DE.value,
             GSTR1_SubCategory.CDNR.value,
-            GSTR1_SubCategory.SUPECOM_9_5.value,
         )
 
         if is_m3:

@@ -99,15 +99,8 @@ class GSTR1Beta(Document):
         settings = frappe.get_cached_doc("GST Settings")
 
         if self.filing_preference != gstr1_log.filing_preference:
-
             recompute_books = True
-            # TODO:
-            # when i do this it changes filing_preference in frontend
-            # self.filing_preference = gstr1_log.filing_preference
-
             gstr1_log.db_set("filing_preference", self.filing_preference)
-            # when i do refresh at that time self.filing_preference may be wrong
-            # so we can not set it in filing_preference
 
         if sync_for:
             gstr1_log.remove_json_for(sync_for)
