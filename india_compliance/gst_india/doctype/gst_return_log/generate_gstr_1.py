@@ -654,7 +654,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
 
         if not self.get("filing_preference"):
             self.filing_preference = get_and_update_filing_preference(
-                self.gstin, self.return_period, force=True
+                self.gstin, self.return_period
             )
 
     def generate_only_books_data(self, data, filters, callback=None):

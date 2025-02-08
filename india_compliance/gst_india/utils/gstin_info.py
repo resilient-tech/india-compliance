@@ -380,35 +380,15 @@ def get_latest_3b_filed_period(company, company_gstin):
 
 @frappe.whitelist()
 @otp_handler
-def get_and_update_filing_preference(gstin, period, force=False):
-    frappe.has_permission("GST Return Log", "write", throw=True)
-
-    if not force:
-        log_names = get_logs_for_year(gstin, period)
-
-        filing_preference = frappe.db.get_value(
-            "GST Return Log", {"name": ["in", log_names]}, "filing_preference"
-        )
-
-        if filing_preference:
-            return filing_preference
+def get_and_update_filing_preference(gstin, period):
+    frappe.has_permission("GST Return Log", throw=True)
 
     response = fetch_filing_preference(gstin, get_fy(period))
 
     # update GST Return Log
     create_or_update_logs_for_year(gstin, period, response)
 
-    return _get_filing_preference(period, response)
-
-
-def get_filing_preference(gstin, period):
-    response = fetch_filing_preference(gstin, get_fy(period))
-    return _get_filing_preference(period, response)
-
-
-def _get_filing_preference(period, response):
-    quarter = get_financial_quarter(cint(period[:2]))
-    return "Quarterly" if response[quarter - 1].get("preference") == "Q" else "Monthly"
+    return get_filing_preference(period, response)
 
 
 @request_cache
@@ -432,7 +412,7 @@ def create_or_update_logs_for_year(gstin, period, response):
 
     for log_name in log_names:
         period = log_name.split("-")[1]
-        filing_preference = _get_filing_preference(period, response)
+        filing_preference = get_filing_preference(period, response)
 
         if log_name in existing_log:
             if existing_log[log_name] == filing_preference:
@@ -465,6 +445,11 @@ def create_or_update_logs_for_year(gstin, period, response):
     patch_filing_preference(gstin)
 
 
+def get_filing_preference(period, response):
+    quarter = get_financial_quarter(cint(period[:2]))
+    return "Quarterly" if response[quarter - 1].get("preference") == "Q" else "Monthly"
+
+
 ####################################################################################################
 #### GSTIN UTILITIES ###############################################################################
 ####################################################################################################
@@ -495,8 +480,7 @@ def get_logs_for_year(gstin, period):
         year -= 1
 
     for return_type in ["GSTR1", "GSTR3B"]:
-        for month_offset in range(12):
-            current_month = (4 + month_offset - 1) % 12 + 1
+        for current_month in range(1, 13):
             current_year = year if current_month >= 4 else year + 1
             logs.append(f"{return_type}-{current_month:02d}{current_year}-{gstin}")
 

@@ -3090,7 +3090,7 @@ function refresh_filing_preference(frm) {
 
             const { message: new_preference } = await taxpayer_api.call({
                 method: "india_compliance.gst_india.utils.gstin_info.get_and_update_filing_preference",
-                args: { gstin: company_gstin, period, force: true },
+                args: { gstin: company_gstin, period },
             });
 
             if (new_preference === old_preference)
