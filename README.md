@@ -29,25 +29,31 @@ It builds on top of [ERPNext](https://github.com/frappe/erpnext) and the [Frappe
 
 ## ✨ Key Features
 
-### File GSTR-1 like a Pro
+### 🚀 File GSTR-1 like a Pro
 
-https://github.com/user-attachments/assets/b64e25ee-58bb-4b9f-a03e-27b7edfb6460
+<https://github.com/user-attachments/assets/b64e25ee-58bb-4b9f-a03e-27b7edfb6460>
 
  *Automated return preparation with intelligent data mapping and error validation*
 
-### Effortless purchase reconciliation
+### 📑 Smart GST Invoice Management (IMS)
 
- *Maximize ITC claims with automated reconciliation based on GSTR-2B and GSTR-2A*
-
-### Smart GST Invoice Management (IMS)
-
-https://github.com/user-attachments/assets/7d25f072-c8f1-4970-8ee0-47d6eccbcb5b
+<https://github.com/user-attachments/assets/7d25f072-c8f1-4970-8ee0-47d6eccbcb5b>
 
  *Simplify invoice actions to ensure accurate and efficient GSTR-3B submissions*
 
-### End-to-end GST e-Waybill management
+### 🌟 Other Features
 
-### Automated GST e-Invoice generation and cancellation
+- **📊 Advanced Purchase Reconciliation**  
+ Maximize ITC claims with automated reconciliation based on GSTR-2B and GSTR-2A
+
+- **🔗 E-Invoice & E-Waybill Integration**  
+  Seamless integration with NIC e-invoice portal (IRP)
+
+- **⚡ Real-time Validation**  
+  Instant GSTIN verification and document validation against government APIs
+
+- **📈 Intelligent Reporting**  
+  Pre-built reports for GSTR-1, GSTR-2A/2B reconciliation, and tax liability
 
 ## 🚀 Quick Start
 
