@@ -3085,9 +3085,11 @@ function refresh_filing_preference(frm) {
     $pref_wrapper
         .empty()
         .addClass("flex align-center justify-content-between")
-        .append(`<span>${text}</span>`)
+        .append($("<span></span>").text(text))
         .append(
-            `<span title="Refresh Filing Preference from GSTN">${ref_btn_html}</span>`
+            $("<span></span>")
+                .attr("title", "Refresh Filing Preference from GSTN")
+                .html(ref_btn_html)
         );
 
     // bind click event
