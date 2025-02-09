@@ -103,7 +103,5 @@ This project is licensed under [GNU General Public License (v3)](https://github.
 <br />
 <br />
 
-**Empowering Businesses | Simplifying Compliance**\
-*Part of the India Compliance Initiative - Making compliance
-accessible for all*
+Empowering Businesses &nbsp;|&nbsp; Simplifying Compliance
 </div>
