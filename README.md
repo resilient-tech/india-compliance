@@ -40,13 +40,13 @@ already!
 
  Automated return preparation with intelligent data mapping and error validation
 
-<https://github.com/user-attachments/assets/ab6abee5-e880-473e-a248-09f795a408d0>
+<!--<https://github.com/user-attachments/assets/ab6abee5-e880-473e-a248-09f795a408d0>-->
 
 ### Smart GST Invoice Management (IMS)
 
  Simplified invoice actions to ensure accurate and efficient GSTR-3B submissions
 
-<https://github.com/user-attachments/assets/3691dea0-953e-404d-be0b-7453a56ab6c7>
+<!--<https://github.com/user-attachments/assets/3691dea0-953e-404d-be0b-7453a56ab6c7>-->
 
 ### Other Features
 
