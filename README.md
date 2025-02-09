@@ -18,7 +18,7 @@ Simple, yet powerful compliance solutions for Indian businesses
  &nbsp;|&nbsp;
  <a href="https://docs.indiacompliance.app/">Docs</a>
  &nbsp;|&nbsp;
-<a href="https://india-compliance.frappe.cloud/">Demo</a>
+<a href="https://india-compliance.frappe.cloud/app/gst-india">Demo</a>
 </div>
 
 ## Introduction
@@ -65,6 +65,14 @@ already!
 ### Installation
 
 For detailed instructions, please [refer to the documentation](https://docs.indiacompliance.app/docs/getting-started/installation)
+
+### Demo
+
+Experience India Compliance with our demo environment. Use the link and credentials below to explore the features:
+
+- **Demo Site**: [India Compliance Demo](https://india-compliance.frappe.cloud/app/gst-india)
+- **Username**: <demo@indiacompliance.app>
+- **Password**: demo
 
 ### In-app Purchases
 
