@@ -14,11 +14,13 @@ Simple, yet powerful compliance solutions for Indian businesses
 </div>
 
 <div align="center">
- <a href="https://indiacompliance.app/">Website</a>
- &nbsp;|&nbsp;
- <a href="https://docs.indiacompliance.app/">Docs</a>
- &nbsp;|&nbsp;
-<a href="https://india-compliance.frappe.cloud/app/gst-india">Demo</a>
+
+[Website](https://indiacompliance.app)
+  &nbsp;|&nbsp;
+[Docs](https://docs.indiacompliance.app)
+  &nbsp;|&nbsp;
+[Demo](https://india-compliance.frappe.cloud/app/gst-india)
+
 </div>
 
 ## Introduction
@@ -36,13 +38,13 @@ already!
 
 ### File GSTR-1 like a Pro
 
- *Automated return preparation with intelligent data mapping and error validation*
+ Automated return preparation with intelligent data mapping and error validation
 
 <https://github.com/user-attachments/assets/ab6abee5-e880-473e-a248-09f795a408d0>
 
 ### Smart GST Invoice Management (IMS)
 
- *Simplify invoice actions to ensure accurate and efficient GSTR-3B submissions*
+ Simplified invoice actions to ensure accurate and efficient GSTR-3B submissions
 
 <https://github.com/user-attachments/assets/3691dea0-953e-404d-be0b-7453a56ab6c7>
 
@@ -68,7 +70,8 @@ For detailed instructions, please [refer to the documentation](https://docs.indi
 
 ### Demo
 
-Experience India Compliance with our demo environment. Use the link and credentials below to explore the features:
+Experience India Compliance with our demo environment.
+Use the link and credentials below to explore the features:
 
 - **Demo Site**: [India Compliance Demo](https://india-compliance.frappe.cloud/app/gst-india)
 - **Username**: <demo@indiacompliance.app>
@@ -87,7 +90,20 @@ Some of the automation features available in India Compliance require access to 
 
 This project is licensed under [GNU General Public License (v3)](https://github.com/resilient-tech/india-compliance/blob/develop/license.txt)
 
----
+<br />
+<br />
+<div align="center" style="padding-top: 0.75rem;">
+
+ <a href="https://resilient.tech" target="_blank">
+  <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://india-compliance.s3.ap-south-1.amazonaws.com/logo_dark.png">
+   <img src="https://india-compliance.s3.ap-south-1.amazonaws.com/logo.png" alt="Resilient Tech" height="28"/>
+  </picture>
+ </a>
+<br />
+<br />
+
 **Empowering Businesses | Simplifying Compliance**\
 *Part of the India Compliance Initiative - Making compliance
 accessible for all*
+</div>
