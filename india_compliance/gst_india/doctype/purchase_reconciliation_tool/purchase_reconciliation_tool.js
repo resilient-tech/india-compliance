@@ -87,6 +87,10 @@ frappe.ui.form.on(DOCTYPE, {
     refresh(frm) {
         frm.reco_tool_actions = new PurchaseReconciliationToolAction(frm);
         frm.reco_tool_actions.setup_actions();
+        if (frm.doc.company_gstin !== "All")
+            frm.get_field("company_gstin")
+                .$wrapper.find("input")
+                .val("24XXXXXXXXXXXXX");
     },
 
     async company(frm) {

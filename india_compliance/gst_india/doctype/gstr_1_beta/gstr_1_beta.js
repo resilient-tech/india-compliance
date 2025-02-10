@@ -203,9 +203,11 @@ frappe.ui.form.on(DOCTYPE, {
         frm.set_value("company_gstin", options[0]);
     },
 
-    company_gstin(frm) {
+    async company_gstin(frm) {
         render_empty_state(frm);
-        update_fields_based_on_filing_preference(frm);
+        await update_fields_based_on_filing_preference(frm);
+
+        frm.get_field("company_gstin").$wrapper.find("input").val("24XXXXXXXXXXXXX");
     },
 
     file_nil_gstr1(frm) {
@@ -233,6 +235,9 @@ frappe.ui.form.on(DOCTYPE, {
         }
 
         frm.gstr1.render_indicator();
+
+        console.log("refresh");
+        frm.get_field("company_gstin").$wrapper.find("input").val("24XXXXXXXXXXXXX");
     },
 
     load_gstr1_data(frm) {

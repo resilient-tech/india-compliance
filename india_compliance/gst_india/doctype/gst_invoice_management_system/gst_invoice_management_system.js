@@ -72,6 +72,8 @@ frappe.ui.form.on(DOCTYPE, {
 
         frm.ims_actions = new IMSAction(frm);
         frm.ims_actions.setup_actions();
+
+        frm.get_field("company_gstin").$wrapper.find("input").val("24XXXXXXXXXXXXX");
     },
 });
 
