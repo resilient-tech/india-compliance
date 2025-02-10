@@ -4,7 +4,7 @@
 import frappe
 from frappe import _
 from frappe.query_builder import Case, Order
-from frappe.query_builder.functions import IfNull, IsNull
+from frappe.query_builder.functions import IfNull, IsNull, LiteralValue
 
 
 def execute(filters: dict | None = None):
@@ -114,10 +114,11 @@ class GSTINDetailedReport:
             )
             .where(dynamic_link.link_doctype.isin(self.doctypes))
             .where(IfNull(address.gstin, "") != "")
+            .distinct()
         ).as_("party")
 
         for doctype in self.doctypes:
-            party_query.union(get_party_query(doctype))
+            party_query = party_query.union(get_party_query(doctype))
 
         gstin_query = (
             frappe.qb.from_(party_query)
@@ -153,7 +154,7 @@ def get_party_query(doctype):
         frappe.qb.from_(dt)
         .select(
             dt.gstin,
-            dt.doctype.as_("party_type"),
+            LiteralValue(f"'{doctype}'").as_("party_type"),
             dt.name.as_("party_name"),
         )
         .where(IfNull(dt.gstin, "") != "")
