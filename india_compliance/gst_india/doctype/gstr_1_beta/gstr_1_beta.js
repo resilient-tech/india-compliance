@@ -1227,7 +1227,7 @@ class TabManager {
                 <a href="#" class="${args[1]?.id}" value=${value}>
                     ${
                         args[1]?.id === "customer_gstin"
-                            ? india_compliance.format_gstin(value)
+                            ? value && india_compliance.format_gstin(value)
                             : value
                     }
                 </a>`;
@@ -1339,7 +1339,7 @@ class GSTR1_TabManager extends TabManager {
                 fieldname: GSTR1_DataField.CUST_NAME,
                 width: 200,
                 _value: (...args) =>
-                    india_compliance.format_name(frappe.format(...args)),
+                    frappe.format(...args) && india_compliance.format_name(frappe.format(...args)),
             },
             {
                 name: "Invoice Type",
