@@ -90,7 +90,10 @@ class GSTR1Beta(Document):
 
         settings = frappe.get_cached_doc("GST Settings")
 
-        if self.filing_preference != gstr1_log.filing_preference:
+        if (
+            self.filing_preference
+            and self.filing_preference != gstr1_log.filing_preference
+        ):
             recompute_books = True
             gstr1_log.db_set("filing_preference", self.filing_preference)
 
