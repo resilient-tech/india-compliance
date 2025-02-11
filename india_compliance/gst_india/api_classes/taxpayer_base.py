@@ -15,7 +15,7 @@ from india_compliance.exceptions import (
     InvalidOTPError,
     OTPRequestedError,
 )
-from india_compliance.gst_india.api_classes.base import BaseAPI, get_public_ip
+from india_compliance.gst_india.api_classes.base import BaseAPI
 from india_compliance.gst_india.utils import merge_dicts, tar_gz_bytes_to_data
 from india_compliance.gst_india.utils.cryptography import (
     aes_decrypt_data,
@@ -313,7 +313,6 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
                 "gstin": self.company_gstin,
                 "state-cd": self.company_gstin[:2],
                 "username": self.username,
-                "ip-usr": frappe.cache.hget("public_ip", "public_ip", get_public_ip),
                 "txn": self.generate_request_id(length=32),
             }
         )
