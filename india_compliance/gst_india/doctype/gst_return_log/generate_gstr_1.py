@@ -553,6 +553,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         data = data
         data["status"] = self.filing_status or "Not Filed"
         data["is_nil"] = self.is_nil
+        data["filing_preference"] = self.filing_preference
 
         if error_data := self.get_json_for("upload_error"):
             data["errors"] = error_data

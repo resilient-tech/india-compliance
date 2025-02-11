@@ -97,6 +97,9 @@ class GSTR1Beta(Document):
             recompute_books = True
             gstr1_log.db_set("filing_preference", self.filing_preference)
 
+        if not gstr1_log.filing_preference:
+            recompute_books = True
+
         if sync_for:
             gstr1_log.remove_json_for(sync_for)
 
