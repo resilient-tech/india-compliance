@@ -10,7 +10,7 @@ import frappe
 from frappe import _
 from frappe.utils import getdate
 
-from india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta import get_period
+from india_compliance.gst_india.utils import get_period
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr_1 import (
     JSON_CATEGORY_EXCEL_CATEGORY_MAPPING,
