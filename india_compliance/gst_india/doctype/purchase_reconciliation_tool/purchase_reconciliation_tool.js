@@ -205,6 +205,7 @@ frappe.ui.form.on(DOCTYPE, {
                     return_period: args.return_period,
                     callback: frm.events.check_regeneration_status_and_redownload,
                     frm: frm,
+                    doctype: DOCTYPE,
                 });
             }, 1000);
         });

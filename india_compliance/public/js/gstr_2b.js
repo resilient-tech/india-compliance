@@ -8,16 +8,23 @@ Object.assign(gstr_2b, {
     regenerate: function (args) {
         taxpayer_api.call({
             method: "india_compliance.gst_india.utils.gstr_2.regenerate_gstr_2b",
-            args: { gstin: args.gstin, return_period: args.return_period },
+            args: {
+                gstin: args.gstin,
+                return_period: args.return_period,
+                doctype: args.doctype,
+            },
             callback: async function (r) {
                 if (r.exc) return;
+
+                if (r.message?.error_type == "otp_requested") return;
 
                 let regeneration_status = null;
                 if (r && r.message) {
                     const { reference_id } = r.message;
                     regeneration_status = await gstr_2b.check_regenerate_status(
                         args.gstin,
-                        reference_id
+                        reference_id,
+                        args.doctype
                     );
                 }
 
@@ -26,13 +33,13 @@ Object.assign(gstr_2b, {
         });
     },
 
-    check_regenerate_status: function (gstin, reference_id) {
+    check_regenerate_status: function (gstin, reference_id, doctype) {
         return new Promise(resolve => {
-            gstr_2b._check_regenerate_status(gstin, reference_id, resolve);
+            gstr_2b._check_regenerate_status(gstin, reference_id, doctype, resolve);
         });
     },
 
-    _check_regenerate_status: function (gstin, reference_id, retries = 0) {
+    _check_regenerate_status: function (gstin, reference_id, doctype, retries = 0) {
         if (retries >= RETRY_INTERVALS.length) {
             return { status: "ER", error: "Failed to regenerate GSTR-2B" };
         }
@@ -40,7 +47,7 @@ Object.assign(gstr_2b, {
         setTimeout(() => {
             frappe.call({
                 method: "india_compliance.gst_india.utils.gstr_2.check_regenerate_status",
-                args: { gstin, reference_id },
+                args: { gstin, reference_id, doctype },
                 callback: function (r) {
                     if (r.exc) return;
                     const { status_cd: status, err_msg: error } = r.message;
@@ -48,7 +55,7 @@ Object.assign(gstr_2b, {
                         return gstr_2b._check_regenerate_status(
                             gstin,
                             reference_id,
-                            callback,
+                            doctype,
                             retries + 1
                         );
 

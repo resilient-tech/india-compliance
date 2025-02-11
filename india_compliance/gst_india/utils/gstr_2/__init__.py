@@ -457,8 +457,8 @@ def end_transaction_progress(return_period):
 
 @frappe.whitelist()
 @otp_handler
-def regenerate_gstr_2b(gstin, return_period):
-    frappe.has_permission("Purchase Reconciliation Tool", throw=True)
+def regenerate_gstr_2b(gstin, return_period, doctype):
+    frappe.has_permission(doctype, throw=True)
 
     try:
         api = GSTR2bAPI(gstin)
@@ -472,8 +472,8 @@ def regenerate_gstr_2b(gstin, return_period):
 
 
 @frappe.whitelist()
-def check_regenerate_status(gstin, reference_id):
-    frappe.has_permission("Purchase Reconciliation Tool", throw=True)
+def check_regenerate_status(gstin, reference_id, doctype):
+    frappe.has_permission(doctype, throw=True)
 
     if not reference_id:
         return
