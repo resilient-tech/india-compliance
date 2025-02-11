@@ -367,9 +367,11 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
         return self._request("get", *args, **kwargs, params=params)
 
     def post(self, *args, **kwargs):
+        self.default_log_values.update(update_gstr_action=True)
         return self._request("post", *args, **kwargs)
 
     def put(self, *args, **kwargs):
+        self.default_log_values.update(update_gstr_action=True)
         return self._request("put", *args, **kwargs)
 
     def before_request(self, request_args):
@@ -466,13 +468,12 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
 
         return app_key
 
-    def get_files(self, return_period, token, action, endpoint, otp=None):
+    def get_files(self, return_period, token, action, endpoint):
         response = self.get(
             action=action,
             return_period=return_period,
             params={"ret_period": return_period, "token": token},
             endpoint=endpoint,
-            otp=otp,
         )
 
         if response.error_type == "queued":
@@ -491,7 +492,7 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
             return
 
         # Dummy request
-        self.get_filing_preference()
+        self.fetch_filing_preference(fy=self.get_fy())
 
         frappe.cache.set_value(
             f"authenticated_gstin:{self.company_gstin}",
@@ -501,10 +502,10 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
 
         return
 
-    def get_filing_preference(self):
+    def fetch_filing_preference(self, fy):
         return self.get(
-            action="GETPREF", params={"fy": self.get_fy()}, endpoint="returns"
-        )
+            action="GETPREF", params={"fy": fy}, endpoint="returns"
+        ).response
 
     @staticmethod
     def get_fy():

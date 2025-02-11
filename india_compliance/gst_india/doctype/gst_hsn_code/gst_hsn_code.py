@@ -6,6 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 
 from india_compliance.gst_india.utils import (
+    enable_autocommit,
     get_hsn_settings,
     join_list_with_custom_separators,
 )
@@ -22,6 +23,7 @@ def update_taxes_in_item_master(taxes, hsn_code):
     return 1
 
 
+@enable_autocommit
 def update_item_document(taxes, hsn_code):
     taxes = frappe.parse_json(taxes)
     items = frappe.get_list("Item", filters={"gst_hsn_code": hsn_code})
@@ -37,13 +39,12 @@ def update_item_document(taxes, hsn_code):
                     "item_tax_template": tax.item_tax_template,
                     "tax_category": tax.tax_category,
                     "valid_from": tax.valid_from,
+                    "minimum_net_rate": tax.minimum_net_rate,
+                    "maximum_net_rate": tax.maximum_net_rate,
                 },
             )
 
         item_to_be_updated.save()
-
-        if index % 10000 == 0:
-            frappe.db.commit()  # nosemgrep
 
 
 def validate_hsn_code(hsn_code):

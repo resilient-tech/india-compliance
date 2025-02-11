@@ -1,4 +1,5 @@
 import copy
+import functools
 import io
 import tarfile
 
@@ -116,6 +117,7 @@ def get_gstin_list(party, party_type="Company"):
 
 
 @frappe.whitelist()
+@frappe.request_cache
 def get_party_for_gstin(gstin, party_type="Supplier"):
     if not gstin:
         return
@@ -568,6 +570,15 @@ def get_gst_accounts_by_tax_type(company, tax_type, throw=True):
     )
 
 
+@frappe.request_cache
+def get_gst_account_by_item_tax_template(item_tax_template):
+    return frappe.get_all(
+        "Item Tax Template Detail",
+        filters={"parent": item_tax_template},
+        pluck="tax_type",
+    )
+
+
 def get_gst_account_gst_tax_type_map():
     """
     - Returns gst_account by tax_type for all the companies
@@ -931,22 +942,25 @@ def validate_invoice_number(doc, throw=True):
     if not throw:
         return is_valid_length and is_valid_format
 
+    if is_valid_length and is_valid_format:
+        return
+
+    title = _("Invalid GST Transaction Name")
+
     if not is_valid_length:
-        frappe.throw(
-            _(
-                "Transaction Name must be 16 characters or fewer to meet GST requirements"
-            ),
-            title=_("Invalid GST Transaction Name"),
+        message = _(
+            "Transaction Name must be 16 characters or fewer to meet GST requirements"
+        )
+    else:
+        message = _(
+            "Transaction Name should start with an alphanumeric character and can"
+            " only contain alphanumeric characters, dash (-) and slash (/) to meet GST requirements"
         )
 
-    if not is_valid_format:
-        frappe.throw(
-            _(
-                "Transaction Name should start with an alphanumeric character and can"
-                " only contain alphanumeric characters, dash (-) and slash (/) to meet GST requirements"
-            ),
-            title=_("Invalid GST Transaction Name"),
-        )
+    if doc.doctype == "Sales Invoice":
+        frappe.throw(message, title=title)
+
+    frappe.msgprint(message, title=title)
 
 
 def handle_server_errors(settings, doc, document_type, error):
@@ -1028,3 +1042,44 @@ def is_outward_stock_entry(doc):
         and not doc.is_return
     ):
         return True
+
+
+def create_notification(
+    message_content, document_type, document_name=None, request_id=None
+):
+    # request_id shows failure response
+    if request_id and (
+        doc_name := frappe.db.get_value(
+            "Integration Request", {"request_id": request_id}
+        )
+    ):
+        document_type = "Integration Request"
+        document_name = doc_name
+
+    notification = frappe.get_doc(
+        {
+            "doctype": "Notification Log",
+            "for_user": frappe.session.user,
+            "type": "Alert",
+            "document_type": document_type,
+            "document_name": document_name or document_type,
+            "subject": message_content.get("subject"),
+            "email_content": message_content.get("body"),
+        }
+    )
+    notification.insert()
+
+
+def enable_autocommit(fn):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        db = frappe.local.db
+        autocommit = db.auto_commit_on_many_writes
+        db.auto_commit_on_many_writes = 1
+
+        try:
+            return fn(*args, **kwargs)
+        finally:
+            db.auto_commit_on_many_writes = autocommit
+
+    return wrapper

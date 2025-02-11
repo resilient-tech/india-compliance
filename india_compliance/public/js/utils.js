@@ -40,12 +40,10 @@ Object.assign(india_compliance, {
          * @returns {Array} - [month_or_quarter, year]
          */
 
-        const { filing_frequency } = gst_settings;
         const month_number = period.slice(0, 2);
         const year = period.slice(2);
 
-        if (filing_frequency === "Monthly") return [this.MONTH[month_number - 1], year];
-        else return [this.QUARTER[Math.floor(month_number / 3)], year];
+        return [this.MONTH[month_number - 1], year];
     },
 
     get_gstin_query(party, party_type = "Company") {
@@ -470,7 +468,7 @@ Object.assign(india_compliance, {
         return alert;
     },
 
-    is_e_waybill_generatable_for_subcontracting(doc) {
+    is_e_waybill_applicable_for_subcontracting(doc) {
         if (
             !(
                 gst_settings.enable_api &&

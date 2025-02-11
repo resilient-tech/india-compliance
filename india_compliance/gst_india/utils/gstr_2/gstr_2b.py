@@ -5,8 +5,60 @@ from india_compliance.gst_india.utils.gstr_2.gstr import GSTR, get_mapped_value
 
 
 class GSTR2b(GSTR):
-    def get_transaction(self, category, supplier, invoice):
-        transaction = super().get_transaction(category, supplier, invoice)
+    def get_existing_transaction(self):
+        gst_is = frappe.qb.DocType("GST Inward Supply")
+        existing_transactions = (
+            frappe.qb.from_(gst_is)
+            .select(gst_is.name, gst_is.supplier_gstin, gst_is.bill_no)
+            .where(gst_is.return_period_2b == self.return_period)
+            .where(gst_is.classification == self.category)
+        ).run(as_dict=True)
+
+        return {
+            f"{transaction.get('supplier_gstin', '')}-{transaction.get('bill_no', '')}": transaction.get(
+                "name"
+            )
+            for transaction in existing_transactions
+        }
+
+    def handle_missing_transactions(self):
+        """
+        For GSTR2b, only filed transactions are reported. They may be removed from GSTR-2b later
+        if marked as pending / rejected from IMS Dashboard.
+
+        In such cases,
+        1) we need to clear the return_period_2b as this could change in future.
+        2) and delete the rejected transactions.
+        """
+        if not self.existing_transaction:
+            return
+
+        missing_transactions = list(self.existing_transaction.values())
+        rejected_transactions = self.get_all_transactions(self.rejected_data)
+
+        # clear return_period_2b
+        inward_supply = frappe.qb.DocType("GST Inward Supply")
+        (
+            frappe.qb.update(inward_supply)
+            .set(inward_supply.return_period_2b, "")
+            .set(inward_supply.is_downloaded_from_2b, 0)
+            .where(inward_supply.name.isin(missing_transactions))
+            .run()
+        )
+
+        # delete rejected transactions
+        for transaction in rejected_transactions:
+            filters = {
+                "bill_no": transaction.bill_no,
+                "bill_date": transaction.bill_date,
+                "classification": transaction.classification,
+                "supplier_gstin": transaction.supplier_gstin,
+            }
+
+            frappe.delete_doc("GST Inward Supply", filters, ignore_permissions=True)
+
+    def get_transaction(self, supplier, invoice):
+        transaction = super().get_transaction(supplier, invoice)
         transaction.return_period_2b = self.return_period
         transaction.gen_date_2b = parse_datetime(self.gen_date_2b, day_first=True)
         return transaction
@@ -18,6 +70,9 @@ class GSTR2b(GSTR):
             "gstr_1_filing_date": parse_datetime(supplier.supfildt, day_first=True),
             "sup_return_period": supplier.supprd,
         }
+
+    def get_download_details(self):
+        return {"is_downloaded_from_2b": 1}
 
     def get_transaction_item(self, item):
         return {
@@ -182,9 +237,5 @@ class GSTR2bIMPG(GSTR2bIMPGSEZ):
         return {}
 
     # invoice details are included in supplier details
-    def get_supplier_transactions(self, category, supplier):
-        return [
-            self.get_transaction(
-                category, frappe._dict(supplier), frappe._dict(supplier)
-            )
-        ]
+    def get_supplier_transactions(self, supplier):
+        return [self.get_transaction(frappe._dict(supplier), frappe._dict(supplier))]

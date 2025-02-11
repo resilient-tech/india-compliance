@@ -12,6 +12,8 @@
   "return_period",
   "company",
   "return_type",
+  "filing_preference",
+  "is_nil",
   "column_break_sqwh",
   "filing_date",
   "acknowledgement_number",
@@ -193,6 +195,12 @@
    "reqd": 1
   },
   {
+   "fieldname": "filing_preference",
+   "fieldtype": "Data",
+   "label": "Filing Preference",
+   "read_only": 1
+  },
+  {
    "fieldname": "upload_error",
    "fieldtype": "Attach",
    "label": "Upload Error Data",
@@ -214,6 +222,13 @@
    "label": "Actions",
    "options": "GSTR Action",
    "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_nil",
+   "fieldtype": "Check",
+   "label": "Is Nil Return",
+   "read_only": 1
   }
  ],
  "in_create": 1,
@@ -224,7 +239,7 @@
    "link_fieldname": "reference_docname"
   }
  ],
- "modified": "2024-10-02 12:16:04.271962",
+ "modified": "2025-01-11 08:19:45.848389",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Return Log",

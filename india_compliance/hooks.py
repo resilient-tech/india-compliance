@@ -7,6 +7,18 @@ app_color = "grey"
 app_email = "hello@indiacompliance.app"
 app_license = "GNU General Public License (v3)"
 required_apps = ["frappe/erpnext"]
+app_home = "/app/gst-india"
+
+add_to_apps_screen = [
+    {
+        "name": app_name,
+        "logo": "/assets/india_compliance/images/india-compliance-logo.png",
+        "title": app_title,
+        "route": app_home,
+        "has_permission": "india_compliance.check_app_permission",
+    }
+]
+
 
 before_install = "india_compliance.patches.check_version_compatibility.execute"
 after_install = "india_compliance.install.after_install"
@@ -232,17 +244,22 @@ doc_events = {
     "Stock Entry": {
         "onload": "india_compliance.gst_india.overrides.subcontracting_transaction.onload",
         "validate": "india_compliance.gst_india.overrides.subcontracting_transaction.validate",
-        "before_submit": "india_compliance.gst_india.overrides.subcontracting_transaction.before_submit",
+        "before_save": "india_compliance.gst_india.overrides.subcontracting_transaction.before_save",
+        "before_submit": "india_compliance.gst_india.overrides.subcontracting_transaction.validate_doc_references",
         "after_mapping": "india_compliance.gst_india.overrides.subcontracting_transaction.after_mapping_stock_entry",
     },
     "Subcontracting Order": {
         "validate": "india_compliance.gst_india.overrides.subcontracting_transaction.validate",
+        "before_save": "india_compliance.gst_india.overrides.subcontracting_transaction.before_save",
         "after_mapping": "india_compliance.gst_india.overrides.subcontracting_transaction.after_mapping_subcontracting_order",
     },
     "Subcontracting Receipt": {
         "onload": "india_compliance.gst_india.overrides.subcontracting_transaction.onload",
         "validate": "india_compliance.gst_india.overrides.subcontracting_transaction.validate",
-        "before_save": "india_compliance.gst_india.overrides.subcontracting_transaction.before_save",
+        "before_save": [
+            "india_compliance.gst_india.overrides.subcontracting_transaction.before_save",
+            "india_compliance.gst_india.overrides.subcontracting_transaction.validate_doc_references",
+        ],
         "before_mapping": "india_compliance.gst_india.overrides.subcontracting_transaction.before_mapping_subcontracting_receipt",
     },
     "Supplier": {
@@ -362,6 +379,7 @@ jinja = {
         "india_compliance.gst_india.utils.jinja.get_qr_code",
         "india_compliance.gst_india.utils.jinja.get_transport_type",
         "india_compliance.gst_india.utils.jinja.get_transport_mode",
+        "india_compliance.gst_india.utils.jinja.get_e_waybill_document_type",
         "india_compliance.gst_india.utils.jinja.get_ewaybill_barcode",
         "india_compliance.gst_india.utils.jinja.get_e_invoice_item_fields",
         "india_compliance.gst_india.utils.jinja.get_e_invoice_amount_fields",

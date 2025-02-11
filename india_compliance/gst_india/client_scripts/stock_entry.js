@@ -56,11 +56,6 @@ frappe.ui.form.on(DOCTYPE, {
             "supplier_address",
             ...get_field_and_label(frm, "party_field")
         );
-
-        frm.get_docfield("taxes", "charge_type").options = [
-            "On Net Total",
-            "On Item Quantity",
-        ];
     },
 
     refresh(frm) {
