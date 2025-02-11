@@ -1023,6 +1023,9 @@ def get_month_or_quarter_dict():
     }
 
 
+MONTHS = list(get_month_or_quarter_dict().keys())[4:]
+
+
 def get_period(month_or_quarter, year=None):
     month_or_quarter_no = get_month_or_quarter_dict().get(month_or_quarter)
 

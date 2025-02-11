@@ -14,6 +14,9 @@ from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
 from india_compliance.gst_india.api_classes.public import PublicAPI
+from india_compliance.gst_india.api_classes.taxpayer_base import (
+    otp_handler,
+)
 from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
 from india_compliance.gst_india.utils import parse_datetime, titlecase, validate_gstin
 
@@ -378,34 +381,17 @@ def get_latest_3b_filed_period(company, company_gstin):
 ####################################################################################################
 
 
-def get_and_update_filing_preference(gstin, period, force=False):
-    if not force:
-        log_names = get_logs_for_quarter(gstin, period)
+@frappe.whitelist()
+@otp_handler
+def get_and_update_filing_preference(gstin, period):
+    frappe.has_permission("GST Return Log", throw=True)
 
-        filing_preference = frappe.db.get_value(
-            "GST Return Log", {"name": ["in", log_names]}, "filing_preference"
-        )
-
-        if filing_preference:
-            return filing_preference
-
-    filing_preference = get_filing_preference(gstin, period)
-
-    # update GST Return Log
-    create_or_update_logs_for_quarter(gstin, period, filing_preference)
-
-    return filing_preference
-
-
-def get_filing_preference(gstin, period):
     response = fetch_filing_preference(gstin, get_fy(period))
 
-    quarter = get_financial_quarter(cint(period[:2]))
-    filing_preference = (
-        "Quarterly" if response[quarter - 1].get("preference") == "Q" else "Monthly"
-    )
+    # update GST Return Log
+    create_or_update_logs_for_year(gstin, period, response)
 
-    return filing_preference
+    return get_filing_preference(period, response)
 
 
 @request_cache
@@ -416,16 +402,30 @@ def fetch_filing_preference(gstin, fy):
     return response
 
 
-def create_or_update_logs_for_quarter(gstin, period, filing_preference):
-    log_names = get_logs_for_quarter(gstin, period)
-    existing_log = frappe.get_all(
-        "GST Return Log", filters={"name": ["in", log_names]}, pluck="name"
+def create_or_update_logs_for_year(gstin, period, response):
+    log_names = get_logs_for_year(gstin, period)
+    existing_log = frappe._dict(
+        frappe.get_all(
+            "GST Return Log",
+            filters={"name": ["in", log_names]},
+            fields=["name", "filing_preference"],
+            as_list=True,
+        )
     )
 
     for log_name in log_names:
+        period = log_name.split("-")[1]
+        filing_preference = get_filing_preference(period, response)
+
         if log_name in existing_log:
+            if existing_log[log_name] == filing_preference:
+                continue
+
+            # books may need a refresh
             frappe.db.set_value(
-                "GST Return Log", log_name, "filing_preference", filing_preference
+                "GST Return Log",
+                log_name,
+                {"filing_preference": filing_preference, "is_latest_data": 0},
             )
             continue
 
@@ -446,6 +446,11 @@ def create_or_update_logs_for_quarter(gstin, period, filing_preference):
     )
 
     patch_filing_preference(gstin)
+
+
+def get_filing_preference(period, response):
+    quarter = get_financial_quarter(cint(period[:2]))
+    return "Quarterly" if response[quarter - 1].get("preference") == "Q" else "Monthly"
 
 
 ####################################################################################################
@@ -469,16 +474,18 @@ def get_current_fy():
     return get_fy(period)
 
 
-def get_logs_for_quarter(gstin, period):
-    quarter = get_financial_quarter(cint(period[:2]))
-    start_month = ((quarter - 1) * 3 + 4) % 12
-    year = period[2:]
-
+def get_logs_for_year(gstin, period):
+    year = cint(period[2:])
+    month = cint(period[:2])
     logs = []
 
+    if month <= 3:
+        year -= 1
+
     for return_type in ["GSTR1", "GSTR3B"]:
-        for month in range(start_month, start_month + 3):
-            logs.append(f"{return_type}-{month:02d}{year}-{gstin}")
+        for current_month in range(1, 13):
+            current_year = year if current_month >= 4 else year + 1
+            logs.append(f"{return_type}-{current_month:02d}{current_year}-{gstin}")
 
     return logs
 
