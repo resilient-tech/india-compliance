@@ -4,17 +4,6 @@
 frappe.query_reports["API Requests"] = {
     filters: [
         {
-            "fieldname": "report_by",
-            "label": __("Report by"),
-            "fieldtype": "Select",
-            "options": [
-                "Endpoint",
-                "Linked Document",
-                "Date"
-            ],
-            "default": "Endpoint"
-        },
-        {
             "fieldname": "from_date",
             "label": __("From"),
             "fieldtype": "Date",
@@ -27,6 +16,17 @@ frappe.query_reports["API Requests"] = {
             "fieldtype": "Date",
             "reqd": 1,
             "default": frappe.datetime.now_date()
+        },
+        {
+            "fieldname": "report_by",
+            "label": __("Report by"),
+            "fieldtype": "Select",
+            "options": [
+                "Endpoint",
+                "Linked Document",
+                "Date"
+            ],
+            "default": "Endpoint"
         },
     ],
 
