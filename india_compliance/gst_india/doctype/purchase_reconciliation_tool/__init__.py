@@ -376,7 +376,12 @@ class PurchaseInvoice:
 
     def get_unmatched(self, category):
         gst_category = (
-            ("Registered Regular", "Tax Deductor", "Input Service Distributor")
+            (
+                "Registered Regular",
+                "Tax Deductor",
+                "Tax Collector",
+                "Input Service Distributor",
+            )
             if category in ("B2B", "CDNR", "ISD")
             else ("SEZ", "Overseas", "UIN Holders")
         )
@@ -412,7 +417,7 @@ class PurchaseInvoice:
             .on(self.PI_ITEM.parent == self.PI.name)
             .where(self.PI.docstatus == 1)
             .where(IfNull(self.PI.reconciliation_status, "") != "Not Applicable")
-            .where(self.PI.is_opening == "NO")
+            .where(self.PI.is_opening == "No")
             .where(self.PI_ITEM.parenttype == "Purchase Invoice")
             .groupby(self.PI.name)
             .select(
@@ -973,7 +978,7 @@ class ReconciledData(BaseReconciliation):
     def get_manually_matched_data(self, purchase_name: str, inward_supply_name: str):
         """
         Get manually matched data for given purchase invoice and inward supply.
-        This can be used to show comparision of matched values.
+        This can be used to show comparison of matched values.
         """
         inward_supplies = self.get_all_inward_supply(
             names=[inward_supply_name], only_names=True
@@ -1132,6 +1137,7 @@ class ReconciledData(BaseReconciliation):
             "differences": "",
             "action": "",
             "classification": "",
+            "is_reverse_charge": "",
         }
 
         for data in reconciliation_data:
@@ -1149,7 +1155,13 @@ class ReconciledData(BaseReconciliation):
                 BaseUtil.update_cess_amount(purchase)
 
     def update_fields(self, data, purchase, inward_supply):
-        for field in ("supplier_name", "supplier_gstin", "bill_no", "bill_date"):
+        for field in (
+            "supplier_name",
+            "supplier_gstin",
+            "bill_no",
+            "bill_date",
+            "is_reverse_charge",
+        ):
             data[field] = purchase.get(field) or inward_supply.get(field)
 
         data.update(
@@ -1227,6 +1239,7 @@ class ReconciledData(BaseReconciliation):
             "Overseas": "IMPG",
             "UIN Holders": "B2B",
             "Tax Deductor": "B2B",
+            "Tax Collector": "B2B",
             "Input Service Distributor": "B2B",
         }
 
