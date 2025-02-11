@@ -610,7 +610,7 @@
    "depends_on": "eval: doc.enable_e_waybill",
    "fieldname": "enable_e_waybill_for_sc",
    "fieldtype": "Check",
-   "label": "Enable e-Waybill Generation for Subcontracting"
+   "label": "Enable e-Waybill Generation for Subcontracting and Material Transfer"
   },
   {
    "default": "1",
