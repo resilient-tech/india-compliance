@@ -12,14 +12,17 @@ from india_compliance.gst_india.utils.itc_04 import (
     ITC04_ItemField,
     ITC04JsonKey,
 )
-from india_compliance.gst_india.utils.itc_04.itc_04_json_map import STOCK_ENTRY, TABLE5A
+from india_compliance.gst_india.utils.itc_04.itc_04_json_map import (
+    FGReceived,
+    RMSent,
+)
 
 
 def normalize_data(data):
     return GenerateGSTR1().normalize_data(data)
 
 
-class TestTable5A(IntegrationTestCase):
+class TestFGReceived(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -52,7 +55,7 @@ class TestTable5A(IntegrationTestCase):
             }
         ]
         cls.mapped_data = {
-            ITC04JsonKey.TABLE5A.value: {
+            ITC04JsonKey.FG_RECEIVED.value: {
                 "124 - 1236": {
                     ITC04_DataField.ORIGINAL_CHALLAN_NUMBER.value: "124",
                     ITC04_DataField.JOB_WORK_CHALLAN_NUMBER.value: "1236",
@@ -81,18 +84,18 @@ class TestTable5A(IntegrationTestCase):
         }
 
     def test_convert_to_internal_data_format(self):
-        output = TABLE5A().convert_to_internal_data_format(self.json_data)
+        output = FGReceived().convert_to_internal_data_format(self.json_data)
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
         normalized_data = normalize_data(copy.deepcopy(self.mapped_data))
-        output = TABLE5A().convert_to_gov_data_format(
-            normalized_data.get(ITC04JsonKey.TABLE5A.value)
+        output = FGReceived().convert_to_gov_data_format(
+            normalized_data.get(ITC04JsonKey.FG_RECEIVED.value)
         )
         self.assertListEqual(self.json_data, output)
 
 
-class TestStockEntry(IntegrationTestCase):
+class TestRMSent(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -117,7 +120,7 @@ class TestStockEntry(IntegrationTestCase):
             }
         ]
         cls.mapped_data = {
-            ITC04JsonKey.STOCK_ENTRY.value: {
+            ITC04JsonKey.RM_SENT.value: {
                 "A4": {
                     ITC04_DataField.JOB_WORKER_STATE_CODE.value: "27-Maharashtra",
                     ITC04_DataField.ORIGINAL_CHALLAN_NUMBER.value: "A4",
@@ -145,12 +148,12 @@ class TestStockEntry(IntegrationTestCase):
         }
 
     def test_convert_to_internal_data_format(self):
-        output = STOCK_ENTRY().convert_to_internal_data_format(self.json_data)
+        output = RMSent().convert_to_internal_data_format(self.json_data)
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
         normalized_data = normalize_data(copy.deepcopy(self.mapped_data))
-        output = STOCK_ENTRY().convert_to_gov_data_format(
-            normalized_data.get(ITC04JsonKey.STOCK_ENTRY.value)
+        output = RMSent().convert_to_gov_data_format(
+            normalized_data.get(ITC04JsonKey.RM_SENT.value)
         )
         self.assertListEqual(self.json_data, output)

@@ -64,8 +64,8 @@ class ITC04DataMapper(GovDataMapper):
         return [self.format_data(item, for_gov=True) for item in items]
 
 
-class TABLE5A(ITC04DataMapper):
-    CATEGORY = ITC04JsonKey.TABLE5A.value
+class FGReceived(ITC04DataMapper):
+    CATEGORY = ITC04JsonKey.FG_RECEIVED.value
 
     KEY_MAPPING = {
         GovDataField.JOB_WORKER_GSTIN.value: ITC04_DataField.JOB_WORKER_GSTIN.value,
@@ -157,8 +157,8 @@ class TABLE5A(ITC04DataMapper):
         ]
 
 
-class STOCK_ENTRY(ITC04DataMapper):
-    CATEGORY = ITC04JsonKey.STOCK_ENTRY.value
+class RMSent(ITC04DataMapper):
+    CATEGORY = ITC04JsonKey.RM_SENT.value
 
     KEY_MAPPING = {
         GovDataField.JOB_WORKER_GSTIN.value: ITC04_DataField.JOB_WORKER_GSTIN.value,
@@ -222,13 +222,13 @@ class STOCK_ENTRY(ITC04DataMapper):
 
 
 CLASS_MAP = {
-    GovJsonKey.TABLE5A.value: TABLE5A,
-    GovJsonKey.STOCK_ENTRY.value: STOCK_ENTRY,
+    GovJsonKey.FG_RECEIVED.value: FGReceived,
+    GovJsonKey.RM_SENT.value: RMSent,
 }
 
 CATEGORY_MAP = {
-    GovJsonKey.TABLE5A.value: ITC04JsonKey.TABLE5A.value,
-    GovJsonKey.STOCK_ENTRY.value: ITC04JsonKey.STOCK_ENTRY.value,
+    GovJsonKey.FG_RECEIVED.value: ITC04JsonKey.FG_RECEIVED.value,
+    GovJsonKey.RM_SENT.value: ITC04JsonKey.RM_SENT.value,
 }
 
 

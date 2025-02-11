@@ -6,8 +6,8 @@ class GovJsonKey(Enum):
     Categories / Keys as per Govt JSON file
     """
 
-    TABLE5A = "table5A"
-    STOCK_ENTRY = "m2jw"
+    FG_RECEIVED = "table5A"
+    RM_SENT = "m2jw"
 
 
 class ITC04JsonKey(Enum):
@@ -15,8 +15,8 @@ class ITC04JsonKey(Enum):
     Categories / Keys as per Internal JSON file
     """
 
-    TABLE5A = "Table 5A"
-    STOCK_ENTRY = "Stock Entry"
+    FG_RECEIVED = "FG Received"
+    RM_SENT = "RM Sent"
 
 
 class GovDataField(Enum):
