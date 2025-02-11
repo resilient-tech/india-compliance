@@ -8,16 +8,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_to_date, cint, now_datetime
 
-<<<<<<< HEAD
-from india_compliance.gst_india.api_classes.base import BaseAPI, get_public_ip
-=======
-from india_compliance.exceptions import (
-    InvalidAuthTokenError,
-    InvalidOTPError,
-    OTPRequestedError,
-)
 from india_compliance.gst_india.api_classes.base import BaseAPI
->>>>>>> 11407506 (fix: no need to use ipify API (#3054))
 from india_compliance.gst_india.utils import merge_dicts, tar_gz_bytes_to_data
 from india_compliance.gst_india.utils.cryptography import (
     aes_decrypt_data,
@@ -251,10 +242,6 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
                 "gstin": self.company_gstin,
                 "state-cd": self.company_gstin[:2],
                 "username": self.username,
-<<<<<<< HEAD
-                "ip-usr": frappe.cache().hget("public_ip", "public_ip", get_public_ip),
-=======
->>>>>>> 11407506 (fix: no need to use ipify API (#3054))
                 "txn": self.generate_request_id(length=32),
             }
         )
