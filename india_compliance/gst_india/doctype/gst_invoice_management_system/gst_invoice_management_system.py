@@ -50,6 +50,7 @@ from india_compliance.gst_india.utils.gstr_2 import (
 from india_compliance.gst_india.utils.gstr_utils import (
     publish_action_status_notification,
 )
+from india_compliance.setup_wizard import can_fetch_gstin_info
 
 CATEGORY_MAP = {
     "Invoice_0": GSTRCategory.B2B.value,
@@ -294,7 +295,7 @@ def get_period_options(company, company_gstin):
     latest_3b_filed_period = format_period(latest_3b_filed_period[0])
     six_months_ago = format_period(six_months_ago)
 
-    if latest_3b_filed_period <= six_months_ago and not frappe.flags.in_test:
+    if latest_3b_filed_period <= six_months_ago and can_fetch_gstin_info():
         update_gstr_returns_info(company, company_gstin)
 
     # Generate last six months of valid periods

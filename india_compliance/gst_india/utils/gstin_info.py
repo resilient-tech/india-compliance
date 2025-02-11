@@ -322,6 +322,9 @@ def get_gstr_1_return_status(company, gstin, period, year_increment=0):
 
 
 def update_gstr_returns_info(company, gstin, fy=None):
+    if frappe.flags.in_test:
+        return
+
     if not fy:
         fy = get_current_fy()
 

@@ -59,7 +59,7 @@
   {
    "fieldname": "period",
    "fieldtype": "Autocomplete",
-   "label": "Period"
+   "label": "GSTR-3B Period"
   }
  ],
  "hide_toolbar": 1,
