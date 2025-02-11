@@ -144,7 +144,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
             // to hide `Actions` button group on smaller screens
             $(group_div).addClass("hidden-md");
 
-            $(group_div).appendTo($(".custom-button-group"));
+            $(group_div).appendTo(frm.$wrapper.find(".custom-button-group"));
         }
     },
 
