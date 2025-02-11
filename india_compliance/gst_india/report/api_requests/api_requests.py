@@ -3,7 +3,7 @@
 
 import frappe
 from frappe import _
-from frappe.query_builder.functions import Count, Date
+from frappe.query_builder.functions import Count, Date, Substring
 
 
 def execute(filters: dict | None = None):
@@ -103,10 +103,15 @@ class APIRequestsReport:
     def _get_data_by_endpoint(self):
         integration_requests = frappe.qb.DocType("Integration Request")
 
+        # https://asp.resilient.tech is common for all the end points
+        # len("https://asp.resilient.tech") = 26
+        # so to only get the relative part,
+        # we can take substring of the url starting from index 27
+
         query = (
             frappe.qb.from_(integration_requests)
             .select(
-                integration_requests.url.as_("endpoint"),
+                Substring(integration_requests.url, 27, 200).as_("endpoint"),
                 Count("*").as_("api_requests_count"),
             )
             .where(integration_requests.creation >= self.from_data)
