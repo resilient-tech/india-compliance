@@ -84,8 +84,8 @@ frappe.ui.form.on("Bill of Entry", {
 
     get_items_from_purchase_invoice(frm) {
         if (!(frm.doc.company && frm.doc.company_gstin)) {
-            frappe.msgprint("Please Select Company and Company GSTIN First")
-            return
+            frappe.msgprint(__("Please Select Company and Company GSTIN First"));
+            return;
         }
 
         const d = new frappe.ui.form.MultiSelectDialog({

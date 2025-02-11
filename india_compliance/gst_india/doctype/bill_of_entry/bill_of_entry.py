@@ -143,10 +143,24 @@ class BillofEntry(Document):
         purchase_invoices = frappe.get_all(
             "Purchase Invoice",
             filters={"name": ["in", pi_names]},
-            fields=["docstatus", "gst_category", "name"],
+            fields=["docstatus", "gst_category", "name", "company", "company_gstin"],
         )
 
         for invoice in purchase_invoices:
+            if invoice.company != self.company:
+                frappe.throw(
+                    _("Company for Purchase Invoice {0} must be {1}").format(
+                        invoice.name, self.company
+                    )
+                )
+
+            if invoice.company_gstin != self.company_gstin:
+                frappe.throw(
+                    _("Company GSTIN for Purchase Invoice {0} must be {1}").format(
+                        invoice.name, self.company_gstin
+                    )
+                )
+
             if invoice.docstatus != 1:
                 frappe.throw(
                     _(
