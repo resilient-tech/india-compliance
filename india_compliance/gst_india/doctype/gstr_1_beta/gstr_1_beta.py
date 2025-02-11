@@ -2,7 +2,6 @@
 # For license information, please see license.txt
 
 import json
-from datetime import datetime
 
 import frappe
 from frappe import _
@@ -24,6 +23,7 @@ from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
 from india_compliance.gst_india.utils import (
     MONTHS,
     get_gst_accounts_by_type,
+    get_period,
 )
 from india_compliance.gst_india.utils.gstin_info import get_gstr_1_return_status
 
@@ -381,16 +381,6 @@ def get_net_gst_liability(
 
 
 ####### UTILS ######################################################################################
-
-
-def get_period(month_or_quarter: str, year: str) -> str:
-    """
-    Returns the period in the format MMYYYY
-    as accepted by the GST Portal
-    """
-    month_number = str(datetime.strptime(month_or_quarter, "%B").month).zfill(2)
-
-    return f"{month_number}{year}"
 
 
 def get_gstr_1_from_and_to_date(
