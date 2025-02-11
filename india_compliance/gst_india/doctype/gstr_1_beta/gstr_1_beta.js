@@ -3079,7 +3079,7 @@ function refresh_filing_preference(frm) {
     );
     if (!$pref_wrapper.length) return;
 
-    const text = $pref_wrapper.text().trim();
+    const text = $pref_wrapper[0]?.textContent.trim();
     const ref_btn_html = frappe.utils.icon("refresh", "xs", "update-filing-preference");
 
     $pref_wrapper
