@@ -237,6 +237,11 @@ frappe.ui.form.on(DOCTYPE, {
             return;
         }
 
+        if (!frm.doc.filing_preference) {
+            frm.doc.filing_preference = frm.doc.__gst_data.filing_preference;
+            frm.refresh_field("filing_preference");
+        }
+
         frm.gstr1.render_indicator();
     },
 
