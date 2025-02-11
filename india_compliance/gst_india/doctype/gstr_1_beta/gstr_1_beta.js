@@ -2990,15 +2990,13 @@ function set_options_for_year(frm) {
 }
 
 function update_filing_preference(frm) {
+    const { month_or_quarter, year, company_gstin } = frm.doc;
+    if (!month_or_quarter || !year || !company_gstin) return;
+
     frappe.call({
         method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_filing_preference_from_log",
-        args: {
-            month_or_quarter: frm.doc.month_or_quarter,
-            year: frm.doc.year,
-            company_gstin: frm.doc.company_gstin,
-        },
+        args: { month_or_quarter, year, company_gstin },
         callback: r => {
-            if (!r.message) return;
             frm.set_value("filing_preference", r.message);
         },
     });
