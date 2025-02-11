@@ -591,12 +591,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "filing_frequency",
-   "fieldtype": "Select",
-   "label": "Filing Frequency",
-   "options": "Monthly\nQuarterly"
-  },
-  {
    "depends_on": "eval: doc.restrict_changes_after_gstr_1",
    "fieldname": "role_allowed_to_modify",
    "fieldtype": "Link",

@@ -492,7 +492,7 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
             return
 
         # Dummy request
-        self.get_filing_preference()
+        self.fetch_filing_preference(fy=self.get_fy())
 
         frappe.cache.set_value(
             f"authenticated_gstin:{self.company_gstin}",
@@ -502,10 +502,10 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
 
         return
 
-    def get_filing_preference(self):
+    def fetch_filing_preference(self, fy):
         return self.get(
-            action="GETPREF", params={"fy": self.get_fy()}, endpoint="returns"
-        )
+            action="GETPREF", params={"fy": fy}, endpoint="returns"
+        ).response
 
     @staticmethod
     def get_fy():
