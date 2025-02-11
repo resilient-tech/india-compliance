@@ -144,7 +144,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
             // to hide `Actions` button group on smaller screens
             $(group_div).addClass("hidden-md");
 
-            $(group_div).appendTo($(".custom-button-group"));
+            $(group_div).appendTo(frm.$wrapper.find(".custom-button-group"));
         }
     },
 
@@ -991,114 +991,8 @@ class DetailViewDialog {
     }
 
     setup_actions() {
-<<<<<<< HEAD
         // determine actions
         let actions = [];
-=======
-        this.setup_document_actions();
-        this.setup_row_actions();
-    }
-
-    setup_document_actions() {
-        // Primary Action
-        this.frm.disable_save();
-        this.frm.page.set_primary_action(__("Generate"), async () => {
-            if (!this.frm.doc.company && !this.frm.doc.company_gstin) {
-                frappe.throw(
-                    __("Please provide either a Company name or Company GSTIN.")
-                );
-            }
-
-            this.get_reconciliation_data(this.frm);
-        });
-
-        // Download Button
-        api_enabled
-            ? this.frm.add_custom_button(
-                  __("Download 2A/2B"),
-                  () => new ImportDialog(this.frm)
-              )
-            : this.frm.add_custom_button(
-                  __("Upload 2A/2B"),
-                  () => new ImportDialog(this.frm, false)
-              );
-
-        // Export button
-        this.frm.add_custom_button(__("Export"), () => this.export_data());
-    }
-
-    setup_row_actions() {
-        const action_group = __("Actions");
-
-        if (!this.frm.reconciliation_tabs?.data?.length) return;
-        if (this.frm.get_active_tab()?.df.fieldname == "invoice_tab") {
-            this.frm.add_custom_button(
-                __("Unlink"),
-                () => reconciliation.unlink_documents(this.frm),
-                action_group
-            );
-            this.frm.add_custom_button(__("dropdown-divider"), () => {}, action_group);
-        }
-
-        // Setup Actions
-        ["Accept", "Pending", "Ignore"].forEach(action =>
-            this.frm.add_custom_button(
-                __(action),
-                () => apply_action(this.frm, action),
-                action_group
-            )
-        );
-
-        // Add Dropdown Divider to differentiate between Actions
-        this.frm.$wrapper
-            .find("[data-label='dropdown-divider']")
-            .addClass("dropdown-divider");
-
-        // move actions button next to filters
-        for (const group_div of $(".custom-actions .inner-group-button")) {
-            const btn_label = group_div.querySelector("button").innerText?.trim();
-            if (btn_label != action_group) continue;
-
-            $(".custom-button-group .inner-group-button").remove();
-
-            // to hide `Actions` button group on smaller screens
-            $(group_div).addClass("hidden-md");
-
-            $(group_div).appendTo(this.frm.$wrapper.find(".custom-button-group"));
-        }
-    }
-
-    async get_reconciliation_data(frm) {
-        const { message } = await frm._call("reconcile_and_generate_data");
-
-        frm.__reconciliation_data = message;
-
-        frm.reconciliation_tabs.render_data(frm.__reconciliation_data);
-        frm.doc.data_state = message.length ? "available" : "unavailable";
-
-        // Toggle HTML fields
-        frm.refresh();
-    }
-
-    export_data(selected_row) {
-        const data_to_export =
-            this.frm.reconciliation_tabs.get_filtered_data(selected_row);
-        if (selected_row) delete data_to_export.supplier_summary;
-
-        const url =
-            "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.download_excel_report";
-
-        open_url_post(`/api/method/${url}`, {
-            data: JSON.stringify(data_to_export),
-            doc: JSON.stringify(this.frm.doc),
-            is_supplier_specific: !!selected_row,
-        });
-    }
-}
-
-class DetailViewDialog extends reconciliation.detail_view_dialog {
-    _get_custom_actions() {
->>>>>>> e644bebc (Merge pull request #2811 from Sanket322/actions_tab_in_gstr_1_beta)
         const doctype = this.dialog.get_value("doctype");
         if (this.row.match_status == "Missing in 2A/2B") actions.push("Link", "Ignore");
         else if (this.row.match_status == "Missing in PI")
