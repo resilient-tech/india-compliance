@@ -1339,7 +1339,8 @@ class GSTR1_TabManager extends TabManager {
                 fieldname: GSTR1_DataField.CUST_NAME,
                 width: 200,
                 _value: (...args) =>
-                    frappe.format(...args) && india_compliance.format_name(frappe.format(...args)),
+                    frappe.format(...args) &&
+                    india_compliance.format_name(frappe.format(...args)),
             },
             {
                 name: "Invoice Type",
@@ -2421,7 +2422,7 @@ class FileGSTR1Dialog {
                     fieldname: "company_gstin",
                     fieldtype: "Data",
                     read_only: 1,
-                    default: this.frm.doc.company_gstin,
+                    default: india_compliance.format_gstin(this.frm.doc.company_gstin),
                 },
                 {
                     label: "Period",
@@ -2444,11 +2445,19 @@ class FileGSTR1Dialog {
                     label: "Sign using EVC",
                     fieldtype: "Section Break",
                 },
+                // Dummy field to just show the label
+                {
+                    label: "Authorised PAN",
+                    fieldname: "demo_pan",
+                    fieldtype: "Data",
+                    default: "XXXXXXXXXX",
+                },
                 {
                     label: "Authorised PAN",
                     fieldname: "pan",
                     fieldtype: "Data",
                     reqd: 1,
+                    hidden: 1,
                 },
                 {
                     label: "EVC OTP",
