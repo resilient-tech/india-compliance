@@ -12,11 +12,11 @@
  "modified": "2025-02-11 12:17:30.611180",
  "modified_by": "Administrator",
  "module": "GST India",
- "name": "API Requests",
+ "name": "India Compliance API Usage",
  "owner": "Administrator",
  "prepared_report": 0,
  "ref_doctype": "Integration Request",
- "report_name": "API Requests",
+ "report_name": "India Compliance API Usage",
  "report_type": "Script Report",
  "roles": [
   {

@@ -1,7 +1,7 @@
 // Copyright (c) 2025, Resilient Tech and contributors
 // For license information, please see license.txt
 
-frappe.query_reports["API Requests"] = {
+frappe.query_reports["India Compliance API Usage"] = {
     filters: [
         {
             "fieldname": "from_date",

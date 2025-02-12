@@ -7,14 +7,14 @@ from frappe.query_builder.functions import Count, Date, Substring
 
 
 def execute(filters: dict | None = None):
-    report = APIRequestsReport(filters=filters)
+    report = IndiaComplianceAPIUsageReport(filters=filters)
     columns = report.get_columns()
     data = report.get_data()
 
     return columns, data
 
 
-class APIRequestsReport:
+class IndiaComplianceAPIUsageReport:
     def __init__(self, filters: dict | None = None):
         self.from_data = filters.from_date
         self.to_date = filters.to_date
