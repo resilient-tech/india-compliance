@@ -3,7 +3,7 @@
 
 import frappe
 from frappe import _
-from frappe.query_builder.functions import Count, Date, Substring
+from frappe.query_builder.functions import Count, Date, Replace
 
 
 def execute(filters: dict | None = None):
@@ -103,15 +103,13 @@ class IndiaComplianceAPIUsageReport:
     def _get_data_by_endpoint(self):
         integration_requests = frappe.qb.DocType("Integration Request")
 
-        # https://asp.resilient.tech is common for all the end points
-        # len("https://asp.resilient.tech") = 26
-        # so to only get the relative part,
-        # we can take substring of the url starting from index 27
+        # The common base domain for all API endpoints
+        base_domain = "https://asp.resilient.tech"
 
         query = (
             frappe.qb.from_(integration_requests)
             .select(
-                Substring(integration_requests.url, 27, 200).as_("endpoint"),
+                Replace(integration_requests.url, base_domain, "").as_("endpoint"),
                 Count("*").as_("api_requests_count"),
             )
             .where(integration_requests.creation >= self.from_data)
@@ -132,7 +130,7 @@ class IndiaComplianceAPIUsageReport:
             )
             .where(integration_requests.creation >= self.from_data)
             .where(integration_requests.creation <= self.to_date)
-            .groupby(Date(integration_requests.creation))
+            .groupby("date")
         )
 
         return query.run(as_dict=True)
