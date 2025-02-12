@@ -163,11 +163,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Other GST Reports",
-<<<<<<< HEAD
    "link_count": 6,
-=======
-   "link_count": 7,
->>>>>>> 67c2ee6f (Merge pull request #3046 from karm1000/api_requests_report)
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -190,10 +186,6 @@
    "link_to": "GSTR-3B Details",
    "link_type": "Report",
    "onboard": 0,
-<<<<<<< HEAD
-=======
-   "report_ref_doctype": "Purchase Invoice",
->>>>>>> 67c2ee6f (Merge pull request #3046 from karm1000/api_requests_report)
    "type": "Link"
   },
   {
@@ -204,10 +196,6 @@
    "link_to": "GST Balance",
    "link_type": "Report",
    "onboard": 0,
-<<<<<<< HEAD
-=======
-   "report_ref_doctype": "GL Entry",
->>>>>>> 67c2ee6f (Merge pull request #3046 from karm1000/api_requests_report)
    "type": "Link"
   },
   {
@@ -228,10 +216,6 @@
    "link_to": "Audit Trail",
    "link_type": "Report",
    "onboard": 0,
-<<<<<<< HEAD
-=======
-   "report_ref_doctype": "Version",
->>>>>>> 67c2ee6f (Merge pull request #3046 from karm1000/api_requests_report)
    "type": "Link"
   },
   {
@@ -247,25 +231,9 @@
   },
   {
    "hidden": 0,
-<<<<<<< HEAD
    "is_query_report": 0,
    "label": "New Reports",
    "link_count": 2,
-=======
-   "is_query_report": 1,
-   "label": "GSTIN Status",
-   "link_count": 0,
-   "link_to": "GSTIN Status",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "New Reports",
-   "link_count": 3,
->>>>>>> 67c2ee6f (Merge pull request #3046 from karm1000/api_requests_report)
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -288,13 +256,7 @@
    "link_to": "GST Job Work Stock Movement",
    "link_type": "Report",
    "onboard": 0,
-<<<<<<< HEAD
    "report_ref_doctype": "Subcontracting Order",
-   "type": "Link"
-  }
- ],
- "modified": "2024-10-05 10:28:10.623892",
-=======
    "type": "Link"
   },
   {
@@ -309,8 +271,7 @@
    "type": "Link"
   }
  ],
- "modified": "2025-02-12 10:48:31.054573",
->>>>>>> 67c2ee6f (Merge pull request #3046 from karm1000/api_requests_report)
+ "modified": "2024-10-05 10:28:10.623892",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST India",
