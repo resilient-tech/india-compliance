@@ -417,6 +417,9 @@ def create_or_update_logs_for_year(gstin, period, response):
         period = log_name.split("-")[1]
         filing_preference = get_filing_preference(period, response)
 
+        if not filing_preference:
+            continue
+
         if log_name in existing_log:
             if existing_log[log_name] == filing_preference:
                 continue
@@ -450,7 +453,11 @@ def create_or_update_logs_for_year(gstin, period, response):
 
 def get_filing_preference(period, response):
     quarter = get_financial_quarter(cint(period[:2]))
-    return "Quarterly" if response[quarter - 1].get("preference") == "Q" else "Monthly"
+    for data in response:
+        if data.get("quarter") == f"Q{quarter}":
+            return "Quarterly" if data.get("preference") == "Q" else "Monthly"
+
+    return None
 
 
 ####################################################################################################
