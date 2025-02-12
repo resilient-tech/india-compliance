@@ -48,8 +48,24 @@ def create_inward_supply(transaction):
     else:
         gst_inward_supply = frappe.new_doc("GST Inward Supply")
 
+    update_reco_action(gst_inward_supply.action, transaction)
+
     gst_inward_supply.update(transaction)
     return gst_inward_supply.save(ignore_permissions=True)
+
+
+def update_reco_action(reco_action, transaction):
+    """
+    This function updates the invoice action based on the ims_action of invoice.
+    1. If invoice is "Rejected" then mark action as "Ignore" only if no action is taken on invoice.
+    2. Copy current action to previous action irrespective of ims_action.
+    """
+    if transaction.previous_ims_action != "Rejected":
+        return
+
+    transaction.previous_action = reco_action
+    if reco_action == "No Action":
+        transaction.action = "Ignore"
 
 
 def update_previous_ims_action(transaction):

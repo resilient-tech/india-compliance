@@ -145,12 +145,34 @@ class GSTInvoiceManagementSystem(Document):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         invoice_names = frappe.parse_json(invoice_names)
+        GSTR2 = frappe.qb.DocType("GST Inward Supply")
 
-        frappe.db.set_value(
-            "GST Inward Supply",
-            {"name": ("in", invoice_names)},
-            "ims_action",
-            action,
+        # When invoice is rejected then mark action as "Ignore" and copy current action to previous action
+        if action == "Rejected":
+            (
+                frappe.qb.update(GSTR2)
+                .set("previous_action", GSTR2.action)
+                .set("action", "Ignore")
+                .where(GSTR2.name.isin(invoice_names))
+                .run()
+            )
+
+        # When invoice is marked from "Rejected" to any other ims_action then copy previous action to action
+        else:
+            (
+                frappe.qb.update(GSTR2)
+                .set("action", GSTR2.previous_action)
+                .where(GSTR2.ims_action == "Rejected")
+                .where(GSTR2.name.isin(invoice_names))
+                .run()
+            )
+
+        # Update ims_action
+        (
+            frappe.qb.update(GSTR2)
+            .set("ims_action", action)
+            .where(GSTR2.name.isin(invoice_names))
+            .run()
         )
 
     @frappe.whitelist()
