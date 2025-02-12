@@ -83,8 +83,8 @@ def get_data(filters):
     ) + itc04.get_query_table_5A_sr().run(as_dict=True)
 
     return {
-        "Stock Entry": process_table_4_data(table_4_data),
-        "Table 5A": process_table_5a_data(table_5a_data),
+        "RM Sent": process_table_4_data(table_4_data),
+        "FG Received": process_table_5a_data(table_5a_data),
     }
 
 
