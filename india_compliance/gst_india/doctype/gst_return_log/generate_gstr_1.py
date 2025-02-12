@@ -727,11 +727,12 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         Else, summarize the data and save it.
         """
         summary_fields = {
-            "reconcile": "reconcile_summary",
             "filed": "filed_summary",
+            "reconcile": "reconcile_summary",
             "unfiled": "unfiled_summary",
             "books": "books_summary",
         }
+        amendment_data = None
 
         for key, field in summary_fields.items():
             if not data.get(key):
@@ -750,6 +751,20 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
             summary_data = self.get_summarized_data(
                 data[key], self.filing_status == "Filed"
             )
+
+            if (
+                key == "filed"
+                and summary_data[-1].get("description")
+                == "Net Liability from Amendments"
+            ):
+                amendment_data = summary_data[-1]
+
+            if key == "reconcile" and amendment_data:
+                for key, value in amendment_data.items():
+                    if key.startswith("total"):
+                        amendment_data[key] = -value
+
+                summary_data.append(amendment_data)
 
             self.update_json_for(field, summary_data)
             data[field] = summary_data
