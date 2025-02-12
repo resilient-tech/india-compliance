@@ -738,8 +738,11 @@ class GSTR1 {
         if (!this.data || !is_gstr1_api_enabled()) return;
 
         const has_records = this.data.books_summary?.some(row => row.no_of_records > 0);
+        // Nil return cannot be filed for quarterly M1 and M2
+        const can_file_nil_return = this.frm.doc.filing_preference === "Monthly" ||
+        (this.frm.doc.filing_preference === "Quarterly" && this.frm.doc.month_or_quarter % 3 === 0);
 
-        if (!has_records && this.data.status != "Filed")
+        if (!has_records && this.data.status != "Filed" && can_file_nil_return)
             this.frm.set_df_property("file_nil_gstr1", "hidden", 0);
         else this.frm.set_df_property("file_nil_gstr1", "hidden", 1);
     }
