@@ -5,6 +5,8 @@ import frappe
 from frappe import _
 from frappe.query_builder.functions import Count, Date, Replace
 
+from india_compliance.gst_india.api_classes.base import BASE_URL
+
 
 def execute(filters: dict | None = None):
     report = IndiaComplianceAPIUsageReport(filters=filters)
@@ -103,13 +105,11 @@ class IndiaComplianceAPIUsageReport:
     def _get_data_by_endpoint(self):
         integration_requests = frappe.qb.DocType("Integration Request")
 
-        # The common base domain for all API endpoints
-        base_domain = "https://asp.resilient.tech"
-
         query = (
             frappe.qb.from_(integration_requests)
             .select(
-                Replace(integration_requests.url, base_domain, "").as_("endpoint"),
+                # Replace base url for all API endpoints
+                Replace(integration_requests.url, BASE_URL, "").as_("endpoint"),
                 Count("*").as_("api_requests_count"),
             )
             .where(integration_requests.creation >= self.from_data)
