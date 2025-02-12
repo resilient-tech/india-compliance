@@ -257,17 +257,16 @@
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
+   "is_query_report": 1,
    "label": "India Compliance API Usage",
    "link_count": 0,
    "link_to": "India Compliance API Usage",
    "link_type": "Report",
    "onboard": 0,
-   "report_ref_doctype": "Integration Request",
    "type": "Link"
   }
  ],
- "modified": "2025-02-12 10:48:31.054573",
+ "modified": "2025-02-12 13:35:55.093635",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST India",
