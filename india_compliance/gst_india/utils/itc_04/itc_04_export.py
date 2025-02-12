@@ -1,11 +1,11 @@
 import frappe
-from frappe.utils import cint, format_date, get_date_str, get_first_day, get_last_day
+from frappe import _
+from frappe.utils import cint, format_date, get_date_str
 
 from india_compliance.gst_india.constants import UOM_MAP
 from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     GenerateGSTR1,
 )
-from india_compliance.gst_india.utils import get_month_or_quarter_dict
 from india_compliance.gst_india.utils.itc_04 import ITC04_DataField, ITC04_ItemField
 from india_compliance.gst_india.utils.itc_04.itc_04_data import ITC04Query
 from india_compliance.gst_india.utils.itc_04.itc_04_json_map import (
@@ -14,16 +14,17 @@ from india_compliance.gst_india.utils.itc_04.itc_04_json_map import (
 
 
 @frappe.whitelist()
-def download_itc_04_json(company, company_gstin, year, period=None, return_type=None):
+def download_itc_04_json(filters):
     frappe.has_permission("GST Job Work Stock Movement", "export", throw=True)
 
-    filters = get_filters(company, company_gstin, year, period, return_type)
+    filters = frappe.parse_json(filters)
+    company_gstin = filters.get("company_gstin")
+    ret_period = get_return_period(filters)
 
     data = get_data(filters)
 
     GenerateGSTR1().normalize_data(data)
 
-    ret_period = get_return_period(period, year, return_type)
     return {
         "data": {
             "gstin": company_gstin,
@@ -34,25 +35,40 @@ def download_itc_04_json(company, company_gstin, year, period=None, return_type=
     }
 
 
-def get_filters(company, company_gstin, year, period, return_type=None):
-    filters = {}
-    year = cint(year)
+def get_return_period(filters):
+    # Helper function to extract year and month from a date string in the format "YYYY-MM"
+    def extract_year_month(date_str):
+        year, month = map(cint, date_str.split("-")[:2])
+        return year, month
 
-    quarter_no = (4, 3)
-    if return_type != "Annual":
-        quarter_no = get_month_or_quarter_dict().get(period)
+    # Extract year and month
+    start_year, start_month = extract_year_month(filters.get("from_date"))
+    end_year, end_month = extract_year_month(filters.get("to_date"))
 
-    filters["from_date"] = get_first_day(f"{year}-{quarter_no[0]}-01")
+    # If the end year is greater than the start year, adjust the end month accordingly
+    year_diff = end_year - start_year
+    if end_year > start_year:
+        end_month += 12 * year_diff
 
-    # Adjust year if the quarter spans two calendar years
-    if quarter_no[1] < quarter_no[0]:
-        year += 1
+    RETURN_PERIODS = {
+        13: (4, 6),
+        14: (7, 9),
+        15: (10, 12),
+        16: (1, 3),
+        17: (4, 9),
+        18: (10, 15),
+        19: (4, 15),
+    }
 
-    filters["to_date"] = get_last_day(f"{year}-{quarter_no[1]}-01")
-    filters["company_gstin"] = company_gstin
-    filters["company"] = company
+    for period, (start_q, end_q) in RETURN_PERIODS.items():
+        if start_month >= start_q and end_month <= end_q:
+            return f"{period}{start_year}"
 
-    return filters
+    frappe.throw(
+        _(
+            "Date range does not belong to any <b>Quarterly</b>,  <b>Half Yearly</b> or <b>Annual</b> Returns."
+        )
+    )
 
 
 def get_data(filters):
@@ -148,17 +164,3 @@ def process_table_5a_data(invoice_data):
             )
 
     return res
-
-
-def get_return_period(month_or_quarter, year, return_type=None):
-    if return_type == "Annual":
-        return "19" + str(year)
-
-    return {
-        "Apr - Jun": "13",
-        "Jul - Sep": "14",
-        "Oct - Dec": "15",
-        "Jan - Mar": "16",
-        "Apr - Sep": "17",
-        "Oct - Mar": "18",
-    }.get(month_or_quarter) + str(year)
