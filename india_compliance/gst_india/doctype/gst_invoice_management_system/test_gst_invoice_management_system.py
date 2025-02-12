@@ -44,6 +44,7 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
             **default_args,
             bill_no="BILL-24-00001",
             previous_ims_action="No Action",
+            action="Pending"
         )
         cls.invoice_name_1 = frappe.get_value(
             "GST Inward Supply", {"bill_no": "BILL-24-00001"}
@@ -52,19 +53,36 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         create_gst_inward_supply(
             **default_args,
             bill_no="BILL-24-00002",
-            previous_ims_action="Accepted",
+            previous_ims_action="Rejected",
+            action="No Action",
+            previous_action="Pending"
         )
         cls.invoice_name_2 = frappe.get_value(
             "GST Inward Supply", {"bill_no": "BILL-24-00002"}
         )
 
     def test_update_action(self):
-        self.gst_ims.update_action((self.invoice_name_1,), "Accepted")
+        self.gst_ims.update_action((self.invoice_name_1,), "Rejected")
+        ims_action, action, previous_action = frappe.get_all(
+            "GST Inward Supply",
+            filters={"name": self.invoice_name_1},
+            fields=["ims_action", "action", "previous_action"],
+            as_list=True,
+        )[0]
+        self.assertEqual(ims_action, "Rejected")
+        self.assertEqual(action, "Ignore")
+        self.assertEqual(previous_action, "Pending")
 
-        self.assertEqual(
-            frappe.get_value("GST Inward Supply", self.invoice_name_1, "ims_action"),
-            "Accepted",
-        )
+        self.gst_ims.update_action((self.invoice_name_2,), "No Action")
+        ims_action, action, previous_action = frappe.get_all(
+            "GST Inward Supply",
+            filters={"name": self.invoice_name_2},
+            fields=["ims_action", "action", "previous_action"],
+            as_list=True,
+        )[0]
+        self.assertEqual(ims_action, "No Action")
+        self.assertEqual(action, "Pending")
+        self.assertEqual(previous_action, "Pending")
 
     def test_data_for_upload(self):
         # Empty data
@@ -127,7 +145,7 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
             frappe.get_value(
                 "GST Inward Supply", self.invoice_name_2, "previous_ims_action"
             ),
-            "Accepted",
+            "Rejected",
         )
 
     @change_settings("GST Settings", {"enable_api": 1, "sandbox_mode": 0})
