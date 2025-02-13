@@ -171,6 +171,7 @@ def download_gstr_2b(gstin, return_periods):
 
         if response.error_type == "not_generated":
             regeneration_period = return_period
+            # since current period is not generated, future periods will be non-downloadable
             break
 
         if response.error_type == "no_docs_found":
@@ -180,6 +181,7 @@ def download_gstr_2b(gstin, return_periods):
             continue
 
         if response.error_type == "not_applicable":
+            # eg: M1 & M2 for Quarterly filers
             create_import_log(
                 gstin,
                 ReturnType.GSTR2B.value,
