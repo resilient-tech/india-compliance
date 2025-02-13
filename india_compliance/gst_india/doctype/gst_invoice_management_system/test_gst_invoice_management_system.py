@@ -6,6 +6,7 @@ from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import add_to_date
 
 from india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system import (
+    IMSReconciler,
     get_data_for_upload,
     get_period_options,
     update_previous_ims_action,
@@ -61,7 +62,46 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
             "GST Inward Supply", {"bill_no": "BILL-24-00002"}
         )
 
+        cls.pinv = create_purchase_invoice(
+            **{
+                "bill_no": "BILL-24-00001",
+                "bill_date": "2024-12-11",
+                "items": [
+                    {
+                        "item_code": "_Test Trading Goods 1",
+                        "qty": 1,
+                    }
+                ],
+                "supplier": "_Test Registered Supplier",
+                "supplier_gstin": "24AABCR6898M1ZN",
+            }
+        )
+
     def test_update_action(self):
+        # Reconcile invoice with bill_no "BILL-24-00001"
+        IMSReconciler().reconcile(
+            frappe._dict(
+                {
+                    "company": self.gst_ims.company,
+                    "company_gstin": self.gst_ims.company_gstin,
+                }
+            )
+        )
+
+        # Test matched invoice
+        self.gst_ims.update_action((self.invoice_name_1,), "Rejected")
+        ims_action, action, previous_action = frappe.get_all(
+            "GST Inward Supply",
+            filters={"name": self.invoice_name_1},
+            fields=["ims_action", "action", "previous_action"],
+            as_list=True,
+        )[0]
+        self.assertEqual(ims_action, "Rejected")
+        self.assertEqual(action, "Pending")
+        self.assertEqual(previous_action, "No Action")
+
+        # Test unmatched invoice
+        frappe.db.set_value("GST Inward Supply", self.invoice_name_1, "link_name", "")
         self.gst_ims.update_action((self.invoice_name_1,), "Rejected")
         ims_action, action, previous_action = frappe.get_all(
             "GST Inward Supply",
@@ -73,6 +113,7 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         self.assertEqual(action, "Ignore")
         self.assertEqual(previous_action, "Pending")
 
+        # Test invoice with previous IMS Action "Rejected"
         self.gst_ims.update_action((self.invoice_name_2,), "No Action")
         ims_action, action, previous_action = frappe.get_all(
             "GST Inward Supply",
@@ -173,26 +214,11 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         self.assertListEqual(period_options, periods[:2])
 
     def test_auto_reconciliation(self):
-        pinv = create_purchase_invoice(
-            **{
-                "bill_no": "BILL-24-00001",
-                "bill_date": "2024-12-11",
-                "items": [
-                    {
-                        "item_code": "_Test Trading Goods 1",
-                        "qty": 1,
-                    }
-                ],
-                "supplier": "_Test Registered Supplier",
-                "supplier_gstin": "24AABCR6898M1ZN",
-            }
-        )
-
         invoice_data = self.gst_ims.autoreconcile_and_get_data().get("invoice_data")
 
         for data in invoice_data:
             if data._inward_supply.bill_no == "BILL-24-00001":
-                self.assertEqual(data._purchase_invoice.name, pinv.name)
+                self.assertEqual(data._purchase_invoice.name, self.pinv.name)
 
     def get_periods(self):
         periods = []

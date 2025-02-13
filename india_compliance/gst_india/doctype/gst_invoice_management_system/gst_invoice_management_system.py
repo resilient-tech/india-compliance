@@ -4,6 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.query_builder.functions import IfNull
 from frappe.utils import add_to_date, format_date
 
 from india_compliance.gst_india.api_classes.taxpayer_base import (
@@ -148,21 +149,25 @@ class GSTInvoiceManagementSystem(Document):
         GSTR2 = frappe.qb.DocType("GST Inward Supply")
 
         # When invoice is rejected then mark action as "Ignore" and copy current action to previous action
+        # only if invoice is not matched
         if action == "Rejected":
             (
                 frappe.qb.update(GSTR2)
                 .set("previous_action", GSTR2.action)
                 .set("action", "Ignore")
+                .where(IfNull(GSTR2.link_name, "") == "")
                 .where(GSTR2.name.isin(invoice_names))
                 .run()
             )
 
         # When invoice is marked from "Rejected" to any other ims_action then copy previous action to action
+        # only if invoice is not matched
         else:
             (
                 frappe.qb.update(GSTR2)
                 .set("action", GSTR2.previous_action)
                 .where(GSTR2.ims_action == "Rejected")
+                .where(IfNull(GSTR2.link_name, "") == "")
                 .where(GSTR2.name.isin(invoice_names))
                 .run()
             )
