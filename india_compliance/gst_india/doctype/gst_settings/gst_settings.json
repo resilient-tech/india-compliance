@@ -353,7 +353,7 @@
   {
    "default": "30",
    "depends_on": "eval:doc.validate_gstin_status",
-   "description": "Will auto refresh status if its older than days set here",
+   "description": "Will auto refresh status if its older than days set here (set 15 days or above)",
    "fieldname": "gstin_status_refresh_interval",
    "fieldtype": "Int",
    "label": "GSTIN Status Refresh Interval (In Days)"
@@ -381,7 +381,7 @@
   },
   {
    "default": "1",
-   "description": "Ensures valid GSTIN and GST Transporter ID in transactions by refreshing status periodically from government database",
+   "description": "Ensures valid GSTIN and GST Transporter ID when creating transactions",
    "fieldname": "validate_gstin_status",
    "fieldtype": "Check",
    "label": "Refresh and Validate GSTIN Status in Transactions"
@@ -616,7 +616,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-06-09 17:28:54.720233",
+ "modified": "2025-02-13 07:42:20.143269",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
