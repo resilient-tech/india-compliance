@@ -5,6 +5,7 @@ from frappe import _
 from frappe.query_builder.terms import Criterion
 from frappe.utils import cint
 
+from india_compliance.gst_india.api_classes.taxpayer_base import otp_handler
 from india_compliance.gst_india.api_classes.taxpayer_returns import (
     IMSAPI,
     GSTR2aAPI,
@@ -149,6 +150,7 @@ def download_gstr_2b(gstin, return_periods):
     total_expected_requests = len(return_periods)
     requests_made = 0
     queued_message = False
+    regeneration_period = None
 
     api = GSTR2bAPI(gstin)
     for return_period in return_periods:
@@ -168,15 +170,24 @@ def download_gstr_2b(gstin, return_periods):
         response = api.get_data(return_period)
 
         if response.error_type == "not_generated":
-            frappe.msgprint(
-                _("No record is found in GSTR-2B or generation is still in progress"),
-                title=_("Not Generated"),
-            )
-            continue
+            regeneration_period = return_period
+            # since current period is not generated, future periods will be non-downloadable
+            break
 
         if response.error_type == "no_docs_found":
             create_import_log(
                 gstin, ReturnType.GSTR2B.value, return_period, data_not_found=True
+            )
+            continue
+
+        if response.error_type == "not_applicable":
+            # eg: M1 & M2 for Quarterly filers
+            create_import_log(
+                gstin,
+                ReturnType.GSTR2B.value,
+                return_period,
+                data_not_found=True,
+                dont_redownload=True,
             )
             continue
 
@@ -211,6 +222,16 @@ def download_gstr_2b(gstin, return_periods):
 
     if not has_data:
         end_transaction_progress(return_period)
+
+    if regeneration_period:
+        frappe.publish_realtime(
+            "regenerate_gstr_2b",
+            {
+                "gstin": gstin,
+                "return_period": regeneration_period,
+            },
+            user=frappe.session.user,
+        )
 
 
 def download_ims_invoices(gstin, for_upload=False):
@@ -434,3 +455,35 @@ def end_transaction_progress(return_period):
         },
         user=frappe.session.user,
     )
+
+
+@frappe.whitelist()
+@otp_handler
+def regenerate_gstr_2b(gstin, return_period, doctype):
+    frappe.has_permission(doctype, throw=True)
+
+    try:
+        api = GSTR2bAPI(gstin)
+        return api.regenerate(return_period)
+
+    except frappe.ValidationError as e:
+        frappe.clear_last_message()
+        frappe.throw(
+            str(e), title=_("GSTR 2B Regeneration Failed for {0}").format(return_period)
+        )
+
+
+@frappe.whitelist()
+def check_regenerate_status(gstin, reference_id, doctype):
+    frappe.has_permission(doctype, throw=True)
+
+    if not reference_id:
+        return
+
+    try:
+        api = GSTR2bAPI(gstin)
+        return api.generation_status(reference_id)
+
+    except frappe.ValidationError as e:
+        frappe.clear_last_message()
+        frappe.throw(str(e), title=_("GSTR 2B Regeneration Failed"))

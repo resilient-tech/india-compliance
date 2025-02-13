@@ -24,6 +24,11 @@ class ReturnsAPI(TaxpayerBaseAPI):
         "RTN_24": "queued",
         "RET11402": "authorization_failed",  # API Authorization Failed for 2A
         "RET2B1010": "authorization_failed",  # API Authorization Failed for 2B
+        "GTR2B-002": "not_generated",  # GSTR2B form is not generated for given return period
+        "GTR2B-001": "not_applicable",  # GSTR2B form is not applicable for given return period
+        # "IMS2B007": "not_applicable", # Either the entered ITC period is incorrect or it has 3B filed
+        "IMS2005": "not_needed",  # 2B cannot be generated as there are no changes
+        # "IMSSAV0015": # Previous Save or Reset request is already under progress. Please try after some time.
     }
 
     def download_files(self, return_period, token):
@@ -75,7 +80,7 @@ class GSTR2bAPI(ReturnsAPI):
             otp=otp,
         )
 
-    def regenerate_2b(self, return_period):
+    def regenerate(self, return_period):
         return self.put(
             json={
                 "action": "GEN2B",
@@ -84,7 +89,7 @@ class GSTR2bAPI(ReturnsAPI):
             endpoint=self.END_POINT,
         )
 
-    def get_2b_gen_status(self, transaction_id):
+    def generation_status(self, transaction_id):
         return self.get(
             action="GENSTS2B",
             params={

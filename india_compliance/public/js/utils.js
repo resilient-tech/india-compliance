@@ -46,6 +46,28 @@ Object.assign(india_compliance, {
         return [this.MONTH[month_number - 1], year];
     },
 
+    get_period(month_or_quarter, year) {
+        /**
+         * Returns the period in the format MMYYYY
+         * as accepted by the GST Portal
+         */
+
+        let month;
+
+        if (month_or_quarter.includes("-")) {
+            // Quarterly
+            const last_month = month_or_quarter.split("-")[1];
+            const date = new Date(`${last_month} 1, ${year}`);
+            month = String(date.getMonth() + 1).padStart(2, "0");
+        } else {
+            // Monthly
+            const date = new Date(`${month_or_quarter} 1, ${year}`);
+            month = String(date.getMonth() + 1).padStart(2, "0");
+        }
+
+        return `${month}${year}`;
+    },
+
     get_gstin_query(party, party_type = "Company") {
         if (!party) {
             frappe.show_alert({
