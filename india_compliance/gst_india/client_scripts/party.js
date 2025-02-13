@@ -71,7 +71,7 @@ function validate_gstin(doctype) {
                 frm.doc.pan = pan;
                 frm.refresh_field("pan");
                 set_party_type(frm);
-                if(doctype != "Address"){
+                if (doctype != "Address") {
                     india_compliance.set_pan_status(frm.get_field("pan"));
                 }
             }

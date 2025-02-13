@@ -43,6 +43,7 @@ class GSTSettings(Document):
         self.validate_gst_accounts()
         self.validate_e_invoice_applicability_date()
         self.validate_credentials()
+        self.validate_gstin_status_refresh_interval()
         self.clear_api_auth_session()
         self.update_retry_e_invoice_e_waybill_scheduled_job()
         self.update_e_invoice_status()
@@ -313,6 +314,21 @@ class GSTSettings(Document):
                 )
 
             company_list.append(row.company)
+
+    def validate_gstin_status_refresh_interval(self):
+        if not (
+            self.enable_api
+            and self.validate_gstin_status
+            and self.get("gstin_status_refresh_interval", 0) < 15
+        ):
+            return
+
+        self.gstin_status_refresh_interval = 15
+        frappe.msgprint(
+            _("GSTIN status refresh interval is set to 15"),
+            alert=True,
+            indicator="yellow",
+        )
 
     def is_sek_valid(self, gstin, throw=False, threshold=30):
         for credential in self.credentials:

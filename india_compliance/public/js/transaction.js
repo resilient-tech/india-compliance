@@ -264,7 +264,8 @@ async function _set_gstin_status(frm, gstin_field_name) {
     if (!gstin_doc) {
         gstin_doc = await india_compliance.set_gstin_status(
             gstin_field,
-            date_field.value
+            date_field.value,
+            frm.doc.docstatus
         );
 
         frm._gstin_doc = frm._gstin_doc || {};
