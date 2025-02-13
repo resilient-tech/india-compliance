@@ -727,8 +727,8 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         Else, summarize the data and save it.
         """
         summary_fields = {
-            "reconcile": "reconcile_summary",
             "filed": "filed_summary",
+            "reconcile": "reconcile_summary",
             "unfiled": "unfiled_summary",
             "books": "books_summary",
         }
@@ -750,6 +750,11 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
             summary_data = self.get_summarized_data(
                 data[key], self.filing_status == "Filed"
             )
+
+            if key == "reconcile":
+                amendment_row = self.get_net_liability_from_amendments()
+                if amendment_row:
+                    summary_data.append(amendment_row)
 
             self.update_json_for(field, summary_data)
             data[field] = summary_data
@@ -779,6 +784,27 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
                 data[subcategory] = [*subcategory_data.values()]
 
         return data
+
+    def get_net_liability_from_amendments(self):
+        if not (
+            self.filed_summary and (filed_summary := self.get_json_for("filed_summary"))
+        ):
+            return
+
+        amendment_row = None
+        for row in filed_summary:
+            if row.get("description") == "Net Liability from Amendments":
+                amendment_row = row
+                break
+
+        if not amendment_row:
+            return
+
+        for key, value in amendment_row.items():
+            if key in self.AMOUNT_FIELDS:
+                amendment_row[key] = -value
+
+        return amendment_row
 
 
 class FileGSTR1:
