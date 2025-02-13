@@ -96,7 +96,7 @@
   "credentials",
   "api_secret",
   "gstn_public_certificate",
-  "einvoice_public_key"
+  "nic_public_key"
  ],
  "fields": [
   {
@@ -680,10 +680,10 @@
    "label": "Enable GSTR-1 API Features"
   },
   {
-    "fieldname": "einvoice_public_key",
+    "fieldname": "nic_public_key",
     "fieldtype": "Code",
     "hidden": 1,
-    "label": "E-Invoice Public Key"
+    "label": "NIC Public Key"
   }
  ],
  "index_web_pages_for_search": 1,

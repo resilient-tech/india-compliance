@@ -61,13 +61,12 @@ class StaticResourcesAPI(BaseAPI):
     def get_nic_public_key(self, error_message=None) -> str:
         response = self.get(endpoint="nic_public_key")
 
-        # TODO: Please change fieldname to nic_public_key - Sagar
-        if response.message == self.settings.einvoice_public_key:
+        if response.message == self.settings.nic_public_key:
             frappe.throw(error_message or _("Public Key is already up to date"))
 
-        self.settings.db_set("einvoice_public_key", response.message)
+        self.settings.db_set("nic_public_key", response.message)
 
-        return response.certificate
+        return response.message
 
 
 class FilesAPI(BaseAPI):

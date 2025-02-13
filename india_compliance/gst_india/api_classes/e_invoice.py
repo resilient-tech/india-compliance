@@ -1,5 +1,4 @@
 import base64
-import json
 import re
 from datetime import datetime
 
@@ -12,11 +11,15 @@ from frappe import _
 from india_compliance.gst_india.api_classes.base import BaseAPI, check_scheduler_status
 from india_compliance.gst_india.api_classes.taxpayer_base import StaticResourcesAPI
 from india_compliance.gst_india.constants import DISTANCE_REGEX
-from india_compliance.gst_india.utils.cryptography import aes_decrypt_data
+from india_compliance.gst_india.utils.cryptography import (
+    aes_decrypt_data,
+    aes_encrypt_data,
+)
 
 
 class EInvoiceAuth(BaseAPI):
     API_NAME = "e-Invoice Auth"
+    IGNORED_ERROR_CODES = {}
 
     def setup(self, doc=None, *, company_gstin=None):
         self.company_gstin = company_gstin
@@ -37,6 +40,7 @@ class EInvoiceAuth(BaseAPI):
             company_gstin = "02AMBPG7773M002"
             self.username = "adqgsphpusr1"
             self.password = "Gsp@1234"
+            self.app_key = self.generate_app_key()
 
         elif not company_gstin:
             frappe.throw(_("Company GSTIN is required to use the e-Invoice API"))
@@ -55,11 +59,30 @@ class EInvoiceAuth(BaseAPI):
 
     def _fetch_credentials(self, row, require_password=True):
         self.password = row.get_password(raise_exception=require_password)
-        self.app_key = row.app_key or self.generate_app_key()
+        self.app_key = self.get_app_key(row)
+        self.session_key = base64.b64decode(row.session_key or "")
+        self.session_expiry = row.session_expiry
+        self.auth_token = row.auth_token
+
+    def is_authenticated(self):
+        if not (
+            getattr(self, "auth_token", None)
+            and getattr(self, "session_key", None)
+            and getattr(self, "session_expiry", None)
+        ):
+            return False
+
+        if self.session_expiry < datetime.now():
+            return False
+
+        return True
+
+    def get_app_key(self, row):
+        app_key = row.app_key or self.generate_app_key()
+        return base64.b64encode(app_key.encode()).decode()
 
     def generate_app_key(self):
-        app_key = frappe.generate_hash(length=32).encode()
-        app_key = base64.b64encode(app_key).decode()
+        app_key = frappe.generate_hash(length=32)
 
         frappe.db.set_value(
             "GST Credential",
@@ -78,10 +101,14 @@ class EInvoiceAuth(BaseAPI):
 
     def process_response(self, response):
         self.handle_error_response(response)
-        response = self.decrypt_response(response)
+        self.decrypt_response(response)
+        self.response = response
         return response
 
     def encrypt_request(self, request_args):
+        if self.is_authenticated():
+            return
+
         if not (json_data := request_args.get("json")):
             return
 
@@ -90,7 +117,7 @@ class EInvoiceAuth(BaseAPI):
         if not json_data:
             return
 
-        json_data = json.dumps(json_data)
+        json_data = frappe.as_json(json_data)
         json_data = base64.b64encode(json_data.encode())
 
         encrypted_json = encrypt_using_public_key(
@@ -143,7 +170,7 @@ class EInvoiceAuth(BaseAPI):
         return response
 
     def get_public_key(self):
-        key = self.settings.einvoice_public_key
+        key = self.settings.nic_public_key
         if not key:
             key = StaticResourcesAPI().get_nic_public_key()
 
@@ -184,12 +211,31 @@ class EInvoiceAPI(EInvoiceAuth):
         "3001": "Requested data is not available",
     }
 
-    def is_ignored_error(self, response_json):
-        message = response_json.get("message", "").strip()
+    def setup(self, doc=None, *, company_gstin=None):
+        super().setup(doc, company_gstin=company_gstin)
+
+        if not self.is_authenticated():
+            self.authenticate()
+
+    def handle_error_response(self, response):
+        success_value = response.get("Status") != 0
+        if not success_value and not self.is_ignored_error(response):
+            frappe.throw(
+                response.get("ErrorDetails", {})[0].get("ErrorMessage")
+                # Fallback to response body if message is not present
+                or frappe.as_json(response, indent=4),
+                title=_("API Request Failed"),
+            )
+
+    def is_ignored_error(self, response):
+        error_details = response.get("ErrorDetails")
+
+        if not error_details:
+            return
 
         for error_code in self.IGNORED_ERROR_CODES:
-            if message.startswith(error_code):
-                response_json.error_code = error_code
+            if error_code == error_details[0].get("ErrorCode"):
+                response.error_code = error_code
                 return True
 
     def get_e_invoice_by_irn(self, irn):
@@ -237,6 +283,43 @@ class EInvoiceAPI(EInvoiceAuth):
 
     def sync_gstin_info(self, gstin):
         return self.get(endpoint="master/syncgstin", params={"gstin": gstin})
+
+    def before_request(self, request_args):
+        self.encrypt_request(request_args)
+        if not self.is_authenticated():
+            return
+
+        request_args["headers"]["AuthToken"] = self.auth_token
+
+    def encrypt_request(self, request_args):
+        super().encrypt_request(request_args)
+
+        if not self.is_authenticated():
+            return
+
+        if not (json_data := request_args.get("json")):
+            return
+
+        encrypted_data = aes_encrypt_data(frappe.as_json(json_data), self.session_key)
+
+        request_args["json"] = {
+            "Data": encrypted_data,
+        }
+
+    def decrypt_response(self, response):
+        if response.get("error_code"):
+            return response
+
+        if not (response_data := response.get("Data")):
+            return response
+
+        if not isinstance(response_data, str):
+            return super().decrypt_response(response)
+
+        decrypted_data = aes_decrypt_data(response_data, self.session_key)
+        response.result = frappe.parse_json(decrypted_data.decode())
+
+        return response
 
 
 def encrypt_using_public_key(data: str, public_key: bytes) -> str:
