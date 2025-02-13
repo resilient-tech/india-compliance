@@ -2,7 +2,7 @@
 # See license.txt
 
 import frappe
-from frappe.tests import IntegrationTestCase
+from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import add_to_date
 
 from india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system import (
@@ -130,6 +130,7 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
             "Accepted",
         )
 
+    @change_settings("GST Settings", {"enable_api": 1, "sandbox_mode": 0})
     def test_get_period_options(self):
         periods = self.get_periods()
 

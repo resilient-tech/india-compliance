@@ -205,7 +205,7 @@ frappe.ui.form.on(DOCTYPE, {
 
     async company_gstin(frm) {
         render_empty_state(frm);
-        await update_fields_based_on_filing_preference(frm);
+        update_filing_preference(frm);
 
         frm.get_field("company_gstin").$wrapper.find("input").val("24XXXXXXXXXXXXX");
     },
@@ -216,7 +216,7 @@ frappe.ui.form.on(DOCTYPE, {
 
     month_or_quarter(frm) {
         render_empty_state(frm);
-        update_fields_based_on_filing_preference(frm);
+        update_filing_preference(frm);
     },
 
     year(frm) {
@@ -224,14 +224,24 @@ frappe.ui.form.on(DOCTYPE, {
         set_options_for_month_or_quarter(frm);
     },
 
+    filing_preference: render_empty_state,
+
     refresh(frm) {
         frm.disable_save();
+        if (is_gstr1_api_enabled()) {
+            refresh_filing_preference(frm);
+        }
 
         frm.gstr1?.render_form_actions();
 
         if (!frm.doc.__gst_data) {
             frm.page.clear_indicator();
             return;
+        }
+
+        if (!frm.doc.filing_preference) {
+            frm.doc.filing_preference = frm.doc.__gst_data.filing_preference;
+            frm.refresh_field("filing_preference");
         }
 
         frm.gstr1.render_indicator();
@@ -733,8 +743,11 @@ class GSTR1 {
         if (!this.data || !is_gstr1_api_enabled()) return;
 
         const has_records = this.data.books_summary?.some(row => row.no_of_records > 0);
+        // Nil return cannot be filed for quarterly M1 and M2
+        const can_file_nil_return = this.frm.doc.filing_preference === "Monthly" ||
+        (this.frm.doc.filing_preference === "Quarterly" && this.frm.doc.month_or_quarter % 3 === 0);
 
-        if (!has_records && this.data.status != "Filed")
+        if (!has_records && this.data.status != "Filed" && can_file_nil_return)
             this.frm.set_df_property("file_nil_gstr1", "hidden", 0);
         else this.frm.set_df_property("file_nil_gstr1", "hidden", 1);
     }
@@ -1071,7 +1084,6 @@ class TabManager {
                         if (!this.summary) return null;
 
                         const total = this.summary.reduce((acc, row) => {
-                            if (row.indent !== 1) return acc;
                             if (
                                 row.consider_in_total_taxable_value &&
                                 ["no_of_records", "total_taxable_value"].includes(
@@ -3005,19 +3017,17 @@ function set_options_for_year(frm) {
     frm.set_value("year", current_year.toString());
 }
 
-async function update_fields_based_on_filing_preference(frm) {
-    let { message: preference } = await frappe.call({
+function update_filing_preference(frm) {
+    const { month_or_quarter, year, company_gstin } = frm.doc;
+    if (!month_or_quarter || !year || !company_gstin) return;
+
+    frappe.call({
         method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_filing_preference_from_log",
-        args: {
-            month_or_quarter: frm.doc.month_or_quarter,
-            year: frm.doc.year,
-            company_gstin: frm.doc.company_gstin,
+        args: { month_or_quarter, year, company_gstin },
+        callback: r => {
+            frm.set_value("filing_preference", r.message);
         },
     });
-
-    if (preference === frm.doc.filing_preference) return;
-
-    frm.set_value("filing_preference", preference);
 }
 
 function set_options_for_month_or_quarter(frm) {
@@ -3086,4 +3096,49 @@ async function get_net_gst_liability(frm) {
     });
 
     return response?.message;
+}
+
+function refresh_filing_preference(frm) {
+    // update html/css to show refresh button next to filing preference
+    const $pref_wrapper = $(
+        '[data-fieldname="filing_preference"] .control-value.like-disabled-input'
+    );
+    if (!$pref_wrapper.length) return;
+
+    const text = $pref_wrapper[0]?.textContent.trim();
+    const ref_btn_html = frappe.utils.icon("refresh", "xs", "update-filing-preference");
+
+    $pref_wrapper
+        .empty()
+        .addClass("flex align-center justify-content-between")
+        .append($("<span></span>").text(text))
+        .append(
+            $("<span></span>")
+                .attr("title", "Refresh Filing Preference from GSTN")
+                .html(ref_btn_html)
+        );
+
+    // bind click event
+    frm.$wrapper.find(".update-filing-preference").click(async function (e) {
+        const {
+            filing_preference: old_preference,
+            month_or_quarter,
+            year,
+            company_gstin,
+        } = frm.doc;
+
+        const month = india_compliance.MONTH.indexOf(month_or_quarter) + 1;
+        const period = `${String(month).padStart(2, "0")}${year}`;
+
+        const { message: new_preference } = await taxpayer_api.call({
+            method: "india_compliance.gst_india.utils.gstin_info.get_and_update_filing_preference",
+            args: { gstin: company_gstin, period },
+        });
+
+        if (new_preference === old_preference)
+            return frappe.show_alert(__("No change in filing preference"));
+
+        frappe.show_alert(__("Filing preference updated. Regenerate data."));
+        frm.set_value("filing_preference", new_preference);
+    });
 }

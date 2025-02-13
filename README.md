@@ -19,7 +19,7 @@ Simple, yet powerful compliance solutions for Indian businesses
   &nbsp;|&nbsp;
 [Docs](https://docs.indiacompliance.app)
   &nbsp;|&nbsp;
-[Demo](https://india-compliance.frappe.cloud/app/gst-india)
+[Demo](https://india-compliance.frappe.cloud/demo-login)
 
 </div>
 
@@ -67,15 +67,6 @@ Simplified invoice actions to ensure accurate and efficient GSTR-3B submissions
 ### Installation
 
 For detailed instructions, please [refer to the documentation](https://docs.indiacompliance.app/docs/getting-started/installation)
-
-### Demo
-
-Experience India Compliance with our demo environment.
-Use the link and credentials below to explore the features:
-
-- **Demo Site**: [India Compliance Demo](https://india-compliance.frappe.cloud/app/gst-india)
-- **Username**: <demo@indiacompliance.app>
-- **Password**: demo
 
 ### In-app Purchases
 

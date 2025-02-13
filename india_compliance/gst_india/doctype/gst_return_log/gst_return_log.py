@@ -314,14 +314,10 @@ def process_gstr_3b_returns_info(company, gstin, e_filed_list):
         gstr3b_log.insert()
 
 
-def get_gst_return_log(posting_date, company_gstin):
-    period = getdate(posting_date).strftime("%m%Y")
-    if name := frappe.db.exists(DOCTYPE, f"GSTR1-{period}-{company_gstin}"):
-        return frappe.get_doc(DOCTYPE, name)
-
-
 def add_comment_to_gst_return_log(doc, action):
-    if not (log := get_gst_return_log(doc.posting_date, doc.company_gstin)):
+    period = getdate(doc.posting_date).strftime("%m%Y")
+    log_name = f"GSTR1-{period}-{doc.company_gstin}"
+    if not (log := get_gst_return_log(log_name)):
         return
 
     log.add_comment(
@@ -381,3 +377,20 @@ def create_ims_return_log(company_gstin):
     ims_log.gstin = company_gstin
     ims_log.return_type = "IMS"
     ims_log.insert()
+
+
+def get_gst_return_log(log_name, **kwargs):
+    if frappe.db.exists(DOCTYPE, log_name):
+        return frappe.get_doc(DOCTYPE, log_name)
+
+    return_type, period, gstin = log_name.split("-")
+
+    log = frappe.new_doc(DOCTYPE)
+    log.return_period = period
+    log.company = get_party_for_gstin(gstin, "Company")
+    log.gstin = gstin
+    log.return_type = return_type
+    log.update(kwargs)
+    log.insert()
+
+    return log
