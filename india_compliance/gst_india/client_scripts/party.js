@@ -71,6 +71,12 @@ function validate_gstin(doctype) {
                 frm.doc.pan = pan;
                 frm.refresh_field("pan");
                 set_party_type(frm);
+<<<<<<< HEAD
+=======
+                if (doctype != "Address") {
+                    india_compliance.set_pan_status(frm.get_field("pan"));
+                }
+>>>>>>> 9f653527 (fix: refresh GSTIN status only when creating transactions (#3049))
             }
         },
     });

@@ -87,16 +87,16 @@ Object.assign(india_compliance, {
         return in_list(frappe.boot.sales_doctypes, doctype) ? "Customer" : "Supplier";
     },
 
-    async set_gstin_status(field, transaction_date, force_update) {
+    async set_gstin_status(field, transaction_date, docstatus, force_update) {
         const gstin = field.value;
         if (!gstin || gstin.length !== 15) return field.set_description("");
 
-        const { message } = await frappe.call({
+        let { message } = await frappe.call({
             method: "india_compliance.gst_india.doctype.gstin.gstin.get_gstin_status",
-            args: { gstin, transaction_date, force_update },
+            args: { gstin, transaction_date, docstatus, force_update },
         });
 
-        if (!message) return field.set_description("");
+        if (!message) message = { status: "Not Available" };
 
         field.set_description(
             india_compliance.get_gstin_status_desc(
@@ -124,6 +124,7 @@ Object.assign(india_compliance, {
         const user_date = frappe.datetime.str_to_user(datetime);
         const pretty_date = frappe.datetime.prettyDate(datetime);
 
+<<<<<<< HEAD
         const STATUS_COLORS = { Active: "green", Cancelled: "red" };
         return `<div class="d-flex indicator ${STATUS_COLORS[status] || "orange"}">
                     Status:&nbsp;<strong>${status}</strong>
@@ -133,6 +134,27 @@ Object.assign(india_compliance, {
                         </span>
                     </span>
                 </div>`;
+=======
+        function get_indicator(status) {
+            switch (status) {
+                case "Active":
+                    return "green";
+                case "Cancelled":
+                    return "red";
+                case "Not Available":
+                    return "grey";
+                default:
+                    return "orange";
+            }
+        }
+
+        return this.get_status_description(
+            status,
+            get_indicator(status),
+            datetime,
+            "gstin-last-synced"
+        );
+>>>>>>> 9f653527 (fix: refresh GSTIN status only when creating transactions (#3049))
     },
 
     set_gstin_refresh_btn(field, transaction_date) {
@@ -155,11 +177,44 @@ Object.assign(india_compliance, {
             await india_compliance.set_gstin_status(
                 field,
                 transaction_date,
+                null,
                 force_update
             );
         });
     },
 
+<<<<<<< HEAD
+=======
+    get_status_description(status, indicator, datetime, classes) {
+        const user_date = frappe.datetime.str_to_user(datetime);
+        const pretty_date = frappe.datetime.prettyDate(datetime);
+
+        return $(`<div class="d-flex indicator ${indicator}" style="font-size: 12px">
+                    <strong>${status}</strong>
+                    <span class="d-flex justify-content-between align-items-center ${classes}"
+                        title="${user_date}" style="margin-left: auto;gap: 2px">
+                       <span style="text-align: end;"> ${
+                           datetime ? "Synced " + pretty_date : ""
+                       }</span>
+                    </span>
+                </div>`);
+    },
+
+    get_status_refresh_button(classes, append_to = null, style = null) {
+        if (!style) {
+            style = "cursor: pointer;width: 14px;height: 14px;";
+        }
+
+        const refresh_btn = $(frappe.utils.icon("refresh", "sm", classes, style));
+
+        if (append_to) {
+            refresh_btn.appendTo(append_to);
+        }
+
+        return refresh_btn;
+    },
+
+>>>>>>> 9f653527 (fix: refresh GSTIN status only when creating transactions (#3049))
     set_state_options(frm) {
         const state_field = frm.get_field("state");
         const country = frm.get_field("country").value;
