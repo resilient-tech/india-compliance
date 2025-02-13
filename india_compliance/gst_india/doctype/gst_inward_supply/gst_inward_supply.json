@@ -60,6 +60,7 @@
   "original_doc_type",
   "section_break_22",
   "action",
+  "previous_action",
   "link_doctype",
   "column_break_27",
   "match_status",
@@ -470,11 +471,19 @@
    "hidden": 1,
    "label": "Downloaded from 2A",
    "read_only": 1
+  },
+  {
+   "fieldname": "previous_action",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Previous Action",
+   "options": "No Action\nAccept\nIgnore\nPending",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-12-12 17:28:52.668508",
+ "modified": "2025-02-11 18:31:07.802663",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Inward Supply",
