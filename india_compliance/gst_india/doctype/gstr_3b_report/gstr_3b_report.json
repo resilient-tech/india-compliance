@@ -1,6 +1,6 @@
 {
  "actions": [],
- "autoname": "format:GSTR3B-{month_or_quarter}-{year}-{company_gstin}",
+ "autoname": "format:GSTR3B-{month_or_quarter}-{year}",
  "creation": "2019-02-04 11:35:55.964639",
  "doctype": "DocType",
  "editable_grid": 1,
@@ -95,7 +95,7 @@
   }
  ],
  "links": [],
- "modified": "2024-11-22 18:36:30.385643",
+ "modified": "2025-02-13 17:08:31.417697",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR 3B Report",

@@ -246,7 +246,6 @@ frappe.ui.form.on(DOCTYPE, {
 
         frm.gstr1.render_indicator();
 
-        console.log("refresh");
         frm.get_field("company_gstin").$wrapper.find("input").val("24XXXXXXXXXXXXX");
     },
 

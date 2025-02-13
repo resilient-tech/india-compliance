@@ -58,6 +58,11 @@ frappe.ui.form.on("GSTR 3B Report", {
         });
 
         append_form(frm);
+        frm.get_field("company_gstin").$wrapper.find("input").val("24XXXXXXXXXXXXX");
+    },
+
+    company_gstin: function (frm) {
+        frm.get_field("company_gstin").$wrapper.find("input").val("24XXXXXXXXXXXXX");
     },
 
     company: async function (frm) {

@@ -16,6 +16,7 @@ def execute(filters=None):
         return
 
     report_type = filters.get("section")
+    filters.__setattr__("company_gstin", "24AAUPV7468F1ZW")
 
     if report_type == "4":
         report = GSTR3B_ITC_Details(filters)
