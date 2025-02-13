@@ -113,12 +113,22 @@ class TestITC04Export(IntegrationTestCase):
 
     def test_itc_04_export(self):
         data = download_itc_04_json(
-            self.scr.company, self.scr.company_gstin, "2024", "Oct - Mar", "Half Yearly"
+            {
+                "company": self.scr.company,
+                "company_gstin": self.scr.company_gstin,
+                "from_date": "2024-12-15",
+                "to_date": "2025-02-20",
+            }
         )
         self.assertDictEqual(response, data)
 
         data = download_itc_04_json(
-            self.scr.company, self.scr.company_gstin, "2024", return_type="Annual"
+            {
+                "company": self.scr.company,
+                "company_gstin": self.scr.company_gstin,
+                "from_date": "2024-05-15",
+                "to_date": "2025-02-20",
+            }
         )
 
         self.assertEqual(data["data"]["fp"], "192024")

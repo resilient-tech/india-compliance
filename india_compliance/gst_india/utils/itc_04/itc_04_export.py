@@ -6,7 +6,11 @@ from india_compliance.gst_india.constants import UOM_MAP
 from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     GenerateGSTR1,
 )
-from india_compliance.gst_india.utils.itc_04 import ITC04_DataField, ITC04_ItemField
+from india_compliance.gst_india.utils.itc_04 import (
+    ITC04_DataField,
+    ITC04_ItemField,
+    ITC04JsonKey,
+)
 from india_compliance.gst_india.utils.itc_04.itc_04_data import ITC04Query
 from india_compliance.gst_india.utils.itc_04.itc_04_json_map import (
     convert_to_gov_data_format,
@@ -83,8 +87,8 @@ def get_data(filters):
     ) + itc04.get_query_table_5A_sr().run(as_dict=True)
 
     return {
-        "RM Sent": process_table_4_data(table_4_data),
-        "FG Received": process_table_5a_data(table_5a_data),
+        ITC04JsonKey.FG_RECEIVED.value: process_table_5a_data(table_5a_data),
+        ITC04JsonKey.RM_SENT.value: process_table_4_data(table_4_data),
     }
 
 
