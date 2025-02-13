@@ -57,4 +57,18 @@ frappe.query_reports["GST Job Work Stock Movement"] = {
             reqd: 1,
         },
     ],
+    onload: function (query_report) {
+        query_report.page.add_inner_button(__("Export JSON"), function () {
+            frappe.call({
+                method: "india_compliance.gst_india.utils.itc_04.itc_04_export.download_itc_04_json",
+                args: { filters: query_report.get_values() },
+                callback: r => {
+                    india_compliance.trigger_file_download(
+                        JSON.stringify(r.message.data),
+                        r.message.filename
+                    );
+                },
+            });
+        });
+    },
 };

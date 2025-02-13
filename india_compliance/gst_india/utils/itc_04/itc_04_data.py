@@ -43,10 +43,14 @@ class ITC04Query:
                 doc.is_return,
                 IfNull(doc.place_of_supply, "").as_("place_of_supply"),
                 doc.base_grand_total.as_("invoice_total"),
+                IfNull(doc_item.description, "").as_("description"),
                 IfNull(doc_item.gst_treatment, "Not Defined").as_("gst_treatment"),
                 (doc_item.cgst_rate + doc_item.sgst_rate + doc_item.igst_rate).as_(
                     "gst_rate"
                 ),
+                doc_item.cgst_rate,
+                doc_item.sgst_rate,
+                doc_item.igst_rate,
                 doc_item.taxable_value,
                 doc_item.cgst_amount,
                 doc_item.sgst_amount,
@@ -141,9 +145,9 @@ class ITC04Query:
             .select(
                 IfNull(doc_item.item_code, doc_item.item_name).as_("item_code"),
                 doc_item.qty,
+                IfNull(doc_item.description, "").as_("description"),
                 doc_item.gst_hsn_code,
                 IfNull(doc.supplier, "").as_("supplier"),
-                IfNull(doc.name, "").as_("invoice_no"),
                 doc.posting_date,
                 doc.is_return,
                 IfNull(doc.place_of_supply, "").as_("place_of_supply"),
@@ -151,6 +155,7 @@ class ITC04Query:
                 IfNull(doc_item.gst_treatment, "Not Defined").as_("gst_treatment"),
                 ref_doc.link_doctype.as_("original_challan_invoice_type"),
                 IfNull(ref_doc.link_name, "").as_("original_challan_no"),
+                self.get_challan_date_query(ref_doc).as_("original_challan_date"),
             )
             .where(doc.docstatus == 1)
             .orderby(doc.name, order=Order.desc)
@@ -169,6 +174,7 @@ class ITC04Query:
         query = (
             self.get_base_query_table_5A(self.se, self.se_item, self.ref_doc)
             .select(
+                IfNull(self.se.name, "").as_("invoice_no"),
                 self.se_item.uom,
                 self.se.bill_to_gstin.as_("supplier_gstin"),
                 self.se.bill_from_gstin.as_("company_gstin"),
@@ -193,6 +199,7 @@ class ITC04Query:
         query = (
             self.get_base_query_table_5A(self.sr, self.sr_item, self.ref_doc)
             .select(
+                IfNull(self.sr.supplier_delivery_note, "").as_("invoice_no"),
                 self.sr_item.stock_uom.as_("uom"),
                 self.sr.company_gstin,
                 self.sr.supplier_gstin,
@@ -221,3 +228,14 @@ class ITC04Query:
             query = query.where(Date(doc.posting_date) <= getdate(self.filters.to_date))
 
         return query
+
+    def get_challan_date_query(self, ref_doc):
+        se_doc = frappe.qb.DocType("Stock Entry")
+        sr_doc = frappe.qb.DocType("Subcontracting Receipt")
+
+        return frappe.qb.from_(se_doc).select(se_doc.posting_date).where(
+            (se_doc.name == ref_doc.link_name) & (ref_doc.link_doctype == "Stock Entry")
+        ) + frappe.qb.from_(sr_doc).select(sr_doc.posting_date).where(
+            (sr_doc.name == ref_doc.link_name)
+            & (ref_doc.link_doctype == "Subcontracting Receipt")
+        )
