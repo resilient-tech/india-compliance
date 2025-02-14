@@ -10,7 +10,7 @@ import frappe
 from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Abs, IfNull, Sum
-from frappe.utils import add_months, format_date, getdate, rounded
+from frappe.utils import add_months, cint, format_date, getdate, rounded
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.utils import get_gstin_list, get_party_for_gstin
@@ -1367,10 +1367,28 @@ class BaseUtil:
         if isinstance(end_date, str):
             end_date = getdate(end_date)
 
-        return [
+        return_periods = [
             dt.strftime("%m%Y")
             for dt in rrule(MONTHLY, dtstart=start_date, until=end_date)
         ]
+
+        return_periods_map = frappe._dict(
+            frappe.get_all(
+                "GST Return Log",
+                filters={
+                    "return_type": "GSTR3B",
+                    "return_period": ["in", return_periods],
+                },
+                fields=["return_period", "filing_preference"],
+                as_list=True,
+            )
+        )
+
+        for return_period, filing_preference in return_periods_map.copy().items():
+            if filing_preference == "Quarterly" and cint(return_period[:2]) % 3 != 0:
+                del return_periods_map[return_period]
+
+        return list(return_periods_map)
 
     @staticmethod
     def _reversed(lst, reverse):
