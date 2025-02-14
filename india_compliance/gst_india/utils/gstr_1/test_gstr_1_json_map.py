@@ -7,7 +7,6 @@ from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
 )
 from india_compliance.gst_india.utils import get_party_for_gstin as _get_party_for_gstin
 from india_compliance.gst_india.utils.gstr_1 import (
-    SUB_CATEGORY_GOV_CATEGORY_MAPPING,
     GovDataField,
     GSTR1_B2B_InvoiceType,
     GSTR1_DataField,
@@ -40,11 +39,7 @@ def normalize_data(data):
 
 
 def process_mapped_data(data):
-    return list(
-        get_category_wise_data(
-            normalize_data(copy.deepcopy(data)), SUB_CATEGORY_GOV_CATEGORY_MAPPING
-        ).values()
-    )[0]
+    return list(get_category_wise_data(normalize_data(copy.deepcopy(data))).values())[0]
 
 
 class TestB2B(IntegrationTestCase):

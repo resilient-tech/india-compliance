@@ -124,6 +124,7 @@ class PurchaseReconciliationTool(Document):
         company_gstin,
         date_range,
         return_type=None,
+        return_period=None,
         force=False,
         gst_categories=None,
     ):
@@ -136,6 +137,7 @@ class PurchaseReconciliationTool(Document):
             company_gstin=company_gstin,
             date_range=date_range,
             return_type=return_type,
+            return_period=return_period,
             force=force,
             gst_categories=gst_categories,
             queue="long",
@@ -362,14 +364,19 @@ def download_gstr(
     company_gstin,
     date_range,
     return_type,
+    return_period=None,
     force=False,
     gst_categories=None,
 ):
     return_type = ReturnType(return_type)
 
-    periods = BaseUtil.get_periods(date_range, return_type)
-    if not force:
-        periods = get_periods_to_download(company_gstin, return_type, periods)
+    if return_period:
+        periods = [return_period]
+    else:
+        periods = BaseUtil.get_periods(date_range, return_type)
+        periods = get_periods_to_download(
+            company_gstin, return_type, periods, download_all=force
+        )
 
     if not periods:
         return
@@ -393,15 +400,31 @@ def download_gstr(
         )
 
 
-def get_periods_to_download(company_gstin, return_type, periods):
+def get_periods_to_download(company_gstin, return_type, periods, download_all=False):
+    if return_type == ReturnType.GSTR2B:
+        periods = filter_redownload_periods(company_gstin, return_type, periods)
+
+    if download_all:
+        return periods
+
+    # get missing periods
     existing_periods = get_import_history(
-        company_gstin,
-        return_type,
-        periods,
-        pluck="return_period",
+        company_gstin, return_type, periods, pluck="return_period"
     )
 
     return [period for period in periods if period not in existing_periods]
+
+
+def filter_redownload_periods(company_gstin, return_type, periods):
+    # check if redownload is useful. not useful if data is downloaded after 3B is filed
+    dont_redownload = get_import_history(
+        company_gstin, return_type, periods, fields=("return_period", "dont_redownload")
+    )
+    dont_redownload = [
+        log.return_period for log in dont_redownload if log.dont_redownload
+    ]
+
+    return [period for period in periods if period not in dont_redownload]
 
 
 def get_import_history(

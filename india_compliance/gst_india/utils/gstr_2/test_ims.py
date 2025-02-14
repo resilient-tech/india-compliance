@@ -33,7 +33,6 @@ class TestIMS(IntegrationTestCase):
 
     def test_ims_b2b(self):
         doc = self.get_doc("B2B", "Invoice")
-        print(doc.as_dict())
         self.assertDocumentEqual(
             {
                 "bill_date": date(2023, 1, 23),
@@ -45,8 +44,8 @@ class TestIMS(IntegrationTestCase):
                 "place_of_supply": "24-Gujarat",
                 "document_value": 1000,
                 "is_downloaded_from_ims": 1,
-                "ims_action": "Accepted",
-                "previous_ims_action": "Accepted",
+                "ims_action": "Rejected",
+                "previous_ims_action": "Rejected",
                 "is_pending_action_allowed": 1,
                 "is_supplier_return_filed": 0,
                 "supplier_return_form": "R1",
@@ -56,13 +55,14 @@ class TestIMS(IntegrationTestCase):
                 "cgst": 20,
                 "sgst": 20,
                 "cess": 0,
+                "action": "Ignore",
+                "previous_action": "No Action",
             },
             doc,
         )
 
     def test_ims_b2ba(self):
         doc = self.get_doc("B2BA", "Invoice")
-        print(doc.as_dict())
         self.assertDocumentEqual(
             {
                 "bill_date": date(2023, 1, 23),
@@ -94,7 +94,6 @@ class TestIMS(IntegrationTestCase):
 
     def test_ims_dn(self):
         doc = self.get_doc("CDNR", "Debit Note")
-        print(doc.as_dict())
         self.assertDocumentEqual(
             {
                 "bill_date": date(2023, 2, 24),
@@ -123,7 +122,6 @@ class TestIMS(IntegrationTestCase):
 
     def test_ims_dna(self):
         doc = self.get_doc("CDNRA", "Debit Note")
-        print(doc.as_dict())
         self.assertDocumentEqual(
             {
                 "bill_no": "dna2",
@@ -155,7 +153,6 @@ class TestIMS(IntegrationTestCase):
 
     def test_ims_cn(self):
         doc = self.get_doc("CDNR", "Credit Note")
-        print(doc.as_dict())
         self.assertDocumentEqual(
             {
                 "bill_date": date(2023, 2, 24),
@@ -184,7 +181,6 @@ class TestIMS(IntegrationTestCase):
 
     def test_ims_cna(self):
         doc = self.get_doc("CDNRA", "Credit Note")
-        print(doc.as_dict())
         self.assertDocumentEqual(
             {
                 "bill_no": "cna2",

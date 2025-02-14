@@ -144,6 +144,9 @@ def make_stock_transfer_entry(**args):
     doc = frappe.get_doc(ste_dict)
     doc.insert()
 
+    if args.do_not_submit:
+        return doc
+
     return doc.submit()
 
 
@@ -170,6 +173,13 @@ def make_stock_entry(**args):
     return se
 
 
+def create_subcontracting_data():
+    make_raw_materials()
+    make_service_items()
+    make_subcontracted_items()
+    make_boms()
+
+
 SERVICE_ITEM = {
     "item_code": "Subcontracted Service Item 1",
     "qty": 10,
@@ -183,10 +193,7 @@ class TestSubcontractingTransaction(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        make_raw_materials()
-        make_service_items()
-        make_subcontracted_items()
-        make_boms()
+        create_subcontracting_data()
 
         frappe.db.set_single_value(
             "GST Settings",
