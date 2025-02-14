@@ -1086,3 +1086,11 @@ def enable_autocommit(fn):
             db.auto_commit_on_many_writes = autocommit
 
     return wrapper
+
+
+def format_gstin(gstin: str) -> str:
+    return f"{gstin[:2]}XXXXXXXXXXXXX"
+
+
+def format_name(name: str) -> str:
+    return f"{name[:2]}XXX"

@@ -1282,6 +1282,7 @@ class EmailDialog {
     }
 
     async get_recipients() {
+        return "example@gmail.com";
         if (!this.data) return [];
 
         const { message } = await frappe.call({
@@ -1290,8 +1291,6 @@ class EmailDialog {
                 party: this.data.supplier_name,
             },
         });
-
-        return message?.contact_email || [];
     }
 }
 
