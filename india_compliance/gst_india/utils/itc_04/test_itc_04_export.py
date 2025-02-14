@@ -8,12 +8,19 @@ from erpnext.subcontracting.doctype.subcontracting_order.test_subcontracting_ord
 )
 
 from india_compliance.gst_india.overrides.test_subcontracting_transaction import (
-    SERVICE_ITEM,
     create_purchase_order,
     create_subcontracting_data,
     make_stock_transfer_entry,
 )
 from india_compliance.gst_india.utils.itc_04.itc_04_export import download_itc_04_json
+
+SERVICE_ITEM = {
+    "item_code": "Subcontracted Service Item 1",
+    "qty": 10,
+    "rate": 100,
+    "fg_item": "Subcontracted Item SA2",
+    "fg_item_qty": 10,
+}
 
 response = {
     "data": {
@@ -31,7 +38,7 @@ response = {
                         "nat_jw": "Job Work",
                         "uqc": "NOS",
                         "qty": 10.0,
-                        "desc": "Subcontracted Item SA1",
+                        "desc": "Subcontracted Item SA2",
                     }
                 ],
                 "flag": "N",
@@ -45,17 +52,6 @@ response = {
                         "uqc": "NOS",
                         "qty": 10.0,
                         "desc": "Subcontracted SRM Item 1",
-                        "txval": 0.0,
-                        "goods_ty": "8b",
-                        "tx_i": 0.0,
-                        "tx_c": 0.0,
-                        "tx_s": 0.0,
-                        "tx_cs": 0.0,
-                    },
-                    {
-                        "uqc": "NOS",
-                        "qty": 10.0,
-                        "desc": "Subcontracted SRM Item 2",
                         "txval": 0.0,
                         "goods_ty": "8b",
                         "tx_i": 0.0,
