@@ -481,7 +481,7 @@ def get_current_fy():
     return get_fy(period)
 
 
-def get_logs_for_year(gstin, period):
+def get_logs_for_year(gstin, period, return_types=None):
     year = cint(period[2:])
     month = cint(period[:2])
     logs = []
@@ -489,7 +489,11 @@ def get_logs_for_year(gstin, period):
     if month <= 3:
         year -= 1
 
-    for return_type in ["GSTR1", "GSTR3B"]:
+    # rename this return_types
+    if not return_types:
+        return_types = ["GSTR1", "GSTR3B"]
+
+    for return_type in return_types:
         for current_month in range(1, 13):
             current_year = year if current_month >= 4 else year + 1
             logs.append(f"{return_type}-{current_month:02d}{current_year}-{gstin}")
