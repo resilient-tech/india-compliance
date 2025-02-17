@@ -115,7 +115,7 @@ function toggle_reverse_charge(frm) {
 function validate_gst_hsn_code(frm) {
     if (frm.doc.gst_category !== "Overseas") return;
 
-    if (frm.doc.items.some(item => !item.gst_hsn_code)) {
+    if (frm.doc.items.some(item => item.item_name && !item.gst_hsn_code)) {
         frappe.throw(__("GST HSN Code is mandatory for Overseas Purchase Invoice."));
     }
 }

@@ -23,6 +23,7 @@ frappe.ui.form.on("GSTR 3B Report", {
         if (frm.is_new()) return;
 
         frm.set_intro(__("Please save the report again to rebuild or update"));
+        frm.doc.__unsaved = 1;
 
         // Download Button
         frm.add_custom_button(__("Download JSON"), function () {
