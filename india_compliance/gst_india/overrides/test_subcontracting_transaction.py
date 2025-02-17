@@ -44,6 +44,7 @@ def make_service_items():
 def make_subcontracted_items():
     sub_contracted_items = {
         "Subcontracted Item SA1": {},
+        "Subcontracted Item SA2": {},
     }
 
     for item, properties in sub_contracted_items.items():
@@ -57,6 +58,9 @@ def make_boms():
         "Subcontracted Item SA1": [
             "Subcontracted SRM Item 1",
             "Subcontracted SRM Item 2",
+        ],
+        "Subcontracted Item SA2": [
+            "Subcontracted SRM Item 1",
         ],
     }
 
