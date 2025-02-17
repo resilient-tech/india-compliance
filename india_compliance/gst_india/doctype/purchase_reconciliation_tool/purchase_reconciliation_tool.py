@@ -153,11 +153,10 @@ class PurchaseReconciliationTool(Document):
             return
 
         return_type = ReturnType(return_type)
-        periods = BaseUtil.get_periods(date_range, return_type, True)
-
         company_gstins = (
             get_gstin_list(self.company) if company_gstin == "All" else [company_gstin]
         )
+        periods = BaseUtil.get_periods(date_range, return_type, company_gstins, True)
 
         history = get_import_history(company_gstins, return_type, periods)
         history = {(log.return_period, log.gstin): log for log in history}
@@ -367,7 +366,7 @@ def download_gstr(
 ):
     return_type = ReturnType(return_type)
 
-    periods = BaseUtil.get_periods(date_range, return_type)
+    periods = BaseUtil.get_periods(date_range, return_type, company_gstin)
     if not force:
         periods = get_periods_to_download(company_gstin, return_type, periods)
 
@@ -440,14 +439,14 @@ def get_import_history(
 def has_missing_2b_documents(
     date_range, return_type: ReturnType, company_gstin, company
 ):
-    periods = BaseUtil.get_periods(date_range, return_type, True)
+    company_gstins = (
+        get_gstin_list(company) if company_gstin == "All" else [company_gstin]
+    )
+    periods = BaseUtil.get_periods(date_range, return_type, company_gstins, True)
 
     if not periods:
         return False
 
-    company_gstins = (
-        get_gstin_list(company) if company_gstin == "All" else [company_gstin]
-    )
     history = get_import_history(company_gstins, return_type, periods)
     history = {(log.return_period, log.gstin): log for log in history}
 

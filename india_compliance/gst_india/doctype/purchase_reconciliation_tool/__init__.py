@@ -277,7 +277,9 @@ class InwardSupply:
 
     def with_period_filter(self, additional_fields=None):
         query = self.get_query(additional_fields)
-        periods = BaseUtil._get_periods(self.from_date, self.to_date)
+        periods = BaseUtil._get_periods(
+            self.from_date, self.to_date, self.gst_return, self.company_gstin
+        )
 
         if self.gst_return == "GSTR 2B":
             query = query.where((self.GSTR2.return_period_2b.isin(periods)))
@@ -1342,7 +1344,9 @@ class BaseUtil:
             doc.total_gst = doc.cgst + doc.sgst + doc.igst
 
     @staticmethod
-    def get_periods(date_range, return_type: ReturnType, reversed_order=False):
+    def get_periods(
+        date_range, return_type: ReturnType, company_gstin=None, reversed_order=False
+    ):
         """Returns a list of month (formatted as `MMYYYY`) in a fiscal year"""
         if not date_range:
             return []
@@ -1353,12 +1357,15 @@ class BaseUtil:
         # latest to oldest
         return tuple(
             BaseUtil._reversed(
-                BaseUtil._get_periods(date_range[0], end_date), reversed_order
+                BaseUtil._get_periods(
+                    date_range[0], end_date, return_type, company_gstin
+                ),
+                reversed_order,
             )
         )
 
     @staticmethod
-    def _get_periods(start_date, end_date):
+    def _get_periods(start_date, end_date, return_type, company_gstin):
         """Returns a list of month (formatted as `MMYYYY`) in given date range"""
 
         if isinstance(start_date, str):
@@ -1367,10 +1374,16 @@ class BaseUtil:
         if isinstance(end_date, str):
             end_date = getdate(end_date)
 
+        if isinstance(company_gstin, str):
+            company_gstin = [company_gstin]
+
         return_periods = [
             dt.strftime("%m%Y")
             for dt in rrule(MONTHLY, dtstart=start_date, until=end_date)
         ]
+
+        if return_type == ReturnType.GSTR2A:
+            return return_periods
 
         return_periods_map = frappe._dict(
             frappe.get_all(
@@ -1378,17 +1391,22 @@ class BaseUtil:
                 filters={
                     "return_type": "GSTR3B",
                     "return_period": ["in", return_periods],
+                    "gstin": ["in", company_gstin],
                 },
                 fields=["return_period", "filing_preference"],
                 as_list=True,
             )
         )
 
-        for return_period, filing_preference in return_periods_map.copy().items():
-            if filing_preference == "Quarterly" and cint(return_period[:2]) % 3 != 0:
-                del return_periods_map[return_period]
+        if not return_periods_map:
+            return return_periods
 
-        return list(return_periods_map)
+        download_period = []
+        for return_period, filing_preference in return_periods_map.items():
+            if filing_preference == "Quarterly" and cint(return_period[:2]) % 3 == 0:
+                download_period.append(return_period)
+
+        return download_period
 
     @staticmethod
     def _reversed(lst, reverse):
