@@ -1,4 +1,5 @@
 import copy
+import functools
 import io
 import tarfile
 
@@ -980,3 +981,18 @@ def handle_server_errors(settings, doc, document_type, error):
         title=error_message_title.get(type(error)),
         indicator="yellow",
     )
+
+
+def enable_autocommit(fn):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        db = frappe.local.db
+        autocommit = db.auto_commit_on_many_writes
+        db.auto_commit_on_many_writes = 1
+
+        try:
+            return fn(*args, **kwargs)
+        finally:
+            db.auto_commit_on_many_writes = autocommit
+
+    return wrapper
