@@ -392,6 +392,12 @@ class IMS extends reconciliation.reconciliation_tabs {
                 options: "linked_voucher_type",
             },
             {
+                label: "Posting Date",
+                fieldname: "posting_date",
+                align: "center",
+                width: 120,
+            },
+            {
                 label: "Tax Difference <br>2A/2B - Purchase",
                 fieldname: "tax_difference",
                 align: "center",
@@ -438,6 +444,7 @@ class IMS extends reconciliation.reconciliation_tabs {
                 pending_upload: row.pending_upload,
                 is_supplier_return_filed: row.is_supplier_return_filed,
                 linked_voucher_type: row._purchase_invoice.doctype,
+                posting_date: row.posting_date,
             });
         });
 
