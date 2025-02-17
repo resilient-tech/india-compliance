@@ -67,7 +67,7 @@ frappe.ui.form.on("GSTR 3B Report", {
         append_form(frm);
 
         // Regenerate Button
-        frm.add_custom_button(__("Regenerate"), function () {
+        frm.add_custom_button(__("Regenerate 2B"), function () {
             frappe.show_alert(__("Regenerating GSTR-2B"));
 
             gstr_2b.regenerate({
