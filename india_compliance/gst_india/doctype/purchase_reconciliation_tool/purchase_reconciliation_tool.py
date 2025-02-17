@@ -154,27 +154,28 @@ class PurchaseReconciliationTool(Document):
         if not return_type:
             return
 
+        pending_download = defaultdict(set)
+        download_history = defaultdict(set)
+
+        has_single_gstin = company_gstin != "All"
+        action = "Download" if for_download else "Upload"
+
         return_type = ReturnType(return_type)
         company_gstins = (
             get_gstin_list(self.company) if company_gstin == "All" else [company_gstin]
         )
-        periods = BaseUtil.get_periods(date_range, return_type, company_gstins, True)
 
-        history = get_import_history(company_gstins, return_type, periods)
-        history = {(log.return_period, log.gstin): log for log in history}
+        for company_gstin in company_gstins:
+            periods = BaseUtil.get_periods(date_range, return_type, company_gstin, True)
 
-        action = "Download" if for_download else "Upload"
-        has_single_gstin = company_gstin != "All"
+            history = get_import_history(company_gstin, return_type, periods)
+            history = {(log.return_period, log.gstin): log for log in history}
 
-        pending_download = defaultdict(set)
-        download_history = defaultdict(set)
-
-        for period in periods:
-            for gst_no in company_gstins:
-                download_row = history.get((period, gst_no))
+            for period in periods:
+                download_row = history.get((period, company_gstin))
 
                 if not download_row:
-                    pending_download[period].add(gst_no)
+                    pending_download[period].add(company_gstin)
 
                 elif has_single_gstin:
                     download_history[period].add(
@@ -465,18 +466,19 @@ def has_missing_2b_documents(
     company_gstins = (
         get_gstin_list(company) if company_gstin == "All" else [company_gstin]
     )
-    periods = BaseUtil.get_periods(date_range, return_type, company_gstins, True)
-
-    if not periods:
-        return False
-
-    history = get_import_history(company_gstins, return_type, periods)
-    history = {(log.return_period, log.gstin): log for log in history}
-
-    if not history:
-        return True
 
     for gstin in company_gstins:
+        periods = BaseUtil.get_periods(date_range, return_type, gstin, True)
+
+        if not periods:
+            continue
+
+        history = get_import_history(gstin, return_type, periods)
+        history = {(log.return_period, log.gstin): log for log in history}
+
+        if not history:
+            return True
+
         for period in periods:
             download = history.get((period, gstin))
             if not download or download.data_not_found or download.request_id:

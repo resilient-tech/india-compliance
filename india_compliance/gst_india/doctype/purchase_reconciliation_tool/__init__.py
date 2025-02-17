@@ -275,10 +275,16 @@ class InwardSupply:
 
         return BaseUtil.get_dict_for_key("supplier_gstin", data)
 
+    # what to do here
     def with_period_filter(self, additional_fields=None):
         query = self.get_query(additional_fields)
+        company_gstins = (
+            get_gstin_list(self.company)
+            if self.company_gstin == "All"
+            else [self.company_gstin]
+        )
         periods = BaseUtil._get_periods(
-            self.from_date, self.to_date, self.gst_return, self.company_gstin
+            self.from_date, self.to_date, self.gst_return, company_gstins
         )
 
         if self.gst_return == "GSTR 2B":
@@ -1374,9 +1380,6 @@ class BaseUtil:
         if isinstance(end_date, str):
             end_date = getdate(end_date)
 
-        if isinstance(company_gstin, str):
-            company_gstin = [company_gstin]
-
         return_periods = [
             dt.strftime("%m%Y")
             for dt in rrule(MONTHLY, dtstart=start_date, until=end_date)
@@ -1385,7 +1388,7 @@ class BaseUtil:
         if return_type == ReturnType.GSTR2A:
             return return_periods
 
-        return_periods_map = frappe._dict(
+        gst_return_logs = frappe._dict(
             frappe.get_all(
                 "GST Return Log",
                 filters={
@@ -1398,15 +1401,18 @@ class BaseUtil:
             )
         )
 
-        if not return_periods_map:
+        if not gst_return_logs:
             return return_periods
 
-        download_period = []
-        for return_period, filing_preference in return_periods_map.items():
+        applicable_periods = []
+        for return_period, filing_preference in gst_return_logs.items():
             if filing_preference == "Quarterly" and cint(return_period[:2]) % 3 == 0:
-                download_period.append(return_period)
+                applicable_periods.append(return_period)
 
-        return download_period
+            if filing_preference == "Monthly":
+                applicable_periods.append(return_period)
+
+        return applicable_periods
 
     @staticmethod
     def _reversed(lst, reverse):
