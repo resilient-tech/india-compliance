@@ -1090,7 +1090,7 @@ class ImportDialog {
                 label: "Company GSTIN",
                 fieldname: "company_gstin",
                 fieldtype: "Autocomplete",
-                default: this.frm.doc.company_gstin,
+                default: india_compliance.format_gstin(this.frm.doc.company_gstin),
                 get_query: async () => {
                     let { message: gstin_list } = await frappe.call({
                         method: "india_compliance.gst_india.utils.get_gstin_list",
@@ -1104,6 +1104,7 @@ class ImportDialog {
                     this.company_gstin = this.dialog.get_value("company_gstin");
                     this.fetch_import_history();
                 },
+                _value: (...args) => india_compliance.format_gstin(args[0]),
             },
             {
                 fieldtype: "Column Break",

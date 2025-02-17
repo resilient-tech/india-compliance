@@ -95,7 +95,7 @@
   }
  ],
  "links": [],
- "modified": "2025-02-13 17:08:31.417697",
+ "modified": "2025-02-17 10:33:20.647013",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR 3B Report",
@@ -104,18 +104,21 @@
  "permissions": [
   {
    "create": 1,
+   "delete": 1,
    "read": 1,
    "role": "Accounts Manager",
    "write": 1
   },
   {
    "create": 1,
+   "delete": 1,
    "read": 1,
    "role": "Accounts User",
    "write": 1
   },
   {
    "create": 1,
+   "delete": 1,
    "read": 1,
    "role": "System Manager",
    "write": 1
