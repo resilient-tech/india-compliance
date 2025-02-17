@@ -44,6 +44,7 @@ def make_service_items():
 def make_subcontracted_items():
     sub_contracted_items = {
         "Subcontracted Item SA1": {},
+        "Subcontracted Item SA2": {},
     }
 
     for item, properties in sub_contracted_items.items():
@@ -57,6 +58,9 @@ def make_boms():
         "Subcontracted Item SA1": [
             "Subcontracted SRM Item 1",
             "Subcontracted SRM Item 2",
+        ],
+        "Subcontracted Item SA2": [
+            "Subcontracted SRM Item 1",
         ],
     }
 
@@ -144,6 +148,9 @@ def make_stock_transfer_entry(**args):
     doc = frappe.get_doc(ste_dict)
     doc.insert()
 
+    if args.do_not_submit:
+        return doc
+
     return doc.submit()
 
 
@@ -170,6 +177,13 @@ def make_stock_entry(**args):
     return se
 
 
+def create_subcontracting_data():
+    make_raw_materials()
+    make_service_items()
+    make_subcontracted_items()
+    make_boms()
+
+
 SERVICE_ITEM = {
     "item_code": "Subcontracted Service Item 1",
     "qty": 10,
@@ -183,10 +197,7 @@ class TestSubcontractingTransaction(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        make_raw_materials()
-        make_service_items()
-        make_subcontracted_items()
-        make_boms()
+        create_subcontracting_data()
 
         frappe.db.set_single_value(
             "GST Settings",
