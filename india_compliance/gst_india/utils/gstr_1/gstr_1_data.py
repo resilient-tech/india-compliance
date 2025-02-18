@@ -448,6 +448,7 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
             frappe.qb.from_(query)
             .select(
                 "*",
+                Sum(query.qty).as_("qty"),
                 Sum(query.taxable_value).as_("taxable_value"),
                 Sum(query.cgst_amount).as_("cgst_amount"),
                 Sum(query.sgst_amount).as_("sgst_amount"),

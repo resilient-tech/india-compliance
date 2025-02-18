@@ -1,6 +1,6 @@
 import frappe
 
-from india_compliance.gst_india.constants import STATE_NUMBERS
+from india_compliance.gst_india.constants import GST_CATEGORY_MAP, STATE_NUMBERS
 from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
     create_inward_supply,
 )
@@ -19,13 +19,7 @@ class GSTR:
         {
             "Y_N_to_check": {"Y": 1, "N": 0},
             "yes_no": {"Y": "Yes", "N": "No"},
-            "gst_category": {
-                "R": "Regular",
-                "SEZWP": "SEZ supplies with payment of tax",
-                "SEZWOP": "SEZ supplies with out payment of tax",
-                "DE": "Deemed exports",
-                "CBW": "Intra-State Supplies attracting IGST",
-            },
+            "gst_category": GST_CATEGORY_MAP,
             "states": {value: f"{value}-{key}" for key, value in STATE_NUMBERS.items()},
             "note_type": {"C": "Credit Note", "D": "Debit Note"},
             "isd_type_2a": {"ISDCN": "ISD Credit Note", "ISD": "ISD Invoice"},
@@ -38,23 +32,25 @@ class GSTR:
         }
     )
 
-    def __init__(self, company, gstin, return_period, data, gen_date_2b):
+    def __init__(self, company, gstin, return_period, gen_date_2b):
         self.company = company
         self.gstin = gstin
         self.return_period = return_period
-        self._data = data
         self.gen_date_2b = gen_date_2b
+        self.category = type(self).__name__[6:]
         self.setup()
 
     def setup(self):
-        self.existing_transaction = {}
-        pass
+        self.existing_transaction = self.get_existing_transaction()
 
-    def create_transactions(self, category, suppliers):
+    def create_transactions(self, suppliers, rejected_data):
+        self.rejected_data = rejected_data or []
+
         if not suppliers:
+            self.handle_missing_transactions()
             return
 
-        transactions = self.get_all_transactions(category, suppliers)
+        transactions = self.get_all_transactions(suppliers)
         total_transactions = len(transactions)
         current_transaction = 0
 
@@ -63,53 +59,48 @@ class GSTR:
 
             current_transaction += 1
             frappe.publish_realtime(
-                "update_transactions_progress",
+                "update_2a_2b_transactions_progress",
                 {
                     "current_progress": current_transaction * 100 / total_transactions,
                     "return_period": self.return_period,
                 },
                 user=frappe.session.user,
-                doctype="Purchase Reconciliation Tool",
             )
 
             if transaction.get("unique_key") in self.existing_transaction:
                 self.existing_transaction.pop(transaction.get("unique_key"))
 
-        self.delete_missing_transactions()
+        self.handle_missing_transactions()
 
-    def delete_missing_transactions(self):
-        """
-        For GSTR2a, transactions are reflected immediately after it's pushed to GSTR-1.
-        At times, it may later be removed from GSTR-1.
-
-        In such cases, we need to delete such unfilled transactions not present in the latest data.
-        """
+    def handle_missing_transactions(self):
         return
 
-    def get_all_transactions(self, category, suppliers):
+    def get_existing_transaction(self):
+        return {}
+
+    def get_all_transactions(self, suppliers):
         transactions = []
         for supplier in suppliers:
-            transactions.extend(self.get_supplier_transactions(category, supplier))
+            transactions.extend(self.get_supplier_transactions(supplier))
 
         self.update_gstins()
 
         return transactions
 
-    def get_supplier_transactions(self, category, supplier):
+    def get_supplier_transactions(self, supplier):
         return [
-            self.get_transaction(
-                category, frappe._dict(supplier), frappe._dict(invoice)
-            )
+            self.get_transaction(frappe._dict(supplier), frappe._dict(invoice))
             for invoice in supplier.get(self.get_key("invoice_key"))
         ]
 
-    def get_transaction(self, category, supplier, invoice):
+    def get_transaction(self, supplier, invoice):
         transaction = frappe._dict(
             company=self.company,
             company_gstin=self.gstin,
-            classification=category.value,
+            classification=self.category,
             **self.get_supplier_details(supplier),
             **self.get_invoice_details(invoice),
+            **self.get_download_details(),
             items=self.get_transaction_items(invoice),
         )
 
@@ -132,6 +123,9 @@ class GSTR:
         return {}
 
     def get_invoice_details(self, invoice):
+        return {}
+
+    def get_download_details(self):
         return {}
 
     def get_transaction_items(self, invoice):

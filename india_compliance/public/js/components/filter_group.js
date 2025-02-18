@@ -33,7 +33,9 @@ FILTER_GROUP_BUTTON = $(
                         ${__("Filter")}
                     <span>
                 </button>
-                <button class="btn btn-default btn-sm filter-x-button" title="${__("Clear all filters")}">
+                <button class="btn btn-default btn-sm filter-x-button" title="${__(
+                    "Clear all filters"
+                )}">
                     <span class="filter-icon">
                         ${frappe.utils.icon("filter-x")}
                     </span>
@@ -42,7 +44,7 @@ FILTER_GROUP_BUTTON = $(
         </div>
     </div>
     `
-)
+);
 
 class _Filter extends frappe.ui.Filter {
     set_conditions_from_config() {
@@ -62,7 +64,6 @@ class _Filter extends frappe.ui.Filter {
 }
 
 india_compliance.FilterGroup = class FilterGroup extends frappe.ui.FilterGroup {
-
     constructor(opts) {
         if (!opts.parent)
             frappe.throw(__("india_compliance.FilterGroup: Parent element not found"));
@@ -95,6 +96,32 @@ india_compliance.FilterGroup = class FilterGroup extends frappe.ui.FilterGroup {
         this.filter_x_button.on("click", () => {
             this.on_change();
         });
+    }
+
+    remove_filter(filter_value) {
+        // filter_value of form: [doctype, fieldname, condition, value]
+        this.filters = this.filters.filter(f => {
+            let f_value = f.get_value();
+
+            if (filter_value.length === 2) f_value = f_value.slice(0, 2);
+
+            const remove = frappe.utils.arrays_equal(
+                f_value.slice(0, 4),
+                filter_value.slice(0, 4)
+            );
+            if (remove) f.remove();
+
+            return !remove;
+        });
+    }
+
+    async add_or_remove_filter(filter_value) {
+        // filter_value of form: [doctype, fieldname, condition, value]
+        if (this.filter_exists(filter_value)) {
+            this.remove_filter(filter_value);
+        } else {
+            await this.push_new_filter(filter_value);
+        }
     }
 };
 

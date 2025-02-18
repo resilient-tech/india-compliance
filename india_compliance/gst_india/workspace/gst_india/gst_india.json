@@ -1,6 +1,7 @@
 {
+ "app": "india_compliance",
  "charts": [],
- "content": "[{\"id\":\"Xz6h3FH8sZ\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pending e-Waybills\",\"col\":4}},{\"id\":\"5wHVnb2VB-\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pending e-Invoices\",\"col\":4}},{\"id\":\"FT76_s4_M1\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Invoice Cancelled, e-Invoice Active\",\"col\":4}},{\"id\":\"ROouz1137a\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"pSkSY7vg5b\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Shortcuts</b></span>\",\"col\":12}},{\"id\":\"kJscjOHSLN\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GST Settings\",\"col\":3}},{\"id\":\"BT3ZIyt2_1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GSTR-1 Beta\",\"col\":3}},{\"id\":\"fVgN1kK1r6\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GSTR-3B\",\"col\":3}},{\"id\":\"kxE1gBYYUW\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Purchase Reconciliation Tool\",\"col\":3}},{\"id\":\"-G2gVutaOP\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"HSN Code\",\"col\":3}},{\"id\":\"sEPHpNM3bl\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"India Compliance Account\",\"col\":3}},{\"id\":\"bVd6Hbw3Yp\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"oN0FbtHAdc\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports and Masters</b></span>\",\"col\":12}},{\"id\":\"doCaNmtmY8\",\"type\":\"card\",\"data\":{\"card_name\":\"Sales and Purchase Reports\",\"col\":4}},{\"id\":\"Emy7VbsSYq\",\"type\":\"card\",\"data\":{\"card_name\":\"Logs\",\"col\":4}},{\"id\":\"2FUZmTJKVp\",\"type\":\"card\",\"data\":{\"card_name\":\"Other GST Reports\",\"col\":4}},{\"id\":\"PhR9LKvBdc\",\"type\":\"card\",\"data\":{\"card_name\":\"New Reports\",\"col\":3}}]",
+ "content": "[{\"id\":\"Xz6h3FH8sZ\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pending e-Waybills\",\"col\":4}},{\"id\":\"5wHVnb2VB-\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pending e-Invoices\",\"col\":4}},{\"id\":\"FT76_s4_M1\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Invoice Cancelled, e-Invoice Active\",\"col\":4}},{\"id\":\"ROouz1137a\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"pSkSY7vg5b\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Shortcuts</b></span>\",\"col\":12}},{\"id\":\"kJscjOHSLN\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GST Settings\",\"col\":3}},{\"id\":\"BT3ZIyt2_1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GSTR-1 Beta\",\"col\":3}},{\"id\":\"fVgN1kK1r6\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GSTR-3B\",\"col\":3}},{\"id\":\"kxE1gBYYUW\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Purchase Reconciliation Tool\",\"col\":3}},{\"id\":\"-G2gVutaOP\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"HSN Code\",\"col\":3}},{\"id\":\"sEPHpNM3bl\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"India Compliance Account\",\"col\":3}},{\"id\":\"bVd6Hbw3Yp\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"oN0FbtHAdc\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports and Masters</b></span>\",\"col\":12}},{\"id\":\"doCaNmtmY8\",\"type\":\"card\",\"data\":{\"card_name\":\"Sales and Purchase Reports\",\"col\":4}},{\"id\":\"Emy7VbsSYq\",\"type\":\"card\",\"data\":{\"card_name\":\"Logs\",\"col\":4}},{\"id\":\"2FUZmTJKVp\",\"type\":\"card\",\"data\":{\"card_name\":\"Other GST Reports\",\"col\":4}},{\"id\":\"PhR9LKvBdc\",\"type\":\"card\",\"data\":{\"card_name\":\"New Reports\",\"col\":4}}]",
  "creation": "2022-02-28 19:04:58.655348",
  "custom_blocks": [],
  "docstatus": 0,
@@ -146,7 +147,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Other GST Reports",
-   "link_count": 6,
+   "link_count": 7,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -217,9 +218,19 @@
   },
   {
    "hidden": 0,
+   "is_query_report": 1,
+   "label": "GSTIN Status",
+   "link_count": 0,
+   "link_to": "GSTIN Status",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
    "is_query_report": 0,
    "label": "New Reports",
-   "link_count": 2,
+   "link_count": 3,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -242,11 +253,20 @@
    "link_to": "GST Job Work Stock Movement",
    "link_type": "Report",
    "onboard": 0,
-   "report_ref_doctype": "Subcontracting Order",
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "India Compliance API Usage",
+   "link_count": 0,
+   "link_to": "India Compliance API Usage",
+   "link_type": "Report",
+   "onboard": 0,
    "type": "Link"
   }
  ],
- "modified": "2024-10-05 10:28:10.623892",
+ "modified": "2025-02-12 13:35:55.093635",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST India",
@@ -265,7 +285,7 @@
   }
  ],
  "owner": "Administrator",
- "parent_page": "Accounting",
+ "parent_page": "",
  "public": 1,
  "quick_lists": [],
  "restrict_to_domain": "",
@@ -274,7 +294,7 @@
    "role": "Accounts Manager"
   }
  ],
- "sequence_id": 3.0,
+ "sequence_id": 15.0,
  "shortcuts": [
   {
    "color": "Grey",
@@ -319,5 +339,6 @@
    "type": "DocType"
   }
  ],
- "title": "GST India"
+ "title": "GST India",
+ "type": "Workspace"
 }

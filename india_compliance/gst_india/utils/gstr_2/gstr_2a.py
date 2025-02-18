@@ -14,19 +14,17 @@ def map_date_format(date_str, source_format, target_format):
 
 class GSTR2a(GSTR):
     def setup(self):
+        super().setup()
         self.all_gstins = set()
         self.cancelled_gstins = {}
-        self.existing_transaction = self.get_existing_transaction()
 
     def get_existing_transaction(self):
-        category = type(self).__name__[6:]
-
         gst_is = frappe.qb.DocType("GST Inward Supply")
         existing_transactions = (
             frappe.qb.from_(gst_is)
             .select(gst_is.name, gst_is.supplier_gstin, gst_is.bill_no)
             .where(gst_is.sup_return_period == self.return_period)
-            .where(gst_is.classification == category)
+            .where(gst_is.classification == self.category)
             .where(gst_is.gstr_1_filled == 0)
         ).run(as_dict=True)
 
@@ -37,10 +35,19 @@ class GSTR2a(GSTR):
             for transaction in existing_transactions
         }
 
-    def delete_missing_transactions(self):
+    def handle_missing_transactions(self):
+        """
+        For GSTR2a, transactions are reflected immediately after it's pushed to GSTR-1.
+        At times, it may later be removed from GSTR-1.
+
+        In such cases, we need to delete such unfilled transactions not present in the latest data.
+        """
+
         if self.existing_transaction:
             for inward_supply_name in self.existing_transaction.values():
-                frappe.delete_doc("GST Inward Supply", inward_supply_name)
+                frappe.delete_doc(
+                    "GST Inward Supply", inward_supply_name, ignore_permissions=True
+                )
 
     def get_supplier_details(self, supplier):
         supplier_details = {
@@ -59,6 +66,9 @@ class GSTR2a(GSTR):
         self.update_gstins_list(supplier_details)
 
         return supplier_details
+
+    def get_download_details(self):
+        return {"is_downloaded_from_2a": 1}
 
     def update_gstins_list(self, supplier_details):
         self.all_gstins.add(supplier_details.get("supplier_gstin"))
@@ -250,12 +260,8 @@ class GSTR2aIMPG(GSTR2a):
         }
 
     # invoice details are included in supplier details
-    def get_supplier_transactions(self, category, supplier):
-        return [
-            self.get_transaction(
-                category, frappe._dict(supplier), frappe._dict(supplier)
-            )
-        ]
+    def get_supplier_transactions(self, supplier):
+        return [self.get_transaction(frappe._dict(supplier), frappe._dict(supplier))]
 
     # item details are not available
     def get_transaction_items(self, invoice):

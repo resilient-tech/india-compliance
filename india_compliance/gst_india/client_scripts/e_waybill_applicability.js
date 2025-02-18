@@ -253,17 +253,17 @@ class StockEntryEwaybill extends EwaybillApplicability {
         let message_list = [];
         const is_return = this.frm.doc.is_return;
 
-        if (is_return && !this.frm.doc.bill_from_gstin) {
-            is_ewb_applicable = false;
-            message_list.push(
-                "Bill From GSTIN is not set. Ensure its set in Bill From Address."
-            );
-        }
-
-        if (!is_return && !this.frm.doc.bill_to_gstin) {
+        if (is_return && !this.frm.doc.bill_to_gstin) {
             is_ewb_applicable = false;
             message_list.push(
                 "Bill To GSTIN is not set. Ensure its set in Bill To Address."
+            );
+        }
+
+        if (!is_return && !this.frm.doc.bill_from_gstin) {
+            is_ewb_applicable = false;
+            message_list.push(
+                "Bill From GSTIN is not set. Ensure its set in Bill From Address."
             );
         }
 

@@ -33,6 +33,8 @@ frappe.ui.form.on("GST Settings", {
     enable_e_invoice: set_auto_generate_e_waybill,
     auto_generate_e_invoice: set_auto_generate_e_waybill,
     generate_e_waybill_with_e_invoice: set_auto_generate_e_waybill,
+    auto_cancel_e_invoice: auto_cancel_e_invoice,
+    reason_for_e_invoice_cancellation: reason_for_e_invoice_cancellation,
     after_save(frm) {
         // sets latest values in frappe.boot for current user
         // other users will still need to refresh page
@@ -115,4 +117,14 @@ function set_auto_generate_e_waybill(frm) {
         "auto_generate_e_waybill",
         frm.doc.auto_generate_e_invoice && frm.doc.generate_e_waybill_with_e_invoice
     );
+
+    frm.set_value("auto_cancel_e_waybill", frm.doc.auto_cancel_e_invoice)
+}
+
+function auto_cancel_e_invoice(frm){
+    frm.set_value("auto_cancel_e_waybill", frm.doc.auto_cancel_e_invoice)
+}
+
+function reason_for_e_invoice_cancellation(frm){
+    frm.set_value("reason_for_e_waybill_cancellation", frm.doc.reason_for_e_invoice_cancellation)
 }

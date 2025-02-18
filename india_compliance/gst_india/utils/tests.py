@@ -108,6 +108,8 @@ def append_item(transaction, data=None, company_abbr="_TIRC"):
             "warehouse": f"Stores - {company_abbr}",
             "expense_account": f"Cost of Goods Sold - {company_abbr}",
             "taxable_value": data.taxable_value or 0,
+            "fg_item": data.fg_item,
+            "fg_item_qty": data.fg_item_qty,
         },
     )
 

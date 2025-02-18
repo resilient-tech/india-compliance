@@ -349,6 +349,7 @@ class PurchaseInvoice:
 
     def get_all(self, additional_fields=None, names=None, only_names=False):
         query = self.get_query(additional_fields)
+        match_found = ("Reconciled", "Match Found")
 
         if only_names and not names:
             return
@@ -360,7 +361,7 @@ class PurchaseInvoice:
             query = query.where(
                 (
                     (self.PI.posting_date[self.from_date : self.to_date])
-                    & (IfNull(self.PI.reconciliation_status, "") != "Reconciled")
+                    & (IfNull(self.PI.reconciliation_status, "").notin(match_found))
                 )
                 | (self.PI.name.isin(names))
             )
@@ -368,14 +369,19 @@ class PurchaseInvoice:
         else:
             query = query.where(
                 (self.PI.posting_date[self.from_date : self.to_date])
-                & (IfNull(self.PI.reconciliation_status, "") != "Reconciled")
+                & (IfNull(self.PI.reconciliation_status, "").notin(match_found))
             )
 
         return query.run(as_dict=True)
 
     def get_unmatched(self, category):
         gst_category = (
-            ("Registered Regular", "Tax Deductor", "Input Service Distributor")
+            (
+                "Registered Regular",
+                "Tax Deductor",
+                "Tax Collector",
+                "Input Service Distributor",
+            )
             if category in ("B2B", "CDNR", "ISD")
             else ("SEZ", "Overseas", "UIN Holders")
         )
@@ -411,7 +417,7 @@ class PurchaseInvoice:
             .on(self.PI_ITEM.parent == self.PI.name)
             .where(self.PI.docstatus == 1)
             .where(IfNull(self.PI.reconciliation_status, "") != "Not Applicable")
-            .where(self.PI.is_opening == "NO")
+            .where(self.PI.is_opening == "No")
             .where(self.PI_ITEM.parenttype == "Purchase Invoice")
             .groupby(self.PI.name)
             .select(
@@ -503,6 +509,7 @@ class BillOfEntry:
 
     def get_all(self, additional_fields=None, names=None, only_names=False):
         query = self.get_query(additional_fields)
+        match_found = ("Reconciled", "Match Found")
 
         if only_names and not names:
             return
@@ -514,7 +521,7 @@ class BillOfEntry:
             query = query.where(
                 (
                     (self.BOE.posting_date[self.from_date : self.to_date])
-                    & (IfNull(self.BOE.reconciliation_status, "") != "Reconciled")
+                    & (IfNull(self.BOE.reconciliation_status, "").notin(match_found))
                 )
                 | (self.BOE.name.isin(names))
             )
@@ -522,7 +529,7 @@ class BillOfEntry:
         else:
             query = query.where(
                 (self.BOE.posting_date[self.from_date : self.to_date])
-                & (IfNull(self.BOE.reconciliation_status, "") != "Reconciled")
+                & (IfNull(self.BOE.reconciliation_status, "").notin(match_found))
             )
 
         return query.run(as_dict=True)
@@ -746,6 +753,8 @@ class Reconciler(BaseReconciliation):
         """
         Reconcile purchases and inward supplies for given category.
         """
+        self.category = category
+
         # GSTIN Level matching
         purchases = self.get_unmatched_purchase_or_bill_of_entry(category)
         inward_supplies = self.get_unmatched_inward_supply(category, amended_category)
@@ -790,12 +799,13 @@ class Reconciler(BaseReconciliation):
                 for inward_supply_name, inward_supply in (
                     inward_supplies[supplier_gstin].copy().items()
                 ):
-                    if match_status == "Residual Match":
-                        if (
-                            abs((purchase.bill_date - inward_supply.bill_date).days)
-                            > 10
-                        ):
-                            continue
+                    if (
+                        match_status == "Residual Match"
+                        and self.category != "CDNR"
+                        and abs((purchase.bill_date - inward_supply.bill_date).days)
+                        > 10
+                    ):
+                        continue
 
                     if not self.is_doc_matching(purchase, inward_supply, rules):
                         continue
@@ -968,7 +978,7 @@ class ReconciledData(BaseReconciliation):
     def get_manually_matched_data(self, purchase_name: str, inward_supply_name: str):
         """
         Get manually matched data for given purchase invoice and inward supply.
-        This can be used to show comparision of matched values.
+        This can be used to show comparison of matched values.
         """
         inward_supplies = self.get_all_inward_supply(
             names=[inward_supply_name], only_names=True
@@ -1127,6 +1137,7 @@ class ReconciledData(BaseReconciliation):
             "differences": "",
             "action": "",
             "classification": "",
+            "is_reverse_charge": "",
         }
 
         for data in reconciliation_data:
@@ -1144,7 +1155,13 @@ class ReconciledData(BaseReconciliation):
                 BaseUtil.update_cess_amount(purchase)
 
     def update_fields(self, data, purchase, inward_supply):
-        for field in ("supplier_name", "supplier_gstin", "bill_no", "bill_date"):
+        for field in (
+            "supplier_name",
+            "supplier_gstin",
+            "bill_no",
+            "bill_date",
+            "is_reverse_charge",
+        ):
             data[field] = purchase.get(field) or inward_supply.get(field)
 
         data.update(
@@ -1222,6 +1239,7 @@ class ReconciledData(BaseReconciliation):
             "Overseas": "IMPG",
             "UIN Holders": "B2B",
             "Tax Deductor": "B2B",
+            "Tax Collector": "B2B",
             "Input Service Distributor": "B2B",
         }
 

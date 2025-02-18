@@ -60,6 +60,12 @@ class SUPECOM(Enum):
     US_52 = "Liable to collect tax u/s 52(TCS)"
 
 
+QUARTERLY_KEYS = (
+    "already_included_docs_for_quarterly",
+    "excluded_docs_for_quarterly",
+)
+
+
 CATEGORY_SUB_CATEGORY_MAPPING = {
     GSTR1_Category.B2B: (
         GSTR1_SubCategory.B2B_REGULAR,
