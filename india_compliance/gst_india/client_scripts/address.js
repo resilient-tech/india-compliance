@@ -16,16 +16,17 @@ frappe.ui.form.on(DOCTYPE, {
 
         // Assume default country to be India for now
         // Automatically set GST Category as Overseas if country is not India
-        if (frm.doc.country != "India")
-            frm.set_value("gst_category", "Overseas");
-        else
-            frm.trigger("gstin");
+        if (frm.doc.country != "India") frm.set_value("gst_category", "Overseas");
+        else frm.trigger("gstin");
     },
     async refresh(frm) {
         india_compliance.set_state_options(frm);
 
+        frm.add_custom_button(__("Update Address"), () => update_address_fields(frm));
+
         // set default values for GST fields
-        if (!frm.is_new() || !frm.doc.links || !frm.doc.links.length || frm.doc.gstin) return;
+        if (!frm.is_new() || !frm.doc.links || !frm.doc.links.length || frm.doc.gstin)
+            return;
 
         const row = frm.doc.links[0];
         if (!frappe.boot.gst_party_types.includes(row.link_doctype)) return;
@@ -52,3 +53,33 @@ frappe.ui.form.on(DOCTYPE, {
         frm.set_value("gst_category", doc.gst_category || "");
     },
 });
+
+function update_address_fields(frm) {
+    const original_quick_entry_form = frappe.ui.form.AddressQuickEntryForm;
+
+    frappe.ui.form.AddressQuickEntryForm = class extends (
+        frappe.ui.form.AddressQuickEntryForm
+    ) {
+        title = "Update Address";
+
+        get_dynamic_link_fields() {
+            return [];
+        }
+
+        update_doc() {
+            const doc = super.update_doc();
+            frm.reload_doc();
+            return doc;
+        }
+    };
+
+    frappe.db.get_doc(DOCTYPE, frm.doc.name).then(doc => {
+        frappe.ui.form.make_quick_entry(
+            DOCTYPE,
+            null,
+            dialog => dialog.set_value("_gstin", frm.doc.gstin),
+            doc
+        );
+        frappe.ui.form.AddressQuickEntryForm = original_quick_entry_form;
+    });
+}
