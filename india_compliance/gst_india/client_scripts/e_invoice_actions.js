@@ -45,21 +45,12 @@ frappe.ui.form.on("Sales Invoice", {
         ) {
             frm.add_custom_button(
                 __("Generate"),
-                () => {
-                    frappe.call({
+                async () => {
+                    await taxpayer_api.call({
                         method: "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
                         args: { docname: frm.doc.name, force: true },
-                        callback: async (r) => {
-                            if (r.message?.error_type == "otp_requested") {
-                                await india_compliance.authenticate_otp(frm.doc.company_gstin);
-                                await frappe.call({
-                                    method: "india_compliance.gst_india.utils.e_invoice.fetch_irn_details_compare_invoice",
-                                    args: r.message
-                                });
-                            }
-                            frm.refresh();
-                        },
                     });
+                    frm.refresh();
                 },
                 "e-Invoice"
             );
@@ -204,26 +195,17 @@ function show_mark_e_invoice_as_generated_dialog(frm) {
         title: __("Update e-Invoice Details"),
         fields: get_generated_e_invoice_dialog_fields(),
         primary_action_label: __("Update"),
-        primary_action(values) {
-            frappe.call({
+        async primary_action(values) {
+            await taxpayer_api.call({
                 method: "india_compliance.gst_india.utils.e_invoice.mark_e_invoice_as_generated",
                 args: {
                     doctype: frm.doctype,
                     docname: frm.doc.name,
                     values,
-                },
-                callback: async (r) => {
-                    if (r.message?.error_type == "otp_requested") {
-                        await india_compliance.authenticate_otp(frm.doc.company_gstin);
-                        await frappe.call({
-                            method: "india_compliance.gst_india.utils.e_invoice.fetch_irn_details_compare_invoice",
-                            args: r.message
-                        });
-                    }
-                    d.hide();
-                    frm.refresh();
-                },
+                }
             });
+            d.hide();
+            frm.refresh();
         },
     });
 

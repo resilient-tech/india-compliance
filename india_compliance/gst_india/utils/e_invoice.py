@@ -208,7 +208,6 @@ def fetch_irn_details_compare_invoice(
 
     doc = doc or load_doc("Sales Invoice", docname, "submit")
     api = EInvoiceAPI(doc)
-    # TODO: test Taxpayer api call and otp and check that Ack dt/No data is coming or not
     response = api.get_e_invoice_by_irn(irn_data.Irn)
 
     # Handle error 2283:
