@@ -16,7 +16,9 @@ Object.assign(gstr_2b, {
             callback: async function (r) {
                 if (r.exc) return;
 
-                if (r.message?.error_type == "otp_requested") return;
+                if (r.message?.error_type === "otp_requested") return;
+
+                if (r.message?.error_type) frappe.throw(__(r.message?.error?.message));
 
                 let regeneration_status = null;
                 if (r && r.message) {
@@ -39,9 +41,16 @@ Object.assign(gstr_2b, {
         });
     },
 
-    _check_regenerate_status: function (gstin, reference_id, doctype, retries = 0) {
+    _check_regenerate_status: function (
+        gstin,
+        reference_id,
+        doctype,
+        resolve,
+        retries = 0
+    ) {
         if (retries >= RETRY_INTERVALS.length) {
-            return { status: "ER", error: "Failed to regenerate GSTR-2B" };
+            resolve({ status: "ER", error: "Failed to regenerate GSTR-2B" });
+            return;
         }
 
         setTimeout(() => {
@@ -50,16 +59,22 @@ Object.assign(gstr_2b, {
                 args: { gstin, reference_id, doctype },
                 callback: function (r) {
                     if (r.exc) return;
-                    const { status_cd: status, err_msg: error } = r.message;
-                    if (status === "IP")
-                        return gstr_2b._check_regenerate_status(
-                            gstin,
-                            reference_id,
-                            doctype,
-                            retries + 1
-                        );
 
-                    return { status, error };
+                    const { status_cd: status, err_msg: error } = r.message;
+                    if (status === "IP") {
+                        resolve(
+                            gstr_2b._check_regenerate_status(
+                                gstin,
+                                reference_id,
+                                doctype,
+                                resolve,
+                                retries + 1
+                            )
+                        );
+                        return;
+                    }
+
+                    resolve({ status, error });
                 },
             });
         }, RETRY_INTERVALS[retries]);
