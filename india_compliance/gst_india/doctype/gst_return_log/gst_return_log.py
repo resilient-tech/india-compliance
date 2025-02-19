@@ -19,7 +19,10 @@ from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     FileGSTR1,
     GenerateGSTR1,
 )
-from india_compliance.gst_india.utils import is_production_api_enabled
+from india_compliance.gst_india.utils import (
+    get_party_for_gstin,
+    is_production_api_enabled,
+)
 
 DOCTYPE = "GST Return Log"
 
@@ -220,11 +223,16 @@ def download_file():
     frappe.response["type"] = "download"
 
 
-def process_gstr_1_returns_info(company, gstin, response):
+def process_gstr_returns_info(company, gstin, e_filed_list):
+    process_gstr_1_returns_info(company, gstin, e_filed_list)
+    process_gstr_3b_returns_info(company, gstin, e_filed_list)
+
+
+def process_gstr_1_returns_info(company, gstin, e_filed_list):
     return_info = {}
 
     # compile gstr-1 returns info
-    for info in response.get("EFiledlist"):
+    for info in e_filed_list:
         if info["rtntype"] == "GSTR1":
             return_info[f"GSTR1-{info['ret_prd']}-{gstin}"] = info
 
@@ -284,14 +292,32 @@ def process_gstr_1_returns_info(company, gstin, response):
         _update_gstr_1_filed_upto(filed_upto)
 
 
-def get_gst_return_log(posting_date, company_gstin):
-    period = getdate(posting_date).strftime("%m%Y")
-    if name := frappe.db.exists(DOCTYPE, f"GSTR1-{period}-{company_gstin}"):
-        return frappe.get_doc(DOCTYPE, name)
+def process_gstr_3b_returns_info(company, gstin, e_filed_list):
+    for info in e_filed_list:
+        if info["status"] != "Filed":
+            continue
+
+        if frappe.db.exists(
+            "GST Return Log",
+            f'GSTR3B-{info["ret_prd"]}-{gstin}',
+        ):
+            continue
+
+        gstr3b_log = frappe.new_doc("GST Return Log")
+        gstr3b_log.return_period = info["ret_prd"]
+        gstr3b_log.company = company
+        gstr3b_log.gstin = gstin
+        gstr3b_log.return_type = "GSTR3B"
+        gstr3b_log.filing_status = "Filed"
+        gstr3b_log.acknowledgement_number = info["arn"]
+        gstr3b_log.filing_date = datetime.strptime(info["dof"], "%d-%m-%Y").date()
+        gstr3b_log.insert()
 
 
 def add_comment_to_gst_return_log(doc, action):
-    if not (log := get_gst_return_log(doc.posting_date, doc.company_gstin)):
+    period = getdate(doc.posting_date).strftime("%m%Y")
+    log_name = f"GSTR1-{period}-{doc.company_gstin}"
+    if not (log := get_gst_return_log(log_name)):
         return
 
     log.add_comment(
@@ -337,3 +363,34 @@ def get_compressed_data(json_data):
 
 def get_decompressed_data(content):
     return frappe.parse_json(frappe.safe_decode(gzip.decompress(content)))
+
+
+def create_ims_return_log(company_gstin):
+    company = get_party_for_gstin(company_gstin, "Company")
+
+    if frappe.db.exists("GST Return Log", f"IMS-ALL-{company_gstin}"):
+        return
+
+    ims_log = frappe.new_doc("GST Return Log")
+    ims_log.return_period = "ALL"
+    ims_log.company = company
+    ims_log.gstin = company_gstin
+    ims_log.return_type = "IMS"
+    ims_log.insert()
+
+
+def get_gst_return_log(log_name, **kwargs):
+    if frappe.db.exists(DOCTYPE, log_name):
+        return frappe.get_doc(DOCTYPE, log_name)
+
+    return_type, period, gstin = log_name.split("-")
+
+    log = frappe.new_doc(DOCTYPE)
+    log.return_period = period
+    log.company = get_party_for_gstin(gstin, "Company")
+    log.gstin = gstin
+    log.return_type = return_type
+    log.update(kwargs)
+    log.insert()
+
+    return log

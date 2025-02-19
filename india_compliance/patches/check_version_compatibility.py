@@ -51,7 +51,7 @@ def execute():
             show_error_and_exit(
                 f"Incompatible {app_name} Version: \n"
                 f"{app_name} version {app_version} not compatible with India Compliance {IC_VERSION}\n"
-                "Please upgrade {app_name} to version {required_version} or above to use the current version of"
+                f"Please upgrade {app_name} to version {required_version} or above to use the current version of"
                 " India Compliance.\n"
             )
 

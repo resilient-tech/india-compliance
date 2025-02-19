@@ -19,14 +19,12 @@ class GSTR2a(GSTR):
         self.cancelled_gstins = {}
 
     def get_existing_transaction(self):
-        category = type(self).__name__[6:]
-
         gst_is = frappe.qb.DocType("GST Inward Supply")
         existing_transactions = (
             frappe.qb.from_(gst_is)
             .select(gst_is.name, gst_is.supplier_gstin, gst_is.bill_no)
             .where(gst_is.sup_return_period == self.return_period)
-            .where(gst_is.classification == category)
+            .where(gst_is.classification == self.category)
             .where(gst_is.gstr_1_filled == 0)
         ).run(as_dict=True)
 
@@ -262,12 +260,8 @@ class GSTR2aIMPG(GSTR2a):
         }
 
     # invoice details are included in supplier details
-    def get_supplier_transactions(self, category, supplier):
-        return [
-            self.get_transaction(
-                category, frappe._dict(supplier), frappe._dict(supplier)
-            )
-        ]
+    def get_supplier_transactions(self, supplier):
+        return [self.get_transaction(frappe._dict(supplier), frappe._dict(supplier))]
 
     # item details are not available
     def get_transaction_items(self, invoice):

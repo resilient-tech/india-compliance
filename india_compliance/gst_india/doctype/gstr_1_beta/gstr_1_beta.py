@@ -2,7 +2,6 @@
 # For license information, please see license.txt
 
 import json
-from datetime import datetime
 
 import frappe
 from frappe import _
@@ -18,7 +17,14 @@ from india_compliance.gst_india.api_classes.taxpayer_base import (
 from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     verify_request_in_progress,
 )
-from india_compliance.gst_india.utils import get_gst_accounts_by_type
+from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
+    get_gst_return_log,
+)
+from india_compliance.gst_india.utils import (
+    MONTHS,
+    get_gst_accounts_by_type,
+    get_period,
+)
 from india_compliance.gst_india.utils.gstin_info import get_gstr_1_return_status
 
 
@@ -60,39 +66,39 @@ class GSTR1Beta(Document):
         self, sync_for=None, recompute_books=False, only_books_data=None, message=None
     ):
         period = get_period(self.month_or_quarter, self.year)
+        log_name = f"GSTR1-{period}-{self.company_gstin}"
 
-        # get gstr1 log
-        if log_name := frappe.db.exists(
-            "GST Return Log", f"GSTR1-{period}-{self.company_gstin}"
-        ):
+        gstr1_log = get_gst_return_log(
+            log_name, company=self.company, filing_preference=self.filing_preference
+        )
 
-            gstr1_log = frappe.get_doc("GST Return Log", log_name)
+        message = None
+        if gstr1_log.status == "In Progress":
+            message = (
+                "GSTR-1 is being prepared. Please wait for the process to complete."
+            )
 
-            message = None
-            if gstr1_log.status == "In Progress":
-                message = (
-                    "GSTR-1 is being prepared. Please wait for the process to complete."
-                )
+        elif gstr1_log.status == "Queued":
+            message = (
+                "GSTR-1 download is queued and could take some time. Please wait"
+                " for the process to complete."
+            )
 
-            elif gstr1_log.status == "Queued":
-                message = (
-                    "GSTR-1 download is queued and could take some time. Please wait"
-                    " for the process to complete."
-                )
-
-            if message:
-                frappe.msgprint(_(message), title=_("GSTR-1 Generation In Progress"))
-                return
-
-        else:
-            gstr1_log = frappe.new_doc("GST Return Log")
-            gstr1_log.company = self.company
-            gstr1_log.gstin = self.company_gstin
-            gstr1_log.return_period = period
-            gstr1_log.return_type = "GSTR1"
-            gstr1_log.insert()
+        if message:
+            frappe.msgprint(_(message), title=_("GSTR-1 Generation In Progress"))
+            return
 
         settings = frappe.get_cached_doc("GST Settings")
+
+        if (
+            self.filing_preference
+            and self.filing_preference != gstr1_log.filing_preference
+        ):
+            recompute_books = True
+            gstr1_log.db_set("filing_preference", self.filing_preference)
+
+        if not gstr1_log.filing_preference:
+            recompute_books = True
 
         if sync_for:
             gstr1_log.remove_json_for(sync_for)
@@ -137,6 +143,7 @@ class GSTR1Beta(Document):
             company_gstin=self.company_gstin,
             month_or_quarter=self.month_or_quarter,
             year=self.year,
+            filing_preference=self.filing_preference,
         )
 
         try:
@@ -241,11 +248,13 @@ def mark_as_unfiled(filters, force):
 
 
 @frappe.whitelist()
-def get_journal_entries(month_or_quarter, year, company):
+def get_journal_entries(month_or_quarter, year, company, filing_preference):
     if not frappe.has_permission("Journal Entry", "create"):
         return
 
-    from_date, to_date = get_gstr_1_from_and_to_date(month_or_quarter, year)
+    from_date, to_date = get_gstr_1_from_and_to_date(
+        month_or_quarter, year, filing_preference
+    )
 
     gst_accounts = list(
         get_gst_accounts_by_type(company, "Sales Reverse Charge", throw=False).values()
@@ -328,14 +337,18 @@ def make_journal_entry(
 
 
 @frappe.whitelist()
-def get_net_gst_liability(company, company_gstin, month_or_quarter, year):
+def get_net_gst_liability(
+    company, company_gstin, month_or_quarter, year, filing_preference=None
+):
     """
     Returns the net output balance for the given return period as per ledger entries
     """
 
     frappe.has_permission("GSTR-1 Beta", throw=True)
 
-    from_date, to_date = get_gstr_1_from_and_to_date(month_or_quarter, year)
+    from_date, to_date = get_gstr_1_from_and_to_date(
+        month_or_quarter, year, filing_preference
+    )
 
     filters = frappe._dict(
         {
@@ -373,39 +386,33 @@ def get_net_gst_liability(company, company_gstin, month_or_quarter, year):
 ####### UTILS ######################################################################################
 
 
-def get_period(month_or_quarter: str, year: str) -> str:
-    """
-    Returns the period in the format MMYYYY
-    as accepted by the GST Portal
-    """
-
-    if "-" in month_or_quarter:
-        # Quarterly
-        last_month = month_or_quarter.split("-")[1]
-        month_number = str(getdate(f"{last_month}-{year}").month).zfill(2)
-
-    else:
-        # Monthly
-        month_number = str(datetime.strptime(month_or_quarter, "%B").month).zfill(2)
-
-    return f"{month_number}{year}"
-
-
-def get_gstr_1_from_and_to_date(month_or_quarter: str, year: str) -> tuple:
+def get_gstr_1_from_and_to_date(
+    month_or_quarter: str, year: str, filing_preference: str
+) -> tuple:
     """
     Returns the from and to date for the given month or quarter and year
     This is used to filter the data for the given period in Books
     """
+    start_month = end_month = MONTHS.index(month_or_quarter) + 1
 
-    filing_frequency = frappe.get_cached_value("GST Settings", None, "filing_frequency")
+    # only for quarter ending month
+    if filing_preference == "Quarterly" and start_month % 3 == 0:
+        start_month -= 2
 
-    if filing_frequency == "Quarterly":
-        start_month, end_month = month_or_quarter.split("-")
-        from_date = getdate(f"{year}-{start_month}-01")
-        to_date = get_last_day(f"{year}-{end_month}-01")
-    else:
-        # Monthly (default)
-        from_date = getdate(f"{year}-{month_or_quarter}-01")
-        to_date = get_last_day(from_date)
+    from_date = getdate(f"{year}-{start_month}-01")
+    to_date = get_last_day(f"{year}-{end_month}-01")
 
     return from_date, to_date
+
+
+@frappe.whitelist()
+def get_filing_preference_from_log(month_or_quarter: str, year: str, company_gstin):
+    period = get_period(month_or_quarter, year)
+    filing_preference = frappe.db.get_value(
+        "GST Return Log", f"GSTR1-{period}-{company_gstin}", "filing_preference"
+    )
+
+    if not filing_preference:
+        return None
+
+    return filing_preference

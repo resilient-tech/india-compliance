@@ -107,6 +107,8 @@ def get_and_validate_gstin_status(gstin, transaction_date):
         validate_gstin_status(doc, transaction_date, throw=True)
 
     else:
+        now = get_datetime()
+
         # Don't delay the response if API is required
         frappe.enqueue(
             create_or_update_gstin_status,
@@ -115,11 +117,12 @@ def get_and_validate_gstin_status(gstin, transaction_date):
             gstin=gstin,
             transaction_date=transaction_date,
             callback=validate_gstin_status,
+            job_id=f"create_or_update_gstin_status_{gstin}_{now.date()}_{now.hour}",
         )
 
 
 @frappe.whitelist()
-def get_gstin_status(gstin, transaction_date=None, force_update=False):
+def get_gstin_status(gstin, transaction_date=None, docstatus=0, force_update=False):
     """
     Get GSTIN status. Responds immediately, and best suited for Frontend use.
     Permission check not required as GSTIN details are public where GSTIN is known.
@@ -127,7 +130,12 @@ def get_gstin_status(gstin, transaction_date=None, force_update=False):
     if not gstin:
         return
 
-    if not force_update and not is_status_refresh_required(gstin, transaction_date):
+    if isinstance(docstatus, str):
+        docstatus = int(docstatus)
+
+    if not force_update and not is_status_refresh_required(
+        gstin, transaction_date, docstatus
+    ):
         if not frappe.db.exists("GSTIN", gstin):
             return
 
@@ -185,15 +193,20 @@ def validate_gstin_status(gstin_doc, transaction_date=None, throw=False):
         )
 
 
-def is_status_refresh_required(gstin, transaction_date):
+def is_status_refresh_required(gstin, transaction_date, docstatus=0):
     settings = frappe.get_cached_doc("GST Settings")
 
     if (
         not settings.validate_gstin_status
         or not is_api_enabled(settings)
         or settings.sandbox_mode
+        or docstatus > 0
     ):
-        return
+        return False
+
+    # # not from draft transactions
+    if not transaction_date or docstatus > 0:
+        return False
 
     doc = frappe.db.get_value(
         "GSTIN", gstin, ["last_updated_on", "status"], as_dict=True
@@ -201,9 +214,6 @@ def is_status_refresh_required(gstin, transaction_date):
 
     if not doc:
         return True
-
-    if not transaction_date:  # not from transactions
-        return False
 
     if doc.status not in ("Active", "Cancelled"):
         return True

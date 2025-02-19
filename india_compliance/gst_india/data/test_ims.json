@@ -1,0 +1,134 @@
+{
+    "b2b": [
+        {
+            "stin": "24MAYAS0100J1JD",
+            "inum": "b1",
+            "inv_typ": "R",
+            "action": "R",
+            "ispendactblocked": "N",
+            "srcform": "R1",
+            "rtnprd": "012023",
+            "srcfilstatus": "Not Filed",
+            "idt": "23-01-2023",
+            "val": 1000,
+            "pos": "24",
+            "txval": 100,
+            "iamt": 20,
+            "camt": 20,
+            "samt": 20,
+            "cess": 0,
+            "hash": "1f5fb5de9e491c24dcdee9ac01d3fa5f7889f20d3a8c923bfd2e3c7f0d0125f1"
+        }
+    ],
+    "b2ba": [
+        {
+            "oinum": "ab2",
+            "oidt": "24-02-2023",
+            "stin": "24MAYAS0100J1JD",
+            "rtnprd": "012023",
+            "inum": "b1a",
+            "action": "A",
+            "ispendactblocked": "N",
+            "inv_typ": "R",
+            "srcform": "R1",
+            "idt": "23-01-2023",
+            "val": 1000,
+            "pos": "07",
+            "txval": 100,
+            "iamt": 20,
+            "camt": 20,
+            "samt": 20,
+            "cess": 0,
+            "srcfilstatus": "Not Filed",
+            "hash": "1f5fb5de9e491c24dcdee9ac01d3fa5f7889f20d3a8c923bfd2e3c7f0d0125f1"
+        }
+    ],
+    "b2bdn": [
+        {
+            "stin": "24MAYAS0100J1JD",
+            "nt_num": "dn2",
+            "action": "A",
+            "inv_typ": "R",
+            "srcform": "R1",
+            "ispendactblocked": "N",
+            "rtnprd": "012023",
+            "nt_dt": "24-02-2023",
+            "val": 1000.1,
+            "pos": "07",
+            "txval": 1000.1,
+            "iamt": 20,
+            "camt": 20,
+            "samt": 20,
+            "cess": 0,
+            "srcfilstatus": "Filed",
+            "hash": "1f5fb5de9e491c24dcdee9ac01d3fa5f7889f20d3a8c923bfd2e3c7f0d0125f1"
+        }
+    ],
+    "b2bdna": [
+        {
+            "stin": "24MAYAS0100J1JD",
+            "ont_num": "dn2",
+            "ont_dt": "24-02-2023",
+            "nt_num": "dna2",
+            "action": "A",
+            "inv_typ": "R",
+            "srcform": "R1",
+            "ispendactblocked": "N",
+            "rtnprd": "012023",
+            "nt_dt": "24-02-2023",
+            "val": 1000.1,
+            "pos": "07",
+            "txval": 1000.1,
+            "iamt": 20,
+            "camt": 20,
+            "samt": 20,
+            "cess": 0,
+            "srcfilstatus": "Filed",
+            "hash": "1f5fb5de9e491c24dcdee9ac01d3fa5f7889f20d3a8c923bfd2e3c7f0d0125f1"
+        }
+    ],
+    "b2bcn": [
+        {
+            "stin": "24MAYAS0100J1JD",
+            "nt_num": "cn2",
+            "action": "A",
+            "inv_typ": "R",
+            "srcform": "R1",
+            "rtnprd": "012023",
+            "ispendactblocked": "N",
+            "nt_dt": "24-02-2023",
+            "val": 1000.1,
+            "pos": "07",
+            "txval": 1000.1,
+            "iamt": 20,
+            "camt": 20,
+            "samt": 20,
+            "cess": 0,
+            "srcfilstatus": "Not Filed",
+            "hash": "1f5fb5de9e491c24dcdee9ac01d3fa5f7889f20d3a8c923bfd2e3c7f0d0125f1"
+        }
+    ],
+    "b2bcna": [
+        {
+            "stin": "24MAYAS0100J1JD",
+            "ont_num": "cn2",
+            "ont_dt": "24-02-2023",
+            "nt_num": "cna2",
+            "action": "A",
+            "inv_typ": "R",
+            "srcform": "R1",
+            "ispendactblocked": "N",
+            "rtnprd": "012023",
+            "nt_dt": "24-02-2023",
+            "val": 1000.1,
+            "pos": "07",
+            "txval": 1000.1,
+            "iamt": 20,
+            "camt": 20,
+            "samt": 20,
+            "cess": 0,
+            "srcfilstatus": "Not Filed",
+            "hash": "1f5fb5de9e491c24dcdee9ac01d3fa5f7889f20d3a8c923bfd2e3c7f0d0125f1"
+        }
+    ]
+}
