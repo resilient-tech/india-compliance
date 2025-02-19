@@ -165,17 +165,17 @@ class PurchaseReconciliationTool(Document):
             get_gstin_list(self.company) if company_gstin == "All" else [company_gstin]
         )
 
-        for company_gstin in company_gstins:
-            periods = BaseUtil.get_periods(date_range, return_type, company_gstin, True)
+        for gst_no in company_gstins:
+            periods = BaseUtil.get_periods(date_range, return_type, gst_no, True)
 
-            history = get_import_history(company_gstin, return_type, periods)
+            history = get_import_history(gst_no, return_type, periods)
             history = {(log.return_period, log.gstin): log for log in history}
 
             for period in periods:
-                download_row = history.get((period, company_gstin))
+                download_row = history.get((period, gst_no))
 
                 if not download_row:
-                    pending_download[period].add(company_gstin)
+                    pending_download[period].add(gst_no)
 
                 elif has_single_gstin:
                     download_history[period].add(

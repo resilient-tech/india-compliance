@@ -275,17 +275,9 @@ class InwardSupply:
 
         return BaseUtil.get_dict_for_key("supplier_gstin", data)
 
-    # what to do here
     def with_period_filter(self, additional_fields=None):
         query = self.get_query(additional_fields)
-        company_gstins = (
-            get_gstin_list(self.company)
-            if self.company_gstin == "All"
-            else [self.company_gstin]
-        )
-        periods = BaseUtil._get_periods(
-            self.from_date, self.to_date, self.gst_return, company_gstins
-        )
+        periods = BaseUtil._get_periods(self.from_date, self.to_date)
 
         if self.gst_return == "GSTR 2B":
             query = query.where((self.GSTR2.return_period_2b.isin(periods)))
@@ -1361,17 +1353,18 @@ class BaseUtil:
         end_date = min(date_range[1], BaseUtil._getdate(return_type))
 
         # latest to oldest
-        return tuple(
+        periods = tuple(
             BaseUtil._reversed(
-                BaseUtil._get_periods(
-                    date_range[0], end_date, return_type, company_gstin
-                ),
+                BaseUtil._get_periods(date_range[0], end_date),
                 reversed_order,
             )
         )
 
+        # Filter periods based on Filing Preference
+        return BaseUtil.get_filtered_periods(return_type, periods, company_gstin)
+
     @staticmethod
-    def _get_periods(start_date, end_date, return_type, company_gstin):
+    def _get_periods(start_date, end_date):
         """Returns a list of month (formatted as `MMYYYY`) in given date range"""
 
         if isinstance(start_date, str):
@@ -1380,39 +1373,10 @@ class BaseUtil:
         if isinstance(end_date, str):
             end_date = getdate(end_date)
 
-        return_periods = [
+        return [
             dt.strftime("%m%Y")
             for dt in rrule(MONTHLY, dtstart=start_date, until=end_date)
         ]
-
-        if return_type == ReturnType.GSTR2A:
-            return return_periods
-
-        gst_return_logs = frappe._dict(
-            frappe.get_all(
-                "GST Return Log",
-                filters={
-                    "return_type": "GSTR3B",
-                    "return_period": ["in", return_periods],
-                    "gstin": ["in", company_gstin],
-                },
-                fields=["return_period", "filing_preference"],
-                as_list=True,
-            )
-        )
-
-        if not gst_return_logs:
-            return return_periods
-
-        applicable_periods = []
-        for return_period, filing_preference in gst_return_logs.items():
-            if filing_preference == "Quarterly" and cint(return_period[:2]) % 3 == 0:
-                applicable_periods.append(return_period)
-
-            if filing_preference == "Monthly":
-                applicable_periods.append(return_period)
-
-        return applicable_periods
 
     @staticmethod
     def _reversed(lst, reverse):
@@ -1430,3 +1394,37 @@ class BaseUtil:
                 return add_months(getdate(), -2)
 
         return getdate()
+
+    @staticmethod
+    def get_filtered_periods(return_type, periods, company_gstin=None):
+        if return_type == ReturnType.GSTR2A:
+            return periods
+
+        gst_return_logs = frappe._dict(
+            frappe.get_all(
+                "GST Return Log",
+                filters={
+                    "return_type": "GSTR3B",
+                    "return_period": ["in", periods],
+                    "gstin": ["in", company_gstin],
+                },
+                fields=["return_period", "filing_preference"],
+                as_list=True,
+            )
+        )
+
+        if not gst_return_logs:
+            return periods
+
+        applicable_periods = []
+        for return_period, filing_preference in gst_return_logs.items():
+            month = cint(return_period[:2])
+
+            # For Quarterly filing, only last month of quarter is applicable
+            if filing_preference == "Quarterly" and month % 3 == 0:
+                applicable_periods.append(return_period)
+
+            if filing_preference == "Monthly":
+                applicable_periods.append(return_period)
+
+        return applicable_periods
