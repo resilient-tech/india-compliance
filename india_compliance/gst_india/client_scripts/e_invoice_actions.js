@@ -45,12 +45,21 @@ frappe.ui.form.on("Sales Invoice", {
         ) {
             frm.add_custom_button(
                 __("Generate"),
-                async () => {
-                    await taxpayer_api.call({
+                () => {
+                    frappe.call({
                         method: "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
                         args: { docname: frm.doc.name, force: true },
+                        callback: async (r) => {
+                            if (r.message?.error_type == "otp_requested") {
+                                await india_compliance.authenticate_otp(frm.doc.company_gstin);
+                                await frappe.call({
+                                    method: "india_compliance.gst_india.utils.e_invoice.handle_duplicate_irn_error",
+                                    args: r.message
+                                });
+                            }
+                            frm.refresh();
+                        },
                     });
-                    frm.refresh();
                 },
                 "e-Invoice"
             );
@@ -219,7 +228,27 @@ function get_generated_e_invoice_dialog_fields() {
             fieldname: "irn",
             fieldtype: "Data",
             reqd: 1,
-        }
+        },
+        {
+            label: "Fetch Invoice Details",
+            fieldname: "fetch_invoice_details",
+            fieldtype: "Check",
+            default: 1,
+        },
+        {
+            label: "Acknowledgement Number",
+            fieldname: "ack_no",
+            fieldtype: "Data",
+            mandatory_depends_on: "eval: !doc.fetch_invoice_details",
+            depends_on: "eval: !doc.fetch_invoice_details",
+        },
+        {
+            label: "Acknowledged On",
+            fieldname: "ack_dt",
+            fieldtype: "Datetime",
+            mandatory_depends_on: "eval: !doc.fetch_invoice_details",
+            depends_on: "eval: !doc.fetch_invoice_details",
+        },
     ];
     return fields;
 }
