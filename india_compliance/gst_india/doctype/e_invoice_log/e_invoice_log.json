@@ -13,6 +13,7 @@
   "column_break_1",
   "acknowledgement_number",
   "acknowledged_on",
+  "fetch_e_invoice_details",
   "signed_data_section",
   "invoice_data",
   "signed_invoice",
@@ -131,6 +132,13 @@
    "label": "Reference Document Name",
    "options": "reference_doctype",
    "read_only": 1
+  },
+  {
+   "default": "0",
+   "depends_on": "eval: !doc.invoice_data",
+   "fieldname": "fetch_e_invoice_details",
+   "fieldtype": "Check",
+   "label": "Fetch E-Invoice Details"
   }
  ],
  "in_create": 1,
@@ -140,7 +148,7 @@
    "link_fieldname": "irn"
   }
  ],
- "modified": "2024-09-19 18:59:01.195753",
+ "modified": "2025-02-21 12:58:02.214762",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Invoice Log",
