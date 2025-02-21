@@ -9,7 +9,7 @@ from frappe.utils.scheduler import is_scheduler_disabled
 
 from india_compliance.exceptions import GatewayTimeoutError, GSPServerError
 from india_compliance.gst_india.utils import is_api_enabled
-from india_compliance.gst_india.utils.api import enqueue_integration_request
+from india_compliance.gst_india.utils.api import create_integration_request
 
 BASE_URL = "https://asp.resilient.tech"
 
@@ -178,7 +178,7 @@ class BaseAPI:
 
             self.mask_sensitive_info(log)
 
-            enqueue_integration_request(**log)
+            create_integration_request(**log)
 
             if self.sandbox_mode and not frappe.flags.ic_sandbox_message_shown:
                 frappe.msgprint(

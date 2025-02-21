@@ -1,4 +1,5 @@
 import itertools
+from functools import wraps
 
 import frappe
 from frappe.query_builder import Case
@@ -117,3 +118,18 @@ def build_query_and_update_in_bulk(doctype: str, docs: dict):
         update_query = update_query.set(dt[field], conditions[field])
 
     update_query.where(dt.name.isin(docnames)).run()
+
+
+def execute_in_new_transaction(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        try:
+            _db = frappe.local.db
+            frappe.connect(set_admin_as_user=False)
+            fn(*args, **kwargs)
+        finally:
+            frappe.db.commit()
+            frappe.db.close()
+            frappe.local.db = _db
+
+    return wrapper
