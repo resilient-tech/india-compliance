@@ -13,7 +13,7 @@ from india_compliance.gst_india.utils.gstin_info import (
     get_and_update_filing_preference as create_fiscal_year_logs,
 )
 from india_compliance.gst_india.utils.gstin_info import (
-    get_logs_for_year,
+    get_logs_for_year as get_fiscal_year_logs,
 )
 
 
@@ -21,38 +21,37 @@ class GSTR1Reconciliation(Document):
     @frappe.whitelist()
     @otp_handler
     def generate_gstr1_reconciliation(self):
-        if self.has_all_files():
-            data = self.get_reconciliation_summary_data()
-
-            if data:
-                return data
+        if self.has_all_files() or not frappe.db.get_single_value(
+            "GST Settings", "enable_api"
+        ):
+            return self.get_reconciliation_summary_data()
 
         if self.is_gstr1_api_enabled():
             TaxpayerBaseAPI(self.company_gstin).validate_auth_token()
 
-        frappe.enqueue(self._process_reconciliation_data)
+        frappe.enqueue(self._generate_gstr1_reconciliation)
         frappe.msgprint(_("GSTR-1 Reconciliation is being prepared"), alert=True)
 
-    def _process_reconciliation_data(self):
+    def _generate_gstr1_reconciliation(self):
         if not self.gst_log:
             create_fiscal_year_logs()
 
-        self.create_and_update_gstr1_log_data()
+        self.update_gstr1_log()
         self.get_reconciliation_summary_data()
 
-    def create_and_update_gstr1_log_data(self):
+    def update_gstr1_log(self):
         if not self.gst_log:
             self.gst_log = frappe.get_all(
                 "GST Return Log",
                 filters={"name": ["in", self.log_names], "gstin": self.company_gstin},
-                fields=["name", "is_latest_data", "filed_summary", "status"],
+                fields=["name", "is_latest_data", "filed_summary", "filing_status"],
             )
 
         for log in self.gst_log:
-            if not log.status != "Filed":
+            if log.status != "Filed":
                 continue
 
-            if not log.status or not log.is_latest_data or not log.filed_summary:
+            if not log.is_latest_data or not log.filed_summary or log.filed:
                 self.update_gstr_1_data(log.name)
 
     def update_gstr_1_data(self, log_name):
@@ -69,22 +68,21 @@ class GSTR1Reconciliation(Document):
         doc.generate_gstr1_data(filters)
 
     def has_all_files(self):
-        self.log_names = get_logs_for_year(["GSTR1"])
+        period = f"04{self.fiscal_year.split('-')[0]}"
+        self.log_names = get_fiscal_year_logs(self.company_gstin, period, ["GSTR1"])
 
         self.gst_log = frappe.get_all(
             "GST Return Log",
-            filters={"name": ["in", self.log_names]},  # company gstin as filter
-            fields=["name", "is_latest_data", "filed_summary", "status"],
+            filters={"name": ["in", self.log_names], "gstin": self.company_gstin},
+            fields=["name", "is_latest_data", "filed_summary", "filing_status"],
         )
 
         if len(self.gst_log) != 12:
-            self.gst_log = (
-                None  # this will help me to create all logs and then have it's field
-            )
+            self.gst_log = None
             return False
 
         for log in self.gst_log:
-            if log.status != "Filed":
+            if log.filing_status != "Filed":
                 continue
 
             if not log.is_latest_data or not log.filed_summary or log.filed:
