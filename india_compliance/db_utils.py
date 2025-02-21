@@ -128,7 +128,7 @@ def execute_in_new_transaction(fn):
             frappe.connect(set_admin_as_user=False)
             fn(*args, **kwargs)
         finally:
-            frappe.db.commit()
+            frappe.db.commit()  # nosemgrep
             frappe.db.close()
             frappe.local.db = _db
 
