@@ -194,4 +194,8 @@ export default {
   text-align: center;
   margin: 0.5em 0 0 0;
 }
+
+.btn:disabled {
+  cursor: not-allowed;
+}
 </style>
