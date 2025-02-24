@@ -8,13 +8,20 @@ class PublicAPI(BaseAPI):
     API_NAME = "GST Public"
     BASE_PATH = "commonapi"
 
-    def setup(self):
+    def setup(self, doc=None):
         if self.sandbox_mode:
             frappe.throw(
                 _(
                     "Autofill Party Information based on GSTIN is not supported in sandbox mode"
                 )
             )
+
+        if doc:
+            self.default_log_values.update(
+                reference_doctype=doc.doctype,
+                reference_name=doc.name,
+            )
+
         self.default_headers.update({"requestid": self.generate_request_id()})
 
     def get_gstin_info(self, gstin):

@@ -108,13 +108,13 @@ Object.assign(india_compliance, {
         return in_list(frappe.boot.sales_doctypes, doctype) ? "Customer" : "Supplier";
     },
 
-    async set_gstin_status(field, transaction_date, docstatus, force_update) {
+    async set_gstin_status(field, transaction_date, docstatus, force_update, doc) {
         const gstin = field.value;
         if (!gstin || gstin.length !== 15) return field.set_description("");
 
         let { message } = await frappe.call({
             method: "india_compliance.gst_india.doctype.gstin.gstin.get_gstin_status",
-            args: { gstin, transaction_date, docstatus, force_update },
+            args: { gstin, transaction_date, docstatus, force_update, doc },
         });
 
         if (!message) message = { status: "Not Available" };
@@ -126,7 +126,7 @@ Object.assign(india_compliance, {
             )
         );
 
-        this.set_gstin_refresh_btn(field, transaction_date);
+        this.set_gstin_refresh_btn(field, transaction_date, doc);
 
         return message;
     },
@@ -177,12 +177,12 @@ Object.assign(india_compliance, {
         return field.set_description(pan_desc);
     },
 
-    validate_gst_transporter_id(transporter_id) {
+    validate_gst_transporter_id(transporter_id, doc) {
         if (!transporter_id || transporter_id.length !== 15) return;
 
         frappe.call({
             method: "india_compliance.gst_india.doctype.gstin.gstin.validate_gst_transporter_id",
-            args: { transporter_id },
+            args: { transporter_id, doc },
         });
     },
 
@@ -210,7 +210,7 @@ Object.assign(india_compliance, {
         );
     },
 
-    set_gstin_refresh_btn(field, transaction_date) {
+    set_gstin_refresh_btn(field, transaction_date, doc) {
         if (
             !this.is_api_enabled() ||
             gst_settings.sandbox_mode ||
@@ -230,7 +230,8 @@ Object.assign(india_compliance, {
                 field,
                 transaction_date,
                 null,
-                force_update
+                force_update,
+                doc
             );
         });
     },

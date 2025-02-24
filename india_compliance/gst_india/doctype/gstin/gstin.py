@@ -4,7 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import date_diff, format_date, get_datetime
+from frappe.utils import cint, date_diff, format_date, get_datetime
 
 from india_compliance.gst_india.utils import is_api_enabled, validate_gstin_check_digit
 from india_compliance.gst_india.utils.gstin_info import (
@@ -62,14 +62,15 @@ def create_or_update_gstin_status(
     callback=None,
     is_transporter_id=False,
     throw=False,
+    doc=None,
 ):
     doctype = "GSTIN"
 
     if not response:
         if is_transporter_id:
-            response = fetch_transporter_id_status(gstin, throw=throw)
+            response = fetch_transporter_id_status(gstin, throw=throw, doc=doc)
         else:
-            response = fetch_gstin_status(gstin=gstin, throw=throw)
+            response = fetch_gstin_status(gstin=gstin, throw=throw, doc=doc)
 
         if not response:
             return
@@ -122,7 +123,9 @@ def get_and_validate_gstin_status(gstin, transaction_date):
 
 
 @frappe.whitelist()
-def get_gstin_status(gstin, transaction_date=None, docstatus=0, force_update=False):
+def get_gstin_status(
+    gstin, transaction_date=None, docstatus=0, force_update=False, doc=None
+):
     """
     Get GSTIN status. Responds immediately, and best suited for Frontend use.
     Permission check not required as GSTIN details are public where GSTIN is known.
@@ -131,7 +134,10 @@ def get_gstin_status(gstin, transaction_date=None, docstatus=0, force_update=Fal
         return
 
     if isinstance(docstatus, str):
-        docstatus = int(docstatus)
+        docstatus = cint(docstatus)
+
+    if doc and isinstance(doc, str):
+        doc = frappe.parse_json(doc)
 
     if not force_update and not is_status_refresh_required(
         gstin, transaction_date, docstatus
@@ -141,7 +147,7 @@ def get_gstin_status(gstin, transaction_date=None, docstatus=0, force_update=Fal
 
         return frappe.get_doc("GSTIN", gstin)
 
-    return create_or_update_gstin_status(gstin, throw=force_update)
+    return create_or_update_gstin_status(gstin, throw=force_update, doc=doc)
 
 
 def validate_gstin_status(gstin_doc, transaction_date=None, throw=False):
@@ -226,7 +232,7 @@ def is_status_refresh_required(gstin, transaction_date, docstatus=0):
 
 
 @frappe.whitelist()
-def validate_gst_transporter_id(transporter_id):
+def validate_gst_transporter_id(transporter_id, doc=None):
     """
     Validates GST Transporter ID and warns user if transporter_id is not Active.
     Just suggestive and not enforced.
@@ -239,6 +245,9 @@ def validate_gst_transporter_id(transporter_id):
     if not transporter_id:
         return
 
+    if doc and isinstance(doc, str):
+        doc = frappe.parse_json(doc)
+
     gstin = None
 
     # Check if GSTIN doc exists
@@ -250,11 +259,12 @@ def validate_gst_transporter_id(transporter_id):
         gstin = create_or_update_gstin_status(
             transporter_id,
             is_transporter_id=True,
+            doc=doc,
         )
 
     # Use GSTIN API
     else:
-        gstin = create_or_update_gstin_status(transporter_id)
+        gstin = create_or_update_gstin_status(transporter_id, doc=doc)
 
     if not gstin:
         return
@@ -264,6 +274,7 @@ def validate_gst_transporter_id(transporter_id):
         gstin = create_or_update_gstin_status(
             transporter_id,
             is_transporter_id=True,
+            doc=doc,
         )
 
     # Return if GSTIN or transporter_id_status is Active

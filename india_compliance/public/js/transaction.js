@@ -232,7 +232,7 @@ function set_and_validate_gstin_status(doctype) {
         },
 
         gst_transporter_id(frm) {
-            india_compliance.validate_gst_transporter_id(frm.doc.gst_transporter_id);
+            india_compliance.validate_gst_transporter_id(frm.doc.gst_transporter_id, frm.doc);
         },
 
         posting_date(frm) {
@@ -265,7 +265,9 @@ async function _set_gstin_status(frm, gstin_field_name) {
         gstin_doc = await india_compliance.set_gstin_status(
             gstin_field,
             date_field.value,
-            frm.doc.docstatus
+            frm.doc.docstatus,
+            null,
+            frm.doc
         );
 
         frm._gstin_doc = frm._gstin_doc || {};
