@@ -8,7 +8,6 @@
       :required="true"
       :error="email.error"
       :state="email.state"
-      @blur="validateEmail"
     />
     <transition name="slide">
       <FormField
@@ -109,8 +108,9 @@ export default {
       this.validateGstin(value);
     },
 
-    "email.value"(_) {
+    "email.value"(value) {
       this.error = null;
+      this.validateEmail(value);
     },
 
     isAccountRegistered() {
