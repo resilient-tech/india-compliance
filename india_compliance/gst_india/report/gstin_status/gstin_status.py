@@ -49,8 +49,8 @@ class GSTINDetailedReport:
                 "width": 100,
             },
             {
-                "label": _("Party Name"),
-                "fieldname": "party_name",
+                "label": _("Party"),
+                "fieldname": "party",
                 "fieldtype": "Dynamic Link",
                 "options": "party_type",
                 "width": 220,
@@ -104,8 +104,8 @@ class GSTINDetailedReport:
             columns.insert(
                 2,
                 {
-                    "label": _("Party Ref Name"),
-                    "fieldname": "party_ref_name",
+                    "label": _("Party Name"),
+                    "fieldname": "party_name",
                     "fieldtype": "Data",
                     "width": 220,
                 },
@@ -130,11 +130,11 @@ class GSTINDetailedReport:
             .else_("Yes")
             .as_("is_blocked"),
             party_query.party_type,
-            party_query.party_name,
+            party_query.party,
         ]
 
         if self.is_naming_series:
-            gstin_query_select_fields.append(party_query.party_ref_name)
+            gstin_query_select_fields.append(party_query.party_name)
 
         gstin_query = (
             frappe.qb.from_(party_query)
@@ -156,7 +156,7 @@ class GSTINDetailedReport:
         party_query_select_fields = [
             address.gstin,
             dynamic_link.link_doctype.as_("party_type"),
-            dynamic_link.link_name.as_("party_name"),
+            dynamic_link.link_name.as_("party"),
         ]
 
         party_query = (
@@ -179,7 +179,7 @@ class GSTINDetailedReport:
                 Case()
                 .when(dynamic_link.link_doctype == "Customer", customer.customer_name)
                 .when(dynamic_link.link_doctype == "Supplier", supplier.supplier_name)
-                .as_("party_ref_name")
+                .as_("party_name")
             )
 
         party_query = (
@@ -200,11 +200,11 @@ class GSTINDetailedReport:
         select_fields = [
             dt.gstin,
             LiteralValue(f"'{doctype}'").as_("party_type"),
-            dt.name.as_("party_name"),
+            dt.name.as_("party"),
         ]
 
         if self.is_naming_series:
-            select_fields.append(dt[f"{doctype.lower()}_name"].as_("party_ref_name"))
+            select_fields.append(dt[f"{doctype.lower()}_name"].as_("party_name"))
 
         query = (
             frappe.qb.from_(dt).select(*select_fields).where(IfNull(dt.gstin, "") != "")
