@@ -225,13 +225,7 @@ Object.assign(india_compliance, {
         );
 
         refresh_btn.on("click", async function () {
-            const force_update = true;
-            await india_compliance.set_gstin_status(
-                field,
-                transaction_date,
-                null,
-                force_update
-            );
+            await india_compliance.set_gstin_status(field, transaction_date, 0, true);
         });
     },
 
