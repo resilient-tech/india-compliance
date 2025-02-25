@@ -108,13 +108,15 @@ Object.assign(india_compliance, {
         return in_list(frappe.boot.sales_doctypes, doctype) ? "Customer" : "Supplier";
     },
 
-    async set_gstin_status(field, transaction_date, docstatus, force_update, doc) {
+    async set_gstin_status(field, doc, force_update) {
         const gstin = field.value;
         if (!gstin || gstin.length !== 15) return field.set_description("");
 
+        doc = get_doc_details(doc);
+
         let { message } = await frappe.call({
             method: "india_compliance.gst_india.doctype.gstin.gstin.get_gstin_status",
-            args: { gstin, transaction_date, docstatus, force_update, doc },
+            args: { gstin, doc, force_update },
         });
 
         if (!message) message = { status: "Not Available" };
@@ -126,7 +128,7 @@ Object.assign(india_compliance, {
             )
         );
 
-        this.set_gstin_refresh_btn(field, transaction_date, doc);
+        this.set_gstin_refresh_btn(field, doc);
 
         return message;
     },
@@ -180,6 +182,8 @@ Object.assign(india_compliance, {
     validate_gst_transporter_id(transporter_id, doc) {
         if (!transporter_id || transporter_id.length !== 15) return;
 
+        doc = get_doc_details(doc);
+
         frappe.call({
             method: "india_compliance.gst_india.doctype.gstin.gstin.validate_gst_transporter_id",
             args: { transporter_id, doc },
@@ -210,7 +214,7 @@ Object.assign(india_compliance, {
         );
     },
 
-    set_gstin_refresh_btn(field, transaction_date, doc) {
+    set_gstin_refresh_btn(field, doc) {
         if (
             !this.is_api_enabled() ||
             gst_settings.sandbox_mode ||
@@ -226,13 +230,7 @@ Object.assign(india_compliance, {
 
         refresh_btn.on("click", async function () {
             const force_update = true;
-            await india_compliance.set_gstin_status(
-                field,
-                transaction_date,
-                null,
-                force_update,
-                doc
-            );
+            await india_compliance.set_gstin_status(field, doc, force_update);
         });
     },
 
@@ -520,6 +518,17 @@ Object.assign(india_compliance, {
         return true;
     },
 });
+
+function get_doc_details(doc) {
+    return doc
+        ? {
+              doctype: doc.doctype,
+              name: doc.name,
+              docstatus: doc.docstatus,
+              transaction_date: doc.posting_date || doc.transaction_date,
+          }
+        : null;
+}
 
 function is_gstin_check_digit_valid(gstin) {
     /*

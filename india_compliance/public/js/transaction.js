@@ -232,7 +232,10 @@ function set_and_validate_gstin_status(doctype) {
         },
 
         gst_transporter_id(frm) {
-            india_compliance.validate_gst_transporter_id(frm.doc.gst_transporter_id, frm.doc);
+            india_compliance.validate_gst_transporter_id(
+                frm.doc.gst_transporter_id,
+                frm.doc
+            );
         },
 
         posting_date(frm) {
@@ -257,18 +260,10 @@ async function _set_and_validate_gstin_status(frm, gstin_field_name) {
 async function _set_gstin_status(frm, gstin_field_name) {
     const gstin_field = frm.get_field(gstin_field_name);
     const gstin = gstin_field.value;
-    const date_field =
-        frm.get_field("posting_date") || frm.get_field("transaction_date");
 
     let gstin_doc = frm._gstin_doc?.[gstin];
     if (!gstin_doc) {
-        gstin_doc = await india_compliance.set_gstin_status(
-            gstin_field,
-            date_field.value,
-            frm.doc.docstatus,
-            null,
-            frm.doc
-        );
+        gstin_doc = await india_compliance.set_gstin_status(gstin_field, frm.doc);
 
         frm._gstin_doc = frm._gstin_doc || {};
         frm._gstin_doc[gstin] = gstin_doc;

@@ -27,7 +27,7 @@ class EWaybillAPI(BaseAPI):
         check_scheduler_status()
 
         if doc:
-            company_gstin = doc.company_gstin or company_gstin
+            company_gstin = doc.company_gstin
             self.default_log_values.update(
                 reference_doctype=doc.doctype,
                 reference_name=doc.name,
