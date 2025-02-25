@@ -591,15 +591,21 @@ class IMS extends reconciliation.reconciliation_tabs {
         const year = period.slice(2);
         const reference_date = new Date(year, month, 0);
 
-        // Change match status of invoices in which purchase is booked in next period
-        // but supplier has filed return in current period
-        for (const row of data) {
-            if (!row._purchase_invoice?.posting_date) continue;
 
+        for (const row of data) {
+            // Change match status of invoices in which supplier has uploaded invoices for next period
             const bill_date = str_to_obj(row._inward_supply.bill_date);
+            if (bill_date > reference_date) {
+                row.match_status = "Suggested Mark as Pending";
+                continue;
+            }
+
+            // Change match status of invoices in which purchase is booked in next period
+            // but supplier has filed return in current period
+            if (!row._purchase_invoice?.posting_date) continue;
             const posting_date = str_to_obj(row._purchase_invoice.posting_date);
 
-            if (posting_date > reference_date && bill_date <= reference_date) {
+            if (posting_date > reference_date) {
                 row.match_status = "Suggested Mark as Pending";
             }
         }
