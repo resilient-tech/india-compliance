@@ -1199,12 +1199,12 @@ class ReconciledData(BaseReconciliation):
 
     def update_amount_difference(self, data, purchase, inward_supply):
         data.taxable_value_difference = rounded(
-            purchase.get("taxable_value", 0) - inward_supply.get("taxable_value", 0),
+            inward_supply.get("taxable_value", 0) - purchase.get("taxable_value", 0),
             2,
         )
 
         data.tax_difference = rounded(
-            BaseUtil.get_total_tax(purchase) - BaseUtil.get_total_tax(inward_supply),
+            BaseUtil.get_total_tax(inward_supply) - BaseUtil.get_total_tax(purchase),
             2,
         )
 
