@@ -591,7 +591,6 @@ class IMS extends reconciliation.reconciliation_tabs {
         const year = period.slice(2);
         const reference_date = new Date(year, month, 0);
 
-
         for (const row of data) {
             // Change match status of invoices in which supplier has uploaded invoices for next period
             const bill_date = str_to_obj(row._inward_supply.bill_date);
@@ -946,9 +945,14 @@ async function apply_action(frm, action, invoice_names) {
     // Validate and Update JS
     let pending_not_allowed = [];
     let accept_not_allowed = [];
+    let supplier_return_not_filed = [];
     let new_data = [];
+
     frm.reconciliation_tabs.data.forEach(row => {
         if (invoice_names.includes(row.inward_supply_name)) {
+            if (action === "Accepted" && !row.is_supplier_return_filed) {
+                supplier_return_not_filed.push(row.inward_supply_name);
+            }
             if (!is_pending_allowed(row, action)) {
                 pending_not_allowed.push(row.inward_supply_name);
             } else if (!is_accept_allowed(row, action)) {
@@ -988,6 +992,16 @@ async function apply_action(frm, action, invoice_names) {
     }
 
     if (!invoice_names.length) return;
+
+    // If in some invoices "Accept" action is allowed and Supplier has Not Filed Return
+    if (supplier_return_not_filed.length) {
+        frappe.show_alert({
+            message: __(
+                "Some invoices should be marked as <strong>Pending</strong> since the Supplier has not yet filed the return for them."
+            ),
+            indicator: "orange",
+        });
+    }
 
     // Update
     frm._call("update_action", { invoice_names, action });
