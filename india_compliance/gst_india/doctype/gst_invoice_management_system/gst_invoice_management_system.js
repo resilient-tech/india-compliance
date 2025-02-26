@@ -381,7 +381,7 @@ class IMS extends reconciliation.reconciliation_tabs {
                 fieldtype: "Link",
                 options: "GST Inward Supply",
                 width: 150,
-                _after_format: (...args) => get_value_with_indicator(...args),
+                _after_format: (...args) => this.get_value_with_indicator(...args),
             },
             {
                 label: "Linked Voucher",
@@ -1011,23 +1011,6 @@ function get_icon(value, column, data) {
     return `<button class="btn eye" data-name="${data.inward_supply_name}">
                 <i class="fa fa-eye"></i>
             </button>`;
-}
-
-function get_value_with_indicator(value, column, data) {
-    let color = "green";
-    let title = "Supplier Return: Filed";
-
-    if (!data.is_supplier_return_filed) {
-        color = "red";
-        title = "Supplier Return: Not Filed";
-    }
-
-    value = $(value)
-        .addClass(`indicator ${color}`)
-        .attr("title", title)
-        .prop("outerHTML");
-
-    return value;
 }
 
 function get_affected_rows(tab, selection, data) {

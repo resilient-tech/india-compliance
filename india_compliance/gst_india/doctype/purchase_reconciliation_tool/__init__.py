@@ -1052,6 +1052,7 @@ class ReconciledData(BaseReconciliation):
             "action",
             "link_doctype",
             "link_name",
+            "is_supplier_return_filed",
         ]
 
         return (
@@ -1138,6 +1139,7 @@ class ReconciledData(BaseReconciliation):
             "action": "",
             "classification": "",
             "is_reverse_charge": "",
+            "is_supplier_return_filed": "",
         }
 
         for data in reconciliation_data:
@@ -1178,6 +1180,7 @@ class ReconciledData(BaseReconciliation):
                 "action": inward_supply.get("action"),
                 "classification": inward_supply.get("classification")
                 or self.guess_classification(purchase),
+                "is_supplier_return_filed": inward_supply.is_supplier_return_filed,
             }
         )
 
