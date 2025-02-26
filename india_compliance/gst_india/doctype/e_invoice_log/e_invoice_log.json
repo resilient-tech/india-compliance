@@ -130,7 +130,8 @@
    "in_standard_filter": 1,
    "label": "Reference Document Name",
    "options": "reference_doctype",
-   "read_only": 1
+   "read_only": 1,
+   "search_index": 1
   }
  ],
  "in_create": 1,
@@ -140,7 +141,7 @@
    "link_fieldname": "irn"
   }
  ],
- "modified": "2024-09-19 18:59:01.195753",
+ "modified": "2025-02-26 11:43:41.437023",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Invoice Log",
