@@ -1016,8 +1016,9 @@ function is_pending_allowed(row, action) {
 }
 
 function is_accept_allowed(row, action) {
-    // "Accept" not allowed for Missing in PI
-    if (action === "Accepted" && row.match_status === "Missing in PI") return false;
+    // "Accept" not allowed where Purchase is not linked
+    // This has to done because match status can be "Suggested Mark as Pending" where invoice is not linked
+    if (action === "Accepted" && !row._purchase_invoice?.name) return false;
     return true;
 }
 
