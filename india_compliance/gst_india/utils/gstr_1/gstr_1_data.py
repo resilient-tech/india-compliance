@@ -76,7 +76,7 @@ class GSTR1Query:
                 IfNull(self.si_item.item_code, self.si_item.item_name).as_("item_code"),
                 self.si_item.qty,
                 self.si_item.gst_hsn_code,
-                self.si_item.stock_uom,
+                self.si_item.uom,
                 self.si.billing_address_gstin,
                 self.si.company_gstin,
                 self.si.customer_name,
@@ -462,7 +462,7 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
                 query.gst_hsn_code,
                 query.gst_rate,
                 query.gst_treatment,
-                query.stock_uom,
+                query.uom,
             )
             .orderby(
                 query.posting_date, query.invoice_no, query.item_code, order=Order.desc
