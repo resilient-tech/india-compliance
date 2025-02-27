@@ -19,6 +19,13 @@ from india_compliance.gst_india.report.gstr_3b_details.gstr_3b_details import (
 )
 
 VALUES_TO_UPDATE = ["iamt", "camt", "samt", "csamt"]
+GST_TAX_TYPE_MAP = {
+    "sgst": "samt",
+    "cgst": "camt",
+    "igst": "iamt",
+    "cess": "csamt",
+    "cess_non_advol": "csamt",
+}
 
 
 class GSTR3BReport(Document):
@@ -55,6 +62,7 @@ class GSTR3BReport(Document):
             inward_nil_exempt = self.get_inward_nil_exempt(
                 self.gst_details.get("gst_state")
             )
+            self.set_reclaim_of_itc_reversal()
             self.set_inward_nil_exempt(inward_nil_exempt)
 
             self.set_reverse_charge_supply_through_ecomm_operators()
@@ -195,13 +203,6 @@ class GSTR3BReport(Document):
         ).run(as_dict=True)
 
         net_itc = self.report_dict["itc_elg"]["itc_net"]
-        gst_tax_type_to_key_map = {
-            "sgst": "samt",
-            "cgst": "camt",
-            "igst": "iamt",
-            "cess": "csamt",
-            "cess_non_advol": "csamt",
-        }
 
         for entry in reversal_entries:
             if entry.ineligibility_reason == "As per rules 42 & 43 of CGST Rules":
@@ -209,10 +210,11 @@ class GSTR3BReport(Document):
             else:
                 index = 1
 
-            tax_amount_key = gst_tax_type_to_key_map.get(entry.gst_tax_type)
+            tax_amount_key = GST_TAX_TYPE_MAP.get(entry.gst_tax_type)
             self.report_dict["itc_elg"]["itc_rev"][index][
                 tax_amount_key
             ] += entry.amount
+
             net_itc[tax_amount_key] -= entry.amount
 
     def get_itc_details(self):
@@ -276,6 +278,30 @@ class GSTR3BReport(Document):
         itc_details.setdefault("Import Of Goods", {"iamt": 0, "csamt": 0})
         itc_details["Import Of Goods"]["iamt"] += igst
         itc_details["Import Of Goods"]["csamt"] += cess
+
+    def set_reclaim_of_itc_reversal(self):
+        journal_entry = frappe.qb.DocType("Journal Entry")
+        journal_entry_account = frappe.qb.DocType("Journal Entry Account")
+
+        reclaimed_entries = (
+            frappe.qb.from_(journal_entry)
+            .join(journal_entry_account)
+            .on(journal_entry_account.parent == journal_entry.name)
+            .select(
+                journal_entry_account.gst_tax_type,
+                Sum(journal_entry_account.debit_in_account_currency).as_("amount"),
+            )
+            .where(journal_entry.voucher_type == "Reclaim of ITC Reversal")
+            .where(IfNull(journal_entry_account.gst_tax_type, "") != "")
+            .groupby(journal_entry_account.gst_tax_type)
+        )
+        reclaimed_entries = self.get_query_with_conditions(
+            journal_entry, reclaimed_entries, party_gstin=""
+        ).run(as_dict=True)
+
+        for entry in reclaimed_entries:
+            tax_amount_key = GST_TAX_TYPE_MAP.get(entry.gst_tax_type)
+            self.report_dict["itc_elg"]["itc_inelg"][0][tax_amount_key] += entry.amount
 
     def get_inward_nil_exempt(self, state):
         inward_nil_exempt = frappe.db.sql(
@@ -360,13 +386,6 @@ class GSTR3BReport(Document):
     def set_item_wise_tax_details(self, docs):
         self.invoice_item_wise_tax_details = {}
         item_wise_details = {}
-        gst_tax_type_map = {
-            "cgst": "camt",
-            "sgst": "samt",
-            "igst": "iamt",
-            "cess": "csamt",
-            "cess_non_advol": "csamt",
-        }
 
         item_defaults = frappe._dict(
             {
@@ -402,7 +421,7 @@ class GSTR3BReport(Document):
 
             # Process tax details
             for tax in details["taxes"]:
-                gst_tax_type = gst_tax_type_map.get(tax.gst_tax_type)
+                gst_tax_type = GST_TAX_TYPE_MAP.get(tax.gst_tax_type)
 
                 if not gst_tax_type:
                     continue
@@ -525,7 +544,7 @@ class GSTR3BReport(Document):
     def get_reverse_charge_invoice_condition(self, doctype):
         condition = ""
         if doctype == "Sales Invoice" and self.reverse_charge_invoices:
-            condition = f""" and parent not in ({', '.join([f'"{invoice}"' for invoice in self.reverse_charge_invoices])})"""
+            condition = f""" and parent not in ({", ".join([f'"{invoice}"' for invoice in self.reverse_charge_invoices])})"""
 
         return condition
 
