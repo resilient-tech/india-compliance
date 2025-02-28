@@ -394,35 +394,21 @@ def mark_e_invoice_as_generated(doctype, docname, values):
 
     values = frappe.parse_json(values)
     if values.fetch_invoice_details:
-        return fetch_e_invoice_details(values.irn, doc=doc)
+        api = EInvoiceAPI(doc)
+        result = api.get_e_invoice_by_irn(values.irn)
 
-    result = frappe._dict(
-        {
-            "Irn": values.irn,
-            "AckDt": values.ack_dt,
-            "AckNo": values.ack_no,
-            "einvoice_status": "Manually Generated",
-        }
-    )
-    return log_and_process_e_invoice_generation(
-        doc, result, message="e-Invoice updated successfully"
-    )
+        if result.error_code == "2283":
+            result = TaxpayerEInvoiceAPI(doc).get_irn_details(values.irn)
 
-
-@frappe.whitelist()
-@otp_handler
-def fetch_e_invoice_details(irn, docname=None, doc=None):
-    if not doc:
-        doc = load_doc("Sales Invoice", docname, "submit")
-
-    api = EInvoiceAPI(doc)
-    result = api.get_e_invoice_by_irn(irn)
-
-    if result.error_code == "2148":
-        frappe.throw(_("Requested IRN data is not available"))
-
-    if result.error_code == "2283":
-        result = TaxpayerEInvoiceAPI(doc).get_irn_details(irn)
+    else:
+        result = frappe._dict(
+            {
+                "Irn": values.irn,
+                "AckDt": values.ack_dt,
+                "AckNo": values.ack_no,
+                "einvoice_status": "Manually Generated",
+            }
+        )
 
     return log_and_process_e_invoice_generation(
         doc, result, message="e-Invoice updated successfully"
