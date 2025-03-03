@@ -592,9 +592,9 @@ class IMS extends reconciliation.reconciliation_tabs {
         const reference_date = new Date(year, month, 0);
 
         for (const row of data) {
-            // Change match status of invoices in which supplier has uploaded invoices for next period
+            // Change match status of invoices in which supplier has uploaded invoices for next period and invoice is matched
             const bill_date = str_to_obj(row._inward_supply.bill_date);
-            if (bill_date > reference_date) {
+            if (row._purchase_invoice?.name && bill_date > reference_date) {
                 row.match_status = "Suggested Mark as Pending";
                 continue;
             }
@@ -995,12 +995,15 @@ async function apply_action(frm, action, invoice_names) {
 
     // If in some invoices "Accept" action is allowed and Supplier has Not Filed Return
     if (supplier_return_not_filed.length) {
-        frappe.show_alert({
-            message: __(
-                "Some invoices should be marked as <strong>Pending</strong> since the Supplier has not yet filed the return for them."
-            ),
-            indicator: "orange",
-        });
+        frappe.show_alert(
+            {
+                message: __(
+                    "Some invoices are <strong>Accepted</strong> where the Supplier has not filed the return"
+                ),
+                indicator: "orange",
+            },
+            10
+        );
     }
 
     // Update
@@ -1017,8 +1020,7 @@ function is_pending_allowed(row, action) {
 
 function is_accept_allowed(row, action) {
     // "Accept" not allowed where Purchase is not linked
-    // This has to done because match status can be "Suggested Mark as Pending" where invoice is not linked
-    if (action === "Accepted" && !row._purchase_invoice?.name) return false;
+    if (action === "Accepted" && row.match_status === "Missing in PI") return false;
     return true;
 }
 
