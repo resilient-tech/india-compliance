@@ -7,6 +7,10 @@ from india_compliance.gst_india.api_classes.base import BaseAPI
 class PublicAPI(BaseAPI):
     API_NAME = "GST Public"
     BASE_PATH = "commonapi"
+    IGNORED_ERROR_CODES = {
+        "RET13510": "no_docs_found",
+        "FO8000": "no_docs_found",
+    }
 
     def setup(self):
         if self.sandbox_mode:
@@ -36,11 +40,16 @@ class PublicAPI(BaseAPI):
         )
 
     def is_ignored_error(self, response_json):
-        if response_json.get("errorCode") == "FO8000":
+        error_code = response_json.get("errorCode", "").strip()
+
+        if error_code == "FO8000":
             response_json.update(
                 {
                     "sts": "Invalid",
                     "gstin": self.gstin,
                 }
             )
+
+        if error_code in self.IGNORED_ERROR_CODES:
+            response_json.error_code = error_code
             return True

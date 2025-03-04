@@ -297,21 +297,27 @@ def process_gstr_3b_returns_info(company, gstin, e_filed_list):
         if info["status"] != "Filed":
             continue
 
+        log_name = f"GSTR3B-{info['ret_prd']}-{gstin}"
         if frappe.db.exists(
             "GST Return Log",
-            f'GSTR3B-{info["ret_prd"]}-{gstin}',
+            log_name,
         ):
-            continue
+            gstr3b_log = frappe.get_doc("GST Return Log", log_name)
+        else:
+            gstr3b_log = frappe.new_doc("GST Return Log")
 
-        gstr3b_log = frappe.new_doc("GST Return Log")
-        gstr3b_log.return_period = info["ret_prd"]
-        gstr3b_log.company = company
-        gstr3b_log.gstin = gstin
-        gstr3b_log.return_type = "GSTR3B"
-        gstr3b_log.filing_status = "Filed"
-        gstr3b_log.acknowledgement_number = info["arn"]
-        gstr3b_log.filing_date = datetime.strptime(info["dof"], "%d-%m-%Y").date()
-        gstr3b_log.insert()
+        gstr3b_log.update(
+            {
+                "return_period": info["ret_prd"],
+                "company": company,
+                "gstin": gstin,
+                "return_type": "GSTR3B",
+                "filing_status": "Filed",
+                "acknowledgement_number": info["arn"],
+                "filing_date": datetime.strptime(info["dof"], "%d-%m-%Y").date(),
+            }
+        )
+        gstr3b_log.save(ignore_permissions=True)
 
 
 def add_comment_to_gst_return_log(doc, action):
