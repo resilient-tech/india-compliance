@@ -1421,8 +1421,9 @@ class BaseUtil:
             month = cint(return_period[:2])
 
             # For Quarterly filing, only last month of quarter is applicable
-            if filing_preference == "Quarterly" and month % 3 == 0:
-                applicable_periods.append(return_period)
+            if filing_preference == "Quarterly":
+                if month % 3 == 0:
+                    applicable_periods.append(return_period)
 
             else:
                 applicable_periods.append(return_period)
