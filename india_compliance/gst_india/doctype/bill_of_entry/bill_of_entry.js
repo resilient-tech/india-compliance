@@ -72,14 +72,12 @@ frappe.ui.form.on("Bill of Entry", {
         const options = await india_compliance.set_gstin_options(frm);
         frm.set_value("company_gstin", options[0]);
 
-        const { message } = await frappe.db.get_value(
-            "Company",
-            frm.doc.company,
-            ["default_customs_payable_account", "default_customs_expense_account"]
-        );
+        const { message } = await frappe.db.get_value("Company", frm.doc.company, [
+            "default_customs_payable_account as customs_payable_account",
+            "default_customs_expense_account as customs_expense_account",
+        ]);
 
-        frm.set_value("customs_expense_account", message.default_customs_expense_account);
-        frm.set_value("customs_payable_account", message.default_customs_payable_account);
+        frm.set_value(message);
     },
 
     get_items_from_purchase_invoice(frm) {
@@ -93,7 +91,7 @@ frappe.ui.form.on("Bill of Entry", {
             target: frm,
             setters: {
                 company: frm.doc.company,
-                company_gstin: frm.doc.company_gstin
+                company_gstin: frm.doc.company_gstin,
             },
             read_only_setters: ["company", "company_gstin"],
             get_query() {
@@ -102,18 +100,17 @@ frappe.ui.form.on("Bill of Entry", {
                         docstatus: 1,
                         company: frm.doc.company,
                         company_gstin: frm.doc.company_gstin,
-                        gst_category: "Overseas"
-                    }
-                }
+                        gst_category: "Overseas",
+                    },
+                };
             },
             add_filters_group: 1,
             action: function (selections, args) {
-                frm.call('get_items_from_purchase_invoice', { purchase_invoices: selections }).then(
-                    d.dialog.hide()
-                )
-            }
-        })
-
+                frm.call("get_items_from_purchase_invoice", {
+                    purchase_invoices: selections,
+                }).then(d.dialog.hide());
+            },
+        });
     },
 
     total_taxable_value(frm) {
