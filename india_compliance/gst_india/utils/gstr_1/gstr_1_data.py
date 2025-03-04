@@ -405,17 +405,17 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
             self.assign_categories(invoice)
 
             if invoice.gst_hsn_code and invoice.gst_hsn_code.startswith("99"):
-                invoice["stock_uom"] = "OTH-OTHERS"
+                invoice["uom"] = "OTH-OTHERS"
                 invoice["qty"] = 0
                 continue
 
-            stock_uom = invoice.get("stock_uom", "")
-            if stock_uom in identified_uom:
-                invoice["stock_uom"] = identified_uom[stock_uom]
+            uom = invoice.get("uom", "")
+            if uom in identified_uom:
+                invoice["uom"] = identified_uom[uom]
             else:
-                gst_uom = get_full_gst_uom(stock_uom, settings)
-                identified_uom[stock_uom] = gst_uom
-                invoice["stock_uom"] = gst_uom
+                gst_uom = get_full_gst_uom(uom, settings)
+                identified_uom[uom] = gst_uom
+                invoice["uom"] = gst_uom
 
     def assign_categories(self, invoice):
         if not invoice.invoice_sub_category:
