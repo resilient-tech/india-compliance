@@ -626,40 +626,7 @@ def get_items_for_landed_cost_voucher(boe):
 
     NOTE: Assuming business has consistent practice of creating PR and PI
     """
-    pi_names, pi_item_names = set(), set()
-    for item in boe.items:
-        pi_names.add(item.purchase_invoice)
-        pi_item_names.add(item.pi_detail)
-
-    purchase_invoices = frappe.get_all(
-        "Purchase Invoice",
-        filters={"name": ["in", pi_names]},
-        fields=["update_stock", "name"],
-    )
-
-    # Fetch items from the Purchase Invoices
-    purchase_invoice_items = frappe.get_all(
-        "Purchase Invoice Item",
-        filters={"name": ["in", pi_item_names]},
-        fields=["*"],
-    )
-
-    # Map items to their corresponding Purchase Invoices
-    invoice_items_map = {}
-    for item in purchase_invoice_items:
-        invoice_items_map.setdefault(item.parent, []).append(item)
-
-    # Create a map of Purchase Invoice details, including their items
-    invoice_details_map = []
-    for pi in purchase_invoices:
-        details = frappe._dict(
-            {
-                "name": pi.name,
-                "update_stock": pi.update_stock,
-                "item": invoice_items_map.get(pi.name, []),
-            }
-        )
-        invoice_details_map.append(details)
+    invoice_details_map = get_purchase_invoice_details(boe)
 
     item_customs_map = {item.pi_detail: item.customs_duty for item in boe.items}
     item_name_map = {item.pi_detail: item.name for item in boe.items}
@@ -668,15 +635,15 @@ def get_items_for_landed_cost_voucher(boe):
     all_items = []
     for pi in invoice_details_map:
         if pi.update_stock:
-            for pi_item in pi.item:
+            for pi_item in pi._items:
                 pi_item.customs_duty = item_customs_map.get(pi_item.name)
                 pi_item.boe_detail = item_name_map.get(pi_item.name)
 
-            all_items.extend(pi.item)
+            all_items.extend(pi._items)
 
         # Creating PI from PR
-        elif pi.item[0].purchase_receipt:
-            pr_pi_map = {pi_item.pr_detail: pi_item.name for pi_item in pi.item}
+        elif pi._items[0].purchase_receipt:
+            pr_pi_map = {pi_item.pr_detail: pi_item.name for pi_item in pi._items}
             pr_items = frappe.get_all(
                 "Purchase Receipt Item",
                 fields="*",
@@ -697,7 +664,7 @@ def get_items_for_landed_cost_voucher(boe):
                 filters={"purchase_invoice": pi.name, "docstatus": 1},
             )
 
-            item_qty_map = {item.name: item.qty for item in pi.item}
+            item_qty_map = {item.name: item.qty for item in pi._items}
 
             for pr_item in pr_items:
                 customs_duty_for_item = item_customs_map.get(
@@ -710,6 +677,39 @@ def get_items_for_landed_cost_voucher(boe):
             all_items.extend(pr_items)
 
     return frappe._dict({item.name: item for item in all_items if item})
+
+
+def get_purchase_invoice_details(boe):
+    pi_names, pi_item_names = set(), set()
+    for item in boe.items:
+        pi_names.add(item.purchase_invoice)
+        pi_item_names.add(item.pi_detail)
+
+    # update_stock
+    invoice_map = frappe._dict(
+        frappe.get_all(
+            "Purchase Invoice",
+            filters={"name": ["in", pi_names]},
+            fields=["name", "update_stock"],
+            as_list=True,
+        )
+    )
+
+    # items
+    pi_items = frappe.get_all(
+        "Purchase Invoice Item", filters={"name": ["in", pi_item_names]}, fields=["*"]
+    )
+
+    # build doc
+    pi_details = {}
+    for item in pi_items:
+        name = item.parent
+        invoice = pi_details.setdefault(
+            name, frappe._dict(name=name, update_stock=invoice_map.get(name), _items=[])
+        )
+        invoice._items.append(item)
+
+    return list(pi_details.values())
 
 
 def get_pi_items(purchase_invoices):
