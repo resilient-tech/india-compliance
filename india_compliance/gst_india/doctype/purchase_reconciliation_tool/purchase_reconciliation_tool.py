@@ -182,9 +182,13 @@ class PurchaseReconciliationTool(Document):
                         download_row.last_updated_on.strftime("%d-%m-%Y %H:%M:%S")
                     )
 
+        # ensure data order is maintained
+        def get_map(data):
+            return [[k, v] for k, v in data.items()]
+
         return {
-            "pending_download": (pending_download or f"No Pending {action}s"),
-            "download_history": (download_history or f"No {action} History"),
+            "pending_download": (get_map(pending_download) or f"No Pending {action}s"),
+            "download_history": (get_map(download_history) or f"No {action} History"),
         }
 
     @frappe.whitelist()
