@@ -335,7 +335,7 @@ def update_gstr_returns_info(company, gstin, fy=None):
     if not response:
         return
 
-    e_filed_list = response.get("EFiledlist")
+    e_filed_list = response.get("EFiledlist") or []
 
     from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
         process_gstr_returns_info,
