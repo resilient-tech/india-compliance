@@ -124,6 +124,7 @@ class PurchaseReconciliationTool(Document):
         company_gstin,
         date_range,
         return_type=None,
+        return_period=None,
         force=False,
         gst_categories=None,
     ):
@@ -136,6 +137,7 @@ class PurchaseReconciliationTool(Document):
             company_gstin=company_gstin,
             date_range=date_range,
             return_type=return_type,
+            return_period=return_period,
             force=force,
             gst_categories=gst_categories,
             queue="long",
@@ -152,24 +154,24 @@ class PurchaseReconciliationTool(Document):
         if not return_type:
             return
 
-        return_type = ReturnType(return_type)
-        periods = BaseUtil.get_periods(date_range, return_type, True)
+        pending_download = defaultdict(set)
+        download_history = defaultdict(set)
 
+        has_single_gstin = company_gstin != "All"
+        action = "Download" if for_download else "Upload"
+
+        return_type = ReturnType(return_type)
         company_gstins = (
             get_gstin_list(self.company) if company_gstin == "All" else [company_gstin]
         )
 
-        history = get_import_history(company_gstins, return_type, periods)
-        history = {(log.return_period, log.gstin): log for log in history}
+        for gst_no in company_gstins:
+            periods = BaseUtil.get_periods(date_range, return_type, gst_no, True)
 
-        action = "Download" if for_download else "Upload"
-        has_single_gstin = company_gstin != "All"
+            history = get_import_history(gst_no, return_type, periods)
+            history = {(log.return_period, log.gstin): log for log in history}
 
-        pending_download = defaultdict(set)
-        download_history = defaultdict(set)
-
-        for period in periods:
-            for gst_no in company_gstins:
+            for period in periods:
                 download_row = history.get((period, gst_no))
 
                 if not download_row:
@@ -180,9 +182,13 @@ class PurchaseReconciliationTool(Document):
                         download_row.last_updated_on.strftime("%d-%m-%Y %H:%M:%S")
                     )
 
+        # ensure data order is maintained
+        def get_map(data):
+            return [[k, v] for k, v in data.items()]
+
         return {
-            "pending_download": (pending_download or f"No Pending {action}s"),
-            "download_history": (download_history or f"No {action} History"),
+            "pending_download": (get_map(pending_download) or f"No Pending {action}s"),
+            "download_history": (get_map(download_history) or f"No {action} History"),
         }
 
     @frappe.whitelist()
@@ -362,14 +368,19 @@ def download_gstr(
     company_gstin,
     date_range,
     return_type,
+    return_period=None,
     force=False,
     gst_categories=None,
 ):
     return_type = ReturnType(return_type)
 
-    periods = BaseUtil.get_periods(date_range, return_type)
-    if not force:
-        periods = get_periods_to_download(company_gstin, return_type, periods)
+    if return_period:
+        periods = [return_period]
+    else:
+        periods = BaseUtil.get_periods(date_range, return_type, company_gstin)
+        periods = get_periods_to_download(
+            company_gstin, return_type, periods, download_all=force
+        )
 
     if not periods:
         return
@@ -393,15 +404,31 @@ def download_gstr(
         )
 
 
-def get_periods_to_download(company_gstin, return_type, periods):
+def get_periods_to_download(company_gstin, return_type, periods, download_all=False):
+    if return_type == ReturnType.GSTR2B:
+        periods = filter_redownload_periods(company_gstin, return_type, periods)
+
+    if download_all:
+        return periods
+
+    # get missing periods
     existing_periods = get_import_history(
-        company_gstin,
-        return_type,
-        periods,
-        pluck="return_period",
+        company_gstin, return_type, periods, pluck="return_period"
     )
 
     return [period for period in periods if period not in existing_periods]
+
+
+def filter_redownload_periods(company_gstin, return_type, periods):
+    # check if redownload is useful. not useful if data is downloaded after 3B is filed
+    dont_redownload = get_import_history(
+        company_gstin, return_type, periods, fields=("return_period", "dont_redownload")
+    )
+    dont_redownload = [
+        log.return_period for log in dont_redownload if log.dont_redownload
+    ]
+
+    return [period for period in periods if period not in dont_redownload]
 
 
 def get_import_history(
@@ -440,21 +467,22 @@ def get_import_history(
 def has_missing_2b_documents(
     date_range, return_type: ReturnType, company_gstin, company
 ):
-    periods = BaseUtil.get_periods(date_range, return_type, True)
-
-    if not periods:
-        return False
-
     company_gstins = (
         get_gstin_list(company) if company_gstin == "All" else [company_gstin]
     )
-    history = get_import_history(company_gstins, return_type, periods)
-    history = {(log.return_period, log.gstin): log for log in history}
-
-    if not history:
-        return True
 
     for gstin in company_gstins:
+        periods = BaseUtil.get_periods(date_range, return_type, gstin, True)
+
+        if not periods:
+            continue
+
+        history = get_import_history(gstin, return_type, periods)
+        history = {(log.return_period, log.gstin): log for log in history}
+
+        if not history:
+            return True
+
         for period in periods:
             download = history.get((period, gstin))
             if not download or download.data_not_found or download.request_id:

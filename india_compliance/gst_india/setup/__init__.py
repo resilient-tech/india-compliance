@@ -229,7 +229,6 @@ def set_default_gst_settings():
         "enable_gstr_1_api": 1,
         "compare_unfiled_data": 1,
         "freeze_transactions": 1,
-        "filing_frequency": "Monthly",
     }
 
     if frappe.conf.developer_mode:

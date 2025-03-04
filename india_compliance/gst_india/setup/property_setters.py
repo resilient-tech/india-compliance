@@ -6,7 +6,7 @@ def get_property_setters(*, include_defaults=False):
         get_options_property_setter(
             "Journal Entry",
             "voucher_type",
-            ["Reversal Of ITC"],
+            ["Reversal Of ITC", "Reclaim of ITC Reversal"],
             prepend=False,
         ),
         get_options_property_setter(

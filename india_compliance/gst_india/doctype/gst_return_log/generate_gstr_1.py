@@ -9,8 +9,10 @@ from frappe.utils import flt, sbool
 from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
 from india_compliance.gst_india.constants import STATUS_CODE_MAP
 from india_compliance.gst_india.doctype.gstr_action.gstr_action import set_gstr_actions
+from india_compliance.gst_india.utils.gstin_info import get_and_update_filing_preference
 from india_compliance.gst_india.utils.gstr_1 import (
     CATEGORY_SUB_CATEGORY_MAPPING,
+    QUARTERLY_KEYS,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
     GovJsonKey,
@@ -29,8 +31,6 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
 from india_compliance.gst_india.utils.gstr_utils import (
     publish_action_status_notification,
 )
-
-MAXIMUM_UPLOAD_SIZE = 5200000
 
 
 class SummarizeGSTR1:
@@ -99,6 +99,12 @@ class SummarizeGSTR1:
             if remove_category_row:
                 cateogory_summary.remove(summary_row)
 
+        for key in QUARTERLY_KEYS:
+            if key not in subcategory_summary:
+                continue
+
+            cateogory_summary.append(subcategory_summary.get(key))
+
         # Round Values
         for row in cateogory_summary:
             for key, value in row.items():
@@ -150,6 +156,39 @@ class SummarizeGSTR1:
                 summary_row["no_of_records"] = count
 
             summary_row.pop("unique_records")
+
+        # summarize included / excluded docs
+        for key in QUARTERLY_KEYS:
+            if key not in data:
+                continue
+
+            summary_row = subcategory_summary.setdefault(
+                key, self.default_subcategory_summary(frappe.unscrub(key))
+            )
+            summary_row.update(
+                {
+                    "indent": 0,
+                    "consider_in_total_taxable_value": True,
+                    "consider_in_total_tax": True,
+                }
+            )
+
+            for row in data[key]:
+                if (
+                    row.get("sub_category")
+                    in SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE
+                ):
+                    continue
+
+                for field in self.AMOUNT_FIELDS:
+                    if (
+                        field != "total_taxable_value"
+                        and row.get("sub_category")
+                        in SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX
+                    ):
+                        continue
+
+                    summary_row[field] += row.get(field, 0)
 
         return subcategory_summary
 
@@ -514,6 +553,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         data = data
         data["status"] = self.filing_status or "Not Filed"
         data["is_nil"] = self.is_nil
+        data["filing_preference"] = self.filing_preference
 
         if error_data := self.get_json_for("upload_error"):
             data["errors"] = error_data
@@ -551,6 +591,8 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
 
         # APIs Enabled
         status = self.get_return_status()
+
+        self.set_filing_preference()
 
         if status == "Filed":
             gov_data_field = "filed"
@@ -599,6 +641,18 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         self.summarize_data(data)
         return callback and callback(filters)
 
+    def set_filing_preference(self):
+        """
+        Args:
+            filters (dict): Filters containing month_or_quarter and filing_preference.
+            status (str): The current filing status.
+        """
+
+        if not self.get("filing_preference"):
+            self.filing_preference = get_and_update_filing_preference(
+                self.gstin, self.return_period
+            )
+
     def generate_only_books_data(self, data, filters, callback=None):
         status = "Not Filed"
 
@@ -643,15 +697,15 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
                 return books_data
 
         from_date, to_date = get_gstr_1_from_and_to_date(
-            filters.month_or_quarter, filters.year
+            filters.month_or_quarter, filters.year, self.filing_preference
         )
 
         _filters = frappe._dict(
             {
-                "company": filters.company,
-                "company_gstin": filters.company_gstin,
                 "from_date": from_date,
                 "to_date": to_date,
+                "filing_preference": self.filing_preference,
+                **filters,
             }
         )
 
@@ -673,8 +727,8 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         Else, summarize the data and save it.
         """
         summary_fields = {
-            "reconcile": "reconcile_summary",
             "filed": "filed_summary",
+            "reconcile": "reconcile_summary",
             "unfiled": "unfiled_summary",
             "books": "books_summary",
         }
@@ -696,6 +750,11 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
             summary_data = self.get_summarized_data(
                 data[key], self.filing_status == "Filed"
             )
+
+            if key == "reconcile":
+                amendment_row = self.get_net_liability_from_amendments()
+                if amendment_row:
+                    summary_data.append(amendment_row)
 
             self.update_json_for(field, summary_data)
             data[field] = summary_data
@@ -725,6 +784,27 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
                 data[subcategory] = [*subcategory_data.values()]
 
         return data
+
+    def get_net_liability_from_amendments(self):
+        if not (
+            self.filed_summary and (filed_summary := self.get_json_for("filed_summary"))
+        ):
+            return
+
+        amendment_row = None
+        for row in filed_summary:
+            if row.get("description") == "Net Liability from Amendments":
+                amendment_row = row
+                break
+
+        if not amendment_row:
+            return
+
+        for key, value in amendment_row.items():
+            if key in self.AMOUNT_FIELDS:
+                amendment_row[key] = -value
+
+        return amendment_row
 
 
 class FileGSTR1:
@@ -1022,7 +1102,10 @@ def get_differing_categories(mapped_summary, gov_summary):
         },
     }
 
-    IGNORED_CATEGORIES = {"Net Liability from Amendments"}
+    IGNORED_CATEGORIES = {
+        "Net Liability from Amendments",
+        *[frappe.unscrub(key) for key in QUARTERLY_KEYS],
+    }
 
     gov_summary = {row["description"]: row for row in gov_summary if row["indent"] == 0}
     compared_categories = set()

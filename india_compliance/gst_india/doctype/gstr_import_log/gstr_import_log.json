@@ -12,6 +12,7 @@
   "return_period",
   "last_updated_on",
   "data_not_found",
+  "dont_redownload",
   "request_id",
   "request_time"
  ],
@@ -63,6 +64,12 @@
    "fieldtype": "Datetime",
    "hidden": 1,
    "label": "Request Time"
+  },
+  {
+   "default": "0",
+   "fieldname": "dont_redownload",
+   "fieldtype": "Check",
+   "label": "Redownload not Required"
   }
  ],
  "index_web_pages_for_search": 1,

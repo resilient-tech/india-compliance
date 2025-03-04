@@ -2,6 +2,10 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("GSTR 3B Report", {
+    setup: function () {
+        frappe.require("assets/india_compliance/js/gstr_2b.js");
+    },
+
     onload: function (frm) {
         set_options_for_year_gstr3b(frm);
 
@@ -19,7 +23,9 @@ frappe.ui.form.on("GSTR 3B Report", {
         if (frm.is_new()) return;
 
         frm.set_intro(__("Please save the report again to rebuild or update"));
+        frm.doc.__unsaved = 1;
 
+        // Download Button
         frm.add_custom_button(__("Download JSON"), function () {
             var w = window.open(
                 frappe.urllib.get_full_url(
@@ -35,6 +41,7 @@ frappe.ui.form.on("GSTR 3B Report", {
             }
         });
 
+        // View Form Button
         frm.add_custom_button(__("View Form"), function () {
             frappe.call({
                 method: "india_compliance.gst_india.doctype.gstr_3b_report.gstr_3b_report.view_report",
@@ -58,6 +65,30 @@ frappe.ui.form.on("GSTR 3B Report", {
         });
 
         append_form(frm);
+
+        // Regenerate Button
+        frm.add_custom_button(__("Regenerate 2B"), function () {
+            frappe.show_alert(__("Regenerating GSTR-2B"));
+
+            gstr_2b.regenerate({
+                gstin: frm.doc.company_gstin,
+                return_period: india_compliance.get_period(
+                    frm.doc.month_or_quarter,
+                    frm.doc.year
+                ),
+                doctype: frm.doc.doctype,
+                callback: function (regeneration_status) {
+                    if (regeneration_status.status === "ER") {
+                        frappe.throw(__(regeneration_status.error));
+                    } else if (regeneration_status.status === "P") {
+                        frappe.show_alert({
+                            message: __("Successfully Regenerated GSTR-2B"),
+                            indicator: "green",
+                        });
+                    }
+                },
+            });
+        });
     },
 
     company: async function (frm) {

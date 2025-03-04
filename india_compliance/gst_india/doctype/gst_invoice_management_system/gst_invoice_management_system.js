@@ -55,11 +55,17 @@ frappe.ui.form.on(DOCTYPE, {
         render_empty_state(frm);
         if (!frm.doc.company) return;
         const options = await india_compliance.set_gstin_options(frm);
-
         frm.set_value("company_gstin", options[0]);
+
+        set_period_options(frm);
     },
 
-    company_gstin: render_empty_state,
+    company_gstin(frm) {
+        render_empty_state(frm);
+        set_period_options(frm);
+    },
+
+    period: render_empty_state,
 
     refresh(frm) {
         show_download_invoices_message(frm);
@@ -70,7 +76,13 @@ frappe.ui.form.on(DOCTYPE, {
 });
 
 class IMS extends reconciliation.reconciliation_tabs {
+    render_data(data) {
+        this.process_data(data);
+        super.render_data(data);
+    }
+
     refresh(data) {
+        this.process_data(data);
         super.refresh(data);
         this.set_actions_summary();
     }
@@ -136,6 +148,7 @@ class IMS extends reconciliation.reconciliation_tabs {
                     "Mismatch",
                     "Manual Match",
                     "Missing in PI",
+                    "Suggested Mark as Pending",
                 ],
             },
             {
@@ -343,7 +356,7 @@ class IMS extends reconciliation.reconciliation_tabs {
             },
             {
                 label: "Bill No.",
-                fieldname: "bill_no",
+                fieldname: "bill_no_date",
                 align: "center",
                 width: 120,
             },
@@ -368,7 +381,7 @@ class IMS extends reconciliation.reconciliation_tabs {
                 fieldtype: "Link",
                 options: "GST Inward Supply",
                 width: 150,
-                _after_format: (...args) => get_value_with_indicator(...args),
+                _after_format: (...args) => this.get_value_with_indicator(...args),
             },
             {
                 label: "Linked Voucher",
@@ -377,6 +390,12 @@ class IMS extends reconciliation.reconciliation_tabs {
                 width: 150,
                 fieldtype: "Dynamic Link",
                 options: "linked_voucher_type",
+            },
+            {
+                label: "Posting Date",
+                fieldname: "posting_date",
+                align: "center",
+                width: 120,
             },
             {
                 label: "Tax Difference <br>2A/2B - Purchase",
@@ -414,7 +433,7 @@ class IMS extends reconciliation.reconciliation_tabs {
 
             data.push({
                 supplier_name_gstin: this.get_supplier_name_gstin(row),
-                bill_no: row.bill_no,
+                bill_no_date: this.get_bill_no_bill_date(row),
                 classification: row._inward_supply.classification,
                 ims_action: row.ims_action || "",
                 match_status: row.match_status,
@@ -424,6 +443,8 @@ class IMS extends reconciliation.reconciliation_tabs {
                 inward_supply_name: row.inward_supply_name,
                 pending_upload: row.pending_upload,
                 is_supplier_return_filed: row.is_supplier_return_filed,
+                linked_voucher_type: row._purchase_invoice.doctype,
+                posting_date: row.posting_date,
             });
         });
 
@@ -530,7 +551,7 @@ class IMS extends reconciliation.reconciliation_tabs {
             .join("");
 
         const action_performed_html = `
-            <div class="action-performed-summary m-3 d-flex justify-content-around align-items-center" style="border-bottom: 1px solid var(--border-color);">
+            <div class="action-performed-summary mt-3 mb-3 w-100 d-flex justify-content-around align-items-center" style="border-bottom: 1px solid var(--border-color);">
                 ${action_performed_cards}
             </div>
        `;
@@ -552,6 +573,41 @@ class IMS extends reconciliation.reconciliation_tabs {
 
             me.update_filter(e, "ims_action", action, me);
         });
+    }
+
+    get_bill_no_bill_date(row) {
+        return `
+            ${row.bill_no}
+            <br/>
+            ${frappe.datetime.str_to_user(row.bill_date) || ""}
+        `;
+    }
+
+    process_data(data = this.frm.__invoice_data) {
+        if (!data || !this.frm?.doc?.period) return;
+
+        const { period } = this.frm.doc;
+        const month = period.slice(0, 2);
+        const year = period.slice(2);
+        const reference_date = new Date(year, month, 0);
+
+        for (const row of data) {
+            // Change match status of invoices in which supplier has uploaded invoices for next period and invoice is matched
+            const bill_date = str_to_obj(row._inward_supply.bill_date);
+            if (row._purchase_invoice?.name && bill_date > reference_date) {
+                row.match_status = "Suggested Mark as Pending";
+                continue;
+            }
+
+            // Change match status of invoices in which purchase is booked in next period
+            // but supplier has filed return in current period
+            if (!row._purchase_invoice?.posting_date) continue;
+            const posting_date = str_to_obj(row._purchase_invoice.posting_date);
+
+            if (posting_date > reference_date) {
+                row.match_status = "Suggested Mark as Pending";
+            }
+        }
     }
 }
 
@@ -580,10 +636,14 @@ class IMSAction {
             );
         }
 
+        // Download Button
         this.frm.add_custom_button(__("Download Invoices"), () => {
             render_empty_state(this.frm);
             this.download_ims_data();
         });
+
+        // Export button
+        this.frm.add_custom_button(__("Export"), () => this.export_data());
     }
 
     setup_row_actions() {
@@ -767,6 +827,21 @@ class IMSAction {
             indicator: "green",
         });
     }
+
+    async export_data() {
+        if (!this.frm.reconciliation_tabs.filtered_data) {
+            await this.frm.ims_actions.get_ims_data();
+        }
+
+        const url = `${DOC_PATH}.download_excel_report`;
+        open_url_post(`/api/method/${url}`, {
+            data: JSON.stringify(this.frm.reconciliation_tabs.filtered_data),
+            doc: JSON.stringify({
+                company: this.frm.doc.company,
+                company_gstin: this.frm.doc.company_gstin,
+            }),
+        });
+    }
 }
 
 class DetailViewDialog extends reconciliation.detail_view_dialog {
@@ -870,9 +945,14 @@ async function apply_action(frm, action, invoice_names) {
     // Validate and Update JS
     let pending_not_allowed = [];
     let accept_not_allowed = [];
+    let supplier_return_not_filed = [];
     let new_data = [];
+
     frm.reconciliation_tabs.data.forEach(row => {
         if (invoice_names.includes(row.inward_supply_name)) {
+            if (action === "Accepted" && !row.is_supplier_return_filed) {
+                supplier_return_not_filed.push(row.inward_supply_name);
+            }
             if (!is_pending_allowed(row, action)) {
                 pending_not_allowed.push(row.inward_supply_name);
             } else if (!is_accept_allowed(row, action)) {
@@ -913,6 +993,19 @@ async function apply_action(frm, action, invoice_names) {
 
     if (!invoice_names.length) return;
 
+    // If in some invoices "Accept" action is allowed and Supplier has Not Filed Return
+    if (supplier_return_not_filed.length) {
+        frappe.show_alert(
+            {
+                message: __(
+                    "Some invoices are <strong>Accepted</strong> where the Supplier has not filed the return"
+                ),
+                indicator: "orange",
+            },
+            10
+        );
+    }
+
     // Update
     frm._call("update_action", { invoice_names, action });
 
@@ -926,7 +1019,7 @@ function is_pending_allowed(row, action) {
 }
 
 function is_accept_allowed(row, action) {
-    // "Accept" not allowed for Missing in PI
+    // "Accept" not allowed where Purchase is not linked
     if (action === "Accepted" && row.match_status === "Missing in PI") return false;
     return true;
 }
@@ -935,23 +1028,6 @@ function get_icon(value, column, data) {
     return `<button class="btn eye" data-name="${data.inward_supply_name}">
                 <i class="fa fa-eye"></i>
             </button>`;
-}
-
-function get_value_with_indicator(value, column, data) {
-    let color = "green";
-    let title = "Supplier Return: Filed";
-
-    if (!data.is_supplier_return_filed) {
-        color = "red";
-        title = "Supplier Return: Not Filed";
-    }
-
-    value = $(value)
-        .addClass(`indicator ${color}`)
-        .attr("title", title)
-        .prop("outerHTML");
-
-    return value;
 }
 
 function get_affected_rows(tab, selection, data) {
@@ -987,4 +1063,20 @@ function show_download_invoices_message(frm) {
     msg_tag.on("click", () => {
         frm.ims_actions.download_ims_data();
     });
+}
+
+async function set_period_options(frm) {
+    if (!(frm.doc.company && frm.doc.company_gstin)) return;
+
+    const { message: period_options } = await frappe.call({
+        method: "india_compliance.gst_india.doctype.gst_invoice_management_system.gst_invoice_management_system.get_period_options",
+        args: { company: frm.doc.company, company_gstin: frm.doc.company_gstin },
+    });
+
+    frm.get_field("period").set_data(period_options);
+    frm.set_value("period", period_options[0]);
+}
+
+function str_to_obj(d) {
+    return frappe.datetime.user_to_obj(frappe.datetime.str_to_user(d));
 }
