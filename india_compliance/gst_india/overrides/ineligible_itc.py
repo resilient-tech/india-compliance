@@ -401,9 +401,11 @@ class BillOfEntry(IneligibleITC):
     def update_valuation_rate(self):
         # Update fixed assets
         asset_items = self.doc.get_asset_items()
+
+        purchase_invoices = [item.purchase_invoice for item in self.doc.items]
         expense_account = frappe.db.get_values(
             "Purchase Invoice Item",
-            {"parent": self.doc.purchase_invoice},
+            {"parent": ["in", purchase_invoices]},
             ["expense_account", "name"],
             as_dict=True,
         )
@@ -444,7 +446,7 @@ class BillOfEntry(IneligibleITC):
                 continue
 
             total_gst_expense += gst_expense
-            item.applicable_charges += gst_expense / item.qty
+            item.applicable_charges += gst_expense
 
         if total_gst_expense == 0:
             return

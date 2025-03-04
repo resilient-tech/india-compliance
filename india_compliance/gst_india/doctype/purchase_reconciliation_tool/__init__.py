@@ -565,7 +565,7 @@ class BillOfEntry:
             .left_join(self.BOE_ITEM)
             .on(self.BOE_ITEM.parent == self.BOE.name)
             .join(self.PI)
-            .on(self.BOE.purchase_invoice == self.PI.name)
+            .on(self.BOE_ITEM.purchase_invoice == self.PI.name)
             .where(self.BOE.docstatus == 1)
             .where(IfNull(self.BOE.reconciliation_status, "") != "Not Applicable")
             .where(self.BOE_ITEM.parenttype == "Bill of Entry")

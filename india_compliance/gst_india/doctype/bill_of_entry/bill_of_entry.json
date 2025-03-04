@@ -13,7 +13,6 @@
   "amended_from",
   "column_break_2wjs",
   "section_break_fqdh",
-  "purchase_invoice",
   "column_break_epap",
   "company",
   "column_break_4zp5",
@@ -36,6 +35,7 @@
   "cost_center",
   "dimension_col_break",
   "section_break_nlqh",
+  "get_items_from_purchase_invoice",
   "items",
   "section_break_ujtl",
   "column_break_cnrv",
@@ -115,8 +115,7 @@
    "fieldname": "company",
    "fieldtype": "Link",
    "label": "Company",
-   "options": "Company",
-   "read_only": 1
+   "options": "Company"
   },
   {
    "fieldname": "column_break_4zp5",
@@ -124,20 +123,12 @@
   },
   {
    "fieldname": "company_gstin",
-   "fieldtype": "Data",
-   "label": "Company GSTIN",
-   "read_only": 1
+   "fieldtype": "Autocomplete",
+   "label": "Company GSTIN"
   },
   {
    "fieldname": "column_break_hbfk",
    "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "purchase_invoice",
-   "fieldtype": "Link",
-   "label": "Purchase Invoice",
-   "options": "Purchase Invoice",
-   "reqd": 1
   },
   {
    "fieldname": "column_break_epap",
@@ -273,6 +264,7 @@
    "label": "Bill of Lading No."
   },
   {
+   "depends_on": "eval: doc.docstatus == 1",
    "fieldname": "reconciliation_status",
    "fieldtype": "Select",
    "label": "Reconciliation Status",
@@ -287,9 +279,17 @@
    "label": "Tax Category",
    "options": "Tax Category",
    "print_hide": 1
+  },
+  {
+   "fieldname": "get_items_from_purchase_invoice",
+   "fieldtype": "Button",
+   "label": "Get Items From Purchase Invoice"
+  },
+  {
+   "fieldname": "column_break_tzdn",
+   "fieldtype": "Column Break"
   }
  ],
- "in_create": 1,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [
@@ -305,7 +305,7 @@
    "link_fieldname": "link_name"
   }
  ],
- "modified": "2024-12-20 15:17:36.898844",
+ "modified": "2025-02-06 18:45:23.478878",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Bill of Entry",

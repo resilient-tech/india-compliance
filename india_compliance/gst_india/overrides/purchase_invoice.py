@@ -23,7 +23,7 @@ def onload(doc, method=None):
         doc.set_onload(
             "bill_of_entry_exists",
             frappe.db.exists(
-                "Bill of Entry",
+                "Bill of Entry Item",
                 {"purchase_invoice": doc.name, "docstatus": 1},
             ),
         )

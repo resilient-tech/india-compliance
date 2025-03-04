@@ -852,7 +852,7 @@ class TestIneligibleITC(FrappeTestCase):
 
         for item in lcv.items:
             if item.item_code == "Test Ineligible Stock Item":
-                self.assertEqual(item.applicable_charges, 3.42)  # 10.26 / 3 Nos
+                self.assertEqual(item.applicable_charges, 10.26)  # 10.26 for 3 Nos
             elif item.item_code == "Test Ineligible Fixed Asset":
                 self.assertEqual(item.applicable_charges, 179.82)
             else:
