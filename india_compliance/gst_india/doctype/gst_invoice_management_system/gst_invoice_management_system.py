@@ -39,6 +39,7 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_re
 )
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstin_info import (
+    get_fy,
     get_latest_3b_filed_period,
     update_gstr_returns_info,
 )
@@ -323,7 +324,9 @@ def get_period_options(company, company_gstin):
     six_months_ago = format_period(six_months_ago)
 
     if latest_3b_filed_period <= six_months_ago and can_fetch_gstin_info():
-        update_gstr_returns_info(company, company_gstin)
+        # Update info of Fiscal Year for the previous period as it is a valid period
+        fy = get_fy(add_to_date(None, months=-1).strftime("%m%Y"))
+        update_gstr_returns_info(company, company_gstin, fy)
 
     # Generate last six months of valid periods
     periods = []

@@ -324,12 +324,9 @@ def get_gstr_1_return_status(company, gstin, period, year_increment=0):
     return "Not Filed"
 
 
-def update_gstr_returns_info(company, gstin, fy=None):
+def update_gstr_returns_info(company, gstin, fy):
     if frappe.flags.in_test:
         return
-
-    if not fy:
-        fy = get_current_fy()
 
     response = PublicAPI().get_returns_info(gstin, fy)
     if not response:
