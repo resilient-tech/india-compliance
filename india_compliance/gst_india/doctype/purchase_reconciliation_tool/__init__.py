@@ -1424,7 +1424,7 @@ class BaseUtil:
             if filing_preference == "Quarterly" and month % 3 == 0:
                 applicable_periods.append(return_period)
 
-            if filing_preference == "Monthly":
+            else:
                 applicable_periods.append(return_period)
 
         return applicable_periods
