@@ -399,11 +399,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
-<<<<<<< HEAD
- "modified": "2024-11-16 16:23:13.402870",
-=======
  "modified": "2025-03-04 18:38:19.056682",
->>>>>>> 57634000 (fix: issue with increment and naming of GST Inward Supply)
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Inward Supply",
