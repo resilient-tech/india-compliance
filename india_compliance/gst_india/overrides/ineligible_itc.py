@@ -446,7 +446,7 @@ class BillOfEntry(IneligibleITC):
                 continue
 
             total_gst_expense += gst_expense
-            item.applicable_charges += gst_expense / item.qty
+            item.applicable_charges += gst_expense
 
         if total_gst_expense == 0:
             return
