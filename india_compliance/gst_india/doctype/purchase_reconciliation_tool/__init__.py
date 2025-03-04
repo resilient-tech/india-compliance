@@ -10,7 +10,7 @@ import frappe
 from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Abs, IfNull, Sum
-from frappe.utils import add_months, format_date, getdate, rounded
+from frappe.utils import add_months, cint, format_date, getdate, rounded
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.utils import get_gstin_list, get_party_for_gstin
@@ -1345,7 +1345,9 @@ class BaseUtil:
             doc.total_gst = doc.cgst + doc.sgst + doc.igst
 
     @staticmethod
-    def get_periods(date_range, return_type: ReturnType, reversed_order=False):
+    def get_periods(
+        date_range, return_type: ReturnType, company_gstin=None, reversed_order=False
+    ):
         """Returns a list of month (formatted as `MMYYYY`) in a fiscal year"""
         if not date_range:
             return []
@@ -1354,11 +1356,15 @@ class BaseUtil:
         end_date = min(date_range[1], BaseUtil._getdate(return_type))
 
         # latest to oldest
-        return tuple(
+        periods = tuple(
             BaseUtil._reversed(
-                BaseUtil._get_periods(date_range[0], end_date), reversed_order
+                BaseUtil._get_periods(date_range[0], end_date),
+                reversed_order,
             )
         )
+
+        # Filter periods based on Filing Preference
+        return BaseUtil.get_filtered_periods(return_type, periods, company_gstin)
 
     @staticmethod
     def _get_periods(start_date, end_date):
@@ -1391,3 +1397,38 @@ class BaseUtil:
                 return add_months(getdate(), -2)
 
         return getdate()
+
+    @staticmethod
+    def get_filtered_periods(return_type, periods, company_gstin=None):
+        if return_type == ReturnType.GSTR2A:
+            return periods
+
+        gst_return_logs = frappe._dict(
+            frappe.get_all(
+                "GST Return Log",
+                filters={
+                    "return_type": "GSTR3B",
+                    "return_period": ["in", periods],
+                    "gstin": ["in", company_gstin],
+                },
+                fields=["return_period", "filing_preference"],
+                as_list=True,
+            )
+        )
+
+        if not gst_return_logs:
+            return periods
+
+        applicable_periods = []
+        for return_period, filing_preference in gst_return_logs.items():
+            month = cint(return_period[:2])
+
+            # For Quarterly filing, only last month of quarter is applicable
+            if filing_preference == "Quarterly":
+                if month % 3 == 0:
+                    applicable_periods.append(return_period)
+
+            else:
+                applicable_periods.append(return_period)
+
+        return applicable_periods
