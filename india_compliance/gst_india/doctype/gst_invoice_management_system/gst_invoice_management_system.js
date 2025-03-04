@@ -381,7 +381,7 @@ class IMS extends reconciliation.reconciliation_tabs {
                 fieldtype: "Link",
                 options: "GST Inward Supply",
                 width: 150,
-                _after_format: (...args) => get_value_with_indicator(...args),
+                _after_format: (...args) => this.get_value_with_indicator(...args),
             },
             {
                 label: "Linked Voucher",
@@ -591,15 +591,20 @@ class IMS extends reconciliation.reconciliation_tabs {
         const year = period.slice(2);
         const reference_date = new Date(year, month, 0);
 
-        // Change match status of invoices in which purchase is booked in next period
-        // but supplier has filed return in current period
         for (const row of data) {
-            if (!row._purchase_invoice?.posting_date) continue;
-
+            // Change match status of invoices in which supplier has uploaded invoices for next period and invoice is matched
             const bill_date = str_to_obj(row._inward_supply.bill_date);
+            if (row._purchase_invoice?.name && bill_date > reference_date) {
+                row.match_status = "Suggested Mark as Pending";
+                continue;
+            }
+
+            // Change match status of invoices in which purchase is booked in next period
+            // but supplier has filed return in current period
+            if (!row._purchase_invoice?.posting_date) continue;
             const posting_date = str_to_obj(row._purchase_invoice.posting_date);
 
-            if (posting_date > reference_date && bill_date <= reference_date) {
+            if (posting_date > reference_date) {
                 row.match_status = "Suggested Mark as Pending";
             }
         }
@@ -940,9 +945,14 @@ async function apply_action(frm, action, invoice_names) {
     // Validate and Update JS
     let pending_not_allowed = [];
     let accept_not_allowed = [];
+    let supplier_return_not_filed = [];
     let new_data = [];
+
     frm.reconciliation_tabs.data.forEach(row => {
         if (invoice_names.includes(row.inward_supply_name)) {
+            if (action === "Accepted" && !row.is_supplier_return_filed) {
+                supplier_return_not_filed.push(row.inward_supply_name);
+            }
             if (!is_pending_allowed(row, action)) {
                 pending_not_allowed.push(row.inward_supply_name);
             } else if (!is_accept_allowed(row, action)) {
@@ -983,6 +993,19 @@ async function apply_action(frm, action, invoice_names) {
 
     if (!invoice_names.length) return;
 
+    // If in some invoices "Accept" action is allowed and Supplier has Not Filed Return
+    if (supplier_return_not_filed.length) {
+        frappe.show_alert(
+            {
+                message: __(
+                    "Some invoices are <strong>Accepted</strong> where the Supplier has not filed the return"
+                ),
+                indicator: "orange",
+            },
+            10
+        );
+    }
+
     // Update
     frm._call("update_action", { invoice_names, action });
 
@@ -996,7 +1019,7 @@ function is_pending_allowed(row, action) {
 }
 
 function is_accept_allowed(row, action) {
-    // "Accept" not allowed for Missing in PI
+    // "Accept" not allowed where Purchase is not linked
     if (action === "Accepted" && row.match_status === "Missing in PI") return false;
     return true;
 }
@@ -1005,23 +1028,6 @@ function get_icon(value, column, data) {
     return `<button class="btn eye" data-name="${data.inward_supply_name}">
                 <i class="fa fa-eye"></i>
             </button>`;
-}
-
-function get_value_with_indicator(value, column, data) {
-    let color = "green";
-    let title = "Supplier Return: Filed";
-
-    if (!data.is_supplier_return_filed) {
-        color = "red";
-        title = "Supplier Return: Not Filed";
-    }
-
-    value = $(value)
-        .addClass(`indicator ${color}`)
-        .attr("title", title)
-        .prop("outerHTML");
-
-    return value;
 }
 
 function get_affected_rows(tab, selection, data) {

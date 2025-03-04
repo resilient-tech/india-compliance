@@ -135,6 +135,25 @@ reconciliation.reconciliation_tabs = class ReconciliationTabs {
         </a>
         `;
     }
+
+    get_value_with_indicator(value, column, data) {
+        if (!value) return "";
+
+        let color = "green";
+        let title = "Supplier Return: Filed";
+
+        if (!data.is_supplier_return_filed) {
+            color = "red";
+            title = "Supplier Return: Not Filed";
+        }
+
+        value = $(value)
+            .addClass(`indicator ${color}`)
+            .attr("title", title)
+            .prop("outerHTML");
+
+        return value;
+    }
 };
 
 reconciliation.detail_view_dialog = class DetailViewDialog {
