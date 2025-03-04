@@ -148,8 +148,13 @@ def is_shipping_address_in_india(doc):
 
 
 def on_submit(doc, method=None):
+    # Check to validate_backdated_transaction
+    if ignore_gst_validations(doc):
+        return
+
     validate_backdated_transaction(doc)
 
+    # Checks to validate generation of e-Invoice
     if getattr(doc, "_submitted_from_ui", None) or validate_transaction(doc) is False:
         return
 
