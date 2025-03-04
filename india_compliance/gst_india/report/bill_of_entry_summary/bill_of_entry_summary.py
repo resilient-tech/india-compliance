@@ -3,6 +3,7 @@
 
 import frappe
 from frappe import _
+from frappe.query_builder.custom import GROUP_CONCAT
 
 
 def execute(filters=None):
@@ -90,9 +91,10 @@ def update_purchase_invoice_query(query):
         .left_join(purchase_invoice)
         .on(purchase_invoice.name == bill_of_entry_item.purchase_invoice)
         .select(
-            purchase_invoice.name.as_("purchase_invoice"),
+            GROUP_CONCAT(purchase_invoice.name, ",").as_("purchase_invoice"),
             purchase_invoice.supplier,
         )
+        .groupby(bill_of_entry.name)
     )
 
 
@@ -119,7 +121,7 @@ def get_columns(filters):
         {
             "fieldname": "purchase_invoice",
             "label": _("Purchase Invoice"),
-            "fieldtype": "Link",
+            "fieldtype": "Data",
             "options": "Purchase Invoice",
             "width": 130,
         },
