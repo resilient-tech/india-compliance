@@ -63,6 +63,56 @@ frappe.ui.form.on("Bill of Entry", {
         );
     },
 
+    async company(frm) {
+        if (!frm.doc.company) {
+            frm.set_value("company_gstin", "");
+            return;
+        }
+
+        const options = await india_compliance.set_gstin_options(frm);
+        frm.set_value("company_gstin", options[0]);
+
+        const { message } = await frappe.db.get_value("Company", frm.doc.company, [
+            "default_customs_payable_account as customs_payable_account",
+            "default_customs_expense_account as customs_expense_account",
+        ]);
+
+        frm.set_value(message);
+    },
+
+    get_items_from_purchase_invoice(frm) {
+        if (!(frm.doc.company && frm.doc.company_gstin)) {
+            frappe.msgprint(__("Please Select Company and Company GSTIN First"));
+            return;
+        }
+
+        const d = new frappe.ui.form.MultiSelectDialog({
+            doctype: "Purchase Invoice",
+            target: frm,
+            setters: {
+                company: frm.doc.company,
+                company_gstin: frm.doc.company_gstin,
+            },
+            read_only_setters: ["company", "company_gstin"],
+            get_query() {
+                return {
+                    filters: {
+                        docstatus: 1,
+                        company: frm.doc.company,
+                        company_gstin: frm.doc.company_gstin,
+                        gst_category: "Overseas",
+                    },
+                };
+            },
+            add_filters_group: 1,
+            action: function (selections, args) {
+                frm.call("get_items_from_purchase_invoice", {
+                    purchase_invoices: selections,
+                }).then(d.dialog.hide());
+            },
+        });
+    },
+
     total_taxable_value(frm) {
         frm.taxes_controller.update_tax_amount();
     },
