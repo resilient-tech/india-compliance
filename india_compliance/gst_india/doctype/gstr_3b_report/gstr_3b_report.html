@@ -256,7 +256,7 @@
 				<td></td>
 			</tr>
 			<tr>
-				<td>&nbsp (1) {{__("As per rules 42 & 43 of CGST Rules and section 17(5)")}}</td>
+				<td>&nbsp (1) {{__("As per rules 38,42 & 43 of CGST Rules and section 17(5)")}}</td>
 				<td class="right">{{ flt(data.itc_elg.itc_rev[0].iamt, 2) }}</td>
 				<td class="right">{{ flt(data.itc_elg.itc_rev[0].camt, 2) }}</td>
 				<td class="right">{{ flt(data.itc_elg.itc_rev[0].samt, 2) }}</td>
@@ -270,14 +270,14 @@
 				<td class="right">{{ flt(data.itc_elg.itc_rev[1].csamt, 2) }}</td>
 			</tr>
 			<tr>
-				<td><b>(C) {{__("Net ITC Available(A) - (B)")}}</b></td>
+				<td><b>(C) {{__("Net ITC Available (A) - (B)")}}</b></td>
 				<td class="right">{{ flt(data.itc_elg.itc_net.iamt, 2) }}</td>
 				<td class="right">{{ flt(data.itc_elg.itc_net.camt, 2) }}</td>
 				<td class="right">{{ flt(data.itc_elg.itc_net.samt, 2) }}</td>
 				<td class="right">{{ flt(data.itc_elg.itc_net.csamt, 2) }}</td>
 			</tr>
 			<tr>
-				<td><b>(D) {{__("Ineligible ITC")}}</b></td>
+				<td><b>(D) {{__("Other Details")}}</b></td>
 				<td></td>
 				<td></td>
 				<td></td>
@@ -311,7 +311,7 @@
 	</thead>
 	<tbody>
 		<tr>
-			<td>{{__("From a supplier under composition scheme, Exempt and Nil rated")}}</td>
+			<td>{{__("From a supplier under composition scheme, Exempt and Nil rated supply")}}</td>
 			<td class="right">{{ flt(data.inward_sup.isup_details[0].inter, 2) }}</td>
 			<td class="right">{{ flt(data.inward_sup.isup_details[0].intra, 2) }}</td>
 		</tr>

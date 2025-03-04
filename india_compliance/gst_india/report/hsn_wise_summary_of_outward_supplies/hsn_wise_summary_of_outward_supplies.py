@@ -46,7 +46,7 @@ def get_hsn_data(filters, columns):
 
         if d.gst_hsn_code.startswith("99"):
             # service item doesn't have qty/uom
-            d.stock_qty = 0
+            d.qty = 0
             d.uqc = "NA"
         else:
             d.uqc = get_gst_uom(d.get("uqc"))
@@ -66,7 +66,7 @@ def get_hsn_data(filters, columns):
             d.gst_hsn_code,
             d.description,
             d.uqc,
-            flt(d.stock_qty, 2),
+            flt(d.qty, 2),
             flt(d.taxable_value + total_tax, 2),
             tax_rate,
             d.taxable_value,
@@ -117,7 +117,7 @@ def get_columns(filters):
             "width": 100,
         },
         {
-            "fieldname": "stock_qty",
+            "fieldname": "qty",
             "label": _("Total Quantity"),
             "fieldtype": "Float",
             "width": 90,
@@ -201,8 +201,8 @@ def get_items(filters):
         f"""
         SELECT
             COALESCE(`tabSales Invoice Item`.gst_hsn_code, '') AS gst_hsn_code,
-            `tabSales Invoice Item`.stock_uom as uqc,
-            sum(`tabSales Invoice Item`.stock_qty) AS stock_qty,
+            `tabSales Invoice Item`.uom as uqc,
+            sum(`tabSales Invoice Item`.qty) AS qty,
             sum(`tabSales Invoice Item`.taxable_value) AS taxable_value,
             `tabSales Invoice Item`.parent,
             `tabSales Invoice Item`.item_code,
@@ -362,7 +362,7 @@ def get_hsn_wise_json_data(filters, report_data):
             "num": count,
             "hsn_sc": hsn.get("gst_hsn_code"),
             "uqc": hsn.get("uqc"),
-            "qty": flt(hsn.get("stock_qty"), 2),
+            "qty": flt(hsn.get("qty"), 2),
             "rt": flt(hsn.get("tax_rate"), 2),
             "txval": flt(hsn.get("taxable_amount"), 2),
             "iamt": 0.0,
