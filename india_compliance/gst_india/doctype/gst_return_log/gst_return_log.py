@@ -5,14 +5,19 @@ import gzip
 from datetime import datetime
 
 import frappe
-from frappe import _
 from frappe.model.document import Document
 from frappe.utils import get_datetime, get_datetime_str, get_last_day, getdate
 
 from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     GenerateGSTR1,
 )
+<<<<<<< HEAD
 from india_compliance.gst_india.utils import is_production_api_enabled
+=======
+from india_compliance.gst_india.utils import get_party_for_gstin
+
+DOCTYPE = "GST Return Log"
+>>>>>>> 34989691 (refactor: move function from return log to gst settings)
 
 
 class GSTReturnLog(GenerateGSTR1, Document):
@@ -111,6 +116,7 @@ class GSTReturnLog(GenerateGSTR1, Document):
         if file_field == "filed":
             self.remove_json_for("unfiled")
 
+<<<<<<< HEAD
     # GSTR 1 UTILITY
     def is_gstr1_api_enabled(self, settings=None, warn_for_missing_credentials=False):
         if not settings:
@@ -140,8 +146,10 @@ class GSTReturnLog(GenerateGSTR1, Document):
 
         return True
 
+=======
+>>>>>>> 34989691 (refactor: move function from return log to gst settings)
     def is_sek_needed(self, settings=None):
-        if not self.is_gstr1_api_enabled(settings):
+        if not settings.is_gstr1_api_enabled(self.gstin):
             return False
 
         if not self.unfiled or self.filing_status != "Filed":
@@ -177,9 +185,13 @@ class GSTReturnLog(GenerateGSTR1, Document):
         # Books aggregated data stored in filed (as to file)
         fields = ["books", "books_summary"]
 
+<<<<<<< HEAD
         if self.is_gstr1_api_enabled(settings):
             fields.extend(["reconcile", "reconcile_summary"])
 
+=======
+        if settings.is_gstr1_api_enabled(self.gstin):
+>>>>>>> 34989691 (refactor: move function from return log to gst settings)
             if self.filing_status == "Filed":
                 fields.extend(["filed", "filed_summary"])
             else:
