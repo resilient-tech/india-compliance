@@ -188,11 +188,11 @@ class GSTReturnLog(GenerateGSTR1, Document):
         return fields
 
 
-def process_gstr_1_returns_info(company, gstin, response):
+def process_gstr_1_returns_info(company, gstin, e_filed_list):
     return_info = {}
 
     # compile gstr-1 returns info
-    for info in response.get("EFiledlist"):
+    for info in e_filed_list:
         if info["rtntype"] == "GSTR1":
             return_info[f"GSTR1-{info['ret_prd']}-{gstin}"] = info
 

@@ -314,16 +314,17 @@ def get_gstr_1_return_status(
     if not response:
         return
 
+    e_filed_list = response.get("EFiledlist") or []
     if process_info:
         frappe.enqueue(
             process_gstr_1_returns_info,
             company=company,
             gstin=gstin,
-            response=response,
+            e_filed_list=e_filed_list,
             enqueue_after_commit=True,
         )
 
-    for info in response.get("EFiledlist"):
+    for info in e_filed_list:
         if info["rtntype"] == "GSTR1" and info["ret_prd"] == period:
             return info["status"]
 
