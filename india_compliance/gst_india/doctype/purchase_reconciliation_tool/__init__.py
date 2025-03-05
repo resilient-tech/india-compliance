@@ -10,7 +10,7 @@ import frappe
 from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Abs, IfNull, Sum
-from frappe.utils import add_months, format_date, getdate, rounded
+from frappe.utils import add_months, cint, format_date, getdate, rounded
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.utils import get_gstin_list, get_party_for_gstin
@@ -565,7 +565,7 @@ class BillOfEntry:
             .left_join(self.BOE_ITEM)
             .on(self.BOE_ITEM.parent == self.BOE.name)
             .join(self.PI)
-            .on(self.BOE.purchase_invoice == self.PI.name)
+            .on(self.BOE_ITEM.purchase_invoice == self.PI.name)
             .where(self.BOE.docstatus == 1)
             .where(IfNull(self.BOE.reconciliation_status, "") != "Not Applicable")
             .where(self.BOE_ITEM.parenttype == "Bill of Entry")
@@ -1052,6 +1052,7 @@ class ReconciledData(BaseReconciliation):
             "action",
             "link_doctype",
             "link_name",
+            "is_supplier_return_filed",
         ]
 
         return (
@@ -1138,6 +1139,7 @@ class ReconciledData(BaseReconciliation):
             "action": "",
             "classification": "",
             "is_reverse_charge": "",
+            "is_supplier_return_filed": "",
         }
 
         for data in reconciliation_data:
@@ -1178,6 +1180,7 @@ class ReconciledData(BaseReconciliation):
                 "action": inward_supply.get("action"),
                 "classification": inward_supply.get("classification")
                 or self.guess_classification(purchase),
+                "is_supplier_return_filed": inward_supply.is_supplier_return_filed,
             }
         )
 
@@ -1196,12 +1199,12 @@ class ReconciledData(BaseReconciliation):
 
     def update_amount_difference(self, data, purchase, inward_supply):
         data.taxable_value_difference = rounded(
-            purchase.get("taxable_value", 0) - inward_supply.get("taxable_value", 0),
+            inward_supply.get("taxable_value", 0) - purchase.get("taxable_value", 0),
             2,
         )
 
         data.tax_difference = rounded(
-            BaseUtil.get_total_tax(purchase) - BaseUtil.get_total_tax(inward_supply),
+            BaseUtil.get_total_tax(inward_supply) - BaseUtil.get_total_tax(purchase),
             2,
         )
 
@@ -1342,7 +1345,9 @@ class BaseUtil:
             doc.total_gst = doc.cgst + doc.sgst + doc.igst
 
     @staticmethod
-    def get_periods(date_range, return_type: ReturnType, reversed_order=False):
+    def get_periods(
+        date_range, return_type: ReturnType, company_gstin=None, reversed_order=False
+    ):
         """Returns a list of month (formatted as `MMYYYY`) in a fiscal year"""
         if not date_range:
             return []
@@ -1351,11 +1356,15 @@ class BaseUtil:
         end_date = min(date_range[1], BaseUtil._getdate(return_type))
 
         # latest to oldest
-        return tuple(
+        periods = tuple(
             BaseUtil._reversed(
-                BaseUtil._get_periods(date_range[0], end_date), reversed_order
+                BaseUtil._get_periods(date_range[0], end_date),
+                reversed_order,
             )
         )
+
+        # Filter periods based on Filing Preference
+        return BaseUtil.get_filtered_periods(return_type, periods, company_gstin)
 
     @staticmethod
     def _get_periods(start_date, end_date):
@@ -1388,3 +1397,38 @@ class BaseUtil:
                 return add_months(getdate(), -2)
 
         return getdate()
+
+    @staticmethod
+    def get_filtered_periods(return_type, periods, company_gstin=None):
+        if return_type == ReturnType.GSTR2A:
+            return periods
+
+        gst_return_logs = frappe._dict(
+            frappe.get_all(
+                "GST Return Log",
+                filters={
+                    "return_type": "GSTR3B",
+                    "return_period": ["in", periods],
+                    "gstin": ["in", company_gstin],
+                },
+                fields=["return_period", "filing_preference"],
+                as_list=True,
+            )
+        )
+
+        if not gst_return_logs:
+            return periods
+
+        applicable_periods = []
+        for return_period, filing_preference in gst_return_logs.items():
+            month = cint(return_period[:2])
+
+            # For Quarterly filing, only last month of quarter is applicable
+            if filing_preference == "Quarterly":
+                if month % 3 == 0:
+                    applicable_periods.append(return_period)
+
+            else:
+                applicable_periods.append(return_period)
+
+        return applicable_periods

@@ -237,7 +237,7 @@ def get_columns(filters):
             },
             {
                 "label": _("UOM"),
-                "fieldname": "stock_uom",
+                "fieldname": "uom",
                 "fieldtype": "Data",
                 "width": 100,
             },

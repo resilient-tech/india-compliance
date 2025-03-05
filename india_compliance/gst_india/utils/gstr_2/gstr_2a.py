@@ -52,9 +52,6 @@ class GSTR2a(GSTR):
     def get_supplier_details(self, supplier):
         supplier_details = {
             "supplier_gstin": supplier.ctin,
-            "gstr_1_filled": get_mapped_value(
-                supplier.cfs, self.VALUE_MAPS.Y_N_to_check
-            ),
             "gstr_3b_filled": get_mapped_value(
                 supplier.cfs3b, self.VALUE_MAPS.Y_N_to_check
             ),

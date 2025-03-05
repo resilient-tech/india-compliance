@@ -23,6 +23,7 @@ frappe.ui.form.on("GSTR 3B Report", {
         if (frm.is_new()) return;
 
         frm.set_intro(__("Please save the report again to rebuild or update"));
+        frm.doc.__unsaved = 1;
 
         // Download Button
         frm.add_custom_button(__("Download JSON"), function () {
@@ -66,7 +67,9 @@ frappe.ui.form.on("GSTR 3B Report", {
         append_form(frm);
 
         // Regenerate Button
-        frm.add_custom_button(__("Regenerate"), function () {
+        frm.add_custom_button(__("Regenerate 2B"), function () {
+            frappe.show_alert(__("Regenerating GSTR-2B"));
+
             gstr_2b.regenerate({
                 gstin: frm.doc.company_gstin,
                 return_period: india_compliance.get_period(
@@ -74,6 +77,16 @@ frappe.ui.form.on("GSTR 3B Report", {
                     frm.doc.year
                 ),
                 doctype: frm.doc.doctype,
+                callback: function (regeneration_status) {
+                    if (regeneration_status.status === "ER") {
+                        frappe.throw(__(regeneration_status.error));
+                    } else if (regeneration_status.status === "P") {
+                        frappe.show_alert({
+                            message: __("Successfully Regenerated GSTR-2B"),
+                            indicator: "green",
+                        });
+                    }
+                },
             });
         });
     },

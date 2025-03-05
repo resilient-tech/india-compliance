@@ -148,8 +148,13 @@ def is_shipping_address_in_india(doc):
 
 
 def on_submit(doc, method=None):
+    # Check to validate_backdated_transaction
+    if ignore_gst_validations(doc):
+        return
+
     validate_backdated_transaction(doc)
 
+    # Checks to validate generation of e-Invoice
     if getattr(doc, "_submitted_from_ui", None) or validate_transaction(doc) is False:
         return
 
@@ -357,7 +362,9 @@ def set_and_validate_advances_with_gst(doc):
         allocated_amount_with_taxes += advance.allocated_amount
 
     excess_allocation = flt(
-        flt(allocated_amount_with_taxes, 2) - (doc.rounded_total or doc.grand_total), 2
+        flt(allocated_amount_with_taxes, 2)
+        - (doc.base_rounded_total or doc.base_grand_total),
+        2,
     )
     if excess_allocation > 0:
         message = _(

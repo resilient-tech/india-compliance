@@ -16,6 +16,7 @@ class GSTInwardSupply(Document):
 
         if self.gstr_1_filing_date:
             self.gstr_1_filled = True
+            self.is_supplier_return_filed = True
 
         if self.previous_ims_action and not self.get("ims_action"):
             self.ims_action = self.previous_ims_action

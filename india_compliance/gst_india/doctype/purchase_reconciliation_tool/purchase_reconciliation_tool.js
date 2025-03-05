@@ -641,6 +641,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 options: "GST Inward Supply",
                 align: "center",
                 width: 120,
+                _after_format: (...args) => this.get_value_with_indicator(...args),
             },
             {
                 label: "Purchase <br>Invoice",
@@ -1011,19 +1012,21 @@ class ImportDialog {
             for_download: this.for_download,
         });
 
+        // ensure sequence is maintained
+        function get_map(message) {
+            return Array.isArray(message) ? new Map(message) : message;
+        }
+
+        const _pending = get_map(message.pending_download);
+        const _history = get_map(message.download_history);
+
         // render html
-        let pending_download = {
-            columns: ["Period", "GSTIN"],
-            data: message.pending_download,
-        };
+        let pending_download = { columns: ["Period", "GSTIN"], data: _pending };
         this.dialog.fields_dict.pending_download.html(
             frappe.render_template("gstr_download_history", pending_download)
         );
 
-        let download_history = {
-            columns: ["Period", "Downloaded On"],
-            data: message.download_history,
-        };
+        let download_history = { columns: ["Period", "Downloaded On"], data: _history };
         let html =
             this.company_gstin === "All"
                 ? ""
