@@ -50,6 +50,6 @@ class TestHSNWiseSummaryReport(TestCase):
         self.assertTrue(filtered_rows)
 
         hsn_row = filtered_rows[0]
-        self.assertEquals(hsn_row["qty"], 3.0)
-        self.assertEquals(hsn_row["taxable_amount"], 300)
-        self.assertEquals(hsn_row["total_amount"], 354)  # 6 * 100 * 1.18
+        self.assertEquals(hsn_row["qty"], 2.0)
+        self.assertEquals(hsn_row["taxable_amount"], 200)
+        self.assertEquals(hsn_row["total_amount"], 236)  # 2 * 1.18 * 100
