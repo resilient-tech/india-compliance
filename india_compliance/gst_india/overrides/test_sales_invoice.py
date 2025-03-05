@@ -1,11 +1,14 @@
-import unittest
-
 import frappe
+from frappe.tests.utils import FrappeTestCase
 
 from india_compliance.gst_india.utils import validate_invoice_number
 
 
-class TestSalesInvoice(unittest.TestCase):
+class TestSalesInvoice(FrappeTestCase):
+    @classmethod
+    def setUpClass(cls):
+        return super().setUpClass()
+
     def test_validate_invoice_number(self):
         posting_date = "2021-05-01"
 

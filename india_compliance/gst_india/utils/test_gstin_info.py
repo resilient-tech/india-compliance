@@ -1,4 +1,3 @@
-import unittest
 from unittest.mock import Mock, patch
 
 import responses
@@ -10,7 +9,7 @@ from frappe.tests.utils import FrappeTestCase, change_settings
 from india_compliance.gst_india.utils.gstin_info import get_gstin_info
 
 
-class TestGstinInfo(unittest.TestCase):
+class TestGstinInfo(FrappeTestCase):
     MOCK_GSTIN_INFO = frappe._dict(
         {
             "adadr": [
