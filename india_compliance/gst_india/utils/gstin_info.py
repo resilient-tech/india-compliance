@@ -4,7 +4,7 @@ from string import whitespace
 
 import frappe
 from frappe import _
-from frappe.utils import getdate
+from frappe.utils import add_to_date
 
 from india_compliance.exceptions import GSPServerError
 from india_compliance.gst_india.api_classes.base import BASE_URL
@@ -314,21 +314,22 @@ def get_gstr_1_return_status(
     if not response:
         return
 
+    e_filed_list = response.get("EFiledlist") or []
     if process_info:
         frappe.enqueue(
             process_gstr_1_returns_info,
             company=company,
             gstin=gstin,
-            response=response,
+            e_filed_list=e_filed_list,
             enqueue_after_commit=True,
         )
 
-    for info in response.get("EFiledlist"):
+    for info in e_filed_list:
         if info["rtntype"] == "GSTR1" and info["ret_prd"] == period:
             return info["status"]
 
     # late filing possibility (limitation: only checks for the next FY: good enough)
-    if not year_increment and get_current_fy() != fy:
+    if not year_increment and get_previous_period_fy() != fy:
         get_gstr_1_return_status(
             company, gstin, period, process_info=process_info, year_increment=1
         )
@@ -347,6 +348,7 @@ def get_fy(period, year_increment=0):
         return f"{year}-{int(year[-2:]) + 1}"
 
 
-def get_current_fy():
-    period = getdate().strftime("%m%Y")
+def get_previous_period_fy():
+    # Best possible scenario is that the return was filed in the previous period.
+    period = add_to_date(None, months=-1).strftime("%m%Y")
     return get_fy(period)

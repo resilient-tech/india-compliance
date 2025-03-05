@@ -7,6 +7,8 @@ frappe.ui.form.on("GST Return Log", {
             frm.doc.return_period
         );
 
+        if (frm.doc.return_type !== "GSTR1") return;
+
         frm.add_custom_button(__("View GSTR-1"), () => {
             frappe.set_route("Form", "GSTR-1 Beta");
 
