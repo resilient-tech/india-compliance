@@ -21,8 +21,9 @@ class GSTR1Reconciliation(Document):
     @frappe.whitelist()
     @otp_handler
     def generate_gstr1_reconciliation(self):
-        if self.has_all_files() or not frappe.db.get_single_value(
-            "GST Settings", "enable_api"
+        if (
+            not frappe.db.get_single_value("GST Settings", "enable_api")
+            or self.has_all_files()
         ):
             return self.get_reconciliation_summary_data()
 
@@ -36,25 +37,21 @@ class GSTR1Reconciliation(Document):
         if not self.gst_log:
             create_fiscal_year_logs()
 
-        self.update_gstr1_log()
+        self.create_or_update_gstr1_data()
         self.get_reconciliation_summary_data()
 
-    def update_gstr1_log(self):
+    def create_or_update_gstr1_data(self):
         if not self.gst_log:
-            self.gst_log = frappe.get_all(
-                "GST Return Log",
-                filters={"name": ["in", self.log_names], "gstin": self.company_gstin},
-                fields=["name", "is_latest_data", "filed_summary", "filing_status"],
-            )
+            self.get_logs_data()
 
         for log in self.gst_log:
             if log.status != "Filed":
                 continue
 
             if not log.is_latest_data or not log.filed_summary or log.filed:
-                self.update_gstr_1_data(log.name)
+                self.create_or_update_gstr_1_data(log.name)
 
-    def update_gstr_1_data(self, log_name):
+    def create_or_update_gstr_1_data(self, log_name):
         doc = frappe.get_doc("GST Return Log", log_name)
 
         filters = frappe._dict(
@@ -71,11 +68,7 @@ class GSTR1Reconciliation(Document):
         period = f"04{self.fiscal_year.split('-')[0]}"
         self.log_names = get_fiscal_year_logs(self.company_gstin, period, ["GSTR1"])
 
-        self.gst_log = frappe.get_all(
-            "GST Return Log",
-            filters={"name": ["in", self.log_names], "gstin": self.company_gstin},
-            fields=["name", "is_latest_data", "filed_summary", "filing_status"],
-        )
+        self.get_logs_data()
 
         if len(self.gst_log) != 12:
             self.gst_log = None
@@ -102,3 +95,10 @@ class GSTR1Reconciliation(Document):
             summary_data[log.name] = doc.get_net_liability_from_amendments()
 
         return summary_data
+
+    def get_logs_data(self):
+        self.gst_log = frappe.get_all(
+            "GST Return Log",
+            filters={"name": ["in", self.log_names], "gstin": self.company_gstin},
+            fields=["name", "is_latest_data", "filed_summary", "filing_status"],
+        )
