@@ -586,7 +586,9 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         data = {}
 
         # APIs Disabled
-        if not self.is_gstr1_api_enabled(warn_for_missing_credentials=True):
+        if not frappe.get_cached_doc("GST Settings").is_gstr1_api_enabled(
+            self.gstin, warn_for_missing_credentials=True
+        ):
             return self.generate_only_books_data(data, filters, callback)
 
         # APIs Enabled
