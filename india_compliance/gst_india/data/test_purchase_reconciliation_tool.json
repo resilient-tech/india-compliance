@@ -167,8 +167,8 @@
                     "purchase_invoice_name": "",
                     "supplier_gstin": "24AABCR6898M1ZN",
                     "supplier_name": "_Test Registered Supplier",
-                    "tax_difference": -0.09,
-                    "taxable_value_difference": -0.5
+                    "tax_difference": 0.09,
+                    "taxable_value_difference": 0.5
                 }
             }
         ],
