@@ -11,6 +11,9 @@ from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Abs, IfNull, Sum
 from frappe.utils import add_months, cint, format_date, getdate, rounded
+from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
+    get_accounting_dimensions,
+)
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.utils import get_gstin_list, get_party_for_gstin
@@ -1069,7 +1072,9 @@ class ReconciledData(BaseReconciliation):
             "is_return",
             "gst_category",
             "reconciliation_status",
-        ]
+            "cost_center",
+            "project",
+        ] + get_accounting_dimensions()
 
         boe_names = purchase_names
 
@@ -1157,6 +1162,11 @@ class ReconciledData(BaseReconciliation):
                 BaseUtil.update_cess_amount(purchase)
 
     def update_fields(self, data, purchase, inward_supply):
+        # Update accounting dimension fields
+        dimension_fields = get_accounting_dimensions() + ["cost_center", "project"]
+        for dimension in dimension_fields:
+            data[dimension] = purchase.get(dimension)
+
         for field in (
             "supplier_name",
             "supplier_gstin",

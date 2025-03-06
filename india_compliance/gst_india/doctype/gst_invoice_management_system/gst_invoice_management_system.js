@@ -125,7 +125,8 @@ class IMS extends reconciliation.reconciliation_tabs {
     }
 
     get_filter_fields() {
-        const fields = [
+        const fields = super.get_filter_fields();
+        fields.push(
             {
                 label: "Supplier Name",
                 fieldname: "supplier_name",
@@ -183,8 +184,8 @@ class IMS extends reconciliation.reconciliation_tabs {
                 label: "Is Supplier Return Filed",
                 fieldname: "is_supplier_return_filed",
                 fieldtype: "Check",
-            },
-        ];
+            }
+        );
 
         fields.forEach(field => (field.parent = DOCTYPE));
         return fields;

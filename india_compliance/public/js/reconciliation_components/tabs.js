@@ -18,6 +18,7 @@ reconciliation.reconciliation_tabs = class ReconciliationTabs {
         // clear filters
         this.filter_group.filter_x_button.click();
         this.render_data_tables();
+        this.refresh_filter_fields();
     }
 
     refresh(data) {
@@ -74,7 +75,20 @@ reconciliation.reconciliation_tabs = class ReconciliationTabs {
     }
 
     get_filter_fields() {
-        return [];
+        const fields = [];
+        const dimension_fields = this.get_accounting_dimensions();
+
+        dimension_fields.forEach(dimension => {
+            const label = frappe.unscrub(dimension);
+            fields.push({
+                label,
+                fieldname: dimension,
+                fieldtype: "Autocomplete",
+                options: this.get_autocomplete_options(dimension),
+            });
+        });
+
+        return fields;
     }
 
     apply_filters(force, supplier_filter) {
@@ -153,6 +167,18 @@ reconciliation.reconciliation_tabs = class ReconciliationTabs {
             .prop("outerHTML");
 
         return value;
+    }
+
+    get_accounting_dimensions() {
+        let options = ["cost_center", "project"];
+        frappe.db
+            .get_list("Accounting Dimension", { fields: ["fieldname"] })
+            .then(res => {
+                res.forEach(dimension => {
+                    options.push(dimension.document_type);
+                });
+            });
+        return options;
     }
 };
 
