@@ -94,8 +94,7 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
             }
         )
 
-        purchase_reconciliation_tool.save(ignore_permissions=True)
-        reconciled_data = purchase_reconciliation_tool.ReconciledData.get()
+        reconciled_data = purchase_reconciliation_tool.reconcile_and_generate_data()
 
         for row in reconciled_data:
             for key, value in row.items():
