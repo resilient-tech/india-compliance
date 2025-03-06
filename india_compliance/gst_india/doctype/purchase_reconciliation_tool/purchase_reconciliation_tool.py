@@ -1271,6 +1271,20 @@ class BuildExcel:
                 },
             },
             {
+                "label": "Inward Supply Name",
+                "fieldname": "inward_supply_name",
+                "data_format": {
+                    "horizontal": "left",
+                },
+            },
+            {
+                "label": "Purchase Document Name",
+                "fieldname": "purchase_invoice_name",
+                "data_format": {
+                    "horizontal": "left",
+                },
+            },
+            {
                 "label": "Taxable Value Difference",
                 "fieldname": "taxable_value_difference",
                 "fieldtype": "Float",
