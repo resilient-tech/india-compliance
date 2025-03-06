@@ -774,6 +774,46 @@ class TestEInvoice(IntegrationTestCase):
             si.name,
         )
 
+    @responses.activate
+    def test_cancellation_when_e_invoice_not_cancellable(self):
+        """
+        Test that a Sales Invoice cannot be cancelled if the associated e-Invoice is not cancellable configurable as per GST settings.
+        """
+        # Enable Setting
+        frappe.db.set_single_value(
+            "GST Settings", "restrict_cancellation_if_e_invoice_not_cancellable", 1
+        )
+
+        test_data = self.e_invoice_test_data.get("service_item")
+        si = create_sales_invoice(
+            **test_data.get("kwargs"),
+            is_in_state=True,
+        )
+        test_data.get("response_data").get("result").update(
+            {"AckDt": str(add_to_date(days=-2))}
+        )
+
+        # Mock response for generating irn
+        self._mock_e_invoice_response(data=test_data)
+
+        generate_e_invoice(si.name)
+        si.reload()
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(
+                r"^(This document cannot be cancelled because the associated e-Invoice.*)$"
+            ),
+            si.cancel,
+        )
+
+        # Disable Setting
+        frappe.db.set_single_value(
+            "GST Settings", "restrict_cancellation_if_e_invoice_not_cancellable", 0
+        )
+        si.reload()
+        si.cancel()
+
     def _cancel_e_invoice(self, invoice_no):
         values = frappe._dict(
             {"reason": "Data Entry Mistake", "remark": "Data Entry Mistake"}
