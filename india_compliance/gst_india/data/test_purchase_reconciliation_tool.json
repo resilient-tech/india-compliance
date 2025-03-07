@@ -25,7 +25,9 @@
                     "supplier_gstin": "24AABCR6898M1ZN",
                     "supplier_name": "_Test Registered Supplier",
                     "tax_difference": 0.0,
-                    "taxable_value_difference": 0.0
+                    "taxable_value_difference": 0.0,
+                    "project": "",
+                    "cost_center": ""
                 }
             },
             {
@@ -70,7 +72,9 @@
                     "supplier_gstin": "_Test Foreign Supplier",
                     "supplier_name": "_Test Foreign Supplier",
                     "tax_difference": 0.0,
-                    "taxable_value_difference": 0.0
+                    "taxable_value_difference": 0.0,
+                    "project": "",
+                    "cost_center": ""
                 }
             },
             {
@@ -109,7 +113,9 @@
                     "supplier_gstin": "24AABCR6898M1ZN",
                     "supplier_name": "_Test Registered Supplier",
                     "tax_difference": 0.0,
-                    "taxable_value_difference": 0.0
+                    "taxable_value_difference": 0.0,
+                    "project": "",
+                    "cost_center": ""
                 }
             }
         ],
@@ -140,7 +146,9 @@
                     "supplier_gstin": "24AABCR6898M1ZN",
                     "supplier_name": "_Test Registered Supplier",
                     "tax_difference": 0.0,
-                    "taxable_value_difference": 0.0
+                    "taxable_value_difference": 0.0,
+                    "project": "",
+                    "cost_center": ""
                 }
             }
         ],
@@ -178,7 +186,9 @@
                     "supplier_gstin": "24AABCR6898M1ZN",
                     "supplier_name": "_Test Registered Supplier",
                     "tax_difference": 0.09,
-                    "taxable_value_difference": 0.5
+                    "taxable_value_difference": 0.5,
+                    "project": "",
+                    "cost_center": ""
                 }
             }
         ],
@@ -207,7 +217,9 @@
                     "supplier_gstin": "24AABCR6898M1ZN",
                     "supplier_name": "_Test Registered Supplier",
                     "tax_difference": 0.0,
-                    "taxable_value_difference": 0.0
+                    "taxable_value_difference": 0.0,
+                    "project": "",
+                    "cost_center": ""
                 }
             }
         ]

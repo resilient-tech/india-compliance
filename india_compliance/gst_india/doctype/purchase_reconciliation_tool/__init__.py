@@ -1165,7 +1165,7 @@ class ReconciledData(BaseReconciliation):
         # Update accounting dimension fields
         dimension_fields = get_accounting_dimensions() + ["cost_center", "project"]
         for dimension in dimension_fields:
-            data[dimension] = purchase.get(dimension)
+            data[dimension] = purchase.get(dimension) or ""
 
         for field in (
             "supplier_name",
