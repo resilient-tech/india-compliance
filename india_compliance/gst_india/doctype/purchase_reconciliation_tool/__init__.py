@@ -954,6 +954,7 @@ class ReconciledData(BaseReconciliation):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.gstin_party_map = frappe._dict()
+        self.dimension_fields = get_accounting_dimensions() + ["cost_center", "project"]
 
     def get_consolidated_data(
         self,
@@ -1072,9 +1073,7 @@ class ReconciledData(BaseReconciliation):
             "is_return",
             "gst_category",
             "reconciliation_status",
-            "cost_center",
-            "project",
-        ] + get_accounting_dimensions()
+        ] + self.dimension_fields
 
         boe_names = purchase_names
 
@@ -1163,8 +1162,7 @@ class ReconciledData(BaseReconciliation):
 
     def update_fields(self, data, purchase, inward_supply):
         # Update accounting dimension fields
-        dimension_fields = get_accounting_dimensions() + ["cost_center", "project"]
-        for dimension in dimension_fields:
+        for dimension in self.dimension_fields:
             data[dimension] = purchase.get(dimension) or ""
 
         for field in (
