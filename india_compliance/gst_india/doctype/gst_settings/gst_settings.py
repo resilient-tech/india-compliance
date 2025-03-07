@@ -373,7 +373,7 @@ class GSTSettings(Document):
     # GSTR 1 UTILITY
     def is_gstr1_api_enabled(self, gstin, warn_for_missing_credentials=False):
         if not is_production_api_enabled(self):
-            pass
+            return False
 
         if not self.enable_gstr_1_api:
             return False
