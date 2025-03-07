@@ -499,7 +499,8 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         data = {}
 
         # APIs Disabled
-        if not frappe.get_cached_doc("GST Settings").is_gstr1_api_enabled(
+        settings = frappe.get_cached_doc("GST Settings")
+        if not settings.is_gstr1_api_enabled(
             self.gstin, warn_for_missing_credentials=True
         ):
             return self.generate_only_books_data(data, filters, callback)
@@ -512,6 +513,12 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         else:
             gov_data_field = "unfiled"
 
+<<<<<<< HEAD
+=======
+        if status != "Filed" and settings.compare_unfiled_data != 1:
+            return self.generate_only_books_data(data, filters, callback)
+
+>>>>>>> fa44c51e (fix: remove pass and minor refactor)
         # Get Data
         gov_data, is_enqueued = self.get_gov_gstr1_data()
 
