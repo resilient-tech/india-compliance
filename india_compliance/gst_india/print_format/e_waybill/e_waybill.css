@@ -86,3 +86,7 @@ table, th, td {
     width: 95px !important;
     image-rendering: -webkit-optimize-contrast;
 }
+
+.custom-margin {
+    margin: 5px 0 15px;
+}
