@@ -967,11 +967,11 @@ class BuildExcel:
         ]
 
     def get_invoice_columns(self):
-        self.dimension_fields = ["Project", "Cost Center"] + get_accounting_dimensions()
+        self.dimension_fields = ["project", "cost_center"] + get_accounting_dimensions()
         dimension_columns = [
             {
-                "label": dimension,
-                "fieldname": frappe.scrub(dimension),
+                "label": frappe.unscrub(dimension),
+                "fieldname": dimension,
                 "data_format": {
                     "horizontal": "left",
                 },
@@ -1287,6 +1287,7 @@ class BuildExcel:
                     "width": 11,
                 },
             },
+            *dimension_columns,
             {
                 "label": "Inward Supply Name",
                 "fieldname": "inward_supply_name",
@@ -1329,8 +1330,7 @@ class BuildExcel:
             },
         ]
 
-        dimension_columns.extend(inv_columns)
-        dimension_columns.extend(self.inward_supply_columns)
-        dimension_columns.extend(self.pr_columns)
+        inv_columns.extend(self.inward_supply_columns)
+        inv_columns.extend(self.pr_columns)
 
-        return dimension_columns
+        return inv_columns
