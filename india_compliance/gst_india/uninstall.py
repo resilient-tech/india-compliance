@@ -7,7 +7,7 @@ from india_compliance.gst_india.setup import (
     get_all_custom_fields,
     get_property_setters,
 )
-from india_compliance.gst_india.utils.custom_fields import delete_custom_fields
+from india_compliance.utils.custom_fields import delete_custom_fields
 
 
 def before_uninstall():

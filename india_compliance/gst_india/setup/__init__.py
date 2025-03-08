@@ -1,9 +1,6 @@
 import click
 
 import frappe
-from frappe.custom.doctype.custom_field.custom_field import (
-    create_custom_fields as _create_custom_fields,
-)
 from frappe.utils import now_datetime, nowdate
 from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
     make_dimension_in_accounting_doctypes,
@@ -20,9 +17,13 @@ from india_compliance.gst_india.constants.custom_fields import (
 )
 from india_compliance.gst_india.setup.property_setters import get_property_setters
 from india_compliance.gst_india.utils import get_data_file_path
-from india_compliance.gst_india.utils.custom_fields import toggle_custom_fields
+from india_compliance.utils.custom_fields import (
+    get_custom_fields_creator,
+    toggle_custom_fields,
+)
 
 ITEM_VARIANT_FIELDNAMES = frozenset(("gst_hsn_code",))
+_create_custom_fields = get_custom_fields_creator("GST India")
 
 
 def after_install():
@@ -43,10 +44,12 @@ def create_custom_fields():
     # Will not fail if a core field with same name already exists (!)
     # Will update a custom field if it already exists
     _create_custom_fields(get_all_custom_fields(), ignore_validate=True)
-    if "hrms" in frappe.get_installed_apps():
+    installed_apps = frappe.get_installed_apps()
+
+    if "hrms" in installed_apps:
         create_hrms_custom_fields()
 
-    if "education" in frappe.get_installed_apps():
+    if "education" in installed_apps:
         create_education_custom_fields()
 
 

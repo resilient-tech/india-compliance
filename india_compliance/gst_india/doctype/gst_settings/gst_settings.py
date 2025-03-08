@@ -27,8 +27,8 @@ from india_compliance.gst_india.utils import (
     is_api_enabled,
     is_production_api_enabled,
 )
-from india_compliance.gst_india.utils.custom_fields import toggle_custom_fields
 from india_compliance.gst_india.utils.gstin_info import get_gstin_info
+from india_compliance.utils.custom_fields import toggle_custom_fields
 
 E_INVOICE_START_DATE = "2021-01-01"
 
