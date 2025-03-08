@@ -371,7 +371,7 @@ class GSTSettings(Document):
         if not is_production_api_enabled(self):
             return False
 
-        if not self.enable_gstr_1_api:
+        if not self.compare_gstr_1_data:
             return False
 
         if not self.has_valid_credentials(gstin, "Returns"):

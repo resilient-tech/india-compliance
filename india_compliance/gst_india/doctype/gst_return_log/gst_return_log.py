@@ -11,13 +11,6 @@ from frappe.utils import get_datetime, get_datetime_str, get_last_day, getdate
 from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     GenerateGSTR1,
 )
-<<<<<<< HEAD
-from india_compliance.gst_india.utils import is_production_api_enabled
-=======
-from india_compliance.gst_india.utils import get_party_for_gstin
-
-DOCTYPE = "GST Return Log"
->>>>>>> 34989691 (refactor: move function from return log to gst settings)
 
 
 class GSTReturnLog(GenerateGSTR1, Document):
@@ -116,38 +109,6 @@ class GSTReturnLog(GenerateGSTR1, Document):
         if file_field == "filed":
             self.remove_json_for("unfiled")
 
-<<<<<<< HEAD
-    # GSTR 1 UTILITY
-    def is_gstr1_api_enabled(self, settings=None, warn_for_missing_credentials=False):
-        if not settings:
-            settings = frappe.get_cached_doc("GST Settings")
-
-        if not is_production_api_enabled(settings):
-            return False
-
-        if not settings.compare_gstr_1_data:
-            return False
-
-        if not settings.has_valid_credentials(self.gstin, "Returns"):
-            if warn_for_missing_credentials:
-                frappe.publish_realtime(
-                    "show_missing_gst_credentials_message",
-                    dict(
-                        message=_(
-                            "Credentials are missing for GSTIN {0} for service"
-                            " Returns in GST Settings"
-                        ).format(self.gstin),
-                        title=_("Missing Credentials"),
-                    ),
-                    user=frappe.session.user,
-                )
-
-            return False
-
-        return True
-
-=======
->>>>>>> 34989691 (refactor: move function from return log to gst settings)
     def is_sek_needed(self, settings=None):
         if not settings.is_gstr1_api_enabled(self.gstin):
             return False
@@ -185,13 +146,8 @@ class GSTReturnLog(GenerateGSTR1, Document):
         # Books aggregated data stored in filed (as to file)
         fields = ["books", "books_summary"]
 
-<<<<<<< HEAD
-        if self.is_gstr1_api_enabled(settings):
-            fields.extend(["reconcile", "reconcile_summary"])
-
-=======
         if settings.is_gstr1_api_enabled(self.gstin):
->>>>>>> 34989691 (refactor: move function from return log to gst settings)
+            fields.extend(["reconcile", "reconcile_summary"])
             if self.filing_status == "Filed":
                 fields.extend(["filed", "filed_summary"])
             else:

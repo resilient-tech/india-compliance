@@ -513,12 +513,6 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         else:
             gov_data_field = "unfiled"
 
-<<<<<<< HEAD
-=======
-        if status != "Filed" and settings.compare_unfiled_data != 1:
-            return self.generate_only_books_data(data, filters, callback)
-
->>>>>>> fa44c51e (fix: remove pass and minor refactor)
         # Get Data
         gov_data, is_enqueued = self.get_gov_gstr1_data()
 
