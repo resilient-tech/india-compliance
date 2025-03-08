@@ -147,6 +147,9 @@ def validate_item_wise_tax_detail(doc):
         if not row.gst_tax_type:
             continue
 
+        if row.dont_recompute_tax:
+            continue
+
         if row.charge_type != "Actual":
             continue
 
