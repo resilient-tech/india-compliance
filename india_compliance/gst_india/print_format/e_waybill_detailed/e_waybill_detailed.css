@@ -119,3 +119,7 @@ td {
     width: 95px !important;
     image-rendering: -webkit-optimize-contrast;
 }
+
+.custom-margin {
+    margin: 15px 0 20px;
+}
