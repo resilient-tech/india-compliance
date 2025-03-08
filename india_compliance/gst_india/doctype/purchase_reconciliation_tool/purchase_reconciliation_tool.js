@@ -268,7 +268,8 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
     }
 
     get_filter_fields() {
-        const fields = [
+        const fields = super.get_filter_fields();
+        fields.push(
             {
                 label: "Supplier Name",
                 fieldname: "supplier_name",
@@ -325,8 +326,8 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 fieldname: "purchase_doctype",
                 fieldtype: "Select",
                 options: ["Purchase Invoice", "Bill of Entry"],
-            },
-        ];
+            }
+        );
 
         fields.forEach(field => (field.parent = DOCTYPE));
         return fields;

@@ -9,6 +9,9 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.functions import IfNull
 from frappe.utils import add_to_date, cint, now_datetime
+from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
+    get_accounting_dimensions,
+)
 
 from india_compliance.gst_india.api_classes.taxpayer_base import (
     TaxpayerBaseAPI,
@@ -964,6 +967,18 @@ class BuildExcel:
         ]
 
     def get_invoice_columns(self):
+        self.dimension_fields = ["project", "cost_center"] + get_accounting_dimensions()
+        dimension_columns = [
+            {
+                "label": frappe.unscrub(dimension),
+                "fieldname": dimension,
+                "data_format": {
+                    "horizontal": "left",
+                },
+            }
+            for dimension in self.dimension_fields
+        ]
+
         self.pr_columns = [
             {
                 "label": "Bill No",
@@ -1101,6 +1116,7 @@ class BuildExcel:
                 },
             },
         ]
+
         self.inward_supply_columns = [
             {
                 "label": "Bill No",
@@ -1238,6 +1254,7 @@ class BuildExcel:
                 },
             },
         ]
+
         inv_columns = [
             {
                 "label": "Action Status",
@@ -1270,6 +1287,21 @@ class BuildExcel:
                     "width": 11,
                 },
             },
+            *dimension_columns,
+            {
+                "label": "Inward Supply Name",
+                "fieldname": "inward_supply_name",
+                "data_format": {
+                    "horizontal": "left",
+                },
+            },
+            {
+                "label": "Purchase Document Name",
+                "fieldname": "purchase_invoice_name",
+                "data_format": {
+                    "horizontal": "left",
+                },
+            },
             {
                 "label": "Taxable Value Difference",
                 "fieldname": "taxable_value_difference",
@@ -1297,6 +1329,8 @@ class BuildExcel:
                 },
             },
         ]
+
         inv_columns.extend(self.inward_supply_columns)
         inv_columns.extend(self.pr_columns)
+
         return inv_columns
