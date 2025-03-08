@@ -39,11 +39,14 @@ class GSTSettings(Document):
 
     def validate(self):
         self.update_dependant_fields()
-        self.validate_enable_api()
-        self.validate_gst_accounts()
-        self.validate_e_invoice_applicability_date()
-        self.validate_credentials()
-        self.validate_gstin_status_refresh_interval()
+
+        if not frappe.flags.in_install:
+            self.validate_enable_api()
+            self.validate_gst_accounts()
+            self.validate_e_invoice_applicability_date()
+            self.validate_credentials()
+            self.validate_gstin_status_refresh_interval()
+
         self.clear_api_auth_session()
         self.update_retry_e_invoice_e_waybill_scheduled_job()
         self.update_e_invoice_status()
