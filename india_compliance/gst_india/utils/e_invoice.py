@@ -522,7 +522,7 @@ def validate_taxable_item(doc, throw=True):
     )
 
 
-def validate_if_e_invoice_can_be_cancelled(doc):
+def validate_if_e_invoice_can_be_cancelled(doc, throw=True):
     if not doc.irn:
         frappe.throw(_("IRN not found"), title=_("Error Cancelling e-Invoice"))
 
@@ -534,6 +534,9 @@ def validate_if_e_invoice_can_be_cancelled(doc):
         or add_to_date(get_datetime(acknowledged_on), days=1, as_datetime=True)
         < get_datetime()
     ):
+        if not throw:
+            return False
+
         frappe.throw(
             _("e-Invoice can only be cancelled upto 24 hours after it is generated")
         )
