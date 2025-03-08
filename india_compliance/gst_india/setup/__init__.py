@@ -44,10 +44,12 @@ def create_custom_fields():
     # Will not fail if a core field with same name already exists (!)
     # Will update a custom field if it already exists
     _create_custom_fields(get_all_custom_fields(), ignore_validate=True)
-    if "hrms" in frappe.get_installed_apps():
+    installed_apps = frappe.get_installed_apps()
+
+    if "hrms" in installed_apps:
         create_hrms_custom_fields()
 
-    if "education" in frappe.get_installed_apps():
+    if "education" in installed_apps:
         create_education_custom_fields()
 
 
