@@ -228,11 +228,11 @@ def validate_cancellation_based_on_e_invoice(doc):
     cannot_be_cancelled = (
         validate_if_e_invoice_can_be_cancelled(doc, throw=False) is False
     )
-    restrict_cancellation = frappe.db.get_single_value(
-        "GST Settings", "restrict_cancellation_if_e_invoice_not_cancellable"
+    restrict_cancel = frappe.db.get_single_value(
+        "GST Settings", "restrict_cancel_if_e_invoice_final"
     )
 
-    if cannot_be_cancelled and restrict_cancellation:
+    if cannot_be_cancelled and restrict_cancel:
         frappe.throw(
             _(
                 "This document cannot be cancelled because the associated e-Invoice is not cancellable. <br><br>Please create a Credit Note instead."

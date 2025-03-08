@@ -781,7 +781,7 @@ class TestEInvoice(IntegrationTestCase):
         """
         # Enable Setting
         frappe.db.set_single_value(
-            "GST Settings", "restrict_cancellation_if_e_invoice_not_cancellable", 1
+            "GST Settings", "restrict_cancel_if_e_invoice_final", 1
         )
 
         test_data = self.e_invoice_test_data.get("service_item")
@@ -809,7 +809,7 @@ class TestEInvoice(IntegrationTestCase):
 
         # Disable Setting
         frappe.db.set_single_value(
-            "GST Settings", "restrict_cancellation_if_e_invoice_not_cancellable", 0
+            "GST Settings", "restrict_cancel_if_e_invoice_final", 0
         )
         si.reload()
         si.cancel()

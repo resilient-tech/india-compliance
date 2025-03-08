@@ -41,7 +41,7 @@
   "generate_e_waybill_with_e_invoice",
   "auto_generate_e_invoice",
   "auto_cancel_e_invoice",
-  "restrict_cancellation_if_e_invoice_not_cancellable",
+  "restrict_cancel_if_e_invoice_final",
   "reason_for_e_invoice_cancellation",
   "column_break_17",
   "fetch_e_invoice_details_from_gst_portal",
@@ -676,7 +676,7 @@
    "default": "0",
    "depends_on": "eval: doc.enable_e_invoice",
    "description": "If the e-Invoice is not cancellable, the Sales Invoice will not be allowed to be cancelled.",
-   "fieldname": "restrict_cancellation_if_e_invoice_not_cancellable",
+   "fieldname": "restrict_cancel_if_e_invoice_final",
    "fieldtype": "Check",
    "label": "Restrict Cancellation if e-Invoice not Cancellable"
   }
