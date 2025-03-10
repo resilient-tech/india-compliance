@@ -514,7 +514,7 @@ Object.assign(india_compliance, {
     },
 
     format_gstin(gstin) {
-        return gstin.slice(0, 2) + "XXXXXXXXXXXXX";
+        return gstin.slice(0, 2) + "XXXXXXXXXXX" + gstin.slice(-2);
     },
 
     format_name(name) {

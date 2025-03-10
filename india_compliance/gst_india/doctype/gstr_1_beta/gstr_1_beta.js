@@ -227,7 +227,7 @@ frappe.ui.form.on(DOCTYPE, {
         render_empty_state(frm);
         update_filing_preference(frm);
 
-        frm.get_field("company_gstin").$wrapper.find("input").val("24XXXXXXXXXXXXX");
+        frm.get_field("company_gstin").$wrapper.find("input").val(india_compliance.format_gstin(frm.doc.company_gstin));
     },
 
     file_nil_gstr1(frm) {
@@ -266,7 +266,7 @@ frappe.ui.form.on(DOCTYPE, {
 
         frm.gstr1.render_indicator();
 
-        frm.get_field("company_gstin").$wrapper.find("input").val("24XXXXXXXXXXXXX");
+        frm.get_field("company_gstin").$wrapper.find("input").val(india_compliance.format_gstin(frm.doc.company_gstin));
     },
 
     load_gstr1_data(frm) {
