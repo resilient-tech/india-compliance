@@ -3101,6 +3101,8 @@ function render_empty_state(frm) {
     }
 
     frm.doc.__gst_data = null;
+    frm.__action_performed = null;
+    frm.set_df_property("file_nil_gstr1", "hidden",  1);
     frm.refresh();
 }
 
