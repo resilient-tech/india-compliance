@@ -376,7 +376,7 @@ class GSTR1Subcategory(GSTR1CategoryConditions):
                 invoice.invoice_type = GSTR1_B2B_InvoiceType.SEWOP.value
                 invoice.invoice_sub_category = GSTR1_SubCategory.SEZWOP.value
 
-        elif invoice.is_reverese_charge:
+        elif invoice.is_reverse_charge:
             invoice.invoice_type = GSTR1_B2B_InvoiceType.R.value
             invoice.invoice_sub_category = GSTR1_SubCategory.B2B_REVERSE_CHARGE.value
 
