@@ -2124,7 +2124,7 @@ class BooksDataMapper:
         )
 
     def process_data_for_hsn_summary(self, invoice, prepared_data):
-        key = f"{invoice.gst_hsn_code} - {invoice.stock_uom} - {flt(invoice.gst_rate)}"
+        key = f"{invoice.gst_hsn_code} - {invoice.uom} - {flt(invoice.gst_rate)}"
 
         if key not in prepared_data:
             mapped_dict = prepared_data.setdefault(
@@ -2134,7 +2134,7 @@ class BooksDataMapper:
                     GSTR1_DataField.DESCRIPTION.value: frappe.db.get_value(
                         "GST HSN Code", invoice.gst_hsn_code, "description"
                     ),
-                    GSTR1_DataField.UOM.value: invoice.stock_uom,
+                    GSTR1_DataField.UOM.value: invoice.uom,
                     GSTR1_DataField.QUANTITY.value: 0,
                     GSTR1_DataField.TAX_RATE.value: invoice.gst_rate,
                     GSTR1_DataField.TAXABLE_VALUE.value: 0,

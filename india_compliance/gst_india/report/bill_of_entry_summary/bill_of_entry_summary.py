@@ -3,6 +3,7 @@
 
 import frappe
 from frappe import _
+from frappe.query_builder.custom import GROUP_CONCAT
 
 
 def execute(filters=None):
@@ -44,7 +45,6 @@ def get_data(filters):
         frappe.qb.from_(bill_of_entry)
         .select(
             bill_of_entry.name,
-            bill_of_entry.purchase_invoice,
             bill_of_entry.bill_of_entry_no,
             bill_of_entry.bill_of_entry_date,
             bill_of_entry.bill_of_lading_no,
@@ -82,14 +82,19 @@ def update_journal_entry_for_payment(query):
 
 def update_purchase_invoice_query(query):
     bill_of_entry = frappe.qb.DocType("Bill of Entry")
+    bill_of_entry_item = frappe.qb.DocType("Bill of Entry Item")
     purchase_invoice = frappe.qb.DocType("Purchase Invoice")
 
     return (
-        query.left_join(purchase_invoice)
-        .on(purchase_invoice.name == bill_of_entry.purchase_invoice)
+        query.join(bill_of_entry_item)
+        .on(bill_of_entry_item.parent == bill_of_entry.name)
+        .left_join(purchase_invoice)
+        .on(purchase_invoice.name == bill_of_entry_item.purchase_invoice)
         .select(
+            GROUP_CONCAT(purchase_invoice.name, ",").as_("purchase_invoice"),
             purchase_invoice.supplier,
         )
+        .groupby(bill_of_entry.name)
     )
 
 
@@ -116,7 +121,7 @@ def get_columns(filters):
         {
             "fieldname": "purchase_invoice",
             "label": _("Purchase Invoice"),
-            "fieldtype": "Link",
+            "fieldtype": "Data",
             "options": "Purchase Invoice",
             "width": 130,
         },

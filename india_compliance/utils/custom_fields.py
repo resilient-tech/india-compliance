@@ -1,4 +1,7 @@
+import functools
+
 import frappe
+from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
 
 def toggle_custom_fields(custom_fields, show):
@@ -72,3 +75,18 @@ def delete_custom_fields(custom_fields):
             )
 
             frappe.clear_cache(doctype=doctype)
+
+
+def make_custom_fields(custom_fields, module_name, *args, **kwargs):
+    for _doctypes, fields in custom_fields.items():
+        if isinstance(fields, dict):
+            fields = (fields,)
+
+        for field in fields:
+            field["module"] = module_name
+
+    return create_custom_fields(custom_fields, *args, **kwargs)
+
+
+def get_custom_fields_creator(module_name):
+    return functools.partial(make_custom_fields, module_name=module_name)

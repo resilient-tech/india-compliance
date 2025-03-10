@@ -4,8 +4,8 @@ india_compliance.patches.v15.remove_duplicate_web_template
 
 [post_model_sync]
 india_compliance.patches.v14.set_default_for_overridden_accounts_setting
-execute:from india_compliance.gst_india.setup import create_custom_fields; create_custom_fields() #61
-execute:from india_compliance.gst_india.setup import create_property_setters; create_property_setters() #10
+execute:from india_compliance.gst_india.setup import create_custom_fields; create_custom_fields() #62
+execute:from india_compliance.gst_india.setup import create_property_setters; create_property_setters() #11
 execute:from india_compliance.income_tax_india.setup import create_custom_fields; create_custom_fields() #2
 india_compliance.patches.post_install.remove_old_fields #2
 india_compliance.patches.post_install.set_gst_tax_type
@@ -70,3 +70,5 @@ india_compliance.patches.v15.set_default_for_new_gst_category_notification
 india_compliance.patches.v15.make_e_invoice_log_extensible
 india_compliance.patches.v15.migrate_boe_taxes_to_ic_taxes
 india_compliance.patches.v15.set_download_document_for_2a_2b
+india_compliance.patches.v15.multiple_pi_in_boe
+india_compliance.patches.v15.update_supplier_filing_status
