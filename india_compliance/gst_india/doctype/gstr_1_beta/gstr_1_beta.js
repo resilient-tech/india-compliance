@@ -112,6 +112,14 @@ frappe.ui.form.on(DOCTYPE, {
         set_default_company_gstin(frm);
         set_options_for_year(frm);
         set_options_for_month_or_quarter(frm);
+        if (frm.doc.company) {
+            const { message } = await frappe.db.get_value(
+                "Company",
+                frm.doc.company,
+                "gstin"
+            );
+            frm.formatted_gstin = message.gstin;
+        }
 
         if (is_gstr1_api_enabled()) {
             frm.set_df_property("filing_preference", "read_only", 1);
@@ -127,7 +135,7 @@ frappe.ui.form.on(DOCTYPE, {
                 india_compliance.get_month_year_from_period(filters.period);
 
             if (
-                frm.doc.company_gstin !== filters.company_gstin ||
+                frm.formatted_gstin !== filters.company_gstin ||
                 frm.doc.month_or_quarter != month_or_quarter ||
                 frm.doc.year != year
             )
@@ -163,7 +171,7 @@ frappe.ui.form.on(DOCTYPE, {
             const { filters, error_log } = message;
 
             if (
-                frm.doc.company_gstin !== filters.company_gstin ||
+                frm.formatted_gstin !== filters.company_gstin ||
                 frm.doc.month_or_quarter != filters.month_or_quarter ||
                 frm.doc.year != filters.year
             )
@@ -198,7 +206,19 @@ frappe.ui.form.on(DOCTYPE, {
         render_empty_state(frm);
 
         if (!frm.doc.company) return;
-        const options = await india_compliance.set_gstin_options(frm);
+        const { message } = await frappe.db.get_value(
+            "Company",
+            frm.doc.company,
+            "gstin"
+        );
+        frm.formatted_gstin = message.gstin;
+
+        let options = await india_compliance.set_gstin_options(frm);
+
+        options = options.map(gstin => {
+            return india_compliance.format_gstin(gstin);
+        });
+        frm.get_field("company_gstin").set_data(options);
 
         frm.set_value("company_gstin", options[0]);
     },
@@ -846,13 +866,14 @@ class GSTR1 {
             ],
             primary_action_label: "Create",
             primary_action: values => {
-                const { company, company_gstin, month_or_quarter, year } = this.frm.doc;
+                const { company, month_or_quarter, year } = this.frm.doc;
+                const formatted_gstin = this.frm.formatted_gstin;
 
                 frappe.call({
                     method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.make_journal_entry",
                     args: {
                         company,
-                        company_gstin,
+                        company_gstin: formatted_gstin,
                         month_or_quarter,
                         year,
                         accounts: je_details.data,
@@ -1759,7 +1780,7 @@ class BooksTab extends GSTR1_TabManager {
             "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export.download_books_as_excel";
 
         open_url_post(`/api/method/${url}`, {
-            company_gstin: this.instance.frm.doc.company_gstin,
+            company_gstin: this.instance.frm.formatted_gstin,
             month_or_quarter: this.instance.frm.doc.month_or_quarter,
             year: this.instance.frm.doc.year,
         });
@@ -1970,7 +1991,7 @@ class FiledTab extends GSTR1_TabManager {
             "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export.download_filed_as_excel";
 
         open_url_post(`/api/method/${url}`, {
-            company_gstin: this.instance.frm.doc.company_gstin,
+            company_gstin: this.instance.frm.formatted_gstin,
             month_or_quarter: this.instance.frm.doc.month_or_quarter,
             year: this.instance.frm.doc.year,
         });
@@ -1996,7 +2017,7 @@ class FiledTab extends GSTR1_TabManager {
             frappe.call({
                 method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export.get_gstr_1_json",
                 args: {
-                    company_gstin: doc.company_gstin,
+                    company_gstin: me.instance.frm.formatted_gstin,
                     year: doc.year,
                     month_or_quarter: doc.month_or_quarter,
                     include_uploaded,
@@ -2234,7 +2255,7 @@ class ReconcileTab extends FiledTab {
             "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export.download_reconcile_as_excel";
 
         open_url_post(`/api/method/${url}`, {
-            company_gstin: this.instance.frm.doc.company_gstin,
+            company_gstin: this.instance.frm.formatted_gstin,
             month_or_quarter: this.instance.frm.doc.month_or_quarter,
             year: this.instance.frm.doc.year,
         });
@@ -2435,7 +2456,7 @@ class FileGSTR1Dialog {
                     fieldname: "company_gstin",
                     fieldtype: "Data",
                     read_only: 1,
-                    default: india_compliance.format_gstin(this.frm.doc.company_gstin),
+                    default: india_compliance.format_gstin(this.frm.formatted_gstin),
                 },
                 {
                     label: "Period",
@@ -2494,7 +2515,7 @@ class FileGSTR1Dialog {
 
                 // generate otp
                 await india_compliance.generate_evc_otp(
-                    this.frm.doc.company_gstin,
+                    this.frm.formatted_gstin,
                     pan,
                     "R1"
                 );
@@ -2512,11 +2533,11 @@ class FileGSTR1Dialog {
 
         // get last used pan
         frappe.db
-            .get_value("GSTIN", this.frm.doc.company_gstin, ["last_pan_used_for_gstr"])
+            .get_value("GSTIN", this.frm.formatted_gstin, ["last_pan_used_for_gstr"])
             .then(({ message }) => {
                 const pan_no =
                     message.last_pan_used_for_gstr ||
-                    this.frm.doc.company_gstin.substr(2, 10);
+                    this.frm.formatted_gstin.substr(2, 10);
 
                 this.filing_dialog.set_value("pan", pan_no);
             });
@@ -2528,7 +2549,7 @@ class FileGSTR1Dialog {
                 action: "get_amendment_data",
                 month_or_quarter: this.frm.doc.month_or_quarter,
                 year: this.frm.doc.year,
-                company_gstin: this.frm.doc.company_gstin,
+                company_gstin: this.frm.formatted_gstin,
             },
             callback: r => {
                 if (!r.message) return;
@@ -2612,7 +2633,7 @@ class FileGSTR1Dialog {
 
         this.filing_dialog.set_secondary_action_label("Resend OTP");
         this.filing_dialog.set_secondary_action(() => {
-            india_compliance.generate_evc_otp(this.frm.doc.company_gstin, pan, "R1");
+            india_compliance.generate_evc_otp(this.frm.formatted_gstin, pan, "R1");
         });
     }
 
@@ -2663,7 +2684,7 @@ class GSTR1Action extends FileGSTR1Dialog {
         this.defaults = {
             month_or_quarter: frm.doc.month_or_quarter,
             year: frm.doc.year,
-            company_gstin: frm.doc.company_gstin,
+            company_gstin: frm.formatted_gstin,
         };
     }
 
@@ -2750,10 +2771,11 @@ class GSTR1Action extends FileGSTR1Dialog {
     async mark_as_unfiled() {
         if (await this.is_request_in_progress("Mark as Unfiled")) return;
 
-        const { company, company_gstin, month_or_quarter, year } = this.frm.doc;
+        const { company, month_or_quarter, year } = this.frm.doc;
+        const formatted_gstin = this.frm.formatted_gstin;
         const filters = {
             company: company,
-            company_gstin: company_gstin,
+            company_gstin: formatted_gstin,
             month_or_quarter: month_or_quarter,
             year: year,
         };
@@ -2902,7 +2924,7 @@ class GSTR1Action extends FileGSTR1Dialog {
         const doc = this.frm.doc;
         const on_current_document =
             window.location.pathname.includes("gstr-1-beta") &&
-            doc.company_gstin == response.company_gstin &&
+            this.frm.formatted_gstin == response.company_gstin &&
             doc.month_or_quarter == response.month_or_quarter &&
             doc.year == response.year;
 
@@ -2995,7 +3017,7 @@ async function set_default_company_gstin(frm) {
     );
 
     if (gstin_list && gstin_list.length) {
-        frm.set_value("company_gstin", gstin_list[0]);
+        frm.set_value("company_gstin", india_compliance.format_gstin(gstin_list[0]));
     }
 }
 
@@ -3019,12 +3041,13 @@ function set_options_for_year(frm) {
 }
 
 function update_filing_preference(frm) {
-    const { month_or_quarter, year, company_gstin } = frm.doc;
-    if (!month_or_quarter || !year || !company_gstin) return;
+    const { month_or_quarter, year } = frm.doc;
+    const formatted_gstin = frm.formatted_gstin;
+    if (!month_or_quarter || !year || !formatted_gstin) return;
 
     frappe.call({
         method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_filing_preference_from_log",
-        args: { month_or_quarter, year, company_gstin },
+        args: { month_or_quarter, year, company_gstin: formatted_gstin },
         callback: r => {
             frm.set_value("filing_preference", r.message || "Monthly");
         },
@@ -3082,14 +3105,14 @@ function render_empty_state(frm) {
 }
 
 async function get_net_gst_liability(frm) {
-    const { month_or_quarter, year, company, company_gstin, filing_preference } =
-        frm.doc;
+    const { month_or_quarter, year, company, filing_preference } = frm.doc;
+    const formatted_gstin = frm.formatted_gstin;
 
     const response = await frappe.call({
         method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_net_gst_liability",
         args: {
             company,
-            company_gstin,
+            company_gstin: formatted_gstin,
             month_or_quarter,
             year,
             filing_preference,
@@ -3121,19 +3144,15 @@ function refresh_filing_preference(frm) {
 
     // bind click event
     frm.$wrapper.find(".update-filing-preference").click(async function (e) {
-        const {
-            filing_preference: old_preference,
-            month_or_quarter,
-            year,
-            company_gstin,
-        } = frm.doc;
+        const { filing_preference: old_preference, month_or_quarter, year } = frm.doc;
+        const formatted_gstin = frm.formatted_gstin;
 
         const month = india_compliance.MONTH.indexOf(month_or_quarter) + 1;
         const period = `${String(month).padStart(2, "0")}${year}`;
 
         const { message: new_preference } = await taxpayer_api.call({
             method: "india_compliance.gst_india.utils.gstin_info.get_and_update_filing_preference",
-            args: { gstin: company_gstin, period },
+            args: { gstin: formatted_gstin, period },
         });
 
         if (new_preference === old_preference)
