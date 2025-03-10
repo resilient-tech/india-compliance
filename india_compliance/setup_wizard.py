@@ -2,7 +2,10 @@ import frappe
 from frappe import _
 
 from india_compliance.audit_trail.utils import enable_audit_trail
-from india_compliance.gst_india.overrides.company import make_default_tax_templates
+from india_compliance.gst_india.overrides.company import (
+    create_output_refund_accounts,
+    make_default_tax_templates,
+)
 from india_compliance.gst_india.overrides.party import validate_pan
 from india_compliance.gst_india.utils import (
     guess_gst_category,
@@ -71,6 +74,7 @@ def setup_company_taxes(params):
     update_company_info(params, gstin_info.gst_category)
     create_address(gstin_info, params)
     setup_tax_template(params)
+    create_output_refund_accounts(params.company_name)
 
 
 def update_company_info(params, gst_category=None):

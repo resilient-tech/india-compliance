@@ -1,6 +1,9 @@
 import frappe
 from frappe.utils import flt
-from erpnext.setup.setup_wizard.operations.taxes_setup import from_detailed_data
+from erpnext.setup.setup_wizard.operations.taxes_setup import (
+    from_detailed_data,
+    get_or_create_account,
+)
 
 from india_compliance.gst_india.utils import get_data_file_path
 
@@ -33,6 +36,7 @@ def create_company_fixtures(company, gst_rate=None):
 
     make_default_customs_accounts(company)
     make_default_gst_expense_accounts(company)
+    create_output_refund_accounts(company)
 
 
 def make_default_customs_accounts(company):
@@ -247,6 +251,20 @@ def create_default_company_account(
         frappe.db.set_value(
             "Company", company, default_fieldname, account.name, update_modified=False
         )
+
+
+def create_output_refund_accounts(company):
+    """
+    Create or update output tax refund accounts for companies.
+    """
+    data = [
+        {"account_name": "Output Tax SGST Refund", "tax_rate": -9.0},
+        {"account_name": "Output Tax CGST Refund", "tax_rate": -9.0},
+        {"account_name": "Output Tax IGST Refund", "tax_rate": -18.0},
+    ]
+
+    for account in data:
+        get_or_create_account(company, account)
 
 
 @frappe.whitelist()
