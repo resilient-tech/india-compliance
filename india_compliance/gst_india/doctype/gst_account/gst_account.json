@@ -68,7 +68,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Account Type",
-   "options": "Input\nOutput\nPurchase Reverse Charge\nSales Reverse Charge",
+   "options": "Input\nOutput\nPurchase Reverse Charge\nSales Reverse Charge\nOutput Refund",
    "reqd": 1
   }
  ],
