@@ -5,6 +5,7 @@ from itertools import combinations
 from pypika import Order
 
 import frappe
+from frappe.query_builder import Case
 from frappe.query_builder.functions import Date, IfNull, Sum
 from frappe.utils import getdate
 
@@ -92,13 +93,6 @@ class GSTR1Query:
                 self.si.port_code.as_("shipping_port_code"),
                 self.si.shipping_bill_number,
                 self.si.shipping_bill_date,
-                IfNull(self.si.base_rounded_total, self.si.base_grand_total).as_(
-                    "invoice_total"
-                ),
-                IfNull(
-                    returned_si.base_rounded_total,
-                    IfNull(returned_si.base_grand_total, 0),
-                ).as_("returned_invoice_total"),
                 self.si.gst_category,
                 IfNull(self.si_item.gst_treatment, "Not Defined").as_("gst_treatment"),
                 (
@@ -142,6 +136,9 @@ class GSTR1Query:
             )
         )
 
+        query = self.calculate_totals(query, self.si, "invoice_total")
+        query = self.calculate_totals(query, returned_si, "returned_invoice_total")
+
         if self.additional_si_columns:
             for col in self.additional_si_columns:
                 query = query.select(self.si[col])
@@ -173,6 +170,20 @@ class GSTR1Query:
 
         return query
 
+    def calculate_totals(self, query, si_doc, key):
+        # TODO: Handle Refunds and TDS
+        return query.select(
+            IfNull(
+                Case()
+                .when(
+                    si_doc.base_rounded_total != 0,
+                    si_doc.base_rounded_total,
+                )
+                .else_(si_doc.base_grand_total),
+                0,
+            ).as_(key)
+        )
+
 
 def cache_invoice_condition(func):
     def wrapped(self, invoice):
@@ -187,7 +198,6 @@ def cache_invoice_condition(func):
 
 
 class GSTR1Conditions:
-
     @cache_invoice_condition
     def is_nil_rated(self, invoice):
         return invoice.gst_treatment == "Nil-Rated"
@@ -306,7 +316,6 @@ class GSTR1CategoryConditions(GSTR1Conditions):
 
 
 class GSTR1Subcategory(GSTR1CategoryConditions):
-
     def set_for_b2b(self, invoice):
         self._set_invoice_type_for_b2b_and_cdnr(invoice)
 
@@ -474,7 +483,6 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
     def get_filtered_invoices(
         self, invoices, invoice_category=None, invoice_sub_category=None
     ):
-
         filtered_invoices = []
         functions = CATEGORY_CONDITIONS.get(invoice_category)
         condition = getattr(self, functions["category"], None)
