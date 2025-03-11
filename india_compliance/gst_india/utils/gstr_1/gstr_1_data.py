@@ -9,6 +9,7 @@ from frappe.query_builder import Case
 from frappe.query_builder.functions import Date, IfNull, Sum
 from frappe.utils import getdate
 
+from india_compliance.gst_india.constants import GST_REFUND_TAX_TYPES
 from india_compliance.gst_india.utils import get_full_gst_uom
 from india_compliance.gst_india.utils.gstr_1 import (
     CATEGORY_SUB_CATEGORY_MAPPING,
@@ -60,6 +61,7 @@ class GSTR1Query:
     ):
         self.si = frappe.qb.DocType("Sales Invoice")
         self.si_item = frappe.qb.DocType("Sales Invoice Item")
+        self.si_taxes = frappe.qb.DocType("Sales Taxes and Charges")
         self.filters = frappe._dict(filters or {})
         self.additional_si_columns = additional_si_columns or []
         self.additional_si_item_columns = additional_si_item_columns or []
@@ -171,16 +173,26 @@ class GSTR1Query:
         return query
 
     def calculate_totals(self, query, si_doc, key):
-        # TODO: Handle Refunds and TDS
+        # TODO: Handle TDS
+        refund_amount = (
+            frappe.qb.from_(self.si_taxes)
+            .select(Sum(self.si_taxes.tax_amount).as_("refund_amount"))
+            .where(self.si_taxes.gst_tax_type.isin(GST_REFUND_TAX_TYPES))
+            .where(self.si_taxes.parent == si_doc.name)
+        )
+
         return query.select(
-            IfNull(
-                Case()
-                .when(
-                    si_doc.base_rounded_total != 0,
-                    si_doc.base_rounded_total,
+            (
+                IfNull(
+                    Case()
+                    .when(
+                        si_doc.base_rounded_total != 0,
+                        si_doc.base_rounded_total,
+                    )
+                    .else_(si_doc.base_grand_total),
+                    0,
                 )
-                .else_(si_doc.base_grand_total),
-                0,
+                - IfNull(refund_amount, 0)
             ).as_(key)
         )
 
