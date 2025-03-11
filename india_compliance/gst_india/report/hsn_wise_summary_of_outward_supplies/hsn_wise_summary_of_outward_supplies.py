@@ -45,26 +45,29 @@ def get_hsn_data(filters, columns):
             d.uqc = get_gst_uom(d.get("uqc"))
 
         total_tax = 0
-        tax_rate = 0
 
         for tax in GST_TAX_TYPES:
             total_tax += flt(d.get(f"{tax}_amount"), 2)
-            if "cess" not in tax:
-                tax_rate += flt(d.get(f"{tax}_rate", 0))
 
         d.taxable_value = flt(d.taxable_value, 2)
-        row = [
-            d.gst_hsn_code,
-            d.description,
-            d.uqc,
-            flt(d.qty, 2),
-            flt(d.taxable_value + total_tax, 2),
-            tax_rate,
-            d.taxable_value,
-        ]
+        row = {
+            "gst_hsn_code": d.gst_hsn_code,
+            "description": d.description,
+            "uqc": d.uqc,
+            "qty": flt(d.qty, 2),
+            "total_amount": flt(d.taxable_value + total_tax, 2),
+            "tax_rate": flt(d.get("tax_rate", 0)),
+            "taxable_amount": d.taxable_value,
+        }
 
-        for tax in GST_TAX_TYPES:
-            row.append(flt(d.get(f"{tax}_amount"), 2))
+        for tax in GST_TAX_TYPES[:-1]:
+            if tax == "cess":
+                cess_amount = flt(
+                    d.get("cess_amount", 0) + d.get("cess_non_advol_amount", 0), 2
+                )
+                row["cess_account"] = cess_amount
+            else:
+                row[f"{tax}_account"] = flt(d.get(f"{tax}_amount", 0), 2)
 
         data.append(row)
         added_item.add(key)
@@ -183,18 +186,10 @@ def get_conditions(filters):
 
 
 def get_tax_fields():
-    tax_fields = [
-        f"sum(`tabSales Invoice Item`.{tax_type}_rate) AS {tax_type}_rate"
-        for tax_type in GST_TAX_TYPES[:-1]
-        if tax_type != "cess"
-    ]
-
-    tax_fields += [
+    return ", ".join(
         f"sum(`tabSales Invoice Item`.{tax_type}_amount) AS {tax_type}_amount"
         for tax_type in GST_TAX_TYPES
-    ]
-
-    return ", ".join(tax_fields)
+    )
 
 
 def get_items(filters):
@@ -215,7 +210,12 @@ def get_items(filters):
             `tabSales Invoice Item`.parent,
             `tabSales Invoice Item`.item_code,
             `tabSales Invoice Item`.item_name,
-            COALESCE(`tabGST HSN Code`.description, 'NA') AS description
+            COALESCE(`tabGST HSN Code`.description, 'NA') AS description,
+            (
+                `tabSales Invoice Item`.igst_rate +
+                `tabSales Invoice Item`.cgst_rate +
+                `tabSales Invoice Item`.sgst_rate
+            ) AS tax_rate
         FROM
             `tabSales Invoice`
             INNER JOIN `tabSales Invoice Item` ON `tabSales Invoice`.name = `tabSales Invoice Item`.parent
@@ -241,15 +241,15 @@ def get_merged_data(columns, data):
     merged_hsn_dict = {}
 
     for row in data:
-        key = f"{row[0]}-{row[2]}-{row[5]}"
+        key = f"{row['gst_hsn_code']}-{row['uqc']}-{row['tax_rate']}"
         merged_hsn_dict.setdefault(key, {})
-        for i, d in enumerate(columns):
+        for d in columns:
             fieldname = d["fieldname"]
             if d["fieldtype"] not in ("Int", "Float", "Currency"):
-                merged_hsn_dict[key][fieldname] = row[i]
+                merged_hsn_dict[key][fieldname] = row[fieldname]
             else:
                 merged_hsn_dict[key][fieldname] = (
-                    merged_hsn_dict.get(key, {}).get(fieldname, 0) + row[i]
+                    merged_hsn_dict.get(key, {}).get(fieldname, 0) + row[fieldname]
                 )
 
     return list(merged_hsn_dict.values())

@@ -1233,10 +1233,14 @@ class HSNSUM(GSTR1DataMapper):
         uom = uom.upper()
 
         if "-" in uom:
-            if data and data.get(GSTR1_DataField.HSN_CODE.value, "").startswith("99"):
+            if (
+                data
+                and (hsn_code := data.get(GSTR1_DataField.HSN_CODE.value) or "")
+                and hsn_code.startswith("99")
+            ):
                 return "NA"
-            else:
-                return uom.split("-")[0]
+
+            return uom.split("-")[0]
 
         if uom in UOM_MAP:
             return f"{uom}-{UOM_MAP[uom]}"
