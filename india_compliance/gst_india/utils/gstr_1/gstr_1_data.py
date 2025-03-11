@@ -463,7 +463,7 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
                 Sum(query.sgst_amount).as_("sgst_amount"),
                 Sum(query.igst_amount).as_("igst_amount"),
                 Sum(query.total_cess_amount).as_("total_cess_amount"),
-                Sum(query.total_tax).as_("total_tax_amount"),
+                Sum(query.total_tax).as_("total_tax"),
                 Sum(query.total_amount).as_("total_amount"),
             )
             .groupby(
