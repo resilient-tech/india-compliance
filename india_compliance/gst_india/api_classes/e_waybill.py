@@ -1,15 +1,105 @@
+import base64
 import re
 
 import frappe
 from frappe import _
+from frappe.utils import add_to_date, now_datetime
 
-from india_compliance.gst_india.api_classes.base import BaseAPI, check_scheduler_status
+from india_compliance.gst_india.api_classes.base import BaseAPI
+from india_compliance.gst_india.api_classes.e_invoice import NICAuth
+from india_compliance.gst_india.api_classes.taxpayer_base import StaticResourcesAPI
 from india_compliance.gst_india.constants import DISTANCE_REGEX
+from india_compliance.gst_india.utils.cryptography import (
+    aes_decrypt_data,
+    aes_encrypt_data,
+    hmac_sha256,
+)
 
 
-class EWaybillAPI(BaseAPI):
+class EWaybillAuth(NICAuth):
+    API_NAME = "e-Waybill Auth"
+    IGNORED_ERROR_CODES = {}
+
+    def validate_enable_api(self):
+        if self.settings.enable_e_waybill:
+            return
+
+        frappe.throw(_("Please enable e-Waybill features in GST Settings first"))
+
+    def decrypt_response(self, response):
+        values = {}
+
+        if not response:
+            return response
+
+        if response.get("authtoken"):
+            self.auth_token = response.authtoken
+            values["auth_token"] = response.authtoken
+
+        if response.get("sek"):
+            self.session_key = aes_decrypt_data(
+                response.sek, base64.b64decode(self.app_key.encode())
+            )
+            self.session_expiry = add_to_date(now_datetime(), hours=6)
+
+            values["session_key"] = base64.b64encode(self.session_key).decode()
+            values["session_expiry"] = self.session_expiry
+
+        if values:
+            frappe.db.set_value(
+                "GST Credential",
+                {
+                    "gstin": self.company_gstin,
+                    "username": self.username,
+                    "service": "e-Waybill / e-Invoice",
+                },
+                values,
+            )
+
+            # cache of parent doctype GST Settings is not cleared by default so clear it manually
+            frappe.clear_document_cache("GST Settings")
+
+        return response
+
+    def get_public_key(self):
+        key = self.settings.nic_public_key
+
+        if not key:
+            key = StaticResourcesAPI().get_nic_public_key()
+
+        return key.encode()
+
+    def change_base_path(new_base_path):
+        def decorator(func):
+            def wrapper(self, *args, **kwargs):
+                original_base_path = self.BASE_PATH
+                self.BASE_PATH = new_base_path
+                try:
+                    return func(self, *args, **kwargs)
+                finally:
+                    self.BASE_PATH = original_base_path
+
+            return wrapper
+
+        return decorator
+
+    @change_base_path("standard/ewb")
+    def authenticate(self):
+        json_data = {
+            "Data": {
+                "action": "ACCESSTOKEN",
+                "username": self.username,
+                "password": self.password,
+                "app_key": self.app_key,
+            }
+        }
+
+        return self.post(endpoint="auth", json=json_data)
+
+
+class EWaybillAPI(EWaybillAuth):
     API_NAME = "e-Waybill"
-    BASE_PATH = "ewb/ewayapi"
+    BASE_PATH = "standard/ewb/ewayapi"
     SENSITIVE_INFO = BaseAPI.SENSITIVE_INFO + ("password",)
     IGNORED_ERROR_CODES = {
         #  Cancel e-waybill errors
@@ -21,66 +111,40 @@ class EWaybillAPI(BaseAPI):
     }
 
     def setup(self, doc=None, *, company_gstin=None):
-        if not self.settings.enable_e_waybill:
-            frappe.throw(_("Please enable e-Waybill features in GST Settings first"))
+        super().setup(doc=doc, company_gstin=company_gstin)
 
-        check_scheduler_status()
+        if not self.is_authenticated():
+            self.authenticate()
 
-        if doc:
-            company_gstin = doc.company_gstin
-            self.default_log_values.update(
-                reference_doctype=doc.doctype,
-                reference_name=doc.name,
-            )
-
-        if self.sandbox_mode:
-            company_gstin = "05AAACG2115R1ZN"
-            self.username = "05AAACG2115R1ZN"
-            self.password = "abc123@@"
-
-        elif not company_gstin:
-            frappe.throw(_("Company GSTIN is required to use the e-Waybill API"))
-
-        else:
-            self.fetch_credentials(company_gstin, "e-Waybill / e-Invoice")
-
-        self.default_headers.update(
-            {
-                "gstin": company_gstin,
-                "username": self.username,
-                "password": self.password,
-                "requestid": self.generate_request_id(),
-            }
-        )
-
-    def post(self, action, json):
-        return super().post(params={"action": action}, json=json)
+    def post(self, action=None, **kwargs):
+        self.action = action
+        return super().post(**kwargs)
 
     def get_e_waybill(self, ewaybill_number):
-        return self.get("getewaybill", params={"ewbNo": ewaybill_number})
+        return self.get("GetEwayBill", params={"ewbNo": ewaybill_number})
 
     def get_e_waybills_by_date(self, date):
         return self.get("GetEwayBillsByDate", params={"date": date})
 
     def generate_e_waybill(self, data):
-        result = self.post("GENEWAYBILL", data)
+        result = self.post("GENEWAYBILL", json=data)
         self.update_distance(result)
         return result
 
     def cancel_e_waybill(self, data):
-        return self.post("CANEWB", data)
+        return self.post("CANEWB", json=data)
 
     def update_vehicle_info(self, data):
-        return self.post("VEHEWB", data)
+        return self.post("VEHEWB", json=data)
 
     def update_transporter(self, data):
-        return self.post("UPDATETRANSPORTER", data)
+        return self.post("UPDATETRANSPORTER", json=data)
 
     def extend_validity(self, data):
-        return self.post("EXTENDVALIDITY", data)
+        return self.post("EXTENDVALIDITY", json=data)
 
+    @EWaybillAuth.change_base_path("standard/ewb/master")
     def get_transporter_details(self, transporter_id):
-        self.BASE_PATH = "ewb/Master"
         return self.get("GetTransporterDetails", params={"trn_no": transporter_id})
 
     def update_distance(self, result):
@@ -92,9 +156,74 @@ class EWaybillAPI(BaseAPI):
             result.distance = int(distance_match.group())
 
     def is_ignored_error(self, response_json):
-        message = response_json.get("message", "")
+        error = response_json.get("error")
+
+        if not error:
+            return True
+
+        if isinstance(error, str):
+            error = frappe.parse_json(error)
+            response_json.error = error
+
+        err_code = error.get("errorCodes")
 
         for error_code, error_message in self.IGNORED_ERROR_CODES.items():
-            if error_message in message:
+            if error_code == err_code:
                 response_json.error_code = error_code
                 return True
+
+    def handle_error_response(self, response):
+        success_value = response.get("status") != 0
+
+        if not success_value:
+            response.error = base64.b64decode(response.error).decode()
+
+        if not success_value and not self.is_ignored_error(response):
+            frappe.throw(
+                response.get("error", {}).get("errorCodes")
+                or frappe.as_json(response.error, indent=4),
+                title=_("API Request Failed"),
+            )
+
+    def before_request(self, request_args):
+        self.encrypt_request(request_args)
+        if self.is_authentication_api(request_args):
+            return
+
+        request_args["headers"]["authtoken"] = self.auth_token
+
+    def encrypt_request(self, request_args):
+        if self.is_authentication_api(request_args):
+            return super().encrypt_request(request_args)
+
+        if not (json_data := request_args.get("json")):
+            return
+
+        encrypted_data = aes_encrypt_data(frappe.as_json(json_data), self.session_key)
+
+        request_args["json"] = {
+            "action": self.action,
+            "Data": encrypted_data,
+        }
+
+    def decrypt_response(self, response):
+        decrypted_rek = None
+
+        if response.get("authtoken"):
+            return super().decrypt_response(response)
+
+        if response.get("rek"):
+            decrypted_rek = aes_decrypt_data(response.rek, self.session_key)
+
+        if response.get("data"):
+            decrypted_data = aes_decrypt_data(response.pop("data"), decrypted_rek)
+
+            if response.get("hmac"):
+                hmac = hmac_sha256(base64.b64encode(decrypted_data), decrypted_rek)
+
+                if hmac != response.hmac:
+                    frappe.throw(_("HMAC mismatch"))
+
+            response.result = frappe.parse_json(decrypted_data.decode())
+
+        return response

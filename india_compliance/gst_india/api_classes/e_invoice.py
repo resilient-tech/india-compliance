@@ -17,16 +17,15 @@ from india_compliance.gst_india.utils.cryptography import (
 )
 
 
-class EInvoiceAuth(BaseAPI):
-    API_NAME = "e-Invoice Auth"
+class NICAuth(BaseAPI):
+    API_NAME = "NIC Auth"
     IGNORED_ERROR_CODES = {}
+    BASE_PATH = ""
 
     def setup(self, doc=None, *, company_gstin=None):
         self.company_gstin = company_gstin
 
-        if not self.settings.enable_e_invoice:
-            frappe.throw(_("Please enable e-Invoicing in GST Settings first"))
-
+        self.validate_enable_api()
         check_scheduler_status()
 
         if doc:
@@ -64,22 +63,11 @@ class EInvoiceAuth(BaseAPI):
         self.session_expiry = row.session_expiry
         self.auth_token = row.auth_token
 
-    def is_authenticated(self):
-        if not (
-            getattr(self, "auth_token", None)
-            and getattr(self, "session_key", None)
-            and getattr(self, "session_expiry", None)
-        ):
-            return False
-
-        if self.session_expiry < datetime.now():
-            return False
-
-        return True
+    def validate_enable_api(self):
+        pass
 
     def get_app_key(self, row):
-        app_key = row.app_key or self.generate_app_key()
-        return base64.b64encode(app_key.encode()).decode()
+        return row.app_key or self.generate_app_key()
 
     def generate_app_key(self):
         app_key = frappe.generate_hash(length=32)
@@ -105,10 +93,17 @@ class EInvoiceAuth(BaseAPI):
         self.response = response
         return response
 
-    def encrypt_request(self, request_args):
-        if self.is_authenticated():
-            return
+    def get_public_key(self):
+        key = self.settings.nic_public_key
+        if not key:
+            key = StaticResourcesAPI().get_nic_public_key()
 
+        return key.encode()
+
+    def is_authentication_api(self, request_args):
+        return request_args.get("url").endswith("auth")
+
+    def encrypt_request(self, request_args):
         if not (json_data := request_args.get("json")):
             return
 
@@ -126,6 +121,36 @@ class EInvoiceAuth(BaseAPI):
         )
 
         request_args["json"]["Data"] = encrypted_json
+
+    def decrypt_response(self, response):
+        pass
+
+    def is_authenticated(self):
+        return (
+            all(
+                getattr(self, attr, None)
+                for attr in ["auth_token", "session_key", "session_expiry"]
+            )
+            and self.session_expiry >= datetime.now()
+        )
+
+    def authenticate(self):
+        pass
+
+
+class EInvoiceAuth(NICAuth):
+    API_NAME = "e-Invoice Auth"
+    IGNORED_ERROR_CODES = {}
+
+    def validate_enable_api(self):
+        if self.settings.enable_e_invoice:
+            return
+
+        frappe.throw(_("Please enable e-Invoicing in GST Settings first"))
+
+    def get_app_key(self, row):
+        app_key = row.app_key or self.generate_app_key()
+        return base64.b64encode(app_key.encode()).decode()
 
     def decrypt_response(self, response):
         values = {}
@@ -168,13 +193,6 @@ class EInvoiceAuth(BaseAPI):
             frappe.clear_document_cache("GST Settings")
 
         return response
-
-    def get_public_key(self):
-        key = self.settings.nic_public_key
-        if not key:
-            key = StaticResourcesAPI().get_nic_public_key()
-
-        return key.encode()
 
     def authenticate(self):
         json_data = {
@@ -286,16 +304,14 @@ class EInvoiceAPI(EInvoiceAuth):
 
     def before_request(self, request_args):
         self.encrypt_request(request_args)
-        if not self.is_authenticated():
+        if self.is_authentication_api(request_args):
             return
 
         request_args["headers"]["AuthToken"] = self.auth_token
 
     def encrypt_request(self, request_args):
-        super().encrypt_request(request_args)
-
-        if not self.is_authenticated():
-            return
+        if self.is_authentication_api(request_args):
+            return super().encrypt_request(request_args)
 
         if not (json_data := request_args.get("json")):
             return
