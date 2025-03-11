@@ -3,6 +3,7 @@ from frappe import _, bold
 from frappe.desk.form.load import run_onload
 from frappe.utils import add_days, days_diff, flt, fmt_money
 
+from india_compliance.gst_india.constants import GST_REFUND_TAX_TYPES
 from india_compliance.gst_india.overrides.payment_entry import get_taxes_summary
 from india_compliance.gst_india.overrides.transaction import (
     _validate_hsn_codes,
@@ -66,6 +67,7 @@ def validate(doc, method=None):
 
     validate_invoice_number(doc)
     validate_credit_debit_note(doc)
+    validate_gst_refund_accounts(doc)
     validate_fields_and_set_status_for_e_invoice(doc, gst_settings)
     validate_unique_hsn_and_uom(doc)
     validate_port_address(doc)
@@ -402,3 +404,25 @@ def set_and_validate_advances_with_gst(doc):
     doc.set_payment_schedule()
     doc.outstanding_amount -= tax_amount
     frappe.flags.gst_excess_allocation_validated = True
+
+
+def validate_gst_refund_accounts(doc):
+    refund_amount = 0
+
+    for tax in doc.taxes:
+        if tax.gst_tax_type not in GST_REFUND_TAX_TYPES:
+            continue
+
+        # Validate if tax amount is negative
+        if tax.tax_amount > 0:
+            frappe.throw(
+                _("Row #{0}: Tax amount should be negative for GST Account {2}").format(
+                    tax.idx, tax.account_head
+                )
+            )
+
+        refund_amount += abs(tax.tax_amount)
+
+    # Validate if refund amount is same as total gst amount
+    if refund_amount and refund_amount != doc.get("total_taxes_and_charges", 0):
+        frappe.throw(_("Total GST amount should be equal to Refund amount."))
