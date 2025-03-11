@@ -258,9 +258,9 @@ def create_output_refund_accounts(company):
     Create or update output tax refund accounts for companies.
     """
     data = [
-        {"account_name": "Output Tax SGST Refund", "tax_rate": -9.0},
-        {"account_name": "Output Tax CGST Refund", "tax_rate": -9.0},
-        {"account_name": "Output Tax IGST Refund", "tax_rate": -18.0},
+        {"account_name": "Output Tax SGST Refund"},
+        {"account_name": "Output Tax CGST Refund"},
+        {"account_name": "Output Tax IGST Refund"},
     ]
 
     for account in data:
