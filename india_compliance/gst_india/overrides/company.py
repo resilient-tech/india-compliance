@@ -68,7 +68,7 @@ def make_default_tax_templates(company: str, gst_rate=None):
 
     default_taxes = get_tax_defaults(gst_rate)
     from_detailed_data(company, default_taxes)
-    # update_gst_settings(company)
+    update_gst_settings(company)
 
 
 def get_tax_defaults(gst_rate=None):

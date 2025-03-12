@@ -124,7 +124,10 @@ class GSTTransactionData:
             self.transaction_details[key] = 0
 
         for row in self.doc.taxes:
-            if row.gst_tax_type not in GST_REFUND_TAX_TYPES:
+            if row.gst_tax_type in GST_REFUND_TAX_TYPES:
+                self.transaction_details.grand_total -= (
+                    row.base_tax_amount_after_discount_amount
+                )
                 continue
 
             if (
