@@ -20,6 +20,10 @@
     color: black;
 }
 
+.info-section > .table{
+    margin-top: 5px !important;
+}
+
 table, th, td {
     border: 1px solid #d1d8dd;
     border-collapse: collapse;
