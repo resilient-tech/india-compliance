@@ -27,6 +27,9 @@ class EWaybillAuth(NICAuth):
         frappe.throw(_("Please enable e-Waybill features in GST Settings first"))
 
     def decrypt_response(self, response):
+        if self.sandbox_mode:
+            return response
+
         values = {}
 
         if not response:
@@ -113,15 +116,40 @@ class EWaybillAPI(EWaybillAuth):
     def setup(self, doc=None, *, company_gstin=None):
         super().setup(doc=doc, company_gstin=company_gstin)
 
+        if self.sandbox_mode:
+            return
+
         if not self.is_authenticated():
             self.authenticate()
 
+    def set_sandbox_credentials(self):
+        # using enriched APIs for sandbox mode
+        self.BASE_PATH = "ewb/ewayapi"
+
+        self.company_gstin = "05AAACG2115R1ZN"
+        self.username = "05AAACG2115R1ZN"
+        self.password = "abc123@@"
+
+    def set_default_headers(self):
+        self.default_headers.update(
+            {
+                "gstin": self.company_gstin,
+                "username": self.username,
+                "password": self.password,
+                "requestid": self.generate_request_id(),
+            }
+        )
+
     def post(self, action=None, **kwargs):
         self.action = action
+        if self.sandbox_mode:
+            kwargs.update({"params": {"action": action}})
+
         return super().post(**kwargs)
 
     def get_e_waybill(self, ewaybill_number):
-        return self.get("GetEwayBill", params={"ewbNo": ewaybill_number})
+        action = "getewaybill" if self.sandbox_mode else "GetEwayBill"
+        return self.get(action, params={"ewbNo": ewaybill_number})
 
     def get_e_waybills_by_date(self, date):
         return self.get("GetEwayBillsByDate", params={"date": date})
@@ -186,6 +214,9 @@ class EWaybillAPI(EWaybillAuth):
             )
 
     def before_request(self, request_args):
+        if self.sandbox_mode:
+            return
+
         self.encrypt_request(request_args)
         if self.is_authentication_api(request_args):
             return
@@ -207,6 +238,9 @@ class EWaybillAPI(EWaybillAuth):
         }
 
     def decrypt_response(self, response):
+        if self.sandbox_mode:
+            return response
+
         decrypted_rek = None
 
         if response.get("authtoken"):

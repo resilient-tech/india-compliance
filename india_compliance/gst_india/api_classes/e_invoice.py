@@ -29,32 +29,22 @@ class NICAuth(BaseAPI):
         check_scheduler_status()
 
         if doc:
-            company_gstin = doc.company_gstin
+            self.company_gstin = doc.company_gstin
             self.default_log_values.update(
                 reference_doctype=doc.doctype,
                 reference_name=doc.name,
             )
 
         if self.sandbox_mode:
-            company_gstin = "02AMBPG7773M002"
-            self.username = "adqgsphpusr1"
-            self.password = "Gsp@1234"
-            self.app_key = self.generate_app_key()
+            self.set_sandbox_credentials()
 
-        elif not company_gstin:
+        elif not self.company_gstin:
             frappe.throw(_("Company GSTIN is required to use the e-Invoice API"))
 
         else:
-            self.fetch_credentials(company_gstin, "e-Waybill / e-Invoice")
+            self.fetch_credentials(self.company_gstin, "e-Waybill / e-Invoice")
 
-        self.default_headers.update(
-            {
-                "gstin": company_gstin,
-                "user_name": self.username,
-                "password": self.password,
-                "requestid": self.generate_request_id(),
-            }
-        )
+        self.set_default_headers()
 
     def _fetch_credentials(self, row, require_password=True):
         self.password = row.get_password(raise_exception=require_password)
@@ -135,6 +125,12 @@ class NICAuth(BaseAPI):
         )
 
     def authenticate(self):
+        pass
+
+    def set_sandbox_credentials(self):
+        pass
+
+    def set_default_headers(self):
         pass
 
 
@@ -232,10 +228,34 @@ class EInvoiceAPI(EInvoiceAuth):
     def setup(self, doc=None, *, company_gstin=None):
         super().setup(doc, company_gstin=company_gstin)
 
+        if self.sandbox_mode:
+            return
+
         if not self.is_authenticated():
             self.authenticate()
 
+    def set_sandbox_credentials(self):
+        # using enriched APIs for sandbox mode
+        self.BASE_PATH = "ei/api"
+
+        self.company_gstin = "02AMBPG7773M002"
+        self.username = "adqgsphpusr1"
+        self.password = "Gsp@1234"
+
+    def set_default_headers(self):
+        self.default_headers.update(
+            {
+                "gstin": self.company_gstin,
+                "user_name": self.username,
+                "password": self.password,
+                "requestid": self.generate_request_id(),
+            }
+        )
+
     def handle_error_response(self, response):
+        if self.sandbox_mode:
+            return super().handle_error_response(response)
+
         success_value = response.get("Status") != 0
         if not success_value and not self.is_ignored_error(response):
             frappe.throw(
@@ -245,7 +265,18 @@ class EInvoiceAPI(EInvoiceAuth):
                 title=_("API Request Failed"),
             )
 
+    def is_ignored_error_sandbox(self, response_json):
+        message = response_json.get("message", "").strip()
+
+        for error_code in self.IGNORED_ERROR_CODES:
+            if message.startswith(error_code):
+                response_json.error_code = error_code
+                return True
+
     def is_ignored_error(self, response):
+        if self.sandbox_mode:
+            return self.is_ignored_error_sandbox(response)
+
         error_details = response.get("ErrorDetails")
 
         if not error_details:
@@ -303,6 +334,9 @@ class EInvoiceAPI(EInvoiceAuth):
         return self.get(endpoint="master/syncgstin", params={"gstin": gstin})
 
     def before_request(self, request_args):
+        if self.sandbox_mode:
+            return
+
         self.encrypt_request(request_args)
         if self.is_authentication_api(request_args):
             return
@@ -323,6 +357,9 @@ class EInvoiceAPI(EInvoiceAuth):
         }
 
     def decrypt_response(self, response):
+        if self.sandbox_mode:
+            return response
+
         if response.get("error_code"):
             return response
 
