@@ -176,7 +176,11 @@ class GSTR1Query:
         # TODO: Handle TDS
         refund_amount = (
             frappe.qb.from_(self.si_taxes)
-            .select(Sum(self.si_taxes.tax_amount).as_("refund_amount"))
+            .select(
+                Sum(self.si_taxes.base_tax_amount_after_discount_amount).as_(
+                    "refund_amount"
+                )
+            )
             .where(self.si_taxes.gst_tax_type.isin(GST_REFUND_TAX_TYPES))
             .where(self.si_taxes.parent == si_doc.name)
         )
