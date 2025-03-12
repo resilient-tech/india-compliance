@@ -55,6 +55,7 @@ async function add_gstr2b_alert(frm) {
                 [frm.doc.inward_supply_from_date, frm.doc.inward_supply_to_date],
                 ReturnType.GSTR2B,
                 frm.doc.company_gstin,
+                null,
                 true
             );
             remove_gstr2b_alert(existing_alert);
@@ -75,6 +76,7 @@ frappe.ui.form.on(DOCTYPE, {
         );
 
         frm.events.handle_download_message(frm);
+        frm.events.handle_regeneration_and_redownload(frm);
     },
 
     onload(frm) {
@@ -185,6 +187,46 @@ frappe.ui.form.on(DOCTYPE, {
             frappe.msgprint(message);
         });
     },
+
+    handle_regeneration_and_redownload(frm) {
+        frappe.realtime.on("regenerate_gstr_2b", args => {
+            // This has to be done because frm is refreshed after download completes
+            setTimeout(() => {
+                frappe.show_alert({
+                    message: __(
+                        "GSTR 2B download for period {0} is in progress, due to pending regeneration.",
+                        [args.return_period]
+                    ),
+                    indicator: "orange",
+                });
+
+                gstr_2b.regenerate({
+                    gstin: args.gstin,
+                    return_period: args.return_period,
+                    callback: frm.events.check_regeneration_status_and_redownload,
+                    frm: frm,
+                    doctype: DOCTYPE,
+                });
+            }, 1000);
+        });
+    },
+
+    check_regeneration_status_and_redownload(regeneration_status, args) {
+        if (regeneration_status.status === "ER") {
+            frappe.msgprint({
+                message: __(regeneration_status.error),
+                indicator: "red",
+            });
+        } else if (regeneration_status.status === "P") {
+            download_gstr(
+                args.frm,
+                null,
+                ReturnType.GSTR2B,
+                args.gstin,
+                args.return_period
+            );
+        }
+    },
 });
 
 class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
@@ -226,7 +268,8 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
     }
 
     get_filter_fields() {
-        const fields = [
+        const fields = super.get_filter_fields();
+        fields.push(
             {
                 label: "Supplier Name",
                 fieldname: "supplier_name",
@@ -283,8 +326,8 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 fieldname: "purchase_doctype",
                 fieldtype: "Select",
                 options: ["Purchase Invoice", "Bill of Entry"],
-            },
-        ];
+            }
+        );
 
         fields.forEach(field => (field.parent = DOCTYPE));
         return fields;
@@ -599,6 +642,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 options: "GST Inward Supply",
                 align: "center",
                 width: 120,
+                _after_format: (...args) => this.get_value_with_indicator(...args),
             },
             {
                 label: "Purchase <br>Invoice",
@@ -718,7 +762,7 @@ class PurchaseReconciliationToolAction {
             // to hide `Actions` button group on smaller screens
             $(group_div).addClass("hidden-md");
 
-            $(group_div).appendTo($(".custom-button-group"));
+            $(group_div).appendTo(this.frm.$wrapper.find(".custom-button-group"));
         }
     }
 
@@ -929,6 +973,7 @@ class ImportDialog {
             this.date_range,
             this.return_type,
             this.company_gstin,
+            null,
             only_missing,
             marked_gst_categories
         );
@@ -950,6 +995,7 @@ class ImportDialog {
             this.date_range,
             this.return_type,
             this.company_gstin,
+            null,
             only_missing
         );
 
@@ -967,19 +1013,21 @@ class ImportDialog {
             for_download: this.for_download,
         });
 
+        // ensure sequence is maintained
+        function get_map(message) {
+            return Array.isArray(message) ? new Map(message) : message;
+        }
+
+        const _pending = get_map(message.pending_download);
+        const _history = get_map(message.download_history);
+
         // render html
-        let pending_download = {
-            columns: ["Period", "GSTIN"],
-            data: message.pending_download,
-        };
+        let pending_download = { columns: ["Period", "GSTIN"], data: _pending };
         this.dialog.fields_dict.pending_download.html(
             frappe.render_template("gstr_download_history", pending_download)
         );
 
-        let download_history = {
-            columns: ["Period", "Downloaded On"],
-            data: message.download_history,
-        };
+        let download_history = { columns: ["Period", "Downloaded On"], data: _history };
         let html =
             this.company_gstin === "All"
                 ? ""
@@ -1153,6 +1201,7 @@ async function download_gstr(
     date_range,
     return_type,
     company_gstin,
+    return_period,
     only_missing = true,
     gst_categories = null
 ) {
@@ -1163,9 +1212,10 @@ async function download_gstr(
 
     company_gstins.forEach(async gstin => {
         const args = {
-            return_type: return_type,
+            return_type,
             company_gstin: gstin,
-            date_range: date_range,
+            date_range,
+            return_period,
             force: !only_missing,
             gst_categories,
         };

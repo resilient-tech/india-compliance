@@ -14,6 +14,8 @@
   "year",
   "column_break_qcor",
   "month_or_quarter",
+  "column_break_auof",
+  "filing_preference",
   "data_section",
   "tabs_html",
   "tabs_empty_state",
@@ -84,6 +86,16 @@
    "reqd": 1
   },
   {
+   "fieldname": "column_break_auof",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "filing_preference",
+   "fieldtype": "Select",
+   "label": "Filing Preference",
+   "options": "\nMonthly\nQuarterly"
+  },
+  {
    "default": "0",
    "fieldname": "file_nil_gstr1",
    "fieldtype": "Check",
@@ -95,7 +107,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-12-26 12:43:21.979607",
+ "modified": "2025-02-06 12:26:08.792234",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR-1 Beta",

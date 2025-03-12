@@ -5,6 +5,7 @@ from itertools import combinations
 from pypika import Order
 
 import frappe
+from frappe.query_builder import Case
 from frappe.query_builder.functions import Date, IfNull, Sum
 from frappe.utils import getdate
 
@@ -76,7 +77,7 @@ class GSTR1Query:
                 IfNull(self.si_item.item_code, self.si_item.item_name).as_("item_code"),
                 self.si_item.qty,
                 self.si_item.gst_hsn_code,
-                self.si_item.stock_uom,
+                self.si_item.uom,
                 self.si.billing_address_gstin,
                 self.si.company_gstin,
                 self.si.customer_name,
@@ -92,13 +93,6 @@ class GSTR1Query:
                 self.si.port_code.as_("shipping_port_code"),
                 self.si.shipping_bill_number,
                 self.si.shipping_bill_date,
-                IfNull(self.si.base_rounded_total, self.si.base_grand_total).as_(
-                    "invoice_total"
-                ),
-                IfNull(
-                    returned_si.base_rounded_total,
-                    IfNull(returned_si.base_grand_total, 0),
-                ).as_("returned_invoice_total"),
                 self.si.gst_category,
                 IfNull(self.si_item.gst_treatment, "Not Defined").as_("gst_treatment"),
                 (
@@ -142,6 +136,9 @@ class GSTR1Query:
             )
         )
 
+        query = self.calculate_totals(query, self.si, "invoice_total")
+        query = self.calculate_totals(query, returned_si, "returned_invoice_total")
+
         if self.additional_si_columns:
             for col in self.additional_si_columns:
                 query = query.select(self.si[col])
@@ -173,6 +170,20 @@ class GSTR1Query:
 
         return query
 
+    def calculate_totals(self, query, si_doc, key):
+        # TODO: Handle Refunds and TDS
+        return query.select(
+            IfNull(
+                Case()
+                .when(
+                    si_doc.base_rounded_total != 0,
+                    si_doc.base_rounded_total,
+                )
+                .else_(si_doc.base_grand_total),
+                0,
+            ).as_(key)
+        )
+
 
 def cache_invoice_condition(func):
     def wrapped(self, invoice):
@@ -187,7 +198,6 @@ def cache_invoice_condition(func):
 
 
 class GSTR1Conditions:
-
     @cache_invoice_condition
     def is_nil_rated(self, invoice):
         return invoice.gst_treatment == "Nil-Rated"
@@ -306,7 +316,6 @@ class GSTR1CategoryConditions(GSTR1Conditions):
 
 
 class GSTR1Subcategory(GSTR1CategoryConditions):
-
     def set_for_b2b(self, invoice):
         self._set_invoice_type_for_b2b_and_cdnr(invoice)
 
@@ -376,7 +385,7 @@ class GSTR1Subcategory(GSTR1CategoryConditions):
                 invoice.invoice_type = GSTR1_B2B_InvoiceType.SEWOP.value
                 invoice.invoice_sub_category = GSTR1_SubCategory.SEZWOP.value
 
-        elif invoice.is_reverese_charge:
+        elif invoice.is_reverse_charge:
             invoice.invoice_type = GSTR1_B2B_InvoiceType.R.value
             invoice.invoice_sub_category = GSTR1_SubCategory.B2B_REVERSE_CHARGE.value
 
@@ -405,17 +414,17 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
             self.assign_categories(invoice)
 
             if invoice.gst_hsn_code and invoice.gst_hsn_code.startswith("99"):
-                invoice["stock_uom"] = "OTH-OTHERS"
+                invoice["uom"] = "OTH-OTHERS"
                 invoice["qty"] = 0
                 continue
 
-            stock_uom = invoice.get("stock_uom", "")
-            if stock_uom in identified_uom:
-                invoice["stock_uom"] = identified_uom[stock_uom]
+            uom = invoice.get("uom", "")
+            if uom in identified_uom:
+                invoice["uom"] = identified_uom[uom]
             else:
-                gst_uom = get_full_gst_uom(stock_uom, settings)
-                identified_uom[stock_uom] = gst_uom
-                invoice["stock_uom"] = gst_uom
+                gst_uom = get_full_gst_uom(uom, settings)
+                identified_uom[uom] = gst_uom
+                invoice["uom"] = gst_uom
 
     def assign_categories(self, invoice):
         if not invoice.invoice_sub_category:
@@ -454,7 +463,7 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
                 Sum(query.sgst_amount).as_("sgst_amount"),
                 Sum(query.igst_amount).as_("igst_amount"),
                 Sum(query.total_cess_amount).as_("total_cess_amount"),
-                Sum(query.total_tax).as_("total_tax_amount"),
+                Sum(query.total_tax).as_("total_tax"),
                 Sum(query.total_amount).as_("total_amount"),
             )
             .groupby(
@@ -462,7 +471,7 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
                 query.gst_hsn_code,
                 query.gst_rate,
                 query.gst_treatment,
-                query.stock_uom,
+                query.uom,
             )
             .orderby(
                 query.posting_date, query.invoice_no, query.item_code, order=Order.desc
@@ -474,7 +483,6 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
     def get_filtered_invoices(
         self, invoices, invoice_category=None, invoice_sub_category=None
     ):
-
         filtered_invoices = []
         functions = CATEGORY_CONDITIONS.get(invoice_category)
         condition = getattr(self, functions["category"], None)

@@ -53,6 +53,7 @@ footer {
 
 .footer-logo img {
   content: url("https://india-compliance.s3.ap-south-1.amazonaws.com/logo.png");
+  max-width: 13em;
 }
 
 [data-theme="dark"] .footer-logo img {

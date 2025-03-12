@@ -1,6 +1,6 @@
 {
  "actions": [],
- "autoname": "format:GST-IS-{######}",
+ "autoname": "hash",
  "creation": "2022-04-12 17:45:44.603856",
  "doctype": "DocType",
  "editable_grid": 1,
@@ -60,6 +60,7 @@
   "original_doc_type",
   "section_break_22",
   "action",
+  "previous_action",
   "link_doctype",
   "column_break_27",
   "match_status",
@@ -470,15 +471,24 @@
    "hidden": 1,
    "label": "Downloaded from 2A",
    "read_only": 1
+  },
+  {
+   "fieldname": "previous_action",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Previous Action",
+   "options": "No Action\nAccept\nIgnore\nPending",
+   "read_only": 1
   }
  ],
+ "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-12-12 17:28:52.668508",
+ "modified": "2025-03-04 18:38:19.056682",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Inward Supply",
- "naming_rule": "Expression",
+ "naming_rule": "Random",
  "owner": "Administrator",
  "permissions": [
   {
@@ -509,6 +519,7 @@
    "role": "Accounts User"
   }
  ],
+ "row_format": "Dynamic",
  "search_fields": "bill_date, supplier_name, bill_no, document_value",
  "sort_field": "creation",
  "sort_order": "DESC",

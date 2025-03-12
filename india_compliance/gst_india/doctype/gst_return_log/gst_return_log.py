@@ -5,7 +5,6 @@ import gzip
 from datetime import datetime
 
 import frappe
-from frappe import _
 from frappe.model.document import Document
 from frappe.utils import (
     get_datetime,
@@ -19,10 +18,7 @@ from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     FileGSTR1,
     GenerateGSTR1,
 )
-from india_compliance.gst_india.utils import (
-    get_party_for_gstin,
-    is_production_api_enabled,
-)
+from india_compliance.gst_india.utils import get_party_for_gstin
 
 DOCTYPE = "GST Return Log"
 
@@ -123,37 +119,8 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
         if file_field == "filed":
             self.remove_json_for("unfiled")
 
-    # GSTR 1 UTILITY
-    def is_gstr1_api_enabled(self, settings=None, warn_for_missing_credentials=False):
-        if not settings:
-            settings = frappe.get_cached_doc("GST Settings")
-
-        if not is_production_api_enabled(settings):
-            return False
-
-        if not settings.enable_gstr_1_api:
-            return False
-
-        if not settings.has_valid_credentials(self.gstin, "Returns"):
-            if warn_for_missing_credentials:
-                frappe.publish_realtime(
-                    "show_missing_gst_credentials_message",
-                    dict(
-                        message=_(
-                            "Credentials are missing for GSTIN {0} for service"
-                            " Returns in GST Settings"
-                        ).format(self.gstin),
-                        title=_("Missing Credentials"),
-                    ),
-                    user=frappe.session.user,
-                )
-
-            return False
-
-        return True
-
     def is_sek_needed(self, settings=None):
-        if not self.is_gstr1_api_enabled(settings):
+        if not settings.is_gstr1_api_enabled(self.gstin):
             return False
 
         if not self.unfiled or self.filing_status != "Filed":
@@ -192,7 +159,7 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
 
         fields = ["books", "books_summary"]
 
-        if self.is_gstr1_api_enabled(settings):
+        if settings.is_gstr1_api_enabled(self.gstin):
             if self.filing_status == "Filed":
                 fields.extend(
                     ["reconcile", "reconcile_summary", "filed", "filed_summary"]
@@ -223,11 +190,16 @@ def download_file():
     frappe.response["type"] = "download"
 
 
-def process_gstr_1_returns_info(company, gstin, response):
+def process_gstr_returns_info(company, gstin, e_filed_list):
+    process_gstr_1_returns_info(company, gstin, e_filed_list)
+    process_gstr_3b_returns_info(company, gstin, e_filed_list)
+
+
+def process_gstr_1_returns_info(company, gstin, e_filed_list):
     return_info = {}
 
     # compile gstr-1 returns info
-    for info in response.get("EFiledlist"):
+    for info in e_filed_list:
         if info["rtntype"] == "GSTR1":
             return_info[f"GSTR1-{info['ret_prd']}-{gstin}"] = info
 
@@ -287,14 +259,38 @@ def process_gstr_1_returns_info(company, gstin, response):
         _update_gstr_1_filed_upto(filed_upto)
 
 
-def get_gst_return_log(posting_date, company_gstin):
-    period = getdate(posting_date).strftime("%m%Y")
-    if name := frappe.db.exists(DOCTYPE, f"GSTR1-{period}-{company_gstin}"):
-        return frappe.get_doc(DOCTYPE, name)
+def process_gstr_3b_returns_info(company, gstin, e_filed_list):
+    for info in e_filed_list:
+        if info["status"] != "Filed":
+            continue
+
+        log_name = f"GSTR3B-{info['ret_prd']}-{gstin}"
+        if frappe.db.exists(
+            "GST Return Log",
+            log_name,
+        ):
+            gstr3b_log = frappe.get_doc("GST Return Log", log_name)
+        else:
+            gstr3b_log = frappe.new_doc("GST Return Log")
+
+        gstr3b_log.update(
+            {
+                "return_period": info["ret_prd"],
+                "company": company,
+                "gstin": gstin,
+                "return_type": "GSTR3B",
+                "filing_status": "Filed",
+                "acknowledgement_number": info["arn"],
+                "filing_date": datetime.strptime(info["dof"], "%d-%m-%Y").date(),
+            }
+        )
+        gstr3b_log.save(ignore_permissions=True)
 
 
 def add_comment_to_gst_return_log(doc, action):
-    if not (log := get_gst_return_log(doc.posting_date, doc.company_gstin)):
+    period = getdate(doc.posting_date).strftime("%m%Y")
+    log_name = f"GSTR1-{period}-{doc.company_gstin}"
+    if not (log := get_gst_return_log(log_name)):
         return
 
     log.add_comment(
@@ -354,3 +350,20 @@ def create_ims_return_log(company_gstin):
     ims_log.gstin = company_gstin
     ims_log.return_type = "IMS"
     ims_log.insert()
+
+
+def get_gst_return_log(log_name, **kwargs):
+    if frappe.db.exists(DOCTYPE, log_name):
+        return frappe.get_doc(DOCTYPE, log_name)
+
+    return_type, period, gstin = log_name.split("-")
+
+    log = frappe.new_doc(DOCTYPE)
+    log.return_period = period
+    log.company = get_party_for_gstin(gstin, "Company")
+    log.gstin = gstin
+    log.return_type = return_type
+    log.update(kwargs)
+    log.insert()
+
+    return log
