@@ -7,6 +7,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
+from frappe.query_builder import Case
 from frappe.utils import today
 import erpnext
 from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_entries
@@ -72,10 +73,12 @@ class BillofEntry(Document):
         gl_entries = self.get_gl_entries()
         update_regional_gl_entries(gl_entries, self)
         make_gl_entries(gl_entries)
+        self.update_pending_boe_qty()
 
     def on_cancel(self):
         self.ignore_linked_doctypes = ("GL Entry",)
         make_reverse_gl_entries(voucher_type=self.doctype, voucher_no=self.name)
+        self.update_pending_boe_qty()
 
         frappe.db.set_value(
             "GST Inward Supply",
@@ -409,6 +412,35 @@ class BillofEntry(Document):
 
         set_missing_values(self)
 
+    def update_pending_boe_qty(self):
+        pi_item_names = [item.pi_detail for item in self.items]
+        pi_item_map = frappe._dict(
+            frappe.get_all(
+                "Purchase Invoice Item",
+                filters={"name": ["in", pi_item_names]},
+                fields=["name", "pending_boe_qty"],
+                as_list=True,
+            )
+        )
+
+        items_to_update = {}
+        for item in self.items:
+            if self.docstatus == 1:
+                pending_boe_qty = pi_item_map.get(item.pi_detail) - item.qty
+                if pending_boe_qty < 0:
+                    frappe.throw(
+                        _(
+                            "Quantity of item {0} cannot be mote than its pending quantity."
+                        ).format(item.item_code)
+                    )
+
+            elif self.docstatus == 2:
+                pending_boe_qty = pi_item_map.get(item.pi_detail) + item.qty
+
+            items_to_update[item.pi_detail] = {"pending_boe_qty": pending_boe_qty}
+
+        frappe.db.bulk_update("Purchase Invoice Item", items_to_update)
+
 
 def set_missing_values(source, target=None):
     if not target:
@@ -484,6 +516,8 @@ def make_bill_of_entry(source_name, target_doc=None):
                     "name": "pi_detail",
                     "taxable_value": "assessable_value",
                 },
+                "condition": lambda doc: doc.pending_boe_qty > 0,
+                "postprocess": update_item_qty,
             },
         },
         target_doc,
@@ -491,6 +525,10 @@ def make_bill_of_entry(source_name, target_doc=None):
     )
 
     return doc
+
+
+def update_item_qty(source, target, source_parent):
+    target.qty = source.get("pending_boe_qty")
 
 
 @frappe.whitelist()
@@ -721,7 +759,10 @@ def get_pi_items(purchase_invoices):
             pi_item.item_code,
             pi_item.item_name,
             pi_item.parent.as_("purchase_invoice"),
-            pi_item.qty,
+            Case()
+            .when(pi_item.qty == pi_item.pending_boe_qty, pi_item.qty)
+            .else_(pi_item.qty - pi_item.pending_boe_qty)
+            .as_("qty"),
             pi_item.uom,
             pi_item.cost_center,
             pi_item.item_tax_template,
@@ -732,5 +773,30 @@ def get_pi_items(purchase_invoices):
             pi_item.name.as_("pi_detail"),
         )
         .where(pi_item.parent.isin(purchase_invoices))
+        .where(pi_item.pending_boe_qty > 0)
         .run(as_dict=True)
+    )
+
+
+@frappe.whitelist()
+def fetch_pending_boe_invoices(*args, **kwargs):
+    frappe.has_permission("Purchase Invoice", "read")
+
+    filters = next((arg for arg in args if isinstance(arg, dict)), {})
+    return frappe.get_all(
+        "Purchase Invoice",
+        filters={
+            "docstatus": 1,
+            "company": filters.get("company"),
+            "company_gstin": filters.get("company_gstin"),
+            "gst_category": "Overseas",
+            "pending_boe_qty": [">", 0],
+        },
+        fields=[
+            "name",
+            "company",
+            "company_gstin",
+            "items.item_code",
+            "items.pending_boe_qty",
+        ],
     )
