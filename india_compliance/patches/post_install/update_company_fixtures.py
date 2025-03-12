@@ -3,7 +3,6 @@ from frappe.query_builder.functions import IfNull
 from erpnext.setup.setup_wizard.operations.taxes_setup import get_or_create_tax_group
 
 from india_compliance.gst_india.overrides.company import (
-    create_output_refund_accounts,
     make_default_customs_accounts,
     make_default_gst_expense_accounts,
     make_default_tax_templates,
@@ -32,7 +31,6 @@ def execute():
 
         make_default_customs_accounts(company)
         make_default_gst_expense_accounts(company)
-        create_output_refund_accounts(company)
 
 
 def update_root_for_rcm(company):
