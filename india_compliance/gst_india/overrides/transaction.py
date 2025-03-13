@@ -1128,7 +1128,7 @@ def validate_gst_refund_accounts(doc):
         # Validate if tax amount is negative
         if tax.tax_amount > 0:
             frappe.throw(
-                _("Row #{0}: Tax amount should be negative for GST Account {2}").format(
+                _("Row #{0}: Tax amount should be negative for GST Account {1}").format(
                     tax.idx, tax.account_head
                 )
             )

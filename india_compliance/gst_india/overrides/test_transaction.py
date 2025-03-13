@@ -973,6 +973,71 @@ class TestTransaction(IntegrationTestCase):
             if "is missing in Item Tax Template" in message.get("message"):
                 self.fail("Item Tax Template validation message found")
 
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_validate_gst_refund_accounts(self):
+        create_gst_refund_accounts()
+
+        transaction_details = {
+            "doctype": "Sales Invoice",
+            "customer": "_Test Registered Customer",
+            "customer_address": "_Test Registered Customer-Billing-1",
+            "is_out_state": 1,
+            "do_not_save": True,
+            "is_export_with_gst": 1,
+        }
+        doc = create_transaction(**transaction_details)
+        doc.append(
+            "taxes",
+            {
+                "charge_type": "On Net Total",
+                "account_head": "Output Tax IGST Refund - _TIRC",
+                "rate": -9,
+                "description": "Output Tax IGST Refund",
+            },
+        )
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(.*Total GST amount should be equal to Refund amount.*)$"),
+            doc.save,
+        )
+
+        doc.taxes[1].rate = 18
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(.*Tax amount should be negative for GST Account.*)$"),
+            doc.save,
+        )
+
+        doc.taxes[1].rate = -18
+        doc.save()
+
+
+def create_gst_refund_accounts():
+    gst_settings = frappe.get_cached_doc("GST Settings")
+
+    gst_accounts = [
+        "Output Tax CGST Refund",
+        "Output Tax SGST Refund",
+        "Output Tax IGST Refund",
+    ]
+    for account in gst_accounts:
+        if not frappe.db.exists("Account", f"{account} - _TIRC"):
+            create_tax_accounts(account)
+
+    gst_settings.append(
+        "gst_accounts",
+        {
+            "company": "_Test Indian Registered Company",
+            "cgst_account": f"{gst_accounts[0]} - _TIRC",
+            "sgst_account": f"{gst_accounts[1]} - _TIRC",
+            "igst_account": f"{gst_accounts[2]} - _TIRC",
+            "account_type": "Output Refund",
+        },
+    )
+    gst_settings.save()
+
 
 class TestQuotationTransaction(IntegrationTestCase):
     @classmethod
@@ -1134,7 +1199,6 @@ class TestRegionalOverrides(IntegrationTestCase):
         {"round_off_gst_values": 1},
     )
     def test_get_regional_round_off_accounts(self):
-
         data = get_regional_round_off_accounts("_Test Indian Registered Company", [])
         self.assertListEqual(
             data,
@@ -1159,12 +1223,10 @@ class TestRegionalOverrides(IntegrationTestCase):
         {"round_off_gst_values": 0},
     )
     def test_get_regional_round_off_accounts_with_round_off_unchecked(self):
-
         data = get_regional_round_off_accounts("_Test Indian Registered Company", [])
         self.assertListEqual(data, [])
 
     def test_update_gl_dict_with_regional_fields(self):
-
         doc = frappe.get_doc(
             {"doctype": "Sales Invoice", "company_gstin": "29AAHCM7727Q1ZI"}
         )
