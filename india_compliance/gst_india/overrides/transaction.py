@@ -751,7 +751,7 @@ def _validate_hsn_codes(doc, valid_hsn_length, throw=False, message=None):
     if rows_with_missing_hsn:
         frappe.msgprint(
             _(
-                "{0}" "Please enter HSN/SAC code for the following row numbers: <br>{1}"
+                "{0}Please enter HSN/SAC code for the following row numbers: <br>{1}"
             ).format(message or "", frappe.bold(", ".join(rows_with_missing_hsn))),
             title=_("Invalid HSN/SAC"),
             raise_exception=throw,
@@ -1117,6 +1117,9 @@ def validate_reverse_charge_transaction(doc):
 
 
 def validate_gst_refund_accounts(doc):
+    if doc.doctype not in SALES_DOCTYPES:
+        return
+
     has_refund = False
     net_amount = 0
 
