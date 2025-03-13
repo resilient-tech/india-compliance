@@ -100,7 +100,6 @@ frappe.ui.form.on("Bill of Entry", {
                 }
             },
             add_filters_group: 1,
-            columns: ["name", "company", "company_gstin", "item_code", "pending_boe_qty"],
             action: function (selections, args) {
                 frm.call("get_items_from_purchase_invoice", {
                     purchase_invoices: selections,

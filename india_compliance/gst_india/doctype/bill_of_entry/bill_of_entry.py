@@ -796,7 +796,6 @@ def fetch_pending_boe_invoices(*args, **kwargs):
             "name",
             "company",
             "company_gstin",
-            "items.item_code",
-            "items.pending_boe_qty",
         ],
+        distinct=True,
     )
