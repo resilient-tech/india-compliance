@@ -975,46 +975,25 @@ class TestTransaction(IntegrationTestCase):
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_validate_gst_refund_accounts(self):
-        create_gst_refund_accounts()
+        doc = create_refund_transaction()
 
-        transaction_details = {
-            "doctype": "Sales Invoice",
-            "customer": "_Test Registered Customer",
-            "customer_address": "_Test Registered Customer-Billing-1",
-            "is_out_state": 1,
-            "do_not_save": True,
-            "is_export_with_gst": 1,
-        }
-        doc = create_transaction(**transaction_details)
-        doc.append(
-            "taxes",
-            {
-                "charge_type": "On Net Total",
-                "account_head": "Output Tax IGST Refund - _TIRC",
-                "rate": -9,
-                "description": "Output Tax IGST Refund",
-            },
-        )
-
+        doc.taxes[1].rate = -9
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             re.compile(r"^(.*Total GST amount should be equal to Refund amount.*)$"),
             doc.save,
         )
 
+        doc.reload()
         doc.taxes[1].rate = 18
-
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             re.compile(r"^(.*Tax amount should be negative for GST Account.*)$"),
             doc.save,
         )
 
-        doc.taxes[1].rate = -18
-        doc.save()
 
-
-def create_gst_refund_accounts():
+def create_refund_transaction():
     gst_settings = frappe.get_cached_doc("GST Settings")
 
     gst_accounts = [
@@ -1037,6 +1016,26 @@ def create_gst_refund_accounts():
         },
     )
     gst_settings.save()
+
+    transaction_details = {
+        "doctype": "Sales Invoice",
+        "customer": "_Test Registered Customer",
+        "customer_address": "_Test Registered Customer-Billing-1",
+        "is_out_state": 1,
+        "do_not_save": True,
+        "is_export_with_gst": 1,
+    }
+    doc = create_transaction(**transaction_details)
+    doc.append(
+        "taxes",
+        {
+            "charge_type": "On Net Total",
+            "account_head": "Output Tax IGST Refund - _TIRC",
+            "rate": -18,
+            "description": "Output Tax IGST Refund",
+        },
+    )
+    return doc.insert()
 
 
 class TestQuotationTransaction(IntegrationTestCase):
