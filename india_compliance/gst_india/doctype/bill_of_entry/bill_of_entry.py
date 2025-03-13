@@ -447,14 +447,17 @@ class BillofEntry(Document):
             .groupby(boe_item.pi_detail)
         )
 
-        frappe.qb.update(pi_item).join(submitted_boe_qty).on(
-            pi_item.name == submitted_boe_qty.pi_detail
-        ).set(
-            pi_item.pending_boe_qty,
-            pi_item.qty - submitted_boe_qty.qty,
-        ).where(
-            pi_item.name.isin(pi_item_names)
-        ).run()
+        (
+            frappe.qb.update(pi_item)
+            .join(submitted_boe_qty)
+            .on(pi_item.name == submitted_boe_qty.pi_detail)
+            .set(
+                pi_item.pending_boe_qty,
+                pi_item.qty - submitted_boe_qty.qty,
+            )
+            .where(pi_item.name.isin(pi_item_names))
+            .run()
+        )
 
 
 def set_missing_values(source, target=None):
