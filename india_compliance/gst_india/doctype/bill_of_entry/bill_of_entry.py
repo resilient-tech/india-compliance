@@ -7,6 +7,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
+from frappe.query_builder.functions import Sum
 from frappe.utils import today
 import erpnext
 from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_entries
@@ -60,6 +61,7 @@ class BillofEntry(Document):
         update_gst_details(self)
 
     def before_submit(self):
+        self.validate_qty()
         update_gst_details(self)
 
     def validate(self):
@@ -411,9 +413,10 @@ class BillofEntry(Document):
 
         set_missing_values(self)
 
-    def update_pending_boe_qty(self):
+    def validate_qty(self):
         pi_item_names = [item.pi_detail for item in self.items]
-        pi_item_map = frappe._dict(
+
+        pi_qty_map = frappe._dict(
             frappe.get_all(
                 "Purchase Invoice Item",
                 filters={"name": ["in", pi_item_names]},
@@ -422,23 +425,36 @@ class BillofEntry(Document):
             )
         )
 
-        items_to_update = {}
         for item in self.items:
-            if self.docstatus == 1:
-                pending_boe_qty = pi_item_map.get(item.pi_detail) - item.qty
-                if pending_boe_qty < 0:
-                    frappe.throw(
-                        _(
-                            "Quantity of item {0} cannot be mote than its pending quantity."
-                        ).format(item.item_code)
+            if item.qty > pi_qty_map.get(item.pi_detail):
+                frappe.throw(
+                    _("Quantity of {0} is more than it's pending qty").format(
+                        item.item_code
                     )
+                )
 
-            elif self.docstatus == 2:
-                pending_boe_qty = pi_item_map.get(item.pi_detail) + item.qty
+    def update_pending_boe_qty(self):
+        pi_item_names = [item.pi_detail for item in self.items]
 
-            items_to_update[item.pi_detail] = {"pending_boe_qty": pending_boe_qty}
+        pi_item = frappe.qb.DocType("Purchase Invoice Item")
+        boe_item = frappe.qb.DocType("Bill of Entry Item")
 
-        frappe.db.bulk_update("Purchase Invoice Item", items_to_update)
+        submitted_boe_qty = (
+            frappe.qb.from_(boe_item)
+            .select(boe_item.pi_detail, Sum(boe_item.qty).as_("qty"))
+            .where(boe_item.pi_detail.isin(pi_item_names))
+            .where(boe_item.docstatus == 1)
+            .groupby(boe_item.pi_detail)
+        )
+
+        frappe.qb.update(pi_item).join(submitted_boe_qty).on(
+            pi_item.name == submitted_boe_qty.pi_detail
+        ).set(
+            pi_item.pending_boe_qty,
+            pi_item.qty - submitted_boe_qty.qty,
+        ).where(
+            pi_item.name.isin(pi_item_names)
+        ).run()
 
 
 def set_missing_values(source, target=None):
