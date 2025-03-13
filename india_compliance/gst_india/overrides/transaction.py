@@ -1051,9 +1051,6 @@ def validate_reverse_charge_transaction(doc):
     base_gst_tax = 0
     base_reverse_charge_booked = 0
 
-    if not doc.get("is_reverse_charge"):
-        return
-
     is_return = doc.get("is_return", False)
 
     def _throw_tax_error(is_positive, tax, comment_suffix=""):
@@ -1589,8 +1586,10 @@ def validate_transaction(doc, method=None):
     validate_gst_category(doc.gst_category, gstin)
 
     GSTAccounts().validate(doc, is_sales_transaction)
-    validate_reverse_charge_transaction(doc)
-    validate_gst_refund_accounts(doc)
+    if doc.get("is_reverse_charge"):
+        validate_reverse_charge_transaction(doc)
+    else:
+        validate_gst_refund_accounts(doc)
     update_taxable_values(doc)
     validate_item_wise_tax_detail(doc)
 
