@@ -7,7 +7,6 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
-from frappe.query_builder import Case
 from frappe.utils import today
 import erpnext
 from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_entries
@@ -498,6 +497,10 @@ def make_bill_of_entry(source_name, target_doc=None):
     """
     Permission checked in get_mapped_doc
     """
+
+    def update_item_qty(source, target, source_parent):
+        target.qty = source.get("pending_boe_qty")
+
     doc = get_mapped_doc(
         "Purchase Invoice",
         source_name,
@@ -525,10 +528,6 @@ def make_bill_of_entry(source_name, target_doc=None):
     )
 
     return doc
-
-
-def update_item_qty(source, target, source_parent):
-    target.qty = source.get("pending_boe_qty")
 
 
 @frappe.whitelist()
@@ -759,10 +758,7 @@ def get_pi_items(purchase_invoices):
             pi_item.item_code,
             pi_item.item_name,
             pi_item.parent.as_("purchase_invoice"),
-            Case()
-            .when(pi_item.qty == pi_item.pending_boe_qty, pi_item.qty)
-            .else_(pi_item.qty - pi_item.pending_boe_qty)
-            .as_("qty"),
+            pi_item.pending_boe_qty.as_("qty"),
             pi_item.uom,
             pi_item.cost_center,
             pi_item.item_tax_template,
