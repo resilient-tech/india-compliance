@@ -67,6 +67,7 @@ class GSTR1Query:
         self.additional_si_item_columns = additional_si_item_columns or []
 
     def get_base_query(self):
+        self.taxes_query = self.get_taxes_query()  # subquery for refund amount taxes
         returned_si = frappe.qb.DocType("Sales Invoice", alias="returned_si")
 
         query = (
@@ -75,6 +76,8 @@ class GSTR1Query:
             .on(self.si.name == self.si_item.parent)
             .left_join(returned_si)
             .on(self.si.return_against == returned_si.name)
+            .left_join(self.taxes_query)
+            .on(self.si.name == self.taxes_query.parent)
             .select(
                 IfNull(self.si_item.item_code, self.si_item.item_name).as_("item_code"),
                 self.si_item.qty,
@@ -138,8 +141,8 @@ class GSTR1Query:
             )
         )
 
-        query = self.calculate_totals(query, self.si, "invoice_total")
-        query = self.calculate_totals(query, returned_si, "returned_invoice_total")
+        query = self.select_totals(query, self.si, "invoice_total")
+        query = self.select_totals(query, returned_si, "returned_invoice_total")
 
         if self.additional_si_columns:
             for col in self.additional_si_columns:
@@ -172,19 +175,21 @@ class GSTR1Query:
 
         return query
 
-    def calculate_totals(self, query, si_doc, key):
-        # TODO: Handle TDS
-        refund_amount = (
+    def get_taxes_query(self):
+        return (
             frappe.qb.from_(self.si_taxes)
             .select(
                 Sum(self.si_taxes.base_tax_amount_after_discount_amount).as_(
                     "refund_amount"
-                )
+                ),
+                self.si_taxes.parent,
             )
             .where(self.si_taxes.gst_tax_type.isin(GST_REFUND_TAX_TYPES))
-            .where(self.si_taxes.parent == si_doc.name)
+            .groupby(self.si_taxes.parent)
         )
 
+    def select_totals(self, query, si_doc, key):
+        # TODO: Handle TDS
         return query.select(
             (
                 IfNull(
@@ -196,7 +201,7 @@ class GSTR1Query:
                     .else_(si_doc.base_grand_total),
                     0,
                 )
-                - IfNull(refund_amount, 0)
+                - IfNull(self.taxes_query.refund_amount, 0)
             ).as_(key)
         )
 
