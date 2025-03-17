@@ -263,12 +263,19 @@
             "gstin": "24AAQCA8719H1ZC",
             "gst_category": "Registered Regular",
             "is_primary_address": 1,
-            "is_shipping_address": 1,
             "is_company_address": 1,
             "links": [
                 {
                     "link_doctype": "Company",
                     "link_name": "_Test Indian Registered Company"
+                },
+                {
+                    "link_doctype": "Customer",
+                    "link_name": "_Test Registered Customer"
+                },
+                {
+                    "link_doctype": "Customer",
+                    "link_name": "_Test Registered Composition Customer"
                 }
             ]
         },
@@ -365,6 +372,23 @@
             ]
         },
         {
+            "name": "_Test Foreign Customer-Billing-1",
+            "address_type": "Billing",
+            "address_line1": "Test Address - 15",
+            "city": "Test City",
+            "state": "Gujarat",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "24AANFA2641L1ZF",
+            "gst_category": "Registered Regular",
+            "links": [
+                {
+                    "link_doctype": "Customer",
+                    "link_name": "_Test Foreign Customer"
+                }
+            ]
+        },
+        {
             "name": "_Test Registered Supplier-Billing",
             "address_type": "Billing",
             "address_line1": "Test Address - 7",
@@ -449,6 +473,7 @@
             "gstin": "24AAQCA8719H1ZC",
             "gst_category": "Registered Regular",
             "is_company_address": 1,
+            "is_shipping_address": 1,
             "links": [
                 {
                     "link_doctype": "Company",
