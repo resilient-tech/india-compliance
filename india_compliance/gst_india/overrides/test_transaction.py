@@ -760,7 +760,6 @@ class TestTransaction(IntegrationTestCase):
             **self.transaction_details,
             "customer": "_Test Foreign Customer",
             "party_name": "_Test Foreign Customer",
-            "customer_address": "_Test Foreign Customer-Billing",
         }
         doc = create_transaction(**doc_details, do_not_submit=True)
         self.assertEqual(doc.items[0].gst_treatment, "Zero-Rated")

@@ -86,7 +86,6 @@ class TestEInvoice(IntegrationTestCase):
             **test_data.get("kwargs"),
             qty=1000,
             do_not_submit=True,
-            ignore_company_address=True,
         )
         si.update(
             {
