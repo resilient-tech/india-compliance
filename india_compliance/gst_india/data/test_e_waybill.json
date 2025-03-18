@@ -2,7 +2,8 @@
     "non_taxable_goods_item": {
         "kwargs": {
             "vehicle_no": "GJ06AA1123",
-            "item_code": "_Test Nil Rated Item"
+            "item_code": "_Test Nil Rated Item",
+            "company_address": "_Test Indian Registered Company-Billing"
         },
         "request_data": {
             "userGstin": "05AAACG2115R1ZN",
@@ -71,7 +72,8 @@
     "goods_item_with_ewaybill": {
         "kwargs": {
             "vehicle_no": "GJ07DL9009",
-            "is_in_state": 1
+            "is_in_state": 1,
+            "company_address": "_Test Indian Registered Company-Billing"
         },
         "request_data": {
             "otherValue": 0.0,
@@ -233,6 +235,9 @@
         }
     },
     "goods_with_taxes": {
+        "kwargs": {
+            "company_address": "_Test Indian Registered Company-Billing"
+        },
         "request_data": {
             "userGstin": "05AAACG2115R1ZN",
             "supplyType": "O",
@@ -310,6 +315,9 @@
         }
     },
     "credit_note": {
+        "kwargs": {
+            "company_address": "_Test Indian Registered Company-Billing"
+        },
         "request_data": {
             "userGstin": "05AAACG2115R1ZN",
             "supplyType": "I",
@@ -406,6 +414,9 @@
         }
     },
     "get_e_waybill": {
+        "kwargs": {
+            "company_address": "_Test Indian Registered Company-Billing"
+        },
         "request_data": "ewbNo=301002999920",
         "response_data": {
             "message": "E-Way Bill is fetched successfully",
@@ -579,7 +590,8 @@
     },
     "is_return_dn_with_different_gstin": {
         "kwargs": {
-            "qty": 1000
+            "qty": 1000,
+            "company_address": "_Test Indian Registered Company-Billing"
         },
         "values": {
             "distance": 100,
@@ -652,7 +664,8 @@
     },
     "dn_with_different_gstin": {
         "kwargs": {
-            "qty": 1000
+            "qty": 1000,
+            "company_address": "_Test Indian Registered Company-Billing"
         },
         "values": {
             "distance": 100,
@@ -805,7 +818,8 @@
             "mode_of_transport": "Road",
             "vehicle_no": "GJ05DL9009",
             "is_reverse_charge": 1,
-            "is_in_state_rcm": 1
+            "is_in_state_rcm": 1,
+            "billing_address": "_Test Indian Registered Company-Billing"
         },
         "request_data": {
             "otherValue": 0.0,
@@ -877,7 +891,8 @@
             "distance": 10,
             "mode_of_transport": "Road",
             "vehicle_no": "GJ05DL9009",
-            "is_in_state": 1
+            "is_in_state": 1,
+            "billing_address": "_Test Indian Registered Company-Billing"
         },
         "request_data": {
             "otherValue": 0.0,
@@ -949,7 +964,8 @@
             "distance": 10,
             "mode_of_transport": "Road",
             "vehicle_no": "GJ05DL9009",
-            "is_in_state": 1
+            "is_in_state": 1,
+            "billing_address": "_Test Indian Registered Company-Billing"
         },
         "request_data": {
             "otherValue": 0.0,
@@ -1017,7 +1033,8 @@
     },
     "gsp_gst_down_error": {
         "kwargs": {
-            "vehicle_no": "GJ07DL9009"
+            "vehicle_no": "GJ07DL9009",
+            "company_address": "_Test Indian Registered Company-Billing"
         },
         "request_data": {
             "otherValue": 0.0,
@@ -1083,8 +1100,8 @@
             "purpose": "Send to Subcontractor",
             "bill_from_address": "_Test Indian Registered Company-Billing",
             "bill_to_address": "_Test Registered Supplier-Billing",
-            "items":
-                [{
+            "items": [
+                {
                     "item_code": "_Test Trading Goods 1",
                     "qty": 1,
                     "gst_hsn_code": "61149090",
@@ -1092,7 +1109,8 @@
                     "t_warehouse": "Goods In Transit - _TIRC",
                     "amount": 100,
                     "taxable_value": 100
-                }],
+                }
+            ],
             "company": "_Test Indian Registered Company",
             "base_grand_total": 100
         },
@@ -1171,8 +1189,8 @@
             "purpose": "Material Transfer",
             "bill_from_address": "_Test Indian Registered Company-Billing",
             "bill_to_address": "_Test Indian Registered Company-Billing",
-            "items":
-                [{
+            "items": [
+                {
                     "item_code": "_Test Trading Goods 1",
                     "qty": 1,
                     "gst_hsn_code": "61149090",
@@ -1180,7 +1198,8 @@
                     "t_warehouse": "Goods In Transit - _TIRC",
                     "amount": 100,
                     "taxable_value": 100
-                }],
+                }
+            ],
             "company": "_Test Indian Registered Company",
             "base_grand_total": 100
         },

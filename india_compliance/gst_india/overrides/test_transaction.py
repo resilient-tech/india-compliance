@@ -789,9 +789,10 @@ class TestTransaction(IntegrationTestCase):
 
         doc_details = {
             **self.transaction_details,
-            "customer": "_Test Foreign Customer",
-            "party_name": "_Test Foreign Customer",
-            "shipping_address_name": "_Test Registered Customer-Billing",
+            "customer": "_Test Foreign Customer-1",
+            "party_name": "_Test Foreign Customer-1",
+            "customer_address": "_Test Foreign Customer-1-Billing",
+            "shipping_address_name": "_Test Foreign Customer-1-Shipping",
         }
 
         doc = create_transaction(**doc_details, is_in_state=True)
@@ -1042,14 +1043,14 @@ class TestSpecificTransactions(IntegrationTestCase):
         # create user
         test_user = frappe.get_doc("User", {"email": "test@example.com"})
         test_user.add_roles("Accounts User")
-        frappe.set_user(test_user.name)
 
-        # submit invoice
-        self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
-            re.compile(r"You are not allowed to submit Sales Invoice"),
-            si.submit,
-        )
+        with self.set_user(test_user.name):
+            # submit invoice
+            self.assertRaisesRegex(
+                frappe.exceptions.ValidationError,
+                re.compile(r"You are not allowed to submit Sales Invoice"),
+                si.submit,
+            )
 
     def test_backdated_transaction_with_comment(self):
         si = create_transaction(doctype="Sales Invoice", do_not_submit=True)
@@ -1134,7 +1135,6 @@ class TestRegionalOverrides(IntegrationTestCase):
         {"round_off_gst_values": 1},
     )
     def test_get_regional_round_off_accounts(self):
-
         data = get_regional_round_off_accounts("_Test Indian Registered Company", [])
         self.assertListEqual(
             data,
@@ -1159,12 +1159,10 @@ class TestRegionalOverrides(IntegrationTestCase):
         {"round_off_gst_values": 0},
     )
     def test_get_regional_round_off_accounts_with_round_off_unchecked(self):
-
         data = get_regional_round_off_accounts("_Test Indian Registered Company", [])
         self.assertListEqual(data, [])
 
     def test_update_gl_dict_with_regional_fields(self):
-
         doc = frappe.get_doc(
             {"doctype": "Sales Invoice", "company_gstin": "29AAHCM7727Q1ZI"}
         )
