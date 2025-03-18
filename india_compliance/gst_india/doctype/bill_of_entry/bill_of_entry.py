@@ -7,6 +7,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
+from frappe.query_builder.functions import Sum
 from frappe.utils import today
 import erpnext
 from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_entries
@@ -60,6 +61,7 @@ class BillofEntry(Document):
         update_gst_details(self)
 
     def before_submit(self):
+        self.validate_qty()
         update_gst_details(self)
 
     def validate(self):
@@ -72,10 +74,12 @@ class BillofEntry(Document):
         gl_entries = self.get_gl_entries()
         update_regional_gl_entries(gl_entries, self)
         make_gl_entries(gl_entries)
+        self.update_pending_boe_qty()
 
     def on_cancel(self):
         self.ignore_linked_doctypes = ("GL Entry",)
         make_reverse_gl_entries(voucher_type=self.doctype, voucher_no=self.name)
+        self.update_pending_boe_qty()
 
         frappe.db.set_value(
             "GST Inward Supply",
@@ -409,6 +413,52 @@ class BillofEntry(Document):
 
         set_missing_values(self)
 
+    def validate_qty(self):
+        pi_item_names = [item.pi_detail for item in self.items]
+
+        pi_qty_map = frappe._dict(
+            frappe.get_all(
+                "Purchase Invoice Item",
+                filters={"name": ["in", pi_item_names]},
+                fields=["name", "pending_boe_qty"],
+                as_list=True,
+            )
+        )
+
+        for item in self.items:
+            if item.qty > pi_qty_map.get(item.pi_detail):
+                frappe.throw(
+                    _("Quantity of {0} is more than it's pending qty").format(
+                        item.item_code
+                    )
+                )
+
+    def update_pending_boe_qty(self):
+        pi_item_names = [item.pi_detail for item in self.items]
+
+        pi_item = frappe.qb.DocType("Purchase Invoice Item")
+        boe_item = frappe.qb.DocType("Bill of Entry Item")
+
+        submitted_boe_qty = (
+            frappe.qb.from_(boe_item)
+            .select(boe_item.pi_detail, Sum(boe_item.qty).as_("qty"))
+            .where(boe_item.pi_detail.isin(pi_item_names))
+            .where(boe_item.docstatus == 1)
+            .groupby(boe_item.pi_detail)
+        )
+
+        (
+            frappe.qb.update(pi_item)
+            .join(submitted_boe_qty)
+            .on(pi_item.name == submitted_boe_qty.pi_detail)
+            .set(
+                pi_item.pending_boe_qty,
+                pi_item.qty - submitted_boe_qty.qty,
+            )
+            .where(pi_item.name.isin(pi_item_names))
+            .run()
+        )
+
 
 def set_missing_values(source, target=None):
     if not target:
@@ -466,6 +516,10 @@ def make_bill_of_entry(source_name, target_doc=None):
     """
     Permission checked in get_mapped_doc
     """
+
+    def update_item_qty(source, target, source_parent):
+        target.qty = source.get("pending_boe_qty")
+
     doc = get_mapped_doc(
         "Purchase Invoice",
         source_name,
@@ -484,6 +538,8 @@ def make_bill_of_entry(source_name, target_doc=None):
                     "name": "pi_detail",
                     "taxable_value": "assessable_value",
                 },
+                "condition": lambda doc: doc.pending_boe_qty > 0,
+                "postprocess": update_item_qty,
             },
         },
         target_doc,
@@ -721,7 +777,7 @@ def get_pi_items(purchase_invoices):
             pi_item.item_code,
             pi_item.item_name,
             pi_item.parent.as_("purchase_invoice"),
-            pi_item.qty,
+            pi_item.pending_boe_qty.as_("qty"),
             pi_item.uom,
             pi_item.cost_center,
             pi_item.item_tax_template,
@@ -732,5 +788,29 @@ def get_pi_items(purchase_invoices):
             pi_item.name.as_("pi_detail"),
         )
         .where(pi_item.parent.isin(purchase_invoices))
+        .where(pi_item.pending_boe_qty > 0)
         .run(as_dict=True)
+    )
+
+
+@frappe.whitelist()
+def fetch_pending_boe_invoices(*args, **kwargs):
+    frappe.has_permission("Purchase Invoice", "read")
+
+    filters = next((arg for arg in args if isinstance(arg, dict)), {})
+    return frappe.get_all(
+        "Purchase Invoice",
+        filters={
+            "docstatus": 1,
+            "company": filters.get("company"),
+            "company_gstin": filters.get("company_gstin"),
+            "gst_category": "Overseas",
+            "pending_boe_qty": [">", 0],
+        },
+        fields=[
+            "name",
+            "company",
+            "company_gstin",
+        ],
+        distinct=True,
     )

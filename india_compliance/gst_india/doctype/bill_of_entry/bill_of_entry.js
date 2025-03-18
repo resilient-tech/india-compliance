@@ -96,13 +96,8 @@ frappe.ui.form.on("Bill of Entry", {
             read_only_setters: ["company", "company_gstin"],
             get_query() {
                 return {
-                    filters: {
-                        docstatus: 1,
-                        company: frm.doc.company,
-                        company_gstin: frm.doc.company_gstin,
-                        gst_category: "Overseas",
-                    },
-                };
+                    query: "india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry.fetch_pending_boe_invoices",
+                }
             },
             add_filters_group: 1,
             action: function (selections, args) {
