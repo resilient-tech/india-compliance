@@ -760,6 +760,7 @@ class TestTransaction(IntegrationTestCase):
             **self.transaction_details,
             "customer": "_Test Foreign Customer",
             "party_name": "_Test Foreign Customer",
+            "customer_address": "_Test Foreign Customer-Billing",
         }
         doc = create_transaction(**doc_details, do_not_submit=True)
         self.assertEqual(doc.items[0].gst_treatment, "Zero-Rated")
@@ -791,13 +792,13 @@ class TestTransaction(IntegrationTestCase):
             **self.transaction_details,
             "customer": "_Test Foreign Customer",
             "party_name": "_Test Foreign Customer",
-            "shipping_address_name": "_Test Foreign Customer-Billing-1",
+            "customer_address": "_Test Foreign Customer-Billing-1",
         }
 
         doc = create_transaction(**doc_details, is_in_state=True)
 
         # Place of Supply as Gujarat for Shipping Address in Gujarat
-        self.assertEqual(doc.gst_category, "Overseas")
+        self.assertEqual(doc.gst_category, "Registered Regular")
         self.assertEqual(doc.place_of_supply, "24-Gujarat")
 
     def test_purchase_with_different_place_of_supply(self):

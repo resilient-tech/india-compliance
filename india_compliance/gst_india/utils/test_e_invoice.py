@@ -373,6 +373,7 @@ class TestEInvoice(IntegrationTestCase):
             rate=7.6,
             is_in_state=True,
             do_not_submit=True,
+            company_address="_Test Indian Registered Company-Billing",
         )
 
         append_item(
@@ -446,6 +447,7 @@ class TestEInvoice(IntegrationTestCase):
         si = create_sales_invoice(
             customer_address=test_data.get("kwargs").get("customer_address"),
             shipping_address_name=test_data.get("kwargs").get("shipping_address_name"),
+            company_address=test_data.get("kwargs").get("company_address"),
             is_in_state=True,
         )
 
@@ -763,7 +765,11 @@ class TestEInvoice(IntegrationTestCase):
 
         test_data_with_diff_value = self.e_invoice_test_data.get("duplicate_irn")
 
-        si = create_sales_invoice(rate=1400, is_in_state=True)
+        si = create_sales_invoice(
+            rate=1400,
+            is_in_state=True,
+            company_address="_Test Indian Registered Company-Billing",
+        )
         self._mock_e_invoice_response(data=test_data_with_diff_value)
 
         # Assert if Invoice amount has changed
