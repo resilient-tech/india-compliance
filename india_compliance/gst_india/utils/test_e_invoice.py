@@ -11,6 +11,9 @@ from frappe.utils.data import format_date
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
+from india_compliance.gst_india.overrides.test_transaction import (
+    create_refund_transaction,
+)
 from india_compliance.gst_india.utils import load_doc
 from india_compliance.gst_india.utils.e_invoice import (
     EInvoiceData,
@@ -781,6 +784,18 @@ class TestEInvoice(IntegrationTestCase):
             generate_e_invoice,
             si.name,
         )
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_refund_transaction_invoice_total(self):
+        """Test for e-Invoice generation for Refund Transaction"""
+
+        si = create_refund_transaction()
+        data = EInvoiceData(si).get_data()
+
+        self.assertEqual(data.get("ValDtls").get("TotInvVal"), 118)
+        self.assertEqual(data.get("ValDtls").get("OthChrg"), 0)
+        self.assertEqual(data.get("ValDtls").get("Discount"), 0)
+        self.assertEqual(data.get("ValDtls").get("IgstVal"), 18)
 
     @responses.activate
     def test_cancellation_when_e_invoice_not_cancellable(self):

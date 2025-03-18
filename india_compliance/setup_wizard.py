@@ -2,7 +2,9 @@ import frappe
 from frappe import _
 
 from india_compliance.audit_trail.utils import enable_audit_trail
-from india_compliance.gst_india.overrides.company import make_default_tax_templates
+from india_compliance.gst_india.overrides.company import (
+    make_default_tax_templates,
+)
 from india_compliance.gst_india.overrides.party import validate_pan
 from india_compliance.gst_india.utils import (
     guess_gst_category,

@@ -18,7 +18,9 @@ GST_TAX_TYPES = tuple(field[:-8] for field in GST_ACCOUNT_FIELDS)
 
 GST_RCM_TAX_TYPES = tuple(tax_type + "_rcm" for tax_type in GST_TAX_TYPES)
 
-TAX_TYPES = (*GST_TAX_TYPES, *GST_RCM_TAX_TYPES)
+GST_REFUND_TAX_TYPES = tuple(tax_type + "_refund" for tax_type in GST_TAX_TYPES)
+
+TAX_TYPES = (*GST_TAX_TYPES, *GST_RCM_TAX_TYPES, *GST_REFUND_TAX_TYPES)
 
 GST_PARTY_TYPES = ("Customer", "Supplier", "Company")
 

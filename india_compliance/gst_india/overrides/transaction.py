@@ -10,6 +10,7 @@ from erpnext.controllers.accounts_controller import get_taxes_and_charges
 
 from india_compliance.gst_india.constants import (
     GST_RCM_TAX_TYPES,
+    GST_REFUND_TAX_TYPES,
     GST_TAX_TYPES,
     SALES_DOCTYPES,
     STATE_NUMBERS,
@@ -289,7 +290,7 @@ def get_valid_accounts(company, *, for_sales=False, for_purchase=False, throw=Tr
 
     account_types = []
     if for_sales:
-        account_types.extend(["Output", "Sales Reverse Charge"])
+        account_types.extend(["Output", "Sales Reverse Charge", "Output Refund"])
 
     if for_purchase:
         account_types.extend(["Input", "Purchase Reverse Charge"])
@@ -750,7 +751,7 @@ def _validate_hsn_codes(doc, valid_hsn_length, throw=False, message=None):
     if rows_with_missing_hsn:
         frappe.msgprint(
             _(
-                "{0}" "Please enter HSN/SAC code for the following row numbers: <br>{1}"
+                "{0}Please enter HSN/SAC code for the following row numbers: <br>{1}"
             ).format(message or "", frappe.bold(", ".join(rows_with_missing_hsn))),
             title=_("Invalid HSN/SAC"),
             raise_exception=throw,
@@ -1050,9 +1051,6 @@ def validate_reverse_charge_transaction(doc):
     base_gst_tax = 0
     base_reverse_charge_booked = 0
 
-    if not doc.get("is_reverse_charge"):
-        return
-
     is_return = doc.get("is_return", False)
 
     def _throw_tax_error(is_positive, tax, comment_suffix=""):
@@ -1113,6 +1111,34 @@ def validate_reverse_charge_transaction(doc):
         )
 
         frappe.throw(msg)
+
+
+def validate_gst_refund_accounts(doc):
+    if doc.doctype not in SALES_DOCTYPES:
+        return
+
+    has_refund = False
+    net_amount = 0
+
+    for tax in doc.taxes:
+        if tax.gst_tax_type not in GST_REFUND_TAX_TYPES:
+            net_amount += tax.base_tax_amount_after_discount_amount
+            continue
+
+        # Validate if tax amount is negative
+        if tax.tax_amount > 0:
+            frappe.throw(
+                _("Row #{0}: Tax amount should be negative for GST Account {1}").format(
+                    tax.idx, tax.account_head
+                )
+            )
+
+        has_refund = True
+        net_amount += tax.base_tax_amount_after_discount_amount
+
+    # Validate if refund amount is same as total gst amount
+    if has_refund and net_amount != 0:
+        frappe.throw(_("Total GST amount should be equal to Refund amount."))
 
 
 def is_export_without_payment_of_gst(doc):
@@ -1560,7 +1586,10 @@ def validate_transaction(doc, method=None):
     validate_gst_category(doc.gst_category, gstin)
 
     GSTAccounts().validate(doc, is_sales_transaction)
-    validate_reverse_charge_transaction(doc)
+    if doc.get("is_reverse_charge"):
+        validate_reverse_charge_transaction(doc)
+    else:
+        validate_gst_refund_accounts(doc)
     update_taxable_values(doc)
     validate_item_wise_tax_detail(doc)
 

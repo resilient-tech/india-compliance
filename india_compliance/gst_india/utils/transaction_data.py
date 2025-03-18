@@ -6,6 +6,7 @@ from frappe.utils import format_date, get_link_to_form, getdate, rounded
 
 from india_compliance.gst_india.constants import (
     E_INVOICE_MASTER_CODES_URL,
+    GST_REFUND_TAX_TYPES,
     GST_TAX_RATES,
     GST_TAX_TYPES,
     SUBCONTRACTING_DOCTYPES,
@@ -123,6 +124,12 @@ class GSTTransactionData:
             self.transaction_details[key] = 0
 
         for row in self.doc.taxes:
+            if row.gst_tax_type in GST_REFUND_TAX_TYPES:
+                self.transaction_details.grand_total -= (
+                    row.base_tax_amount_after_discount_amount
+                )
+                continue
+
             if (
                 not row.tax_amount
                 or self.is_purchase_rcm

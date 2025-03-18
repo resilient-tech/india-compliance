@@ -9,6 +9,7 @@ from frappe.query_builder import Case
 from frappe.query_builder.functions import Date, IfNull, Sum
 from frappe.utils import getdate
 
+from india_compliance.gst_india.constants import GST_REFUND_TAX_TYPES
 from india_compliance.gst_india.utils import get_full_gst_uom
 from india_compliance.gst_india.utils.gstr_1 import (
     CATEGORY_SUB_CATEGORY_MAPPING,
@@ -60,11 +61,13 @@ class GSTR1Query:
     ):
         self.si = frappe.qb.DocType("Sales Invoice")
         self.si_item = frappe.qb.DocType("Sales Invoice Item")
+        self.si_taxes = frappe.qb.DocType("Sales Taxes and Charges")
         self.filters = frappe._dict(filters or {})
         self.additional_si_columns = additional_si_columns or []
         self.additional_si_item_columns = additional_si_item_columns or []
 
     def get_base_query(self):
+        self.taxes_query = self.get_taxes_query()  # subquery for refund amount taxes
         returned_si = frappe.qb.DocType("Sales Invoice", alias="returned_si")
 
         query = (
@@ -73,6 +76,8 @@ class GSTR1Query:
             .on(self.si.name == self.si_item.parent)
             .left_join(returned_si)
             .on(self.si.return_against == returned_si.name)
+            .left_join(self.taxes_query)
+            .on(self.si.name == self.taxes_query.parent)
             .select(
                 IfNull(self.si_item.item_code, self.si_item.item_name).as_("item_code"),
                 self.si_item.qty,
@@ -136,8 +141,8 @@ class GSTR1Query:
             )
         )
 
-        query = self.calculate_totals(query, self.si, "invoice_total")
-        query = self.calculate_totals(query, returned_si, "returned_invoice_total")
+        query = self.select_totals(query, self.si, "invoice_total")
+        query = self.select_totals(query, returned_si, "returned_invoice_total")
 
         if self.additional_si_columns:
             for col in self.additional_si_columns:
@@ -170,17 +175,33 @@ class GSTR1Query:
 
         return query
 
-    def calculate_totals(self, query, si_doc, key):
-        # TODO: Handle Refunds and TDS
+    def get_taxes_query(self):
+        return (
+            frappe.qb.from_(self.si_taxes)
+            .select(
+                Sum(self.si_taxes.base_tax_amount_after_discount_amount).as_(
+                    "refund_amount"
+                ),
+                self.si_taxes.parent,
+            )
+            .where(self.si_taxes.gst_tax_type.isin(GST_REFUND_TAX_TYPES))
+            .groupby(self.si_taxes.parent)
+        )
+
+    def select_totals(self, query, si_doc, key):
+        # TODO: Handle TDS
         return query.select(
-            IfNull(
-                Case()
-                .when(
-                    si_doc.base_rounded_total != 0,
-                    si_doc.base_rounded_total,
+            (
+                IfNull(
+                    Case()
+                    .when(
+                        si_doc.base_rounded_total != 0,
+                        si_doc.base_rounded_total,
+                    )
+                    .else_(si_doc.base_grand_total),
+                    0,
                 )
-                .else_(si_doc.base_grand_total),
-                0,
+                - IfNull(self.taxes_query.refund_amount, 0)
             ).as_(key)
         )
 
