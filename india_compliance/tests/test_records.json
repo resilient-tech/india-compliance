@@ -384,6 +384,23 @@
             "address_type": "Billing",
             "address_line1": "Test Address - 11",
             "city": "Test City",
+            "state": "Texas",
+            "pincode": "75001",
+            "country": "United States",
+            "gstin": "",
+            "gst_category": "Overseas",
+            "links": [
+                {
+                    "link_doctype": "Customer",
+                    "link_name": "_Test Foreign Customer-1"
+                }
+            ]
+        },
+        {
+            "name": "_Test Foreign Customer-1-Shipping",
+            "address_type": "Shipping",
+            "address_line1": "Test Address - 13",
+            "city": "Test City",
             "state": "Gujarat",
             "pincode": "380015",
             "country": "India",

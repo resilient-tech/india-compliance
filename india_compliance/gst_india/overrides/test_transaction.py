@@ -792,12 +792,13 @@ class TestTransaction(IntegrationTestCase):
             "customer": "_Test Foreign Customer-1",
             "party_name": "_Test Foreign Customer-1",
             "customer_address": "_Test Foreign Customer-1-Billing",
+            "shipping_address_name": "_Test Foreign Customer-1-Shipping",
         }
 
         doc = create_transaction(**doc_details, is_in_state=True)
 
         # Place of Supply as Gujarat for Shipping Address in Gujarat
-        self.assertEqual(doc.gst_category, "Registered Regular")
+        self.assertEqual(doc.gst_category, "Overseas")
         self.assertEqual(doc.place_of_supply, "24-Gujarat")
 
     def test_purchase_with_different_place_of_supply(self):
