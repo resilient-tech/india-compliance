@@ -180,6 +180,13 @@
             "customer_type": "Individual",
             "gstin": "",
             "gst_category": "Overseas"
+        },
+        {
+            "name": "_Test Foreign Customer-1",
+            "customer_name": "_Test Foreign Customer-1",
+            "customer_type": "Individual",
+            "gstin": "",
+            "gst_category": "Overseas"
         }
     ],
     "Supplier": [
@@ -373,9 +380,9 @@
             ]
         },
         {
-            "name": "_Test Foreign Customer-Billing-1",
+            "name": "_Test Foreign Customer-1-Billing",
             "address_type": "Billing",
-            "address_line1": "Test Address - 15",
+            "address_line1": "Test Address - 11",
             "city": "Test City",
             "state": "Gujarat",
             "pincode": "380015",
@@ -385,7 +392,7 @@
             "links": [
                 {
                     "link_doctype": "Customer",
-                    "link_name": "_Test Foreign Customer"
+                    "link_name": "_Test Foreign Customer-1"
                 }
             ]
         },

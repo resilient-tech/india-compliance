@@ -790,9 +790,9 @@ class TestTransaction(IntegrationTestCase):
 
         doc_details = {
             **self.transaction_details,
-            "customer": "_Test Foreign Customer",
-            "party_name": "_Test Foreign Customer",
-            "customer_address": "_Test Foreign Customer-Billing-1",
+            "customer": "_Test Foreign Customer-1",
+            "party_name": "_Test Foreign Customer-1",
+            "customer_address": "_Test Foreign Customer-1-Billing",
         }
 
         doc = create_transaction(**doc_details, is_in_state=True)
