@@ -78,6 +78,9 @@ def create_transaction(**data):
     if data.is_out_state_rcm:
         _append_taxes(transaction, "IGST RCM", company_abbr, rate=18)
 
+    if data.ignore_company_address:
+        transaction.company_address = None
+
     if not data.do_not_save:
         transaction.insert()
 

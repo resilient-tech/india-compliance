@@ -199,7 +199,10 @@ def create_test_items():
 
 def create_sales_invoices(count, **kwargs):
     """Create a list of sales invoices."""
-    return [create_sales_invoice(**kwargs) for _ in range(count)]
+    return [
+        create_sales_invoice(**kwargs, ignore_company_address=True)
+        for _ in range(count)
+    ]
 
 
 def create_purchase_invoices(count, **kwargs):

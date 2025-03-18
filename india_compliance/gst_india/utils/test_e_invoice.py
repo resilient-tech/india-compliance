@@ -83,7 +83,10 @@ class TestEInvoice(IntegrationTestCase):
     def test_request_data_for_foreign_transactions(self):
         test_data = self.e_invoice_test_data.foreign_transaction
         si = create_sales_invoice(
-            **test_data.get("kwargs"), qty=1000, do_not_submit=True
+            **test_data.get("kwargs"),
+            qty=1000,
+            do_not_submit=True,
+            ignore_company_address=True,
         )
         si.update(
             {

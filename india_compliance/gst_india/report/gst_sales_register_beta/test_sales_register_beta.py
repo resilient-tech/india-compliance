@@ -654,9 +654,7 @@ class TestSalesRegisterBeta(IntegrationTestCase):
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def create_test_records(cls):
         for invoice in INVOICES:
-            create_sales_invoice(
-                **invoice, company_address="_Test Indian Registered Company-Billing"
-            )
+            create_sales_invoice(**invoice, ignore_company_address=True)
 
     def test_summary_by_hsn(self):
         FILTERS["summary_by"] = "Summary by HSN"
