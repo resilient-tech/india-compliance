@@ -36,6 +36,8 @@ const GSTR1_SubCategory = {
     AT: "Advances Received",
     TXP: "Advances Adjusted",
     HSN: "HSN Summary",
+    HSN_B2B: "HSN Summary - B2B",
+    HSN_B2C: "HSN Summary - B2C",
     DOC_ISSUE: "Document Issued",
 
     SUPECOM_52: "Liable to collect tax u/s 52(TCS)",
@@ -1722,7 +1724,9 @@ class BooksTab extends GSTR1_TabManager {
         [GSTR1_SubCategory.AT]: this.get_advances_received_columns,
         [GSTR1_SubCategory.TXP]: this.get_advances_adjusted_columns,
 
-        [GSTR1_SubCategory.HSN]: this.get_hsn_columns,
+        [GSTR1_SubCategory.HSN]: this.get_hsn_columns,// Backwards compatibility
+        [GSTR1_SubCategory.HSN_B2B]: this.get_hsn_columns,
+        [GSTR1_SubCategory.HSN_B2C]: this.get_hsn_columns,
 
         [GSTR1_SubCategory.DOC_ISSUE]: this.get_documents_issued_columns,
     };

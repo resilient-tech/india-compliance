@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import datetime
 
 import frappe
@@ -1123,39 +1124,47 @@ class HSNSUM(GSTR1DataMapper):
 
     Government Data Format:
         {
-            'data': [
+            "flag": "N",
+            "chksum": "11b149c8af5cff3580ed478a60233c1",
+            "hsn_b2b": [
                 {
-                    'num': 1,
-                    'hsn_sc': '1010',
-                    'desc': 'Goods Description',
-                    'uqc': 'KGS',
-                    'qty': 2.05,
-                    'txval': 10.23,
-                    'iamt': 14.52,
-                    'csamt': 500,
-                    'rt': 0.1
+                    "num": 1,
+                    "hsn_sc": "1102",
+                    "desc": "CEREAL FLOURS OTHER THAN THAT OF WHEAT OR MESLIN",
+                    "user_desc": "WHEAT FLOUR",
+                    "uqc": "BOX",
+                    "qty": 2,
+                    "txval": 100,
+                    "camt": 0.5,
+                    "samt": 0.5,
+                    "rt": 1
                 }
-            ]
+            ],
         }
 
     Internal Data Format:
         {
-            'HSN Summary': {
-                '1010 - KGS-KILOGRAMS - 0.1': {
-                    'hsn_code': '1010',
-                    'description': 'Goods Description',
-                    'uom': 'KGS-KILOGRAMS',
-                    'quantity': 2.05,
-                    'total_taxable_value': 10.23,
-                    'total_igst_amount': 14.52,
-                    'total_cess_amount': 500,
-                    'tax_rate': 0.1
+            'HSN Summary - B2B': {
+                '1102 - BOX-BOX - 1.0': {
+                    'hsn_code': '1102',
+                    'description': 'CEREAL FLOURS OTHER THAN THAT OF WHEAT OR MESLIN',
+                    'uom': 'BOX-BOX',
+                    'quantity': 2,
+                    'total_taxable_value': 100,
+                    'total_cgst_amount': 0.5,
+                    'total_sgst_amount': 0.5,
+                    'tax_rate': 1,
+                    'document_value': 101.0
                 }
             }
         }
     """
 
-    SUBCATEGORY = GSTR1_SubCategory.HSN.value
+    DOCUMENT_CATEGORIES = {
+        GovDataField.HSN_B2B.value: GSTR1_SubCategory.HSN_B2B.value,
+        GovDataField.HSN_B2C.value: GSTR1_SubCategory.HSN_B2C.value,
+        GovDataField.HSN_DATA.value: GSTR1_SubCategory.HSN.value,  # Backwards Compatibility
+    }
     KEY_MAPPING = {
         # GovDataFields.INDEX.value: ItemFields.INDEX.value,
         GovDataField.HSN_CODE.value: GSTR1_DataField.HSN_CODE.value,
@@ -1188,28 +1197,46 @@ class HSNSUM(GSTR1DataMapper):
             ),
         }
 
-        for invoice in input_data[GovDataField.HSN_DATA.value]:
-            output[
+        for section, invoices in input_data.items():
+            if section in (GovDataField.FLAG.value, GovDataField.CHECKSUM.value):
+                continue
+
+            document_type = self.DOCUMENT_CATEGORIES.get(section, section)
+            output[document_type] = {
                 " - ".join(
                     (
                         invoice.get(GovDataField.HSN_CODE.value, ""),
                         self.map_uom(invoice.get(GovDataField.UOM.value, "")),
                         str(flt(invoice.get(GovDataField.TAX_RATE.value))),
                     )
+                ): self.format_data(
+                    invoice,
+                    {**default_data, GSTR1_DataField.DOC_TYPE.value: document_type},
                 )
-            ] = self.format_data(invoice, default_data)
+                for invoice in invoices
+            }
 
-        return {self.SUBCATEGORY: output}
+        return output
 
     def convert_to_gov_data_format(self, input_data, **kwargs):
-        return {
-            GovDataField.HSN_DATA.value: [
+        output = {}
+        self.DOCUMENT_CATEGORIES = self.reverse_dict(self.DOCUMENT_CATEGORIES)
+        index = defaultdict(int)
+
+        for invoice in input_data:
+            doc_type = invoice[GSTR1_DataField.DOC_TYPE.value]
+            section = self.DOCUMENT_CATEGORIES.get(doc_type, doc_type)
+            index[section] += 1
+
+            output.setdefault(section, []).append(
                 self.format_data(
-                    invoice, {GovDataField.INDEX.value: index + 1}, for_gov=True
+                    invoice,
+                    {GovDataField.INDEX.value: index[section]},
+                    for_gov=True,
                 )
-                for index, invoice in enumerate(input_data)
-            ]
-        }
+            )
+
+        return output
 
     def format_data(self, data, default_data=None, for_gov=False):
         data = super().format_data(data, default_data, for_gov)
@@ -1723,7 +1750,9 @@ class RETSUM(GSTR1DataMapper):
         "ECOMA_SEZWOP": "ECOMA_SEZWOP",
         "ECOMA_SEZWP": "ECOMA_SEZWP",
         "ECOMA_UNREG": "ECOMA_UNREG",
-        "HSN": GSTR1_Category.HSN.value,
+        "HSN": GSTR1_Category.HSN.value,  # Backwards Compatibility
+        "HSN_B2B": GSTR1_SubCategory.HSN_B2B.value,
+        "HSN_B2C": GSTR1_SubCategory.HSN_B2C.value,
         "NIL": GSTR1_Category.NIL_EXEMPT.value,
         "DOC_ISSUE": GSTR1_Category.DOC_ISSUE.value,
         "TTL_LIAB": "Total Liability",
@@ -2311,9 +2340,28 @@ class GSTR1BooksData(BooksDataMapper):
         other_categories = {
             GSTR1_Category.AT.value: self.prepare_advances_recevied_data(),
             GSTR1_Category.TXP.value: self.prepare_advances_adjusted_data(),
-            GSTR1_Category.HSN.value: self.prepare_hsn_data(data),
             GSTR1_Category.DOC_ISSUE.value: self.prepare_document_issued_data(),
         }
+
+        # Backwards Compatibility
+        if self.current_month < 2:
+            other_categories.update(
+                {
+                    GSTR1_Category.HSN.value: self.prepare_hsn_data(data),
+                }
+            )
+        else:
+            hsn_b2b_data, hsn_b2c_data = GSTR1Invoices().process_hsn_summary(data)
+            other_categories.update(
+                {
+                    GSTR1_SubCategory.HSN_B2B.value: self.prepare_hsn_data(
+                        hsn_b2b_data
+                    ),
+                    GSTR1_SubCategory.HSN_B2C.value: self.prepare_hsn_data(
+                        hsn_b2c_data
+                    ),
+                }
+            )
 
         for category, data in other_categories.items():
             if data:
@@ -2431,7 +2479,9 @@ class GSTR1BooksData(BooksDataMapper):
                 continue
 
             if category in (
-                GSTR1_SubCategory.HSN.value,
+                GSTR1_SubCategory.HSN.value,  # Backwards Compatibility
+                GSTR1_SubCategory.HSN_B2B.value,
+                GSTR1_SubCategory.HSN_B2C.value,
                 GSTR1_SubCategory.DOC_ISSUE.value,
             ):
                 del data[category]
@@ -2463,8 +2513,8 @@ class GSTR1BooksData(BooksDataMapper):
         year = self.filters.year
 
         log_names = [
-            f"GSTR1-{(self.current_month-1):02d}{year}-{company_gstin}",
-            f"GSTR1-{(self.current_month-2):02d}{year}-{company_gstin}",
+            f"GSTR1-{(self.current_month - 1):02d}{year}-{company_gstin}",
+            f"GSTR1-{(self.current_month - 2):02d}{year}-{company_gstin}",
         ]
 
         filed_invoices = set()
