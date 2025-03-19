@@ -300,9 +300,6 @@
                                     {{ get_transport_mode(detail.transMode) }}
                                 </td>
                                 <td>
-<<<<<<< HEAD
-                                    {{ detail.vehicleNo }}
-=======
                                     {{ detail.vehicleNo or "" }}
                                     {% if detail.transDocNo %}
                                     / {{ detail.transDocNo }}
@@ -310,7 +307,6 @@
                                     {% if detail.transDocDate %}
                                         - Dt {{ detail.transDocDate }}
                                     {% endif %}
->>>>>>> d0032532 (fix: handle non existing value with empty string)
                                 </td>
                                 <td>
                                     {{ detail.fromPlace }}
