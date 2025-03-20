@@ -7,7 +7,7 @@ frappe.ui.form.on("GSTR 3B Report", {
     },
 
     onload: function (frm) {
-        set_options_for_year_gstr3b(frm);
+        set_options_for_year_month(frm);
 
         if (frm.doc.company)
             india_compliance.set_gstin_options(frm).then(options => {
@@ -113,7 +113,7 @@ function append_form(frm) {
     ).appendTo(frm.fields_dict.gstr3b_form.wrapper);
 }
 
-function set_options_for_year_gstr3b(frm) {
+function set_options_for_year_month(frm) {
     let current_year = new Date().getFullYear();
     let options = [current_year, current_year - 1, current_year - 2];
 
@@ -121,4 +121,5 @@ function set_options_for_year_gstr3b(frm) {
 
     if (!frm.is_new()) return;
     frm.set_value("year", options[0]);
+    frm.set_value("month_or_quarter", india_compliance.last_month_name());
 }

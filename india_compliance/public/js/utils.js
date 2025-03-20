@@ -412,6 +412,12 @@ Object.assign(india_compliance, {
         });
     },
 
+    last_month_name() {
+        const today = frappe.datetime.now_date(true);
+        const last_month = today.getMonth() - 1;
+        return this.MONTH[last_month];
+    },
+
     last_month_start() {
         return frappe.datetime.add_months(frappe.datetime.month_start(), -1);
     },
