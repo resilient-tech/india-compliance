@@ -499,13 +499,6 @@ def get_logs_for_year(gstin, period):
 
 
 def get_financial_quarter(month):
-    if month in [4, 5, 6]:
-        return 1  # April, May, June
-    elif month in [7, 8, 9]:
-        return 2  # July, August, September
-    elif month in [10, 11, 12]:
-        return 3  # October, November, December
-    elif month in [1, 2, 3]:
-        return 4  # January, February, March
-    else:
-        raise ValueError("Month must be between 1 and 12")
+    if 1 <= month <= 12:
+        return ((month + 8) // 3) % 4 + 1
+    raise ValueError("Month must be between 1 and 12")
