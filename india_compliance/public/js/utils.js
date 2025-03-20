@@ -446,6 +446,29 @@ Object.assign(india_compliance, {
         }
     },
 
+    set_options_for_year(filing_frequency, frm) {
+        const today = new Date();
+        let current_year = today.getFullYear();
+        const current_month_idx = today.getMonth();
+        const start_year = 2017;
+        const year_range = current_year - start_year + 1;
+        const options = Array.from({ length: year_range }, (_, index) =>
+            (start_year + year_range - index - 1).toString()
+        );
+
+        if (
+            (filing_frequency === "Monthly" && current_month_idx === 0) ||
+            (filing_frequency === "Quarterly" && current_month_idx < 3)
+        )
+            current_year--;
+
+        current_year = current_year.toString();
+        if (!frm) return current_year;
+
+        frm.get_field("year").set_data(options);
+        frm.set_value("year", current_year);
+    },
+
     primary_to_danger_btn(parent) {
         parent.$wrapper
             .find(".btn-primary")

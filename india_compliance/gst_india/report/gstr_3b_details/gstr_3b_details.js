@@ -27,7 +27,7 @@ frappe.query_reports["GSTR-3B Details"] = {
             label: __("Year"),
             fieldtype: "Select",
             reqd: 1,
-            default: new Date().getFullYear(),
+            default: india_compliance.set_options_for_year("Monthly"),
             options: get_year_list(),
         },
         {

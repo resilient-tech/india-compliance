@@ -110,7 +110,7 @@ frappe.ui.form.on(DOCTYPE, {
 
         // Set Default Values
         set_default_company_gstin(frm);
-        set_options_for_year(frm);
+        india_compliance.set_options_for_year(frm.doc.filing_preference, frm);
         set_options_for_month_or_quarter(frm);
 
         if (is_gstr1_api_enabled()) {
@@ -2978,25 +2978,6 @@ async function set_default_company_gstin(frm) {
     if (gstin_list && gstin_list.length) {
         frm.set_value("company_gstin", gstin_list[0]);
     }
-}
-
-function set_options_for_year(frm) {
-    const today = new Date();
-    let current_year = today.getFullYear();
-    const current_month_idx = today.getMonth();
-    const start_year = 2017;
-    const year_range = current_year - start_year + 1;
-    let options = Array.from({ length: year_range }, (_, index) => start_year + index);
-    options = options.reverse().map(year => year.toString());
-
-    if (
-        (frm.filing_frequency === "Monthly" && current_month_idx === 0) ||
-        (frm.filing_frequency === "Quarterly" && current_month_idx < 3)
-    )
-        current_year--;
-
-    frm.get_field("year").set_data(options);
-    frm.set_value("year", current_year.toString());
 }
 
 function update_filing_preference(frm) {
