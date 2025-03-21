@@ -94,7 +94,9 @@ class GSTTransactionData:
                     self.rounded(total - total_taxable_value)
                 ),
                 "rounding_adjustment": rounding_adjustment,
-                "grand_total": abs(self.rounded(self.doc.get(grand_total_fieldname))),
+                "grand_total": abs(
+                    self.doc.get(grand_total_fieldname)
+                ),  # rounded after updating refund amounts
                 "grand_total_in_foreign_currency": (
                     abs(self.rounded(self.doc.grand_total))
                     if self.doc.get("currency", "INR") != "INR"
@@ -149,6 +151,11 @@ class GSTTransactionData:
             )
             self.transaction_details.setdefault(tax_key, 0)
             self.transaction_details[tax_key] += abs(self.rounded(tax_amount))
+
+        # Ensure that grand total is rounded as it is updated above
+        self.transaction_details.grand_total = self.rounded(
+            self.transaction_details.grand_total
+        )
 
         # Other Charges
         current_total = 0
