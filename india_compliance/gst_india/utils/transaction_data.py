@@ -71,12 +71,30 @@ class GSTTransactionData:
 
         total = 0
         total_taxable_value = 0
+        tax_total_keys = tuple(f"total_{tax}_amount" for tax in GST_TAX_TYPES)
+
+        # Initialize all tax totals to 0
+        self.transaction_details.update({key: 0 for key in tax_total_keys})
 
         for row in self.doc.items:
             total += row.taxable_value
 
             if row.gst_treatment in ("Taxable", "Zero-Rated"):
                 total_taxable_value += row.taxable_value
+
+            if self.is_purchase_rcm:
+                continue
+
+            # eg: Skip reverse charge tax for e-Waybill
+            if self.doc.get("is_reverse_charge") and getattr(
+                self, "exclude_reverse_charge_tax", False
+            ):
+                continue
+
+            for tax_key in tax_total_keys:
+                self.transaction_details[tax_key] += abs(
+                    self.rounded(row.get(tax_key[6:], 0))
+                )
 
         self.transaction_details.update(
             {
@@ -94,9 +112,7 @@ class GSTTransactionData:
                     self.rounded(total - total_taxable_value)
                 ),
                 "rounding_adjustment": rounding_adjustment,
-                "grand_total": abs(
-                    self.doc.get(grand_total_fieldname)
-                ),  # rounded after updating refund amounts
+                "grand_total": abs(self.rounded(self.doc.get(grand_total_fieldname))),
                 "grand_total_in_foreign_currency": (
                     abs(self.rounded(self.doc.grand_total))
                     if self.doc.get("currency", "INR") != "INR"
@@ -113,49 +129,28 @@ class GSTTransactionData:
             }
         )
         self.update_transaction_details()
-        self.update_transaction_tax_details()
+        self.update_discount_and_other_charges(tax_total_keys)
 
     def update_transaction_details(self):
         # to be overrridden
         pass
 
-    def update_transaction_tax_details(self):
-        tax_total_keys = tuple(f"total_{tax}_amount" for tax in GST_TAX_TYPES)
-
-        for key in tax_total_keys:
-            self.transaction_details[key] = 0
-
+    def update_totals_for_refund(self):
         for row in self.doc.taxes:
-            if row.gst_tax_type in GST_REFUND_TAX_TYPES:
-                self.transaction_details.grand_total -= (
-                    row.base_tax_amount_after_discount_amount
-                )
+            if row.gst_tax_type not in GST_REFUND_TAX_TYPES:
                 continue
 
-            if (
-                not row.tax_amount
-                or self.is_purchase_rcm
-                or row.gst_tax_type not in GST_TAX_TYPES
-            ):
-                continue
-
-            # eg: Skip reverse charge tax for e-Waybill
-            if self.doc.get("is_reverse_charge") and getattr(
-                self, "exclude_reverse_charge_tax", False
-            ):
-                continue
-
-            tax_key = f"total_{row.gst_tax_type}_amount"
-            tax_amount = (
-                row.get("base_tax_amount_after_discount_amount") or row.tax_amount
+            self.transaction_details.grand_total -= (
+                row.base_tax_amount_after_discount_amount
             )
-            self.transaction_details.setdefault(tax_key, 0)
-            self.transaction_details[tax_key] += abs(self.rounded(tax_amount))
 
-        # Ensure that grand total is rounded as it is updated above
+        # Ensure that grand total is rounded as it may be updated above
         self.transaction_details.grand_total = self.rounded(
             self.transaction_details.grand_total
         )
+
+    def update_discount_and_other_charges(self, tax_total_keys):
+        self.update_totals_for_refund()  # Ensure grand total is correct for refund
 
         # Other Charges
         current_total = 0
