@@ -1,7 +1,10 @@
+from collections import defaultdict
+
 import frappe
 from frappe import _
 from frappe.utils import flt
 
+from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.overrides.sales_invoice import (
     update_dashboard_with_gst_logs,
 )
@@ -185,7 +188,9 @@ def validate_with_inward_supply(doc):
         return
 
     mismatch_fields = {}
-    for field in [
+    tax_fields = defaultdict(int)
+
+    for field in (
         "company",
         "company_gstin",
         "supplier_gstin",
@@ -193,25 +198,29 @@ def validate_with_inward_supply(doc):
         "bill_date",
         "is_reverse_charge",
         "place_of_supply",
-    ]:
+    ):
         if doc.get(field) != doc._inward_supply.get(field):
             mismatch_fields[field] = doc._inward_supply.get(field)
 
     # mismatch for taxable_value
-    taxable_value = sum([item.taxable_value for item in doc.items])
+    taxable_value = sum(item.taxable_value for item in doc.items)
     if taxable_value != doc._inward_supply.get("taxable_value"):
         mismatch_fields["Taxable Value"] = doc._inward_supply.get("taxable_value")
 
     # mismatch for taxes
-    for tax in ["cgst", "sgst", "igst", "cess"]:
-        tax_amount = get_tax_amount(doc.taxes, tax)
-        if tax == "cess":
-            tax_amount += get_tax_amount(doc.taxes, "cess_non_advol")
+    for row in doc.items:
+        for tax in GST_TAX_TYPES[:-1]:
+            tax_fields[tax] += row.get(f"{tax}_amount")
 
-        if tax_amount == doc._inward_supply.get(tax):
-            continue
+        tax_fields["cess"] += row.get("cess_non_advol_amount")
 
-        mismatch_fields[tax.upper()] = doc._inward_supply.get(tax)
+    mismatch_fields.update(
+        {
+            tax.upper(): doc._inward_supply.get(tax)
+            for tax, amount in tax_fields.items()
+            if amount != doc._inward_supply.get(tax)
+        }
+    )
 
     if mismatch_fields:
         message = (
@@ -220,31 +229,16 @@ def validate_with_inward_supply(doc):
         )
         for field, value in mismatch_fields.items():
             message += f"<br>{field}: {value}"
-
         frappe.msgprint(
             _(message),
             title=_("Mismatch with GST Inward Supply"),
         )
-
     elif doc._action == "submit":
         frappe.msgprint(
             _("Invoice matched with GST Inward Supply"),
             alert=True,
             indicator="green",
         )
-
-
-def get_tax_amount(taxes, gst_tax_type):
-    if not (taxes or gst_tax_type):
-        return 0
-
-    return sum(
-        [
-            tax.base_tax_amount_after_discount_amount
-            for tax in taxes
-            if tax.gst_tax_type == gst_tax_type
-        ]
-    )
 
 
 def set_ineligibility_reason(doc, show_alert=True):
