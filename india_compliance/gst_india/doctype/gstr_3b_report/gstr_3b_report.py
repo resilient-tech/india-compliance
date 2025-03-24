@@ -232,18 +232,27 @@ class GSTR3BReport(Document):
     def get_itc_details(self):
         itc_amounts = frappe.db.sql(
             """
-            SELECT itc_classification, sum(itc_integrated_tax) as itc_integrated_tax,
-            sum(itc_central_tax) as itc_central_tax,
-            sum(itc_state_tax) as itc_state_tax,
-            sum(itc_cess_amount) as itc_cess_amount
-            FROM `tabPurchase Invoice`
-            WHERE docstatus = 1
-            and is_opening = 'No'
-            and company_gstin != IFNULL(supplier_gstin, "")
-            and month(posting_date) between %s and %s and year(posting_date) = %s and company = %s
-            and company_gstin = %s
-            GROUP BY itc_classification
-        """,
+                SELECT
+                    `tabPurchase Invoice`.itc_classification,
+                    sum(`tabPurchase Invoice Item`.igst_amount) as itc_integrated_tax,
+                    sum(`tabPurchase Invoice Item`.cgst_amount) as itc_central_tax,
+                    sum(`tabPurchase Invoice Item`.sgst_amount) as itc_state_tax,
+                    sum(`tabPurchase Invoice Item`.cess_amount) as itc_cess_amount
+                FROM
+                    `tabPurchase Invoice`
+                    INNER JOIN `tabPurchase Invoice Item`
+                    ON `tabPurchase Invoice`.name = `tabPurchase Invoice Item`.parent
+                WHERE
+                    `tabPurchase Invoice`.docstatus = 1
+                    AND `tabPurchase Invoice`.is_opening = 'No'
+                    AND `tabPurchase Invoice`.company_gstin != IFNULL(`tabPurchase Invoice`.supplier_gstin, "")
+                    AND month(`tabPurchase Invoice`.posting_date) between %s and %s
+                    AND year(`tabPurchase Invoice`.posting_date) = %s
+                    AND `tabPurchase Invoice`.company = %s
+                    AND `tabPurchase Invoice`.company_gstin = %s
+                GROUP BY
+                    `tabPurchase Invoice`.itc_classification
+            """,
             (
                 self.month_or_quarter_no[0],
                 self.month_or_quarter_no[1],

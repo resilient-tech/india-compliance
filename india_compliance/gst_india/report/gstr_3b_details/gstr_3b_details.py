@@ -140,18 +140,21 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
 
     def get_itc_from_purchase(self):
         purchase_invoice = frappe.qb.DocType("Purchase Invoice")
+        purchase_invoice_item = frappe.qb.DocType("Purchase Invoice Item")
 
         query = (
             frappe.qb.from_(purchase_invoice)
+            .inner_join(purchase_invoice_item)
+            .on(purchase_invoice_item.parent == purchase_invoice.name)
             .select(
                 ConstantColumn("Purchase Invoice").as_("voucher_type"),
                 purchase_invoice.name.as_("voucher_no"),
                 purchase_invoice.posting_date,
                 purchase_invoice.itc_classification,
-                Sum(purchase_invoice.itc_integrated_tax).as_("iamt"),
-                Sum(purchase_invoice.itc_central_tax).as_("camt"),
-                Sum(purchase_invoice.itc_state_tax).as_("samt"),
-                Sum(purchase_invoice.itc_cess_amount).as_("csamt"),
+                Sum(purchase_invoice_item.igst_amount).as_("iamt"),
+                Sum(purchase_invoice_item.cgst_amount).as_("camt"),
+                Sum(purchase_invoice_item.sgst_amount).as_("samt"),
+                Sum(purchase_invoice_item.cess_amount).as_("csamt"),
             )
             .where(
                 (purchase_invoice.docstatus == 1)
@@ -165,7 +168,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                 )
                 & (Ifnull(purchase_invoice.itc_classification, "") != "")
             )
-            .groupby(purchase_invoice.name)
+            .groupby(purchase_invoice_item.parent)
         )
 
         return query.run(as_dict=True)

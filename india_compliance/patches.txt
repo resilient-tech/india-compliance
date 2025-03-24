@@ -73,3 +73,4 @@ india_compliance.patches.v15.set_download_document_for_2a_2b
 india_compliance.patches.v15.multiple_pi_in_boe
 india_compliance.patches.v15.update_supplier_filing_status
 india_compliance.patches.v14.set_pending_boe_qty
+india_compliance.patches.v15.remove_itc_amount_custom_fields

@@ -22,7 +22,6 @@ POST_INSTALL_PATCHES = (
     "add_company_link_to_einvoice_settings",
     "update_state_code_for_daman_and_diu",
     "update_gst_accounts",  # this is an India Compliance patch, but needs priority
-    "update_itc_amounts",
     ## India Compliance
     "set_gst_tax_type",
     "update_state_name_to_puducherry",
