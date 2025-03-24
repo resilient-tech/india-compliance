@@ -15,11 +15,11 @@ from frappe.utils import cstr, flt, get_date_str, get_first_day, get_last_day
 
 from india_compliance.gst_india.constants import INVOICE_DOCTYPES, STATE_NUMBERS
 from india_compliance.gst_india.overrides.transaction import is_inter_state_supply
+from india_compliance.gst_india.report.gstr_1.gstr_1 import GSTR11A11BData
 from india_compliance.gst_india.report.gstr_3b_details.gstr_3b_details import (
     IneligibleITC,
 )
-from india_compliance.gst_india.utils import get_period
-from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import GSTR1BooksData
+from india_compliance.gst_india.utils import get_gst_accounts_by_type, get_period
 
 VALUES_TO_UPDATE = ["iamt", "camt", "samt", "csamt"]
 GST_TAX_TYPE_MAP = {
@@ -526,6 +526,10 @@ class GSTR3BReport(Document):
         }
 
     def set_advances_received_or_adjusted(self):
+        """
+        Section 3.1(a) of GSTR-3B also includes the difference of advances received and adjusted
+        """
+
         def update_totals(data, totals, multiplier):
             for row in data:
                 is_intra_state = row["place_of_supply"][:2] == row["company_gstin"][:2]
@@ -543,17 +547,16 @@ class GSTR3BReport(Document):
                 "company_gstin": self.company_gstin,
                 "from_date": self.from_date,
                 "to_date": self.to_date,
-                "month_or_quarter": self.month_or_quarter,
             }
         )
 
         totals = defaultdict(int)
-        _class = GSTR1BooksData(filters)
+        gst_accounts = get_gst_accounts_by_type(self.company, "Output")
+        _class = GSTR11A11BData(filters, gst_accounts)
 
-        for type_, multiplier in [("Advances", 1), ("Adjustment", -1)]:
-            data = _class.prepare_advances_received_or_adjusted_data(
-                type_, raw_output=True
-            )
+        for type_, multiplier in (("get_11A_query", 1), ("get_11B_query", -1)):
+            query = getattr(_class, type_)()
+            data = query.select(_class.pe.company_gstin).run(as_dict=True)
             update_totals(data, totals, multiplier)
 
         for key in totals:
