@@ -2352,7 +2352,9 @@ class GSTR1BooksData(BooksDataMapper):
     def prepare_advances_adjusted_data(self):
         return self.prepare_advances_received_or_adjusted_data("Adjustment")
 
-    def prepare_advances_received_or_adjusted_data(self, type_of_business):
+    def prepare_advances_received_or_adjusted_data(
+        self, type_of_business, raw_output=False
+    ):
         advances_data = {}
         self.filters.type_of_business = type_of_business
         gst_accounts = get_gst_accounts_by_type(self.filters.company, "Output")
@@ -2381,6 +2383,9 @@ class GSTR1BooksData(BooksDataMapper):
 
         query = query.select(*fields)
         data = query.run(as_dict=True)
+
+        if raw_output:
+            return data
 
         for row in data:
             self.process_data_for_advances_received_or_adjusted(
