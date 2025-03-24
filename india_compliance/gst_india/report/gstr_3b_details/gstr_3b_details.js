@@ -27,8 +27,8 @@ frappe.query_reports["GSTR-3B Details"] = {
             label: __("Year"),
             fieldtype: "Select",
             reqd: 1,
-            default: india_compliance.set_options_for_year("Monthly"),
-            options: get_year_list(),
+            default: get_default_option(),
+            options: get_options(),
         },
         {
             fieldname: "month_or_quarter",
@@ -74,8 +74,10 @@ frappe.query_reports["GSTR-3B Details"] = {
     ],
 };
 
-function get_year_list() {
-    const current_year = new Date().getFullYear();
-    options = [current_year, current_year - 1, current_year - 2];
-    return options;
+function get_default_option() {
+    return india_compliance.get_options_for_year("Monthly").current_year;
+}
+
+function get_options() {
+    return india_compliance.get_options_for_year("Monthly").options.slice(0, 3);
 }

@@ -114,15 +114,13 @@ function append_form(frm) {
 }
 
 function set_options_for_year_month(frm) {
-    const current_year = new Date().getFullYear();
-    const options = [current_year, current_year - 1, current_year - 2];
-
-    frm.set_df_property("year", "options", options);
+    const { options, current_year } = india_compliance.get_options_for_year("Monthly");
+    frm.set_df_property("year", "options", options.slice(0, 3));
 
     if (!frm.is_new()) return;
 
     const last_month_name = india_compliance.last_month_name();
-    // If the current month is January 2025, it is likely that the return being filed is for December 2024
-    frm.set_value("year", last_month_name === "December" ? options[1] : options[0]);
+
+    frm.set_value("year", current_year);
     frm.set_value("month_or_quarter", last_month_name);
 }

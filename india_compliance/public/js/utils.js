@@ -446,7 +446,7 @@ Object.assign(india_compliance, {
         }
     },
 
-    set_options_for_year(filing_frequency, frm) {
+    get_options_for_year(filing_frequency) {
         const today = new Date();
         let current_year = today.getFullYear();
         const current_month_idx = today.getMonth();
@@ -463,10 +463,7 @@ Object.assign(india_compliance, {
             current_year--;
 
         current_year = current_year.toString();
-        if (!frm) return current_year;
-
-        frm.get_field("year").set_data(options);
-        frm.set_value("year", current_year);
+        return { options, current_year };
     },
 
     primary_to_danger_btn(parent) {
