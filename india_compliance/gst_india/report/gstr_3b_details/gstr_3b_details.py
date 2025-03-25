@@ -167,6 +167,8 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                     != IfNull(purchase_invoice.supplier_gstin, "")
                 )
                 & (Ifnull(purchase_invoice.itc_classification, "") != "")
+                & purchase_invoice_item.parenttype
+                == "Purchase Invoice"
             )
             .groupby(purchase_invoice_item.parent)
         )
