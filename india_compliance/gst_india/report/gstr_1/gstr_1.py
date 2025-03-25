@@ -281,7 +281,6 @@ class Gstr1Report:
                 self.filters.get("type_of_business") in ("CDNR-REG", "CDNR-UNREG")
                 and fieldname == "invoice_value"
             ):
-
                 row[fieldname] = flt(abs(invoice_details.base_rounded_total), 2) or flt(
                     abs(invoice_details.base_grand_total), 2
                 )
@@ -1269,24 +1268,22 @@ class GSTR11A11BData:
 
     def get_11A_query(self):
         return (
-            self.get_query()
+            self.get_query("Advances")
             .select(self.pe.paid_amount.as_("taxable_value"))
             .groupby(self.pe.name)
         )
 
     def get_11B_query(self):
         return (
-            self.get_query()
+            self.get_query("Adjustment")
             .join(self.pe_ref)
             .on(self.pe_ref.name == self.gl_entry.voucher_detail_no)
             .select(self.pe_ref.allocated_amount.as_("taxable_value"))
             .groupby(self.gl_entry.voucher_detail_no)
         )
 
-    def get_query(self):
-        cr_or_dr = (
-            "credit" if self.filters.get("type_of_business") == "Advances" else "debit"
-        )
+    def get_query(self, type_of_business):
+        cr_or_dr = "credit" if type_of_business == "Advances" else "debit"
         cr_or_dr_amount_field = getattr(
             self.gl_entry, f"{cr_or_dr}_in_account_currency"
         )
@@ -1402,7 +1399,6 @@ class GSTR1DocumentIssuedSummary:
         additional_selects=None,
         additional_conditions=None,
     ):
-
         party_gstin_field = getattr(doctype, party_gstin_field, None)
         company_gstin_field = getattr(doctype, company_gstin_field, None)
         address_field = getattr(doctype, address_field, None)
