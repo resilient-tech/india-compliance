@@ -19,10 +19,7 @@ from india_compliance.gst_india.report.gstr_1.gstr_1 import GSTR11A11BData
 from india_compliance.gst_india.report.gstr_3b_details.gstr_3b_details import (
     IneligibleITC,
 )
-<<<<<<< HEAD
-=======
-from india_compliance.gst_india.utils import get_gst_accounts_by_type, get_period
->>>>>>> 0a256c00 (Merge pull request #3225 from Ninad1306/handle_advances)
+from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 VALUES_TO_UPDATE = ["iamt", "camt", "samt", "csamt"]
 GST_TAX_TYPE_MAP = {
@@ -53,23 +50,12 @@ class GSTR3BReport(Document):
 
             self.gst_details = self.get_company_gst_details()
             self.report_dict["gstin"] = self.gst_details.get("gstin")
-<<<<<<< HEAD
             self.report_dict["ret_period"] = get_period(self.month, self.year)
             self.month_no = get_period(self.month)
-=======
-            self.report_dict["ret_period"] = get_period(
-                self.month_or_quarter, self.year
-            )
-            self.month_or_quarter_no = get_period(self.month_or_quarter)
             self.from_date = get_date_str(
-                get_first_day(f"{self.year}-{self.month_or_quarter_no[0]}-01")
+                get_first_day(f"{self.year}-{self.month_no}-01")
             )
-            self.to_date = (
-                get_date_str(
-                    get_last_day(f"{self.year}-{self.month_or_quarter_no[1]}-01")
-                ),
-            )
->>>>>>> 0a256c00 (Merge pull request #3225 from Ninad1306/handle_advances)
+            self.to_date = get_date_str(get_last_day(f"{self.year}-{self.month_no}-01"))
 
             self.get_outward_supply_details("Sales Invoice")
             self.set_outward_taxable_supplies()
@@ -286,14 +272,7 @@ class GSTR3BReport(Document):
                 .join(boe_taxes)
                 .on(boe_taxes.parent == boe.name)
                 .where(
-<<<<<<< HEAD
-                    boe.posting_date.between(
-                        get_date_str(get_first_day(f"{self.year}-{self.month_no}-01")),
-                        get_date_str(get_last_day(f"{self.year}-{self.month_no}-01")),
-                    )
-=======
-                    boe.posting_date.between(self.from_date, self.to_date)
->>>>>>> 0a256c00 (Merge pull request #3225 from Ninad1306/handle_advances)
+                    boe.posting_date[self.from_date : self.to_date]
                     & boe.company_gstin.eq(self.gst_details.get("gstin"))
                     & boe.docstatus.eq(1)
                     & boe_taxes.gst_tax_type.eq(account_type)
@@ -522,7 +501,9 @@ class GSTR3BReport(Document):
 
         def update_totals(data, totals, multiplier):
             for row in data:
-                is_intra_state = row["place_of_supply"][:2] == self.company_gstin[:2]
+                is_intra_state = (
+                    row["place_of_supply"][:2] == self.gst_details.get("gstin")[:2]
+                )
                 tax_amount = row["tax_amount"] * multiplier
 
                 totals["txval"] += row.taxable_value * multiplier
@@ -534,7 +515,7 @@ class GSTR3BReport(Document):
         filters = frappe._dict(
             {
                 "company": self.company,
-                "company_gstin": self.company_gstin,
+                "company_gstin": self.gst_details.get("gstin"),
                 "from_date": self.from_date,
                 "to_date": self.to_date,
             }
