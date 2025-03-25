@@ -532,7 +532,7 @@ class GSTR3BReport(Document):
 
         def update_totals(data, totals, multiplier):
             for row in data:
-                is_intra_state = row["place_of_supply"][:2] == row["company_gstin"][:2]
+                is_intra_state = row["place_of_supply"][:2] == self.company_gstin[:2]
                 tax_amount = row["tax_amount"] * multiplier
 
                 totals["txval"] += row.taxable_value * multiplier
@@ -554,9 +554,9 @@ class GSTR3BReport(Document):
         gst_accounts = get_gst_accounts_by_type(self.company, "Output")
         _class = GSTR11A11BData(filters, gst_accounts)
 
-        for type_, multiplier in (("get_11A_query", 1), ("get_11B_query", -1)):
-            query = getattr(_class, type_)()
-            data = query.select(_class.pe.company_gstin).run(as_dict=True)
+        for method, multiplier in (("get_11A_query", 1), ("get_11B_query", -1)):
+            query = getattr(_class, method)()
+            data = query.run(as_dict=True)
             update_totals(data, totals, multiplier)
 
         for key in totals:
