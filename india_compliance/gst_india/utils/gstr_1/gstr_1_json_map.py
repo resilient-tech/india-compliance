@@ -8,8 +8,10 @@ from india_compliance.gst_india.report.gstr_1.gstr_1 import (
     GSTR1DocumentIssuedSummary,
     GSTR11A11BData,
 )
-from india_compliance.gst_india.utils import get_gst_accounts_by_type
-from india_compliance.gst_india.utils.__init__ import get_party_for_gstin
+from india_compliance.gst_india.utils import (
+    get_gst_accounts_by_type,
+    get_party_for_gstin,
+)
 from india_compliance.gst_india.utils.gstr_1 import (
     CATEGORY_SUB_CATEGORY_MAPPING,
     SUB_CATEGORY_GOV_CATEGORY_MAPPING,
