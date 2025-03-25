@@ -2463,8 +2463,8 @@ class GSTR1BooksData(BooksDataMapper):
         year = self.filters.year
 
         log_names = [
-            f"GSTR1-{(self.current_month-1):02d}{year}-{company_gstin}",
-            f"GSTR1-{(self.current_month-2):02d}{year}-{company_gstin}",
+            f"GSTR1-{(self.current_month - 1):02d}{year}-{company_gstin}",
+            f"GSTR1-{(self.current_month - 2):02d}{year}-{company_gstin}",
         ]
 
         filed_invoices = set()

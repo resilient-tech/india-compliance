@@ -4,6 +4,7 @@
 
 import json
 import os
+from collections import defaultdict
 
 import frappe
 from frappe import _
@@ -13,10 +14,11 @@ from frappe.utils import cint, cstr, flt, get_first_day, get_last_day
 
 from india_compliance.gst_india.constants import INVOICE_DOCTYPES, STATE_NUMBERS
 from india_compliance.gst_india.overrides.transaction import is_inter_state_supply
+from india_compliance.gst_india.report.gstr_1.gstr_1 import GSTR11A11BData
 from india_compliance.gst_india.report.gstr_3b_details.gstr_3b_details import (
     IneligibleITC,
 )
-from india_compliance.gst_india.utils import get_period
+from india_compliance.gst_india.utils import get_gst_accounts_by_type, get_period
 
 VALUES_TO_UPDATE = ["iamt", "camt", "samt", "csamt"]
 GST_TAX_TYPE_MAP = {
@@ -64,6 +66,8 @@ class GSTR3BReport(Document):
 
             self.get_outward_supply_details("Purchase Invoice", reverse_charge=True)
             self.set_supplies_liable_to_reverse_charge()
+
+            self.set_advances_received_or_adjusted()
 
             itc_details = self.get_itc_details()
             self.set_itc_details(itc_details)
@@ -525,6 +529,43 @@ class GSTR3BReport(Document):
         self.reverse_charge_invoices = {
             d.name for d in invoice_details if d.is_reverse_charge
         }
+
+    def set_advances_received_or_adjusted(self):
+        """
+        Section 3.1(a) of GSTR-3B also includes the difference of advances received and adjusted
+        """
+
+        def update_totals(data, totals, multiplier):
+            for row in data:
+                is_intra_state = row["place_of_supply"][:2] == self.company_gstin[:2]
+                tax_amount = row["tax_amount"] * multiplier
+
+                totals["txval"] += row.taxable_value * multiplier
+                totals["iamt"] += 0 if is_intra_state else tax_amount
+                totals["camt"] += (tax_amount / 2) if is_intra_state else 0
+                totals["samt"] += (tax_amount / 2) if is_intra_state else 0
+                totals["csamt"] += row.cess_amount * multiplier
+
+        filters = frappe._dict(
+            {
+                "company": self.company,
+                "company_gstin": self.company_gstin,
+                "from_date": self.from_date,
+                "to_date": self.to_date,
+            }
+        )
+
+        totals = defaultdict(int)
+        gst_accounts = get_gst_accounts_by_type(self.company, "Output")
+        _class = GSTR11A11BData(filters, gst_accounts)
+
+        for method, multiplier in (("get_11A_query", 1), ("get_11B_query", -1)):
+            query = getattr(_class, method)()
+            data = query.run(as_dict=True)
+            update_totals(data, totals, multiplier)
+
+        for key in totals:
+            self.report_dict["sup_details"]["osup_det"][key] += totals[key]
 
     def get_query_with_conditions(self, invoice, query, party_gstin):
         return (
