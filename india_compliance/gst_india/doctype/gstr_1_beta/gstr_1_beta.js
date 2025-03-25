@@ -2980,25 +2980,6 @@ async function set_default_company_gstin(frm) {
     }
 }
 
-function set_options_for_year(frm) {
-    const today = new Date();
-    let current_year = today.getFullYear();
-    const current_month_idx = today.getMonth();
-    const start_year = 2017;
-    const year_range = current_year - start_year + 1;
-    let options = Array.from({ length: year_range }, (_, index) => start_year + index);
-    options = options.reverse().map(year => year.toString());
-
-    if (
-        (frm.filing_frequency === "Monthly" && current_month_idx === 0) ||
-        (frm.filing_frequency === "Quarterly" && current_month_idx < 3)
-    )
-        current_year--;
-
-    frm.get_field("year").set_data(options);
-    frm.set_value("year", current_year.toString());
-}
-
 function update_filing_preference(frm) {
     const { month_or_quarter, year, company_gstin } = frm.doc;
     if (!month_or_quarter || !year || !company_gstin) return;
@@ -3123,4 +3104,12 @@ function refresh_filing_preference(frm) {
         frappe.show_alert(__("Filing preference updated. Regenerate data."));
         frm.set_value("filing_preference", new_preference);
     });
+}
+
+function set_options_for_year(frm) {
+    const { options, current_year } = india_compliance.get_options_for_year(
+        frm.doc.filing_preference
+    );
+    frm.get_field("year").set_data(options);
+    frm.set_value("year", current_year);
 }
