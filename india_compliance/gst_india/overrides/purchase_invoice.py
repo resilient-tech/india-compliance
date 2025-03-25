@@ -2,6 +2,7 @@ from collections import defaultdict
 
 import frappe
 from frappe import _
+from frappe.model.meta import get_field_precision
 from frappe.utils import flt
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
@@ -178,6 +179,13 @@ def validate_with_inward_supply(doc):
     mismatch_fields = {}
     tax_fields = defaultdict(int)
 
+    taxable_value_precision = get_field_precision(
+        frappe.get_meta("GST Inward Supply").get_field("taxable_value")
+    )
+    tax_precision = get_field_precision(
+        frappe.get_meta("GST Inward Supply").get_field("igst")
+    )
+
     for field in (
         "company",
         "company_gstin",
@@ -191,7 +199,9 @@ def validate_with_inward_supply(doc):
             mismatch_fields[field] = doc._inward_supply.get(field)
 
     # mismatch for taxable_value
-    taxable_value = sum(item.taxable_value for item in doc.items)
+    taxable_value = flt(
+        sum(item.taxable_value for item in doc.items), taxable_value_precision
+    )
     if taxable_value != doc._inward_supply.get("taxable_value"):
         mismatch_fields["Taxable Value"] = doc._inward_supply.get("taxable_value")
 
@@ -206,7 +216,7 @@ def validate_with_inward_supply(doc):
         {
             tax.upper(): doc._inward_supply.get(tax)
             for tax, amount in tax_fields.items()
-            if amount != doc._inward_supply.get(tax)
+            if flt(amount, tax_precision) != doc._inward_supply.get(tax)
         }
     )
 
