@@ -29,6 +29,7 @@ def get_wdv_or_dd_depr_amount(
     asset_depr_schedule,
     prev_per_day_depr=0,
 ):
+
     # As per IT act, if the asset is purchased in the 2nd half of fiscal year, then rate is divided by 2 for the first year
 
     if not fb_row.finance_book or not frappe.db.get_value(
@@ -126,8 +127,10 @@ def get_wdv_or_dd_depr_amount(
 
     return depreciation_amount, None
 
+
 def is_fiscal_year(year):
     return (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)
+
 
 def cancel_depreciation_entries(asset_doc, date):
     # Once the asset is sold during the current year, depreciation booked during the year of sale has to be cancelled as per Income Tax Act
