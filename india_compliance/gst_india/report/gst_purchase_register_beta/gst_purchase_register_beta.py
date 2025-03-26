@@ -279,6 +279,9 @@ class BaseGSTR3B:
         sub_category_summary = self.get_sub_category_summary(mapping)
 
         for category, sub_categories in mapping.items():
+            if category == "Ineligible ITC" and self.filters.sub_section == "4":
+                self.add_net_itc_row(final_summary)
+
             category_summary = {
                 "description": category,
                 "no_of_records": 0,
@@ -297,6 +300,28 @@ class BaseGSTR3B:
                 final_summary.append(sub_category_row)
 
         self.data = final_summary
+
+    def add_net_itc_row(self, summary):
+        row = {
+            "description": "Net ITC Avaliable",
+            "no_of_records": 0,
+            "indent": 0,
+            **self.AMOUNT_FIELDS,
+        }
+
+        for summary_row in summary:
+            if summary_row["description"] == "ITC Available":
+                for key in self.AMOUNT_FIELDS:
+                    row[key] += summary_row[key]
+
+                row["no_of_records"] += summary_row["no_of_records"]
+            elif summary_row["description"] == "ITC Reversed":
+                for key in self.AMOUNT_FIELDS:
+                    row[key] -= summary_row[key]
+
+                row["no_of_records"] -= summary_row["no_of_records"]
+
+        summary.append(row)
 
     def get_sub_category_summary(self, mapping):
         sub_categories = []

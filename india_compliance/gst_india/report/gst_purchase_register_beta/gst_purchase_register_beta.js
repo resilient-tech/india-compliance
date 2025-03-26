@@ -155,13 +155,5 @@ custom_report_column_total = function (...args) {
     if (summary_by !== "Overview")
         return frappe.utils.report_column_total.apply(this, args);
 
-    const column_field = args[1].column.fieldname;
-    if (column_field === "description") return;
-
-    const total = this.datamanager.data.reduce((acc, row) => {
-        if (row.indent !== 1) acc += row[column_field] || 0;
-        return acc;
-    }, 0);
-
-    return total;
+    return 0;
 };
