@@ -1,18 +1,25 @@
 import frappe
-from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
 from india_compliance.audit_trail.constants.custom_fields import CUSTOM_FIELDS
 from india_compliance.audit_trail.utils import (
     get_audit_trail_doctypes,
     is_audit_trail_enabled,
 )
+from india_compliance.utils.custom_fields import get_custom_fields_creator
+
+_create_custom_fields = get_custom_fields_creator("Audit Trail")
+
 
 # Hooks
 
 
 def setup_fixtures():
-    create_custom_fields(CUSTOM_FIELDS)
+    create_custom_fields()
     create_property_setters_for_versioning()
+
+
+def create_custom_fields():
+    _create_custom_fields(CUSTOM_FIELDS)
 
 
 def create_property_setters_for_versioning():

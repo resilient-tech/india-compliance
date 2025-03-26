@@ -739,8 +739,10 @@ class GSTR1 {
 
         const has_records = this.data.books_summary?.some(row => row.no_of_records > 0);
         // Nil return cannot be filed for quarterly M1 and M2
-        const can_file_nil_return = this.frm.doc.filing_preference === "Monthly" ||
-        (this.frm.doc.filing_preference === "Quarterly" && this.frm.doc.month_or_quarter % 3 === 0);
+        const can_file_nil_return =
+            this.frm.doc.filing_preference === "Monthly" ||
+            (this.frm.doc.filing_preference === "Quarterly" &&
+                this.frm.doc.month_or_quarter % 3 === 0);
 
         if (!has_records && this.data.status != "Filed" && can_file_nil_return)
             this.frm.set_df_property("file_nil_gstr1", "hidden", 0);
@@ -2978,25 +2980,6 @@ async function set_default_company_gstin(frm) {
     }
 }
 
-function set_options_for_year(frm) {
-    const today = new Date();
-    let current_year = today.getFullYear();
-    const current_month_idx = today.getMonth();
-    const start_year = 2017;
-    const year_range = current_year - start_year + 1;
-    let options = Array.from({ length: year_range }, (_, index) => start_year + index);
-    options = options.reverse().map(year => year.toString());
-
-    if (
-        (frm.filing_frequency === "Monthly" && current_month_idx === 0) ||
-        (frm.filing_frequency === "Quarterly" && current_month_idx < 3)
-    )
-        current_year--;
-
-    frm.get_field("year").set_data(options);
-    frm.set_value("year", current_year.toString());
-}
-
 function update_filing_preference(frm) {
     const { month_or_quarter, year, company_gstin } = frm.doc;
     if (!month_or_quarter || !year || !company_gstin) return;
@@ -3005,7 +2988,7 @@ function update_filing_preference(frm) {
         method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_filing_preference_from_log",
         args: { month_or_quarter, year, company_gstin },
         callback: r => {
-            frm.set_value("filing_preference", r.message);
+            frm.set_value("filing_preference", r.message || "Monthly");
         },
     });
 }
@@ -3121,4 +3104,12 @@ function refresh_filing_preference(frm) {
         frappe.show_alert(__("Filing preference updated. Regenerate data."));
         frm.set_value("filing_preference", new_preference);
     });
+}
+
+function set_options_for_year(frm) {
+    const { options, current_year } = india_compliance.get_options_for_year(
+        frm.doc.filing_preference
+    );
+    frm.get_field("year").set_data(options);
+    frm.set_value("year", current_year);
 }

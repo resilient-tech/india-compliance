@@ -30,6 +30,10 @@ class GSTINDetailedReport:
             if self.filters.party_type
             else ["Customer", "Supplier"]
         )
+        self.is_naming_series = "Naming Series" in (
+            frappe.db.get_single_value("Buying Settings", "supp_master_name"),
+            frappe.db.get_single_value("Selling Settings", "cust_master_name"),
+        )
 
     def get_columns(self) -> list[dict]:
         """Return columns for the report.
@@ -45,8 +49,8 @@ class GSTINDetailedReport:
                 "width": 100,
             },
             {
-                "label": _("Party Name"),
-                "fieldname": "party_name",
+                "label": _("Party"),
+                "fieldname": "party",
                 "fieldtype": "Dynamic Link",
                 "options": "party_type",
                 "width": 220,
@@ -96,48 +100,47 @@ class GSTINDetailedReport:
             },
         ]
 
+        if self.is_naming_series:
+            columns.insert(
+                2,
+                {
+                    "label": _("Party Name"),
+                    "fieldname": "party_name",
+                    "fieldtype": "Data",
+                    "width": 220,
+                },
+            )
+
         return columns
 
     def get_data(self):
         gstin = frappe.qb.DocType("GSTIN")
-        address = frappe.qb.DocType("Address")
-        dynamic_link = frappe.qb.DocType("Dynamic Link")
 
-        party_query = (
-            frappe.qb.from_(address)
-            .inner_join(dynamic_link)
-            .on(address.name == dynamic_link.parent)
-            .select(
-                address.gstin,
-                dynamic_link.link_doctype.as_("party_type"),
-                dynamic_link.link_name.as_("party_name"),
-            )
-            .where(dynamic_link.link_doctype.isin(self.doctypes))
-            .where(IfNull(address.gstin, "") != "")
-            .distinct()
-        ).as_("party")
+        party_query = self._get_party_query()
 
-        for doctype in self.doctypes:
-            party_query = party_query.union(get_party_query(doctype))
+        gstin_query_select_fields = [
+            party_query.gstin,
+            gstin.status,
+            gstin.registration_date,
+            gstin.last_updated_on,
+            gstin.cancelled_date,
+            Case()
+            .when(IsNull(gstin.is_blocked), "")
+            .when(gstin.is_blocked == 0, "No")
+            .else_("Yes")
+            .as_("is_blocked"),
+            party_query.party_type,
+            party_query.party,
+        ]
+
+        if self.is_naming_series:
+            gstin_query_select_fields.append(party_query.party_name)
 
         gstin_query = (
             frappe.qb.from_(party_query)
             .left_join(gstin)
             .on(gstin.gstin == party_query.gstin)
-            .select(
-                party_query.gstin,
-                gstin.status,
-                gstin.registration_date,
-                gstin.last_updated_on,
-                gstin.cancelled_date,
-                Case()
-                .when(IsNull(gstin.is_blocked), "")
-                .when(gstin.is_blocked == 0, "No")
-                .else_("Yes")
-                .as_("is_blocked"),
-                party_query.party_type,
-                party_query.party_name,
-            )
+            .select(*gstin_query_select_fields)
             .orderby(gstin.modified, order=Order.desc)
         )
 
@@ -146,18 +149,65 @@ class GSTINDetailedReport:
 
         return gstin_query.run(as_dict=True)
 
+    def _get_party_query(self):
+        address = frappe.qb.DocType("Address")
+        dynamic_link = frappe.qb.DocType("Dynamic Link")
 
-def get_party_query(doctype):
-    dt = frappe.qb.DocType(doctype)
+        party_query_select_fields = [
+            address.gstin,
+            dynamic_link.link_doctype.as_("party_type"),
+            dynamic_link.link_name.as_("party"),
+        ]
 
-    query = (
-        frappe.qb.from_(dt)
-        .select(
+        party_query = (
+            frappe.qb.from_(address)
+            .inner_join(dynamic_link)
+            .on(address.name == dynamic_link.parent)
+        )
+
+        if self.is_naming_series:
+            customer = frappe.qb.DocType("Customer")
+            supplier = frappe.qb.DocType("Supplier")
+            party_query = (
+                party_query.inner_join(customer)
+                .on(dynamic_link.link_name == customer.name)
+                .inner_join(supplier)
+                .on(dynamic_link.link_name == supplier.name)
+            )
+
+            party_query_select_fields.append(
+                Case()
+                .when(dynamic_link.link_doctype == "Customer", customer.customer_name)
+                .when(dynamic_link.link_doctype == "Supplier", supplier.supplier_name)
+                .as_("party_name")
+            )
+
+        party_query = (
+            party_query.select(*party_query_select_fields)
+            .where(dynamic_link.link_doctype.isin(self.doctypes))
+            .where(IfNull(address.gstin, "") != "")
+            .distinct()
+        ).as_("party")
+
+        for doctype in self.doctypes:
+            party_query = party_query.union(self._get_party_doctype_query(doctype))
+
+        return party_query
+
+    def _get_party_doctype_query(self, doctype):
+        dt = frappe.qb.DocType(doctype)
+
+        select_fields = [
             dt.gstin,
             LiteralValue(f"'{doctype}'").as_("party_type"),
-            dt.name.as_("party_name"),
-        )
-        .where(IfNull(dt.gstin, "") != "")
-    )
+            dt.name.as_("party"),
+        ]
 
-    return query
+        if self.is_naming_series:
+            select_fields.append(dt[f"{doctype.lower()}_name"].as_("party_name"))
+
+        query = (
+            frappe.qb.from_(dt).select(*select_fields).where(IfNull(dt.gstin, "") != "")
+        )
+
+        return query

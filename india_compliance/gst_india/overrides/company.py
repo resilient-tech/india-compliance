@@ -1,6 +1,8 @@
 import frappe
 from frappe.utils import flt
-from erpnext.setup.setup_wizard.operations.taxes_setup import from_detailed_data
+from erpnext.setup.setup_wizard.operations.taxes_setup import (
+    from_detailed_data,
+)
 
 from india_compliance.gst_india.utils import get_data_file_path
 

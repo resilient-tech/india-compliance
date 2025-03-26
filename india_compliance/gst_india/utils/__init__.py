@@ -600,6 +600,9 @@ def get_gst_account_gst_tax_type_map():
             if row.account_type and row.account_type.endswith("Reverse Charge"):
                 account_key = account_key + "_rcm"
 
+            if row.account_type and row.account_type.endswith("Refund"):
+                account_key = account_key + "_refund"
+
             gst_account_map[account_value] = account_key
 
     return gst_account_map

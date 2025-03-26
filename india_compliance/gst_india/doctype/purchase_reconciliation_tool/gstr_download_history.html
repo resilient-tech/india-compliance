@@ -11,15 +11,15 @@
                 </tr>
             </thead>
             <tbody>
-                {% for(let period in data) { %}
+                {% for(let [period, list] of data) { %}
                     <tr>
-                        <td rowspan="{{ data[period].length }}" style="width:50%">{{period}}</td>
-                        <td>{{ data[period][0] }}</td>
+                        <td rowspan="{{ list.length }}" style="width:50%">{{period}}</td>
+                        <td>{{ list[0] }}</td>
                     </tr>
 
-                    {% for(let i=1;i < data[period].length;i++){ %}
+                    {% for(let i=1;i < list.length;i++){ %}
                         <tr>
-                            <td>{{ data[period][i] }}</td>
+                            <td>{{ list[i] }}</td>
                         </tr>
                     {% } %}
 

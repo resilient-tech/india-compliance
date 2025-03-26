@@ -4,6 +4,7 @@
 
 import json
 import os
+from collections import defaultdict
 
 import frappe
 from frappe import _
@@ -14,12 +15,20 @@ from frappe.utils import cstr, flt, get_date_str, get_first_day, get_last_day
 
 from india_compliance.gst_india.constants import INVOICE_DOCTYPES, STATE_NUMBERS
 from india_compliance.gst_india.overrides.transaction import is_inter_state_supply
+from india_compliance.gst_india.report.gstr_1.gstr_1 import GSTR11A11BData
 from india_compliance.gst_india.report.gstr_3b_details.gstr_3b_details import (
     IneligibleITC,
 )
-from india_compliance.gst_india.utils import get_period
+from india_compliance.gst_india.utils import get_gst_accounts_by_type, get_period
 
 VALUES_TO_UPDATE = ["iamt", "camt", "samt", "csamt"]
+GST_TAX_TYPE_MAP = {
+    "sgst": "samt",
+    "cgst": "camt",
+    "igst": "iamt",
+    "cess": "csamt",
+    "cess_non_advol": "csamt",
+}
 
 
 class GSTR3BReport(Document):
@@ -45,6 +54,14 @@ class GSTR3BReport(Document):
                 self.month_or_quarter, self.year
             )
             self.month_or_quarter_no = get_period(self.month_or_quarter)
+            self.from_date = get_date_str(
+                get_first_day(f"{self.year}-{self.month_or_quarter_no[0]}-01")
+            )
+            self.to_date = (
+                get_date_str(
+                    get_last_day(f"{self.year}-{self.month_or_quarter_no[1]}-01")
+                ),
+            )
 
             self.get_outward_supply_details("Sales Invoice")
             self.set_outward_taxable_supplies()
@@ -52,12 +69,15 @@ class GSTR3BReport(Document):
             self.get_outward_supply_details("Purchase Invoice", reverse_charge=True)
             self.set_supplies_liable_to_reverse_charge()
 
+            self.set_advances_received_or_adjusted()
+
             itc_details = self.get_itc_details()
             self.set_itc_details(itc_details)
             self.get_itc_reversal_entries()
             inward_nil_exempt = self.get_inward_nil_exempt(
                 self.gst_details.get("gst_state")
             )
+            self.set_reclaim_of_itc_reversal()
             self.set_inward_nil_exempt(inward_nil_exempt)
 
             self.set_reverse_charge_supply_through_ecomm_operators()
@@ -207,13 +227,6 @@ class GSTR3BReport(Document):
         ).run(as_dict=True)
 
         net_itc = self.report_dict["itc_elg"]["itc_net"]
-        gst_tax_type_to_key_map = {
-            "sgst": "samt",
-            "cgst": "camt",
-            "igst": "iamt",
-            "cess": "csamt",
-            "cess_non_advol": "csamt",
-        }
 
         for entry in reversal_entries:
             if entry.ineligibility_reason == "As per rules 42 & 43 of CGST Rules":
@@ -221,10 +234,11 @@ class GSTR3BReport(Document):
             else:
                 index = 1
 
-            tax_amount_key = gst_tax_type_to_key_map.get(entry.gst_tax_type)
+            tax_amount_key = GST_TAX_TYPE_MAP.get(entry.gst_tax_type)
             self.report_dict["itc_elg"]["itc_rev"][index][
                 tax_amount_key
             ] += entry.amount
+
             net_itc[tax_amount_key] -= entry.amount
 
     def get_itc_details(self):
@@ -279,18 +293,7 @@ class GSTR3BReport(Document):
                 .join(boe_taxes)
                 .on(boe_taxes.parent == boe.name)
                 .where(
-                    boe.posting_date.between(
-                        get_date_str(
-                            get_first_day(
-                                f"{self.year}-{self.month_or_quarter_no[0]}-01"
-                            )
-                        ),
-                        get_date_str(
-                            get_last_day(
-                                f"{self.year}-{self.month_or_quarter_no[1]}-01"
-                            )
-                        ),
-                    )
+                    boe.posting_date.between(self.from_date, self.to_date)
                     & boe.company_gstin.eq(self.gst_details.get("gstin"))
                     & boe.docstatus.eq(1)
                     & boe_taxes.gst_tax_type.eq(account_type)
@@ -303,6 +306,30 @@ class GSTR3BReport(Document):
         itc_details.setdefault("Import Of Goods", {"iamt": 0, "csamt": 0})
         itc_details["Import Of Goods"]["iamt"] += igst
         itc_details["Import Of Goods"]["csamt"] += cess
+
+    def set_reclaim_of_itc_reversal(self):
+        journal_entry = frappe.qb.DocType("Journal Entry")
+        journal_entry_account = frappe.qb.DocType("Journal Entry Account")
+
+        reclaimed_entries = (
+            frappe.qb.from_(journal_entry)
+            .join(journal_entry_account)
+            .on(journal_entry_account.parent == journal_entry.name)
+            .select(
+                journal_entry_account.gst_tax_type,
+                Sum(journal_entry_account.debit_in_account_currency).as_("amount"),
+            )
+            .where(journal_entry.voucher_type == "Reclaim of ITC Reversal")
+            .where(IfNull(journal_entry_account.gst_tax_type, "") != "")
+            .groupby(journal_entry_account.gst_tax_type)
+        )
+        reclaimed_entries = self.get_query_with_conditions(
+            journal_entry, reclaimed_entries, party_gstin=""
+        ).run(as_dict=True)
+
+        for entry in reclaimed_entries:
+            tax_amount_key = GST_TAX_TYPE_MAP.get(entry.gst_tax_type)
+            self.report_dict["itc_elg"]["itc_inelg"][0][tax_amount_key] += entry.amount
 
     def get_inward_nil_exempt(self, state):
         inward_nil_exempt = frappe.db.sql(
@@ -394,13 +421,6 @@ class GSTR3BReport(Document):
     def set_item_wise_tax_details(self, docs):
         self.invoice_item_wise_tax_details = {}
         item_wise_details = {}
-        gst_tax_type_map = {
-            "cgst": "camt",
-            "sgst": "samt",
-            "igst": "iamt",
-            "cess": "csamt",
-            "cess_non_advol": "csamt",
-        }
 
         item_defaults = frappe._dict(
             {
@@ -436,7 +456,7 @@ class GSTR3BReport(Document):
 
             # Process tax details
             for tax in details["taxes"]:
-                gst_tax_type = gst_tax_type_map.get(tax.gst_tax_type)
+                gst_tax_type = GST_TAX_TYPE_MAP.get(tax.gst_tax_type)
 
                 if not gst_tax_type:
                     continue
@@ -505,6 +525,43 @@ class GSTR3BReport(Document):
             d.name for d in invoice_details if d.is_reverse_charge
         }
 
+    def set_advances_received_or_adjusted(self):
+        """
+        Section 3.1(a) of GSTR-3B also includes the difference of advances received and adjusted
+        """
+
+        def update_totals(data, totals, multiplier):
+            for row in data:
+                is_intra_state = row["place_of_supply"][:2] == self.company_gstin[:2]
+                tax_amount = row["tax_amount"] * multiplier
+
+                totals["txval"] += row.taxable_value * multiplier
+                totals["iamt"] += 0 if is_intra_state else tax_amount
+                totals["camt"] += (tax_amount / 2) if is_intra_state else 0
+                totals["samt"] += (tax_amount / 2) if is_intra_state else 0
+                totals["csamt"] += row.cess_amount * multiplier
+
+        filters = frappe._dict(
+            {
+                "company": self.company,
+                "company_gstin": self.company_gstin,
+                "from_date": self.from_date,
+                "to_date": self.to_date,
+            }
+        )
+
+        totals = defaultdict(int)
+        gst_accounts = get_gst_accounts_by_type(self.company, "Output")
+        _class = GSTR11A11BData(filters, gst_accounts)
+
+        for method, multiplier in (("get_11A_query", 1), ("get_11B_query", -1)):
+            query = getattr(_class, method)()
+            data = query.run(as_dict=True)
+            update_totals(data, totals, multiplier)
+
+        for key in totals:
+            self.report_dict["sup_details"]["osup_det"][key] += totals[key]
+
     def get_query_with_conditions(self, invoice, query, party_gstin):
         return (
             query.where(invoice.docstatus == 1)
@@ -565,7 +622,7 @@ class GSTR3BReport(Document):
     def get_reverse_charge_invoice_condition(self, doctype):
         condition = ""
         if doctype == "Sales Invoice" and self.reverse_charge_invoices:
-            condition = f""" and parent not in ({', '.join([f'"{invoice}"' for invoice in self.reverse_charge_invoices])})"""
+            condition = f""" and parent not in ({", ".join([f'"{invoice}"' for invoice in self.reverse_charge_invoices])})"""
 
         return condition
 

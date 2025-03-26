@@ -8,7 +8,6 @@
       :required="true"
       :error="email.error"
       :state="email.state"
-      @blur="validateEmail"
     />
     <transition name="slide">
       <FormField
@@ -109,8 +108,9 @@ export default {
       this.validateGstin(value);
     },
 
-    "email.value"(_) {
+    "email.value"(value) {
       this.error = null;
+      this.validateEmail(value);
     },
 
     isAccountRegistered() {
@@ -174,7 +174,7 @@ export default {
 
       if (!value) return set_error("GSTIN is required");
 
-      value = india_compliance.validate_gstin(value);
+      value = india_compliance.validate_gstin(value, false);
       if (!value) return set_error("Invalid GSTIN detected");
 
       const { message, error } = await check_free_trial_eligibility(value);
@@ -193,5 +193,9 @@ export default {
   font-size: var(--font-size-xs);
   text-align: center;
   margin: 0.5em 0 0 0;
+}
+
+.btn:disabled {
+  cursor: not-allowed;
 }
 </style>

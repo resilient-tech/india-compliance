@@ -85,6 +85,10 @@ def get_accounts_with_negative_rate(company):
     negative_rate_accounts = list(
         get_gst_accounts_by_type(company, "Sales Reverse Charge", throw=False).values()
     )
+    negative_rate_accounts += list(
+        get_gst_accounts_by_type(company, "Output Refund", throw=False).values()
+    )  # add refund accounts
+
     purchase_rcm_accounts = list(
         get_gst_accounts_by_type(
             company, "Purchase Reverse Charge", throw=False
