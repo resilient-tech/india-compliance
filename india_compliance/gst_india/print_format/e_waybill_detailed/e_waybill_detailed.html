@@ -300,7 +300,6 @@
                                     {{ get_transport_mode(detail.transMode) }}
                                 </td>
                                 <td>
-<<<<<<< HEAD
                                     {{ detail.vehicleNo or "" }}
                                     {% if detail.transDocNo %}
                                     / {{ detail.transDocNo }}
@@ -308,11 +307,6 @@
                                     {% if detail.transDocDate %}
                                         - Dt {{ detail.transDocDate }}
                                     {% endif %}
-=======
-                                    {{ detail.vehicleNo }} /
-                                    {{ detail.transDocNo }} Dt
-                                    {{ detail.transDocDate }}
->>>>>>> eb75a86f (fix: add Trans. Doc No. and Dt. in e-Waybill detailed print format)
                                 </td>
                                 <td>
                                     {{ detail.fromPlace }}
