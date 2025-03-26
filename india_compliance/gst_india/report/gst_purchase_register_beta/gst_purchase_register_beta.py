@@ -6,6 +6,7 @@ from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Ifnull, IfNull, LiteralValue, Sum
 
+from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.overrides.transaction import is_inter_state_supply
 
 SECTION_MAPPING = {
@@ -30,10 +31,10 @@ SECTION_MAPPING = {
 
 AMOUNT_FIELDS_MAP = {
     "4": {
-        "iamt": 0,
-        "camt": 0,
-        "samt": 0,
-        "csamt": 0,
+        "igst_amount": 0,
+        "cgst_amount": 0,
+        "sgst_amount": 0,
+        "cess_amount": 0,
     },
     "5": {
         "intra": 0,
@@ -130,11 +131,7 @@ class BaseGSTR3B:
             doc_item.cgst_amount,
             doc_item.sgst_amount,
             doc_item.igst_amount,
-            doc_item.cess_amount,
-            doc_item.cess_non_advol_amount,
-            (doc_item.cess_amount + doc_item.cess_non_advol_amount).as_(
-                "total_cess_amount"
-            ),
+            (doc_item.cess_amount + doc_item.cess_non_advol_amount).as_("cess_amount"),
             (
                 doc_item.cgst_amount
                 + doc_item.sgst_amount
@@ -150,6 +147,32 @@ class BaseGSTR3B:
                 + doc_item.cess_amount
                 + doc_item.cess_non_advol_amount
             ).as_("total_amount"),
+        )
+
+    def select_tax_details(self, query, doc_item):
+        return query.select(
+            Sum(doc_item.igst_amount).as_("igst_amount"),
+            Sum(doc_item.cgst_amount).as_("cgst_amount"),
+            Sum(doc_item.sgst_amount).as_("sgst_amount"),
+            Sum(doc_item.cess_amount + doc_item.cess_non_advol_amount).as_(
+                "cess_amount"
+            ),
+            Sum(
+                doc_item.igst_amount
+                + doc_item.cgst_amount
+                + doc_item.sgst_amount
+                + doc_item.cess_amount
+                + doc_item.cess_non_advol_amount
+            ).as_("total_tax"),
+            Sum(
+                doc_item.taxable_value
+                + doc_item.igst_amount
+                + doc_item.cgst_amount
+                + doc_item.sgst_amount
+                + doc_item.cess_amount
+                + doc_item.cess_non_advol_amount
+            ).as_("total_amount"),
+            Sum(doc_item.taxable_value).as_("taxable_value"),
         )
 
     def get_common_filters(self, query, doc):
@@ -176,6 +199,52 @@ class BaseGSTR3B:
         ):
             return True
 
+    def get_tax_columns(self):
+        return [
+            {
+                "fieldname": "taxable_value",
+                "label": _("Taxable Value"),
+                "fieldtype": "Currency",
+                "width": 90,
+            },
+            {
+                "fieldname": "cgst_amount",
+                "label": _("CGST Amount"),
+                "fieldtype": "Currency",
+                "width": 90,
+            },
+            {
+                "fieldname": "sgst_amount",
+                "label": _("SGST Amount"),
+                "fieldtype": "Currency",
+                "width": 90,
+            },
+            {
+                "fieldname": "igst_amount",
+                "label": _("IGST Amount"),
+                "fieldtype": "Currency",
+                "width": 90,
+            },
+            {
+                "fieldname": "cess_amount",
+                "label": _("CESS Amount"),
+                "fieldtype": "Currency",
+                "width": 90,
+            },
+            {
+                "fieldname": "total_tax",
+                "label": _("Total Tax"),
+                "fieldtype": "Currency",
+                "width": 90,
+            },
+            {
+                "fieldname": "total_amount",
+                "label": _("Total Amount"),
+                "fieldtype": "Currency",
+                "width": 90,
+            },
+        ]
+
     def get_item_wise_columns(self):
         self.columns.extend(
             [
@@ -199,66 +268,7 @@ class BaseGSTR3B:
                     "fieldtype": "Percent",
                     "width": 90,
                 },
-                {
-                    "fieldname": "taxable_value",
-                    "label": _("Taxable Value"),
-                    "fieldtype": "Currency",
-                    "width": 90,
-                },
-                {
-                    "fieldname": "cgst_amount",
-                    "label": _("CGST Amount"),
-                    "fieldtype": "Currency",
-                    "width": 90,
-                },
-                {
-                    "fieldname": "sgst_amount",
-                    "label": _("SGST Amount"),
-                    "fieldtype": "Currency",
-                    "width": 90,
-                },
-                {
-                    "fieldname": "igst_amount",
-                    "label": _("IGST Amount"),
-                    "fieldtype": "Currency",
-                    "width": 90,
-                },
-                {
-                    "fieldname": "cess_amount",
-                    "label": _("CESS Amount"),
-                    "fieldtype": "Currency",
-                    "width": 90,
-                },
-                {
-                    "fieldname": "cess_non_advol_amount",
-                    "label": _("CESS Non Advol Amount"),
-                    "fieldtype": "Currency",
-                    "width": 90,
-                },
-                {
-                    "fieldname": "total_cess_amount",
-                    "label": _("Total CESS Amount"),
-                    "fieldtype": "Currency",
-                    "width": 90,
-                },
-                {
-                    "fieldname": "total_tax",
-                    "label": _("Total Tax"),
-                    "fieldtype": "Currency",
-                    "width": 90,
-                },
-                {
-                    "fieldname": "total_amount",
-                    "label": _("Total Amount"),
-                    "fieldtype": "Currency",
-                    "width": 90,
-                },
-                {
-                    "fieldname": "invoice_sub_category",
-                    "label": _("Invoice Sub Category"),
-                    "fieldtype": "Data",
-                    "width": 90,
-                },
+                *self.get_tax_columns(),
             ]
         )
 
@@ -332,39 +342,32 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
             self.columns.extend(
                 [
                     {
-                        "fieldname": "iamt",
+                        "fieldname": "igst_amount",
                         "label": _("Integrated Tax"),
                         "fieldtype": "Currency",
                         "options": self.company_currency,
                         "width": 120,
                     },
                     {
-                        "fieldname": "camt",
+                        "fieldname": "cgst_amount",
                         "label": _("Central Tax"),
                         "fieldtype": "Currency",
                         "options": self.company_currency,
                         "width": 120,
                     },
                     {
-                        "fieldname": "samt",
+                        "fieldname": "sgst_amount",
                         "label": _("State/UT Tax"),
                         "fieldtype": "Currency",
                         "options": self.company_currency,
                         "width": 120,
                     },
                     {
-                        "fieldname": "csamt",
+                        "fieldname": "cess_amount",
                         "label": _("Cess Tax"),
                         "fieldtype": "Currency",
                         "options": self.company_currency,
                         "width": 120,
-                    },
-                    {
-                        "fieldname": "invoice_sub_category",
-                        "label": _("Invoice Sub Category"),
-                        "fieldtype": "Data",
-                        "width": 200,
-                        "hidden": self.filters.get("summary_by") == "Overview",
                     },
                 ]
             )
@@ -372,54 +375,31 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
             self.columns.extend(
                 [
                     {
-                        "fieldname": "itc_available",
-                        "label": _("ITC Available"),
-                        "fieldtype": "Data",
-                        "width": 200,
-                    },
-                    {
-                        "fieldname": "itc_reversed",
-                        "label": _("ITC Reversed"),
-                        "fieldtype": "Data",
-                        "width": 250,
-                    },
-                    {
-                        "fieldname": "tax_available",
-                        "label": _("Tax Available"),
-                        "fieldtype": "Currency",
-                        "options": self.company_currency,
-                        "width": 150,
-                    },
-                    {
-                        "fieldname": "tax_reversed",
-                        "label": _("Tax Reversed"),
-                        "fieldtype": "Currency",
-                        "options": self.company_currency,
-                        "width": 150,
-                    },
-                    {
                         "fieldname": "gst_category",
                         "label": _("GST Category"),
                         "fieldtype": "Data",
                         "width": 150,
                     },
-                    {
-                        "fieldname": "taxable_value",
-                        "label": _("Taxable Value"),
-                        "fieldtype": "Currency",
-                        "width": 150,
-                    },
+                    *self.get_tax_columns(),
                 ]
             )
+
+        self.columns.append(
+            {
+                "fieldname": "invoice_sub_category",
+                "label": _("Invoice Sub Category"),
+                "fieldtype": "Data",
+                "width": 200,
+                "hidden": self.filters.get("summary_by") == "Overview",
+            },
+        )
 
     def get_data(self):
         if self.filters.summary_by == "Summary by Item":
             self.get_item_wise_data()
         else:
             self.get_invoice_data()
-            if self.filters.summary_by == "Summary by Invoice":
-                self.process_invoices()
-            else:
+            if self.filters.summary_by == "Overview":
                 self.create_tree_view()
 
     def get_invoice_data(self):
@@ -441,28 +421,6 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
             data,
             key=lambda k: (k["invoice_sub_category"], k["posting_date"]),
         )
-
-    def process_invoices(self):
-        for row in self.data:
-            itc_field, tax_field = self.get_report_field(row.invoice_sub_category)
-            row.update(
-                {
-                    itc_field: row.invoice_sub_category,
-                    tax_field: (row.iamt + row.camt + row.samt + row.csamt),
-                }
-            )
-
-    def get_report_field(self, sub_category):
-        if sub_category in [
-            "Import Of Goods",
-            "Import Of Service",
-            "ITC on Reverse Charge",
-            "Input Service Distributor",
-            "All Other ITC",
-        ]:
-            return "itc_available", "tax_available"
-        else:
-            return "itc_reversed", "tax_reversed"
 
     def get_item_wise_data(self):
         purchase_data = self.get_itc_from_purchase()
@@ -500,15 +458,8 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
         query = self.get_common_filters(query, purchase_invoice)
 
         if self.group_by:
+            query = self.select_tax_details(query, purchase_invoice_item)
             query = query.select(
-                Sum(purchase_invoice_item.igst_amount).as_("iamt"),
-                Sum(purchase_invoice_item.cgst_amount).as_("camt"),
-                Sum(purchase_invoice_item.sgst_amount).as_("samt"),
-                Sum(
-                    purchase_invoice_item.cess_amount
-                    + purchase_invoice_item.cess_non_advol_amount
-                ).as_("csamt"),
-                Sum(purchase_invoice_item.taxable_value).as_("taxable_value"),
                 IfNull(purchase_invoice.gst_category, "").as_("gst_category"),
             ).groupby(purchase_invoice.name)
         else:
@@ -548,12 +499,10 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
         )
 
         if self.group_by:
+            query = self.select_tax_details(query, boe_item)
             query = query.select(
-                Sum(boe_item.igst_amount).as_("iamt"),
-                Sum(boe_item.cess_amount + boe_item.cess_non_advol_amount).as_("csamt"),
-                LiteralValue(0).as_("camt"),
-                LiteralValue(0).as_("samt"),
-                Sum(boe_item.taxable_value).as_("taxable_value"),
+                LiteralValue(0).as_("cgst_amount"),
+                LiteralValue(0).as_("sgst_amount"),
             ).groupby(boe.name)
 
         else:
@@ -575,30 +524,17 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
                 ConstantColumn("Journal Entry").as_("voucher_type"),
                 journal_entry.name.as_("voucher_no"),
                 journal_entry.posting_date,
-                Sum(
-                    Case()
-                    .when(
-                        journal_entry_account.gst_tax_type == "igst",
-                        (journal_entry_account.credit_in_account_currency),
-                    )
-                    .else_(0)
-                ).as_("iamt"),
-                Sum(
-                    Case()
-                    .when(
-                        journal_entry_account.gst_tax_type == "cgst",
-                        (journal_entry_account.credit_in_account_currency),
-                    )
-                    .else_(0)
-                ).as_("camt"),
-                Sum(
-                    Case()
-                    .when(
-                        journal_entry_account.gst_tax_type == "sgst",
-                        (journal_entry_account.credit_in_account_currency),
-                    )
-                    .else_(0)
-                ).as_("samt"),
+                *[
+                    Sum(
+                        Case()
+                        .when(
+                            journal_entry_account.gst_tax_type == tax,
+                            (journal_entry_account.credit_in_account_currency),
+                        )
+                        .else_(0)
+                    ).as_(f"{tax}_amount")
+                    for tax in GST_TAX_TYPES[:-1]
+                ],
                 Sum(
                     Case()
                     .when(
@@ -608,7 +544,15 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
                         (journal_entry_account.credit_in_account_currency),
                     )
                     .else_(0)
-                ).as_("csamt"),
+                ).as_("cess_amount"),
+                Sum(
+                    Case()
+                    .when(
+                        journal_entry_account.gst_tax_type.isin(GST_TAX_TYPES),
+                        (journal_entry_account.credit_in_account_currency),
+                    )
+                    .else_(0)
+                ).as_("total_tax"),
                 journal_entry.ineligibility_reason.as_("invoice_sub_category"),
             )
             .where(
@@ -647,8 +591,7 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3B):
     def extend_columns(self):
         if self.filters.summary_by == "Summary by Item":
             self.get_item_wise_columns()
-
-        else:
+        elif self.filters.summary_by == "Overview":
             self.columns.extend(
                 [
                     {
@@ -665,15 +608,39 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3B):
                         "options": self.company_currency,
                         "width": 120,
                     },
-                    {
-                        "fieldname": "invoice_sub_category",
-                        "label": _("Nature of Supply"),
-                        "fieldtype": "Data",
-                        "width": 200,
-                        "hidden": self.filters.get("summary_by") == "Overview",
-                    },
                 ]
             )
+        else:
+            self.columns.extend(
+                [
+                    {
+                        "fieldname": "gst_category",
+                        "label": _("GST Category"),
+                        "fieldtype": "Data",
+                        "width": 150,
+                    },
+                    *self.get_tax_columns(),
+                ]
+            )
+
+        self.columns.extend(
+            [
+                {
+                    "fieldname": "invoice_type",
+                    "label": _("Invoice Type"),
+                    "fieldtype": "Data",
+                    "width": 200,
+                    "hidden": self.filters.get("summary_by") == "Overview",
+                },
+                {
+                    "fieldname": "invoice_sub_category",
+                    "label": _("Invoice Sub Category"),
+                    "fieldtype": "Data",
+                    "width": 200,
+                    "hidden": self.filters.get("summary_by") == "Overview",
+                },
+            ]
+        )
 
     def get_data(self):
         formatted_data = []
@@ -699,12 +666,10 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3B):
             if self.filter_by_category(invoice_sub_category, invoice_sub_category):
                 continue
 
-            # intra, inter details not required for summary by item
-            if self.group_by:
-                if is_inter_state_supply(invoice):
-                    inter = taxable_value
-                else:
-                    intra = taxable_value
+            if is_inter_state_supply(invoice):
+                inter = taxable_value
+            else:
+                intra = taxable_value
 
             formatted_data.append(
                 {
@@ -712,6 +677,7 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3B):
                     "intra": intra,
                     "inter": inter,
                     "invoice_sub_category": invoice_sub_category,
+                    "invoice_type": "Inter State" if inter else "Intra State",
                 }
             )
 
@@ -840,12 +806,8 @@ class IneligibleITC:
                 ConstantColumn(doctype).as_("voucher_type"),
                 dt.name.as_("voucher_no"),
                 dt.posting_date,
-                Sum(dt_item.igst_amount).as_("iamt"),
-                Sum(dt_item.cgst_amount).as_("camt"),
-                Sum(dt_item.sgst_amount).as_("samt"),
-                Sum(dt_item.cess_amount + dt_item.cess_non_advol_amount).as_("csamt"),
-                Sum(dt_item.taxable_value).as_("taxable_value"),
             )
         )
+        query = self._class.select_tax_details(query, dt_item)
 
         return self._class.get_common_filters(query, dt)
