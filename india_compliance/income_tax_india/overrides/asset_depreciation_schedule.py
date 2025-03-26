@@ -90,7 +90,7 @@ def get_wdv_or_dd_depr_amount(
                 flt(fb_row.rate_of_depreciation) / 100
             )
             # if leap year, then consider 366 days
-            if is_fiscal_year(cint(schedule_date.year)) and fb_row.daily_prorata_based:
+            if is_leap_year(cint(schedule_date.year)) and fb_row.daily_prorata_based:
                 depreciation_amount = depreciation_amount * 366 / 365
     elif fb_row.frequency_of_depreciation == 1:
         if fb_row.daily_prorata_based:
@@ -128,7 +128,7 @@ def get_wdv_or_dd_depr_amount(
     return depreciation_amount, None
 
 
-def is_fiscal_year(year):
+def is_leap_year(year):
     return (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)
 
 
