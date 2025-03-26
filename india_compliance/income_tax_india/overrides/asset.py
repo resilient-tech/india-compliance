@@ -24,6 +24,7 @@ def get_wdv_or_dd_depr_amount(
     prev_depreciation_amount,
     has_wdv_or_dd_non_yearly_pro_rata,
 ):
+
     # As per IT act, if the asset is purchased in the 2nd half of fiscal year, then rate is divided by 2 for the first year
 
     if not fb_row.finance_book or not frappe.db.get_value(
@@ -82,7 +83,7 @@ def get_wdv_or_dd_depr_amount(
                 flt(fb_row.rate_of_depreciation) / 100
             )
             # if leap year, then consider 366 days
-            if cint(schedule_date.year) % 4 == 0 and fb_row.daily_prorata_based:
+            if is_fiscal_year(cint(schedule_date.year)) and fb_row.daily_prorata_based:
                 depreciation_amount = depreciation_amount * 366 / 365
     elif fb_row.frequency_of_depreciation == 1:
         if fb_row.daily_prorata_based:
@@ -120,7 +121,15 @@ def get_wdv_or_dd_depr_amount(
     return depreciation_amount
 
 
+<<<<<<< HEAD:india_compliance/income_tax_india/overrides/asset.py
 def cancel_depreciation_entries(asset, date):
+=======
+def is_fiscal_year(year):
+    return (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)
+
+
+def cancel_depreciation_entries(asset_doc, date):
+>>>>>>> 0c4a203a (fix: leap year check logic (#3237)):india_compliance/income_tax_india/overrides/asset_depreciation_schedule.py
     # Once the asset is sold during the current year, depreciation booked during the year of sale has to be cancelled as per Income Tax Act
 
     start_date_of_fiscal_year = get_fiscal_year(date)[1]
