@@ -121,15 +121,11 @@ def get_wdv_or_dd_depr_amount(
     return depreciation_amount
 
 
-<<<<<<< HEAD:india_compliance/income_tax_india/overrides/asset.py
-def cancel_depreciation_entries(asset, date):
-=======
 def is_fiscal_year(year):
     return (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)
 
 
-def cancel_depreciation_entries(asset_doc, date):
->>>>>>> 0c4a203a (fix: leap year check logic (#3237)):india_compliance/income_tax_india/overrides/asset_depreciation_schedule.py
+def cancel_depreciation_entries(asset, date):
     # Once the asset is sold during the current year, depreciation booked during the year of sale has to be cancelled as per Income Tax Act
 
     start_date_of_fiscal_year = get_fiscal_year(date)[1]
