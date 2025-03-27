@@ -246,7 +246,10 @@ class GSTR3BReport(Document):
         itc_amounts = (
             frappe.qb.from_(purchase_invoice)
             .inner_join(purchase_invoice_item)
-            .on(purchase_invoice_item.parent == purchase_invoice.name)
+            .on(
+                (purchase_invoice_item.parent == purchase_invoice.name)
+                & (purchase_invoice_item.parenttype == "Purchase Invoice")
+            )
             .select(
                 purchase_invoice.itc_classification,
                 Sum(purchase_invoice_item.igst_amount).as_("itc_integrated_tax"),
@@ -265,8 +268,10 @@ class GSTR3BReport(Document):
                     != IfNull(purchase_invoice.supplier_gstin, "")
                 )
                 & (IfNull(purchase_invoice.itc_classification, "") != "")
-                & purchase_invoice_item.parenttype
-                == "Purchase Invoice"
+                & (
+                    IfNull(purchase_invoice.ineligibility_reason, "")
+                    != "ITC restricted due to PoS rules"
+                )
             )
             .groupby(purchase_invoice.itc_classification)
             .run(as_dict=True)

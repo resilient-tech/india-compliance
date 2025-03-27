@@ -145,7 +145,10 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
         query = (
             frappe.qb.from_(purchase_invoice)
             .inner_join(purchase_invoice_item)
-            .on(purchase_invoice_item.parent == purchase_invoice.name)
+            .on(
+                (purchase_invoice_item.parent == purchase_invoice.name)
+                & (purchase_invoice_item.parenttype == "Purchase Invoice")
+            )
             .select(
                 ConstantColumn("Purchase Invoice").as_("voucher_type"),
                 purchase_invoice.name.as_("voucher_no"),
@@ -167,8 +170,10 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                     != IfNull(purchase_invoice.supplier_gstin, "")
                 )
                 & (Ifnull(purchase_invoice.itc_classification, "") != "")
-                & purchase_invoice_item.parenttype
-                == "Purchase Invoice"
+                & (
+                    IfNull(purchase_invoice.ineligibility_reason, "")
+                    != "ITC restricted due to PoS rules"
+                )
             )
             .groupby(purchase_invoice_item.parent)
         )
