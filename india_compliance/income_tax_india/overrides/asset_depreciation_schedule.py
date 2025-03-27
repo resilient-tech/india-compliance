@@ -29,6 +29,7 @@ def get_wdv_or_dd_depr_amount(
     asset_depr_schedule,
     prev_per_day_depr=0,
 ):
+
     # As per IT act, if the asset is purchased in the 2nd half of fiscal year, then rate is divided by 2 for the first year
 
     if not fb_row.finance_book or not frappe.db.get_value(
@@ -89,7 +90,7 @@ def get_wdv_or_dd_depr_amount(
                 flt(fb_row.rate_of_depreciation) / 100
             )
             # if leap year, then consider 366 days
-            if cint(schedule_date.year) % 4 == 0 and fb_row.daily_prorata_based:
+            if is_leap_year(cint(schedule_date.year)) and fb_row.daily_prorata_based:
                 depreciation_amount = depreciation_amount * 366 / 365
     elif fb_row.frequency_of_depreciation == 1:
         if fb_row.daily_prorata_based:
@@ -125,6 +126,10 @@ def get_wdv_or_dd_depr_amount(
         frappe.throw(_("Only monthly and yearly depreciations allowed yet."))
 
     return depreciation_amount, None
+
+
+def is_leap_year(year):
+    return (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)
 
 
 def cancel_depreciation_entries(asset_doc, date):
