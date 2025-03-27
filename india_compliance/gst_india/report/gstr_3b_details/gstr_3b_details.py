@@ -173,7 +173,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                 & (
                     IfNull(purchase_invoice.ineligibility_reason, "")
                     != "ITC restricted due to PoS rules"
-                )
+                )  # Ignore as it is Ineligible for ITC
             )
             .groupby(purchase_invoice_item.parent)
         )
