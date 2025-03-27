@@ -6,7 +6,7 @@ import json
 
 import frappe
 from frappe import _
-from frappe.utils import getdate
+from frappe.utils import flt, getdate
 
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
 
@@ -118,12 +118,31 @@ def get_hsn_data(filters):
     # TODO: This import should be moved to the top of the file once GSTR-1 Report is discontinued.
     from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import GSTR1BooksData
 
+    precision_fields = (
+        "quantity",
+        "document_value",
+        "tax_rate",
+        "total_taxable_value",
+        "total_igst_amount",
+        "total_cgst_amount",
+        "total_sgst_amount",
+        "total_cess_amount",
+    )
+
     _class = GSTR1Invoices(filters)
     invoices = _class.get_invoices_for_item_wise_summary()
     _class.process_invoices(invoices)
 
     hsn_data = GSTR1BooksData({}).prepare_hsn_data(invoices)
-    data = [{**row, "uom": row["uom"].split("-")[0]} for row in hsn_data.values()]
+
+    data = [
+        {
+            **row,
+            "uom": row["uom"].split("-")[0],
+            **{field: flt(row[field], 2) for field in precision_fields},
+        }
+        for row in hsn_data.values()
+    ]
 
     return data
 
