@@ -9,9 +9,8 @@ from collections import defaultdict
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.query_builder import DatePart
-from frappe.query_builder.functions import Extract, IfNull, Sum
-from frappe.utils import cstr, flt, get_date_str, get_first_day, get_last_day
+from frappe.query_builder.functions import IfNull, Sum
+from frappe.utils import cint, cstr, flt, get_first_day, get_last_day
 
 from india_compliance.gst_india.constants import INVOICE_DOCTYPES, STATE_NUMBERS
 from india_compliance.gst_india.overrides.transaction import is_inter_state_supply
@@ -54,13 +53,12 @@ class GSTR3BReport(Document):
                 self.month_or_quarter, self.year
             )
             self.month_or_quarter_no = get_period(self.month_or_quarter)
-            self.from_date = get_date_str(
-                get_first_day(f"{self.year}-{self.month_or_quarter_no[0]}-01")
+            self.from_date = get_first_day(
+                f"{cint(self.year)}-{self.month_or_quarter_no[0]}-01"
             )
-            self.to_date = (
-                get_date_str(
-                    get_last_day(f"{self.year}-{self.month_or_quarter_no[1]}-01")
-                ),
+
+            self.to_date = get_last_day(
+                f"{cint(self.year)}-{self.month_or_quarter_no[1]}-01"
             )
 
             self.get_outward_supply_details("Sales Invoice")
@@ -242,28 +240,41 @@ class GSTR3BReport(Document):
             net_itc[tax_amount_key] -= entry.amount
 
     def get_itc_details(self):
-        itc_amounts = frappe.db.sql(
-            """
-            SELECT itc_classification, sum(itc_integrated_tax) as itc_integrated_tax,
-            sum(itc_central_tax) as itc_central_tax,
-            sum(itc_state_tax) as itc_state_tax,
-            sum(itc_cess_amount) as itc_cess_amount
-            FROM `tabPurchase Invoice`
-            WHERE docstatus = 1
-            and is_opening = 'No'
-            and company_gstin != IFNULL(supplier_gstin, "")
-            and month(posting_date) between %s and %s and year(posting_date) = %s and company = %s
-            and company_gstin = %s
-            GROUP BY itc_classification
-        """,
-            (
-                self.month_or_quarter_no[0],
-                self.month_or_quarter_no[1],
-                self.year,
-                self.company,
-                self.gst_details.get("gstin"),
-            ),
-            as_dict=1,
+        purchase_invoice = frappe.qb.DocType("Purchase Invoice")
+        purchase_invoice_item = frappe.qb.DocType("Purchase Invoice Item")
+
+        itc_amounts = (
+            frappe.qb.from_(purchase_invoice)
+            .inner_join(purchase_invoice_item)
+            .on(
+                (purchase_invoice_item.parent == purchase_invoice.name)
+                & (purchase_invoice_item.parenttype == "Purchase Invoice")
+            )
+            .select(
+                purchase_invoice.itc_classification,
+                Sum(purchase_invoice_item.igst_amount).as_("itc_integrated_tax"),
+                Sum(purchase_invoice_item.cgst_amount).as_("itc_central_tax"),
+                Sum(purchase_invoice_item.sgst_amount).as_("itc_state_tax"),
+                Sum(purchase_invoice_item.cess_amount).as_("itc_cess_amount"),
+            )
+            .where(
+                (purchase_invoice.docstatus == 1)
+                & (purchase_invoice.is_opening == "No")
+                & (purchase_invoice.posting_date[self.from_date : self.to_date])
+                & (purchase_invoice.company == self.company)
+                & (purchase_invoice.company_gstin == self.company_gstin)
+                & (
+                    purchase_invoice.company_gstin
+                    != IfNull(purchase_invoice.supplier_gstin, "")
+                )
+                & (IfNull(purchase_invoice.itc_classification, "") != "")
+                & (
+                    IfNull(purchase_invoice.ineligibility_reason, "")
+                    != "ITC restricted due to PoS rules"
+                )  # Ignore as it is Ineligible for ITC
+            )
+            .groupby(purchase_invoice.itc_classification)
+            .run(as_dict=True)
         )
 
         itc_details = {}
@@ -293,7 +304,7 @@ class GSTR3BReport(Document):
                 .join(boe_taxes)
                 .on(boe_taxes.parent == boe.name)
                 .where(
-                    boe.posting_date.between(self.from_date, self.to_date)
+                    boe.posting_date[self.from_date : self.to_date]
                     & boe.company_gstin.eq(self.gst_details.get("gstin"))
                     & boe.docstatus.eq(1)
                     & boe_taxes.gst_tax_type.eq(account_type)
@@ -341,14 +352,13 @@ class GSTR3BReport(Document):
             and p.is_opening = 'No'
             and p.company_gstin != IFNULL(p.supplier_gstin, "")
             and (i.gst_treatment != 'Taxable' or p.gst_category = 'Registered Composition') and
-            month(p.posting_date) between %s and %s and year(p.posting_date) = %s
+            p.posting_date between %s and %s
             and p.company = %s and p.company_gstin = %s
             and p.gst_category != "Overseas"
             """,
             (
-                self.month_or_quarter_no[0],
-                self.month_or_quarter_no[1],
-                self.year,
+                self.from_date,
+                self.to_date,
                 self.company,
                 self.gst_details.get("gstin"),
             ),
@@ -565,12 +575,7 @@ class GSTR3BReport(Document):
     def get_query_with_conditions(self, invoice, query, party_gstin):
         return (
             query.where(invoice.docstatus == 1)
-            .where(
-                Extract(DatePart.month, invoice.posting_date).between(
-                    self.month_or_quarter_no[0], self.month_or_quarter_no[1]
-                )
-            )
-            .where(Extract(DatePart.year, invoice.posting_date).eq(self.year))
+            .where(invoice.posting_date[self.from_date : self.to_date])
             .where(invoice.company == self.company)
             .where(invoice.company_gstin == self.gst_details.get("gstin"))
             .where(invoice.is_opening == "No")
@@ -748,15 +753,14 @@ class GSTR3BReport(Document):
                 f"""
                     SELECT name FROM `tab{doctype}`
                     WHERE docstatus = 1 and is_opening = 'No'
-                    and month(posting_date) between %s and %s and year(posting_date) = %s
+                    and posting_date between %s and %s
                     and company = %s and place_of_supply IS NULL
                     and company_gstin != IFNULL({party_gstin},"")
                     and gst_category != 'Overseas'
                 """,
                 (
-                    self.month_or_quarter_no[0],
-                    self.month_or_quarter_no[1],
-                    self.year,
+                    self.from_date,
+                    self.to_date,
                     self.company,
                 ),
                 as_dict=1,

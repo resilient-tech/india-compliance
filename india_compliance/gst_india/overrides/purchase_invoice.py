@@ -52,7 +52,8 @@ def validate(doc, method=None):
         validate_invoice_number(doc)
 
     set_ineligibility_reason(doc)
-    update_itc_totals(doc)
+    set_itc_classification(doc)
+    validate_reverse_charge(doc)
     validate_supplier_invoice_number(doc)
     validate_with_inward_supply(doc)
     set_reconciliation_status(doc)
@@ -93,34 +94,6 @@ def is_b2b_invoice(doc):
         or doc.supplier_gstin == doc.company_gstin
         or doc.is_opening == "Yes"
     )
-
-
-def update_itc_totals(doc, method=None):
-    # Set default value
-    set_itc_classification(doc)
-    validate_reverse_charge(doc)
-
-    # Initialize values
-    doc.itc_integrated_tax = 0
-    doc.itc_state_tax = 0
-    doc.itc_central_tax = 0
-    doc.itc_cess_amount = 0
-
-    if doc.ineligibility_reason == "ITC restricted due to PoS rules":
-        return
-
-    for tax in doc.get("taxes"):
-        if tax.gst_tax_type == "igst":
-            doc.itc_integrated_tax += flt(tax.base_tax_amount_after_discount_amount)
-
-        if tax.gst_tax_type == "sgst":
-            doc.itc_state_tax += flt(tax.base_tax_amount_after_discount_amount)
-
-        if tax.gst_tax_type == "cgst":
-            doc.itc_central_tax += flt(tax.base_tax_amount_after_discount_amount)
-
-        if tax.gst_tax_type == "cess":
-            doc.itc_cess_amount += flt(tax.base_tax_amount_after_discount_amount)
 
 
 def set_itc_classification(doc):
