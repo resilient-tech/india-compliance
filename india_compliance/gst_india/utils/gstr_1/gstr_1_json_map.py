@@ -2282,7 +2282,8 @@ class BooksDataMapper:
 class GSTR1BooksData(BooksDataMapper):
     def __init__(self, filters):
         self.filters = filters
-        self.current_month = MONTHS.index(filters.month_or_quarter) + 1
+        if filters.get("month_or_quarter"):
+            self.current_month = MONTHS.index(filters.month_or_quarter) + 1
 
     def prepare_mapped_data(self):
         prepared_data = {}

@@ -114,7 +114,7 @@ class Gstr1Report:
         elif self.filters.get("type_of_business") == "Document Issued Summary":
             self.get_documents_issued_data()
         elif self.filters.get("type_of_business") == "HSN":
-            self.data = get_hsn_data(self.filters, self.columns)
+            self.data = get_hsn_data(self.filters)
         elif self.filters.get("type_of_business") == "Section 14":
             self.data = self.get_data_for_supplies_through_ecommerce_operators()
         elif self.invoices:
