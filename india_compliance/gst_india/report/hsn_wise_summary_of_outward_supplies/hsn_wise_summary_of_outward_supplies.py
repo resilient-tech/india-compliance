@@ -6,7 +6,7 @@ import json
 
 import frappe
 from frappe import _
-from frappe.utils import flt, getdate
+from frappe.utils import getdate
 
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
 
@@ -186,15 +186,15 @@ def get_hsn_wise_json_data(filters, report_data):
     count = 1
 
     for hsn in report_data:
-        if hsn.get("gst_hsn_code") == "Total":
+        if hsn.get("hsn_code") == "Total":
             continue
         row = {
             "num": count,
-            "hsn_sc": hsn.get("gst_hsn_code"),
-            "uqc": hsn.get("uqc"),
-            "qty": flt(hsn.get("qty"), 2),
-            "rt": flt(hsn.get("tax_rate"), 2),
-            "txval": flt(hsn.get("taxable_amount"), 2),
+            "hsn_sc": hsn.get("hsn_code"),
+            "uqc": hsn.get("uom"),
+            "qty": hsn.get("quantity"),
+            "rt": hsn.get("tax_rate"),
+            "txval": hsn.get("total_taxable_value"),
             "iamt": 0.0,
             "camt": 0.0,
             "samt": 0.0,
@@ -204,10 +204,10 @@ def get_hsn_wise_json_data(filters, report_data):
         if hsn_description := hsn.get("description"):
             row["desc"] = hsn_description[:30]
 
-        row["iamt"] += flt(hsn.get("igst_account"), 2)
-        row["camt"] += flt(hsn.get("cgst_account"), 2)
-        row["samt"] += flt(hsn.get("sgst_account"), 2)
-        row["csamt"] += flt(hsn.get("cess_account"), 2)
+        row["iamt"] += hsn.get("total_igst_amount")
+        row["camt"] += hsn.get("total_cgst_amount")
+        row["samt"] += hsn.get("total_sgst_amount")
+        row["csamt"] += hsn.get("total_cess_amount")
 
         data.append(row)
         count += 1
