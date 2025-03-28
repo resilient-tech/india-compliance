@@ -9,8 +9,14 @@ const SUB_SECTION_MAPPING = {
             "Input Service Distributor",
             "All Other ITC",
         ],
-        "ITC Reversed": ["As per rules 42 & 43 of CGST Rules", "Others"],
-        "Ineligible ITC": ["Ineligible As Per Section 17(5)", "Others"],
+        "ITC Reversed": [
+            "As per rules 42 & 43 of CGST Rules and section 17(5)",
+            "Others",
+        ],
+        "Ineligible ITC": [
+            "Reclaim of ITC Reversal",
+            "ITC restricted due to PoS rules",
+        ],
     },
     5: {
         "Composition Scheme, Exempted, Nil Rated": [

@@ -18,8 +18,14 @@ SECTION_MAPPING = {
             "Input Service Distributor",
             "All Other ITC",
         ],
-        "ITC Reversed": ["As per rules 42 & 43 of CGST Rules", "Others"],
-        "Ineligible ITC": ["Ineligible As Per Section 17(5)", "Others"],
+        "ITC Reversed": [
+            "As per rules 42 & 43 of CGST Rules and section 17(5)",
+            "Others",
+        ],
+        "Ineligible ITC": [
+            "Reclaim of ITC Reversal",
+            "ITC restricted due to PoS rules",
+        ],
     },
     "5": {
         "Composition Scheme, Exempted, Nil Rated": [
@@ -28,6 +34,7 @@ SECTION_MAPPING = {
         "Non-GST": ["Non-GST"],
     },
 }
+
 
 AMOUNT_FIELDS_MAP = {
     "4": {
@@ -76,7 +83,7 @@ class BaseGSTR3B:
                 {
                     "label": _("Description"),
                     "fieldname": "description",
-                    "width": "300",
+                    "width": "400",
                 },
                 {
                     "label": _("No. of records"),
@@ -420,39 +427,27 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
         )
 
     def get_data(self):
-        if self.filters.summary_by == "Summary by Item":
-            self.get_item_wise_data()
-        else:
-            self.get_invoice_data()
-            if self.filters.summary_by == "Overview":
-                self.create_tree_view()
+        self.get_invoice_data()
+        if self.filters.summary_by == "Overview":
+            self.create_tree_view()
 
     def get_invoice_data(self):
         purchase_data = self.get_itc_from_purchase()
         boe_data = self.get_itc_from_boe()
         journal_entry_data = self.get_itc_from_journal_entry()
-        pi_ineligible_itc = self.get_ineligible_itc_from_purchase()
-        boe_ineligible_itc = self.get_ineligible_itc_from_boe()
+        reversal_us_17_4 = self.get_itc_reversal_us_17_5()
+        ineligible_itc = self.get_ineligible_itc()
 
         data = (
             purchase_data
             + boe_data
             + journal_entry_data
-            + pi_ineligible_itc
-            + boe_ineligible_itc
+            + reversal_us_17_4
+            + ineligible_itc
         )
 
         self.data = sorted(
             data,
-            key=lambda k: (k["invoice_sub_category"], k["posting_date"]),
-        )
-
-    def get_item_wise_data(self):
-        purchase_data = self.get_itc_from_purchase()
-        boe_data = self.get_itc_from_boe()
-
-        self.data = sorted(
-            purchase_data + boe_data,
             key=lambda k: (k["invoice_sub_category"], k["posting_date"]),
         )
 
@@ -477,6 +472,10 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
                     != Ifnull(purchase_invoice.supplier_gstin, "")
                 )
                 & (Ifnull(purchase_invoice.itc_classification, "") != "")
+                & (
+                    IfNull(purchase_invoice.ineligibility_reason, "")
+                    != "ITC restricted due to PoS rules"
+                )
             )
         )
 
@@ -538,78 +537,39 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
         return query.run(as_dict=True)
 
     def get_itc_from_journal_entry(self):
+        if self.filter_by_category(
+            "ITC Reversed", "As per rules 42 & 43 of CGST Rules and section 17(5)"
+        ):
+            return []
+
         journal_entry = frappe.qb.DocType("Journal Entry")
-        journal_entry_account = frappe.qb.DocType("Journal Entry Account")
 
         query = (
-            frappe.qb.from_(journal_entry)
-            .inner_join(journal_entry_account)
-            .on(journal_entry_account.parent == journal_entry.name)
+            IneligibleITC(self.filters)
+            .get_common_query_for_journal_entry()
             .select(
-                ConstantColumn("Journal Entry").as_("voucher_type"),
-                journal_entry.name.as_("voucher_no"),
-                journal_entry.posting_date,
-                *[
-                    Sum(
-                        Case()
-                        .when(
-                            journal_entry_account.gst_tax_type == tax,
-                            (journal_entry_account.credit_in_account_currency),
-                        )
-                        .else_(0)
-                    ).as_(f"{tax}_amount")
-                    for tax in GST_TAX_TYPES[:-1]
-                ],
-                Sum(
-                    Case()
-                    .when(
-                        journal_entry_account.gst_tax_type.isin(
-                            ["cess", "cess_non_advol"]
-                        ),
-                        (journal_entry_account.credit_in_account_currency),
-                    )
-                    .else_(0)
-                ).as_("cess_amount"),
-                Sum(
-                    Case()
-                    .when(
-                        journal_entry_account.gst_tax_type.isin(GST_TAX_TYPES),
-                        (journal_entry_account.credit_in_account_currency),
-                    )
-                    .else_(0)
-                ).as_("total_tax"),
-                journal_entry.ineligibility_reason.as_("invoice_sub_category"),
+                ConstantColumn(
+                    "As per rules 42 & 43 of CGST Rules and section 17(5)"
+                ).as_("invoice_sub_category")
             )
-            .where(
-                (journal_entry.is_opening == "No")
-                & (journal_entry.voucher_type == "Reversal of ITC")
-            )
-            .groupby(journal_entry.name)
+            .where(journal_entry.voucher_type == "Reversal of ITC")
         )
-
-        if self.filters.get("invoice_sub_category"):
-            query = query.where(
-                journal_entry.ineligibility_reason == self.filters.invoice_sub_category
-            )
-
-        if self.filters.get("invoice_category"):
-            query = query.where(
-                journal_entry.ineligibility_reason.isin(
-                    self.get_sub_categories(self.filters.invoice_category)
-                )
-            )
-
-        query = self.get_common_filters(query, journal_entry)
 
         return query.run(as_dict=True)
 
-    def get_ineligible_itc_from_purchase(self):
-        return IneligibleITC(self.filters).get_for_purchase(
-            "Ineligible As Per Section 17(5)"
+    def get_itc_reversal_us_17_5(self):
+        ineligible_itc = IneligibleITC(self.filters)
+        return (
+            ineligible_itc.get_for_purchase("Ineligible As Per Section 17(5)")
+            + ineligible_itc.get_for_bill_of_entry()
         )
 
-    def get_ineligible_itc_from_boe(self):
-        return IneligibleITC(self.filters).get_for_bill_of_entry()
+    def get_ineligible_itc(self):
+        ineligible_itc = IneligibleITC(self.filters)
+        return (
+            ineligible_itc.get_for_purchase("ITC restricted due to PoS rules")
+            + ineligible_itc.get_reclaim_of_itc_reversal()
+        )
 
 
 class GSTR3B_Inward_Nil_Exempt(BaseGSTR3B):
@@ -767,7 +727,7 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3B):
 
 class IneligibleITC:
     def __init__(self, filters) -> None:
-        self._class = BaseGSTR3B(filters)
+        self.gstr3b = BaseGSTR3B(filters)
 
     def get_for_purchase(self, ineligibility_reason, group_by="name"):
         doctype = "Purchase Invoice"
@@ -775,54 +735,72 @@ class IneligibleITC:
         dt_item = frappe.qb.DocType(f"{doctype} Item")
 
         query = (
-            self.get_common_query(doctype, dt, dt_item)
+            self.get_common_query_for_purchase(doctype, dt, dt_item)
             .select(
                 (dt.ineligibility_reason).as_("invoice_sub_category"),
                 IfNull(dt.gst_category, "").as_("gst_category"),
             )
             .where((dt.is_opening == "No"))
             .where(IfNull(dt.ineligibility_reason, "") == ineligibility_reason)
+            .groupby(dt[group_by])
         )
 
         if ineligibility_reason == "Ineligible As Per Section 17(5)":
-            query = query.where(dt_item.is_ineligible_for_itc == 1)
+            if self.gstr3b.filter_by_category(
+                "ITC Reversed", "As per rules 42 & 43 of CGST Rules and section 17(5)"
+            ):
+                return []
 
-        if self._class.filters.get("invoice_sub_category"):
-            query = query.where(
-                dt.ineligibility_reason == self._class.filters.invoice_sub_category
-            )
+            query = query.select(
+                ConstantColumn(
+                    "As per rules 42 & 43 of CGST Rules and section 17(5)"
+                ).as_("invoice_sub_category")
+            ).where(dt_item.is_ineligible_for_itc == 1)
 
-        if self._class.filters.get("invoice_category"):
-            query = query.where(
-                dt.ineligibility_reason.isin(
-                    self._class.get_sub_categories(self._class.filters.invoice_category)
-                )
-            )
+        else:
+            if self.gstr3b.filter_by_category("Ineligible ITC", ineligibility_reason):
+                return []
 
-        return query.groupby(dt[group_by]).run(as_dict=True)
+        return query.run(as_dict=True)
 
     def get_for_bill_of_entry(self, group_by="name"):
         doctype = "Bill of Entry"
         dt = frappe.qb.DocType(doctype)
         dt_item = frappe.qb.DocType(f"{doctype} Item")
         query = (
-            self.get_common_query(doctype, dt, dt_item)
+            self.get_common_query_for_purchase(doctype, dt, dt_item)
             .select(
-                ConstantColumn("Ineligible As Per Section 17(5)").as_(
-                    "invoice_sub_category"
-                )
+                ConstantColumn(
+                    "As per rules 42 & 43 of CGST Rules and section 17(5)"
+                ).as_("invoice_sub_category")
             )
             .where(dt_item.is_ineligible_for_itc == 1)
         )
 
-        if self._class.filter_by_category(
-            "Ineligible ITC", "Ineligible As Per Section 17(5)"
+        if self.gstr3b.filter_by_category(
+            "ITC Reversed", "As per rules 42 & 43 of CGST Rules and section 17(5)"
         ):
             return []
 
         return query.groupby(dt[group_by]).run(as_dict=True)
 
-    def get_common_query(self, doctype, dt, dt_item):
+    def get_reclaim_of_itc_reversal(self):
+        if self.gstr3b.filter_by_category("Ineligible ITC", "Reclaim of ITC Reversal"):
+            return []
+
+        journal_entry = frappe.qb.DocType("Journal Entry")
+
+        query = (
+            self.get_common_query_for_journal_entry("debit")
+            .select(
+                journal_entry.voucher_type.as_("invoice_sub_category"),
+            )
+            .where(journal_entry.voucher_type == "Reclaim of ITC Reversal")
+        )
+
+        return query.run(as_dict=True)
+
+    def get_common_query_for_purchase(self, doctype, dt, dt_item):
         query = (
             frappe.qb.from_(dt)
             .inner_join(dt_item)
@@ -833,6 +811,82 @@ class IneligibleITC:
                 dt.posting_date,
             )
         )
-        query = self._class.select_tax_details(query, dt_item)
+        query = self.gstr3b.select_tax_details(query, dt_item)
 
-        return self._class.get_common_filters(query, dt)
+        return self.gstr3b.get_common_filters(query, dt)
+
+    def get_common_query_for_journal_entry(self, amount_key="credit"):
+        journal_entry = frappe.qb.DocType("Journal Entry")
+        journal_entry_account = frappe.qb.DocType("Journal Entry Account")
+
+        query = (
+            frappe.qb.from_(journal_entry)
+            .inner_join(journal_entry_account)
+            .on(journal_entry_account.parent == journal_entry.name)
+            .select(
+                ConstantColumn("Journal Entry").as_("voucher_type"),
+                journal_entry.name.as_("voucher_no"),
+                journal_entry.posting_date,
+                *[
+                    Sum(
+                        Case()
+                        .when(
+                            journal_entry_account.gst_tax_type == tax,
+                            (
+                                getattr(
+                                    journal_entry_account,
+                                    f"{amount_key}_in_account_currency",
+                                )
+                            ),
+                        )
+                        .else_(0)
+                    ).as_(f"{tax}_amount")
+                    for tax in GST_TAX_TYPES[:-1]
+                ],
+                Sum(
+                    Case()
+                    .when(
+                        journal_entry_account.gst_tax_type.isin(
+                            ["cess", "cess_non_advol"]
+                        ),
+                        (
+                            getattr(
+                                journal_entry_account,
+                                f"{amount_key}_in_account_currency",
+                            )
+                        ),
+                    )
+                    .else_(0)
+                ).as_("cess_amount"),
+                Sum(
+                    Case()
+                    .when(
+                        journal_entry_account.gst_tax_type.isin(GST_TAX_TYPES),
+                        (
+                            getattr(
+                                journal_entry_account,
+                                f"{amount_key}_in_account_currency",
+                            )
+                        ),
+                    )
+                    .else_(0)
+                ).as_("total_tax"),
+                Sum(
+                    Case()
+                    .when(
+                        journal_entry_account.gst_tax_type.isin(GST_TAX_TYPES),
+                        (
+                            getattr(
+                                journal_entry_account,
+                                f"{amount_key}_in_account_currency",
+                            )
+                        ),
+                    )
+                    .else_(0)
+                ).as_("total_amount"),
+            )
+            .where(journal_entry.is_opening == "No")
+            .groupby(journal_entry.name)
+        )
+
+        return self.gstr3b.get_common_filters(query, journal_entry)
