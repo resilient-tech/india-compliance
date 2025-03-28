@@ -73,7 +73,7 @@ class BaseGSTR3B:
         self.AMOUNT_FIELDS = AMOUNT_FIELDS_MAP[self.sub_section]
         self.from_date = self.filters.get("date_range")[0]
         self.to_date = self.filters.get("date_range")[1]
-        self.group_by = self.filters.summary_by != "Summary by Item"
+        self.is_grouped_by_invoice = self.filters.summary_by != "Summary by Item"
 
         self.initialize_tables()
         self.initialize_columns()
@@ -487,7 +487,7 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
 
         query = self.get_common_filters(query, self.PI)
 
-        if self.group_by:
+        if self.is_grouped_by_invoice:
             query = self.select_tax_details(query, self.PI_ITEM)
             query = query.select(
                 IfNull(self.PI.gst_category, "").as_("gst_category"),
@@ -518,7 +518,7 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
             )
         )
 
-        if self.group_by:
+        if self.is_grouped_by_invoice:
             query = self.select_tax_details(query, self.BOE_ITEM)
             query = query.select(
                 LiteralValue(0).as_("cgst_amount"),
@@ -700,7 +700,7 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3B):
             )
         )
 
-        if self.group_by:
+        if self.is_grouped_by_invoice:
             query = query.select(
                 Sum(self.PI_ITEM.taxable_value).as_("taxable_value"),
             ).groupby(self.PI.name)
@@ -717,7 +717,7 @@ class IneligibleITC(BaseGSTR3B):
     def __init__(self, filters) -> None:
         super().__init__(filters)
 
-    def get_for_purchase(self, ineligibility_reason, group_by="name"):
+    def get_for_purchase(self, ineligibility_reason):
         if ineligibility_reason == "Ineligible As Per Section 17(5)":
             if self.filter_by_category(
                 "ITC Reversed", "As per rules 42 & 43 of CGST Rules and section 17(5)"
@@ -737,7 +737,7 @@ class IneligibleITC(BaseGSTR3B):
             )
             .where((self.PI.is_opening == "No"))
             .where(IfNull(self.PI.ineligibility_reason, "") == ineligibility_reason)
-            .groupby(self.PI[group_by])
+            .groupby(self.PI.name)
         )
 
         if ineligibility_reason == "Ineligible As Per Section 17(5)":
@@ -749,7 +749,7 @@ class IneligibleITC(BaseGSTR3B):
 
         return query.run(as_dict=True)
 
-    def get_for_bill_of_entry(self, group_by="name"):
+    def get_for_bill_of_entry(self):
         if self.filter_by_category(
             "ITC Reversed", "As per rules 42 & 43 of CGST Rules and section 17(5)"
         ):
@@ -763,9 +763,10 @@ class IneligibleITC(BaseGSTR3B):
                 ).as_("invoice_sub_category")
             )
             .where(self.BOE_ITEM.is_ineligible_for_itc == 1)
+            .groupby(self.BOE.name)
         )
 
-        return query.groupby(self.BOE[group_by]).run(as_dict=True)
+        return query.run(as_dict=True)
 
     def get_reclaim_of_itc_reversal(self):
         if self.filter_by_category("Ineligible ITC", "Reclaim of ITC Reversal"):
