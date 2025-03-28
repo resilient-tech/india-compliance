@@ -190,9 +190,6 @@ class BaseGSTR3B:
             & (doc.company_gstin == self.company_gstin)
         )
 
-    def get_sub_categories(self, category):
-        return SECTION_MAPPING[self.sub_section][category]
-
     def filter_by_category(self, category, sub_category):
         if (
             self.filters.get("invoice_sub_category")
@@ -452,6 +449,12 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
         )
 
     def get_itc_from_purchase(self):
+        if (
+            self.filters.get("invoice_category")
+            and self.filters.invoice_category != "ITC Available"
+        ):
+            return []
+
         purchase_invoice = frappe.qb.DocType("Purchase Invoice")
         purchase_invoice_item = frappe.qb.DocType("Purchase Invoice Item")
 
@@ -492,13 +495,6 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
         if self.filters.get("invoice_sub_category"):
             query = query.where(
                 purchase_invoice.itc_classification == self.filters.invoice_sub_category
-            )
-
-        if self.filters.get("invoice_category"):
-            query = query.where(
-                purchase_invoice.itc_classification.isin(
-                    self.get_sub_categories(self.filters.invoice_category)
-                )
             )
 
         return query.run(as_dict=True)
@@ -730,6 +726,15 @@ class IneligibleITC:
         self.gstr3b = BaseGSTR3B(filters)
 
     def get_for_purchase(self, ineligibility_reason, group_by="name"):
+        if ineligibility_reason == "Ineligible As Per Section 17(5)":
+            if self.gstr3b.filter_by_category(
+                "ITC Reversed", "As per rules 42 & 43 of CGST Rules and section 17(5)"
+            ):
+                return []
+        else:
+            if self.gstr3b.filter_by_category("Ineligible ITC", ineligibility_reason):
+                return []
+
         doctype = "Purchase Invoice"
         dt = frappe.qb.DocType(doctype)
         dt_item = frappe.qb.DocType(f"{doctype} Item")
@@ -746,24 +751,20 @@ class IneligibleITC:
         )
 
         if ineligibility_reason == "Ineligible As Per Section 17(5)":
-            if self.gstr3b.filter_by_category(
-                "ITC Reversed", "As per rules 42 & 43 of CGST Rules and section 17(5)"
-            ):
-                return []
-
             query = query.select(
                 ConstantColumn(
                     "As per rules 42 & 43 of CGST Rules and section 17(5)"
                 ).as_("invoice_sub_category")
             ).where(dt_item.is_ineligible_for_itc == 1)
 
-        else:
-            if self.gstr3b.filter_by_category("Ineligible ITC", ineligibility_reason):
-                return []
-
         return query.run(as_dict=True)
 
     def get_for_bill_of_entry(self, group_by="name"):
+        if self.gstr3b.filter_by_category(
+            "ITC Reversed", "As per rules 42 & 43 of CGST Rules and section 17(5)"
+        ):
+            return []
+
         doctype = "Bill of Entry"
         dt = frappe.qb.DocType(doctype)
         dt_item = frappe.qb.DocType(f"{doctype} Item")
@@ -776,11 +777,6 @@ class IneligibleITC:
             )
             .where(dt_item.is_ineligible_for_itc == 1)
         )
-
-        if self.gstr3b.filter_by_category(
-            "ITC Reversed", "As per rules 42 & 43 of CGST Rules and section 17(5)"
-        ):
-            return []
 
         return query.groupby(dt[group_by]).run(as_dict=True)
 
