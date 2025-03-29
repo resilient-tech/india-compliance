@@ -125,13 +125,99 @@ class BaseGSTR3B:
             ]
 
     def run(self):
-        self.get_data()
         self.extend_columns()
+        self.get_data()
 
         return self.columns, self.data
 
     def extend_columns(self):
         raise NotImplementedError("Report Not Available")
+
+    def get_tax_columns(self):
+        return [
+            {
+                "fieldname": "taxable_value",
+                "label": _("Taxable Value"),
+                "fieldtype": "Currency",
+                "width": 90,
+            },
+            {
+                "fieldname": "cgst_amount",
+                "label": _("CGST Amount"),
+                "fieldtype": "Currency",
+                "width": 90,
+            },
+            {
+                "fieldname": "sgst_amount",
+                "label": _("SGST Amount"),
+                "fieldtype": "Currency",
+                "width": 90,
+            },
+            {
+                "fieldname": "igst_amount",
+                "label": _("IGST Amount"),
+                "fieldtype": "Currency",
+                "width": 90,
+            },
+            {
+                "fieldname": "cess_amount",
+                "label": _("CESS Amount"),
+                "fieldtype": "Currency",
+                "width": 90,
+            },
+            {
+                "fieldname": "total_tax",
+                "label": _("Total Tax"),
+                "fieldtype": "Currency",
+                "width": 90,
+            },
+            {
+                "fieldname": "total_amount",
+                "label": _("Total Amount"),
+                "fieldtype": "Currency",
+                "width": 90,
+            },
+        ]
+
+    def get_item_wise_columns(self):
+        self.columns.extend(
+            [
+                {
+                    "fieldname": "item_code",
+                    "label": _("Item Code"),
+                    "fieldtype": "Link",
+                    "options": "Item",
+                    "width": 180,
+                },
+                {
+                    "fieldname": "gst_hsn_code",
+                    "label": _("HSN Code"),
+                    "fieldtype": "Link",
+                    "options": "GST HSN Code",
+                    "width": 120,
+                },
+                {
+                    "fieldname": "gst_rate",
+                    "label": _("GST Rate"),
+                    "fieldtype": "Percent",
+                    "width": 90,
+                },
+                *self.get_tax_columns(),
+            ]
+        )
+
+    def get_invoice_wise_columns(self):
+        self.columns.extend(
+            [
+                {
+                    "fieldname": "gst_category",
+                    "label": _("GST Category"),
+                    "fieldtype": "Data",
+                    "width": 150,
+                },
+                *self.get_tax_columns(),
+            ]
+        )
 
     def get_data(self):
         raise NotImplementedError("Report Not Available")
@@ -212,79 +298,6 @@ class BaseGSTR3B:
         ):
             return True
 
-    def get_tax_columns(self):
-        return [
-            {
-                "fieldname": "taxable_value",
-                "label": _("Taxable Value"),
-                "fieldtype": "Currency",
-                "width": 90,
-            },
-            {
-                "fieldname": "cgst_amount",
-                "label": _("CGST Amount"),
-                "fieldtype": "Currency",
-                "width": 90,
-            },
-            {
-                "fieldname": "sgst_amount",
-                "label": _("SGST Amount"),
-                "fieldtype": "Currency",
-                "width": 90,
-            },
-            {
-                "fieldname": "igst_amount",
-                "label": _("IGST Amount"),
-                "fieldtype": "Currency",
-                "width": 90,
-            },
-            {
-                "fieldname": "cess_amount",
-                "label": _("CESS Amount"),
-                "fieldtype": "Currency",
-                "width": 90,
-            },
-            {
-                "fieldname": "total_tax",
-                "label": _("Total Tax"),
-                "fieldtype": "Currency",
-                "width": 90,
-            },
-            {
-                "fieldname": "total_amount",
-                "label": _("Total Amount"),
-                "fieldtype": "Currency",
-                "width": 90,
-            },
-        ]
-
-    def get_item_wise_columns(self):
-        self.columns.extend(
-            [
-                {
-                    "fieldname": "item_code",
-                    "label": _("Item Code"),
-                    "fieldtype": "Link",
-                    "options": "Item",
-                    "width": 180,
-                },
-                {
-                    "fieldname": "gst_hsn_code",
-                    "label": _("HSN Code"),
-                    "fieldtype": "Link",
-                    "options": "GST HSN Code",
-                    "width": 120,
-                },
-                {
-                    "fieldname": "gst_rate",
-                    "label": _("GST Rate"),
-                    "fieldtype": "Percent",
-                    "width": 90,
-                },
-                *self.get_tax_columns(),
-            ]
-        )
-
     def create_tree_view(self):
         mapping = SECTION_MAPPING[self.filters.sub_section]
 
@@ -326,12 +339,11 @@ class BaseGSTR3B:
             if summary_row["description"] == "ITC Available":
                 for key in self.AMOUNT_FIELDS:
                     row[key] += summary_row[key]
-
                 row["no_of_records"] += summary_row["no_of_records"]
+
             elif summary_row["description"] == "ITC Reversed":
                 for key in self.AMOUNT_FIELDS:
                     row[key] -= summary_row[key]
-
                 row["no_of_records"] -= summary_row["no_of_records"]
 
         summary.append(row)
@@ -410,17 +422,7 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
                 ]
             )
         else:
-            self.columns.extend(
-                [
-                    {
-                        "fieldname": "gst_category",
-                        "label": _("GST Category"),
-                        "fieldtype": "Data",
-                        "width": 150,
-                    },
-                    *self.get_tax_columns(),
-                ]
-            )
+            self.get_invoice_wise_columns()
 
         self.columns.append(
             {
@@ -429,7 +431,7 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
                 "fieldtype": "Data",
                 "width": 200,
                 "hidden": self.filters.get("summary_by") == "Overview",
-            },
+            }
         )
 
     def get_data(self):
@@ -438,11 +440,11 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
             self.create_tree_view()
 
     def get_invoice_data(self):
-        purchase_data = self.get_itc_from_purchase()
-        boe_data = self.get_itc_from_boe()
-        journal_entry_data = self.get_itc_from_journal_entry()
-        reversal_us_17_4 = self.get_itc_reversal_us_17_5()
-        ineligible_itc = self.get_ineligible_itc()
+        purchase_data = self.get_itc_from_purchase()  # ITC Available
+        boe_data = self.get_itc_from_boe()  # ITC Available
+        journal_entry_data = self.get_itc_from_journal_entry()  # ITC Available
+        reversal_us_17_4 = self.get_itc_reversal_us_17_5()  # ITC Reversed
+        ineligible_itc = self.get_ineligible_itc()  # Ineligible ITC
 
         data = (
             purchase_data
@@ -590,17 +592,7 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3B):
                 ]
             )
         else:
-            self.columns.extend(
-                [
-                    {
-                        "fieldname": "gst_category",
-                        "label": _("GST Category"),
-                        "fieldtype": "Data",
-                        "width": 150,
-                    },
-                    *self.get_tax_columns(),
-                ]
-            )
+            self.get_invoice_wise_columns()
 
         self.columns.extend(
             [
@@ -714,9 +706,6 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3B):
 
 
 class IneligibleITC(BaseGSTR3B):
-    def __init__(self, filters) -> None:
-        super().__init__(filters)
-
     def get_for_purchase(self, ineligibility_reason):
         if ineligibility_reason == "Ineligible As Per Section 17(5)":
             if self.filter_by_category(
