@@ -8,6 +8,7 @@ from frappe.query_builder.functions import Ifnull, IfNull, LiteralValue, Sum
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.overrides.transaction import is_inter_state_supply
+from india_compliance.gst_india.utils.gstr3b.gstr3b_data import GSTR3BInvoices
 
 SECTION_MAPPING = {
     "4": {
@@ -63,6 +64,9 @@ def execute(filters: dict | None = None):
 class BaseGSTR3B:
     def __init__(self, filters=None):
         self.filters = filters
+        self.from_date = self.filters.get("date_range")[0]
+        self.to_date = self.filters.get("date_range")[1]
+        self.filters.update({"from_date": self.from_date, "to_date": self.to_date})
         self.data = []
         self.company = self.filters.company
         self.company_gstin = self.filters.company_gstin
@@ -71,8 +75,6 @@ class BaseGSTR3B:
         )
         self.sub_section = self.filters.sub_section
         self.AMOUNT_FIELDS = AMOUNT_FIELDS_MAP[self.sub_section]
-        self.from_date = self.filters.get("date_range")[0]
-        self.to_date = self.filters.get("date_range")[1]
         self.is_grouped_by_invoice = self.filters.summary_by != "Summary by Item"
 
         self.initialize_tables()
@@ -298,6 +300,13 @@ class BaseGSTR3B:
         ):
             return True
 
+    def get_sub_categories(self, section):
+        return [
+            subcategory
+            for categories in SECTION_MAPPING[section].values()
+            for subcategory in categories
+        ]
+
     def create_tree_view(self):
         mapping = SECTION_MAPPING[self.filters.sub_section]
 
@@ -435,7 +444,8 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
         )
 
     def get_data(self):
-        self.get_invoice_data()
+        # self.get_invoice_data()
+        self.get_itc_data()
         if self.filters.summary_by == "Overview":
             self.create_tree_view()
 
@@ -456,6 +466,18 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
 
         self.data = sorted(
             data,
+            key=lambda k: (k["invoice_sub_category"], k["posting_date"]),
+        )
+
+    def get_itc_data(self):
+        data = []
+        gstr3b_invoices = GSTR3BInvoices(self.filters)
+        for doctype in ("Purchase Invoice", "Bill of Entry", "Journal Entry"):
+            data.extend(gstr3b_invoices.get_data(doctype, self.is_grouped_by_invoice))
+
+        subcategories = self.get_sub_categories("4")
+        self.data = sorted(
+            gstr3b_invoices.get_filtered_invoices(data, subcategories),
             key=lambda k: (k["invoice_sub_category"], k["posting_date"]),
         )
 
@@ -615,6 +637,13 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3B):
         )
 
     def get_data(self):
+        # self.get_invoice_data()
+        self.get_inward_nil_exempt_data()
+
+        if self.filters.summary_by == "Overview":
+            self.create_tree_view()
+
+    def get_invoice_data(self):
         formatted_data = []
 
         invoices = self.get_inward_nil_exempt()
@@ -657,12 +686,14 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3B):
             formatted_data, key=lambda k: (k["invoice_sub_category"], k["posting_date"])
         )
 
-        if self.filters.summary_by == "Overview":
-            self.create_tree_view()
+    def get_inward_nil_exempt_data(self):
+        gstr3b_invoices = GSTR3BInvoices(self.filters)
+        data = gstr3b_invoices.get_data("Purchase Invoice", self.is_grouped_by_invoice)
+        subcategories = self.get_sub_categories("5")
 
-    def get_address_state_map(self):
-        return frappe._dict(
-            frappe.get_all("Address", fields=["name", "gst_state_number"], as_list=1)
+        self.data = sorted(
+            gstr3b_invoices.get_filtered_invoices(data, subcategories),
+            key=lambda k: (k["invoice_sub_category"], k["posting_date"]),
         )
 
     def get_inward_nil_exempt(self):
