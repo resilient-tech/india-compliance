@@ -442,7 +442,7 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
     def get_invoice_data(self):
         purchase_data = self.get_itc_from_purchase()  # ITC Available
         boe_data = self.get_itc_from_boe()  # ITC Available
-        journal_entry_data = self.get_itc_from_journal_entry()  # ITC Available
+        journal_entry_data = self.get_itc_from_journal_entry()  # ITC Reversed
         reversal_us_17_4 = self.get_itc_reversal_us_17_5()  # ITC Reversed
         ineligible_itc = self.get_ineligible_itc()  # Ineligible ITC
 
@@ -484,6 +484,7 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
                     IfNull(self.PI.ineligibility_reason, "")
                     != "ITC restricted due to PoS rules"
                 )
+                & (self.PI.itc_classification != "Import Of Goods")
             )
         )
 
@@ -548,7 +549,7 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
                     "As per rules 42 & 43 of CGST Rules and section 17(5)"
                 ).as_("invoice_sub_category")
             )
-            .where(self.JE.voucher_type == "Reversal of ITC")
+            .where(self.JE.voucher_type == "Reversal Of ITC")
         )
 
         return query.run(as_dict=True)
@@ -576,15 +577,15 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3B):
             self.columns.extend(
                 [
                     {
-                        "fieldname": "intra",
-                        "label": _("Intra State"),
+                        "fieldname": "inter",
+                        "label": _("Inter State"),
                         "fieldtype": "Currency",
                         "options": self.company_currency,
                         "width": 120,
                     },
                     {
-                        "fieldname": "inter",
-                        "label": _("Inter State"),
+                        "fieldname": "intra",
+                        "label": _("Intra State"),
                         "fieldtype": "Currency",
                         "options": self.company_currency,
                         "width": 120,
