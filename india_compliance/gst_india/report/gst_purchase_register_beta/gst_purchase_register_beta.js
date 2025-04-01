@@ -27,8 +27,6 @@ const SUB_SECTION_MAPPING = {
 };
 
 frappe.query_reports["GST Purchase Register Beta"] = {
-    onload: set_category_options,
-
     filters: [
         {
             fieldname: "company",
@@ -93,28 +91,13 @@ frappe.query_reports["GST Purchase Register Beta"] = {
             ],
             default: "4",
             reqd: 1,
-            on_change: report => {
-                report.set_filter_value("invoice_category", "");
-                set_category_options(report);
-                report.refresh();
-            },
         },
         {
-            fieldtype: "Autocomplete",
-            fieldname: "invoice_category",
-            label: __("Invoice Category"),
-            on_change: report => {
-                report.set_filter_value("invoice_sub_category", "");
-                set_sub_category_options(report);
-                report.refresh();
-            },
-            depends_on: 'eval:doc.summary_by!=="Overview"',
-        },
-        {
-            fieldtype: "Autocomplete",
+            fieldtype: "MultiSelectList",
             fieldname: "invoice_sub_category",
             label: __("Invoice Sub Category"),
             depends_on: 'eval:doc.summary_by!=="Overview"',
+            get_data: () => get_subcategory_options(),
         },
     ],
 
@@ -138,22 +121,9 @@ frappe.query_reports["GST Purchase Register Beta"] = {
     },
 };
 
-function set_sub_category_options(report) {
-    const invoice_category = report.get_filter_value("invoice_category");
-    const sub_section = report.get_filter_value("sub_section");
-    const sub_category = SUB_SECTION_MAPPING[sub_section][invoice_category];
-    report.get_filter("invoice_sub_category").set_data(sub_category || []);
-
-    if (invoice_category && sub_category.length === 1) {
-        report.set_filter_value("invoice_sub_category", sub_category[0]);
-    }
-}
-
-function set_category_options(report) {
-    const sub_section = report.get_filter_value("sub_section");
-    report
-        .get_filter("invoice_category")
-        .set_data(Object.keys(SUB_SECTION_MAPPING[sub_section]));
+function get_subcategory_options() {
+    const sub_section = frappe.query_report.get_filter_value("sub_section");
+    return Object.values(SUB_SECTION_MAPPING[sub_section]).flat();
 }
 
 custom_report_column_total = function (...args) {

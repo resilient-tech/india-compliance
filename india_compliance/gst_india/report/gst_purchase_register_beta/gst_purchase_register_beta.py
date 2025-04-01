@@ -84,10 +84,6 @@ class BaseGSTR3B:
     def set_sub_category_filters(self):
         if self.filters.get("invoice_sub_category"):
             self.subcategories = self.filters.invoice_sub_category
-        elif self.filters.get("invoice_category"):
-            self.subcategories = SECTION_MAPPING[self.sub_section][
-                self.filters.invoice_category
-            ]
         else:
             self.subcategories = self.get_sub_categories()
 
@@ -305,12 +301,6 @@ class BaseGSTR3B:
         ):
             return True
 
-        if (
-            self.filters.get("invoice_category")
-            and self.filters.invoice_category != category
-        ):
-            return True
-
     def get_sub_categories(self):
         return [
             subcategory
@@ -492,12 +482,6 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
         )
 
     def get_itc_from_purchase(self):
-        if (
-            self.filters.get("invoice_category")
-            and self.filters.invoice_category != "ITC Available"
-        ):
-            return []
-
         query = (
             frappe.qb.from_(self.PI)
             .inner_join(self.PI_ITEM)
