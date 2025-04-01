@@ -48,7 +48,7 @@ def get_gstin_info(gstin, *, throw_error=True):
 
 
 def _get_gstin_info(gstin, *, throw_error=True):
-    validate_gstin(gstin)
+    gstin = validate_gstin(gstin)
     response = get_archived_gstin_info(gstin)
 
     if not response:
@@ -107,7 +107,7 @@ def get_archived_gstin_info(gstin):
 
     archive_date_limit = frappe.utils.now_datetime() - timedelta(days=archive_days)
 
-    completed_requestes = frappe.get_all(
+    archived_response = frappe.db.get_value(
         "Integration Request",
         {
             "status": "Completed",
@@ -115,16 +115,15 @@ def get_archived_gstin_info(gstin):
             "data": ("like", f"%{gstin}%"),
             "modified": (">", archive_date_limit),
         },
-        pluck="output",
-        limit=1,
+        "output",
     )
 
-    if not completed_requestes:
+    if not archived_response:
         return
 
-    response = json.loads(completed_requestes[0], object_hook=frappe._dict)
+    archived_response = json.loads(archived_response, object_hook=frappe._dict)
 
-    return response.result
+    return archived_response.result
 
 
 def _get_address(address):
@@ -191,7 +190,7 @@ def fetch_gstin_status(*, gstin=None, throw=True):
     :param gstin: GSTIN to fetch status for
     :param throw: Raise exception if error occurs (used for user initiated requests)
     """
-    validate_gstin(gstin)
+    gstin = validate_gstin(gstin)
 
     try:
         if not throw and frappe.cache.get_value("gst_server_error"):
