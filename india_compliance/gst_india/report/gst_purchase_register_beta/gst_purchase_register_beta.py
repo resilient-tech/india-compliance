@@ -310,7 +310,7 @@ class BaseGSTR3B:
             & (doc.company_gstin == self.company_gstin)
         )
 
-    def filter_by_category(self, category, sub_category):
+    def filter_by_category(self, sub_category):
         if (
             self.filters.get("invoice_sub_category")
             and self.filters.invoice_sub_category != sub_category

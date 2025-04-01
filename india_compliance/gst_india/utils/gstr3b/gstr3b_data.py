@@ -19,13 +19,14 @@ PURCHASE_CATEGORY_CONDITIONS = {
         "category": "is_itc_available",
         "sub_category": "set_for_itc_available",
     },
-    "ITC Reversed": {
-        "category": "is_itc_reversed",
-        "sub_category": "set_for_itc_reversed",
-    },
     "Ineligible ITC": {
         "category": "is_ineligible_itc",
         "sub_category": "set_for_ineligible_itc",
+    },
+    # keep always after ITC available
+    "ITC Reversed": {
+        "category": "is_itc_reversed",
+        "sub_category": "set_for_itc_reversed",
     },
 }
 
@@ -36,14 +37,14 @@ BOE_CATEGORY_CONDITIONS = {
     },
     "ITC Reversed": {
         "category": "is_itc_reversed_for_boe",
-        "sub_category": "set_for_itc_reversed_boe",
+        "sub_category": "set_for_itc_reversed",
     },
 }
 
 JE_CATEGORY_CONDITIONS = {
     "ITC Reversed": {
         "category": "is_itc_reversed_for_je",
-        "sub_category": "set_for_itc_reversed_je",
+        "sub_category": "set_for_itc_reversed",
     },
     "ITC Reclaimed": {
         "category": "is_itc_reclaimed",
@@ -69,32 +70,21 @@ AMOUNT_FIELDS = (
 
 class GSTR3BCategoryConditions:
     def is_composition_nil_rated_or_exempted(self, invoice):
-        cond = invoice.place_of_supply != "96-Other Countries" and (
+        cond = invoice.gst_category != "Overseas" and (
             invoice.gst_treatment == "Nil-Rated"
             or invoice.gst_treatment == "Exempted"
             or invoice.gst_category == "Registered Composition"
         )
-        if invoice.voucher_no == "PINV-23-01217":
-            print(cond, "\n\n")
         return cond
 
     def is_non_gst(self, invoice):
-        return (
-            invoice.place_of_supply != "96-Other Countries"
-            and invoice.gst_treatment == "Non-GST"
-        )
+        return invoice.gst_category != "Overseas" and invoice.gst_treatment == "Non-GST"
 
     def is_itc_available(self, invoice):
-        return (
-            invoice.itc_classification != "Import Of Goods"
-            and invoice.ineligibility_reason != "ITC restricted due to PoS rules"
-        )
+        return invoice.ineligibility_reason != "ITC restricted due to PoS rules"
 
     def is_itc_reversed(self, invoice):
-        return (
-            invoice.itc_classification != "Import Of Goods"
-            and invoice.ineligibility_reason == "Ineligible As Per Section 17(5)"
-        )
+        return invoice.ineligibility_reason == "Ineligible As Per Section 17(5)"
 
     def is_ineligible_itc(self, invoice):
         return invoice.ineligibility_reason == "ITC restricted due to PoS rules"
@@ -132,16 +122,6 @@ class GSTR3BSubcategory(GSTR3BCategoryConditions):
 
     def set_for_itc_available_boe(self, invoice):
         invoice.invoice_sub_category = "Import Of Goods"
-
-    def set_for_itc_reversed_boe(self, invoice):
-        invoice.invoice_sub_category = (
-            "As per rules 42 & 43 of CGST Rules and section 17(5)"
-        )
-
-    def set_for_itc_reversed_je(self, invoice):
-        invoice.invoice_sub_category = (
-            "As per rules 42 & 43 of CGST Rules and section 17(5)"
-        )
 
     def set_for_itc_reclaimed(self, invoice):
         invoice.invoice_sub_category = "Reclaim of ITC Reversal"
@@ -205,7 +185,7 @@ class GSTR3BQuery:
             )
             .where((self.PI.is_opening == "No"))
             .where(self.PI.company_gstin != IfNull(self.PI.supplier_gstin, ""))
-            .where(IfNull(self.PI.itc_classification, "") != "")
+            .where(IfNull(self.PI.itc_classification, "") != "Import Of Goods")
         )
 
         return self.get_query_with_common_filters(query, self.PI)
@@ -255,15 +235,14 @@ class GSTR3BQuery:
         return self.get_query_with_common_filters(query, self.BOE)
 
     def get_base_je_query(self, amount_key="credit"):
-        def get_case_condition():
-            return (
-                Case()
-                .when(
-                    self.JE.voucher_type == "Reversal of ITC",
-                    self.JE_ACCOUNT.credit_in_account_currency,
-                )
-                .else_(self.JE_ACCOUNT.debit_in_account_currency)
-            )
+        key_field_map = {
+            "cgst_amount": ["cgst"],
+            "sgst_amount": ["sgst"],
+            "igst_amount": ["igst"],
+            "cess_amount": ["cess", "cess_non_advol"],
+            "total_tax": GST_TAX_TYPES,
+            "total_amount": GST_TAX_TYPES,
+        }
 
         query = (
             frappe.qb.from_(self.JE)
@@ -277,37 +256,22 @@ class GSTR3BQuery:
                     Sum(
                         Case()
                         .when(
-                            self.JE_ACCOUNT.gst_tax_type == tax,
-                            get_case_condition(),
+                            self.JE_ACCOUNT.gst_tax_type.isin(fields),
+                            Case()
+                            .when(
+                                self.JE.voucher_type == "Reversal of ITC",
+                                self.JE_ACCOUNT.credit_in_account_currency
+                                - self.JE_ACCOUNT.debit_in_account_currency,
+                            )
+                            .else_(
+                                self.JE_ACCOUNT.debit_in_account_currency
+                                - self.JE_ACCOUNT.credit_in_account_currency
+                            ),
                         )
                         .else_(0)
-                    ).as_(f"{tax}_amount")
-                    for tax in GST_TAX_TYPES[:-1]
+                    ).as_(key)
+                    for key, fields in key_field_map.items()
                 ],
-                Sum(
-                    Case()
-                    .when(
-                        self.JE_ACCOUNT.gst_tax_type.isin(["cess", "cess_non_advol"]),
-                        get_case_condition(),
-                    )
-                    .else_(0)
-                ).as_("cess_amount"),
-                Sum(
-                    Case()
-                    .when(
-                        self.JE_ACCOUNT.gst_tax_type.isin(GST_TAX_TYPES),
-                        get_case_condition(),
-                    )
-                    .else_(0)
-                ).as_("total_tax"),
-                Sum(
-                    Case()
-                    .when(
-                        self.JE_ACCOUNT.gst_tax_type.isin(GST_TAX_TYPES),
-                        get_case_condition(),
-                    )
-                    .else_(0)
-                ).as_("total_amount"),
             )
             .where(self.JE.is_opening == "No")
             .where(
@@ -319,35 +283,6 @@ class GSTR3BQuery:
         )
 
         return self.get_query_with_common_filters(query, self.JE)
-
-    def select_item_wise_columns(self, query, doc_item):
-        return query.select(
-            doc_item.item_code,
-            doc_item.gst_hsn_code,
-            (doc_item.cgst_rate + doc_item.sgst_rate + doc_item.igst_rate).as_(
-                "gst_rate"
-            ),
-            doc_item.taxable_value,
-            doc_item.cgst_amount,
-            doc_item.sgst_amount,
-            doc_item.igst_amount,
-            (doc_item.cess_amount + doc_item.cess_non_advol_amount).as_("cess_amount"),
-            (
-                doc_item.cgst_amount
-                + doc_item.sgst_amount
-                + doc_item.igst_amount
-                + doc_item.cess_amount
-                + doc_item.cess_non_advol_amount
-            ).as_("total_tax"),
-            (
-                doc_item.taxable_value
-                + doc_item.cgst_amount
-                + doc_item.sgst_amount
-                + doc_item.igst_amount
-                + doc_item.cess_amount
-                + doc_item.cess_non_advol_amount
-            ).as_("total_amount"),
-        )
 
     def get_query_with_common_filters(self, query, doc):
         return query.where(
@@ -368,11 +303,12 @@ class GSTR3BInvoices(GSTR3BQuery, GSTR3BSubcategory):
             query = self.get_base_je_query()
 
         data = query.run(as_dict=True)
+        processed_data = self.get_processed_invoices(doctype, data)
 
         if not group_by_invoice:
-            return data
+            return processed_data
 
-        return self.get_processed_invoices(doctype, data)
+        return self.get_invoice_wise_data(processed_data)
 
     def get_processed_invoices(self, doctype, data):
         conditions = DOCTYPE_CONDITION_MAP[doctype]
@@ -390,7 +326,7 @@ class GSTR3BInvoices(GSTR3BQuery, GSTR3BSubcategory):
 
             processed_invoices.append(invoice)
 
-            if invoice.invoice_category != "ITC Available":
+            if invoice.invoice_category not in ["ITC Available", "ITC Reversed"]:
                 continue
 
             if getattr(self, conditions["ITC Reversed"]["category"], None)(invoice):
