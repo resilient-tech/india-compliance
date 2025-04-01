@@ -422,89 +422,47 @@ class GSTR3BReport(Document):
         self.get_invoice_item_wise_tax_details(doctype)
 
     def get_invoice_item_wise_tax_details(self, doctype):
-        item_details = self.get_outward_items(doctype)
-        tax_details = self.get_outward_tax_details(doctype)
-        docs = self.combine_item_and_taxes(doctype, item_details, tax_details)
-
+        docs = self.get_grouped_item_details(doctype)
         self.set_item_wise_tax_details(docs)
 
     def set_item_wise_tax_details(self, docs):
         self.invoice_item_wise_tax_details = {}
-        item_wise_details = {}
 
-        item_defaults = frappe._dict(
-            {
-                "camt": 0,
-                "samt": 0,
-                "iamt": 0,
-                "csamt": 0,
-            }
-        )
-
-        # Process tax and item details
         for doc, details in docs.items():
-            item_wise_details[doc] = {}
             invoice_items = {}
             item_code_gst_treatment_map = {}
 
-            # Initialize invoice items with default values
             for item in details["items"]:
-                item_code_gst_treatment_map[item.item_code or item.item_name] = (
-                    item.gst_treatment
-                )
-                invoice_items.setdefault(
-                    item.gst_treatment,
-                    {
-                        "taxable_value": 0,
-                        **item_defaults,
-                    },
-                )
+                item_code = item.item_code or item.item_name
+                gst_treatment = item.gst_treatment
+                item_code_gst_treatment_map[item_code] = gst_treatment
 
-                invoice_items[item.gst_treatment]["taxable_value"] += item.get(
+                invoice_items.setdefault(gst_treatment, defaultdict(int))
+                invoice_items[gst_treatment]["taxable_value"] += item.get(
                     "taxable_value", 0
                 )
 
-            # Process tax details
-            for tax in details["taxes"]:
-                gst_tax_type = GST_TAX_TYPE_MAP.get(tax.gst_tax_type)
-
-                if not gst_tax_type:
+                if (
+                    details.doctype == "Sales Invoice"
+                    and doc in self.reverse_charge_invoices
+                ):
                     continue
 
-                if tax.item_wise_tax_detail:
-                    try:
-                        item_wise_detail = json.loads(tax.item_wise_tax_detail)
-                        for item_code, taxes in item_wise_detail.items():
-                            gst_treatment = item_code_gst_treatment_map.get(item_code)
-                            invoice_items[gst_treatment][gst_tax_type] += taxes.get(
-                                "tax_amount"
-                            )
+                for tax, tax_type in GST_TAX_TYPE_MAP.items():
+                    invoice_items[gst_treatment][tax_type] += item.get(
+                        f"{tax}_amount", 0
+                    )
 
-                    except ValueError:
-                        continue
+            self.invoice_item_wise_tax_details[doc] = invoice_items
 
-            item_wise_details[doc].update(invoice_items)
-
-        self.invoice_item_wise_tax_details = item_wise_details
-
-    def combine_item_and_taxes(self, doctype, item_details, tax_details):
-        response = frappe._dict()
-
-        # Group tax details by parent document
-        for tax in tax_details:
-            if tax.parent not in response:
-                response[tax.parent] = frappe._dict(taxes=[], items=[], doctype=doctype)
-
-            response[tax.parent]["taxes"].append(tax)
+    def get_grouped_item_details(self, doctype):
+        item_details = self.get_outward_items(doctype)
+        response = defaultdict(lambda: frappe._dict(items=[], doctype=doctype))
 
         # Group item details by parent document
         for item in item_details:
-            if item.parent not in response:
-                response[item.parent] = frappe._dict(
-                    taxes=[], items=[], doctype=doctype
-                )
-
             response[item.parent]["items"].append(item)
+
         return response
 
     def get_outward_tax_invoices(self, doctype, reverse_charge=None):
@@ -586,10 +544,12 @@ class GSTR3BReport(Document):
         if not self.invoice_map:
             return {}
 
+        tax_fields = ", ".join(f"{tax}_amount" for tax in GST_TAX_TYPE_MAP)
+
         item_details = frappe.db.sql(
             f"""
             SELECT
-                item_code, item_name, parent, taxable_value, gst_treatment
+               {tax_fields}, item_code, item_name, parent, taxable_value, gst_treatment
             FROM
                 `tab{doctype} Item`
             WHERE parent in ({", ".join(["%s"] * len(self.invoice_map))})
@@ -599,37 +559,6 @@ class GSTR3BReport(Document):
         )
 
         return item_details
-
-    def get_outward_tax_details(self, doctype):
-        if not self.invoice_map:
-            return {}
-
-        condition = self.get_reverse_charge_invoice_condition(doctype)
-
-        tax_template = f"{doctype.split()[0]} Taxes and Charges"
-        tax_details = frappe.db.sql(
-            f"""
-            SELECT
-                parent, item_wise_tax_detail, gst_tax_type
-            FROM `tab{tax_template}`
-            WHERE
-                parenttype = %s and docstatus = 1
-                and parent in ({", ".join(["%s"] * len(self.invoice_map))})
-                {condition}
-            ORDER BY account_head
-            """,
-            (doctype, *self.invoice_map.keys()),
-            as_dict=1,
-        )
-
-        return tax_details
-
-    def get_reverse_charge_invoice_condition(self, doctype):
-        condition = ""
-        if doctype == "Sales Invoice" and self.reverse_charge_invoices:
-            condition = f""" and parent not in ({", ".join([f'"{invoice}"' for invoice in self.reverse_charge_invoices])})"""
-
-        return condition
 
     def set_outward_taxable_supplies(self):
         inter_state_supply_details = {}
