@@ -26,6 +26,16 @@ const SUB_SECTION_MAPPING = {
     },
 };
 
+AMOUNT_FIELDS = [
+    "taxable_value",
+    "total_amount",
+    "total_tax",
+    "igst_amount",
+    "cgst_amount",
+    "sgst_amount",
+    "cess_amount",
+];
+
 frappe.query_reports["GST Purchase Register Beta"] = {
     filters: [
         {
@@ -128,8 +138,17 @@ function get_subcategory_options() {
 
 custom_report_column_total = function (...args) {
     const summary_by = frappe.query_report.get_filter_value("summary_by");
-    if (summary_by !== "Overview")
-        return frappe.utils.report_column_total.apply(this, args);
+    if (summary_by === "Overview") return 0;
 
-    return 0;
+    const column_field = args[1].column.fieldname;
+    if (!AMOUNT_FIELDS.includes(column_field)) return;
+
+    return this.datamanager.data.reduce((acc, row) => {
+        const value = row[column_field] || 0;
+        if (row.invoice_category === "ITC Reversed") {
+            return acc - value;
+        } else {
+            return acc + value;
+        }
+    }, 0);
 };
