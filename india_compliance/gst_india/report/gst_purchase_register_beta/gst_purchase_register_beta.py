@@ -77,11 +77,11 @@ class BaseGSTR3B:
         self.AMOUNT_FIELDS = AMOUNT_FIELDS_MAP[self.sub_section]
         self.is_grouped_by_invoice = self.filters.summary_by != "Summary by Item"
 
-        self.set_sub_category_filters()
+        self.set_subcategories()
         self.initialize_tables()
         self.initialize_columns()
 
-    def set_sub_category_filters(self):
+    def set_subcategories(self):
         if self.filters.get("invoice_sub_category"):
             self.subcategories = self.filters.invoice_sub_category
         else:
@@ -229,7 +229,23 @@ class BaseGSTR3B:
         )
 
     def get_data(self):
-        raise NotImplementedError("Report Not Available")
+        gstr3b_invoices = GSTR3BInvoices(self.filters)
+        data = []
+
+        doctypes = ["Purchase Invoice"]
+        if self.filters.get("sub_section") == "4":
+            doctypes.extend(["Bill of Entry", "Journal Entry"])
+
+        for doctype in doctypes:
+            data.extend(gstr3b_invoices.get_data(doctype, self.is_grouped_by_invoice))
+
+        self.data = sorted(
+            gstr3b_invoices.get_filtered_invoices(data, self.subcategories),
+            key=lambda k: (k["invoice_sub_category"], k["posting_date"]),
+        )
+
+        if self.filters.summary_by == "Overview":
+            self.create_summary_view()
 
     def select_item_details(self, query, doc_item):
         return query.select(
@@ -308,7 +324,7 @@ class BaseGSTR3B:
             for subcategory in categories
         ]
 
-    def create_tree_view(self):
+    def create_summary_view(self):
         mapping = SECTION_MAPPING[self.filters.sub_section]
 
         final_summary = []
@@ -444,12 +460,6 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
             }
         )
 
-    def get_data(self):
-        # self.get_invoice_data()
-        self.get_itc_data()
-        if self.filters.summary_by == "Overview":
-            self.create_tree_view()
-
     def get_invoice_data(self):
         purchase_data = self.get_itc_from_purchase()  # ITC Available
         boe_data = self.get_itc_from_boe()  # ITC Available
@@ -467,17 +477,6 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
 
         self.data = sorted(
             data,
-            key=lambda k: (k["invoice_sub_category"], k["posting_date"]),
-        )
-
-    def get_itc_data(self):
-        data = []
-        gstr3b_invoices = GSTR3BInvoices(self.filters)
-        for doctype in ("Purchase Invoice", "Bill of Entry", "Journal Entry"):
-            data.extend(gstr3b_invoices.get_data(doctype, self.is_grouped_by_invoice))
-
-        self.data = sorted(
-            gstr3b_invoices.get_filtered_invoices(data, self.subcategories),
             key=lambda k: (k["invoice_sub_category"], k["posting_date"]),
         )
 
@@ -630,13 +629,6 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3B):
             ]
         )
 
-    def get_data(self):
-        # self.get_invoice_data()
-        self.get_inward_nil_exempt_data()
-
-        if self.filters.summary_by == "Overview":
-            self.create_tree_view()
-
     def get_invoice_data(self):
         formatted_data = []
 
@@ -678,15 +670,6 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3B):
 
         self.data = sorted(
             formatted_data, key=lambda k: (k["invoice_sub_category"], k["posting_date"])
-        )
-
-    def get_inward_nil_exempt_data(self):
-        gstr3b_invoices = GSTR3BInvoices(self.filters)
-        data = gstr3b_invoices.get_data("Purchase Invoice", self.is_grouped_by_invoice)
-
-        self.data = sorted(
-            gstr3b_invoices.get_filtered_invoices(data, self.subcategories),
-            key=lambda k: (k["invoice_sub_category"], k["posting_date"]),
         )
 
     def get_inward_nil_exempt(self):
