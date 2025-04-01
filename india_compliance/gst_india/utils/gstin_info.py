@@ -121,7 +121,10 @@ def get_archived_gstin_info(gstin):
     if not archived_response:
         return
 
-    archived_response = json.loads(archived_response, object_hook=frappe._dict)
+    try:
+        archived_response = json.loads(archived_response, object_hook=frappe._dict)
+    except json.JSONDecodeError:
+        return
 
     return archived_response.result
 
