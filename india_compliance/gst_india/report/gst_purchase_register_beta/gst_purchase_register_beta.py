@@ -77,8 +77,19 @@ class BaseGSTR3B:
         self.AMOUNT_FIELDS = AMOUNT_FIELDS_MAP[self.sub_section]
         self.is_grouped_by_invoice = self.filters.summary_by != "Summary by Item"
 
+        self.set_sub_category_filters()
         self.initialize_tables()
         self.initialize_columns()
+
+    def set_sub_category_filters(self):
+        if self.filters.get("invoice_sub_category"):
+            self.subcategories = self.filters.invoice_sub_category
+        elif self.filters.get("invoice_category"):
+            self.subcategories = SECTION_MAPPING[self.sub_section][
+                self.filters.invoice_category
+            ]
+        else:
+            self.subcategories = self.get_sub_categories()
 
     def initialize_tables(self):
         self.PI = frappe.qb.DocType("Purchase Invoice")
@@ -300,10 +311,10 @@ class BaseGSTR3B:
         ):
             return True
 
-    def get_sub_categories(self, section):
+    def get_sub_categories(self):
         return [
             subcategory
-            for categories in SECTION_MAPPING[section].values()
+            for categories in SECTION_MAPPING[self.sub_section].values()
             for subcategory in categories
         ]
 
@@ -475,9 +486,8 @@ class GSTR3B_ITC_Details(BaseGSTR3B):
         for doctype in ("Purchase Invoice", "Bill of Entry", "Journal Entry"):
             data.extend(gstr3b_invoices.get_data(doctype, self.is_grouped_by_invoice))
 
-        subcategories = self.get_sub_categories("4")
         self.data = sorted(
-            gstr3b_invoices.get_filtered_invoices(data, subcategories),
+            gstr3b_invoices.get_filtered_invoices(data, self.subcategories),
             key=lambda k: (k["invoice_sub_category"], k["posting_date"]),
         )
 
@@ -689,10 +699,9 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3B):
     def get_inward_nil_exempt_data(self):
         gstr3b_invoices = GSTR3BInvoices(self.filters)
         data = gstr3b_invoices.get_data("Purchase Invoice", self.is_grouped_by_invoice)
-        subcategories = self.get_sub_categories("5")
 
         self.data = sorted(
-            gstr3b_invoices.get_filtered_invoices(data, subcategories),
+            gstr3b_invoices.get_filtered_invoices(data, self.subcategories),
             key=lambda k: (k["invoice_sub_category"], k["posting_date"]),
         )
 
