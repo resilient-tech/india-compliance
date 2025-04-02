@@ -447,19 +447,10 @@ class GSTR3BReport(Document):
                 ):
                     continue
 
-<<<<<<< HEAD
-                if tax.item_wise_tax_detail:
-                    try:
-                        item_wise_detail = json.loads(tax.item_wise_tax_detail)
-                        for item_code, tax_amounts in item_wise_detail.items():
-                            gst_treatment = item_code_gst_treatment_map.get(item_code)
-                            invoice_items[gst_treatment][gst_tax_type] += tax_amounts[1]
-=======
                 for tax, tax_type in GST_TAX_TYPE_MAP.items():
                     invoice_items[gst_treatment][tax_type] += item.get(
                         f"{tax}_amount", 0
                     )
->>>>>>> 2bcf74c2 (refactor: use gst details instead of taxes)
 
             self.invoice_item_wise_tax_details[doc] = invoice_items
 
