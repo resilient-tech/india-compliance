@@ -229,7 +229,7 @@ Object.assign(india_compliance, {
         );
 
         refresh_btn.on("click", async function () {
-            await india_compliance.set_gstin_status(field, transaction_date, 0, true);
+            await india_compliance.set_gstin_status(field, doc, true);
         });
     },
 

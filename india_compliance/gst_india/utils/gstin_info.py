@@ -50,7 +50,7 @@ def get_gstin_info(gstin, *, doc=None, throw_error=True):
     return _get_gstin_info(gstin, doc=doc, throw_error=throw_error)
 
 
-def _get_gstin_info(gstin, *, throw_error=True):
+def _get_gstin_info(gstin, *, doc=None, throw_error=True):
     gstin = validate_gstin(gstin)
     response = get_archived_gstin_info(gstin)
 
