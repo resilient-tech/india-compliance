@@ -96,10 +96,10 @@ class GSTR3BCategoryConditions:
         return invoice.is_ineligible_for_itc
 
     def is_itc_reversed_for_je(self, invoice):
-        return invoice.voucher_type == "Reversal Of ITC"
+        return invoice.ineligibility_type == "Reversal Of ITC"
 
     def is_itc_reclaimed(self, invoice):
-        return invoice.voucher_type == "Reclaim of ITC Reversal"
+        return invoice.ineligibility_type == "Reclaim of ITC Reversal"
 
 
 class GSTR3BSubcategory(GSTR3BCategoryConditions):
@@ -234,7 +234,7 @@ class GSTR3BQuery:
 
         return self.get_query_with_common_filters(query, self.BOE)
 
-    def get_base_je_query(self, amount_key="credit"):
+    def get_base_je_query(self):
         key_field_map = {
             "cgst_amount": ["cgst"],
             "sgst_amount": ["sgst"],
@@ -249,7 +249,8 @@ class GSTR3BQuery:
             .inner_join(self.JE_ACCOUNT)
             .on(self.JE_ACCOUNT.parent == self.JE.name)
             .select(
-                self.JE.voucher_type,
+                ConstantColumn("Journal Entry").as_("voucher_type"),
+                self.JE.voucher_type.as_("ineligibility_type"),
                 self.JE.name.as_("voucher_no"),
                 self.JE.posting_date,
                 *[
@@ -326,7 +327,7 @@ class GSTR3BInvoices(GSTR3BQuery, GSTR3BSubcategory):
 
             processed_invoices.append(invoice)
 
-            if invoice.invoice_category not in ["ITC Available", "ITC Reversed"]:
+            if invoice.invoice_category not in ["ITC Available"]:
                 continue
 
             if getattr(self, conditions["ITC Reversed"]["category"], None)(invoice):
