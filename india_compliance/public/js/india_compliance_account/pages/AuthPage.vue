@@ -106,8 +106,8 @@ export default {
   margin-top: 20px;
 }
 
-.change-view-btn a {
-  color: var(--primary-color);
+.change-view-btn a:hover {
+  text-decoration: underline;
 }
 
 @media (max-width: 991px) {

@@ -789,9 +789,10 @@ class TestTransaction(IntegrationTestCase):
 
         doc_details = {
             **self.transaction_details,
-            "customer": "_Test Foreign Customer",
-            "party_name": "_Test Foreign Customer",
-            "shipping_address_name": "_Test Registered Customer-Billing",
+            "customer": "_Test Foreign Customer-1",
+            "party_name": "_Test Foreign Customer-1",
+            "customer_address": "_Test Foreign Customer-1-Billing",
+            "shipping_address_name": "_Test Foreign Customer-1-Shipping",
         }
 
         doc = create_transaction(**doc_details, is_in_state=True)
@@ -973,6 +974,61 @@ class TestTransaction(IntegrationTestCase):
             if "is missing in Item Tax Template" in message.get("message"):
                 self.fail("Item Tax Template validation message found")
 
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_validate_gst_refund_accounts(self):
+        doc = create_refund_transaction()
+
+        doc.taxes[1].rate = -9
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(.*Total GST amount should be equal to Refund amount.*)$"),
+            doc.save,
+        )
+
+        doc.reload()
+        doc.taxes[1].rate = 18
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(.*Tax amount should be negative for GST Account.*)$"),
+            doc.save,
+        )
+
+
+def create_refund_transaction():
+    gst_settings = frappe.get_cached_doc("GST Settings")
+
+    gst_settings.append(
+        "gst_accounts",
+        {
+            "company": "_Test Indian Registered Company",
+            "cgst_account": "Output Tax CGST Refund - _TIRC",
+            "sgst_account": "Output Tax SGST Refund - _TIRC",
+            "igst_account": "Output Tax IGST Refund - _TIRC",
+            "account_type": "Output Refund",
+        },
+    )
+    gst_settings.save()
+
+    transaction_details = {
+        "doctype": "Sales Invoice",
+        "customer": "_Test Registered Customer",
+        "customer_address": "_Test Registered Customer-Billing-1",
+        "is_out_state": 1,
+        "do_not_save": True,
+        "is_export_with_gst": 1,
+    }
+    doc = create_transaction(**transaction_details)
+    doc.append(
+        "taxes",
+        {
+            "charge_type": "On Net Total",
+            "account_head": "Output Tax IGST Refund - _TIRC",
+            "rate": -18,
+            "description": "Output Tax IGST Refund",
+        },
+    )
+    return doc.insert()
+
 
 class TestQuotationTransaction(IntegrationTestCase):
     @classmethod
@@ -1042,14 +1098,14 @@ class TestSpecificTransactions(IntegrationTestCase):
         # create user
         test_user = frappe.get_doc("User", {"email": "test@example.com"})
         test_user.add_roles("Accounts User")
-        frappe.set_user(test_user.name)
 
-        # submit invoice
-        self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
-            re.compile(r"You are not allowed to submit Sales Invoice"),
-            si.submit,
-        )
+        with self.set_user(test_user.name):
+            # submit invoice
+            self.assertRaisesRegex(
+                frappe.exceptions.ValidationError,
+                re.compile(r"You are not allowed to submit Sales Invoice"),
+                si.submit,
+            )
 
     def test_backdated_transaction_with_comment(self):
         si = create_transaction(doctype="Sales Invoice", do_not_submit=True)
@@ -1134,7 +1190,6 @@ class TestRegionalOverrides(IntegrationTestCase):
         {"round_off_gst_values": 1},
     )
     def test_get_regional_round_off_accounts(self):
-
         data = get_regional_round_off_accounts("_Test Indian Registered Company", [])
         self.assertListEqual(
             data,
@@ -1159,12 +1214,10 @@ class TestRegionalOverrides(IntegrationTestCase):
         {"round_off_gst_values": 0},
     )
     def test_get_regional_round_off_accounts_with_round_off_unchecked(self):
-
         data = get_regional_round_off_accounts("_Test Indian Registered Company", [])
         self.assertListEqual(data, [])
 
     def test_update_gl_dict_with_regional_fields(self):
-
         doc = frappe.get_doc(
             {"doctype": "Sales Invoice", "company_gstin": "29AAHCM7727Q1ZI"}
         )

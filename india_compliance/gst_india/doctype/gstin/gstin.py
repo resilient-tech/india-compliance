@@ -255,6 +255,14 @@ def validate_gst_transporter_id(transporter_id, doc=None):
 
     gstin = None
 
+    settings = frappe.get_cached_doc("GST Settings")
+    if (
+        not settings.validate_gstin_status
+        or not is_api_enabled(settings)
+        or settings.sandbox_mode
+    ):
+        return
+
     # Check if GSTIN doc exists
     if frappe.db.exists("GSTIN", transporter_id):
         gstin = frappe.get_doc("GSTIN", transporter_id)

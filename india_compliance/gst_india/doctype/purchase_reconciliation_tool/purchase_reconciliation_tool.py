@@ -9,6 +9,9 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.functions import IfNull
 from frappe.utils import add_to_date, cint, now_datetime
+from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
+    get_accounting_dimensions,
+)
 
 from india_compliance.gst_india.api_classes.taxpayer_base import (
     TaxpayerBaseAPI,
@@ -154,24 +157,24 @@ class PurchaseReconciliationTool(Document):
         if not return_type:
             return
 
-        return_type = ReturnType(return_type)
-        periods = BaseUtil.get_periods(date_range, return_type, True)
+        pending_download = defaultdict(set)
+        download_history = defaultdict(set)
 
+        has_single_gstin = company_gstin != "All"
+        action = "Download" if for_download else "Upload"
+
+        return_type = ReturnType(return_type)
         company_gstins = (
             get_gstin_list(self.company) if company_gstin == "All" else [company_gstin]
         )
 
-        history = get_import_history(company_gstins, return_type, periods)
-        history = {(log.return_period, log.gstin): log for log in history}
+        for gst_no in company_gstins:
+            periods = BaseUtil.get_periods(date_range, return_type, gst_no, True)
 
-        action = "Download" if for_download else "Upload"
-        has_single_gstin = company_gstin != "All"
+            history = get_import_history(gst_no, return_type, periods)
+            history = {(log.return_period, log.gstin): log for log in history}
 
-        pending_download = defaultdict(set)
-        download_history = defaultdict(set)
-
-        for period in periods:
-            for gst_no in company_gstins:
+            for period in periods:
                 download_row = history.get((period, gst_no))
 
                 if not download_row:
@@ -182,9 +185,13 @@ class PurchaseReconciliationTool(Document):
                         download_row.last_updated_on.strftime("%d-%m-%Y %H:%M:%S")
                     )
 
+        # ensure data order is maintained
+        def get_map(data):
+            return [[k, v] for k, v in data.items()]
+
         return {
-            "pending_download": (pending_download or f"No Pending {action}s"),
-            "download_history": (download_history or f"No {action} History"),
+            "pending_download": (get_map(pending_download) or f"No Pending {action}s"),
+            "download_history": (get_map(download_history) or f"No {action} History"),
         }
 
     @frappe.whitelist()
@@ -373,7 +380,7 @@ def download_gstr(
     if return_period:
         periods = [return_period]
     else:
-        periods = BaseUtil.get_periods(date_range, return_type)
+        periods = BaseUtil.get_periods(date_range, return_type, company_gstin)
         periods = get_periods_to_download(
             company_gstin, return_type, periods, download_all=force
         )
@@ -463,21 +470,22 @@ def get_import_history(
 def has_missing_2b_documents(
     date_range, return_type: ReturnType, company_gstin, company
 ):
-    periods = BaseUtil.get_periods(date_range, return_type, True)
-
-    if not periods:
-        return False
-
     company_gstins = (
         get_gstin_list(company) if company_gstin == "All" else [company_gstin]
     )
-    history = get_import_history(company_gstins, return_type, periods)
-    history = {(log.return_period, log.gstin): log for log in history}
-
-    if not history:
-        return True
 
     for gstin in company_gstins:
+        periods = BaseUtil.get_periods(date_range, return_type, gstin, True)
+
+        if not periods:
+            continue
+
+        history = get_import_history(gstin, return_type, periods)
+        history = {(log.return_period, log.gstin): log for log in history}
+
+        if not history:
+            return True
+
         for period in periods:
             download = history.get((period, gstin))
             if not download or download.data_not_found or download.request_id:
@@ -959,6 +967,18 @@ class BuildExcel:
         ]
 
     def get_invoice_columns(self):
+        self.dimension_fields = ["project", "cost_center"] + get_accounting_dimensions()
+        dimension_columns = [
+            {
+                "label": frappe.unscrub(dimension),
+                "fieldname": dimension,
+                "data_format": {
+                    "horizontal": "left",
+                },
+            }
+            for dimension in self.dimension_fields
+        ]
+
         self.pr_columns = [
             {
                 "label": "Bill No",
@@ -1096,6 +1116,7 @@ class BuildExcel:
                 },
             },
         ]
+
         self.inward_supply_columns = [
             {
                 "label": "Bill No",
@@ -1233,6 +1254,7 @@ class BuildExcel:
                 },
             },
         ]
+
         inv_columns = [
             {
                 "label": "Action Status",
@@ -1265,6 +1287,21 @@ class BuildExcel:
                     "width": 11,
                 },
             },
+            *dimension_columns,
+            {
+                "label": "Inward Supply Name",
+                "fieldname": "inward_supply_name",
+                "data_format": {
+                    "horizontal": "left",
+                },
+            },
+            {
+                "label": "Purchase Document Name",
+                "fieldname": "purchase_invoice_name",
+                "data_format": {
+                    "horizontal": "left",
+                },
+            },
             {
                 "label": "Taxable Value Difference",
                 "fieldname": "taxable_value_difference",
@@ -1292,6 +1329,8 @@ class BuildExcel:
                 },
             },
         ]
+
         inv_columns.extend(self.inward_supply_columns)
         inv_columns.extend(self.pr_columns)
+
         return inv_columns

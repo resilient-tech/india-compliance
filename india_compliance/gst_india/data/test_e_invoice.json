@@ -1,7 +1,8 @@
 {
     "goods_item_with_ewaybill": {
         "kwargs": {
-            "vehicle_no": "GJ07DL9009"
+            "vehicle_no": "GJ07DL9009",
+            "company_address": "_Test Indian Registered Company-Billing"
         },
         "request_data": {
             "BuyerDtls": {
@@ -42,7 +43,7 @@
                     "SgstAmt": 9000.0,
                     "SlNo": "1",
                     "TotAmt": 100000.0,
-                    "TotItemVal": 118000.0  ,
+                    "TotItemVal": 118000.0,
                     "Unit": "NOS",
                     "UnitPrice": 100.0
                 }
@@ -107,7 +108,8 @@
         "kwargs": {
             "item_code": "_Test Service Item",
             "customer_address": "_Test Registered Customer-Billing",
-            "shipping_address_name": "_Test Registered Customer-Billing"
+            "shipping_address_name": "_Test Registered Customer-Billing",
+            "company_address": "_Test Indian Registered Company-Billing"
         },
         "request_data": {
             "BuyerDtls": {
@@ -212,7 +214,8 @@
             "item_code": "_Test Nil Rated Item",
             "customer_address": "_Test Registered Customer-Billing",
             "shipping_address_name": "_Test Registered Customer-Billing",
-            "rate":100
+            "company_address": "_Test Indian Registered Company-Billing",
+            "rate": 100
         },
         "request_data": {
             "BuyerDtls": {
@@ -317,7 +320,8 @@
             "qty": -1,
             "is_return": 1,
             "customer_address": "_Test Registered Customer-Billing",
-            "shipping_address_name": "_Test Registered Customer-Billing"
+            "shipping_address_name": "_Test Registered Customer-Billing",
+            "company_address": "_Test Indian Registered Company-Billing"
         },
         "request_data": {
             "BuyerDtls": {
@@ -450,7 +454,8 @@
             "is_debit_note": 1,
             "qty": 0,
             "customer_address": "_Test Registered Customer-Billing",
-            "shipping_address_name": "_Test Registered Customer-Billing"
+            "shipping_address_name": "_Test Registered Customer-Billing",
+            "company_address": "_Test Indian Registered Company-Billing"
         },
         "request_data": {
             "BuyerDtls": {
@@ -604,7 +609,8 @@
         "kwargs": {
             "customer": "_Test Foreign Customer",
             "port_address": "_Test Indian Unregistered Company-Billing",
-            "vehicle_no": "GJ07DL9009"
+            "vehicle_no": "GJ07DL9009",
+            "company_address": "_Test Indian Registered Company-Billing"
         },
         "request_data": {
             "BuyerDtls": {
@@ -690,6 +696,9 @@
         }
     },
     "duplicate_irn": {
+        "kwargs": {
+            "company_address": "_Test Indian Registered Company-Billing"
+        },
         "request_data": {
             "BuyerDtls": {
                 "Addr1": "Test Address - 3",

@@ -1233,10 +1233,14 @@ class HSNSUM(GSTR1DataMapper):
         uom = uom.upper()
 
         if "-" in uom:
-            if data and data.get(GSTR1_DataField.HSN_CODE.value, "").startswith("99"):
+            if (
+                data
+                and (hsn_code := data.get(GSTR1_DataField.HSN_CODE.value) or "")
+                and hsn_code.startswith("99")
+            ):
                 return "NA"
-            else:
-                return uom.split("-")[0]
+
+            return uom.split("-")[0]
 
         if uom in UOM_MAP:
             return f"{uom}-{UOM_MAP[uom]}"
@@ -2124,7 +2128,7 @@ class BooksDataMapper:
         )
 
     def process_data_for_hsn_summary(self, invoice, prepared_data):
-        key = f"{invoice.gst_hsn_code} - {invoice.stock_uom} - {flt(invoice.gst_rate)}"
+        key = f"{invoice.gst_hsn_code} - {invoice.uom} - {flt(invoice.gst_rate)}"
 
         if key not in prepared_data:
             mapped_dict = prepared_data.setdefault(
@@ -2134,7 +2138,7 @@ class BooksDataMapper:
                     GSTR1_DataField.DESCRIPTION.value: frappe.db.get_value(
                         "GST HSN Code", invoice.gst_hsn_code, "description"
                     ),
-                    GSTR1_DataField.UOM.value: invoice.stock_uom,
+                    GSTR1_DataField.UOM.value: invoice.uom,
                     GSTR1_DataField.QUANTITY.value: 0,
                     GSTR1_DataField.TAX_RATE.value: invoice.gst_rate,
                     GSTR1_DataField.TAXABLE_VALUE.value: 0,
@@ -2278,7 +2282,8 @@ class BooksDataMapper:
 class GSTR1BooksData(BooksDataMapper):
     def __init__(self, filters):
         self.filters = filters
-        self.current_month = MONTHS.index(filters.month_or_quarter) + 1
+        if filters.get("month_or_quarter"):
+            self.current_month = MONTHS.index(filters.month_or_quarter) + 1
 
     def prepare_mapped_data(self):
         prepared_data = {}
@@ -2459,8 +2464,8 @@ class GSTR1BooksData(BooksDataMapper):
         year = self.filters.year
 
         log_names = [
-            f"GSTR1-{(self.current_month-1):02d}{year}-{company_gstin}",
-            f"GSTR1-{(self.current_month-2):02d}{year}-{company_gstin}",
+            f"GSTR1-{(self.current_month - 1):02d}{year}-{company_gstin}",
+            f"GSTR1-{(self.current_month - 2):02d}{year}-{company_gstin}",
         ]
 
         filed_invoices = set()

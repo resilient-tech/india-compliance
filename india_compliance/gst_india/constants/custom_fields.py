@@ -21,7 +21,7 @@ party_fields = [
         "fieldname": "tax_details_section",
         "label": "Tax Details",
         "fieldtype": "Section Break",
-        "insert_after": "tax_withholding_category",
+        "insert_after": "tax_tab",
     },
     {
         "fieldname": "gstin",
@@ -492,7 +492,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Check",
             "insert_after": "apply_tds",
             "print_hide": 1,
-            "default": 0,
+            "default": "0",
         },
         {
             "fieldname": "section_gst_breakup",
@@ -521,7 +521,7 @@ CUSTOM_FIELDS = {
         "insert_after": "is_reverse_charge",
         "print_hide": 1,
         "depends_on": 'eval:doc.gst_category == "SEZ" || (doc.gst_category == "Overseas" && doc.place_of_supply == "96-Other Countries")',
-        "default": 0,
+        "default": "0",
         "translatable": 0,
     },
     # Sales - GST Details Section
@@ -1028,46 +1028,13 @@ CUSTOM_FIELDS = {
             "no_copy": 1,
             "read_only": 1,
         },
+    ],
+    "Purchase Invoice Item": [
         {
-            "fieldname": "gst_col_break",
-            "fieldtype": "Column Break",
-            "insert_after": "reconciliation_status",
-        },
-        {
-            "fieldname": "itc_integrated_tax",
-            "label": "Integrated Tax",
-            "fieldtype": "Currency",
-            "insert_after": "gst_col_break",
-            "options": "Company:company:default_currency",
-            "read_only": 1,
-            "print_hide": 1,
-        },
-        {
-            "fieldname": "itc_central_tax",
-            "label": "Central Tax",
-            "fieldtype": "Currency",
-            "insert_after": "itc_integrated_tax",
-            "options": "Company:company:default_currency",
-            "read_only": 1,
-            "print_hide": 1,
-        },
-        {
-            "fieldname": "itc_state_tax",
-            "label": "State/UT Tax",
-            "fieldtype": "Currency",
-            "insert_after": "itc_central_tax",
-            "options": "Company:company:default_currency",
-            "read_only": 1,
-            "print_hide": 1,
-        },
-        {
-            "fieldname": "itc_cess_amount",
-            "label": "Availed ITC Cess",
-            "fieldtype": "Currency",
-            "insert_after": "itc_state_tax",
-            "options": "Company:company:default_currency",
-            "read_only": 1,
-            "print_hide": 1,
+            "fieldname": "pending_boe_qty",
+            "label": "Pending BOE Qty",
+            "fieldtype": "Float",
+            "insert_after": "rejected_qty",
         },
     ],
     "Purchase Receipt": [
@@ -1368,24 +1335,20 @@ EDUCATION_CUSTOM_FIELDS = {
     ]
 }
 
-reverse_charge_field = frappe._dict(
-    fieldname="is_reverse_charge",
-    label="Is Reverse Charge",
-    fieldtype="Check",
-    print_hide=1,
-    default=0,
-)
+reverse_charge_field = {
+    "fieldname": "is_reverse_charge",
+    "label": "Is Reverse Charge",
+    "fieldtype": "Check",
+    "print_hide": 1,
+    "default": "0",
+}
 
 # POS Invoice excluded, since it isn't designed for reverse charge transactions
 SALES_REVERSE_CHARGE_FIELDS = {
-    "Quotation": reverse_charge_field.copy().update(insert_after="customer_name"),
-    "Sales Order": reverse_charge_field.copy().update(
-        insert_after="skip_delivery_note"
-    ),
-    "Delivery Note": reverse_charge_field.copy().update(
-        insert_after="set_posting_time"
-    ),
-    "Sales Invoice": reverse_charge_field.copy().update(insert_after="is_debit_note"),
+    "Quotation": {**reverse_charge_field, "insert_after": "customer_name"},
+    "Sales Order": {**reverse_charge_field, "insert_after": "skip_delivery_note"},
+    "Delivery Note": {**reverse_charge_field, "insert_after": "set_posting_time"},
+    "Sales Invoice": {**reverse_charge_field, "insert_after": "is_debit_note"},
 }
 
 E_INVOICE_FIELDS = {

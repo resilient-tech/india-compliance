@@ -7,7 +7,7 @@ from pypika import Order
 import frappe
 from frappe import _, request_cache
 from frappe.query_builder.functions import Concat, Substring
-from frappe.utils import cint, getdate
+from frappe.utils import add_to_date, cint
 
 from india_compliance.exceptions import GSPServerError
 from india_compliance.gst_india.api_classes.base import BASE_URL
@@ -50,8 +50,8 @@ def get_gstin_info(gstin, *, doc=None, throw_error=True):
     return _get_gstin_info(gstin, doc=doc, throw_error=throw_error)
 
 
-def _get_gstin_info(gstin, *, doc=None, throw_error=True):
-    validate_gstin(gstin)
+def _get_gstin_info(gstin, *, throw_error=True):
+    gstin = validate_gstin(gstin)
     response = get_archived_gstin_info(gstin)
 
     if not response:
@@ -110,7 +110,7 @@ def get_archived_gstin_info(gstin):
 
     archive_date_limit = frappe.utils.now_datetime() - timedelta(days=archive_days)
 
-    completed_requestes = frappe.get_all(
+    archived_response = frappe.db.get_value(
         "Integration Request",
         {
             "status": "Completed",
@@ -118,16 +118,18 @@ def get_archived_gstin_info(gstin):
             "data": ("like", f"%{gstin}%"),
             "modified": (">", archive_date_limit),
         },
-        pluck="output",
-        limit=1,
+        "output",
     )
 
-    if not completed_requestes:
+    if not archived_response:
         return
 
-    response = json.loads(completed_requestes[0], object_hook=frappe._dict)
+    try:
+        archived_response = json.loads(archived_response, object_hook=frappe._dict)
+    except json.JSONDecodeError:
+        return
 
-    return response.result
+    return archived_response.result
 
 
 def _get_address(address):
@@ -194,7 +196,7 @@ def fetch_gstin_status(*, gstin=None, doc=None, throw=True):
     :param gstin: GSTIN to fetch status for
     :param throw: Raise exception if error occurs (used for user initiated requests)
     """
-    validate_gstin(gstin)
+    gstin = validate_gstin(gstin)
 
     try:
         if not throw and frappe.cache.get_value("gst_server_error"):
@@ -323,7 +325,7 @@ def get_gstr_1_return_status(company, gstin, period, year_increment=0):
             return info["status"]
 
     # late filing possibility (limitation: only checks for the next FY: good enough)
-    if not year_increment and get_current_fy() != fy:
+    if not year_increment and get_previous_period_fy() != fy:
         get_gstr_1_return_status(company, gstin, period, year_increment=1)
 
     return "Not Filed"
@@ -334,13 +336,13 @@ def update_gstr_returns_info(company, gstin, fy=None):
         return
 
     if not fy:
-        fy = get_current_fy()
+        fy = get_previous_period_fy()
 
     response = PublicAPI().get_returns_info(gstin, fy)
     if not response:
         return
 
-    e_filed_list = response.get("EFiledlist")
+    e_filed_list = response.get("EFiledlist") or []
 
     from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
         process_gstr_returns_info,
@@ -481,8 +483,9 @@ def get_fy(period, year_increment=0):
         return f"{year}-{int(year[-2:]) + 1}"
 
 
-def get_current_fy():
-    period = getdate().strftime("%m%Y")
+def get_previous_period_fy():
+    # Best possible scenario is that the return was filed in the previous period.
+    period = add_to_date(None, months=-1).strftime("%m%Y")
     return get_fy(period)
 
 

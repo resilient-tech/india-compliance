@@ -62,6 +62,7 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
                 "sgst": 0,
                 "cess": 0,
                 "is_downloaded_from_2b": 1,
+                "is_supplier_return_filed": 1,
             },
             doc,
         )
@@ -97,6 +98,7 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
                 "sgst": 0,
                 "cess": 0,
                 "is_downloaded_from_2b": 1,
+                "is_supplier_return_filed": 1,
             },
             doc,
         )
@@ -132,6 +134,7 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
                 "sgst": 0,
                 "cess": 0,
                 "is_downloaded_from_2b": 1,
+                "is_supplier_return_filed": 1,
             },
             doc,
         )
@@ -165,6 +168,7 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
                 "sgst": 0,
                 "cess": 0,
                 "is_downloaded_from_2b": 1,
+                "is_supplier_return_filed": 1,
             },
             doc,
         )
@@ -189,6 +193,7 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
                 "sgst": 200,
                 "cess": 0,
                 "is_downloaded_from_2b": 1,
+                "is_supplier_return_filed": 1,
             },
             doc,
         )
@@ -216,6 +221,7 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
                 "sgst": 200,
                 "cess": 0,
                 "is_downloaded_from_2b": 1,
+                "is_supplier_return_filed": 1,
             },
             doc,
         )

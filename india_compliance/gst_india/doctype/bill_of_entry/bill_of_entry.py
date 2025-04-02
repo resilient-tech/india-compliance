@@ -7,6 +7,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
+from frappe.query_builder.functions import Sum
 from frappe.utils import today
 import erpnext
 from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_entries
@@ -60,6 +61,7 @@ class BillofEntry(Document):
         update_gst_details(self)
 
     def before_submit(self):
+        self.validate_qty()
         update_gst_details(self)
 
     def validate(self):
@@ -72,10 +74,12 @@ class BillofEntry(Document):
         gl_entries = self.get_gl_entries()
         update_regional_gl_entries(gl_entries, self)
         make_gl_entries(gl_entries)
+        self.update_pending_boe_qty()
 
     def on_cancel(self):
         self.ignore_linked_doctypes = ("GL Entry",)
         make_reverse_gl_entries(voucher_type=self.doctype, voucher_no=self.name)
+        self.update_pending_boe_qty()
 
         frappe.db.set_value(
             "GST Inward Supply",
@@ -139,28 +143,56 @@ class BillofEntry(Document):
         self.total_taxable_value = total_taxable_value
 
     def validate_purchase_invoice(self):
-        purchase = frappe.get_doc("Purchase Invoice", self.purchase_invoice)
-        if purchase.docstatus != 1:
-            frappe.throw(
-                _("Purchase Invoice must be submitted when creating a Bill of Entry")
-            )
+        pi_names = {row.purchase_invoice for row in self.items}
+        purchase_invoices = frappe.get_all(
+            "Purchase Invoice",
+            filters={"name": ["in", pi_names]},
+            fields=["docstatus", "gst_category", "name", "company", "company_gstin"],
+        )
 
-        if purchase.gst_category != "Overseas":
-            frappe.throw(
-                _(
-                    "GST Category must be set to Overseas in Purchase Invoice to create"
-                    " a Bill of Entry"
+        for invoice in purchase_invoices:
+            if invoice.company != self.company:
+                frappe.throw(
+                    _("Company for Purchase Invoice {0} must be {1}").format(
+                        invoice.name, self.company
+                    )
                 )
-            )
 
-        pi_items = {item.name for item in purchase.items}
+            if invoice.company_gstin != self.company_gstin:
+                frappe.throw(
+                    _("Company GSTIN for Purchase Invoice {0} must be {1}").format(
+                        invoice.name, self.company_gstin
+                    )
+                )
+
+            if invoice.docstatus != 1:
+                frappe.throw(
+                    _(
+                        "Purchase Invoice {0} must be submitted when creating a Bill of Entry"
+                    ).format(invoice.name)
+                )
+
+            if invoice.gst_category != "Overseas":
+                frappe.throw(
+                    _(
+                        "GST Category must be set to Overseas in Purchase Invoice {0} to create"
+                        " a Bill of Entry"
+                    ).format(invoice.name)
+                )
+
+        pi_item_names = frappe.get_all(
+            "Purchase Invoice Item",
+            filters={"parent": ["in", pi_names]},
+            pluck="name",
+        )
+
         for item in self.items:
             if not item.pi_detail:
                 frappe.throw(
                     _("Row #{0}: Purchase Invoice Item is required").format(item.idx)
                 )
 
-            if item.pi_detail not in pi_items:
+            if item.pi_detail not in pi_item_names:
                 frappe.throw(
                     _(
                         "Row #{0}: Purchase Invoice Item {1} not found in Purchase"
@@ -168,7 +200,7 @@ class BillofEntry(Document):
                     ).format(
                         item.idx,
                         frappe.bold(item.pi_detail),
-                        frappe.bold(self.purchase_invoice),
+                        frappe.bold(item.purchase_invoice),
                     )
                 )
 
@@ -362,32 +394,109 @@ class BillofEntry(Document):
 
         return asset_items
 
+    @frappe.whitelist()
+    def get_items_from_purchase_invoice(self, purchase_invoices):
+        frappe.has_permission("Bill Of Entry", "write")
+        frappe.has_permission("Purchase Invoice", "read")
 
-@frappe.whitelist()
-def make_bill_of_entry(source_name, target_doc=None):
-    """
-    Permission checked in get_mapped_doc
-    """
+        existing_items = [
+            item.pi_detail for item in self.get("items") if item.pi_detail
+        ]
+        item_to_add = get_pi_items(purchase_invoices)
 
-    def set_missing_values(source, target):
-        target.set_defaults()
+        if not existing_items:
+            self.items = []
 
-        # Add default tax
-        input_igst_account = get_gst_accounts_by_type(
-            source.company, "Input"
-        ).igst_account
+        for item in item_to_add:
+            if item.pi_detail not in existing_items:
+                self.append("items", {**item})
 
-        if not input_igst_account:
-            return
+        set_missing_values(self)
 
-        rate, description = frappe.db.get_value(
+    def validate_qty(self):
+        pi_item_names = [item.pi_detail for item in self.items]
+
+        pi_qty_map = frappe._dict(
+            frappe.get_all(
+                "Purchase Invoice Item",
+                filters={"name": ["in", pi_item_names]},
+                fields=["name", "pending_boe_qty"],
+                as_list=True,
+            )
+        )
+
+        for item in self.items:
+            if item.qty > pi_qty_map.get(item.pi_detail):
+                frappe.throw(
+                    _("Quantity of {0} is more than it's pending qty").format(
+                        item.item_code
+                    )
+                )
+
+    def update_pending_boe_qty(self):
+        pi_item_names = [item.pi_detail for item in self.items]
+
+        pi_item = frappe.qb.DocType("Purchase Invoice Item")
+        boe_item = frappe.qb.DocType("Bill of Entry Item")
+
+        submitted_boe_qty = (
+            frappe.qb.from_(boe_item)
+            .select(boe_item.pi_detail, Sum(boe_item.qty).as_("qty"))
+            .where(boe_item.pi_detail.isin(pi_item_names))
+            .where(boe_item.docstatus == 1)
+            .groupby(boe_item.pi_detail)
+        )
+
+        (
+            frappe.qb.update(pi_item)
+            .join(submitted_boe_qty)
+            .on(pi_item.name == submitted_boe_qty.pi_detail)
+            .set(
+                pi_item.pending_boe_qty,
+                pi_item.qty - submitted_boe_qty.qty,
+            )
+            .where(pi_item.name.isin(pi_item_names))
+            .run()
+        )
+
+
+def set_missing_values(source, target=None):
+    if not target:
+        target = source
+
+    target.set_defaults()
+
+    # Add default tax
+    input_igst_account = get_gst_accounts_by_type(source.company, "Input").igst_account
+    if not input_igst_account:
+        return
+
+    rate = (
+        frappe.db.get_value(
             "Purchase Taxes and Charges",
             {
                 "parenttype": "Purchase Taxes and Charges Template",
                 "account_head": input_igst_account,
             },
-            ("rate", "description"),
-        ) or (0, input_igst_account)
+            "rate",
+        )
+        or 0
+    )
+
+    has_igst_tax = any(
+        tax.charge_type == "On Net Total"
+        and tax.account_head == input_igst_account
+        and tax.rate == rate
+        and tax.gst_tax_type == "igst"
+        for tax in source.taxes
+    )
+
+    if not has_igst_tax:
+        valid_tax_row = {
+            tax_row.account_head for tax_row in target.taxes if tax_row.account_head
+        }
+        if not valid_tax_row:
+            target.taxes = []
 
         target.append(
             "taxes",
@@ -396,11 +505,20 @@ def make_bill_of_entry(source_name, target_doc=None):
                 "account_head": input_igst_account,
                 "rate": rate,
                 "gst_tax_type": "igst",
-                "description": description,
             },
         )
 
-        target.set_taxes_and_totals()
+    target.set_taxes_and_totals()
+
+
+@frappe.whitelist()
+def make_bill_of_entry(source_name, target_doc=None):
+    """
+    Permission checked in get_mapped_doc
+    """
+
+    def update_item_qty(source, target, source_parent):
+        target.qty = source.get("pending_boe_qty")
 
     doc = get_mapped_doc(
         "Purchase Invoice",
@@ -420,6 +538,8 @@ def make_bill_of_entry(source_name, target_doc=None):
                     "name": "pi_detail",
                     "taxable_value": "assessable_value",
                 },
+                "condition": lambda doc: doc.pending_boe_qty > 0,
+                "postprocess": update_item_qty,
             },
         },
         target_doc,
@@ -562,50 +682,135 @@ def get_items_for_landed_cost_voucher(boe):
 
     NOTE: Assuming business has consistent practice of creating PR and PI
     """
-    pi = frappe.get_doc("Purchase Invoice", boe.purchase_invoice)
+    invoice_details_map = get_purchase_invoice_details(boe)
+
     item_customs_map = {item.pi_detail: item.customs_duty for item in boe.items}
     item_name_map = {item.pi_detail: item.name for item in boe.items}
 
-    def _item_dict(items):
-        return frappe._dict({item.name: item for item in items})
-
     # No PR
-    if pi.update_stock:
-        pi_items = [pi_item.as_dict() for pi_item in pi.items]
-        for pi_item in pi_items:
-            pi_item.customs_duty = item_customs_map.get(pi_item.name)
-            pi_item.boe_detail = item_name_map.get(pi_item.name)
+    all_items = []
+    for pi in invoice_details_map:
+        if pi.update_stock:
+            for pi_item in pi._items:
+                pi_item.customs_duty = item_customs_map.get(pi_item.name)
+                pi_item.boe_detail = item_name_map.get(pi_item.name)
 
-        return _item_dict(pi_items)
+            all_items.extend(pi._items)
 
-    # Creating PI from PR
-    if pi.items[0].purchase_receipt:
-        pr_pi_map = {pi_item.pr_detail: pi_item.name for pi_item in pi.items}
-        pr_items = frappe.get_all(
-            "Purchase Receipt Item",
-            fields="*",
-            filters={"name": ["in", pr_pi_map.keys()], "docstatus": 1},
+        # Creating PI from PR
+        elif pi._items[0].purchase_receipt:
+            pr_pi_map = {pi_item.pr_detail: pi_item.name for pi_item in pi._items}
+            pr_items = frappe.get_all(
+                "Purchase Receipt Item",
+                fields="*",
+                filters={"name": ["in", pr_pi_map.keys()], "docstatus": 1},
+            )
+
+            for pr_item in pr_items:
+                pr_item.customs_duty = item_customs_map.get(pr_pi_map.get(pr_item.name))
+                pr_item.boe_detail = item_name_map.get(pr_pi_map.get(pr_item.name))
+
+            all_items.extend(pr_items)
+
+        else:
+            # Creating PR from PI (Qty split possible in PR)
+            pr_items = frappe.get_all(
+                "Purchase Receipt Item",
+                fields="*",
+                filters={"purchase_invoice": pi.name, "docstatus": 1},
+            )
+
+            item_qty_map = {item.name: item.qty for item in pi._items}
+
+            for pr_item in pr_items:
+                customs_duty_for_item = item_customs_map.get(
+                    pr_item.purchase_invoice_item
+                )
+                total_qty = item_qty_map.get(pr_item.purchase_invoice_item)
+                pr_item.customs_duty = customs_duty_for_item * pr_item.qty / total_qty
+                pr_item.boe_detail = item_name_map.get(pr_item.purchase_invoice_item)
+
+            all_items.extend(pr_items)
+
+    return frappe._dict({item.name: item for item in all_items if item})
+
+
+def get_purchase_invoice_details(boe):
+    pi_names, pi_item_names = set(), set()
+    for item in boe.items:
+        pi_names.add(item.purchase_invoice)
+        pi_item_names.add(item.pi_detail)
+
+    # update_stock
+    invoice_map = frappe._dict(
+        frappe.get_all(
+            "Purchase Invoice",
+            filters={"name": ["in", pi_names]},
+            fields=["name", "update_stock"],
+            as_list=True,
         )
-
-        for pr_item in pr_items:
-            pr_item.customs_duty = item_customs_map.get(pr_pi_map.get(pr_item.name))
-            pr_item.boe_detail = item_name_map.get(pr_pi_map.get(pr_item.name))
-
-        return _item_dict(pr_items)
-
-    # Creating PR from PI (Qty split possible in PR)
-    pr_items = frappe.get_all(
-        "Purchase Receipt Item",
-        fields="*",
-        filters={"purchase_invoice": pi.name, "docstatus": 1},
     )
 
-    item_qty_map = {item.name: item.qty for item in pi.items}
+    # items
+    pi_items = frappe.get_all(
+        "Purchase Invoice Item", filters={"name": ["in", pi_item_names]}, fields=["*"]
+    )
 
-    for pr_item in pr_items:
-        customs_duty_for_item = item_customs_map.get(pr_item.purchase_invoice_item)
-        total_qty = item_qty_map.get(pr_item.purchase_invoice_item)
-        pr_item.customs_duty = customs_duty_for_item * pr_item.qty / total_qty
-        pr_item.boe_detail = item_name_map.get(pr_item.purchase_invoice_item)
+    # build doc
+    pi_details = {}
+    for item in pi_items:
+        name = item.parent
+        invoice = pi_details.setdefault(
+            name, frappe._dict(name=name, update_stock=invoice_map.get(name), _items=[])
+        )
+        invoice._items.append(item)
 
-    return _item_dict(pr_items)
+    return list(pi_details.values())
+
+
+def get_pi_items(purchase_invoices):
+    pi_item = frappe.qb.DocType("Purchase Invoice Item")
+
+    return (
+        frappe.qb.from_(pi_item)
+        .select(
+            pi_item.item_code,
+            pi_item.item_name,
+            pi_item.parent.as_("purchase_invoice"),
+            pi_item.pending_boe_qty.as_("qty"),
+            pi_item.uom,
+            pi_item.cost_center,
+            pi_item.item_tax_template,
+            pi_item.gst_treatment,
+            pi_item.taxable_value.as_("assessable_value"),
+            pi_item.taxable_value,
+            pi_item.project,
+            pi_item.name.as_("pi_detail"),
+        )
+        .where(pi_item.parent.isin(purchase_invoices))
+        .where(pi_item.pending_boe_qty > 0)
+        .run(as_dict=True)
+    )
+
+
+@frappe.whitelist()
+def fetch_pending_boe_invoices(*args, **kwargs):
+    frappe.has_permission("Purchase Invoice", "read")
+
+    filters = next((arg for arg in args if isinstance(arg, dict)), {})
+    return frappe.get_all(
+        "Purchase Invoice",
+        filters={
+            "docstatus": 1,
+            "company": filters.get("company"),
+            "company_gstin": filters.get("company_gstin"),
+            "gst_category": "Overseas",
+            "pending_boe_qty": [">", 0],
+        },
+        fields=[
+            "name",
+            "company",
+            "company_gstin",
+        ],
+        distinct=True,
+    )

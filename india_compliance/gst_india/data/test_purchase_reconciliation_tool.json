@@ -16,6 +16,8 @@
                     "differences": "",
                     "inward_supply_company_gstin": "24AAQCA8719H1ZC",
                     "inward_supply_name": "",
+                    "is_reverse_charge": 0,
+                    "is_supplier_return_filed": 0,
                     "match_status": "Exact Match",
                     "purchase_company_gstin": "24AAQCA8719H1ZC",
                     "purchase_doctype": "Purchase Invoice",
@@ -23,7 +25,9 @@
                     "supplier_gstin": "24AABCR6898M1ZN",
                     "supplier_name": "_Test Registered Supplier",
                     "tax_difference": 0.0,
-                    "taxable_value_difference": 0.0
+                    "taxable_value_difference": 0.0,
+                    "project": "",
+                    "cost_center": ""
                 }
             },
             {
@@ -59,6 +63,8 @@
                     "differences": "",
                     "inward_supply_company_gstin": "24AAQCA8719H1ZC",
                     "inward_supply_name": "",
+                    "is_reverse_charge": 0,
+                    "is_supplier_return_filed": 0,
                     "match_status": "Exact Match",
                     "purchase_company_gstin": "24AAQCA8719H1ZC",
                     "purchase_doctype": "Bill of Entry",
@@ -66,7 +72,9 @@
                     "supplier_gstin": "_Test Foreign Supplier",
                     "supplier_name": "_Test Foreign Supplier",
                     "tax_difference": 0.0,
-                    "taxable_value_difference": 0.0
+                    "taxable_value_difference": 0.0,
+                    "project": "",
+                    "cost_center": ""
                 }
             },
             {
@@ -96,6 +104,8 @@
                     "differences": "",
                     "inward_supply_company_gstin": "29AABCR1718E1ZL",
                     "inward_supply_name": "",
+                    "is_reverse_charge": 0,
+                    "is_supplier_return_filed": 0,
                     "match_status": "Exact Match",
                     "purchase_company_gstin": "29AABCR1718E1ZL",
                     "purchase_doctype": "Purchase Invoice",
@@ -103,7 +113,9 @@
                     "supplier_gstin": "24AABCR6898M1ZN",
                     "supplier_name": "_Test Registered Supplier",
                     "tax_difference": 0.0,
-                    "taxable_value_difference": 0.0
+                    "taxable_value_difference": 0.0,
+                    "project": "",
+                    "cost_center": ""
                 }
             }
         ],
@@ -125,6 +137,8 @@
                     "differences": "COMPANY_GSTIN",
                     "inward_supply_company_gstin": "29AABCR1718E1ZL",
                     "inward_supply_name": "",
+                    "is_reverse_charge": 0,
+                    "is_supplier_return_filed": 0,
                     "match_status": "Mismatch",
                     "purchase_company_gstin": "24AAQCA8719H1ZC",
                     "purchase_doctype": "Purchase Invoice",
@@ -132,7 +146,9 @@
                     "supplier_gstin": "24AABCR6898M1ZN",
                     "supplier_name": "_Test Registered Supplier",
                     "tax_difference": 0.0,
-                    "taxable_value_difference": 0.0
+                    "taxable_value_difference": 0.0,
+                    "project": "",
+                    "cost_center": ""
                 }
             }
         ],
@@ -161,14 +177,18 @@
                     "differences": "Rounding Difference, TAXABLE_VALUE, CGST, SGST",
                     "inward_supply_company_gstin": "24AAQCA8719H1ZC",
                     "inward_supply_name": "",
+                    "is_reverse_charge": 0,
+                    "is_supplier_return_filed": 0,
                     "match_status": "Suggested Match",
                     "purchase_company_gstin": "24AAQCA8719H1ZC",
                     "purchase_doctype": "Purchase Invoice",
                     "purchase_invoice_name": "",
                     "supplier_gstin": "24AABCR6898M1ZN",
                     "supplier_name": "_Test Registered Supplier",
-                    "tax_difference": -0.09,
-                    "taxable_value_difference": -0.5
+                    "tax_difference": 0.09,
+                    "taxable_value_difference": 0.5,
+                    "project": "",
+                    "cost_center": ""
                 }
             }
         ],
@@ -188,6 +208,8 @@
                     "differences": "",
                     "inward_supply_company_gstin": "24AAQCA8719H1ZC",
                     "inward_supply_name": "",
+                    "is_reverse_charge": 0,
+                    "is_supplier_return_filed": 0,
                     "match_status": "Suggested Match",
                     "purchase_company_gstin": "24AAQCA8719H1ZC",
                     "purchase_doctype": "Purchase Invoice",
@@ -195,7 +217,9 @@
                     "supplier_gstin": "24AABCR6898M1ZN",
                     "supplier_name": "_Test Registered Supplier",
                     "tax_difference": 0.0,
-                    "taxable_value_difference": 0.0
+                    "taxable_value_difference": 0.0,
+                    "project": "",
+                    "cost_center": ""
                 }
             }
         ]

@@ -71,7 +71,7 @@
                         </td>
                         <td>
                             <span class="bold">
-                                {{ data.ewayBillDate | replace(":00 ", " ") }} {{ " [" }} {{ data.actualDist }}{{ "Kms]" }}
+                                {{ data.ewayBillDate | replace(":00 ", " ") }} {{ " [" }}{{ data.actualDist }}{{ "Kms]" }}
                             </span>
                         </td>
                     </tr>
@@ -105,7 +105,7 @@
             <div>
                 <strong>Part - A</strong>
             </div>
-            <table class="table">
+            <table class="table custom-margin">
                 <tbody class="table-element">
                     <tr>
                         <td style="width: 200px">GSTIN of Supplier</td>
@@ -209,7 +209,7 @@
             <div>
                 <strong>Part - B</strong>
             </div>
-            <table class="table">
+            <table class="table custom-margin">
                 <tbody class="table-element">
                     <tr class="bold">
                         <td>Mode</td>
@@ -236,9 +236,13 @@
                             {{ get_transport_mode(detail.transMode) }}
                         </td>
                         <td>
-                            {{ detail.vehicleNo }} /
-                            {{ detail.transDocNo }} Dt
-                            {{ detail.transDocDate }}
+                            {{ detail.vehicleNo }}
+                            {% if detail.transDocNo %}
+                               / {{ detail.transDocNo }}
+                            {% endif %}
+                            {% if detail.transDocDate %}
+                                - Dt {{ detail.transDocDate }}
+                            {% endif %}
                         </td>
                         <td>{{ detail.fromPlace }}</td>
                         <td>

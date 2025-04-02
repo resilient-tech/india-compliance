@@ -1,7 +1,7 @@
 import frappe
 from frappe.query_builder.functions import IfNull
 
-from india_compliance.gst_india.utils.custom_fields import delete_old_fields
+from india_compliance.utils.custom_fields import delete_old_fields
 
 
 def execute():

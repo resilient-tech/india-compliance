@@ -2,6 +2,9 @@ import frappe
 from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Abs, IfNull, Sum
+from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
+    get_accounting_dimensions,
+)
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
@@ -149,7 +152,10 @@ class PurchaseInvoice:
         self.PI_ITEM = frappe.qb.DocType("Purchase Invoice Item")
 
     def get_all(self, names=None, filters=None):
-        query = self.get_query(filters=filters, additional_fields=["posting_date"])
+        dimension_fields = get_accounting_dimensions() + ["cost_center", "project"]
+        additional_fields = dimension_fields + ["posting_date"]
+
+        query = self.get_query(filters=filters, additional_fields=additional_fields)
 
         if names:
             query = query.where(self.PI.name.isin(names))
@@ -168,7 +174,7 @@ class PurchaseInvoice:
         is_return = 1 if filters.doc_type == "Credit Note" else 0
 
         data = (
-            self.get_query(filters=filters)
+            self.get_query(filters=filters, is_return=is_return)
             .where(self.PI.gst_category.isin(gst_category))
             .where(self.PI.reconciliation_status == "Unreconciled")
             .where(self.PI.is_return == is_return)
@@ -181,8 +187,8 @@ class PurchaseInvoice:
 
         return BaseUtil.get_dict_for_key("supplier_gstin", data)
 
-    def get_query(self, filters=None, additional_fields=None):
-        fields = self.get_fields(additional_fields)
+    def get_query(self, filters=None, additional_fields=None, is_return=False):
+        fields = self.get_fields(additional_fields, is_return)
 
         query = (
             frappe.qb.from_(self.PI)
@@ -215,7 +221,7 @@ class PurchaseInvoice:
 
         return query
 
-    def get_fields(self, additional_fields=None):
+    def get_fields(self, additional_fields=None, is_return=False):
         fields = [
             "supplier_gstin",
             "supplier_name",
@@ -233,6 +239,21 @@ class PurchaseInvoice:
 
         fields = [self.PI[field] for field in fields]
         fields += self.get_tax_fields()
+
+        if is_return:
+            # return is initiated by the customer. So bill date may not be available or known.
+            fields += [self.PI.posting_date.as_("bill_date")]
+        else:
+            fields += [
+                # Default to posting date if bill date is not available.
+                Case()
+                .when(
+                    IfNull(self.PI.bill_date, "") == "",
+                    self.PI.posting_date,
+                )
+                .else_(self.PI.bill_date)
+                .as_("bill_date")
+            ]
 
         return fields
 

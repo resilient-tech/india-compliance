@@ -6,12 +6,9 @@ import json
 
 import frappe
 from frappe import _
-from frappe.model.meta import get_field_precision
 from frappe.utils import flt, getdate
-import erpnext
 
-from india_compliance.gst_india.constants import GST_TAX_TYPES
-from india_compliance.gst_india.utils import get_gst_uom
+from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
 
 
 def execute(filters=None):
@@ -21,67 +18,9 @@ def execute(filters=None):
     validate_filters(filters)
 
     columns = get_columns(filters)
-
-    data = get_hsn_data(filters, columns)
+    data = get_hsn_data(filters)
 
     return columns, data
-
-
-def get_hsn_data(filters, columns):
-    non_cess_accounts = ["igst_account", "cgst_account", "sgst_account"]
-    tax_columns = non_cess_accounts + ["cess_account"]
-
-    company_currency = erpnext.get_company_currency(filters.company)
-    item_list = get_items(filters)
-    itemised_tax = get_item_taxes(item_list, company_currency)
-
-    data = []
-    added_item = set()
-
-    for d in item_list:
-        item_key = d.item_code or d.item_name
-        key = (d.parent, d.gst_hsn_code, item_key)
-        if key in added_item:
-            continue
-
-        if d.gst_hsn_code.startswith("99"):
-            # service item doesn't have qty/uom
-            d.stock_qty = 0
-            d.uqc = "NA"
-        else:
-            d.uqc = get_gst_uom(d.get("uqc"))
-
-        total_tax = 0
-        tax_rate = 0
-
-        item_tax = itemised_tax.get((d.parent, item_key), {})
-        for tax in tax_columns:
-            tax_data = item_tax.get(tax, {})
-            total_tax += flt(tax_data.get("tax_amount", 0), 2)
-            if tax in non_cess_accounts:
-                tax_rate += flt(tax_data.get("tax_rate", 0))
-
-        d.taxable_value = flt(d.taxable_value, 2)
-        row = [
-            d.gst_hsn_code,
-            d.description,
-            d.uqc,
-            flt(d.stock_qty, 2),
-            flt(d.taxable_value + total_tax, 2),
-            tax_rate,
-            d.taxable_value,
-        ]
-
-        for tax in tax_columns:
-            row.append(flt(item_tax.get(tax, {}).get("tax_amount", 0), 2))
-
-        data.append(row)
-        added_item.add(key)
-
-    if data:
-        data = get_merged_data(columns, data)  # merge same hsn code data
-
-    return data
 
 
 def validate_filters(filters):
@@ -98,7 +37,7 @@ def get_columns(filters):
 
     columns = [
         {
-            "fieldname": "gst_hsn_code",
+            "fieldname": "hsn_code",
             "label": _("HSN"),
             "fieldtype": "Link",
             "options": "GST HSN Code",
@@ -111,19 +50,19 @@ def get_columns(filters):
             "width": 300,
         },
         {
-            "fieldname": "uqc",
+            "fieldname": "uom",
             "label": _("UQC"),
             "fieldtype": "Data",
             "width": 100,
         },
         {
-            "fieldname": "stock_qty",
+            "fieldname": "quantity",
             "label": _("Total Quantity"),
             "fieldtype": "Float",
             "width": 90,
         },
         {
-            "fieldname": "total_amount",
+            "fieldname": "document_value",
             "label": _("Total Value"),
             "fieldtype": "Currency",
             "options": company_currency,
@@ -136,35 +75,35 @@ def get_columns(filters):
             "width": 120,
         },
         {
-            "fieldname": "taxable_amount",
+            "fieldname": "total_taxable_value",
             "label": _("Taxable Value"),
             "fieldtype": "Currency",
             "options": company_currency,
             "width": 170,
         },
         {
-            "fieldname": "igst_account",
+            "fieldname": "total_igst_amount",
             "label": _("Integrated Tax Amount"),
             "fieldtype": "Currency",
             "options": company_currency,
             "width": 170,
         },
         {
-            "fieldname": "cgst_account",
+            "fieldname": "total_cgst_amount",
             "label": _("Central Tax Amount"),
             "fieldtype": "Currency",
             "options": company_currency,
             "width": 170,
         },
         {
-            "fieldname": "sgst_account",
+            "fieldname": "total_sgst_amount",
             "label": _("State/UT Tax Amount"),
             "fieldtype": "Currency",
             "options": company_currency,
             "width": 170,
         },
         {
-            "fieldname": "cess_account",
+            "fieldname": "total_cess_amount",
             "label": _("Cess Amount"),
             "fieldtype": "Currency",
             "options": company_currency,
@@ -175,6 +114,40 @@ def get_columns(filters):
     return columns
 
 
+def get_hsn_data(filters):
+    # TODO: This import should be moved to the top of the file once GSTR-1 Report is discontinued.
+    from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import GSTR1BooksData
+
+    precision_fields = (
+        "quantity",
+        "document_value",
+        "tax_rate",
+        "total_taxable_value",
+        "total_igst_amount",
+        "total_cgst_amount",
+        "total_sgst_amount",
+        "total_cess_amount",
+    )
+
+    _class = GSTR1Invoices(filters)
+    invoices = _class.get_invoices_for_item_wise_summary()
+    _class.process_invoices(invoices)
+
+    hsn_data = GSTR1BooksData({}).prepare_hsn_data(invoices)
+
+    data = [
+        {
+            **row,
+            "uom": row["uom"].split("-")[0],
+            **{field: flt(row[field], 2) for field in precision_fields},
+        }
+        for row in hsn_data.values()
+    ]
+
+    return data
+
+
+# TODO: This function will be unused and should be removed once GSTR-1 Report is discontinued.
 def get_conditions(filters):
     conditions = ""
 
@@ -189,132 +162,6 @@ def get_conditions(filters):
             conditions += opts[1]
 
     return conditions
-
-
-def get_items(filters):
-    conditions = get_conditions(filters)
-    match_conditions = frappe.build_match_conditions("Sales Invoice")
-    if match_conditions:
-        conditions += f" and {match_conditions} "
-
-    items = frappe.db.sql(
-        f"""
-        SELECT
-            COALESCE(`tabSales Invoice Item`.gst_hsn_code, '') AS gst_hsn_code,
-            `tabSales Invoice Item`.stock_uom as uqc,
-            sum(`tabSales Invoice Item`.stock_qty) AS stock_qty,
-            sum(`tabSales Invoice Item`.taxable_value) AS taxable_value,
-            `tabSales Invoice Item`.parent,
-            `tabSales Invoice Item`.item_code,
-            `tabSales Invoice Item`.item_name,
-            COALESCE(`tabGST HSN Code`.description, 'NA') AS description
-        FROM
-            `tabSales Invoice`
-            INNER JOIN `tabSales Invoice Item` ON `tabSales Invoice`.name = `tabSales Invoice Item`.parent
-            LEFT JOIN `tabGST HSN Code` ON `tabSales Invoice Item`.gst_hsn_code = `tabGST HSN Code`.name
-        WHERE
-            `tabSales Invoice`.docstatus = 1
-            AND `tabSales Invoice`.is_opening != 'Yes'
-            AND `tabSales Invoice`.company_gstin != IFNULL(`tabSales Invoice`.billing_address_gstin, '') {conditions}
-
-        GROUP BY
-            `tabSales Invoice Item`.parent,
-            `tabSales Invoice Item`.item_code
-        """,
-        filters,
-        as_dict=1,
-    )
-
-    return items
-
-
-def get_item_taxes(item_list, company_currency):
-    if not item_list:
-        return []
-
-    tax_doctype = "Sales Taxes and Charges"
-    itemised_tax = {}
-
-    tax_amount_precision = (
-        get_field_precision(
-            frappe.get_meta(tax_doctype).get_field("tax_amount"),
-            currency=company_currency,
-        )
-        or 2
-    )
-
-    invoice_numbers = [d.parent for d in item_list]
-
-    doctype = frappe.qb.DocType(tax_doctype)
-
-    tax_details = (
-        frappe.qb.from_(doctype)
-        .select(
-            doctype.parent,
-            doctype.gst_tax_type,
-            doctype.item_wise_tax_detail,
-            doctype.base_tax_amount_after_discount_amount,
-        )
-        .where(doctype.parenttype == "Sales Invoice")
-        .where(doctype.docstatus == 1)
-        .where(doctype.parent.isin(invoice_numbers))
-        .where(doctype.gst_tax_type.isin(GST_TAX_TYPES))
-    ).run()
-
-    gst_account_map = get_gst_account_tax_type_map()
-
-    for parent, gst_tax_type, item_wise_tax_detail, tax_amount in tax_details:
-        if not item_wise_tax_detail:
-            continue
-
-        try:
-            item_taxes = json.loads(item_wise_tax_detail)
-            for item_code, tax_data in item_taxes.items():
-                tax_rate = tax_data.get("tax_rate")
-                tax_amount = tax_data.get("tax_amount")
-
-                if not tax_amount:
-                    continue
-
-                item_taxes = itemised_tax.setdefault((parent, item_code), {})
-                item_taxes[gst_account_map.get(gst_tax_type)] = frappe._dict(
-                    tax_rate=flt(tax_rate, 2),
-                    tax_amount=flt(tax_amount, tax_amount_precision),
-                )
-
-        except ValueError:
-            continue
-
-    return itemised_tax
-
-
-def get_gst_account_tax_type_map():
-    gst_account_map = {}
-
-    for tax_type in GST_TAX_TYPES:
-        if "cess" in tax_type:
-            gst_account_map[tax_type] = "cess_account"
-        else:
-            gst_account_map[tax_type] = tax_type + "_account"
-    return gst_account_map
-
-
-def get_merged_data(columns, data):
-    merged_hsn_dict = {}
-
-    for row in data:
-        key = f"{row[0]}-{row[2]}-{row[5]}"
-        merged_hsn_dict.setdefault(key, {})
-        for i, d in enumerate(columns):
-            fieldname = d["fieldname"]
-            if d["fieldtype"] not in ("Int", "Float", "Currency"):
-                merged_hsn_dict[key][fieldname] = row[i]
-            else:
-                merged_hsn_dict[key][fieldname] = (
-                    merged_hsn_dict.get(key, {}).get(fieldname, 0) + row[i]
-                )
-
-    return list(merged_hsn_dict.values())
 
 
 @frappe.whitelist()
@@ -358,15 +205,15 @@ def get_hsn_wise_json_data(filters, report_data):
     count = 1
 
     for hsn in report_data:
-        if hsn.get("gst_hsn_code") == "Total":
+        if hsn.get("hsn_code") == "Total":
             continue
         row = {
             "num": count,
-            "hsn_sc": hsn.get("gst_hsn_code"),
-            "uqc": hsn.get("uqc"),
-            "qty": flt(hsn.get("stock_qty"), 2),
-            "rt": flt(hsn.get("tax_rate"), 2),
-            "txval": flt(hsn.get("taxable_amount"), 2),
+            "hsn_sc": hsn.get("hsn_code"),
+            "uqc": hsn.get("uom"),
+            "qty": hsn.get("quantity"),
+            "rt": hsn.get("tax_rate"),
+            "txval": hsn.get("total_taxable_value"),
             "iamt": 0.0,
             "camt": 0.0,
             "samt": 0.0,
@@ -376,10 +223,10 @@ def get_hsn_wise_json_data(filters, report_data):
         if hsn_description := hsn.get("description"):
             row["desc"] = hsn_description[:30]
 
-        row["iamt"] += flt(hsn.get("igst_account"), 2)
-        row["camt"] += flt(hsn.get("cgst_account"), 2)
-        row["samt"] += flt(hsn.get("sgst_account"), 2)
-        row["csamt"] += flt(hsn.get("cess_account"), 2)
+        row["iamt"] += hsn.get("total_igst_amount")
+        row["camt"] += hsn.get("total_cgst_amount")
+        row["samt"] += hsn.get("total_sgst_amount")
+        row["csamt"] += hsn.get("total_cess_amount")
 
         data.append(row)
         count += 1
