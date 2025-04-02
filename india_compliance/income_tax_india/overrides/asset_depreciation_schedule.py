@@ -12,39 +12,18 @@ from frappe.utils import (
     month_diff,
 )
 from erpnext.accounts.utils import get_fiscal_year
-from erpnext.assets.doctype.asset_depreciation_schedule.asset_depreciation_schedule import (
-    get_asset_depr_schedule_doc,
-    get_default_wdv_or_dd_depr_amount,
-)
+from erpnext.assets.doctype.asset_depreciation_schedule.asset_depreciation_schedule import get_asset_depr_schedule_doc
+from erpnext.assets.doctype.asset_depreciation_schedule.depreciation_methods import WDVMethod
 
 
-def get_wdv_or_dd_depr_amount(
-    asset,
-    fb_row,
-    depreciable_value,
-    yearly_opening_wdv,
-    schedule_idx,
-    prev_depreciation_amount,
-    has_wdv_or_dd_non_yearly_pro_rata,
-    asset_depr_schedule,
-    prev_per_day_depr=0,
-):
+def get_wdv_or_dd_depr_amount(asset_depreciation_schedule, row_idx):
 
     # As per IT act, if the asset is purchased in the 2nd half of fiscal year, then rate is divided by 2 for the first year
 
     if not fb_row.finance_book or not frappe.db.get_value(
         "Finance Book", fb_row.finance_book, "for_income_tax"
     ):
-        return get_default_wdv_or_dd_depr_amount(
-            asset,
-            fb_row,
-            depreciable_value,
-            schedule_idx,
-            prev_depreciation_amount,
-            has_wdv_or_dd_non_yearly_pro_rata,
-            asset_depr_schedule,
-            prev_per_day_depr=prev_per_day_depr,
-        )
+        return WDVMethod.calculate_wdv_or_dd_based_depreciation_amount(asset_depreciation_schedule, row_idx)
 
     asset_depr_schedule.flags.wdv_it_act_applied = True
 
