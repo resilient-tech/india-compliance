@@ -308,3 +308,22 @@ def check_scheduler_status():
                 """
             )
         )
+
+
+def change_base_path(new_base_path):
+    """
+    Decorator to change the base path of the API class for wrapped method only.
+    """
+
+    def decorator(func):
+        def wrapper(self, *args, **kwargs):
+            original_base_path = self.BASE_PATH
+            self.BASE_PATH = new_base_path
+            try:
+                return func(self, *args, **kwargs)
+            finally:
+                self.BASE_PATH = original_base_path
+
+        return wrapper
+
+    return decorator
