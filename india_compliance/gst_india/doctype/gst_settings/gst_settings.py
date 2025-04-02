@@ -439,7 +439,9 @@ def update_gst_category():
         gstin = address.gstin
 
         if gstin not in gstin_info_map:
-            gstin_info_map[gstin] = get_gstin_info(gstin)
+            gstin_info_map[gstin] = get_gstin_info(
+                gstin, doc=frappe._dict(docname="Address", name=address.name)
+            )
 
         gst_category = gstin_info_map[gstin].gst_category
 
