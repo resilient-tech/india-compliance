@@ -300,7 +300,7 @@ def validate_transaction(doc, method=None):
 
     gstin = getattr(doc, party_gstin_field)
 
-    validate_gstin_status(gstin, doc.get("posting_date") or doc.get("transaction_date"))
+    validate_gstin_status(gstin, doc)
     validate_gst_transporter_id(doc)
     validate_gst_category(doc.get(gst_category_field), gstin)
 

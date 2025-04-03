@@ -227,7 +227,7 @@ def create_opening_entry():
             "customer": "_Test Registered Customer",
         }
     )
-
+    sales_invoice.billing_address = ""
     sales_invoice.save()
 
     return sales_invoice

@@ -2282,7 +2282,8 @@ class BooksDataMapper:
 class GSTR1BooksData(BooksDataMapper):
     def __init__(self, filters):
         self.filters = filters
-        self.current_month = MONTHS.index(filters.month_or_quarter) + 1
+        if filters.get("month_or_quarter"):
+            self.current_month = MONTHS.index(filters.month_or_quarter) + 1
 
     def prepare_mapped_data(self):
         prepared_data = {}
@@ -2463,8 +2464,8 @@ class GSTR1BooksData(BooksDataMapper):
         year = self.filters.year
 
         log_names = [
-            f"GSTR1-{(self.current_month-1):02d}{year}-{company_gstin}",
-            f"GSTR1-{(self.current_month-2):02d}{year}-{company_gstin}",
+            f"GSTR1-{(self.current_month - 1):02d}{year}-{company_gstin}",
+            f"GSTR1-{(self.current_month - 2):02d}{year}-{company_gstin}",
         ]
 
         filed_invoices = set()
