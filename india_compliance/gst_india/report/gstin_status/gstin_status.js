@@ -39,7 +39,7 @@ frappe.query_reports["GSTIN Status"] = {
         if (fieldname == "status") {
             value = this.get_colored_status(value);
         } else if (fieldname == "update_gstin_details_btn") {
-            value = this.get_btn_with_gstin_attr(data.gstin);
+            value = this.get_btn_with_attr(data);
         } else {
             if (fieldname == "last_updated_on") {
                 value = frappe.datetime.prettyDate(value);
@@ -69,11 +69,13 @@ frappe.query_reports["GSTIN Status"] = {
         </span>`;
     },
 
-    get_btn_with_gstin_attr(gstin) {
+    get_btn_with_attr(data) {
         const BUTTON_HTML = `<button
             fieldname="update_gstin_details_btn"
             class="btn btn-xs btn-primary center"
-            data-gstin="${gstin}"
+            data-gstin="${data.gstin}"
+            data-party-type="${data.party_type}"
+            data-party-name="${data.party_name}"
 
         >
             Update
@@ -100,6 +102,10 @@ frappe.query_reports["GSTIN Status"] = {
                 args: {
                     gstin: gstin,
                     force_update: true,
+                    doc: {
+                        doctype: e.target.attributes["data-party-type"].value,
+                        name: e.target.attributes["data-party-name"].value,
+                    },
                 },
             });
 

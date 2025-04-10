@@ -114,7 +114,7 @@ async function autofill_company_info(slide) {
 
     if (!can_fetch_gstin_info()) return;
 
-    const gstin_info = await get_gstin_info(gstin, false);
+    const gstin_info = await get_gstin_info(gstin, null, false);
 
     if (gstin_info.business_name) {
         await slide.get_field("company_name").set_value(gstin_info.business_name);

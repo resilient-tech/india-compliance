@@ -379,7 +379,7 @@ async function autofill_fields(dialog) {
         return;
     }
 
-    const gstin_info = await get_gstin_info(gstin);
+    const gstin_info = await get_gstin_info(gstin, dialog.doc.doctype);
     set_gstin_description(gstin_field, gstin_info.status);
     map_gstin_info(dialog.doc, gstin_info);
     dialog.refresh();
@@ -416,11 +416,11 @@ function setup_pincode_field(dialog, gstin_info) {
     };
 }
 
-function get_gstin_info(gstin, throw_error = true) {
+function get_gstin_info(gstin, doctype, throw_error = true) {
     return frappe
         .call({
             method: "india_compliance.gst_india.utils.gstin_info.get_gstin_info",
-            args: { gstin, throw_error },
+            args: { gstin, throw_error, doc: { doctype: doctype } },
         })
         .then(r => r.message);
 }
