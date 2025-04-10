@@ -88,6 +88,45 @@ def get_columns(filters):
     return columns
 
 
+def initialize_columns(filters):
+    if filters.summary_by == "Overview":
+        return [
+            {
+                "label": _("Description"),
+                "fieldname": "description",
+                "width": "400",
+            },
+            {
+                "label": _("No. of records"),
+                "fieldname": "no_of_records",
+                "width": "120",
+                "fieldtype": "Int",
+            },
+        ]
+    else:
+        return [
+            {
+                "fieldname": "voucher_type",
+                "label": _("Voucher Type"),
+                "fieldtype": "Data",
+                "width": 200,
+            },
+            {
+                "fieldname": "voucher_no",
+                "label": _("Voucher No"),
+                "fieldtype": "Dynamic Link",
+                "options": "voucher_type",
+                "width": 200,
+            },
+            {
+                "fieldname": "posting_date",
+                "label": _("Posting Date"),
+                "fieldtype": "Date",
+                "width": 150,
+            },
+        ]
+
+
 def get_item_wise_columns():
     return [
         {
@@ -188,84 +227,45 @@ def get_tax_columns():
             "fieldname": "taxable_value",
             "label": _("Taxable Value"),
             "fieldtype": "Currency",
-            "width": 90,
+            "width": 150,
         },
         {
             "fieldname": "cgst_amount",
             "label": _("CGST Amount"),
             "fieldtype": "Currency",
-            "width": 90,
+            "width": 120,
         },
         {
             "fieldname": "sgst_amount",
             "label": _("SGST Amount"),
             "fieldtype": "Currency",
-            "width": 90,
+            "width": 120,
         },
         {
             "fieldname": "igst_amount",
             "label": _("IGST Amount"),
             "fieldtype": "Currency",
-            "width": 90,
+            "width": 120,
         },
         {
             "fieldname": "cess_amount",
             "label": _("CESS Amount"),
             "fieldtype": "Currency",
-            "width": 90,
+            "width": 120,
         },
         {
             "fieldname": "total_tax",
             "label": _("Total Tax"),
             "fieldtype": "Currency",
-            "width": 90,
+            "width": 120,
         },
         {
             "fieldname": "total_amount",
             "label": _("Total Amount"),
             "fieldtype": "Currency",
-            "width": 90,
+            "width": 150,
         },
     ]
-
-
-def initialize_columns(filters):
-    if filters.summary_by == "Overview":
-        return [
-            {
-                "label": _("Description"),
-                "fieldname": "description",
-                "width": "400",
-            },
-            {
-                "label": _("No. of records"),
-                "fieldname": "no_of_records",
-                "width": "120",
-                "fieldtype": "Int",
-            },
-        ]
-    else:
-        return [
-            {
-                "fieldname": "voucher_type",
-                "label": _("Voucher Type"),
-                "fieldtype": "Data",
-                "width": 200,
-            },
-            {
-                "fieldname": "voucher_no",
-                "label": _("Voucher No"),
-                "fieldtype": "Dynamic Link",
-                "options": "voucher_type",
-                "width": 200,
-            },
-            {
-                "fieldname": "posting_date",
-                "label": _("Posting Date"),
-                "fieldtype": "Date",
-                "width": 150,
-            },
-        ]
 
 
 def get_data(filters):
@@ -273,11 +273,6 @@ def get_data(filters):
     gstr3b_invoices = GSTR3BInvoices(filters)
     is_grouped_by_invoice = filters.summary_by != "Summary by Item"
     sub_section = filters.sub_section
-    subcategories = (
-        filters.invoice_sub_category
-        if filters.get("invoice_sub_category")
-        else get_sub_categories(sub_section)
-    )
 
     doctypes = ["Purchase Invoice"]
     if sub_section == "4":
@@ -286,23 +281,15 @@ def get_data(filters):
     for doctype in doctypes:
         data.extend(gstr3b_invoices.get_data(doctype, is_grouped_by_invoice))
 
-    data = sorted(
-        gstr3b_invoices.get_filtered_invoices(data, subcategories),
-        key=lambda k: (k["invoice_sub_category"], k["posting_date"]),
-    )
-
     if filters.summary_by == "Overview":
         return get_summary_view(data, sub_section)
 
+    data = sorted(
+        gstr3b_invoices.get_filtered_invoices(data, filters.invoice_sub_category),
+        key=lambda k: (k["invoice_sub_category"], k["posting_date"]),
+    )
+
     return data
-
-
-def get_sub_categories(sub_section):
-    return [
-        subcategory
-        for categories in SECTION_MAPPING[sub_section].values()
-        for subcategory in categories
-    ]
 
 
 def get_summary_view(data, sub_section):

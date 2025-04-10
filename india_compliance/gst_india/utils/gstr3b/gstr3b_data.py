@@ -286,12 +286,16 @@ class GSTR3BQuery:
         return self.get_query_with_common_filters(query, self.JE)
 
     def get_query_with_common_filters(self, query, doc):
-        return query.where(
+        query = query.where(
             (doc.docstatus == 1)
             & (doc.posting_date[self.filters.from_date : self.filters.to_date])
             & (doc.company == self.filters.company)
-            & (doc.company_gstin == self.filters.company_gstin)
         )
+
+        if self.filters.company_gstin:
+            query = query.where(doc.company_gstin == self.filters.company_gstin)
+
+        return query
 
 
 class GSTR3BInvoices(GSTR3BQuery, GSTR3BSubcategory):
@@ -383,6 +387,9 @@ class GSTR3BInvoices(GSTR3BQuery, GSTR3BSubcategory):
         return list(invoice_wise_data.values())
 
     def get_filtered_invoices(self, invoices, subcategories):
+        if not subcategories:
+            return invoices
+
         return [
             invoice
             for invoice in invoices

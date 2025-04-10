@@ -63,7 +63,6 @@ frappe.query_reports["GST Purchase Register Beta"] = {
             fieldname: "company_gstin",
             label: __("Company GSTIN"),
             fieldtype: "Autocomplete",
-            reqd: 1,
             get_query() {
                 const company = frappe.query_report.get_filter_value("company");
                 return india_compliance.get_gstin_query(company);
@@ -84,7 +83,7 @@ frappe.query_reports["GST Purchase Register Beta"] = {
             fieldname: "summary_by",
             label: __("Summary By"),
             options: "Overview\nSummary by Item\nSummary by Invoice",
-            default: "Overview",
+            default: "Summary by Item",
         },
         {
             fieldtype: "Select",
