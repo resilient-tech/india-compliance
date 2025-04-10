@@ -47,347 +47,348 @@ AMOUNT_FIELDS_MAP = {
 
 
 def execute(filters: dict | None = None):
-    return BaseGSTR3B(frappe._dict(filters or {})).run()
+    filters.from_date, filters.to_date = filters.get("date_range")
+
+    data = get_data(filters)
+    columns = get_columns(filters)
+
+    return columns, data
 
 
-class BaseGSTR3B:
-    def __init__(self, filters=None):
-        self.filters = filters
-        self.filters.from_date, self.filters.to_date = self.filters.get("date_range")
-        self.data = []
-        self.company_currency = frappe.get_cached_value(
-            "Company", filters.get("company"), "default_currency"
-        )
-        self.AMOUNT_FIELDS = AMOUNT_FIELDS_MAP[self.filters.sub_section]
-        self.is_grouped_by_invoice = self.filters.summary_by != "Summary by Item"
-        self.subcategories = (
-            self.filters.invoice_sub_category
-            if self.filters.get("invoice_sub_category")
-            else self.get_sub_categories()
-        )
+def get_columns(filters):
+    columns = initialize_columns(filters)
 
-    def run(self):
-        self.extend_columns()
-        self.get_data()
+    if filters.summary_by == "Summary by Item":
+        columns.extend(get_item_wise_columns())
+    elif filters.summary_by == "Overview":
+        columns.extend(get_summary_columns(filters))
+    else:
+        columns.extend(get_invoice_wise_columns())
 
-        return self.columns, self.data
+    columns.extend(
+        [
+            {
+                "fieldname": "invoice_type",
+                "label": _("Invoice Type"),
+                "fieldtype": "Data",
+                "width": 200,
+                "hidden": filters.summary_by == "Overview"
+                or filters.sub_section != "5",
+            },
+            {
+                "fieldname": "invoice_sub_category",
+                "label": _("Invoice Sub Category"),
+                "fieldtype": "Data",
+                "width": 200,
+                "hidden": filters.summary_by == "Overview",
+            },
+        ]
+    )
 
-    def extend_columns(self):
-        self.initialize_columns()
+    return columns
 
-        if self.filters.summary_by == "Summary by Item":
-            self.get_item_wise_columns()
-        elif self.filters.summary_by == "Overview":
-            self.get_summary_columns()
-        else:
-            self.get_invoice_wise_columns()
 
-        self.columns.extend(
-            [
-                {
-                    "fieldname": "invoice_type",
-                    "label": _("Invoice Type"),
-                    "fieldtype": "Data",
-                    "width": 200,
-                    "hidden": self.filters.summary_by == "Overview"
-                    or self.filters.sub_section != "5",
-                },
-                {
-                    "fieldname": "invoice_sub_category",
-                    "label": _("Invoice Sub Category"),
-                    "fieldtype": "Data",
-                    "width": 200,
-                    "hidden": self.filters.summary_by == "Overview",
-                },
-            ]
-        )
+def get_item_wise_columns():
+    return [
+        {
+            "fieldname": "item_code",
+            "label": _("Item Code"),
+            "fieldtype": "Link",
+            "options": "Item",
+            "width": 180,
+        },
+        {
+            "fieldname": "gst_hsn_code",
+            "label": _("HSN Code"),
+            "fieldtype": "Link",
+            "options": "GST HSN Code",
+            "width": 120,
+        },
+        {
+            "fieldname": "gst_rate",
+            "label": _("GST Rate"),
+            "fieldtype": "Percent",
+            "width": 90,
+        },
+        *get_tax_columns(),
+    ]
 
-    def get_item_wise_columns(self):
-        self.columns.extend(
-            [
-                {
-                    "fieldname": "item_code",
-                    "label": _("Item Code"),
-                    "fieldtype": "Link",
-                    "options": "Item",
-                    "width": 180,
-                },
-                {
-                    "fieldname": "gst_hsn_code",
-                    "label": _("HSN Code"),
-                    "fieldtype": "Link",
-                    "options": "GST HSN Code",
-                    "width": 120,
-                },
-                {
-                    "fieldname": "gst_rate",
-                    "label": _("GST Rate"),
-                    "fieldtype": "Percent",
-                    "width": 90,
-                },
-                *self.get_tax_columns(),
-            ]
-        )
 
-    def get_summary_columns(self):
-        if self.filters.sub_section == "4":
-            self.columns.extend(
-                [
-                    {
-                        "fieldname": "igst_amount",
-                        "label": _("Integrated Tax"),
-                        "fieldtype": "Currency",
-                        "options": self.company_currency,
-                        "width": 120,
-                    },
-                    {
-                        "fieldname": "cgst_amount",
-                        "label": _("Central Tax"),
-                        "fieldtype": "Currency",
-                        "options": self.company_currency,
-                        "width": 120,
-                    },
-                    {
-                        "fieldname": "sgst_amount",
-                        "label": _("State/UT Tax"),
-                        "fieldtype": "Currency",
-                        "options": self.company_currency,
-                        "width": 120,
-                    },
-                    {
-                        "fieldname": "cess_amount",
-                        "label": _("Cess Tax"),
-                        "fieldtype": "Currency",
-                        "options": self.company_currency,
-                        "width": 120,
-                    },
-                ]
-            )
+def get_summary_columns(filters):
+    company_currency = frappe.get_cached_value(
+        "Company", filters.get("company"), "default_currency"
+    )
 
-        else:
-            self.columns.extend(
-                [
-                    {
-                        "fieldname": "inter",
-                        "label": _("Inter State"),
-                        "fieldtype": "Currency",
-                        "options": self.company_currency,
-                        "width": 120,
-                    },
-                    {
-                        "fieldname": "intra",
-                        "label": _("Intra State"),
-                        "fieldtype": "Currency",
-                        "options": self.company_currency,
-                        "width": 120,
-                    },
-                ]
-            )
-
-    def get_invoice_wise_columns(self):
-        self.columns.extend(
-            [
-                {
-                    "fieldname": "gst_category",
-                    "label": _("GST Category"),
-                    "fieldtype": "Data",
-                    "width": 150,
-                },
-                *self.get_tax_columns(),
-            ]
-        )
-
-    def get_tax_columns(self):
+    if filters.sub_section == "4":
         return [
             {
-                "fieldname": "taxable_value",
-                "label": _("Taxable Value"),
+                "fieldname": "igst_amount",
+                "label": _("Integrated Tax"),
                 "fieldtype": "Currency",
-                "width": 90,
+                "options": company_currency,
+                "width": 120,
             },
             {
                 "fieldname": "cgst_amount",
-                "label": _("CGST Amount"),
+                "label": _("Central Tax"),
                 "fieldtype": "Currency",
-                "width": 90,
+                "options": company_currency,
+                "width": 120,
             },
             {
                 "fieldname": "sgst_amount",
-                "label": _("SGST Amount"),
+                "label": _("State/UT Tax"),
                 "fieldtype": "Currency",
-                "width": 90,
-            },
-            {
-                "fieldname": "igst_amount",
-                "label": _("IGST Amount"),
-                "fieldtype": "Currency",
-                "width": 90,
+                "options": company_currency,
+                "width": 120,
             },
             {
                 "fieldname": "cess_amount",
-                "label": _("CESS Amount"),
+                "label": _("Cess Tax"),
                 "fieldtype": "Currency",
-                "width": 90,
-            },
-            {
-                "fieldname": "total_tax",
-                "label": _("Total Tax"),
-                "fieldtype": "Currency",
-                "width": 90,
-            },
-            {
-                "fieldname": "total_amount",
-                "label": _("Total Amount"),
-                "fieldtype": "Currency",
-                "width": 90,
+                "options": company_currency,
+                "width": 120,
             },
         ]
 
-    def initialize_columns(self):
-        if self.filters.summary_by == "Overview":
-            self.columns = [
-                {
-                    "label": _("Description"),
-                    "fieldname": "description",
-                    "width": "400",
-                },
-                {
-                    "label": _("No. of records"),
-                    "fieldname": "no_of_records",
-                    "width": "120",
-                    "fieldtype": "Int",
-                },
-            ]
-        else:
-            self.columns = [
-                {
-                    "fieldname": "voucher_type",
-                    "label": _("Voucher Type"),
-                    "fieldtype": "Data",
-                    "width": 200,
-                },
-                {
-                    "fieldname": "voucher_no",
-                    "label": _("Voucher No"),
-                    "fieldtype": "Dynamic Link",
-                    "options": "voucher_type",
-                    "width": 200,
-                },
-                {
-                    "fieldname": "posting_date",
-                    "label": _("Posting Date"),
-                    "fieldtype": "Date",
-                    "width": 150,
-                },
-            ]
-
-    def get_data(self):
-        gstr3b_invoices = GSTR3BInvoices(self.filters)
-        data = []
-
-        doctypes = ["Purchase Invoice"]
-        if self.filters.sub_section == "4":
-            doctypes.extend(["Bill of Entry", "Journal Entry"])
-
-        for doctype in doctypes:
-            data.extend(gstr3b_invoices.get_data(doctype, self.is_grouped_by_invoice))
-
-        self.data = sorted(
-            gstr3b_invoices.get_filtered_invoices(data, self.subcategories),
-            key=lambda k: (k["invoice_sub_category"], k["posting_date"]),
-        )
-
-        if self.filters.summary_by == "Overview":
-            self.create_summary_view()
-
-    def get_sub_categories(self):
+    else:
         return [
-            subcategory
-            for categories in SECTION_MAPPING[self.filters.sub_section].values()
-            for subcategory in categories
+            {
+                "fieldname": "inter",
+                "label": _("Inter State"),
+                "fieldtype": "Currency",
+                "options": company_currency,
+                "width": 120,
+            },
+            {
+                "fieldname": "intra",
+                "label": _("Intra State"),
+                "fieldtype": "Currency",
+                "options": company_currency,
+                "width": 120,
+            },
         ]
 
-    def create_summary_view(self):
-        mapping = SECTION_MAPPING[self.filters.sub_section]
 
-        final_summary = []
-        sub_category_summary = self.get_sub_category_summary(mapping)
+def get_invoice_wise_columns():
+    return [
+        {
+            "fieldname": "gst_category",
+            "label": _("GST Category"),
+            "fieldtype": "Data",
+            "width": 150,
+        },
+        *get_tax_columns(),
+    ]
 
-        for category, sub_categories in mapping.items():
-            if category == "Ineligible ITC" and self.filters.sub_section == "4":
-                self.add_net_itc_row(final_summary)
 
-            category_summary = {
-                "description": category,
-                "no_of_records": 0,
-                "indent": 0,
-                **self.AMOUNT_FIELDS,
-            }
-            final_summary.append(category_summary)
+def get_tax_columns():
+    return [
+        {
+            "fieldname": "taxable_value",
+            "label": _("Taxable Value"),
+            "fieldtype": "Currency",
+            "width": 90,
+        },
+        {
+            "fieldname": "cgst_amount",
+            "label": _("CGST Amount"),
+            "fieldtype": "Currency",
+            "width": 90,
+        },
+        {
+            "fieldname": "sgst_amount",
+            "label": _("SGST Amount"),
+            "fieldtype": "Currency",
+            "width": 90,
+        },
+        {
+            "fieldname": "igst_amount",
+            "label": _("IGST Amount"),
+            "fieldtype": "Currency",
+            "width": 90,
+        },
+        {
+            "fieldname": "cess_amount",
+            "label": _("CESS Amount"),
+            "fieldtype": "Currency",
+            "width": 90,
+        },
+        {
+            "fieldname": "total_tax",
+            "label": _("Total Tax"),
+            "fieldtype": "Currency",
+            "width": 90,
+        },
+        {
+            "fieldname": "total_amount",
+            "label": _("Total Amount"),
+            "fieldtype": "Currency",
+            "width": 90,
+        },
+    ]
 
-            for sub_category in sub_categories:
-                sub_category_row = sub_category_summary[sub_category]
-                category_summary["no_of_records"] += sub_category_row["no_of_records"]
 
-                for key in self.AMOUNT_FIELDS:
-                    category_summary[key] += sub_category_row[key]
+def initialize_columns(filters):
+    if filters.summary_by == "Overview":
+        return [
+            {
+                "label": _("Description"),
+                "fieldname": "description",
+                "width": "400",
+            },
+            {
+                "label": _("No. of records"),
+                "fieldname": "no_of_records",
+                "width": "120",
+                "fieldtype": "Int",
+            },
+        ]
+    else:
+        return [
+            {
+                "fieldname": "voucher_type",
+                "label": _("Voucher Type"),
+                "fieldtype": "Data",
+                "width": 200,
+            },
+            {
+                "fieldname": "voucher_no",
+                "label": _("Voucher No"),
+                "fieldtype": "Dynamic Link",
+                "options": "voucher_type",
+                "width": 200,
+            },
+            {
+                "fieldname": "posting_date",
+                "label": _("Posting Date"),
+                "fieldtype": "Date",
+                "width": 150,
+            },
+        ]
 
-                final_summary.append(sub_category_row)
 
-        self.data = final_summary
+def get_data(filters):
+    data = []
+    gstr3b_invoices = GSTR3BInvoices(filters)
+    is_grouped_by_invoice = filters.summary_by != "Summary by Item"
+    sub_section = filters.sub_section
+    subcategories = (
+        filters.invoice_sub_category
+        if filters.get("invoice_sub_category")
+        else get_sub_categories(sub_section)
+    )
 
-    def add_net_itc_row(self, summary):
-        row = {
-            "description": "Net ITC Avaliable",
+    doctypes = ["Purchase Invoice"]
+    if sub_section == "4":
+        doctypes.extend(["Bill of Entry", "Journal Entry"])
+
+    for doctype in doctypes:
+        data.extend(gstr3b_invoices.get_data(doctype, is_grouped_by_invoice))
+
+    data = sorted(
+        gstr3b_invoices.get_filtered_invoices(data, subcategories),
+        key=lambda k: (k["invoice_sub_category"], k["posting_date"]),
+    )
+
+    if filters.summary_by == "Overview":
+        return get_summary_view(data, sub_section)
+
+    return data
+
+
+def get_sub_categories(sub_section):
+    return [
+        subcategory
+        for categories in SECTION_MAPPING[sub_section].values()
+        for subcategory in categories
+    ]
+
+
+def get_summary_view(data, sub_section):
+    mapping = SECTION_MAPPING[sub_section]
+    amount_fields = AMOUNT_FIELDS_MAP[sub_section]
+
+    final_summary = []
+    sub_category_summary = get_sub_category_summary(data, mapping, amount_fields)
+
+    for category, sub_categories in mapping.items():
+        if category == "Ineligible ITC" and sub_section == "4":
+            add_net_itc_row(final_summary, amount_fields)
+
+        category_summary = {
+            "description": category,
             "no_of_records": 0,
             "indent": 0,
-            **self.AMOUNT_FIELDS,
+            **amount_fields,
         }
+        final_summary.append(category_summary)
 
-        for summary_row in summary:
-            if summary_row["description"] == "ITC Available":
-                for key in self.AMOUNT_FIELDS:
-                    row[key] += summary_row[key]
-                row["no_of_records"] += summary_row["no_of_records"]
+        for sub_category in sub_categories:
+            sub_category_row = sub_category_summary[sub_category]
+            category_summary["no_of_records"] += sub_category_row["no_of_records"]
 
-            elif summary_row["description"] == "ITC Reversed":
-                for key in self.AMOUNT_FIELDS:
-                    row[key] -= summary_row[key]
-                row["no_of_records"] -= summary_row["no_of_records"]
+            for key in amount_fields:
+                category_summary[key] += sub_category_row[key]
 
-        summary.append(row)
+            final_summary.append(sub_category_row)
 
-    def get_sub_category_summary(self, mapping):
-        sub_categories = []
-        for category in mapping:
-            sub_categories.extend(mapping[category])
+    return final_summary
 
-        summary = {
-            category: {
-                "description": category,
-                "no_of_records": 0,
-                "indent": 1,
-                "unique_records": set(),
-                **self.AMOUNT_FIELDS,
-            }
-            for category in sub_categories
+
+def add_net_itc_row(summary, amount_fields):
+    row = {
+        "description": "Net ITC Available",
+        "no_of_records": 0,
+        "indent": 0,
+        **amount_fields,
+    }
+
+    for summary_row in summary:
+        if summary_row["description"] == "ITC Available":
+            for key in amount_fields:
+                row[key] += summary_row[key]
+            row["no_of_records"] += summary_row["no_of_records"]
+
+        elif summary_row["description"] == "ITC Reversed":
+            for key in amount_fields:
+                row[key] -= summary_row[key]
+            row["no_of_records"] -= summary_row["no_of_records"]
+
+    summary.append(row)
+
+
+def get_sub_category_summary(data, mapping, amount_fields):
+    sub_categories = []
+    for category in mapping:
+        sub_categories.extend(mapping[category])
+
+    summary = {
+        category: {
+            "description": category,
+            "no_of_records": 0,
+            "indent": 1,
+            "unique_records": set(),
+            **amount_fields,
         }
+        for category in sub_categories
+    }
 
-        def _update_summary_row(row, sub_category_field="invoice_sub_category"):
-            if row.get(sub_category_field) not in sub_categories:
-                return
+    def _update_summary_row(row, sub_category_field="invoice_sub_category"):
+        if row.get(sub_category_field) not in sub_categories:
+            return
 
-            summary_row = summary[row.get(sub_category_field)]
+        summary_row = summary[row.get(sub_category_field)]
 
-            for key in self.AMOUNT_FIELDS:
-                summary_row[key] += row[key]
+        for key in amount_fields:
+            summary_row[key] += row[key]
 
-            summary_row["unique_records"].add(row["voucher_no"])
+        summary_row["unique_records"].add(row["voucher_no"])
 
-        for row in self.data:
-            _update_summary_row(row)
+    for row in data:
+        _update_summary_row(row)
 
-        for summary_row in summary.values():
-            summary_row["no_of_records"] = len(summary_row["unique_records"])
+    for summary_row in summary.values():
+        summary_row["no_of_records"] = len(summary_row["unique_records"])
 
-        return summary
+    return summary
