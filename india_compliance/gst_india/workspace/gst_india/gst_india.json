@@ -230,7 +230,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "New Reports",
-   "link_count": 3,
+   "link_count": 4,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -241,6 +241,16 @@
    "label": "GST Sales Register Beta",
    "link_count": 0,
    "link_to": "GST Sales Register Beta",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "GST Purchase Register Beta",
+   "link_count": 0,
+   "link_to": "GST Purchase Register Beta",
    "link_type": "Report",
    "onboard": 0,
    "type": "Link"
@@ -266,7 +276,7 @@
    "type": "Link"
   }
  ],
- "modified": "2025-02-12 13:35:55.093635",
+ "modified": "2025-04-10 16:26:43.021117",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST India",
