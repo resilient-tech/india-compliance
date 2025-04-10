@@ -11,7 +11,7 @@ selling_address = {
 buying_address = {
     "bill_from": "supplier_address",
     "bill_to": "billing_address",
-    "ship_from": "supplier_address",
+    "ship_from": "dispatch_address",
     "ship_to": "shipping_address",
 }
 
