@@ -4,6 +4,8 @@
 import frappe
 from frappe import _
 
+from india_compliance.gst_india.constants import GST_TAX_RATES
+
 AMOUNT_FIELDS = (
     "taxable_value",
     "cgst_amount",
@@ -119,9 +121,9 @@ def process_data(data):
     for invoice in data:
         # Determine the key field
         key_field = (
-            "tax_rate" if invoice.gst_treatment == "Taxable" else "gst_treatment"
+            "tax_rate" if invoice.get("gst_treatment") == "Taxable" else "gst_treatment"
         )
-        key_value = f"{invoice.get(key_field)}"
+        key_value = invoice.get(key_field)
 
         if key_value not in invoice_wise_data:
             invoice_wise_data[key_value] = invoice
@@ -130,9 +132,21 @@ def process_data(data):
                 invoice_wise_data[key_value][field] += invoice[field]
 
         # Set description based on key field
-        if key_field == "tax_rate":
-            invoice_wise_data[key_value].description = f"{key_value} %"
-        else:
-            invoice_wise_data[key_value].description = key_value
+        invoice_wise_data[key_value]["description"] = (
+            f"{key_value} %" if key_field == "tax_rate" else key_value
+        )
 
-    return list(invoice_wise_data.values())
+    # Sorting order
+    sort_order = [rate for rate in GST_TAX_RATES] + [
+        "Taxable",
+        "Zero-Rated",
+        "Nil-Rated",
+        "Exempted",
+        "Non-GST",
+    ]
+
+    # Sort the dictionary based on the sort order
+    sorted_data = sorted(
+        invoice_wise_data.items(), key=lambda item: sort_order.index(item[0])
+    )
+    return [value for _, value in sorted_data]
