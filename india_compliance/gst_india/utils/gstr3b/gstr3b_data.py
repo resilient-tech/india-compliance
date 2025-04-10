@@ -5,6 +5,7 @@ from frappe.query_builder.functions import IfNull, Sum
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.overrides.transaction import is_inter_state_supply
+from india_compliance.gst_india.utils import get_full_gst_uom
 
 PURCHASE_CATEGORY_CONDITIONS = {
     "Composition Scheme, Exempted, Nil Rated": {
@@ -70,12 +71,11 @@ AMOUNT_FIELDS = (
 
 class GSTR3BCategoryConditions:
     def is_composition_nil_rated_or_exempted(self, invoice):
-        cond = invoice.gst_category != "Overseas" and (
+        return invoice.gst_category != "Overseas" and (
             invoice.gst_treatment == "Nil-Rated"
             or invoice.gst_treatment == "Exempted"
             or invoice.gst_category == "Registered Composition"
         )
-        return cond
 
     def is_non_gst(self, invoice):
         return invoice.gst_category != "Overseas" and invoice.gst_treatment == "Non-GST"
@@ -155,6 +155,8 @@ class GSTR3BQuery:
                 self.PI_ITEM.item_code,
                 IfNull(self.PI_ITEM.gst_treatment, "").as_("gst_treatment"),
                 self.PI_ITEM.gst_hsn_code,
+                self.PI_ITEM.uom,
+                self.PI_ITEM.qty,
                 (
                     self.PI_ITEM.cgst_rate
                     + self.PI_ITEM.sgst_rate
@@ -202,6 +204,8 @@ class GSTR3BQuery:
                 self.BOE_ITEM.is_ineligible_for_itc,
                 self.BOE_ITEM.item_code,
                 self.BOE_ITEM.gst_hsn_code,
+                self.BOE_ITEM.uom,
+                self.BOE_ITEM.qty,
                 (
                     self.BOE_ITEM.cgst_rate
                     + self.BOE_ITEM.sgst_rate
@@ -317,7 +321,10 @@ class GSTR3BInvoices(GSTR3BQuery, GSTR3BSubcategory):
 
     def get_processed_invoices(self, doctype, data):
         conditions = DOCTYPE_CONDITION_MAP[doctype]
+        self.gst_settings = frappe.get_cached_doc("GST Settings")
         processed_invoices = []
+        identified_uom = {}
+
         for invoice in data:
             if not invoice.invoice_sub_category:
                 self.set_invoice_category(invoice, conditions)
@@ -329,9 +336,10 @@ class GSTR3BInvoices(GSTR3BQuery, GSTR3BSubcategory):
             ):
                 self.update_tax_values(invoice)
 
+            self.process_uom(invoice, identified_uom)
             processed_invoices.append(invoice)
 
-            if invoice.invoice_category not in ["ITC Available"]:
+            if invoice.invoice_category != "ITC Available":
                 continue
 
             if getattr(self, conditions["ITC Reversed"]["category"], None)(invoice):
@@ -361,6 +369,19 @@ class GSTR3BInvoices(GSTR3BQuery, GSTR3BSubcategory):
                 "invoice_type": "Inter State" if inter else "Intra State",
             }
         )
+
+    def process_uom(self, invoice, identified_uom):
+        if invoice.gst_hsn_code and invoice.gst_hsn_code.startswith("99"):
+            invoice["uom"] = "OTH-OTHERS"
+            return
+
+        uom = invoice.get("uom", "")
+        if uom in identified_uom:
+            invoice["uom"] = identified_uom[uom]
+        else:
+            gst_uom = get_full_gst_uom(uom, self.gst_settings)
+            identified_uom[uom] = gst_uom
+            invoice["uom"] = gst_uom
 
     def set_invoice_category(self, invoice, conditions):
         for category, functions in conditions.items():

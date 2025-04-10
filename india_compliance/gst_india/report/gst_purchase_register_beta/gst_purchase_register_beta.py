@@ -137,11 +137,23 @@ def get_item_wise_columns():
             "width": 180,
         },
         {
+            "fieldname": "qty",
+            "label": _("Item Qty"),
+            "fieldtype": "Data",
+            "width": 100,
+        },
+        {
             "fieldname": "gst_hsn_code",
             "label": _("HSN Code"),
             "fieldtype": "Link",
             "options": "GST HSN Code",
             "width": 120,
+        },
+        {
+            "fieldname": "uom",
+            "label": _("UOM"),
+            "fieldtype": "Data",
+            "width": 100,
         },
         {
             "fieldname": "gst_rate",
@@ -361,11 +373,11 @@ def get_sub_category_summary(data, mapping, amount_fields):
         for category in sub_categories
     }
 
-    def _update_summary_row(row, sub_category_field="invoice_sub_category"):
-        if row.get(sub_category_field) not in sub_categories:
+    def _update_summary_row(row):
+        if row.get("invoice_sub_category") not in sub_categories:
             return
 
-        summary_row = summary[row.get(sub_category_field)]
+        summary_row = summary[row.get("invoice_sub_category")]
 
         for key in amount_fields:
             summary_row[key] += row[key]
