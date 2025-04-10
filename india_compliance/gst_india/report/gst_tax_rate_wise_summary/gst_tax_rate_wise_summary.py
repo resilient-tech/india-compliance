@@ -3,6 +3,7 @@
 
 import frappe
 from frappe import _
+from frappe.query_builder.functions import IfNull
 
 from india_compliance.gst_india.constants import GST_TAX_RATES
 
@@ -77,11 +78,12 @@ def get_columns(filters):
 
 
 def get_data(filters):
-    doctype = (
-        "Sales Invoice"
-        if filters.voucher_type == "Sales Invoice"
-        else "Purchase Invoice"
-    )
+    if filters.voucher_type == "Sales Invoice":
+        doctype = "Sales Invoice"
+        gstin_field = "billing_address_gstin"
+    else:
+        doctype = "Purchase Invoice"
+        gstin_field = "supplier_gstin"
 
     doc = frappe.qb.DocType(doctype)
     doc_item = frappe.qb.DocType(f"{doctype} Item")
@@ -105,12 +107,18 @@ def get_data(filters):
             (doc.docstatus == 1)
             & (doc.posting_date[filters.from_date : filters.to_date])
             & (doc.company == filters.company)
-            & (doc.company_gstin == filters.company_gstin)
+            & (doc.is_opening == "No")
+            & (doc.company_gstin != IfNull(doc[gstin_field], ""))
         )
     )
 
+    if filters.get("company_gstin"):
+        query = query.where(doc.company_gstin == filters.company_gstin)
+
     if filters.voucher_type == "Purchase Reverse Charge":
         query = query.where(doc.is_reverse_charge == 1)
+    else:
+        query = query.where(doc.is_reverse_charge == 0)
 
     return query.run(as_dict=True)
 

@@ -14,11 +14,11 @@
  "modified": "2025-04-03 12:09:20.116328",
  "modified_by": "Administrator",
  "module": "GST India",
- "name": "GST Tax-Rate-Wise Summary",
+ "name": "GST Tax Rate-wise Summary",
  "owner": "Administrator",
  "prepared_report": 0,
  "ref_doctype": "Sales Invoice",
- "report_name": "GST Tax-Rate-Wise Summary",
+ "report_name": "GST Tax Rate-wise Summary",
  "report_type": "Script Report",
  "roles": [
   {
