@@ -140,7 +140,7 @@ def get_item_wise_columns():
             "fieldname": "qty",
             "label": _("Item Qty"),
             "fieldtype": "Data",
-            "width": 100,
+            "width": 90,
         },
         {
             "fieldname": "gst_hsn_code",
@@ -153,7 +153,7 @@ def get_item_wise_columns():
             "fieldname": "uom",
             "label": _("UOM"),
             "fieldtype": "Data",
-            "width": 100,
+            "width": 120,
         },
         {
             "fieldname": "gst_rate",
