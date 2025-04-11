@@ -57,4 +57,28 @@ frappe.query_reports["HSN-wise-summary of purchases"] = {
             reqd: 1,
         },
     ],
+    onload: report => {
+        report.page.add_inner_button(__("Download JSON"), function () {
+            var filters = report.get_values();
+
+            frappe.call({
+                method: "india_compliance.gst_india.report.hsn_wise_summary_of_purchases.hsn_wise_summary_of_purchases.get_json",
+                args: {
+                    data: report.data,
+                    report_name: report.report_name,
+                    filters: filters,
+                },
+                callback: function (r) {
+                    if (r.message) {
+                        const args = {
+                            cmd: "india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies.download_json_file",
+                            data: r.message.data,
+                            report_name: r.message.report_name,
+                        };
+                        open_url_post(frappe.request.url, args);
+                    }
+                },
+            });
+        });
+    },
 };
