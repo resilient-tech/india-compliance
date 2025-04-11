@@ -1242,6 +1242,7 @@ class HSNSUM(GovDataMapper):
         output = {}
 
 <<<<<<< HEAD
+<<<<<<< HEAD
         for invoice in input_data[GovDataField.HSN_DATA.value]:
             output[
                 " - ".join(
@@ -1253,6 +1254,12 @@ class HSNSUM(GovDataMapper):
                 )
             ] = self.format_data(invoice)
 =======
+=======
+        # get hsn summary has dict
+        if isinstance(input_data, dict):
+            input_data = [input_data]
+
+>>>>>>> a6c389c2 (fix: handle dict object)
         for row in input_data:
             default_data = {
                 GSTR1_DataField.ERROR_CD.value: row.get(GovDataField.ERROR_CD.value),
