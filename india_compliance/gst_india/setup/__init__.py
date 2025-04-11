@@ -203,6 +203,11 @@ def set_default_gst_settings():
         "auto_generate_e_invoice": 1,
         "generate_e_waybill_with_e_invoice": 1,
         "e_invoice_applicable_from": nowdate(),
+<<<<<<< HEAD
+=======
+        "fetch_e_invoice_details_from_gst_portal": 1,
+        "e_invoice_reporting_time_limit_days": 30,
+>>>>>>> 41e45b83 (fix: add backdated e-invoice validation and exception handling)
         "autofill_party_info": 1,
         "archive_party_info_days": 7,
         "validate_gstin_status": 0,

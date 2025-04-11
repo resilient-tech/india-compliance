@@ -36,7 +36,16 @@
   "e_invoice_section",
   "enable_e_invoice",
   "auto_generate_e_invoice",
+<<<<<<< HEAD
   "generate_e_waybill_with_e_invoice",
+=======
+  "auto_cancel_e_invoice",
+  "restrict_cancel_if_e_invoice_final",
+  "reason_for_e_invoice_cancellation",
+  "e_invoice_reporting_time_limit_days",
+  "column_break_17",
+  "fetch_e_invoice_details_from_gst_portal",
+>>>>>>> 41e45b83 (fix: add backdated e-invoice validation and exception handling)
   "apply_e_invoice_only_for_selected_companies",
   "column_break_17",
   "e_invoice_applicable_from",
@@ -610,13 +619,37 @@
    "description": "Use APIs to compare records with GST Portal Data Before and After Filing",
    "fieldname": "compare_gstr_1_data",
    "fieldtype": "Check",
+<<<<<<< HEAD
    "label": "Compare Data with GST Portal"
+=======
+   "label": "Enable GSTR-1 API Features"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval: doc.enable_e_invoice",
+   "description": "If the e-Invoice is not cancellable, the Sales Invoice will not be allowed to be cancelled.",
+   "fieldname": "restrict_cancel_if_e_invoice_final",
+   "fieldtype": "Check",
+   "label": "Restrict Cancellation if e-Invoice not Cancellable"
+  },
+  {
+   "default": "30",
+   "depends_on": "eval: doc.enable_e_invoice",
+   "description": "Maximum number of days allowed for e-invoice generation after posting date",
+   "fieldname": "e_invoice_reporting_time_limit_days",
+   "fieldtype": "Int",
+   "label": "e-Invoice Reporting Time Limit (in Days)"
+>>>>>>> 41e45b83 (fix: add backdated e-invoice validation and exception handling)
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
+<<<<<<< HEAD
  "modified": "2025-02-13 07:42:20.143269",
+=======
+ "modified": "2025-04-11 15:33:51.263598",
+>>>>>>> 41e45b83 (fix: add backdated e-invoice validation and exception handling)
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
