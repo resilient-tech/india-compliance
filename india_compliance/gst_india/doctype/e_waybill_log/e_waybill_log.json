@@ -177,11 +177,7 @@
    "link_fieldname": "ewaybill"
   }
  ],
-<<<<<<< HEAD
- "modified": "2024-01-17 14:46:29.964817",
-=======
  "modified": "2025-04-10 09:56:46.803698",
->>>>>>> 4386bcbc (chore: removed redundant column break from e-Waybill Log doctype)
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Waybill Log",
