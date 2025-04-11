@@ -146,89 +146,6 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Other GST Reports",
-   "link_count": 7,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "e-Invoice Summary",
-   "link_count": 0,
-   "link_to": "e-Invoice Summary",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "GSTR-3B Details",
-   "link_count": 0,
-   "link_to": "GSTR-3B Details",
-   "link_type": "Report",
-   "onboard": 0,
-   "report_ref_doctype": "Purchase Invoice",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "GST Balance",
-   "link_count": 0,
-   "link_to": "GST Balance",
-   "link_type": "Report",
-   "onboard": 0,
-   "report_ref_doctype": "GL Entry",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "HSN-wise Summary of Outward Supplies",
-   "link_count": 0,
-   "link_to": "HSN-wise-summary of outward supplies",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Audit Trail",
-   "link_count": 0,
-   "link_to": "Audit Trail",
-   "link_type": "Report",
-   "onboard": 0,
-   "report_ref_doctype": "Version",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "GST Advance Detail",
-   "link_count": 0,
-   "link_to": "GST Advance Detail",
-   "link_type": "Report",
-   "onboard": 0,
-   "report_ref_doctype": "Payment Entry",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "GSTIN Status",
-   "link_count": 0,
-   "link_to": "GSTIN Status",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
    "label": "New Reports",
    "link_count": 4,
    "link_type": "DocType",
@@ -274,9 +191,98 @@
    "link_type": "Report",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Other GST Reports",
+   "link_count": 9,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "e-Invoice Summary",
+   "link_count": 0,
+   "link_to": "e-Invoice Summary",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "GSTR-3B Details",
+   "link_count": 0,
+   "link_to": "GSTR-3B Details",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "GST Balance",
+   "link_count": 0,
+   "link_to": "GST Balance",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "HSN-wise Summary of Outward Supplies",
+   "link_count": 0,
+   "link_to": "HSN-wise-summary of outward supplies",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "HSN-wise-summary of Inward Supplies",
+   "link_count": 0,
+   "link_to": "HSN-wise-summary of inward supplies",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Audit Trail",
+   "link_count": 0,
+   "link_to": "Audit Trail",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "GST Advance Detail",
+   "link_count": 0,
+   "link_to": "GST Advance Detail",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "GSTIN Status",
+   "link_count": 0,
+   "link_to": "GSTIN Status",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2025-04-10 16:26:43.021117",
+ "modified": "2025-04-11 19:51:51.089855",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST India",
