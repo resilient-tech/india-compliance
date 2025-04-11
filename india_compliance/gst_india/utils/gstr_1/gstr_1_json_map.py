@@ -1243,6 +1243,7 @@ class HSNSUM(GovDataMapper):
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         for invoice in input_data[GovDataField.HSN_DATA.value]:
             output[
                 " - ".join(
@@ -1256,6 +1257,9 @@ class HSNSUM(GovDataMapper):
 =======
 =======
         # get hsn summary has dict
+=======
+        # error JSON is diff from normal JSON
+>>>>>>> 8462f57b (test: Error JSON for HSN Summary)
         if isinstance(input_data, dict):
             input_data = [input_data]
 
