@@ -1181,6 +1181,10 @@ class HSNSUM(GSTR1DataMapper):
     def convert_to_internal_data_format(self, input_data):
         output = {}
 
+        # get hsn summary has dict
+        if isinstance(input_data, dict):
+            input_data = [input_data]
+
         for row in input_data:
             default_data = {
                 GSTR1_DataField.ERROR_CD.value: row.get(GovDataField.ERROR_CD.value),
