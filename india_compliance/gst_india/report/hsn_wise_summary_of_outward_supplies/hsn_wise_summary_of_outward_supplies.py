@@ -115,6 +115,14 @@ def get_columns(filters):
 
 
 def get_hsn_data(filters):
+    _class = GSTR1Invoices(filters)
+    invoices = _class.get_invoices_for_item_wise_summary()
+    _class.process_invoices(invoices)
+
+    return process_hsn_data(invoices)
+
+
+def process_hsn_data(invoices):
     # TODO: This import should be moved to the top of the file once GSTR-1 Report is discontinued.
     from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import GSTR1BooksData
 
@@ -129,13 +137,9 @@ def get_hsn_data(filters):
         "total_cess_amount",
     )
 
-    _class = GSTR1Invoices(filters)
-    invoices = _class.get_invoices_for_item_wise_summary()
-    _class.process_invoices(invoices)
-
     hsn_data = GSTR1BooksData({}).prepare_hsn_data(invoices)
 
-    data = [
+    return [
         {
             **row,
             "uom": row["uom"].split("-")[0],
@@ -143,8 +147,6 @@ def get_hsn_data(filters):
         }
         for row in hsn_data.values()
     ]
-
-    return data
 
 
 # TODO: This function will be unused and should be removed once GSTR-1 Report is discontinued.
