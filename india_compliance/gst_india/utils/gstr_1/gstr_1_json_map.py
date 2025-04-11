@@ -1181,7 +1181,7 @@ class HSNSUM(GSTR1DataMapper):
     def convert_to_internal_data_format(self, input_data):
         output = {}
 
-        # get hsn summary has dict
+        # error JSON is diff from normal JSON
         if isinstance(input_data, dict):
             input_data = [input_data]
 
