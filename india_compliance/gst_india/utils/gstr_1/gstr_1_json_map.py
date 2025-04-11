@@ -1241,6 +1241,7 @@ class HSNSUM(GovDataMapper):
     def convert_to_internal_data_format(self, input_data):
         output = {}
 
+<<<<<<< HEAD
         for invoice in input_data[GovDataField.HSN_DATA.value]:
             output[
                 " - ".join(
@@ -1251,6 +1252,24 @@ class HSNSUM(GovDataMapper):
                     )
                 )
             ] = self.format_data(invoice)
+=======
+        for row in input_data:
+            default_data = {
+                GSTR1_DataField.ERROR_CD.value: row.get(GovDataField.ERROR_CD.value),
+                GSTR1_DataField.ERROR_MSG.value: row.get(GovDataField.ERROR_MSG.value),
+            }
+
+            for invoice in row[GovDataField.HSN_DATA.value]:
+                output[
+                    " - ".join(
+                        (
+                            invoice.get(GovDataField.HSN_CODE.value, ""),
+                            self.map_uom(invoice.get(GovDataField.UOM.value, "")),
+                            str(flt(invoice.get(GovDataField.TAX_RATE.value))),
+                        )
+                    )
+                ] = self.format_data(invoice, default_data)
+>>>>>>> a40fe2e9 (fix: correct data format for hsn error)
 
         return {self.SUBCATEGORY: output}
 
