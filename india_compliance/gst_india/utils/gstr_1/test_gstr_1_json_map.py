@@ -1361,3 +1361,84 @@ class TestSUPECOM(IntegrationTestCase):
             process_mapped_data(self.mapped_data)
         )
         self.assertDictEqual(self.json_data, output)
+
+
+##### ERROR JSON TEST CASES #####
+
+
+class TestHSNSUMError(IntegrationTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+        cls.json_data = [
+            {
+                GovDataField.HSN_DATA.value: [
+                    {
+                        GovDataField.INDEX.value: 1,
+                        GovDataField.HSN_CODE.value: "1010",
+                        GovDataField.DESCRIPTION.value: "Goods Description",
+                        GovDataField.UOM.value: "KGS",
+                        GovDataField.QUANTITY.value: 2.05,
+                        GovDataField.TAXABLE_VALUE.value: 10.23,
+                        GovDataField.IGST.value: 14.52,
+                        GovDataField.CESS.value: 500,
+                        GovDataField.TAX_RATE.value: 0.1,
+                    },
+                ],
+                GovDataField.ERROR_CD.value: "RET191350",
+                GovDataField.ERROR_MSG.value: "Length of entered HSN code is not valid as per AATO",
+            },
+            {
+                GovDataField.HSN_DATA.value: [
+                    {
+                        GovDataField.INDEX.value: 2,
+                        GovDataField.HSN_CODE.value: "1011",
+                        GovDataField.DESCRIPTION.value: "Goods Description",
+                        GovDataField.UOM.value: "NOS",
+                        GovDataField.QUANTITY.value: 2.05,
+                        GovDataField.TAXABLE_VALUE.value: 10.23,
+                        GovDataField.IGST.value: 14.52,
+                        GovDataField.CESS.value: 500,
+                        GovDataField.TAX_RATE.value: 5.0,
+                    }
+                ],
+                GovDataField.ERROR_CD.value: "RET191350",
+                GovDataField.ERROR_MSG.value: "Length of entered HSN code is not valid as per AATO",
+            },
+        ]
+
+        cls.mapped_data = {
+            GSTR1_SubCategory.HSN.value: {
+                "1010 - KGS-KILOGRAMS - 0.1": {
+                    GSTR1_DataField.HSN_CODE.value: "1010",
+                    GSTR1_DataField.DESCRIPTION.value: "Goods Description",
+                    GSTR1_DataField.UOM.value: "KGS-KILOGRAMS",
+                    GSTR1_DataField.QUANTITY.value: 2.05,
+                    GSTR1_DataField.TAXABLE_VALUE.value: 10.23,
+                    GSTR1_DataField.IGST.value: 14.52,
+                    GSTR1_DataField.CESS.value: 500,
+                    GSTR1_DataField.TAX_RATE.value: 0.1,
+                    GSTR1_DataField.DOC_VALUE.value: 524.75,
+                    GSTR1_DataField.ERROR_CD.value: "RET191350",
+                    GSTR1_DataField.ERROR_MSG.value: "Length of entered HSN code is not valid as per AATO",
+                },
+                "1011 - NOS-NUMBERS - 5.0": {
+                    GSTR1_DataField.HSN_CODE.value: "1011",
+                    GSTR1_DataField.DESCRIPTION.value: "Goods Description",
+                    GSTR1_DataField.UOM.value: "NOS-NUMBERS",
+                    GSTR1_DataField.QUANTITY.value: 2.05,
+                    GSTR1_DataField.TAXABLE_VALUE.value: 10.23,
+                    GSTR1_DataField.IGST.value: 14.52,
+                    GSTR1_DataField.CESS.value: 500,
+                    GSTR1_DataField.TAX_RATE.value: 5,
+                    GSTR1_DataField.DOC_VALUE.value: 524.75,
+                    GSTR1_DataField.ERROR_CD.value: "RET191350",
+                    GSTR1_DataField.ERROR_MSG.value: "Length of entered HSN code is not valid as per AATO",
+                },
+            }
+        }
+
+    def test_convert_to_internal_data_format(self):
+        output = HSNSUM().convert_to_internal_data_format(self.json_data)
+        self.assertDictEqual(self.mapped_data, output)

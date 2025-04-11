@@ -1181,23 +1181,26 @@ class HSNSUM(GSTR1DataMapper):
     def convert_to_internal_data_format(self, input_data):
         output = {}
 
-        default_data = {
-            GSTR1_DataField.ERROR_CD.value: input_data.get(GovDataField.ERROR_CD.value),
-            GSTR1_DataField.ERROR_MSG.value: input_data.get(
-                GovDataField.ERROR_MSG.value
-            ),
-        }
+        # error JSON is diff from normal JSON
+        if isinstance(input_data, dict):
+            input_data = [input_data]
 
-        for invoice in input_data[GovDataField.HSN_DATA.value]:
-            output[
-                " - ".join(
-                    (
-                        invoice.get(GovDataField.HSN_CODE.value, ""),
-                        self.map_uom(invoice.get(GovDataField.UOM.value, "")),
-                        str(flt(invoice.get(GovDataField.TAX_RATE.value))),
+        for row in input_data:
+            default_data = {
+                GSTR1_DataField.ERROR_CD.value: row.get(GovDataField.ERROR_CD.value),
+                GSTR1_DataField.ERROR_MSG.value: row.get(GovDataField.ERROR_MSG.value),
+            }
+
+            for invoice in row[GovDataField.HSN_DATA.value]:
+                output[
+                    " - ".join(
+                        (
+                            invoice.get(GovDataField.HSN_CODE.value, ""),
+                            self.map_uom(invoice.get(GovDataField.UOM.value, "")),
+                            str(flt(invoice.get(GovDataField.TAX_RATE.value))),
+                        )
                     )
-                )
-            ] = self.format_data(invoice, default_data)
+                ] = self.format_data(invoice, default_data)
 
         return {self.SUBCATEGORY: output}
 
