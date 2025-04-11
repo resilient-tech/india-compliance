@@ -128,6 +128,15 @@ def generate_e_invoice(docname, throw=True, force=False):
         ):
             raise GSPServerError
 
+        if settings.e_invoice_reporting_time_limit_days and getdate() > add_to_date(
+            doc.posting_date, days=settings.e_invoice_reporting_time_limit_days
+        ):
+            frappe.throw(
+                _(
+                    "e-Invoice cannot be generated because the posting date exceeds the reporting time limit of {0} days as specified in GST Settings."
+                ).format(settings.e_invoice_reporting_time_limit_days),
+            )
+
         data = EInvoiceData(doc).get_data()
         api = EInvoiceAPI(doc)
         result = api.generate_irn(data)
