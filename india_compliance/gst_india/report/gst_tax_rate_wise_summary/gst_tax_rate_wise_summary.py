@@ -31,6 +31,11 @@ VOUCHER_TYPE_MAP = {
         "gstin_field": "supplier_gstin",
         "is_reverse_charge": 1,
     },
+    "Sales Reverse Charge": {
+        "doctypes": ("Sales Invoice",),
+        "gstin_field": "billing_address_gstin",
+        "is_reverse_charge": 1,
+    },
 }
 
 

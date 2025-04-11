@@ -49,8 +49,8 @@ frappe.query_reports["GST Tax Rate-wise Summary"] = {
             label: __("Voucher Type"),
             fieldtype: "Select",
             reqd: 1,
-            default: "Purchase Invoice",
-            options: ["Purchase Invoice", "Sales Invoice", "Purchase Reverse Charge"],
+            default: "Sales Invoice",
+            options: ["Purchase Invoice", "Sales Invoice", "Purchase Reverse Charge", "Sales Reverse Charge"],
         },
     ],
 };
