@@ -20,22 +20,19 @@ class CustomItemGSTDetails(ItemGSTDetails):
     Support use of Item wise tax rates in Taxes and Charges table
     """
 
-    def set_item_wise_tax_details(self):
+    # TO Deprecate
+    def set_item_code_wise_tax_details(self):
         tax_details = frappe._dict()
         item_map = {}
 
         for row in self.doc.get("items"):
-            key = row.name
+            key = self.get_item_key(row)
             item_map[key] = row
             tax_details[key] = self.item_defaults.copy()
             tax_details[key]["count"] += 1
 
         for row in self.doc.taxes:
-            if (
-                not row.tax_amount
-                or row.gst_tax_type not in GST_TAX_TYPES
-                or not row.item_wise_tax_rates
-            ):
+            if not self.is_gst_tax_row(row):
                 continue
 
             tax = row.gst_tax_type
@@ -53,18 +50,14 @@ class CustomItemGSTDetails(ItemGSTDetails):
 
                 item_taxes = tax_details[row_name]
                 tax_rate = item_wise_tax_rates.get(row_name)
-                precision = self.precision.get(tax_amount_field)
-                item = item_map.get(row_name)
-
-                multiplier = (
-                    item.qty if tax == "cess_non_advol" else item.taxable_value / 100
-                )
 
                 # cases when charge type == "Actual"
                 if not tax_rate:
                     continue
 
-                tax_amount = flt(tax_rate * multiplier, precision)
+                item = item_map.get(row_name)
+                tax_amount = self.get_item_tax_amount(item, tax_rate, tax)
+
                 item_taxes[tax_rate_field] = tax_rate
                 item_taxes[tax_amount_field] += tax_amount
 
@@ -72,6 +65,28 @@ class CustomItemGSTDetails(ItemGSTDetails):
 
     def get_item_key(self, item):
         return item.name
+
+    @staticmethod
+    def tax_amount_field():
+        return "tax_amount"
+
+    @staticmethod
+    def tax_details_field():
+        return "item_wise_tax_rates"
+
+    def get_item_tax_rate(self, item, tax_row):
+        """
+        Get item tax rate from item tax template
+        """
+        if not getattr(self, "item_tax_rates", None):
+            self.item_tax_rates = frappe._dict()
+
+        if tax_row.name not in self.item_tax_rates:
+            tax_rates = frappe.parse_json(tax_row.item_wise_tax_rates)
+            self.item_tax_rates[tax_row.name] = tax_rates
+
+        item_tax_rates = self.item_tax_rates[tax_row.name]
+        return item_tax_rates.get(item.name)
 
 
 def update_gst_details(doc, method=None):

@@ -200,15 +200,37 @@ class TestTransaction(IntegrationTestCase):
 
     def test_transaction_for_items_with_duplicate_taxes(self):
         # Should not allow same item in invoice with multiple taxes
-        doc = create_transaction(**self.transaction_details, do_not_save=True)
+        doc = create_transaction(
+            **self.transaction_details, do_not_save=True, is_in_state=True
+        )
 
         append_item(doc, frappe._dict(item_tax_template="GST 28% - _TIRC"))
+        doc.taxes[0].dont_recompute_tax = 1
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             re.compile(r"^(Cannot use different Item Tax Templates in different.*)$"),
             doc.insert,
         )
+
+    def test_transaction_for_items_with_different_tax_templates(self):
+        doc = create_transaction(
+            **self.transaction_details, do_not_save=True, is_in_state=True
+        )
+
+        append_item(doc, frappe._dict(item_tax_template="GST 12% - _TIRC"))
+        doc.insert()
+
+        # Verify that taxes and amounts are set correctly in both items
+        self.assertEqual(doc.items[0].cgst_rate, 9)
+        self.assertEqual(doc.items[0].sgst_rate, 9)
+        self.assertEqual(doc.items[0].cgst_amount, 9)
+        self.assertEqual(doc.items[0].sgst_amount, 9)
+
+        self.assertEqual(doc.items[1].cgst_rate, 6)
+        self.assertEqual(doc.items[1].sgst_rate, 6)
+        self.assertEqual(doc.items[1].cgst_amount, 6)
+        self.assertEqual(doc.items[1].sgst_amount, 6)
 
     def test_place_of_supply_is_set(self):
         doc = create_transaction(**self.transaction_details)
