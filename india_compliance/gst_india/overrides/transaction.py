@@ -1231,6 +1231,7 @@ class ItemGSTDetails:
                 tax_rate_field = f"{tax}_rate"
                 tax_amount_field = f"{tax}_amount"
 
+                old = self.get_tax_details(tax_row)
                 old = frappe.parse_json(tax_row.get(self.tax_details_field(), "{}"))
 
                 if self.get_item_key(item) not in old:
@@ -1410,6 +1411,8 @@ class ItemGSTDetails:
             if row.get("dont_recompute_tax"):
                 return True
 
+        return False
+
     def is_gst_tax_row(self, row):
         return (
             row.gst_tax_type
@@ -1418,14 +1421,7 @@ class ItemGSTDetails:
         )
 
     def get_item_tax_rate(self, item, tax_row):
-        if not getattr(self, "item_tax_rates", None):
-            self.item_tax_rates = frappe._dict()
-
-        if item.name not in self.item_tax_rates:
-            tax_rates = frappe.parse_json(item.item_tax_rate)
-            self.item_tax_rates[item.name] = tax_rates
-
-        item_tax_rates = self.item_tax_rates[item.name]
+        item_tax_rates = frappe.parse_json(item.item_tax_rate)
 
         if tax_row.account_head in item_tax_rates:
             return item_tax_rates[tax_row.account_head]
@@ -1437,6 +1433,14 @@ class ItemGSTDetails:
         multiplier = item.qty if tax == "cess_non_advol" else item.taxable_value / 100
 
         return flt(tax_rate * multiplier, precision)
+
+    def get_tax_details(self, tax_row):
+        if not getattr(tax_row, "__tax_details", None):
+            tax_row.__tax_details = frappe.parse_json(
+                tax_row.get(self.tax_details_field()) or "{}"
+            )
+
+        return tax_row.__tax_details
 
     @staticmethod
     def tax_amount_field():

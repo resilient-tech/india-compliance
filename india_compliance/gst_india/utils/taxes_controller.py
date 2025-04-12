@@ -34,14 +34,7 @@ class CustomItemGSTDetails(ItemGSTDetails):
         """
         Get item tax rate from item tax template
         """
-        if not getattr(self, "item_tax_rates", None):
-            self.item_tax_rates = frappe._dict()
-
-        if tax_row.name not in self.item_tax_rates:
-            tax_rates = frappe.parse_json(tax_row.item_wise_tax_rates)
-            self.item_tax_rates[tax_row.name] = tax_rates
-
-        item_tax_rates = self.item_tax_rates[tax_row.name]
+        item_tax_rates = self.get_tax_details(tax_row)
         return item_tax_rates.get(item.name)
 
 
