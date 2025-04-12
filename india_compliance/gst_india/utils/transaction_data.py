@@ -9,7 +9,6 @@ from india_compliance.gst_india.constants import (
     GST_REFUND_TAX_TYPES,
     GST_TAX_RATES,
     GST_TAX_TYPES,
-    SUBCONTRACTING_DOCTYPES,
 )
 from india_compliance.gst_india.constants.e_waybill import (
     TRANSPORT_MODES,
@@ -132,7 +131,7 @@ class GSTTransactionData:
         self.update_discount_and_other_charges(tax_total_keys)
 
     def update_transaction_details(self):
-        # to be overrridden
+        # to be overridden
         pass
 
     def update_totals_for_refund(self):
@@ -340,7 +339,13 @@ class GSTTransactionData:
             item = grouped_items.setdefault(
                 row.item_code,
                 frappe._dict(
-                    {**row.as_dict(), "idx": 0, "qty": 0.00, "taxable_value": 0.00}
+                    {
+                        **row.as_dict(),
+                        "idx": 0,
+                        "qty": 0.00,
+                        "taxable_value": 0.00,
+                        **{f"{tax}_amount": 0.00 for tax in GST_TAX_TYPES},
+                    },
                 ),
             )
 
@@ -350,6 +355,9 @@ class GSTTransactionData:
 
             item.qty += row.qty
             item.taxable_value += row.taxable_value
+
+            for tax in GST_TAX_TYPES:
+                item[f"{tax}_amount"] += row.get(f"{tax}_amount", 0)
 
         return list(grouped_items.values())
 
