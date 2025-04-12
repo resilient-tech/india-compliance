@@ -303,7 +303,7 @@ class GSTR3BQuery:
 
 
 class GSTR3BInvoices(GSTR3BQuery, GSTR3BSubcategory):
-    def get_data(self, doctype, group_by_invoice=True):
+    def get_data(self, doctype, group_by_invoice=False):
         if doctype == "Purchase Invoice":
             query = self.get_base_purchase_query()
         elif doctype == "Bill of Entry":
