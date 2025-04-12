@@ -91,9 +91,7 @@ class GSTTransactionData:
                 continue
 
             for tax_key in tax_total_keys:
-                self.transaction_details[tax_key] += abs(
-                    self.rounded(row.get(tax_key[6:], 0))
-                )
+                self.transaction_details[tax_key] += abs(row.get(tax_key[6:], 0))
 
         self.transaction_details.update(
             {
@@ -127,6 +125,13 @@ class GSTTransactionData:
                 "other_charges": 0,
             }
         )
+
+        # Round tax totals
+        for tax_key in tax_total_keys:
+            self.transaction_details[tax_key] = self.rounded(
+                self.transaction_details[tax_key]
+            )
+
         self.update_transaction_details()
         self.update_discount_and_other_charges(tax_total_keys)
 
