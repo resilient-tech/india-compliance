@@ -144,6 +144,9 @@ class GSTReturnLog(GenerateGSTR1, Document):
 
     def get_applicable_file_fields(self, settings=None):
         # Books aggregated data stored in filed (as to file)
+        if not settings:
+            settings = frappe.get_cached_doc("GST Settings")
+
         fields = ["books", "books_summary"]
 
         if settings.is_gstr1_api_enabled(self.gstin):
