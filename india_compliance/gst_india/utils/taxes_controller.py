@@ -7,7 +7,6 @@ from erpnext.controllers.taxes_and_totals import (
     get_round_off_applicable_accounts as fetch_round_off_accounts,
 )
 
-from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.overrides.transaction import (
     ItemGSTDetails,
     ItemGSTTreatment,
@@ -19,49 +18,6 @@ class CustomItemGSTDetails(ItemGSTDetails):
     """
     Support use of Item wise tax rates in Taxes and Charges table
     """
-
-    # TO Deprecate
-    def set_item_code_wise_tax_details(self):
-        tax_details = frappe._dict()
-        item_map = {}
-
-        for row in self.doc.get("items"):
-            key = self.get_item_key(row)
-            item_map[key] = row
-            tax_details[key] = self.item_defaults.copy()
-            tax_details[key]["count"] += 1
-
-        for row in self.doc.taxes:
-            if not self.is_gst_tax_row(row):
-                continue
-
-            tax = row.gst_tax_type
-            tax_rate_field = f"{tax}_rate"
-            tax_amount_field = f"{tax}_amount"
-
-            item_wise_tax_rates = json.loads(row.item_wise_tax_rates)
-
-            # update item taxes
-            for row_name in item_wise_tax_rates:
-                if row_name not in tax_details:
-                    # Do not compute if Item is not present in Item table
-                    # There can be difference in Item Table and Item Wise Tax Details
-                    continue
-
-                item_taxes = tax_details[row_name]
-                tax_rate = item_wise_tax_rates.get(row_name)
-
-                # cases when charge type == "Actual"
-                if not tax_rate:
-                    continue
-
-                item = item_map.get(row_name)
-                tax_amount = self.get_item_tax_amount(item, tax_rate, tax)
-
-                item_taxes[tax_rate_field] = tax_rate
-                item_taxes[tax_amount_field] += tax_amount
-
-        self.item_tax_details = tax_details
 
     def get_item_key(self, item):
         return item.name
