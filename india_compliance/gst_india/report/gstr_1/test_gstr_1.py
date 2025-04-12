@@ -159,7 +159,9 @@ def create_test_items():
 
     # Sales Invoice with Same Billing GSTIN
     # Excluded from Document Issued Summary
-    sales_invoice = create_sales_invoices(1, do_not_submit=True)[0]
+    sales_invoice = create_sales_invoices(
+        1, do_not_submit=True, company_address="_Test Indian Registered Company-Billing"
+    )[0]
     sales_invoice.customer_address = sales_invoice.company_address
     sales_invoice.save()
     sales_invoice.submit()
@@ -227,7 +229,6 @@ def create_opening_entry():
             "customer": "_Test Registered Customer",
         }
     )
-    sales_invoice.billing_address = ""
     sales_invoice.save()
 
     return sales_invoice

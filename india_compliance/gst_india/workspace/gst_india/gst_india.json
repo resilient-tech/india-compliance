@@ -196,7 +196,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Other GST Reports",
-   "link_count": 8,
+   "link_count": 9,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -237,6 +237,16 @@
    "label": "HSN-wise Summary of Outward Supplies",
    "link_count": 0,
    "link_to": "HSN-wise-summary of outward supplies",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "HSN-wise-summary of Inward Supplies",
+   "link_count": 0,
+   "link_to": "HSN-wise-summary of inward supplies",
    "link_type": "Report",
    "onboard": 0,
    "type": "Link"
