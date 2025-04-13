@@ -3,7 +3,11 @@ import re
 import frappe
 from frappe import _
 
-from india_compliance.gst_india.api_classes.base import BaseAPI, check_scheduler_status
+from india_compliance.gst_india.api_classes.base import (
+    BaseAPI,
+    change_base_path,
+    check_scheduler_status,
+)
 from india_compliance.gst_india.constants import DISTANCE_REGEX
 
 
@@ -79,8 +83,8 @@ class EWaybillAPI(BaseAPI):
     def extend_validity(self, data):
         return self.post("EXTENDVALIDITY", data)
 
+    @change_base_path("ewb/Master")
     def get_transporter_details(self, transporter_id):
-        self.BASE_PATH = "ewb/Master"
         return self.get("GetTransporterDetails", params={"trn_no": transporter_id})
 
     def update_distance(self, result):
