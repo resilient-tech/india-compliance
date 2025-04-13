@@ -43,6 +43,7 @@
   "auto_cancel_e_invoice",
   "restrict_cancel_if_e_invoice_final",
   "reason_for_e_invoice_cancellation",
+  "e_invoice_reporting_time_limit_days",
   "column_break_17",
   "fetch_e_invoice_details_from_gst_portal",
   "apply_e_invoice_only_for_selected_companies",
@@ -679,13 +680,21 @@
    "fieldname": "restrict_cancel_if_e_invoice_final",
    "fieldtype": "Check",
    "label": "Restrict Cancellation if e-Invoice not Cancellable"
+  },
+  {
+   "default": "30",
+   "depends_on": "eval: doc.enable_e_invoice",
+   "description": "Maximum number of days allowed for e-invoice generation after posting date",
+   "fieldname": "e_invoice_reporting_time_limit_days",
+   "fieldtype": "Int",
+   "label": "e-Invoice Reporting Time Limit (in Days)"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-03-06 15:25:06.577199",
+ "modified": "2025-04-11 15:33:51.263598",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
