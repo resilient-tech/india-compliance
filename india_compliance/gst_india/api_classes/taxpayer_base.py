@@ -45,18 +45,28 @@ def otp_handler(func):
     return wrapper
 
 
-class PublicCertificate(BaseAPI):
+class StaticResourcesAPI(BaseAPI):
     BASE_PATH = "static"
 
     def get_gstn_public_certificate(self, error_message=None) -> str:
-        response = self.get(endpoint="gstn_g2b_prod_public")
+        response = self.get(endpoint="gstn_public_certificate")
 
-        if response.certificate == self.settings.gstn_public_certificate:
+        if response.message == self.settings.gstn_public_certificate:
             frappe.throw(error_message or _("Public Certificate is already up to date"))
 
-        self.settings.db_set("gstn_public_certificate", response.certificate)
+        self.settings.db_set("gstn_public_certificate", response.message)
 
-        return response.certificate
+        return response.message
+
+    def get_nic_public_key(self, error_message=None) -> str:
+        response = self.get(endpoint="nic_public_key")
+
+        if response.message == self.settings.nic_public_key:
+            frappe.throw(error_message or _("Public Key is already up to date"))
+
+        self.settings.db_set("nic_public_key", response.message)
+
+        return response.message
 
 
 class FilesAPI(BaseAPI):
@@ -254,13 +264,13 @@ class TaxpayerAuthenticate(BaseAPI):
         certificate = self.settings.gstn_public_certificate
 
         if not certificate:
-            certificate = PublicCertificate().get_gstn_public_certificate()
+            certificate = StaticResourcesAPI().get_gstn_public_certificate()
 
         cert = x509.load_pem_x509_certificate(certificate.encode(), default_backend())
         valid_up_to = cert.not_valid_after
 
         if valid_up_to < now_datetime():
-            certificate = PublicCertificate().get_gstn_public_certificate()
+            certificate = StaticResourcesAPI().get_gstn_public_certificate()
 
         return certificate.encode()
 
@@ -432,7 +442,7 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
 
         # Handle invalid public key
         if response.error_type == "invalid_public_key":
-            PublicCertificate().get_gstn_public_certificate(
+            StaticResourcesAPI().get_gstn_public_certificate(
                 error_message=_(
                     "Looks like Public Key of GSTN used for encryption is Invalid"
                 )
