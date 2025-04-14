@@ -7,7 +7,14 @@ from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.overrides.sales_invoice import (
     update_dashboard_with_gst_logs,
 )
+<<<<<<< HEAD
 from india_compliance.gst_india.overrides.transaction import validate_transaction
+=======
+from india_compliance.gst_india.overrides.transaction import (
+    _validate_hsn_codes,
+    validate_transaction,
+)
+>>>>>>> 44fe923b (fix: validate hsn code for Overseas purchase invoice)
 from india_compliance.gst_india.utils import is_api_enabled, validate_invoice_number
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 
@@ -263,3 +270,26 @@ def set_ineligibility_reason(doc, show_alert=True):
             alert=True,
             indicator="orange",
         )
+<<<<<<< HEAD
+=======
+
+
+def validate_reverse_charge(doc):
+    if doc.itc_classification != "Import Of Goods" or not doc.is_reverse_charge:
+        return
+
+    frappe.throw(_("Reverse Charge is not applicable on Import of Goods"))
+
+
+def validate_hsn_codes(doc):
+    # To determine whether BOE is applicable or not.
+    if doc.gst_category != "Overseas":
+        return
+
+    _validate_hsn_codes(
+        doc,
+        valid_hsn_length=[4, 6, 8],
+        throw=True,
+        message=_("GST HSN Code is mandatory for Overseas Purchase Invoice.<br>"),
+    )
+>>>>>>> 44fe923b (fix: validate hsn code for Overseas purchase invoice)
