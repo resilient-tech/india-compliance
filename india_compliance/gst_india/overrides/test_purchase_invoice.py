@@ -1,3 +1,5 @@
+import re
+
 import frappe
 from frappe.tests import IntegrationTestCase, change_settings
 from erpnext.accounts.doctype.account.test_account import create_account
@@ -86,3 +88,22 @@ class TestPurchaseInvoice(IntegrationTestCase):
 
         # Reset autoname (as it's cached)
         pinv.meta.autoname = "naming_series:"
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    @change_settings("GST Settings", {"validate_hsn_code": 0})
+    def test_validate_hsn_code_for_overseas(self):
+        frappe.db.set_value("Item", "_Test Service Item", "gst_hsn_code", "")
+        pinv = create_purchase_invoice(
+            supplier="_Test Foreign Supplier",
+            do_not_submit=1,
+            do_not_save=1,
+            item_code="_Test Service Item",
+        )
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(GST HSN Code is mandatory for Overseas Purchase Invoice.*)"),
+            pinv.save,
+        )
+
+        frappe.db.set_value("Item", "_Test Service Item", "gst_hsn_code", "999900")
