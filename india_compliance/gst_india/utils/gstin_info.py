@@ -11,8 +11,8 @@ from frappe.utils import add_to_date, cint
 
 from india_compliance.exceptions import GSPServerError
 from india_compliance.gst_india.api_classes.base import BASE_URL
-from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
-from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
+from india_compliance.gst_india.api_classes.nic.e_invoice import EInvoiceAPI
+from india_compliance.gst_india.api_classes.nic.e_waybill import EWaybillAPI
 from india_compliance.gst_india.api_classes.public import PublicAPI
 from india_compliance.gst_india.api_classes.taxpayer_base import (
     otp_handler,

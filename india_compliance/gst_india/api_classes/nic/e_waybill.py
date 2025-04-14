@@ -25,9 +25,7 @@ class EWaybillAPI(BaseAPI):
     }
 
     def setup(self, doc=None, *, company_gstin=None):
-        if not self.settings.enable_e_waybill:
-            frappe.throw(_("Please enable e-Waybill features in GST Settings first"))
-
+        self.validate_enable_api()
         check_scheduler_status()
 
         if doc:
@@ -56,6 +54,12 @@ class EWaybillAPI(BaseAPI):
                 "requestid": self.generate_request_id(),
             }
         )
+
+    def validate_enable_api(self):
+        if self.settings.enable_e_waybill:
+            return
+
+        frappe.throw(_("Please enable e-Waybill features in GST Settings first"))
 
     def post(self, action, json):
         return super().post(params={"action": action}, json=json)

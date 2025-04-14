@@ -15,7 +15,7 @@ from frappe.utils import (
 )
 
 from india_compliance.exceptions import GSPServerError
-from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
+from india_compliance.gst_india.api_classes.nic.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.taxpayer_e_invoice import (
     EInvoiceAPI as TaxpayerEInvoiceAPI,
 )

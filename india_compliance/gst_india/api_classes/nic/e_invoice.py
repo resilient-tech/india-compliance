@@ -30,9 +30,7 @@ class EInvoiceAPI(BaseAPI):
     }
 
     def setup(self, doc=None, *, company_gstin=None):
-        if not self.settings.enable_e_invoice:
-            frappe.throw(_("Please enable e-Invoicing in GST Settings first"))
-
+        self.validate_enable_api()
         check_scheduler_status()
 
         if doc:
@@ -61,6 +59,12 @@ class EInvoiceAPI(BaseAPI):
                 "requestid": self.generate_request_id(),
             }
         )
+
+    def validate_enable_api(self):
+        if self.settings.enable_e_invoice:
+            return
+
+        frappe.throw(_("Please enable e-Invoicing in GST Settings first"))
 
     def is_ignored_error(self, response_json):
         message = response_json.get("message", "").strip()
