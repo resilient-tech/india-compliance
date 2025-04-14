@@ -83,7 +83,7 @@ def create_or_update_gstin_status(
     doc.save(ignore_permissions=True)
 
     if callback:
-        callback(doc, transaction_date)
+        callback(gstin_doc, transaction_date)
 
     return doc
 
