@@ -82,13 +82,15 @@ def create_or_update_gstin_status(
     gstin_doc.update(response)
     gstin_doc.save(ignore_permissions=True)
 
-    transaction_date = (
-        (doc.get("transaction_date") or doc.get("posting_date")) if doc else None
-    )
-    if callback:
-        callback(doc, transaction_date)
+    transaction_date = None
 
-    return doc
+    if doc:
+        transaction_date = doc.get("transaction_date") or doc.get("posting_date")
+
+    if callback:
+        callback(gstin_doc, transaction_date)
+
+    return gstin_doc
 
 
 ### GSTIN Status Validation ###
