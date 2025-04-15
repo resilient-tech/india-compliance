@@ -78,7 +78,7 @@ frappe.query_reports["GSTIN Status"] = {
             data-party="${data.party}"
 
         >
-            Update
+            ${__("Update")}
         </button>`;
 
         return BUTTON_HTML;
@@ -94,7 +94,7 @@ frappe.query_reports["GSTIN Status"] = {
         const gstin = e.target.attributes["data-gstin"].value;
 
         this.toggle_gstin_update_btn(gstin, (disabled = true));
-        this.set_btn_text(gstin, "Updating");
+        this.set_btn_text(gstin, __("Updating"));
 
         try {
             const {message} = await frappe.call({
@@ -111,13 +111,13 @@ frappe.query_reports["GSTIN Status"] = {
 
             if (message) {
                 this.update_gstin_values(gstin, message)
-                this.set_btn_text(gstin, "Updated");
+                this.set_btn_text(gstin, __("Updated"));
             } else {
                 throw new Error("Invalid Response");
             }
         } catch (error) {
             this.toggle_gstin_update_btn(gstin, (disabled = false));
-            this.set_btn_text(gstin, "Update");
+            this.set_btn_text(gstin, __("Update"));
         }
     },
 
