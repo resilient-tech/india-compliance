@@ -75,7 +75,7 @@ frappe.query_reports["GSTIN Status"] = {
             class="btn btn-xs btn-primary center"
             data-gstin="${data.gstin}"
             data-party-type="${data.party_type}"
-            data-party-name="${data.party_name}"
+            data-party="${data.party}"
 
         >
             Update
@@ -104,7 +104,7 @@ frappe.query_reports["GSTIN Status"] = {
                     force_update: true,
                     doc: {
                         doctype: e.target.attributes["data-party-type"].value,
-                        name: e.target.attributes["data-party-name"].value,
+                        name: e.target.attributes["data-party"].value,
                     },
                 },
             });
