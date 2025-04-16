@@ -1,6 +1,5 @@
 // Copyright (c) 2023, Resilient Tech and contributors
 // For license information, please see license.txt
-/* eslint-disable */
 
 const REPORT_TYPES = ["Detailed", "Summary by DocType", "Summary by User"];
 
