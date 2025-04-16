@@ -8,9 +8,7 @@ from india_compliance.gst_india.overrides.sales_invoice import (
     update_dashboard_with_gst_logs,
 )
 from india_compliance.gst_india.overrides.transaction import (
-    validate_hsn_codes as _validate_hsn_codes,
-)
-from india_compliance.gst_india.overrides.transaction import (
+    _validate_hsn_codes,
     validate_transaction,
 )
 from india_compliance.gst_india.utils import is_api_enabled, validate_invoice_number
@@ -264,6 +262,7 @@ def validate_hsn_codes(doc):
 
     _validate_hsn_codes(
         doc,
+        valid_hsn_length=[4, 6, 8],
         throw=True,
-        message="GST HSN Code is mandatory for Overseas Purchase Invoice.<br>",
+        message=_("GST HSN Code is mandatory for Overseas Purchase Invoice.<br>"),
     )
