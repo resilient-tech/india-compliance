@@ -43,15 +43,12 @@ frappe.query_reports["Audit Trail"] = {
             default: DATE_OPTIONS[0],
             reqd: 1,
             on_change: function (report) {
-                let selected_value = report.get_filter_value("date_option");
-                let date_range = report.get_filter("date_range");
-
-                if (selected_value === "Custom") {
-                    date_range.df.hidden = false;
-                } else {
-                    date_range.df.hidden = true;
+                if (report.get_filter_value("date_option") === DATE_OPTIONS.at(-1)) {
+                    const date_range = report.get_filter("date_range");
+                    date_range.df.reqd = 1;
+                    date_range.set_required(1);
                 }
-                date_range.refresh();
+
                 report.refresh();
             },
         },
@@ -59,7 +56,8 @@ frappe.query_reports["Audit Trail"] = {
             fieldname: "date_range",
             label: __("Select Dates"),
             fieldtype: "DateRange",
-            hidden: true,
+            depends_on: `eval: doc.date_option === '${DATE_OPTIONS.at(-1)}'`,
+            default: [frappe.datetime.month_start(), frappe.datetime.now_date()],
         },
         {
             fieldname: "user",
