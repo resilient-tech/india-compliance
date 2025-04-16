@@ -82,13 +82,15 @@ def create_or_update_gstin_status(
     gstin_doc.update(response)
     gstin_doc.save(ignore_permissions=True)
 
-    transaction_date = (
-        (doc.get("transaction_date") or doc.get("posting_date")) if doc else None
-    )
+    transaction_date = None
+
+    if doc:
+        transaction_date = doc.get("transaction_date") or doc.get("posting_date")
+
     if callback:
         callback(gstin_doc, transaction_date)
 
-    return doc
+    return gstin_doc
 
 
 ### GSTIN Status Validation ###
@@ -143,10 +145,13 @@ def get_gstin_status(gstin, doc=None, force_update=False):
     if doc and isinstance(doc, str):
         doc = frappe.parse_json(doc)
 
+    if not doc:
+        doc = frappe._dict()
+
     transaction_date = doc.get("transaction_date") or doc.get("posting_date")
 
     if not force_update and not is_status_refresh_required(
-        gstin, transaction_date, doc.docstatus
+        gstin, transaction_date, doc.get("docstatus") or 0
     ):
         if not frappe.db.exists("GSTIN", gstin):
             return

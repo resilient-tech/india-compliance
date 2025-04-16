@@ -34,7 +34,7 @@ frappe.query_reports["GSTIN Status"] = {
     formatter: function (value, row, column, data, default_formatter) {
         if (!data) return value;
 
-        const {fieldname} = column;
+        const { fieldname } = column;
 
         if (fieldname == "status") {
             value = this.get_colored_status(value);
@@ -62,7 +62,9 @@ frappe.query_reports["GSTIN Status"] = {
 
     get_colored_status(status) {
         return `<span
-            style="color: ${this.STATUS_TO_COLOR_MAPPING[status]}; text-align:center; width:100%;"
+            style="color: ${
+                this.STATUS_TO_COLOR_MAPPING[status]
+            }; text-align:center; width:100%;"
             fieldname="status"
         >
             ${frappe.utils.escape_html(status)}
@@ -75,54 +77,66 @@ frappe.query_reports["GSTIN Status"] = {
             class="btn btn-xs btn-primary center"
             data-gstin="${data.gstin}"
             data-party-type="${data.party_type}"
-            data-party-name="${data.party_name}"
+            data-party="${data.party}"
 
         >
-            Update
+            ${__("Update")}
         </button>`;
 
         return BUTTON_HTML;
     },
 
     onload() {
-        $(document).on("click", "button[fieldname='update_gstin_details_btn']", async (e) => {
-            await this.handle_click_listner(e);
-        });
+        $(document).on(
+            "click",
+            "button[fieldname='update_gstin_details_btn']",
+            async e => {
+                await this.handle_click_listner(e);
+            }
+        );
     },
 
     async handle_click_listner(e) {
         const gstin = e.target.attributes["data-gstin"].value;
 
         this.toggle_gstin_update_btn(gstin, (disabled = true));
-        this.set_btn_text(gstin, "Updating");
+        this.set_btn_text(gstin, __("Updating"));
 
         try {
-            const {message} = await frappe.call({
+            const { message } = await frappe.call({
                 method: "india_compliance.gst_india.doctype.gstin.gstin.get_gstin_status",
                 args: {
                     gstin: gstin,
                     force_update: true,
                     doc: {
                         doctype: e.target.attributes["data-party-type"].value,
-                        name: e.target.attributes["data-party-name"].value,
+                        name: e.target.attributes["data-party"].value,
                     },
                 },
             });
 
             if (message) {
-                this.update_gstin_values(gstin, message)
-                this.set_btn_text(gstin, "Updated");
+                this.update_gstin_values(gstin, message);
+                this.set_btn_text(gstin, __("Updated"));
             } else {
                 throw new Error("Invalid Response");
             }
         } catch (error) {
+            frappe.show_alert({
+                message: __(
+                    "Error while updating GSTIN status. Please try again later."
+                ),
+                indicator: "red",
+            });
             this.toggle_gstin_update_btn(gstin, (disabled = false));
-            this.set_btn_text(gstin, "Update");
+            this.set_btn_text(gstin, __("Update"));
         }
     },
 
     toggle_gstin_update_btn(gstin, disabled = null) {
-        let btn = $(`button[fieldname='update_gstin_details_btn'][data-gstin='${gstin}']`);
+        let btn = $(
+            `button[fieldname='update_gstin_details_btn'][data-gstin='${gstin}']`
+        );
         if (disabled == null) {
             disabled = btn.prop("disabled");
             disabled = !disabled;
@@ -156,14 +170,20 @@ frappe.query_reports["GSTIN Status"] = {
     },
 
     update_value(row, fieldname, value) {
-        const ele = $(`.dt-row.dt-row-${row}.vrow > div > div > [fieldname='${fieldname}']`);
-        let {fieldtype} = frappe.query_report.columns.find(column => {
+        const ele = $(
+            `.dt-row.dt-row-${row}.vrow > div > div > [fieldname='${fieldname}']`
+        );
+        let { fieldtype } = frappe.query_report.columns.find(column => {
             return column.fieldname == fieldname;
         });
         let formatter;
         switch (fieldname) {
             case "is_blocked":
-                value = [undefined, null].includes(value) ? "" : value === 0 ? "No" : "Yes";
+                value = [undefined, null].includes(value)
+                    ? ""
+                    : value === 0
+                    ? "No"
+                    : "Yes";
                 break;
             case "status":
                 ele.css("color", this.STATUS_TO_COLOR_MAPPING[value]);
@@ -180,4 +200,3 @@ frappe.query_reports["GSTIN Status"] = {
         ele.parent().attr("title", value);
     },
 };
-
