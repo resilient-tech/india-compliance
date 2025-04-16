@@ -2,6 +2,22 @@
 // For license information, please see license.txt
 /* eslint-disable */
 
+const REPORT_TYPES = ["Detailed", "Summary by DocType", "Summary by User"];
+
+const DATE_OPTIONS = [
+    "Today",
+    "Yesterday",
+    "This Week",
+    "This Month",
+    "This Quarter",
+    "This Year",
+    "Last Week",
+    "Last Month",
+    "Last Quarter",
+    "Last Year",
+    "Custom",
+];
+
 frappe.query_reports["Audit Trail"] = {
     filters: [
         {
@@ -16,17 +32,16 @@ frappe.query_reports["Audit Trail"] = {
             fieldname: "report",
             label: __("Report"),
             fieldtype: "Select",
-            options: "Detailed\nSummary by DocType\nSummary by User",
-            default: "Detailed",
+            options: REPORT_TYPES,
+            default: REPORT_TYPES[0],
             reqd: 1,
         },
         {
             label: __("Select Day"),
             fieldtype: "Select",
             fieldname: "date_option",
-            default: "This Week",
-            options:
-                "Today\nYesterday\nThis Week\nThis Month\nThis Quarter\nThis Year\nLast Week\nLast Month\nLast Quarter\nLast Year\nCustom",
+            options: DATE_OPTIONS,
+            default: DATE_OPTIONS[0],
             reqd: 1,
             on_change: function (report) {
                 let selected_value = report.get_filter_value("date_option");
