@@ -86,7 +86,7 @@ def create_or_update_gstin_status(
         (doc.get("transaction_date") or doc.get("posting_date")) if doc else None
     )
     if callback:
-        callback(doc, transaction_date)
+        callback(gstin_doc, transaction_date)
 
     return doc
 
