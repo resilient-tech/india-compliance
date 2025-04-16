@@ -71,7 +71,7 @@ frappe.query_reports["Audit Trail"] = {
             fieldtype: "Autocomplete",
             get_query: function () {
                 return {
-                    query: "india_compliance.audit_trail.report.audit_trail.audit_trail.get_relavant_doctypes",
+                    query: "india_compliance.audit_trail.report.audit_trail.audit_trail.get_relevant_doctypes",
                 };
             },
         },
