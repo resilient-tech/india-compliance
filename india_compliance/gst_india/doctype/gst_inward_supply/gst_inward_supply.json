@@ -144,7 +144,7 @@
    "fieldname": "supply_type",
    "fieldtype": "Select",
    "label": "Supply Type",
-   "options": "\nRegular\nSEZ Without Payment of Tax\nSEZ With Payment of Tax\nDeemend Exports"
+   "options": "\nRegular\nSEZ Without Payment of Tax\nSEZ With Payment of Tax\nDeemed Export\nIntra-State Supplies Attracting IGST"
   },
   {
    "fieldname": "classification",
@@ -484,7 +484,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-03-04 18:38:19.056682",
+ "modified": "2025-04-14 08:40:00.100410",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Inward Supply",
