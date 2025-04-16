@@ -65,14 +65,12 @@ frappe.query_reports["Audit Trail"] = {
             fieldname: "user",
             label: __("User"),
             fieldtype: "Link",
-            default: "",
             options: "User",
         },
         {
             fieldname: "doctype",
             label: __("DocType"),
             fieldtype: "Autocomplete",
-            default: "",
             get_query: function () {
                 return {
                     query: "india_compliance.audit_trail.report.audit_trail.audit_trail.get_relavant_doctypes",
