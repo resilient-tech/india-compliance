@@ -32,7 +32,7 @@ frappe.query_reports["Audit Trail"] = {
             label: __("Report"),
             fieldtype: "Select",
             options: REPORT_TYPES,
-            default: REPORT_TYPES[0],
+            default: "Detailed",
             reqd: 1,
         },
         {
@@ -40,7 +40,7 @@ frappe.query_reports["Audit Trail"] = {
             fieldtype: "Select",
             fieldname: "date_option",
             options: DATE_OPTIONS,
-            default: DATE_OPTIONS[0],
+            default: "This Week",
             reqd: 1,
             on_change: function (report) {
                 if (report.get_filter_value("date_option") === "Custom") {
