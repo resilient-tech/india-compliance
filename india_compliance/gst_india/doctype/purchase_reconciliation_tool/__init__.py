@@ -15,7 +15,7 @@ from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
     get_accounting_dimensions,
 )
 
-from india_compliance.gst_india.constants import GST_TAX_TYPES
+from india_compliance.gst_india.constants import GST_TAX_TYPES, TAXABLE_GST_TREATMENTS
 from india_compliance.gst_india.utils import get_gstin_list, get_party_for_gstin
 from india_compliance.gst_india.utils.gstr_2 import IMPORT_CATEGORY, ReturnType
 
@@ -422,6 +422,7 @@ class PurchaseInvoice:
             .where(IfNull(self.PI.reconciliation_status, "") != "Not Applicable")
             .where(self.PI.is_opening == "No")
             .where(self.PI_ITEM.parenttype == "Purchase Invoice")
+            .where(self.PI_ITEM.gst_treatment.isin(TAXABLE_GST_TREATMENTS))
             .groupby(self.PI.name)
             .select(
                 *fields,
@@ -572,6 +573,7 @@ class BillOfEntry:
             .where(self.BOE.docstatus == 1)
             .where(IfNull(self.BOE.reconciliation_status, "") != "Not Applicable")
             .where(self.BOE_ITEM.parenttype == "Bill of Entry")
+            .where(self.BOE_ITEM.gst_treatment.isin(TAXABLE_GST_TREATMENTS))
             .groupby(self.BOE.name)
             .select(*fields, ConstantColumn("Bill of Entry").as_("doctype"))
         )
