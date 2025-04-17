@@ -33,9 +33,6 @@ GST_CATEGORIES = {
     "UIN Holders": "B2B",
     "Tax Deductor": "B2B",
     "Tax Collector": "B2B",
-<<<<<<< HEAD
-=======
-    "Input Service Distributor": "B2B",
 }
 
 GST_CATEGORY_MAP = {
@@ -44,16 +41,6 @@ GST_CATEGORY_MAP = {
     "SEZWOP": "SEZ Without Payment of Tax",
     "DE": "Deemed Export",
     "CBW": "Intra-State Supplies Attracting IGST",
-}
-
-ACTION_MAP = {"A": "Accepted", "R": "Rejected", "P": "Pending", "N": "No Action"}
-
-STATUS_CODE_MAP = {
-    "P": "Processed",
-    "PE": "Processed with Errors",
-    "ER": "Error",
-    "IP": "In Progress",
->>>>>>> 6f6c7a1b (fix: consistency in supply type and select options for GST Inward Supply)
 }
 
 EXPORT_TYPES = (
