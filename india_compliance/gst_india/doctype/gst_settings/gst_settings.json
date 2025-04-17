@@ -51,6 +51,7 @@
   "gstr_1_section_break",
   "enable_gstr_1_api",
   "compare_unfiled_data",
+  "hsn_bifurcation_from",
   "column_break_cxmn",
   "restrict_changes_after_gstr_1",
   "role_allowed_to_modify",
@@ -679,13 +680,19 @@
    "fieldname": "restrict_cancel_if_e_invoice_final",
    "fieldtype": "Check",
    "label": "Restrict Cancellation if e-Invoice not Cancellable"
+  },
+  {
+   "description": "The HSN Summary Data will be bifurcated into B2B and B2C after this date.",
+   "fieldname": "hsn_bifurcation_from",
+   "fieldtype": "Date",
+   "label": "GSTR-1 HSN Bifurcation From"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-03-06 15:25:06.577199",
+ "modified": "2025-04-17 13:42:03.388873",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
