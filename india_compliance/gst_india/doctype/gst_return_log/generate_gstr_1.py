@@ -67,7 +67,7 @@ class SummarizeGSTR1:
         3. Remove category row if no records
         4. Round Values
         """
-        cateogory_summary = []
+        category_summary = []
         for category, sub_categories in CATEGORY_SUB_CATEGORY_MAPPING.items():
             # Init category row
             category = category.value
@@ -78,7 +78,7 @@ class SummarizeGSTR1:
                 **self.AMOUNT_FIELDS,
             }
 
-            cateogory_summary.append(summary_row)
+            category_summary.append(summary_row)
             remove_category_row = True
 
             # Backwards compatibility
@@ -98,27 +98,27 @@ class SummarizeGSTR1:
                     summary_row[key] += subcategory_row[key]
 
                 # add subcategory row
-                cateogory_summary.append(subcategory_row)
+                category_summary.append(subcategory_row)
                 remove_category_row = False
 
             if not summary_row["no_of_records"]:
                 summary_row["no_of_records"] = ""
 
             if remove_category_row:
-                cateogory_summary.remove(summary_row)
+                category_summary.remove(summary_row)
 
         for key in QUARTERLY_KEYS:
             if key not in subcategory_summary:
                 continue
 
-            cateogory_summary.append(subcategory_summary.get(key))
+            category_summary.append(subcategory_summary.get(key))
 
         # Round Values
-        for row in cateogory_summary:
+        for row in category_summary:
             for key, value in row.items():
                 if isinstance(value, (int, float)):
                     row[key] = flt(value, 2)
-        return cateogory_summary
+        return category_summary
 
     def get_subcategory_summary(self, data):
         """

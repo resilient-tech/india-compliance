@@ -1200,7 +1200,7 @@ class HSNSUM(GSTR1DataMapper):
                 GSTR1_DataField.ERROR_MSG.value: row.get(GovDataField.ERROR_MSG.value),
             }
 
-            for section, invoices in input_data.items():
+            for section, invoices in row.items():
                 if section in (GovDataField.FLAG.value, GovDataField.CHECKSUM.value):
                     continue
 
