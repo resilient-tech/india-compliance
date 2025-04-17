@@ -50,7 +50,7 @@ def fetch_or_guess_gst_category(doc):
         return doc.gst_category
 
     if doc.gstin and is_autofill_party_info_enabled():
-        gstin_info = _get_gstin_info(doc.gstin, throw_error=False) or {}
+        gstin_info = _get_gstin_info(doc.gstin, doc=doc, throw_error=False) or {}
 
         if gstin_info.get("gst_category"):
             return gstin_info.gst_category

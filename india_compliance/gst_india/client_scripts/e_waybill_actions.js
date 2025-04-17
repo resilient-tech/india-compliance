@@ -302,7 +302,7 @@ function show_generate_e_waybill_dialog(frm) {
     );
 
     d.show();
-    validate_gst_transporter_id(d);
+    validate_gst_transporter_id(d, frm.doc);
 
     //Alert if E-waybill cannot be generated using api
     if (!is_e_waybill_generatable(frm)) {
@@ -423,7 +423,7 @@ function get_generate_e_waybill_dialog(opts, frm) {
                 frm.doc.gst_transporter_id?.length == 15
                     ? frm.doc.gst_transporter_id
                     : "",
-            onchange: () => validate_gst_transporter_id(d),
+            onchange: () => validate_gst_transporter_id(d, frm.doc),
         },
         {
             label: "Part B",
@@ -933,7 +933,7 @@ function show_update_transporter_dialog(frm) {
                         frm.doc.gst_transporter_id.length === 15
                         ? frm.doc.gst_transporter_id
                         : "",
-                onchange: () => validate_gst_transporter_id(d),
+                onchange: () => validate_gst_transporter_id(d, frm.doc),
             },
             {
                 label: "Update e-Waybill Print/Data",
@@ -960,7 +960,7 @@ function show_update_transporter_dialog(frm) {
     // To prevent triggering of change event on input twice
     frappe.ui.form.ControlData.trigger_change_on_input_event = true;
     d.show();
-    validate_gst_transporter_id(d);
+    validate_gst_transporter_id(d, frm.doc);
 }
 
 async function show_extend_validity_dialog(frm) {
@@ -1287,9 +1287,9 @@ async function update_gst_tranporter_id(dialog) {
     dialog.set_value("gst_transporter_id", response.gst_transporter_id);
 }
 
-function validate_gst_transporter_id(dialog) {
+function validate_gst_transporter_id(dialog, doc) {
     india_compliance.validate_gst_transporter_id(
-        dialog.get_value("gst_transporter_id")
+        dialog.get_value("gst_transporter_id"), doc
     );
 }
 

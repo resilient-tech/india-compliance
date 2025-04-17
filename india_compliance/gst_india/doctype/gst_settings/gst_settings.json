@@ -43,6 +43,7 @@
   "auto_cancel_e_invoice",
   "restrict_cancel_if_e_invoice_final",
   "reason_for_e_invoice_cancellation",
+  "e_invoice_reporting_time_limit_days",
   "column_break_17",
   "fetch_e_invoice_details_from_gst_portal",
   "apply_e_invoice_only_for_selected_companies",
@@ -682,6 +683,14 @@
    "label": "Restrict Cancellation if e-Invoice not Cancellable"
   },
   {
+   "default": "30",
+   "depends_on": "eval: doc.enable_e_invoice",
+   "description": "Maximum number of days allowed for e-invoice generation after posting date",
+   "fieldname": "e_invoice_reporting_time_limit_days",
+   "fieldtype": "Int",
+   "label": "e-Invoice Reporting Time Limit (in Days)"
+  },
+  {
    "description": "The HSN Summary Data will be bifurcated into B2B and B2C after this date.",
    "fieldname": "hsn_bifurcation_from",
    "fieldtype": "Date",
@@ -692,7 +701,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-04-17 13:42:03.388873",
+ "modified": "2025-04-11 15:33:51.263598",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

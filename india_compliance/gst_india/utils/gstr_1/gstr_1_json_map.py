@@ -1190,31 +1190,34 @@ class HSNSUM(GSTR1DataMapper):
     def convert_to_internal_data_format(self, input_data):
         output = {}
 
-        default_data = {
-            GSTR1_DataField.ERROR_CD.value: input_data.get(GovDataField.ERROR_CD.value),
-            GSTR1_DataField.ERROR_MSG.value: input_data.get(
-                GovDataField.ERROR_MSG.value
-            ),
-        }
+        # error JSON is diff from normal JSON
+        if isinstance(input_data, dict):
+            input_data = [input_data]
 
-        for section, invoices in input_data.items():
-            if section in (GovDataField.FLAG.value, GovDataField.CHECKSUM.value):
-                continue
-
-            document_type = self.DOCUMENT_CATEGORIES.get(section, section)
-            output[document_type] = {
-                " - ".join(
-                    (
-                        invoice.get(GovDataField.HSN_CODE.value, ""),
-                        self.map_uom(invoice.get(GovDataField.UOM.value, "")),
-                        str(flt(invoice.get(GovDataField.TAX_RATE.value))),
-                    )
-                ): self.format_data(
-                    invoice,
-                    {**default_data, GSTR1_DataField.DOC_TYPE.value: document_type},
-                )
-                for invoice in invoices
+        for row in input_data:
+            default_data = {
+                GSTR1_DataField.ERROR_CD.value: row.get(GovDataField.ERROR_CD.value),
+                GSTR1_DataField.ERROR_MSG.value: row.get(GovDataField.ERROR_MSG.value),
             }
+
+            for section, invoices in input_data.items():
+                if section in (GovDataField.FLAG.value, GovDataField.CHECKSUM.value):
+                    continue
+
+                document_type = self.DOCUMENT_CATEGORIES.get(section, section)
+                output[document_type] = {
+                    " - ".join(
+                        (
+                            invoice.get(GovDataField.HSN_CODE.value, ""),
+                            self.map_uom(invoice.get(GovDataField.UOM.value, "")),
+                            str(flt(invoice.get(GovDataField.TAX_RATE.value))),
+                        )
+                    ): self.format_data(
+                        invoice,
+                        {**default_data, GSTR1_DataField.DOC_TYPE.value: document_type},
+                    )
+                    for invoice in invoices
+                }
 
         return output
 
@@ -2311,7 +2314,8 @@ class BooksDataMapper:
 class GSTR1BooksData(BooksDataMapper):
     def __init__(self, filters):
         self.filters = filters
-        self.current_month = MONTHS.index(filters.month_or_quarter) + 1
+        if filters.get("month_or_quarter"):
+            self.current_month = MONTHS.index(filters.month_or_quarter) + 1
 
     def prepare_mapped_data(self):
         prepared_data = {}

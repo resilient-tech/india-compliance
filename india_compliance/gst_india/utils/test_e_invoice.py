@@ -786,16 +786,20 @@ class TestEInvoice(IntegrationTestCase):
         )
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    @change_settings("System Settings", {"currency_precision": 3})
     def test_refund_transaction_invoice_total(self):
         """Test for e-Invoice generation for Refund Transaction"""
 
         si = create_refund_transaction()
+        si.items[0].rate = 100.25
+        si.save()
+
         data = EInvoiceData(si).get_data()
 
-        self.assertEqual(data.get("ValDtls").get("TotInvVal"), 118)
+        self.assertEqual(data.get("ValDtls").get("TotInvVal"), 118.04)
         self.assertEqual(data.get("ValDtls").get("OthChrg"), 0)
         self.assertEqual(data.get("ValDtls").get("Discount"), 0)
-        self.assertEqual(data.get("ValDtls").get("IgstVal"), 18)
+        self.assertEqual(data.get("ValDtls").get("IgstVal"), 18.04)
 
     @responses.activate
     def test_cancellation_when_e_invoice_not_cancellable(self):

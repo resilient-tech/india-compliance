@@ -108,13 +108,15 @@ Object.assign(india_compliance, {
         return in_list(frappe.boot.sales_doctypes, doctype) ? "Customer" : "Supplier";
     },
 
-    async set_gstin_status(field, transaction_date, docstatus, force_update) {
+    async set_gstin_status(field, doc, force_update) {
         const gstin = field.value;
         if (!gstin || gstin.length !== 15) return field.set_description("");
 
+        doc = get_doc_details(doc);
+
         let { message } = await frappe.call({
             method: "india_compliance.gst_india.doctype.gstin.gstin.get_gstin_status",
-            args: { gstin, transaction_date, docstatus, force_update },
+            args: { gstin, doc, force_update },
         });
 
         if (!message) message = { status: "Not Available" };
@@ -126,7 +128,7 @@ Object.assign(india_compliance, {
             )
         );
 
-        this.set_gstin_refresh_btn(field, transaction_date);
+        this.set_gstin_refresh_btn(field, doc);
 
         return message;
     },
@@ -177,12 +179,14 @@ Object.assign(india_compliance, {
         return field.set_description(pan_desc);
     },
 
-    validate_gst_transporter_id(transporter_id) {
+    validate_gst_transporter_id(transporter_id, doc) {
         if (!transporter_id || transporter_id.length !== 15) return;
+
+        doc = get_doc_details(doc);
 
         frappe.call({
             method: "india_compliance.gst_india.doctype.gstin.gstin.validate_gst_transporter_id",
-            args: { transporter_id },
+            args: { transporter_id, doc },
         });
     },
 
@@ -210,7 +214,7 @@ Object.assign(india_compliance, {
         );
     },
 
-    set_gstin_refresh_btn(field, transaction_date) {
+    set_gstin_refresh_btn(field, doc) {
         if (
             !this.is_api_enabled() ||
             gst_settings.sandbox_mode ||
@@ -225,7 +229,7 @@ Object.assign(india_compliance, {
         );
 
         refresh_btn.on("click", async function () {
-            await india_compliance.set_gstin_status(field, transaction_date, 0, true);
+            await india_compliance.set_gstin_status(field, doc, true);
         });
     },
 
@@ -412,6 +416,12 @@ Object.assign(india_compliance, {
         });
     },
 
+    last_month_name() {
+        const today = frappe.datetime.now_date(true);
+        const last_month = today.getMonth() - 1;
+        return this.MONTH[last_month];
+    },
+
     last_month_start() {
         return frappe.datetime.add_months(frappe.datetime.month_start(), -1);
     },
@@ -438,6 +448,26 @@ Object.assign(india_compliance, {
                 ? `${current_year}-04-01`
                 : `${current_year}-09-30`;
         }
+    },
+
+    get_options_for_year(filing_frequency) {
+        const today = new Date();
+        let current_year = today.getFullYear();
+        const current_month_idx = today.getMonth();
+        const start_year = 2017;
+        const year_range = current_year - start_year + 1;
+        const options = Array.from({ length: year_range }, (_, index) =>
+            (start_year + year_range - index - 1).toString()
+        );
+
+        if (
+            (filing_frequency === "Monthly" && current_month_idx === 0) ||
+            (filing_frequency === "Quarterly" && current_month_idx < 3)
+        )
+            current_year--;
+
+        current_year = current_year.toString();
+        return { options, current_year };
     },
 
     primary_to_danger_btn(parent) {
@@ -513,6 +543,17 @@ Object.assign(india_compliance, {
         return true;
     },
 });
+
+function get_doc_details(doc) {
+    return doc
+        ? {
+              doctype: doc.doctype,
+              name: doc.name,
+              docstatus: doc.docstatus,
+              transaction_date: doc.posting_date || doc.transaction_date,
+          }
+        : null;
+}
 
 function is_gstin_check_digit_valid(gstin) {
     /*

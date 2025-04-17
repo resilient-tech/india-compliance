@@ -217,6 +217,7 @@ def set_default_gst_settings():
         "e_invoice_applicable_from": nowdate(),
         "hsn_bifurcation_from": "2025-04-01",  # As per GST Notification
         "fetch_e_invoice_details_from_gst_portal": 1,
+        "e_invoice_reporting_time_limit_days": 30,
         "autofill_party_info": 1,
         "archive_party_info_days": 7,
         "validate_gstin_status": 0,

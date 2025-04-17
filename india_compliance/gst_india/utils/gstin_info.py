@@ -40,15 +40,18 @@ CHARACTERS_TO_STRIP = f"{whitespace},"
 
 
 @frappe.whitelist()
-def get_gstin_info(gstin, *, throw_error=True):
+def get_gstin_info(gstin, *, doc=None, throw_error=True):
+    if doc and isinstance(doc, str):
+        doc = frappe.parse_json(doc)
+
     if not frappe.get_cached_doc("User", frappe.session.user).has_desk_access():
         frappe.throw(_("Not allowed"), frappe.PermissionError)
 
-    return _get_gstin_info(gstin, throw_error=throw_error)
+    return _get_gstin_info(gstin, doc=doc, throw_error=throw_error)
 
 
-def _get_gstin_info(gstin, *, throw_error=True):
-    validate_gstin(gstin)
+def _get_gstin_info(gstin, *, doc=None, throw_error=True):
+    gstin = validate_gstin(gstin)
     response = get_archived_gstin_info(gstin)
 
     if not response:
@@ -56,7 +59,7 @@ def _get_gstin_info(gstin, *, throw_error=True):
             if frappe.cache.get_value("gst_server_error"):
                 return frappe._dict()
 
-            response = PublicAPI().get_gstin_info(gstin)
+            response = PublicAPI(doc).get_gstin_info(gstin)
             frappe.enqueue(
                 "india_compliance.gst_india.doctype.gstin.gstin.create_or_update_gstin_status",
                 queue="long",
@@ -107,7 +110,7 @@ def get_archived_gstin_info(gstin):
 
     archive_date_limit = frappe.utils.now_datetime() - timedelta(days=archive_days)
 
-    completed_requestes = frappe.get_all(
+    archived_response = frappe.db.get_value(
         "Integration Request",
         {
             "status": "Completed",
@@ -115,16 +118,18 @@ def get_archived_gstin_info(gstin):
             "data": ("like", f"%{gstin}%"),
             "modified": (">", archive_date_limit),
         },
-        pluck="output",
-        limit=1,
+        "output",
     )
 
-    if not completed_requestes:
+    if not archived_response:
         return
 
-    response = json.loads(completed_requestes[0], object_hook=frappe._dict)
+    try:
+        archived_response = json.loads(archived_response, object_hook=frappe._dict)
+    except json.JSONDecodeError:
+        return
 
-    return response.result
+    return archived_response.result
 
 
 def _get_address(address):
@@ -182,7 +187,7 @@ def _extract_address_lines(address):
     return address_line1, address_line2
 
 
-def fetch_gstin_status(*, gstin=None, throw=True):
+def fetch_gstin_status(*, gstin=None, doc=None, throw=True):
     """
     Fetch GSTIN status from E-Invoice API or Public API
 
@@ -191,7 +196,7 @@ def fetch_gstin_status(*, gstin=None, throw=True):
     :param gstin: GSTIN to fetch status for
     :param throw: Raise exception if error occurs (used for user initiated requests)
     """
-    validate_gstin(gstin)
+    gstin = validate_gstin(gstin)
 
     try:
         if not throw and frappe.cache.get_value("gst_server_error"):
@@ -201,10 +206,12 @@ def fetch_gstin_status(*, gstin=None, throw=True):
         company_gstin = gst_settings.get_gstin_with_credentials(service="e-Invoice")
 
         if throw or not company_gstin:
-            response = PublicAPI().get_gstin_info(gstin)
+            response = PublicAPI(doc).get_gstin_info(gstin)
             return get_formatted_response_for_status(response)
 
-        response = EInvoiceAPI(company_gstin=company_gstin).get_gstin_info(gstin)
+        doc = doc or frappe._dict()
+        doc.company_gstin = company_gstin
+        response = EInvoiceAPI(doc=doc).get_gstin_info(gstin)
         return frappe._dict(
             {
                 "gstin": gstin,
@@ -247,7 +254,7 @@ def get_formatted_response_for_status(response):
     )
 
 
-def fetch_transporter_id_status(transporter_id, throw=True):
+def fetch_transporter_id_status(transporter_id, doc=None, throw=True):
     """
     Fetch Transporter ID status from E-Waybill API
 
@@ -258,15 +265,15 @@ def fetch_transporter_id_status(transporter_id, throw=True):
         return
 
     gst_settings = frappe.get_cached_doc("GST Settings", None)
-    company_gstin = gst_settings.get_gstin_with_credentials(service="e-Waybill")
+    doc = doc or frappe._dict()
+    doc.company_gstin = gst_settings.get_gstin_with_credentials(service="e-Waybill")
 
-    if not company_gstin:
+    if not doc.company_gstin:
         return
 
     try:
-        response = EWaybillAPI(company_gstin=company_gstin).get_transporter_details(
-            transporter_id
-        )
+        # fetched using first credentials
+        response = EWaybillAPI(doc=doc).get_transporter_details(transporter_id)
 
     except Exception as e:
         if throw:

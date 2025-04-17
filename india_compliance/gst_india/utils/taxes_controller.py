@@ -7,7 +7,6 @@ from erpnext.controllers.taxes_and_totals import (
     get_round_off_applicable_accounts as fetch_round_off_accounts,
 )
 
-from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.overrides.transaction import (
     ItemGSTDetails,
     ItemGSTTreatment,
@@ -20,58 +19,23 @@ class CustomItemGSTDetails(ItemGSTDetails):
     Support use of Item wise tax rates in Taxes and Charges table
     """
 
-    def set_item_wise_tax_details(self):
-        tax_details = frappe._dict()
-        item_map = {}
-
-        for row in self.doc.get("items"):
-            key = row.name
-            item_map[key] = row
-            tax_details[key] = self.item_defaults.copy()
-            tax_details[key]["count"] += 1
-
-        for row in self.doc.taxes:
-            if (
-                not row.tax_amount
-                or row.gst_tax_type not in GST_TAX_TYPES
-                or not row.item_wise_tax_rates
-            ):
-                continue
-
-            tax = row.gst_tax_type
-            tax_rate_field = f"{tax}_rate"
-            tax_amount_field = f"{tax}_amount"
-
-            item_wise_tax_rates = json.loads(row.item_wise_tax_rates)
-
-            # update item taxes
-            for row_name in item_wise_tax_rates:
-                if row_name not in tax_details:
-                    # Do not compute if Item is not present in Item table
-                    # There can be difference in Item Table and Item Wise Tax Details
-                    continue
-
-                item_taxes = tax_details[row_name]
-                tax_rate = item_wise_tax_rates.get(row_name)
-                precision = self.precision.get(tax_amount_field)
-                item = item_map.get(row_name)
-
-                multiplier = (
-                    item.qty if tax == "cess_non_advol" else item.taxable_value / 100
-                )
-
-                # cases when charge type == "Actual"
-                if not tax_rate:
-                    continue
-
-                tax_amount = flt(tax_rate * multiplier, precision)
-                item_taxes[tax_rate_field] = tax_rate
-                item_taxes[tax_amount_field] += tax_amount
-
-        self.item_tax_details = tax_details
-
     def get_item_key(self, item):
         return item.name
+
+    @staticmethod
+    def tax_amount_field():
+        return "tax_amount"
+
+    @staticmethod
+    def tax_details_field():
+        return "item_wise_tax_rates"
+
+    def get_item_tax_rate(self, item, tax_row):
+        """
+        Get item tax rate from item tax template
+        """
+        item_tax_rates = self.get_tax_details(tax_row)
+        return item_tax_rates.get(item.name)
 
 
 def update_gst_details(doc, method=None):
