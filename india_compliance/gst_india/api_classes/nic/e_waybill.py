@@ -1,3 +1,4 @@
+import base64
 import re
 
 import frappe
@@ -8,12 +9,12 @@ from india_compliance.gst_india.api_classes.base import (
     change_base_path,
     check_scheduler_status,
 )
+from india_compliance.gst_india.api_classes.nic.auth import EnrichedAuth, StandardAuth
 from india_compliance.gst_india.constants import DISTANCE_REGEX
 
 
 class EWaybillAPI(BaseAPI):
     API_NAME = "e-Waybill"
-    BASE_PATH = "ewb/ewayapi"
     SENSITIVE_INFO = BaseAPI.SENSITIVE_INFO + ("password",)
     IGNORED_ERROR_CODES = {
         #  Cancel e-waybill errors
@@ -24,31 +25,32 @@ class EWaybillAPI(BaseAPI):
         "328": "Could not retrieve transporter details from gstin",
     }
 
+    def __new__(cls, *args, **kwargs):
+        if cls != EWaybillAPI:
+            return super().__new__(cls)
+
+        sandbox_mode = frappe.db.get_single_value("GST Settings", "sandbox_mode")
+
+        if sandbox_mode:
+            return EnrichedEWaybillAPI(*args, **kwargs)
+
+        return StandardEWaybillAPI(*args, **kwargs)
+
     def setup(self, doc=None, *, company_gstin=None):
         self.validate_enable_api()
         check_scheduler_status()
 
         if doc:
-            company_gstin = doc.company_gstin
+            self.company_gstin = doc.company_gstin
             self.default_log_values.update(
                 reference_doctype=doc.doctype,
                 reference_name=doc.name,
             )
 
-        if self.sandbox_mode:
-            company_gstin = "05AAACG2115R1ZN"
-            self.username = "05AAACG2115R1ZN"
-            self.password = "abc123@@"
-
-        elif not company_gstin:
-            frappe.throw(_("Company GSTIN is required to use the e-Waybill API"))
-
-        else:
-            self.fetch_credentials(company_gstin, "e-Waybill / e-Invoice")
-
+    def set_default_headers(self):
         self.default_headers.update(
             {
-                "gstin": company_gstin,
+                "gstin": self.company_gstin,
                 "username": self.username,
                 "password": self.password,
                 "requestid": self.generate_request_id(),
@@ -64,32 +66,40 @@ class EWaybillAPI(BaseAPI):
     def post(self, action, json):
         return super().post(params={"action": action}, json=json)
 
+    def get_transporter_details(self, transporter_id):
+        return self.get("GetTransporterDetails", params={"trn_no": transporter_id})
+
+    def is_ignored_error(self, response_json):
+        message = response_json.get("message", "")
+
+        for error_code, error_message in self.IGNORED_ERROR_CODES.items():
+            if error_message in message:
+                response_json.error_code = error_code
+                return True
+
     def get_e_waybill(self, ewaybill_number):
-        return self.get("getewaybill", params={"ewbNo": ewaybill_number})
+        action = "getewaybill" if self.sandbox_mode else "GetEwayBill"
+        return self.get(action, params={"ewbNo": ewaybill_number})
 
     def get_e_waybills_by_date(self, date):
         return self.get("GetEwayBillsByDate", params={"date": date})
 
     def generate_e_waybill(self, data):
-        result = self.post("GENEWAYBILL", data)
+        result = self.post("GENEWAYBILL", json=data)
         self.update_distance(result)
         return result
 
     def cancel_e_waybill(self, data):
-        return self.post("CANEWB", data)
+        return self.post("CANEWB", json=data)
 
     def update_vehicle_info(self, data):
-        return self.post("VEHEWB", data)
+        return self.post("VEHEWB", json=data)
 
     def update_transporter(self, data):
-        return self.post("UPDATETRANSPORTER", data)
+        return self.post("UPDATETRANSPORTER", json=data)
 
     def extend_validity(self, data):
-        return self.post("EXTENDVALIDITY", data)
-
-    @change_base_path("ewb/Master")
-    def get_transporter_details(self, transporter_id):
-        return self.get("GetTransporterDetails", params={"trn_no": transporter_id})
+        return self.post("EXTENDVALIDITY", json=data)
 
     def update_distance(self, result):
         if (
@@ -99,10 +109,83 @@ class EWaybillAPI(BaseAPI):
         ):
             result.distance = int(distance_match.group())
 
-    def is_ignored_error(self, response_json):
-        message = response_json.get("message", "")
 
-        for error_code, error_message in self.IGNORED_ERROR_CODES.items():
-            if error_message in message:
-                response_json.error_code = error_code
-                return True
+class EnrichedEWaybillAPI(EWaybillAPI):
+    BASE_PATH = "ewb/ewayapi"
+
+    def setup(self, doc=None, *, company_gstin=None):
+        super().setup(doc, company_gstin=company_gstin)
+
+        if self.sandbox_mode:
+            company_gstin = "05AAACG2115R1ZN"
+            self.username = "05AAACG2115R1ZN"
+            self.password = "abc123@@"
+
+        self.auth_strategy = EnrichedAuth(self)
+        self.set_default_headers()
+
+    @change_base_path("ewb/Master")
+    def get_transporter_details(self, transporter_id):
+        return super().get_transporter_details(transporter_id)
+
+
+class StandardEWaybillAPI(EWaybillAPI):
+    BASE_PATH = "standard/ewb/ewayapi"
+
+    def setup(self, doc=None, *, company_gstin=None):
+        super().setup(doc, company_gstin=company_gstin)
+
+        if not company_gstin:
+            frappe.throw(_("Company GSTIN is required to use the e-Waybill API"))
+
+        self.fetch_credentials(company_gstin, "e-Waybill / e-Invoice")
+        self.auth_strategy = StandardAuth(self)
+
+        self.set_default_headers()
+
+    @change_base_path("standard/ewb")
+    def authenticate(self):
+        json_data = {
+            "action": "ACCESSTOKEN",
+            "username": self.username,
+            "password": self.password,
+            "app_key": self.app_key,
+        }
+
+        return self.post(endpoint="auth", json=json_data)
+
+    @change_base_path("standard/ewb/master")
+    def get_transporter_details(self, transporter_id):
+        return super().get_transporter_details(transporter_id)
+
+    def is_ignored_error(self, response_json):
+        error = response_json.get("error")
+
+        if not error:
+            return True
+
+        err_code = error.get("errorCodes")
+        if err_code in self.IGNORED_ERROR_CODES:
+            response_json.error_code = err_code
+            return True
+
+    def handle_error_response(self, response_json):
+        success_value = response_json.get("status") != 0
+
+        if not success_value:
+            self.handle_server_error(response_json)
+
+        if not success_value:
+            error = base64.b64decode(response_json.error).decode()
+            if isinstance(error, str):
+                error = frappe.parse_json(error)
+
+            response_json.error = error
+
+        if not success_value and not self.is_ignored_error(response_json):
+            frappe.throw(
+                response_json.get("error", {}).get("errorCodes")
+                # Fallback to response body if message is not present
+                or frappe.as_json(response_json, indent=4),
+                title=_("API Request Failed"),
+            )
