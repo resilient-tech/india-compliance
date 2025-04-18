@@ -1123,7 +1123,7 @@ class CDNUR(GSTR1DataMapper):
 
 class HSNSUM(GSTR1DataMapper):
     """
-    GST API Version - v4.0
+    GST API Version - Supports both v4.1 and v4.0
 
     Government Data Format:
         {
@@ -1149,6 +1149,7 @@ class HSNSUM(GSTR1DataMapper):
         {
             'HSN Summary - B2B': {
                 '1102 - BOX-BOX - 1.0': {
+                    'document_type': 'HSN Summary - B2B',
                     'hsn_code': '1102',
                     'description': 'CEREAL FLOURS OTHER THAN THAT OF WHEAT OR MESLIN',
                     'uom': 'BOX-BOX',
@@ -1157,7 +1158,7 @@ class HSNSUM(GSTR1DataMapper):
                     'total_cgst_amount': 0.5,
                     'total_sgst_amount': 0.5,
                     'tax_rate': 1,
-                    'document_value': 101.0
+                    'document_value': 101
                 }
             }
         }
