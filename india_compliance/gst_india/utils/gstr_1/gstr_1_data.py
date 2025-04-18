@@ -649,10 +649,15 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
         self.invoice_conditions = {}
 
         for row in data:
-            if row.invoice_type in (row.value for row in GSTR1_B2B_InvoiceType):
+            if row.invoice_sub_category in (
+                GSTR1_SubCategory.B2B_REGULAR.value,
+                GSTR1_SubCategory.SEZWP.value,
+                GSTR1_SubCategory.SEZWOP.value,
+                GSTR1_SubCategory.DE.value,
+            ):
                 hsn_b2b.append(row)
 
-            elif row.invoice_type in (
+            elif row.invoice_sub_category in (
                 GSTR1_SubCategory.B2CL.value,
                 GSTR1_SubCategory.B2CS.value,
             ):

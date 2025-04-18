@@ -3,6 +3,9 @@ from datetime import datetime
 
 import frappe
 from frappe.utils import flt
+from frappe.utils.data import (
+    getdate,
+)
 
 from india_compliance.gst_india.constants import UOM_MAP
 from india_compliance.gst_india.report.gstr_1.gstr_1 import (
@@ -1196,8 +1199,12 @@ class HSNSUM(GSTR1DataMapper):
 
         for row in input_data:
             default_data = {
-                GSTR1_DataField.ERROR_CD.value: row.get(GovDataField.ERROR_CD.value),
-                GSTR1_DataField.ERROR_MSG.value: row.get(GovDataField.ERROR_MSG.value),
+                GSTR1_DataField.ERROR_CD.value: row.pop(
+                    GovDataField.ERROR_CD.value, ""
+                ),
+                GSTR1_DataField.ERROR_MSG.value: row.pop(
+                    GovDataField.ERROR_MSG.value, ""
+                ),
             }
 
             for section, invoices in row.items():
@@ -1205,19 +1212,15 @@ class HSNSUM(GSTR1DataMapper):
                     continue
 
                 document_type = self.DOCUMENT_CATEGORIES.get(section, section)
-                output[document_type] = {
-                    " - ".join(
-                        (
-                            invoice.get(GovDataField.HSN_CODE.value, ""),
-                            self.map_uom(invoice.get(GovDataField.UOM.value, "")),
-                            str(flt(invoice.get(GovDataField.TAX_RATE.value))),
-                        )
-                    ): self.format_data(
-                        invoice,
-                        {**default_data, GSTR1_DataField.DOC_TYPE.value: document_type},
-                    )
-                    for invoice in invoices
-                }
+
+                formatted_invoices = self.get_formatted_invoices(
+                    invoices, document_type, default_data
+                )
+
+                if output.get(document_type):
+                    output[document_type].update(formatted_invoices)
+                else:
+                    output[document_type] = formatted_invoices
 
         return output
 
@@ -1240,6 +1243,24 @@ class HSNSUM(GSTR1DataMapper):
             )
 
         return output
+
+    def get_formatted_invoices(self, invoices, document_type, default_data=None):
+        return {
+            " - ".join(
+                (
+                    invoice.get(GovDataField.HSN_CODE.value, ""),
+                    self.map_uom(invoice.get(GovDataField.UOM.value, "")),
+                    str(flt(invoice.get(GovDataField.TAX_RATE.value))),
+                )
+            ): self.format_data(
+                invoice,
+                {
+                    **default_data,
+                    GSTR1_DataField.DOC_TYPE.value: document_type,
+                },
+            )
+            for invoice in invoices
+        }
 
     def format_data(self, data, default_data=None, for_gov=False):
         data = super().format_data(data, default_data, for_gov)
@@ -2316,6 +2337,10 @@ class GSTR1BooksData(BooksDataMapper):
         self.filters = filters
         if filters.get("month_or_quarter"):
             self.current_month = MONTHS.index(filters.month_or_quarter) + 1
+            self.filing_date = getdate(f"01-{filters.month_or_quarter}-{filters.year}")
+            self.hsn_bifurcation_from = frappe.db.get_single_value(
+                "GST Settings", "hsn_bifurcation_from"
+            )
 
     def prepare_mapped_data(self):
         prepared_data = {}
@@ -2348,7 +2373,7 @@ class GSTR1BooksData(BooksDataMapper):
         }
 
         # Backwards Compatibility
-        if self.current_month < 2:
+        if self.filing_date < self.hsn_bifurcation_from:
             other_categories.update(
                 {
                     GSTR1_Category.HSN.value: self.prepare_hsn_data(data),
