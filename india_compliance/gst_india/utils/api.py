@@ -34,7 +34,7 @@ def create_integration_request(
             "reference_docname": reference_name,
         }
     )
-    doc.insert(ignore_permissions=True)
+    doc.insert(ignore_permissions=True, ignore_links=True)
 
     if update_gstr_action:
         link_integration_request(request_id, doc.name)
