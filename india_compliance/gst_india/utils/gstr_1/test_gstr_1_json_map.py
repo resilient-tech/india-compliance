@@ -980,7 +980,7 @@ class TestHSNSUM_With_Bifurcation(IntegrationTestCase):
                 {
                     GovDataField.INDEX.value: 1,
                     GovDataField.HSN_CODE.value: "1102",
-                    GovDataField.DESCRIPTION.value: "CEREAL FLOURS OTHER THAN THAT OF WHEAT OR MESLIN",
+                    GovDataField.DESCRIPTION.value: "Goods Description",
                     GovDataField.UOM.value: "BOX",
                     GovDataField.QUANTITY.value: 2,
                     GovDataField.TAXABLE_VALUE.value: 100,
@@ -993,7 +993,7 @@ class TestHSNSUM_With_Bifurcation(IntegrationTestCase):
                 {
                     GovDataField.INDEX.value: 1,
                     GovDataField.HSN_CODE.value: "1301",
-                    GovDataField.DESCRIPTION.value: "LAC; NATURAL GUMS, RESINS",
+                    GovDataField.DESCRIPTION.value: "Goods Description",
                     GovDataField.UOM.value: "CTN",
                     GovDataField.QUANTITY.value: 2,
                     GovDataField.TAXABLE_VALUE.value: 100,
@@ -1009,21 +1009,21 @@ class TestHSNSUM_With_Bifurcation(IntegrationTestCase):
                 "1102 - BOX-BOX - 1.0": {
                     GSTR1_DataField.DOC_TYPE.value: GSTR1_SubCategory.HSN_B2B.value,
                     GSTR1_DataField.HSN_CODE.value: "1102",
-                    GSTR1_DataField.DESCRIPTION.value: "CEREAL FLOURS OTHER THAN THAT OF WHEAT OR MESLIN",
+                    GSTR1_DataField.DESCRIPTION.value: "Goods Description",
                     GSTR1_DataField.UOM.value: "BOX-BOX",
                     GSTR1_DataField.QUANTITY.value: 2,
                     GSTR1_DataField.TAXABLE_VALUE.value: 100,
                     GSTR1_DataField.CGST.value: 0.5,
                     GSTR1_DataField.SGST.value: 0.5,
                     GSTR1_DataField.TAX_RATE.value: 1,
-                    GSTR1_DataField.DOC_VALUE.value: 101.0,
+                    GSTR1_DataField.DOC_VALUE.value: 101,
                 }
             },
             GSTR1_SubCategory.HSN_B2C.value: {
                 "1301 - CTN-CARTONS - 1.0": {
                     GSTR1_DataField.DOC_TYPE.value: GSTR1_SubCategory.HSN_B2C.value,
                     GSTR1_DataField.HSN_CODE.value: "1301",
-                    GSTR1_DataField.DESCRIPTION.value: "LAC; NATURAL GUMS, RESINS",
+                    GSTR1_DataField.DESCRIPTION.value: "Goods Description",
                     GSTR1_DataField.UOM.value: "CTN-CARTONS",
                     GSTR1_DataField.QUANTITY.value: 2,
                     GSTR1_DataField.TAXABLE_VALUE.value: 100,
