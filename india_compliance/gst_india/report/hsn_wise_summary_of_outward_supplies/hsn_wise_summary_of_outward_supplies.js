@@ -45,6 +45,11 @@ frappe.query_reports["HSN-wise-summary of outward supplies"] = {
 			"mandatory_depends_on": "eval: doc.from_date",
 			"default": india_compliance.last_month_end()
 		},
+		{
+			"fieldname":"bifurcate_hsn",
+			"label": __("Bifurcate HSN Summary"),
+			"fieldtype": "Check",
+		},
 
 	],
 	onload: (report) => {

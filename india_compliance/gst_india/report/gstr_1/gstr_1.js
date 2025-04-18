@@ -89,6 +89,12 @@ frappe.query_reports["GSTR-1"] = {
                 report.refresh();
             },
         },
+        {
+            fieldname: "bifurcate_hsn",
+            label: __("Bifurcate HSN Summary"),
+            fieldtype: "Check",
+            depends_on: "eval: doc.type_of_business == 'HSN'",
+        },
     ],
     onload(report) {
         create_download_buttons(report);
