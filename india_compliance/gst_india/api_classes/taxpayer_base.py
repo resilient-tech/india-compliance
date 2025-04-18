@@ -327,12 +327,6 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
             }
         )
 
-    def _fetch_credentials(self, row, require_password=True):
-        self.app_key = row.app_key or self.generate_app_key()
-        self.auth_token = row.auth_token
-        self.session_key = b64decode(row.session_key or "")
-        self.session_expiry = row.session_expiry
-
     def _request(
         self,
         method,
@@ -462,20 +456,6 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
                 raise InvalidOTPError(response=response)
 
             return True
-
-    def generate_app_key(self):
-        app_key = self.generate_request_id(length=32)
-        frappe.db.set_value(
-            "GST Credential",
-            {
-                "gstin": self.company_gstin,
-                "username": self.username,
-                "service": "Returns",
-            },
-            {"app_key": app_key},
-        )
-
-        return app_key
 
     def get_files(self, return_period, token, action, endpoint):
         response = self.get(

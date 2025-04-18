@@ -1,15 +1,16 @@
+import base64
 import re
 
 import frappe
 from frappe import _
 
 from india_compliance.gst_india.api_classes.base import BaseAPI, check_scheduler_status
+from india_compliance.gst_india.api_classes.nic.auth import EnrichedAuth, StandardAuth
 from india_compliance.gst_india.constants import DISTANCE_REGEX
 
 
 class EInvoiceAPI(BaseAPI):
     API_NAME = "e-Invoice"
-    BASE_PATH = "ei/api"
     SENSITIVE_INFO = BaseAPI.SENSITIVE_INFO + ("password",)
     IGNORED_ERROR_CODES = {
         # Generate IRN errors
@@ -29,31 +30,32 @@ class EInvoiceAPI(BaseAPI):
         "3001": "Requested data is not available",
     }
 
+    def __new__(cls, *args, **kwargs):
+        if cls != EInvoiceAPI:
+            return super().__new__(cls)
+
+        sandbox_mode = frappe.db.get_single_value("GST Settings", "sandbox_mode")
+
+        if sandbox_mode:
+            return EnrichedEInvoiceAPI(*args, **kwargs)
+
+        return StandardEInvoiceAPI(*args, **kwargs)
+
     def setup(self, doc=None, *, company_gstin=None):
         self.validate_enable_api()
         check_scheduler_status()
 
         if doc:
-            company_gstin = doc.company_gstin
+            self.company_gstin = doc.company_gstin
             self.default_log_values.update(
                 reference_doctype=doc.doctype,
                 reference_name=doc.name,
             )
 
-        if self.sandbox_mode:
-            company_gstin = "02AMBPG7773M002"
-            self.username = "adqgsphpusr1"
-            self.password = "Gsp@1234"
-
-        elif not company_gstin:
-            frappe.throw(_("Company GSTIN is required to use the e-Invoice API"))
-
-        else:
-            self.fetch_credentials(company_gstin, "e-Waybill / e-Invoice")
-
+    def set_default_headers(self):
         self.default_headers.update(
             {
-                "gstin": company_gstin,
+                "gstin": self.company_gstin,
                 "user_name": self.username,
                 "password": self.password,
                 "requestid": self.generate_request_id(),
@@ -119,3 +121,69 @@ class EInvoiceAPI(BaseAPI):
 
     def sync_gstin_info(self, gstin):
         return self.get(endpoint="master/syncgstin", params={"gstin": gstin})
+
+
+class EnrichedEInvoiceAPI(EInvoiceAPI):
+    BASE_PATH = "ei/api"
+
+    def setup(self, doc=None, *, company_gstin=None):
+        super().setup(doc, company_gstin=company_gstin)
+
+        if self.sandbox_mode:
+            self.company_gstin = "02AMBPG7773M002"
+            self.username = "adqgsphpusr1"
+            self.password = "Gsp@1234"
+
+        self.auth_strategy = EnrichedAuth(self)
+        self.set_default_headers()
+
+
+class StandardEInvoiceAPI(EInvoiceAPI):
+    BASE_PATH = "standard/ei/api"
+
+    def setup(self, doc=None, *, company_gstin=None):
+        super().setup(doc, company_gstin=company_gstin)
+
+        if not self.company_gstin:
+            frappe.throw(_("Company GSTIN is required to use the e-Invoice API"))
+
+        self.fetch_credentials(self.company_gstin, "e-Waybill / e-Invoice")
+        self.app_key = base64.b64encode(self.app_key.encode()).decode()
+        self.auth_strategy = StandardAuth(self)
+
+        self.set_default_headers(self)
+
+    def handle_error_response(self, response_json):
+        success_value = response_json.get("Status") != 0
+
+        if not success_value:
+            self.handle_server_error(response_json)
+
+        if not success_value and not self.is_ignored_error(response_json):
+            frappe.throw(
+                response_json.get("ErrorDetails", [{}])[0].get("ErrorMessage")
+                # Fallback to response body if message is not present
+                or frappe.as_json(response_json, indent=4),
+                title=_("API Request Failed"),
+            )
+
+    def is_ignored_error(self, response):
+        error_details = response.get("ErrorDetails")
+
+        if not error_details:
+            return
+
+        error_code = error_details[0].get("ErrorCode")
+        if error_code in self.IGNORED_ERROR_CODES:
+            response.error_code = error_code
+            return True
+
+    def authenticate(self):
+        json_data = {
+            "UserName": self.username,
+            "Password": self.password,
+            "AppKey": self.app_key,
+            "ForceRefreshAccessToken": False,
+        }
+
+        return self.post(endpoint="auth", json=json_data)

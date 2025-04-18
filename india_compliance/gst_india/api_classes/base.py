@@ -1,3 +1,4 @@
+from base64 import b64decode
 from urllib.parse import urljoin
 
 import requests
@@ -28,6 +29,8 @@ class BaseAPI:
                 )
             )
 
+        self.company_gstin = None
+        self.auth_strategy = None
         self.sandbox_mode = self.settings.sandbox_mode
         self.default_headers = {
             "x-api-key": (
@@ -59,10 +62,14 @@ class BaseAPI:
 
         self.username = row.username
         self.company = row.company
+        self.app_key = row.app_key or self.generate_app_key(service)
         self._fetch_credentials(row, require_password=require_password)
 
     def _fetch_credentials(self, row, require_password=True):
         self.password = row.get_password(raise_exception=require_password)
+        self.session_key = b64decode(row.session_key or "")
+        self.session_expiry = row.session_expiry
+        self.auth_token = row.auth_token
 
     def get_url(self, *parts):
         parts = list(parts)
@@ -188,10 +195,15 @@ class BaseAPI:
                 frappe.flags.ic_sandbox_message_shown = True
 
     def before_request(self, request_args):
-        return
+        if getattr(self, "auth_strategy", None):
+            self.auth_strategy.prepare_request(request_args)
 
     def process_response(self, response):
         self.handle_error_response(response)
+
+        if getattr(self, "auth_strategy", None):
+            response = self.auth_strategy.process_response(response)
+
         self.response = response
         return response
 
@@ -284,6 +296,21 @@ class BaseAPI:
 
             if request_body and key in request_body:
                 request_body[key] = placeholder
+
+    def generate_app_key(self, service):
+        app_key = frappe.generate_hash(length=32)
+
+        frappe.db.set_value(
+            "GST Credential",
+            {
+                "gstin": self.company_gstin,
+                "username": self.username,
+                "service": service,
+            },
+            {"app_key": app_key},
+        )
+
+        return app_key
 
 
 def check_scheduler_status():
