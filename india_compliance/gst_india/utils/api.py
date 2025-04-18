@@ -32,7 +32,21 @@ def create_integration_request(
             "reference_doctype": reference_doctype,
             "reference_docname": reference_name,
         }
+<<<<<<< HEAD
     ).insert(ignore_permissions=True)
+=======
+    )
+    doc.insert(ignore_permissions=True, ignore_links=True)
+
+    if update_gstr_action:
+        link_integration_request(request_id, doc.name)
+
+
+def link_integration_request(request_id, doc_name):
+    frappe.db.set_value(
+        "GSTR Action", {"request_id": request_id}, {"integration_request": doc_name}
+    )
+>>>>>>> 5cc1cede (fix: ensure links are ignored when inserting integration request document)
 
 
 def pretty_json(obj):
