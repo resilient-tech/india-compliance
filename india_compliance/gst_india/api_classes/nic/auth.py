@@ -44,7 +44,7 @@ class Auth:
         pass
 
     def process_response(self, response):
-        pass
+        return response
 
     def _is_authenticated(self):
         return True
