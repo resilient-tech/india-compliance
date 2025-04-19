@@ -122,6 +122,10 @@ class EInvoiceAPI(BaseAPI):
     def sync_gstin_info(self, gstin):
         return self.get(endpoint="master/syncgstin", params={"gstin": gstin})
 
+    @staticmethod
+    def getkey(key):
+        return key
+
 
 class EnrichedEInvoiceAPI(EInvoiceAPI):
     BASE_PATH = "ei/api"
@@ -151,7 +155,7 @@ class StandardEInvoiceAPI(EInvoiceAPI):
         self.app_key = base64.b64encode(self.app_key.encode()).decode()
         self.auth_strategy = StandardAuth(self)
 
-        self.set_default_headers(self)
+        self.set_default_headers()
 
     def handle_error_response(self, response_json):
         success_value = response_json.get("Status") != 0

@@ -8,7 +8,6 @@ import frappe
 from frappe import _
 from frappe.utils import add_to_date, now_datetime
 
-from india_compliance.gst_india.api_classes.base import change_base_path
 from india_compliance.gst_india.api_classes.taxpayer_base import StaticResourcesAPI
 from india_compliance.gst_india.utils.cryptography import (
     aes_decrypt_data,
@@ -60,7 +59,7 @@ class StandardAuth(Auth):
         if self._is_authentication_api(request_args.get("url")):
             return
 
-        request_args["headers"][self.getkey("AuthToken")] = self.auth_token
+        request_args["headers"][self.client.getkey("AuthToken")] = self.auth_token
 
     def process_response(self, response):
         self.client.handle_error_response(response)
@@ -86,7 +85,7 @@ class StandardAuth(Auth):
         if not (data := request_args.get("json")):
             return
 
-        key = self.getkey("UserName")
+        key = self.client.getkey("UserName")
         if key in data:
             data = frappe.as_json(data)
             data = base64.b64encode(data.encode())
@@ -102,40 +101,28 @@ class StandardAuth(Auth):
         }
 
     def _decrypt_response(self, response):
-        decrypted_rek = None
-
-        # For Other APIs
-        key = self.getkey("Rek")
-        if response.get(key):
-            decrypted_rek = aes_decrypt_data(response[key], self.session_key)
-
-        key = self.getkey("Data")
-        if response.get(key) and isinstance(response[key], str):
-            decrypted_data = aes_decrypt_data(
-                response.pop(key), decrypted_rek or self.session_key
-            )
-
-            if response.get(self.getkey("Hmac")):
-                hmac = aes_decrypt_data(base64.b64encode(decrypted_data), decrypted_rek)
-
-                if hmac != response[self.getkey("Hmac")]:
-                    frappe.throw(_("HMAC mismatch"))
-
-            response.result = frappe.parse_json(decrypted_data.decode())
+        key = self.client.getkey("Data")
+        data = response.get(key) or response
+        if not data:
             return
 
+        key = self.client.getkey("AuthToken")
+
+        if isinstance(data, dict) and key in data:
+            self._decrypt_session_key(data)
+
+        else:
+            self._decrypt_response_data(response)
+
+    def _decrypt_session_key(self, response):
         # For Auth API
-        response = response.get(key) or response
-        if not response:
-            return
-
         values = {}
-        key = self.getkey("AuthToken")
+        key = self.client.getkey("AuthToken")
         if response.get(key):
             self.auth_token = response[key]
             values["auth_token"] = response[key]
 
-        key = self.getkey("Sek")
+        key = self.client.getkey("Sek")
         if response.get(key):
             self.session_key = aes_decrypt_data(
                 response[key], base64.b64decode(self.app_key.encode())
@@ -159,34 +146,35 @@ class StandardAuth(Auth):
             # cache of parent doctype GST Settings is not cleared by default so clear it manually
             frappe.clear_document_cache("GST Settings")
 
+    def _decrypt_response_data(self, response):
+        # For Other APIs
+        decrypted_rek = None
+
+        key = self.client.getkey("Rek")
+        if response.get(key):
+            decrypted_rek = aes_decrypt_data(response[key], self.session_key)
+
+        key = self.client.getkey("Data")
+        if response.get(key) and isinstance(response[key], str):
+            decrypted_data = aes_decrypt_data(
+                response.pop(key), decrypted_rek or self.session_key
+            )
+
+            if response.get(self.client.getkey("Hmac")):
+                hmac = aes_decrypt_data(base64.b64encode(decrypted_data), decrypted_rek)
+
+                if hmac != response[self.client.getkey("Hmac")]:
+                    frappe.throw(_("HMAC mismatch"))
+
+            response.result = frappe.parse_json(decrypted_data.decode())
+            return
+
     def _get_public_key(self):
         key = self.client.settings.nic_public_key
         if not key:
             key = StaticResourcesAPI().get_nic_public_key()
 
         return key.encode()
-
-    @staticmethod
-    def getkey(key):
-        return key
-
-
-class EWBAuth(StandardAuth):
-
-    # TODO: try removing decorator
-    # What is the base path for this API?
-    @change_base_path("standard/ewb")
-    def authenticate(self):
-        super().authenticate()
-
-        json_data = {
-            "action": "ACCESSTOKEN",
-            "username": self.client.username,
-            "password": self.client.password,
-            "app_key": self.client.app_key,
-        }
-
-        return self.client.post(endpoint="auth", json=json_data)
 
 
 class EnrichedAuth(Auth):

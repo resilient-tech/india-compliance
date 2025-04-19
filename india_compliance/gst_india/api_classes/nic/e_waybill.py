@@ -109,6 +109,10 @@ class EWaybillAPI(BaseAPI):
         ):
             result.distance = int(distance_match.group())
 
+    @staticmethod
+    def getkey(key):
+        return key.lower()
+
 
 class EnrichedEWaybillAPI(EWaybillAPI):
     BASE_PATH = "ewb/ewayapi"
@@ -152,7 +156,7 @@ class StandardEWaybillAPI(EWaybillAPI):
             "app_key": self.app_key,
         }
 
-        return self.post(endpoint="auth", json=json_data)
+        return self._make_request("POST", endpoint="auth", json=json_data)
 
     @change_base_path("standard/ewb/master")
     def get_transporter_details(self, transporter_id):
