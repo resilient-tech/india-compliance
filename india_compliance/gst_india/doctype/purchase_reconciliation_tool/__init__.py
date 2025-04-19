@@ -1310,10 +1310,13 @@ class BaseUtil:
         replace_list = [
             f"{fy[0]}-{fy[1]}",
             f"{fy[0]}/{fy[1]}",
+            f"{fy[0]}{fy[1]}",
             f"{fy[0]}-{fy[1][2:]}",
             f"{fy[0]}/{fy[1][2:]}",
+            f"{fy[0]}{fy[1][2:]}",
             f"{fy[0][2:]}-{fy[1][2:]}",
             f"{fy[0][2:]}/{fy[1][2:]}",
+            f"{fy[0][2:]}{fy[1][2:]}",
             "/",  # these are only special characters allowed in invoice
             "-",
         ]
