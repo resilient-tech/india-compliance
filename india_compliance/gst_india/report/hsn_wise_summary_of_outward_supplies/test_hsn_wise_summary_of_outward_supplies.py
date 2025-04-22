@@ -75,7 +75,7 @@ class TestHSNWiseSummaryReport(IntegrationTestCase):
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(r"^(GST HSN Code is Mandatory.*)"),
+            re.compile(r"^(GST HSN Code is missing in one or more invoices*)"),
             get_hsn_wise_json_data,
             report_data=data,
         )

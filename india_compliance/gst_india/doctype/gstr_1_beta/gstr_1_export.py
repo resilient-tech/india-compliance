@@ -2077,7 +2077,11 @@ def get_gstr_1_json(
                 if row.get(GSTR1_DataField.HSN_CODE.value):
                     continue
 
-                frappe.throw(_("GST HSN Code is Mandatory."))
+                frappe.throw(
+                    _(
+                        "GST HSN Code is missing in one or more invoices. Please ensure all invoices include the HSN Code, as it is Mandatory for filing GSTR-1."
+                    )
+                )
 
             continue
 

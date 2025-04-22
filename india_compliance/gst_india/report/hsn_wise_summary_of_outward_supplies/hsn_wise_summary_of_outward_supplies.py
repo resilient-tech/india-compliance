@@ -210,7 +210,11 @@ def get_hsn_wise_json_data(report_data):
             continue
 
         if not hsn.get("hsn_code"):
-            frappe.throw(_("GST HSN Code is Mandatory."))
+            frappe.throw(
+                _(
+                    "GST HSN Code is missing in one or more invoices. Please ensure all invoices include the HSN Code, as it is Mandatory for filing GSTR-1."
+                )
+            )
 
         row = {
             "num": count,
