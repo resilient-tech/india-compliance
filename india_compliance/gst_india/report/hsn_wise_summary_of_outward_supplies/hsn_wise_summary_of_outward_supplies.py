@@ -169,6 +169,7 @@ def get_columns(filters):
     return columns
 
 
+<<<<<<< HEAD
 def get_conditions(filters):
     conditions = ""
 
@@ -253,6 +254,41 @@ def get_merged_data(columns, data):
                 )
 
     return list(merged_hsn_dict.values())
+=======
+def get_hsn_data(filters):
+    _class = GSTR1Invoices(filters)
+    invoices = _class.get_invoices_for_item_wise_summary()
+    _class.process_invoices(invoices)
+
+    return process_hsn_data(invoices)
+
+
+def process_hsn_data(invoices):
+    # TODO: This import should be moved to the top of the file once GSTR-1 Report is discontinued.
+    from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import GSTR1BooksData
+
+    precision_fields = (
+        "quantity",
+        "document_value",
+        "tax_rate",
+        "total_taxable_value",
+        "total_igst_amount",
+        "total_cgst_amount",
+        "total_sgst_amount",
+        "total_cess_amount",
+    )
+
+    hsn_data = GSTR1BooksData({}).prepare_hsn_data(invoices)
+
+    return [
+        {
+            **row,
+            "uom": map_uom(row["uom"], row),
+            **{field: flt(row[field], 2) for field in precision_fields},
+        }
+        for row in hsn_data.values()
+    ]
+>>>>>>> 4a71c55c (fix: uom for service item as "NA" in HSN-wise-summary of outward supplies)
 
 
 @frappe.whitelist()
@@ -323,3 +359,19 @@ def get_hsn_wise_json_data(filters, report_data):
         count += 1
 
     return {"data": data}
+
+
+def map_uom(uom, data=None):
+    uom = uom.upper()
+
+    if "-" in uom:
+        if (
+            data
+            and (hsn_code := data.get("hsn_code") or "")
+            and hsn_code.startswith("99")
+        ):
+            return "NA"
+
+        return uom.split("-")[0]
+
+    return uom
