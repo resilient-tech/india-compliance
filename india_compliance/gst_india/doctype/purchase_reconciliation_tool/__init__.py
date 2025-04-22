@@ -803,7 +803,7 @@ class Reconciler(BaseReconciliation):
                     inward_supplies[supplier_gstin].copy().items()
                 ):
                     if (
-                        match_status == "Residual Match"
+                        match_status == MatchStatus.RESIDUAL_MATCH.value
                         and self.category != "CDNR"
                         and abs((purchase.bill_date - inward_supply.bill_date).days)
                         > 10
