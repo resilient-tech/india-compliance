@@ -9,6 +9,7 @@ from india_compliance.gst_india.constants import (
     GST_REFUND_TAX_TYPES,
     GST_TAX_RATES,
     GST_TAX_TYPES,
+    TAXABLE_GST_TREATMENTS,
 )
 from india_compliance.gst_india.constants.e_waybill import (
     TRANSPORT_MODES,
@@ -78,7 +79,7 @@ class GSTTransactionData:
         for row in self.doc.items:
             total += row.taxable_value
 
-            if row.gst_treatment in ("Taxable", "Zero-Rated"):
+            if row.gst_treatment in TAXABLE_GST_TREATMENTS:
                 total_taxable_value += row.taxable_value
 
             if self.is_purchase_rcm:
