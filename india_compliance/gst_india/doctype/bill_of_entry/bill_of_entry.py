@@ -112,13 +112,6 @@ class BillofEntry(Document):
         self.set_taxes_and_totals()
         set_gst_tax_type(self)
 
-    def before_submit(self):
-<<<<<<< HEAD
-        update_gst_details(self)
-=======
-        self.validate_qty()
->>>>>>> 96cb516c (fix: update gst details before valuation rate)
-
     def validate(self):
         self.validate_purchase_invoice()
         self.validate_taxes()
