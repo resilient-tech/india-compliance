@@ -803,7 +803,7 @@ class Reconciler(BaseReconciliation):
                     inward_supplies[supplier_gstin].copy().items()
                 ):
                     if (
-                        match_status == "Residual Match"
+                        match_status == MatchStatus.RESIDUAL_MATCH.value
                         and self.category != "CDNR"
                         and abs((purchase.bill_date - inward_supply.bill_date).days)
                         > 10
@@ -812,6 +812,12 @@ class Reconciler(BaseReconciliation):
 
                     if not self.is_doc_matching(purchase, inward_supply, rules):
                         continue
+
+                    if match_status == MatchStatus.RESIDUAL_MATCH.value:
+                        if inward_supply.supplier_gstin == purchase.supplier_gstin:
+                            match_status = MatchStatus.SUGGESTED_MATCH.value
+                        else:
+                            match_status = MatchStatus.MISMATCH.value
 
                     self.update_matching_doc(
                         match_status,
@@ -909,10 +915,6 @@ class Reconciler(BaseReconciliation):
         self, match_status, purchase_invoice_name, inward_supply_name, link_doctype
     ):
         """Update matching doc for records."""
-
-        if match_status == "Residual Match":
-            match_status = "Mismatch"
-
         inward_supply_fields = {
             "match_status": match_status,
             "link_doctype": link_doctype,
@@ -1310,10 +1312,13 @@ class BaseUtil:
         replace_list = [
             f"{fy[0]}-{fy[1]}",
             f"{fy[0]}/{fy[1]}",
+            f"{fy[0]}{fy[1]}",
             f"{fy[0]}-{fy[1][2:]}",
             f"{fy[0]}/{fy[1][2:]}",
+            f"{fy[0]}{fy[1][2:]}",
             f"{fy[0][2:]}-{fy[1][2:]}",
             f"{fy[0][2:]}/{fy[1][2:]}",
+            f"{fy[0][2:]}{fy[1][2:]}",
             "/",  # these are only special characters allowed in invoice
             "-",
         ]

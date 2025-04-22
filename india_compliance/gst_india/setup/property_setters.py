@@ -3,48 +3,6 @@ import frappe
 
 def get_property_setters(*, include_defaults=False):
     properties = [
-        get_options_property_setter(
-            "Journal Entry",
-            "voucher_type",
-            ["Reversal Of ITC", "Reclaim of ITC Reversal"],
-            prepend=False,
-        ),
-        get_options_property_setter(
-            "Delivery Note",
-            "naming_series",
-            ["DN-.YY.-", "DRET-.YY.-", ""],
-        ),
-        get_options_property_setter(
-            "Sales Invoice",
-            "naming_series",
-            ["SINV-.YY.-", "SRET-.YY.-", ""],
-        ),
-        get_options_property_setter(
-            "Purchase Invoice",
-            "naming_series",
-            ["PINV-.YY.-", "PRET-.YY.-", ""],
-        ),
-        get_options_property_setter(
-            "Purchase Receipt",
-            "naming_series",
-            ["PR-.YY.-", "PRRET-.YY.-", ""],
-        ),
-        get_options_property_setter(
-            "Journal Entry Account",
-            "reference_type",
-            ["Bill of Entry"],
-            prepend=False,
-        ),
-        get_options_property_setter(
-            "Stock Entry",
-            "naming_series",
-            ["MAT-STE-"],
-        ),
-        get_options_property_setter(
-            "Subcontracting Receipt",
-            "naming_series",
-            ["MAT-SCR-"],
-        ),
         {
             "doctype": "Purchase Invoice",
             "fieldname": "bill_no",
@@ -108,12 +66,6 @@ def get_property_setters(*, include_defaults=False):
             "fieldname": "tax_settings_section",
             "property": "collapsible",
             "value": "0",
-        },
-        {
-            "doctype": "Purchase Reconciliation Tool",
-            "doctype_or_field": "DocType",
-            "property": "default_email_template",
-            "value": "Purchase Reconciliation",
         },
         {
             "doctype": "Subcontracting Receipt",
@@ -250,6 +202,7 @@ SUBCONTRACTING_RECEIPT_PROPERTIES = [
 
 # Customizable property setters that are set by default
 DEFAULT_PROPERTIES = [
+    # DEFAULTS #
     {
         "doctype": "e-Waybill Log",
         "doctype_or_field": "DocType",
@@ -257,4 +210,53 @@ DEFAULT_PROPERTIES = [
         "value": "e-Waybill",
         "is_system_generated": 0,
     },
+    {
+        "doctype": "Purchase Reconciliation Tool",
+        "doctype_or_field": "DocType",
+        "property": "default_email_template",
+        "value": "Purchase Reconciliation",
+    },
+    # OPTIONS #
+    get_options_property_setter(
+        "Journal Entry",
+        "voucher_type",
+        ["Reversal Of ITC", "Reclaim of ITC Reversal"],
+        prepend=False,
+    ),
+    get_options_property_setter(
+        "Delivery Note",
+        "naming_series",
+        ["DN-.YY.-", "DRET-.YY.-", ""],
+    ),
+    get_options_property_setter(
+        "Sales Invoice",
+        "naming_series",
+        ["SINV-.YY.-", "SRET-.YY.-", ""],
+    ),
+    get_options_property_setter(
+        "Purchase Invoice",
+        "naming_series",
+        ["PINV-.YY.-", "PRET-.YY.-", ""],
+    ),
+    get_options_property_setter(
+        "Purchase Receipt",
+        "naming_series",
+        ["PR-.YY.-", "PRRET-.YY.-", ""],
+    ),
+    get_options_property_setter(
+        "Journal Entry Account",
+        "reference_type",
+        ["Bill of Entry"],
+        prepend=False,
+    ),
+    get_options_property_setter(
+        "Stock Entry",
+        "naming_series",
+        ["MAT-STE-"],
+    ),
+    get_options_property_setter(
+        "Subcontracting Receipt",
+        "naming_series",
+        ["MAT-SCR-"],
+    ),
 ]
