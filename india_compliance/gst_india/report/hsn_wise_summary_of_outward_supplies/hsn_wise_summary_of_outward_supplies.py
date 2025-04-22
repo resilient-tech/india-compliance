@@ -191,6 +191,14 @@ def get_hsn_wise_json_data(report_data):
     for hsn in report_data:
         if hsn.get("hsn_code") == "Total":
             continue
+
+        if not hsn.get("hsn_code"):
+            frappe.throw(
+                _(
+                    "GST HSN Code is missing in one or more invoices. Please ensure all invoices include the HSN Code, as it is Mandatory for filing GSTR-1."
+                )
+            )
+
         row = {
             "num": count,
             "hsn_sc": hsn.get("hsn_code"),

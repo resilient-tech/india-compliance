@@ -47,7 +47,6 @@ CATEGORIES_WITH_ITEMS = {
 
 
 class DataProcessor:
-
     # transform input data to required format
     FIELD_TRANSFORMATIONS = {}
 
@@ -2068,10 +2067,22 @@ def get_gstr_1_json(
     for subcategory, subcategory_data in data.items():
         if subcategory in {
             GSTR1_SubCategory.NIL_EXEMPT.value,
-            GSTR1_SubCategory.HSN.value,
             GSTR1_SubCategory.DOC_ISSUE.value,
             *QUARTERLY_KEYS,
         }:
+            continue
+
+        if subcategory == GSTR1_SubCategory.HSN.value:
+            for row in subcategory_data.values():
+                if row.get(GSTR1_DataField.HSN_CODE.value):
+                    continue
+
+                frappe.throw(
+                    _(
+                        "GST HSN Code is missing in one or more invoices. Please ensure all invoices include the HSN Code, as it is Mandatory for filing GSTR-1."
+                    )
+                )
+
             continue
 
         discard_invoices = []
