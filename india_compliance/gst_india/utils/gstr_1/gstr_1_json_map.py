@@ -2338,7 +2338,7 @@ class GSTR1BooksData(BooksDataMapper):
         self.filters = filters
         if filters.get("month_or_quarter"):
             self.current_month = MONTHS.index(filters.month_or_quarter) + 1
-            self.filing_date = getdate(f"01-{filters.month_or_quarter}-{filters.year}")
+            self.filing_from = getdate(f"01-{filters.month_or_quarter}-{filters.year}")
             self.hsn_bifurcation_from = frappe.db.get_single_value(
                 "GST Settings", "hsn_bifurcation_from"
             )
@@ -2374,7 +2374,7 @@ class GSTR1BooksData(BooksDataMapper):
         }
 
         # Backwards Compatibility
-        if self.filing_date < self.hsn_bifurcation_from:
+        if self.filing_from < self.hsn_bifurcation_from:
             other_categories.update(
                 {
                     GSTR1_Category.HSN.value: self.prepare_hsn_data(data),

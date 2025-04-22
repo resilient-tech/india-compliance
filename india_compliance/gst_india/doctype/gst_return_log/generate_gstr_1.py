@@ -46,7 +46,7 @@ class SummarizeGSTR1:
         "total_cess_amount": 0,
     }
 
-    def get_summarized_data(self, data, filing_date, is_filed=False):
+    def get_summarized_data(self, data, filing_from, is_filed=False):
         """
         Helper function to summarize data for each sub-category
         """
@@ -55,9 +55,9 @@ class SummarizeGSTR1:
 
         subcategory_summary = self.get_subcategory_summary(data)
 
-        return self.get_overall_summary(subcategory_summary, filing_date)
+        return self.get_overall_summary(subcategory_summary, filing_from)
 
-    def get_overall_summary(self, subcategory_summary, filing_date):
+    def get_overall_summary(self, subcategory_summary, filing_from):
         """
         Summarize data for each category with subcategories
 
@@ -86,7 +86,7 @@ class SummarizeGSTR1:
             remove_category_row = True
 
             # Backwards compatibility
-            if (filing_date < hsn_bifurcation_from) and category in PREVIOUS_VERSION:
+            if (filing_from < hsn_bifurcation_from) and category in PREVIOUS_VERSION:
                 sub_categories = PREVIOUS_VERSION[category]
 
             for subcategory in sub_categories:
@@ -653,9 +653,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         data[gov_data_field] = self.normalize_data(gov_data)
         data["books"] = self.normalize_data(books_data)
 
-        filing_date = getdate(f"01-{filters.month_or_quarter}-{filters.year}")
-
-        self.summarize_data(data, filing_date)
+        self.summarize_data(data, filters)
         return callback and callback(filters)
 
     def set_filing_preference(self):
@@ -678,8 +676,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         data["books"] = self.normalize_data(books_data)
         data["status"] = status
 
-        filing_date = getdate(f"01-{filters.month_or_quarter}-{filters.year}")
-        self.summarize_data(data, filing_date)
+        self.summarize_data(data, filters)
 
         return callback and callback(filters)
 
@@ -738,7 +735,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         return books_data
 
     # DATA MODIFIERS
-    def summarize_data(self, data, filing_date):
+    def summarize_data(self, data, filters):
         """
         Summarize data for all fields => reconcile, filed, unfiled, books
 
@@ -766,8 +763,9 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
                     data[field] = _data
                     continue
 
+            filing_from = getdate(f"01-{filters.month_or_quarter}-{filters.year}")
             summary_data = self.get_summarized_data(
-                data[key], filing_date, self.filing_status == "Filed"
+                data[key], filing_from, self.filing_status == "Filed"
             )
 
             if key == "reconcile":
