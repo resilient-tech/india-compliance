@@ -25,6 +25,7 @@ from india_compliance.gst_india.constants import (
     EXPORT_TYPES,
     GST_CATEGORIES,
     PORT_CODES,
+    TAXABLE_GST_TREATMENTS,
 )
 from india_compliance.gst_india.constants.e_invoice import (
     CANCEL_REASON_CODES,
@@ -526,7 +527,7 @@ def validate_taxable_item(doc, throw=True):
 
     """
     # Check if there is at least one taxable item in the document
-    if any(item.gst_treatment in ("Taxable", "Zero-Rated") for item in doc.items):
+    if any(item.gst_treatment in TAXABLE_GST_TREATMENTS for item in doc.items):
         return True
 
     if not throw:
@@ -612,7 +613,7 @@ class EInvoiceData(GSTTransactionData):
         self.item_list = []
 
         for item_details in self.get_all_item_details():
-            if item_details.get("gst_treatment") not in ("Taxable", "Zero-Rated"):
+            if item_details.get("gst_treatment") not in TAXABLE_GST_TREATMENTS:
                 continue
 
             self.item_list.append(self.get_item_data(item_details))
