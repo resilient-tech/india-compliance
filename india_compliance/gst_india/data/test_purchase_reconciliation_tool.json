@@ -332,13 +332,13 @@
                             "item_code": "_Test Nil Rated Item",
                             "rate": 1000,
                             "qty": 10,
-                            "gst_trreatment": "Nil-Rated"
+                            "gst_treatment": "Nil-Rated"
                         },
                         {
                             "item_code": "_Test Trading Goods 1",
                             "rate": 1000,
                             "qty": 10,
-                            "gst_trreatment": "Taxable"
+                            "gst_treatment": "Taxable"
                         }
                     ]
                 },
