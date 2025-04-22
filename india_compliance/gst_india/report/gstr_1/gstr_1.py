@@ -438,18 +438,14 @@ class Gstr1Report:
         sii = frappe.qb.DocType("Sales Invoice Item")
         taxable_gst_treatment = ("Taxable", "Zero-Rated")
 
-        query = (
+        subquery = (
             frappe.qb.from_(sii)
             .select(
                 sii.parent,
-                sii.item_code,
-                sii.item_name,
-                Sum(sii.taxable_value).as_("taxable_value"),
+                sii.taxable_value.as_("taxable_value"),
                 sii.gst_treatment,
                 (sii.cgst_rate + sii.sgst_rate + sii.igst_rate).as_("tax_rate"),
-                Sum((sii.cgst_amount + sii.sgst_amount + sii.igst_amount)).as_(
-                    "tax_amount"
-                ),
+                (sii.cgst_amount + sii.sgst_amount + sii.igst_amount).as_("tax_amount"),
                 (sii.cess_amount + sii.cess_non_advol_amount).as_("cess_amount"),
             )
             .where(
@@ -457,17 +453,29 @@ class Gstr1Report:
                 & (sii.parenttype == "Sales Invoice")
                 & (sii.docstatus == 1)
             )
-            .groupby(sii.parent, sii.gst_treatment, sii.tax_rate)
         )
 
         if self.filters.get("type_of_business") == "NIL Rated":
-            query = query.where(
-                IfNull(sii.gst_treatment.notin(taxable_gst_treatment), "")
+            subquery = subquery.where(
+                IfNull(sii.gst_treatment, "").notin(taxable_gst_treatment)
             )
         else:
-            query = query.where(
-                IfNull(sii.gst_treatment.isin(taxable_gst_treatment), "")
+            subquery = subquery.where(
+                IfNull(sii.gst_treatment, "").isin(taxable_gst_treatment)
             )
+
+        query = (
+            frappe.qb.from_(subquery)
+            .select(
+                subquery.parent,
+                Sum(subquery.taxable_value).as_("taxable_value"),
+                Sum(subquery.tax_amount).as_("tax_amount"),
+                Sum(subquery.cess_amount).as_("cess_amount"),
+                subquery.gst_treatment,
+                subquery.tax_rate,
+            )
+            .groupby(subquery.parent, subquery.gst_treatment, subquery.tax_rate)
+        )
 
         items = query.run(as_dict=True)
 
