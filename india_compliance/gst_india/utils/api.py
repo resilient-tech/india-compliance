@@ -32,7 +32,7 @@ def create_integration_request(
             "reference_doctype": reference_doctype,
             "reference_docname": reference_name,
         }
-    ).insert(ignore_permissions=True)
+    ).insert(ignore_permissions=True, ignore_links=True)
 
 
 def pretty_json(obj):
