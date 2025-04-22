@@ -5,7 +5,8 @@ from collections import defaultdict
 
 import frappe
 from frappe import _
-from frappe.query_builder.functions import IfNull
+from frappe.query_builder import Case
+from frappe.query_builder.functions import IfNull, Sum
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.income_tax_india.overrides.tax_withholding_category import (
@@ -104,7 +105,10 @@ def get_data(filters):
             if not tax.ineligibility_reason:
                 account_data["total_itc_availed"] += proportional_tax
 
-    return list(account_summary.values())
+    account_summary_data = list(account_summary.values())
+    account_summary_data.append(get_ineligible_itc_from_je(filters))
+
+    return account_summary_data
 
 
 def get_invoices(filters):
@@ -229,3 +233,47 @@ def get_query_with_common_filters(query, doc, filters):
         query = query.where(doc.company_gstin == filters.company_gstin)
 
     return query
+
+
+def get_ineligible_itc_from_je(filters):
+    je_doc = frappe.qb.DocType("Journal Entry")
+    je_account = frappe.qb.DocType("Journal Entry Account")
+
+    query = (
+        frappe.qb.from_(je_doc)
+        .join(je_account)
+        .on(je_account.parent == je_doc.name)
+        .select(
+            Sum(
+                Case()
+                .when(
+                    je_account.gst_tax_type.isin(GST_TAX_TYPES),
+                    (
+                        je_account.credit_in_account_currency
+                        - je_account.debit_in_account_currency
+                    ),
+                )
+                .else_(0)
+            ).as_("ineligible_itc")
+        )
+        .where(
+            (je_doc.docstatus == 1)
+            & (je_doc.is_opening == "No")
+            & (je_doc.posting_date[filters.from_date : filters.to_date])
+            & (je_doc.company == filters.company)
+            & (je_doc.voucher_type == "Reversal of ITC")
+        )
+        .groupby(je_doc.name)
+    )
+
+    if filters.get("company_gstin"):
+        query = query.where(je_doc.company_gstin == filters.company_gstin)
+
+    ineligible_itc = query.run(as_dict=True)[0].ineligible_itc
+
+    return {
+        "account_name": "Ineligible ITC from Journal Entry",
+        "total_amount": ineligible_itc,
+        "total_itc": ineligible_itc,
+        "total_itc_availed": 0,
+    }
