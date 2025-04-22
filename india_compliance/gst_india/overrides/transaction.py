@@ -1640,6 +1640,8 @@ def update_gst_details(doc, method=None):
         ItemGSTDetails().update(doc)
 
     ItemGSTTreatment().set(doc)
+    if doc.doctype in ("Purchase Receipt", "Purchase Invoice"):
+        doc.update_valuation_rate()
 
 
 def after_mapping(target_doc, method=None, source_doc=None):
