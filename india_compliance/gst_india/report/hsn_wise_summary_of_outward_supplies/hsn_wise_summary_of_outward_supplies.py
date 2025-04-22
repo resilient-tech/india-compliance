@@ -142,28 +142,11 @@ def process_hsn_data(invoices):
     return [
         {
             **row,
-            "uom": row["uom"].split("-")[0],
+            "uom": map_uom(row["uom"], row),
             **{field: flt(row[field], 2) for field in precision_fields},
         }
         for row in hsn_data.values()
     ]
-
-
-# TODO: This function will be unused and should be removed once GSTR-1 Report is discontinued.
-def get_conditions(filters):
-    conditions = ""
-
-    for opts in (
-        ("company", " and company=%(company)s"),
-        ("gst_hsn_code", " and gst_hsn_code=%(gst_hsn_code)s"),
-        ("company_gstin", " and company_gstin=%(company_gstin)s"),
-        ("from_date", " and posting_date >= %(from_date)s"),
-        ("to_date", " and posting_date <= %(to_date)s"),
-    ):
-        if filters.get(opts[0]):
-            conditions += opts[1]
-
-    return conditions
 
 
 @frappe.whitelist()
@@ -233,3 +216,19 @@ def get_hsn_wise_json_data(report_data):
         count += 1
 
     return {"data": data}
+
+
+def map_uom(uom, data=None):
+    uom = uom.upper()
+
+    if "-" in uom:
+        if (
+            data
+            and (hsn_code := data.get("hsn_code") or "")
+            and hsn_code.startswith("99")
+        ):
+            return "NA"
+
+        return uom.split("-")[0]
+
+    return uom

@@ -16,9 +16,6 @@ from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_
     get_columns as get_hsn_columns,
 )
 from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies import (
-    get_conditions as get_hsn_conditions,
-)
-from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies import (
     get_hsn_data,
     get_hsn_wise_json_data,
 )
@@ -356,7 +353,7 @@ class Gstr1Report:
 
     def get_conditions(self):
         if self.filters.get("type_of_business") == "HSN":
-            return get_hsn_conditions(self.filters)
+            return ""
 
         conditions = ""
 
