@@ -1740,6 +1740,9 @@ def update_gst_details(doc, method=None):
         ItemGSTDetails().update(doc)
         validate_item_tax_template(doc)
 
+    if doc.doctype in ("Purchase Receipt", "Purchase Invoice"):
+        doc.update_valuation_rate()
+
 
 def validate_item_tax_template(doc):
     if not doc.items or not doc.taxes:
