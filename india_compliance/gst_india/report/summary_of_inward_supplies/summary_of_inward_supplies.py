@@ -9,35 +9,33 @@ from frappe.query_builder.functions import LiteralValue
 MAPPING_FIELD = {
     1: {
         "title": "Inward supplies (other than imports and inward supplies liable to reverse charge but includes services received from SEZs)",
-        "get_detail_type": lambda row: row.get("gst_category") != "Overseas"
+        "is_part_of": lambda row: row.get("gst_category") != "Overseas"
         and row.get("is_reverse_charge") == 0,
     },
     2: {
         "title": "Inward supplies received from unregistered persons liable to reverse charge (other than B above) on which tax is paid & ITC availed",
-        "get_detail_type": lambda row: row.get("gst_category") == "Unregistered"
+        "is_part_of": lambda row: row.get("gst_category") == "Unregistered"
         and row.get("is_reverse_charge") == 1
         and row.get("is_ineligible_for_itc") == 0,
     },
     3: {
         "title": "Inward supplies received from registered persons liable to reverse charge (other than B above) on which tax is paid & ITC availed",
-        "get_detail_type": lambda row: row.get("gst_category") != "Unregistered"
+        "is_part_of": lambda row: row.get("gst_category") != "Unregistered"
         and row.get("is_reverse_charge") == 1
         and row.get("is_ineligible_for_itc") == 0,
     },
     4: {
         "title": "Import Of Goods (including supplies from SEZ)",
-        "get_detail_type": lambda row: row.get("itc_classification")
-        == "Import Of Goods",
+        "is_part_of": lambda row: row.get("itc_classification") == "Import Of Goods",
     },
     5: {
         "title": "Import Of Services (excluding inward supplies from SEZ)",
-        "get_detail_type": lambda row: row.get("itc_classification")
-        == "Import Of Service"
+        "is_part_of": lambda row: row.get("itc_classification") == "Import Of Service"
         and row.get("gst_category") != "SEZ",
     },
     6: {
         "title": "Input Tax credit received from ISD",
-        "get_detail_type": lambda row: row.get("itc_classification")
+        "is_part_of": lambda row: row.get("itc_classification")
         == "Input Service Distributor",
     },
 }
@@ -210,7 +208,7 @@ def get_initial_summary() -> dict:
 
 def get_detail_type(row) -> int:
     for detail_type, mapping in MAPPING_FIELD.items():
-        if mapping["get_detail_type"](row):
+        if mapping["is_part_of"](row):
             return detail_type
 
 
