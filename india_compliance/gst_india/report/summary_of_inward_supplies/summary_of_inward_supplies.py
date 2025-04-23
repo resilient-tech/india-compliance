@@ -56,25 +56,25 @@ def get_columns() -> list[dict]:
         },
         {
             "label": _("Integrated tax (₹)"),
-            "fieldname": "integrated_tax",
+            "fieldname": "igst_amount",
             "fieldtype": "Currency",
             "width": 150,
         },
         {
             "label": _("Central tax (₹)"),
-            "fieldname": "central_tax",
+            "fieldname": "cgst_amount",
             "fieldtype": "Currency",
             "width": 150,
         },
         {
             "label": _("State/UT tax (₹)"),
-            "fieldname": "state_ut_tax",
+            "fieldname": "sgst_amount",
             "fieldtype": "Currency",
             "width": 150,
         },
         {
             "label": _("Cess (₹)"),
-            "fieldname": "cess",
+            "fieldname": "cess_amount",
             "fieldtype": "Currency",
             "width": 150,
         },
@@ -94,10 +94,10 @@ def get_data(filters: dict) -> list[dict]:
             add_subcategory_summary(summary[detail_type], row)
 
         elif detail_type in (5, 6):
-            summary[detail_type]["integrated_tax"] += row.igst_amount
-            summary[detail_type]["central_tax"] += row.cgst_amount
-            summary[detail_type]["state_ut_tax"] += row.sgst_amount
-            summary[detail_type]["cess"] += row.cess_amount
+            summary[detail_type]["igst_amount"] += row.igst_amount
+            summary[detail_type]["cgst_amount"] += row.cgst_amount
+            summary[detail_type]["sgst_amount"] += row.sgst_amount
+            summary[detail_type]["cess_amount"] += row.cess_amount
 
     return get_transformed_summary(summary)
 
@@ -176,10 +176,10 @@ def get_bill_of_entry_data(filters: dict) -> list[list]:
 
 def get_initial_summary() -> dict:
     zero_taxes = {
-        "integrated_tax": 0,
-        "central_tax": 0,
-        "state_ut_tax": 0,
-        "cess": 0,
+        "igst_amount": 0,
+        "cgst_amount": 0,
+        "sgst_amount": 0,
+        "cess_amount": 0,
     }
 
     return {
@@ -223,10 +223,10 @@ def add_subcategory_summary(summary: dict, row: dict) -> None:
     else:
         key = "Inputs"
 
-    summary[key]["integrated_tax"] += row.igst_amount
-    summary[key]["central_tax"] += row.cgst_amount
-    summary[key]["state_ut_tax"] += row.sgst_amount
-    summary[key]["cess"] += row.cess_amount
+    summary[key]["igst_amount"] += row.igst_amount
+    summary[key]["cgst_amount"] += row.cgst_amount
+    summary[key]["sgst_amount"] += row.sgst_amount
+    summary[key]["cess_amount"] += row.cess_amount
 
 
 def get_transformed_summary(summary: dict) -> list[dict]:
@@ -259,24 +259,26 @@ def get_transformed_summary(summary: dict) -> list[dict]:
 def get_tax_summary_row(details: str, taxes: dict, indent: int = 0) -> dict:
     return {
         "details": details,
-        "integrated_tax": taxes.get("integrated_tax", 0),
-        "central_tax": taxes.get("central_tax", 0),
-        "state_ut_tax": taxes.get("state_ut_tax", 0),
-        "cess": taxes.get("cess", 0),
+        "igst_amount": taxes.get("igst_amount", 0),
+        "cgst_amount": taxes.get("cgst_amount", 0),
+        "sgst_amount": taxes.get("sgst_amount", 0),
+        "cess_amount": taxes.get("cess_amount", 0),
         "indent": indent,
     }
 
 
 def aggregate_taxes(subcategory: dict) -> dict:
     return {
-        "integrated_tax": sum(
-            tax_item.get("integrated_tax", 0) for tax_item in subcategory.values()
+        "igst_amount": sum(
+            tax_item.get("igst_amount", 0) for tax_item in subcategory.values()
         ),
-        "central_tax": sum(
-            tax_item.get("central_tax", 0) for tax_item in subcategory.values()
+        "cgst_amount": sum(
+            tax_item.get("cgst_amount", 0) for tax_item in subcategory.values()
         ),
-        "state_ut_tax": sum(
-            tax_item.get("state_ut_tax", 0) for tax_item in subcategory.values()
+        "sgst_amount": sum(
+            tax_item.get("sgst_amount", 0) for tax_item in subcategory.values()
         ),
-        "cess": sum(tax_item.get("cess", 0) for tax_item in subcategory.values()),
+        "cess_amount": sum(
+            tax_item.get("cess_amount", 0) for tax_item in subcategory.values()
+        ),
     }
