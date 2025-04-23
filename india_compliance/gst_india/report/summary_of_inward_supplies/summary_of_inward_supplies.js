@@ -60,11 +60,13 @@ frappe.query_reports["Summary of Inward Supplies"] = {
     get_datatable_options(datatable_options) {
         datatable_options.hooks = {
             columnTotal: function (...args) {
-                const total = this.datamanager.data.reduce((acc, row) => {
-                    const column_field = args[1].column.fieldname;
-                    if (column_field === "details") return;
+                const column_field = args[1].column.fieldname;
+                if (column_field === "details") return;
 
-                    if (row.indent !== 1) { acc += row[column_field] || 0; }
+                const total = this.datamanager.data.reduce((acc, row) => {
+                    if (row.indent === 0) {
+                        acc += row[column_field] || 0;
+                    }
 
                     return acc;
                 }, 0);
