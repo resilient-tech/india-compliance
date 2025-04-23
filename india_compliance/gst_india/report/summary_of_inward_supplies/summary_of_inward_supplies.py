@@ -80,7 +80,7 @@ def get_columns() -> list[dict]:
     ]
 
 
-def get_data(filters) -> list[dict]:
+def get_data(filters: dict) -> list[dict]:
     data = []
     data.extend(get_purchase_invoice_data(filters))
     data.extend(get_bill_of_entry_data(filters))
@@ -174,7 +174,7 @@ def get_bill_of_entry_data(filters: dict) -> list[list]:
 
 
 def get_initial_summary() -> dict:
-    _tax_amount = {
+    zero_taxes = {
         "integrated_tax": 0,
         "central_tax": 0,
         "state_ut_tax": 0,
@@ -183,41 +183,42 @@ def get_initial_summary() -> dict:
 
     return {
         1: {
-            "Inputs": {**_tax_amount},
-            "Capital Goods": {**_tax_amount},
-            "Input Services": {**_tax_amount},
+            "Inputs": {**zero_taxes},
+            "Capital Goods": {**zero_taxes},
+            "Input Services": {**zero_taxes},
         },
         2: {
-            "Inputs": {**_tax_amount},
-            "Capital Goods": {**_tax_amount},
-            "Input Services": {**_tax_amount},
+            "Inputs": {**zero_taxes},
+            "Capital Goods": {**zero_taxes},
+            "Input Services": {**zero_taxes},
         },
         3: {
-            "Inputs": {**_tax_amount},
-            "Capital Goods": {**_tax_amount},
-            "Input Services": {**_tax_amount},
+            "Inputs": {**zero_taxes},
+            "Capital Goods": {**zero_taxes},
+            "Input Services": {**zero_taxes},
         },
         4: {
-            "Inputs": {**_tax_amount},
-            "Capital Goods": {**_tax_amount},
+            "Inputs": {**zero_taxes},
+            "Capital Goods": {**zero_taxes},
         },
-        5: {**_tax_amount},
-        6: {**_tax_amount},
+        5: {**zero_taxes},
+        6: {**zero_taxes},
     }
 
 
-def get_detail_type(row) -> int:
+def get_detail_type(row: dict) -> int:
     for detail_type, mapping in MAPPING_FIELD.items():
         if mapping["is_part_of"](row):
             return detail_type
 
 
-def add_subcategory_summary(summary, row) -> dict:
+def add_subcategory_summary(summary: dict, row: dict) -> None:
     if row["is_fixed_asset"] == 1:
         key = "Capital Goods"
 
     elif row["gst_hsn_code"] and row["gst_hsn_code"].startswith("99"):
         key = "Input Services"
+
     else:
         key = "Inputs"
 
@@ -227,54 +228,54 @@ def add_subcategory_summary(summary, row) -> dict:
     summary[key]["cess"] += row.cess_amount
 
 
-def get_transformed_summary(summary) -> list[dict]:
+def get_transformed_summary(summary: dict) -> list[dict]:
     transformed_summary = []
+
     for detail_type, subcategory in summary.items():
+        title = MAPPING_FIELD[detail_type]["title"]
+
         if detail_type in (1, 2, 3, 4):
+            # Add aggregated row
+            total_taxes = aggregate_taxes(subcategory)
             transformed_summary.append(
-                {
-                    "details": MAPPING_FIELD[detail_type]["title"],
-                    "integrated_tax": sum(
-                        [
-                            subcategory[subcat]["integrated_tax"]
-                            for subcat in subcategory
-                        ]
-                    ),
-                    "central_tax": sum(
-                        [subcategory[subcat]["central_tax"] for subcat in subcategory]
-                    ),
-                    "state_ut_tax": sum(
-                        [subcategory[subcat]["state_ut_tax"] for subcat in subcategory]
-                    ),
-                    "cess": sum(
-                        [subcategory[subcat]["cess"] for subcat in subcategory]
-                    ),
-                    "indent": 0,
-                }
+                get_tax_summary_row(title, total_taxes, indent=0)
             )
 
-            for subcategory_name, tax_amounts in subcategory.items():
+            # Add individual subcategory rows
+            for subcat_name, taxes in subcategory.items():
                 transformed_summary.append(
-                    {
-                        "details": subcategory_name,
-                        "integrated_tax": tax_amounts["integrated_tax"],
-                        "central_tax": tax_amounts["central_tax"],
-                        "state_ut_tax": tax_amounts["state_ut_tax"],
-                        "cess": tax_amounts["cess"],
-                        "indent": 1,
-                    }
+                    get_tax_summary_row(subcat_name, taxes, indent=1)
                 )
-
         else:
+            # Add single row
             transformed_summary.append(
-                {
-                    "details": MAPPING_FIELD[detail_type]["title"],
-                    "integrated_tax": subcategory["integrated_tax"],
-                    "central_tax": subcategory["central_tax"],
-                    "state_ut_tax": subcategory["state_ut_tax"],
-                    "cess": subcategory["cess"],
-                    "indent": 0,
-                }
+                get_tax_summary_row(title, subcategory, indent=0)
             )
 
     return transformed_summary
+
+
+def get_tax_summary_row(details: str, taxes: dict, indent: int = 0) -> dict:
+    return {
+        "details": details,
+        "integrated_tax": taxes.get("integrated_tax", 0),
+        "central_tax": taxes.get("central_tax", 0),
+        "state_ut_tax": taxes.get("state_ut_tax", 0),
+        "cess": taxes.get("cess", 0),
+        "indent": indent,
+    }
+
+
+def aggregate_taxes(subcategory: dict) -> dict:
+    return {
+        "integrated_tax": sum(
+            tax_item.get("integrated_tax", 0) for tax_item in subcategory.values()
+        ),
+        "central_tax": sum(
+            tax_item.get("central_tax", 0) for tax_item in subcategory.values()
+        ),
+        "state_ut_tax": sum(
+            tax_item.get("state_ut_tax", 0) for tax_item in subcategory.values()
+        ),
+        "cess": sum(tax_item.get("cess", 0) for tax_item in subcategory.values()),
+    }
