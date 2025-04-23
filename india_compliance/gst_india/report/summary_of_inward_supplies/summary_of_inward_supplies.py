@@ -10,18 +10,18 @@ MAPPING_FIELD = {
     1: {
         "title": "Inward supplies (other than imports and inward supplies liable to reverse charge but includes services received from SEZs)",
         "is_part_of": lambda row: row.get("gst_category") != "Overseas"
-        and row.get("is_reverse_charge") == 0,
+        and not row.get("is_reverse_charge"),
     },
     2: {
         "title": "Inward supplies received from unregistered persons liable to reverse charge (other than B above) on which tax is paid & ITC availed",
         "is_part_of": lambda row: row.get("gst_category") == "Unregistered"
-        and row.get("is_reverse_charge") == 1
+        and row.get("is_reverse_charge")
         and row.get("is_ineligible_for_itc") == 0,
     },
     3: {
         "title": "Inward supplies received from registered persons liable to reverse charge (other than B above) on which tax is paid & ITC availed",
         "is_part_of": lambda row: row.get("gst_category") != "Unregistered"
-        and row.get("is_reverse_charge") == 1
+        and row.get("is_reverse_charge")
         and row.get("is_ineligible_for_itc") == 0,
     },
     4: {
@@ -42,6 +42,8 @@ MAPPING_FIELD = {
 
 
 def execute(filters: dict | None = None) -> tuple[list[dict], list[dict]]:
+    filters.from_date, filters.to_date = filters.date_range
+
     return get_columns(), get_data(filters)
 
 
@@ -105,27 +107,25 @@ def get_purchase_invoice_data(filters: dict) -> list[list]:
     doc = frappe.qb.DocType("Purchase Invoice")
     doc_item = frappe.qb.DocType("Purchase Invoice Item")
 
-    from_date, to_date = filters.date_range
-
     query = (
         frappe.qb.from_(doc)
         .inner_join(doc_item)
         .on(doc.name == doc_item.parent)
         .select(
-            doc.gst_category.as_("gst_category"),
-            doc.itc_classification.as_("itc_classification"),
-            doc_item.is_ineligible_for_itc.as_("is_ineligible_for_itc"),
-            doc_item.is_fixed_asset.as_("is_fixed_asset"),
-            doc.is_reverse_charge.as_("is_reverse_charge"),
-            doc_item.gst_hsn_code.as_("gst_hsn_code"),
-            doc_item.cgst_amount.as_("cgst_amount"),
-            doc_item.sgst_amount.as_("sgst_amount"),
-            doc_item.igst_amount.as_("igst_amount"),
+            doc.gst_category,
+            doc.itc_classification,
+            doc_item.is_ineligible_for_itc,
+            doc_item.is_fixed_asset,
+            doc.is_reverse_charge,
+            doc_item.gst_hsn_code,
+            doc_item.cgst_amount,
+            doc_item.sgst_amount,
+            doc_item.igst_amount,
             (doc_item.cess_amount + doc_item.cess_non_advol_amount).as_("cess_amount"),
         )
         .where(
             (doc.docstatus == 1)
-            & (doc.posting_date[from_date:to_date])
+            & (doc.posting_date[filters.from_date : filters.to_date])
             & (doc.company == filters.company)
             & (doc.is_opening == "No")
         )
@@ -142,8 +142,6 @@ def get_bill_of_entry_data(filters: dict) -> list[list]:
     item = frappe.qb.DocType("Item")
     doc_item = frappe.qb.DocType("Bill of Entry Item")
 
-    from_date, to_date = filters.date_range
-
     query = (
         frappe.qb.from_(doc)
         .inner_join(doc_item)
@@ -155,17 +153,16 @@ def get_bill_of_entry_data(filters: dict) -> list[list]:
             .when(doc_item.gst_hsn_code.like("99%"), "Import Of Service")
             .else_("Import Of Goods"),
             LiteralValue("'Overseas'").as_("gst_category"),
-            LiteralValue(False).as_("is_reverse_charge"),
-            item.is_fixed_asset.as_("is_fixed_asset"),
-            doc_item.gst_hsn_code.as_("gst_hsn_code"),
-            doc_item.cgst_amount.as_("cgst_amount"),
-            doc_item.sgst_amount.as_("sgst_amount"),
-            doc_item.igst_amount.as_("igst_amount"),
+            item.is_fixed_asset,
+            doc_item.gst_hsn_code,
+            doc_item.cgst_amount,
+            doc_item.sgst_amount,
+            doc_item.igst_amount,
             (doc_item.cess_amount + doc_item.cess_non_advol_amount).as_("cess_amount"),
         )
         .where(
             (doc.docstatus == 1)
-            & (doc.posting_date[from_date:to_date])
+            & (doc.posting_date[filters.from_date : filters.to_date])
             & (doc.company == filters.company)
         )
     )
