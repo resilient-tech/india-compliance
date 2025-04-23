@@ -2429,19 +2429,10 @@ class GSTR1BooksData(BooksDataMapper):
         self.invoice_conditions = {}
 
         for row in data:
-            if row.invoice_sub_category in (
-                GSTR1_SubCategory.B2B_REGULAR.value,
-                GSTR1_SubCategory.SEZWP.value,
-                GSTR1_SubCategory.SEZWOP.value,
-                GSTR1_SubCategory.DE.value,
-            ):
-                hsn_b2b.append(row)
-
-            elif row.invoice_sub_category in (
-                GSTR1_SubCategory.B2CL.value,
-                GSTR1_SubCategory.B2CS.value,
-            ):
+            if row.gst_category == "Unregistered":
                 hsn_b2c.append(row)
+            else:
+                hsn_b2b.append(row)
 
         hsn_b2b = assign_category(self.prepare_hsn_data(hsn_b2b), "B2B")
         hsn_b2c = assign_category(self.prepare_hsn_data(hsn_b2c), "B2C")
