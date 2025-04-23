@@ -60,7 +60,7 @@ frappe.query_reports["Summary of Inward Supplies"] = {
     get_datatable_options(datatable_options) {
         datatable_options.hooks = {
             columnTotal: function (...args) {
-                return this.datamanager.data.reduce((acc, row) => {
+                const total = this.datamanager.data.reduce((acc, row) => {
                     const column_field = args[1].column.fieldname;
                     if (column_field === "details") return;
 
@@ -68,6 +68,8 @@ frappe.query_reports["Summary of Inward Supplies"] = {
 
                     return acc;
                 }, 0);
+
+                return total;
             },
         };
 
