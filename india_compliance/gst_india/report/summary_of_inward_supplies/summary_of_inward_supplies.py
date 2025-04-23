@@ -31,8 +31,7 @@ MAPPING_FIELD = {
     },
     5: {
         "title": "Import Of Services (excluding inward supplies from SEZ)",
-        "is_part_of": lambda row: row.get("itc_classification") == "Import Of Service"
-        and row.get("gst_category") != "SEZ",
+        "is_part_of": lambda row: row.get("itc_classification") == "Import Of Service",
     },
     6: {
         "title": "Input Tax credit received from ISD",
