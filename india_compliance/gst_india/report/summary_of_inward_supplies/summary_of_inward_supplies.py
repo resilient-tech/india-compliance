@@ -25,12 +25,12 @@ MAPPING_FIELD = {
         and row.get("is_ineligible_for_itc") == 0,
     },
     4: {
-        "title": "Import Of Goods",
+        "title": "Import Of Goods (including supplies from SEZ)",
         "get_detail_type": lambda row: row.get("itc_classification")
         == "Import Of Goods",
     },
     5: {
-        "title": "Import Of Services",
+        "title": "Import Of Services (excluding inward supplies from SEZ)",
         "get_detail_type": lambda row: row.get("itc_classification")
         == "Import Of Service"
         and row.get("gst_category") != "SEZ",
