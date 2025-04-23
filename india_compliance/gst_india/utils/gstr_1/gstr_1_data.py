@@ -642,25 +642,3 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
                     "no_of_records": -len(overlaping_invoices),
                 }
             )
-
-    def process_hsn_summary(self, data):
-        hsn_b2b = []
-        hsn_b2c = []
-        self.invoice_conditions = {}
-
-        for row in data:
-            if row.invoice_sub_category in (
-                GSTR1_SubCategory.B2B_REGULAR.value,
-                GSTR1_SubCategory.SEZWP.value,
-                GSTR1_SubCategory.SEZWOP.value,
-                GSTR1_SubCategory.DE.value,
-            ):
-                hsn_b2b.append(row)
-
-            elif row.invoice_sub_category in (
-                GSTR1_SubCategory.B2CL.value,
-                GSTR1_SubCategory.B2CS.value,
-            ):
-                hsn_b2c.append(row)
-
-        return hsn_b2b, hsn_b2c

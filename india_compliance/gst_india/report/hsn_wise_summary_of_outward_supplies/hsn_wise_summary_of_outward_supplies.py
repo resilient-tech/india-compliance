@@ -147,16 +147,13 @@ def process_hsn_data(invoices, bifurcate_hsn=False):
     gstr_data = GSTR1BooksData({})
 
     if bifurcate_hsn:
-        hsn_b2b_data, hsn_b2c_data = GSTR1Invoices().process_hsn_summary(invoices)
-        hsn_b2b_data = gstr_data.prepare_hsn_data(hsn_b2b_data)
-        hsn_b2c_data = gstr_data.prepare_hsn_data(hsn_b2c_data)
-
-        process_hsn_bifurcation(hsn_b2b_data, "B2B")
-        process_hsn_bifurcation(hsn_b2c_data, "B2C")
-
-        hsn_data = {**hsn_b2b_data, **hsn_b2c_data}
+        hsn_b2b_data, hsn_b2c_data = gstr_data.prepare_hsn_data_with_bifurcation(
+            invoices
+        )
+        hsn_data = list(hsn_b2b_data.values()) + list(hsn_b2c_data.values())
     else:
         hsn_data = gstr_data.prepare_hsn_data(invoices)
+        hsn_data = list(hsn_data.values())
 
     return [
         {
@@ -164,13 +161,8 @@ def process_hsn_data(invoices, bifurcate_hsn=False):
             "uom": row["uom"].split("-")[0],
             **{field: flt(row[field], 2) for field in precision_fields},
         }
-        for row in hsn_data.values()
+        for row in hsn_data
     ]
-
-
-def process_hsn_bifurcation(hsn_data, invoice_type):
-    for row in hsn_data.values():
-        row["invoice_type"] = invoice_type
 
 
 # TODO: This function will be unused and should be removed once GSTR-1 Report is discontinued.

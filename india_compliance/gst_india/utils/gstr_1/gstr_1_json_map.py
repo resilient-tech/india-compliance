@@ -2378,15 +2378,11 @@ class GSTR1BooksData(BooksDataMapper):
                 }
             )
         else:
-            hsn_b2b_data, hsn_b2c_data = GSTR1Invoices().process_hsn_summary(data)
+            hsn_b2b_data, hsn_b2c_data = self.prepare_hsn_data_with_bifurcation(data)
             other_categories.update(
                 {
-                    GSTR1_SubCategory.HSN_B2B.value: self.prepare_hsn_data(
-                        hsn_b2b_data
-                    ),
-                    GSTR1_SubCategory.HSN_B2C.value: self.prepare_hsn_data(
-                        hsn_b2c_data
-                    ),
+                    GSTR1_SubCategory.HSN_B2B.value: hsn_b2b_data,
+                    GSTR1_SubCategory.HSN_B2C.value: hsn_b2c_data,
                 }
             )
 
@@ -2420,6 +2416,37 @@ class GSTR1BooksData(BooksDataMapper):
             self.process_data_for_hsn_summary(row, hsn_summary_data)
 
         return hsn_summary_data
+
+    def prepare_hsn_data_with_bifurcation(self, data):
+        def assign_category(data, label):
+            for row in data.values():
+                row["invoice_type"] = label
+
+            return data
+
+        hsn_b2b = []
+        hsn_b2c = []
+        self.invoice_conditions = {}
+
+        for row in data:
+            if row.invoice_sub_category in (
+                GSTR1_SubCategory.B2B_REGULAR.value,
+                GSTR1_SubCategory.SEZWP.value,
+                GSTR1_SubCategory.SEZWOP.value,
+                GSTR1_SubCategory.DE.value,
+            ):
+                hsn_b2b.append(row)
+
+            elif row.invoice_sub_category in (
+                GSTR1_SubCategory.B2CL.value,
+                GSTR1_SubCategory.B2CS.value,
+            ):
+                hsn_b2c.append(row)
+
+        hsn_b2b = assign_category(self.prepare_hsn_data(hsn_b2b), "B2B")
+        hsn_b2c = assign_category(self.prepare_hsn_data(hsn_b2c), "B2C")
+
+        return hsn_b2b, hsn_b2c
 
     def prepare_advances_recevied_data(self):
         return self.prepare_advances_received_or_adjusted_data("Advances")
