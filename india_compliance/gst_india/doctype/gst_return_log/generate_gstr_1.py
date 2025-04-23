@@ -5,9 +5,7 @@ import itertools
 import frappe
 from frappe import _, unscrub
 from frappe.utils import flt, sbool
-from frappe.utils.data import (
-    getdate,
-)
+from frappe.utils.data import getdate
 
 from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
 from india_compliance.gst_india.constants import STATUS_CODE_MAP

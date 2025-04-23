@@ -126,11 +126,7 @@ def get_hsn_data(filters):
     invoices = _class.get_invoices_for_item_wise_summary()
     _class.process_invoices(invoices)
 
-    bifurcate_hsn = False
-    if filters.get("bifurcate_hsn"):
-        bifurcate_hsn = True
-
-    return process_hsn_data(invoices, bifurcate_hsn)
+    return process_hsn_data(invoices, filters.get("bifurcate_hsn"))
 
 
 def process_hsn_data(invoices, bifurcate_hsn=False):

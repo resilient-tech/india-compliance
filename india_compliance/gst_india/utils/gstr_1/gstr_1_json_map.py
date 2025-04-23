@@ -1200,16 +1200,12 @@ class HSNSUM(GSTR1DataMapper):
 
         for row in input_data:
             default_data = {
-                GSTR1_DataField.ERROR_CD.value: row.pop(
-                    GovDataField.ERROR_CD.value, ""
-                ),
-                GSTR1_DataField.ERROR_MSG.value: row.pop(
-                    GovDataField.ERROR_MSG.value, ""
-                ),
+                GSTR1_DataField.ERROR_CD.value: row.get(GovDataField.ERROR_CD.value),
+                GSTR1_DataField.ERROR_MSG.value: row.get(GovDataField.ERROR_MSG.value),
             }
 
             for section, invoices in row.items():
-                if section in (GovDataField.FLAG.value, GovDataField.CHECKSUM.value):
+                if section not in self.DOCUMENT_CATEGORIES:
                     continue
 
                 document_type = self.DOCUMENT_CATEGORIES.get(section, section)
@@ -1218,6 +1214,7 @@ class HSNSUM(GSTR1DataMapper):
                     invoices, document_type, default_data
                 )
 
+                # This is required due to different format of error JSON
                 if output.get(document_type):
                     output[document_type].update(formatted_invoices)
                 else:
