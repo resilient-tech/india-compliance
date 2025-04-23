@@ -136,7 +136,7 @@ def get_purchase_invoice_data(filters: dict) -> list[list]:
     if filters.get("company_gstin"):
         query = query.where(doc.company_gstin == filters.company_gstin)
 
-    return query.run(as_dict=True, debug=True)
+    return query.run(as_dict=True)
 
 
 def get_bill_of_entry_data(filters: dict) -> list[list]:
@@ -172,7 +172,7 @@ def get_bill_of_entry_data(filters: dict) -> list[list]:
         )
     )
 
-    return query.run(as_dict=True, debug=True)
+    return query.run(as_dict=True)
 
 
 def get_initial_summary() -> dict:
