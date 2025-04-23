@@ -7,7 +7,11 @@ from frappe.model.document import Document
 from frappe.query_builder.functions import IfNull
 from frappe.utils import add_to_date, getdate
 
-from india_compliance.gst_india.constants import GST_ACCOUNT_FIELDS, GST_PARTY_TYPES
+from india_compliance.gst_india.constants import (
+    GST_ACCOUNT_FIELDS,
+    GST_PARTY_TYPES,
+    TAXABLE_GST_TREATMENTS,
+)
 from india_compliance.gst_india.constants.custom_fields import (
     E_INVOICE_FIELDS,
     E_WAYBILL_FIELDS,
@@ -517,7 +521,7 @@ def update_pending_status(e_invoice_applicability_date, company=None):
             != IfNull(sales_invoice.company_gstin, "")
         )
         .where(IfNull(sales_invoice.irn, "") == "")
-        .where(sales_invoice_item.gst_treatment.isin(("Taxable", "Zero-Rated")))
+        .where(sales_invoice_item.gst_treatment.isin(TAXABLE_GST_TREATMENTS))
         .where(
             (IfNull(sales_invoice.place_of_supply, "") == "96-Other Countries")
             | (IfNull(sales_invoice.billing_address_gstin, "") != "")

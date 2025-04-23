@@ -60,6 +60,9 @@ EXPORT_TYPES = (
     "WP",  # With Payment of Tax [1]
 )
 
+TAXABLE_GST_TREATMENTS = ("Taxable", "Zero-Rated")
+
+
 STATE_NUMBERS = {
     "Andaman and Nicobar Islands": "35",
     "Andhra Pradesh": "37",

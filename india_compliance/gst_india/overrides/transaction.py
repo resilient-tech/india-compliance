@@ -16,6 +16,7 @@ from india_compliance.gst_india.constants import (
     STATE_NUMBERS,
     SUBCONTRACTING_DOCTYPES,
     TAX_TYPES,
+    TAXABLE_GST_TREATMENTS,
 )
 from india_compliance.gst_india.constants.custom_fields import E_WAYBILL_INV_FIELDS
 from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
@@ -1739,6 +1740,9 @@ def update_gst_details(doc, method=None):
         ItemGSTDetails().update(doc)
         validate_item_tax_template(doc)
 
+    if doc.doctype in ("Purchase Receipt", "Purchase Invoice"):
+        doc.update_valuation_rate()
+
 
 def validate_item_tax_template(doc):
     if not doc.items or not doc.taxes:
@@ -1756,10 +1760,10 @@ def validate_item_tax_template(doc):
 
         total_taxes = abs(item.igst_amount + item.cgst_amount + item.sgst_amount)
 
-        if total_taxes and item.gst_treatment in ("Nil-Rated", "Exempted", "Non-GST"):
+        if total_taxes and item.gst_treatment not in TAXABLE_GST_TREATMENTS:
             non_taxable_items_with_tax.append(item.idx)
 
-        if not total_taxes and item.gst_treatment in ("Taxable", "Zero-Rated"):
+        if not total_taxes and item.gst_treatment in TAXABLE_GST_TREATMENTS:
             taxable_items_with_no_tax.append(item.idx)
 
     # Case: Zero Tax template with taxes or missing GST Accounts

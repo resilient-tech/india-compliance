@@ -16,6 +16,7 @@ from frappe.utils import (
 
 from india_compliance.exceptions import GSPServerError
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
+from india_compliance.gst_india.api_classes.taxpayer_base import otp_handler
 from india_compliance.gst_india.api_classes.taxpayer_e_invoice import (
     EInvoiceAPI as TaxpayerEInvoiceAPI,
 )
@@ -24,6 +25,7 @@ from india_compliance.gst_india.constants import (
     EXPORT_TYPES,
     GST_CATEGORIES,
     PORT_CODES,
+    TAXABLE_GST_TREATMENTS,
 )
 from india_compliance.gst_india.constants.e_invoice import (
     CANCEL_REASON_CODES,
@@ -193,12 +195,14 @@ def generate_e_invoice(docname, throw=True, force=False):
 
 
 @frappe.whitelist()
+@otp_handler
 def handle_duplicate_irn_error(
     irn_data,
     current_gstin,
     current_invoice_amount,
     doc=None,
     docname=None,
+    taxpayer_api=False,
 ):
     """
     Handle Duplicate IRN errors by fetching the IRN details and comparing with the current invoice.
@@ -214,8 +218,15 @@ def handle_duplicate_irn_error(
         current_invoice_amount = flt(current_invoice_amount)
 
     doc = doc or load_doc("Sales Invoice", docname, "submit")
-    api = EInvoiceAPI(doc)
-    response = api.get_e_invoice_by_irn(irn_data.Irn)
+
+    if taxpayer_api:
+        api = TaxpayerEInvoiceAPI(doc)
+        response = api.get_irn_details(irn_data.Irn)
+        response = frappe._dict(response.data or response.error)
+
+    else:
+        api = EInvoiceAPI(doc)
+        response = api.get_e_invoice_by_irn(irn_data.Irn)
 
     # Handle error 2283:
     # IRN details cannot be provided as it is generated more than 2 days ago
@@ -223,21 +234,17 @@ def handle_duplicate_irn_error(
         response.error_code == "2283"
         and api.settings.fetch_e_invoice_details_from_gst_portal
     ):
-        response = TaxpayerEInvoiceAPI(doc).get_irn_details(irn_data.Irn)
+        response.update(
+            {
+                "irn_data": irn_data,
+                "current_gstin": current_gstin,
+                "current_invoice_amount": current_invoice_amount,
+                "docname": doc.name,
+                "taxpayer_api": True,
+            }
+        )
 
-        if response.error_type == "otp_requested":
-            response.update(
-                {
-                    "irn_data": irn_data,
-                    "current_gstin": current_gstin,
-                    "current_invoice_amount": current_invoice_amount,
-                    "docname": doc.name,
-                }
-            )
-
-            return response
-
-        response = frappe._dict(response.data or response.error)
+        return response
 
     if signed_data := response.SignedInvoice:
         verify_e_invoice_details(current_gstin, current_invoice_amount, signed_data)
@@ -520,7 +527,7 @@ def validate_taxable_item(doc, throw=True):
 
     """
     # Check if there is at least one taxable item in the document
-    if any(item.gst_treatment in ("Taxable", "Zero-Rated") for item in doc.items):
+    if any(item.gst_treatment in TAXABLE_GST_TREATMENTS for item in doc.items):
         return True
 
     if not throw:
@@ -606,7 +613,7 @@ class EInvoiceData(GSTTransactionData):
         self.item_list = []
 
         for item_details in self.get_all_item_details():
-            if item_details.get("gst_treatment") not in ("Taxable", "Zero-Rated"):
+            if item_details.get("gst_treatment") not in TAXABLE_GST_TREATMENTS:
                 continue
 
             self.item_list.append(self.get_item_data(item_details))
@@ -762,6 +769,8 @@ class EInvoiceData(GSTTransactionData):
             self.transaction_details.grand_total < self.settings.e_waybill_threshold
             # e-waybill auto-generation is disabled by user
             or not self.settings.generate_e_waybill_with_e_invoice
+            # e-waybill is already generated
+            or self.doc.ewaybill
         ):
             return
 
