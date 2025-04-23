@@ -127,6 +127,7 @@ def get_purchase_invoice_data(filters: dict) -> list[list]:
             (doc.docstatus == 1)
             & (doc.posting_date[filters.from_date : filters.to_date])
             & (doc.company == filters.company)
+            & (doc.company_gstin != doc.supplier_gstin)
             & (doc.is_opening == "No")
         )
     )
@@ -166,6 +167,9 @@ def get_bill_of_entry_data(filters: dict) -> list[list]:
             & (doc.company == filters.company)
         )
     )
+
+    if filters.get("company_gstin"):
+        query = query.where(doc.company_gstin == filters.company_gstin)
 
     return query.run(as_dict=True)
 
