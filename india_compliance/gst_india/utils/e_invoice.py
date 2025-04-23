@@ -128,6 +128,15 @@ def generate_e_invoice(docname, throw=True, force=False):
         ):
             raise GSPServerError
 
+        if settings.e_invoice_reporting_time_limit_days and getdate() > add_to_date(
+            doc.posting_date, days=settings.e_invoice_reporting_time_limit_days
+        ):
+            frappe.throw(
+                _(
+                    "e-Invoice cannot be generated because the posting date exceeds the reporting time limit of {0} days as specified in GST Settings."
+                ).format(settings.e_invoice_reporting_time_limit_days),
+            )
+
         data = EInvoiceData(doc).get_data()
         api = EInvoiceAPI(doc)
         result = api.generate_irn(data)
@@ -758,6 +767,8 @@ class EInvoiceData(GSTTransactionData):
             self.transaction_details.grand_total < self.settings.e_waybill_threshold
             # e-waybill auto-generation is disabled by user
             or not self.settings.generate_e_waybill_with_e_invoice
+            # e-waybill is already generated
+            or self.doc.ewaybill
         ):
             return
 
@@ -774,7 +785,11 @@ class EInvoiceData(GSTTransactionData):
             self.doc.company_address, validate_gstin=True
         )
 
-        ship_to_address = self.doc.shipping_address_name
+        ship_to_address = (
+            self.doc.port_address
+            if (is_foreign_doc(self.doc) and self.doc.port_address)
+            else self.doc.shipping_address_name
+        )
 
         # Defaults
         self.shipping_address = None

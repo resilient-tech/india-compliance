@@ -35,6 +35,14 @@ GST_CATEGORIES = {
     "Tax Collector": "B2B",
 }
 
+GST_CATEGORY_MAP = {
+    "R": "Regular",
+    "SEZWP": "SEZ With Payment of Tax",
+    "SEZWOP": "SEZ Without Payment of Tax",
+    "DE": "Deemed Export",
+    "CBW": "Intra-State Supplies Attracting IGST",
+}
+
 EXPORT_TYPES = (
     "WOP",  # Without Payment of Tax [0]
     "WP",  # With Payment of Tax [1]
