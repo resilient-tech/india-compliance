@@ -220,6 +220,7 @@ def download_json_file():
 def get_hsn_wise_json_data(report_data, filters):
     hsn_b2b = []
     hsn_b2c = []
+    hsn_data = []
 
     for count, hsn in enumerate(report_data, start=1):
         if hsn.get("hsn_code") == "Total":
@@ -246,7 +247,12 @@ def get_hsn_wise_json_data(report_data, filters):
         row["samt"] += hsn.get("total_sgst_amount")
         row["csamt"] += hsn.get("total_cess_amount")
 
-        if hsn.get("invoice_type") == "B2B":
+        # Bifurcate by B2B and B2C only if the filter is set
+        if not filters.get("bifurcate_hsn"):
+            hsn_data.append(row)
+            continue
+
+        if hsn["invoice_type"] == "B2B":
             hsn_b2b.append(row)
         else:
             hsn_b2c.append(row)
@@ -257,4 +263,4 @@ def get_hsn_wise_json_data(report_data, filters):
             "hsn_b2c": hsn_b2c,
         }
 
-    return {"data": hsn_b2b + hsn_b2c}
+    return {"data": hsn_data}
