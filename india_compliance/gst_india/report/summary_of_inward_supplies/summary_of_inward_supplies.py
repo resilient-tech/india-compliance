@@ -17,11 +17,11 @@ TAX_FIELDS = (
 
 
 def execute(filters: dict | None = None) -> tuple[list[dict], list[dict]]:
-    report = GSTSummaryReport(filters)
+    report = InwardSuppliesGSTSummary(filters)
     return report.get_columns(), report.get_data()
 
 
-class GSTSummaryMapping:
+class InwardSuppliesGSTSummaryMapping:
     def __init__(self) -> None:
         self.mapping = {
             "A": {
@@ -63,7 +63,7 @@ class GSTSummaryMapping:
         return self.mapping.get(category, {}).get("has_subcategory", False)
 
 
-class GSTSummaryCategory(GSTSummaryMapping):
+class InwardSuppliesGSTSummaryCategory(InwardSuppliesGSTSummaryMapping):
     def __init__(self) -> None:
         super().__init__()
         self.mapping["A"]["category"] = self._is_inward_supplies_from_registered
@@ -121,7 +121,7 @@ class GSTSummaryCategory(GSTSummaryMapping):
         return "Inputs"
 
 
-class GSTSummaryData:
+class InwardSuppliesGSTSummaryData:
     def _get_data(self, filters: dict) -> list[dict]:
         return chain(
             self._get_bill_of_entry_data(filters),
@@ -201,7 +201,9 @@ class GSTSummaryData:
         return query.run(as_dict=True)
 
 
-class GSTSummaryReport(GSTSummaryCategory, GSTSummaryData):
+class InwardSuppliesGSTSummary(
+    InwardSuppliesGSTSummaryCategory, InwardSuppliesGSTSummaryData
+):
     def __init__(self, filters: dict) -> None:
         super().__init__()
         filters.from_date, filters.to_date = filters.date_range
