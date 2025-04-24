@@ -151,15 +151,15 @@ class InwardSuppliesGSTSummaryData:
             )
             .where(
                 (doc.docstatus == 1)
-                & (doc.posting_date[filters.from_date : filters.to_date])
-                & (doc.company == filters.company)
+                & (doc.posting_date[filters.get("from_date") : filters.get("to_date")])
+                & (doc.company == filters.get("company"))
                 & (doc.company_gstin != doc.supplier_gstin)
                 & (doc.is_opening == "No")
             )
         )
 
         if filters.get("company_gstin"):
-            query = query.where(doc.company_gstin == filters.company_gstin)
+            query = query.where(doc.company_gstin == filters.get("company_gstin"))
 
         return query.run(as_dict=True)
 
@@ -190,13 +190,13 @@ class InwardSuppliesGSTSummaryData:
             )
             .where(
                 (doc.docstatus == 1)
-                & (doc.posting_date[filters.from_date : filters.to_date])
-                & (doc.company == filters.company)
+                & (doc.posting_date[filters.get("from_date") : filters.get("to_date")])
+                & (doc.company == filters.get("company"))
             )
         )
 
         if filters.get("company_gstin"):
-            query = query.where(doc.company_gstin == filters.company_gstin)
+            query = query.where(doc.company_gstin == filters.get("company_gstin"))
 
         return query.run(as_dict=True)
 
@@ -206,7 +206,7 @@ class InwardSuppliesGSTSummary(
 ):
     def __init__(self, filters: dict) -> None:
         super().__init__()
-        filters.from_date, filters.to_date = filters.date_range
+        filters.from_date, filters.to_date = filters.get("date_range")
         self.filters = filters
         self._init_summary()
 
@@ -289,7 +289,7 @@ class InwardSuppliesGSTSummary(
             summary_entry = self.summary[category]
 
         for tax_field in TAX_FIELDS:
-            summary_entry[tax_field] += getattr(row, tax_field)
+            summary_entry[tax_field] += row.get(tax_field, 0)
 
     def _build_transformed_summary(self) -> list[dict]:
         transformed = []
