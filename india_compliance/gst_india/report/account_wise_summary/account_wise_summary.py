@@ -106,7 +106,11 @@ def get_data(filters):
                 account_data["total_itc_availed"] += proportional_tax
 
     account_summary_data = list(account_summary.values())
-    account_summary_data.append(get_ineligible_itc_from_je(filters))
+
+    if filters.voucher_type == "Purchase" and (
+        ineligible_itc_from_je := get_ineligible_itc_from_je(filters)
+    ):
+        account_summary_data.append(ineligible_itc_from_je)
 
     return account_summary_data
 
@@ -263,17 +267,17 @@ def get_ineligible_itc_from_je(filters):
             & (je_doc.company == filters.company)
             & (je_doc.voucher_type == "Reversal of ITC")
         )
-        .groupby(je_doc.name)
     )
 
     if filters.get("company_gstin"):
         query = query.where(je_doc.company_gstin == filters.company_gstin)
 
-    ineligible_itc = query.run(as_dict=True)[0].ineligible_itc
+    ineligible_itc = query.run(as_dict=True)[0].get("ineligible_itc")
 
-    return {
-        "account_name": "Ineligible ITC from Journal Entry",
-        "total_amount": ineligible_itc,
-        "total_itc": ineligible_itc,
-        "total_itc_availed": 0,
-    }
+    if ineligible_itc:
+        return {
+            "account_name": "Ineligible ITC from Journal Entry",
+            "total_amount": ineligible_itc,
+            "total_itc": ineligible_itc,
+            "total_itc_availed": 0,
+        }
