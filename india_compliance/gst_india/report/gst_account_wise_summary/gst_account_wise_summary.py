@@ -77,6 +77,9 @@ def get_data(filters):
                 account_data["total_itc_availed"] += proportional_tax
                 eligible_items += 1
 
+            if invoice.doctype == "Bill of Entry":
+                continue
+
             additional_charges += item.taxable_value - net_amount
             additional_tax += item.tax_amount - proportional_tax
 
@@ -113,22 +116,27 @@ def get_data(filters):
 
 def get_invoices(filters):
     if filters.voucher_type == "Sales":
-        filters.doctype = "Sales Invoice"
+        doctypes = ["Sales Invoice"]
         filters["gstin_field"] = "billing_address_gstin"
     else:
-        filters.doctype = "Purchase Invoice"
+        doctypes = ["Purchase Invoice", "Bill of Entry"]
         filters["gstin_field"] = "supplier_gstin"
 
     compiled_docs = frappe._dict()
-    taxes = get_taxes_for_docs(filters)
-    items = get_items_for_docs(filters)
+    for doctype in doctypes:
+        filters.doctype = doctype
+        taxes = get_taxes_for_docs(filters)
+        items = get_items_for_docs(filters)
 
-    compile_docs(taxes, items, filters.doctype, compiled_docs)
+        compile_docs(taxes, items, filters.doctype, compiled_docs)
 
     return list(compiled_docs.values())
 
 
 def get_taxes_for_docs(filters):
+    if filters.doctype == "Bill of Entry":
+        return []
+
     taxes_doctype = (
         "Sales Taxes and Charges"
         if filters.doctype == "Sales Invoice"
@@ -159,6 +167,9 @@ def get_taxes_for_docs(filters):
 
 
 def get_items_for_docs(filters):
+    if filters.doctype == "Bill of Entry":
+        return get_items_for_boe_docs(filters)
+
     doc = frappe.qb.DocType(filters.doctype)
     item_doc = frappe.qb.DocType(f"{filters.doctype} Item")
 
@@ -194,7 +205,48 @@ def get_items_for_docs(filters):
             .when(item_doc.is_ineligible_for_itc == 1, 1)
             .when(doc.ineligibility_reason == "ITC restricted due to PoS rules", 1)
             .else_(0)
+        ).where(
+            Case()
+            .when(doc.gst_category == "Overseas", item_doc.pending_boe_qty > 0)
+            .else_(1)
         )
+
+    query = get_query_with_common_filters(query, doc, filters)
+
+    return query.run(as_dict=True)
+
+
+def get_items_for_boe_docs(filters):
+    doc = frappe.qb.DocType(filters.doctype)
+    item_doc = frappe.qb.DocType(f"{filters.doctype} Item")
+    pinv_item = frappe.qb.DocType("Purchase Invoice Item")
+
+    query = (
+        frappe.qb.from_(doc)
+        .join(item_doc)
+        .on((doc.name == item_doc.parent) & (item_doc.parenttype == filters.doctype))
+        .join(pinv_item)
+        .on(item_doc.pi_detail == pinv_item.name)
+        .select(
+            item_doc.name,
+            item_doc.parent,
+            pinv_item.expense_account,
+            item_doc.item_code,
+            item_doc.item_name,
+            item_doc.qty,
+            item_doc.taxable_value.as_("base_net_amount"),
+            (item_doc.cgst_rate + item_doc.sgst_rate + item_doc.igst_rate).as_(
+                "tax_rate"
+            ),
+            (
+                item_doc.cgst_amount
+                + item_doc.sgst_amount
+                + item_doc.igst_amount
+                + item_doc.cess_amount
+                + item_doc.cess_non_advol_amount
+            ).as_("tax_amount"),
+        )
+    )
 
     query = get_query_with_common_filters(query, doc, filters)
 
@@ -227,11 +279,13 @@ def get_query_with_common_filters(query, doc, filters):
         (doc.docstatus == 1)
         & (doc.posting_date[filters.from_date : filters.to_date])
         & (doc.company == filters.company)
-        & (doc.is_opening == "No")
     )
 
-    if filters.get("doctype") != "Journal Entry":
+    if filters.get("doctype") not in ["Journal Entry", "Bill of Entry"]:
         query = query.where(doc.company_gstin != IfNull(doc[filters.gstin_field], ""))
+
+    if filters.get("doctype") != "Bill of Entry":
+        query = query.where(doc.is_opening == "No")
 
     if filters.get("company_gstin"):
         query = query.where(doc.company_gstin == filters.company_gstin)
