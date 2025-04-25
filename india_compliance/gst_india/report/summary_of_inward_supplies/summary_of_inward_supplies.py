@@ -6,7 +6,7 @@ from itertools import chain
 import frappe
 from frappe import _
 from frappe.query_builder import Case
-from frappe.query_builder.functions import LiteralValue
+from frappe.query_builder.custom import ConstantColumn
 
 TAX_FIELDS = (
     "igst_amount",
@@ -181,7 +181,7 @@ class InwardSuppliesGSTSummaryData:
                 Case("itc_classification")
                 .when(doc_item.gst_hsn_code.like("99%"), "Import Of Service")
                 .else_("Import Of Goods"),
-                LiteralValue("'Overseas'").as_("gst_category"),
+                ConstantColumn("Overseas").as_("gst_category"),
                 item.is_fixed_asset,
                 doc_item.gst_hsn_code,
                 doc_item.cgst_amount,
