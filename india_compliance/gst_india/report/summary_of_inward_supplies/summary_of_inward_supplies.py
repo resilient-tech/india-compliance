@@ -66,14 +66,17 @@ class InwardSuppliesGSTSummaryMapping:
 class InwardSuppliesGSTSummaryCategory(InwardSuppliesGSTSummaryMapping):
     def __init__(self) -> None:
         super().__init__()
-        self.mapping["A"]["category"] = self._is_inward_supplies_from_registered
-        self.mapping["B"]["category"] = self._is_inward_supplies_from_unregistered
-        self.mapping["C"][
-            "category"
-        ] = self._is_inward_supplies_from_registered_reverse_charge
-        self.mapping["D"]["category"] = self._is_import_of_goods_sez
-        self.mapping["E"]["category"] = self._is_import_of_services
-        self.mapping["F"]["category"] = self._is_itc_received_from_isd
+        category_map = {
+            "A": self._is_inward_supplies_from_registered,
+            "B": self._is_inward_supplies_from_unregistered,
+            "C": self._is_inward_supplies_from_registered_reverse_charge,
+            "D": self._is_import_of_goods_sez,
+            "E": self._is_import_of_services,
+            "F": self._is_itc_received_from_isd,
+        }
+
+        for key, func in category_map.items():
+            self.mapping[key]["category"] = func
 
     def _is_inward_supplies_from_registered(self, row: dict) -> bool:
         return (
