@@ -230,8 +230,10 @@ def get_query_with_common_filters(query, doc, filters):
         & (doc.posting_date[filters.from_date : filters.to_date])
         & (doc.company == filters.company)
         & (doc.is_opening == "No")
-        & (doc.company_gstin != IfNull(doc[filters.gstin_field], ""))
     )
+
+    if filters.get("doctype") != "Journal Entry":
+        query = query.where(doc.company_gstin != IfNull(doc[filters.gstin_field], ""))
 
     if filters.get("company_gstin"):
         query = query.where(doc.company_gstin == filters.company_gstin)
@@ -240,8 +242,9 @@ def get_query_with_common_filters(query, doc, filters):
 
 
 def get_ineligible_itc_from_je(filters):
-    je_doc = frappe.qb.DocType("Journal Entry")
-    je_account = frappe.qb.DocType("Journal Entry Account")
+    filters.doctype = "Journal Entry"
+    je_doc = frappe.qb.DocType(filters.doctype)
+    je_account = frappe.qb.DocType(f"{filters.doctype} Account")
 
     query = (
         frappe.qb.from_(je_doc)
@@ -260,24 +263,17 @@ def get_ineligible_itc_from_je(filters):
                 .else_(0)
             ).as_("ineligible_itc")
         )
-        .where(
-            (je_doc.docstatus == 1)
-            & (je_doc.is_opening == "No")
-            & (je_doc.posting_date[filters.from_date : filters.to_date])
-            & (je_doc.company == filters.company)
-            & (je_doc.voucher_type == "Reversal of ITC")
-        )
+        .where(je_doc.voucher_type == "Reversal of ITC")
     )
 
-    if filters.get("company_gstin"):
-        query = query.where(je_doc.company_gstin == filters.company_gstin)
+    query = get_query_with_common_filters(query, je_doc, filters)
 
     ineligible_itc = query.run(as_dict=True)[0].get("ineligible_itc")
 
     if ineligible_itc:
         return {
             "account_name": "Ineligible ITC from Journal Entry",
-            "total_amount": ineligible_itc,
-            "total_itc": ineligible_itc,
-            "total_itc_availed": 0,
+            "total_amount": 0,
+            "total_itc": 0,
+            "total_itc_availed": -1 * ineligible_itc,
         }
