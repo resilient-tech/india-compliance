@@ -61,6 +61,7 @@ def get_data(filters):
     for invoice in invoices:
         additional_charges = 0
         additional_tax = 0
+        eligible_items = 0
 
         for item in invoice["items"]:
             net_amount = item.base_net_amount
@@ -72,8 +73,9 @@ def get_data(filters):
 
             proportional_tax = net_amount * (item.tax_rate / 100)
             account_data["total_itc"] += proportional_tax
-            if not item.ineligibility_reason:
+            if not item.is_ineligible_for_itc:
                 account_data["total_itc_availed"] += proportional_tax
+                eligible_items += 1
 
             additional_charges += item.taxable_value - net_amount
             additional_tax += item.tax_amount - proportional_tax
@@ -82,6 +84,7 @@ def get_data(filters):
             continue
 
         proportion = additional_tax / additional_charges
+        eligibility_proportion = eligible_items / len(invoice["items"])
         for tax in invoice["taxes"]:
             if tax.gst_tax_type in GST_TAX_TYPES:
                 break
@@ -96,10 +99,7 @@ def get_data(filters):
 
             account_data["total_amount"] += tax_amount
             proportional_tax = proportion * tax_amount
-            account_data["total_itc"] += proportional_tax
-
-            if not tax.ineligibility_reason:
-                account_data["total_itc_availed"] += proportional_tax
+            account_data["total_itc"] += proportional_tax * eligibility_proportion
 
     account_summary_data = list(account_summary.values())
 
@@ -153,9 +153,6 @@ def get_taxes_for_docs(filters):
         .orderby(taxes_doc.idx)
     )
 
-    if filters.doctype == "Purchase Invoice":
-        query = query.select(doc.ineligibility_reason)
-
     query = get_query_with_common_filters(query, doc, filters)
 
     return query.run(as_dict=True)
@@ -192,7 +189,12 @@ def get_items_for_docs(filters):
     )
 
     if filters.doctype == "Purchase Invoice":
-        query = query.select(doc.ineligibility_reason)
+        query = query.select(
+            Case("is_ineligible_for_itc")
+            .when(item_doc.is_ineligible_for_itc == 1, 1)
+            .when(doc.ineligibility_reason == "ITC restricted due to PoS rules", 1)
+            .else_(0)
+        )
 
     query = get_query_with_common_filters(query, doc, filters)
 
