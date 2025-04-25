@@ -29,7 +29,6 @@ from india_compliance.gst_india.utils.gstin_info import get_gstr_1_return_status
 
 
 class GSTR1Beta(Document):
-
     @frappe.whitelist()
     def recompute_books(self):
         return self.generate_gstr1(recompute_books=True)

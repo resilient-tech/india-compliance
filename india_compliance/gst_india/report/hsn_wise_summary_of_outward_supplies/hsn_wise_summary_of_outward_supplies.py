@@ -109,6 +109,13 @@ def get_columns(filters):
             "options": company_currency,
             "width": 170,
         },
+        {
+            "fieldname": "invoice_type",
+            "label": _("Invoice Type"),
+            "fieldtype": "Data",
+            "width": 120,
+            "hidden": not filters.get("bifurcate_hsn"),
+        },
     ]
 
     return columns
@@ -119,10 +126,10 @@ def get_hsn_data(filters):
     invoices = _class.get_invoices_for_item_wise_summary()
     _class.process_invoices(invoices)
 
-    return process_hsn_data(invoices)
+    return process_hsn_data(invoices, filters.get("bifurcate_hsn"))
 
 
-def process_hsn_data(invoices):
+def process_hsn_data(invoices, bifurcate_hsn=False):
     # TODO: This import should be moved to the top of the file once GSTR-1 Report is discontinued.
     from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import GSTR1BooksData
 
@@ -137,7 +144,16 @@ def process_hsn_data(invoices):
         "total_cess_amount",
     )
 
-    hsn_data = GSTR1BooksData({}).prepare_hsn_data(invoices)
+    gstr_data = GSTR1BooksData({})
+
+    if bifurcate_hsn:
+        hsn_b2b_data, hsn_b2c_data = gstr_data.prepare_hsn_data_with_bifurcation(
+            invoices
+        )
+        hsn_data = list(hsn_b2b_data.values()) + list(hsn_b2c_data.values())
+    else:
+        hsn_data = gstr_data.prepare_hsn_data(invoices)
+        hsn_data = list(hsn_data.values())
 
     return [
         {
@@ -145,7 +161,7 @@ def process_hsn_data(invoices):
             "uom": map_uom(row["uom"], row),
             **{field: flt(row[field], 2) for field in precision_fields},
         }
-        for row in hsn_data.values()
+        for row in hsn_data
     ]
 
 
@@ -167,7 +183,7 @@ def get_json(filters, report_name, data):
 
     gst_json = {"version": "GST3.1.2", "hash": "hash", "gstin": gstin, "fp": fp}
 
-    gst_json["hsn"] = get_hsn_wise_json_data(report_data)
+    gst_json["hsn"] = get_hsn_wise_json_data(report_data, filters)
 
     return {"report_name": report_name, "data": gst_json}
 
@@ -184,11 +200,12 @@ def download_json_file():
     frappe.response["type"] = "download"
 
 
-def get_hsn_wise_json_data(report_data):
-    data = []
-    count = 1
+def get_hsn_wise_json_data(report_data, filters):
+    hsn_b2b = []
+    hsn_b2c = []
+    hsn_data = []
 
-    for hsn in report_data:
+    for count, hsn in enumerate(report_data, start=1):
         if hsn.get("hsn_code") == "Total":
             continue
 
@@ -220,10 +237,23 @@ def get_hsn_wise_json_data(report_data):
         row["samt"] += hsn.get("total_sgst_amount")
         row["csamt"] += hsn.get("total_cess_amount")
 
-        data.append(row)
-        count += 1
+        # Bifurcate by B2B and B2C only if the filter is set
+        if not filters.get("bifurcate_hsn"):
+            hsn_data.append(row)
+            continue
 
-    return {"data": data}
+        if hsn["invoice_type"] == "B2B":
+            hsn_b2b.append(row)
+        else:
+            hsn_b2c.append(row)
+
+    if filters.get("bifurcate_hsn"):
+        return {
+            "hsn_b2b": hsn_b2b,
+            "hsn_b2c": hsn_b2c,
+        }
+
+    return {"data": hsn_data}
 
 
 def map_uom(uom, data=None):

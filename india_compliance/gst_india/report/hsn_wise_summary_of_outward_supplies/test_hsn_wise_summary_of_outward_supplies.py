@@ -36,7 +36,7 @@ class TestHSNWiseSummaryReport(IntegrationTestCase):
 
         si_two.submit()
 
-        columns, data = run_report(
+        _, data = run_report(
             filters=frappe._dict(
                 {
                     "company": "_Test Indian Registered Company",
@@ -62,20 +62,21 @@ class TestHSNWiseSummaryReport(IntegrationTestCase):
         )  # Avoid fetching of hsn code from item
         si = create_sales_invoice()
 
-        columns, data = run_report(
-            frappe._dict(
-                {
-                    "company": "_Test Indian Registered Company",
-                    "company_gstin": si.company_gstin,
-                    "from_date": si.posting_date,
-                    "to_date": si.posting_date,
-                }
-            )
+        filters = frappe._dict(
+            {
+                "company": "_Test Indian Registered Company",
+                "company_gstin": si.company_gstin,
+                "from_date": si.posting_date,
+                "to_date": si.posting_date,
+            }
         )
+
+        _, data = run_report(filters)
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             re.compile(r"^(GST HSN Code is missing in one or more invoices*)"),
             get_hsn_wise_json_data,
             report_data=data,
+            filters=filters,
         )

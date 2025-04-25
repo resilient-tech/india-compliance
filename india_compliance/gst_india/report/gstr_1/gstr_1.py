@@ -1679,7 +1679,7 @@ def get_json(type_of_business, gstin, data, filters):
         return get_document_issued_summary_json(data)
 
     if type_of_business == "HSN":
-        return get_hsn_wise_json_data(data)
+        return get_hsn_wise_json_data(data, filters)
 
     if type_of_business == "Section 14":
         res.setdefault("superco", {})

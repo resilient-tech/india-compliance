@@ -52,6 +52,7 @@
   "gstr_1_section_break",
   "enable_gstr_1_api",
   "compare_unfiled_data",
+  "hsn_bifurcation_from",
   "column_break_cxmn",
   "restrict_changes_after_gstr_1",
   "role_allowed_to_modify",
@@ -688,6 +689,12 @@
    "fieldname": "e_invoice_reporting_time_limit_days",
    "fieldtype": "Int",
    "label": "e-Invoice Reporting Time Limit (in Days)"
+  },
+  {
+   "description": "The HSN Summary Data will be bifurcated into B2B and B2C after this date.",
+   "fieldname": "hsn_bifurcation_from",
+   "fieldtype": "Date",
+   "label": "GSTR-1 HSN Bifurcation From"
   }
  ],
  "grid_page_length": 50,

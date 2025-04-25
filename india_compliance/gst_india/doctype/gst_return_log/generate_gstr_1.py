@@ -5,6 +5,7 @@ import itertools
 import frappe
 from frappe import _, unscrub
 from frappe.utils import flt, sbool
+from frappe.utils.data import getdate
 
 from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
 from india_compliance.gst_india.constants import STATUS_CODE_MAP
@@ -12,6 +13,7 @@ from india_compliance.gst_india.doctype.gstr_action.gstr_action import set_gstr_
 from india_compliance.gst_india.utils.gstin_info import get_and_update_filing_preference
 from india_compliance.gst_india.utils.gstr_1 import (
     CATEGORY_SUB_CATEGORY_MAPPING,
+    PREVIOUS_VERSION,
     QUARTERLY_KEYS,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
@@ -42,7 +44,7 @@ class SummarizeGSTR1:
         "total_cess_amount": 0,
     }
 
-    def get_summarized_data(self, data, is_filed=False):
+    def get_summarized_data(self, data, filing_from, is_filed=False):
         """
         Helper function to summarize data for each sub-category
         """
@@ -51,9 +53,9 @@ class SummarizeGSTR1:
 
         subcategory_summary = self.get_subcategory_summary(data)
 
-        return self.get_overall_summary(subcategory_summary)
+        return self.get_overall_summary(subcategory_summary, filing_from)
 
-    def get_overall_summary(self, subcategory_summary):
+    def get_overall_summary(self, subcategory_summary, filing_from):
         """
         Summarize data for each category with subcategories
 
@@ -63,7 +65,11 @@ class SummarizeGSTR1:
         3. Remove category row if no records
         4. Round Values
         """
-        cateogory_summary = []
+        category_summary = []
+        hsn_bifurcation_from = frappe.db.get_single_value(
+            "GST Settings", "hsn_bifurcation_from"
+        )
+
         for category, sub_categories in CATEGORY_SUB_CATEGORY_MAPPING.items():
             # Init category row
             category = category.value
@@ -74,8 +80,12 @@ class SummarizeGSTR1:
                 **self.AMOUNT_FIELDS,
             }
 
-            cateogory_summary.append(summary_row)
+            category_summary.append(summary_row)
             remove_category_row = True
+
+            # Backwards compatibility
+            if (filing_from < hsn_bifurcation_from) and category in PREVIOUS_VERSION:
+                sub_categories = PREVIOUS_VERSION[category]
 
             for subcategory in sub_categories:
                 # update category row
@@ -90,27 +100,27 @@ class SummarizeGSTR1:
                     summary_row[key] += subcategory_row[key]
 
                 # add subcategory row
-                cateogory_summary.append(subcategory_row)
+                category_summary.append(subcategory_row)
                 remove_category_row = False
 
             if not summary_row["no_of_records"]:
                 summary_row["no_of_records"] = ""
 
             if remove_category_row:
-                cateogory_summary.remove(summary_row)
+                category_summary.remove(summary_row)
 
         for key in QUARTERLY_KEYS:
             if key not in subcategory_summary:
                 continue
 
-            cateogory_summary.append(subcategory_summary.get(key))
+            category_summary.append(subcategory_summary.get(key))
 
         # Round Values
-        for row in cateogory_summary:
+        for row in category_summary:
             for key, value in row.items():
                 if isinstance(value, (int, float)):
                     row[key] = flt(value, 2)
-        return cateogory_summary
+        return category_summary
 
     def get_subcategory_summary(self, data):
         """
@@ -146,7 +156,11 @@ class SummarizeGSTR1:
                 elif subcategory == GSTR1_SubCategory.DOC_ISSUE.value:
                     self.count_doc_issue_summary(summary_row, row)
 
-                elif subcategory == GSTR1_SubCategory.HSN.value:
+                elif subcategory in (
+                    GSTR1_SubCategory.HSN_B2B.value,
+                    GSTR1_SubCategory.HSN_B2C.value,
+                    GSTR1_SubCategory.HSN.value,  # Backwards compatibility
+                ):
                     self.count_hsn_summary(summary_row)
 
         for subcategory in subcategory_summary.keys():
@@ -637,7 +651,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         data[gov_data_field] = self.normalize_data(gov_data)
         data["books"] = self.normalize_data(books_data)
 
-        self.summarize_data(data)
+        self.summarize_data(data, filters)
         return callback and callback(filters)
 
     def set_filing_preference(self):
@@ -660,7 +674,8 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         data["books"] = self.normalize_data(books_data)
         data["status"] = status
 
-        self.summarize_data(data)
+        self.summarize_data(data, filters)
+
         return callback and callback(filters)
 
     # GET DATA
@@ -718,7 +733,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         return books_data
 
     # DATA MODIFIERS
-    def summarize_data(self, data):
+    def summarize_data(self, data, filters):
         """
         Summarize data for all fields => reconcile, filed, unfiled, books
 
@@ -746,8 +761,9 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
                     data[field] = _data
                     continue
 
+            filing_from = getdate(f"01-{filters.month_or_quarter}-{filters.year}")
             summary_data = self.get_summarized_data(
-                data[key], self.filing_status == "Filed"
+                data[key], filing_from, self.filing_status == "Filed"
             )
 
             if key == "reconcile":
@@ -807,7 +823,6 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
 
 
 class FileGSTR1:
-
     def reset_gstr1(self, is_nil_return, force):
         verify_request_in_progress(self, force)
 

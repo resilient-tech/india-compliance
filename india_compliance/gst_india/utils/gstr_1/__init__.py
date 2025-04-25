@@ -47,7 +47,9 @@ class GSTR1_SubCategory(Enum):
     # Other Sub-Categories
     AT = "Advances Received"
     TXP = "Advances Adjusted"
-    HSN = "HSN Summary"
+    HSN = "HSN Summary"  # Backwards Compatibility
+    HSN_B2B = "HSN Summary - B2B"
+    HSN_B2C = "HSN Summary - B2C"
     DOC_ISSUE = "Document Issued"
 
     # E-Commerce
@@ -83,11 +85,19 @@ CATEGORY_SUB_CATEGORY_MAPPING = {
     GSTR1_Category.AT: (GSTR1_SubCategory.AT,),
     GSTR1_Category.TXP: (GSTR1_SubCategory.TXP,),
     GSTR1_Category.DOC_ISSUE: (GSTR1_SubCategory.DOC_ISSUE,),
-    GSTR1_Category.HSN: (GSTR1_SubCategory.HSN,),
+    GSTR1_Category.HSN: (
+        GSTR1_SubCategory.HSN_B2B,
+        GSTR1_SubCategory.HSN_B2C,
+    ),
     GSTR1_Category.SUPECOM: (
         GSTR1_SubCategory.SUPECOM_52,
         GSTR1_SubCategory.SUPECOM_9_5,
     ),
+}
+
+# Backwards compatibility
+PREVIOUS_VERSION = {
+    GSTR1_Category.HSN.value: (GSTR1_SubCategory.HSN,),
 }
 
 
@@ -175,7 +185,7 @@ class GovDataField(Enum):
     NIL_RATED_AMOUNT = "nil_amt"
     NON_GST_AMOUNT = "ngsup_amt"
 
-    HSN_DATA = "data"
+    HSN_DATA = "data"  # Backwards compatibility
     HSN_CODE = "hsn_sc"
     DESCRIPTION = "desc"
     UOM = "uqc"
@@ -205,10 +215,14 @@ class GovDataField(Enum):
     SUPECOM_52 = "clttx"
     SUPECOM_9_5 = "paytx"
 
+    HSN_B2B = "hsn_b2b"
+    HSN_B2C = "hsn_b2c"
+
     ERROR_CD = "error_cd"
     ERROR_MSG = "error_msg"
 
     FLAG = "flag"
+    CHECKSUM = "chksum"
 
 
 class GovExcelField(Enum):
@@ -303,7 +317,9 @@ SUB_CATEGORY_GOV_CATEGORY_MAPPING = {
     GSTR1_SubCategory.AT: GovJsonKey.AT,
     GSTR1_SubCategory.TXP: GovJsonKey.TXP,
     GSTR1_SubCategory.DOC_ISSUE: GovJsonKey.DOC_ISSUE,
-    GSTR1_SubCategory.HSN: GovJsonKey.HSN,
+    GSTR1_SubCategory.HSN: GovJsonKey.HSN,  # Backwards Compatibility
+    GSTR1_SubCategory.HSN_B2B: GovJsonKey.HSN,
+    GSTR1_SubCategory.HSN_B2C: GovJsonKey.HSN,
     GSTR1_SubCategory.SUPECOM_52: GovJsonKey.SUPECOM,
     GSTR1_SubCategory.SUPECOM_9_5: GovJsonKey.SUPECOM,
 }
@@ -331,7 +347,9 @@ class GSTR1_B2B_InvoiceType(Enum):
 
 
 SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE = [
-    GSTR1_SubCategory.HSN.value,
+    GSTR1_SubCategory.HSN.value,  # Backwards Compatibility
+    GSTR1_SubCategory.HSN_B2B.value,
+    GSTR1_SubCategory.HSN_B2C.value,
     GSTR1_SubCategory.DOC_ISSUE.value,
     GSTR1_SubCategory.SUPECOM_52.value,
     GSTR1_SubCategory.SUPECOM_9_5.value,

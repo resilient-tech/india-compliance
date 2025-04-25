@@ -925,7 +925,7 @@ class TestHSNSUM(IntegrationTestCase):
                     GovDataField.TAXABLE_VALUE.value: 10.23,
                     GovDataField.IGST.value: 14.52,
                     GovDataField.CESS.value: 500,
-                    GovDataField.TAX_RATE.value: 5.0,
+                    GovDataField.TAX_RATE.value: 5,
                 },
             ]
         }
@@ -933,6 +933,7 @@ class TestHSNSUM(IntegrationTestCase):
         cls.mapped_data = {
             GSTR1_SubCategory.HSN.value: {
                 "1010 - KGS-KILOGRAMS - 0.1": {
+                    GSTR1_DataField.DOC_TYPE.value: GSTR1_SubCategory.HSN.value,
                     GSTR1_DataField.HSN_CODE.value: "1010",
                     GSTR1_DataField.DESCRIPTION.value: "Goods Description",
                     GSTR1_DataField.UOM.value: "KGS-KILOGRAMS",
@@ -944,6 +945,7 @@ class TestHSNSUM(IntegrationTestCase):
                     GSTR1_DataField.DOC_VALUE.value: 524.75,
                 },
                 "1011 - NOS-NUMBERS - 5.0": {
+                    GSTR1_DataField.DOC_TYPE.value: GSTR1_SubCategory.HSN.value,
                     GSTR1_DataField.HSN_CODE.value: "1011",
                     GSTR1_DataField.DESCRIPTION.value: "Goods Description",
                     GSTR1_DataField.UOM.value: "NOS-NUMBERS",
@@ -955,6 +957,82 @@ class TestHSNSUM(IntegrationTestCase):
                     GSTR1_DataField.DOC_VALUE.value: 524.75,
                 },
             }
+        }
+
+    def test_convert_to_internal_data_format(self):
+        output = HSNSUM().convert_to_internal_data_format(self.json_data)
+        self.assertDictEqual(self.mapped_data, output)
+
+    def test_convert_to_gov_data_format(self):
+        output = HSNSUM().convert_to_gov_data_format(
+            process_mapped_data(self.mapped_data)
+        )
+        self.assertDictEqual(self.json_data, output)
+
+
+class TestHSNSUM_With_Bifurcation(IntegrationTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+        cls.json_data = {
+            GovDataField.HSN_B2B.value: [
+                {
+                    GovDataField.INDEX.value: 1,
+                    GovDataField.HSN_CODE.value: "1102",
+                    GovDataField.DESCRIPTION.value: "Goods Description",
+                    GovDataField.UOM.value: "BOX",
+                    GovDataField.QUANTITY.value: 2,
+                    GovDataField.TAXABLE_VALUE.value: 100,
+                    GovDataField.CGST.value: 0.5,
+                    GovDataField.SGST.value: 0.5,
+                    GovDataField.TAX_RATE.value: 1,
+                }
+            ],
+            GovDataField.HSN_B2C.value: [
+                {
+                    GovDataField.INDEX.value: 1,
+                    GovDataField.HSN_CODE.value: "1301",
+                    GovDataField.DESCRIPTION.value: "Goods Description",
+                    GovDataField.UOM.value: "CTN",
+                    GovDataField.QUANTITY.value: 2,
+                    GovDataField.TAXABLE_VALUE.value: 100,
+                    GovDataField.IGST.value: 1,
+                    GovDataField.CESS.value: 10,
+                    GovDataField.TAX_RATE.value: 1,
+                },
+            ],
+        }
+
+        cls.mapped_data = {
+            GSTR1_SubCategory.HSN_B2B.value: {
+                "1102 - BOX-BOX - 1.0": {
+                    GSTR1_DataField.DOC_TYPE.value: GSTR1_SubCategory.HSN_B2B.value,
+                    GSTR1_DataField.HSN_CODE.value: "1102",
+                    GSTR1_DataField.DESCRIPTION.value: "Goods Description",
+                    GSTR1_DataField.UOM.value: "BOX-BOX",
+                    GSTR1_DataField.QUANTITY.value: 2,
+                    GSTR1_DataField.TAXABLE_VALUE.value: 100,
+                    GSTR1_DataField.CGST.value: 0.5,
+                    GSTR1_DataField.SGST.value: 0.5,
+                    GSTR1_DataField.TAX_RATE.value: 1,
+                    GSTR1_DataField.DOC_VALUE.value: 101,
+                }
+            },
+            GSTR1_SubCategory.HSN_B2C.value: {
+                "1301 - CTN-CARTONS - 1.0": {
+                    GSTR1_DataField.DOC_TYPE.value: GSTR1_SubCategory.HSN_B2C.value,
+                    GSTR1_DataField.HSN_CODE.value: "1301",
+                    GSTR1_DataField.DESCRIPTION.value: "Goods Description",
+                    GSTR1_DataField.UOM.value: "CTN-CARTONS",
+                    GSTR1_DataField.QUANTITY.value: 2,
+                    GSTR1_DataField.TAXABLE_VALUE.value: 100,
+                    GSTR1_DataField.IGST.value: 1,
+                    GSTR1_DataField.CESS.value: 10,
+                    GSTR1_DataField.TAX_RATE.value: 1,
+                    GSTR1_DataField.DOC_VALUE.value: 111,
+                },
+            },
         }
 
     def test_convert_to_internal_data_format(self):
@@ -1400,7 +1478,7 @@ class TestHSNSUMError(IntegrationTestCase):
                         GovDataField.TAXABLE_VALUE.value: 10.23,
                         GovDataField.IGST.value: 14.52,
                         GovDataField.CESS.value: 500,
-                        GovDataField.TAX_RATE.value: 5.0,
+                        GovDataField.TAX_RATE.value: 5,
                     }
                 ],
                 GovDataField.ERROR_CD.value: "RET191350",
@@ -1411,6 +1489,7 @@ class TestHSNSUMError(IntegrationTestCase):
         cls.mapped_data = {
             GSTR1_SubCategory.HSN.value: {
                 "1010 - KGS-KILOGRAMS - 0.1": {
+                    GSTR1_DataField.DOC_TYPE.value: GSTR1_SubCategory.HSN.value,
                     GSTR1_DataField.HSN_CODE.value: "1010",
                     GSTR1_DataField.DESCRIPTION.value: "Goods Description",
                     GSTR1_DataField.UOM.value: "KGS-KILOGRAMS",
@@ -1424,6 +1503,7 @@ class TestHSNSUMError(IntegrationTestCase):
                     GSTR1_DataField.ERROR_MSG.value: "Length of entered HSN code is not valid as per AATO",
                 },
                 "1011 - NOS-NUMBERS - 5.0": {
+                    GSTR1_DataField.DOC_TYPE.value: GSTR1_SubCategory.HSN.value,
                     GSTR1_DataField.HSN_CODE.value: "1011",
                     GSTR1_DataField.DESCRIPTION.value: "Goods Description",
                     GSTR1_DataField.UOM.value: "NOS-NUMBERS",
