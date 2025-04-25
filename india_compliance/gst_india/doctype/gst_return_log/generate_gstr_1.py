@@ -3,12 +3,23 @@
 import itertools
 
 import frappe
+<<<<<<< HEAD
 from frappe import unscrub
 from frappe.utils import flt
+=======
+from frappe import _, unscrub
+from frappe.utils import flt, sbool
+from frappe.utils.data import getdate
+>>>>>>> 99c09e54 (fix: Update Implementation for HSN_B2B and HSN_B2C Bifurcation (#3222))
 
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategory
 from india_compliance.gst_india.utils.gstr_1.__init__ import (
     CATEGORY_SUB_CATEGORY_MAPPING,
+<<<<<<< HEAD
+=======
+    PREVIOUS_VERSION,
+    QUARTERLY_KEYS,
+>>>>>>> 99c09e54 (fix: Update Implementation for HSN_B2B and HSN_B2C Bifurcation (#3222))
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
     GSTR1_DataField,
@@ -32,7 +43,7 @@ class SummarizeGSTR1:
         "total_cess_amount": 0,
     }
 
-    def get_summarized_data(self, data, is_filed=False):
+    def get_summarized_data(self, data, filing_from, is_filed=False):
         """
         Helper function to summarize data for each sub-category
         """
@@ -41,9 +52,9 @@ class SummarizeGSTR1:
 
         subcategory_summary = self.get_subcategory_summary(data)
 
-        return self.get_overall_summary(subcategory_summary)
+        return self.get_overall_summary(subcategory_summary, filing_from)
 
-    def get_overall_summary(self, subcategory_summary):
+    def get_overall_summary(self, subcategory_summary, filing_from):
         """
         Summarize data for each category with subcategories
 
@@ -53,7 +64,11 @@ class SummarizeGSTR1:
         3. Remove category row if no records
         4. Round Values
         """
-        cateogory_summary = []
+        category_summary = []
+        hsn_bifurcation_from = frappe.db.get_single_value(
+            "GST Settings", "hsn_bifurcation_from"
+        )
+
         for category, sub_categories in CATEGORY_SUB_CATEGORY_MAPPING.items():
             # Init category row
             category = category.value
@@ -64,8 +79,12 @@ class SummarizeGSTR1:
                 **self.AMOUNT_FIELDS,
             }
 
-            cateogory_summary.append(summary_row)
+            category_summary.append(summary_row)
             remove_category_row = True
+
+            # Backwards compatibility
+            if (filing_from < hsn_bifurcation_from) and category in PREVIOUS_VERSION:
+                sub_categories = PREVIOUS_VERSION[category]
 
             for subcategory in sub_categories:
                 # update category row
@@ -80,21 +99,30 @@ class SummarizeGSTR1:
                     summary_row[key] += subcategory_row[key]
 
                 # add subcategory row
-                cateogory_summary.append(subcategory_row)
+                category_summary.append(subcategory_row)
                 remove_category_row = False
 
             if not summary_row["no_of_records"]:
                 summary_row["no_of_records"] = ""
 
             if remove_category_row:
-                cateogory_summary.remove(summary_row)
+                category_summary.remove(summary_row)
 
+<<<<<<< HEAD
+=======
+        for key in QUARTERLY_KEYS:
+            if key not in subcategory_summary:
+                continue
+
+            category_summary.append(subcategory_summary.get(key))
+
+>>>>>>> 99c09e54 (fix: Update Implementation for HSN_B2B and HSN_B2C Bifurcation (#3222))
         # Round Values
-        for row in cateogory_summary:
+        for row in category_summary:
             for key, value in row.items():
                 if isinstance(value, (int, float)):
                     row[key] = flt(value, 2)
-        return cateogory_summary
+        return category_summary
 
     def get_subcategory_summary(self, data):
         """
@@ -130,7 +158,11 @@ class SummarizeGSTR1:
                 elif subcategory == GSTR1_SubCategory.DOC_ISSUE.value:
                     self.count_doc_issue_summary(summary_row, row)
 
-                elif subcategory == GSTR1_SubCategory.HSN.value:
+                elif subcategory in (
+                    GSTR1_SubCategory.HSN_B2B.value,
+                    GSTR1_SubCategory.HSN_B2C.value,
+                    GSTR1_SubCategory.HSN.value,  # Backwards compatibility
+                ):
                     self.count_hsn_summary(summary_row)
 
         for subcategory in subcategory_summary.keys():
@@ -544,8 +576,25 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         data[gov_data_field] = self.normalize_data(gov_data)
         data["books"] = self.normalize_data(books_data)
 
+<<<<<<< HEAD
         self.summarize_data(data)
         return callback and callback(data, filters)
+=======
+        self.summarize_data(data, filters)
+        return callback and callback(filters)
+
+    def set_filing_preference(self):
+        """
+        Args:
+            filters (dict): Filters containing month_or_quarter and filing_preference.
+            status (str): The current filing status.
+        """
+
+        if not self.get("filing_preference"):
+            self.filing_preference = get_and_update_filing_preference(
+                self.gstin, self.return_period
+            )
+>>>>>>> 99c09e54 (fix: Update Implementation for HSN_B2B and HSN_B2C Bifurcation (#3222))
 
     def generate_only_books_data(self, data, filters, callback=None):
         status = "Not Filed"
@@ -555,8 +604,14 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         data["books"] = self.normalize_data(books_data)
         data["status"] = status
 
+<<<<<<< HEAD
         self.summarize_data(data)
         return callback and callback(data, filters)
+=======
+        self.summarize_data(data, filters)
+
+        return callback and callback(filters)
+>>>>>>> 99c09e54 (fix: Update Implementation for HSN_B2B and HSN_B2C Bifurcation (#3222))
 
     # GET DATA
     def get_gov_gstr1_data(self):
@@ -613,7 +668,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         return books_data
 
     # DATA MODIFIERS
-    def summarize_data(self, data):
+    def summarize_data(self, data, filters):
         """
         Summarize data for all fields => reconcile, filed, unfiled, books
 
@@ -641,8 +696,9 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
                     data[field] = _data
                     continue
 
+            filing_from = getdate(f"01-{filters.month_or_quarter}-{filters.year}")
             summary_data = self.get_summarized_data(
-                data[key], self.filing_status == "Filed"
+                data[key], filing_from, self.filing_status == "Filed"
             )
 
             self.update_json_for(field, summary_data)
@@ -673,3 +729,368 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
                 data[subcategory] = [*subcategory_data.values()]
 
         return data
+<<<<<<< HEAD
+=======
+
+    def get_net_liability_from_amendments(self):
+        if not (
+            self.filed_summary and (filed_summary := self.get_json_for("filed_summary"))
+        ):
+            return
+
+        amendment_row = None
+        for row in filed_summary:
+            if row.get("description") == "Net Liability from Amendments":
+                amendment_row = row
+                break
+
+        if not amendment_row:
+            return
+
+        for key, value in amendment_row.items():
+            if key in self.AMOUNT_FIELDS:
+                amendment_row[key] = -value
+
+        return amendment_row
+
+
+class FileGSTR1:
+    def reset_gstr1(self, is_nil_return, force):
+        verify_request_in_progress(self, force)
+
+        # reset called after proceed to file
+        self.db_set({"filing_status": "Not Filed"})
+        self.db_set({"is_nil": sbool(is_nil_return)})
+
+        api = GSTR1API(self)
+        response = api.reset_gstr_1_data(self.return_period)
+
+        set_gstr_actions(self, "reset", response.get("reference_id"), api.request_id)
+
+    def process_reset_gstr1(self):
+        if not self.actions:
+            return
+
+        api = GSTR1API(self)
+        response = None
+
+        doc = self.get_unprocessed_action("reset")
+
+        if not doc:
+            return
+
+        response = api.get_return_status(self.return_period, doc.token)
+
+        if response.get("status_cd") != "IP":
+            doc.db_set({"status": STATUS_CODE_MAP.get(response.get("status_cd"))})
+            publish_action_status_notification(
+                "GSTR-1",
+                self.return_period,
+                "reset",
+                response.get("status_cd"),
+                self.gstin,
+            )
+
+        if response.get("status_cd") == "P":
+            self.update_json_for("unfiled", {}, reset_reconcile=True)
+
+        return response
+
+    def upload_gstr1(self, json_data, force):
+        if not json_data:
+            return
+
+        verify_request_in_progress(self, force)
+
+        keys = {category.value for category in GovJsonKey}
+        if all(key not in json_data for key in keys):
+            frappe.msgprint(_("No data to upload"), indicator="red")
+            return
+
+        # upload data after proceed to file
+        self.db_set({"filing_status": "Not Filed"})
+
+        # remove error file if it exists
+        self.remove_json_for("upload_error")
+
+        # Make API Request
+        api = GSTR1API(self)
+        response = api.save_gstr_1_data(self.return_period, json_data)
+
+        set_gstr_actions(self, "upload", response.get("reference_id"), api.request_id)
+
+    def process_upload_gstr1(self):
+        if not self.actions:
+            return
+
+        api = GSTR1API(self)
+        response = None
+
+        doc = self.get_unprocessed_action("upload")
+
+        if not doc:
+            return
+
+        response = api.get_return_status(self.return_period, doc.token)
+        status_cd = response.get("status_cd")
+
+        if status_cd != "IP":
+            doc.db_set({"status": STATUS_CODE_MAP.get(status_cd)})
+            publish_action_status_notification(
+                "GSTR-1",
+                self.return_period,
+                "upload",
+                status_cd,
+                self.gstin,
+                api.request_id if status_cd == "ER" else None,
+            )
+
+        if status_cd == "PE":
+            response["error_report"] = convert_to_internal_data_format(
+                response.get("error_report"), True
+            )
+            self.update_json_for("upload_error", response)
+
+        if status_cd == "P":
+            self.db_set({"filing_status": "Uploaded"})
+
+            self.update_json_for("unfiled", self.get_json_for("books"))
+            self.update_json_for("unfiled_summary", self.get_json_for("books_summary"))
+
+            self.update_json_for("reconcile", {})
+            self.update_json_for("reconcile_summary", {})
+
+        return response
+
+    def proceed_to_file_gstr1(self, is_nil_return, force):
+        verify_request_in_progress(self, force)
+
+        is_nil_return = sbool(is_nil_return)
+
+        api = GSTR1API(self)
+        response = api.proceed_to_file("GSTR1", self.return_period, is_nil_return)
+
+        # Return Form already ready to be filed
+        if response.error and response.error.error_cd == "RET00003" or is_nil_return:
+            set_gstr_actions(
+                self,
+                "proceed_to_file",
+                response.get("reference_id"),
+                api.request_id,
+                status="Processed",
+            )
+            return self.fetch_and_compare_summary(api)
+
+        set_gstr_actions(
+            self, "proceed_to_file", response.get("reference_id"), api.request_id
+        )
+
+    def process_proceed_to_file_gstr1(self):
+        if not self.actions:
+            return
+
+        api = GSTR1API(self)
+        response = None
+
+        doc = self.get_unprocessed_action("proceed_to_file")
+
+        if not doc:
+            return
+
+        response = api.get_return_status(self.return_period, doc.token)
+
+        if response.get("status_cd") == "IP":
+            return response
+
+        doc.db_set({"status": STATUS_CODE_MAP.get(response.get("status_cd"))})
+
+        return self.fetch_and_compare_summary(api, response)
+
+    def fetch_and_compare_summary(self, api, response=None):
+        if response is None:
+            response = {}
+
+        summary = api.get_gstr_1_data("RETSUM", self.return_period)
+        self.db_set("is_nil", summary.isnil == "Y")
+
+        if summary.error:
+            return
+
+        self.update_json_for("authenticated_summary", summary)
+
+        mapped_summary = self.get_json_for("books_summary")
+        gov_summary = convert_to_internal_data_format(summary).get("summary", {})
+        gov_summary = summarize_retsum_data(gov_summary.values())
+
+        differing_categories = get_differing_categories(mapped_summary, gov_summary)
+
+        if not differing_categories:
+            self.db_set({"filing_status": "Ready to File"})
+            response["filing_status"] = "Ready to File"
+
+        else:
+            self.db_set({"filing_status": "Not Filed"})
+            response.update(
+                {
+                    "filing_status": "Not Filed",
+                    "differing_categories": differing_categories,
+                }
+            )
+            publish_action_status_notification(
+                "GSTR-1",
+                self.return_period,
+                "proceed_to_file",
+                response.get("status_cd"),
+                self.gstin,
+                api.request_id,
+            )
+
+        return response
+
+    def file_gstr1(self, pan, otp, force):
+        verify_request_in_progress(self, force)
+
+        summary = self.get_json_for("authenticated_summary")
+        api = GSTR1API(self)
+        response = api.file_gstr_1(self.return_period, summary, pan, otp)
+
+        # Latest Summary is not available. Please generate summary and try again.
+        if response.error and response.error.error_cd == "RET09001":
+            self.db_set({"filing_status": "Not Filed"})
+            self.update_json_for("authenticated_summary", None)
+
+        if response.get("ack_num"):
+            frappe.db.set_value("GSTIN", self.gstin, "last_pan_used_for_gstr", pan)
+            self.db_set(
+                {
+                    "filing_status": "Filed",
+                    "filing_date": frappe.utils.nowdate(),
+                    "acknowledgement_number": response.get("ack_num"),
+                }
+            )
+
+            set_gstr_actions(
+                self,
+                "file",
+                response.get("ack_num"),
+                api.request_id,
+                status="Processed",
+            )
+
+        return response
+
+    def get_amendment_data(self):
+        authenticated_summary = convert_to_internal_data_format(
+            self.get_json_for("authenticated_summary")
+        ).get("summary", {})
+        authenticated_summary = summarize_retsum_data(authenticated_summary.values())
+
+        non_amended_entries = {
+            "total_igst_amount": 0,
+            "total_cgst_amount": 0,
+            "total_sgst_amount": 0,
+            "total_cess_amount": 0,
+        }
+        amended_liability = {}
+
+        for data in authenticated_summary:
+            if "Net Liability from Amendments" == data["description"]:
+                amended_liability = data
+            elif data.get("consider_in_total_taxable_value") or data.get(
+                "consider_in_total_tax"
+            ):
+                for key, value in data.items():
+                    if key not in non_amended_entries:
+                        continue
+
+                    non_amended_entries[key] += value
+
+        return {
+            "non_amended_liability": non_amended_entries,
+            "amended_liability": amended_liability,
+        }
+
+
+def verify_request_in_progress(return_log, force):
+    for row in return_log.actions:
+        if row.status:
+            continue
+
+        if force:
+            row.db_set({"status": "Ignored"})
+            continue
+
+        frappe.throw(
+            _(
+                "There is a {0} request in progress. Please wait for the process to complete."
+            ).format(row.request_type)
+        )
+
+
+def get_differing_categories(mapped_summary, gov_summary):
+    KEYS_TO_COMPARE = {
+        "total_cess_amount",
+        "total_cgst_amount",
+        "total_igst_amount",
+        "total_sgst_amount",
+        "total_taxable_value",
+    }
+
+    # TODO: Check this for all categories
+    CATEGORY_KEYS = {
+        (GSTR1_Category.NIL_EXEMPT.value): {
+            "total_exempted_amount",
+            "total_nil_rated_amount",
+            "total_non_gst_amount",
+        },
+        (GSTR1_Category.DOC_ISSUE.value): {
+            "no_of_records",
+        },
+    }
+
+    IGNORED_CATEGORIES = {
+        "Net Liability from Amendments",
+        *[frappe.unscrub(key) for key in QUARTERLY_KEYS],
+    }
+
+    gov_summary = {row["description"]: row for row in gov_summary if row["indent"] == 0}
+    compared_categories = set()
+    differing_categories = set()
+
+    # This will intentionally skip the row in govt_summary with amended data
+    for row in mapped_summary:
+        if row["indent"] != 0:
+            continue
+
+        category = row["description"]
+        if category in IGNORED_CATEGORIES:
+            continue
+
+        compared_categories.add(category)
+        gov_entry = gov_summary.get(category, {})
+
+        keys_to_compare = CATEGORY_KEYS.get(category, KEYS_TO_COMPARE)
+
+        for key in keys_to_compare:
+            if gov_entry.get(key, 0) != row.get(key):
+                differing_categories.add(category)
+                break
+
+    for row in gov_summary.values():
+        # Amendments are with indent 1. Hence auto-skipped
+        category = row["description"]
+        if category in IGNORED_CATEGORIES:
+            continue
+
+        if category in compared_categories:
+            continue
+
+        keys_to_compare = CATEGORY_KEYS.get(row["description"], KEYS_TO_COMPARE)
+
+        for key in keys_to_compare:
+            if row.get(key, 0) != 0:
+                differing_categories.add(row["description"])
+                break
+
+    return differing_categories
+>>>>>>> 99c09e54 (fix: Update Implementation for HSN_B2B and HSN_B2C Bifurcation (#3222))

@@ -1766,7 +1766,11 @@ def get_json(type_of_business, gstin, data, filters):
         return get_document_issued_summary_json(data)
 
     if type_of_business == "HSN":
+<<<<<<< HEAD
         return get_hsn_wise_json_data(filters, data)
+=======
+        return get_hsn_wise_json_data(data, filters)
+>>>>>>> 99c09e54 (fix: Update Implementation for HSN_B2B and HSN_B2C Bifurcation (#3222))
 
     if type_of_business == "Section 14":
         res.setdefault("superco", {})

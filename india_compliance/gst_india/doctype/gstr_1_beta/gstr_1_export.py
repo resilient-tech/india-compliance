@@ -2061,7 +2061,15 @@ def download_gstr_1_json(
     for subcategory, subcategory_data in data.items():
         if subcategory in {
             GSTR1_SubCategory.NIL_EXEMPT.value,
+<<<<<<< HEAD
             GSTR1_SubCategory.HSN.value,
+=======
+            GSTR1_SubCategory.HSN_B2B.value,
+            GSTR1_SubCategory.HSN_B2C.value,
+            GSTR1_SubCategory.HSN.value,  # Backwards compatibility
+            GSTR1_SubCategory.DOC_ISSUE.value,
+            *QUARTERLY_KEYS,
+>>>>>>> 99c09e54 (fix: Update Implementation for HSN_B2B and HSN_B2C Bifurcation (#3222))
         }:
             continue
 

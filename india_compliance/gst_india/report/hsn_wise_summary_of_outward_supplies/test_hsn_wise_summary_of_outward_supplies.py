@@ -33,7 +33,7 @@ class TestHSNWiseSummaryReport(TestCase):
 
         si_two.submit()
 
-        columns, data = run_report(
+        _, data = run_report(
             filters=frappe._dict(
                 {
                     "company": "_Test Indian Registered Company",
@@ -50,6 +50,38 @@ class TestHSNWiseSummaryReport(TestCase):
         self.assertTrue(filtered_rows)
 
         hsn_row = filtered_rows[0]
+<<<<<<< HEAD
         self.assertEquals(hsn_row["qty"], 2.0)
         self.assertEquals(hsn_row["taxable_amount"], 200)
         self.assertEquals(hsn_row["total_amount"], 236)  # 2 * 1.18 * 100
+=======
+        self.assertEqual(hsn_row["quantity"], 2.0)
+        self.assertEqual(hsn_row["total_taxable_value"], 200)
+        self.assertEqual(hsn_row["document_value"], 236)  # 2 * 1.18 * 100
+
+    @change_settings("GST Settings", {"validate_hsn_code": 0})
+    def test_json_upload_for_missing_hsn_code(self):
+        frappe.db.set_value(
+            "Item", "_Test Trading Goods 1", "gst_hsn_code", ""
+        )  # Avoid fetching of hsn code from item
+        si = create_sales_invoice()
+
+        filters = frappe._dict(
+            {
+                "company": "_Test Indian Registered Company",
+                "company_gstin": si.company_gstin,
+                "from_date": si.posting_date,
+                "to_date": si.posting_date,
+            }
+        )
+
+        _, data = run_report(filters)
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(GST HSN Code is missing in one or more invoices*)"),
+            get_hsn_wise_json_data,
+            report_data=data,
+            filters=filters,
+        )
+>>>>>>> 99c09e54 (fix: Update Implementation for HSN_B2B and HSN_B2C Bifurcation (#3222))
