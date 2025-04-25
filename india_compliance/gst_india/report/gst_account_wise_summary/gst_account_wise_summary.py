@@ -63,43 +63,39 @@ def get_data(filters):
         additional_tax = 0
 
         for item in invoice["items"]:
+            net_amount = item.base_net_amount
             account = item.expense_account
             account_data = account_summary.setdefault(account, defaultdict(float))
             account_data["account_name"] = account
 
-            account_data["total_amount"] += item.base_net_amount
+            account_data["total_amount"] += net_amount
 
-            proportional_tax = item.base_net_amount * (item.tax_rate / 100)
+            proportional_tax = net_amount * (item.tax_rate / 100)
             account_data["total_itc"] += proportional_tax
             if not item.ineligibility_reason:
                 account_data["total_itc_availed"] += proportional_tax
 
-            additional_charges += item.taxable_value - item.base_net_amount
+            additional_charges += item.taxable_value - net_amount
             additional_tax += item.tax_amount - proportional_tax
 
+        if not additional_charges:
+            continue
+
+        proportion = additional_tax / additional_charges
         for tax in invoice["taxes"]:
             if tax.gst_tax_type in GST_TAX_TYPES:
-                if (
-                    tax.base_tax_amount_after_discount_amount
-                    and tax.charge_type == "On Previous Row Total"
-                ):
-                    break
-                continue
+                break
 
             if tax.account_head in tds_accounts:
                 continue
 
+            tax_amount = tax.base_tax_amount_after_discount_amount
             account = tax.account_head
             account_data = account_summary.setdefault(account, defaultdict(float))
             account_data["account_name"] = account
 
-            account_data["total_amount"] += tax.base_tax_amount_after_discount_amount
-
-            if not additional_charges:
-                continue
-
-            proportion = tax.base_tax_amount_after_discount_amount / additional_charges
-            proportional_tax = proportion * additional_tax
+            account_data["total_amount"] += tax_amount
+            proportional_tax = proportion * tax_amount
             account_data["total_itc"] += proportional_tax
 
             if not tax.ineligibility_reason:
