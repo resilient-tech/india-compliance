@@ -1,7 +1,7 @@
 // Copyright (c) 2025, Resilient Tech and contributors
 // For license information, please see license.txt
 
-frappe.query_reports["Account-wise Summary"] = {
+frappe.query_reports["GST Account-wise Summary"] = {
     filters: [
         {
             fieldname: "company",
