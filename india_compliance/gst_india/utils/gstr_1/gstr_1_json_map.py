@@ -1254,44 +1254,29 @@ class HSNSUM(GovDataMapper):
     def convert_to_internal_data_format(self, input_data):
         output = {}
 
-<<<<<<< HEAD
-        for invoice in input_data[GovDataField.HSN_DATA.value]:
-            output[
+        for section, invoices in input_data.items():
+            if section not in self.DOCUMENT_CATEGORIES:
+                continue
+
+            document_type = self.DOCUMENT_CATEGORIES.get(section, section)
+
+            formatted_invoices = {
                 " - ".join(
                     (
                         invoice.get(GovDataField.HSN_CODE.value, ""),
                         self.map_uom(invoice.get(GovDataField.UOM.value, "")),
                         str(flt(invoice.get(GovDataField.TAX_RATE.value))),
                     )
+                ): self.format_data(
+                    invoice,
+                    {
+                        GSTR1_DataField.DOC_TYPE.value: document_type,
+                    },
                 )
-            ] = self.format_data(invoice)
-=======
-        # error JSON is diff from normal JSON
-        if isinstance(input_data, dict):
-            input_data = [input_data]
-
-        for row in input_data:
-            default_data = {
-                GSTR1_DataField.ERROR_CD.value: row.get(GovDataField.ERROR_CD.value),
-                GSTR1_DataField.ERROR_MSG.value: row.get(GovDataField.ERROR_MSG.value),
+                for invoice in invoices
             }
 
-            for section, invoices in row.items():
-                if section not in self.DOCUMENT_CATEGORIES:
-                    continue
->>>>>>> 99c09e54 (fix: Update Implementation for HSN_B2B and HSN_B2C Bifurcation (#3222))
-
-                document_type = self.DOCUMENT_CATEGORIES.get(section, section)
-
-                formatted_invoices = self.get_formatted_invoices(
-                    invoices, document_type, default_data
-                )
-
-                # This is required due to different format of error JSON
-                if output.get(document_type):
-                    output[document_type].update(formatted_invoices)
-                else:
-                    output[document_type] = formatted_invoices
+            output[document_type] = formatted_invoices
 
         return output
 
@@ -1314,24 +1299,6 @@ class HSNSUM(GovDataMapper):
             )
 
         return output
-
-    def get_formatted_invoices(self, invoices, document_type, default_data=None):
-        return {
-            " - ".join(
-                (
-                    invoice.get(GovDataField.HSN_CODE.value, ""),
-                    self.map_uom(invoice.get(GovDataField.UOM.value, "")),
-                    str(flt(invoice.get(GovDataField.TAX_RATE.value))),
-                )
-            ): self.format_data(
-                invoice,
-                {
-                    **default_data,
-                    GSTR1_DataField.DOC_TYPE.value: document_type,
-                },
-            )
-            for invoice in invoices
-        }
 
     def format_data(self, data, default_data=None, for_gov=False):
         data = super().format_data(data, default_data, for_gov)
@@ -2342,15 +2309,11 @@ class BooksDataMapper:
 class GSTR1BooksData(BooksDataMapper):
     def __init__(self, filters):
         self.filters = filters
-<<<<<<< HEAD
-=======
         if filters.get("month_or_quarter"):
-            self.current_month = MONTHS.index(filters.month_or_quarter) + 1
             self.filing_from = getdate(f"01-{filters.month_or_quarter}-{filters.year}")
             self.hsn_bifurcation_from = frappe.db.get_single_value(
                 "GST Settings", "hsn_bifurcation_from"
             )
->>>>>>> 99c09e54 (fix: Update Implementation for HSN_B2B and HSN_B2C Bifurcation (#3222))
 
     def prepare_mapped_data(self):
         prepared_data = {}
@@ -2485,108 +2448,3 @@ class GSTR1BooksData(BooksDataMapper):
             )
 
         return advances_data
-<<<<<<< HEAD
-=======
-
-    def process_for_quarterly(self, data):
-        if self.filters.filing_preference != "Quarterly":
-            return
-
-        is_m3 = self.current_month % 3 == 0
-        m1_m2_subcategories = (
-            GSTR1_SubCategory.B2B_REGULAR.value,
-            GSTR1_SubCategory.B2B_REVERSE_CHARGE.value,
-            GSTR1_SubCategory.SEZWP.value,
-            GSTR1_SubCategory.SEZWOP.value,
-            GSTR1_SubCategory.DE.value,
-            GSTR1_SubCategory.CDNR.value,
-        )
-
-        if is_m3:
-            self.process_included_docs_for_quarterly(data, m1_m2_subcategories)
-        else:
-            self.process_excluded_docs_for_quarterly(data, m1_m2_subcategories)
-
-    def process_included_docs_for_quarterly(self, data, m1_m2_subcategories):
-        included_docs = self.get_already_filed_docs(m1_m2_subcategories)
-
-        for category in data:
-            if category not in m1_m2_subcategories:
-                continue
-
-            included = data.setdefault("already_included_docs_for_quarterly", [])
-
-            for key, row in data[category].copy().items():
-                if key in included_docs:
-                    continue
-
-                row["sub_category"] = category
-                included.append(row)
-                del data[category][key]
-
-    def process_excluded_docs_for_quarterly(self, data, m1_m2_subcategories):
-        for category in data.copy():
-            if category in m1_m2_subcategories:
-                continue
-
-            if category in (
-                GSTR1_SubCategory.HSN.value,  # Backwards Compatibility
-                GSTR1_SubCategory.HSN_B2B.value,
-                GSTR1_SubCategory.HSN_B2C.value,
-                GSTR1_SubCategory.DOC_ISSUE.value,
-            ):
-                del data[category]
-                continue
-
-            excluded = data.setdefault("excluded_docs_for_quarterly", [])
-
-            for row in data[category].values():
-                if isinstance(row, dict):
-                    row["sub_category"] = category
-                    excluded.append(row)
-
-                elif isinstance(row, list):
-                    for item in row:
-                        item["sub_category"] = category
-
-                    excluded.extend(row)
-
-            del data[category]
-
-        return data
-
-    def get_already_filed_docs(self, m1_m2_subcategories):
-        from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
-            get_gst_return_log,
-        )
-
-        company_gstin = self.filters.company_gstin
-        year = self.filters.year
-
-        log_names = [
-            f"GSTR1-{(self.current_month - 1):02d}{year}-{company_gstin}",
-            f"GSTR1-{(self.current_month - 2):02d}{year}-{company_gstin}",
-        ]
-
-        filed_invoices = set()
-
-        for log_name in log_names:
-            gstr1_log = get_gst_return_log(
-                log_name,
-                company=self.filters.company,
-                filing_preference=self.filters.filing_preference,
-            )
-
-            if not gstr1_log.filed:
-                gstr1_log.generate_gstr1_data(self.filters)
-
-            filed_data = gstr1_log.get_json_for("filed")
-
-            for category, invoices in filed_data.items():
-                if category not in m1_m2_subcategories:
-                    continue
-
-                filed_invoices.update(invoices.keys())
-
-        return filed_invoices
->>>>>>> 99c09e54 (fix: Update Implementation for HSN_B2B and HSN_B2C Bifurcation (#3222))

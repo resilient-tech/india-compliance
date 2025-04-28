@@ -206,15 +206,9 @@ class GovDataField(Enum):
     SUPECOM_52 = "clttx"
     SUPECOM_9_5 = "paytx"
 
-<<<<<<< HEAD
-=======
     HSN_B2B = "hsn_b2b"
     HSN_B2C = "hsn_b2c"
 
-    ERROR_CD = "error_cd"
-    ERROR_MSG = "error_msg"
-
->>>>>>> 99c09e54 (fix: Update Implementation for HSN_B2B and HSN_B2C Bifurcation (#3222))
     FLAG = "flag"
     CHECKSUM = "chksum"
 
