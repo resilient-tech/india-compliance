@@ -7,6 +7,7 @@ import frappe
 from frappe import _
 from frappe.query_builder import Case
 from frappe.query_builder.functions import IfNull, Sum
+from frappe.utils import flt
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.income_tax_india.overrides.tax_withholding_category import (
@@ -87,22 +88,40 @@ def get_data(filters):
             continue
 
         proportion = additional_tax / additional_charges
-        eligibility_proportion = eligible_items / len(invoice["items"])
+        eligibility_proportion = (eligible_items / len(invoice["items"])) * proportion
+
+        if not eligibility_proportion:
+            continue
+
+        additional_tax /= eligibility_proportion
+
+        # Filter required taxes
+        taxes = []
         for tax in invoice["taxes"]:
             if tax.gst_tax_type in GST_TAX_TYPES:
                 break
-
-            if tax.account_head in tds_accounts:
+            elif tax.account_head in tds_accounts:
                 continue
 
+            taxes.append(tax)
+
+        for i, tax in enumerate(taxes):
             tax_amount = tax.base_tax_amount_after_discount_amount
             account = tax.account_head
             account_data = account_summary.setdefault(account, defaultdict(float))
             account_data["account_name"] = account
 
+            # Calculate proportional ITC for this tax
+            if i == len(taxes) - 1:
+                # For the last item, adjust to ensure total matches additional_tax
+                itc_amount = flt(additional_tax, 2)
+            else:
+                itc_amount = tax_amount * eligibility_proportion
+                additional_tax -= itc_amount
+                itc_amount = flt(itc_amount, 2)
+
             account_data["total_amount"] += tax_amount
-            proportional_tax = proportion * tax_amount
-            account_data["total_itc"] += proportional_tax * eligibility_proportion
+            account_data["total_itc"] += itc_amount
 
     account_summary_data = list(account_summary.values())
 
