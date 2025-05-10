@@ -127,7 +127,7 @@ class GSTR1Beta(Document):
 
         # generate gstr1
         gstr1_log.update_status("In Progress")
-        frappe.enqueue(self._generate_gstr1, queue="short")
+        frappe.enqueue(self._generate_gstr1, queue="long")
 
         if not message:
             message = "GSTR-1 is being prepared"
