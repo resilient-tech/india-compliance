@@ -393,6 +393,10 @@ class BillofEntry(Document):
 
     @frappe.whitelist()
     def get_items_from_purchase_invoice(self, purchase_invoices):
+        if not purchase_invoices:
+            frappe.msgprint(_("No Purchase Invoices selected"))
+            return
+
         frappe.has_permission("Bill Of Entry", "write")
         frappe.has_permission("Purchase Invoice", "read")
 
