@@ -2056,9 +2056,12 @@ class BooksDataMapper:
         invoice_sub_category = invoice.invoice_sub_category
         invoice_no = invoice.invoice_no
 
-        mapped_dict = prepared_data.setdefault(invoice_sub_category, {}).setdefault(
-            invoice_no,
-            {
+        if invoice_sub_category not in prepared_data:
+            prepared_data[invoice_sub_category] = {}
+
+        sub_category_data = prepared_data[invoice_sub_category]
+        if invoice_no not in sub_category_data:
+            sub_category_data[invoice_no] = {
                 GSTR1_DataField.TRANSACTION_TYPE.value: self.get_transaction_type(
                     invoice
                 ),
@@ -2082,9 +2085,9 @@ class BooksDataMapper:
                 GSTR1_DataField.SHIPPING_BILL_NUMBER.value: invoice.shipping_bill_number,
                 GSTR1_DataField.SHIPPING_BILL_DATE.value: invoice.shipping_bill_date,
                 "items": [],
-            },
-        )
+            }
 
+        mapped_dict = sub_category_data[invoice_no]
         items = mapped_dict["items"]
 
         for item in items:
