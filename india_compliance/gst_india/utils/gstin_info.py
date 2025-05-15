@@ -78,7 +78,9 @@ def _get_gstin_info(gstin, *, doc=None, throw_error=True):
             return frappe._dict()
 
     business_name = (
-        response.tradeNam if response.ctb == "Proprietorship" else response.lgnm
+        response.tradeNam
+        if response.ctb in ["Proprietorship", "Hindu Undivided Family"]
+        else response.lgnm
     )
 
     gstin_info = frappe._dict(
