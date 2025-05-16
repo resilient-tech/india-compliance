@@ -5,7 +5,7 @@ execute:import frappe; frappe.delete_doc_if_exists("DocType", "GSTIN")
 india_compliance.patches.v14.set_default_for_overridden_accounts_setting
 execute:from india_compliance.gst_india.setup import create_custom_fields; create_custom_fields() #58
 execute:from india_compliance.gst_india.setup import create_property_setters; create_property_setters() #11
-execute:from india_compliance.income_tax_india.setup import create_custom_fields; create_custom_fields() #3
+execute:from india_compliance.income_tax_india.setup import create_custom_fields; create_custom_fields() #4
 india_compliance.patches.post_install.remove_old_fields #2
 india_compliance.patches.post_install.set_gst_tax_type
 india_compliance.patches.post_install.set_gst_tax_type_in_journal_entry
@@ -61,3 +61,4 @@ india_compliance.patches.v14.update_gstin_status_refresh_interval
 india_compliance.patches.v14.update_default_e_invoice_time_limit
 india_compliance.patches.v15.migrate_gstr1_log_to_returns_log
 india_compliance.patches.v15.update_action_for_gst_inward_supply
+india_compliance.patches.v14.update_tax_withholding_categories

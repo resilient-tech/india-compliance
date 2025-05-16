@@ -15,7 +15,6 @@ from india_compliance.gst_india.utils.gstr_utils import request_otp
 
 
 class GSTR1Beta(Document):
-
     @frappe.whitelist()
     def recompute_books(self):
         self.generate_gstr1(recompute_books=True)

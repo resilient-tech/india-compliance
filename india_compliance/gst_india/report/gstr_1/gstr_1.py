@@ -16,9 +16,6 @@ from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_
     get_columns as get_hsn_columns,
 )
 from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies import (
-    get_conditions as get_hsn_conditions,
-)
-from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies import (
     get_hsn_data,
     get_hsn_wise_json_data,
 )
@@ -113,7 +110,7 @@ class Gstr1Report(object):
         elif self.filters.get("type_of_business") == "Document Issued Summary":
             self.get_documents_issued_data()
         elif self.filters.get("type_of_business") == "HSN":
-            self.data = get_hsn_data(self.filters, self.columns)
+            self.data = get_hsn_data(self.filters)
         elif self.filters.get("type_of_business") == "Section 14":
             self.data = self.get_data_for_supplies_through_ecommerce_operators()
         elif self.invoices:
@@ -354,9 +351,6 @@ class Gstr1Report(object):
             self.data.append(row)
 
     def get_conditions(self):
-        if self.filters.get("type_of_business") == "HSN":
-            return get_hsn_conditions(self.filters)
-
         conditions = ""
 
         for opts in (
@@ -1766,7 +1760,7 @@ def get_json(type_of_business, gstin, data, filters):
         return get_document_issued_summary_json(data)
 
     if type_of_business == "HSN":
-        return get_hsn_wise_json_data(filters, data)
+        return get_hsn_wise_json_data(data, filters)
 
     if type_of_business == "Section 14":
         res.setdefault("superco", {})

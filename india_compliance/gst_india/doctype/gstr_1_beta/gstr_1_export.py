@@ -2061,7 +2061,9 @@ def download_gstr_1_json(
     for subcategory, subcategory_data in data.items():
         if subcategory in {
             GSTR1_SubCategory.NIL_EXEMPT.value,
-            GSTR1_SubCategory.HSN.value,
+            GSTR1_SubCategory.HSN_B2B.value,
+            GSTR1_SubCategory.HSN_B2C.value,
+            GSTR1_SubCategory.HSN.value,  # Backwards compatibility
         }:
             continue
 
