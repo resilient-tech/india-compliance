@@ -308,8 +308,7 @@ class BillofEntry(Document):
 
     def get_gl_entries(self):
         # company_currency is required by get_gl_dict
-        # nosemgrep
-        self.company_currency = erpnext.get_company_currency(self.company)
+        self.company_currency = erpnext.get_company_currency(self.company)  # nosemgrep
 
         gl_entries = []
         remarks = "No Remarks"
@@ -393,6 +392,10 @@ class BillofEntry(Document):
 
     @frappe.whitelist()
     def get_items_from_purchase_invoice(self, purchase_invoices):
+        if not purchase_invoices:
+            frappe.msgprint(_("No Purchase Invoices selected"))
+            return
+
         frappe.has_permission("Bill Of Entry", "write")
         frappe.has_permission("Purchase Invoice", "read")
 
@@ -791,23 +794,28 @@ def get_pi_items(purchase_invoices):
 
 
 @frappe.whitelist()
-def fetch_pending_boe_invoices(*args, **kwargs):
+def fetch_pending_boe_invoices(doctype, txt, searchfield, start, page_len, filters):
     frappe.has_permission("Purchase Invoice", "read")
 
-    filters = next((arg for arg in args if isinstance(arg, dict)), {})
+    filters = frappe._dict(filters)
+
+    if txt and not filters.get("name"):
+        filters.name = ["like", f"%{txt}%"]
+
+    # TODO: fix required in frappe
+    if filters.name and filters.name[1] is None:
+        filters.name = ["!=", ""]
+
     return frappe.get_all(
         "Purchase Invoice",
         filters={
+            **filters,
             "docstatus": 1,
-            "company": filters.get("company"),
-            "company_gstin": filters.get("company_gstin"),
             "gst_category": "Overseas",
             "pending_boe_qty": [">", 0],
         },
-        fields=[
-            "name",
-            "company",
-            "company_gstin",
-        ],
+        fields=["name", "company", "company_gstin"],
+        limit_start=start,
+        limit_page_length=page_len,
         distinct=True,
     )
