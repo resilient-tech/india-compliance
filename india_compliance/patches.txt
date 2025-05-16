@@ -75,3 +75,4 @@ india_compliance.patches.v15.multiple_pi_in_boe
 india_compliance.patches.v15.update_supplier_filing_status
 india_compliance.patches.v14.set_pending_boe_qty #1
 india_compliance.patches.v15.remove_itc_amount_custom_fields
+india_compliance.patches.v14.update_tax_withholding_categories
