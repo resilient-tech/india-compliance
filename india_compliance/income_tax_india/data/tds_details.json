@@ -1215,7 +1215,7 @@
         "from_date": "2025-04-01",
         "to_date": "2026-03-31",
         "tax_withholding_rate": 30,
-        "single_threshold": 0,
+        "single_threshold": 10000,
         "cumulative_threshold": 10000
       }
     ]
@@ -1240,7 +1240,7 @@
         "from_date": "2025-04-01",
         "to_date": "2026-03-31",
         "tax_withholding_rate": 30,
-        "single_threshold": 0,
+        "single_threshold": 10000,
         "cumulative_threshold": 10000
       }
     ]
@@ -1265,7 +1265,7 @@
         "from_date": "2025-04-01",
         "to_date": "2026-03-31",
         "tax_withholding_rate": 30,
-        "single_threshold": 0,
+        "single_threshold": 10000,
         "cumulative_threshold": 10000
       }
     ]
@@ -1283,13 +1283,6 @@
         "from_date": "2024-04-01",
         "to_date": "2025-03-31",
         "tax_withholding_rate": 20,
-        "single_threshold": 0,
-        "cumulative_threshold": 0
-      },
-      {
-        "from_date": "2025-04-01",
-        "to_date": "2026-03-31",
-        "tax_withholding_rate": 0,
         "single_threshold": 0,
         "cumulative_threshold": 0
       }
@@ -1310,13 +1303,6 @@
         "tax_withholding_rate": 20,
         "single_threshold": 0,
         "cumulative_threshold": 0
-      },
-      {
-        "from_date": "2025-04-01",
-        "to_date": "2026-03-31",
-        "tax_withholding_rate": 0,
-        "single_threshold": 0,
-        "cumulative_threshold": 0
       }
     ]
   },
@@ -1332,13 +1318,6 @@
       {
         "from_date": "2024-04-01",
         "to_date": "2025-03-31",
-        "tax_withholding_rate": 20,
-        "single_threshold": 0,
-        "cumulative_threshold": 0
-      },
-      {
-        "from_date": "2025-04-01",
-        "to_date": "2026-03-31",
         "tax_withholding_rate": 20,
         "single_threshold": 0,
         "cumulative_threshold": 0
@@ -1611,8 +1590,8 @@
         "from_date": "2025-04-01",
         "to_date": "2026-03-31",
         "tax_withholding_rate": 10,
-        "single_threshold": 0,
-        "cumulative_threshold": 0
+        "single_threshold": 1,
+        "cumulative_threshold": 1
       }
     ]
   },
@@ -1636,8 +1615,8 @@
         "from_date": "2025-04-01",
         "to_date": "2026-03-31",
         "tax_withholding_rate": 10,
-        "single_threshold": 0,
-        "cumulative_threshold": 0
+        "single_threshold": 1,
+        "cumulative_threshold": 1
       }
     ]
   },
@@ -1661,8 +1640,8 @@
         "from_date": "2025-04-01",
         "to_date": "2026-03-31",
         "tax_withholding_rate": 20,
-        "single_threshold": 0,
-        "cumulative_threshold": 0
+        "single_threshold": 1,
+        "cumulative_threshold": 1
       }
     ]
   },
@@ -1859,13 +1838,6 @@
         "tax_withholding_rate":0.1,
         "single_threshold":0,
         "cumulative_threshold":5000000
-      },
-      {
-        "from_date":"2025-04-01",
-        "to_date":"2026-03-31",
-        "tax_withholding_rate": 0,
-        "single_threshold": 0,
-        "cumulative_threshold": 0
       }
     ]
   },
@@ -1891,13 +1863,6 @@
         "tax_withholding_rate":0.1,
         "single_threshold":0,
         "cumulative_threshold":5000000
-      },
-      {
-        "from_date":"2025-04-01",
-        "to_date":"2026-03-31",
-        "tax_withholding_rate": 0,
-        "single_threshold": 0,
-        "cumulative_threshold": 0
       }
     ]
   },
@@ -1923,13 +1888,6 @@
         "tax_withholding_rate":1.0,
         "single_threshold":0,
         "cumulative_threshold":5000000
-      },
-      {
-        "from_date":"2025-04-01",
-        "to_date":"2026-03-31",
-        "tax_withholding_rate": 0,
-        "single_threshold": 0,
-        "cumulative_threshold": 0
       }
     ]
   }
