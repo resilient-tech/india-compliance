@@ -6,7 +6,6 @@ from frappe.model.document import Document
 from frappe.utils import add_to_date, getdate
 
 from india_compliance.gst_india.api_classes.taxpayer_base import (
-    TaxpayerBaseAPI,
     otp_handler,
 )
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
@@ -52,12 +51,12 @@ class GSTR1Reconciliation(Document):
 
         # Let's assume all the logs are present and latest
 
-        data = {"reconcile": [], "reconcile_summary": []}
+        data = {"reconcile": {}, "reconcile_summary": []}
         for gstr_log in gstr_logs:
-            _data = {"reconcile": [], "reconcile_summary": []}
+            _data = {"reconcile": {}, "reconcile_summary": []}
 
             filters = self._get_filters(gstr_log)
-            books_data = gstr_log.get_books_gstr1_data(gstr_log)
+            books_data = gstr_log.get_books_gstr1_data(filters)
 
             try:
                 gov_data, is_queued = gstr_log.get_gov_gstr1_data()
@@ -68,12 +67,13 @@ class GSTR1Reconciliation(Document):
 
             reconcile_data = gstr_log.get_reconciled_gstr1_data(gov_data, books_data)
             reconcile_data = gstr_log.normalize_data(reconcile_data)
-            _data["reconcile"].extend(reconcile_data)
 
-            gstr_log.summarize_data(_data, filters)
+            for category in reconcile_data:
+                data.setdefault(category, []).extend(reconcile_data[category])
 
-            for key in _data:
-                data[key].extend(_data[key])
+            _data["reconcile"] = reconcile_data
+
+            # gstr_log.summarize_data(_data, filters)
 
         data["reconcile_summary"] = self.summarize_data(data["reconcile_summary"])
         return data
