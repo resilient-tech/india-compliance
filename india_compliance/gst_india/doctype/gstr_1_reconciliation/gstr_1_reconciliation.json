@@ -1,0 +1,83 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-05-14 13:13:07.598664",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "column_break_iuvq",
+  "company_gstin",
+  "column_break_plli",
+  "fiscal_year",
+  "section_break_bzvy",
+  "tab_html"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_iuvq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "company_gstin",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "label": "Company GSTIN",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_plli",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "fiscal_year",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Fiscal Year",
+   "options": "Fiscal Year",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_bzvy",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "tab_html",
+   "fieldtype": "HTML"
+  }
+ ],
+ "grid_page_length": 50,
+ "hide_toolbar": 1,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2025-05-14 15:27:12.396020",
+ "modified_by": "Administrator",
+ "module": "GST India",
+ "name": "GSTR-1 Reconciliation",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
