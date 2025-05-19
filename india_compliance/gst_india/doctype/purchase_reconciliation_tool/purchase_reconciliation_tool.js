@@ -86,7 +86,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         if (!frm.doc.company) return;
         const options = await india_compliance.set_gstin_options(frm, true);
 
-        if (!frm.doc.company_gstin) frm.set_value("company_gstin", options[0]);
+        frm.set_value("company_gstin", options[0]);
     },
 
     refresh(frm) {
