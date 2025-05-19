@@ -2312,22 +2312,12 @@ class BooksDataMapper:
             if field not in data[0]:
                 continue
 
-            differece = 0
-            last_row_with_value = None
-
             for row in data:
                 if not row[field]:  # zero values
                     continue
 
                 rounded = flt(row[field], 2)
-                differece += row[field] - rounded
-
                 row[field] = flt(rounded, 2)
-
-                last_row_with_value = row
-
-            if flt(differece, 2) != 0:
-                last_row_with_value[field] += differece
 
 
 class GSTR1BooksData(BooksDataMapper):
