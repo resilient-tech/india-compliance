@@ -96,9 +96,9 @@ class GSTR1Reconciliation(Document):
         now_date = getdate()
         # Ensure we do not go beyond the current date in the current year
         if year_end_date.year == now_date.year:
-            last_date = now_date
+            year_end_date = now_date
 
-        while current_date <= last_date:
+        while current_date <= year_end_date:
             period = current_date.strftime("%m%Y")
             log_name = f"GSTR-1-{period}-{self.company_gstin}"
 
