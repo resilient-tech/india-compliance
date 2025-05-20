@@ -86,7 +86,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         if (!frm.doc.company) return;
         const options = await india_compliance.set_gstin_options(frm, true);
 
-        if (!frm.doc.company_gstin) frm.set_value("company_gstin", options[0]);
+        frm.set_value("company_gstin", options[0]);
     },
 
     refresh(frm) {
@@ -1779,7 +1779,25 @@ function apply_action(frm, action, selected_rows) {
                     "You can only apply <strong>Ignore</strong> action on rows where data is Missing in 2A/2B or Missing in PI. These rows will be ignored."
                 )
             );
+    } else if (action == "Pending") {
+        let warn = false;
+        affected_rows = affected_rows.filter(row => {
+            if (row.match_status == "Missing in 2A/2B") {
+                warn = true;
+                return false;
+            }
+            return true;
+        });
+
+        if (warn)
+            frappe.msgprint(
+                __(
+                    "You cannot apply <strong>Pending</strong> action on rows where data is Missing in 2A/2B. These rows will be ignored."
+                )
+            );
     }
+
+    if (!affected_rows.length) return;
 
     // update affected rows to backend and frontend
     frm.call("apply_action", { data: affected_rows, action });
@@ -1846,12 +1864,15 @@ async function create_new_purchase_invoice(row, company, company_gstin) {
             }
         }
 
+        const is_return = row.classification.includes("CDNR") ? 1 : 0;
+        const multiplier = is_return ? -1 : 1;
+
         const values = {
             company: company,
             bill_no: doc.bill_no,
             bill_date: doc.bill_date,
             is_reverse_charge: ["Yes", 1].includes(doc.is_reverse_charge) ? 1 : 0,
-            is_return: ["CDNR", "CDNRA"].includes(doc.classification) ? 1 : 0,
+            is_return: is_return,
         };
 
         _set_value({
@@ -1865,15 +1886,15 @@ async function create_new_purchase_invoice(row, company, company_gstin) {
         frm._inward_supply = {
             ...values,
             name: row.inward_supply_name,
-            company_gstin: company_gstin,
+            company_gstin: doc.company_gstin,
             inward_supply: row.inward_supply,
             supplier_gstin: row.supplier_gstin,
             place_of_supply: doc.place_of_supply,
-            cgst: doc.cgst,
-            sgst: doc.sgst,
-            igst: doc.igst,
-            cess: doc.cess,
-            taxable_value: doc.taxable_value,
+            cgst: doc.cgst * multiplier,
+            sgst: doc.sgst * multiplier,
+            igst: doc.igst * multiplier,
+            cess: doc.cess * multiplier,
+            taxable_value: doc.taxable_value * multiplier,
         };
     };
 
