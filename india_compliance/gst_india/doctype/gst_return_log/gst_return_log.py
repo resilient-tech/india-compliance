@@ -223,6 +223,61 @@ def process_gstr_1_returns_info(company, gstin, e_filed_list):
         _update_gstr_1_filed_upto(filed_upto)
 
 
+<<<<<<< HEAD
+=======
+def process_gstr_3b_returns_info(company, gstin, e_filed_list):
+    for info in e_filed_list:
+        if info["rtntype"] != "GSTR3B" or info["status"] != "Filed":
+            continue
+
+        log_name = f"GSTR3B-{info['ret_prd']}-{gstin}"
+        if frappe.db.exists("GST Return Log", log_name):
+            gstr3b_log = frappe.get_doc("GST Return Log", log_name)
+        else:
+            gstr3b_log = frappe.new_doc("GST Return Log")
+
+        gstr3b_log.update(
+            {
+                "return_period": info["ret_prd"],
+                "company": company,
+                "gstin": gstin,
+                "return_type": "GSTR3B",
+                "filing_status": "Filed",
+                "acknowledgement_number": info["arn"],
+                "filing_date": datetime.strptime(info["dof"], "%d-%m-%Y").date(),
+            }
+        )
+        gstr3b_log.save(ignore_permissions=True)
+
+
+def add_comment_to_gst_return_log(doc, action):
+    period = getdate(doc.posting_date).strftime("%m%Y")
+    log_name = f"GSTR1-{period}-{doc.company_gstin}"
+    if not (log := get_gst_return_log(log_name)):
+        return
+
+    log.add_comment(
+        "Comment",
+        f"{doc.doctype} : {get_link_to_form(doc.doctype, doc.name)} has been {action} by {frappe.session.user}",
+    )
+
+
+def update_is_not_latest_gstr1_data(posting_date, company_gstin):
+    period = posting_date.strftime("%m%Y")
+
+    frappe.db.set_value(
+        "GST Return Log", f"GSTR1-{period}-{company_gstin}", "is_latest_data", 0
+    )
+
+    frappe.publish_realtime(
+        "is_not_latest_gstr1_data",
+        message={"filters": {"company_gstin": company_gstin, "period": period}},
+        doctype="GSTR-1 Beta",
+        docname="GSTR-1 Beta",
+    )
+
+
+>>>>>>> f989bfe5 (fix: refine GSTR3B returns info logic to check return type)
 def get_file_doc(doctype, docname, attached_to_field):
     try:
         return frappe.get_doc(
