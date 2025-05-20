@@ -111,11 +111,15 @@ Object.assign(reconciliation, {
                 }
             }
 
+            const is_return = row.classification.includes("CDNR") ? 1 : 0;
+            const multiplier = is_return ? -1 : 1;
+
             const values = {
                 company: company,
                 bill_no: doc.bill_no,
                 bill_date: doc.bill_date,
                 is_reverse_charge: ["Yes", 1].includes(doc.is_reverse_charge) ? 1 : 0,
+                is_return: is_return,
             };
 
             _set_value({
@@ -129,15 +133,15 @@ Object.assign(reconciliation, {
             frm._inward_supply = {
                 ...values,
                 name: row.inward_supply_name,
-                company_gstin: company_gstin,
+                company_gstin: doc.company_gstin,
                 inward_supply: row.inward_supply,
                 supplier_gstin: row.supplier_gstin,
                 place_of_supply: doc.place_of_supply,
-                cgst: doc.cgst,
-                sgst: doc.sgst,
-                igst: doc.igst,
-                cess: doc.cess,
-                taxable_value: doc.taxable_value,
+                cgst: doc.cgst * multiplier,
+                sgst: doc.sgst * multiplier,
+                igst: doc.igst * multiplier,
+                cess: doc.cess * multiplier,
+                taxable_value: doc.taxable_value * multiplier,
                 source_doc,
             };
         };

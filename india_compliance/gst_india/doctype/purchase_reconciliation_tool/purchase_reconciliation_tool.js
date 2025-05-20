@@ -96,7 +96,7 @@ frappe.ui.form.on(DOCTYPE, {
         if (!frm.doc.company) return;
         const options = await india_compliance.set_gstin_options(frm, true);
 
-        if (!frm.doc.company_gstin) frm.set_value("company_gstin", options[0]);
+        frm.set_value("company_gstin", options[0]);
     },
 
     async company_gstin(frm) {
@@ -1408,7 +1408,25 @@ function apply_action(frm, action, selected_rows) {
                     "You can only apply <strong>Ignore</strong> action on rows where data is Missing in 2A/2B or Missing in PI. These rows will be ignored."
                 )
             );
+    } else if (action == "Pending") {
+        let warn = false;
+        affected_rows = affected_rows.filter(row => {
+            if (row.match_status == "Missing in 2A/2B") {
+                warn = true;
+                return false;
+            }
+            return true;
+        });
+
+        if (warn)
+            frappe.msgprint(
+                __(
+                    "You cannot apply <strong>Pending</strong> action on rows where data is Missing in 2A/2B. These rows will be ignored."
+                )
+            );
     }
+
+    if (!affected_rows.length) return;
 
     // update affected rows to backend and frontend
     frm._call("apply_action", { data: affected_rows, action });
