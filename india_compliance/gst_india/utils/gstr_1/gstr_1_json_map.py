@@ -2273,7 +2273,7 @@ class BooksDataMapper:
         else:
             mapped_dict = prepared_data[key]
 
-        self.update_totals(mapped_dict, invoice, for_qty=True)
+        self.update_totals(mapped_dict, [invoice], for_qty=True)
 
         mapped_dict[GSTR1_DataField.DOC_VALUE.value] = sum(
             (
