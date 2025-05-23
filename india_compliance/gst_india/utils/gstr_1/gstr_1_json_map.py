@@ -2212,10 +2212,7 @@ class BooksDataMapper:
         }
         b2c_others = data["B2C (Others)"]
 
-        for (
-            invoice_sub_category,
-            invoice_no,
-        ), gst_rate_wise_item in grouped_data.items():
+        for (_, invoice_no), gst_rate_wise_item in grouped_data.items():
             for gst_rate, items in gst_rate_wise_item.items():
                 invoice_item = items[0]
                 key = f"{invoice_item.place_of_supply} - {flt(gst_rate)}"
