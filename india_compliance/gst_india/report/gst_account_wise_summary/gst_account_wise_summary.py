@@ -21,6 +21,7 @@ def execute(filters: dict | None = None):
 
     columns = get_columns()
     data = get_data(filters)
+    # TODO: Overview vs Breakup
 
     return columns, data
 
@@ -60,9 +61,11 @@ def get_data(filters):
     tds_accounts = get_tax_withholding_accounts(filters.company)
 
     for invoice in invoices:
-        additional_charges = 0
+        additional_amount = 0
         additional_tax = 0
-        eligible_items = 0
+
+        eligible_amount = 0
+        total_amount = 0
 
         for item in invoice["items"]:
             net_amount = item.base_net_amount
@@ -71,57 +74,57 @@ def get_data(filters):
             account_data["account_name"] = account
 
             account_data["total_amount"] += net_amount
+            total_amount += net_amount
 
-            proportional_tax = net_amount * (item.tax_rate / 100)
-            account_data["total_itc"] += proportional_tax
+            net_tax = net_amount * (item.tax_rate / 100) + item.cess_amount
+            account_data["total_itc"] += net_tax
+
             if not item.is_ineligible_for_itc:
-                account_data["total_itc_availed"] += proportional_tax
-                eligible_items += 1
+                eligible_amount += net_amount
+                account_data["total_itc_availed"] += net_tax
 
             if invoice.doctype == "Bill of Entry":
                 continue
 
-            additional_charges += item.taxable_value - net_amount
-            additional_tax += item.tax_amount - proportional_tax
+            # charges as apportioned
+            additional_amount += item.taxable_value - net_amount
+            additional_tax += item.tax_amount - net_tax
 
-        if not additional_charges:
+        if not additional_amount:
             continue
 
-        proportion = additional_tax / additional_charges
-        eligibility_proportion = (eligible_items / len(invoice["items"])) * proportion
+        total_proportion = additional_tax / additional_amount
+        eligibility_proportion = eligible_amount / total_amount
 
-        if not eligibility_proportion:
-            continue
-
-        additional_tax /= eligibility_proportion
-
-        # Filter required taxes
+        # get charges before GST rows
         taxes = []
         for tax in invoice["taxes"]:
             if tax.gst_tax_type in GST_TAX_TYPES:
                 break
+
             elif tax.account_head in tds_accounts:
                 continue
 
             taxes.append(tax)
 
+        # approtion the additional tax to charges
         for i, tax in enumerate(taxes):
             tax_amount = tax.base_tax_amount_after_discount_amount
             account = tax.account_head
             account_data = account_summary.setdefault(account, defaultdict(float))
             account_data["account_name"] = account
 
-            # Calculate proportional ITC for this tax
             if i == len(taxes) - 1:
                 # For the last item, adjust to ensure total matches additional_tax
                 itc_amount = flt(additional_tax, 2)
+
             else:
-                itc_amount = tax_amount * eligibility_proportion
+                itc_amount = flt(tax_amount * total_proportion, 2)
                 additional_tax -= itc_amount
-                itc_amount = flt(itc_amount, 2)
 
             account_data["total_amount"] += tax_amount
             account_data["total_itc"] += itc_amount
+            account_data["total_itc_availed"] += itc_amount * eligibility_proportion
 
     account_summary_data = list(account_summary.values())
 
@@ -154,6 +157,7 @@ def get_invoices(filters):
 
 def get_taxes_for_docs(filters):
     if filters.doctype == "Bill of Entry":
+        # TODO: Implement BOE Taxes. Needed?
         return []
 
     taxes_doctype = (
@@ -208,13 +212,10 @@ def get_items_for_docs(filters):
             (item_doc.cgst_rate + item_doc.sgst_rate + item_doc.igst_rate).as_(
                 "tax_rate"
             ),
-            (
-                item_doc.cgst_amount
-                + item_doc.sgst_amount
-                + item_doc.igst_amount
-                + item_doc.cess_amount
-                + item_doc.cess_non_advol_amount
-            ).as_("tax_amount"),
+            (item_doc.cgst_amount + item_doc.sgst_amount + item_doc.igst_amount).as_(
+                "tax_amount"
+            ),
+            (item_doc.cess_amount + item_doc.cess_non_advol_amount).as_("cess_amount"),
         )
     )
 
@@ -224,11 +225,8 @@ def get_items_for_docs(filters):
             .when(item_doc.is_ineligible_for_itc == 1, 1)
             .when(doc.ineligibility_reason == "ITC restricted due to PoS rules", 1)
             .else_(0)
-        ).where(
-            Case()
-            .when(doc.gst_category == "Overseas", item_doc.pending_boe_qty > 0)
-            .else_(1)
-        )
+            # From BOE
+        ).where(IfNull(doc.itc_classification, "") != "Import of Goods")
 
     query = get_query_with_common_filters(query, doc, filters)
 
@@ -257,13 +255,10 @@ def get_items_for_boe_docs(filters):
             (item_doc.cgst_rate + item_doc.sgst_rate + item_doc.igst_rate).as_(
                 "tax_rate"
             ),
-            (
-                item_doc.cgst_amount
-                + item_doc.sgst_amount
-                + item_doc.igst_amount
-                + item_doc.cess_amount
-                + item_doc.cess_non_advol_amount
-            ).as_("tax_amount"),
+            (item_doc.cgst_amount + item_doc.sgst_amount + item_doc.igst_amount).as_(
+                "tax_amount"
+            ),
+            (item_doc.cess_amount + item_doc.cess_non_advol_amount).as_("cess_amount"),
         )
     )
 
