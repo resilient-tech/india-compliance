@@ -90,31 +90,42 @@ def get_data(filters):
             additional_amount += item.taxable_value - net_amount
             additional_tax += item.tax_amount - net_tax
 
-        if not additional_amount:
-            continue
+        if additional_amount:
+            total_proportion = additional_tax / additional_amount
+        else:
+            total_proportion = 0
 
-        total_proportion = additional_tax / additional_amount
         eligibility_proportion = eligible_amount / total_amount
 
-        # get charges before GST rows
-        taxes = []
+        # get charges
+        before_taxes = []
+        after_taxes = []
+        is_after_tax = False
+
         for tax in invoice["taxes"]:
             if tax.gst_tax_type in GST_TAX_TYPES:
-                break
+                is_after_tax = True
+                continue
 
             elif tax.account_head in tds_accounts:
                 continue
 
-            taxes.append(tax)
+            elif not tax.base_tax_amount_after_discount_amount:
+                continue
+
+            if not is_after_tax:
+                before_taxes.append(tax)
+            else:
+                after_taxes.append(tax)
 
         # approtion the additional tax to charges
-        for i, tax in enumerate(taxes):
+        for i, tax in enumerate(before_taxes):
             tax_amount = tax.base_tax_amount_after_discount_amount
             account = tax.account_head
             account_data = account_summary.setdefault(account, defaultdict(float))
             account_data["account_name"] = account
 
-            if i == len(taxes) - 1:
+            if i == len(before_taxes) - 1:
                 # For the last item, adjust to ensure total matches additional_tax
                 itc_amount = flt(additional_tax, 2)
 
@@ -125,6 +136,13 @@ def get_data(filters):
             account_data["total_amount"] += tax_amount
             account_data["total_itc"] += itc_amount
             account_data["total_itc_availed"] += itc_amount * eligibility_proportion
+
+        # additional charges only
+        for tax in after_taxes:
+            account = tax.account_head
+            account_data = account_summary.setdefault(account, defaultdict(float))
+            account_data["account_name"] = account
+            account_data["total_amount"] += tax.base_tax_amount_after_discount_amount
 
     account_summary_data = list(account_summary.values())
 
