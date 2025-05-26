@@ -90,12 +90,10 @@ def get_data(filters):
             additional_amount += item.taxable_value - net_amount
             additional_tax += item.tax_amount - net_tax
 
-        if additional_amount:
-            total_proportion = additional_tax / additional_amount
-        else:
-            total_proportion = 0
-
-        eligibility_proportion = eligible_amount / total_amount
+        total_proportion = (
+            additional_tax / additional_amount if additional_amount else 0
+        )
+        eligibility_proportion = eligible_amount / total_amount if total_amount else 0
 
         # get charges
         before_taxes = []
@@ -118,12 +116,25 @@ def get_data(filters):
             else:
                 after_taxes.append(tax)
 
+        def _append_charges(tax):
+            account = tax.account_head
+            if account not in account_summary:
+                account_summary[account] = defaultdict(float)
+
+            account_data = account_summary[account]
+            account_data["account_name"] = account
+
+            tax_amount = tax.base_tax_amount_after_discount_amount
+            if tax.get("add_deduct_tax", "Add") == "Deduct":
+                tax_amount *= -1
+
+            account_data["total_amount"] += tax_amount
+
+            return account_data, tax_amount
+
         # approtion the additional tax to charges
         for i, tax in enumerate(before_taxes):
-            tax_amount = tax.base_tax_amount_after_discount_amount
-            account = tax.account_head
-            account_data = account_summary.setdefault(account, defaultdict(float))
-            account_data["account_name"] = account
+            account_data, tax_amount = _append_charges(tax)
 
             if i == len(before_taxes) - 1:
                 # For the last item, adjust to ensure total matches additional_tax
@@ -133,16 +144,12 @@ def get_data(filters):
                 itc_amount = flt(tax_amount * total_proportion, 2)
                 additional_tax -= itc_amount
 
-            account_data["total_amount"] += tax_amount
             account_data["total_itc"] += itc_amount
             account_data["total_itc_availed"] += itc_amount * eligibility_proportion
 
         # additional charges only
         for tax in after_taxes:
-            account = tax.account_head
-            account_data = account_summary.setdefault(account, defaultdict(float))
-            account_data["account_name"] = account
-            account_data["total_amount"] += tax.base_tax_amount_after_discount_amount
+            _append_charges(tax)
 
     account_summary_data = list(account_summary.values())
 
@@ -201,6 +208,9 @@ def get_taxes_for_docs(filters):
         )
         .orderby(taxes_doc.idx)
     )
+
+    if filters.doctype == "Purchase Invoice":
+        query = query.select(taxes_doc.add_deduct_tax)
 
     query = get_query_with_common_filters(query, doc, filters)
 

@@ -20,6 +20,7 @@ frappe.query_reports["GST Account-wise Summary"] = {
                 return {
                     filters: {
                         country: "India",
+                        is_group: 0,
                     },
                 };
             },
