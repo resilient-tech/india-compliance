@@ -154,7 +154,7 @@ def process_hsn_data(invoices, bifurcate_hsn=False):
     gstr_data.process_data_for_hsn_summary(data_for_hsn, hsn_summary, bifurcate_hsn)
 
     hsn_data = []
-    for hsn_type, hsn_key in hsn_summary.items():
+    for hsn_key in hsn_summary.values():
         hsn_data.extend(list(hsn_key.values()))
 
     return [
