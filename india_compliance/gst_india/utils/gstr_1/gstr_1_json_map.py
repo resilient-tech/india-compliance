@@ -2041,47 +2041,47 @@ class BooksDataMapper:
 
         extend the function to round the values to 2 decimal places
         """
-        for (
-            invoice_sub_category,
-            invoice_no,
-        ), gst_rate_wise_item in grouped_data.items():
-            invoice_sub_category_dict = prepared_data.setdefault(
-                invoice_sub_category, {}
-            )
-            invoice_item = next(chain(*gst_rate_wise_item.values()))
-            invoice_sub_category_dict[invoice_no] = {
+        for (sub_category, invoice_no), rate_wise_item in grouped_data.items():
+            doc = next(chain(*rate_wise_item.values()))
+
+            if sub_category not in prepared_data:
+                prepared_data[sub_category] = {}
+
+            sub_category_dict = prepared_data[sub_category]
+            sub_category_dict[invoice_no] = {
                 # TODO: make a method for creating the dict
-                df.TRANSACTION_TYPE: self.get_transaction_type(invoice_item),
-                df.CUST_GSTIN: invoice_item.billing_address_gstin,
-                df.CUST_NAME: invoice_item.customer_name,
-                df.DOC_DATE: invoice_item.posting_date,
-                df.DOC_NUMBER: invoice_item.invoice_no,
-                df.DOC_VALUE: invoice_item.invoice_total,
-                df.POS: invoice_item.place_of_supply,
-                df.REVERSE_CHARGE: ("Y" if invoice_item.is_reverse_charge else "N"),
-                df.DOC_TYPE: invoice_item.invoice_type,
+                df.TRANSACTION_TYPE: self.get_transaction_type(doc),
+                df.CUST_GSTIN: doc.billing_address_gstin,
+                df.CUST_NAME: doc.customer_name,
+                df.DOC_DATE: doc.posting_date,
+                df.DOC_NUMBER: doc.invoice_no,
+                df.DOC_VALUE: doc.invoice_total,
+                df.POS: doc.place_of_supply,
+                df.REVERSE_CHARGE: ("Y" if doc.is_reverse_charge else "N"),
+                df.DOC_TYPE: doc.invoice_type,
                 **self.get_invoice_values(),
                 df.DIFF_PERCENTAGE: 0,
-                df.SHIPPING_PORT_CODE: invoice_item.shipping_port_code,
-                df.SHIPPING_BILL_NUMBER: invoice_item.shipping_bill_number,
-                df.SHIPPING_BILL_DATE: invoice_item.shipping_bill_date,
+                df.SHIPPING_PORT_CODE: doc.shipping_port_code,
+                df.SHIPPING_BILL_NUMBER: doc.shipping_bill_number,
+                df.SHIPPING_BILL_DATE: doc.shipping_bill_date,
                 "items": [],
             }
-            mapped_dict = invoice_sub_category_dict[invoice_no]
 
-            for gst_rate, items in gst_rate_wise_item.items():
+            invoice_dict = sub_category_dict[invoice_no]
+
+            for gst_rate, items in rate_wise_item.items():
                 tax_item = defaultdict(int)
 
                 for item in items:
                     for key, field in self.TAX_FIELDS_MAP.items():
                         tax_item[key] += item.get(field, 0)
 
-                    # self.calculate_hsn_error(item)
-
                 tax_item[GSTR1_ItemField.TAX_RATE.value] = gst_rate
-                mapped_dict["items"].append(dict(tax_item))
+                invoice_dict["items"].append(dict(tax_item))
 
-            self.update_totals(mapped_dict)
+                # self.calculate_hsn_error(item)
+
+            self.update_totals(invoice_dict)
 
     def process_data_for_nil_exempt(self, grouped_data, prepared_data):
         data = {}
