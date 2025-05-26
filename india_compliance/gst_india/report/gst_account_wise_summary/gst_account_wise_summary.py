@@ -8,8 +8,9 @@ from frappe import _
 from frappe.query_builder import Case
 from frappe.query_builder.functions import IfNull, Sum
 from frappe.utils import flt
+from erpnext.accounts.utils import get_currency_precision
 
-from india_compliance.gst_india.constants import GST_TAX_TYPES
+from india_compliance.gst_india.constants import GST_TAX_TYPES, TAX_TYPES
 from india_compliance.income_tax_india.overrides.tax_withholding_category import (
     get_tax_withholding_accounts,
 )
@@ -59,6 +60,7 @@ def get_data(filters):
     account_summary = {}
     invoices = get_invoices(filters)
     tds_accounts = get_tax_withholding_accounts(filters.company)
+    precision = get_currency_precision()
 
     for invoice in invoices:
         additional_amount = 0
@@ -91,9 +93,12 @@ def get_data(filters):
             additional_tax += item.tax_amount - net_tax
 
         total_proportion = (
-            additional_tax / additional_amount if additional_amount else 0
+            flt(additional_tax / additional_amount, 5) if additional_amount else 0
         )
-        eligibility_proportion = eligible_amount / total_amount if total_amount else 0
+        eligibility_proportion = (
+            flt(eligible_amount / total_amount, 5) if total_amount else 0
+        )
+        additional_tax = flt(additional_tax, precision)
 
         # get charges
         before_taxes = []
@@ -101,14 +106,14 @@ def get_data(filters):
         is_after_tax = False
 
         for tax in invoice["taxes"]:
-            if tax.gst_tax_type in GST_TAX_TYPES:
+            if tax.gst_tax_type in TAX_TYPES:
                 is_after_tax = True
                 continue
 
-            elif tax.account_head in tds_accounts:
-                continue
-
-            elif not tax.base_tax_amount_after_discount_amount:
+            elif (
+                tax.account_head in tds_accounts
+                or not tax.base_tax_amount_after_discount_amount
+            ):
                 continue
 
             if not is_after_tax:
@@ -138,14 +143,16 @@ def get_data(filters):
 
             if i == len(before_taxes) - 1:
                 # For the last item, adjust to ensure total matches additional_tax
-                itc_amount = flt(additional_tax, 2)
+                itc_amount = flt(additional_tax, precision)
 
             else:
-                itc_amount = flt(tax_amount * total_proportion, 2)
+                itc_amount = flt(tax_amount * total_proportion, precision)
                 additional_tax -= itc_amount
 
             account_data["total_itc"] += itc_amount
-            account_data["total_itc_availed"] += itc_amount * eligibility_proportion
+            account_data["total_itc_availed"] += flt(
+                itc_amount * eligibility_proportion, precision
+            )
 
         # additional charges only
         for tax in after_taxes:
@@ -362,7 +369,8 @@ def get_ineligible_itc_from_je(filters):
 
     query = get_query_with_common_filters(query, je_doc, filters)
 
-    ineligible_itc = query.run(as_dict=True)[0].get("ineligible_itc")
+    result = query.run(as_dict=True)
+    ineligible_itc = result[0].get("ineligible_itc") if result else 0
 
     if ineligible_itc:
         return {

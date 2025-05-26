@@ -283,7 +283,7 @@
   },
   {
    "hidden": 0,
-   "is_query_report": 0,
+   "is_query_report": 1,
    "label": "GST Account-wise Summary",
    "link_count": 0,
    "link_to": "GST Account-wise Summary",
@@ -303,7 +303,7 @@
    "type": "Link"
   }
  ],
- "modified": "2025-05-26 08:59:44.012344",
+ "modified": "2025-05-26 09:27:02.553281",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST India",
