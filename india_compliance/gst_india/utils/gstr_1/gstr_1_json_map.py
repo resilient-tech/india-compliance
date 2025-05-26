@@ -2132,11 +2132,10 @@ class BooksDataMapper:
                 tax_item = defaultdict(int)
 
                 for item in items:
-                    tax_item[GSTR1_ItemField.TAXABLE_VALUE.value] += item.taxable_value
-                    tax_item[GSTR1_ItemField.IGST.value] += item.igst_amount
-                    tax_item[GSTR1_ItemField.CGST.value] += item.cgst_amount
-                    tax_item[GSTR1_ItemField.SGST.value] += item.sgst_amount
-                    tax_item[GSTR1_ItemField.CESS.value] += item.total_cess_amount
+                    for key, field in self.TAX_FIELDS_MAP.items():
+                        tax_item[key] += item.get(field, 0)
+
+                    # self.calculate_hsn_error(item)
 
                 tax_item[GSTR1_ItemField.TAX_RATE.value] = gst_rate
                 mapped_dict["items"].append(dict(tax_item))
@@ -2198,6 +2197,8 @@ class BooksDataMapper:
                         GSTR1_DataField.NON_GST_AMOUNT.value
                     ] += item.taxable_value
 
+                # self.calculate_hsn_error(item)
+
         # convert {invoice_category: {invoice_type: {invoice_no: invoice}}} to {invoice_category: {invoice_type: [invoice]}}
         for invoice_category, invoices_by_type in data.items():
             for invoice_type in invoices_by_type:
@@ -2235,6 +2236,9 @@ class BooksDataMapper:
                     },
                 )
 
+                # for item in items:
+                #     self.calculate_hsn_error(item)
+
                 self.update_totals(mapped_dict, items)
 
         # convert {"B2C (Others)": { "place_of_supply - gst_rate" : {invoice_no: invoice}}} to {"B2C (Others)": { "place_of_supply - gst_rate" : [invoice]}}
@@ -2245,42 +2249,42 @@ class BooksDataMapper:
 
         prepared_data.update(data)
 
-    def process_data_for_hsn_summary(self, invoice, prepared_data):
-        key = f"{invoice.gst_hsn_code} - {invoice.uom} - {flt(invoice.gst_rate)}"
+    def process_data_for_hsn_summary(
+        self, grouped_data, prepared_data, bifurcate_hsn=False
+    ):
+        for hsn_type, hsn_key in grouped_data.items():
+            prepared_data[hsn_type] = {}
 
-        if key not in prepared_data:
-            mapped_dict = prepared_data.setdefault(
-                key,
-                {
-                    GSTR1_DataField.HSN_CODE.value: invoice.gst_hsn_code,
+            for key, items in hsn_key.items():
+                invoice_item = items[0]
+
+                prepared_data[hsn_type][key] = {
+                    GSTR1_DataField.HSN_CODE.value: invoice_item.gst_hsn_code,
                     GSTR1_DataField.DESCRIPTION.value: frappe.db.get_value(
-                        "GST HSN Code", invoice.gst_hsn_code, "description"
+                        "GST HSN Code", invoice_item.gst_hsn_code, "description"
                     ),
-                    GSTR1_DataField.UOM.value: invoice.uom,
+                    GSTR1_DataField.UOM.value: invoice_item.uom,
                     GSTR1_DataField.QUANTITY.value: 0,
-                    GSTR1_DataField.TAX_RATE.value: invoice.gst_rate,
-                    GSTR1_DataField.TAXABLE_VALUE.value: 0,
-                    GSTR1_DataField.IGST.value: 0,
-                    GSTR1_DataField.CGST.value: 0,
-                    GSTR1_DataField.SGST.value: 0,
-                    GSTR1_DataField.CESS.value: 0,
-                },
-            )
+                    GSTR1_DataField.TAX_RATE.value: invoice_item.gst_rate,
+                    **self.get_invoice_values(),
+                }
 
-        else:
-            mapped_dict = prepared_data[key]
+                mapped_dict = prepared_data[hsn_type][key]
 
-        self.update_totals(mapped_dict, [invoice], for_qty=True)
+                self.update_totals(mapped_dict, items, for_qty=True)
 
-        mapped_dict[GSTR1_DataField.DOC_VALUE.value] = sum(
-            (
-                mapped_dict.get(GSTR1_DataField.TAXABLE_VALUE.value, 0),
-                mapped_dict.get(GSTR1_DataField.IGST.value, 0),
-                mapped_dict.get(GSTR1_DataField.CGST.value, 0),
-                mapped_dict.get(GSTR1_DataField.SGST.value, 0),
-                mapped_dict.get(GSTR1_DataField.CESS.value, 0),
-            )
-        )
+                mapped_dict[GSTR1_DataField.DOC_VALUE.value] = sum(
+                    (
+                        mapped_dict.get(GSTR1_DataField.TAXABLE_VALUE.value, 0),
+                        mapped_dict.get(GSTR1_DataField.IGST.value, 0),
+                        mapped_dict.get(GSTR1_DataField.CGST.value, 0),
+                        mapped_dict.get(GSTR1_DataField.SGST.value, 0),
+                        mapped_dict.get(GSTR1_DataField.CESS.value, 0),
+                    )
+                )
+
+                if bifurcate_hsn:
+                    mapped_dict["invoice_type"] = hsn_type.split("-")[-1].strip()
 
     def process_data_for_document_issued_summary(self, row, prepared_data):
         key = f"{row['nature_of_document']} - {row['from_serial_no']}"
@@ -2348,7 +2352,13 @@ class BooksDataMapper:
 
         for key, field in data_invoice_amount_map.items():
             for item in items:
-                mapped_dict[key] += item.get(field, 0)
+                value = item.get(field, 0)
+                mapped_dict[key] += value
+                # item[field] = flt(value, 2)
+
+            # rounded_value = flt(mapped_dict[key], 2)
+            # self.rounding_difference[key] += mapped_dict[key] - rounded_value
+            # mapped_dict[key] = rounded_value
 
     def get_invoice_values(self, invoice=None):
         if invoice is None:
@@ -2361,6 +2371,25 @@ class BooksDataMapper:
             GSTR1_DataField.SGST.value: invoice.get("sgst_amount", 0),
             GSTR1_DataField.CESS.value: invoice.get("total_cess_amount", 0),
         }
+
+    TAX_FIELDS_MAP = {
+        GSTR1_ItemField.TAXABLE_VALUE.value: "taxable_value",
+        GSTR1_ItemField.IGST.value: "igst_amount",
+        GSTR1_ItemField.CGST.value: "cgst_amount",
+        GSTR1_ItemField.SGST.value: "sgst_amount",
+        GSTR1_ItemField.CESS.value: "total_cess_amount",
+    }
+
+    def calculate_hsn_error(self, item):
+        """
+        Calculate the HSN error for a given item.
+        This method is used to calculate the difference between the actual value and the rounded value.
+        """
+
+        for key, field in self.TAX_FIELDS_MAP.items():
+            value = getattr(item, field, 0)
+            rounded_value = flt(value, 2)
+            self.hsn_error[item.hsn_key][key] += value - rounded_value
 
 
 class GSTR1BooksData(BooksDataMapper):
@@ -2380,9 +2409,13 @@ class GSTR1BooksData(BooksDataMapper):
         data = _class.get_invoices_for_item_wise_summary()
         _class.process_invoices(data)
 
-        # grouped data will be {invoice_sub_category: {invoice_no: {gst_rate: [items]}}}
-        data_for_invoice_no_key, data_for_nil_exempt, data_for_b2cs = (
-            self.get_structured_data(data)
+        # self.rounding_difference = defaultdict(float)
+        # self.hsn_error = defaultdict(lambda: defaultdict(float))
+
+        bifurcate_hsn = self.filing_from >= self.hsn_bifurcation_from
+
+        data_for_invoice_no_key, data_for_nil_exempt, data_for_b2cs, data_for_hsn = (
+            self.get_structured_data(data, bifurcate_hsn=bifurcate_hsn)
         )
 
         self.process_data_for_invoice_no_key(data_for_invoice_no_key, prepared_data)
@@ -2395,21 +2428,9 @@ class GSTR1BooksData(BooksDataMapper):
             GSTR1_Category.DOC_ISSUE.value: self.prepare_document_issued_data(),
         }
 
-        # Backwards Compatibility
-        if self.filing_from < self.hsn_bifurcation_from:
-            other_categories.update(
-                {
-                    GSTR1_Category.HSN.value: self.prepare_hsn_data(data),
-                }
-            )
-        else:
-            hsn_b2b_data, hsn_b2c_data = self.prepare_hsn_data_with_bifurcation(data)
-            other_categories.update(
-                {
-                    GSTR1_SubCategory.HSN_B2B.value: hsn_b2b_data,
-                    GSTR1_SubCategory.HSN_B2C.value: hsn_b2c_data,
-                }
-            )
+        self.process_data_for_hsn_summary(
+            data_for_hsn, other_categories, bifurcate_hsn=bifurcate_hsn
+        )
 
         for category, data in other_categories.items():
             if data:
@@ -2419,18 +2440,34 @@ class GSTR1BooksData(BooksDataMapper):
 
         return prepared_data
 
-    def get_structured_data(self, data):
+    def get_structured_data(self, data, only_for_hsn=False, bifurcate_hsn=False):
         data_for_invoice_no_key = defaultdict(lambda: defaultdict(list))
         data_for_nil_exempt = defaultdict(lambda: defaultdict(list))
         data_for_b2cs = defaultdict(lambda: defaultdict(list))
+        data_for_hsn = defaultdict(lambda: defaultdict(list))
+
         for item in data:
-            if item.get("taxable_value") == 0:
+            hsn_key = f"{item.gst_hsn_code} - {item.uom} - {flt(item.gst_rate)}"
+            item["hsn_key"] = hsn_key
+
+            if bifurcate_hsn:
+                key = (
+                    GSTR1_SubCategory.HSN_B2B.value
+                    if item.gst_category != "Unregistered"
+                    else GSTR1_SubCategory.HSN_B2C.value
+                )
+
+            else:
+                key = GSTR1_Category.HSN.value
+
+            data_for_hsn[key][hsn_key].append(item)
+
+            if only_for_hsn or item.get("taxable_value") == 0:
                 continue
 
-            invoice_sub_category = item.get("invoice_sub_category")
             gst_rate = item.get("gst_rate")
             key = (
-                invoice_sub_category,
+                item.get("invoice_sub_category"),
                 item.get("invoice_no"),
             )
 
@@ -2450,7 +2487,10 @@ class GSTR1BooksData(BooksDataMapper):
             elif invoice_category == GSTR1_Category.B2CS:
                 data_for_b2cs[key][gst_rate].append(item)
 
-        return data_for_invoice_no_key, data_for_nil_exempt, data_for_b2cs
+        if only_for_hsn:
+            return data_for_hsn
+
+        return data_for_invoice_no_key, data_for_nil_exempt, data_for_b2cs, data_for_hsn
 
     def prepare_document_issued_data(self):
         doc_issued_data = {}
@@ -2460,36 +2500,6 @@ class GSTR1BooksData(BooksDataMapper):
             self.process_data_for_document_issued_summary(row, doc_issued_data)
 
         return doc_issued_data
-
-    def prepare_hsn_data(self, data):
-        hsn_summary_data = {}
-
-        for row in data:
-            self.process_data_for_hsn_summary(row, hsn_summary_data)
-
-        return hsn_summary_data
-
-    def prepare_hsn_data_with_bifurcation(self, data):
-        def assign_category(data, label):
-            for row in data.values():
-                row["invoice_type"] = label
-
-            return data
-
-        hsn_b2b = []
-        hsn_b2c = []
-        self.invoice_conditions = {}
-
-        for row in data:
-            if row.gst_category == "Unregistered":
-                hsn_b2c.append(row)
-            else:
-                hsn_b2b.append(row)
-
-        hsn_b2b = assign_category(self.prepare_hsn_data(hsn_b2b), "B2B")
-        hsn_b2c = assign_category(self.prepare_hsn_data(hsn_b2c), "B2C")
-
-        return hsn_b2b, hsn_b2c
 
     def prepare_advances_recevied_data(self):
         return self.prepare_advances_received_or_adjusted_data("Advances")

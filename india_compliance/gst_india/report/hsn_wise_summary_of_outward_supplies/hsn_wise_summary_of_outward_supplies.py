@@ -146,14 +146,16 @@ def process_hsn_data(invoices, bifurcate_hsn=False):
 
     gstr_data = GSTR1BooksData({})
 
-    if bifurcate_hsn:
-        hsn_b2b_data, hsn_b2c_data = gstr_data.prepare_hsn_data_with_bifurcation(
-            invoices
-        )
-        hsn_data = list(hsn_b2b_data.values()) + list(hsn_b2c_data.values())
-    else:
-        hsn_data = gstr_data.prepare_hsn_data(invoices)
-        hsn_data = list(hsn_data.values())
+    data_for_hsn = gstr_data.get_structured_data(
+        invoices, only_for_hsn=True, bifurcate_hsn=bifurcate_hsn
+    )
+
+    hsn_summary = {}
+    gstr_data.process_data_for_hsn_summary(data_for_hsn, hsn_summary, bifurcate_hsn)
+
+    hsn_data = []
+    for hsn_type, hsn_key in hsn_summary.items():
+        hsn_data.extend(list(hsn_key.values()))
 
     return [
         {
