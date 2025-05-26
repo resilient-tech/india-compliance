@@ -27,7 +27,9 @@ from india_compliance.gst_india.utils.gstr_1 import (
     GovJsonKey,
     GSTR1_B2B_InvoiceType,
     GSTR1_Category,
-    GSTR1_DataField,
+)
+from india_compliance.gst_india.utils.gstr_1 import GSTR1_DataField as df
+from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_ItemField,
     GSTR1_SubCategory,
 )
@@ -176,15 +178,15 @@ class B2B(GSTR1DataMapper):
         # GovDataFields.CUST_GSTIN.value: DataFields.CUST_GSTIN.value,
         # GovDataFields.INVOICES.value: "invoices",
         GovDataField.FLAG.value: "flag",
-        GovDataField.DOC_NUMBER.value: GSTR1_DataField.DOC_NUMBER.value,
-        GovDataField.DOC_DATE.value: GSTR1_DataField.DOC_DATE.value,
-        GovDataField.DOC_VALUE.value: GSTR1_DataField.DOC_VALUE.value,
-        GovDataField.POS.value: GSTR1_DataField.POS.value,
-        GovDataField.REVERSE_CHARGE.value: GSTR1_DataField.REVERSE_CHARGE.value,
-        # GovDataFields.ECOMMERCE_GSTIN.value: GSTR1_DataFields.ECOMMERCE_GSTIN.value,
-        GovDataField.INVOICE_TYPE.value: GSTR1_DataField.DOC_TYPE.value,
-        GovDataField.DIFF_PERCENTAGE.value: GSTR1_DataField.DIFF_PERCENTAGE.value,
-        GovDataField.ITEMS.value: GSTR1_DataField.ITEMS.value,
+        GovDataField.DOC_NUMBER.value: df.DOC_NUMBER,
+        GovDataField.DOC_DATE.value: df.DOC_DATE,
+        GovDataField.DOC_VALUE.value: df.DOC_VALUE,
+        GovDataField.POS.value: df.POS,
+        GovDataField.REVERSE_CHARGE.value: df.REVERSE_CHARGE,
+        # GovDataFields.ECOMMERCE_GSTIN.value: df.ECOMMERCE_GSTIN.value,
+        GovDataField.INVOICE_TYPE.value: df.DOC_TYPE,
+        GovDataField.DIFF_PERCENTAGE.value: df.DIFF_PERCENTAGE,
+        GovDataField.ITEMS.value: df.ITEMS,
         # GovDataFields.INDEX.value: ItemFields.INDEX.value,
         GovDataField.ITEM_DETAILS.value: GSTR1_ItemField.ITEM_DETAILS.value,
         GovDataField.TAX_RATE.value: GSTR1_ItemField.TAX_RATE.value,
@@ -222,10 +224,10 @@ class B2B(GSTR1DataMapper):
         }
 
         self.value_formatters_for_gov = {
-            GSTR1_DataField.ITEMS.value: self.format_item_for_gov,
-            GSTR1_DataField.DOC_TYPE.value: self.document_category_mapping,
-            GSTR1_DataField.POS.value: self.map_place_of_supply,
-            GSTR1_DataField.DOC_DATE.value: self.format_date_for_gov,
+            df.ITEMS: self.format_item_for_gov,
+            df.DOC_TYPE: self.document_category_mapping,
+            df.POS: self.map_place_of_supply,
+            df.DOC_DATE: self.format_date_for_gov,
         }
 
     def convert_to_internal_data_format(self, input_data):
@@ -243,30 +245,20 @@ class B2B(GSTR1DataMapper):
             customer_gstin = customer_data.get(GovDataField.CUST_GSTIN.value)
 
             default_invoice_data = {
-                GSTR1_DataField.CUST_GSTIN.value: customer_gstin,
-                GSTR1_DataField.CUST_NAME.value: self.guess_customer_name(
-                    customer_gstin
-                ),
-                GSTR1_DataField.ERROR_CD.value: customer_data.get(
-                    GovDataField.ERROR_CD.value
-                ),
-                GSTR1_DataField.ERROR_MSG.value: customer_data.get(
-                    GovDataField.ERROR_MSG.value
-                ),
+                df.CUST_GSTIN: customer_gstin,
+                df.CUST_NAME: self.guess_customer_name(customer_gstin),
+                df.ERROR_CD: customer_data.get(GovDataField.ERROR_CD.value),
+                df.ERROR_MSG: customer_data.get(GovDataField.ERROR_MSG.value),
             }
 
             for invoice in customer_data.get(GovDataField.INVOICES.value):
                 invoice_data = self.format_data(invoice, default_invoice_data)
-                self.update_totals(
-                    invoice_data, invoice_data.get(GSTR1_DataField.ITEMS.value)
-                )
+                self.update_totals(invoice_data, invoice_data.get(df.ITEMS))
 
                 subcategory_data = output.setdefault(
                     self.get_document_subcategory(invoice), {}
                 )
-                subcategory_data[invoice_data[GSTR1_DataField.DOC_NUMBER.value]] = (
-                    invoice_data
-                )
+                subcategory_data[invoice_data[df.DOC_NUMBER]] = invoice_data
 
         return output
 
@@ -284,11 +276,9 @@ class B2B(GSTR1DataMapper):
 
         for invoice in input_data:
             customer = customer_data.setdefault(
-                invoice[GSTR1_DataField.CUST_GSTIN.value],
+                invoice[df.CUST_GSTIN],
                 {
-                    GovDataField.CUST_GSTIN.value: invoice[
-                        GSTR1_DataField.CUST_GSTIN.value
-                    ],
+                    GovDataField.CUST_GSTIN.value: invoice[df.CUST_GSTIN],
                     GovDataField.INVOICES.value: [],
                 },
             )
@@ -369,12 +359,12 @@ class B2CL(GSTR1DataMapper):
         # GovDataFields.POS.value: DataFields.POS.value,
         # GovDataFields.INVOICES.value: "invoices",
         GovDataField.FLAG.value: "flag",
-        GovDataField.DOC_NUMBER.value: GSTR1_DataField.DOC_NUMBER.value,
-        GovDataField.DOC_DATE.value: GSTR1_DataField.DOC_DATE.value,
-        GovDataField.DOC_VALUE.value: GSTR1_DataField.DOC_VALUE.value,
-        # GovDataFields.ECOMMERCE_GSTIN.value: GSTR1_DataFields.ECOMMERCE_GSTIN.value,
-        GovDataField.DIFF_PERCENTAGE.value: GSTR1_DataField.DIFF_PERCENTAGE.value,
-        GovDataField.ITEMS.value: GSTR1_DataField.ITEMS.value,
+        GovDataField.DOC_NUMBER.value: df.DOC_NUMBER,
+        GovDataField.DOC_DATE.value: df.DOC_DATE,
+        GovDataField.DOC_VALUE.value: df.DOC_VALUE,
+        # GovDataFields.ECOMMERCE_GSTIN.value: df.ECOMMERCE_GSTIN.value,
+        GovDataField.DIFF_PERCENTAGE.value: df.DIFF_PERCENTAGE,
+        GovDataField.ITEMS.value: df.ITEMS,
         # GovDataFields.INDEX.value: ItemFields.INDEX.value,
         GovDataField.ITEM_DETAILS.value: GSTR1_ItemField.ITEM_DETAILS.value,
         GovDataField.TAX_RATE.value: GSTR1_ItemField.TAX_RATE.value,
@@ -391,8 +381,8 @@ class B2CL(GSTR1DataMapper):
             GovDataField.DOC_DATE.value: self.format_date_for_internal,
         }
         self.value_formatters_for_gov = {
-            GSTR1_DataField.ITEMS.value: self.format_item_for_gov,
-            GSTR1_DataField.DOC_DATE.value: self.format_date_for_gov,
+            df.ITEMS: self.format_item_for_gov,
+            df.DOC_DATE: self.format_date_for_gov,
         }
 
     def convert_to_internal_data_format(self, input_data):
@@ -402,26 +392,20 @@ class B2CL(GSTR1DataMapper):
             pos = self.map_place_of_supply(pos_data.get(GovDataField.POS.value))
 
             default_invoice_data = {
-                GSTR1_DataField.POS.value: pos,
-                GSTR1_DataField.DOC_TYPE.value: self.DOCUMENT_CATEGORY,
-                GSTR1_DataField.ERROR_CD.value: pos_data.get(
-                    GovDataField.ERROR_CD.value
-                ),
-                GSTR1_DataField.ERROR_MSG.value: pos_data.get(
-                    GovDataField.ERROR_MSG.value
-                ),
+                df.POS: pos,
+                df.DOC_TYPE: self.DOCUMENT_CATEGORY,
+                df.ERROR_CD: pos_data.get(GovDataField.ERROR_CD.value),
+                df.ERROR_MSG: pos_data.get(GovDataField.ERROR_MSG.value),
             }
 
             for invoice in pos_data.get(GovDataField.INVOICES.value):
                 invoice_level_data = self.format_data(invoice, default_invoice_data)
                 self.update_totals(
                     invoice_level_data,
-                    invoice_level_data.get(GSTR1_DataField.ITEMS.value),
+                    invoice_level_data.get(df.ITEMS),
                 )
 
-                output[invoice_level_data[GSTR1_DataField.DOC_NUMBER.value]] = (
-                    invoice_level_data
-                )
+                output[invoice_level_data[df.DOC_NUMBER]] = invoice_level_data
 
         return {self.SUBCATEGORY: output}
 
@@ -430,11 +414,9 @@ class B2CL(GSTR1DataMapper):
 
         for invoice in input_data:
             pos = pos_data.setdefault(
-                invoice[GSTR1_DataField.POS.value],
+                invoice[df.POS],
                 {
-                    GovDataField.POS.value: self.map_place_of_supply(
-                        invoice[GSTR1_DataField.POS.value]
-                    ),
+                    GovDataField.POS.value: self.map_place_of_supply(invoice[df.POS]),
                     GovDataField.INVOICES.value: [],
                 },
             )
@@ -501,13 +483,13 @@ class Exports(GSTR1DataMapper):
         # GovDataFields.INVOICES.value: "invoices",
         GovDataField.FLAG.value: "flag",
         # GovDataFields.EXPORT_TYPE.value: DataFields.DOC_TYPE.value,
-        GovDataField.DOC_NUMBER.value: GSTR1_DataField.DOC_NUMBER.value,
-        GovDataField.DOC_DATE.value: GSTR1_DataField.DOC_DATE.value,
-        GovDataField.DOC_VALUE.value: GSTR1_DataField.DOC_VALUE.value,
-        GovDataField.SHIPPING_PORT_CODE.value: GSTR1_DataField.SHIPPING_PORT_CODE.value,
-        GovDataField.SHIPPING_BILL_NUMBER.value: GSTR1_DataField.SHIPPING_BILL_NUMBER.value,
-        GovDataField.SHIPPING_BILL_DATE.value: GSTR1_DataField.SHIPPING_BILL_DATE.value,
-        GovDataField.ITEMS.value: GSTR1_DataField.ITEMS.value,
+        GovDataField.DOC_NUMBER.value: df.DOC_NUMBER,
+        GovDataField.DOC_DATE.value: df.DOC_DATE,
+        GovDataField.DOC_VALUE.value: df.DOC_VALUE,
+        GovDataField.SHIPPING_PORT_CODE.value: df.SHIPPING_PORT_CODE,
+        GovDataField.SHIPPING_BILL_NUMBER.value: df.SHIPPING_BILL_NUMBER,
+        GovDataField.SHIPPING_BILL_DATE.value: df.SHIPPING_BILL_DATE,
+        GovDataField.ITEMS.value: df.ITEMS,
         GovDataField.TAXABLE_VALUE.value: GSTR1_ItemField.TAXABLE_VALUE.value,
         GovDataField.TAX_RATE.value: GSTR1_ItemField.TAX_RATE.value,
         GovDataField.IGST.value: GSTR1_ItemField.IGST.value,
@@ -528,9 +510,9 @@ class Exports(GSTR1DataMapper):
             GovDataField.SHIPPING_BILL_DATE.value: self.format_date_for_internal,
         }
         self.value_formatters_for_gov = {
-            GSTR1_DataField.ITEMS.value: self.format_item_for_gov,
-            GSTR1_DataField.DOC_DATE.value: self.format_date_for_gov,
-            GSTR1_DataField.SHIPPING_BILL_DATE.value: self.format_date_for_gov,
+            df.ITEMS: self.format_item_for_gov,
+            df.DOC_DATE: self.format_date_for_gov,
+            df.SHIPPING_BILL_DATE: self.format_date_for_gov,
         }
 
     def convert_to_internal_data_format(self, input_data):
@@ -543,13 +525,9 @@ class Exports(GSTR1DataMapper):
             )
 
             default_invoice_data = {
-                GSTR1_DataField.DOC_TYPE.value: document_type,
-                GSTR1_DataField.ERROR_CD.value: export_category.get(
-                    GovDataField.ERROR_CD.value
-                ),
-                GSTR1_DataField.ERROR_MSG.value: export_category.get(
-                    GovDataField.ERROR_MSG.value
-                ),
+                df.DOC_TYPE: document_type,
+                df.ERROR_CD: export_category.get(GovDataField.ERROR_CD.value),
+                df.ERROR_MSG: export_category.get(GovDataField.ERROR_MSG.value),
             }
 
             for invoice in export_category.get(GovDataField.INVOICES.value):
@@ -557,11 +535,9 @@ class Exports(GSTR1DataMapper):
 
                 self.update_totals(
                     invoice_level_data,
-                    invoice_level_data.get(GSTR1_DataField.ITEMS.value),
+                    invoice_level_data.get(df.ITEMS),
                 )
-                subcategory_data[
-                    invoice_level_data[GSTR1_DataField.DOC_NUMBER.value]
-                ] = invoice_level_data
+                subcategory_data[invoice_level_data[df.DOC_NUMBER]] = invoice_level_data
 
         return output
 
@@ -570,11 +546,9 @@ class Exports(GSTR1DataMapper):
 
         for invoice in input_data:
             export_category = export_category_wise_data.setdefault(
-                invoice[GSTR1_DataField.DOC_TYPE.value],
+                invoice[df.DOC_TYPE],
                 {
-                    GovDataField.EXPORT_TYPE.value: invoice[
-                        GSTR1_DataField.DOC_TYPE.value
-                    ],
+                    GovDataField.EXPORT_TYPE.value: invoice[df.DOC_TYPE],
                     GovDataField.INVOICES.value: [],
                 },
             )
@@ -634,18 +608,18 @@ class B2CS(GSTR1DataMapper):
     KEY_MAPPING = {
         GovDataField.FLAG.value: "flag",
         # GovDataFields.SUPPLY_TYPE.value: "supply_type",
-        GovDataField.TAXABLE_VALUE.value: GSTR1_DataField.TAXABLE_VALUE.value,
-        GovDataField.TYPE.value: GSTR1_DataField.DOC_TYPE.value,
-        # GovDataFields.ECOMMERCE_GSTIN.value: GSTR1_DataFields.ECOMMERCE_GSTIN.value,
-        GovDataField.DIFF_PERCENTAGE.value: GSTR1_DataField.DIFF_PERCENTAGE.value,
-        GovDataField.POS.value: GSTR1_DataField.POS.value,
-        GovDataField.TAX_RATE.value: GSTR1_DataField.TAX_RATE.value,
-        GovDataField.IGST.value: GSTR1_DataField.IGST.value,
-        GovDataField.CGST.value: GSTR1_DataField.CGST.value,
-        GovDataField.SGST.value: GSTR1_DataField.SGST.value,
-        GovDataField.CESS.value: GSTR1_DataField.CESS.value,
-        GovDataField.ERROR_CD.value: GSTR1_DataField.ERROR_CD.value,
-        GovDataField.ERROR_MSG.value: GSTR1_DataField.ERROR_MSG.value,
+        GovDataField.TAXABLE_VALUE.value: df.TAXABLE_VALUE,
+        GovDataField.TYPE.value: df.DOC_TYPE,
+        # GovDataFields.ECOMMERCE_GSTIN.value: df.ECOMMERCE_GSTIN.value,
+        GovDataField.DIFF_PERCENTAGE.value: df.DIFF_PERCENTAGE,
+        GovDataField.POS.value: df.POS,
+        GovDataField.TAX_RATE.value: df.TAX_RATE,
+        GovDataField.IGST.value: df.IGST,
+        GovDataField.CGST.value: df.CGST,
+        GovDataField.SGST.value: df.SGST,
+        GovDataField.CESS.value: df.CESS,
+        GovDataField.ERROR_CD.value: df.ERROR_CD,
+        GovDataField.ERROR_MSG.value: df.ERROR_MSG,
     }
 
     def __init__(self):
@@ -656,8 +630,8 @@ class B2CS(GSTR1DataMapper):
             GovDataField.POS.value: self.map_place_of_supply,
         }
         self.value_formatters_for_gov = {
-            GSTR1_DataField.ITEMS.value: self.format_item_for_gov,
-            GSTR1_DataField.POS.value: self.map_place_of_supply,
+            df.ITEMS: self.format_item_for_gov,
+            df.POS: self.map_place_of_supply,
         }
 
     def convert_to_internal_data_format(self, input_data):
@@ -669,9 +643,9 @@ class B2CS(GSTR1DataMapper):
             output.setdefault(
                 " - ".join(
                     (
-                        invoice_data.get(GSTR1_DataField.POS.value, ""),
-                        str(flt(invoice_data.get(GSTR1_DataField.TAX_RATE.value, ""))),
-                        # invoice_data.get(GSTR1_DataFields.ECOMMERCE_GSTIN.value, ""),
+                        invoice_data.get(df.POS, ""),
+                        str(flt(invoice_data.get(df.TAX_RATE, ""))),
+                        # invoice_data.get(df.ECOMMERCE_GSTIN.value, ""),
                     )
                 ),
                 [],
@@ -730,10 +704,10 @@ class NilRated(GSTR1DataMapper):
 
     SUBCATEGORY = GSTR1_SubCategory.NIL_EXEMPT.value
     KEY_MAPPING = {
-        GovDataField.SUPPLY_TYPE.value: GSTR1_DataField.DOC_TYPE.value,
-        GovDataField.EXEMPTED_AMOUNT.value: GSTR1_DataField.EXEMPTED_AMOUNT.value,
-        GovDataField.NIL_RATED_AMOUNT.value: GSTR1_DataField.NIL_RATED_AMOUNT.value,
-        GovDataField.NON_GST_AMOUNT.value: GSTR1_DataField.NON_GST_AMOUNT.value,
+        GovDataField.SUPPLY_TYPE.value: df.DOC_TYPE,
+        GovDataField.EXEMPTED_AMOUNT.value: df.EXEMPTED_AMOUNT,
+        GovDataField.NIL_RATED_AMOUNT.value: df.NIL_RATED_AMOUNT,
+        GovDataField.NON_GST_AMOUNT.value: df.NON_GST_AMOUNT,
     }
 
     DOCUMENT_CATEGORIES = {
@@ -749,18 +723,14 @@ class NilRated(GSTR1DataMapper):
         self.value_formatters_for_internal = {
             GovDataField.SUPPLY_TYPE.value: self.document_category_mapping
         }
-        self.value_formatters_for_gov = {
-            GSTR1_DataField.DOC_TYPE.value: self.document_category_mapping
-        }
+        self.value_formatters_for_gov = {df.DOC_TYPE: self.document_category_mapping}
 
     def convert_to_internal_data_format(self, input_data):
         output = {}
 
         default_data = {
-            GSTR1_DataField.ERROR_CD.value: input_data.get(GovDataField.ERROR_CD.value),
-            GSTR1_DataField.ERROR_MSG.value: input_data.get(
-                GovDataField.ERROR_MSG.value
-            ),
+            df.ERROR_CD: input_data.get(GovDataField.ERROR_CD.value),
+            df.ERROR_MSG: input_data.get(GovDataField.ERROR_MSG.value),
         }
 
         for invoice in input_data[GovDataField.INVOICES.value]:
@@ -769,9 +739,7 @@ class NilRated(GSTR1DataMapper):
             if not invoice_data:
                 continue
 
-            output.setdefault(
-                invoice_data.get(GSTR1_DataField.DOC_TYPE.value), []
-            ).append(invoice_data)
+            output.setdefault(invoice_data.get(df.DOC_TYPE), []).append(invoice_data)
 
         return {self.SUBCATEGORY: output}
 
@@ -792,15 +760,15 @@ class NilRated(GSTR1DataMapper):
 
         # No need to discard if zero fields
         amounts = [
-            invoice_data.get(GSTR1_DataField.EXEMPTED_AMOUNT.value, 0),
-            invoice_data.get(GSTR1_DataField.NIL_RATED_AMOUNT.value, 0),
-            invoice_data.get(GSTR1_DataField.NON_GST_AMOUNT.value, 0),
+            invoice_data.get(df.EXEMPTED_AMOUNT, 0),
+            invoice_data.get(df.NIL_RATED_AMOUNT, 0),
+            invoice_data.get(df.NON_GST_AMOUNT, 0),
         ]
 
         if all(amount == 0 for amount in amounts):
             return
 
-        invoice_data[GSTR1_DataField.TAXABLE_VALUE.value] = sum(amounts)
+        invoice_data[df.TAXABLE_VALUE] = sum(amounts)
         return invoice_data
 
     # value formatters
@@ -861,15 +829,15 @@ class CDNR(GSTR1DataMapper):
         # GovDataFields.CUST_GSTIN.value: DataFields.CUST_GSTIN.value,
         GovDataField.FLAG.value: "flag",
         # GovDataFields.NOTE_DETAILS.value: "credit_debit_note_details",
-        GovDataField.NOTE_TYPE.value: GSTR1_DataField.TRANSACTION_TYPE.value,
-        GovDataField.NOTE_NUMBER.value: GSTR1_DataField.DOC_NUMBER.value,
-        GovDataField.NOTE_DATE.value: GSTR1_DataField.DOC_DATE.value,
-        GovDataField.POS.value: GSTR1_DataField.POS.value,
-        GovDataField.REVERSE_CHARGE.value: GSTR1_DataField.REVERSE_CHARGE.value,
-        GovDataField.INVOICE_TYPE.value: GSTR1_DataField.DOC_TYPE.value,
-        GovDataField.DOC_VALUE.value: GSTR1_DataField.DOC_VALUE.value,
-        GovDataField.DIFF_PERCENTAGE.value: GSTR1_DataField.DIFF_PERCENTAGE.value,
-        GovDataField.ITEMS.value: GSTR1_DataField.ITEMS.value,
+        GovDataField.NOTE_TYPE.value: df.TRANSACTION_TYPE,
+        GovDataField.NOTE_NUMBER.value: df.DOC_NUMBER,
+        GovDataField.NOTE_DATE.value: df.DOC_DATE,
+        GovDataField.POS.value: df.POS,
+        GovDataField.REVERSE_CHARGE.value: df.REVERSE_CHARGE,
+        GovDataField.INVOICE_TYPE.value: df.DOC_TYPE,
+        GovDataField.DOC_VALUE.value: df.DOC_VALUE,
+        GovDataField.DIFF_PERCENTAGE.value: df.DIFF_PERCENTAGE,
+        GovDataField.ITEMS.value: df.ITEMS,
         # GovDataFields.INDEX.value: ItemFields.INDEX.value,
         # GovDataFields.ITEM_DETAILS.value: "item_details",
         GovDataField.TAX_RATE.value: GSTR1_ItemField.TAX_RATE.value,
@@ -905,12 +873,12 @@ class CDNR(GSTR1DataMapper):
         }
 
         self.value_formatters_for_gov = {
-            GSTR1_DataField.ITEMS.value: self.format_item_for_gov,
-            GSTR1_DataField.TRANSACTION_TYPE.value: self.document_type_mapping,
-            GSTR1_DataField.POS.value: self.map_place_of_supply,
-            GSTR1_DataField.DOC_TYPE.value: self.document_category_mapping,
-            GSTR1_DataField.DOC_VALUE.value: lambda val, *args: abs(val),
-            GSTR1_DataField.DOC_DATE.value: self.format_date_for_gov,
+            df.ITEMS: self.format_item_for_gov,
+            df.TRANSACTION_TYPE: self.document_type_mapping,
+            df.POS: self.map_place_of_supply,
+            df.DOC_TYPE: self.document_category_mapping,
+            df.DOC_VALUE: lambda val, *args: abs(val),
+            df.DOC_DATE: self.format_date_for_gov,
         }
 
     def convert_to_internal_data_format(self, input_data):
@@ -923,22 +891,14 @@ class CDNR(GSTR1DataMapper):
                 document_data = self.format_data(
                     document,
                     {
-                        GSTR1_DataField.CUST_GSTIN.value: customer_gstin,
-                        GSTR1_DataField.CUST_NAME.value: self.guess_customer_name(
-                            customer_gstin
-                        ),
-                        GSTR1_DataField.ERROR_CD.value: customer_data.get(
-                            GovDataField.ERROR_CD.value
-                        ),
-                        GSTR1_DataField.ERROR_MSG.value: customer_data.get(
-                            GovDataField.ERROR_MSG.value
-                        ),
+                        df.CUST_GSTIN: customer_gstin,
+                        df.CUST_NAME: self.guess_customer_name(customer_gstin),
+                        df.ERROR_CD: customer_data.get(GovDataField.ERROR_CD.value),
+                        df.ERROR_MSG: customer_data.get(GovDataField.ERROR_MSG.value),
                     },
                 )
-                self.update_totals(
-                    document_data, document_data.get(GSTR1_DataField.ITEMS.value)
-                )
-                output[document_data[GSTR1_DataField.DOC_NUMBER.value]] = document_data
+                self.update_totals(document_data, document_data.get(df.ITEMS))
+                output[document_data[df.DOC_NUMBER]] = document_data
 
         return {self.SUBCATEGORY: output}
 
@@ -949,7 +909,7 @@ class CDNR(GSTR1DataMapper):
         self.DOCUMENT_TYPES = self.reverse_dict(self.DOCUMENT_TYPES)
 
         for document in input_data:
-            customer_gstin = document[GSTR1_DataField.CUST_GSTIN.value]
+            customer_gstin = document[df.CUST_GSTIN]
             customer = customer_data.setdefault(
                 customer_gstin,
                 {
@@ -1050,20 +1010,20 @@ class CDNUR(GSTR1DataMapper):
     }
     KEY_MAPPING = {
         GovDataField.FLAG.value: "flag",
-        GovDataField.TYPE.value: GSTR1_DataField.DOC_TYPE.value,
-        GovDataField.NOTE_TYPE.value: GSTR1_DataField.TRANSACTION_TYPE.value,
-        GovDataField.NOTE_NUMBER.value: GSTR1_DataField.DOC_NUMBER.value,
-        GovDataField.NOTE_DATE.value: GSTR1_DataField.DOC_DATE.value,
-        GovDataField.DOC_VALUE.value: GSTR1_DataField.DOC_VALUE.value,
-        GovDataField.POS.value: GSTR1_DataField.POS.value,
-        GovDataField.DIFF_PERCENTAGE.value: GSTR1_DataField.DIFF_PERCENTAGE.value,
-        GovDataField.ITEMS.value: GSTR1_DataField.ITEMS.value,
+        GovDataField.TYPE.value: df.DOC_TYPE,
+        GovDataField.NOTE_TYPE.value: df.TRANSACTION_TYPE,
+        GovDataField.NOTE_NUMBER.value: df.DOC_NUMBER,
+        GovDataField.NOTE_DATE.value: df.DOC_DATE,
+        GovDataField.DOC_VALUE.value: df.DOC_VALUE,
+        GovDataField.POS.value: df.POS,
+        GovDataField.DIFF_PERCENTAGE.value: df.DIFF_PERCENTAGE,
+        GovDataField.ITEMS.value: df.ITEMS,
         GovDataField.TAX_RATE.value: GSTR1_ItemField.TAX_RATE.value,
         GovDataField.TAXABLE_VALUE.value: GSTR1_ItemField.TAXABLE_VALUE.value,
         GovDataField.IGST.value: GSTR1_ItemField.IGST.value,
         GovDataField.CESS.value: GSTR1_ItemField.CESS.value,
-        GovDataField.ERROR_CD.value: GSTR1_DataField.ERROR_CD.value,
-        GovDataField.ERROR_MSG.value: GSTR1_DataField.ERROR_MSG.value,
+        GovDataField.ERROR_CD.value: df.ERROR_CD,
+        GovDataField.ERROR_MSG.value: df.ERROR_MSG,
     }
     DOCUMENT_TYPES = {
         "C": "Credit Note",
@@ -1082,11 +1042,11 @@ class CDNUR(GSTR1DataMapper):
         }
 
         self.value_formatters_for_gov = {
-            GSTR1_DataField.ITEMS.value: self.format_item_for_gov,
-            GSTR1_DataField.TRANSACTION_TYPE.value: self.document_type_mapping,
-            GSTR1_DataField.POS.value: self.map_place_of_supply,
-            GSTR1_DataField.DOC_VALUE.value: lambda x, *args: abs(x),
-            GSTR1_DataField.DOC_DATE.value: self.format_date_for_gov,
+            df.ITEMS: self.format_item_for_gov,
+            df.TRANSACTION_TYPE: self.document_type_mapping,
+            df.POS: self.map_place_of_supply,
+            df.DOC_VALUE: lambda x, *args: abs(x),
+            df.DOC_DATE: self.format_date_for_gov,
         }
 
     def convert_to_internal_data_format(self, input_data):
@@ -1094,10 +1054,8 @@ class CDNUR(GSTR1DataMapper):
 
         for invoice in input_data:
             invoice_data = self.format_data(invoice)
-            self.update_totals(
-                invoice_data, invoice_data.get(GSTR1_DataField.ITEMS.value)
-            )
-            output[invoice_data[GSTR1_DataField.DOC_NUMBER.value]] = invoice_data
+            self.update_totals(invoice_data, invoice_data.get(df.ITEMS))
+            output[invoice_data[df.DOC_NUMBER]] = invoice_data
 
         return {self.SUBCATEGORY: output}
 
@@ -1192,15 +1150,15 @@ class HSNSUM(GSTR1DataMapper):
     }
     KEY_MAPPING = {
         # GovDataFields.INDEX.value: ItemFields.INDEX.value,
-        GovDataField.HSN_CODE.value: GSTR1_DataField.HSN_CODE.value,
-        GovDataField.DESCRIPTION.value: GSTR1_DataField.DESCRIPTION.value,
-        GovDataField.UOM.value: GSTR1_DataField.UOM.value,
-        GovDataField.QUANTITY.value: GSTR1_DataField.QUANTITY.value,
-        GovDataField.TAXABLE_VALUE.value: GSTR1_DataField.TAXABLE_VALUE.value,
-        GovDataField.IGST.value: GSTR1_DataField.IGST.value,
-        GovDataField.CGST.value: GSTR1_DataField.CGST.value,
-        GovDataField.SGST.value: GSTR1_DataField.SGST.value,
-        GovDataField.CESS.value: GSTR1_DataField.CESS.value,
+        GovDataField.HSN_CODE.value: df.HSN_CODE,
+        GovDataField.DESCRIPTION.value: df.DESCRIPTION,
+        GovDataField.UOM.value: df.UOM,
+        GovDataField.QUANTITY.value: df.QUANTITY,
+        GovDataField.TAXABLE_VALUE.value: df.TAXABLE_VALUE,
+        GovDataField.IGST.value: df.IGST,
+        GovDataField.CGST.value: df.CGST,
+        GovDataField.SGST.value: df.SGST,
+        GovDataField.CESS.value: df.CESS,
         GovDataField.TAX_RATE.value: GSTR1_ItemField.TAX_RATE.value,
     }
 
@@ -1208,8 +1166,8 @@ class HSNSUM(GSTR1DataMapper):
         super().__init__()
         self.value_formatters_for_internal = {GovDataField.UOM.value: self.map_uom}
         self.value_formatters_for_gov = {
-            GSTR1_DataField.UOM.value: self.map_uom,
-            GSTR1_DataField.DESCRIPTION.value: lambda x, *args: x[:30],
+            df.UOM: self.map_uom,
+            df.DESCRIPTION: lambda x, *args: x[:30],
         }
 
     def convert_to_internal_data_format(self, input_data):
@@ -1221,8 +1179,8 @@ class HSNSUM(GSTR1DataMapper):
 
         for row in input_data:
             default_data = {
-                GSTR1_DataField.ERROR_CD.value: row.get(GovDataField.ERROR_CD.value),
-                GSTR1_DataField.ERROR_MSG.value: row.get(GovDataField.ERROR_MSG.value),
+                df.ERROR_CD: row.get(GovDataField.ERROR_CD.value),
+                df.ERROR_MSG: row.get(GovDataField.ERROR_MSG.value),
             }
 
             for section, invoices in row.items():
@@ -1249,7 +1207,7 @@ class HSNSUM(GSTR1DataMapper):
         index = defaultdict(int)
 
         for invoice in input_data:
-            doc_type = invoice[GSTR1_DataField.DOC_TYPE.value]
+            doc_type = invoice[df.DOC_TYPE]
             section = self.DOCUMENT_CATEGORIES.get(doc_type, doc_type)
             index[section] += 1
 
@@ -1275,7 +1233,7 @@ class HSNSUM(GSTR1DataMapper):
                 invoice,
                 {
                     **default_data,
-                    GSTR1_DataField.DOC_TYPE.value: document_type,
+                    df.DOC_TYPE: document_type,
                 },
             )
             for invoice in invoices
@@ -1287,13 +1245,13 @@ class HSNSUM(GSTR1DataMapper):
         if for_gov:
             return data
 
-        data[GSTR1_DataField.DOC_VALUE.value] = sum(
+        data[df.DOC_VALUE] = sum(
             (
-                data.get(GSTR1_DataField.TAXABLE_VALUE.value, 0),
-                data.get(GSTR1_DataField.IGST.value, 0),
-                data.get(GSTR1_DataField.CGST.value, 0),
-                data.get(GSTR1_DataField.SGST.value, 0),
-                data.get(GSTR1_DataField.CESS.value, 0),
+                data.get(df.TAXABLE_VALUE, 0),
+                data.get(df.IGST, 0),
+                data.get(df.CGST, 0),
+                data.get(df.SGST, 0),
+                data.get(df.CESS, 0),
             )
         )
 
@@ -1305,7 +1263,7 @@ class HSNSUM(GSTR1DataMapper):
         if "-" in uom:
             if (
                 data
-                and (hsn_code := data.get(GSTR1_DataField.HSN_CODE.value) or "")
+                and (hsn_code := data.get(df.HSN_CODE) or "")
                 and hsn_code.startswith("99")
             ):
                 return "NA"
@@ -1359,24 +1317,24 @@ class AT(GSTR1DataMapper):
     SUBCATEGORY = GSTR1_SubCategory.AT.value
     KEY_MAPPING = {
         GovDataField.FLAG.value: "flag",
-        GovDataField.POS.value: GSTR1_DataField.POS.value,
-        GovDataField.DIFF_PERCENTAGE.value: GSTR1_DataField.DIFF_PERCENTAGE.value,
-        GovDataField.ITEMS.value: GSTR1_DataField.ITEMS.value,
+        GovDataField.POS.value: df.POS,
+        GovDataField.DIFF_PERCENTAGE.value: df.DIFF_PERCENTAGE,
+        GovDataField.ITEMS.value: df.ITEMS,
         GovDataField.TAX_RATE.value: GSTR1_ItemField.TAX_RATE.value,
-        GovDataField.ADVANCE_AMOUNT.value: GSTR1_DataField.TAXABLE_VALUE.value,
-        GovDataField.IGST.value: GSTR1_DataField.IGST.value,
-        GovDataField.CGST.value: GSTR1_DataField.CGST.value,
-        GovDataField.SGST.value: GSTR1_DataField.SGST.value,
-        GovDataField.CESS.value: GSTR1_DataField.CESS.value,
-        GovDataField.ERROR_CD.value: GSTR1_DataField.ERROR_CD.value,
-        GovDataField.ERROR_MSG.value: GSTR1_DataField.ERROR_MSG.value,
+        GovDataField.ADVANCE_AMOUNT.value: df.TAXABLE_VALUE,
+        GovDataField.IGST.value: df.IGST,
+        GovDataField.CGST.value: df.CGST,
+        GovDataField.SGST.value: df.SGST,
+        GovDataField.CESS.value: df.CESS,
+        GovDataField.ERROR_CD.value: df.ERROR_CD,
+        GovDataField.ERROR_MSG.value: df.ERROR_MSG,
     }
     DEFAULT_ITEM_AMOUNTS = {
-        GSTR1_DataField.IGST.value: 0,
-        GSTR1_DataField.CESS.value: 0,
-        GSTR1_DataField.CGST.value: 0,
-        GSTR1_DataField.SGST.value: 0,
-        GSTR1_DataField.TAXABLE_VALUE.value: 0,
+        df.IGST: 0,
+        df.CESS: 0,
+        df.CGST: 0,
+        df.SGST: 0,
+        df.TAXABLE_VALUE: 0,
     }
     MULTIPLIER = 1
 
@@ -1389,8 +1347,8 @@ class AT(GSTR1DataMapper):
         }
 
         self.value_formatters_for_gov = {
-            # GSTR1_DataField.ITEMS.value: self.format_item_for_gov,
-            GSTR1_DataField.POS.value: self.map_place_of_supply,
+            # df.ITEMS: self.format_item_for_gov,
+            df.POS: self.map_place_of_supply,
         }
 
     def convert_to_internal_data_format(self, input_data):
@@ -1398,7 +1356,7 @@ class AT(GSTR1DataMapper):
 
         for invoice in input_data:
             invoice_data = self.format_data(invoice)
-            items = invoice_data.pop(GSTR1_DataField.ITEMS.value)
+            items = invoice_data.pop(df.ITEMS)
 
             for item in items:
                 if self.MULTIPLIER != 1:
@@ -1415,8 +1373,8 @@ class AT(GSTR1DataMapper):
                 output[
                     " - ".join(
                         (
-                            invoice_data.get(GSTR1_DataField.POS.value, ""),
-                            str(flt(item_data.get(GSTR1_DataField.TAX_RATE.value, ""))),
+                            invoice_data.get(df.POS, ""),
+                            str(flt(item_data.get(df.TAX_RATE, ""))),
                         )
                     )
                 ] = [item_data]
@@ -1431,9 +1389,7 @@ class AT(GSTR1DataMapper):
             formatted_data = self.format_data(invoice, for_gov=True)
             rate_wise_taxes = self.get_item_details(formatted_data)
 
-            pos_data = pos_wise_data.setdefault(
-                invoice[GSTR1_DataField.POS.value], formatted_data
-            )
+            pos_data = pos_wise_data.setdefault(invoice[df.POS], formatted_data)
 
             pos_data.setdefault(GovDataField.ITEMS.value, []).extend(
                 rate_wise_taxes[GovDataField.ITEMS.value]
@@ -1541,11 +1497,11 @@ class DOC_ISSUE(GSTR1DataMapper):
 
     KEY_MAPPING = {
         # GovDataFields.INDEX.value: ItemFields.INDEX.value,
-        GovDataField.FROM_SR.value: GSTR1_DataField.FROM_SR.value,
-        GovDataField.TO_SR.value: GSTR1_DataField.TO_SR.value,
-        GovDataField.TOTAL_COUNT.value: GSTR1_DataField.TOTAL_COUNT.value,
-        GovDataField.CANCELLED_COUNT.value: GSTR1_DataField.CANCELLED_COUNT.value,
-        GovDataField.NET_ISSUE.value: GSTR1_DataField.NET_ISSUE.value,
+        GovDataField.FROM_SR.value: df.FROM_SR,
+        GovDataField.TO_SR.value: df.TO_SR,
+        GovDataField.TOTAL_COUNT.value: df.TOTAL_COUNT,
+        GovDataField.CANCELLED_COUNT.value: df.CANCELLED_COUNT,
+        GovDataField.NET_ISSUE.value: df.NET_ISSUE,
     }
     DOCUMENT_NATURE = {
         1: "Invoices for outward supply",
@@ -1576,9 +1532,7 @@ class DOC_ISSUE(GSTR1DataMapper):
                 {
                     " - ".join(
                         (document_nature, doc.get(GovDataField.FROM_SR.value))
-                    ): self.format_data(
-                        doc, {GSTR1_DataField.DOC_TYPE.value: document_nature}
-                    )
+                    ): self.format_data(doc, {df.DOC_TYPE: document_nature})
                     for doc in document[GovDataField.DOC_ISSUE_LIST.value]
                 }
             )
@@ -1592,14 +1546,10 @@ class DOC_ISSUE(GSTR1DataMapper):
         doc_nature_wise_data = {}
 
         for invoice in input_data:
-            if invoice[GSTR1_DataField.DOC_TYPE.value].startswith(
-                "Excluded from Report"
-            ):
+            if invoice[df.DOC_TYPE].startswith("Excluded from Report"):
                 continue
 
-            doc_nature_wise_data.setdefault(
-                invoice[GSTR1_DataField.DOC_TYPE.value], []
-            ).append(invoice)
+            doc_nature_wise_data.setdefault(invoice[df.DOC_TYPE], []).append(invoice)
 
         input_data = doc_nature_wise_data
 
@@ -1629,12 +1579,8 @@ class DOC_ISSUE(GSTR1DataMapper):
             return super().format_data(data, additional_data)
 
         # compute additional data
-        data[GSTR1_DataField.CANCELLED_COUNT.value] += data.get(
-            GSTR1_DataField.DRAFT_COUNT.value, 0
-        )
-        data["net_issue"] = data[GSTR1_DataField.TOTAL_COUNT.value] - data.get(
-            GSTR1_DataField.CANCELLED_COUNT.value, 0
-        )
+        data[df.CANCELLED_COUNT] += data.get(df.DRAFT_COUNT, 0)
+        data["net_issue"] = data[df.TOTAL_COUNT] - data.get(df.CANCELLED_COUNT, 0)
 
         return super().format_data(data, additional_data, for_gov)
 
@@ -1677,8 +1623,8 @@ class SUPECOM(GSTR1DataMapper):
     """
 
     KEY_MAPPING = {
-        GovDataField.ECOMMERCE_GSTIN.value: GSTR1_DataField.ECOMMERCE_GSTIN.value,
-        GovDataField.NET_TAXABLE_VALUE.value: GSTR1_DataField.TAXABLE_VALUE.value,
+        GovDataField.ECOMMERCE_GSTIN.value: df.ECOMMERCE_GSTIN,
+        GovDataField.NET_TAXABLE_VALUE.value: df.TAXABLE_VALUE,
         "igst": GSTR1_ItemField.IGST.value,
         "cgst": GSTR1_ItemField.CGST.value,
         "sgst": GSTR1_ItemField.SGST.value,
@@ -1700,7 +1646,7 @@ class SUPECOM(GSTR1DataMapper):
             document_type = self.DOCUMENT_CATEGORIES.get(section, section)
             output[document_type] = {
                 invoice.get(GovDataField.ECOMMERCE_GSTIN.value, ""): self.format_data(
-                    invoice, {GSTR1_DataField.DOC_TYPE.value: document_type}
+                    invoice, {df.DOC_TYPE: document_type}
                 )
                 for invoice in invoices
             }
@@ -1712,7 +1658,7 @@ class SUPECOM(GSTR1DataMapper):
         self.DOCUMENT_CATEGORIES = self.reverse_dict(self.DOCUMENT_CATEGORIES)
 
         for invoice in input_data:
-            section = invoice[GSTR1_DataField.DOC_TYPE.value]
+            section = invoice[df.DOC_TYPE]
             output.setdefault(
                 self.DOCUMENT_CATEGORIES.get(section, section), []
             ).append(self.format_data(invoice, for_gov=True))
@@ -1730,26 +1676,26 @@ class RETSUM(GSTR1DataMapper):
     """
 
     KEY_MAPPING = {
-        "sec_nm": GSTR1_DataField.DESCRIPTION.value,
-        "typ": GSTR1_DataField.DESCRIPTION.value,
+        "sec_nm": df.DESCRIPTION,
+        "typ": df.DESCRIPTION,
         "ttl_rec": "no_of_records",
         "ttl_val": "total_document_value",
-        "ttl_igst": GSTR1_DataField.IGST.value,
-        "ttl_cgst": GSTR1_DataField.CGST.value,
-        "ttl_sgst": GSTR1_DataField.SGST.value,
-        "ttl_cess": GSTR1_DataField.CESS.value,
-        "ttl_tax": GSTR1_DataField.TAXABLE_VALUE.value,
+        "ttl_igst": df.IGST,
+        "ttl_cgst": df.CGST,
+        "ttl_sgst": df.SGST,
+        "ttl_cess": df.CESS,
+        "ttl_tax": df.TAXABLE_VALUE,
         "act_val": "actual_document_value",
         "act_igst": "actual_igst",
         "act_sgst": "actual_sgst",
         "act_cgst": "actual_cgst",
         "act_cess": "actual_cess",
         "act_tax": "actual_taxable_value",
-        "ttl_expt_amt": f"total_{GSTR1_DataField.EXEMPTED_AMOUNT.value}",
-        "ttl_ngsup_amt": f"total_{GSTR1_DataField.NON_GST_AMOUNT.value}",
-        "ttl_nilsup_amt": f"total_{GSTR1_DataField.NIL_RATED_AMOUNT.value}",
-        "ttl_doc_issued": GSTR1_DataField.TOTAL_COUNT.value,
-        "ttl_doc_cancelled": GSTR1_DataField.CANCELLED_COUNT.value,
+        "ttl_expt_amt": f"total_{df.EXEMPTED_AMOUNT}",
+        "ttl_ngsup_amt": f"total_{df.NON_GST_AMOUNT}",
+        "ttl_nilsup_amt": f"total_{df.NIL_RATED_AMOUNT}",
+        "ttl_doc_issued": df.TOTAL_COUNT,
+        "ttl_doc_cancelled": df.CANCELLED_COUNT,
     }
 
     SECTION_NAMES = {
@@ -1847,9 +1793,7 @@ class RETSUM(GSTR1DataMapper):
 
             for subsection_data in sub_sections:
                 formatted_data = self.format_subsection_data(section, subsection_data)
-                output[formatted_data[GSTR1_DataField.DESCRIPTION.value]] = (
-                    formatted_data
-                )
+                output[formatted_data[df.DESCRIPTION]] = formatted_data
 
         return {"summary": output}
 
@@ -1865,8 +1809,8 @@ class RETSUM(GSTR1DataMapper):
         subsection = subsection_data.get("typ") or subsection_data.get("sec_nm")
         formatted_data = self.format_data(subsection_data)
 
-        formatted_data[GSTR1_DataField.DESCRIPTION.value] = (
-            self.SECTIONS_WITH_SUBSECTIONS[section].get(subsection, subsection)
+        formatted_data[df.DESCRIPTION] = self.SECTIONS_WITH_SUBSECTIONS[section].get(
+            subsection, subsection
         )
         return formatted_data
 
@@ -2090,6 +2034,7 @@ class BooksDataMapper:
                 }
             }
             prepared_data: dict to be updated with the processed data
+
         What does this function do?
         1. It makes a dict/object of an invoice with the invoice specific keys and add different tax_rate items in items
         2. then it add it to the prepared_data
@@ -2106,24 +2051,20 @@ class BooksDataMapper:
             invoice_item = next(chain(*gst_rate_wise_item.values()))
             invoice_sub_category_dict[invoice_no] = {
                 # TODO: make a method for creating the dict
-                GSTR1_DataField.TRANSACTION_TYPE.value: self.get_transaction_type(
-                    invoice_item
-                ),
-                GSTR1_DataField.CUST_GSTIN.value: invoice_item.billing_address_gstin,
-                GSTR1_DataField.CUST_NAME.value: invoice_item.customer_name,
-                GSTR1_DataField.DOC_DATE.value: invoice_item.posting_date,
-                GSTR1_DataField.DOC_NUMBER.value: invoice_item.invoice_no,
-                GSTR1_DataField.DOC_VALUE.value: invoice_item.invoice_total,
-                GSTR1_DataField.POS.value: invoice_item.place_of_supply,
-                GSTR1_DataField.REVERSE_CHARGE.value: (
-                    "Y" if invoice_item.is_reverse_charge else "N"
-                ),
-                GSTR1_DataField.DOC_TYPE.value: invoice_item.invoice_type,
+                df.TRANSACTION_TYPE: self.get_transaction_type(invoice_item),
+                df.CUST_GSTIN: invoice_item.billing_address_gstin,
+                df.CUST_NAME: invoice_item.customer_name,
+                df.DOC_DATE: invoice_item.posting_date,
+                df.DOC_NUMBER: invoice_item.invoice_no,
+                df.DOC_VALUE: invoice_item.invoice_total,
+                df.POS: invoice_item.place_of_supply,
+                df.REVERSE_CHARGE: ("Y" if invoice_item.is_reverse_charge else "N"),
+                df.DOC_TYPE: invoice_item.invoice_type,
                 **self.get_invoice_values(),
-                GSTR1_DataField.DIFF_PERCENTAGE.value: 0,
-                GSTR1_DataField.SHIPPING_PORT_CODE.value: invoice_item.shipping_port_code,
-                GSTR1_DataField.SHIPPING_BILL_NUMBER.value: invoice_item.shipping_bill_number,
-                GSTR1_DataField.SHIPPING_BILL_DATE.value: invoice_item.shipping_bill_date,
+                df.DIFF_PERCENTAGE: 0,
+                df.SHIPPING_PORT_CODE: invoice_item.shipping_port_code,
+                df.SHIPPING_BILL_NUMBER: invoice_item.shipping_bill_number,
+                df.SHIPPING_BILL_DATE: invoice_item.shipping_bill_date,
                 "items": [],
             }
             mapped_dict = invoice_sub_category_dict[invoice_no]
@@ -2160,42 +2101,32 @@ class BooksDataMapper:
                 mapped_dict = invoices_by_type.setdefault(
                     invoice_no,
                     {
-                        GSTR1_DataField.TRANSACTION_TYPE.value: self.get_transaction_type(
-                            item
-                        ),
-                        GSTR1_DataField.CUST_GSTIN.value: item.billing_address_gstin,
-                        GSTR1_DataField.CUST_NAME.value: item.customer_name,
-                        GSTR1_DataField.DOC_NUMBER.value: item.invoice_no,
-                        GSTR1_DataField.DOC_DATE.value: item.posting_date,
-                        GSTR1_DataField.DOC_VALUE.value: item.invoice_total,
-                        GSTR1_DataField.POS.value: item.place_of_supply,
-                        GSTR1_DataField.REVERSE_CHARGE.value: (
-                            "Y" if item.is_reverse_charge else "N"
-                        ),
-                        GSTR1_DataField.DOC_TYPE.value: item.invoice_type,
-                        GSTR1_DataField.TAXABLE_VALUE.value: 0,
-                        GSTR1_DataField.NIL_RATED_AMOUNT.value: 0,
-                        GSTR1_DataField.EXEMPTED_AMOUNT.value: 0,
-                        GSTR1_DataField.NON_GST_AMOUNT.value: 0,
+                        df.TRANSACTION_TYPE: self.get_transaction_type(item),
+                        df.CUST_GSTIN: item.billing_address_gstin,
+                        df.CUST_NAME: item.customer_name,
+                        df.DOC_NUMBER: item.invoice_no,
+                        df.DOC_DATE: item.posting_date,
+                        df.DOC_VALUE: item.invoice_total,
+                        df.POS: item.place_of_supply,
+                        df.REVERSE_CHARGE: ("Y" if item.is_reverse_charge else "N"),
+                        df.DOC_TYPE: item.invoice_type,
+                        df.TAXABLE_VALUE: 0,
+                        df.NIL_RATED_AMOUNT: 0,
+                        df.EXEMPTED_AMOUNT: 0,
+                        df.NON_GST_AMOUNT: 0,
                     },
                 )
 
-                mapped_dict[GSTR1_DataField.TAXABLE_VALUE.value] += item.taxable_value
+                mapped_dict[df.TAXABLE_VALUE] += item.taxable_value
 
                 if item.gst_treatment == "Nil-Rated":
-                    mapped_dict[
-                        GSTR1_DataField.NIL_RATED_AMOUNT.value
-                    ] += item.taxable_value
+                    mapped_dict[df.NIL_RATED_AMOUNT] += item.taxable_value
 
                 elif item.gst_treatment == "Exempted":
-                    mapped_dict[
-                        GSTR1_DataField.EXEMPTED_AMOUNT.value
-                    ] += item.taxable_value
+                    mapped_dict[df.EXEMPTED_AMOUNT] += item.taxable_value
 
                 elif item.gst_treatment == "Non-GST":
-                    mapped_dict[
-                        GSTR1_DataField.NON_GST_AMOUNT.value
-                    ] += item.taxable_value
+                    mapped_dict[df.NON_GST_AMOUNT] += item.taxable_value
 
                 # self.calculate_hsn_error(item)
 
@@ -2220,18 +2151,16 @@ class BooksDataMapper:
                 mapped_dict = b2c_others.setdefault(key, {}).setdefault(
                     invoice_no,
                     {
-                        GSTR1_DataField.DOC_DATE.value: invoice_item.posting_date,
-                        GSTR1_DataField.DOC_NUMBER.value: invoice_item.invoice_no,
-                        GSTR1_DataField.DOC_VALUE.value: invoice_item.invoice_total,
-                        GSTR1_DataField.CUST_NAME.value: invoice_item.customer_name,
+                        df.DOC_DATE: invoice_item.posting_date,
+                        df.DOC_NUMBER: invoice_item.invoice_no,
+                        df.DOC_VALUE: invoice_item.invoice_total,
+                        df.CUST_NAME: invoice_item.customer_name,
                         # currently other value is not supported in GSTR-1
-                        GSTR1_DataField.DOC_TYPE.value: "OE",
-                        GSTR1_DataField.TRANSACTION_TYPE.value: self.get_transaction_type(
-                            invoice_item
-                        ),
-                        GSTR1_DataField.POS.value: invoice_item.place_of_supply,
-                        GSTR1_DataField.TAX_RATE.value: invoice_item.gst_rate,
-                        GSTR1_DataField.ECOMMERCE_GSTIN.value: invoice_item.ecommerce_gstin,
+                        df.DOC_TYPE: "OE",
+                        df.TRANSACTION_TYPE: self.get_transaction_type(invoice_item),
+                        df.POS: invoice_item.place_of_supply,
+                        df.TAX_RATE: invoice_item.gst_rate,
+                        df.ECOMMERCE_GSTIN: invoice_item.ecommerce_gstin,
                         **self.get_invoice_values(),
                     },
                 )
@@ -2259,13 +2188,13 @@ class BooksDataMapper:
                 invoice_item = items[0]
 
                 prepared_data[hsn_type][key] = {
-                    GSTR1_DataField.HSN_CODE.value: invoice_item.gst_hsn_code,
-                    GSTR1_DataField.DESCRIPTION.value: frappe.db.get_value(
+                    df.HSN_CODE: invoice_item.gst_hsn_code,
+                    df.DESCRIPTION: frappe.db.get_value(
                         "GST HSN Code", invoice_item.gst_hsn_code, "description"
                     ),
-                    GSTR1_DataField.UOM.value: invoice_item.uom,
-                    GSTR1_DataField.QUANTITY.value: 0,
-                    GSTR1_DataField.TAX_RATE.value: invoice_item.gst_rate,
+                    df.UOM: invoice_item.uom,
+                    df.QUANTITY: 0,
+                    df.TAX_RATE: invoice_item.gst_rate,
                     **self.get_invoice_values(),
                 }
 
@@ -2273,13 +2202,13 @@ class BooksDataMapper:
 
                 self.update_totals(mapped_dict, items, for_qty=True)
 
-                mapped_dict[GSTR1_DataField.DOC_VALUE.value] = sum(
+                mapped_dict[df.DOC_VALUE] = sum(
                     (
-                        mapped_dict.get(GSTR1_DataField.TAXABLE_VALUE.value, 0),
-                        mapped_dict.get(GSTR1_DataField.IGST.value, 0),
-                        mapped_dict.get(GSTR1_DataField.CGST.value, 0),
-                        mapped_dict.get(GSTR1_DataField.SGST.value, 0),
-                        mapped_dict.get(GSTR1_DataField.CESS.value, 0),
+                        mapped_dict.get(df.TAXABLE_VALUE, 0),
+                        mapped_dict.get(df.IGST, 0),
+                        mapped_dict.get(df.CGST, 0),
+                        mapped_dict.get(df.SGST, 0),
+                        mapped_dict.get(df.CESS, 0),
                     )
                 )
 
@@ -2291,13 +2220,13 @@ class BooksDataMapper:
         prepared_data.setdefault(
             key,
             {
-                GSTR1_DataField.DOC_TYPE.value: row["nature_of_document"],
-                GSTR1_DataField.FROM_SR.value: row["from_serial_no"],
-                GSTR1_DataField.TO_SR.value: row["to_serial_no"],
-                GSTR1_DataField.TOTAL_COUNT.value: row["total_issued"],
-                GSTR1_DataField.DRAFT_COUNT.value: row["total_draft"],
-                GSTR1_DataField.CANCELLED_COUNT.value: row["cancelled"],
-                GSTR1_DataField.NET_ISSUE.value: row["total_submitted"],
+                df.DOC_TYPE: row["nature_of_document"],
+                df.FROM_SR: row["from_serial_no"],
+                df.TO_SR: row["to_serial_no"],
+                df.TOTAL_COUNT: row["total_issued"],
+                df.DRAFT_COUNT: row["total_draft"],
+                df.CANCELLED_COUNT: row["cancelled"],
+                df.NET_ISSUE: row["total_submitted"],
             },
         )
 
@@ -2310,28 +2239,26 @@ class BooksDataMapper:
 
         mapped_dict = prepared_data.setdefault(key, [])
 
-        advances[GSTR1_DataField.CUST_NAME.value] = row["party"]
-        advances[GSTR1_DataField.DOC_NUMBER.value] = row["name"]
-        advances[GSTR1_DataField.DOC_DATE.value] = row["posting_date"]
-        advances[GSTR1_DataField.POS.value] = row["place_of_supply"]
-        advances[GSTR1_DataField.TAXABLE_VALUE.value] = (
-            row["taxable_value"] * multiplier
-        )
-        advances[GSTR1_DataField.TAX_RATE.value] = tax_rate
-        advances[GSTR1_DataField.CESS.value] = row["cess_amount"] * multiplier
+        advances[df.CUST_NAME] = row["party"]
+        advances[df.DOC_NUMBER] = row["name"]
+        advances[df.DOC_DATE] = row["posting_date"]
+        advances[df.POS] = row["place_of_supply"]
+        advances[df.TAXABLE_VALUE] = row["taxable_value"] * multiplier
+        advances[df.TAX_RATE] = tax_rate
+        advances[df.CESS] = row["cess_amount"] * multiplier
 
         if row.get("reference_name"):
             advances["against_voucher"] = row["reference_name"]
 
         if row["place_of_supply"][0:2] == row["company_gstin"][0:2]:
-            advances[GSTR1_DataField.CGST.value] = row["tax_amount"] / 2 * multiplier
-            advances[GSTR1_DataField.SGST.value] = row["tax_amount"] / 2 * multiplier
-            advances[GSTR1_DataField.IGST.value] = 0
+            advances[df.CGST] = row["tax_amount"] / 2 * multiplier
+            advances[df.SGST] = row["tax_amount"] / 2 * multiplier
+            advances[df.IGST] = 0
 
         else:
-            advances[GSTR1_DataField.IGST.value] = row["tax_amount"] * multiplier
-            advances[GSTR1_DataField.CGST.value] = 0
-            advances[GSTR1_DataField.SGST.value] = 0
+            advances[df.IGST] = row["tax_amount"] * multiplier
+            advances[df.CGST] = 0
+            advances[df.SGST] = 0
 
         mapped_dict.append(advances)
 
@@ -2340,15 +2267,15 @@ class BooksDataMapper:
     def update_totals(self, mapped_dict, items=None, for_qty=False):
         items = items or mapped_dict.get("items", [])
         data_invoice_amount_map = {
-            GSTR1_DataField.TAXABLE_VALUE.value: GSTR1_ItemField.TAXABLE_VALUE.value,
-            GSTR1_DataField.IGST.value: GSTR1_ItemField.IGST.value,
-            GSTR1_DataField.CGST.value: GSTR1_ItemField.CGST.value,
-            GSTR1_DataField.SGST.value: GSTR1_ItemField.SGST.value,
-            GSTR1_DataField.CESS.value: GSTR1_ItemField.CESS.value,
+            df.TAXABLE_VALUE: GSTR1_ItemField.TAXABLE_VALUE.value,
+            df.IGST: GSTR1_ItemField.IGST.value,
+            df.CGST: GSTR1_ItemField.CGST.value,
+            df.SGST: GSTR1_ItemField.SGST.value,
+            df.CESS: GSTR1_ItemField.CESS.value,
         }
 
         if for_qty:
-            data_invoice_amount_map[GSTR1_DataField.QUANTITY.value] = "qty"
+            data_invoice_amount_map[df.QUANTITY] = "qty"
 
         for key, field in data_invoice_amount_map.items():
             for item in items:
@@ -2365,11 +2292,11 @@ class BooksDataMapper:
             invoice = {}
 
         return {
-            GSTR1_DataField.TAXABLE_VALUE.value: invoice.get("taxable_value", 0),
-            GSTR1_DataField.IGST.value: invoice.get("igst_amount", 0),
-            GSTR1_DataField.CGST.value: invoice.get("cgst_amount", 0),
-            GSTR1_DataField.SGST.value: invoice.get("sgst_amount", 0),
-            GSTR1_DataField.CESS.value: invoice.get("total_cess_amount", 0),
+            df.TAXABLE_VALUE: invoice.get("taxable_value", 0),
+            df.IGST: invoice.get("igst_amount", 0),
+            df.CGST: invoice.get("cgst_amount", 0),
+            df.SGST: invoice.get("sgst_amount", 0),
+            df.CESS: invoice.get("total_cess_amount", 0),
         }
 
     TAX_FIELDS_MAP = {
