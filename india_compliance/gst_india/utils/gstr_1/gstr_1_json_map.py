@@ -2157,8 +2157,12 @@ class BooksDataMapper:
 
                 invoice_list.append(invoice)
 
-                # Replace update totals
-                self.update_totals(invoice, items)
+                for item in items:
+                    tax_value = self.get_invoice_values(item)
+
+                    for key, val in tax_value.items():
+                        invoice[key] += val
+
                 # self.calculate_hsn_error(invoice)
 
         # if not b2c_others:
@@ -2186,7 +2190,12 @@ class BooksDataMapper:
 
                 mapped_dict = prepared_data[hsn_type][key]
 
-                self.update_totals(mapped_dict, items, for_qty=True)
+                for item in items:
+                    tax_value = self.get_invoice_values(item)
+                    tax_value[df.QUANTITY] = item.get("qty", 0)
+
+                    for key, val in tax_value.items():
+                        mapped_dict[key] += val
 
                 mapped_dict[df.DOC_VALUE] = sum(
                     (
