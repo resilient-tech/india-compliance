@@ -2131,44 +2131,41 @@ class BooksDataMapper:
             # self.calculate_hsn_error(item)
 
     def process_data_for_b2cs(self, grouped_data, prepared_data):
-        data = {
-            "B2C (Others)": {},
-        }
-        b2c_others = data["B2C (Others)"]
+        b2c_others = prepared_data.setdefault("B2C (Others)", {})
 
         for (_, invoice_no), gst_rate_wise_item in grouped_data.items():
             for gst_rate, items in gst_rate_wise_item.items():
                 invoice_item = items[0]
                 key = f"{invoice_item.place_of_supply} - {flt(gst_rate)}"
-                mapped_dict = b2c_others.setdefault(key, {}).setdefault(
-                    invoice_no,
-                    {
-                        df.DOC_DATE: invoice_item.posting_date,
-                        df.DOC_NUMBER: invoice_item.invoice_no,
-                        df.DOC_VALUE: invoice_item.invoice_total,
-                        df.CUST_NAME: invoice_item.customer_name,
-                        # currently other value is not supported in GSTR-1
-                        df.DOC_TYPE: "OE",
-                        df.TRANSACTION_TYPE: self.get_transaction_type(invoice_item),
-                        df.POS: invoice_item.place_of_supply,
-                        df.TAX_RATE: invoice_item.gst_rate,
-                        df.ECOMMERCE_GSTIN: invoice_item.ecommerce_gstin,
-                        **self.get_invoice_values(),
-                    },
-                )
+
+                if key not in b2c_others:
+                    b2c_others[key] = []
+
+                invoice_list = b2c_others[key]
+
+                invoice = {
+                    df.DOC_DATE: invoice_item.posting_date,
+                    df.DOC_NUMBER: invoice_item.invoice_no,
+                    df.DOC_VALUE: invoice_item.invoice_total,
+                    df.CUST_NAME: invoice_item.customer_name,
+                    # currently other value is not supported in GSTR-1
+                    df.DOC_TYPE: "OE",
+                    df.TRANSACTION_TYPE: self.get_transaction_type(invoice_item),
+                    df.POS: invoice_item.place_of_supply,
+                    df.TAX_RATE: invoice_item.gst_rate,
+                    df.ECOMMERCE_GSTIN: invoice_item.ecommerce_gstin,
+                    **self.get_invoice_values(),
+                }
+
+                invoice_list.append(invoice)
 
                 # for item in items:
                 #     self.calculate_hsn_error(item)
 
-                self.update_totals(mapped_dict, items)
+                self.update_totals(invoice, items)
 
-        # convert {"B2C (Others)": { "place_of_supply - gst_rate" : {invoice_no: invoice}}} to {"B2C (Others)": { "place_of_supply - gst_rate" : [invoice]}}
-        for invoice_category, place_of_supply_and_gst_rate in data.items():
-            for key in place_of_supply_and_gst_rate:
-                invoices_dict = data[invoice_category][key]
-                data[invoice_category][key] = list(invoices_dict.values())
-
-        prepared_data.update(data)
+        if not b2c_others:
+            del prepared_data["B2C (Others)"]
 
     def process_data_for_hsn_summary(
         self, grouped_data, prepared_data, bifurcate_hsn=False
