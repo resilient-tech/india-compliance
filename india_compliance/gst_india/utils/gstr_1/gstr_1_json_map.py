@@ -2133,7 +2133,7 @@ class BooksDataMapper:
     def process_data_for_b2cs(self, grouped_data, prepared_data):
         b2c_others = prepared_data.setdefault("B2C (Others)", {})
 
-        for (_, invoice_no), gst_rate_wise_item in grouped_data.items():
+        for (_, _), gst_rate_wise_item in grouped_data.items():
             for gst_rate, items in gst_rate_wise_item.items():
                 invoice_item = items[0]
                 key = f"{invoice_item.place_of_supply} - {flt(gst_rate)}"
@@ -2363,7 +2363,9 @@ class GSTR1BooksData(BooksDataMapper):
         data_for_hsn = defaultdict(lambda: defaultdict(list))
 
         for item in data:
-            hsn_key = f"{item.gst_hsn_code} - {item.uom} - {flt(item.gst_rate)}"
+            gst_rate = flt(item.get("gst_rate"))
+            hsn_key = f"{item.gst_hsn_code} - {item.uom} - {gst_rate}"
+
             item["hsn_key"] = hsn_key
 
             if bifurcate_hsn:
@@ -2381,7 +2383,6 @@ class GSTR1BooksData(BooksDataMapper):
             if only_for_hsn or item.get("taxable_value") == 0:
                 continue
 
-            gst_rate = item.get("gst_rate")
             key = (
                 item.get("invoice_sub_category"),
                 item.get("invoice_no"),
