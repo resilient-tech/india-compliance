@@ -2025,6 +2025,22 @@ class BooksDataMapper:
             if invoice_sub_category in sub_category:
                 return category
 
+    DATA_FIELD_TO_ITEM_FIELD_MAPPING = {
+        df.TAXABLE_VALUE: GSTR1_ItemField.TAXABLE_VALUE.value,
+        df.IGST: GSTR1_ItemField.IGST.value,
+        df.CGST: GSTR1_ItemField.CGST.value,
+        df.SGST: GSTR1_ItemField.SGST.value,
+        df.CESS: GSTR1_ItemField.CESS.value,
+    }
+
+    ITEM_FIELD_TO_INVOICE_FIELD_MAPPING = {
+        GSTR1_ItemField.TAXABLE_VALUE.value: "taxable_value",
+        GSTR1_ItemField.IGST.value: "igst_amount",
+        GSTR1_ItemField.CGST.value: "cgst_amount",
+        GSTR1_ItemField.SGST.value: "sgst_amount",
+        GSTR1_ItemField.CESS.value: "total_cess_amount",
+    }
+
     def process_data_for_invoice_no_key(self, grouped_data, prepared_data):
         """
         Input:
@@ -2073,7 +2089,7 @@ class BooksDataMapper:
                 tax_item = defaultdict(int)
 
                 for item in items:
-                    for key, field in self.TAX_FIELDS_MAP.items():
+                    for key, field in self.ITEM_FIELD_TO_INVOICE_FIELD_MAPPING.items():
                         tax_item[key] += item.get(field, 0)
 
                 tax_item[GSTR1_ItemField.TAX_RATE.value] = gst_rate
@@ -2081,7 +2097,9 @@ class BooksDataMapper:
 
                 # self.calculate_hsn_error(item)
 
-            self.update_totals(invoice_dict)
+            for key, field in self.DATA_FIELD_TO_ITEM_FIELD_MAPPING.items():
+                for item in invoice_dict["items"]:
+                    invoice_dict[key] += item.get(field)
 
     def process_data_for_nil_exempt(self, grouped_data, prepared_data):
         sub_category = GSTR1_SubCategory.NIL_EXEMPT.value
@@ -2294,21 +2312,13 @@ class BooksDataMapper:
             df.CESS: invoice.get("total_cess_amount", 0),
         }
 
-    TAX_FIELDS_MAP = {
-        GSTR1_ItemField.TAXABLE_VALUE.value: "taxable_value",
-        GSTR1_ItemField.IGST.value: "igst_amount",
-        GSTR1_ItemField.CGST.value: "cgst_amount",
-        GSTR1_ItemField.SGST.value: "sgst_amount",
-        GSTR1_ItemField.CESS.value: "total_cess_amount",
-    }
-
     def calculate_hsn_error(self, item):
         """
         Calculate the HSN error for a given item.
         This method is used to calculate the difference between the actual value and the rounded value.
         """
 
-        for key, field in self.TAX_FIELDS_MAP.items():
+        for key, field in self.ITEM_FIELD_TO_INVOICE_FIELD_MAPPING.items():
             value = getattr(item, field, 0)
             rounded_value = flt(value, 2)
             self.hsn_error[item.hsn_key][key] += value - rounded_value
