@@ -2084,59 +2084,51 @@ class BooksDataMapper:
             self.update_totals(invoice_dict)
 
     def process_data_for_nil_exempt(self, grouped_data, prepared_data):
-        data = {}
+        for (sub_category, _), gst_rate_wise_item in grouped_data.items():
+            invoice_category = GSTR1_Category.NIL_EXEMPT.value
+            invoice_item = next(chain(*gst_rate_wise_item.values()), None)
 
-        for (
-            invoice_sub_category,
-            invoice_no,
-        ), gst_rate_wise_item in grouped_data.items():
-            invoice_category = self.get_category_from_subcategory(invoice_sub_category)
-            invoice_category_dict = data.setdefault(invoice_category.value, {})
+            if invoice_category not in prepared_data:
+                prepared_data[invoice_category] = {}
+
+            invoice_category_dict = prepared_data[invoice_category]
+
+            if invoice_item.invoice_type not in invoice_category_dict:
+                invoice_category_dict[invoice_item.invoice_type] = []
+
+            invoices_by_type = invoice_category_dict[invoice_item.invoice_type]
+
+            invoice = {
+                df.TRANSACTION_TYPE: self.get_transaction_type(invoice_item),
+                df.CUST_GSTIN: invoice_item.billing_address_gstin,
+                df.CUST_NAME: invoice_item.customer_name,
+                df.DOC_NUMBER: invoice_item.invoice_no,
+                df.DOC_DATE: invoice_item.posting_date,
+                df.DOC_VALUE: invoice_item.invoice_total,
+                df.POS: invoice_item.place_of_supply,
+                df.REVERSE_CHARGE: ("Y" if invoice_item.is_reverse_charge else "N"),
+                df.DOC_TYPE: invoice_item.invoice_type,
+                df.TAXABLE_VALUE: 0,
+                df.NIL_RATED_AMOUNT: 0,
+                df.EXEMPTED_AMOUNT: 0,
+                df.NON_GST_AMOUNT: 0,
+            }
+
+            invoices_by_type.append(invoice)
 
             for item in chain(*gst_rate_wise_item.values()):
-                invoices_by_type = invoice_category_dict.setdefault(
-                    item.invoice_type, {}
-                )
-
-                mapped_dict = invoices_by_type.setdefault(
-                    invoice_no,
-                    {
-                        df.TRANSACTION_TYPE: self.get_transaction_type(item),
-                        df.CUST_GSTIN: item.billing_address_gstin,
-                        df.CUST_NAME: item.customer_name,
-                        df.DOC_NUMBER: item.invoice_no,
-                        df.DOC_DATE: item.posting_date,
-                        df.DOC_VALUE: item.invoice_total,
-                        df.POS: item.place_of_supply,
-                        df.REVERSE_CHARGE: ("Y" if item.is_reverse_charge else "N"),
-                        df.DOC_TYPE: item.invoice_type,
-                        df.TAXABLE_VALUE: 0,
-                        df.NIL_RATED_AMOUNT: 0,
-                        df.EXEMPTED_AMOUNT: 0,
-                        df.NON_GST_AMOUNT: 0,
-                    },
-                )
-
-                mapped_dict[df.TAXABLE_VALUE] += item.taxable_value
+                invoice[df.TAXABLE_VALUE] += item.taxable_value
 
                 if item.gst_treatment == "Nil-Rated":
-                    mapped_dict[df.NIL_RATED_AMOUNT] += item.taxable_value
+                    invoice[df.NIL_RATED_AMOUNT] += item.taxable_value
 
                 elif item.gst_treatment == "Exempted":
-                    mapped_dict[df.EXEMPTED_AMOUNT] += item.taxable_value
+                    invoice[df.EXEMPTED_AMOUNT] += item.taxable_value
 
                 elif item.gst_treatment == "Non-GST":
-                    mapped_dict[df.NON_GST_AMOUNT] += item.taxable_value
+                    invoice[df.NON_GST_AMOUNT] += item.taxable_value
 
-                # self.calculate_hsn_error(item)
-
-        # convert {invoice_category: {invoice_type: {invoice_no: invoice}}} to {invoice_category: {invoice_type: [invoice]}}
-        for invoice_category, invoices_by_type in data.items():
-            for invoice_type in invoices_by_type:
-                invoices_dict = data[invoice_category][invoice_type]
-                data[invoice_category][invoice_type] = list(invoices_dict.values())
-
-        prepared_data.update(data)
+            # self.calculate_hsn_error(item)
 
     def process_data_for_b2cs(self, grouped_data, prepared_data):
         data = {
