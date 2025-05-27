@@ -2084,30 +2084,27 @@ class BooksDataMapper:
             self.update_totals(invoice_dict)
 
     def process_data_for_nil_exempt(self, grouped_data, prepared_data):
-        for (sub_category, _), gst_rate_wise_item in grouped_data.items():
-            invoice_category = GSTR1_Category.NIL_EXEMPT.value
-            invoice_item = next(chain(*gst_rate_wise_item.values()), None)
+        sub_category = GSTR1_SubCategory.NIL_EXEMPT.value
+        nil_exempt = prepared_data.setdefault(sub_category, {})
 
-            if invoice_category not in prepared_data:
-                prepared_data[invoice_category] = {}
+        for _, rate_wise_item in grouped_data.items():
+            item = next(chain(*rate_wise_item.values()), None)
 
-            invoice_category_dict = prepared_data[invoice_category]
+            if item.invoice_type not in nil_exempt:
+                nil_exempt[item.invoice_type] = []
 
-            if invoice_item.invoice_type not in invoice_category_dict:
-                invoice_category_dict[invoice_item.invoice_type] = []
-
-            invoices_by_type = invoice_category_dict[invoice_item.invoice_type]
+            invoices_by_type = nil_exempt[item.invoice_type]
 
             invoice = {
-                df.TRANSACTION_TYPE: self.get_transaction_type(invoice_item),
-                df.CUST_GSTIN: invoice_item.billing_address_gstin,
-                df.CUST_NAME: invoice_item.customer_name,
-                df.DOC_NUMBER: invoice_item.invoice_no,
-                df.DOC_DATE: invoice_item.posting_date,
-                df.DOC_VALUE: invoice_item.invoice_total,
-                df.POS: invoice_item.place_of_supply,
-                df.REVERSE_CHARGE: ("Y" if invoice_item.is_reverse_charge else "N"),
-                df.DOC_TYPE: invoice_item.invoice_type,
+                df.TRANSACTION_TYPE: self.get_transaction_type(item),
+                df.CUST_GSTIN: item.billing_address_gstin,
+                df.CUST_NAME: item.customer_name,
+                df.DOC_NUMBER: item.invoice_no,
+                df.DOC_DATE: item.posting_date,
+                df.DOC_VALUE: item.invoice_total,
+                df.POS: item.place_of_supply,
+                df.REVERSE_CHARGE: ("Y" if item.is_reverse_charge else "N"),
+                df.DOC_TYPE: item.invoice_type,
                 df.TAXABLE_VALUE: 0,
                 df.NIL_RATED_AMOUNT: 0,
                 df.EXEMPTED_AMOUNT: 0,
@@ -2116,7 +2113,7 @@ class BooksDataMapper:
 
             invoices_by_type.append(invoice)
 
-            for item in chain(*gst_rate_wise_item.values()):
+            for item in chain(*rate_wise_item.values()):
                 invoice[df.TAXABLE_VALUE] += item.taxable_value
 
                 if item.gst_treatment == "Nil-Rated":
@@ -2131,12 +2128,13 @@ class BooksDataMapper:
             # self.calculate_hsn_error(item)
 
     def process_data_for_b2cs(self, grouped_data, prepared_data):
-        b2c_others = prepared_data.setdefault("B2C (Others)", {})
+        sub_category = GSTR1_Category.B2CS.value
+        b2c_others = prepared_data.setdefault(sub_category, {})
 
-        for (_, _), gst_rate_wise_item in grouped_data.items():
-            for gst_rate, items in gst_rate_wise_item.items():
-                invoice_item = items[0]
-                key = f"{invoice_item.place_of_supply} - {flt(gst_rate)}"
+        for _, rate_wise_item in grouped_data.items():
+            for gst_rate, items in rate_wise_item.items():
+                item = items[0]
+                key = f"{item.place_of_supply} - {flt(gst_rate)}"
 
                 if key not in b2c_others:
                     b2c_others[key] = []
@@ -2144,28 +2142,27 @@ class BooksDataMapper:
                 invoice_list = b2c_others[key]
 
                 invoice = {
-                    df.DOC_DATE: invoice_item.posting_date,
-                    df.DOC_NUMBER: invoice_item.invoice_no,
-                    df.DOC_VALUE: invoice_item.invoice_total,
-                    df.CUST_NAME: invoice_item.customer_name,
+                    df.DOC_DATE: item.posting_date,
+                    df.DOC_NUMBER: item.invoice_no,
+                    df.DOC_VALUE: item.invoice_total,
+                    df.CUST_NAME: item.customer_name,
                     # currently other value is not supported in GSTR-1
                     df.DOC_TYPE: "OE",
-                    df.TRANSACTION_TYPE: self.get_transaction_type(invoice_item),
-                    df.POS: invoice_item.place_of_supply,
-                    df.TAX_RATE: invoice_item.gst_rate,
-                    df.ECOMMERCE_GSTIN: invoice_item.ecommerce_gstin,
+                    df.TRANSACTION_TYPE: self.get_transaction_type(item),
+                    df.POS: item.place_of_supply,
+                    df.TAX_RATE: item.gst_rate,
+                    df.ECOMMERCE_GSTIN: item.ecommerce_gstin,
                     **self.get_invoice_values(),
                 }
 
                 invoice_list.append(invoice)
 
-                # for item in items:
-                #     self.calculate_hsn_error(item)
-
+                # Replace update totals
                 self.update_totals(invoice, items)
+                # self.calculate_hsn_error(invoice)
 
-        if not b2c_others:
-            del prepared_data["B2C (Others)"]
+        # if not b2c_others:
+        #     del prepared_data["B2C (Others)"]
 
     def process_data_for_hsn_summary(
         self, grouped_data, prepared_data, bifurcate_hsn=False
@@ -2330,7 +2327,7 @@ class GSTR1BooksData(BooksDataMapper):
 
         bifurcate_hsn = self.filing_from >= self.hsn_bifurcation_from
 
-        data_for_invoice_no_key, data_for_nil_exempt, data_for_b2cs, data_for_hsn = (
+        data_for_hsn, data_for_invoice_no_key, data_for_nil_exempt, data_for_b2cs = (
             self.get_structured_data(data, bifurcate_hsn=bifurcate_hsn)
         )
 
@@ -2356,7 +2353,26 @@ class GSTR1BooksData(BooksDataMapper):
 
         return prepared_data
 
+    def prepare_hsn_data(self, invoices, bifurcate_hsn=False):
+        hsn_summary = {}
+
+        data_for_hsn, *_ = self.get_structured_data(
+            invoices, only_for_hsn=True, bifurcate_hsn=bifurcate_hsn
+        )
+        self.process_data_for_hsn_summary(data_for_hsn, hsn_summary, bifurcate_hsn)
+
+        return hsn_summary
+
     def get_structured_data(self, data, only_for_hsn=False, bifurcate_hsn=False):
+        """
+        Invoices are bifurcated into different categories by invoice sub-category, invoice number and GST Rate.
+        - data_for_invoice_no_key: B2B, B2CL, CDNR, CDNUR, etc.
+        - data_for_nil_exempt: Nil Rated, Exempted, Non-GST
+        - data_for_b2cs: B2CS (B2C Others)
+
+        Further all invoices are grouped by HSN code, UOM, and GST rate
+        - data_for_hsn: HSN Summary
+        """
         data_for_invoice_no_key = defaultdict(lambda: defaultdict(list))
         data_for_nil_exempt = defaultdict(lambda: defaultdict(list))
         data_for_b2cs = defaultdict(lambda: defaultdict(list))
@@ -2369,16 +2385,16 @@ class GSTR1BooksData(BooksDataMapper):
             item["hsn_key"] = hsn_key
 
             if bifurcate_hsn:
-                key = (
+                sub_category = (
                     GSTR1_SubCategory.HSN_B2B.value
                     if item.gst_category != "Unregistered"
                     else GSTR1_SubCategory.HSN_B2C.value
                 )
 
             else:
-                key = GSTR1_Category.HSN.value
+                sub_category = GSTR1_SubCategory.HSN.value
 
-            data_for_hsn[key][hsn_key].append(item)
+            data_for_hsn[sub_category][hsn_key].append(item)
 
             if only_for_hsn or item.get("taxable_value") == 0:
                 continue
@@ -2404,10 +2420,7 @@ class GSTR1BooksData(BooksDataMapper):
             elif invoice_category == GSTR1_Category.B2CS:
                 data_for_b2cs[key][gst_rate].append(item)
 
-        if only_for_hsn:
-            return data_for_hsn
-
-        return data_for_invoice_no_key, data_for_nil_exempt, data_for_b2cs, data_for_hsn
+        return data_for_hsn, data_for_invoice_no_key, data_for_nil_exempt, data_for_b2cs
 
     def prepare_document_issued_data(self):
         doc_issued_data = {}

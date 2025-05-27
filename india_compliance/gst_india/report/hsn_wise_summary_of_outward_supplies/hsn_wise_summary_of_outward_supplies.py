@@ -144,14 +144,7 @@ def process_hsn_data(invoices, bifurcate_hsn=False):
         "total_cess_amount",
     )
 
-    gstr_data = GSTR1BooksData({})
-
-    data_for_hsn = gstr_data.get_structured_data(
-        invoices, only_for_hsn=True, bifurcate_hsn=bifurcate_hsn
-    )
-
-    hsn_summary = {}
-    gstr_data.process_data_for_hsn_summary(data_for_hsn, hsn_summary, bifurcate_hsn)
+    hsn_summary = GSTR1BooksData({}).prepare_hsn_data(invoices, bifurcate_hsn)
 
     hsn_data = []
     for hsn_key in hsn_summary.values():
