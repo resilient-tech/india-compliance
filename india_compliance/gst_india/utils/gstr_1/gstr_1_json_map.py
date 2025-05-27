@@ -2050,12 +2050,6 @@ class BooksDataMapper:
                 }
             }
             prepared_data: dict to be updated with the processed data
-
-        What does this function do?
-        1. It makes a dict/object of an invoice with the invoice specific keys and add different tax_rate items in items
-        2. then it add it to the prepared_data
-
-        extend the function to round the values to 2 decimal places
         """
         for (sub_category, invoice_no), rate_wise_item in grouped_data.items():
             doc = next(chain(*rate_wise_item.values()))
@@ -2102,6 +2096,15 @@ class BooksDataMapper:
                     invoice_dict[key] += item.get(field)
 
     def process_data_for_nil_exempt(self, grouped_data, prepared_data):
+        """
+        Input:
+            grouped_data: {
+                (invoice_sub_category, invoice_no): {
+                    gst_rate: [invoice_items]
+                }
+            }
+            prepared_data: dict to be updated with the processed data
+        """
         sub_category = GSTR1_SubCategory.NIL_EXEMPT.value
         nil_exempt = prepared_data.setdefault(sub_category, {})
 
@@ -2146,6 +2149,15 @@ class BooksDataMapper:
             # self.calculate_hsn_error(item)
 
     def process_data_for_b2cs(self, grouped_data, prepared_data):
+        """
+        Input:
+            grouped_data: {
+                (invoice_sub_category, invoice_no): {
+                    gst_rate: [invoice_items]
+                }
+            }
+            prepared_data: dict to be updated with the processed data
+        """
         sub_category = GSTR1_Category.B2CS.value
         b2c_others = prepared_data.setdefault(sub_category, {})
 
@@ -2189,6 +2201,16 @@ class BooksDataMapper:
     def process_data_for_hsn_summary(
         self, grouped_data, prepared_data, bifurcate_hsn=False
     ):
+        """
+        Input:
+            grouped_data: {
+                invoice_sub_category: {
+                    "gst_hsn_code - uom - gst_rate": [invoice_items]
+                }
+            }
+            prepared_data: dict to be updated with the processed data
+            bifurcate_hsn: bool, whether to bifurcate HSN by type
+        """
         for hsn_type, hsn_key in grouped_data.items():
             prepared_data[hsn_type] = {}
 
