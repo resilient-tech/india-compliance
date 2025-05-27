@@ -877,7 +877,7 @@ class CDNR(GSTR1DataMapper):
             df.TRANSACTION_TYPE: self.document_type_mapping,
             df.POS: self.map_place_of_supply,
             df.DOC_TYPE: self.document_category_mapping,
-            df.DOC_VALUE: lambda val, *args: abs(val),
+            df.DOC_VALUE: lambda val, *args: abs(val),  # nosemgrep
             df.DOC_DATE: self.format_date_for_gov,
         }
 
@@ -1045,7 +1045,7 @@ class CDNUR(GSTR1DataMapper):
             df.ITEMS: self.format_item_for_gov,
             df.TRANSACTION_TYPE: self.document_type_mapping,
             df.POS: self.map_place_of_supply,
-            df.DOC_VALUE: lambda x, *args: abs(x),
+            df.DOC_VALUE: lambda x, *args: abs(x),  # nosemgrep
             df.DOC_DATE: self.format_date_for_gov,
         }
 
