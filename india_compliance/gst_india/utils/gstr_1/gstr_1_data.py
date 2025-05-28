@@ -249,7 +249,10 @@ class GSTR1Conditions:
 
     @cache_invoice_condition
     def is_export(self, invoice):
-        return invoice.place_of_supply == "96-Other Countries"
+        return (
+            invoice.place_of_supply == "96-Other Countries"
+            and invoice.gst_category == "Overseas"
+        )
 
     @cache_invoice_condition
     def is_inter_state(self, invoice):
