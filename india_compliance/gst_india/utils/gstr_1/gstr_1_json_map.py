@@ -2246,9 +2246,6 @@ class BooksDataMapper:
                     self.rounding_difference[key] += diff
                     self.hsn_error[gst_rate][key] += diff
 
-        # if not b2c_others:
-        #     del prepared_data["B2C (Others)"]
-
     def process_data_for_hsn_summary(
         self, grouped_data, prepared_data, bifurcate_hsn=False
     ):
@@ -2262,13 +2259,14 @@ class BooksDataMapper:
             prepared_data: dict to be updated with the processed data
             bifurcate_hsn: bool, whether to bifurcate HSN by type
         """
+        data = {}
         for hsn_type, hsn_key in grouped_data.items():
-            prepared_data[hsn_type] = {}
+            data[hsn_type] = {}
 
             for key, items in hsn_key.items():
                 invoice_item = items[0]
 
-                prepared_data[hsn_type][key] = {
+                data[hsn_type][key] = {
                     df.HSN_CODE: invoice_item.gst_hsn_code,
                     df.DESCRIPTION: frappe.db.get_value(
                         "GST HSN Code", invoice_item.gst_hsn_code, "description"
@@ -2279,7 +2277,7 @@ class BooksDataMapper:
                     **self.get_invoice_values(),
                 }
 
-                invoice = prepared_data[hsn_type][key]
+                invoice = data[hsn_type][key]
 
                 # Aggregate the values for each item tax field
                 # and round off the values to 2 decimal places
@@ -2306,6 +2304,23 @@ class BooksDataMapper:
 
                 if bifurcate_hsn:
                     invoice["invoice_type"] = hsn_type.split("-")[-1].strip()
+
+        # get the min key
+        max_key = min(
+            chain(*map(lambda x: x.keys(), data.values())),
+            key=lambda x: x if x else "",
+        )
+
+        hsn_item = next((d[max_key] for d in data.values() if max_key in d))
+
+        hsn_error = self.hsn_error.get(hsn_item.get(df.TAX_RATE))
+
+        # update the prepared data with the HSN summary
+        for key in self.DATA_TO_ITEM_FIELD_MAPPING.keys():
+            val = hsn_item.get(key, 0) + hsn_error.get(key, 0)
+            hsn_item[key] = flt(val, 2)
+
+        prepared_data.update(data)
 
     def process_data_for_document_issued_summary(self, row, prepared_data):
         key = f"{row['nature_of_document']} - {row['from_serial_no']}"
@@ -2409,6 +2424,18 @@ class BooksDataMapper:
         self.rounding_difference = defaultdict(float)
         self.hsn_error = defaultdict(lambda: defaultdict(float))
 
+    def round_rounding_difference(self):
+        """
+        Round off the rounding difference values to 2 decimal places.
+        This method is used to round off the rounding difference values.
+        """
+        for key, value in self.rounding_difference.items():
+            self.rounding_difference[key] = flt(value, 2)
+
+        for key, round_diff in self.hsn_error.items():
+            for k, v in round_diff.items():
+                self.hsn_error[key][k] = flt(v, 2)
+
 
 class GSTR1BooksData(BooksDataMapper):
     def __init__(self, filters):
@@ -2445,6 +2472,8 @@ class GSTR1BooksData(BooksDataMapper):
             GSTR1_Category.TXP.value: self.prepare_advances_adjusted_data(),
             GSTR1_Category.DOC_ISSUE.value: self.prepare_document_issued_data(),
         }
+
+        self.round_rounding_difference()
 
         self.process_data_for_hsn_summary(
             data_for_hsn, other_categories, bifurcate_hsn=bifurcate_hsn
