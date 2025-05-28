@@ -2042,6 +2042,14 @@ class BooksDataMapper:
         GSTR1_ItemField.CESS.value: "total_cess_amount",
     }
 
+    DATA_TO_INVOICE_FIELD_MAPPING = {
+        df.TAXABLE_VALUE: "taxable_value",
+        df.IGST: "igst_amount",
+        df.CGST: "cgst_amount",
+        df.SGST: "sgst_amount",
+        df.CESS: "total_cess_amount",
+    }
+
     def process_data_for_invoice_no_key(self, grouped_data, prepared_data):
         """
         Input:
@@ -2166,9 +2174,13 @@ class BooksDataMapper:
                 df.NON_GST_AMOUNT,
             ):
                 val = invoice.get(key, 0)
-                rounding = flt(val, 2)
-                self.rounding_difference[key] += val - rounding
-                invoice[key] = rounding
+                rounded = flt(val, 2)
+                diff = val - rounded
+
+                invoice[key] = rounded
+
+                self.rounding_difference[key] += diff
+                self.hsn_error[item.gst_rate][key] += diff
 
             # self.calculate_hsn_error(item)
 
@@ -2211,20 +2223,19 @@ class BooksDataMapper:
 
                 invoice_list.append(invoice)
 
-                for item in items:
-                    tax_value = self.get_invoice_values(item)
+                for key, field in self.DATA_TO_INVOICE_FIELD_MAPPING.items():
 
-                    for key, val in tax_value.items():
-                        invoice[key] += val
+                    for item in items:
+                        invoice[key] += item.get(field, 0)
 
-                # Update the invoice with rounding and update rounding difference
-                for key in self.DATA_TO_ITEM_FIELD_MAPPING.keys():
                     val = invoice.get(key, 0)
-                    rounding = flt(val, 2)
-                    self.rounding_difference[key] += val - rounding
-                    invoice[key] = val
+                    rounded = flt(val, 2)
+                    diff = val - rounded
 
-                # self.calculate_hsn_error(invoice)
+                    invoice[key] = rounded
+
+                    self.rounding_difference[key] += diff
+                    self.hsn_error[gst_rate][key] += diff
 
         # if not b2c_others:
         #     del prepared_data["B2C (Others)"]
@@ -2263,12 +2274,15 @@ class BooksDataMapper:
 
                 # Aggregate the values for each item tax field
                 # and round off the values to 2 decimal places
-                for item in items:
-                    tax_value = self.get_invoice_values(item)
-                    tax_value[df.QUANTITY] = item.get("qty", 0)
 
-                    for key, val in tax_value.items():
-                        invoice[key] += val
+                for key, field in tuple(self.DATA_TO_INVOICE_FIELD_MAPPING.items()) + (
+                    (
+                        df.QUANTITY,
+                        "qty",
+                    ),
+                ):
+                    for item in items:
+                        invoice[key] += item.get(field, 0)
 
                     invoice[key] = flt(invoice[key], 2)
 
