@@ -2060,6 +2060,9 @@ class BooksDataMapper:
             }
             prepared_data: dict to be updated with the processed data
         """
+        if not grouped_data:
+            return
+
         for (sub_category, invoice_no), rate_wise_item in grouped_data.items():
             doc = next(chain(*rate_wise_item.values()))
 
@@ -2125,6 +2128,9 @@ class BooksDataMapper:
             }
             prepared_data: dict to be updated with the processed data
         """
+        if not grouped_data:
+            return
+
         sub_category = GSTR1_SubCategory.NIL_EXEMPT.value
         nil_exempt = prepared_data.setdefault(sub_category, {})
 
@@ -2194,6 +2200,9 @@ class BooksDataMapper:
             }
             prepared_data: dict to be updated with the processed data
         """
+        if not grouped_data:
+            return
+
         sub_category = GSTR1_Category.B2CS.value
         b2c_others = prepared_data.setdefault(sub_category, {})
 
