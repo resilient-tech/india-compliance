@@ -2354,29 +2354,6 @@ class BooksDataMapper:
 
     # utils
 
-    def update_totals(self, mapped_dict, items=None, for_qty=False):
-        items = items or mapped_dict.get("items", [])
-        data_invoice_amount_map = {
-            df.TAXABLE_VALUE: GSTR1_ItemField.TAXABLE_VALUE.value,
-            df.IGST: GSTR1_ItemField.IGST.value,
-            df.CGST: GSTR1_ItemField.CGST.value,
-            df.SGST: GSTR1_ItemField.SGST.value,
-            df.CESS: GSTR1_ItemField.CESS.value,
-        }
-
-        if for_qty:
-            data_invoice_amount_map[df.QUANTITY] = "qty"
-
-        for key, field in data_invoice_amount_map.items():
-            for item in items:
-                value = item.get(field, 0)
-                mapped_dict[key] += value
-                # item[field] = flt(value, 2)
-
-            # rounded_value = flt(mapped_dict[key], 2)
-            # self.rounding_difference[key] += mapped_dict[key] - rounded_value
-            # mapped_dict[key] = rounded_value
-
     def get_invoice_values(self, invoice=None):
         if invoice is None:
             invoice = {}
