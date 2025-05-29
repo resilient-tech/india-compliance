@@ -2188,8 +2188,6 @@ class BooksDataMapper:
                 self.rounding_difference[key] += diff
                 self.hsn_error[item.gst_rate][key] += diff
 
-            # self.calculate_hsn_error(item)
-
     def process_data_for_b2cs(self, grouped_data, prepared_data):
         """
         Input:
@@ -2259,68 +2257,58 @@ class BooksDataMapper:
             prepared_data: dict to be updated with the processed data
             bifurcate_hsn: bool, whether to bifurcate HSN by type
         """
-        data = {}
+
+        data_to_invoice_field_map = {
+            **self.DATA_TO_INVOICE_FIELD_MAPPING,
+            df.QUANTITY: "qty",
+        }
+        tax_fields = self.DATA_TO_INVOICE_FIELD_MAPPING.keys()
+
         for hsn_type, hsn_key in grouped_data.items():
-            data[hsn_type] = {}
+            prepared_data[hsn_type] = {}
 
+            if bifurcate_hsn:
+                invoice_type = hsn_type.split("-")[-1].strip()
+
+            # HSN Descriptions
+            hsn_codes = [key.split(" - ")[0] for key in hsn_key.keys()]
+            descriptions = frappe._dict(
+                frappe.get_all(
+                    "GST HSN Code",
+                    fields=["name", "description"],
+                    filters={"name": ["in", hsn_codes]},
+                    as_list=True,
+                )
+            )
+
+            # Map
             for key, items in hsn_key.items():
-                invoice_item = items[0]
+                item = items[0]
 
-                data[hsn_type][key] = {
-                    df.HSN_CODE: invoice_item.gst_hsn_code,
-                    df.DESCRIPTION: frappe.db.get_value(
-                        "GST HSN Code", invoice_item.gst_hsn_code, "description"
-                    ),
-                    df.UOM: invoice_item.uom,
+                prepared_data[hsn_type][key] = {
+                    df.HSN_CODE: item.gst_hsn_code,
+                    df.DESCRIPTION: descriptions.get(item.gst_hsn_code),
+                    df.UOM: item.uom,
                     df.QUANTITY: 0,
-                    df.TAX_RATE: invoice_item.gst_rate,
+                    df.TAX_RATE: item.gst_rate,
                     **self.get_invoice_values(),
                 }
 
-                invoice = data[hsn_type][key]
+                invoice = prepared_data[hsn_type][key]
 
-                # Aggregate the values for each item tax field
-                # and round off the values to 2 decimal places
+                if bifurcate_hsn:
+                    # TODO: Better Key: set in constants
+                    invoice["invoice_type"] = invoice_type
 
-                for key, field in tuple(self.DATA_TO_INVOICE_FIELD_MAPPING.items()) + (
-                    (
-                        df.QUANTITY,
-                        "qty",
-                    ),
-                ):
+                # Aggregate
+                for key, field in data_to_invoice_field_map.items():
                     for item in items:
                         invoice[key] += item.get(field, 0)
 
                     invoice[key] = flt(invoice[key], 2)
 
-                doc_value = sum(
-                    [
-                        invoice.get(field, 0)
-                        for field in self.DATA_TO_ITEM_FIELD_MAPPING.keys()
-                    ]
-                )
-
+                doc_value = sum([invoice.get(field, 0) for field in tax_fields])
                 invoice[df.DOC_VALUE] = flt(doc_value, 2)
-
-                if bifurcate_hsn:
-                    invoice["invoice_type"] = hsn_type.split("-")[-1].strip()
-
-        # get the min key
-        max_key = min(
-            chain(*map(lambda x: x.keys(), data.values())),
-            key=lambda x: x if x else "",
-        )
-
-        hsn_item = next((d[max_key] for d in data.values() if max_key in d))
-
-        hsn_error = self.hsn_error.get(hsn_item.get(df.TAX_RATE))
-
-        # update the prepared data with the HSN summary
-        for key in self.DATA_TO_ITEM_FIELD_MAPPING.keys():
-            val = hsn_item.get(key, 0) + hsn_error.get(key, 0)
-            hsn_item[key] = flt(val, 2)
-
-        prepared_data.update(data)
 
     def process_data_for_document_issued_summary(self, row, prepared_data):
         key = f"{row['nature_of_document']} - {row['from_serial_no']}"
