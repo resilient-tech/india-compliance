@@ -2307,18 +2307,19 @@ class BooksDataMapper:
 
     def process_data_for_document_issued_summary(self, row, prepared_data):
         key = f"{row['nature_of_document']} - {row['from_serial_no']}"
-        prepared_data.setdefault(
-            key,
-            {
-                df.DOC_TYPE: row["nature_of_document"],
-                df.FROM_SR: row["from_serial_no"],
-                df.TO_SR: row["to_serial_no"],
-                df.TOTAL_COUNT: row["total_issued"],
-                df.DRAFT_COUNT: row["total_draft"],
-                df.CANCELLED_COUNT: row["cancelled"],
-                df.NET_ISSUE: row["total_submitted"],
-            },
-        )
+
+        if key in prepared_data:
+            return
+
+        prepared_data[key] = {
+            df.DOC_TYPE: row["nature_of_document"],
+            df.FROM_SR: row["from_serial_no"],
+            df.TO_SR: row["to_serial_no"],
+            df.TOTAL_COUNT: row["total_issued"],
+            df.DRAFT_COUNT: row["total_draft"],
+            df.CANCELLED_COUNT: row["cancelled"],
+            df.NET_ISSUE: row["total_submitted"],
+        }
 
     def process_data_for_advances_received_or_adjusted(
         self, row, prepared_data, multiplier=1
