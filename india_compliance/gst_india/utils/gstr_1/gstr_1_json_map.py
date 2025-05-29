@@ -4,9 +4,6 @@ from itertools import chain
 
 import frappe
 from frappe.utils import flt
-from frappe.utils.data import (
-    getdate,
-)
 
 from india_compliance.gst_india.constants import UOM_MAP
 from india_compliance.gst_india.report.gstr_1.gstr_1 import (
@@ -2244,9 +2241,7 @@ class BooksDataMapper:
                     self.rounding_difference[key] += diff
                     self.hsn_error[gst_rate][key] += diff
 
-    def process_data_for_hsn_summary(
-        self, grouped_data, prepared_data, bifurcate_hsn=False
-    ):
+    def process_data_for_hsn_summary(self, grouped_data, prepared_data):
         """
         Input:
             grouped_data: {
@@ -2255,7 +2250,6 @@ class BooksDataMapper:
                 }
             }
             prepared_data: dict to be updated with the processed data
-            bifurcate_hsn: bool, whether to bifurcate HSN by type
         """
 
         data_to_invoice_field_map = {
@@ -2267,7 +2261,8 @@ class BooksDataMapper:
         for hsn_type, hsn_key in grouped_data.items():
             prepared_data[hsn_type] = {}
 
-            if bifurcate_hsn:
+            invoice_type = None
+            if hsn_type != GSTR1_SubCategory.HSN.value:
                 invoice_type = hsn_type.split("-")[-1].strip()
 
             # HSN Descriptions
@@ -2296,7 +2291,7 @@ class BooksDataMapper:
 
                 invoice = prepared_data[hsn_type][key]
 
-                if bifurcate_hsn:
+                if invoice_type:
                     # TODO: Better Key: set in constants
                     invoice["invoice_type"] = invoice_type
 
@@ -2430,10 +2425,6 @@ class GSTR1BooksData(BooksDataMapper):
         self.filters = filters
         if filters.get("month_or_quarter"):
             self.current_month = MONTHS.index(filters.month_or_quarter) + 1
-            self.filing_from = getdate(f"01-{filters.month_or_quarter}-{filters.year}")
-            self.hsn_bifurcation_from = frappe.db.get_single_value(
-                "GST Settings", "hsn_bifurcation_from"
-            )
 
     def prepare_mapped_data(self):
         prepared_data = {}
@@ -2445,10 +2436,8 @@ class GSTR1BooksData(BooksDataMapper):
         # initialize rounding difference and hsn error
         self.initialize_rounding_difference()
 
-        bifurcate_hsn = self.filing_from >= self.hsn_bifurcation_from
-
         data_for_hsn, data_for_invoice_no_key, data_for_nil_exempt, data_for_b2cs = (
-            self.get_structured_data(data, bifurcate_hsn=bifurcate_hsn)
+            self.get_structured_data(data)
         )
 
         self.process_data_for_invoice_no_key(data_for_invoice_no_key, prepared_data)
@@ -2463,9 +2452,7 @@ class GSTR1BooksData(BooksDataMapper):
 
         self.round_rounding_difference()
 
-        self.process_data_for_hsn_summary(
-            data_for_hsn, other_categories, bifurcate_hsn=bifurcate_hsn
-        )
+        self.process_data_for_hsn_summary(data_for_hsn, other_categories)
 
         for category, data in other_categories.items():
             if data:
@@ -2475,17 +2462,15 @@ class GSTR1BooksData(BooksDataMapper):
 
         return prepared_data
 
-    def prepare_hsn_data(self, invoices, bifurcate_hsn=False):
+    def prepare_hsn_data(self, invoices):
         hsn_summary = {}
 
-        data_for_hsn, *_ = self.get_structured_data(
-            invoices, only_for_hsn=True, bifurcate_hsn=bifurcate_hsn
-        )
-        self.process_data_for_hsn_summary(data_for_hsn, hsn_summary, bifurcate_hsn)
+        data_for_hsn, *_ = self.get_structured_data(invoices, only_for_hsn=True)
+        self.process_data_for_hsn_summary(data_for_hsn, hsn_summary)
 
         return hsn_summary
 
-    def get_structured_data(self, data, only_for_hsn=False, bifurcate_hsn=False):
+    def get_structured_data(self, data, only_for_hsn=False):
         """
         Invoices are bifurcated into different categories by invoice sub-category, invoice number and GST Rate.
         - data_for_invoice_no_key: B2B, B2CL, CDNR, CDNUR, etc.
@@ -2504,27 +2489,12 @@ class GSTR1BooksData(BooksDataMapper):
             gst_rate = flt(item.get("gst_rate"))
             hsn_key = f"{item.gst_hsn_code} - {item.uom} - {gst_rate}"
 
-            item["hsn_key"] = hsn_key
-
-            if bifurcate_hsn:
-                sub_category = (
-                    GSTR1_SubCategory.HSN_B2B.value
-                    if item.gst_category not in ("Unregistered", "Overseas")
-                    else GSTR1_SubCategory.HSN_B2C.value
-                )
-
-            else:
-                sub_category = GSTR1_SubCategory.HSN.value
-
-            data_for_hsn[sub_category][hsn_key].append(item)
+            data_for_hsn[item.get("hsn_sub_category")][hsn_key].append(item)
 
             if only_for_hsn or item.get("taxable_value") == 0:
                 continue
 
-            key = (
-                item.get("invoice_sub_category"),
-                item.get("invoice_no"),
-            )
+            key = (item.get("invoice_sub_category"), item.get("invoice_no"))
 
             invoice_category = GSTR1_Category(item.get("invoice_category"))
             if invoice_category in (

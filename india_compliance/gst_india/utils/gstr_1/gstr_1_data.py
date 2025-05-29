@@ -417,6 +417,16 @@ class GSTR1Subcategory(GSTR1CategoryConditions):
             invoice.invoice_type = GSTR1_B2B_InvoiceType.R.value
             invoice.invoice_sub_category = GSTR1_SubCategory.B2B_REGULAR.value
 
+    def set_hsn_sub_category(self, invoice, bifurcate_hsn):
+        if not bifurcate_hsn:
+            invoice.hsn_sub_category = GSTR1_SubCategory.HSN.value
+
+        elif invoice.gst_category in ("Unregistered", "Overseas"):
+            invoice.hsn_sub_category = GSTR1_SubCategory.HSN_B2C.value
+
+        else:
+            invoice.hsn_sub_category = GSTR1_SubCategory.HSN_B2B.value
+
 
 class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
     AMOUNT_FIELDS = {
@@ -430,9 +440,13 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
     def __init__(self, filters=None):
         super().__init__(filters)
 
-    def process_invoices(self, invoices):
+    def process_invoices(self, invoices, bifurcate_hsn=None):
         settings = frappe.get_cached_doc("GST Settings")
         identified_uom = {}
+
+        if bifurcate_hsn is None:
+            bifurcate_hsn = self.is_hsn_bifurcation_needed(settings)
+
         for invoice in invoices:
             self.invoice_conditions = {}
             self.assign_categories(invoice)
@@ -449,6 +463,8 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
                 gst_uom = get_full_gst_uom(uom, settings)
                 identified_uom[uom] = gst_uom
                 invoice["uom"] = gst_uom
+
+            self.set_hsn_sub_category(invoice, bifurcate_hsn)
 
     def assign_categories(self, invoice):
         if not invoice.invoice_sub_category:
@@ -645,3 +661,17 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
                     "no_of_records": -len(overlaping_invoices),
                 }
             )
+
+    def is_hsn_bifurcation_needed(self, settings):
+        if not settings.hsn_bifurcation_from:
+            return False
+
+        # From GSTR-1 Beta
+        if self.filters.get("month_or_quarter"):
+            from_date = getdate(
+                f"01-{self.filters.month_or_quarter}-{self.filters.year}"
+            )
+        else:
+            from_date = getdate(self.filters.from_date)
+
+        return from_date >= getdate(settings.hsn_bifurcation_from)
