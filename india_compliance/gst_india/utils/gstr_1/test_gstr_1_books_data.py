@@ -227,7 +227,38 @@ class TestGSTR1BooksData(IntegrationTestCase):
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_deemed_export_transaction(self):
-        pass  # TODO: Implement Deemed Export Transaction Test
+        si = create_sales_invoice(
+            customer="_Test Registered Customer",
+            customer_address="_Test Registered Customer-Billing-2",
+            is_in_state=True,
+        )
+
+        data = GSTR1BooksData(filters=FILTERS).prepare_mapped_data()
+
+        self.assertDictEq(
+            {
+                "transaction_type": "Invoice",
+                "document_value": 118.0,
+                "reverse_charge": "N",
+                "document_type": GSTR1_B2B_InvoiceType.DE.value,
+                "total_taxable_value": 100.0,
+                "total_igst_amount": 0.0,
+                "total_cgst_amount": 9.0,
+                "total_sgst_amount": 9.0,
+                "total_cess_amount": 0.0,
+                "items": [
+                    {
+                        "taxable_value": 100.0,
+                        "igst_amount": 0.0,
+                        "cgst_amount": 9.0,
+                        "sgst_amount": 9.0,
+                        "cess_amount": 0.0,
+                        "tax_rate": 18.0,
+                    }
+                ],
+            },
+            data[GSTR1_SubCategory.DE.value][si.name],
+        )
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_export_without_tax(self):
