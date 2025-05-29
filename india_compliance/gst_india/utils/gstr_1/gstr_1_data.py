@@ -450,6 +450,7 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
         for invoice in invoices:
             self.invoice_conditions = {}
             self.assign_categories(invoice)
+            self.set_hsn_sub_category(invoice, bifurcate_hsn)
 
             if invoice.gst_hsn_code and invoice.gst_hsn_code.startswith("99"):
                 invoice["uom"] = "OTH-OTHERS"
@@ -463,8 +464,6 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
                 gst_uom = get_full_gst_uom(uom, settings)
                 identified_uom[uom] = gst_uom
                 invoice["uom"] = gst_uom
-
-            self.set_hsn_sub_category(invoice, bifurcate_hsn)
 
     def assign_categories(self, invoice):
         if not invoice.invoice_sub_category:

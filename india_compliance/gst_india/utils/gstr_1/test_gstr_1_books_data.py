@@ -31,7 +31,7 @@ FILTERS = frappe._dict(
 )
 
 
-class TestGSTR1BooksData(IntegrationTestCase):
+class TestBooksData(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -39,6 +39,23 @@ class TestGSTR1BooksData(IntegrationTestCase):
         # setup cess account
         cls.cess_account = setup_cess_account()
 
+    def assertDictEq(self, expected: dict, actual: dict):
+        """
+        Partial Comparision of Dict
+        """
+        for k, v in expected.items():
+            if isinstance(v, dict):
+                self.assertDictEq(v, actual.get(k, {}))
+
+            if isinstance(v, list | tuple):
+                for i, row in enumerate(v):
+                    if isinstance(row, dict):
+                        self.assertDictEq(row, v[i])
+
+            self.assertEqual(v, actual.get(k))
+
+
+class TestGSTR1BooksData(TestBooksData):
     def test_b2b_regular_transaction(self):
         si = create_sales_invoice(
             customer="_Test Registered Customer",
@@ -295,13 +312,13 @@ class TestGSTR1BooksData(IntegrationTestCase):
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_export_with_tax(self):
-        # Foreign Customer + IGST
         si = create_sales_invoice(
             customer="_Test Foreign Customer",
             customer_address="_Test Foreign Customer-Billing",
             is_out_state=True,
             is_export_with_gst=True,
         )
+        # TODO: Update port details
 
         data = GSTR1BooksData(filters=FILTERS).prepare_mapped_data()
         self.assertDictEq(
@@ -426,12 +443,13 @@ class TestGSTR1BooksData(IntegrationTestCase):
             data[GSTR1_SubCategory.B2B_REGULAR.value][si.name],
         )
 
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_cdnur_transaction(self):
         # Create Export and CN from SI
-        # DOUBT: Is this correct?
         si = create_sales_invoice(
-            customer="_Test Unregistered Customer",
-            is_in_state=True,
+            customer="_Test Foreign Customer",
+            customer_address="_Test Foreign Customer-Billing",
+            is_out_state=True,
             is_export_with_gst=True,
         )
 
@@ -443,42 +461,40 @@ class TestGSTR1BooksData(IntegrationTestCase):
             {
                 "transaction_type": "Credit Note",
                 "document_value": -118.0,
-                "document_type": "OE",
-                "place_of_supply": "24-Gujarat",
-                "tax_rate": 18.0,
+                "place_of_supply": "96-Other Countries",
+                "reverse_charge": "N",
+                "document_type": "EXPWP",
                 "total_taxable_value": -100.0,
-                "total_igst_amount": 0.0,
-                "total_cgst_amount": -9.0,
-                "total_sgst_amount": -9.0,
+                "total_igst_amount": -18.0,
+                "total_cgst_amount": 0.0,
+                "total_sgst_amount": 0.0,
                 "total_cess_amount": 0.0,
+                "items": [
+                    {
+                        "taxable_value": -100.0,
+                        "igst_amount": -18.0,
+                        "cgst_amount": 0.0,
+                        "sgst_amount": 0.0,
+                        "cess_amount": 0.0,
+                        "tax_rate": 18.0,
+                    }
+                ],
             },
-            data[GSTR1_SubCategory.B2CS.value][f"{si.place_of_supply} - 18.0"][0],
-        )
-
-        self.assertDictEq(
-            {
-                "transaction_type": "Invoice",
-                "document_value": 118.0,
-                "document_type": "OE",
-                "place_of_supply": "24-Gujarat",
-                "tax_rate": 18.0,
-                "total_taxable_value": 100.0,
-                "total_igst_amount": 0.0,
-                "total_cgst_amount": 9.0,
-                "total_sgst_amount": 9.0,
-                "total_cess_amount": 0.0,
-            },
-            data[GSTR1_SubCategory.B2CS.value][f"{si.place_of_supply} - 18.0"][1],
+            data[GSTR1_SubCategory.CDNUR.value][cn.name],
         )
 
     def test_nil_exempt_transaction(self):
         # Create B2B (CGST) and B2C (IGST) Invoice
         b2b_si = create_sales_invoice(
             customer="_Test Registered Customer",
+            item_code="_Test Nil Rated Item",
+            is_in_state=True,
         )
 
         b2c_si = create_sales_invoice(
             customer="_Test Unregistered Customer",
+            item_code="_Test Nil Rated Item",
+            is_in_state=True,
         )
 
         data = GSTR1BooksData(filters=FILTERS).prepare_mapped_data()
@@ -588,98 +604,6 @@ class TestGSTR1BooksData(IntegrationTestCase):
                 data[GSTR1_SubCategory.B2CS.value][f"{si.place_of_supply} - 18.0"][0],
             )
 
-    def test_hsn_summary_without_bifurcation(self):
-        items = [
-            {
-                "item_code": "_Test Trading Goods 1",
-                "qty": 1.0,
-                "rate": 100.0,
-            },
-            {
-                "item_code": "_Test Nil Rated Item",
-                "qty": 1.0,
-                "rate": 100.0,
-            },
-        ]
-
-        si = create_sales_invoice(
-            customer="_Test Registered Customer",
-            is_in_state=True,
-            items=items,
-        )
-
-        data = GSTR1BooksData(filters=FILTERS).prepare_mapped_data()
-
-        item = si.items[0]
-        uom = get_full_gst_uom(item.uom)
-        key = f"{item.gst_hsn_code} - {uom} - {18.0}"
-
-        self.assertDictEq(
-            {
-                "hsn_code": item.gst_hsn_code,
-                "uom": uom,
-                "quantity": 1.0,
-                "tax_rate": 18.0,
-                "total_taxable_value": 100.0,
-                "total_igst_amount": 0.0,
-                "total_cgst_amount": 9.0,
-                "total_sgst_amount": 9.0,
-                "total_cess_amount": 0.0,
-                "document_value": 118.0,
-            },
-            data[GSTR1_SubCategory.HSN.value][key],
-        )
-
-        item = si.items[1]
-        uom = get_full_gst_uom(item.uom)
-        key = f"{item.gst_hsn_code} - {uom} - {0.0}"
-
-        self.assertDictEq(
-            {
-                "hsn_code": item.gst_hsn_code,
-                "uom": uom,
-                "quantity": 1.0,
-                "tax_rate": 0.0,
-                "total_taxable_value": 100.0,
-                "total_igst_amount": 0.0,
-                "total_cgst_amount": 0.0,
-                "total_sgst_amount": 0.0,
-                "total_cess_amount": 0.0,
-                "document_value": 100.0,
-            },
-            data[GSTR1_SubCategory.HSN.value][key],
-        )
-
-    # change settings
-    @change_settings("GST Settings", {"hsn_bifurcation_from": getdate("01-04-2025")})
-    def test_hsn_summary_with_bifurcation(self):
-        si = create_sales_invoice(
-            customer="_Test Registered Customer",
-            is_in_state=True,
-        )
-
-        item = si.items[0]
-
-        data = GSTR1BooksData(filters=FILTERS).prepare_mapped_data()
-        uom = get_full_gst_uom(item.uom)
-        key = f"{item.gst_hsn_code} - {uom} - {18.0}"
-
-        self.assertDictEq(
-            {
-                "hsn_code": item.gst_hsn_code,
-                "uom": uom,
-                "quantity": 1.0,
-                "tax_rate": 18.0,
-                "total_taxable_value": 100.0,
-                "total_igst_amount": 0.0,
-                "total_cgst_amount": 9.0,
-                "total_sgst_amount": 9.0,
-                "total_cess_amount": 0.0,
-                "document_value": 118.0,
-            },
-            data[GSTR1_SubCategory.HSN_B2B.value][key],
-        )
-
     def test_document_issued_summary(self):
         pass
 
@@ -756,20 +680,112 @@ class TestGSTR1BooksData(IntegrationTestCase):
             ][0],
         )
 
-    def assertDictEq(self, expected: dict, actual: dict):
-        """
-        Partial Comparision of Dict
-        """
-        for k, v in expected.items():
-            if isinstance(v, dict):
-                self.assertDictEq(v, actual.get(k, {}))
 
-            if isinstance(v, list | tuple):
-                for i, row in enumerate(v):
-                    if isinstance(row, dict):
-                        self.assertDictEq(row, v[i])
+class TestHSNBifurcation(TestBooksData):
+    # change settings
+    @change_settings("GST Settings", {"hsn_bifurcation_from": getdate("01-04-2025")})
+    def test_hsn_summary_with_bifurcation(self):
+        si = create_sales_invoice(
+            customer="_Test Registered Customer",
+            is_in_state=True,
+            gst_hsn_code="55885588",
+        )
 
-            self.assertEqual(v, actual.get(k))
+        item = si.items[0]
+
+        data = GSTR1BooksData(filters=FILTERS).prepare_mapped_data()
+        uom = get_full_gst_uom(item.uom)
+        key = f"{item.gst_hsn_code} - {uom} - {18.0}"
+
+        self.assertDictEq(
+            {
+                "hsn_code": item.gst_hsn_code,
+                "uom": uom,
+                "quantity": 1.0,
+                "tax_rate": 18.0,
+                "total_taxable_value": 100.0,
+                "total_igst_amount": 0.0,
+                "total_cgst_amount": 9.0,
+                "total_sgst_amount": 9.0,
+                "total_cess_amount": 0.0,
+                "document_value": 118.0,
+                "invoice_type": "B2B",
+            },
+            data[GSTR1_SubCategory.HSN_B2B.value][key],
+        )
+
+
+class TestHSNWithoutBifurcation(TestBooksData):
+
+    def test_hsn_summary_without_bifurcation(self):
+        frappe.db.rollback()
+
+        items = [
+            {
+                "item_code": "_Test Trading Goods 1",
+                "qty": 1.0,
+                "rate": 100.0,
+                "gst_hsn_code": "55885588",
+                "uom": "Nos",
+            },
+            {
+                "item_code": "_Test Nil Rated Item",
+                "qty": 1.0,
+                "rate": 100.0,
+                "gst_hsn_code": "55998899",
+                "uom": "Nos",
+            },
+        ]
+
+        # TODO: Service Item with Others as UOM
+
+        si = create_sales_invoice(
+            customer="_Test Registered Customer",
+            is_in_state=True,
+            items=items,
+        )
+
+        data = GSTR1BooksData(filters=FILTERS).prepare_mapped_data()
+
+        item = si.items[0]
+        uom = get_full_gst_uom(item.uom)
+        key = f"{item.gst_hsn_code} - {uom} - {18.0}"
+
+        self.assertDictEq(
+            {
+                "hsn_code": item.gst_hsn_code,
+                "uom": uom,
+                "quantity": 1.0,
+                "tax_rate": 18.0,
+                "total_taxable_value": 100.0,
+                "total_igst_amount": 0.0,
+                "total_cgst_amount": 9.0,
+                "total_sgst_amount": 9.0,
+                "total_cess_amount": 0.0,
+                "document_value": 118.0,
+            },
+            data[GSTR1_SubCategory.HSN.value][key],
+        )
+
+        item = si.items[1]
+        uom = get_full_gst_uom(item.uom)
+        key = f"{item.gst_hsn_code} - {uom} - {0.0}"
+
+        self.assertDictEq(
+            {
+                "hsn_code": item.gst_hsn_code,
+                "uom": uom,
+                "quantity": 1.0,
+                "tax_rate": 0.0,
+                "total_taxable_value": 100.0,
+                "total_igst_amount": 0.0,
+                "total_cgst_amount": 0.0,
+                "total_sgst_amount": 0.0,
+                "total_cess_amount": 0.0,
+                "document_value": 100.0,
+            },
+            data[GSTR1_SubCategory.HSN.value][key],
+        )
 
 
 def setup_cess_account(company="_Test Indian Registered Company"):
