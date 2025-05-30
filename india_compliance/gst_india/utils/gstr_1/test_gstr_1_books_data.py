@@ -184,7 +184,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                 invoice_total += row.get(key, 0.0)
 
             hsn_total = 0
-            for row in data[GSTR1_SubCategory.HSN.value].values():
+            for row in data[GSTR1_SubCategory.HSN_B2B.value].values():
                 hsn_total += row.get(key, 0.0)
 
             self.assertEqual(flt(hsn_total, 2), flt(invoice_total, 2))
@@ -899,7 +899,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
             customer="_Test Registered Customer",
             is_in_state=True,
             items=items,
-            posting_date=getdate("01-04-2025"),
+            posting_date=getdate("2025-04-01"),
         )
 
         filters = frappe._dict(
