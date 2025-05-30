@@ -2296,7 +2296,8 @@ class BooksDataMapper:
                 doc_value = sum([invoice.get(field, 0) for field in tax_fields])
                 invoice[df.DOC_VALUE] = flt(doc_value, self.PRECISION)
 
-            self.adjust_hsn_totals(sub_category, sub_category_dict)
+            if hasattr(self, "invoice_totals"):
+                self.adjust_hsn_totals(sub_category, sub_category_dict)
 
     def process_data_for_document_issued_summary(self, row, prepared_data):
         key = f"{row['nature_of_document']} - {row['from_serial_no']}"
