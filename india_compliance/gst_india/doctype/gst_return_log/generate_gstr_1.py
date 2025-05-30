@@ -13,13 +13,16 @@ from india_compliance.gst_india.doctype.gstr_action.gstr_action import set_gstr_
 from india_compliance.gst_india.utils.gstin_info import get_and_update_filing_preference
 from india_compliance.gst_india.utils.gstr_1 import (
     CATEGORY_SUB_CATEGORY_MAPPING,
+    HSN_BIFURCATION_FROM,
     PREVIOUS_VERSION,
     QUARTERLY_KEYS,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
     GovJsonKey,
     GSTR1_Category,
-    GSTR1_DataField,
+)
+from india_compliance.gst_india.utils.gstr_1 import GSTR1_DataField as df
+from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_SubCategory,
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_download import (
@@ -66,9 +69,6 @@ class SummarizeGSTR1:
         4. Round Values
         """
         category_summary = []
-        hsn_bifurcation_from = frappe.db.get_single_value(
-            "GST Settings", "hsn_bifurcation_from"
-        )
 
         for category, sub_categories in CATEGORY_SUB_CATEGORY_MAPPING.items():
             # Init category row
@@ -84,7 +84,7 @@ class SummarizeGSTR1:
             remove_category_row = True
 
             # Backwards compatibility
-            if (filing_from < hsn_bifurcation_from) and category in PREVIOUS_VERSION:
+            if (filing_from < HSN_BIFURCATION_FROM) and category in PREVIOUS_VERSION:
                 sub_categories = PREVIOUS_VERSION[category]
 
             for subcategory in sub_categories:
@@ -239,9 +239,9 @@ class SummarizeGSTR1:
     @staticmethod
     def count_doc_issue_summary(summary_row, data_row):
         summary_row["no_of_records"] += (
-            data_row.get(GSTR1_DataField.TOTAL_COUNT.value, 0)
-            - data_row.get(GSTR1_DataField.CANCELLED_COUNT.value, 0)
-            - data_row.get(GSTR1_DataField.DRAFT_COUNT.value, 0)
+            data_row.get(df.TOTAL_COUNT, 0)
+            - data_row.get(df.CANCELLED_COUNT, 0)
+            - data_row.get(df.DRAFT_COUNT, 0)
         )
 
     @staticmethod
@@ -250,14 +250,14 @@ class SummarizeGSTR1:
 
 
 class ReconcileGSTR1:
-    IGNORED_FIELDS = {GSTR1_DataField.TAX_RATE.value, GSTR1_DataField.DOC_VALUE.value}
+    IGNORED_FIELDS = {df.TAX_RATE, df.DOC_VALUE}
     UNREQUIRED_KEYS = {
-        GSTR1_DataField.TRANSACTION_TYPE.value,
-        GSTR1_DataField.DOC_NUMBER.value,
-        GSTR1_DataField.DOC_DATE.value,
-        GSTR1_DataField.CUST_GSTIN.value,
-        GSTR1_DataField.CUST_NAME.value,
-        GSTR1_DataField.REVERSE_CHARGE.value,
+        df.TRANSACTION_TYPE,
+        df.DOC_NUMBER,
+        df.DOC_DATE,
+        df.CUST_GSTIN,
+        df.CUST_NAME,
+        df.REVERSE_CHARGE,
     }
 
     def get_reconcile_gstr1_data(self, gov_data, books_data):
@@ -478,7 +478,7 @@ class ReconcileGSTR1:
 
 
 class AggregateInvoices:
-    IGNORED_FIELDS = {GSTR1_DataField.TAX_RATE.value, GSTR1_DataField.DOC_VALUE.value}
+    IGNORED_FIELDS = {df.TAX_RATE, df.DOC_VALUE}
 
     @staticmethod
     def get_aggregate_data(data: dict):

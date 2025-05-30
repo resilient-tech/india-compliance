@@ -235,6 +235,7 @@ def get_columns(filters):
                 "options": "GST HSN Code",
                 "width": 120,
             },
+            # TODO: HSN Subcategory Column
             {
                 "label": _("UOM"),
                 "fieldname": "uom",
