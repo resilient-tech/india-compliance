@@ -22,9 +22,6 @@ def create_transaction(**data):
     data = frappe._dict(data)
     transaction = frappe.get_doc(data)
 
-    if transaction.posting_date:
-        transaction.set_posting_time = 1
-
     if not transaction.company:
         transaction.company = "_Test Indian Registered Company"
 

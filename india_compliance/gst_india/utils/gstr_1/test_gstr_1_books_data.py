@@ -900,6 +900,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
             is_in_state=True,
             items=items,
             posting_date=getdate("2025-04-01"),
+            set_posting_time=1,
         )
 
         filters = frappe._dict(
