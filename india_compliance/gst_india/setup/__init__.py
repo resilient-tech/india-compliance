@@ -203,7 +203,6 @@ def set_default_gst_settings():
         "auto_generate_e_invoice": 1,
         "generate_e_waybill_with_e_invoice": 1,
         "e_invoice_applicable_from": nowdate(),
-        # "hsn_bifurcation_from": "2025-04-01",  # As per GST Notification
         "e_invoice_reporting_time_limit_days": 30,
         "autofill_party_info": 1,
         "archive_party_info_days": 7,

@@ -9,6 +9,7 @@ from frappe.utils.data import getdate
 
 from india_compliance.gst_india.utils.gstr_1 import (
     CATEGORY_SUB_CATEGORY_MAPPING,
+    HSN_BIFURCATION_FROM,
     PREVIOUS_VERSION,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
@@ -56,9 +57,6 @@ class SummarizeGSTR1:
         4. Round Values
         """
         category_summary = []
-        hsn_bifurcation_from = frappe.db.get_single_value(
-            "GST Settings", "hsn_bifurcation_from"
-        )
 
         for category, sub_categories in CATEGORY_SUB_CATEGORY_MAPPING.items():
             # Init category row
@@ -74,7 +72,7 @@ class SummarizeGSTR1:
             remove_category_row = True
 
             # Backwards compatibility
-            if (filing_from < hsn_bifurcation_from) and category in PREVIOUS_VERSION:
+            if (filing_from < HSN_BIFURCATION_FROM) and category in PREVIOUS_VERSION:
                 sub_categories = PREVIOUS_VERSION[category]
 
             for subcategory in sub_categories:
