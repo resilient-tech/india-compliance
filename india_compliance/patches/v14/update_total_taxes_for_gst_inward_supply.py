@@ -9,11 +9,11 @@ def execute():
         frappe.qb.from_(dt)
         .select(
             dt.parent.as_("name"),
-            Sum(dt.taxable_value),
-            Sum(dt.igst),
-            Sum(dt.cgst),
-            Sum(dt.sgst),
-            Sum(dt.cess),
+            Sum(dt.taxable_value).as_("taxable_value"),
+            Sum(dt.igst).as_("igst"),
+            Sum(dt.cgst).as_("cgst"),
+            Sum(dt.sgst).as_("sgst"),
+            Sum(dt.cess).as_("cess"),
         )
         .groupby(dt.parent)
         .run(as_dict=True)
