@@ -124,12 +124,12 @@ def get_columns(filters):
 def get_hsn_data(filters):
     _class = GSTR1Invoices(filters)
     invoices = _class.get_invoices_for_item_wise_summary()
-    _class.process_invoices(invoices)
+    _class.process_invoices(invoices, filters.get("bifurcate_hsn"))
 
-    return process_hsn_data(invoices, filters.get("bifurcate_hsn"))
+    return process_hsn_data(invoices)
 
 
-def process_hsn_data(invoices, bifurcate_hsn=False):
+def process_hsn_data(invoices):
     # TODO: This import should be moved to the top of the file once GSTR-1 Report is discontinued.
     from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import GSTR1BooksData
 
@@ -144,16 +144,11 @@ def process_hsn_data(invoices, bifurcate_hsn=False):
         "total_cess_amount",
     )
 
-    gstr_data = GSTR1BooksData({})
+    hsn_summary = GSTR1BooksData({}).prepare_hsn_data(invoices)
 
-    if bifurcate_hsn:
-        hsn_b2b_data, hsn_b2c_data = gstr_data.prepare_hsn_data_with_bifurcation(
-            invoices
-        )
-        hsn_data = list(hsn_b2b_data.values()) + list(hsn_b2c_data.values())
-    else:
-        hsn_data = gstr_data.prepare_hsn_data(invoices)
-        hsn_data = list(hsn_data.values())
+    hsn_data = []
+    for hsn_key in hsn_summary.values():
+        hsn_data.extend(list(hsn_key.values()))
 
     return [
         {
