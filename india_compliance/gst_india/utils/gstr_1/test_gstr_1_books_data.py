@@ -159,7 +159,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
             si.save()
             si.submit()
 
-        for i in range(11):
+        for _ in range(11):
             create_invoice()
 
         _class = GSTR1BooksData(filters=FILTERS)
@@ -210,7 +210,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
             si.save()
             si.submit()
 
-        for i in range(11):
+        for _ in range(11):
             create_invoice()
 
         _class = GSTR1BooksData(filters=FILTERS)
@@ -267,7 +267,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
             si.save()
             si.submit()
 
-        for i in range(11):
+        for _ in range(11):
             create_invoice()
 
         _class = GSTR1BooksData(filters=FILTERS)
