@@ -13,7 +13,9 @@ from india_compliance.gst_india.utils.gstr_1 import (
     PREVIOUS_VERSION,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
-    GSTR1_DataField,
+)
+from india_compliance.gst_india.utils.gstr_1 import GSTR1_DataField as df
+from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_SubCategory,
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_download import (
@@ -187,9 +189,9 @@ class SummarizeGSTR1:
 
     @staticmethod
     def count_doc_issue_summary(summary_row, data_row):
-        summary_row["no_of_records"] += data_row.get(
-            GSTR1_DataField.TOTAL_COUNT.value, 0
-        ) - data_row.get(GSTR1_DataField.CANCELLED_COUNT.value, 0)
+        summary_row["no_of_records"] += data_row.get(df.TOTAL_COUNT, 0) - data_row.get(
+            df.CANCELLED_COUNT, 0
+        )
 
     @staticmethod
     def count_hsn_summary(summary_row):
@@ -197,14 +199,14 @@ class SummarizeGSTR1:
 
 
 class ReconcileGSTR1:
-    IGNORED_FIELDS = {GSTR1_DataField.TAX_RATE.value, GSTR1_DataField.DOC_VALUE.value}
+    IGNORED_FIELDS = {df.TAX_RATE, df.DOC_VALUE}
     UNREQUIRED_KEYS = {
-        GSTR1_DataField.TRANSACTION_TYPE.value,
-        GSTR1_DataField.DOC_NUMBER.value,
-        GSTR1_DataField.DOC_DATE.value,
-        GSTR1_DataField.CUST_GSTIN.value,
-        GSTR1_DataField.CUST_NAME.value,
-        GSTR1_DataField.REVERSE_CHARGE.value,
+        df.TRANSACTION_TYPE,
+        df.DOC_NUMBER,
+        df.DOC_DATE,
+        df.CUST_GSTIN,
+        df.CUST_NAME,
+        df.REVERSE_CHARGE,
     }
 
     def get_reconcile_gstr1_data(self, gov_data, books_data):
@@ -416,7 +418,7 @@ class ReconcileGSTR1:
 
 
 class AggregateInvoices:
-    IGNORED_FIELDS = {GSTR1_DataField.TAX_RATE.value, GSTR1_DataField.DOC_VALUE.value}
+    IGNORED_FIELDS = {df.TAX_RATE, df.DOC_VALUE}
 
     @staticmethod
     def get_aggregate_data(data: dict):
