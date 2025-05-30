@@ -32,13 +32,14 @@ FILTERS = frappe._dict(
 )
 
 
-class TestBooksData(IntegrationTestCase):
+class TestGSTR1BooksData(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
 
-        # setup cess account
-        cls.cess_account = setup_cess_account()
+    def setUp(self):
+        super().setUp()
+        frappe.db.rollback()
 
     def assertDictEq(self, expected: dict, actual: dict):
         """
@@ -55,9 +56,8 @@ class TestBooksData(IntegrationTestCase):
 
             self.assertEqual(v, actual.get(k))
 
-
-class TestGSTR1BooksData(TestBooksData):
     def test_b2b_regular_transaction(self):
+        setup_cess_account()
         si = create_sales_invoice(
             customer="_Test Registered Customer",
             is_in_state=True,
@@ -102,6 +102,7 @@ class TestGSTR1BooksData(TestBooksData):
         )
 
     def test_b2b_regular_transaction_with_gst_inclusive_price(self):
+        setup_cess_account()
         si = create_sales_invoice(
             customer="_Test Registered Customer", do_not_submit=True
         )
@@ -184,6 +185,111 @@ class TestGSTR1BooksData(TestBooksData):
 
             hsn_total = 0
             for row in data[GSTR1_SubCategory.HSN.value].values():
+                hsn_total += row.get(key, 0.0)
+
+            self.assertEqual(flt(hsn_total, 2), flt(invoice_total, 2))
+
+    @change_settings("System Settings", {"currency_precision": 3})
+    def test_b2c_rounding_adjustment(self):
+        def create_invoice():
+            si = create_sales_invoice(
+                customer="_Test Unregistered Customer",
+                is_in_state=True,
+                do_not_submit=True,
+            )
+
+            random_hsn_codes = ["55885588", "55998899", "55779966", "55667788"]
+            for i in range(1, 7):
+                append_item(
+                    si,
+                    data=frappe._dict(
+                        gst_hsn_code=random_hsn_codes[i % 4], qty=1.0, rate=1.003
+                    ),
+                )
+
+            si.save()
+            si.submit()
+
+        for i in range(11):
+            create_invoice()
+
+        _class = GSTR1BooksData(filters=FILTERS)
+        data = _class.prepare_mapped_data()
+        self.assertDictEq(
+            {
+                "rounding_difference": {
+                    "total_taxable_value": -0.02,
+                    "total_igst_amount": 0.0,
+                    "total_cgst_amount": 0.02,
+                    "total_sgst_amount": 0.02,
+                    "total_cess_amount": 0.0,
+                }
+            },
+            data["rounding_difference"],
+        )
+
+        # Check if HSN Summary is same as Invoice Summary
+        for key in _class.DATA_TO_ITEM_FIELD_MAPPING:
+            invoice_total = 0
+            for invoices in data[GSTR1_SubCategory.B2CS.value].values():
+                for row in invoices:
+                    invoice_total += row.get(key, 0.0)
+
+            hsn_total = 0
+            for row in data[GSTR1_SubCategory.HSN_B2C.value].values():
+                hsn_total += row.get(key, 0.0)
+
+            self.assertEqual(flt(hsn_total, 2), flt(invoice_total, 2))
+
+    @change_settings("System Settings", {"currency_precision": 3})
+    def test_nil_exempt_rounding_adjustment(self):
+        def create_invoice():
+            si = create_sales_invoice(
+                customer="_Test Unregistered Customer",
+                is_in_state=True,
+                do_not_submit=True,
+                item_code="_Test Nil Rated Item",
+            )
+
+            random_hsn_codes = ["55885588", "55998899", "55779966", "55667788"]
+
+            for i in range(1, 7):
+                append_item(
+                    si,
+                    data=frappe._dict(
+                        item_code="_Test Nil Rated Item",
+                        gst_hsn_code=random_hsn_codes[i % 4],
+                        qty=1.0,
+                        rate=1.003,
+                    ),
+                )
+
+            si.save()
+            si.submit()
+
+        for i in range(11):
+            create_invoice()
+
+        _class = GSTR1BooksData(filters=FILTERS)
+        data = _class.prepare_mapped_data()
+        self.assertDictEq(
+            {
+                "rounding_difference": {
+                    "total_taxable_value": -0.02,
+                }
+            },
+            data["rounding_difference"],
+        )
+
+        # Check if HSN Summary is same as Invoice Summary
+        for key in _class.DATA_TO_ITEM_FIELD_MAPPING:
+            invoice_total = 0
+            for invoices in data[GSTR1_SubCategory.NIL_EXEMPT.value].values():
+                for row in invoices:
+                    invoice_total += row.get(key, 0.0)
+
+            hsn_total = 0
+            for row in data[GSTR1_SubCategory.HSN_B2C.value].values():
                 hsn_total += row.get(key, 0.0)
 
             self.assertEqual(flt(hsn_total, 2), flt(invoice_total, 2))
@@ -729,10 +835,6 @@ class TestGSTR1BooksData(TestBooksData):
             ][0],
         )
 
-
-class TestHSNBifurcation(TestBooksData):
-    # change settings
-    @change_settings("GST Settings", {"hsn_bifurcation_from": getdate("01-04-2025")})
     def test_hsn_summary_with_bifurcation(self):
         si = create_sales_invoice(
             customer="_Test Registered Customer",
@@ -758,16 +860,21 @@ class TestHSNBifurcation(TestBooksData):
                 "total_sgst_amount": 9.0,
                 "total_cess_amount": 0.0,
                 "document_value": 118.0,
-                "invoice_type": "B2B",
+                "document_type": "HSN Summary - B2B",
             },
             data[GSTR1_SubCategory.HSN_B2B.value][key],
         )
 
-
-class TestHSNWithoutBifurcation(TestBooksData):
-
     def test_hsn_summary_without_bifurcation(self):
-        frappe.db.rollback()
+        # create 2023-2024 fiscal year
+        fiscal_year = frappe.new_doc("Fiscal Year")
+        fiscal_year.update(
+            {
+                "year_start_date": "2025-04-01",
+                "year_end_date": "2026-03-31",
+                "year": "2025-2026",
+            }
+        ).insert(ignore_if_duplicate=True)
 
         items = [
             {
@@ -792,9 +899,19 @@ class TestHSNWithoutBifurcation(TestBooksData):
             customer="_Test Registered Customer",
             is_in_state=True,
             items=items,
+            posting_date=getdate("01-04-2025"),
         )
 
-        data = GSTR1BooksData(filters=FILTERS).prepare_mapped_data()
+        filters = frappe._dict(
+            {
+                **FILTERS,
+                "year": 2025,
+                "month_or_quarter": "April",
+                "from_date": getdate("2025-04-01"),
+                "to_date": getdate("2025-04-30"),
+            }
+        )
+        data = GSTR1BooksData(filters=filters).prepare_mapped_data()
         item = si.items[0]
         uom = get_full_gst_uom(item.uom)
         key = f"{item.gst_hsn_code} - {uom} - {18.0}"
@@ -837,7 +954,6 @@ class TestHSNWithoutBifurcation(TestBooksData):
 
 
 def setup_cess_account(company="_Test Indian Registered Company"):
-    return
     # create cess account
     create_default_company_account(company, "Output Tax CESS", "Duties and Taxes")
     account = frappe.db.get_value(
@@ -845,27 +961,31 @@ def setup_cess_account(company="_Test Indian Registered Company"):
         {"account_name": "Output Tax CESS", "company": company, "is_group": 0},
     )
 
-    # update this to GST Settings
-    gst_settings = frappe.get_doc("GST Settings")
-    for row in gst_settings.gst_accounts:
-        if row.company != company or row.account_type != "Output":
-            continue
+    try:
+        # update this to GST Settings
+        gst_settings = frappe.get_doc("GST Settings")
+        for row in gst_settings.gst_accounts:
+            if row.company != company or row.account_type != "Output":
+                continue
 
-        row.cess_account = account
-        break
+            row.cess_account = account
+            break
 
-    gst_settings.save()
+        gst_settings.save()
 
-    # update this to item tax templates
-    item_templates = frappe.get_all(
-        "Item Tax Template",
-        {"company": company, "gst_treatment": "Taxable"},
-        pluck="name",
-    )
+        # update this to item tax templates
+        item_templates = frappe.get_all(
+            "Item Tax Template",
+            {"company": company, "gst_treatment": "Taxable"},
+            pluck="name",
+        )
 
-    for name in item_templates:
-        template = frappe.get_doc("Item Tax Template", name)
-        template.append("taxes", {"tax_type": account, "tax_rate": 2})
-        template.save()
+        for name in item_templates:
+            template = frappe.get_doc("Item Tax Template", name)
+            template.append("taxes", {"tax_type": account, "tax_rate": 2})
+            template.save()
+
+    except frappe.ValidationError:
+        pass
 
     return account

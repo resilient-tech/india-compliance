@@ -2172,20 +2172,16 @@ class BooksDataMapper:
                 elif item.gst_treatment == "Non-GST":
                     invoice[df.NON_GST_AMOUNT] += item.taxable_value
 
-            # Update the invoice with rounding and update rounding difference
-            for key in (
-                df.TAXABLE_VALUE,
-                df.NIL_RATED_AMOUNT,
-                df.EXEMPTED_AMOUNT,
-                df.NON_GST_AMOUNT,
-            ):
-                val = invoice.get(key, 0)
-                rounded = flt(val, self.PRECISION)
-                diff = val - rounded
+            # Round
+            key = df.TAXABLE_VALUE
+            val = invoice.get(key, 0)
+            rounded = flt(val, self.PRECISION)
+            diff = val - rounded
 
-                invoice[key] = rounded
+            invoice[key] = rounded
 
-                self.rounding_difference[key] += diff
+            self.rounding_difference[key] += diff
+            self.invoice_totals[item.hsn_sub_category][key] += rounded
 
     def process_data_for_b2cs(self, grouped_data, prepared_data):
         """
@@ -2241,6 +2237,7 @@ class BooksDataMapper:
                     invoice[key] = rounded
 
                     self.rounding_difference[key] += diff
+                    self.invoice_totals[item.hsn_sub_category][key] += rounded
 
     def process_data_for_hsn_summary(self, grouped_data, prepared_data):
         """
