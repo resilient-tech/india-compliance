@@ -1,24 +1,22 @@
 from collections import defaultdict
 from datetime import datetime
+from itertools import chain
 
 import frappe
 from frappe.utils import flt
-from frappe.utils.data import (
-    getdate,
-)
 
-from india_compliance.gst_india.constants import STATE_NUMBERS, UOM_MAP
+from india_compliance.gst_india.constants import UOM_MAP
 from india_compliance.gst_india.report.gstr_1.gstr_1 import (
     GSTR1DocumentIssuedSummary,
     GSTR11A11BData,
 )
 from india_compliance.gst_india.utils import (
+    MONTHS,
     get_gst_accounts_by_type,
     get_party_for_gstin,
 )
 from india_compliance.gst_india.utils.gstr_1 import (
     CATEGORY_SUB_CATEGORY_MAPPING,
-    HSN_BIFURCATION_FROM,
     SUB_CATEGORY_GOV_CATEGORY_MAPPING,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
@@ -33,20 +31,20 @@ from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_SubCategory,
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
+from india_compliance.gst_india.utils.gstr_mapper_utils import GovDataMapper
 
 ############################################################################################################
 ### Map Govt JSON to Internal Data Structure ###############################################################
 ############################################################################################################
 
 
-class GovDataMapper:
+class GSTR1DataMapper(GovDataMapper):
     """
     GST Developer API Documentation for Returns - https://developer.gst.gov.in/apiportal/taxpayer/returns
 
     GSTR-1 JSON format - https://developer.gst.gov.in/pages/apiportal/data/Returns/GSTR1%20-%20Save%20GSTR1%20data/v4.0/GSTR1%20-%20Save%20GSTR1%20data%20attributes.xlsx
     """
 
-    KEY_MAPPING = {}
     # default item amounts
     DEFAULT_ITEM_AMOUNTS = {
         GSTR1_ItemField.TAXABLE_VALUE.value: 0,
@@ -77,106 +75,10 @@ class GovDataMapper:
     }
 
     def __init__(self):
-        self.set_total_defaults()
-
-        self.value_formatters_for_internal = {}
-        self.value_formatters_for_gov = {}
+        super().__init__()
         self.gstin_party_map = {}
-        # value formatting constants
-
-        self.STATE_NUMBERS = self.reverse_dict(STATE_NUMBERS)
-
-    def format_data(
-        self, data: dict, default_data: dict = None, for_gov: bool = False
-    ) -> dict:
-        """
-        Objective: Convert Object from one format to another.
-            eg: Govt JSON to Internal Data Structure
-
-        Args:
-            data (dict): Data to be converted
-            default_data (dict, optional): Default Data to be added. Hardcoded values.
-            for_gov (bool, optional): If the data is to be converted to Govt JSON. Defaults to False.
-                else it will be converted to Internal Data Structure.
-
-        Steps:
-            1. Use key mapping to map the keys from one format to another.
-            2. Use value formatters to format the values of the keys.
-            3. Round values
-        """
-        output = {}
-
-        if default_data:
-            output.update(default_data)
-
-        key_mapping = self.KEY_MAPPING.copy()
-
-        if for_gov:
-            key_mapping = self.reverse_dict(key_mapping)
-
-        value_formatters = (
-            self.value_formatters_for_gov
-            if for_gov
-            else self.value_formatters_for_internal
-        )
-
-        for old_key, new_key in key_mapping.items():
-            invoice_data_value = data.get(old_key, "")
-
-            if not for_gov and old_key == "flag":
-                continue
-
-            if new_key in self.DISCARD_IF_ZERO_FIELDS and not invoice_data_value:
-                continue
-
-            if not (invoice_data_value or invoice_data_value == 0):
-                # continue if value is None or empty object
-                continue
-
-            value_formatter = value_formatters.get(old_key)
-
-            if callable(value_formatter):
-                output[new_key] = value_formatter(invoice_data_value, data)
-            else:
-                output[new_key] = invoice_data_value
-
-            if new_key in self.FLOAT_FIELDS:
-                output[new_key] = flt(output[new_key], 2)
-
-        return output
-
-    # common utils
-
-    def update_totals(self, invoice, items):
-        """
-        Update item totals to the invoice row
-        """
-        total_data = self.TOTAL_DEFAULTS.copy()
-
-        for item in items:
-            for field, value in item.items():
-                total_field = f"total_{field}"
-
-                if total_field not in total_data:
-                    continue
-
-                invoice[total_field] = invoice.setdefault(total_field, 0) + value
-
-    def set_total_defaults(self):
-        self.TOTAL_DEFAULTS = {
-            f"total_{key}": 0 for key in self.DEFAULT_ITEM_AMOUNTS.keys()
-        }
-
-    def reverse_dict(self, data):
-        return {v: k for k, v in data.items()}
 
     # common value formatters
-    def map_place_of_supply(self, pos, *args):
-        if pos.isnumeric():
-            return f"{pos}-{self.STATE_NUMBERS.get(pos)}"
-
-        return pos.split("-")[0]
-
     def format_item_for_internal(self, items, *args):
         return [
             {
@@ -209,8 +111,28 @@ class GovDataMapper:
     def format_date_for_gov(self, date, *args):
         return datetime.strptime(date, "%Y-%m-%d").strftime("%d-%m-%Y")
 
+    def convert_to_internal_data_format(self, input_data):
+        """
+        Objective: Convert Govt JSON to Internal Data Structure
+        Args:
+            input_data (list): Govt JSON Data
+        Returns:
+            dict: Internal Data Structure
+        """
+        raise NotImplementedError("This method should be overridden in subclasses")
 
-class B2B(GovDataMapper):
+    def convert_to_gov_data_format(self, input_data, **kwargs):
+        """
+        Objective: Convert Internal Data Structure to Govt JSON
+        Args:
+            input_data (dict): Internal Data Structure
+        Returns:
+            list: Govt JSON Data
+        """
+        raise NotImplementedError("This method should be overridden in subclasses")
+
+
+class B2B(GSTR1DataMapper):
     """
     GST API Version - v4.0
 
@@ -377,7 +299,7 @@ class B2B(GovDataMapper):
         return self.DOCUMENT_CATEGORIES.get(sub_category, sub_category)
 
 
-class B2CL(GovDataMapper):
+class B2CL(GSTR1DataMapper):
     """
     GST API Version - v4.0
 
@@ -499,7 +421,7 @@ class B2CL(GovDataMapper):
         return list(pos_data.values())
 
 
-class Exports(GovDataMapper):
+class Exports(GSTR1DataMapper):
     """
     GST API Version - v4.0
 
@@ -641,7 +563,7 @@ class Exports(GovDataMapper):
         return [self.format_data(item, for_gov=True) for item in items]
 
 
-class B2CS(GovDataMapper):
+class B2CS(GSTR1DataMapper):
     """
     GST API Version - v4.0
 
@@ -737,7 +659,7 @@ class B2CS(GovDataMapper):
         return data
 
 
-class NilRated(GovDataMapper):
+class NilRated(GSTR1DataMapper):
     """
     GST API Version - v4.0
 
@@ -838,7 +760,7 @@ class NilRated(GovDataMapper):
         return self.DOCUMENT_CATEGORIES.get(doc_category, doc_category)
 
 
-class CDNR(GovDataMapper):
+class CDNR(GSTR1DataMapper):
     """
     GST API Version - v4.0
 
@@ -1022,7 +944,7 @@ class CDNR(GovDataMapper):
         return value * -1 if data[GovDataField.NOTE_TYPE.value] == "C" else value
 
 
-class CDNUR(GovDataMapper):
+class CDNUR(GSTR1DataMapper):
     """
     GST API Version - v4.0
 
@@ -1158,7 +1080,7 @@ class CDNUR(GovDataMapper):
         return value * -1 if data[GovDataField.NOTE_TYPE.value] == "C" else value
 
 
-class HSNSUM(GovDataMapper):
+class HSNSUM(GSTR1DataMapper):
     """
     GST API Version - Supports both v4.1 and v4.0
 
@@ -1314,7 +1236,7 @@ class HSNSUM(GovDataMapper):
         return f"OTH-{UOM_MAP.get('OTH')}"
 
 
-class AT(GovDataMapper):
+class AT(GSTR1DataMapper):
     """
     GST API Version - v4.0
 
@@ -1493,7 +1415,7 @@ class TXPD(AT):
     MULTIPLIER = -1
 
 
-class DOC_ISSUE(GovDataMapper):
+class DOC_ISSUE(GSTR1DataMapper):
     """
     GST API Version - v4.0
 
@@ -1621,7 +1543,7 @@ class DOC_ISSUE(GovDataMapper):
         return self.DOCUMENT_NATURE.get(doc_nature, doc_nature)
 
 
-class SUPECOM(GovDataMapper):
+class SUPECOM(GSTR1DataMapper):
     """
     GST API Version - v4.0
 
@@ -1698,7 +1620,7 @@ class SUPECOM(GovDataMapper):
         return output
 
 
-class RETSUM(GovDataMapper):
+class RETSUM(GSTR1DataMapper):
     """
     Convert GSTR-1 Summary as returned by the API to the internal format
 
@@ -2024,6 +1946,7 @@ def summarize_retsum_data(input_data):
 
 
 class BooksDataMapper:
+
     def get_transaction_type(self, invoice):
         if invoice.is_debit_note:
             return "Debit Note"
@@ -2032,173 +1955,305 @@ class BooksDataMapper:
         else:
             return "Invoice"
 
-    def process_data_for_invoice_no_key(self, invoice, prepared_data):
-        invoice_sub_category = invoice.invoice_sub_category
-        invoice_no = invoice.invoice_no
+    def get_category_from_subcategory(
+        self, invoice_sub_category: str
+    ) -> GSTR1_Category:
+        invoice_sub_category = GSTR1_SubCategory(invoice_sub_category)
+        for category, sub_category in CATEGORY_SUB_CATEGORY_MAPPING.items():
+            if invoice_sub_category in sub_category:
+                return category
 
-        mapped_dict = prepared_data.setdefault(invoice_sub_category, {}).setdefault(
-            invoice_no,
-            {
-                df.TRANSACTION_TYPE: self.get_transaction_type(invoice),
-                df.CUST_GSTIN: invoice.billing_address_gstin,
-                df.CUST_NAME: invoice.customer_name,
-                df.DOC_DATE: invoice.posting_date,
-                df.DOC_NUMBER: invoice.invoice_no,
-                df.DOC_VALUE: invoice.invoice_total,
-                df.POS: invoice.place_of_supply,
-                df.REVERSE_CHARGE: ("Y" if invoice.is_reverse_charge else "N"),
-                df.DOC_TYPE: invoice.invoice_type,
-                df.TAXABLE_VALUE: 0,
-                df.IGST: 0,
-                df.CGST: 0,
-                df.SGST: 0,
-                df.CESS: 0,
-                df.DIFF_PERCENTAGE: 0,
-                df.SHIPPING_PORT_CODE: invoice.shipping_port_code,
-                df.SHIPPING_BILL_NUMBER: invoice.shipping_bill_number,
-                df.SHIPPING_BILL_DATE: invoice.shipping_bill_date,
-                "items": [],
-            },
-        )
+    DATA_TO_ITEM_FIELD_MAPPING = {
+        df.TAXABLE_VALUE: GSTR1_ItemField.TAXABLE_VALUE.value,
+        df.IGST: GSTR1_ItemField.IGST.value,
+        df.CGST: GSTR1_ItemField.CGST.value,
+        df.SGST: GSTR1_ItemField.SGST.value,
+        df.CESS: GSTR1_ItemField.CESS.value,
+    }
 
-        items = mapped_dict["items"]
+    ITEM_TO_INVOICE_FIELD_MAPPING = {
+        GSTR1_ItemField.TAXABLE_VALUE.value: "taxable_value",
+        GSTR1_ItemField.IGST.value: "igst_amount",
+        GSTR1_ItemField.CGST.value: "cgst_amount",
+        GSTR1_ItemField.SGST.value: "sgst_amount",
+        GSTR1_ItemField.CESS.value: "total_cess_amount",
+    }
 
-        for item in items:
-            if item[GSTR1_ItemField.TAX_RATE.value] == invoice.gst_rate:
-                item[GSTR1_ItemField.TAXABLE_VALUE.value] += invoice.taxable_value
-                item[GSTR1_ItemField.IGST.value] += invoice.igst_amount
-                item[GSTR1_ItemField.CGST.value] += invoice.cgst_amount
-                item[GSTR1_ItemField.SGST.value] += invoice.sgst_amount
-                item[GSTR1_ItemField.CESS.value] += invoice.total_cess_amount
-                self.update_totals(mapped_dict, invoice)
-                return
+    DATA_TO_INVOICE_FIELD_MAPPING = {
+        df.TAXABLE_VALUE: "taxable_value",
+        df.IGST: "igst_amount",
+        df.CGST: "cgst_amount",
+        df.SGST: "sgst_amount",
+        df.CESS: "total_cess_amount",
+    }
 
-        items.append(
-            {
-                GSTR1_ItemField.TAXABLE_VALUE.value: invoice.taxable_value,
-                GSTR1_ItemField.IGST.value: invoice.igst_amount,
-                GSTR1_ItemField.CGST.value: invoice.cgst_amount,
-                GSTR1_ItemField.SGST.value: invoice.sgst_amount,
-                GSTR1_ItemField.CESS.value: invoice.total_cess_amount,
-                GSTR1_ItemField.TAX_RATE.value: invoice.gst_rate,
+    PRECISION = 2
+
+    def process_data_for_invoice_no_key(self, grouped_data, prepared_data):
+        """
+        Input:
+            grouped_data: {
+                (invoice_sub_category, invoice_no): {
+                    gst_rate: [invoice_items]
+                }
             }
-        )
+            prepared_data: dict to be updated with the processed data
+        """
+        if not grouped_data:
+            return
 
-        self.update_totals(mapped_dict, invoice)
+        for (sub_category, invoice_no), rate_wise_item in grouped_data.items():
+            doc = next(chain(*rate_wise_item.values()))
 
-    def process_data_for_nil_exempt(self, invoice, prepared_data):
-        key = invoice.invoice_category
-        invoices_by_type = prepared_data.setdefault(key, {}).setdefault(
-            invoice.invoice_type, []
-        )
+            if sub_category not in prepared_data:
+                prepared_data[sub_category] = {}
 
-        for mapped_dict in invoices_by_type:
-            if mapped_dict[df.DOC_NUMBER] == invoice.invoice_no:
-                break
+            sub_category_dict = prepared_data[sub_category]
+            sub_category_dict[invoice_no] = {
+                # TODO: make a method for creating the dict
+                df.TRANSACTION_TYPE: self.get_transaction_type(doc),
+                df.CUST_GSTIN: doc.billing_address_gstin,
+                df.CUST_NAME: doc.customer_name,
+                df.DOC_DATE: doc.posting_date,
+                df.DOC_NUMBER: doc.invoice_no,
+                df.DOC_VALUE: doc.invoice_total,
+                df.POS: doc.place_of_supply,
+                df.REVERSE_CHARGE: ("Y" if doc.is_reverse_charge else "N"),
+                df.DOC_TYPE: doc.invoice_type,
+                **self.get_invoice_values(),
+                df.DIFF_PERCENTAGE: 0,
+                df.SHIPPING_PORT_CODE: doc.shipping_port_code,
+                df.SHIPPING_BILL_NUMBER: doc.shipping_bill_number,
+                df.SHIPPING_BILL_DATE: doc.shipping_bill_date,
+                "items": [],
+            }
 
-        else:
-            mapped_dict = {
-                df.TRANSACTION_TYPE: self.get_transaction_type(invoice),
-                df.CUST_GSTIN: invoice.billing_address_gstin,
-                df.CUST_NAME: invoice.customer_name,
-                df.DOC_NUMBER: invoice.invoice_no,
-                df.DOC_DATE: invoice.posting_date,
-                df.DOC_VALUE: invoice.invoice_total,
-                df.POS: invoice.place_of_supply,
-                df.REVERSE_CHARGE: ("Y" if invoice.is_reverse_charge else "N"),
-                df.DOC_TYPE: invoice.invoice_type,
+            invoice = sub_category_dict[invoice_no]
+
+            for gst_rate, items in rate_wise_item.items():
+                tax_item = defaultdict(int)
+
+                for item in items:
+                    for key, field in self.ITEM_TO_INVOICE_FIELD_MAPPING.items():
+                        tax_item[key] += item.get(field, 0)
+
+                tax_item[GSTR1_ItemField.TAX_RATE.value] = gst_rate
+                invoice["items"].append(dict(tax_item))
+
+            # Aggregate the values for each item field with same GST Rate
+            # Round off this aggregated value and compute the difference at GST Rate level
+
+            for key, field in self.DATA_TO_ITEM_FIELD_MAPPING.items():
+                for item in invoice["items"]:
+                    value = item.get(field, 0)
+                    rounded = flt(value, self.PRECISION)
+                    diff = value - rounded
+
+                    item[field] = rounded
+                    invoice[key] += rounded
+
+                    self.rounding_difference[key] += diff
+
+                rounded = flt(invoice[key], self.PRECISION)
+                invoice[key] = rounded
+                self.invoice_totals[doc.hsn_sub_category][key] += rounded
+
+    def process_data_for_nil_exempt(self, grouped_data, prepared_data):
+        """
+        Input:
+            grouped_data: {
+                (invoice_sub_category, invoice_no): {
+                    gst_rate: [invoice_items]
+                }
+            }
+            prepared_data: dict to be updated with the processed data
+        """
+        if not grouped_data:
+            return
+
+        sub_category = GSTR1_SubCategory.NIL_EXEMPT.value
+        nil_exempt = prepared_data.setdefault(sub_category, {})
+
+        for _, rate_wise_item in grouped_data.items():
+            item = next(chain(*rate_wise_item.values()), None)
+
+            if item.invoice_type not in nil_exempt:
+                nil_exempt[item.invoice_type] = []
+
+            invoices_by_type = nil_exempt[item.invoice_type]
+
+            invoice = {
+                df.TRANSACTION_TYPE: self.get_transaction_type(item),
+                df.CUST_GSTIN: item.billing_address_gstin,
+                df.CUST_NAME: item.customer_name,
+                df.DOC_NUMBER: item.invoice_no,
+                df.DOC_DATE: item.posting_date,
+                df.DOC_VALUE: item.invoice_total,
+                df.POS: item.place_of_supply,
+                df.REVERSE_CHARGE: ("Y" if item.is_reverse_charge else "N"),
+                df.DOC_TYPE: item.invoice_type,
                 df.TAXABLE_VALUE: 0,
                 df.NIL_RATED_AMOUNT: 0,
                 df.EXEMPTED_AMOUNT: 0,
                 df.NON_GST_AMOUNT: 0,
             }
-            invoices_by_type.append(mapped_dict)
 
-        mapped_dict[df.TAXABLE_VALUE] += invoice.taxable_value
+            invoices_by_type.append(invoice)
 
-        if invoice.gst_treatment == "Nil-Rated":
-            mapped_dict[df.NIL_RATED_AMOUNT] += invoice.taxable_value
-        elif invoice.gst_treatment == "Exempted":
-            mapped_dict[df.EXEMPTED_AMOUNT] += invoice.taxable_value
-        elif invoice.gst_treatment == "Non-GST":
-            mapped_dict[df.NON_GST_AMOUNT] += invoice.taxable_value
+            for item in chain(*rate_wise_item.values()):
+                invoice[df.TAXABLE_VALUE] += item.taxable_value
 
-    def process_data_for_b2cs(self, invoice, prepared_data):
-        key = f"{invoice.place_of_supply} - {flt(invoice.gst_rate)}"
-        mapped_dict = prepared_data.setdefault("B2C (Others)", {}).setdefault(key, [])
+                if item.gst_treatment == "Nil-Rated":
+                    invoice[df.NIL_RATED_AMOUNT] += item.taxable_value
 
-        for row in mapped_dict:
-            if row[df.DOC_NUMBER] == invoice.invoice_no:
-                self.update_totals(row, invoice)
-                return
+                elif item.gst_treatment == "Exempted":
+                    invoice[df.EXEMPTED_AMOUNT] += item.taxable_value
 
-        mapped_dict.append(
-            {
-                df.DOC_DATE: invoice.posting_date,
-                df.DOC_NUMBER: invoice.invoice_no,
-                df.DOC_VALUE: invoice.invoice_total,
-                df.CUST_NAME: invoice.customer_name,
-                # currently other value is not supported in GSTR-1
-                df.DOC_TYPE: "OE",
-                df.TRANSACTION_TYPE: self.get_transaction_type(invoice),
-                df.POS: invoice.place_of_supply,
-                df.TAX_RATE: invoice.gst_rate,
-                df.ECOMMERCE_GSTIN: invoice.ecommerce_gstin,
-                **self.get_invoice_values(invoice),
+                elif item.gst_treatment == "Non-GST":
+                    invoice[df.NON_GST_AMOUNT] += item.taxable_value
+
+            # Round
+            key = df.TAXABLE_VALUE
+            val = invoice.get(key, 0)
+            rounded = flt(val, self.PRECISION)
+            diff = val - rounded
+
+            invoice[key] = rounded
+
+            self.rounding_difference[key] += diff
+            self.invoice_totals[item.hsn_sub_category][key] += rounded
+
+    def process_data_for_b2cs(self, grouped_data, prepared_data):
+        """
+        Input:
+            grouped_data: {
+                (invoice_sub_category, invoice_no): {
+                    gst_rate: [invoice_items]
+                }
             }
-        )
+            prepared_data: dict to be updated with the processed data
+        """
+        if not grouped_data:
+            return
 
-    def process_data_for_hsn_summary(self, invoice, prepared_data):
-        key = f"{invoice.gst_hsn_code} - {invoice.uom} - {flt(invoice.gst_rate)}"
+        sub_category = GSTR1_Category.B2CS.value
+        b2c_others = prepared_data.setdefault(sub_category, {})
 
-        if key not in prepared_data:
-            mapped_dict = prepared_data.setdefault(
-                key,
-                {
-                    df.HSN_CODE: invoice.gst_hsn_code,
-                    df.DESCRIPTION: frappe.db.get_value(
-                        "GST HSN Code", invoice.gst_hsn_code, "description"
-                    ),
-                    df.UOM: invoice.uom,
+        for _, rate_wise_item in grouped_data.items():
+            for gst_rate, items in rate_wise_item.items():
+                item = items[0]
+                key = f"{item.place_of_supply} - {flt(gst_rate)}"
+
+                if key not in b2c_others:
+                    b2c_others[key] = []
+
+                invoice_list = b2c_others[key]
+
+                invoice = {
+                    df.DOC_DATE: item.posting_date,
+                    df.DOC_NUMBER: item.invoice_no,
+                    df.DOC_VALUE: item.invoice_total,
+                    df.CUST_NAME: item.customer_name,
+                    # currently other value is not supported in GSTR-1
+                    df.DOC_TYPE: "OE",
+                    df.TRANSACTION_TYPE: self.get_transaction_type(item),
+                    df.POS: item.place_of_supply,
+                    df.TAX_RATE: item.gst_rate,
+                    df.ECOMMERCE_GSTIN: item.ecommerce_gstin,
+                    **self.get_invoice_values(),
+                }
+
+                invoice_list.append(invoice)
+
+                for key, field in self.DATA_TO_INVOICE_FIELD_MAPPING.items():
+
+                    for item in items:
+                        invoice[key] += item.get(field, 0)
+
+                    val = invoice.get(key, 0)
+                    rounded = flt(val, self.PRECISION)
+                    diff = val - rounded
+
+                    invoice[key] = rounded
+
+                    self.rounding_difference[key] += diff
+                    self.invoice_totals[item.hsn_sub_category][key] += rounded
+
+    def process_data_for_hsn_summary(self, grouped_data, prepared_data):
+        """
+        Input:
+            grouped_data: {
+                invoice_sub_category: {
+                    "gst_hsn_code - uom - gst_rate": [invoice_items]
+                }
+            }
+            prepared_data: dict to be updated with the processed data
+        """
+
+        data_to_invoice_field_map = {
+            **self.DATA_TO_INVOICE_FIELD_MAPPING,
+            df.QUANTITY: "qty",
+        }
+        tax_fields = self.DATA_TO_INVOICE_FIELD_MAPPING.keys()
+
+        for sub_category, hsn_key in grouped_data.items():
+            sub_category_dict = prepared_data.setdefault(sub_category, {})
+
+            # HSN Descriptions
+            hsn_codes = [key.split(" - ")[0] for key in hsn_key]
+            descriptions = frappe._dict(
+                frappe.get_all(
+                    "GST HSN Code",
+                    fields=["name", "description"],
+                    filters={"name": ["in", hsn_codes]},
+                    as_list=True,
+                )
+            )
+
+            # Map
+            for key, items in hsn_key.items():
+                item = items[0]
+
+                sub_category_dict[key] = {
+                    df.DOC_TYPE: sub_category,
+                    df.HSN_CODE: item.gst_hsn_code,
+                    df.DESCRIPTION: descriptions.get(item.gst_hsn_code),
+                    df.UOM: item.uom,
                     df.QUANTITY: 0,
-                    df.TAX_RATE: invoice.gst_rate,
-                    df.TAXABLE_VALUE: 0,
-                    df.IGST: 0,
-                    df.CGST: 0,
-                    df.SGST: 0,
-                    df.CESS: 0,
-                },
-            )
+                    df.TAX_RATE: item.gst_rate,
+                    **self.get_invoice_values(),
+                }
 
-        else:
-            mapped_dict = prepared_data[key]
+                invoice = sub_category_dict[key]
 
-        self.update_totals(mapped_dict, invoice, for_qty=True)
+                # Aggregate
+                for key, field in data_to_invoice_field_map.items():
+                    for item in items:
+                        invoice[key] += item.get(field, 0)
 
-        mapped_dict[df.DOC_VALUE] = sum(
-            (
-                mapped_dict.get(df.TAXABLE_VALUE, 0),
-                mapped_dict.get(df.IGST, 0),
-                mapped_dict.get(df.CGST, 0),
-                mapped_dict.get(df.SGST, 0),
-                mapped_dict.get(df.CESS, 0),
-            )
-        )
+                    invoice[key] = flt(invoice[key], self.PRECISION)
+
+                doc_value = sum([invoice.get(field, 0) for field in tax_fields])
+                invoice[df.DOC_VALUE] = flt(doc_value, self.PRECISION)
+
+            if hasattr(self, "invoice_totals"):
+                self.adjust_hsn_totals(sub_category, sub_category_dict)
 
     def process_data_for_document_issued_summary(self, row, prepared_data):
         key = f"{row['nature_of_document']} - {row['from_serial_no']}"
-        prepared_data.setdefault(
-            key,
-            {
-                df.DOC_TYPE: row["nature_of_document"],
-                df.FROM_SR: row["from_serial_no"],
-                df.TO_SR: row["to_serial_no"],
-                df.TOTAL_COUNT: row["total_issued"],
-                df.DRAFT_COUNT: row["total_draft"],
-                df.CANCELLED_COUNT: row["cancelled"],
-                df.NET_ISSUE: row["total_submitted"],
-            },
-        )
+
+        if key in prepared_data:
+            return
+
+        prepared_data[key] = {
+            df.DOC_TYPE: row["nature_of_document"],
+            df.FROM_SR: row["from_serial_no"],
+            df.TO_SR: row["to_serial_no"],
+            df.TOTAL_COUNT: row["total_issued"],
+            df.DRAFT_COUNT: row["total_draft"],
+            df.CANCELLED_COUNT: row["cancelled"],
+            df.NET_ISSUE: row["total_submitted"],
+        }
 
     def process_data_for_advances_received_or_adjusted(
         self, row, prepared_data, multiplier=1
@@ -2234,36 +2289,69 @@ class BooksDataMapper:
 
     # utils
 
-    def update_totals(self, mapped_dict, invoice, for_qty=False):
-        data_invoice_amount_map = {
-            df.TAXABLE_VALUE: GSTR1_ItemField.TAXABLE_VALUE.value,
-            df.IGST: GSTR1_ItemField.IGST.value,
-            df.CGST: GSTR1_ItemField.CGST.value,
-            df.SGST: GSTR1_ItemField.SGST.value,
-            df.CESS: GSTR1_ItemField.CESS.value,
-        }
+    def get_invoice_values(self, invoice=None):
+        if invoice is None:
+            invoice = {}
 
-        if for_qty:
-            data_invoice_amount_map[df.QUANTITY] = "qty"
-
-        for key, field in data_invoice_amount_map.items():
-            mapped_dict[key] += invoice.get(field, 0)
-
-    def get_invoice_values(self, invoice):
         return {
-            df.TAXABLE_VALUE: invoice.taxable_value,
-            df.IGST: invoice.igst_amount,
-            df.CGST: invoice.cgst_amount,
-            df.SGST: invoice.sgst_amount,
-            df.CESS: invoice.total_cess_amount,
+            df.TAXABLE_VALUE: invoice.get("taxable_value", 0),
+            df.IGST: invoice.get("igst_amount", 0),
+            df.CGST: invoice.get("cgst_amount", 0),
+            df.SGST: invoice.get("sgst_amount", 0),
+            df.CESS: invoice.get("total_cess_amount", 0),
         }
+
+    def initialize_totals(self):
+        """
+        Initialize the rounding difference dictionary.
+        This method is used to reset the rounding difference.
+        """
+        self.invoice_totals = defaultdict(lambda: defaultdict(float))
+        self.rounding_difference = defaultdict(float)
+
+    def update_rounding_difference(self, prepared_data):
+        """
+        Round off the rounding difference values to 2 decimal places.
+        This method is used to round off the rounding difference values.
+        """
+        for key, value in self.rounding_difference.items():
+            self.rounding_difference[key] = flt(value, self.PRECISION)
+
+        # saved as object -> it's normalized
+        prepared_data["rounding_difference"] = {
+            "rounding_difference": self.rounding_difference
+        }
+
+    def adjust_hsn_totals(self, sub_category, sub_category_dict):
+        expected_totals = self.invoice_totals.get(sub_category)
+        if not expected_totals:
+            return
+
+        # sort -> to ensure adjusted to same row
+        hsn_data = sorted(
+            sub_category_dict.values(),
+            key=lambda item: item.get(df.TAXABLE_VALUE, 0),
+            reverse=True,
+        )
+
+        # diff
+        for row in hsn_data:
+            for key in expected_totals:
+                expected_totals[key] -= row.get(key, 0)
+
+        # adjust totals
+        for key, diff in expected_totals.items():
+            for row in hsn_data:
+                if row.get(key):
+                    row[key] = flt(row[key] + diff, self.PRECISION)
+                    break
 
 
 class GSTR1BooksData(BooksDataMapper):
     def __init__(self, filters):
         self.filters = filters
         if filters.get("month_or_quarter"):
-            self.filing_from = getdate(f"01-{filters.month_or_quarter}-{filters.year}")
+            self.current_month = MONTHS.index(filters.month_or_quarter) + 1
 
     def prepare_mapped_data(self):
         prepared_data = {}
@@ -2272,22 +2360,16 @@ class GSTR1BooksData(BooksDataMapper):
         data = _class.get_invoices_for_item_wise_summary()
         _class.process_invoices(data)
 
-        for invoice in data:
-            if invoice.get("taxable_value") == 0:
-                continue
+        # initialize rounding difference and hsn error
+        self.initialize_totals()
 
-            if invoice["invoice_category"] in (
-                GSTR1_Category.B2B.value,
-                GSTR1_Category.EXP.value,
-                GSTR1_Category.B2CL.value,
-                GSTR1_Category.CDNR.value,
-                GSTR1_Category.CDNUR.value,
-            ):
-                self.process_data_for_invoice_no_key(invoice, prepared_data)
-            elif invoice["invoice_category"] == GSTR1_Category.NIL_EXEMPT.value:
-                self.process_data_for_nil_exempt(invoice, prepared_data)
-            elif invoice["invoice_category"] == GSTR1_Category.B2CS.value:
-                self.process_data_for_b2cs(invoice, prepared_data)
+        data_for_hsn, data_for_invoice_no_key, data_for_nil_exempt, data_for_b2cs = (
+            self.get_structured_data(data)
+        )
+
+        self.process_data_for_invoice_no_key(data_for_invoice_no_key, prepared_data)
+        self.process_data_for_nil_exempt(data_for_nil_exempt, prepared_data)
+        self.process_data_for_b2cs(data_for_b2cs, prepared_data)
 
         other_categories = {
             GSTR1_Category.AT.value: self.prepare_advances_recevied_data(),
@@ -2295,27 +2377,69 @@ class GSTR1BooksData(BooksDataMapper):
             GSTR1_Category.DOC_ISSUE.value: self.prepare_document_issued_data(),
         }
 
-        # Backwards Compatibility
-        if self.filing_from < HSN_BIFURCATION_FROM:
-            other_categories.update(
-                {
-                    GSTR1_Category.HSN.value: self.prepare_hsn_data(data),
-                }
-            )
-        else:
-            hsn_b2b_data, hsn_b2c_data = self.prepare_hsn_data_with_bifurcation(data)
-            other_categories.update(
-                {
-                    GSTR1_SubCategory.HSN_B2B.value: hsn_b2b_data,
-                    GSTR1_SubCategory.HSN_B2C.value: hsn_b2c_data,
-                }
-            )
+        self.process_data_for_hsn_summary(data_for_hsn, other_categories)
 
         for category, data in other_categories.items():
             if data:
                 prepared_data[category] = data
 
+        self.process_for_quarterly(prepared_data)
+
+        self.update_rounding_difference(prepared_data)
+
         return prepared_data
+
+    def prepare_hsn_data(self, invoices):
+        hsn_summary = {}
+
+        data_for_hsn, *_ = self.get_structured_data(invoices, only_for_hsn=True)
+        self.process_data_for_hsn_summary(data_for_hsn, hsn_summary)
+
+        return hsn_summary
+
+    def get_structured_data(self, data, only_for_hsn=False):
+        """
+        Invoices are bifurcated into different categories by invoice sub-category, invoice number and GST Rate.
+        - data_for_invoice_no_key: B2B, B2CL, CDNR, CDNUR, etc.
+        - data_for_nil_exempt: Nil Rated, Exempted, Non-GST
+        - data_for_b2cs: B2CS (B2C Others)
+
+        Further all invoices are grouped by HSN code, UOM, and GST rate
+        - data_for_hsn: HSN Summary
+        """
+        data_for_invoice_no_key = defaultdict(lambda: defaultdict(list))
+        data_for_nil_exempt = defaultdict(lambda: defaultdict(list))
+        data_for_b2cs = defaultdict(lambda: defaultdict(list))
+        data_for_hsn = defaultdict(lambda: defaultdict(list))
+
+        for item in data:
+            gst_rate = flt(item.get("gst_rate"))
+            hsn_key = f"{item.gst_hsn_code} - {item.uom} - {gst_rate}"
+
+            data_for_hsn[item.get("hsn_sub_category")][hsn_key].append(item)
+
+            if only_for_hsn or item.get("taxable_value") == 0:
+                continue
+
+            key = (item.get("invoice_sub_category"), item.get("invoice_no"))
+
+            invoice_category = GSTR1_Category(item.get("invoice_category"))
+            if invoice_category in (
+                GSTR1_Category.B2B,
+                GSTR1_Category.EXP,
+                GSTR1_Category.B2CL,
+                GSTR1_Category.CDNR,
+                GSTR1_Category.CDNUR,
+            ):
+                data_for_invoice_no_key[key][gst_rate].append(item)
+
+            elif invoice_category == GSTR1_Category.NIL_EXEMPT:
+                data_for_nil_exempt[key][gst_rate].append(item)
+
+            elif invoice_category == GSTR1_Category.B2CS:
+                data_for_b2cs[key][gst_rate].append(item)
+
+        return data_for_hsn, data_for_invoice_no_key, data_for_nil_exempt, data_for_b2cs
 
     def prepare_document_issued_data(self):
         doc_issued_data = {}
@@ -2325,36 +2449,6 @@ class GSTR1BooksData(BooksDataMapper):
             self.process_data_for_document_issued_summary(row, doc_issued_data)
 
         return doc_issued_data
-
-    def prepare_hsn_data(self, data):
-        hsn_summary_data = {}
-
-        for row in data:
-            self.process_data_for_hsn_summary(row, hsn_summary_data)
-
-        return hsn_summary_data
-
-    def prepare_hsn_data_with_bifurcation(self, data):
-        def assign_category(data, label):
-            for row in data.values():
-                row["invoice_type"] = label
-
-            return data
-
-        hsn_b2b = []
-        hsn_b2c = []
-        self.invoice_conditions = {}
-
-        for row in data:
-            if row.gst_category == "Unregistered":
-                hsn_b2c.append(row)
-            else:
-                hsn_b2b.append(row)
-
-        hsn_b2b = assign_category(self.prepare_hsn_data(hsn_b2b), "B2B")
-        hsn_b2c = assign_category(self.prepare_hsn_data(hsn_b2c), "B2C")
-
-        return hsn_b2b, hsn_b2c
 
     def prepare_advances_recevied_data(self):
         return self.prepare_advances_received_or_adjusted_data("Advances")
@@ -2398,3 +2492,105 @@ class GSTR1BooksData(BooksDataMapper):
             )
 
         return advances_data
+
+    def process_for_quarterly(self, data):
+        if self.filters.filing_preference != "Quarterly":
+            return
+
+        is_m3 = self.current_month % 3 == 0
+        m1_m2_subcategories = (
+            GSTR1_SubCategory.B2B_REGULAR.value,
+            GSTR1_SubCategory.B2B_REVERSE_CHARGE.value,
+            GSTR1_SubCategory.SEZWP.value,
+            GSTR1_SubCategory.SEZWOP.value,
+            GSTR1_SubCategory.DE.value,
+            GSTR1_SubCategory.CDNR.value,
+        )
+
+        if is_m3:
+            self.process_included_docs_for_quarterly(data, m1_m2_subcategories)
+        else:
+            self.process_excluded_docs_for_quarterly(data, m1_m2_subcategories)
+
+    def process_included_docs_for_quarterly(self, data, m1_m2_subcategories):
+        included_docs = self.get_already_filed_docs(m1_m2_subcategories)
+
+        for category in data:
+            if category not in m1_m2_subcategories:
+                continue
+
+            included = data.setdefault("already_included_docs_for_quarterly", [])
+
+            for key, row in data[category].copy().items():
+                if key in included_docs:
+                    continue
+
+                row["sub_category"] = category
+                included.append(row)
+                del data[category][key]
+
+    def process_excluded_docs_for_quarterly(self, data, m1_m2_subcategories):
+        for category in data.copy():
+            if category in m1_m2_subcategories:
+                continue
+
+            if category in (
+                GSTR1_SubCategory.HSN.value,  # Backwards Compatibility
+                GSTR1_SubCategory.HSN_B2B.value,
+                GSTR1_SubCategory.HSN_B2C.value,
+                GSTR1_SubCategory.DOC_ISSUE.value,
+            ):
+                del data[category]
+                continue
+
+            excluded = data.setdefault("excluded_docs_for_quarterly", [])
+
+            for row in data[category].values():
+                if isinstance(row, dict):
+                    row["sub_category"] = category
+                    excluded.append(row)
+
+                elif isinstance(row, list):
+                    for item in row:
+                        item["sub_category"] = category
+
+                    excluded.extend(row)
+
+            del data[category]
+
+        return data
+
+    def get_already_filed_docs(self, m1_m2_subcategories):
+        from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
+            get_gst_return_log,
+        )
+
+        company_gstin = self.filters.company_gstin
+        year = self.filters.year
+
+        log_names = [
+            f"GSTR1-{(self.current_month - 1):02d}{year}-{company_gstin}",
+            f"GSTR1-{(self.current_month - 2):02d}{year}-{company_gstin}",
+        ]
+
+        filed_invoices = set()
+
+        for log_name in log_names:
+            gstr1_log = get_gst_return_log(
+                log_name,
+                company=self.filters.company,
+                filing_preference=self.filters.filing_preference,
+            )
+
+            if not gstr1_log.filed:
+                gstr1_log.generate_gstr1_data(self.filters)
+
+            filed_data = gstr1_log.get_json_for("filed")
+
+            for category, invoices in filed_data.items():
+                if category not in m1_m2_subcategories:
+                    continue
+
+                filed_invoices.update(invoices.keys())
+
+        return filed_invoices
