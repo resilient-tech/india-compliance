@@ -1204,7 +1204,7 @@ class HSNSUM(GSTR1DataMapper):
         index = defaultdict(int)
 
         for invoice in input_data:
-            doc_type = invoice[df.DOC_TYPE]
+            doc_type = invoice.get(df.DOC_TYPE) or GSTR1_SubCategory.HSN.value
             section = self.DOCUMENT_CATEGORIES.get(doc_type, doc_type)
             index[section] += 1
 
@@ -2047,6 +2047,8 @@ class BooksDataMapper:
         df.CESS: "total_cess_amount",
     }
 
+    PRECISION = 2
+
     def process_data_for_invoice_no_key(self, grouped_data, prepared_data):
         """
         Input:
@@ -2104,16 +2106,15 @@ class BooksDataMapper:
             for key, field in self.DATA_TO_ITEM_FIELD_MAPPING.items():
                 for item in invoice["items"]:
                     value = item.get(field, 0)
-                    rounded = flt(value, 2)
+                    rounded = flt(value, self.PRECISION)
                     diff = value - rounded
 
                     item[field] = rounded
                     invoice[key] += rounded
 
                     self.rounding_difference[key] += diff
-                    self.hsn_error[item[GSTR1_ItemField.TAX_RATE.value]][key] += diff
 
-                invoice[key] = flt(invoice[key], 2)
+                invoice[key] = flt(invoice[key], self.PRECISION)
 
     def process_data_for_nil_exempt(self, grouped_data, prepared_data):
         """
@@ -2177,13 +2178,12 @@ class BooksDataMapper:
                 df.NON_GST_AMOUNT,
             ):
                 val = invoice.get(key, 0)
-                rounded = flt(val, 2)
+                rounded = flt(val, self.PRECISION)
                 diff = val - rounded
 
                 invoice[key] = rounded
 
                 self.rounding_difference[key] += diff
-                self.hsn_error[item.gst_rate][key] += diff
 
     def process_data_for_b2cs(self, grouped_data, prepared_data):
         """
@@ -2233,13 +2233,12 @@ class BooksDataMapper:
                         invoice[key] += item.get(field, 0)
 
                     val = invoice.get(key, 0)
-                    rounded = flt(val, 2)
+                    rounded = flt(val, self.PRECISION)
                     diff = val - rounded
 
                     invoice[key] = rounded
 
                     self.rounding_difference[key] += diff
-                    self.hsn_error[gst_rate][key] += diff
 
     def process_data_for_hsn_summary(self, grouped_data, prepared_data):
         """
@@ -2261,12 +2260,8 @@ class BooksDataMapper:
         for hsn_type, hsn_key in grouped_data.items():
             prepared_data[hsn_type] = {}
 
-            invoice_type = None
-            if hsn_type != GSTR1_SubCategory.HSN.value:
-                invoice_type = hsn_type.split("-")[-1].strip()
-
             # HSN Descriptions
-            hsn_codes = [key.split(" - ")[0] for key in hsn_key.keys()]
+            hsn_codes = [key.split(" - ")[0] for key in hsn_key]
             descriptions = frappe._dict(
                 frappe.get_all(
                     "GST HSN Code",
@@ -2281,6 +2276,7 @@ class BooksDataMapper:
                 item = items[0]
 
                 prepared_data[hsn_type][key] = {
+                    df.DOC_TYPE: hsn_type,
                     df.HSN_CODE: item.gst_hsn_code,
                     df.DESCRIPTION: descriptions.get(item.gst_hsn_code),
                     df.UOM: item.uom,
@@ -2291,19 +2287,15 @@ class BooksDataMapper:
 
                 invoice = prepared_data[hsn_type][key]
 
-                if invoice_type:
-                    # TODO: Better Key: set in constants
-                    invoice["invoice_type"] = invoice_type
-
                 # Aggregate
                 for key, field in data_to_invoice_field_map.items():
                     for item in items:
                         invoice[key] += item.get(field, 0)
 
-                    invoice[key] = flt(invoice[key], 2)
+                    invoice[key] = flt(invoice[key], self.PRECISION)
 
                 doc_value = sum([invoice.get(field, 0) for field in tax_fields])
-                invoice[df.DOC_VALUE] = flt(doc_value, 2)
+                invoice[df.DOC_VALUE] = flt(doc_value, self.PRECISION)
 
     def process_data_for_document_issued_summary(self, row, prepared_data):
         key = f"{row['nature_of_document']} - {row['from_serial_no']}"
@@ -2367,35 +2359,20 @@ class BooksDataMapper:
             df.CESS: invoice.get("total_cess_amount", 0),
         }
 
-    def calculate_hsn_error(self, item):
-        """
-        Calculate the HSN error for a given item.
-        This method is used to calculate the difference between the actual value and the rounded value.
-        """
-        for key, field in self.ITEM_TO_INVOICE_FIELD_MAPPING.items():
-            value = getattr(item, field, 0)
-            rounded_value = flt(value, 2)
-            self.hsn_error[item.hsn_key][key] += value - rounded_value
-
     def initialize_rounding_difference(self):
         """
         Initialize the rounding difference dictionary.
         This method is used to reset the rounding difference.
         """
         self.rounding_difference = defaultdict(float)
-        self.hsn_error = defaultdict(lambda: defaultdict(float))
 
-    def round_rounding_difference(self):
+    def update_rounding_difference(self, prepared_data):
         """
         Round off the rounding difference values to 2 decimal places.
         This method is used to round off the rounding difference values.
         """
         for key, value in self.rounding_difference.items():
-            self.rounding_difference[key] = flt(value, 2)
-
-        for key, round_diff in self.hsn_error.items():
-            for k, v in round_diff.items():
-                self.hsn_error[key][k] = flt(v, 2)
+            self.rounding_difference[key] = flt(value, self.PRECISION)
 
 
 class GSTR1BooksData(BooksDataMapper):
@@ -2428,8 +2405,6 @@ class GSTR1BooksData(BooksDataMapper):
             GSTR1_Category.DOC_ISSUE.value: self.prepare_document_issued_data(),
         }
 
-        self.round_rounding_difference()
-
         self.process_data_for_hsn_summary(data_for_hsn, other_categories)
 
         for category, data in other_categories.items():
@@ -2437,6 +2412,8 @@ class GSTR1BooksData(BooksDataMapper):
                 prepared_data[category] = data
 
         self.process_for_quarterly(prepared_data)
+
+        self.update_rounding_difference(prepared_data)
 
         return prepared_data
 

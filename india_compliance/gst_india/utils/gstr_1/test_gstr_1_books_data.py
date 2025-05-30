@@ -50,7 +50,7 @@ class TestBooksData(IntegrationTestCase):
             if isinstance(v, list | tuple):
                 for i, row in enumerate(v):
                     if isinstance(row, dict):
-                        self.assertDictEq(row, v[i])
+                        self.assertDictEq(row, actual.get(k, [])[i])
 
             self.assertEqual(v, actual.get(k))
 
@@ -746,7 +746,6 @@ class TestHSNWithoutBifurcation(TestBooksData):
         )
 
         data = GSTR1BooksData(filters=FILTERS).prepare_mapped_data()
-
         item = si.items[0]
         uom = get_full_gst_uom(item.uom)
         key = f"{item.gst_hsn_code} - {uom} - {18.0}"
