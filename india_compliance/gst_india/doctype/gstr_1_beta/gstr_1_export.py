@@ -2064,6 +2064,7 @@ def get_gstr_1_json(
             GSTR1_SubCategory.HSN.value,  # Backwards compatibility
             GSTR1_SubCategory.DOC_ISSUE.value,
             *QUARTERLY_KEYS,
+            "rounding_difference",
         }:
             continue
 

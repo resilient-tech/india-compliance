@@ -2114,7 +2114,9 @@ class BooksDataMapper:
 
                     self.rounding_difference[key] += diff
 
-                invoice[key] = flt(invoice[key], self.PRECISION)
+                rounded = flt(invoice[key], self.PRECISION)
+                invoice[key] = rounded
+                self.invoice_totals[doc.hsn_sub_category][key] += rounded
 
     def process_data_for_nil_exempt(self, grouped_data, prepared_data):
         """
@@ -2257,8 +2259,8 @@ class BooksDataMapper:
         }
         tax_fields = self.DATA_TO_INVOICE_FIELD_MAPPING.keys()
 
-        for hsn_type, hsn_key in grouped_data.items():
-            prepared_data[hsn_type] = {}
+        for sub_category, hsn_key in grouped_data.items():
+            sub_category_dict = prepared_data.setdefault(sub_category, {})
 
             # HSN Descriptions
             hsn_codes = [key.split(" - ")[0] for key in hsn_key]
@@ -2275,8 +2277,8 @@ class BooksDataMapper:
             for key, items in hsn_key.items():
                 item = items[0]
 
-                prepared_data[hsn_type][key] = {
-                    df.DOC_TYPE: hsn_type,
+                sub_category_dict[key] = {
+                    df.DOC_TYPE: sub_category,
                     df.HSN_CODE: item.gst_hsn_code,
                     df.DESCRIPTION: descriptions.get(item.gst_hsn_code),
                     df.UOM: item.uom,
@@ -2285,7 +2287,7 @@ class BooksDataMapper:
                     **self.get_invoice_values(),
                 }
 
-                invoice = prepared_data[hsn_type][key]
+                invoice = sub_category_dict[key]
 
                 # Aggregate
                 for key, field in data_to_invoice_field_map.items():
@@ -2296,6 +2298,8 @@ class BooksDataMapper:
 
                 doc_value = sum([invoice.get(field, 0) for field in tax_fields])
                 invoice[df.DOC_VALUE] = flt(doc_value, self.PRECISION)
+
+            self.adjust_hsn_totals(sub_category, sub_category_dict)
 
     def process_data_for_document_issued_summary(self, row, prepared_data):
         key = f"{row['nature_of_document']} - {row['from_serial_no']}"
@@ -2359,11 +2363,12 @@ class BooksDataMapper:
             df.CESS: invoice.get("total_cess_amount", 0),
         }
 
-    def initialize_rounding_difference(self):
+    def initialize_totals(self):
         """
         Initialize the rounding difference dictionary.
         This method is used to reset the rounding difference.
         """
+        self.invoice_totals = defaultdict(lambda: defaultdict(float))
         self.rounding_difference = defaultdict(float)
 
     def update_rounding_difference(self, prepared_data):
@@ -2373,6 +2378,35 @@ class BooksDataMapper:
         """
         for key, value in self.rounding_difference.items():
             self.rounding_difference[key] = flt(value, self.PRECISION)
+
+        # saved as object -> it's normalized
+        prepared_data["rounding_difference"] = {
+            "rounding_difference": self.rounding_difference
+        }
+
+    def adjust_hsn_totals(self, sub_category, sub_category_dict):
+        expected_totals = self.invoice_totals.get(sub_category)
+        if not expected_totals:
+            return
+
+        # sort -> to ensure adjusted to same row
+        hsn_data = sorted(
+            sub_category_dict.values(),
+            key=lambda item: item.get(df.TAXABLE_VALUE, 0),
+            reverse=True,
+        )
+
+        # diff
+        for row in hsn_data:
+            for key in expected_totals:
+                expected_totals[key] -= row.get(key, 0)
+
+        # adjust totals
+        for key, diff in expected_totals.items():
+            for row in hsn_data:
+                if row.get(key):
+                    row[key] = flt(row[key] + diff, self.PRECISION)
+                    break
 
 
 class GSTR1BooksData(BooksDataMapper):
@@ -2389,7 +2423,7 @@ class GSTR1BooksData(BooksDataMapper):
         _class.process_invoices(data)
 
         # initialize rounding difference and hsn error
-        self.initialize_rounding_difference()
+        self.initialize_totals()
 
         data_for_hsn, data_for_invoice_no_key, data_for_nil_exempt, data_for_b2cs = (
             self.get_structured_data(data)

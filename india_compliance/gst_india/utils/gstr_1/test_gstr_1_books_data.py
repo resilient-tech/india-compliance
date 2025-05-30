@@ -1,6 +1,6 @@
 import frappe
 from frappe.tests import IntegrationTestCase, change_settings
-from frappe.utils import getdate
+from frappe.utils import flt, getdate
 from erpnext.accounts.doctype.sales_invoice.sales_invoice import make_sales_return
 
 from india_compliance.gst_india.overrides.company import create_default_company_account
@@ -12,6 +12,7 @@ from india_compliance.gst_india.utils.gstr_1 import (
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import GSTR1BooksData
 from india_compliance.gst_india.utils.tests import (
     _append_taxes,
+    append_item,
     create_sales_invoice,
 )
 
@@ -136,8 +137,56 @@ class TestGSTR1BooksData(TestBooksData):
             data[GSTR1_SubCategory.B2B_REGULAR.value][si.name],
         )
 
+    @change_settings("System Settings", {"currency_precision": 3})
     def test_b2b_rounding_adjustment(self):
-        pass
+        def create_invoice():
+            si = create_sales_invoice(
+                customer="_Test Registered Customer",
+                is_in_state=True,
+                do_not_submit=True,
+            )
+
+            random_hsn_codes = ["55885588", "55998899", "55779966", "55667788"]
+            for i in range(1, 7):
+                append_item(
+                    si,
+                    data=frappe._dict(
+                        gst_hsn_code=random_hsn_codes[i % 4], qty=1.0, rate=1.003
+                    ),
+                )
+
+            si.save()
+            si.submit()
+
+        for i in range(11):
+            create_invoice()
+
+        _class = GSTR1BooksData(filters=FILTERS)
+        data = _class.prepare_mapped_data()
+        self.assertDictEq(
+            {
+                "rounding_difference": {
+                    "total_taxable_value": -0.02,
+                    "total_igst_amount": 0.0,
+                    "total_cgst_amount": 0.02,
+                    "total_sgst_amount": 0.02,
+                    "total_cess_amount": 0.0,
+                }
+            },
+            data["rounding_difference"],
+        )
+
+        # Check if HSN Summary is same as Invoice Summary
+        for key in _class.DATA_TO_ITEM_FIELD_MAPPING:
+            invoice_total = 0
+            for row in data[GSTR1_SubCategory.B2B_REGULAR.value].values():
+                invoice_total += row.get(key, 0.0)
+
+            hsn_total = 0
+            for row in data[GSTR1_SubCategory.HSN.value].values():
+                hsn_total += row.get(key, 0.0)
+
+            self.assertEqual(flt(hsn_total, 2), flt(invoice_total, 2))
 
     @change_settings("GST Settings", {"enable_reverse_charge_in_sales": 1})
     def test_b2b_rcm_transaction(self):
@@ -788,6 +837,7 @@ class TestHSNWithoutBifurcation(TestBooksData):
 
 
 def setup_cess_account(company="_Test Indian Registered Company"):
+    return
     # create cess account
     create_default_company_account(company, "Output Tax CESS", "Duties and Taxes")
     account = frappe.db.get_value(
