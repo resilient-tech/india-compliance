@@ -409,6 +409,7 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
     def process_invoices(self, invoices):
         settings = frappe.get_cached_doc("GST Settings")
         identified_uom = {}
+
         for invoice in invoices:
             self.invoice_conditions = {}
             self.assign_categories(invoice)

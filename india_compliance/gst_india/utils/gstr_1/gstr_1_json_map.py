@@ -18,6 +18,7 @@ from india_compliance.gst_india.utils import (
 )
 from india_compliance.gst_india.utils.gstr_1 import (
     CATEGORY_SUB_CATEGORY_MAPPING,
+    HSN_BIFURCATION_FROM,
     SUB_CATEGORY_GOV_CATEGORY_MAPPING,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
@@ -2311,9 +2312,6 @@ class GSTR1BooksData(BooksDataMapper):
         self.filters = filters
         if filters.get("month_or_quarter"):
             self.filing_from = getdate(f"01-{filters.month_or_quarter}-{filters.year}")
-            self.hsn_bifurcation_from = frappe.db.get_single_value(
-                "GST Settings", "hsn_bifurcation_from"
-            )
 
     def prepare_mapped_data(self):
         prepared_data = {}
@@ -2346,7 +2344,7 @@ class GSTR1BooksData(BooksDataMapper):
         }
 
         # Backwards Compatibility
-        if self.filing_from < self.hsn_bifurcation_from:
+        if self.filing_from < HSN_BIFURCATION_FROM:
             other_categories.update(
                 {
                     GSTR1_Category.HSN.value: self.prepare_hsn_data(data),
