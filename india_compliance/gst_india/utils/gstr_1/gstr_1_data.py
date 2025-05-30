@@ -13,6 +13,7 @@ from india_compliance.gst_india.constants import GST_REFUND_TAX_TYPES
 from india_compliance.gst_india.utils import get_full_gst_uom
 from india_compliance.gst_india.utils.gstr_1 import (
     CATEGORY_SUB_CATEGORY_MAPPING,
+    HSN_BIFURCATION_FROM,
     GSTR1_B2B_InvoiceType,
     GSTR1_Category,
     GSTR1_SubCategory,
@@ -445,7 +446,7 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
         identified_uom = {}
 
         if bifurcate_hsn is None:
-            bifurcate_hsn = self.is_hsn_bifurcation_needed(settings)
+            bifurcate_hsn = self.is_hsn_bifurcation_needed()
 
         for invoice in invoices:
             self.invoice_conditions = {}
@@ -661,10 +662,7 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
                 }
             )
 
-    def is_hsn_bifurcation_needed(self, settings):
-        if not settings.hsn_bifurcation_from:
-            return False
-
+    def is_hsn_bifurcation_needed(self):
         # From GSTR-1 Beta
         if self.filters.get("month_or_quarter"):
             from_date = getdate(
@@ -673,4 +671,4 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
         else:
             from_date = getdate(self.filters.from_date)
 
-        return from_date >= getdate(settings.hsn_bifurcation_from)
+        return from_date >= HSN_BIFURCATION_FROM
