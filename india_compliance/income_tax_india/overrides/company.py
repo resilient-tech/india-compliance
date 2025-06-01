@@ -89,7 +89,16 @@ def update_existing_tax_withholding_category(category_doc, category_name, compan
     # accounts table is mandatory
     doc.flags.ignore_mandatory = True
 
-    doc.save()
+    try:
+        doc.save()
+
+    except frappe.ValidationError:
+        frappe.log_error(
+            title="Error Updating Tax Withholding Category",
+            message=frappe.get_traceback(),
+            reference_doctype="Tax Withholding Category",
+            reference_name=category_name,
+        )
 
 
 def get_tds_category_details(accounts):
