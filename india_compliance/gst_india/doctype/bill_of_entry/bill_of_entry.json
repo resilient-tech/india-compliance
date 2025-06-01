@@ -274,7 +274,7 @@
   {
    "fieldname": "reconciliation_status",
    "fieldtype": "Select",
-   "label": "Reconciliation Status",
+   "label": "2A/2B Reconciliation Status",
    "no_copy": 1,
    "options": "\nNot Applicable\nReconciled\nUnreconciled\nIgnored",
    "print_hide": 1,

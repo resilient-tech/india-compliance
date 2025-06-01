@@ -41,7 +41,7 @@ const GSTR1_SubCategory = {
     DOC_ISSUE: "Document Issued",
 
     SUPECOM_52: "Liable to collect tax u/s 52(TCS)",
-    SUPECOM_9_5: "Liable to pay tax u/s 9(5)"
+    SUPECOM_9_5: "Liable to pay tax u/s 9(5)",
 };
 
 const INVOICE_TYPE = {
@@ -167,7 +167,7 @@ frappe.ui.form.on(DOCTYPE, {
                 return;
 
             frappe.after_ajax(() => {
-                frm.doc.__gst_data = data ;
+                frm.doc.__gst_data = data;
                 frm.trigger("load_gstr1_data");
             });
         });
@@ -196,9 +196,7 @@ frappe.ui.form.on(DOCTYPE, {
     refresh(frm) {
         // Primary Action
         frm.disable_save();
-        frm.page.set_primary_action(__("Generate"), () =>
-            frm.call("generate_gstr1")
-        );
+        frm.page.set_primary_action(__("Generate"), () => frm.call("generate_gstr1"));
 
         // After indicator set in frappe refresh
         if (frm.doc.__gst_data) frm.gstr1.render_indicator();
@@ -990,7 +988,7 @@ class TabManager {
             args[2]?.indent == 0
                 ? `<strong>${value}</strong>`
                 : isDescriptionCell
-                    ? `<a href="#" class="description">
+                ? `<a href="#" class="description">
                     <p style="padding-left: 15px">${value}</p>
                     </a>`
                 : value;
@@ -1493,7 +1491,7 @@ class BooksTab extends GSTR1_TabManager {
         [GSTR1_SubCategory.AT]: this.get_advances_received_columns,
         [GSTR1_SubCategory.TXP]: this.get_advances_adjusted_columns,
 
-        [GSTR1_SubCategory.HSN]: this.get_hsn_columns,// Backwards compatibility
+        [GSTR1_SubCategory.HSN]: this.get_hsn_columns, // Backwards compatibility
         [GSTR1_SubCategory.HSN_B2B]: this.get_hsn_columns,
         [GSTR1_SubCategory.HSN_B2C]: this.get_hsn_columns,
 
@@ -1693,7 +1691,10 @@ class FiledTab extends GSTR1_TabManager {
         [GSTR1_SubCategory.AT]: this.get_advances_received_columns,
         [GSTR1_SubCategory.TXP]: this.get_advances_adjusted_columns,
 
-        [GSTR1_SubCategory.HSN]: this.get_hsn_columns,
+        [GSTR1_SubCategory.HSN]: this.get_hsn_columns, // Backwards compatibility
+        [GSTR1_SubCategory.HSN_B2B]: this.get_hsn_columns,
+        [GSTR1_SubCategory.HSN_B2C]: this.get_hsn_columns,
+
         [GSTR1_SubCategory.DOC_ISSUE]: this.get_documents_issued_columns,
     };
 
