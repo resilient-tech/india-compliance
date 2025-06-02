@@ -146,7 +146,7 @@ class GSTR1_DataField:
     ERROR_MSG = "error_message"
 
 
-class GSTR1_ItemField(Enum):
+class GSTR1_ItemField:
     INDEX = "idx"
     TAXABLE_VALUE = "taxable_value"
     IGST = "igst_amount"
