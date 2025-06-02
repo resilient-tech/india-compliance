@@ -1032,7 +1032,7 @@ class DetailViewDialog {
                 this.frm,
                 this.data.purchase_invoice_name,
                 this.data.inward_supply_name,
-                this.dialog.get_value("doctype"),
+                this.data.purchase_doctype,
                 true
             );
         } else if (action == "Create") {
