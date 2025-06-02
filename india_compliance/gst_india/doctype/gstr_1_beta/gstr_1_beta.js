@@ -1700,6 +1700,16 @@ class GSTR1_TabManager extends TabManager {
 }
 
 class BooksTab extends GSTR1_TabManager {
+    constructor(instance, wrapper, summary_view_callback, detailed_view_callback) {
+        super(instance, wrapper, summary_view_callback, detailed_view_callback);
+        const datatable = this.datatable.datatable;
+        const renderFooter = datatable.bodyRenderer.renderFooter;
+        datatable.bodyRenderer.renderFooter = () => {
+            renderFooter.call(datatable.bodyRenderer);
+            this.render_rounding_difference();
+        };
+    }
+
     CATEGORY_COLUMNS = {
         // [GSTR1_Categories.NIL_EXEMPT]: this.get_document_columns,
 
@@ -1743,6 +1753,79 @@ class BooksTab extends GSTR1_TabManager {
     filter_data(data, filters) {
         data = super.filter_data(data, filters);
         return data.filter(row => row.upload_status !== "Missing in Books");
+    }
+
+    refresh_data(data, summary_data, status) {
+        super.refresh_data(data, summary_data, status);
+
+        if (!data?.rounding_difference) return;
+
+        this.rounding_difference = data.rounding_difference[0];
+        this.render_rounding_difference();
+    }
+
+    refresh_view(view, category, filters) {
+        super.refresh_view(view, category, filters);
+        if (view === "Summary") {
+            this.render_rounding_difference();
+        }
+    }
+
+    // isTotalRow: 1 is redundant
+    // classname was showing undefined within it if isTotalRow was not given
+    render_rounding_difference() {
+        if (
+            !this.rounding_difference ||
+            Object.values(this.rounding_difference).every(v => !v)
+        )
+            return;
+
+        const rounding_difference = this.get_rounding_difference();
+
+        const datatable = this.datatable.datatable;
+
+        let html = datatable.rowmanager.getRowHTML(rounding_difference, {
+            rowIndex: "roundingDifference",
+            isTotalRow: 1,
+        });
+
+        datatable.footer.insertAdjacentHTML("beforeend", html);
+
+        $(`[data-row-index='roundingDifference']`).css({
+            "font-weight": "bold",
+        });
+    }
+
+    get_rounding_difference() {
+        const datatable = this.datatable.datatable;
+        const columns = datatable.getColumns();
+        const rounding_difference_row_template = columns.map(col => {
+            let content = null;
+            if (["_rowIndex", "_checkbox", "no_of_records"].includes(col.id)) {
+                content = "";
+            }
+            return {
+                content,
+                isTotalRow: 1,
+                colIndex: col.colIndex,
+                column: col,
+            };
+        });
+
+        const rounding_difference = rounding_difference_row_template.map(cell => {
+            if (cell.content === "") return cell;
+
+            if (cell.column.id === "description") {
+                cell.content = "Rounding Difference";
+            } else if (cell.column._fieldtype == "Float") {
+                const fieldname = cell.column.id;
+                cell.content = this.rounding_difference[fieldname] || 0.0;
+            }
+
+            return cell;
+        });
+
+        return rounding_difference;
     }
 
     // ACTIONS
