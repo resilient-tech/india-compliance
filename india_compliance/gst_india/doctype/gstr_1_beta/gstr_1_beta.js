@@ -1758,7 +1758,11 @@ class BooksTab extends GSTR1_TabManager {
     refresh_data(data, summary_data, status) {
         super.refresh_data(data, summary_data, status);
 
-        if (!data?.rounding_difference) return;
+        // rounding_difference is array
+        if (!data?.rounding_difference || data.rounding_difference.length === 0) {
+            this.rounding_difference = null;
+            return;
+        }
 
         this.rounding_difference = data.rounding_difference[0];
         this.render_rounding_difference();
