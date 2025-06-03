@@ -1784,20 +1784,24 @@ class BooksTab extends GSTR1_TabManager {
         )
             return;
 
-        const rounding_difference = this.get_rounding_difference();
+        try {
+            const rounding_difference = this.get_rounding_difference();
 
-        const datatable = this.datatable.datatable;
+            const datatable = this.datatable.datatable;
 
-        let html = datatable.rowmanager.getRowHTML(rounding_difference, {
-            rowIndex: "roundingDifference",
-            isTotalRow: 1,
-        });
+            let html = datatable.rowmanager.getRowHTML(rounding_difference, {
+                rowIndex: "roundingDifference",
+                isTotalRow: 1,
+            });
 
-        datatable.footer.insertAdjacentHTML("beforeend", html);
+            datatable.footer.insertAdjacentHTML("beforeend", html);
 
-        $(`[data-row-index='roundingDifference']`).css({
-            "font-weight": "bold",
-        });
+            $(`[data-row-index='roundingDifference']`).css({
+                "font-weight": "bold",
+            });
+        } catch (error) {
+            console.error("Error rendering rounding difference:", error);
+        }
     }
 
     get_rounding_difference() {
