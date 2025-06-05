@@ -8,6 +8,7 @@ import frappe
 from frappe import _
 from frappe.utils import flt, getdate
 
+from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategory
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
 
 
@@ -154,6 +155,7 @@ def process_hsn_data(invoices):
         {
             **row,
             "uom": map_uom(row["uom"], row),
+            "invoice_type": row["document_type"].split("-")[-1].strip(),
             **{field: flt(row[field], 2) for field in precision_fields},
         }
         for row in hsn_data
@@ -237,7 +239,7 @@ def get_hsn_wise_json_data(report_data, filters):
             hsn_data.append(row)
             continue
 
-        if hsn["invoice_type"] == "B2B":
+        if hsn["document_type"] == GSTR1_SubCategory.HSN_B2B.value:
             hsn_b2b.append(row)
         else:
             hsn_b2c.append(row)
