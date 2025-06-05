@@ -110,7 +110,7 @@ def get_columns(filters):
             "width": 170,
         },
         {
-            "fieldname": "invoice_type",
+            "fieldname": "document_type",
             "label": _("Invoice Type"),
             "fieldtype": "Data",
             "width": 120,
