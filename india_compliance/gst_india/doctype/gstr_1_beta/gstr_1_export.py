@@ -223,7 +223,7 @@ class GovExcel(DataProcessor):
         new_data = defaultdict(list)
 
         for row in hsn_data:
-            sub_category = row.get(df.DOC_TYPE, GSTR1_SubCategory.HSN.value)
+            sub_category = row.get(df.DOC_TYPE)
             if sub_category not in MAP:
                 continue
 
@@ -1019,6 +1019,10 @@ class BooksExcel(DataProcessor):
                 "fieldname": df.TAX_RATE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+            },
+            {
+                "label": _("Document Type"),
+                "fieldname": df.DOC_TYPE,
             },
             {
                 "label": "Upload Status",
