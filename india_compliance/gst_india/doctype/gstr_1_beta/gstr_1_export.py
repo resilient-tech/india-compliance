@@ -160,9 +160,6 @@ class GovExcel(DataProcessor):
             if category == GovJsonKey.DOC_ISSUE.value:
                 self.process_doc_issue_data(category_wise_data[category])
 
-            elif category == GovJsonKey.HSN.value:
-                self.process_hsn_data(category_wise_data, category)
-
             if category not in [
                 GovJsonKey.CDNR.value,
                 GovJsonKey.CDNUR.value,
@@ -182,6 +179,8 @@ class GovExcel(DataProcessor):
                         if isinstance(value, (int, float))
                     }
                 )
+
+        self.process_hsn_data(category_wise_data)
 
         return category_wise_data
 
@@ -210,8 +209,8 @@ class GovExcel(DataProcessor):
 
             doc[df.CANCELLED_COUNT] += doc.get(df.DRAFT_COUNT, 0)
 
-    def process_hsn_data(self, category_wise_data, category):
-        hsn_data = category_wise_data.pop(category, None)
+    def process_hsn_data(self, category_wise_data):
+        hsn_data = category_wise_data.pop(GovJsonKey.HSN.value, None)
         if not hsn_data:
             return
 
