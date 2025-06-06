@@ -2209,7 +2209,10 @@ def get_gstr1_excel(filters, data=None, columns=None):
         if type_of_business == "Document Issued Summary":
             format_doc_issued_excel_data(headers, data)
 
-        create_excel_sheet(excel, type_of_business, headers, data)
+        if type_of_business == "HSN" and filters.get("bifurcate_hsn"):
+            create_hsn_excel_sheet(excel, headers, data)
+        else:
+            create_excel_sheet(excel, type_of_business, headers, data)
 
     else:
         for type_of_business in report_types:
@@ -2221,6 +2224,10 @@ def get_gstr1_excel(filters, data=None, columns=None):
 
             if type_of_business == "Document Issued Summary":
                 format_doc_issued_excel_data(headers, data)
+
+            if type_of_business == "HSN" and filters.get("bifurcate_hsn"):
+                create_hsn_excel_sheet(excel, headers, data)
+                continue
 
             create_excel_sheet(excel, type_of_business, headers, data)
 
@@ -2245,6 +2252,22 @@ def format_doc_issued_excel_data(headers, data):
 
     if total_draft_idx is not None:
         headers.pop(total_draft_idx)
+
+
+def create_hsn_excel_sheet(excel, headers, data):
+    b2b_data = []
+    b2c_data = []
+    for row in data:
+        if row.get("invoice_type") == "B2B":
+            b2b_data.append(row)
+        else:
+            b2c_data.append(row)
+
+    if b2b_data:
+        create_excel_sheet(excel, "HSN - B2B", headers, b2b_data)
+
+    if b2c_data:
+        create_excel_sheet(excel, "HSN - B2C", headers, b2c_data)
 
 
 def create_excel_sheet(excel, sheet_name, headers, data):
