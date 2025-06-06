@@ -38,13 +38,13 @@ frappe.query_reports["HSN-wise-summary of outward supplies"] = {
 			"default": india_compliance.last_month_start(),
 			on_change: report => {
 				let { from_date } = report.get_values();
-                from_date = frappe.datetime.str_to_obj(from_date);
+				from_date = frappe.datetime.str_to_obj(from_date);
 
-                if (india_compliance.HSN_BIFURCATION_FROM <= from_date) {
-                    report.set_filter_value("bifurcate_hsn", 1);
-                } else {
-                    report.set_filter_value("bifurcate_hsn", 0);
-                }
+				if (india_compliance.HSN_BIFURCATION_FROM <= from_date) {
+					report.set_filter_value("bifurcate_hsn", 1);
+				} else {
+					report.set_filter_value("bifurcate_hsn", 0);
+				}
 			}
 		},
 		{
