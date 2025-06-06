@@ -226,7 +226,6 @@ class PurchaseReconciliationTool(Document):
         if not purchase_invoice_name or not inward_supply_name:
             return
 
-<<<<<<< HEAD
         purchases = []
         inward_supplies = []
 
@@ -266,8 +265,6 @@ class PurchaseReconciliationTool(Document):
             link_doctype, (purchase_invoice_name,), "Match Found"
         )
 
-=======
->>>>>>> 6889b059 (fix: use data.purchase_doctype  and remove unnecessary function call.)
         return self.ReconciledData.get(purchases, inward_supplies)
 
     @frappe.whitelist()
