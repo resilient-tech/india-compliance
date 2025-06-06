@@ -3,6 +3,7 @@ Export GSTR-1 data to excel or json
 """
 
 import json
+from collections import defaultdict
 from datetime import datetime
 from enum import Enum
 
@@ -23,6 +24,7 @@ from india_compliance.gst_india.utils.gstr_1 import GSTR1_DataField as df
 from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_ItemField,
     GSTR1_SubCategory,
+    HSNKey,
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     convert_to_gov_data_format,
@@ -178,6 +180,8 @@ class GovExcel(DataProcessor):
                     }
                 )
 
+        self.process_hsn_data(category_wise_data)
+
         return category_wise_data
 
     def build_excel(self, data):
@@ -204,6 +208,28 @@ class GovExcel(DataProcessor):
                 continue
 
             doc[df.CANCELLED_COUNT] += doc.get(df.DRAFT_COUNT, 0)
+
+    def process_hsn_data(self, category_wise_data):
+        hsn_data = category_wise_data.pop(GovJsonKey.HSN.value, None)
+        if not hsn_data:
+            return
+
+        MAP = {
+            GSTR1_SubCategory.HSN.value: HSNKey.HSN.value,  # backward compatibility
+            GSTR1_SubCategory.HSN_B2B.value: HSNKey.HSN_B2B.value,
+            GSTR1_SubCategory.HSN_B2C.value: HSNKey.HSN_B2C.value,
+        }
+
+        new_data = defaultdict(list)
+
+        for row in hsn_data:
+            sub_category = row.get(df.DOC_TYPE)
+            if sub_category not in MAP:
+                continue
+
+            new_data[MAP[sub_category]].append(row)
+
+        category_wise_data.update(new_data)
 
     def get_category_headers(self, category):
         return getattr(self, f"get_{category.lower()}_headers")()
@@ -691,6 +717,12 @@ class GovExcel(DataProcessor):
             },
         ]
 
+    def get_hsn_b2b_headers(self):
+        return self.get_hsn_headers()
+
+    def get_hsn_b2c_headers(self):
+        return self.get_hsn_headers()
+
     def get_doc_issue_headers(self):
         return [
             {
@@ -987,6 +1019,10 @@ class BooksExcel(DataProcessor):
                 "fieldname": df.TAX_RATE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+            },
+            {
+                "label": _("Document Type"),
+                "fieldname": df.DOC_TYPE,
             },
             {
                 "label": "Upload Status",

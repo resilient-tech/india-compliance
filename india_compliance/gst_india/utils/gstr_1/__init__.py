@@ -283,6 +283,13 @@ class GovJsonKey(Enum):
     RET_SUM = "sec_sum"
 
 
+# only for excel
+class HSNKey(Enum):
+    HSN = "hsn"
+    HSN_B2B = "hsn_b2b"
+    HSN_B2C = "hsn_b2c"
+
+
 class GovExcelSheetName(Enum):
     """
     Categories / Worksheets as per Gov Excel file
@@ -298,6 +305,8 @@ class GovExcelSheetName(Enum):
     AT = "at"
     TXP = "atadj"
     HSN = "hsn"
+    HSN_B2B = "hsn(b2b)"
+    HSN_B2C = "hsn(b2c)"
     DOC_ISSUE = "docs"
 
 
@@ -336,6 +345,9 @@ JSON_CATEGORY_EXCEL_CATEGORY_MAPPING = {
     GovJsonKey.TXP.value: GovExcelSheetName.TXP.value,
     GovJsonKey.HSN.value: GovExcelSheetName.HSN.value,
     GovJsonKey.DOC_ISSUE.value: GovExcelSheetName.DOC_ISSUE.value,
+    # only for excel
+    HSNKey.HSN_B2B.value: GovExcelSheetName.HSN_B2B.value,
+    HSNKey.HSN_B2C.value: GovExcelSheetName.HSN_B2C.value,
 }
 
 
