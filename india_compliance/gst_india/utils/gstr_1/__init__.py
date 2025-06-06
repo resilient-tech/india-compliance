@@ -285,6 +285,7 @@ class GovJsonKey(Enum):
 
 # only for excel
 class HSNKey(Enum):
+    HSN = "hsn"
     HSN_B2B = "hsn_b2b"
     HSN_B2C = "hsn_b2c"
 

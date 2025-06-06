@@ -160,6 +160,9 @@ class GovExcel(DataProcessor):
             if category == GovJsonKey.DOC_ISSUE.value:
                 self.process_doc_issue_data(category_wise_data[category])
 
+            elif category == GovJsonKey.HSN.value:
+                self.process_hsn_data(category_wise_data, category)
+
             if category not in [
                 GovJsonKey.CDNR.value,
                 GovJsonKey.CDNUR.value,
@@ -180,31 +183,7 @@ class GovExcel(DataProcessor):
                     }
                 )
 
-        self.process_hsn_data(category_wise_data)
         return category_wise_data
-
-    def process_hsn_data(self, category_wise_data):
-        if not (data := category_wise_data.get(GovJsonKey.HSN.value)):
-            return
-
-        item = data[0]
-        bifurcate_hsn = item.get(df.DOC_TYPE) != GSTR1_SubCategory.HSN.value
-
-        if not bifurcate_hsn:
-            return
-
-        _hsn_data = defaultdict(list)
-        for row in data:
-            key = (
-                HSNKey.HSN_B2B.value
-                if (row.get(df.DOC_TYPE) == GSTR1_SubCategory.HSN_B2B.value)
-                else HSNKey.HSN_B2C.value
-            )
-
-            _hsn_data[key].append(row)
-
-        category_wise_data.pop(GovJsonKey.HSN.value)
-        category_wise_data.update(dict(_hsn_data))
 
     def build_excel(self, data):
         excel = ExcelExporter()
@@ -230,6 +209,28 @@ class GovExcel(DataProcessor):
                 continue
 
             doc[df.CANCELLED_COUNT] += doc.get(df.DRAFT_COUNT, 0)
+
+    def process_hsn_data(self, category_wise_data, category):
+        hsn_data = category_wise_data.pop(category, None)
+        if not hsn_data:
+            return
+
+        MAP = {
+            GSTR1_SubCategory.HSN.value: HSNKey.HSN.value,  # backward compatibility
+            GSTR1_SubCategory.HSN_B2B.value: HSNKey.HSN_B2B.value,
+            GSTR1_SubCategory.HSN_B2C.value: HSNKey.HSN_B2C.value,
+        }
+
+        new_data = defaultdict(list)
+
+        for row in hsn_data:
+            sub_category = row.get(df.DOC_TYPE, GSTR1_SubCategory.HSN.value)
+            if sub_category not in MAP:
+                continue
+
+            new_data[MAP[sub_category]].append(row)
+
+        category_wise_data.update(new_data)
 
     def get_category_headers(self, category):
         return getattr(self, f"get_{category.lower()}_headers")()
