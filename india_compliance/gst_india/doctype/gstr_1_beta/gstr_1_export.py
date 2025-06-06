@@ -3,6 +3,7 @@ Export GSTR-1 data to excel or json
 """
 
 import json
+from collections import defaultdict
 from datetime import datetime
 from enum import Enum
 
@@ -23,6 +24,7 @@ from india_compliance.gst_india.utils.gstr_1 import GSTR1_DataField as df
 from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_ItemField,
     GSTR1_SubCategory,
+    HSNKey,
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     convert_to_gov_data_format,
@@ -178,7 +180,31 @@ class GovExcel(DataProcessor):
                     }
                 )
 
+        self.process_hsn_data(category_wise_data)
         return category_wise_data
+
+    def process_hsn_data(self, category_wise_data):
+        if not (data := category_wise_data.get(GovJsonKey.HSN.value)):
+            return
+
+        item = data[0]
+        bifurcate_hsn = item.get(df.DOC_TYPE) != GSTR1_SubCategory.HSN.value
+
+        if not bifurcate_hsn:
+            return
+
+        _hsn_data = defaultdict(list)
+        for row in data:
+            key = (
+                HSNKey.HSN_B2B.value
+                if (row.get(df.DOC_TYPE) == GSTR1_SubCategory.HSN_B2B.value)
+                else HSNKey.HSN_B2C.value
+            )
+
+            _hsn_data[key].append(row)
+
+        category_wise_data.pop(GovJsonKey.HSN.value)
+        category_wise_data.update(dict(_hsn_data))
 
     def build_excel(self, data):
         excel = ExcelExporter()
@@ -690,6 +716,12 @@ class GovExcel(DataProcessor):
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
         ]
+
+    def get_hsn_b2b_headers(self):
+        return self.get_hsn_headers()
+
+    def get_hsn_b2c_headers(self):
+        return self.get_hsn_headers()
 
     def get_doc_issue_headers(self):
         return [
