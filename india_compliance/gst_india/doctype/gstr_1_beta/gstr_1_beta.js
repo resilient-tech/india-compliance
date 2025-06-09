@@ -812,6 +812,81 @@ class GSTR1 {
         this.create_journal_entry_dialog(je_details);
     }
 
+    async show_round_off_jv_dialog() {
+        if (!frappe.perm.has_perm("Journal Entry")) return;
+
+        const { month_or_quarter, year, company, filing_preference } = this.frm.doc;
+        const { message: data } = await frappe.call({
+            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_accounts",
+            args: { month_or_quarter, year, company, filing_preference },
+        });
+
+        if (!data) return;
+
+        this.create_rounding_journal_entry(data.account, data.posting_date);
+    }
+
+    TAX_TO_ACCOUNT_MAP = {
+        total_igst_amount: "igst_account",
+        total_cgst_amount: "cgst_account",
+        total_sgst_amount: "sgst_account",
+        total_cess_amount: ["cess_account", "cess_non_advol_account"],
+    };
+
+    create_rounding_journal_entry(account, posting_date) {
+        let rounding_difference = this.data.books?.rounding_difference[0];
+        if (!rounding_difference) return;
+
+        const je_details = {
+            posting_date: posting_date,
+            data: [],
+        };
+
+        const get_account_name = account_field => {
+            if (!Array.isArray(account_field)) return account[account_field];
+            for (const acc of account_field) {
+                if (account[acc]) {
+                    return account[acc];
+                }
+            }
+            return null;
+        };
+
+        let total = 0;
+
+        for (const [tax_field, account_field] of Object.entries(
+            this.TAX_TO_ACCOUNT_MAP
+        )) {
+            let value = rounding_difference[tax_field];
+
+            if (!value) continue;
+
+            let account_name = get_account_name(account_field);
+
+            if (!account_name) continue;
+
+            total += value;
+
+            je_details.data.push({
+                account: account_name,
+                debit_in_account_currency: value > 0 ? value : 0,
+                credit_in_account_currency: value < 0 ? Math.abs(value) : 0,
+            });
+        }
+
+        if (je_details.data.length === 0) return;
+
+        if (total !== 0) {
+            je_details.data.push({
+                account: account.round_off_account,
+                debit_in_account_currency: total < 0 ? Math.abs(total) : 0,
+                credit_in_account_currency: total > 0 ? total : 0,
+            });
+        }
+
+        this.create_journal_entry_dialog(je_details);
+    }
+
     create_journal_entry_dialog(je_details) {
         const dialog = new frappe.ui.Dialog({
             title: "Suggested Journal Entry",
@@ -2728,6 +2803,7 @@ class FileGSTR1Dialog {
                     this.frm.doc.__gst_data = r.message;
                     this.frm.trigger("load_gstr1_data");
                     this.frm.gstr1.show_suggested_jv_dialog();
+                    this.frm.gstr1.show_round_off_jv_dialog();
                 });
         }
     }

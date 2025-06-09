@@ -304,6 +304,57 @@ def get_journal_entries(month_or_quarter, year, company, filing_preference):
 
 
 @frappe.whitelist()
+def get_accounts(month_or_quarter, year, company, filing_preference):
+    if not frappe.has_permission("Journal Entry", "create"):
+        return
+
+    _, to_date = get_gstr_1_from_and_to_date(month_or_quarter, year, filing_preference)
+
+    # For Output Account
+    gst_settings = frappe.get_cached_doc("GST Settings")
+
+    output_gst_account = [
+        account
+        for account in gst_settings.gst_accounts
+        if account.account_type == "Output"
+    ]
+
+    if not output_gst_account:
+        return
+
+    output_gst_account = output_gst_account[0]
+
+    # For Round Off Account
+    round_off_account = frappe.get_all(
+        "Account",
+        filters={
+            "company": company,
+            "account_type": "Round Off",
+        },
+        pluck="name",
+    )
+
+    if not round_off_account:
+        return
+
+    round_off_account = round_off_account[0]
+
+    account = {
+        "igst_account": output_gst_account.igst_account,
+        "cgst_account": output_gst_account.cgst_account,
+        "sgst_account": output_gst_account.sgst_account,
+        "cess_account": output_gst_account.cess_account,
+        "cess_non_advol_account": output_gst_account.cess_non_advol_account,
+        "round_off_account": round_off_account,
+    }
+
+    return {
+        "account": account,
+        "posting_date": to_date,
+    }
+
+
+@frappe.whitelist()
 def make_journal_entry(
     company, company_gstin, month_or_quarter, year, accounts, values
 ):
