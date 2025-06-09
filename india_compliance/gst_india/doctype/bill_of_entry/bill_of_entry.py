@@ -490,7 +490,87 @@ def make_bill_of_entry(source_name, target_doc=None):
         if not input_igst_account:
             return
 
+<<<<<<< HEAD
         rate, description = frappe.db.get_value(
+=======
+        frappe.has_permission("Bill Of Entry", "write", throw=True)
+        frappe.has_permission("Purchase Invoice", "read", throw=True)
+
+        existing_items = [
+            item.pi_detail for item in self.get("items") if item.pi_detail
+        ]
+        item_to_add = get_pi_items(purchase_invoices)
+
+        if not existing_items:
+            self.items = []
+
+        for item in item_to_add:
+            if item.pi_detail not in existing_items:
+                self.append("items", {**item})
+
+        set_missing_values(self)
+
+    def validate_qty(self):
+        pi_item_names = [item.pi_detail for item in self.items]
+
+        pi_qty_map = frappe._dict(
+            frappe.get_all(
+                "Purchase Invoice Item",
+                filters={"name": ["in", pi_item_names]},
+                fields=["name", "pending_boe_qty"],
+                as_list=True,
+            )
+        )
+
+        for item in self.items:
+            if item.qty > pi_qty_map.get(item.pi_detail):
+                frappe.throw(
+                    _("Quantity of {0} is more than it's pending qty").format(
+                        item.item_code
+                    )
+                )
+
+    def update_pending_boe_qty(self):
+        pi_item_names = [item.pi_detail for item in self.items]
+
+        pi_item = frappe.qb.DocType("Purchase Invoice Item")
+        boe_item = frappe.qb.DocType("Bill of Entry Item")
+
+        submitted_boe_qty = (
+            frappe.qb.from_(boe_item)
+            .select(boe_item.pi_detail, Sum(boe_item.qty).as_("qty"))
+            .where(boe_item.pi_detail.isin(pi_item_names))
+            .where(boe_item.docstatus == 1)
+            .groupby(boe_item.pi_detail)
+        )
+
+        (
+            frappe.qb.update(pi_item)
+            .left_join(submitted_boe_qty)
+            .on(pi_item.name == submitted_boe_qty.pi_detail)
+            .set(
+                pi_item.pending_boe_qty,
+                pi_item.qty - IfNull(submitted_boe_qty.qty, 0),
+            )
+            .where(pi_item.name.isin(pi_item_names))
+            .run()
+        )
+
+
+def set_missing_values(source, target=None):
+    if not target:
+        target = source
+
+    target.set_defaults()
+
+    # Add default tax
+    input_igst_account = get_gst_accounts_by_type(source.company, "Input").igst_account
+    if not input_igst_account:
+        return
+
+    rate = (
+        frappe.db.get_value(
+>>>>>>> a11b54a8 (fix: throw error if user is not permitted)
             "Purchase Taxes and Charges",
             {
                 "parenttype": "Purchase Taxes and Charges Template",
@@ -718,4 +798,61 @@ def get_items_for_landed_cost_voucher(boe):
         pr_item.customs_duty = customs_duty_for_item * pr_item.qty / total_qty
         pr_item.boe_detail = item_name_map.get(pr_item.purchase_invoice_item)
 
+<<<<<<< HEAD
     return _item_dict(pr_items)
+=======
+    return list(pi_details.values())
+
+
+def get_pi_items(purchase_invoices):
+    pi_item = frappe.qb.DocType("Purchase Invoice Item")
+
+    return (
+        frappe.qb.from_(pi_item)
+        .select(
+            pi_item.item_code,
+            pi_item.item_name,
+            pi_item.parent.as_("purchase_invoice"),
+            pi_item.pending_boe_qty.as_("qty"),
+            pi_item.uom,
+            pi_item.cost_center,
+            pi_item.item_tax_template,
+            pi_item.gst_treatment,
+            pi_item.taxable_value.as_("assessable_value"),
+            pi_item.taxable_value,
+            pi_item.project,
+            pi_item.name.as_("pi_detail"),
+        )
+        .where(pi_item.parent.isin(purchase_invoices))
+        .where(pi_item.pending_boe_qty > 0)
+        .run(as_dict=True)
+    )
+
+
+@frappe.whitelist()
+def fetch_pending_boe_invoices(doctype, txt, searchfield, start, page_len, filters):
+    frappe.has_permission("Purchase Invoice", "read", throw=True)
+
+    filters = frappe._dict(filters)
+
+    if txt and not filters.get("name"):
+        filters.name = ["like", f"%{txt}%"]
+
+    # TODO: fix required in frappe
+    if filters.name and filters.name[1] is None:
+        filters.name = ["!=", ""]
+
+    return frappe.get_all(
+        "Purchase Invoice",
+        filters={
+            **filters,
+            "docstatus": 1,
+            "gst_category": "Overseas",
+            "pending_boe_qty": [">", 0],
+        },
+        fields=["name", "company", "company_gstin"],
+        limit_start=start,
+        limit_page_length=page_len,
+        distinct=True,
+    )
+>>>>>>> a11b54a8 (fix: throw error if user is not permitted)
