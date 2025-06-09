@@ -179,7 +179,7 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
 
 @frappe.whitelist()
 def download_file():
-    frappe.has_permission("GST Return Log", "read")
+    frappe.has_permission("GST Return Log", "read", throw=True)
 
     data = frappe._dict(frappe.local.form_dict)
     frappe.response["filename"] = data["file_name"]
