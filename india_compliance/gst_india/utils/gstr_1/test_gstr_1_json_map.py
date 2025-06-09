@@ -11,7 +11,7 @@ from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_B2B_InvoiceType,
 )
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_DataField as df
-from india_compliance.gst_india.utils.gstr_1 import GSTR1_ItemField as _if
+from india_compliance.gst_india.utils.gstr_1 import GSTR1_ItemField as item_f
 from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_SubCategory,
 )
@@ -173,19 +173,19 @@ class TestB2B(IntegrationTestCase):
                     df.DIFF_PERCENTAGE: 0.65,
                     df.ITEMS: [
                         {
-                            _if.TAXABLE_VALUE: 10000,
-                            _if.IGST: 325,
-                            _if.CGST: 0,
-                            _if.SGST: 0,
-                            _if.CESS: 500,
+                            item_f.TAXABLE_VALUE: 10000,
+                            item_f.IGST: 325,
+                            item_f.CGST: 0,
+                            item_f.SGST: 0,
+                            item_f.CESS: 500,
                             df.TAX_RATE: 5,
                         },
                         {
-                            _if.TAXABLE_VALUE: 10000,
-                            _if.IGST: 325,
-                            _if.CGST: 0,
-                            _if.SGST: 0,
-                            _if.CESS: 500,
+                            item_f.TAXABLE_VALUE: 10000,
+                            item_f.IGST: 325,
+                            item_f.CGST: 0,
+                            item_f.SGST: 0,
+                            item_f.CESS: 500,
                             df.TAX_RATE: 5,
                         },
                     ],
@@ -209,11 +209,11 @@ class TestB2B(IntegrationTestCase):
                     df.DIFF_PERCENTAGE: 0.65,
                     df.ITEMS: [
                         {
-                            _if.TAXABLE_VALUE: 10000,
-                            _if.IGST: 325,
-                            _if.CGST: 0,
-                            _if.SGST: 0,
-                            _if.CESS: 500,
+                            item_f.TAXABLE_VALUE: 10000,
+                            item_f.IGST: 325,
+                            item_f.CGST: 0,
+                            item_f.SGST: 0,
+                            item_f.CESS: 500,
                             df.TAX_RATE: 5,
                         }
                     ],
@@ -237,11 +237,11 @@ class TestB2B(IntegrationTestCase):
                     df.DIFF_PERCENTAGE: 0.65,
                     df.ITEMS: [
                         {
-                            _if.TAXABLE_VALUE: 10000,
-                            _if.IGST: 325,
-                            _if.CGST: 0,
-                            _if.SGST: 0,
-                            _if.CESS: 500,
+                            item_f.TAXABLE_VALUE: 10000,
+                            item_f.IGST: 325,
+                            item_f.CGST: 0,
+                            item_f.SGST: 0,
+                            item_f.CESS: 500,
                             df.TAX_RATE: 5,
                         }
                     ],
@@ -265,11 +265,11 @@ class TestB2B(IntegrationTestCase):
                     df.DIFF_PERCENTAGE: 0.65,
                     df.ITEMS: [
                         {
-                            _if.TAXABLE_VALUE: 10000,
-                            _if.IGST: 325,
-                            _if.CGST: 0,
-                            _if.SGST: 0,
-                            _if.CESS: 500,
+                            item_f.TAXABLE_VALUE: 10000,
+                            item_f.IGST: 325,
+                            item_f.CGST: 0,
+                            item_f.SGST: 0,
+                            item_f.CESS: 500,
                             df.TAX_RATE: 5,
                         }
                     ],
@@ -404,15 +404,15 @@ class TestB2CL(IntegrationTestCase):
                     df.DIFF_PERCENTAGE: 0.65,
                     df.ITEMS: [
                         {
-                            _if.TAXABLE_VALUE: 10000,
-                            _if.IGST: 325,
-                            _if.CESS: 500,
+                            item_f.TAXABLE_VALUE: 10000,
+                            item_f.IGST: 325,
+                            item_f.CESS: 500,
                             df.TAX_RATE: 5,
                         },
                         {
-                            _if.TAXABLE_VALUE: 10000,
-                            _if.IGST: 325,
-                            _if.CESS: 500,
+                            item_f.TAXABLE_VALUE: 10000,
+                            item_f.IGST: 325,
+                            item_f.CESS: 500,
                             df.TAX_RATE: 5,
                         },
                     ],
@@ -429,9 +429,9 @@ class TestB2CL(IntegrationTestCase):
                     df.DIFF_PERCENTAGE: 0.65,
                     df.ITEMS: [
                         {
-                            _if.TAXABLE_VALUE: 10000,
-                            _if.IGST: 325,
-                            _if.CESS: 500,
+                            item_f.TAXABLE_VALUE: 10000,
+                            item_f.IGST: 325,
+                            item_f.CESS: 500,
                             df.TAX_RATE: 5,
                         }
                     ],
@@ -448,15 +448,15 @@ class TestB2CL(IntegrationTestCase):
                     df.DIFF_PERCENTAGE: 0.65,
                     df.ITEMS: [
                         {
-                            _if.TAXABLE_VALUE: 10000,
-                            _if.IGST: 325,
-                            _if.CESS: 500,
+                            item_f.TAXABLE_VALUE: 10000,
+                            item_f.IGST: 325,
+                            item_f.CESS: 500,
                             df.TAX_RATE: 5,
                         },
                         {
-                            _if.TAXABLE_VALUE: 10000,
-                            _if.IGST: 325,
-                            _if.CESS: 500,
+                            item_f.TAXABLE_VALUE: 10000,
+                            item_f.IGST: 325,
+                            item_f.CESS: 500,
                             df.TAX_RATE: 5,
                         },
                     ],
@@ -473,9 +473,9 @@ class TestB2CL(IntegrationTestCase):
                     df.DIFF_PERCENTAGE: 0.65,
                     df.ITEMS: [
                         {
-                            _if.TAXABLE_VALUE: 10000,
-                            _if.IGST: 325,
-                            _if.CESS: 500,
+                            item_f.TAXABLE_VALUE: 10000,
+                            item_f.IGST: 325,
+                            item_f.CESS: 500,
                             df.TAX_RATE: 5,
                         }
                     ],
@@ -557,9 +557,9 @@ class TestExports(IntegrationTestCase):
                     df.SHIPPING_BILL_DATE: "2016-10-04",
                     df.ITEMS: [
                         {
-                            _if.TAXABLE_VALUE: 10000,
-                            _if.IGST: 833.33,
-                            _if.CESS: 100,
+                            item_f.TAXABLE_VALUE: 10000,
+                            item_f.IGST: 833.33,
+                            item_f.CESS: 100,
                             df.TAX_RATE: 5,
                         }
                     ],
@@ -579,9 +579,9 @@ class TestExports(IntegrationTestCase):
                     df.SHIPPING_BILL_DATE: "2016-10-04",
                     df.ITEMS: [
                         {
-                            _if.TAXABLE_VALUE: 10000,
-                            _if.IGST: 0,
-                            _if.CESS: 100,
+                            item_f.TAXABLE_VALUE: 10000,
+                            item_f.IGST: 0,
+                            item_f.CESS: 100,
                             df.TAX_RATE: 0,
                         }
                     ],
@@ -790,19 +790,19 @@ class TestCDNR(IntegrationTestCase):
                     df.DIFF_PERCENTAGE: 0.65,
                     df.ITEMS: [
                         {
-                            _if.TAXABLE_VALUE: -5225.28,
-                            _if.IGST: -339.64,
-                            _if.CGST: 0,
-                            _if.SGST: 0,
-                            _if.CESS: -789.52,
+                            item_f.TAXABLE_VALUE: -5225.28,
+                            item_f.IGST: -339.64,
+                            item_f.CGST: 0,
+                            item_f.SGST: 0,
+                            item_f.CESS: -789.52,
                             df.TAX_RATE: 10,
                         },
                         {
-                            _if.TAXABLE_VALUE: -5225.28,
-                            _if.IGST: -339.64,
-                            _if.CGST: 0,
-                            _if.SGST: 0,
-                            _if.CESS: -789.52,
+                            item_f.TAXABLE_VALUE: -5225.28,
+                            item_f.IGST: -339.64,
+                            item_f.CGST: 0,
+                            item_f.SGST: 0,
+                            item_f.CESS: -789.52,
                             df.TAX_RATE: 10,
                         },
                     ],
@@ -866,9 +866,9 @@ class TestCDNUR(IntegrationTestCase):
                     df.DIFF_PERCENTAGE: 0.65,
                     df.ITEMS: [
                         {
-                            _if.TAXABLE_VALUE: -5225.28,
-                            _if.IGST: -339.64,
-                            _if.CESS: -789.52,
+                            item_f.TAXABLE_VALUE: -5225.28,
+                            item_f.IGST: -339.64,
+                            item_f.CESS: -789.52,
                             df.TAX_RATE: 10,
                         }
                     ],
@@ -1403,10 +1403,10 @@ class TestSUPECOM(IntegrationTestCase):
                     df.DOC_TYPE: GSTR1_SubCategory.SUPECOM_52.value,
                     df.ECOMMERCE_GSTIN: "20ALYPD6528PQC5",
                     df.TAXABLE_VALUE: 10000,
-                    _if.IGST: 1000,
-                    _if.CGST: 0,
-                    _if.SGST: 0,
-                    _if.CESS: 0,
+                    item_f.IGST: 1000,
+                    item_f.CGST: 0,
+                    item_f.SGST: 0,
+                    item_f.CESS: 0,
                 }
             },
             GSTR1_SubCategory.SUPECOM_9_5.value: {
@@ -1414,10 +1414,10 @@ class TestSUPECOM(IntegrationTestCase):
                     df.DOC_TYPE: GSTR1_SubCategory.SUPECOM_9_5.value,
                     df.ECOMMERCE_GSTIN: "20ALYPD6528PQC5",
                     df.TAXABLE_VALUE: 10000,
-                    _if.IGST: 1000,
-                    _if.CGST: 0,
-                    _if.SGST: 0,
-                    _if.CESS: 0,
+                    item_f.IGST: 1000,
+                    item_f.CGST: 0,
+                    item_f.SGST: 0,
+                    item_f.CESS: 0,
                 }
             },
         }

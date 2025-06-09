@@ -26,7 +26,7 @@ from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_Category,
 )
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_DataField as df
-from india_compliance.gst_india.utils.gstr_1 import GSTR1_ItemField as _if
+from india_compliance.gst_india.utils.gstr_1 import GSTR1_ItemField as item_f
 from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_SubCategory,
 )
@@ -47,11 +47,11 @@ class GSTR1DataMapper(GovDataMapper):
 
     # default item amounts
     DEFAULT_ITEM_AMOUNTS = {
-        _if.TAXABLE_VALUE: 0,
-        _if.IGST: 0,
-        _if.CGST: 0,
-        _if.SGST: 0,
-        _if.CESS: 0,
+        item_f.TAXABLE_VALUE: 0,
+        item_f.IGST: 0,
+        item_f.CGST: 0,
+        item_f.SGST: 0,
+        item_f.CESS: 0,
     }
 
     FLOAT_FIELDS = {
@@ -185,13 +185,13 @@ class B2B(GSTR1DataMapper):
         GovDataField.DIFF_PERCENTAGE.value: df.DIFF_PERCENTAGE,
         GovDataField.ITEMS.value: df.ITEMS,
         # GovDataFields.INDEX.value: ItemFields.INDEX.value,
-        GovDataField.ITEM_DETAILS.value: _if.ITEM_DETAILS,
-        GovDataField.TAX_RATE.value: _if.TAX_RATE,
-        GovDataField.TAXABLE_VALUE.value: _if.TAXABLE_VALUE,
-        GovDataField.IGST.value: _if.IGST,
-        GovDataField.CGST.value: _if.CGST,
-        GovDataField.SGST.value: _if.SGST,
-        GovDataField.CESS.value: _if.CESS,
+        GovDataField.ITEM_DETAILS.value: item_f.ITEM_DETAILS,
+        GovDataField.TAX_RATE.value: item_f.TAX_RATE,
+        GovDataField.TAXABLE_VALUE.value: item_f.TAXABLE_VALUE,
+        GovDataField.IGST.value: item_f.IGST,
+        GovDataField.CGST.value: item_f.CGST,
+        GovDataField.SGST.value: item_f.SGST,
+        GovDataField.CESS.value: item_f.CESS,
     }
 
     # value formatting constants
@@ -348,9 +348,9 @@ class B2CL(GSTR1DataMapper):
     DOCUMENT_CATEGORY = "B2C (Large)"
     SUBCATEGORY = GSTR1_SubCategory.B2CL.value
     DEFAULT_ITEM_AMOUNTS = {
-        _if.TAXABLE_VALUE: 0,
-        _if.IGST: 0,
-        _if.CESS: 0,
+        item_f.TAXABLE_VALUE: 0,
+        item_f.IGST: 0,
+        item_f.CESS: 0,
     }
     KEY_MAPPING = {
         # GovDataFields.POS.value: DataFields.POS.value,
@@ -363,11 +363,11 @@ class B2CL(GSTR1DataMapper):
         GovDataField.DIFF_PERCENTAGE.value: df.DIFF_PERCENTAGE,
         GovDataField.ITEMS.value: df.ITEMS,
         # GovDataFields.INDEX.value: ItemFields.INDEX.value,
-        GovDataField.ITEM_DETAILS.value: _if.ITEM_DETAILS,
-        GovDataField.TAX_RATE.value: _if.TAX_RATE,
-        GovDataField.TAXABLE_VALUE.value: _if.TAXABLE_VALUE,
-        GovDataField.IGST.value: _if.IGST,
-        GovDataField.CESS.value: _if.CESS,
+        GovDataField.ITEM_DETAILS.value: item_f.ITEM_DETAILS,
+        GovDataField.TAX_RATE.value: item_f.TAX_RATE,
+        GovDataField.TAXABLE_VALUE.value: item_f.TAXABLE_VALUE,
+        GovDataField.IGST.value: item_f.IGST,
+        GovDataField.CESS.value: item_f.CESS,
     }
 
     def __init__(self):
@@ -471,9 +471,9 @@ class Exports(GSTR1DataMapper):
     """
 
     DEFAULT_ITEM_AMOUNTS = {
-        _if.TAXABLE_VALUE: 0,
-        _if.IGST: 0,
-        _if.CESS: 0,
+        item_f.TAXABLE_VALUE: 0,
+        item_f.IGST: 0,
+        item_f.CESS: 0,
     }
     KEY_MAPPING = {
         # GovDataFields.POS.value: DataFields.POS.value,
@@ -487,10 +487,10 @@ class Exports(GSTR1DataMapper):
         GovDataField.SHIPPING_BILL_NUMBER.value: df.SHIPPING_BILL_NUMBER,
         GovDataField.SHIPPING_BILL_DATE.value: df.SHIPPING_BILL_DATE,
         GovDataField.ITEMS.value: df.ITEMS,
-        GovDataField.TAXABLE_VALUE.value: _if.TAXABLE_VALUE,
-        GovDataField.TAX_RATE.value: _if.TAX_RATE,
-        GovDataField.IGST.value: _if.IGST,
-        GovDataField.CESS.value: _if.CESS,
+        GovDataField.TAXABLE_VALUE.value: item_f.TAXABLE_VALUE,
+        GovDataField.TAX_RATE.value: item_f.TAX_RATE,
+        GovDataField.IGST.value: item_f.IGST,
+        GovDataField.CESS.value: item_f.CESS,
     }
 
     SUBCATEGORIES = {
@@ -837,12 +837,12 @@ class CDNR(GSTR1DataMapper):
         GovDataField.ITEMS.value: df.ITEMS,
         # GovDataFields.INDEX.value: ItemFields.INDEX.value,
         # GovDataFields.ITEM_DETAILS.value: "item_details",
-        GovDataField.TAX_RATE.value: _if.TAX_RATE,
-        GovDataField.TAXABLE_VALUE.value: _if.TAXABLE_VALUE,
-        GovDataField.IGST.value: _if.IGST,
-        GovDataField.SGST.value: _if.SGST,
-        GovDataField.CGST.value: _if.CGST,
-        GovDataField.CESS.value: _if.CESS,
+        GovDataField.TAX_RATE.value: item_f.TAX_RATE,
+        GovDataField.TAXABLE_VALUE.value: item_f.TAXABLE_VALUE,
+        GovDataField.IGST.value: item_f.IGST,
+        GovDataField.SGST.value: item_f.SGST,
+        GovDataField.CGST.value: item_f.CGST,
+        GovDataField.CESS.value: item_f.CESS,
     }
 
     DOCUMENT_CATEGORIES = {
@@ -1001,9 +1001,9 @@ class CDNUR(GSTR1DataMapper):
 
     SUBCATEGORY = GSTR1_SubCategory.CDNUR.value
     DEFAULT_ITEM_AMOUNTS = {
-        _if.TAXABLE_VALUE: 0,
-        _if.IGST: 0,
-        _if.CESS: 0,
+        item_f.TAXABLE_VALUE: 0,
+        item_f.IGST: 0,
+        item_f.CESS: 0,
     }
     KEY_MAPPING = {
         GovDataField.FLAG.value: "flag",
@@ -1015,10 +1015,10 @@ class CDNUR(GSTR1DataMapper):
         GovDataField.POS.value: df.POS,
         GovDataField.DIFF_PERCENTAGE.value: df.DIFF_PERCENTAGE,
         GovDataField.ITEMS.value: df.ITEMS,
-        GovDataField.TAX_RATE.value: _if.TAX_RATE,
-        GovDataField.TAXABLE_VALUE.value: _if.TAXABLE_VALUE,
-        GovDataField.IGST.value: _if.IGST,
-        GovDataField.CESS.value: _if.CESS,
+        GovDataField.TAX_RATE.value: item_f.TAX_RATE,
+        GovDataField.TAXABLE_VALUE.value: item_f.TAXABLE_VALUE,
+        GovDataField.IGST.value: item_f.IGST,
+        GovDataField.CESS.value: item_f.CESS,
         GovDataField.ERROR_CD.value: df.ERROR_CD,
         GovDataField.ERROR_MSG.value: df.ERROR_MSG,
     }
@@ -1156,7 +1156,7 @@ class HSNSUM(GSTR1DataMapper):
         GovDataField.CGST.value: df.CGST,
         GovDataField.SGST.value: df.SGST,
         GovDataField.CESS.value: df.CESS,
-        GovDataField.TAX_RATE.value: _if.TAX_RATE,
+        GovDataField.TAX_RATE.value: item_f.TAX_RATE,
     }
 
     def __init__(self):
@@ -1317,7 +1317,7 @@ class AT(GSTR1DataMapper):
         GovDataField.POS.value: df.POS,
         GovDataField.DIFF_PERCENTAGE.value: df.DIFF_PERCENTAGE,
         GovDataField.ITEMS.value: df.ITEMS,
-        GovDataField.TAX_RATE.value: _if.TAX_RATE,
+        GovDataField.TAX_RATE.value: item_f.TAX_RATE,
         GovDataField.ADVANCE_AMOUNT.value: df.TAXABLE_VALUE,
         GovDataField.IGST.value: df.IGST,
         GovDataField.CGST.value: df.CGST,
@@ -1622,10 +1622,10 @@ class SUPECOM(GSTR1DataMapper):
     KEY_MAPPING = {
         GovDataField.ECOMMERCE_GSTIN.value: df.ECOMMERCE_GSTIN,
         GovDataField.NET_TAXABLE_VALUE.value: df.TAXABLE_VALUE,
-        "igst": _if.IGST,
-        "cgst": _if.CGST,
-        "sgst": _if.SGST,
-        "cess": _if.CESS,
+        "igst": item_f.IGST,
+        "cgst": item_f.CGST,
+        "sgst": item_f.SGST,
+        "cess": item_f.CESS,
         GovDataField.FLAG.value: "flag",
     }
     DOCUMENT_CATEGORIES = {
@@ -2024,19 +2024,19 @@ class BooksDataMapper:
                 return category
 
     DATA_TO_ITEM_FIELD_MAPPING = {
-        df.TAXABLE_VALUE: _if.TAXABLE_VALUE,
-        df.IGST: _if.IGST,
-        df.CGST: _if.CGST,
-        df.SGST: _if.SGST,
-        df.CESS: _if.CESS,
+        df.TAXABLE_VALUE: item_f.TAXABLE_VALUE,
+        df.IGST: item_f.IGST,
+        df.CGST: item_f.CGST,
+        df.SGST: item_f.SGST,
+        df.CESS: item_f.CESS,
     }
 
     ITEM_TO_INVOICE_FIELD_MAPPING = {
-        _if.TAXABLE_VALUE: "taxable_value",
-        _if.IGST: "igst_amount",
-        _if.CGST: "cgst_amount",
-        _if.SGST: "sgst_amount",
-        _if.CESS: "total_cess_amount",
+        item_f.TAXABLE_VALUE: "taxable_value",
+        item_f.IGST: "igst_amount",
+        item_f.CGST: "cgst_amount",
+        item_f.SGST: "sgst_amount",
+        item_f.CESS: "total_cess_amount",
     }
 
     DATA_TO_INVOICE_FIELD_MAPPING = {
@@ -2097,7 +2097,7 @@ class BooksDataMapper:
                     for key, field in self.ITEM_TO_INVOICE_FIELD_MAPPING.items():
                         tax_item[key] += item.get(field, 0)
 
-                tax_item[_if.TAX_RATE] = gst_rate
+                tax_item[item_f.TAX_RATE] = gst_rate
                 invoice["items"].append(dict(tax_item))
 
             # Aggregate the values for each item field with same GST Rate
