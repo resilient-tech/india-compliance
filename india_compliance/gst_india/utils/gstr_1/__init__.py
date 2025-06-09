@@ -225,7 +225,7 @@ class GovDataField:
     CHECKSUM = "chksum"
 
 
-class GovExcelField(Enum):
+class GovExcelField:
     CUST_GSTIN = "GSTIN/UIN of Recipient"
     CUST_NAME = "Receiver Name"
     INVOICE_NUMBER = "Invoice Number"
