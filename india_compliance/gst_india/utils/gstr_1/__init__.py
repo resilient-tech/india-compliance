@@ -158,7 +158,7 @@ class GSTR1_ItemField:
     ADDITIONAL_AMOUNT = "additional_amount"
 
 
-class GovDataField(Enum):
+class GovDataField:
     CUST_GSTIN = "ctin"
     ECOMMERCE_GSTIN = "etin"
     DOC_DATE = "idt"
