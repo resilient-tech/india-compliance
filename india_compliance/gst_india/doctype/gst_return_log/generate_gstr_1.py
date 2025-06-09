@@ -21,7 +21,7 @@ from india_compliance.gst_india.utils.gstr_1 import (
     GovJsonKey,
     GSTR1_Category,
 )
-from india_compliance.gst_india.utils.gstr_1 import GSTR1_DataField as df
+from india_compliance.gst_india.utils.gstr_1 import GSTR1_DataField as inv_f
 from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_SubCategory,
 )
@@ -239,9 +239,9 @@ class SummarizeGSTR1:
     @staticmethod
     def count_doc_issue_summary(summary_row, data_row):
         summary_row["no_of_records"] += (
-            data_row.get(df.TOTAL_COUNT, 0)
-            - data_row.get(df.CANCELLED_COUNT, 0)
-            - data_row.get(df.DRAFT_COUNT, 0)
+            data_row.get(inv_f.TOTAL_COUNT, 0)
+            - data_row.get(inv_f.CANCELLED_COUNT, 0)
+            - data_row.get(inv_f.DRAFT_COUNT, 0)
         )
 
     @staticmethod
@@ -250,14 +250,14 @@ class SummarizeGSTR1:
 
 
 class ReconcileGSTR1:
-    IGNORED_FIELDS = {df.TAX_RATE, df.DOC_VALUE}
+    IGNORED_FIELDS = {inv_f.TAX_RATE, inv_f.DOC_VALUE}
     UNREQUIRED_KEYS = {
-        df.TRANSACTION_TYPE,
-        df.DOC_NUMBER,
-        df.DOC_DATE,
-        df.CUST_GSTIN,
-        df.CUST_NAME,
-        df.REVERSE_CHARGE,
+        inv_f.TRANSACTION_TYPE,
+        inv_f.DOC_NUMBER,
+        inv_f.DOC_DATE,
+        inv_f.CUST_GSTIN,
+        inv_f.CUST_NAME,
+        inv_f.REVERSE_CHARGE,
     }
 
     def get_reconcile_gstr1_data(self, gov_data, books_data):
@@ -478,7 +478,7 @@ class ReconcileGSTR1:
 
 
 class AggregateInvoices:
-    IGNORED_FIELDS = {df.TAX_RATE, df.DOC_VALUE}
+    IGNORED_FIELDS = {inv_f.TAX_RATE, inv_f.DOC_VALUE}
 
     @staticmethod
     def get_aggregate_data(data: dict):
