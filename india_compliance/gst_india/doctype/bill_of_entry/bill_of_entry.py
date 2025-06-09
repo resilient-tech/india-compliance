@@ -396,8 +396,8 @@ class BillofEntry(Document):
             frappe.msgprint(_("No Purchase Invoices selected"))
             return
 
-        frappe.has_permission("Bill Of Entry", "write")
-        frappe.has_permission("Purchase Invoice", "read")
+        frappe.has_permission("Bill Of Entry", "write", throw=True)
+        frappe.has_permission("Purchase Invoice", "read", throw=True)
 
         existing_items = [
             item.pi_detail for item in self.get("items") if item.pi_detail
@@ -795,7 +795,7 @@ def get_pi_items(purchase_invoices):
 
 @frappe.whitelist()
 def fetch_pending_boe_invoices(doctype, txt, searchfield, start, page_len, filters):
-    frappe.has_permission("Purchase Invoice", "read")
+    frappe.has_permission("Purchase Invoice", "read", throw=True)
 
     filters = frappe._dict(filters)
 
