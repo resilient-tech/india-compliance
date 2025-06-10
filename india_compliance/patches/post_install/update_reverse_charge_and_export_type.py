@@ -4,6 +4,7 @@ from india_compliance.utils.custom_fields import delete_old_fields
 
 DOCTYPES = ("Purchase Invoice", "Sales Invoice")
 
+# nosemgrep
 DOCTYPE_COLUMNS = {
     doctype: frappe.db.get_table_columns(doctype) for doctype in DOCTYPES
 }

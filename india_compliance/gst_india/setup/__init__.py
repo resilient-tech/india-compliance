@@ -298,8 +298,7 @@ def show_accounts_settings_override_warning():
     since it defaults to `1`
     """
 
-    address_for_tax_category = frappe.db.get_value(
-        "Accounts Settings",
+    address_for_tax_category = frappe.db.get_single_value(
         "Accounts Settings",
         "determine_address_tax_category_from",
     )

@@ -12,7 +12,9 @@ def make_company_fixtures(doc, method=None):
 
 
 def create_company_fixtures(company):
-    company = company or frappe.db.get_value("Global Defaults", None, "default_company")
+    company = company or frappe.db.get_single_value(
+        "Global Defaults", "default_company"
+    )
     create_tds_account(company)
 
     # create records for Tax Withholding Category
