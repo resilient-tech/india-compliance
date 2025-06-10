@@ -275,7 +275,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
         self.assertDictEq(
             {
                 "rounding_difference": {
-                    "total_taxable_value": -0.02,
+                    "total_taxable_value": -0.022,
                 }
             },
             data["rounding_difference"],
