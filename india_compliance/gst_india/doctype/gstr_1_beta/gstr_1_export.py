@@ -2062,7 +2062,7 @@ def download_books_as_excel(company_gstin, month_or_quarter, year):
     frappe.has_permission("GSTR-1 Beta", "export", throw=True)
 
     books_excel = BooksExcel(company_gstin, month_or_quarter, year)
-    books_excel.export_data()
+    books_excel.export_data(row_dimension=4)
 
 
 @frappe.whitelist()

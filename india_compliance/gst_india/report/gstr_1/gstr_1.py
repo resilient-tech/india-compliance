@@ -2229,7 +2229,7 @@ def get_gstr1_excel(filters, data=None, columns=None):
                 create_hsn_excel_sheet(excel, headers, data)
                 continue
 
-            create_excel_sheet(excel, type_of_business, headers, data)
+            create_excel_sheet(excel, type_of_business, headers, data, row_dimension=4)
 
     filename.extend([gstin, report_dict["fp"]])
     excel.export("_".join(filename))
