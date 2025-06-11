@@ -1,6 +1,7 @@
 # Copyright (c) 2025, Resilient Tech and contributors
 # For license information, please see license.txt
 
+from enum import Enum
 from itertools import chain
 
 import frappe
@@ -21,107 +22,101 @@ def execute(filters: dict | None = None) -> tuple[list[dict], list[dict]]:
     return report.get_columns(), report.get_data()
 
 
-class InwardSuppliesGSTSummaryMapping:
-    def __init__(self) -> None:
-        self.mapping = {
-            "A": {
-                "title": "Inward supplies (other than imports and inward supplies liable to reverse charge but includes services received from SEZs)",
-                "category": ...,
-                "has_subcategory": True,
-            },
-            "B": {
-                "title": "Inward supplies received from unregistered persons liable to reverse charge (other than A above) on which tax is paid & ITC availed",
-                "category": ...,
-                "has_subcategory": True,
-            },
-            "C": {
-                "title": "Inward supplies received from registered persons liable to reverse charge (other than A above) on which tax is paid & ITC availed",
-                "category": ...,
-                "has_subcategory": True,
-            },
-            "D": {
-                "title": "Import Of Goods (including supplies from SEZ)",
-                "category": ...,
-                "has_subcategory": True,
-            },
-            "E": {
-                "title": "Import Of Services (excluding inward supplies from SEZ)",
-                "category": ...,
-                "has_subcategory": False,
-            },
-            "F": {
-                "title": "Input Tax credit received from ISD",
-                "category": ...,
-                "has_subcategory": False,
-            },
-        }
+class InwardSuppliesCategory(Enum):
+    INWARD_DOMESTIC = "Inward supplies (other than imports and inward supplies liable to reverse charge but includes services received from SEZs)"
 
-    def get_title(self, category: str) -> str:
-        return self.mapping.get(category, {}).get("title")
+    UNREG_RCM = "Inward supplies received from unregistered persons liable to reverse charge (other than A above) on which tax is paid & ITC availed"
 
-    def has_subcategory(self, category: str) -> bool:
-        return self.mapping.get(category, {}).get("has_subcategory", False)
+    REG_RCM = "Inward supplies received from registered persons liable to reverse charge (other than A above) on which tax is paid & ITC availed"
+
+    IMPORT_GOODS = "Import Of Goods (including supplies from SEZ)"
+
+    IMPORT_SERVICES = "Import Of Services (excluding inward supplies from SEZ)"
+
+    ITC_FROM_ISD = "Input Tax credit received from ISD"
+
+    @property
+    def title(self) -> str:
+        return self.value
+
+    @property
+    def has_subcategory(self) -> bool:
+        return bool(INWARD_SUPPLIES_CATEGORY_MAPPING.get(self))
 
 
-class InwardSuppliesGSTSummaryCategory(InwardSuppliesGSTSummaryMapping):
-    def __init__(self) -> None:
-        super().__init__()
-        category_map = {
-            "A": self._is_inward_supplies_from_registered,
-            "B": self._is_inward_supplies_from_unregistered,
-            "C": self._is_inward_supplies_from_registered_reverse_charge,
-            "D": self._is_import_of_goods_sez,
-            "E": self._is_import_of_services,
-            "F": self._is_itc_received_from_isd,
-        }
+class InwardSuppliesSubCategory:
+    INPUTS = "Inputs"
+    CAPITAL_GOODS = "Capital Goods"
+    INPUT_SERVICES = "Input Services"
 
-        for key, func in category_map.items():
-            self.mapping[key]["category"] = func
 
-    def _is_inward_supplies_from_registered(self, row: dict) -> bool:
-        return (
-            row.get("gst_category") != "Overseas"
-            and not row.get("is_reverse_charge")
-            and row.get("itc_classification") != "Input Service Distributor"
-        )
+INWARD_SUPPLIES_CATEGORY_MAPPING = {
+    InwardSuppliesCategory.INWARD_DOMESTIC: [
+        InwardSuppliesSubCategory.INPUTS,
+        InwardSuppliesSubCategory.CAPITAL_GOODS,
+        InwardSuppliesSubCategory.INPUT_SERVICES,
+    ],
+    InwardSuppliesCategory.UNREG_RCM: [
+        InwardSuppliesSubCategory.INPUTS,
+        InwardSuppliesSubCategory.CAPITAL_GOODS,
+        InwardSuppliesSubCategory.INPUT_SERVICES,
+    ],
+    InwardSuppliesCategory.REG_RCM: [
+        InwardSuppliesSubCategory.INPUTS,
+        InwardSuppliesSubCategory.CAPITAL_GOODS,
+        InwardSuppliesSubCategory.INPUT_SERVICES,
+    ],
+    InwardSuppliesCategory.IMPORT_GOODS: [
+        InwardSuppliesSubCategory.INPUTS,
+        InwardSuppliesSubCategory.CAPITAL_GOODS,
+    ],
+    InwardSuppliesCategory.IMPORT_SERVICES: None,
+    InwardSuppliesCategory.ITC_FROM_ISD: None,
+}
 
-    def _is_inward_supplies_from_unregistered(self, row: dict) -> bool:
-        return row.get("gst_category") == "Unregistered" and row.get(
-            "is_reverse_charge"
-        )
 
-    def _is_inward_supplies_from_registered_reverse_charge(self, row: dict) -> bool:
-        return row.get("gst_category") != "Unregistered" and row.get(
-            "is_reverse_charge"
-        )
+class InwardSuppliesGSTSummaryCategory:
+    def get_category(self, row: dict) -> None:
+        gst_category = row.get("gst_category")
+        itc_classification = row.get("itc_classification")
+        is_reverse_charge = row.get("is_reverse_charge")
 
-    def _is_import_of_goods_sez(self, row: dict) -> bool:
-        return row.get("itc_classification") == "Import Of Goods"
+        if (
+            gst_category != "Overseas"
+            and not is_reverse_charge
+            and itc_classification != "Input Service Distributor"
+        ):
+            return InwardSuppliesCategory.INWARD_DOMESTIC
 
-    def _is_import_of_services(self, row: dict) -> bool:
-        return row.get("itc_classification") == "Import Of Service"
+        elif gst_category == "Unregistered" and is_reverse_charge:
+            return InwardSuppliesCategory.UNREG_RCM
 
-    def _is_itc_received_from_isd(self, row: dict) -> bool:
-        return row.get("itc_classification") == "Input Service Distributor"
+        elif gst_category != "Unregistered" and is_reverse_charge:
+            return InwardSuppliesCategory.REG_RCM
 
-    def get_category(self, row: dict) -> str:
-        for detail_type, mapping in self.mapping.items():
-            if (fn := mapping["category"]) and fn(row):
-                return detail_type
+        elif itc_classification == "Import Of Goods":
+            return InwardSuppliesCategory.IMPORT_GOODS
 
-    def get_subcategory(self, category: str, row: dict) -> str | None:
-        if not self.has_subcategory(category):
+        elif itc_classification == "Import Of Service":
+            return InwardSuppliesCategory.IMPORT_SERVICES
+
+        elif itc_classification == "Input Service Distributor":
+            return InwardSuppliesCategory.ITC_FROM_ISD
+
+    def get_subcategory(self, row: dict, category: InwardSuppliesCategory) -> None:
+        if not category.has_subcategory:
             return None
 
         if row.get("is_fixed_asset") == 1:
-            return "Capital Goods"
+            return InwardSuppliesSubCategory.CAPITAL_GOODS
 
-        if (gst_hsn_code := row.get("gst_hsn_code")) and (
+        elif (gst_hsn_code := row.get("gst_hsn_code")) and (
             gst_hsn_code.startswith("99")
         ):
-            return "Input Services"
+            return InwardSuppliesSubCategory.INPUT_SERVICES
 
-        return "Inputs"
+        else:
+            return InwardSuppliesSubCategory.INPUTS
 
 
 class InwardSuppliesGSTSummaryData:
@@ -208,37 +203,23 @@ class InwardSuppliesGSTSummary(
     InwardSuppliesGSTSummaryCategory, InwardSuppliesGSTSummaryData
 ):
     def __init__(self, filters: dict) -> None:
-        super().__init__()
         filters.from_date, filters.to_date = filters.get("date_range")
         self.filters = filters
-        self._init_summary()
 
-    def _init_summary(self) -> None:
+    def get_init_summary(self) -> None:
         _zero_taxes = {tax_field: 0 for tax_field in TAX_FIELDS}
 
-        self.summary = {
-            "A": {
-                "Inputs": {**_zero_taxes},
-                "Capital Goods": {**_zero_taxes},
-                "Input Services": {**_zero_taxes},
-            },
-            "B": {
-                "Inputs": {**_zero_taxes},
-                "Capital Goods": {**_zero_taxes},
-                "Input Services": {**_zero_taxes},
-            },
-            "C": {
-                "Inputs": {**_zero_taxes},
-                "Capital Goods": {**_zero_taxes},
-                "Input Services": {**_zero_taxes},
-            },
-            "D": {
-                "Inputs": {**_zero_taxes},
-                "Capital Goods": {**_zero_taxes},
-            },
-            "E": {**_zero_taxes},
-            "F": {**_zero_taxes},
-        }
+        summary = {}
+
+        for category, subcategories in INWARD_SUPPLIES_CATEGORY_MAPPING.items():
+            if subcategories:
+                summary[category] = {
+                    subcategory: _zero_taxes.copy() for subcategory in subcategories
+                }
+            else:
+                summary[category] = _zero_taxes.copy()
+
+        return summary
 
     def get_columns(self) -> list[dict]:
         return [
@@ -277,45 +258,45 @@ class InwardSuppliesGSTSummary(
     def get_data(self) -> list[dict]:
         data = self._get_data(self.filters)
 
+        summary = self.get_init_summary()
+
         for row in data:
-            self._add_to_summary(row)
+            category = self.get_category(row)
+            sub_category = self.get_subcategory(row, category)
 
-        return self._build_transformed_summary()
+            _summary_dict = summary.get(category)
 
-    def _add_to_summary(self, row: dict) -> None:
-        category = self.get_category(row)
-        subcategory = self.get_subcategory(category, row)
+            if sub_category:
+                _summary_dict = _summary_dict.get(sub_category)
 
-        if subcategory:
-            summary_entry = self.summary[category][subcategory]
-        else:
-            summary_entry = self.summary[category]
+            for tax_field in TAX_FIELDS:
+                _summary_dict[tax_field] += row.get(tax_field, 0)
 
-        for tax_field in TAX_FIELDS:
-            summary_entry[tax_field] += row.get(tax_field, 0)
+        return self._build_transformed_summary(summary)
 
-    def _build_transformed_summary(self) -> list[dict]:
+    def _build_transformed_summary(self, summary: dict) -> list[dict]:
         transformed = []
 
-        for category, summary in self.summary.items():
-            title = self.get_title(category)
-            has_subcategory = self.has_subcategory(category)
+        for idx, (category, _summary) in enumerate(summary.items()):
+            letter = chr(65 + idx)  # 65 is 'A'
+            title = category.title
+            has_subcategory = category.has_subcategory
 
             transformed.append(
                 self._create_entry(
-                    f"{category}) {title}",
-                    self._aggregate_summary(summary) if has_subcategory else summary,
+                    f"{letter}) {title}",
+                    self._aggregate_summary(_summary) if has_subcategory else _summary,
                     indent=0,
                 )
             )
 
             if has_subcategory:
-                for subcategory, sub_summary in summary.items():
+                for subcategory, sub_summary in _summary.items():
                     transformed.append(
                         self._create_entry(subcategory, sub_summary, indent=1)
                     )
             else:
-                transformed.append(self._create_entry(title, summary, indent=1))
+                transformed.append(self._create_entry(title, _summary, indent=1))
 
         return transformed
 
