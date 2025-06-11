@@ -835,7 +835,8 @@ class GSTR1 {
 
     create_rounding_journal_entry(account, posting_date) {
         let rounding_difference = this.data.books?.rounding_difference[0];
-        if (!rounding_difference) return;
+        if (!rounding_difference || Object.values(rounding_difference).every(v => !v))
+            return;
 
         const je_details = {
             posting_date: posting_date,
