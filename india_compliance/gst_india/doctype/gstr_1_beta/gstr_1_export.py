@@ -800,7 +800,7 @@ class BooksExcel(DataProcessor):
 
         return category_wise_data
 
-    def export_data(self):
+    def export_data(self, **kwargs):
         excel = ExcelExporter()
         excel.remove_sheet("Sheet")
 
@@ -810,12 +810,13 @@ class BooksExcel(DataProcessor):
             data=self.get_document_data(),
             default_data_format=self.DEFAULT_DATA_FORMAT,
             add_totals=False,
+            **kwargs,
         )
 
-        self.create_other_sheets(excel)
+        self.create_other_sheets(excel, **kwargs)
         excel.export(get_file_name("Books", self.company_gstin, self.period))
 
-    def create_other_sheets(self, excel: ExcelExporter):
+    def create_other_sheets(self, excel: ExcelExporter, **kwargs):
         for category in ("NIL_EXEMPT", "HSN", "AT", "TXP", "DOC_ISSUE"):
             data = self.data.get(GovJsonKey[category].value)
 
@@ -828,6 +829,7 @@ class BooksExcel(DataProcessor):
                 data=data,
                 default_data_format=self.DEFAULT_DATA_FORMAT,
                 add_totals=False,
+                **kwargs,
             )
 
     def get_document_data(self):
@@ -1193,7 +1195,7 @@ class ReconcileExcel:
         data = gstr1_log.load_data("reconcile")["reconcile"]
         self.data = get_category_wise_data(data)
 
-    def export_data(self):
+    def export_data(self, **kwargs):
         excel = ExcelExporter()
         excel.remove_sheet("Sheet")
 
@@ -1204,6 +1206,7 @@ class ReconcileExcel:
             default_data_format=self.DEFAULT_DATA_FORMAT,
             default_header_format=self.DEFAULT_HEADER_FORMAT,
             add_totals=False,
+            **kwargs,
         )
 
         for category in (

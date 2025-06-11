@@ -2270,7 +2270,7 @@ def create_hsn_excel_sheet(excel, headers, data):
         create_excel_sheet(excel, "HSN - B2C", headers, b2c_data)
 
 
-def create_excel_sheet(excel, sheet_name, headers, data):
+def create_excel_sheet(excel, sheet_name, headers, data, **kwargs):
     excel.create_sheet(
-        sheet_name=sheet_name, headers=headers, data=data, add_totals=False
+        sheet_name=sheet_name, headers=headers, data=data, add_totals=False, **kwargs
     )

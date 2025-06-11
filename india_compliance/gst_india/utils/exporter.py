@@ -90,10 +90,6 @@ class Worksheet:
         }
     )
 
-    def __init__(self):
-        self.row_dimension = 1
-        self.column_dimension = 1
-
     def create(
         self,
         workbook,
@@ -105,9 +101,13 @@ class Worksheet:
         add_totals=True,
         default_data_format=None,
         default_header_format=None,
+        row_dimension=1,
+        column_dimension=1,
     ):
         """Create worksheet"""
         self.headers = headers
+        self.row_dimension = row_dimension
+        self.column_dimension = column_dimension
 
         if default_data_format:
             self.data_format.update(default_data_format)
