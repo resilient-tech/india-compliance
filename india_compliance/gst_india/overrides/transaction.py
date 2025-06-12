@@ -313,7 +313,9 @@ def set_gst_tax_type(doc, method=None):
     if not doc.taxes:
         return
 
-    gst_tax_account_map = get_gst_account_gst_tax_type_map()
+    gst_tax_account_map = (
+        {} if ignore_gst_validations(doc) else get_gst_account_gst_tax_type_map()
+    )
 
     for tax in doc.taxes:
         # Setting as None if not GST Account
