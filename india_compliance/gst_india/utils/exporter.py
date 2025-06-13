@@ -35,7 +35,12 @@ class ExcelExporter:
 
         for i, row in enumerate(data, start=start_row):
             for j, field in enumerate(fields, start=start_column):
-                value = row.get(field)
+                fieldname, transform = field.get("fieldname"), field.get("transform")
+                value = row.get(fieldname)
+
+                if transform:
+                    value = transform(value)
+
                 if value is not None:
                     sheet.cell(row=i, column=j, value=value)
 

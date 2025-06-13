@@ -198,12 +198,11 @@ class GovExcel(DataProcessor):
         excel = ExcelExporter(file)
         for category, cat_data in data.items():
             sheet_name = JSON_CATEGORY_EXCEL_CATEGORY_MAPPING.get(category)
+
             if sheet_name:
                 excel.insert_data(
                     sheet_name=sheet_name,
-                    fields=[
-                        x.get("fieldname") for x in self.get_category_headers(category)
-                    ],
+                    fields=self.get_fields(category),
                     data=cat_data,
                     start_row=5,
                 )
@@ -253,6 +252,19 @@ class GovExcel(DataProcessor):
             new_data[MAP[sub_category]].append(row)
 
         category_wise_data.update(new_data)
+
+    def get_fields(self, category):
+        headers = self.get_category_headers(category)
+        fields = []
+        for header in headers:
+            fields.append(
+                {
+                    "fieldname": header.get("fieldname"),
+                    "transform": header.get("transform"),
+                }
+            )
+
+        return fields
 
     def get_category_headers(self, category):
         return getattr(self, f"get_{category.lower()}_headers")()
@@ -444,6 +456,7 @@ class GovExcel(DataProcessor):
             {
                 "label": _(GovExcelField.NOTE_TYPE.value),
                 "fieldname": df.TRANSACTION_TYPE,
+                "transform": lambda x: x[0],
             },
             {
                 "label": _(GovExcelField.POS.value),
