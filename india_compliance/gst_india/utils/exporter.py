@@ -9,8 +9,11 @@ import frappe
 
 
 class ExcelExporter:
-    def __init__(self):
-        self.wb = openpyxl.Workbook()
+    def __init__(self, file=None):
+        if file:
+            self.wb = openpyxl.load_workbook(file, read_only=False, keep_links=False)
+        else:
+            self.wb = openpyxl.Workbook()
 
     def create_sheet(self, **kwargs):
         """
@@ -26,6 +29,15 @@ class ExcelExporter:
         """
 
         Worksheet().create(workbook=self.wb, **kwargs)
+
+    def insert_data(self, sheet_name, fields, data, start_row=1, start_column=1):
+        sheet = self.wb[sheet_name]
+
+        for i, row in enumerate(data, start=start_row):
+            for j, field in enumerate(fields, start=start_column):
+                value = row.get(field)
+                if value is not None:
+                    sheet.cell(row=i, column=j, value=value)
 
     def save_workbook(self, file_name=None):
         """Save workbook"""
