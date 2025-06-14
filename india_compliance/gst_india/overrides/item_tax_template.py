@@ -52,6 +52,8 @@ def validate_tax_rates(doc):
         elif row.tax_type in inter_state_accounts and doc.gst_rate != tax_rate:
             invalid_tax_rates[row.idx] = doc.gst_rate
 
+        return
+
     if not invalid_tax_rates:
         return
 
