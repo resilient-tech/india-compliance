@@ -42,6 +42,10 @@ def validate_tax_rates(doc):
 
     invalid_tax_rates = {}
     for row in doc.taxes:
+
+        if row.tax_rate is None:
+            row.tax_rate = 0
+
         tax_rate = abs(row.tax_rate)
 
         # check intra state
