@@ -39,7 +39,6 @@ class ExcelExporter:
         :param data: A list of dictionary to append data to sheet
         :param start_row: Row number to start inserting data
         :param start_column: Column number to start inserting data
-        :param default_data_format: Default data format for the cells
         """
         Worksheet().insert_data(workbook=self.wb, **kwargs)
 
@@ -152,15 +151,11 @@ class Worksheet:
         data,
         start_row=1,
         start_column=1,
-        default_data_format=None,
     ):
         sheet = workbook[sheet_name]
 
-        if default_data_format:
-            self.data_format.update(default_data_format)
-
-        for i, row in enumerate(data, start=start_row):
-            for j, header in enumerate(headers, start=start_column):
+        for i, row in enumerate(data, start_row):
+            for j, header in enumerate(headers, start_column):
                 fieldname, transform = header.get("fieldname"), header.get("transform")
                 value = row.get(fieldname)
 
