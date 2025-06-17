@@ -294,6 +294,7 @@ class GovExcel(DataProcessor):
                 "fieldname": df.DOC_DATE,
                 "data_format": {"number_format": self.DATE_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x.strftime("%d-%b-%y"),
             },
             {
                 "label": _(GovExcelField.INVOICE_VALUE.value),
@@ -315,6 +316,7 @@ class GovExcel(DataProcessor):
                 "fieldname": df.DIFF_PERCENTAGE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x if x else None,
             },
             {
                 "label": _(GovExcelField.INVOICE_TYPE.value),
@@ -355,6 +357,7 @@ class GovExcel(DataProcessor):
                 "fieldname": df.DOC_DATE,
                 "data_format": {"number_format": self.DATE_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x.strftime("%d-%b-%y"),
             },
             {
                 "label": _(GovExcelField.INVOICE_VALUE.value),
@@ -370,6 +373,7 @@ class GovExcel(DataProcessor):
                 "fieldname": df.DIFF_PERCENTAGE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x if x else None,
             },
             {
                 "label": _(GovExcelField.TAX_RATE.value),
@@ -409,6 +413,7 @@ class GovExcel(DataProcessor):
                 "fieldname": df.DIFF_PERCENTAGE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x if x else None,
             },
             {
                 "label": _(GovExcelField.TAX_RATE.value),
@@ -455,6 +460,7 @@ class GovExcel(DataProcessor):
                 "fieldname": df.DOC_DATE,
                 "data_format": {"number_format": self.DATE_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x.strftime("%d-%b-%y"),
             },
             {
                 "label": _(GovExcelField.NOTE_TYPE.value),
@@ -485,6 +491,7 @@ class GovExcel(DataProcessor):
                 "fieldname": df.DIFF_PERCENTAGE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x if x else None,
             },
             {
                 "label": _(GovExcelField.TAX_RATE.value),
@@ -520,6 +527,7 @@ class GovExcel(DataProcessor):
                 "fieldname": df.DOC_DATE,
                 "data_format": {"number_format": self.DATE_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x.strftime("%d-%b-%y"),
             },
             {
                 "label": _(GovExcelField.NOTE_TYPE.value),
@@ -539,6 +547,7 @@ class GovExcel(DataProcessor):
                 "fieldname": df.DIFF_PERCENTAGE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x if x else None,
             },
             {
                 "label": _(GovExcelField.TAX_RATE.value),
@@ -574,6 +583,7 @@ class GovExcel(DataProcessor):
                 "fieldname": df.DOC_DATE,
                 "data_format": {"number_format": self.DATE_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x.strftime("%d-%b-%y"),
             },
             {
                 "label": _(GovExcelField.INVOICE_VALUE.value),
@@ -594,6 +604,7 @@ class GovExcel(DataProcessor):
                 "fieldname": df.SHIPPING_BILL_DATE,
                 "data_format": {"number_format": self.DATE_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x.strftime("%d-%b-%y"),
             },
             {
                 "label": _(GovExcelField.TAX_RATE.value),
@@ -622,10 +633,9 @@ class GovExcel(DataProcessor):
             {
                 "label": _(GovExcelField.DIFF_PERCENTAGE.value),
                 "fieldname": df.DIFF_PERCENTAGE,
-                "data_format": {
-                    "number_format": self.PERCENT_FORMAT,
-                },
+                "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x if x else None,
             },
             {
                 "label": _(GovExcelField.TAX_RATE.value),
@@ -656,6 +666,7 @@ class GovExcel(DataProcessor):
                 "fieldname": df.DIFF_PERCENTAGE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x if x else None,
             },
             {
                 "label": _(GovExcelField.TAX_RATE.value),

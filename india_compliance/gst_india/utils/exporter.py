@@ -154,9 +154,7 @@ class Worksheet:
         start_column=1,
         default_data_format=None,
     ):
-        self.ws = workbook[sheet_name]
-        sheet = self.ws
-        self.headers = headers
+        sheet = workbook[sheet_name]
 
         if default_data_format:
             self.data_format.update(default_data_format)
@@ -171,8 +169,6 @@ class Worksheet:
 
                 if value is not None:
                     sheet.cell(row=i, column=j, value=value)
-
-                self.apply_format(row=i, column=j, header=header, is_data=True)
 
     def add_data(self, data, **kwargs):
         if not data:
