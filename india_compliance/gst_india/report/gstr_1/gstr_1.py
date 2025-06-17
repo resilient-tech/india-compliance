@@ -1973,13 +1973,13 @@ def get_exempted_json(data):
 
     for i, v in enumerate(data):
         if data[i].get("nil_rated"):
-            out["inv"][i]["nil_amt"] = data[i]["nil_rated"]
+            out["inv"][i]["nil_amt"] = flt(data[i]["nil_rated"], 2)
 
         if data[i].get("exempted"):
-            out["inv"][i]["expt_amt"] = data[i]["exempted"]
+            out["inv"][i]["expt_amt"] = flt(data[i]["exempted"], 2)
 
         if data[i].get("non_gst"):
-            out["inv"][i]["ngsup_amt"] = data[i]["non_gst"]
+            out["inv"][i]["ngsup_amt"] = flt(data[i]["non_gst"], 2)
 
     return out
 
