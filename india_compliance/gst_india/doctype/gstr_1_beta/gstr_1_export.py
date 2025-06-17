@@ -189,11 +189,14 @@ class GovExcel(DataProcessor):
 
         return category_wise_data
 
+    TEMPLATE_EXCEL_FILE = {
+        "V2.0": get_data_file_path("GSTR1_Excel_Template_V2.0.xlsx"),
+        "V2.1": get_data_file_path("GSTR1_Excel_Template_V2.1.xlsx"),
+    }
+
     def build_excel(self, data, bifurcate_hsn):
-        if bifurcate_hsn:
-            file = get_data_file_path("GSTR1_Excel_Workbook_Template_V2.1.xlsx")
-        else:
-            file = get_data_file_path("GSTR1_Excel_Workbook_Template_V2.0.xlsx")
+        version = "V2.1" if bifurcate_hsn else "V2.0"
+        file = self.TEMPLATE_EXCEL_FILE.get(version)
 
         excel = ExcelExporter(file)
         for category, cat_data in data.items():
@@ -202,7 +205,7 @@ class GovExcel(DataProcessor):
             if sheet_name:
                 excel.insert_data(
                     sheet_name=sheet_name,
-                    fields=self.get_fields(category),
+                    headers=self.get_category_headers(category),
                     data=cat_data,
                     start_row=5,
                 )

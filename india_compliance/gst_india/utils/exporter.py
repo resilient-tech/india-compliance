@@ -12,6 +12,7 @@ class ExcelExporter:
     def __init__(self, file=None):
         if file:
             self.wb = openpyxl.load_workbook(file, read_only=False, keep_links=False)
+            self.wb.calculation.fullCalcOnLoad = False
         else:
             self.wb = openpyxl.Workbook()
 
@@ -30,22 +31,22 @@ class ExcelExporter:
 
         Worksheet().create(workbook=self.wb, **kwargs)
 
-    def insert_data(self, sheet_name, fields, data, start_row=1, start_column=1):
-        sheet = self.wb[sheet_name]
-
-        for i, row in enumerate(data, start=start_row):
-            for j, field in enumerate(fields, start=start_column):
-                fieldname, transform = field.get("fieldname"), field.get("transform")
-                value = row.get(fieldname)
-
-                if transform:
-                    value = transform(value)
-
-                if value is not None:
-                    sheet.cell(row=i, column=j, value=value)
+    def insert_data(self, **kwargs):
+        """
+        insert data in worksheet
+        :param sheet_name - name for the worksheet
+        :param headers: A List of dictionary (cell properties will be optional)
+        :param data: A list of dictionary to append data to sheet
+        :param start_row: Row number to start inserting data
+        :param start_column: Column number to start inserting data
+        :param default_data_format: Default data format for the cells
+        """
+        Worksheet().insert_data(workbook=self.wb, **kwargs)
 
     def save_workbook(self, file_name=None):
         """Save workbook"""
+        self.wb.calculation.fullCalcOnLoad = True
+
         if file_name:
             self.wb.save(file_name)
             return self.wb
@@ -143,6 +144,36 @@ class Worksheet:
 
         self.apply_conditional_formatting(add_totals)
 
+    def insert_data(
+        self,
+        workbook,
+        sheet_name,
+        headers,
+        data,
+        start_row=1,
+        start_column=1,
+        default_data_format=None,
+    ):
+        self.ws = workbook[sheet_name]
+        sheet = self.ws
+        self.headers = headers
+
+        if default_data_format:
+            self.data_format.update(default_data_format)
+
+        for i, row in enumerate(data, start=start_row):
+            for j, header in enumerate(headers, start=start_column):
+                fieldname, transform = header.get("fieldname"), header.get("transform")
+                value = row.get(fieldname)
+
+                if transform:
+                    value = transform(value)
+
+                if value is not None:
+                    sheet.cell(row=i, column=j, value=value)
+
+                self.apply_format(row=i, column=j, header=header, is_data=True)
+
     def add_data(self, data, **kwargs):
         if not data:
             return
@@ -212,7 +243,8 @@ class Worksheet:
         style = getattr(self, style_name).copy()
 
         # update custom style
-        custom_styles = self.headers[column - 1].get(style_name)
+        header = kwargs.get("header") or self.headers[column - 1]
+        custom_styles = header.get(style_name)
         if custom_styles:
             style.update(custom_styles)
 
