@@ -466,7 +466,7 @@ class GovExcel(DataProcessor):
             },
             {
                 "label": _(gov_xl.NOTE_TYPE.value),
-                "fieldname": gov_xl.TRANSACTION_TYPE,
+                "fieldname": inv_f.TRANSACTION_TYPE,
                 "transform": lambda x: x[0],
             },
             {
