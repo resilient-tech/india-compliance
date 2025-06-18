@@ -449,7 +449,7 @@ class GovExcel(DataProcessor):
                 "transform": lambda x: x.strftime("%d-%b-%y"),
             },
             {
-                "label": _(gov_xl.NOTE_TYPE.value),
+                "label": _(gov_xl.NOTE_TYPE),
                 "fieldname": inv_f.TRANSACTION_TYPE,
                 "transform": lambda x: x[0],
             },
