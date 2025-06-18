@@ -135,6 +135,11 @@ class GovExcel(DataProcessor):
         inv_f.SHIPPING_BILL_DATE: lambda value: datetime.strptime(value, "%Y-%m-%d"),
     }
 
+    TEMPLATE_EXCEL_FILE = {
+        "V2.0": get_data_file_path("GSTR1_Excel_Template_V2.0.xlsx"),
+        "V2.1": get_data_file_path("GSTR1_Excel_Template_V2.1.xlsx"),
+    }
+
     def generate(self, gstin, period):
         """
         Build excel file
@@ -145,12 +150,14 @@ class GovExcel(DataProcessor):
 
         month, year = gstr_1_log.return_period[:2], gstr_1_log.return_period[2:]
         filing_from = getdate(f"{year}-{month}-01")
-        bifurcate_hsn = filing_from >= HSN_BIFURCATION_FROM
+
+        file_version = "V2.1" if filing_from >= HSN_BIFURCATION_FROM else "V2.0"
+        file = self.TEMPLATE_EXCEL_FILE.get(file_version)
 
         self.file_field = "filed" if gstr_1_log.filed else "books"
         data = gstr_1_log.load_data(self.file_field)[self.file_field]
         data = self.process_data(data)
-        self.build_excel(data, bifurcate_hsn)
+        self.build_excel(data, file)
 
     def process_data(self, data):
         data = data.update(data.pop("aggregate_data", {}))
@@ -191,20 +198,12 @@ class GovExcel(DataProcessor):
 
         return category_wise_data
 
-    TEMPLATE_EXCEL_FILE = {
-        "V2.0": get_data_file_path("GSTR1_Excel_Template_V2.0.xlsx"),
-        "V2.1": get_data_file_path("GSTR1_Excel_Template_V2.1.xlsx"),
-    }
-
-    def build_excel(self, data, bifurcate_hsn):
-        version = "V2.1" if bifurcate_hsn else "V2.0"
-        file = self.TEMPLATE_EXCEL_FILE.get(version)
-
+    def build_excel(self, data, file):
         excel = ExcelExporter(file)
         for category, cat_data in data.items():
             sheet_name = JSON_CATEGORY_EXCEL_CATEGORY_MAPPING.get(category)
 
-            if sheet_name:
+            try:
                 excel.insert_data(
                     sheet_name=sheet_name,
                     headers=self.get_category_headers(category),
@@ -212,7 +211,7 @@ class GovExcel(DataProcessor):
                     start_row=5,
                 )
 
-            else:
+            except KeyError:
                 excel.create_sheet(
                     sheet_name=category,
                     headers=self.get_category_headers(category),
@@ -220,8 +219,6 @@ class GovExcel(DataProcessor):
                     add_totals=False,
                     default_data_format={"height": 15},
                 )
-
-                excel.remove_sheet("Sheet")
 
         excel.export(get_file_name("Gov", self.gstin, self.period))
 
@@ -257,19 +254,6 @@ class GovExcel(DataProcessor):
             new_data[MAP[sub_category]].append(row)
 
         category_wise_data.update(new_data)
-
-    def get_fields(self, category):
-        headers = self.get_category_headers(category)
-        fields = []
-        for header in headers:
-            fields.append(
-                {
-                    "fieldname": header.get("fieldname"),
-                    "transform": header.get("transform"),
-                }
-            )
-
-        return fields
 
     def get_category_headers(self, category):
         return getattr(self, f"get_{category.lower()}_headers")()
