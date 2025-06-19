@@ -217,7 +217,7 @@ class GovExcel(DataProcessor):
 
             else:
                 excel.create_sheet(
-                    sheet_name=category,
+                    sheet_name=sheet_name or category,
                     headers=self.get_category_headers(category),
                     data=cat_data,
                     add_totals=False,
