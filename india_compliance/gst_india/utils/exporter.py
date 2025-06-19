@@ -173,8 +173,7 @@ class Worksheet:
                 if transform:
                     value = transform(value)
 
-                if value is not None:
-                    sheet.cell(row=i, column=j, value=value)
+                sheet.cell(row=i, column=j, value=value or "")
 
     def add_data(self, data, **kwargs):
         if not data:
