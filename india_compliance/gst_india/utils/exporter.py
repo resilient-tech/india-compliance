@@ -9,8 +9,14 @@ import frappe
 
 
 class ExcelExporter:
-    def __init__(self):
-        self.wb = openpyxl.Workbook()
+    def __init__(self, file=None):
+        if file:
+            self.wb = openpyxl.load_workbook(file, read_only=False, keep_links=False)
+            self.is_created = False
+
+        else:
+            self.wb = openpyxl.Workbook()
+            self.is_created = True
 
     def create_sheet(self, **kwargs):
         """
@@ -27,8 +33,21 @@ class ExcelExporter:
 
         Worksheet().create(workbook=self.wb, **kwargs)
 
+    def insert_data(self, **kwargs):
+        """
+        insert data in worksheet
+        :param sheet_name - name for the worksheet
+        :param headers: A List of dictionary (cell properties will be optional)
+        :param data: A list of dictionary to append data to sheet
+        :param start_row: Row number to start inserting data
+        :param start_column: Column number to start inserting data
+        """
+        Worksheet().insert_data(workbook=self.wb, **kwargs)
+
     def save_workbook(self, file_name=None):
         """Save workbook"""
+        self.wb.calculation.fullCalcOnLoad = True
+
         if file_name:
             self.wb.save(file_name)
             return self.wb
@@ -52,6 +71,15 @@ class ExcelExporter:
         frappe.local.response["filename"] = file_name
         frappe.local.response["filecontent"] = xlsx_file.getvalue()
         frappe.local.response["type"] = "binary"
+
+    def has_sheet(self, sheet_name):
+        """Check if a sheet exists in the workbook"""
+        return sheet_name in self.wb.sheetnames
+
+    @property
+    def is_loaded(self):
+        """Check if the workbook is loaded from a file"""
+        return not self.is_created
 
 
 class Worksheet:
@@ -126,6 +154,27 @@ class Worksheet:
 
         self.apply_conditional_formatting(add_totals)
 
+    def insert_data(
+        self,
+        workbook,
+        sheet_name,
+        headers,
+        data,
+        start_row=1,
+        start_column=1,
+    ):
+        sheet = workbook[sheet_name]
+
+        for i, row in enumerate(data, start_row):
+            for j, header in enumerate(headers, start_column):
+                fieldname, transform = header.get("fieldname"), header.get("transform")
+                value = row.get(fieldname)
+
+                if transform:
+                    value = transform(value)
+
+                sheet.cell(row=i, column=j, value=value or "")
+
     def add_data(self, data, **kwargs):
         if not data:
             return
@@ -195,7 +244,8 @@ class Worksheet:
         style = getattr(self, style_name).copy()
 
         # update custom style
-        custom_styles = self.headers[column - 1].get(style_name)
+        header = kwargs.get("header") or self.headers[column - 1]
+        custom_styles = header.get(style_name)
         if custom_styles:
             style.update(custom_styles)
 

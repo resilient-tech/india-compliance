@@ -295,7 +295,7 @@ class GovExcelSheetName(Enum):
     Categories / Worksheets as per Gov Excel file
     """
 
-    B2B = "b2b, sez, de"
+    B2B = "b2b,sez,de"
     EXP = "exp"
     B2CL = "b2cl"
     B2CS = "b2cs"

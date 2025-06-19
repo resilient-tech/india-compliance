@@ -11,9 +11,10 @@ import frappe
 from frappe import _
 from frappe.utils import getdate
 
-from india_compliance.gst_india.utils import get_period
+from india_compliance.gst_india.utils import get_data_file_path, get_period
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr_1 import (
+    HSN_BIFURCATION_FROM,
     JSON_CATEGORY_EXCEL_CATEGORY_MAPPING,
     QUARTERLY_KEYS,
 )
@@ -134,6 +135,11 @@ class GovExcel(DataProcessor):
         inv_f.SHIPPING_BILL_DATE: lambda value: datetime.strptime(value, "%Y-%m-%d"),
     }
 
+    TEMPLATE_EXCEL_FILE = {
+        "V2.0": get_data_file_path("GSTR1_Excel_Template_V2.0.xlsx"),
+        "V2.1": get_data_file_path("GSTR1_Excel_Template_V2.1.xlsx"),
+    }
+
     def generate(self, gstin, period):
         """
         Build excel file
@@ -142,10 +148,16 @@ class GovExcel(DataProcessor):
         self.period = period
         gstr_1_log = frappe.get_doc("GST Return Log", f"GSTR1-{period}-{gstin}")
 
+        month, year = gstr_1_log.return_period[:2], gstr_1_log.return_period[2:]
+        filing_from = getdate(f"{year}-{month}-01")
+
+        file_version = "V2.1" if filing_from >= HSN_BIFURCATION_FROM else "V2.0"
+        file = self.TEMPLATE_EXCEL_FILE.get(file_version)
+
         self.file_field = "filed" if gstr_1_log.filed else "books"
         data = gstr_1_log.load_data(self.file_field)[self.file_field]
         data = self.process_data(data)
-        self.build_excel(data)
+        self.build_excel(data, file)
 
     def process_data(self, data):
         data = data.update(data.pop("aggregate_data", {}))
@@ -186,18 +198,32 @@ class GovExcel(DataProcessor):
 
         return category_wise_data
 
-    def build_excel(self, data):
-        excel = ExcelExporter()
-        for category, cat_data in data.items():
-            excel.create_sheet(
-                sheet_name=JSON_CATEGORY_EXCEL_CATEGORY_MAPPING.get(category, category),
-                headers=self.get_category_headers(category),
-                data=cat_data,
-                add_totals=False,
-                default_data_format={"height": 15},
-            )
+    def build_excel(self, data, file=None):
+        excel = ExcelExporter(file)
 
-        excel.remove_sheet("Sheet")
+        if excel.has_sheet("Sheet"):
+            excel.remove_sheet("Sheet")
+
+        for category, cat_data in data.items():
+            sheet_name = JSON_CATEGORY_EXCEL_CATEGORY_MAPPING.get(category)
+
+            if excel.is_loaded and excel.has_sheet(sheet_name):
+                excel.insert_data(
+                    sheet_name=sheet_name,
+                    headers=self.get_category_headers(category),
+                    data=cat_data,
+                    start_row=5,
+                )
+
+            else:
+                excel.create_sheet(
+                    sheet_name=sheet_name or category,
+                    headers=self.get_category_headers(category),
+                    data=cat_data,
+                    add_totals=False,
+                    default_data_format={"height": 15},
+                )
+
         excel.export(get_file_name("Gov", self.gstin, self.period))
 
     def process_doc_issue_data(self, data):
@@ -258,6 +284,7 @@ class GovExcel(DataProcessor):
                 "fieldname": inv_f.DOC_DATE,
                 "data_format": {"number_format": self.DATE_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x.strftime("%d-%b-%y"),
             },
             {
                 "label": _(gov_xl.INVOICE_VALUE),
@@ -279,6 +306,7 @@ class GovExcel(DataProcessor):
                 "fieldname": inv_f.DIFF_PERCENTAGE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x if x else None,
             },
             {
                 "label": _(gov_xl.INVOICE_TYPE),
@@ -319,6 +347,7 @@ class GovExcel(DataProcessor):
                 "fieldname": inv_f.DOC_DATE,
                 "data_format": {"number_format": self.DATE_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x.strftime("%d-%b-%y"),
             },
             {
                 "label": _(gov_xl.INVOICE_VALUE),
@@ -334,6 +363,7 @@ class GovExcel(DataProcessor):
                 "fieldname": inv_f.DIFF_PERCENTAGE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x if x else None,
             },
             {
                 "label": _(gov_xl.TAX_RATE),
@@ -373,6 +403,7 @@ class GovExcel(DataProcessor):
                 "fieldname": inv_f.DIFF_PERCENTAGE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x if x else None,
             },
             {
                 "label": _(gov_xl.TAX_RATE),
@@ -419,10 +450,12 @@ class GovExcel(DataProcessor):
                 "fieldname": inv_f.DOC_DATE,
                 "data_format": {"number_format": self.DATE_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x.strftime("%d-%b-%y"),
             },
             {
                 "label": _(gov_xl.NOTE_TYPE),
                 "fieldname": inv_f.TRANSACTION_TYPE,
+                "transform": lambda x: x[0],
             },
             {
                 "label": _(gov_xl.POS),
@@ -448,6 +481,7 @@ class GovExcel(DataProcessor):
                 "fieldname": inv_f.DIFF_PERCENTAGE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x if x else None,
             },
             {
                 "label": _(gov_xl.TAX_RATE),
@@ -483,6 +517,7 @@ class GovExcel(DataProcessor):
                 "fieldname": inv_f.DOC_DATE,
                 "data_format": {"number_format": self.DATE_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x.strftime("%d-%b-%y"),
             },
             {
                 "label": _(gov_xl.NOTE_TYPE),
@@ -502,6 +537,7 @@ class GovExcel(DataProcessor):
                 "fieldname": inv_f.DIFF_PERCENTAGE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x if x else None,
             },
             {
                 "label": _(gov_xl.TAX_RATE),
@@ -537,6 +573,7 @@ class GovExcel(DataProcessor):
                 "fieldname": inv_f.DOC_DATE,
                 "data_format": {"number_format": self.DATE_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x.strftime("%d-%b-%y"),
             },
             {
                 "label": _(gov_xl.INVOICE_VALUE),
@@ -557,6 +594,7 @@ class GovExcel(DataProcessor):
                 "fieldname": inv_f.SHIPPING_BILL_DATE,
                 "data_format": {"number_format": self.DATE_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x.strftime("%d-%b-%y"),
             },
             {
                 "label": _(gov_xl.TAX_RATE),
@@ -589,6 +627,7 @@ class GovExcel(DataProcessor):
                     "number_format": self.PERCENT_FORMAT,
                 },
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x if x else None,
             },
             {
                 "label": _(gov_xl.TAX_RATE),
@@ -619,6 +658,7 @@ class GovExcel(DataProcessor):
                 "fieldname": inv_f.DIFF_PERCENTAGE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x if x else None,
             },
             {
                 "label": _(gov_xl.TAX_RATE),
