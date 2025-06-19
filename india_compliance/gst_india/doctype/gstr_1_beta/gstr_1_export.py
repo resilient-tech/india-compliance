@@ -198,12 +198,16 @@ class GovExcel(DataProcessor):
 
         return category_wise_data
 
-    def build_excel(self, data, file):
+    def build_excel(self, data, file=None):
         excel = ExcelExporter(file)
+
+        if excel.has_sheet("Sheet"):
+            excel.remove_sheet("Sheet")
+
         for category, cat_data in data.items():
             sheet_name = JSON_CATEGORY_EXCEL_CATEGORY_MAPPING.get(category)
 
-            try:
+            if file and excel.has_sheet(sheet_name):
                 excel.insert_data(
                     sheet_name=sheet_name,
                     headers=self.get_category_headers(category),
@@ -211,7 +215,7 @@ class GovExcel(DataProcessor):
                     start_row=5,
                 )
 
-            except KeyError:
+            else:
                 excel.create_sheet(
                     sheet_name=category,
                     headers=self.get_category_headers(category),

@@ -70,6 +70,10 @@ class ExcelExporter:
         frappe.local.response["filecontent"] = xlsx_file.getvalue()
         frappe.local.response["type"] = "binary"
 
+    def has_sheet(self, sheet_name):
+        """Check if a sheet exists in the workbook"""
+        return sheet_name in self.wb.sheetnames
+
 
 class Worksheet:
     data_format = frappe._dict(
