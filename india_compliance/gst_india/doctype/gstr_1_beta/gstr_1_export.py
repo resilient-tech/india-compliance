@@ -207,7 +207,7 @@ class GovExcel(DataProcessor):
         for category, cat_data in data.items():
             sheet_name = JSON_CATEGORY_EXCEL_CATEGORY_MAPPING.get(category)
 
-            if file and excel.has_sheet(sheet_name):
+            if excel.is_loaded and excel.has_sheet(sheet_name):
                 excel.insert_data(
                     sheet_name=sheet_name,
                     headers=self.get_category_headers(category),

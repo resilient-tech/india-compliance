@@ -13,8 +13,11 @@ class ExcelExporter:
         if file:
             self.wb = openpyxl.load_workbook(file, read_only=False, keep_links=False)
             self.wb.calculation.fullCalcOnLoad = False
+            self.is_created = False
+
         else:
             self.wb = openpyxl.Workbook()
+            self.is_created = True
 
     def create_sheet(self, **kwargs):
         """
@@ -73,6 +76,11 @@ class ExcelExporter:
     def has_sheet(self, sheet_name):
         """Check if a sheet exists in the workbook"""
         return sheet_name in self.wb.sheetnames
+
+    @property
+    def is_loaded(self):
+        """Check if the workbook is loaded from a file"""
+        return not self.is_created
 
 
 class Worksheet:
