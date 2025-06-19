@@ -12,7 +12,6 @@ class ExcelExporter:
     def __init__(self, file=None):
         if file:
             self.wb = openpyxl.load_workbook(file, read_only=False, keep_links=False)
-            self.wb.calculation.fullCalcOnLoad = False
             self.is_created = False
 
         else:
