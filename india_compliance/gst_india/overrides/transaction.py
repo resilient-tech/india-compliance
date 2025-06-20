@@ -314,7 +314,9 @@ def set_gst_tax_type(doc, method=None):
         return
 
     gst_tax_account_map = (
-        {} if ignore_gst_validations(doc) else get_gst_account_gst_tax_type_map()
+        {}
+        if ignore_gst_validations(doc, throw=False)
+        else get_gst_account_gst_tax_type_map()
     )
 
     for tax in doc.taxes:
