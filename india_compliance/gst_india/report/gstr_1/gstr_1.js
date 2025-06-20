@@ -67,6 +67,8 @@ frappe.query_reports["GSTR-1"] = {
                 } else {
                     report.set_filter_value("bifurcate_hsn", 0);
                 }
+
+                report.refresh();
             },
         },
         {
