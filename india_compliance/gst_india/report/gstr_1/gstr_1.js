@@ -61,12 +61,11 @@ frappe.query_reports["GSTR-1"] = {
             on_change: report => {
                 let { from_date } = report.get_values();
                 from_date = frappe.datetime.str_to_obj(from_date);
-
-                if (india_compliance.HSN_BIFURCATION_FROM <= from_date) {
-                    report.set_filter_value("bifurcate_hsn", 1);
-                } else {
-                    report.set_filter_value("bifurcate_hsn", 0);
-                }
+                
+                report.set_filter_value(
+                    "bifurcate_hsn",
+                    india_compliance.HSN_BIFURCATION_FROM <= from_date ? 1 : 0
+                );
 
                 report.refresh();
             },
