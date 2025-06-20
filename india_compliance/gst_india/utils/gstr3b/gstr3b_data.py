@@ -2,10 +2,15 @@ import frappe
 from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import IfNull, Sum
+from frappe.utils import getdate
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.overrides.transaction import is_inter_state_supply
 from india_compliance.gst_india.utils import get_full_gst_uom
+from india_compliance.gst_india.utils.gstr_1 import (
+    HSN_BIFURCATION_FROM,
+    GSTR1_SubCategory,
+)
 
 PURCHASE_CATEGORY_CONDITIONS = {
     "Composition Scheme, Exempted, Nil Rated": {
@@ -125,6 +130,16 @@ class GSTR3BSubcategory(GSTR3BCategoryConditions):
 
     def set_for_itc_reclaimed(self, invoice):
         invoice.invoice_sub_category = "Reclaim of ITC Reversal"
+
+    def set_hsn_sub_category(self, invoice, bifurcate_hsn):
+        if not bifurcate_hsn:
+            invoice.hsn_sub_category = GSTR1_SubCategory.HSN.value
+
+        elif invoice.gst_category in ("Unregistered", "Overseas"):
+            invoice.hsn_sub_category = GSTR1_SubCategory.HSN_B2C.value
+
+        else:
+            invoice.hsn_sub_category = GSTR1_SubCategory.HSN_B2B.value
 
 
 class GSTR3BQuery:
@@ -325,10 +340,17 @@ class GSTR3BInvoices(GSTR3BQuery, GSTR3BSubcategory):
         processed_invoices = []
         identified_uom = {}
 
+        if (bifurcate_hsn := self.filters.get("bifurcate_hsn")) is None:
+            bifurcate_hsn = (
+                getdate(self.filters.get("from_date")) >= HSN_BIFURCATION_FROM
+            )
+
         for invoice in data:
             if not invoice.invoice_sub_category:
                 self.set_invoice_category(invoice, conditions)
                 self.set_invoice_sub_category(invoice, conditions)
+
+            self.set_hsn_sub_category(invoice, bifurcate_hsn)
 
             if invoice.invoice_category in (
                 "Composition Scheme, Exempted, Nil Rated",
