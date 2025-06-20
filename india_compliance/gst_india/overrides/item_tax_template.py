@@ -42,7 +42,7 @@ def validate_tax_rates(doc):
 
     invalid_tax_rates = {}
     for row in doc.taxes:
-        tax_rate = abs(row.tax_rate)
+        tax_rate = abs(row.get("tax_rate") or 0)
 
         # check intra state
         if row.tax_type in intra_state_accounts and doc.gst_rate != tax_rate * 2:
