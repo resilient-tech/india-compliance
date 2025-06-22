@@ -62,11 +62,12 @@ frappe.query_reports["GSTR-1"] = {
                 let { from_date } = report.get_values();
                 from_date = frappe.datetime.str_to_obj(from_date);
 
-                if (india_compliance.HSN_BIFURCATION_FROM <= from_date) {
-                    report.set_filter_value("bifurcate_hsn", 1);
-                } else {
-                    report.set_filter_value("bifurcate_hsn", 0);
-                }
+                report.set_filter_value(
+                    "bifurcate_hsn",
+                    india_compliance.HSN_BIFURCATION_FROM <= from_date ? 1 : 0
+                );
+
+                report.refresh();
             },
         },
         {
@@ -194,7 +195,7 @@ function show_gstr_1_beta_alert(report) {
         <a href="/app/gstr-1-beta" class="alert-link">
             GSTR-1 Beta
         </a>
-        is released with improved features and user experience. Try it out now!
+        ${__("is released with improved features and user experience. Try it out now!")}
         `;
 
     india_compliance.show_dismissable_alert(
