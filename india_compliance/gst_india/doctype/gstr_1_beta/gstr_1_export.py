@@ -81,7 +81,7 @@ class DataProcessor:
         Apply transformations to row fields
         """
         for field, modifier in self.FIELD_TRANSFORMATIONS.items():
-            if field in row:
+            if row.get(field):
                 row[field] = modifier(row[field])
 
         return row
