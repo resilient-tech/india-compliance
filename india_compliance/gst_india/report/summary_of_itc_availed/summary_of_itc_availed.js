@@ -1,7 +1,7 @@
 // Copyright (c) 2025, Resilient Tech and contributors
 // For license information, please see license.txt
 
-frappe.query_reports["Summary of Inward Supplies"] = {
+frappe.query_reports["Summary of ITC Availed"] = {
     filters: [
         {
             fieldname: "company",
@@ -43,7 +43,7 @@ frappe.query_reports["Summary of Inward Supplies"] = {
             ],
             reqd: 1,
             width: "80",
-        }
+        },
     ],
 
     formatter: (value, row, column, data, default_formatter) => {
@@ -78,4 +78,3 @@ frappe.query_reports["Summary of Inward Supplies"] = {
         return datatable_options;
     },
 };
-
