@@ -238,7 +238,7 @@ india_compliance.DataTableManager = class DataTableManager {
                 cell.column.fieldtype === "Float"
             ) {
                 cell.content = data[fieldname] || 0.0;
-            } else if (Object.hasOwn(data, fieldname)) {
+            } else if (Object.prototype.hasOwnProperty.call(data, fieldname)) {
                 cell.content = data[fieldname];
             }
 
