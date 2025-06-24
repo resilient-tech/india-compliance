@@ -13,11 +13,11 @@
  "modified": "2025-04-21 18:26:50.175272",
  "modified_by": "Administrator",
  "module": "GST India",
- "name": "Summary of Inward Supplies",
+ "name": "Summary of ITC Availed",
  "owner": "Administrator",
  "prepared_report": 0,
  "ref_doctype": "Purchase Invoice",
- "report_name": "Summary of Inward Supplies",
+ "report_name": "Summary of ITC Availed",
  "report_type": "Script Report",
  "roles": [
   {
