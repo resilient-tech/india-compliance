@@ -304,25 +304,27 @@ def get_journal_entries(month_or_quarter, year, company, filing_preference):
 
 
 @frappe.whitelist()
-def get_accounts(month_or_quarter, year, company, filing_preference):
+def get_gst_and_round_off_accounts(month_or_quarter, year, company, filing_preference):
+    """
+    Get GST output accounts and round off account for journal entry creation.
+
+    Returns:
+        dict: Contains account details and posting date, or None if accounts not found
+    """
     if not frappe.has_permission("Journal Entry", "create"):
         return
 
     _, to_date = get_gstr_1_from_and_to_date(month_or_quarter, year, filing_preference)
 
-    # For Output Account
-    gst_settings = frappe.get_cached_doc("GST Settings")
+    # Get Output GST accounts using existing utility
+    try:
+        gst_accounts = get_gst_accounts_by_type(company, "Output")
 
-    output_gst_account = [
-        account
-        for account in gst_settings.gst_accounts
-        if account.account_type == "Output"
-    ]
-
-    if not output_gst_account:
+    except Exception:
         return
 
-    output_gst_account = output_gst_account[0]
+    if not gst_accounts:
+        return
 
     # For Round Off Account
     round_off_account = frappe.get_all(
@@ -340,11 +342,11 @@ def get_accounts(month_or_quarter, year, company, filing_preference):
     round_off_account = round_off_account[0]
 
     account = {
-        "igst_account": output_gst_account.igst_account,
-        "cgst_account": output_gst_account.cgst_account,
-        "sgst_account": output_gst_account.sgst_account,
-        "cess_account": output_gst_account.cess_account,
-        "cess_non_advol_account": output_gst_account.cess_non_advol_account,
+        "igst_account": gst_accounts.get("igst_account"),
+        "cgst_account": gst_accounts.get("cgst_account"),
+        "sgst_account": gst_accounts.get("sgst_account"),
+        "cess_account": gst_accounts.get("cess_account"),
+        "cess_non_advol_account": gst_accounts.get("cess_non_advol_account"),
         "round_off_account": round_off_account,
     }
 
