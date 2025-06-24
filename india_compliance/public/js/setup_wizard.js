@@ -2,7 +2,13 @@ frappe.require("assets/india_compliance/js/quick_entry.js");
 update_erpnext_slides_settings();
 
 frappe.setup.on("before_load", function () {
-    if (!frappe.setup.slides.length) return;
+    // if setup wizard is already completed for ERPNext, skip the setup wizard
+    if (
+        frappe.boot.setup_wizard_completed_apps?.length &&
+        frappe.boot.setup_wizard_completed_apps.includes("erpnext")
+    ) {
+        return;
+    }
 
     const first_slide = frappe.setup.slides[0];
     const _onload = first_slide.onload;
