@@ -163,7 +163,7 @@ india_compliance.DataTableManager = class DataTableManager {
     refresh_additional_total_rows() {
         if (!this.additional_total_rows) return;
 
-        this.remove_additional_total_rows(); // I think this is not needed
+        this.remove_additional_total_rows();
         this.render_additional_total_rows();
     }
 
