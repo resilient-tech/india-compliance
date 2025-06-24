@@ -799,6 +799,11 @@ class GSTR1 {
     }
 
     async show_suggested_jv_dialog() {
+        await this.show_rounding_diff_journal_entry();
+        await this.show_rcm_journal_entry();
+    }
+
+    async show_rcm_journal_entry() {
         if (!frappe.perm.has_perm("Journal Entry")) return;
 
         const { month_or_quarter, year, company, filing_preference } = this.frm.doc;
@@ -809,21 +814,15 @@ class GSTR1 {
 
         if (!je_details) return;
 
-        this.create_journal_entry_dialog(je_details);
-    }
+        return new Promise(resolve => {
+            const dialog = this.create_journal_entry_dialog(je_details);
 
-    async show_round_off_jv_dialog() {
-        if (!frappe.perm.has_perm("Journal Entry")) return;
+            dialog.onhide = () => {
+                resolve();
+            };
 
-        const { month_or_quarter, year, company, filing_preference } = this.frm.doc;
-        const { message: data } = await frappe.call({
-            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_accounts",
-            args: { month_or_quarter, year, company, filing_preference },
+            dialog.show();
         });
-
-        if (!data) return;
-
-        this.create_rounding_journal_entry(data.account, data.posting_date);
     }
 
     TAX_TO_ACCOUNT_MAP = {
@@ -833,10 +832,39 @@ class GSTR1 {
         total_cess_amount: ["cess_account", "cess_non_advol_account"],
     };
 
-    create_rounding_journal_entry(account, posting_date) {
+    async show_rounding_diff_journal_entry() {
+        if (!frappe.perm.has_perm("Journal Entry")) return;
+
         let rounding_difference = this.data.books?.rounding_difference[0];
         if (!rounding_difference || Object.values(rounding_difference).every(v => !v))
             return;
+
+        const { month_or_quarter, year, company, filing_preference } = this.frm.doc;
+        const { message: data } = await frappe.call({
+            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_gst_and_round_off_accounts",
+            args: { month_or_quarter, year, company, filing_preference },
+        });
+
+        if (!data) return;
+
+        return new Promise(resolve => {
+            const dialog = this.create_rounding_diff_journal_entry(
+                data.account,
+                data.posting_date
+            );
+
+            if (!dialog) return resolve();
+
+            dialog.onhide = () => {
+                resolve();
+            };
+
+            dialog.show();
+        });
+    }
+
+    create_rounding_diff_journal_entry(account, posting_date) {
+        let rounding_difference = this.data.books?.rounding_difference[0];
 
         const je_details = {
             posting_date: posting_date,
@@ -885,7 +913,7 @@ class GSTR1 {
             });
         }
 
-        this.create_journal_entry_dialog(je_details);
+        return this.create_journal_entry_dialog(je_details);
     }
 
     create_journal_entry_dialog(je_details) {
@@ -941,7 +969,7 @@ class GSTR1 {
             },
         });
 
-        dialog.show();
+        return dialog;
     }
 
     generate_tax_table(data) {
