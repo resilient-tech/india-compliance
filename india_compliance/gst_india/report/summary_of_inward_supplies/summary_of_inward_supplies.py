@@ -76,7 +76,7 @@ INWARD_SUPPLIES_CATEGORY_MAPPING = {
 
 
 class InwardSuppliesGSTSummaryCategory:
-    def get_category(self, row: dict) -> None:
+    def get_category(self, row: dict) -> InwardSuppliesCategory | None:
         gst_category = row.get("gst_category")
         itc_classification = row.get("itc_classification")
         is_reverse_charge = row.get("is_reverse_charge")
@@ -103,8 +103,12 @@ class InwardSuppliesGSTSummaryCategory:
         elif itc_classification == "Input Service Distributor":
             return InwardSuppliesCategory.ITC_FROM_ISD
 
-    def get_subcategory(self, row: dict, category: InwardSuppliesCategory) -> None:
-        if not category.has_subcategory:
+        return None
+
+    def get_subcategory(
+        self, row: dict, category: InwardSuppliesCategory
+    ) -> InwardSuppliesSubCategory | None:
+        if not category or not category.has_subcategory:
             return None
 
         if row.get("is_fixed_asset") == 1:
@@ -206,7 +210,7 @@ class InwardSuppliesGSTSummary(
         filters.from_date, filters.to_date = filters.get("date_range")
         self.filters = filters
 
-    def get_init_summary(self) -> None:
+    def get_initial_summary(self) -> dict:
         _zero_taxes = {tax_field: 0 for tax_field in TAX_FIELDS}
 
         summary = {}
@@ -258,16 +262,19 @@ class InwardSuppliesGSTSummary(
     def get_data(self) -> list[dict]:
         data = self._get_data(self.filters)
 
-        summary = self.get_init_summary()
+        summary = self.get_initial_summary()
 
         for row in data:
             category = self.get_category(row)
+            if not category or not (_summary_dict := summary.get(category)):
+                continue
+
             sub_category = self.get_subcategory(row, category)
 
-            _summary_dict = summary.get(category)
-
-            if sub_category:
-                _summary_dict = _summary_dict.get(sub_category)
+            if not sub_category or not (
+                _summary_dict := _summary_dict.get(sub_category)
+            ):
+                continue
 
             for tax_field in TAX_FIELDS:
                 _summary_dict[tax_field] += row.get(tax_field, 0)
