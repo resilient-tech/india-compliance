@@ -8,6 +8,7 @@ import frappe
 from frappe import _
 from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
+from frappe.query_builder.functions import IfNull
 
 TAX_FIELDS = (
     "igst_amount",
@@ -124,13 +125,18 @@ class ITCAvailedSummaryCategory:
 
 
 class ITCAvailedSummaryData:
-    def _get_data(self, filters: dict) -> list[dict]:
+    def __init__(self, filters: dict) -> None:
+        filters = frappe._dict(filters or {})
+        filters.from_date, filters.to_date = filters.date_range
+        self.filters = filters
+
+    def _get_data(self) -> list[dict]:
         return chain(
-            self._get_bill_of_entry_data(filters),
-            self._get_purchase_invoice_data(filters),
+            self._get_bill_of_entry_data(),
+            self._get_purchase_invoice_data(),
         )
 
-    def _get_purchase_invoice_data(self, filters: dict) -> list[dict]:
+    def _get_purchase_invoice_data(self) -> list[dict]:
         doc = frappe.qb.DocType("Purchase Invoice")
         doc_item = frappe.qb.DocType("Purchase Invoice Item")
 
@@ -153,19 +159,23 @@ class ITCAvailedSummaryData:
             )
             .where(
                 (doc.docstatus == 1)
-                & (doc.posting_date[filters.get("from_date") : filters.get("to_date")])
-                & (doc.company == filters.get("company"))
-                & (doc.company_gstin != doc.supplier_gstin)
+                & (
+                    doc.posting_date[
+                        self.filters.get("from_date") : self.filters.get("to_date")
+                    ]
+                )
+                & (doc.company == self.filters.get("company"))
+                & (doc.company_gstin != IfNull(doc.supplier_gstin, ""))
                 & (doc.is_opening == "No")
             )
         )
 
-        if filters.get("company_gstin"):
-            query = query.where(doc.company_gstin == filters.get("company_gstin"))
+        if self.filters.get("company_gstin"):
+            query = query.where(doc.company_gstin == self.filters.get("company_gstin"))
 
         return query.run(as_dict=True)
 
-    def _get_bill_of_entry_data(self, filters: dict) -> list[dict]:
+    def _get_bill_of_entry_data(self) -> list[dict]:
         doc = frappe.qb.DocType("Bill of Entry")
         item = frappe.qb.DocType("Item")
         doc_item = frappe.qb.DocType("Bill of Entry Item")
@@ -192,22 +202,22 @@ class ITCAvailedSummaryData:
             )
             .where(
                 (doc.docstatus == 1)
-                & (doc.posting_date[filters.get("from_date") : filters.get("to_date")])
-                & (doc.company == filters.get("company"))
+                & (
+                    doc.posting_date[
+                        self.filters.get("from_date") : self.filters.get("to_date")
+                    ]
+                )
+                & (doc.company == self.filters.get("company"))
             )
         )
 
-        if filters.get("company_gstin"):
-            query = query.where(doc.company_gstin == filters.get("company_gstin"))
+        if self.filters.get("company_gstin"):
+            query = query.where(doc.company_gstin == self.filters.get("company_gstin"))
 
         return query.run(as_dict=True)
 
 
 class ITCAvailed(ITCAvailedSummaryCategory, ITCAvailedSummaryData):
-    def __init__(self, filters: dict) -> None:
-        filters.from_date, filters.to_date = filters.get("date_range")
-        self.filters = filters
-
     def get_initial_summary(self) -> dict:
         _zero_taxes = {tax_field: 0 for tax_field in TAX_FIELDS}
 
@@ -258,7 +268,7 @@ class ITCAvailed(ITCAvailedSummaryCategory, ITCAvailedSummaryData):
         ]
 
     def get_data(self) -> list[dict]:
-        data = self._get_data(self.filters)
+        data = self._get_data()
 
         summary = self.get_initial_summary()
 
