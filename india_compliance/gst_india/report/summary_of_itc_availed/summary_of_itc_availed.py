@@ -2,7 +2,6 @@
 # For license information, please see license.txt
 
 from enum import Enum
-from itertools import chain
 
 import frappe
 from frappe import _
@@ -131,10 +130,7 @@ class ITCAvailedSummaryData:
         self.filters = filters
 
     def _get_data(self) -> list[dict]:
-        return chain(
-            self._get_bill_of_entry_data(),
-            self._get_purchase_invoice_data(),
-        )
+        return self._get_bill_of_entry_data() + self._get_purchase_invoice_data()
 
     def _get_purchase_invoice_data(self) -> list[dict]:
         doc = frappe.qb.DocType("Purchase Invoice")
