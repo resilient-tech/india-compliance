@@ -3,7 +3,7 @@ from datetime import datetime
 from itertools import chain
 
 import frappe
-from frappe.utils import flt
+from frappe.utils import cint, flt
 
 from india_compliance.gst_india.constants import UOM_MAP
 from india_compliance.gst_india.report.gstr_1.gstr_1 import (
@@ -2366,8 +2366,10 @@ class BooksDataMapper:
         Round off the rounding difference values to 2 decimal places.
         This method is used to round off the rounding difference values.
         """
+        precision = cint(frappe.db.get_default("currency_precision")) or None
+
         for key, value in self.rounding_difference.items():
-            self.rounding_difference[key] = flt(value, self.PRECISION)
+            self.rounding_difference[key] = flt(value, precision)
 
         # saved as object -> it's normalized
         prepared_data["rounding_difference"] = {
