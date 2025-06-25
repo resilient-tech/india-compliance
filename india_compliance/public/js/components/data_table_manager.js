@@ -167,17 +167,6 @@ india_compliance.DataTableManager = class DataTableManager {
         this.render_additional_total_rows();
     }
 
-    refresh_additional_total_row(row_id) {
-        if (!this.additional_total_rows) return;
-
-        const row = this.additional_total_rows.find(r => r.row_id === row_id);
-
-        if (!row) return;
-
-        this.remove_additional_total_row(row_id);
-        this.render_additional_total_row(row);
-    }
-
     render_additional_total_rows() {
         if (!this.additional_total_rows) return;
 
@@ -210,14 +199,9 @@ india_compliance.DataTableManager = class DataTableManager {
         if (!this.additional_total_rows) return;
 
         for (const row of this.additional_total_rows) {
-            this.remove_additional_total_row(row.row_id);
+            if (!row.row_id) continue;
+            $(`[data-row-index='${row.row_id}']`).remove();
         }
-    }
-
-    remove_additional_total_row(row_id) {
-        if (!row_id) return;
-
-        $(`[data-row-index='${row_id}']`).remove();
     }
 
     get_additional_total_row_data(row) {

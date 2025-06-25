@@ -815,7 +815,8 @@ class GSTR1 {
         if (!je_details) return;
 
         return new Promise(resolve => {
-            const dialog = this.create_journal_entry_dialog(je_details);
+            const remarks = `Reduced Output GST Liability to the extent of Sales Reverse Charge as per GSTR-1 for ${this.frm.doc.month_or_quarter} - ${this.frm.doc.year}`;
+            const dialog = this.create_journal_entry_dialog(je_details, remarks);
 
             dialog.onhide = () => {
                 resolve();
@@ -913,10 +914,11 @@ class GSTR1 {
             });
         }
 
-        return this.create_journal_entry_dialog(je_details);
+        const remarks = `Rounding Difference in Output GST Liability for ${this.frm.doc.month_or_quarter} - ${this.frm.doc.year}`;
+        return this.create_journal_entry_dialog(je_details, remarks);
     }
 
-    create_journal_entry_dialog(je_details) {
+    create_journal_entry_dialog(je_details, remarks) {
         const dialog = new frappe.ui.Dialog({
             title: "Suggested Journal Entry",
             fields: [
@@ -937,7 +939,7 @@ class GSTR1 {
                     fieldtype: "Text",
                     label: "Remarks",
                     read_only: 1,
-                    default: `Reduced Output GST Liability to the extent of Sales Reverse Charge as per GSTR-1 for ${this.frm.doc.month_or_quarter} - ${this.frm.doc.year}`,
+                    default: remarks,
                 },
                 {
                     fieldname: "auto_submit",
@@ -2767,7 +2769,6 @@ class FileGSTR1Dialog {
                     this.frm.doc.__gst_data = r.message;
                     this.frm.trigger("load_gstr1_data");
                     this.frm.gstr1.show_suggested_jv_dialog();
-                    this.frm.gstr1.show_round_off_jv_dialog();
                 });
         }
     }
