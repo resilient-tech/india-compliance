@@ -136,8 +136,8 @@ class GovExcel(DataProcessor):
     }
 
     TEMPLATE_EXCEL_FILE = {
-        "V2.0": get_data_file_path("GSTR1_Excel_Template_V2.0.xlsx"),
-        "V2.1": get_data_file_path("GSTR1_Excel_Template_V2.1.xlsx"),
+        "V2.0": get_data_file_path("gstr1_excel_template_v2.0.xlsx"),
+        "V2.1": get_data_file_path("gstr1_excel_template_v2.1.xlsx"),
     }
 
     def generate(self, gstin, period):
