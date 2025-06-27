@@ -2628,6 +2628,7 @@ class FileGSTR1Dialog {
 
                 this.update_actions_for_filing(pan);
             },
+            static: true,
         });
 
         // get last used pan
@@ -2667,6 +2668,7 @@ class FileGSTR1Dialog {
             },
         });
 
+        this.filing_dialog.get_close_btn().show();
         this.filing_dialog.show();
     }
 
