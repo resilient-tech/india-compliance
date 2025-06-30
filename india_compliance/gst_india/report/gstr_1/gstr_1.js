@@ -58,6 +58,17 @@ frappe.query_reports["GSTR-1"] = {
             reqd: 1,
             default: india_compliance.last_month_start(),
             width: "80",
+            on_change: report => {
+                let { from_date } = report.get_values();
+                from_date = frappe.datetime.str_to_obj(from_date);
+
+                report.set_filter_value(
+                    "bifurcate_hsn",
+                    india_compliance.HSN_BIFURCATION_FROM <= from_date ? 1 : 0
+                );
+
+                report.refresh();
+            },
         },
         {
             fieldname: "to_date",
@@ -93,7 +104,7 @@ frappe.query_reports["GSTR-1"] = {
             fieldname: "bifurcate_hsn",
             label: __("Bifurcate HSN Summary"),
             fieldtype: "Check",
-            depends_on: "eval: doc.type_of_business == 'HSN'",
+            default: 1,
         },
     ],
     onload(report) {
@@ -184,7 +195,7 @@ function show_gstr_1_beta_alert(report) {
         <a href="/app/gstr-1-beta" class="alert-link">
             GSTR-1 Beta
         </a>
-        is released with improved features and user experience. Try it out now!
+        ${__("is released with improved features and user experience. Try it out now!")}
         `;
 
     india_compliance.show_dismissable_alert(

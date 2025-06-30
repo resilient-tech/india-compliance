@@ -1,8 +1,6 @@
 import frappe
 from frappe.query_builder.functions import Sum
 
-from india_compliance.db_utils import bulk_update
-
 
 def execute():
     # Get GST Inward Supply Items
@@ -21,7 +19,6 @@ def execute():
         .run(as_dict=True)
     )
 
-    inward_supply_map = {d.pop("name"): d for d in inward_supply_values}
-
-    # Update GST Inward Supply
-    bulk_update("GST Inward Supply", inward_supply_map)
+    frappe.db.bulk_update(
+        "GST Inward Supply", {d.pop("name"): d for d in inward_supply_values}
+    )

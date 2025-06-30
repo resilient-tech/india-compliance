@@ -2,7 +2,14 @@ frappe.require("assets/india_compliance/js/quick_entry.js");
 update_erpnext_slides_settings();
 
 frappe.setup.on("before_load", function () {
-    if (!frappe.setup.slides.length) return;
+    // if setup wizard is already completed for ERPNext, skip the setup wizard
+    if (
+        frappe.boot.setup_wizard_completed_apps?.length &&
+        frappe.boot.setup_wizard_completed_apps.includes("erpnext")
+    ) {
+        complete_setup_wizard();
+        return;
+    }
 
     const first_slide = frappe.setup.slides[0];
     const _onload = first_slide.onload;
@@ -18,6 +25,15 @@ frappe.setup.on("before_load", function () {
         }
     };
 });
+
+function complete_setup_wizard() {
+    frappe.call({
+        method: "india_compliance.setup_wizard.enable_setup_wizard_complete",
+        callback: function (r) {
+            frappe.ui.toolbar.clear_cache();
+        }
+    })
+}
 
 function toggle_india_specific_fields(country) {
     if (!country) return;

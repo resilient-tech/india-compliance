@@ -344,6 +344,23 @@
             ]
         },
         {
+            "name": "_Test Registered Customer-Billing-2",
+            "address_type": "Billing",
+            "address_line1": "Test Address - 5",
+            "city": "Test City",
+            "state": "Gujarat",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "24AANCA4892J1Z8",
+            "gst_category": "Deemed Export",
+            "links": [
+                {
+                    "link_doctype": "Customer",
+                    "link_name": "_Test Registered Customer"
+                }
+            ]
+        },
+        {
             "name": "_Test Registered Composition Customer-Billing",
             "address_type": "Billing",
             "address_line1": "Test Address - 6",

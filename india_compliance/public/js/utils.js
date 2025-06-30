@@ -31,6 +31,8 @@ Object.assign(india_compliance, {
 
     QUARTER: ["Jan-Mar", "Apr-Jun", "Jul-Sep", "Oct-Dec"],
 
+    HSN_BIFURCATION_FROM: frappe.datetime.str_to_obj("2025-05-01"),
+
     get_month_year_from_period(period) {
         /**
          * Returns month or quarter and year from the period

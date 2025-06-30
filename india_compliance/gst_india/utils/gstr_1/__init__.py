@@ -101,7 +101,7 @@ PREVIOUS_VERSION = {
 }
 
 
-class GSTR1_DataField(Enum):
+class GSTR1_DataField:
     TRANSACTION_TYPE = "transaction_type"
     CUST_GSTIN = "customer_gstin"
     ECOMMERCE_GSTIN = "ecommerce_gstin"
@@ -146,7 +146,7 @@ class GSTR1_DataField(Enum):
     ERROR_MSG = "error_message"
 
 
-class GSTR1_ItemField(Enum):
+class GSTR1_ItemField:
     INDEX = "idx"
     TAXABLE_VALUE = "taxable_value"
     IGST = "igst_amount"
@@ -158,7 +158,7 @@ class GSTR1_ItemField(Enum):
     ADDITIONAL_AMOUNT = "additional_amount"
 
 
-class GovDataField(Enum):
+class GovDataField:
     CUST_GSTIN = "ctin"
     ECOMMERCE_GSTIN = "etin"
     DOC_DATE = "idt"
@@ -225,7 +225,7 @@ class GovDataField(Enum):
     CHECKSUM = "chksum"
 
 
-class GovExcelField(Enum):
+class GovExcelField:
     CUST_GSTIN = "GSTIN/UIN of Recipient"
     CUST_NAME = "Receiver Name"
     INVOICE_NUMBER = "Invoice Number"
@@ -283,12 +283,19 @@ class GovJsonKey(Enum):
     RET_SUM = "sec_sum"
 
 
+# only for excel
+class HSNKey(Enum):
+    HSN = "hsn"
+    HSN_B2B = "hsn_b2b"
+    HSN_B2C = "hsn_b2c"
+
+
 class GovExcelSheetName(Enum):
     """
     Categories / Worksheets as per Gov Excel file
     """
 
-    B2B = "b2b, sez, de"
+    B2B = "b2b,sez,de"
     EXP = "exp"
     B2CL = "b2cl"
     B2CS = "b2cs"
@@ -298,6 +305,8 @@ class GovExcelSheetName(Enum):
     AT = "at"
     TXP = "atadj"
     HSN = "hsn"
+    HSN_B2B = "hsn(b2b)"
+    HSN_B2C = "hsn(b2c)"
     DOC_ISSUE = "docs"
 
 
@@ -336,6 +345,9 @@ JSON_CATEGORY_EXCEL_CATEGORY_MAPPING = {
     GovJsonKey.TXP.value: GovExcelSheetName.TXP.value,
     GovJsonKey.HSN.value: GovExcelSheetName.HSN.value,
     GovJsonKey.DOC_ISSUE.value: GovExcelSheetName.DOC_ISSUE.value,
+    # only for excel
+    HSNKey.HSN_B2B.value: GovExcelSheetName.HSN_B2B.value,
+    HSNKey.HSN_B2C.value: GovExcelSheetName.HSN_B2C.value,
 }
 
 
@@ -360,6 +372,8 @@ SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX = [
     *SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
 ]
 
+
+HSN_BIFURCATION_FROM = getdate("2025-05-01")
 
 B2C_LIMIT = [
     ("2024-07-31", 2_50_000),

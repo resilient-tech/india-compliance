@@ -4,6 +4,7 @@ india_compliance.DataTableManager = class DataTableManager {
     constructor(options) {
         Object.assign(this, options);
         this.data = this.data || [];
+        this.additional_total_rows = this.additional_total_rows || null;
         this.make();
     }
 
@@ -11,6 +12,7 @@ india_compliance.DataTableManager = class DataTableManager {
         this.format_data(this.data);
         this.make_no_data();
         this.render_datatable();
+        this.setup_additional_total_row();
 
         this.columns_dict = {};
         for (const column of this.datatable.getColumns()) {
@@ -28,6 +30,7 @@ india_compliance.DataTableManager = class DataTableManager {
         if (noDataMessage) this.datatable.options.noDataMessage = noDataMessage;
 
         this.datatable.refresh(data, columns);
+        this.refresh_additional_total_rows();
     }
 
     get_column(fieldname) {
@@ -143,5 +146,119 @@ india_compliance.DataTableManager = class DataTableManager {
         };
         this.datatable = new frappe.DataTable(this.$wrapper.get(0), datatable_options);
         this.$datatable = $(`.${this.datatable.style.scopeClass}`);
+    }
+
+    setup_additional_total_row() {
+        if (!this.additional_total_rows) return;
+
+        const datatable = this.datatable;
+        const originalRenderFooter = datatable.bodyRenderer.renderFooter;
+
+        datatable.bodyRenderer.renderFooter = () => {
+            originalRenderFooter.call(datatable.bodyRenderer);
+            this.render_additional_total_rows();
+        };
+    }
+
+    refresh_additional_total_rows() {
+        if (!this.additional_total_rows) return;
+
+        this.remove_additional_total_rows();
+        this.render_additional_total_rows();
+    }
+
+    render_additional_total_rows() {
+        if (!this.additional_total_rows) return;
+
+        for (const row of this.additional_total_rows) {
+            this.render_additional_total_row(row);
+        }
+    }
+
+    render_additional_total_row(row) {
+        if (row.show && !row.show()) return;
+
+        const datatable = this.datatable;
+
+        const total_row_data = this.get_additional_total_row_data(row);
+        if (!total_row_data) return;
+
+        const html = datatable.rowmanager.getRowHTML(total_row_data, {
+            rowIndex: row.row_id,
+            isTotalRow: 1,
+        });
+
+        datatable.footer.insertAdjacentHTML("beforeend", html);
+
+        const $row = $(`[data-row-index='${row.row_id}']`);
+
+        $row.css(row.css_styles || { "font-weight": "bold" });
+    }
+
+    remove_additional_total_rows() {
+        if (!this.additional_total_rows) return;
+
+        for (const row of this.additional_total_rows) {
+            if (!row.row_id) continue;
+            $(`[data-row-index='${row.row_id}']`).remove();
+        }
+    }
+
+    get_additional_total_row_data(row) {
+        let data = this.get_row_data(row);
+        if (!data) return null;
+
+        const row_template = this.get_row_template(row);
+
+        const total_row_data = row_template.map(cell => {
+            if (cell.content === "") return cell;
+
+            const fieldname = cell.column.id;
+
+            if (row.label_column === fieldname) {
+                cell.content = row.label;
+            } else if (
+                cell.column._fieldtype === "Float" ||
+                cell.column.fieldtype === "Float"
+            ) {
+                cell.content = data[fieldname] || 0.0;
+            } else if (Object.prototype.hasOwnProperty.call(data, fieldname)) {
+                cell.content = data[fieldname];
+            }
+
+            return cell;
+        });
+
+        return total_row_data;
+    }
+
+    get_row_data(row) {
+        if (typeof row.data === "function") {
+            return row.data();
+        }
+
+        return row.data;
+    }
+
+    get_row_template(row) {
+        const datatable = this.datatable;
+        const columns = datatable.getColumns();
+
+        const row_template = columns.map(col => {
+            let content = null;
+
+            if (row?.exclude_columns.includes(col.id)) {
+                content = "";
+            }
+
+            return {
+                content,
+                isTotalRow: 1,
+                colIndex: col.colIndex,
+                column: col,
+            };
+        });
+
+        return row_template;
     }
 };

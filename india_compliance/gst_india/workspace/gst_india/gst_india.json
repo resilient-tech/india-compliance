@@ -195,6 +195,16 @@
   {
    "hidden": 0,
    "is_query_report": 1,
+   "label": "HSN-wise Summary of Inward Supplies",
+   "link_count": 0,
+   "link_to": "HSN-wise-summary of inward supplies",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
    "label": "Audit Trail",
    "link_count": 0,
    "link_to": "Audit Trail",
@@ -264,35 +274,36 @@
   {
    "hidden": 0,
    "is_query_report": 1,
-   "label": "India Compliance API Usage",
-   "link_count": 0,
-   "link_to": "India Compliance API Usage",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "HSN-wise-summary of Inward supplies",
-   "link_count": 0,
-   "link_to": "HSN-wise-summary of inward supplies",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
    "label": "GST Tax Rate-wise Summary",
    "link_count": 0,
    "link_to": "GST Tax Rate-wise Summary",
    "link_type": "Report",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "GST Account-wise Summary",
+   "link_count": 0,
+   "link_to": "GST Account-wise Summary",
+   "link_type": "Report",
+   "onboard": 0,
+   "report_ref_doctype": "Purchase Invoice",
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "India Compliance API Usage",
+   "link_count": 0,
+   "link_to": "India Compliance API Usage",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2025-04-12 08:06:38.973451",
+ "modified": "2025-05-26 09:27:02.553281",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST India",

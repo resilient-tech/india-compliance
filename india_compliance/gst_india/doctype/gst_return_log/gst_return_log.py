@@ -179,7 +179,7 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
 
 @frappe.whitelist()
 def download_file():
-    frappe.has_permission("GST Return Log", "read")
+    frappe.has_permission("GST Return Log", "read", throw=True)
 
     data = frappe._dict(frappe.local.form_dict)
     frappe.response["filename"] = data["file_name"]
@@ -261,14 +261,11 @@ def process_gstr_1_returns_info(company, gstin, e_filed_list):
 
 def process_gstr_3b_returns_info(company, gstin, e_filed_list):
     for info in e_filed_list:
-        if info["status"] != "Filed":
+        if info["rtntype"] != "GSTR3B" or info["status"] != "Filed":
             continue
 
         log_name = f"GSTR3B-{info['ret_prd']}-{gstin}"
-        if frappe.db.exists(
-            "GST Return Log",
-            log_name,
-        ):
+        if frappe.db.exists("GST Return Log", log_name):
             gstr3b_log = frappe.get_doc("GST Return Log", log_name)
         else:
             gstr3b_log = frappe.new_doc("GST Return Log")
