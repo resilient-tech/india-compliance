@@ -24,6 +24,7 @@ class ReturnType(Enum):
     GSTR1 = "GSTR1"
     UnfiledGSTR1 = "Unfiled GSTR1"
     IMS = "IMS"
+    GSTR1R = "GSTR1R"
 
 
 @frappe.whitelist()

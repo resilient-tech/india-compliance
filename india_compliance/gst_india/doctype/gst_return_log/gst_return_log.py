@@ -354,6 +354,7 @@ def get_gst_return_log(log_name, **kwargs):
         return frappe.get_doc(DOCTYPE, log_name)
 
     return_type, period, gstin = log_name.split("-")
+    insert = kwargs.pop("insert", True)
 
     log = frappe.new_doc(DOCTYPE)
     log.return_period = period
@@ -361,6 +362,8 @@ def get_gst_return_log(log_name, **kwargs):
     log.gstin = gstin
     log.return_type = return_type
     log.update(kwargs)
-    log.insert()
+
+    if insert:
+        log.insert()
 
     return log
