@@ -667,12 +667,10 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
             )
 
     def generate_only_books_data(self, data, filters, callback=None):
-        status = "Not Filed"
-
         books_data = self.get_books_gstr1_data(filters, aggregate=True)
 
         data["books"] = self.normalize_data(books_data)
-        data["status"] = status
+        data["status"] = "Not Filed"
 
         self.summarize_data(data, filters)
 
@@ -747,6 +745,10 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
             "books": "books_summary",
         }
 
+        filing_from = filters.get("filing_from") or getdate(
+            f"01-{filters.month_or_quarter}-{filters.year}"
+        )
+
         for key, field in summary_fields.items():
             if not data.get(key):
                 continue
@@ -761,7 +763,6 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
                     data[field] = _data
                     continue
 
-            filing_from = getdate(f"01-{filters.month_or_quarter}-{filters.year}")
             summary_data = self.get_summarized_data(
                 data[key], filing_from, self.filing_status == "Filed"
             )
