@@ -87,7 +87,7 @@ class ITCAvailedCategory:
 
     def get_subcategory(self, row: dict, category: Category) -> SubCategory | None:
         # breakup not required
-        if category in (category.IMPORT_SERVICES, category.ITC_FROM_ISD):
+        if category in (Category.IMPORT_SERVICES, Category.ITC_FROM_ISD):
             return category
 
         elif row.get("is_fixed_asset") == 1:
@@ -243,7 +243,7 @@ class ITCAvailed(ITCAvailedCategory, ITCAvailedData):
             category = self.get_category(row)
             sub_category = self.get_subcategory(row, category)
 
-            if not (_summary_dict := (summary.get(category) or {}).get(sub_category)):
+            if (_summary_dict := summary.get(category, {}).get(sub_category)) is None:
                 continue
 
             for tax_field in TAX_FIELDS:
