@@ -1,7 +1,7 @@
 # Copyright (c) 2025, Resilient Tech and contributors
 # For license information, please see license.txt
 
-from enum import Enum
+from collections import defaultdict
 
 import frappe
 from frappe import _
@@ -22,21 +22,13 @@ def execute(filters: dict | None = None) -> tuple[list[dict], list[dict]]:
     return report.get_columns(), report.get_data()
 
 
-class Category(Enum):
+class Category:
     INWARD_DOMESTIC = "Inward supplies (other than imports and inward supplies liable to reverse charge but includes services received from SEZs)"
     UNREG_RCM = "Inward supplies received from unregistered persons liable to reverse charge (other than A above) on which tax is paid & ITC availed"
     REG_RCM = "Inward supplies received from registered persons liable to reverse charge (other than A above) on which tax is paid & ITC availed"
     IMPORT_GOODS = "Import Of Goods (including supplies from SEZ)"
     IMPORT_SERVICES = "Import Of Services (excluding inward supplies from SEZ)"
     ITC_FROM_ISD = "Input Tax credit received from ISD"
-
-    @property
-    def title(self) -> str:
-        return self.value
-
-    @property
-    def has_subcategory(self) -> bool:
-        return bool(ITC_AVAILED_CATEGORY_MAPPING.get(self))
 
 
 class SubCategory:
@@ -65,8 +57,8 @@ ITC_AVAILED_CATEGORY_MAPPING = {
         SubCategory.INPUTS,
         SubCategory.CAPITAL_GOODS,
     ],
-    Category.IMPORT_SERVICES: None,
-    Category.ITC_FROM_ISD: None,
+    Category.IMPORT_SERVICES: [Category.IMPORT_SERVICES],
+    Category.ITC_FROM_ISD: [Category.ITC_FROM_ISD],
 }
 
 
@@ -76,14 +68,7 @@ class ITCAvailedCategory:
         itc_classification = row.get("itc_classification")
         is_reverse_charge = row.get("is_reverse_charge")
 
-        if (
-            gst_category != "Overseas"
-            and not is_reverse_charge
-            and itc_classification != "Input Service Distributor"
-        ):
-            return Category.INWARD_DOMESTIC
-
-        elif gst_category == "Unregistered" and is_reverse_charge:
+        if gst_category == "Unregistered" and is_reverse_charge:
             return Category.UNREG_RCM
 
         elif gst_category != "Unregistered" and is_reverse_charge:
@@ -92,28 +77,26 @@ class ITCAvailedCategory:
         elif itc_classification == "Import Of Goods":
             return Category.IMPORT_GOODS
 
-        elif itc_classification == "Import Of Service":
+        elif itc_classification == "Import Of Service" and gst_category != "SEZ":
             return Category.IMPORT_SERVICES
 
         elif itc_classification == "Input Service Distributor":
             return Category.ITC_FROM_ISD
 
-        return None
+        return Category.INWARD_DOMESTIC
 
     def get_subcategory(self, row: dict, category: Category) -> SubCategory | None:
-        if not category or not category.has_subcategory:
-            return None
+        # breakup not required
+        if category in (category.IMPORT_SERVICES, category.ITC_FROM_ISD):
+            return category
 
-        if row.get("is_fixed_asset") == 1:
+        elif row.get("is_fixed_asset") == 1:
             return SubCategory.CAPITAL_GOODS
 
-        elif (gst_hsn_code := row.get("gst_hsn_code")) and (
-            gst_hsn_code.startswith("99")
-        ):
+        elif (row.get("gst_hsn_code") or "").startswith("99"):
             return SubCategory.INPUT_SERVICES
 
-        else:
-            return SubCategory.INPUTS
+        return SubCategory.INPUTS
 
 
 class ITCAvailedData:
@@ -208,17 +191,12 @@ class ITCAvailedData:
 
 class ITCAvailed(ITCAvailedCategory, ITCAvailedData):
     def get_initial_summary(self) -> dict:
-        _zero_taxes = {tax_field: 0 for tax_field in TAX_FIELDS}
-
         summary = {}
 
         for category, subcategories in ITC_AVAILED_CATEGORY_MAPPING.items():
-            if subcategories:
-                summary[category] = {
-                    subcategory: _zero_taxes.copy() for subcategory in subcategories
-                }
-            else:
-                summary[category] = _zero_taxes.copy()
+            summary[category] = {
+                subcategory: defaultdict(float) for subcategory in subcategories
+            }
 
         return summary
 
@@ -263,14 +241,9 @@ class ITCAvailed(ITCAvailedCategory, ITCAvailedData):
 
         for row in data:
             category = self.get_category(row)
-            if not category or not (_summary_dict := summary.get(category)):
-                continue
-
             sub_category = self.get_subcategory(row, category)
 
-            if not sub_category or not (
-                _summary_dict := _summary_dict.get(sub_category)
-            ):
+            if not (_summary_dict := (summary.get(category) or {}).get(sub_category)):
                 continue
 
             for tax_field in TAX_FIELDS:
@@ -281,41 +254,25 @@ class ITCAvailed(ITCAvailedCategory, ITCAvailedData):
     def _build_transformed_summary(self, summary: dict) -> list[dict]:
         transformed = []
 
-        for idx, (category, _summary) in enumerate(summary.items()):
+        for idx, (category, data) in enumerate(summary.items()):
             letter = chr(65 + idx)  # 65 is 'A'
-            title = category.title
-            has_subcategory = category.has_subcategory
+            category = f"{letter}) {category}"
 
-            transformed.append(
-                self._create_entry(
-                    f"{letter}) {title}",
-                    self._aggregate_summary(_summary) if has_subcategory else _summary,
-                    indent=0,
-                )
-            )
+            # Category
+            aggregate = self._aggregate_summary(data)
+            transformed.append(dict(details=category, **aggregate, indent=0))
 
-            if has_subcategory:
-                for subcategory, sub_summary in _summary.items():
-                    transformed.append(
-                        self._create_entry(subcategory, sub_summary, indent=1)
-                    )
-            else:
-                transformed.append(self._create_entry(title, _summary, indent=1))
+            # Subcategory
+            for subcategory, sub_summary in data.items():
+                transformed.append(dict(details=subcategory, **sub_summary, indent=1))
 
         return transformed
 
     def _aggregate_summary(self, summary: dict) -> dict:
-        totals = {tax_field: 0 for tax_field in TAX_FIELDS}
+        totals = defaultdict(float)
 
         for taxes in summary.values():
             for tax_field in TAX_FIELDS:
                 totals[tax_field] += taxes.get(tax_field, 0)
 
         return totals
-
-    def _create_entry(self, details: str, summary_data: dict, indent: int = 0) -> dict:
-        return {
-            "details": details,
-            **summary_data,
-            "indent": indent,
-        }
