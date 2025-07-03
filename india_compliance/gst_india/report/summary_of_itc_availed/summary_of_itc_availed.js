@@ -61,7 +61,7 @@ frappe.query_reports["Summary of ITC Availed"] = {
         datatable_options.hooks = {
             columnTotal: function (...args) {
                 const column_field = args[1].column.fieldname;
-                if (column_field === "details") return;
+                if (column_field === "details") return "";
 
                 const total = this.datamanager.data.reduce((acc, row) => {
                     if (row.indent === 0) {
