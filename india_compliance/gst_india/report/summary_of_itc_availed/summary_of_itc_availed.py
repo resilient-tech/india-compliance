@@ -22,17 +22,12 @@ def execute(filters: dict | None = None) -> tuple[list[dict], list[dict]]:
     return report.get_columns(), report.get_data()
 
 
-class ITCAvailedCategory(Enum):
+class Category(Enum):
     INWARD_DOMESTIC = "Inward supplies (other than imports and inward supplies liable to reverse charge but includes services received from SEZs)"
-
     UNREG_RCM = "Inward supplies received from unregistered persons liable to reverse charge (other than A above) on which tax is paid & ITC availed"
-
     REG_RCM = "Inward supplies received from registered persons liable to reverse charge (other than A above) on which tax is paid & ITC availed"
-
     IMPORT_GOODS = "Import Of Goods (including supplies from SEZ)"
-
     IMPORT_SERVICES = "Import Of Services (excluding inward supplies from SEZ)"
-
     ITC_FROM_ISD = "Input Tax credit received from ISD"
 
     @property
@@ -44,39 +39,39 @@ class ITCAvailedCategory(Enum):
         return bool(ITC_AVAILED_CATEGORY_MAPPING.get(self))
 
 
-class ITCAvailedSubCategory:
+class SubCategory:
     INPUTS = "Inputs"
     CAPITAL_GOODS = "Capital Goods"
     INPUT_SERVICES = "Input Services"
 
 
 ITC_AVAILED_CATEGORY_MAPPING = {
-    ITCAvailedCategory.INWARD_DOMESTIC: [
-        ITCAvailedSubCategory.INPUTS,
-        ITCAvailedSubCategory.CAPITAL_GOODS,
-        ITCAvailedSubCategory.INPUT_SERVICES,
+    Category.INWARD_DOMESTIC: [
+        SubCategory.INPUTS,
+        SubCategory.CAPITAL_GOODS,
+        SubCategory.INPUT_SERVICES,
     ],
-    ITCAvailedCategory.UNREG_RCM: [
-        ITCAvailedSubCategory.INPUTS,
-        ITCAvailedSubCategory.CAPITAL_GOODS,
-        ITCAvailedSubCategory.INPUT_SERVICES,
+    Category.UNREG_RCM: [
+        SubCategory.INPUTS,
+        SubCategory.CAPITAL_GOODS,
+        SubCategory.INPUT_SERVICES,
     ],
-    ITCAvailedCategory.REG_RCM: [
-        ITCAvailedSubCategory.INPUTS,
-        ITCAvailedSubCategory.CAPITAL_GOODS,
-        ITCAvailedSubCategory.INPUT_SERVICES,
+    Category.REG_RCM: [
+        SubCategory.INPUTS,
+        SubCategory.CAPITAL_GOODS,
+        SubCategory.INPUT_SERVICES,
     ],
-    ITCAvailedCategory.IMPORT_GOODS: [
-        ITCAvailedSubCategory.INPUTS,
-        ITCAvailedSubCategory.CAPITAL_GOODS,
+    Category.IMPORT_GOODS: [
+        SubCategory.INPUTS,
+        SubCategory.CAPITAL_GOODS,
     ],
-    ITCAvailedCategory.IMPORT_SERVICES: None,
-    ITCAvailedCategory.ITC_FROM_ISD: None,
+    Category.IMPORT_SERVICES: None,
+    Category.ITC_FROM_ISD: None,
 }
 
 
-class ITCAvailedSummaryCategory:
-    def get_category(self, row: dict) -> ITCAvailedCategory | None:
+class ITCAvailedCategory:
+    def get_category(self, row: dict) -> Category | None:
         gst_category = row.get("gst_category")
         itc_classification = row.get("itc_classification")
         is_reverse_charge = row.get("is_reverse_charge")
@@ -86,44 +81,42 @@ class ITCAvailedSummaryCategory:
             and not is_reverse_charge
             and itc_classification != "Input Service Distributor"
         ):
-            return ITCAvailedCategory.INWARD_DOMESTIC
+            return Category.INWARD_DOMESTIC
 
         elif gst_category == "Unregistered" and is_reverse_charge:
-            return ITCAvailedCategory.UNREG_RCM
+            return Category.UNREG_RCM
 
         elif gst_category != "Unregistered" and is_reverse_charge:
-            return ITCAvailedCategory.REG_RCM
+            return Category.REG_RCM
 
         elif itc_classification == "Import Of Goods":
-            return ITCAvailedCategory.IMPORT_GOODS
+            return Category.IMPORT_GOODS
 
         elif itc_classification == "Import Of Service":
-            return ITCAvailedCategory.IMPORT_SERVICES
+            return Category.IMPORT_SERVICES
 
         elif itc_classification == "Input Service Distributor":
-            return ITCAvailedCategory.ITC_FROM_ISD
+            return Category.ITC_FROM_ISD
 
         return None
 
-    def get_subcategory(
-        self, row: dict, category: ITCAvailedCategory
-    ) -> ITCAvailedSubCategory | None:
+    def get_subcategory(self, row: dict, category: Category) -> SubCategory | None:
         if not category or not category.has_subcategory:
             return None
 
         if row.get("is_fixed_asset") == 1:
-            return ITCAvailedSubCategory.CAPITAL_GOODS
+            return SubCategory.CAPITAL_GOODS
 
         elif (gst_hsn_code := row.get("gst_hsn_code")) and (
             gst_hsn_code.startswith("99")
         ):
-            return ITCAvailedSubCategory.INPUT_SERVICES
+            return SubCategory.INPUT_SERVICES
 
         else:
-            return ITCAvailedSubCategory.INPUTS
+            return SubCategory.INPUTS
 
 
-class ITCAvailedSummaryData:
+class ITCAvailedData:
     def __init__(self, filters: dict) -> None:
         filters = frappe._dict(filters or {})
         filters.from_date, filters.to_date = filters.date_range
@@ -213,7 +206,7 @@ class ITCAvailedSummaryData:
         return query.run(as_dict=True)
 
 
-class ITCAvailed(ITCAvailedSummaryCategory, ITCAvailedSummaryData):
+class ITCAvailed(ITCAvailedCategory, ITCAvailedData):
     def get_initial_summary(self) -> dict:
         _zero_taxes = {tax_field: 0 for tax_field in TAX_FIELDS}
 
