@@ -87,7 +87,7 @@ class ITCAvailedCategory:
 
     def get_subcategory(self, row: dict, category: Category) -> SubCategory | None:
         # breakup not required
-        if category in (category.IMPORT_SERVICES, category.ITC_FROM_ISD):
+        if category in (Category.IMPORT_SERVICES, Category.ITC_FROM_ISD):
             return category
 
         elif row.get("is_fixed_asset") == 1:
@@ -121,29 +121,14 @@ class ITCAvailedData:
                 doc.itc_classification,
                 doc_item.is_fixed_asset,
                 doc.is_reverse_charge,
-                doc_item.gst_hsn_code,
-                doc_item.cgst_amount,
-                doc_item.sgst_amount,
-                doc_item.igst_amount,
-                (doc_item.cess_amount + doc_item.cess_non_advol_amount).as_(
-                    "cess_amount"
-                ),
             )
             .where(
-                (doc.docstatus == 1)
-                & (
-                    doc.posting_date[
-                        self.filters.get("from_date") : self.filters.get("to_date")
-                    ]
-                )
-                & (doc.company == self.filters.get("company"))
-                & (doc.company_gstin != IfNull(doc.supplier_gstin, ""))
+                (doc.company_gstin != IfNull(doc.supplier_gstin, ""))
                 & (doc.is_opening == "No")
             )
         )
 
-        if self.filters.get("company_gstin"):
-            query = query.where(doc.company_gstin == self.filters.get("company_gstin"))
+        query = self._add_tax_fields_and_filters(query, doc, doc_item)
 
         return query.run(as_dict=True)
 
@@ -164,29 +149,33 @@ class ITCAvailedData:
                 .else_("Import Of Goods"),
                 ConstantColumn("Overseas").as_("gst_category"),
                 item.is_fixed_asset,
-                doc_item.gst_hsn_code,
-                doc_item.cgst_amount,
-                doc_item.sgst_amount,
-                doc_item.igst_amount,
-                (doc_item.cess_amount + doc_item.cess_non_advol_amount).as_(
-                    "cess_amount"
-                ),
             )
-            .where(
-                (doc.docstatus == 1)
-                & (
-                    doc.posting_date[
-                        self.filters.get("from_date") : self.filters.get("to_date")
-                    ]
-                )
-                & (doc.company == self.filters.get("company"))
+        )
+
+        query = self._add_tax_fields_and_filters(query, doc, doc_item)
+
+        return query.run(as_dict=True)
+
+    def _add_tax_fields_and_filters(self, query, doc, doc_item):
+        query = query.select(
+            doc_item.cgst_amount,
+            doc_item.sgst_amount,
+            doc_item.igst_amount,
+            (doc_item.cess_amount + doc_item.cess_non_advol_amount).as_("cess_amount"),
+        ).where(
+            (doc.docstatus == 1)
+            & (
+                doc.posting_date[
+                    self.filters.get("from_date") : self.filters.get("to_date")
+                ]
             )
+            & (doc.company == self.filters.get("company"))
         )
 
         if self.filters.get("company_gstin"):
             query = query.where(doc.company_gstin == self.filters.get("company_gstin"))
 
-        return query.run(as_dict=True)
+        return query
 
 
 class ITCAvailed(ITCAvailedCategory, ITCAvailedData):
@@ -243,7 +232,7 @@ class ITCAvailed(ITCAvailedCategory, ITCAvailedData):
             category = self.get_category(row)
             sub_category = self.get_subcategory(row, category)
 
-            if not (_summary_dict := (summary.get(category) or {}).get(sub_category)):
+            if (_summary_dict := summary.get(category, {}).get(sub_category)) is None:
                 continue
 
             for tax_field in TAX_FIELDS:
