@@ -7,7 +7,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
-from frappe.query_builder.functions import Sum
+from frappe.query_builder.functions import IfNull, Sum
 from frappe.utils import today
 import erpnext
 from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_entries
@@ -57,17 +57,14 @@ class BillofEntry(Document):
         self.set_taxes_and_totals()
         set_gst_tax_type(self)
 
-    def before_save(self):
-        update_gst_details(self)
-
     def before_submit(self):
         self.validate_qty()
-        update_gst_details(self)
 
     def validate(self):
         self.validate_purchase_invoice()
         self.validate_taxes()
         self.reconciliation_status = "Unreconciled"
+        update_gst_details(self)
         update_valuation_rate(self)
 
     def on_submit(self):
@@ -311,8 +308,7 @@ class BillofEntry(Document):
 
     def get_gl_entries(self):
         # company_currency is required by get_gl_dict
-        # nosemgrep
-        self.company_currency = erpnext.get_company_currency(self.company)
+        self.company_currency = erpnext.get_company_currency(self.company)  # nosemgrep
 
         gl_entries = []
         remarks = "No Remarks"
@@ -396,8 +392,12 @@ class BillofEntry(Document):
 
     @frappe.whitelist()
     def get_items_from_purchase_invoice(self, purchase_invoices):
-        frappe.has_permission("Bill Of Entry", "write")
-        frappe.has_permission("Purchase Invoice", "read")
+        if not purchase_invoices:
+            frappe.msgprint(_("No Purchase Invoices selected"))
+            return
+
+        frappe.has_permission("Bill Of Entry", "write", throw=True)
+        frappe.has_permission("Purchase Invoice", "read", throw=True)
 
         existing_items = [
             item.pi_detail for item in self.get("items") if item.pi_detail
@@ -449,11 +449,11 @@ class BillofEntry(Document):
 
         (
             frappe.qb.update(pi_item)
-            .join(submitted_boe_qty)
+            .left_join(submitted_boe_qty)
             .on(pi_item.name == submitted_boe_qty.pi_detail)
             .set(
                 pi_item.pending_boe_qty,
-                pi_item.qty - submitted_boe_qty.qty,
+                pi_item.qty - IfNull(submitted_boe_qty.qty, 0),
             )
             .where(pi_item.name.isin(pi_item_names))
             .run()
@@ -794,23 +794,28 @@ def get_pi_items(purchase_invoices):
 
 
 @frappe.whitelist()
-def fetch_pending_boe_invoices(*args, **kwargs):
-    frappe.has_permission("Purchase Invoice", "read")
+def fetch_pending_boe_invoices(doctype, txt, searchfield, start, page_len, filters):
+    frappe.has_permission("Purchase Invoice", "read", throw=True)
 
-    filters = next((arg for arg in args if isinstance(arg, dict)), {})
+    filters = frappe._dict(filters)
+
+    if txt and not filters.get("name"):
+        filters.name = ["like", f"%{txt}%"]
+
+    # TODO: fix required in frappe
+    if filters.name and filters.name[1] is None:
+        filters.name = ["!=", ""]
+
     return frappe.get_all(
         "Purchase Invoice",
         filters={
+            **filters,
             "docstatus": 1,
-            "company": filters.get("company"),
-            "company_gstin": filters.get("company_gstin"),
             "gst_category": "Overseas",
             "pending_boe_qty": [">", 0],
         },
-        fields=[
-            "name",
-            "company",
-            "company_gstin",
-        ],
+        fields=["name", "company", "company_gstin"],
+        limit_start=start,
+        limit_page_length=page_len,
         distinct=True,
     )

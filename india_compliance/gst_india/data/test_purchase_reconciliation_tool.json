@@ -222,6 +222,160 @@
                     "cost_center": ""
                 }
             }
+        ],
+        "TEST_FY_CLEANUP_WITHOUT_DASH": [
+            {
+                "PURCHASE_INVOICE": {
+                    "bill_no": "BILL-2324-50",
+                    "bill_date": "2023-12-11"
+                },
+                "INWARD_SUPPLY": {
+                    "bill_no": "BILL-23-24-50",
+                    "bill_date": "2023-12-18"
+                },
+                "RECONCILED_DATA": {
+                    "action": "No Action",
+                    "bill_date": "2023-12-11",
+                    "bill_no": "BILL-2324-50",
+                    "classification": "B2B",
+                    "differences": "",
+                    "inward_supply_company_gstin": "24AAQCA8719H1ZC",
+                    "inward_supply_name": "",
+                    "is_reverse_charge": 0,
+                    "is_supplier_return_filed": 0,
+                    "match_status": "Suggested Match",
+                    "purchase_company_gstin": "24AAQCA8719H1ZC",
+                    "purchase_doctype": "Purchase Invoice",
+                    "purchase_invoice_name": "",
+                    "supplier_gstin": "24AABCR6898M1ZN",
+                    "supplier_name": "_Test Registered Supplier",
+                    "tax_difference": 0.0,
+                    "taxable_value_difference": 0.0,
+                    "project": "",
+                    "cost_center": ""
+                }
+            }
+        ],
+        "RESIDUAL_MATCH_AS_SUGGESTED": [
+            {
+                "PURCHASE_INVOICE": {
+                    "bill_no": "BILL-2324-1234",
+                    "bill_date": "2023-12-11"
+                },
+                "INWARD_SUPPLY": {
+                    "bill_no": "BILL-23-24-5678",
+                    "bill_date": "2023-12-18"
+                },
+                "RECONCILED_DATA": {
+                    "action": "No Action",
+                    "bill_date": "2023-12-11",
+                    "bill_no": "BILL-2324-1234",
+                    "classification": "B2B",
+                    "differences": "",
+                    "inward_supply_company_gstin": "24AAQCA8719H1ZC",
+                    "inward_supply_name": "",
+                    "is_reverse_charge": 0,
+                    "is_supplier_return_filed": 0,
+                    "match_status": "Suggested Match",
+                    "purchase_company_gstin": "24AAQCA8719H1ZC",
+                    "purchase_doctype": "Purchase Invoice",
+                    "purchase_invoice_name": "",
+                    "supplier_gstin": "24AABCR6898M1ZN",
+                    "supplier_name": "_Test Registered Supplier",
+                    "tax_difference": 0.0,
+                    "taxable_value_difference": 0.0,
+                    "project": "",
+                    "cost_center": ""
+                }
+            }
+        ],
+        "RESIDUAL_MATCH_AS_MISMATCH": [
+            {
+                "PURCHASE_INVOICE": {
+                    "bill_no": "BILL-2324-00056",
+                    "bill_date": "2023-12-11"
+                },
+                "INWARD_SUPPLY": {
+                    "bill_no": "BILL-23-24-61",
+                    "bill_date": "2023-12-18",
+                    "supplier_gstin": "27AABCR6898M1ZN"
+                },
+                "RECONCILED_DATA": {
+                    "action": "No Action",
+                    "bill_date": "2023-12-11",
+                    "bill_no": "BILL-2324-00056",
+                    "classification": "B2B",
+                    "differences": "SUPPLIER_GSTIN",
+                    "inward_supply_company_gstin": "24AAQCA8719H1ZC",
+                    "inward_supply_name": "",
+                    "is_reverse_charge": 0,
+                    "is_supplier_return_filed": 0,
+                    "match_status": "Mismatch",
+                    "purchase_company_gstin": "24AAQCA8719H1ZC",
+                    "purchase_doctype": "Purchase Invoice",
+                    "purchase_invoice_name": "",
+                    "supplier_gstin": "24AABCR6898M1ZN",
+                    "supplier_name": "_Test Registered Supplier",
+                    "tax_difference": 0.0,
+                    "taxable_value_difference": 0.0,
+                    "project": "",
+                    "cost_center": ""
+                }
+            }
+        ],
+        "TEST_TAXABLE_VALUE_DIFFERENCE_WITH_NIL_RATED": [
+            {
+                "PURCHASE_INVOICE": {
+                    "bill_no": "BILL-23-00050",
+                    "items" : [
+                        {
+                            "item_code": "_Test Nil Rated Item",
+                            "rate": 1000,
+                            "qty": 10,
+                            "gst_treatment": "Nil-Rated"
+                        },
+                        {
+                            "item_code": "_Test Trading Goods 1",
+                            "rate": 1000,
+                            "qty": 10,
+                            "gst_treatment": "Taxable"
+                        }
+                    ]
+                },
+                "INWARD_SUPPLY": {
+                    "bill_no": "BILL-23-00050",
+                    "items": [
+                        {
+                            "taxable_value": 10000,
+                            "rate": 18,
+                            "sgst": 900,
+                            "cgst": 900
+                        }
+                    ],
+                    "document_value": 21800
+                },
+                "RECONCILED_DATA": {
+                    "action": "No Action",
+                    "bill_date": "2023-12-11",
+                    "bill_no": "BILL-23-00050",
+                    "classification": "B2B",
+                    "differences": "",
+                    "inward_supply_company_gstin": "24AAQCA8719H1ZC",
+                    "inward_supply_name": "",
+                    "is_reverse_charge": 0,
+                    "is_supplier_return_filed": 0,
+                    "match_status": "Exact Match",
+                    "purchase_company_gstin": "24AAQCA8719H1ZC",
+                    "purchase_doctype": "Purchase Invoice",
+                    "purchase_invoice_name": "",
+                    "supplier_gstin": "24AABCR6898M1ZN",
+                    "supplier_name": "_Test Registered Supplier",
+                    "tax_difference": 0.0,
+                    "taxable_value_difference": 0.0,
+                    "project": "",
+                    "cost_center": ""
+                }
+            }
         ]
     }
 }

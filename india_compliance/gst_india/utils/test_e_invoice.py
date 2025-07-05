@@ -42,6 +42,8 @@ class TestEInvoice(IntegrationTestCase):
                 "fetch_e_waybill_data": 0,
                 "apply_e_invoice_only_for_selected_companies": 0,
                 "enable_retry_einv_ewb_generation": 1,
+                "auto_cancel_e_invoice": 0,
+                "restrict_cancel_if_e_invoice_final": 0,
             },
         )
         cls.e_invoice_test_data = frappe._dict(
@@ -557,6 +559,37 @@ class TestEInvoice(IntegrationTestCase):
             cancelled_doc,
         )
         self.assertDocumentEqual({"ewaybill": ""}, cancelled_doc)
+
+    @responses.activate
+    def test_auto_cancel_e_invoice(self):
+        """Test for auto cancel e-Invoice on cancellation of Sales Invoice"""
+        frappe.db.set_single_value("GST Settings", "auto_cancel_e_invoice", 1)
+        test_data = self.e_invoice_test_data.get("service_item")
+        si = create_sales_invoice(
+            **test_data.get("kwargs"),
+            is_in_state=True,
+        )
+        test_data.get("response_data").get("result").update(
+            {"AckDt": str(add_to_date(days=-2))}
+        )
+        # Mock response for generating irnFser
+        self._mock_e_invoice_response(data=test_data)
+
+        generate_e_invoice(si.name)
+
+        si_doc = load_doc("Sales Invoice", si.name, "cancel")
+
+        # Assert e-Invoice is not cancellable
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(e-Invoice can only be cancelled.*)$"),
+            validate_if_e_invoice_can_be_cancelled,
+            si_doc,
+        )
+
+        # document sholud be cancelled without any error if e-Invoice is not cancellable
+        si_doc.cancel()
+        frappe.db.set_single_value("GST Settings", "auto_cancel_e_invoice", 0)
 
     @responses.activate
     def test_mark_e_invoice_as_cancelled(self):

@@ -23,6 +23,7 @@ from india_compliance.gst_india.constants import (
     GST_TAX_TYPES,
     SALES_DOCTYPES,
     STATE_NUMBERS,
+    TAXABLE_GST_TREATMENTS,
 )
 from india_compliance.gst_india.constants.e_waybill import (
     ADDRESS_FIELDS,
@@ -1540,8 +1541,7 @@ class EWaybillData(GSTTransactionData):
             doc.doctype in ("Sales Invoice", "Purchase Invoice")
             and not doc.is_return
             and all(
-                item.gst_treatment in ("Nil-Rated", "Exempted", "Non-GST")
-                for item in doc.items
+                item.gst_treatment not in TAXABLE_GST_TREATMENTS for item in doc.items
             )
         ):
             self.transaction_details.update(document_type="BIL")

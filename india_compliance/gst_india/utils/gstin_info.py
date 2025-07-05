@@ -78,7 +78,9 @@ def _get_gstin_info(gstin, *, doc=None, throw_error=True):
             return frappe._dict()
 
     business_name = (
-        response.tradeNam if response.ctb == "Proprietorship" else response.lgnm
+        response.tradeNam
+        if response.ctb in ["Proprietorship", "Hindu Undivided Family"]
+        else response.lgnm
     )
 
     gstin_info = frappe._dict(
@@ -299,7 +301,7 @@ def fetch_transporter_id_status(transporter_id, doc=None, throw=True):
 # "Input Service Distributor (ISD)"         29AABCF8078M2ZW     Flipkart
 # "Tax Deductor"                            06DELI09652G1DA 09ALDN00287A1DD 27AAFT56212B1DO 19AAACI1681G1DV
 # "SEZ Developer"                           27AAJCS5738D1Z6
-# "United Nation Body"                      0717UNO00157UNO 0717UNO00211UN2 2117UNO00002UNF
+# "United Nation Body"                      0717UNO00157UNO 0717UNO00211UN2 2117UNO00002UNF 3317USA00002UNE
 # "Consulate or Embassy of Foreign Country" 0717UNO00154UNU
 # "Tax Collector (e-Commerce Operator)"     29AABCF8078M1C8 27AAECG3736E1C2 29AAFCB7707D1C1
 

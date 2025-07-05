@@ -16,6 +16,17 @@ from india_compliance.gst_india.utils.gstin_info import get_gstin_info
 # Setup Wizard
 
 
+@frappe.whitelist()
+def enable_setup_wizard_complete():
+    frappe.db.set_value(
+        "Installed Application",
+        {"app_name": "india_compliance"},
+        "is_setup_complete",
+        1,
+    )
+    frappe.clear_cache()
+
+
 def get_setup_wizard_stages(params=None):
     if frappe.db.exists("Company"):
         return []

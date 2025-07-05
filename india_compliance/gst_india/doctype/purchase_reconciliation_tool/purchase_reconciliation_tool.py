@@ -256,8 +256,6 @@ class PurchaseReconciliationTool(Document):
             purchase_invoice_name, inward_supply_name, link_doctype
         )
 
-        set_reconciliation_status(link_doctype, (purchase_invoice_name,), "Match Found")
-
         return self.ReconciledData.get(purchases, inward_supplies)
 
     @frappe.whitelist()

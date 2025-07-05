@@ -3,6 +3,7 @@ Export GSTR-1 data to excel or json
 """
 
 import json
+from collections import defaultdict
 from datetime import datetime
 from enum import Enum
 
@@ -10,17 +11,23 @@ import frappe
 from frappe import _
 from frappe.utils import getdate
 
-from india_compliance.gst_india.utils import get_period
+from india_compliance.gst_india.utils import get_data_file_path, get_period
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr_1 import (
+    HSN_BIFURCATION_FROM,
     JSON_CATEGORY_EXCEL_CATEGORY_MAPPING,
     QUARTERLY_KEYS,
-    GovExcelField,
+)
+from india_compliance.gst_india.utils.gstr_1 import GovExcelField as gov_xl
+from india_compliance.gst_india.utils.gstr_1 import (
     GovExcelSheetName,
     GovJsonKey,
-    GSTR1_DataField,
-    GSTR1_ItemField,
+)
+from india_compliance.gst_india.utils.gstr_1 import GSTR1_DataField as inv_f
+from india_compliance.gst_india.utils.gstr_1 import GSTR1_ItemField as item_f
+from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_SubCategory,
+    HSNKey,
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     convert_to_gov_data_format,
@@ -47,7 +54,6 @@ CATEGORIES_WITH_ITEMS = {
 
 
 class DataProcessor:
-
     # transform input data to required format
     FIELD_TRANSFORMATIONS = {}
 
@@ -106,7 +112,7 @@ class DataProcessor:
         return [
             {**invoice, **item}
             for invoice in invoice_list
-            for item in invoice[GSTR1_DataField.ITEMS.value]
+            for item in invoice[inv_f.ITEMS]
         ]
 
 
@@ -124,15 +130,14 @@ class GovExcel(DataProcessor):
     PERCENT_FORMAT = "0.00"
 
     FIELD_TRANSFORMATIONS = {
-        GSTR1_DataField.DIFF_PERCENTAGE.value: lambda value: (
-            value * 100 if value != 0 else None
-        ),
-        GSTR1_DataField.DOC_DATE.value: lambda value: datetime.strptime(
-            value, "%Y-%m-%d"
-        ),
-        GSTR1_DataField.SHIPPING_BILL_DATE.value: lambda value: datetime.strptime(
-            value, "%Y-%m-%d"
-        ),
+        inv_f.DIFF_PERCENTAGE: lambda value: (value * 100 if value != 0 else None),
+        inv_f.DOC_DATE: lambda value: datetime.strptime(value, "%Y-%m-%d"),
+        inv_f.SHIPPING_BILL_DATE: lambda value: datetime.strptime(value, "%Y-%m-%d"),
+    }
+
+    TEMPLATE_EXCEL_FILE = {
+        "V2.0": get_data_file_path("gstr1_excel_template_v2.0.xlsx"),
+        "V2.1": get_data_file_path("gstr1_excel_template_v2.1.xlsx"),
     }
 
     def generate(self, gstin, period):
@@ -143,10 +148,16 @@ class GovExcel(DataProcessor):
         self.period = period
         gstr_1_log = frappe.get_doc("GST Return Log", f"GSTR1-{period}-{gstin}")
 
+        month, year = gstr_1_log.return_period[:2], gstr_1_log.return_period[2:]
+        filing_from = getdate(f"{year}-{month}-01")
+
+        file_version = "V2.1" if filing_from >= HSN_BIFURCATION_FROM else "V2.0"
+        file = self.TEMPLATE_EXCEL_FILE.get(file_version)
+
         self.file_field = "filed" if gstr_1_log.filed else "books"
         data = gstr_1_log.load_data(self.file_field)[self.file_field]
         data = self.process_data(data)
-        self.build_excel(data)
+        self.build_excel(data, file)
 
     def process_data(self, data):
         data = data.update(data.pop("aggregate_data", {}))
@@ -172,7 +183,7 @@ class GovExcel(DataProcessor):
 
             # convert to positive values
             for doc in category_wise_data.get(category, []):
-                if doc.get(GSTR1_DataField.DOC_TYPE.value) == "D":
+                if doc.get(inv_f.DOC_TYPE) == "D":
                     continue
 
                 doc.update(
@@ -183,20 +194,36 @@ class GovExcel(DataProcessor):
                     }
                 )
 
+        self.process_hsn_data(category_wise_data)
+
         return category_wise_data
 
-    def build_excel(self, data):
-        excel = ExcelExporter()
-        for category, cat_data in data.items():
-            excel.create_sheet(
-                sheet_name=JSON_CATEGORY_EXCEL_CATEGORY_MAPPING.get(category, category),
-                headers=self.get_category_headers(category),
-                data=cat_data,
-                add_totals=False,
-                default_data_format={"height": 15},
-            )
+    def build_excel(self, data, file=None):
+        excel = ExcelExporter(file)
 
-        excel.remove_sheet("Sheet")
+        if excel.has_sheet("Sheet"):
+            excel.remove_sheet("Sheet")
+
+        for category, cat_data in data.items():
+            sheet_name = JSON_CATEGORY_EXCEL_CATEGORY_MAPPING.get(category)
+
+            if excel.is_loaded and excel.has_sheet(sheet_name):
+                excel.insert_data(
+                    sheet_name=sheet_name,
+                    headers=self.get_category_headers(category),
+                    data=cat_data,
+                    start_row=5,
+                )
+
+            else:
+                excel.create_sheet(
+                    sheet_name=sheet_name or category,
+                    headers=self.get_category_headers(category),
+                    data=cat_data,
+                    add_totals=False,
+                    default_data_format={"height": 15},
+                )
+
         excel.export(get_file_name("Gov", self.gstin, self.period))
 
     def process_doc_issue_data(self, data):
@@ -204,15 +231,33 @@ class GovExcel(DataProcessor):
         Add draft count to cancelled count for DOC_ISSUE category
         """
         for doc in data.copy():
-            if doc.get(GSTR1_DataField.DOC_TYPE.value).startswith(
-                "Excluded from Report"
-            ):
+            if doc.get(inv_f.DOC_TYPE).startswith("Excluded from Report"):
                 data.remove(doc)
                 continue
 
-            doc[GSTR1_DataField.CANCELLED_COUNT.value] += doc.get(
-                GSTR1_DataField.DRAFT_COUNT.value, 0
-            )
+            doc[inv_f.CANCELLED_COUNT] += doc.get(inv_f.DRAFT_COUNT, 0)
+
+    def process_hsn_data(self, category_wise_data):
+        hsn_data = category_wise_data.pop(GovJsonKey.HSN.value, None)
+        if not hsn_data:
+            return
+
+        MAP = {
+            GSTR1_SubCategory.HSN.value: HSNKey.HSN.value,  # backward compatibility
+            GSTR1_SubCategory.HSN_B2B.value: HSNKey.HSN_B2B.value,
+            GSTR1_SubCategory.HSN_B2C.value: HSNKey.HSN_B2C.value,
+        }
+
+        new_data = defaultdict(list)
+
+        for row in hsn_data:
+            sub_category = row.get(inv_f.DOC_TYPE)
+            if sub_category not in MAP:
+                continue
+
+            new_data[MAP[sub_category]].append(row)
+
+        category_wise_data.update(new_data)
 
     def get_category_headers(self, category):
         return getattr(self, f"get_{category.lower()}_headers")()
@@ -220,70 +265,72 @@ class GovExcel(DataProcessor):
     def get_b2b_headers(self):
         return [
             {
-                "label": _(GovExcelField.CUST_GSTIN.value),
-                "fieldname": GSTR1_DataField.CUST_GSTIN.value,
+                "label": _(gov_xl.CUST_GSTIN),
+                "fieldname": inv_f.CUST_GSTIN,
                 "header_format": {"width": ExcelWidth.SM.value},
             },
             {
-                "label": _(GovExcelField.CUST_NAME.value),
-                "fieldname": GSTR1_DataField.CUST_NAME.value,
+                "label": _(gov_xl.CUST_NAME),
+                "fieldname": inv_f.CUST_NAME,
                 "header_format": {"width": ExcelWidth.XXL.value},
             },
             {
-                "label": _(GovExcelField.INVOICE_NUMBER.value),
-                "fieldname": GSTR1_DataField.DOC_NUMBER.value,
+                "label": _(gov_xl.INVOICE_NUMBER),
+                "fieldname": inv_f.DOC_NUMBER,
                 "header_format": {"width": ExcelWidth.SM.value},
             },
             {
-                "label": _(GovExcelField.INVOICE_DATE.value),
-                "fieldname": GSTR1_DataField.DOC_DATE.value,
+                "label": _(gov_xl.INVOICE_DATE),
+                "fieldname": inv_f.DOC_DATE,
                 "data_format": {"number_format": self.DATE_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x.strftime("%d-%b-%y"),
             },
             {
-                "label": _(GovExcelField.INVOICE_VALUE.value),
-                "fieldname": GSTR1_DataField.DOC_VALUE.value,
+                "label": _(gov_xl.INVOICE_VALUE),
+                "fieldname": inv_f.DOC_VALUE,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "label": _(GovExcelField.POS.value),
-                "fieldname": GSTR1_DataField.POS.value,
+                "label": _(gov_xl.POS),
+                "fieldname": inv_f.POS,
             },
             {
-                "label": _(GovExcelField.REVERSE_CHARGE.value),
-                "fieldname": GSTR1_DataField.REVERSE_CHARGE.value,
+                "label": _(gov_xl.REVERSE_CHARGE),
+                "fieldname": inv_f.REVERSE_CHARGE,
                 "data_format": {"horizontal": "center"},
                 "header_format": {"width": ExcelWidth.XS.value},
             },
             {
-                "label": _(GovExcelField.DIFF_PERCENTAGE.value),
-                "fieldname": GSTR1_DataField.DIFF_PERCENTAGE.value,
+                "label": _(gov_xl.DIFF_PERCENTAGE),
+                "fieldname": inv_f.DIFF_PERCENTAGE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x if x else None,
             },
             {
-                "label": _(GovExcelField.INVOICE_TYPE.value),
-                "fieldname": GSTR1_DataField.DOC_TYPE.value,
+                "label": _(gov_xl.INVOICE_TYPE),
+                "fieldname": inv_f.DOC_TYPE,
             },
             {
-                "label": _(GovExcelField.ECOMMERCE_GSTIN.value),
+                "label": _(gov_xl.ECOMMERCE_GSTIN),
                 # Ignore value, just keep the column
-                "fieldname": f"_{GSTR1_DataField.ECOMMERCE_GSTIN.value}",
+                "fieldname": f"_{inv_f.ECOMMERCE_GSTIN}",
             },
             {
-                "label": _(GovExcelField.TAX_RATE.value),
-                "fieldname": GSTR1_DataField.TAX_RATE.value,
+                "label": _(gov_xl.TAX_RATE),
+                "fieldname": inv_f.TAX_RATE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
             },
             {
-                "label": _(GovExcelField.TAXABLE_VALUE.value),
-                "fieldname": GSTR1_ItemField.TAXABLE_VALUE.value,
+                "label": _(gov_xl.TAXABLE_VALUE),
+                "fieldname": item_f.TAXABLE_VALUE,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "label": _(GovExcelField.CESS.value),
-                "fieldname": GSTR1_ItemField.CESS.value,
+                "label": _(gov_xl.CESS),
+                "fieldname": item_f.CESS,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
         ]
@@ -291,51 +338,53 @@ class GovExcel(DataProcessor):
     def get_b2cl_headers(self):
         return [
             {
-                "label": _(GovExcelField.INVOICE_NUMBER.value),
-                "fieldname": GSTR1_DataField.DOC_NUMBER.value,
+                "label": _(gov_xl.INVOICE_NUMBER),
+                "fieldname": inv_f.DOC_NUMBER,
                 "header_format": {"width": ExcelWidth.SM.value},
             },
             {
-                "label": _(GovExcelField.INVOICE_DATE.value),
-                "fieldname": GSTR1_DataField.DOC_DATE.value,
+                "label": _(gov_xl.INVOICE_DATE),
+                "fieldname": inv_f.DOC_DATE,
                 "data_format": {"number_format": self.DATE_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x.strftime("%d-%b-%y"),
             },
             {
-                "label": _(GovExcelField.INVOICE_VALUE.value),
-                "fieldname": GSTR1_DataField.DOC_VALUE.value,
+                "label": _(gov_xl.INVOICE_VALUE),
+                "fieldname": inv_f.DOC_VALUE,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "label": _(GovExcelField.POS.value),
-                "fieldname": GSTR1_DataField.POS.value,
+                "label": _(gov_xl.POS),
+                "fieldname": inv_f.POS,
             },
             {
-                "label": _(GovExcelField.DIFF_PERCENTAGE.value),
-                "fieldname": GSTR1_DataField.DIFF_PERCENTAGE.value,
+                "label": _(gov_xl.DIFF_PERCENTAGE),
+                "fieldname": inv_f.DIFF_PERCENTAGE,
+                "data_format": {"number_format": self.PERCENT_FORMAT},
+                "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x if x else None,
+            },
+            {
+                "label": _(gov_xl.TAX_RATE),
+                "fieldname": inv_f.TAX_RATE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
             },
             {
-                "label": _(GovExcelField.TAX_RATE.value),
-                "fieldname": GSTR1_DataField.TAX_RATE.value,
-                "data_format": {"number_format": self.PERCENT_FORMAT},
-                "header_format": {"width": ExcelWidth.XS.value},
-            },
-            {
-                "label": _(GovExcelField.TAXABLE_VALUE.value),
-                "fieldname": GSTR1_ItemField.TAXABLE_VALUE.value,
+                "label": _(gov_xl.TAXABLE_VALUE),
+                "fieldname": item_f.TAXABLE_VALUE,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "label": _(GovExcelField.CESS.value),
-                "fieldname": GSTR1_ItemField.CESS.value,
+                "label": _(gov_xl.CESS),
+                "fieldname": item_f.CESS,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "label": _(GovExcelField.ECOMMERCE_GSTIN.value),
+                "label": _(gov_xl.ECOMMERCE_GSTIN),
                 # Ignore value, just keep the column
-                "fieldname": f"_{GSTR1_DataField.ECOMMERCE_GSTIN.value}",
+                "fieldname": f"_{inv_f.ECOMMERCE_GSTIN}",
             },
         ]
 
@@ -343,107 +392,111 @@ class GovExcel(DataProcessor):
         return [
             {
                 "label": _("Type"),
-                "fieldname": GSTR1_DataField.DOC_TYPE.value,
+                "fieldname": inv_f.DOC_TYPE,
             },
             {
-                "label": _(GovExcelField.POS.value),
-                "fieldname": GSTR1_DataField.POS.value,
+                "label": _(gov_xl.POS),
+                "fieldname": inv_f.POS,
             },
             {
-                "label": _(GovExcelField.DIFF_PERCENTAGE.value),
-                "fieldname": GSTR1_DataField.DIFF_PERCENTAGE.value,
+                "label": _(gov_xl.DIFF_PERCENTAGE),
+                "fieldname": inv_f.DIFF_PERCENTAGE,
+                "data_format": {"number_format": self.PERCENT_FORMAT},
+                "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x if x else None,
+            },
+            {
+                "label": _(gov_xl.TAX_RATE),
+                "fieldname": inv_f.TAX_RATE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
             },
             {
-                "label": _(GovExcelField.TAX_RATE.value),
-                "fieldname": GSTR1_DataField.TAX_RATE.value,
-                "data_format": {"number_format": self.PERCENT_FORMAT},
-                "header_format": {"width": ExcelWidth.XS.value},
-            },
-            {
-                "label": _(GovExcelField.TAXABLE_VALUE.value),
-                "fieldname": GSTR1_DataField.TAXABLE_VALUE.value,
+                "label": _(gov_xl.TAXABLE_VALUE),
+                "fieldname": inv_f.TAXABLE_VALUE,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "label": _(GovExcelField.CESS.value),
-                "fieldname": GSTR1_DataField.CESS.value,
+                "label": _(gov_xl.CESS),
+                "fieldname": inv_f.CESS,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "label": _(GovExcelField.ECOMMERCE_GSTIN.value),
+                "label": _(gov_xl.ECOMMERCE_GSTIN),
                 # Ignore value, just keep the column
-                "fieldname": f"_{GSTR1_DataField.ECOMMERCE_GSTIN.value}",
+                "fieldname": f"_{inv_f.ECOMMERCE_GSTIN}",
             },
         ]
 
     def get_cdnr_headers(self):
         return [
             {
-                "label": _(GovExcelField.CUST_GSTIN.value),
-                "fieldname": GSTR1_DataField.CUST_GSTIN.value,
+                "label": _(gov_xl.CUST_GSTIN),
+                "fieldname": inv_f.CUST_GSTIN,
                 "header_format": {"width": ExcelWidth.SM.value},
             },
             {
-                "label": _(GovExcelField.CUST_NAME.value),
-                "fieldname": GSTR1_DataField.CUST_NAME.value,
+                "label": _(gov_xl.CUST_NAME),
+                "fieldname": inv_f.CUST_NAME,
                 "header_format": {"width": ExcelWidth.XXL.value},
             },
             {
-                "label": _(GovExcelField.NOTE_NO.value),
-                "fieldname": GSTR1_DataField.DOC_NUMBER.value,
+                "label": _(gov_xl.NOTE_NO),
+                "fieldname": inv_f.DOC_NUMBER,
                 "header_format": {"width": ExcelWidth.SM.value},
             },
             {
-                "label": _(GovExcelField.NOTE_DATE.value),
-                "fieldname": GSTR1_DataField.DOC_DATE.value,
+                "label": _(gov_xl.NOTE_DATE),
+                "fieldname": inv_f.DOC_DATE,
                 "data_format": {"number_format": self.DATE_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x.strftime("%d-%b-%y"),
             },
             {
-                "label": _(GovExcelField.NOTE_TYPE.value),
-                "fieldname": GSTR1_DataField.TRANSACTION_TYPE.value,
+                "label": _(gov_xl.NOTE_TYPE),
+                "fieldname": inv_f.TRANSACTION_TYPE,
+                "transform": lambda x: x[0],
             },
             {
-                "label": _(GovExcelField.POS.value),
-                "fieldname": GSTR1_DataField.POS.value,
+                "label": _(gov_xl.POS),
+                "fieldname": inv_f.POS,
             },
             {
-                "label": _(GovExcelField.REVERSE_CHARGE.value),
-                "fieldname": GSTR1_DataField.REVERSE_CHARGE.value,
+                "label": _(gov_xl.REVERSE_CHARGE),
+                "fieldname": inv_f.REVERSE_CHARGE,
                 "data_format": {"horizontal": "center"},
                 "header_format": {"width": ExcelWidth.XS.value},
             },
             {
                 "label": _("Note Supply Type"),
-                "fieldname": GSTR1_DataField.DOC_TYPE.value,
+                "fieldname": inv_f.DOC_TYPE,
             },
             {
-                "label": _(GovExcelField.NOTE_VALUE.value),
-                "fieldname": GSTR1_DataField.DOC_VALUE.value,
+                "label": _(gov_xl.NOTE_VALUE),
+                "fieldname": inv_f.DOC_VALUE,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "label": _(GovExcelField.DIFF_PERCENTAGE.value),
-                "fieldname": GSTR1_DataField.DIFF_PERCENTAGE.value,
+                "label": _(gov_xl.DIFF_PERCENTAGE),
+                "fieldname": inv_f.DIFF_PERCENTAGE,
+                "data_format": {"number_format": self.PERCENT_FORMAT},
+                "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x if x else None,
+            },
+            {
+                "label": _(gov_xl.TAX_RATE),
+                "fieldname": inv_f.TAX_RATE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
             },
             {
-                "label": _(GovExcelField.TAX_RATE.value),
-                "fieldname": GSTR1_DataField.TAX_RATE.value,
-                "data_format": {"number_format": self.PERCENT_FORMAT},
-                "header_format": {"width": ExcelWidth.XS.value},
-            },
-            {
-                "label": _(GovExcelField.TAXABLE_VALUE.value),
-                "fieldname": GSTR1_ItemField.TAXABLE_VALUE.value,
+                "label": _(gov_xl.TAXABLE_VALUE),
+                "fieldname": item_f.TAXABLE_VALUE,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "label": _(GovExcelField.CESS.value),
-                "fieldname": GSTR1_ItemField.CESS.value,
+                "label": _(gov_xl.CESS),
+                "fieldname": item_f.CESS,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
         ]
@@ -452,52 +505,54 @@ class GovExcel(DataProcessor):
         return [
             {
                 "label": _("UR Type"),
-                "fieldname": GSTR1_DataField.DOC_TYPE.value,
+                "fieldname": inv_f.DOC_TYPE,
             },
             {
-                "label": _(GovExcelField.NOTE_NO.value),
-                "fieldname": GSTR1_DataField.DOC_NUMBER.value,
+                "label": _(gov_xl.NOTE_NO),
+                "fieldname": inv_f.DOC_NUMBER,
                 "header_format": {"width": ExcelWidth.SM.value},
             },
             {
-                "label": _(GovExcelField.NOTE_DATE.value),
-                "fieldname": GSTR1_DataField.DOC_DATE.value,
+                "label": _(gov_xl.NOTE_DATE),
+                "fieldname": inv_f.DOC_DATE,
                 "data_format": {"number_format": self.DATE_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x.strftime("%d-%b-%y"),
             },
             {
-                "label": _(GovExcelField.NOTE_TYPE.value),
-                "fieldname": GSTR1_DataField.TRANSACTION_TYPE.value,
+                "label": _(gov_xl.NOTE_TYPE),
+                "fieldname": inv_f.TRANSACTION_TYPE,
             },
             {
-                "label": _(GovExcelField.POS.value),
-                "fieldname": GSTR1_DataField.POS.value,
+                "label": _(gov_xl.POS),
+                "fieldname": inv_f.POS,
             },
             {
-                "label": _(GovExcelField.NOTE_VALUE.value),
-                "fieldname": GSTR1_DataField.DOC_VALUE.value,
+                "label": _(gov_xl.NOTE_VALUE),
+                "fieldname": inv_f.DOC_VALUE,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "label": _(GovExcelField.DIFF_PERCENTAGE.value),
-                "fieldname": GSTR1_DataField.DIFF_PERCENTAGE.value,
+                "label": _(gov_xl.DIFF_PERCENTAGE),
+                "fieldname": inv_f.DIFF_PERCENTAGE,
+                "data_format": {"number_format": self.PERCENT_FORMAT},
+                "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x if x else None,
+            },
+            {
+                "label": _(gov_xl.TAX_RATE),
+                "fieldname": inv_f.TAX_RATE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
             },
             {
-                "label": _(GovExcelField.TAX_RATE.value),
-                "fieldname": GSTR1_DataField.TAX_RATE.value,
-                "data_format": {"number_format": self.PERCENT_FORMAT},
-                "header_format": {"width": ExcelWidth.XS.value},
-            },
-            {
-                "label": _(GovExcelField.TAXABLE_VALUE.value),
-                "fieldname": GSTR1_ItemField.TAXABLE_VALUE.value,
+                "label": _(gov_xl.TAXABLE_VALUE),
+                "fieldname": item_f.TAXABLE_VALUE,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "label": _(GovExcelField.CESS.value),
-                "fieldname": GSTR1_ItemField.CESS.value,
+                "label": _(gov_xl.CESS),
+                "fieldname": item_f.CESS,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
         ]
@@ -506,53 +561,55 @@ class GovExcel(DataProcessor):
         return [
             {
                 "label": _("Export Type"),
-                "fieldname": GSTR1_DataField.DOC_TYPE.value,
+                "fieldname": inv_f.DOC_TYPE,
             },
             {
-                "label": _(GovExcelField.INVOICE_NUMBER.value),
-                "fieldname": GSTR1_DataField.DOC_NUMBER.value,
+                "label": _(gov_xl.INVOICE_NUMBER),
+                "fieldname": inv_f.DOC_NUMBER,
                 "header_format": {"width": ExcelWidth.SM.value},
             },
             {
-                "label": _(GovExcelField.INVOICE_DATE.value),
-                "fieldname": GSTR1_DataField.DOC_DATE.value,
+                "label": _(gov_xl.INVOICE_DATE),
+                "fieldname": inv_f.DOC_DATE,
                 "data_format": {"number_format": self.DATE_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x.strftime("%d-%b-%y"),
             },
             {
-                "label": _(GovExcelField.INVOICE_VALUE.value),
-                "fieldname": GSTR1_DataField.DOC_VALUE.value,
+                "label": _(gov_xl.INVOICE_VALUE),
+                "fieldname": inv_f.DOC_VALUE,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "label": _(GovExcelField.PORT_CODE.value),
-                "fieldname": GSTR1_DataField.SHIPPING_PORT_CODE.value,
+                "label": _(gov_xl.PORT_CODE),
+                "fieldname": inv_f.SHIPPING_PORT_CODE,
             },
             {
-                "label": _(GovExcelField.SHIPPING_BILL_NO.value),
-                "fieldname": GSTR1_DataField.SHIPPING_BILL_NUMBER.value,
+                "label": _(gov_xl.SHIPPING_BILL_NO),
+                "fieldname": inv_f.SHIPPING_BILL_NUMBER,
                 "header_format": {"width": ExcelWidth.SM.value},
             },
             {
-                "label": _(GovExcelField.SHIPPING_BILL_DATE.value),
-                "fieldname": GSTR1_DataField.SHIPPING_BILL_DATE.value,
+                "label": _(gov_xl.SHIPPING_BILL_DATE),
+                "fieldname": inv_f.SHIPPING_BILL_DATE,
                 "data_format": {"number_format": self.DATE_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x.strftime("%d-%b-%y"),
             },
             {
-                "label": _(GovExcelField.TAX_RATE.value),
-                "fieldname": GSTR1_DataField.TAX_RATE.value,
+                "label": _(gov_xl.TAX_RATE),
+                "fieldname": inv_f.TAX_RATE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
             },
             {
-                "label": _(GovExcelField.TAXABLE_VALUE.value),
-                "fieldname": GSTR1_ItemField.TAXABLE_VALUE.value,
+                "label": _(gov_xl.TAXABLE_VALUE),
+                "fieldname": item_f.TAXABLE_VALUE,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "label": _(GovExcelField.CESS.value),
-                "fieldname": GSTR1_ItemField.CESS.value,
+                "label": _(gov_xl.CESS),
+                "fieldname": item_f.CESS,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
         ]
@@ -560,31 +617,32 @@ class GovExcel(DataProcessor):
     def get_at_headers(self):
         return [
             {
-                "label": _(GovExcelField.POS.value),
-                "fieldname": GSTR1_DataField.POS.value,
+                "label": _(gov_xl.POS),
+                "fieldname": inv_f.POS,
             },
             {
-                "label": _(GovExcelField.DIFF_PERCENTAGE.value),
-                "fieldname": GSTR1_DataField.DIFF_PERCENTAGE.value,
+                "label": _(gov_xl.DIFF_PERCENTAGE),
+                "fieldname": inv_f.DIFF_PERCENTAGE,
                 "data_format": {
                     "number_format": self.PERCENT_FORMAT,
                 },
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x if x else None,
             },
             {
-                "label": _(GovExcelField.TAX_RATE.value),
-                "fieldname": GSTR1_DataField.TAX_RATE.value,
+                "label": _(gov_xl.TAX_RATE),
+                "fieldname": inv_f.TAX_RATE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
             },
             {
                 "label": _("Gross Advance Received"),
-                "fieldname": GSTR1_DataField.TAXABLE_VALUE.value,
+                "fieldname": inv_f.TAXABLE_VALUE,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "label": _(GovExcelField.CESS.value),
-                "fieldname": GSTR1_DataField.CESS.value,
+                "label": _(gov_xl.CESS),
+                "fieldname": inv_f.CESS,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
         ]
@@ -592,29 +650,30 @@ class GovExcel(DataProcessor):
     def get_txpd_headers(self):
         return [
             {
-                "label": _(GovExcelField.POS.value),
-                "fieldname": GSTR1_DataField.POS.value,
+                "label": _(gov_xl.POS),
+                "fieldname": inv_f.POS,
             },
             {
-                "label": _(GovExcelField.DIFF_PERCENTAGE.value),
-                "fieldname": GSTR1_DataField.DIFF_PERCENTAGE.value,
+                "label": _(gov_xl.DIFF_PERCENTAGE),
+                "fieldname": inv_f.DIFF_PERCENTAGE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x: x if x else None,
             },
             {
-                "label": _(GovExcelField.TAX_RATE.value),
-                "fieldname": GSTR1_DataField.TAX_RATE.value,
+                "label": _(gov_xl.TAX_RATE),
+                "fieldname": inv_f.TAX_RATE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
             },
             {
                 "label": _("Gross Advance Adjusted"),
-                "fieldname": GSTR1_DataField.TAXABLE_VALUE.value,
+                "fieldname": inv_f.TAXABLE_VALUE,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "label": _(GovExcelField.CESS.value),
-                "fieldname": GSTR1_DataField.CESS.value,
+                "label": _(gov_xl.CESS),
+                "fieldname": inv_f.CESS,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
         ]
@@ -622,23 +681,23 @@ class GovExcel(DataProcessor):
     def get_nil_headers(self):
         return [
             {
-                "label": _(GovExcelField.DESCRIPTION.value),
-                "fieldname": GSTR1_DataField.DOC_TYPE.value,
+                "label": _(gov_xl.DESCRIPTION),
+                "fieldname": inv_f.DOC_TYPE,
                 "header_format": {"width": ExcelWidth.XXL.value},
             },
             {
                 "label": _("Nil Rated Supplies"),
-                "fieldname": GSTR1_DataField.NIL_RATED_AMOUNT.value,
+                "fieldname": inv_f.NIL_RATED_AMOUNT,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
                 "label": _("Exempted(other than nil rated/non GST supply)"),
-                "fieldname": GSTR1_DataField.EXEMPTED_AMOUNT.value,
+                "fieldname": inv_f.EXEMPTED_AMOUNT,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
                 "label": _("Non-GST Supplies"),
-                "fieldname": GSTR1_DataField.NON_GST_AMOUNT.value,
+                "fieldname": inv_f.NON_GST_AMOUNT,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
         ]
@@ -646,85 +705,91 @@ class GovExcel(DataProcessor):
     def get_hsn_headers(self):
         return [
             {
-                "label": _(GovExcelField.HSN_CODE.value),
-                "fieldname": GSTR1_DataField.HSN_CODE.value,
+                "label": _(gov_xl.HSN_CODE),
+                "fieldname": inv_f.HSN_CODE,
             },
             {
-                "label": _(GovExcelField.DESCRIPTION.value),
-                "fieldname": GSTR1_DataField.DESCRIPTION.value,
+                "label": _(gov_xl.DESCRIPTION),
+                "fieldname": inv_f.DESCRIPTION,
             },
             {
-                "label": _(GovExcelField.UOM.value),
-                "fieldname": GSTR1_DataField.UOM.value,
+                "label": _(gov_xl.UOM),
+                "fieldname": inv_f.UOM,
             },
             {
-                "label": _(GovExcelField.QUANTITY.value),
-                "fieldname": GSTR1_DataField.QUANTITY.value,
+                "label": _(gov_xl.QUANTITY),
+                "fieldname": inv_f.QUANTITY,
                 "header_format": {"width": ExcelWidth.XS.value},
             },
             {
-                "label": _(GovExcelField.TOTAL_VALUE.value),
-                "fieldname": GSTR1_DataField.DOC_VALUE.value,
+                "label": _(gov_xl.TOTAL_VALUE),
+                "fieldname": inv_f.DOC_VALUE,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "label": _(GovExcelField.TAX_RATE.value),
-                "fieldname": GSTR1_DataField.TAX_RATE.value,
+                "label": _(gov_xl.TAX_RATE),
+                "fieldname": inv_f.TAX_RATE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
             },
             {
-                "label": _(GovExcelField.TAXABLE_VALUE.value),
-                "fieldname": GSTR1_DataField.TAXABLE_VALUE.value,
+                "label": _(gov_xl.TAXABLE_VALUE),
+                "fieldname": inv_f.TAXABLE_VALUE,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "label": _(GovExcelField.IGST.value),
-                "fieldname": GSTR1_DataField.IGST.value,
+                "label": _(gov_xl.IGST),
+                "fieldname": inv_f.IGST,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "label": _(GovExcelField.CGST.value),
-                "fieldname": GSTR1_DataField.CGST.value,
+                "label": _(gov_xl.CGST),
+                "fieldname": inv_f.CGST,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "label": _(GovExcelField.SGST.value),
-                "fieldname": GSTR1_DataField.SGST.value,
+                "label": _(gov_xl.SGST),
+                "fieldname": inv_f.SGST,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "label": _(GovExcelField.CESS.value),
-                "fieldname": GSTR1_DataField.CESS.value,
+                "label": _(gov_xl.CESS),
+                "fieldname": inv_f.CESS,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
         ]
+
+    def get_hsn_b2b_headers(self):
+        return self.get_hsn_headers()
+
+    def get_hsn_b2c_headers(self):
+        return self.get_hsn_headers()
 
     def get_doc_issue_headers(self):
         return [
             {
                 "label": _("Nature of Document"),
-                "fieldname": GSTR1_DataField.DOC_TYPE.value,
+                "fieldname": inv_f.DOC_TYPE,
                 "header_format": {"width": ExcelWidth.XXL.value},
             },
             {
                 "label": _("Sr. No. From"),
-                "fieldname": GSTR1_DataField.FROM_SR.value,
+                "fieldname": inv_f.FROM_SR,
                 "header_format": {"width": ExcelWidth.SM.value},
             },
             {
                 "label": _("Sr. No. To"),
-                "fieldname": GSTR1_DataField.TO_SR.value,
+                "fieldname": inv_f.TO_SR,
                 "header_format": {"width": ExcelWidth.SM.value},
             },
             {
                 "label": _("Total Number"),
-                "fieldname": GSTR1_DataField.TOTAL_COUNT.value,
+                "fieldname": inv_f.TOTAL_COUNT,
                 "header_format": {"width": ExcelWidth.XS.value},
             },
             {
                 "label": _("Cancelled"),
-                "fieldname": GSTR1_DataField.CANCELLED_COUNT.value,
+                "fieldname": inv_f.CANCELLED_COUNT,
                 "header_format": {"width": ExcelWidth.XS.value},
             },
         ]
@@ -752,11 +817,11 @@ class BooksExcel(DataProcessor):
         category_wise_data = super().process_data(data)
 
         DOC_ITEM_FIELD_MAP = {
-            GSTR1_DataField.TAXABLE_VALUE.value: GSTR1_ItemField.TAXABLE_VALUE.value,
-            GSTR1_DataField.IGST.value: GSTR1_ItemField.IGST.value,
-            GSTR1_DataField.CGST.value: GSTR1_ItemField.CGST.value,
-            GSTR1_DataField.SGST.value: GSTR1_ItemField.SGST.value,
-            GSTR1_DataField.CESS.value: GSTR1_ItemField.CESS.value,
+            inv_f.TAXABLE_VALUE: item_f.TAXABLE_VALUE,
+            inv_f.IGST: item_f.IGST,
+            inv_f.CGST: item_f.CGST,
+            inv_f.SGST: item_f.SGST,
+            inv_f.CESS: item_f.CESS,
         }
 
         for category, category_data in category_wise_data.items():
@@ -830,93 +895,93 @@ class BooksExcel(DataProcessor):
         return [
             {
                 "label": _("Transaction Type"),
-                "fieldname": GSTR1_DataField.TRANSACTION_TYPE.value,
+                "fieldname": inv_f.TRANSACTION_TYPE,
             },
             {
                 "label": _("Document Date"),
-                "fieldname": GSTR1_DataField.DOC_DATE.value,
+                "fieldname": inv_f.DOC_DATE,
                 "header_format": {"width": ExcelWidth.XS.value},
             },
             {
                 "label": _("Document Number"),
-                "fieldname": GSTR1_DataField.DOC_NUMBER.value,
+                "fieldname": inv_f.DOC_NUMBER,
                 "header_format": {"width": ExcelWidth.SM.value},
             },
             {
                 "label": _("Customer GSTIN"),
-                "fieldname": GSTR1_DataField.CUST_GSTIN.value,
+                "fieldname": inv_f.CUST_GSTIN,
                 "header_format": {"width": ExcelWidth.SM.value},
             },
             {
                 "label": _("Customer Name"),
-                "fieldname": GSTR1_DataField.CUST_NAME.value,
+                "fieldname": inv_f.CUST_NAME,
                 "header_format": {"width": ExcelWidth.XXL.value},
             },
             {
                 "label": _("Document Type"),
-                "fieldname": GSTR1_DataField.DOC_TYPE.value,
+                "fieldname": inv_f.DOC_TYPE,
             },
             {
-                "label": _(GovExcelField.SHIPPING_BILL_NO.value),
-                "fieldname": GSTR1_DataField.SHIPPING_BILL_NUMBER.value,
+                "label": _(gov_xl.SHIPPING_BILL_NO),
+                "fieldname": inv_f.SHIPPING_BILL_NUMBER,
                 "header_format": {"width": ExcelWidth.SM.value},
             },
             {
-                "label": _(GovExcelField.SHIPPING_BILL_DATE.value),
-                "fieldname": GSTR1_DataField.SHIPPING_BILL_DATE.value,
+                "label": _(gov_xl.SHIPPING_BILL_DATE),
+                "fieldname": inv_f.SHIPPING_BILL_DATE,
                 "header_format": {"width": ExcelWidth.XS.value},
             },
             {
-                "label": _(GovExcelField.PORT_CODE.value),
-                "fieldname": GSTR1_DataField.SHIPPING_PORT_CODE.value,
+                "label": _(gov_xl.PORT_CODE),
+                "fieldname": inv_f.SHIPPING_PORT_CODE,
             },
             {
-                "label": _(GovExcelField.REVERSE_CHARGE.value),
-                "fieldname": GSTR1_DataField.REVERSE_CHARGE.value,
+                "label": _(gov_xl.REVERSE_CHARGE),
+                "fieldname": inv_f.REVERSE_CHARGE,
                 "header_format": {"width": ExcelWidth.XS.value},
             },
             {
                 "label": _("Upload Status"),
-                "fieldname": GSTR1_DataField.UPLOAD_STATUS.value,
+                "fieldname": inv_f.UPLOAD_STATUS,
             },
             {
-                "label": _(GovExcelField.POS.value),
-                "fieldname": GSTR1_DataField.POS.value,
+                "label": _(gov_xl.POS),
+                "fieldname": inv_f.POS,
             },
             {
                 "label": _("Tax Rate"),
-                "fieldname": GSTR1_ItemField.TAX_RATE.value,
+                "fieldname": item_f.TAX_RATE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
             },
             {
-                "fieldname": GSTR1_ItemField.TAXABLE_VALUE.value,
+                "fieldname": item_f.TAXABLE_VALUE,
                 "label": _("Taxable Value"),
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "fieldname": GSTR1_ItemField.IGST.value,
+                "fieldname": item_f.IGST,
                 "label": _("IGST"),
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "fieldname": GSTR1_ItemField.CGST.value,
+                "fieldname": item_f.CGST,
                 "label": _("CGST"),
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "fieldname": GSTR1_ItemField.SGST.value,
+                "fieldname": item_f.SGST,
                 "label": _("SGST"),
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "fieldname": GSTR1_ItemField.CESS.value,
+                "fieldname": item_f.CESS,
                 "label": _("CESS"),
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
                 "label": _("Document Value"),
-                "fieldname": GSTR1_DataField.DOC_VALUE.value,
+                "fieldname": inv_f.DOC_VALUE,
             },
         ]
 
@@ -924,26 +989,26 @@ class BooksExcel(DataProcessor):
         return [
             {
                 "label": _("Advance Date"),
-                "fieldname": GSTR1_DataField.DOC_DATE.value,
+                "fieldname": inv_f.DOC_DATE,
                 "header_format": {"width": ExcelWidth.XS.value},
             },
             {
                 "label": _("Payment Entry Number"),
-                "fieldname": GSTR1_DataField.DOC_NUMBER.value,
+                "fieldname": inv_f.DOC_NUMBER,
                 "header_format": {"width": ExcelWidth.SM.value},
             },
             {
                 "label": _("Customer"),
-                "fieldname": GSTR1_DataField.CUST_NAME.value,
+                "fieldname": inv_f.CUST_NAME,
                 "header_format": {"width": ExcelWidth.XXL.value},
             },
             {
-                "label": _(GovExcelField.POS.value),
-                "fieldname": GSTR1_DataField.POS.value,
+                "label": _(gov_xl.POS),
+                "fieldname": inv_f.POS,
             },
             {
                 "label": "Upload Status",
-                "fieldname": GSTR1_DataField.UPLOAD_STATUS.value,
+                "fieldname": inv_f.UPLOAD_STATUS,
             },
             *self.get_amount_headers(),
         ]
@@ -952,26 +1017,26 @@ class BooksExcel(DataProcessor):
         return [
             {
                 "label": _("Adjustment Date"),
-                "fieldname": GSTR1_DataField.DOC_DATE.value,
+                "fieldname": inv_f.DOC_DATE,
                 "header_format": {"width": ExcelWidth.XS.value},
             },
             {
                 "label": _("Adjustment Entry Number"),
-                "fieldname": GSTR1_DataField.DOC_NUMBER.value,
+                "fieldname": inv_f.DOC_NUMBER,
                 "header_format": {"width": ExcelWidth.SM.value},
             },
             {
                 "label": _("Customer"),
-                "fieldname": GSTR1_DataField.CUST_NAME.value,
+                "fieldname": inv_f.CUST_NAME,
                 "header_format": {"width": ExcelWidth.XXL.value},
             },
             {
-                "label": _(GovExcelField.POS.value),
-                "fieldname": GSTR1_DataField.POS.value,
+                "label": _(gov_xl.POS),
+                "fieldname": inv_f.POS,
             },
             {
                 "label": "Upload Status",
-                "fieldname": GSTR1_DataField.UPLOAD_STATUS.value,
+                "fieldname": inv_f.UPLOAD_STATUS,
             },
             *self.get_amount_headers(),
         ]
@@ -980,35 +1045,39 @@ class BooksExcel(DataProcessor):
         return [
             {
                 "label": _("HSN Code"),
-                "fieldname": GSTR1_DataField.HSN_CODE.value,
+                "fieldname": inv_f.HSN_CODE,
             },
             {
-                "label": _(GovExcelField.DESCRIPTION.value),
-                "fieldname": GSTR1_DataField.DESCRIPTION.value,
+                "label": _(gov_xl.DESCRIPTION),
+                "fieldname": inv_f.DESCRIPTION,
                 "header_format": {"width": ExcelWidth.XXL.value},
             },
             {
                 "label": _("UOM"),
-                "fieldname": GSTR1_DataField.UOM.value,
+                "fieldname": inv_f.UOM,
             },
             {
-                "label": _(GovExcelField.TAX_RATE.value),
-                "fieldname": GSTR1_DataField.TAX_RATE.value,
+                "label": _(gov_xl.TAX_RATE),
+                "fieldname": inv_f.TAX_RATE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
             },
             {
-                "label": "Upload Status",
-                "fieldname": GSTR1_DataField.UPLOAD_STATUS.value,
+                "label": _("Document Type"),
+                "fieldname": inv_f.DOC_TYPE,
             },
             {
-                "label": _(GovExcelField.QUANTITY.value),
-                "fieldname": GSTR1_DataField.QUANTITY.value,
+                "label": "Upload Status",
+                "fieldname": inv_f.UPLOAD_STATUS,
+            },
+            {
+                "label": _(gov_xl.QUANTITY),
+                "fieldname": inv_f.QUANTITY,
                 "header_format": {"width": ExcelWidth.XS.value},
             },
             {
-                "label": _(GovExcelField.TOTAL_VALUE.value),
-                "fieldname": GSTR1_DataField.DOC_VALUE.value,
+                "label": _(gov_xl.TOTAL_VALUE),
+                "fieldname": inv_f.DOC_VALUE,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             *self.get_amount_headers(),
@@ -1018,34 +1087,34 @@ class BooksExcel(DataProcessor):
         return [
             {
                 "label": _("Document Type"),
-                "fieldname": GSTR1_DataField.DOC_TYPE.value,
+                "fieldname": inv_f.DOC_TYPE,
                 "header_format": {"width": ExcelWidth.XXL.value},
             },
             {
                 "label": "Upload Status",
-                "fieldname": GSTR1_DataField.UPLOAD_STATUS.value,
+                "fieldname": inv_f.UPLOAD_STATUS,
             },
             {
                 "label": _("Sr No From"),
-                "fieldname": GSTR1_DataField.FROM_SR.value,
+                "fieldname": inv_f.FROM_SR,
             },
             {
                 "label": _("Sr No To"),
-                "fieldname": GSTR1_DataField.TO_SR.value,
+                "fieldname": inv_f.TO_SR,
             },
             {
                 "label": _("Total Count"),
-                "fieldname": GSTR1_DataField.TOTAL_COUNT.value,
+                "fieldname": inv_f.TOTAL_COUNT,
                 "header_format": {"width": ExcelWidth.XS.value},
             },
             {
                 "label": _("Draft Count"),
-                "fieldname": GSTR1_DataField.DRAFT_COUNT.value,
+                "fieldname": inv_f.DRAFT_COUNT,
                 "header_format": {"width": ExcelWidth.XS.value},
             },
             {
                 "label": _("Cancelled Count"),
-                "fieldname": GSTR1_DataField.CANCELLED_COUNT.value,
+                "fieldname": inv_f.CANCELLED_COUNT,
                 "header_format": {"width": ExcelWidth.XS.value},
             },
         ]
@@ -1053,27 +1122,27 @@ class BooksExcel(DataProcessor):
     def get_amount_headers(self):
         return [
             {
-                "fieldname": GSTR1_DataField.TAXABLE_VALUE.value,
+                "fieldname": inv_f.TAXABLE_VALUE,
                 "label": _("Taxable Value"),
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "fieldname": GSTR1_DataField.IGST.value,
+                "fieldname": inv_f.IGST,
                 "label": _("IGST"),
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "fieldname": GSTR1_DataField.CGST.value,
+                "fieldname": inv_f.CGST,
                 "label": _("CGST"),
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "fieldname": GSTR1_DataField.SGST.value,
+                "fieldname": inv_f.SGST,
                 "label": _("SGST"),
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "fieldname": GSTR1_DataField.CESS.value,
+                "fieldname": inv_f.CESS,
                 "label": _("CESS"),
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
@@ -1083,50 +1152,50 @@ class BooksExcel(DataProcessor):
         return [
             {
                 "label": "Transaction Type",
-                "fieldname": GSTR1_DataField.TRANSACTION_TYPE.value,
+                "fieldname": inv_f.TRANSACTION_TYPE,
             },
             {
                 "label": "Documenrt Date",
-                "fieldname": GSTR1_DataField.DOC_DATE.value,
+                "fieldname": inv_f.DOC_DATE,
                 "header_format": {"width": ExcelWidth.XS.value},
             },
             {
                 "label": "Document Number",
-                "fieldname": GSTR1_DataField.DOC_NUMBER.value,
+                "fieldname": inv_f.DOC_NUMBER,
                 "header_format": {"width": ExcelWidth.SM.value},
             },
             {
                 "label": "Customer Name",
-                "fieldname": GSTR1_DataField.CUST_NAME.value,
+                "fieldname": inv_f.CUST_NAME,
                 "header_format": {"width": ExcelWidth.XXL.value},
             },
             {
                 "label": "Document Type",
-                "fieldname": GSTR1_DataField.DOC_TYPE.value,
+                "fieldname": inv_f.DOC_TYPE,
                 "header_format": {"width": ExcelWidth.XXL.value},
             },
             {
                 "label": "Upload Status",
-                "fieldname": GSTR1_DataField.UPLOAD_STATUS.value,
+                "fieldname": inv_f.UPLOAD_STATUS,
             },
             {
                 "label": "Nil Rated Supplies",
-                "fieldname": GSTR1_DataField.NIL_RATED_AMOUNT.value,
+                "fieldname": inv_f.NIL_RATED_AMOUNT,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
                 "label": "Exempted Supplies",
-                "fieldname": GSTR1_DataField.EXEMPTED_AMOUNT.value,
+                "fieldname": inv_f.EXEMPTED_AMOUNT,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
                 "label": "Non-GST Supplies",
-                "fieldname": GSTR1_DataField.NON_GST_AMOUNT.value,
+                "fieldname": inv_f.NON_GST_AMOUNT,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
                 "label": "Document Value",
-                "fieldname": GSTR1_DataField.DOC_VALUE.value,
+                "fieldname": inv_f.DOC_VALUE,
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
         ]
@@ -1199,32 +1268,32 @@ class ReconcileExcel:
     def get_reconcile_summary_headers(self):
         headers = [
             {
-                "fieldname": GSTR1_DataField.DESCRIPTION.value,
-                "label": _(GovExcelField.DESCRIPTION.value),
+                "fieldname": inv_f.DESCRIPTION,
+                "label": _(gov_xl.DESCRIPTION),
                 "header_format": {"width": ExcelWidth.XXL.value},
             },
             {
-                "fieldname": GSTR1_DataField.TAXABLE_VALUE.value,
-                "label": _(GovExcelField.TAXABLE_VALUE.value),
+                "fieldname": inv_f.TAXABLE_VALUE,
+                "label": _(gov_xl.TAXABLE_VALUE),
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "fieldname": GSTR1_DataField.IGST.value,
+                "fieldname": inv_f.IGST,
                 "label": _("IGST"),
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "fieldname": GSTR1_DataField.CGST.value,
+                "fieldname": inv_f.CGST,
                 "label": _("CGST"),
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "fieldname": GSTR1_DataField.SGST.value,
+                "fieldname": inv_f.SGST,
                 "label": _("SGST"),
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
-                "fieldname": GSTR1_DataField.CESS.value,
+                "fieldname": inv_f.CESS,
                 "label": _("CESS"),
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
@@ -1276,12 +1345,12 @@ class ReconcileExcel:
         return frappe._dict(
             {
                 "Books": [
-                    "books_" + GSTR1_DataField.POS.value,
-                    "books_" + GSTR1_DataField.CESS.value,
+                    "books_" + inv_f.POS,
+                    "books_" + inv_f.CESS,
                 ],
                 "GSTR-1": [
-                    "gstr_1_" + GSTR1_DataField.POS.value,
-                    "gstr_1_" + GSTR1_DataField.CESS.value,
+                    "gstr_1_" + inv_f.POS,
+                    "gstr_1_" + inv_f.CESS,
                 ],
             }
         )
@@ -1293,12 +1362,12 @@ class ReconcileExcel:
         return frappe._dict(
             {
                 "Books": [
-                    "books_" + GSTR1_DataField.TAXABLE_VALUE.value,
-                    "books_" + GSTR1_DataField.CESS.value,
+                    "books_" + inv_f.TAXABLE_VALUE,
+                    "books_" + inv_f.CESS,
                 ],
                 "GSTR-1": [
-                    "gstr_1_" + GSTR1_DataField.TAXABLE_VALUE.value,
-                    "gstr_1_" + GSTR1_DataField.CESS.value,
+                    "gstr_1_" + inv_f.TAXABLE_VALUE,
+                    "gstr_1_" + inv_f.CESS,
                 ],
             }
         )
@@ -1307,12 +1376,12 @@ class ReconcileExcel:
         return frappe._dict(
             {
                 "Books": [
-                    "books_" + GSTR1_DataField.NIL_RATED_AMOUNT.value,
-                    "books_" + GSTR1_DataField.TAXABLE_VALUE.value,
+                    "books_" + inv_f.NIL_RATED_AMOUNT,
+                    "books_" + inv_f.TAXABLE_VALUE,
                 ],
                 "GSTR-1": [
-                    "gstr_1_" + GSTR1_DataField.NIL_RATED_AMOUNT.value,
-                    "gstr_1_" + GSTR1_DataField.TAXABLE_VALUE.value,
+                    "gstr_1_" + inv_f.NIL_RATED_AMOUNT,
+                    "gstr_1_" + inv_f.TAXABLE_VALUE,
                 ],
             }
         )
@@ -1321,12 +1390,12 @@ class ReconcileExcel:
         return frappe._dict(
             {
                 "Books": [
-                    "books_" + GSTR1_DataField.FROM_SR.value,
-                    "books_" + GSTR1_DataField.CANCELLED_COUNT.value,
+                    "books_" + inv_f.FROM_SR,
+                    "books_" + inv_f.CANCELLED_COUNT,
                 ],
                 "GSTR-1": [
-                    "gstr_1_" + GSTR1_DataField.FROM_SR.value,
-                    "gstr_1_" + GSTR1_DataField.CANCELLED_COUNT.value,
+                    "gstr_1_" + inv_f.FROM_SR,
+                    "gstr_1_" + inv_f.CANCELLED_COUNT,
                 ],
             }
         )
@@ -1335,12 +1404,12 @@ class ReconcileExcel:
         return frappe._dict(
             {
                 "Books": [
-                    "books_" + GSTR1_DataField.QUANTITY.value,
-                    "books_" + GSTR1_DataField.CESS.value,
+                    "books_" + inv_f.QUANTITY,
+                    "books_" + inv_f.CESS,
                 ],
                 "GSTR-1": [
-                    "gstr_1_" + GSTR1_DataField.QUANTITY.value,
-                    "gstr_1_" + GSTR1_DataField.CESS.value,
+                    "gstr_1_" + inv_f.QUANTITY,
+                    "gstr_1_" + inv_f.CESS,
                 ],
             }
         )
@@ -1354,11 +1423,11 @@ class ReconcileExcel:
     def get_b2b_headers(self):
         return [
             {
-                "fieldname": GSTR1_DataField.DOC_TYPE.value,
+                "fieldname": inv_f.DOC_TYPE,
                 "label": _("Document Type"),
             },
             {
-                "fieldname": GSTR1_DataField.DOC_DATE.value,
+                "fieldname": inv_f.DOC_DATE,
                 "label": _("Document Date"),
                 "header_format": {
                     "width": ExcelWidth.XS.value,
@@ -1366,17 +1435,17 @@ class ReconcileExcel:
                 },
             },
             {
-                "fieldname": GSTR1_DataField.DOC_NUMBER.value,
+                "fieldname": inv_f.DOC_NUMBER,
                 "label": _("Document No"),
                 "header_format": {"width": ExcelWidth.SM.value},
             },
             {
-                "fieldname": GSTR1_DataField.CUST_GSTIN.value,
+                "fieldname": inv_f.CUST_GSTIN,
                 "label": _("Customer GSTIN"),
                 "header_format": {"width": ExcelWidth.SM.value},
             },
             {
-                "fieldname": GSTR1_DataField.CUST_NAME.value,
+                "fieldname": inv_f.CUST_NAME,
                 "label": _("Customer Name"),
                 "header_format": {"width": ExcelWidth.XXL.value},
             },
@@ -1388,11 +1457,11 @@ class ReconcileExcel:
     def get_b2cl_headers(self):
         return [
             {
-                "fieldname": GSTR1_DataField.DOC_TYPE.value,
+                "fieldname": inv_f.DOC_TYPE,
                 "label": _("Document Type"),
             },
             {
-                "fieldname": GSTR1_DataField.DOC_DATE.value,
+                "fieldname": inv_f.DOC_DATE,
                 "label": _("Document Date"),
                 "header_format": {
                     "width": ExcelWidth.XS.value,
@@ -1400,21 +1469,21 @@ class ReconcileExcel:
                 },
             },
             {
-                "fieldname": GSTR1_DataField.DOC_NUMBER.value,
+                "fieldname": inv_f.DOC_NUMBER,
                 "label": _("Document No"),
                 "header_format": {"width": ExcelWidth.SM.value},
             },
             {
-                "fieldname": GSTR1_DataField.CUST_NAME.value,
+                "fieldname": inv_f.CUST_NAME,
                 "label": _("Customer Name"),
                 "header_format": {"width": ExcelWidth.XXL.value},
             },
             {"fieldname": "match_status", "label": _("Match Status")},
             *self.get_tax_difference_columns(),
             {
-                "fieldname": "books_" + GSTR1_DataField.POS.value,
-                "label": _(GovExcelField.POS.value),
-                "compare_with": "gstr_1_" + GSTR1_DataField.POS.value,
+                "fieldname": "books_" + inv_f.POS,
+                "label": _(gov_xl.POS),
+                "compare_with": "gstr_1_" + inv_f.POS,
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_green,
                 },
@@ -1424,9 +1493,9 @@ class ReconcileExcel:
             },
             *self.get_amount_field_columns(for_books=True, only_igst=True),
             {
-                "fieldname": "gstr_1_" + GSTR1_DataField.POS.value,
-                "label": _(GovExcelField.POS.value),
-                "compare_with": "books_" + GSTR1_DataField.POS.value,
+                "fieldname": "gstr_1_" + inv_f.POS,
+                "label": _(gov_xl.POS),
+                "compare_with": "books_" + inv_f.POS,
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_blue,
                 },
@@ -1440,11 +1509,11 @@ class ReconcileExcel:
     def get_exp_headers(self):
         return [
             {
-                "fieldname": GSTR1_DataField.DOC_TYPE.value,
+                "fieldname": inv_f.DOC_TYPE,
                 "label": _("Document Type"),
             },
             {
-                "fieldname": GSTR1_DataField.DOC_DATE.value,
+                "fieldname": inv_f.DOC_DATE,
                 "label": _("Document Date"),
                 "header_format": {
                     "width": ExcelWidth.XS.value,
@@ -1452,27 +1521,27 @@ class ReconcileExcel:
                 },
             },
             {
-                "fieldname": GSTR1_DataField.DOC_NUMBER.value,
+                "fieldname": inv_f.DOC_NUMBER,
                 "label": _("Document No"),
                 "header_format": {"width": ExcelWidth.SM.value},
             },
             {
-                "fieldname": GSTR1_DataField.CUST_NAME.value,
+                "fieldname": inv_f.CUST_NAME,
                 "label": _("Customer Name"),
                 "header_format": {"width": ExcelWidth.XXL.value},
             },
             {
-                "fieldname": GSTR1_DataField.SHIPPING_BILL_NUMBER.value,
-                "label": _(GovExcelField.SHIPPING_BILL_NO.value),
+                "fieldname": inv_f.SHIPPING_BILL_NUMBER,
+                "label": _(gov_xl.SHIPPING_BILL_NO),
                 "header_format": {"width": ExcelWidth.SM.value},
             },
             {
-                "fieldname": GSTR1_DataField.SHIPPING_BILL_DATE.value,
-                "label": _(GovExcelField.SHIPPING_BILL_DATE.value),
+                "fieldname": inv_f.SHIPPING_BILL_DATE,
+                "label": _(gov_xl.SHIPPING_BILL_DATE),
                 "header_format": {"width": ExcelWidth.XS.value},
             },
             {
-                "fieldname": GSTR1_DataField.SHIPPING_PORT_CODE.value,
+                "fieldname": inv_f.SHIPPING_PORT_CODE,
                 "label": _("Shipping Port Code"),
             },
             {"fieldname": "match_status", "label": _("Match Status")},
@@ -1484,15 +1553,15 @@ class ReconcileExcel:
     def get_b2cs_headers(self):
         return [
             {
-                "fieldname": GSTR1_DataField.DOC_TYPE.value,
+                "fieldname": inv_f.DOC_TYPE,
                 "label": _("Document Type"),
             },
             {
-                "fieldname": GSTR1_DataField.POS.value,
-                "label": _(GovExcelField.POS.value),
+                "fieldname": inv_f.POS,
+                "label": _(gov_xl.POS),
             },
             {
-                "fieldname": GSTR1_DataField.TAX_RATE.value,
+                "fieldname": inv_f.TAX_RATE,
                 "label": _("Tax Rate"),
                 "header_format": {"width": ExcelWidth.XS.value},
             },
@@ -1505,16 +1574,16 @@ class ReconcileExcel:
     def get_nil_headers(self):
         return [
             {
-                "fieldname": GSTR1_DataField.DOC_TYPE.value,
+                "fieldname": inv_f.DOC_TYPE,
                 "label": _("Document Type"),
                 "header_format": {"width": ExcelWidth.XXL.value},
             },
             {"fieldname": "match_status", "label": _("Match Status")},
             *self.get_tax_difference_columns(),
             {
-                "fieldname": "books_" + GSTR1_DataField.NIL_RATED_AMOUNT.value,
+                "fieldname": "books_" + inv_f.NIL_RATED_AMOUNT,
                 "label": _("Nil-Rated Supplies"),
-                "compare_with": "gstr_1_" + GSTR1_DataField.NIL_RATED_AMOUNT.value,
+                "compare_with": "gstr_1_" + inv_f.NIL_RATED_AMOUNT,
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_green,
                     "number_format": self.AMOUNT_FORMAT,
@@ -1522,9 +1591,9 @@ class ReconcileExcel:
                 "header_format": {"bg_color": self.COLOR_PALLATE.green},
             },
             {
-                "fieldname": "books_" + GSTR1_DataField.EXEMPTED_AMOUNT.value,
+                "fieldname": "books_" + inv_f.EXEMPTED_AMOUNT,
                 "label": _("Exempted Supplies"),
-                "compare_with": "gstr_1_" + GSTR1_DataField.EXEMPTED_AMOUNT.value,
+                "compare_with": "gstr_1_" + inv_f.EXEMPTED_AMOUNT,
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_green,
                     "number_format": self.AMOUNT_FORMAT,
@@ -1532,9 +1601,9 @@ class ReconcileExcel:
                 "header_format": {"bg_color": self.COLOR_PALLATE.green},
             },
             {
-                "fieldname": "books_" + GSTR1_DataField.NON_GST_AMOUNT.value,
+                "fieldname": "books_" + inv_f.NON_GST_AMOUNT,
                 "label": _("Non-GST Supplies"),
-                "compare_with": "gstr_1_" + GSTR1_DataField.NON_GST_AMOUNT.value,
+                "compare_with": "gstr_1_" + inv_f.NON_GST_AMOUNT,
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_green,
                     "number_format": self.AMOUNT_FORMAT,
@@ -1542,9 +1611,9 @@ class ReconcileExcel:
                 "header_format": {"bg_color": self.COLOR_PALLATE.green},
             },
             {
-                "fieldname": "books_" + GSTR1_DataField.TAXABLE_VALUE.value,
-                "label": _(GovExcelField.TAXABLE_VALUE.value),
-                "compare_with": "gstr_1_" + GSTR1_DataField.TAXABLE_VALUE.value,
+                "fieldname": "books_" + inv_f.TAXABLE_VALUE,
+                "label": _(gov_xl.TAXABLE_VALUE),
+                "compare_with": "gstr_1_" + inv_f.TAXABLE_VALUE,
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_green,
                     "number_format": self.AMOUNT_FORMAT,
@@ -1552,9 +1621,9 @@ class ReconcileExcel:
                 "header_format": {"bg_color": self.COLOR_PALLATE.green},
             },
             {
-                "fieldname": "gstr_1_" + GSTR1_DataField.NIL_RATED_AMOUNT.value,
+                "fieldname": "gstr_1_" + inv_f.NIL_RATED_AMOUNT,
                 "label": _("Nil-Rated Supplies"),
-                "compare_with": "books_" + GSTR1_DataField.NIL_RATED_AMOUNT.value,
+                "compare_with": "books_" + inv_f.NIL_RATED_AMOUNT,
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_blue,
                     "number_format": self.AMOUNT_FORMAT,
@@ -1562,9 +1631,9 @@ class ReconcileExcel:
                 "header_format": {"bg_color": self.COLOR_PALLATE.sky_blue},
             },
             {
-                "fieldname": "gstr_1_" + GSTR1_DataField.EXEMPTED_AMOUNT.value,
+                "fieldname": "gstr_1_" + inv_f.EXEMPTED_AMOUNT,
                 "label": _("Exempted Supplies"),
-                "compare_with": "books_" + GSTR1_DataField.EXEMPTED_AMOUNT.value,
+                "compare_with": "books_" + inv_f.EXEMPTED_AMOUNT,
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_blue,
                     "number_format": self.AMOUNT_FORMAT,
@@ -1572,9 +1641,9 @@ class ReconcileExcel:
                 "header_format": {"bg_color": self.COLOR_PALLATE.sky_blue},
             },
             {
-                "fieldname": "gstr_1_" + GSTR1_DataField.NON_GST_AMOUNT.value,
+                "fieldname": "gstr_1_" + inv_f.NON_GST_AMOUNT,
                 "label": _("Non-GST Supplies"),
-                "compare_with": "books_" + GSTR1_DataField.NON_GST_AMOUNT.value,
+                "compare_with": "books_" + inv_f.NON_GST_AMOUNT,
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_blue,
                     "number_format": self.AMOUNT_FORMAT,
@@ -1582,9 +1651,9 @@ class ReconcileExcel:
                 "header_format": {"bg_color": self.COLOR_PALLATE.sky_blue},
             },
             {
-                "fieldname": "gstr_1_" + GSTR1_DataField.TAXABLE_VALUE.value,
-                "label": _(GovExcelField.TAXABLE_VALUE.value),
-                "compare_with": "books_" + GSTR1_DataField.TAXABLE_VALUE.value,
+                "fieldname": "gstr_1_" + inv_f.TAXABLE_VALUE,
+                "label": _(gov_xl.TAXABLE_VALUE),
+                "compare_with": "books_" + inv_f.TAXABLE_VALUE,
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_blue,
                     "number_format": self.AMOUNT_FORMAT,
@@ -1596,11 +1665,11 @@ class ReconcileExcel:
     def get_cdnr_headers(self):
         return [
             {
-                "fieldname": GSTR1_DataField.DOC_TYPE.value,
+                "fieldname": inv_f.DOC_TYPE,
                 "label": _("Document Type"),
             },
             {
-                "fieldname": GSTR1_DataField.DOC_DATE.value,
+                "fieldname": inv_f.DOC_DATE,
                 "label": _("Document Date"),
                 "header_format": {
                     "width": ExcelWidth.XS.value,
@@ -1608,17 +1677,17 @@ class ReconcileExcel:
                 },
             },
             {
-                "fieldname": GSTR1_DataField.DOC_NUMBER.value,
+                "fieldname": inv_f.DOC_NUMBER,
                 "label": _("Document No"),
                 "header_format": {"width": ExcelWidth.SM.value},
             },
             {
-                "fieldname": GSTR1_DataField.CUST_GSTIN.value,
+                "fieldname": inv_f.CUST_GSTIN,
                 "label": _("Customer GSTIN"),
                 "header_format": {"width": ExcelWidth.SM.value},
             },
             {
-                "fieldname": GSTR1_DataField.CUST_NAME.value,
+                "fieldname": inv_f.CUST_NAME,
                 "label": _("Customer Name"),
                 "header_format": {"width": ExcelWidth.XXL.value},
             },
@@ -1630,11 +1699,11 @@ class ReconcileExcel:
     def get_cdnur_headers(self):
         return [
             {
-                "fieldname": GSTR1_DataField.DOC_TYPE.value,
+                "fieldname": inv_f.DOC_TYPE,
                 "label": _("Document Type"),
             },
             {
-                "fieldname": GSTR1_DataField.DOC_DATE.value,
+                "fieldname": inv_f.DOC_DATE,
                 "label": _("Document Date"),
                 "header_format": {
                     "width": ExcelWidth.XS.value,
@@ -1642,26 +1711,26 @@ class ReconcileExcel:
                 },
             },
             {
-                "fieldname": GSTR1_DataField.DOC_NUMBER.value,
+                "fieldname": inv_f.DOC_NUMBER,
                 "label": _("Document No"),
                 "header_format": {"width": ExcelWidth.SM.value},
             },
             {
-                "fieldname": GSTR1_DataField.CUST_GSTIN.value,
+                "fieldname": inv_f.CUST_GSTIN,
                 "label": _("Customer GSTIN"),
                 "header_format": {"width": ExcelWidth.SM.value},
             },
             {
-                "fieldname": GSTR1_DataField.CUST_NAME.value,
+                "fieldname": inv_f.CUST_NAME,
                 "label": _("Customer Name"),
                 "header_format": {"width": ExcelWidth.XXL.value},
             },
             {"fieldname": "match_status", "label": _("Match Status")},
             *self.get_tax_difference_columns(),
             {
-                "fieldname": "books_" + GSTR1_DataField.POS.value,
-                "label": _(GovExcelField.POS.value),
-                "compare_with": "gstr_1_" + GSTR1_DataField.POS.value,
+                "fieldname": "books_" + inv_f.POS,
+                "label": _(gov_xl.POS),
+                "compare_with": "gstr_1_" + inv_f.POS,
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_green,
                 },
@@ -1671,9 +1740,9 @@ class ReconcileExcel:
             },
             *self.get_amount_field_columns(for_books=True, only_igst=True),
             {
-                "fieldname": "gstr_1_" + GSTR1_DataField.POS.value,
-                "label": _(GovExcelField.POS.value),
-                "compare_with": "books_" + GSTR1_DataField.POS.value,
+                "fieldname": "gstr_1_" + inv_f.POS,
+                "label": _(gov_xl.POS),
+                "compare_with": "books_" + inv_f.POS,
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_blue,
                 },
@@ -1687,7 +1756,7 @@ class ReconcileExcel:
     def get_doc_issue_headers(self):
         headers = [
             {
-                "fieldname": GSTR1_DataField.DOC_TYPE.value,
+                "fieldname": inv_f.DOC_TYPE,
                 "label": _("Document Type"),
                 "header_format": {"width": ExcelWidth.XXL.value},
             },
@@ -1696,9 +1765,9 @@ class ReconcileExcel:
                 "label": _("Match Status"),
             },
             {
-                "fieldname": "books_" + GSTR1_DataField.FROM_SR.value,
+                "fieldname": "books_" + inv_f.FROM_SR,
                 "label": _("SR No From"),
-                "compare_with": "gstr_1_" + GSTR1_DataField.FROM_SR.value,
+                "compare_with": "gstr_1_" + inv_f.FROM_SR,
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_green,
                 },
@@ -1707,9 +1776,9 @@ class ReconcileExcel:
                 },
             },
             {
-                "fieldname": "books_" + GSTR1_DataField.TO_SR.value,
+                "fieldname": "books_" + inv_f.TO_SR,
                 "label": _("SR No To"),
-                "compare_with": "gstr_1_" + GSTR1_DataField.TO_SR.value,
+                "compare_with": "gstr_1_" + inv_f.TO_SR,
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_green,
                 },
@@ -1718,9 +1787,9 @@ class ReconcileExcel:
                 },
             },
             {
-                "fieldname": "books_" + GSTR1_DataField.TOTAL_COUNT.value,
+                "fieldname": "books_" + inv_f.TOTAL_COUNT,
                 "label": _("Total Count"),
-                "compare_with": "gstr_1_" + GSTR1_DataField.TOTAL_COUNT.value,
+                "compare_with": "gstr_1_" + inv_f.TOTAL_COUNT,
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_green,
                 },
@@ -1730,9 +1799,9 @@ class ReconcileExcel:
                 },
             },
             {
-                "fieldname": "books_" + GSTR1_DataField.CANCELLED_COUNT.value,
+                "fieldname": "books_" + inv_f.CANCELLED_COUNT,
                 "label": _("Cancelled Count"),
-                "compare_with": "gstr_1_" + GSTR1_DataField.CANCELLED_COUNT.value,
+                "compare_with": "gstr_1_" + inv_f.CANCELLED_COUNT,
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_green,
                 },
@@ -1742,9 +1811,9 @@ class ReconcileExcel:
                 },
             },
             {
-                "fieldname": "gstr_1_" + GSTR1_DataField.FROM_SR.value,
+                "fieldname": "gstr_1_" + inv_f.FROM_SR,
                 "label": _("Sr No From"),
-                "compare_with": "books_" + GSTR1_DataField.FROM_SR.value,
+                "compare_with": "books_" + inv_f.FROM_SR,
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_blue,
                 },
@@ -1753,9 +1822,9 @@ class ReconcileExcel:
                 },
             },
             {
-                "fieldname": "gstr_1_" + GSTR1_DataField.TO_SR.value,
+                "fieldname": "gstr_1_" + inv_f.TO_SR,
                 "label": _("Sr No To"),
-                "compare_with": "books_" + GSTR1_DataField.TO_SR.value,
+                "compare_with": "books_" + inv_f.TO_SR,
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_blue,
                 },
@@ -1764,9 +1833,9 @@ class ReconcileExcel:
                 },
             },
             {
-                "fieldname": "gstr_1_" + GSTR1_DataField.TOTAL_COUNT.value,
+                "fieldname": "gstr_1_" + inv_f.TOTAL_COUNT,
                 "label": _("Total Count"),
-                "compare_with": "books_" + GSTR1_DataField.TOTAL_COUNT.value,
+                "compare_with": "books_" + inv_f.TOTAL_COUNT,
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_blue,
                 },
@@ -1776,9 +1845,9 @@ class ReconcileExcel:
                 },
             },
             {
-                "fieldname": "gstr_1_" + GSTR1_DataField.CANCELLED_COUNT.value,
+                "fieldname": "gstr_1_" + inv_f.CANCELLED_COUNT,
                 "label": _("Cancelled Count"),
-                "compare_with": "books_" + GSTR1_DataField.CANCELLED_COUNT.value,
+                "compare_with": "books_" + inv_f.CANCELLED_COUNT,
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_blue,
                 },
@@ -1793,27 +1862,27 @@ class ReconcileExcel:
 
     def get_hsn_headers(self):
         headers = [
-            {"fieldname": GSTR1_DataField.HSN_CODE.value, "label": _("HSN Code")},
+            {"fieldname": inv_f.HSN_CODE, "label": _("HSN Code")},
             {
-                "fieldname": GSTR1_DataField.DESCRIPTION.value,
+                "fieldname": inv_f.DESCRIPTION,
                 "label": _("Description"),
                 "header_format": {"width": ExcelWidth.XXL.value},
             },
             {
-                "fieldname": GSTR1_DataField.UOM.value,
-                "label": _(GovExcelField.UOM.value),
+                "fieldname": inv_f.UOM,
+                "label": _(gov_xl.UOM),
             },
             {
-                "fieldname": GSTR1_DataField.TAX_RATE.value,
-                "label": _(GovExcelField.TAX_RATE.value),
+                "fieldname": inv_f.TAX_RATE,
+                "label": _(gov_xl.TAX_RATE),
                 "header_format": {"width": ExcelWidth.XS.value},
             },
             {"fieldname": "match_status", "label": _("Match Status")},
             *self.get_tax_difference_columns(),
             {
-                "fieldname": "books_" + GSTR1_DataField.QUANTITY.value,
+                "fieldname": "books_" + inv_f.QUANTITY,
                 "label": _("Quantity"),
-                "compare_with": "gstr_1_" + GSTR1_DataField.QUANTITY.value,
+                "compare_with": "gstr_1_" + inv_f.QUANTITY,
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_green,
                 },
@@ -1824,9 +1893,9 @@ class ReconcileExcel:
             },
             *self.get_amount_field_columns(for_books=True),
             {
-                "fieldname": "gstr_1_" + GSTR1_DataField.QUANTITY.value,
+                "fieldname": "gstr_1_" + inv_f.QUANTITY,
                 "label": _("Quantity"),
-                "compare_with": "books_" + GSTR1_DataField.QUANTITY.value,
+                "compare_with": "books_" + inv_f.QUANTITY,
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_blue,
                 },
@@ -1843,7 +1912,7 @@ class ReconcileExcel:
     def get_at_headers(self):
         return [
             {
-                "fieldname": GSTR1_DataField.POS.value,
+                "fieldname": inv_f.POS,
                 "label": _("POS"),
             },
             {"fieldname": "match_status", "label": _("Match Status")},
@@ -1862,19 +1931,19 @@ class ReconcileExcel:
         row.update({"books_" + key: value for key, value in books.items()})
         row.update({"gstr_1_" + key: value for key, value in gstr_1.items()})
 
-        doc_date = row.get(GSTR1_DataField.DOC_DATE.value)
-        row[GSTR1_DataField.DOC_DATE.value] = getdate(doc_date) if doc_date else ""
+        doc_date = row.get(inv_f.DOC_DATE)
+        row[inv_f.DOC_DATE] = getdate(doc_date) if doc_date else ""
 
         self.update_differences(row)
 
         return row
 
     def update_differences(self, row_dict):
-        taxable_value_key = GSTR1_DataField.TAXABLE_VALUE.value
-        igst_key = GSTR1_DataField.IGST.value
-        cgst_key = GSTR1_DataField.CGST.value
-        sgst_key = GSTR1_DataField.SGST.value
-        cess_key = GSTR1_DataField.CESS.value
+        taxable_value_key = inv_f.TAXABLE_VALUE
+        igst_key = inv_f.IGST
+        cgst_key = inv_f.CGST
+        sgst_key = inv_f.SGST
+        cess_key = inv_f.CESS
 
         row_dict["taxable_value_difference"] = (
             row_dict.get("books_" + taxable_value_key, 0)
@@ -1947,16 +2016,16 @@ class ReconcileExcel:
 
             return [
                 {
-                    "fieldname": field_prefix + GSTR1_DataField.CGST.value,
+                    "fieldname": field_prefix + inv_f.CGST,
                     "label": _("CGST"),
-                    "compare_with": compare_with + GSTR1_DataField.CGST.value,
+                    "compare_with": compare_with + inv_f.CGST,
                     "data_format": data_format,
                     "header_format": header_format,
                 },
                 {
-                    "fieldname": field_prefix + GSTR1_DataField.SGST.value,
+                    "fieldname": field_prefix + inv_f.SGST,
                     "label": _("SGST"),
-                    "compare_with": compare_with + GSTR1_DataField.SGST.value,
+                    "compare_with": compare_with + inv_f.SGST,
                     "data_format": data_format,
                     "header_format": header_format,
                 },
@@ -1964,24 +2033,24 @@ class ReconcileExcel:
 
         return [
             {
-                "fieldname": field_prefix + GSTR1_DataField.TAXABLE_VALUE.value,
-                "label": _(GovExcelField.TAXABLE_VALUE.value),
-                "compare_with": compare_with + GSTR1_DataField.TAXABLE_VALUE.value,
+                "fieldname": field_prefix + inv_f.TAXABLE_VALUE,
+                "label": _(gov_xl.TAXABLE_VALUE),
+                "compare_with": compare_with + inv_f.TAXABLE_VALUE,
                 "data_format": data_format,
                 "header_format": header_format,
             },
             {
-                "fieldname": field_prefix + GSTR1_DataField.IGST.value,
+                "fieldname": field_prefix + inv_f.IGST,
                 "label": _("IGST"),
-                "compare_with": compare_with + GSTR1_DataField.IGST.value,
+                "compare_with": compare_with + inv_f.IGST,
                 "data_format": data_format,
                 "header_format": header_format,
             },
             *get_cgst_sgst_columns(),
             {
-                "fieldname": field_prefix + GSTR1_DataField.CESS.value,
+                "fieldname": field_prefix + inv_f.CESS,
                 "label": _("CESS"),
-                "compare_with": compare_with + GSTR1_DataField.CESS.value,
+                "compare_with": compare_with + inv_f.CESS,
                 "data_format": data_format,
                 "header_format": header_format,
             },
@@ -2002,16 +2071,16 @@ class ReconcileExcel:
 
         return [
             {
-                "fieldname": field_prefix + GSTR1_DataField.POS.value,
-                "label": _(GovExcelField.POS.value),
-                "compare_with": compare_with + GSTR1_DataField.POS.value,
+                "fieldname": field_prefix + inv_f.POS,
+                "label": _(gov_xl.POS),
+                "compare_with": compare_with + inv_f.POS,
                 "data_format": {"bg_color": data_color},
                 "header_format": {"bg_color": header_color},
             },
             {
-                "fieldname": field_prefix + GSTR1_DataField.REVERSE_CHARGE.value,
-                "label": _(GovExcelField.REVERSE_CHARGE.value),
-                "compare_with": compare_with + GSTR1_DataField.REVERSE_CHARGE.value,
+                "fieldname": field_prefix + inv_f.REVERSE_CHARGE,
+                "label": _(gov_xl.REVERSE_CHARGE),
+                "compare_with": compare_with + inv_f.REVERSE_CHARGE,
                 "data_format": {"bg_color": data_color},
                 "header_format": {
                     "bg_color": header_color,
@@ -2068,10 +2137,26 @@ def get_gstr_1_json(
     for subcategory, subcategory_data in data.items():
         if subcategory in {
             GSTR1_SubCategory.NIL_EXEMPT.value,
-            GSTR1_SubCategory.HSN.value,
+            GSTR1_SubCategory.HSN_B2B.value,
+            GSTR1_SubCategory.HSN_B2C.value,
+            GSTR1_SubCategory.HSN.value,  # Backwards compatibility
             GSTR1_SubCategory.DOC_ISSUE.value,
             *QUARTERLY_KEYS,
+            "rounding_difference",
         }:
+            continue
+
+        if subcategory == GSTR1_SubCategory.HSN.value:
+            for row in subcategory_data.values():
+                if row.get(inv_f.HSN_CODE):
+                    continue
+
+                frappe.throw(
+                    _(
+                        "GST HSN Code is missing in one or more invoices. Please ensure all invoices include the HSN Code, as it is Mandatory for filing GSTR-1."
+                    )
+                )
+
             continue
 
         discard_invoices = []
