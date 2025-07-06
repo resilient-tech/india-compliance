@@ -214,7 +214,7 @@ class BaseAPI:
             success_value = sbool(success_value)
 
         if not success_value:
-            self.handle_server_error(response_json)
+            self.handle_server_error([response_json.get("message")])
 
         if not success_value and not self.is_ignored_error(response_json):
             frappe.throw(
@@ -224,7 +224,7 @@ class BaseAPI:
                 title=_("API Request Failed"),
             )
 
-    def handle_server_error(self, response_json):
+    def handle_server_error(self, error_messages):
         error_message_list = [
             "GSPGSTDOWN",
             "GSPERR300",
@@ -232,9 +232,10 @@ class BaseAPI:
             "No route to host",
         ]
 
-        for error in error_message_list:
-            if error in response_json.get("message"):
-                raise GSPServerError
+        for message in error_messages:
+            for error in error_message_list:
+                if error in message:
+                    raise GSPServerError
 
     def is_ignored_error(self, response_json):
         # Override in subclass, return truthy value to stop frappe.throw

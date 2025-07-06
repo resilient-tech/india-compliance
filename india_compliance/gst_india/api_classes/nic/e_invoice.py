@@ -11,7 +11,7 @@ from india_compliance.gst_india.constants import DISTANCE_REGEX
 
 class EInvoiceAPI(BaseAPI):
     API_NAME = "e-Invoice"
-    SENSITIVE_INFO = BaseAPI.SENSITIVE_INFO + ("password",)
+    SENSITIVE_INFO = BaseAPI.SENSITIVE_INFO + ("password", "Password", "AppKey")
     IGNORED_ERROR_CODES = {
         # Generate IRN errors
         "2150": "Duplicate IRN",
@@ -162,9 +162,10 @@ class StandardEInvoiceAPI(EInvoiceAPI):
 
         self.fetch_credentials(self.company_gstin, "e-Waybill / e-Invoice")
         self.app_key = base64.b64encode(self.app_key.encode()).decode()
-        self.auth_strategy = StandardAuth(self)
-
         self.set_default_headers()
+
+        self.auth_strategy = StandardAuth(self)
+        self.auth_strategy.authenticate()
 
     def authenticate(self):
         json_data = {
@@ -177,18 +178,34 @@ class StandardEInvoiceAPI(EInvoiceAPI):
         return self.post(endpoint="auth", json=json_data)
 
     def handle_error_response(self, response_json):
-        success_value = response_json.get("Status") != 0
+        is_success = response_json.get("Status") != 0
 
-        if not success_value:
-            self.handle_server_error(response_json)
+        if is_success:
+            return
 
-        if not success_value and not self.is_ignored_error(response_json):
-            frappe.throw(
-                response_json.get("ErrorDetails", [{}])[0].get("ErrorMessage")
-                # Fallback to response body if message is not present
-                or frappe.as_json(response_json, indent=4),
-                title=_("API Request Failed"),
-            )
+        # extract errors
+        error_messages = [
+            f"{error.get('ErrorCode', '')}: {error.get('ErrorMessage', '')}"
+            for error in response_json.get("ErrorDetails", [])
+        ]
+        self.handle_server_error(error_messages)
+
+        if self.is_ignored_error(response_json):
+            return
+
+        # throw
+        formatted_error_message = (
+            (
+                ("<br>").join(error_messages)
+                if error_messages
+                else frappe.as_json(response_json, indent=4)
+            ),
+        )
+
+        frappe.throw(
+            _("Error generating e-Invoice:<br>{0}").format(formatted_error_message),
+            title=_("API Request Failed"),
+        )
 
     def is_ignored_error(self, response):
         error_details = response.get("ErrorDetails")

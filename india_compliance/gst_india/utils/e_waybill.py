@@ -197,7 +197,7 @@ def _generate_e_waybill(doc, throw=True, force=False):
 
     if result.error_code == "604":
         error_message = (
-            result.message
+            result.error_message
             + """<br/><br/> Try to fetch active e-waybills by Date if already generated."""
         )
         frappe.throw(error_message, title=_("API Request Failed"))

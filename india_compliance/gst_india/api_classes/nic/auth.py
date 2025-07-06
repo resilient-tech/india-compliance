@@ -12,6 +12,7 @@ from india_compliance.gst_india.api_classes.taxpayer_base import StaticResources
 from india_compliance.gst_india.utils.cryptography import (
     aes_decrypt_data,
     aes_encrypt_data,
+    hmac_sha256,
 )
 
 
@@ -30,10 +31,10 @@ class Auth:
     def __init__(self, client=None):
         self.client = client
 
-        if not self._is_authenticated():
-            self.authenticate()
-
     def authenticate(self):
+        if self._is_authenticated():
+            return
+
         if not self.client:
             raise ValueError("Client is required for authentication")
 
@@ -59,10 +60,9 @@ class StandardAuth(Auth):
         if self._is_authentication_api(request_args.get("url")):
             return
 
-        request_args["headers"][self.client.AUTH_TOKEN] = self.auth_token
+        request_args["headers"][self.client.AUTH_TOKEN] = self.client.auth_token
 
     def process_response(self, response):
-        self.client.handle_error_response(response)
         self._decrypt_response(response)
         return response
 
@@ -95,13 +95,14 @@ class StandardAuth(Auth):
         else:
             # other requests => use session key
             encrypted_data = aes_encrypt_data(
-                frappe.as_json(json_data), self.session_key
+                frappe.as_json(json_data), self.client.session_key
             )
 
         # update request
+        params = request_args.pop("params", {}) or {}
         request_args["json"] = {
             "Data": encrypted_data,
-            **request_args.pop("params", {}),
+            **params,
         }
 
     def _decrypt_response(self, response):
@@ -128,18 +129,18 @@ class StandardAuth(Auth):
         # extract and store auth token
         auth_token = response.get(self.client.AUTH_TOKEN)
         if auth_token:
-            self.auth_token = auth_token
+            self.client.auth_token = auth_token
             values["auth_token"] = auth_token
 
         # decrypt and store session key
         sek_data = response.get(self.client.SEK)
         if sek_data:
             app_key = base64.b64decode(self.client.app_key.encode())
-            self.session_key = aes_decrypt_data(sek_data, app_key)
-            self.session_expiry = add_to_date(now_datetime(), hours=6)
+            self.client.session_key = aes_decrypt_data(sek_data, app_key)
+            self.client.session_expiry = add_to_date(now_datetime(), hours=6)
 
-            values["session_key"] = base64.b64encode(self.session_key).decode()
-            values["session_expiry"] = self.session_expiry
+            values["session_key"] = base64.b64encode(self.client.session_key).decode()
+            values["session_expiry"] = self.client.session_expiry
 
         # update credentials
         if values:
@@ -156,13 +157,13 @@ class StandardAuth(Auth):
         # decrypt REK if present
         rek_data = response.get(self.client.REK)
         decrypted_rek = (
-            aes_decrypt_data(rek_data, self.session_key) if rek_data else None
+            aes_decrypt_data(rek_data, self.client.session_key) if rek_data else None
         )
 
         # decrypt main response data
         response_data = response.get(self.client.DATA)
         if response_data and isinstance(response_data, str):
-            decryption_key = decrypted_rek or self.session_key
+            decryption_key = decrypted_rek or self.client.session_key
             decrypted_data = aes_decrypt_data(
                 response.pop(self.client.DATA), decryption_key
             )
@@ -170,13 +171,14 @@ class StandardAuth(Auth):
             # validate HMAC if present
             expected_hmac = response.get(self.client.HMAC)
             if expected_hmac:
-                computed_hmac = aes_decrypt_data(
+                computed_hmac = hmac_sha256(
                     base64.b64encode(decrypted_data), decrypted_rek
                 )
                 if computed_hmac != expected_hmac:
                     frappe.throw(_("HMAC mismatch"))
 
-            response.result = frappe.parse_json(decrypted_data.decode())
+            if result := frappe.parse_json(decrypted_data.decode()):
+                response.result = result
 
     def _get_public_key(self):
         key = self.client.settings.nic_public_key
