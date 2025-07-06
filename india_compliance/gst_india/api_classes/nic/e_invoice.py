@@ -30,6 +30,14 @@ class EInvoiceAPI(BaseAPI):
         "3001": "Requested data is not available",
     }
 
+    # Response Keys
+    AUTH_TOKEN = "AuthToken"
+    USER_NAME = "UserName"
+    DATA = "Data"
+    SEK = "Sek"
+    REK = "Rek"
+    HMAC = "Hmac"
+
     def __new__(cls, *args, **kwargs):
         if cls != EInvoiceAPI:
             return super().__new__(cls)
@@ -76,6 +84,8 @@ class EInvoiceAPI(BaseAPI):
                 response_json.error_code = error_code
                 return True
 
+        return False
+
     def get_e_invoice_by_irn(self, irn):
         return self.get(endpoint="invoice/irn", params={"irn": irn})
 
@@ -121,10 +131,6 @@ class EInvoiceAPI(BaseAPI):
 
     def sync_gstin_info(self, gstin):
         return self.get(endpoint="master/syncgstin", params={"gstin": gstin})
-
-    @staticmethod
-    def getkey(key):
-        return key
 
 
 class EnrichedEInvoiceAPI(EInvoiceAPI):
@@ -175,12 +181,14 @@ class StandardEInvoiceAPI(EInvoiceAPI):
         error_details = response.get("ErrorDetails")
 
         if not error_details:
-            return
+            return False
 
         error_code = error_details[0].get("ErrorCode")
         if error_code in self.IGNORED_ERROR_CODES:
             response.error_code = error_code
             return True
+
+        return False
 
     def authenticate(self):
         json_data = {

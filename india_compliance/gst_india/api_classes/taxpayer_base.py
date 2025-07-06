@@ -27,7 +27,6 @@ from india_compliance.gst_india.utils.cryptography import (
 
 
 def otp_handler(func):
-
     @wraps(func)
     def wrapper(*args, **kwargs):
         try:
@@ -456,6 +455,8 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
                 raise InvalidOTPError(response=response)
 
             return True
+
+        return False
 
     def get_files(self, return_period, token, action, endpoint):
         response = self.get(

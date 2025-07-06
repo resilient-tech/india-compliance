@@ -25,6 +25,14 @@ class EWaybillAPI(BaseAPI):
         "328": "Could not retrieve transporter details from gstin",
     }
 
+    # Response Keys
+    AUTH_TOKEN = "authtoken"
+    USER_NAME = "username"
+    DATA = "data"
+    SEK = "sek"
+    REK = "rek"
+    HMAC = "hmac"
+
     def __new__(cls, *args, **kwargs):
         if cls != EWaybillAPI:
             return super().__new__(cls)
@@ -77,6 +85,8 @@ class EWaybillAPI(BaseAPI):
                 response_json.error_code = error_code
                 return True
 
+        return False
+
     def get_e_waybill(self, ewaybill_number):
         action = "getewaybill" if self.sandbox_mode else "GetEwayBill"
         return self.get(action, params={"ewbNo": ewaybill_number})
@@ -108,10 +118,6 @@ class EWaybillAPI(BaseAPI):
             and (distance_match := re.search(DISTANCE_REGEX, alert))
         ):
             result.distance = int(distance_match.group())
-
-    @staticmethod
-    def getkey(key):
-        return key.lower()
 
 
 class EnrichedEWaybillAPI(EWaybillAPI):
@@ -172,6 +178,8 @@ class StandardEWaybillAPI(EWaybillAPI):
         if err_code in self.IGNORED_ERROR_CODES:
             response_json.error_code = err_code
             return True
+
+        return False
 
     def handle_error_response(self, response_json):
         success_value = response_json.get("status") != 0

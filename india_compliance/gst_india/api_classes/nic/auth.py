@@ -59,7 +59,7 @@ class StandardAuth(Auth):
         if self._is_authentication_api(request_args.get("url")):
             return
 
-        request_args["headers"][self.client.getkey("AuthToken")] = self.auth_token
+        request_args["headers"][self.client.AUTH_TOKEN] = self.auth_token
 
     def process_response(self, response):
         self.client.handle_error_response(response)
@@ -76,16 +76,13 @@ class StandardAuth(Auth):
             if not getattr(self.client, attr, None):
                 return False
 
-        if self.client.session_expiry < datetime.now():
-            return False
-
-        return True
+        return self.client.session_expiry >= datetime.now()
 
     def _encrypt_request(self, request_args):
         if not (data := request_args.get("json")):
             return
 
-        key = self.client.getkey("UserName")
+        key = self.client.USER_NAME
         if key in data:
             data = frappe.as_json(data)
             data = base64.b64encode(data.encode())
@@ -101,12 +98,12 @@ class StandardAuth(Auth):
         }
 
     def _decrypt_response(self, response):
-        key = self.client.getkey("Data")
+        key = self.client.DATA
         data = response.get(key) or response
         if not data:
             return
 
-        key = self.client.getkey("AuthToken")
+        key = self.client.AUTH_TOKEN
 
         if isinstance(data, dict) and key in data:
             self._decrypt_session_key(data)
@@ -117,15 +114,15 @@ class StandardAuth(Auth):
     def _decrypt_session_key(self, response):
         # For Auth API
         values = {}
-        key = self.client.getkey("AuthToken")
+        key = self.client.AUTH_TOKEN
         if response.get(key):
             self.auth_token = response[key]
             values["auth_token"] = response[key]
 
-        key = self.client.getkey("Sek")
+        key = self.client.SEK
         if response.get(key):
             self.session_key = aes_decrypt_data(
-                response[key], base64.b64decode(self.app_key.encode())
+                response[key], base64.b64decode(self.client.app_key.encode())
             )
             self.session_expiry = add_to_date(now_datetime(), hours=6)
 
@@ -136,8 +133,8 @@ class StandardAuth(Auth):
             frappe.db.set_value(
                 "GST Credential",
                 {
-                    "gstin": self.company_gstin,
-                    "username": self.username,
+                    "gstin": self.client.company_gstin,
+                    "username": self.client.username,
                     "service": "e-Waybill / e-Invoice",
                 },
                 values,
@@ -150,24 +147,23 @@ class StandardAuth(Auth):
         # For Other APIs
         decrypted_rek = None
 
-        key = self.client.getkey("Rek")
+        key = self.client.REK
         if response.get(key):
             decrypted_rek = aes_decrypt_data(response[key], self.session_key)
 
-        key = self.client.getkey("Data")
+        key = self.client.DATA
         if response.get(key) and isinstance(response[key], str):
             decrypted_data = aes_decrypt_data(
                 response.pop(key), decrypted_rek or self.session_key
             )
 
-            if response.get(self.client.getkey("Hmac")):
+            if response.get(self.client.HMAC):
                 hmac = aes_decrypt_data(base64.b64encode(decrypted_data), decrypted_rek)
 
-                if hmac != response[self.client.getkey("Hmac")]:
+                if hmac != response[self.client.HMAC]:
                     frappe.throw(_("HMAC mismatch"))
 
             response.result = frappe.parse_json(decrypted_data.decode())
-            return
 
     def _get_public_key(self):
         key = self.client.settings.nic_public_key
