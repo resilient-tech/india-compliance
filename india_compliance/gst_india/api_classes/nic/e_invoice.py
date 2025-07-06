@@ -38,13 +38,14 @@ class EInvoiceAPI(BaseAPI):
     REK = "Rek"
     HMAC = "Hmac"
 
-    def __new__(cls, *args, **kwargs):
+    @classmethod
+    def create(cls, *args, **kwargs):
         if cls != EInvoiceAPI:
-            return super().__new__(cls)
+            return cls(*args, **kwargs)
 
-        sandbox_mode = frappe.db.get_single_value("GST Settings", "sandbox_mode")
+        settings = frappe.get_cached_doc("GST Settings")
 
-        if sandbox_mode:
+        if settings.sandbox_mode:
             return EnrichedEInvoiceAPI(*args, **kwargs)
 
         return StandardEInvoiceAPI(*args, **kwargs)

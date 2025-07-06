@@ -213,7 +213,7 @@ def fetch_gstin_status(*, gstin=None, doc=None, throw=True):
 
         doc = doc or frappe._dict()
         doc.company_gstin = company_gstin
-        response = EInvoiceAPI(doc=doc).get_gstin_info(gstin)
+        response = EInvoiceAPI.create(doc=doc).get_gstin_info(gstin)
         return frappe._dict(
             {
                 "gstin": gstin,
@@ -275,7 +275,7 @@ def fetch_transporter_id_status(transporter_id, doc=None, throw=True):
 
     try:
         # fetched using first credentials
-        response = EWaybillAPI(doc=doc).get_transporter_details(transporter_id)
+        response = EWaybillAPI.create(doc=doc).get_transporter_details(transporter_id)
 
     except Exception as e:
         if throw:
