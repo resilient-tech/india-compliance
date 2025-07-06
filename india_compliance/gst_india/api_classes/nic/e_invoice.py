@@ -33,6 +33,8 @@ class EInvoiceAPI(BaseAPI):
     # Response Keys
     AUTH_TOKEN = "AuthToken"
     USER_NAME = "UserName"
+    PASSWORD = "Password"
+    APP_KEY = "AppKey"
     DATA = "Data"
     SEK = "Sek"
     REK = "Rek"
@@ -164,6 +166,16 @@ class StandardEInvoiceAPI(EInvoiceAPI):
 
         self.set_default_headers()
 
+    def authenticate(self):
+        json_data = {
+            self.USER_NAME: self.username,
+            self.PASSWORD: self.password,
+            self.APP_KEY: self.app_key,
+            "ForceRefreshAccessToken": False,
+        }
+
+        return self.post(endpoint="auth", json=json_data)
+
     def handle_error_response(self, response_json):
         success_value = response_json.get("Status") != 0
 
@@ -190,13 +202,3 @@ class StandardEInvoiceAPI(EInvoiceAPI):
             return True
 
         return False
-
-    def authenticate(self):
-        json_data = {
-            "UserName": self.username,
-            "Password": self.password,
-            "AppKey": self.app_key,
-            "ForceRefreshAccessToken": False,
-        }
-
-        return self.post(endpoint="auth", json=json_data)

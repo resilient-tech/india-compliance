@@ -28,6 +28,8 @@ class EWaybillAPI(BaseAPI):
     # Response Keys
     AUTH_TOKEN = "authtoken"
     USER_NAME = "username"
+    PASSWORD = "password"
+    APP_KEY = "app_key"
     DATA = "data"
     SEK = "sek"
     REK = "rek"
@@ -158,12 +160,12 @@ class StandardEWaybillAPI(EWaybillAPI):
     def authenticate(self):
         json_data = {
             "action": "ACCESSTOKEN",
-            "username": self.username,
-            "password": self.password,
-            "app_key": self.app_key,
+            self.USER_NAME: self.username,
+            self.PASSWORD: self.password,
+            self.APP_KEY: self.app_key,
         }
 
-        return self._make_request("POST", endpoint="auth", json=json_data)
+        return self.post(endpoint="auth", json=json_data)
 
     @change_base_path("standard/ewb/master")
     def get_transporter_details(self, transporter_id):
