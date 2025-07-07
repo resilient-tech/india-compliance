@@ -3,7 +3,7 @@
 
 frappe.provide("india_compliance");
 
-const DOCTYPE = "GSTR-1 Beta";
+const DOCTYPE = "GSTR-1";
 const GSTR1_Category = {
     B2B: "B2B, SEZ, DE",
     EXP: "Exports",
@@ -808,7 +808,7 @@ class GSTR1 {
 
         const { month_or_quarter, year, company, filing_preference } = this.frm.doc;
         const { message: je_details } = await frappe.call({
-            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_journal_entries",
+            method: "india_compliance.gst_india.doctype.gstr_1.gstr_1.get_journal_entries",
             args: { month_or_quarter, year, company, filing_preference },
         });
 
@@ -842,7 +842,7 @@ class GSTR1 {
 
         const { month_or_quarter, year, company, filing_preference } = this.frm.doc;
         const { message: data } = await frappe.call({
-            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_gst_and_round_off_accounts",
+            method: "india_compliance.gst_india.doctype.gstr_1.gstr_1.get_gst_and_round_off_accounts",
             args: { month_or_quarter, year, company, filing_preference },
         });
 
@@ -953,7 +953,7 @@ class GSTR1 {
                 const { company, company_gstin, month_or_quarter, year } = this.frm.doc;
 
                 frappe.call({
-                    method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.make_journal_entry",
+                    method: "india_compliance.gst_india.doctype.gstr_1.gstr_1.make_journal_entry",
                     args: {
                         company,
                         company_gstin,
@@ -1881,7 +1881,7 @@ class BooksTab extends GSTR1_TabManager {
 
     download_books_as_excel() {
         const url =
-            "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export.download_books_as_excel";
+            "india_compliance.gst_india.doctype.gstr_1.gstr_1_export.download_books_as_excel";
 
         open_url_post(`/api/method/${url}`, {
             company_gstin: this.instance.frm.doc.company_gstin,
@@ -2095,7 +2095,7 @@ class FiledTab extends GSTR1_TabManager {
 
     download_filed_as_excel() {
         const url =
-            "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export.download_filed_as_excel";
+            "india_compliance.gst_india.doctype.gstr_1.gstr_1_export.download_filed_as_excel";
 
         open_url_post(`/api/method/${url}`, {
             company_gstin: this.instance.frm.doc.company_gstin,
@@ -2122,7 +2122,7 @@ class FiledTab extends GSTR1_TabManager {
             const doc = me.instance.frm.doc;
 
             frappe.call({
-                method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export.get_gstr_1_json",
+                method: "india_compliance.gst_india.doctype.gstr_1.gstr_1_export.get_gstr_1_json",
                 args: {
                     company_gstin: doc.company_gstin,
                     year: doc.year,
@@ -2359,7 +2359,7 @@ class ReconcileTab extends FiledTab {
 
     download_reconcile_as_excel() {
         const url =
-            "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export.download_reconcile_as_excel";
+            "india_compliance.gst_india.doctype.gstr_1.gstr_1_export.download_reconcile_as_excel";
 
         open_url_post(`/api/method/${url}`, {
             company_gstin: this.instance.frm.doc.company_gstin,
@@ -2644,7 +2644,7 @@ class FileGSTR1Dialog {
 
         // update total amendes
         taxpayer_api.call({
-            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.perform_gstr1_action",
+            method: "india_compliance.gst_india.doctype.gstr_1.gstr_1.perform_gstr1_action",
             args: {
                 action: "get_amendment_data",
                 month_or_quarter: this.frm.doc.month_or_quarter,
@@ -2881,7 +2881,7 @@ class GSTR1Action extends FileGSTR1Dialog {
         };
 
         frappe.call({
-            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.mark_as_unfiled",
+            method: "india_compliance.gst_india.doctype.gstr_1.gstr_1.mark_as_unfiled",
             args: { filters: filters, force: this.frm.__action_performed == undefined },
             callback: () => {
                 this.frm.gstr1.status = "Not Filed";
@@ -2901,7 +2901,7 @@ class GSTR1Action extends FileGSTR1Dialog {
         };
 
         taxpayer_api.call({
-            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.perform_gstr1_action",
+            method: "india_compliance.gst_india.doctype.gstr_1.gstr_1.perform_gstr1_action",
             args: args,
             callback: response => callback && callback(response),
         });
@@ -2911,7 +2911,7 @@ class GSTR1Action extends FileGSTR1Dialog {
         setTimeout(
             async () => {
                 const { message } = await taxpayer_api.call({
-                    method: `india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.check_action_status`,
+                    method: `india_compliance.gst_india.doctype.gstr_1.gstr_1.check_action_status`,
                     args: { ...this.defaults, action },
                 });
 
@@ -3126,7 +3126,7 @@ function update_filing_preference(frm) {
     if (!month_or_quarter || !year || !company_gstin) return;
 
     frappe.call({
-        method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_filing_preference_from_log",
+        method: "india_compliance.gst_india.doctype.gstr_1.gstr_1.get_filing_preference_from_log",
         args: { month_or_quarter, year, company_gstin },
         callback: r => {
             frm.set_value("filing_preference", r.message || "Monthly");
@@ -3189,7 +3189,7 @@ async function get_net_gst_liability(frm) {
         frm.doc;
 
     const response = await frappe.call({
-        method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_net_gst_liability",
+        method: "india_compliance.gst_india.doctype.gstr_1.gstr_1.get_net_gst_liability",
         args: {
             company,
             company_gstin,

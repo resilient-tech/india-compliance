@@ -43,12 +43,12 @@ frappe.ui.form.on("GST Return Log", {
         if (frm.doc.return_type !== "GSTR1") return;
 
         frm.add_custom_button(__("View GSTR-1"), () => {
-            frappe.set_route("Form", "GSTR-1 Beta");
+            frappe.set_route("Form", "GSTR-1");
 
             // after form loads
             new Promise(resolve => {
                 const interval = setInterval(() => {
-                    if (cur_frm.doctype === "GSTR-1 Beta" && cur_frm.__setup_complete) {
+                    if (cur_frm.doctype === "GSTR-1" && cur_frm.__setup_complete) {
                         clearInterval(interval);
                         resolve();
                     }

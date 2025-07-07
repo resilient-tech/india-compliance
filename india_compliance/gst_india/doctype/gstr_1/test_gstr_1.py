@@ -5,5 +5,5 @@
 from frappe.tests import IntegrationTestCase
 
 
-class TestGSTR1Beta(IntegrationTestCase):
+class TestGSTR1(IntegrationTestCase):
     pass

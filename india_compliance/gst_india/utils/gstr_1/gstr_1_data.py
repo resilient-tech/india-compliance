@@ -1,16 +1,21 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
+import re
 from itertools import combinations
 
 from pypika import Order
 
 import frappe
-from frappe.query_builder import Case
+from frappe.query_builder import Case, Criterion
 from frappe.query_builder.functions import Date, IfNull, Sum
-from frappe.utils import getdate
+from frappe.utils import cint, flt, getdate
 
 from india_compliance.gst_india.constants import GST_REFUND_TAX_TYPES
-from india_compliance.gst_india.utils import get_full_gst_uom
+from india_compliance.gst_india.utils import (
+    get_escaped_name,
+    get_full_gst_uom,
+    validate_invoice_number,
+)
 from india_compliance.gst_india.utils.gstr_1 import (
     CATEGORY_SUB_CATEGORY_MAPPING,
     HSN_BIFURCATION_FROM,
@@ -663,7 +668,7 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
             )
 
     def is_hsn_bifurcation_needed(self):
-        # From GSTR-1 Beta
+        # From GSTR-1
         if self.filters.get("month_or_quarter"):
             from_date = getdate(
                 f"01-{self.filters.month_or_quarter}-{self.filters.year}"
@@ -672,3 +677,417 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
             from_date = getdate(self.filters.from_date)
 
         return from_date >= HSN_BIFURCATION_FROM
+
+
+class GSTR1DocumentIssuedSummary:
+    def __init__(self, filters):
+        self.filters = filters
+        self.sales_invoice = frappe.qb.DocType("Sales Invoice")
+        self.sales_invoice_item = frappe.qb.DocType("Sales Invoice Item")
+        self.purchase_invoice = frappe.qb.DocType("Purchase Invoice")
+        self.stock_entry = frappe.qb.DocType("Stock Entry")
+        self.subcontracting_receipt = frappe.qb.DocType("Subcontracting Receipt")
+        self.queries = {
+            "Sales Invoice": self.get_query_for_sales_invoice,
+            "Purchase Invoice": self.get_query_for_purchase_invoice,
+            "Stock Entry": self.get_query_for_stock_entry,
+            "Subcontracting Receipt": self.get_query_for_subcontracting_receipt,
+        }
+
+    def get_data(self) -> list:
+        return self.get_document_summary()
+
+    def get_document_summary(self):
+        summarized_data = []
+
+        for doctype, query in self.queries.items():
+            data = query().run(as_dict=True)
+            data = self.handle_amended_docs(data)
+            for (
+                nature_of_document,
+                seperated_data,
+            ) in self.seperate_data_by_nature_of_document(data, doctype).items():
+                summarized_data.extend(
+                    self.seperate_data_by_naming_series(
+                        seperated_data, nature_of_document
+                    )
+                )
+
+        return summarized_data
+
+    def build_query(
+        self,
+        doctype,
+        party_gstin_field,
+        company_gstin_field="company_gstin",
+        address_field=None,
+        additional_selects=None,
+        additional_conditions=None,
+    ):
+        party_gstin_field = getattr(doctype, party_gstin_field, None)
+        company_gstin_field = getattr(doctype, company_gstin_field, None)
+        address_field = getattr(doctype, address_field, None)
+
+        query = (
+            frappe.qb.from_(doctype)
+            .select(
+                doctype.name,
+                IfNull(doctype.naming_series, "").as_("naming_series"),
+                doctype.creation,
+                doctype.docstatus,
+                doctype.amended_from,
+                Case()
+                .when(
+                    IfNull(party_gstin_field, "") == company_gstin_field,
+                    1,
+                )
+                .else_(0)
+                .as_("same_gstin_billing"),
+            )
+            .where(doctype.company == self.filters.company)
+            .where(
+                doctype.posting_date.between(
+                    self.filters.from_date, self.filters.to_date
+                )
+            )
+            .orderby(doctype.name)
+            .groupby(doctype.name)
+        )
+
+        if additional_selects:
+            query = query.select(*additional_selects)
+
+        if additional_conditions:
+            query = query.where(Criterion.all(additional_conditions))
+
+        if self.filters.company_address:
+            query = query.where(address_field == self.filters.company_address)
+
+        if self.filters.company_gstin:
+            query = query.where(company_gstin_field == self.filters.company_gstin)
+
+        return query
+
+    def get_query_for_sales_invoice(self):
+        additional_selects = [
+            self.sales_invoice.is_return,
+            self.sales_invoice.is_debit_note,
+            self.sales_invoice.is_opening,
+        ]
+
+        query = self.build_query(
+            doctype=self.sales_invoice,
+            party_gstin_field="billing_address_gstin",
+            address_field="company_address",
+            additional_selects=additional_selects,
+        )
+
+        return (
+            query.join(self.sales_invoice_item)
+            .on(self.sales_invoice.name == self.sales_invoice_item.parent)
+            .select(
+                self.sales_invoice_item.gst_treatment,
+            )
+        )
+
+    def get_query_for_purchase_invoice(self):
+        additional_selects = [
+            self.purchase_invoice.is_opening,
+        ]
+
+        additional_conditions = [
+            self.purchase_invoice.is_reverse_charge == 1,
+            IfNull(self.purchase_invoice.supplier_gstin, "") == "",
+        ]
+        return self.build_query(
+            doctype=self.purchase_invoice,
+            party_gstin_field="supplier_gstin",
+            address_field="billing_address",
+            additional_selects=additional_selects,
+            additional_conditions=additional_conditions,
+        )
+
+    def get_query_for_stock_entry(self):
+        additional_selects = [
+            self.stock_entry.is_opening,
+        ]
+
+        additional_conditions = [
+            self.stock_entry.purpose == "Send to Subcontractor",
+            self.stock_entry.subcontracting_order != "",
+        ]
+        return self.build_query(
+            doctype=self.stock_entry,
+            party_gstin_field="bill_to_gstin",
+            company_gstin_field="bill_from_gstin",
+            address_field="bill_from_address",
+            additional_selects=additional_selects,
+            additional_conditions=additional_conditions,
+        )
+
+    def get_query_for_subcontracting_receipt(self):
+        additional_conditions = [
+            self.subcontracting_receipt.is_return == 1,
+        ]
+        return self.build_query(
+            doctype=self.subcontracting_receipt,
+            party_gstin_field="supplier_gstin",
+            address_field="billing_address",
+            additional_conditions=additional_conditions,
+        )
+
+    def seperate_data_by_naming_series(self, data, nature_of_document):
+        if not data:
+            return []
+
+        slice_indices = []
+        summarized_data = []
+
+        for i in range(1, len(data)):
+            if self.is_same_naming_series(data[i - 1].name, data[i].name):
+                continue
+            slice_indices.append(i)
+
+        document_series_list = [
+            data[i:j] for i, j in zip([0] + slice_indices, slice_indices + [None])
+        ]
+
+        for series in document_series_list:
+            draft_count = sum(1 for doc in series if doc.docstatus == 0)
+            total_submitted_count = sum(1 for doc in series if doc.docstatus == 1)
+            cancelled_count = sum(1 for doc in series if doc.docstatus == 2)
+
+            summarized_data.append(
+                {
+                    "naming_series": series[0].naming_series.replace(".", ""),
+                    "nature_of_document": nature_of_document,
+                    "from_serial_no": series[0].name,
+                    "to_serial_no": series[-1].name,
+                    "total_submitted": total_submitted_count,
+                    "cancelled": cancelled_count,
+                    "total_draft": draft_count,
+                    "total_issued": draft_count
+                    + total_submitted_count
+                    + cancelled_count,
+                }
+            )
+
+        return summarized_data
+
+    def is_same_naming_series(self, name_1, name_2):
+        """
+        Checks if two document names belong to the same naming series.
+
+        Args:
+            name_1 (str): The first document name.
+            name_2 (str): The second document name.
+
+        Returns:
+            bool: True if the two document names belong to the same naming series, False otherwise.
+
+        Limitations:
+            Case 1: When the difference between the serial numbers in the document names is a multiple of 10. For example, 'SINV-00010-2023' and 'SINV-00020-2023'.
+            Case 2: When the serial numbers are identical, but the months differ. For example, 'SINV-01-2023-001' and 'SINV-02-2023-001'.
+
+            Above cases are false positives and will be considered as same naming series although they are not.
+        """
+
+        alphabet_pattern = re.compile(r"[A-Za-z]+")
+        number_pattern = re.compile(r"\d+")
+
+        a_0 = "".join(alphabet_pattern.findall(name_1))
+        n_0 = "".join(number_pattern.findall(name_1))
+
+        a_1 = "".join(alphabet_pattern.findall(name_2))
+        n_1 = "".join(number_pattern.findall(name_2))
+
+        if a_1 != a_0:
+            return False
+
+        if len(n_0) != len(n_1):
+            return False
+
+        # If common suffix is present between the two names, remove it to compare the numbers
+        # Example: SINV-00001-2023 and SINV-00002-2023, the common suffix 2023 will be removed
+
+        suffix_length = 0
+
+        for i in range(len(n_0) - 1, 0, -1):
+            if n_0[i] == n_1[i]:
+                suffix_length += 1
+            else:
+                break
+
+        if suffix_length:
+            n_0, n_1 = n_0[:-suffix_length], n_1[:-suffix_length]
+
+        if cint(n_1) - cint(n_0) != 1:
+            return False
+
+        return True
+
+    def seperate_data_by_nature_of_document(self, data, doctype):
+        nature_of_document = {
+            "Excluded from Report (Invalid Invoice Number)": [],
+            "Excluded from Report (Same GSTIN Billing)": [],
+            "Excluded from Report (Is Opening Entry)": [],
+            "Invoices for outward supply": [],
+            "Debit Note": [],
+            "Credit Note": [],
+            "Invoices for inward supply from unregistered person": [],
+            "Delivery Challan for job work": [],
+        }
+
+        for doc in data:
+            if not validate_invoice_number(doc, throw=False):
+                nature_of_document[
+                    "Excluded from Report (Invalid Invoice Number)"
+                ].append(doc)
+
+            elif doc.is_opening == "Yes":
+                nature_of_document["Excluded from Report (Is Opening Entry)"].append(
+                    doc
+                )
+            elif doc.same_gstin_billing:
+                nature_of_document["Excluded from Report (Same GSTIN Billing)"].append(
+                    doc
+                )
+            elif doctype == "Purchase Invoice":
+                nature_of_document[
+                    "Invoices for inward supply from unregistered person"
+                ].append(doc)
+            elif doctype == "Stock Entry" or doctype == "Subcontracting Receipt":
+                nature_of_document["Delivery Challan for job work"].append(doc)
+            # for Sales Invoice
+            elif doc.is_return:
+                nature_of_document["Credit Note"].append(doc)
+            elif doc.is_debit_note:
+                nature_of_document["Debit Note"].append(doc)
+            else:
+                nature_of_document["Invoices for outward supply"].append(doc)
+
+        return nature_of_document
+
+    def handle_amended_docs(self, data):
+        """Move amended docs like SINV-00001-1 to the end of the list"""
+
+        data_dict = {doc.name: doc for doc in data}
+        amended_dict = {}
+
+        for doc in data:
+            if (
+                doc.amended_from
+                and len(doc.amended_from) != len(doc.name)
+                or doc.amended_from in amended_dict
+            ):
+                amended_dict[doc.name] = doc
+                data_dict.pop(doc.name)
+
+        data_dict.update(amended_dict)
+
+        return list(data_dict.values())
+
+
+class GSTR11A11BData:
+    def __init__(self, filters, gst_accounts):
+        self.filters = filters
+
+        self.pe = frappe.qb.DocType("Payment Entry")
+        self.pe_ref = frappe.qb.DocType("Payment Entry Reference")
+        self.gl_entry = frappe.qb.DocType("GL Entry")
+        self.gst_accounts = gst_accounts
+
+    def get_data(self):
+        if self.filters.get("type_of_business") == "Advances":
+            records = self.get_11A_query().run(as_dict=True)
+        elif self.filters.get("type_of_business") == "Adjustment":
+            records = self.get_11B_query().run(as_dict=True)
+
+        return self.process_data(records)
+
+    def get_11A_query(self):
+        return (
+            self.get_query("Advances")
+            .select(self.pe.paid_amount.as_("taxable_value"))
+            .groupby(self.pe.name)
+        )
+
+    def get_11B_query(self):
+        return (
+            self.get_query("Adjustment")
+            .join(self.pe_ref)
+            .on(self.pe_ref.name == self.gl_entry.voucher_detail_no)
+            .select(self.pe_ref.allocated_amount.as_("taxable_value"))
+            .groupby(self.gl_entry.voucher_detail_no)
+        )
+
+    def get_query(self, type_of_business):
+        cr_or_dr = "credit" if type_of_business == "Advances" else "debit"
+        cr_or_dr_amount_field = getattr(
+            self.gl_entry, f"{cr_or_dr}_in_account_currency"
+        )
+        cess_account = get_escaped_name(self.gst_accounts.cess_account)
+
+        return (
+            frappe.qb.from_(self.gl_entry)
+            .join(self.pe)
+            .on(self.pe.name == self.gl_entry.voucher_no)
+            .select(
+                self.pe.place_of_supply,
+                Sum(
+                    Case()
+                    .when(
+                        self.gl_entry.account != IfNull(cess_account, ""),
+                        cr_or_dr_amount_field,
+                    )
+                    .else_(0)
+                ).as_("tax_amount"),
+                Sum(
+                    Case()
+                    .when(
+                        self.gl_entry.account == IfNull(cess_account, ""),
+                        cr_or_dr_amount_field,
+                    )
+                    .else_(0)
+                ).as_("cess_amount"),
+            )
+            .where(Criterion.all(self.get_conditions()))
+            .where(cr_or_dr_amount_field > 0)
+        )
+
+    def get_conditions(self):
+        gst_accounts_list = [
+            account_head for account_head in self.gst_accounts.values() if account_head
+        ]
+
+        conditions = []
+
+        conditions.append(self.gl_entry.is_cancelled == 0)
+        conditions.append(self.gl_entry.voucher_type == "Payment Entry")
+        conditions.append(self.gl_entry.company == self.filters.get("company"))
+        conditions.append(self.gl_entry.account.isin(gst_accounts_list))
+        conditions.append(
+            self.gl_entry.posting_date[
+                self.filters.get("from_date") : self.filters.get("to_date")
+            ]
+        )
+
+        if self.filters.get("company_gstin"):
+            conditions.append(
+                self.gl_entry.company_gstin == self.filters.get("company_gstin")
+            )
+
+        return conditions
+
+    def process_data(self, records):
+        data = {}
+        for entry in records:
+            taxable_value = flt(entry.taxable_value, 2)
+            tax_rate = round(((entry.tax_amount / taxable_value) * 100))
+
+            data.setdefault((entry.place_of_supply, tax_rate), [0.0, 0.0])
+
+            data[(entry.place_of_supply, tax_rate)][0] += taxable_value
+            data[(entry.place_of_supply, tax_rate)][1] += flt(entry.cess_amount, 2)
+
+        return data
