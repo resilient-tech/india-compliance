@@ -27,13 +27,9 @@ frappe.ui.form.on("Sales Invoice", {
 
         if (frm.doc.docstatus === 0 || !is_einv_generatable) {
             frm.add_custom_button(
-                __("Applicability Status"),
-                () =>
-                    show_e_invoice_applicability_status(
-                        frm,
-                        is_einv_generatable
-                    ),
-                "e-Invoice"
+                __("e-Invoice Applicability Status"),
+                () => show_e_invoice_applicability_status(frm, is_einv_generatable),
+                "Preview"
             );
 
             return;

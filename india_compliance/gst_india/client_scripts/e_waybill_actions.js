@@ -55,9 +55,9 @@ function setup_e_waybill_actions(doctype) {
                 }
 
                 frm.add_custom_button(
-                    __("Applicability Status"),
+                    __("e-Waybill Applicability Status"),
                     () => show_e_waybill_generatable_status(frm, is_ewb_generatable),
-                    "e-Waybill"
+                    "Preview"
                 );
                 return;
             }
