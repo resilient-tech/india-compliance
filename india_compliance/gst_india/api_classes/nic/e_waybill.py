@@ -27,14 +27,14 @@ class EWaybillAPI(BaseAPI):
     }
 
     # Response Keys
-    AUTH_TOKEN = "authtoken"
-    USER_NAME = "username"
-    PASSWORD = "password"
+    AUTH_TOKEN_KEY = "authtoken"
+    USER_NAME_KEY = "username"
+    PASSWORD_KEY = "password"
     APP_KEY = "app_key"
-    DATA = "data"
-    SEK = "sek"
-    REK = "rek"
-    HMAC = "hmac"
+    DATA_KEY = "data"
+    SEK_KEY = "sek"
+    REK_KEY = "rek"
+    HMAC_KEY = "hmac"
 
     @classmethod
     def create(cls, *args, **kwargs):
@@ -162,8 +162,8 @@ class StandardEWaybillAPI(EWaybillAPI):
     def authenticate(self):
         json_data = {
             "action": "ACCESSTOKEN",
-            self.USER_NAME: self.username,
-            self.PASSWORD: self.password,
+            self.USER_NAME_KEY: self.username,
+            self.PASSWORD_KEY: self.password,
             self.APP_KEY: self.app_key,
         }
 

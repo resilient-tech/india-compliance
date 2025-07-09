@@ -31,14 +31,14 @@ class EInvoiceAPI(BaseAPI):
     }
 
     # Response Keys
-    AUTH_TOKEN = "AuthToken"
-    USER_NAME = "UserName"
-    PASSWORD = "Password"
+    AUTH_TOKEN_KEY = "AuthToken"
+    USER_NAME_KEY = "UserName"
+    PASSWORD_KEY = "Password"
     APP_KEY = "AppKey"
-    DATA = "Data"
-    SEK = "Sek"
-    REK = "Rek"
-    HMAC = "Hmac"
+    DATA_KEY = "Data"
+    SEK_KEY = "Sek"
+    REK_KEY = "Rek"
+    HMAC_KEY = "Hmac"
 
     @classmethod
     def create(cls, *args, **kwargs):
@@ -169,8 +169,8 @@ class StandardEInvoiceAPI(EInvoiceAPI):
 
     def authenticate(self):
         json_data = {
-            self.USER_NAME: self.username,
-            self.PASSWORD: self.password,
+            self.USER_NAME_KEY: self.username,
+            self.PASSWORD_KEY: self.password,
             self.APP_KEY: self.app_key,
             "ForceRefreshAccessToken": False,
         }

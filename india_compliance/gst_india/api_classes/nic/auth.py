@@ -60,7 +60,7 @@ class StandardAuth(Auth):
         if self._is_authentication_api(request_args.get("url")):
             return
 
-        request_args["headers"][self.client.AUTH_TOKEN] = self.client.auth_token
+        request_args["headers"][self.client.AUTH_TOKEN_KEY] = self.client.auth_token
 
     def process_response(self, response):
         self._decrypt_response(response)
@@ -84,8 +84,8 @@ class StandardAuth(Auth):
         if not json_data:
             return
 
-        # auth requests (contains USER_NAME) => use public key
-        if self.client.USER_NAME in json_data:
+        # auth requests => use public key
+        if self._is_authentication_api(request_args.get("url")):
             serialized_data = frappe.as_json(json_data)
             encoded_data = base64.b64encode(serialized_data.encode())
             encrypted_data = encrypt_using_public_key(
@@ -108,13 +108,14 @@ class StandardAuth(Auth):
     def _decrypt_response(self, response):
         """Route response to appropriate decryption method based on content"""
         # get response data
-        response_data = response.get(self.client.DATA) or response
+        response_data = response.get(self.client.DATA_KEY) or response
         if not response_data:
             return
 
         # auth API responses contain auth token
         is_auth_response = (
-            isinstance(response_data, dict) and self.client.AUTH_TOKEN in response_data
+            isinstance(response_data, dict)
+            and self.client.AUTH_TOKEN_KEY in response_data
         )
 
         if is_auth_response:
@@ -127,13 +128,13 @@ class StandardAuth(Auth):
         values = {}
 
         # extract and store auth token
-        auth_token = response.get(self.client.AUTH_TOKEN)
+        auth_token = response.get(self.client.AUTH_TOKEN_KEY)
         if auth_token:
             self.client.auth_token = auth_token
             values["auth_token"] = auth_token
 
         # decrypt and store session key
-        sek_data = response.get(self.client.SEK)
+        sek_data = response.get(self.client.SEK_KEY)
         if sek_data:
             app_key = base64.b64decode(self.client.app_key.encode())
             self.client.session_key = aes_decrypt_data(sek_data, app_key)
@@ -155,21 +156,21 @@ class StandardAuth(Auth):
     def _decrypt_response_data(self, response):
         """Decrypt response data from non-auth APIs and validate HMAC"""
         # decrypt REK if present
-        rek_data = response.get(self.client.REK)
+        rek_data = response.get(self.client.REK_KEY)
         decrypted_rek = (
             aes_decrypt_data(rek_data, self.client.session_key) if rek_data else None
         )
 
         # decrypt main response data
-        response_data = response.get(self.client.DATA)
+        response_data = response.get(self.client.DATA_KEY)
         if response_data and isinstance(response_data, str):
             decryption_key = decrypted_rek or self.client.session_key
             decrypted_data = aes_decrypt_data(
-                response.pop(self.client.DATA), decryption_key
+                response.pop(self.client.DATA_KEY), decryption_key
             )
 
             # validate HMAC if present
-            expected_hmac = response.get(self.client.HMAC)
+            expected_hmac = response.get(self.client.HMAC_KEY)
             if expected_hmac:
                 computed_hmac = hmac_sha256(
                     base64.b64encode(decrypted_data), decrypted_rek
