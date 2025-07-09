@@ -46,16 +46,6 @@
         {
             "hidden": 0,
             "is_query_report": 1,
-            "label": "GST Itemised Purchase Register",
-            "link_count": 0,
-            "link_to": "GST Itemised Purchase Register",
-            "link_type": "Report",
-            "onboard": 0,
-            "type": "Link"
-        },
-        {
-            "hidden": 0,
-            "is_query_report": 1,
             "label": "Bill of Entry Summary",
             "link_count": 0,
             "link_to": "Bill of Entry Summary",
