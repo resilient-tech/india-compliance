@@ -1,7 +1,7 @@
 from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import getdate
 
-from india_compliance.gst_india.report.gst_sales_register_beta.gst_sales_register_beta import (
+from india_compliance.gst_india.report.gst_sales_register.gst_sales_register import (
     execute,
 )
 from india_compliance.gst_india.utils.tests import create_sales_invoice

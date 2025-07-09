@@ -115,9 +115,9 @@ frappe.help.help_links["query-report/GST Balance"] = [
     },
 ];
 
-frappe.help.help_links["query-report/GST Sales Register Beta"] = [
+frappe.help.help_links["query-report/GST Sales Register"] = [
     {
-        label: "GST Sales Register Beta",
+        label: "GST Sales Register",
         url:
             docsUrl +
             "gst-reports/miscellaneous_reports#gst-sales-register-beta-report",

@@ -36,16 +36,6 @@
         {
             "hidden": 0,
             "is_query_report": 1,
-            "label": "GST Sales Register",
-            "link_count": 0,
-            "link_to": "GST Sales Register",
-            "link_type": "Report",
-            "onboard": 0,
-            "type": "Link"
-        },
-        {
-            "hidden": 0,
-            "is_query_report": 1,
             "label": "GST Purchase Register",
             "link_count": 0,
             "link_to": "GST Purchase Register",
@@ -244,9 +234,9 @@
         {
             "hidden": 0,
             "is_query_report": 1,
-            "label": "GST Sales Register Beta",
+            "label": "GST Sales Register",
             "link_count": 0,
-            "link_to": "GST Sales Register Beta",
+            "link_to": "GST Sales Register",
             "link_type": "Report",
             "onboard": 0,
             "type": "Link"
