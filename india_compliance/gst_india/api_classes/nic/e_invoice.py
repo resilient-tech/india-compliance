@@ -195,11 +195,9 @@ class StandardEInvoiceAPI(EInvoiceAPI):
 
         # throw
         formatted_error_message = (
-            (
-                ("<br>").join(error_messages)
-                if error_messages
-                else frappe.as_json(response_json, indent=4)
-            ),
+            ("<br>").join(error_messages)
+            if error_messages
+            else frappe.as_json(response_json, indent=4)
         )
 
         frappe.throw(
