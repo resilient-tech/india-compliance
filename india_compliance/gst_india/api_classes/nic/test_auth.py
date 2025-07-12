@@ -42,6 +42,12 @@ class TestNICAuth(IntegrationTestCase):
             },
         )
 
+
+class TestStandardAuth(TestNICAuth):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
         # Sample test data structure
         cls.test_data = frappe._dict(
             {
@@ -364,23 +370,10 @@ class TestNICAuth(IntegrationTestCase):
         self.assertEqual(result, original_response)
 
 
-class TestEWaybillAPI(IntegrationTestCase):
+class TestEWaybillAuth(TestNICAuth):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        frappe.db.set_single_value(
-            "GST Settings",
-            {
-                "enable_api": 1,
-                "enable_e_invoice": 1,
-                "enable_e_waybill": 1,
-                "auto_generate_e_waybill": 0,
-                "auto_generate_e_invoice": 0,
-                "fetch_e_waybill_data": 0,
-                "apply_e_invoice_only_for_selected_companies": 0,
-                "sandbox_mode": 0,
-            },
-        )
 
         # Sample test data structure
         cls.test_data = frappe._dict(
@@ -454,7 +447,6 @@ class TestEWaybillAPI(IntegrationTestCase):
         # Create test sales invoice
         si = create_sales_invoice(
             customer_address="_Test Registered Customer-Billing",
-            # shipping_address_name="_Test Registered Customer-Shipping",
             company_address="_Test Indian Registered Company-Billing",
             is_in_state=True,
             do_not_submit=True,
@@ -595,23 +587,10 @@ class TestEWaybillAPI(IntegrationTestCase):
         )
 
 
-class TestEInvoiceAPI(IntegrationTestCase):
+class TestEInvoiceAuth(TestNICAuth):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        frappe.db.set_single_value(
-            "GST Settings",
-            {
-                "enable_api": 1,
-                "enable_e_invoice": 1,
-                "enable_e_waybill": 1,
-                "auto_generate_e_waybill": 0,
-                "auto_generate_e_invoice": 0,
-                "fetch_e_waybill_data": 0,
-                "apply_e_invoice_only_for_selected_companies": 0,
-                "sandbox_mode": 0,
-            },
-        )
 
         # Sample test data structure
         cls.test_data = frappe._dict(
@@ -622,6 +601,7 @@ class TestEInvoiceAPI(IntegrationTestCase):
                 "auth_token": "1pfS6VEg8t2QwOtBRQzc5jcjF",
                 "encrypted_sek": "90bckfxWIZMIpy9MLFfCJRb1TP8+SgkzQhjIOBgYSXSM9n3fO+MI1lDC9HXXpj6D",
                 "sample_data": {"test": "data", "value": 123},
+                "irn": "f78753c3cecf4a348addb234636b8897c67565d7f6443ae7a1851a15231f96c8",
             }
         )
 
@@ -644,8 +624,6 @@ class TestEInvoiceAPI(IntegrationTestCase):
             "Data": "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",
             "Status": 1,
         }
-
-        irn = "f78753c3cecf4a348addb234636b8897c67565d7f6443ae7a1851a15231f96c8"
 
         # Mock cancel response
         cancel_response = {
@@ -726,6 +704,7 @@ class TestEInvoiceAPI(IntegrationTestCase):
         }
 
         self._mock_einvoice_generate_response(generate_data, generate_response)
+        irn = self.test_data.irn
 
         result = api.generate_irn(generate_data)
         self.assertIsNotNone(result)
