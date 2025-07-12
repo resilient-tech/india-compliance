@@ -23,6 +23,7 @@
   "is_retry_einv_ewb_generation_pending",
   "column_break_rk3h",
   "sandbox_mode",
+  "encrypt_nic_requests",
   "e_waybill_section",
   "enable_e_waybill",
   "enable_e_waybill_from_dn",
@@ -402,10 +403,10 @@
    "label": "GSTN Public Certificate"
   },
   {
-    "fieldname": "nic_public_key",
-    "fieldtype": "Code",
-    "hidden": 1,
-    "label": "NIC Public Key"
+   "fieldname": "nic_public_key",
+   "fieldtype": "Code",
+   "hidden": 1,
+   "label": "NIC Public Key"
   },
   {
    "default": "0",
@@ -695,13 +696,21 @@
    "fieldname": "e_invoice_reporting_time_limit_days",
    "fieldtype": "Int",
    "label": "e-Invoice Reporting Time Limit (in Days)"
+  },
+  {
+   "default": "1",
+   "depends_on": "eval: india_compliance.is_api_enabled(doc)",
+   "description": "If enabled, encrypts all API requests to NIC portal <br>Note: Return APIs are already encrypted and are not affected by this setting.",
+   "fieldname": "encrypt_nic_requests",
+   "fieldtype": "Check",
+   "label": "Encrypt e-Invoice & e-Waybill API Requests"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-04-11 15:33:51.263598",
+ "modified": "2025-07-12 17:53:51.515911",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

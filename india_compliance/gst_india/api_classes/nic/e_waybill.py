@@ -43,7 +43,7 @@ class EWaybillAPI(BaseAPI):
 
         settings = frappe.get_cached_doc("GST Settings")
 
-        if settings.sandbox_mode:
+        if settings.sandbox_mode or not settings.encrypt_nic_requests:
             return EnrichedEWaybillAPI(*args, **kwargs)
 
         return StandardEWaybillAPI(*args, **kwargs)
