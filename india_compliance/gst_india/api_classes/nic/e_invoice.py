@@ -13,6 +13,7 @@ class EInvoiceAPI(BaseAPI):
     API_NAME = "e-Invoice"
     SENSITIVE_INFO = BaseAPI.SENSITIVE_INFO + ("password", "Password", "AppKey")
     IGNORED_ERROR_CODES = {
+        "1005": "Invalid Token",
         # Generate IRN errors
         "2150": "Duplicate IRN",
         # Get e-Invoice by IRN errors
@@ -166,6 +167,17 @@ class StandardEInvoiceAPI(EInvoiceAPI):
 
         self.auth_strategy = StandardAuth(self)
         self.auth_strategy.authenticate()
+
+    def _make_request(self, method, endpoint="", params=None, headers=None, json=None):
+        response = super()._make_request(method, endpoint, params, headers, json)
+
+        # Invalid Token
+        if response.error_code == "1005":
+            self.auth_token = None
+            self.auth_strategy.authenticate()
+            response = super()._make_request(method, endpoint, params, headers, json)
+
+        return response
 
     def authenticate(self):
         json_data = {
