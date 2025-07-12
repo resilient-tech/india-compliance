@@ -49,6 +49,7 @@ class EInvoiceAPI(BaseAPI):
         settings = frappe.get_cached_doc("GST Settings")
 
         if settings.sandbox_mode or not settings.encrypt_nic_requests:
+            print("Using EnrichedEInvoiceAPI\n\n")
             return EnrichedEInvoiceAPI(*args, **kwargs)
 
         return StandardEInvoiceAPI(*args, **kwargs)
@@ -147,6 +148,8 @@ class EnrichedEInvoiceAPI(EInvoiceAPI):
             self.company_gstin = "02AMBPG7773M002"
             self.username = "adqgsphpusr1"
             self.password = "Gsp@1234"
+        else:
+            self.fetch_credentials(self.company_gstin, "e-Waybill / e-Invoice")
 
         self.auth_strategy = EnrichedAuth(self)
         self.set_default_headers()

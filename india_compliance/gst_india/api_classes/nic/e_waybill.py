@@ -136,6 +136,9 @@ class EnrichedEWaybillAPI(EWaybillAPI):
             self.username = "05AAACG2115R1ZN"
             self.password = "abc123@@"
 
+        else:
+            self.fetch_credentials(self.company_gstin, "e-Waybill / e-Invoice")
+
         self.auth_strategy = EnrichedAuth(self)
         self.set_default_headers()
 
