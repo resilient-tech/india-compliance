@@ -1,5 +1,4 @@
 import base64
-from datetime import datetime
 
 from cryptography.hazmat.primitives.asymmetric import padding as asym_padding
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
@@ -76,7 +75,7 @@ class StandardAuth(Auth):
             if not getattr(self.client, attr, None):
                 return False
 
-        return self.client.session_expiry >= datetime.now()
+        return self.client.session_expiry >= now_datetime()
 
     def _encrypt_request(self, request_args):
         """Encrypt request data using public key or session key based on content"""
