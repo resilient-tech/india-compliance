@@ -137,6 +137,8 @@ class StandardAuth(Auth):
         sek_data = response.get(self.client.SEK_KEY)
         if sek_data:
             app_key = base64.b64decode(self.client.app_key.encode())
+
+            # Error raised when incorrect app_key is used: Padding is incorrect
             self.client.session_key = aes_decrypt_data(sek_data, app_key)
             self.client.session_expiry = add_to_date(now_datetime(), hours=6)
 
