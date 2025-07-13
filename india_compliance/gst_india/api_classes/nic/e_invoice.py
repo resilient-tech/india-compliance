@@ -49,7 +49,6 @@ class EInvoiceAPI(BaseAPI):
         settings = frappe.get_cached_doc("GST Settings")
 
         if settings.sandbox_mode or not settings.encrypt_nic_requests:
-            print("Using EnrichedEInvoiceAPI\n\n")
             return EnrichedEInvoiceAPI(*args, **kwargs)
 
         return StandardEInvoiceAPI(*args, **kwargs)
