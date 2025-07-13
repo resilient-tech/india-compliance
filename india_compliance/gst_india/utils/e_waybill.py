@@ -17,8 +17,8 @@ from frappe.utils import (
 from frappe.utils.file_manager import save_file
 
 from india_compliance.exceptions import GSPServerError
-from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
-from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
+from india_compliance.gst_india.api_classes.nic.e_invoice import EInvoiceAPI
+from india_compliance.gst_india.api_classes.nic.e_waybill import EWaybillAPI
 from india_compliance.gst_india.constants import (
     GST_TAX_TYPES,
     SALES_DOCTYPES,
@@ -166,15 +166,15 @@ def _generate_e_waybill(doc, throw=True, force=False):
         data = EWaybillData(doc).get_data(with_irn=with_irn)
 
         api = EWaybillAPI if not with_irn else EInvoiceAPI
-        result = api(doc).generate_e_waybill(data)
+        result = api.create(doc).generate_e_waybill(data)
 
         if result.error_code == "4002":
-            result = api(doc).get_e_waybill_by_irn(doc.get("irn"))
+            result = api.create(doc).get_e_waybill_by_irn(doc.get("irn"))
 
         if result.error_code == "2148":
             with_irn = False
             data = EWaybillData(doc).get_data(with_irn=with_irn)
-            result = EWaybillAPI(doc).generate_e_waybill(data)
+            result = EWaybillAPI.create(doc).generate_e_waybill(data)
 
     except GSPServerError as e:
         handle_server_errors(settings, doc, "e-Waybill", e)
@@ -197,7 +197,7 @@ def _generate_e_waybill(doc, throw=True, force=False):
 
     if result.error_code == "604":
         error_message = (
-            result.message
+            result.error_message
             + """<br/><br/> Try to fetch active e-waybills by Date if already generated."""
         )
         frappe.throw(error_message, title=_("API Request Failed"))
@@ -284,7 +284,8 @@ def _cancel_e_waybill(doc, values):
         else EWaybillAPI
     )
 
-    result = api(doc).cancel_e_waybill(e_waybill_data.get_data_for_cancellation(values))
+    cancellation_data = e_waybill_data.get_data_for_cancellation(values)
+    result = api.create(doc).cancel_e_waybill(cancellation_data)
 
     log_and_process_e_waybill_cancellation(doc, values, result)
 
@@ -334,7 +335,7 @@ def update_vehicle_info(*, doctype, docname, values):
     )
 
     data = EWaybillData(doc).get_update_vehicle_data(values)
-    result = EWaybillAPI(doc).update_vehicle_info(data)
+    result = EWaybillAPI.create(doc).update_vehicle_info(data)
 
     frappe.msgprint(
         _("Vehicle Info updated successfully"),
@@ -438,7 +439,7 @@ def update_transporter(*, doctype, docname, values):
     doc = load_doc(doctype, docname, "submit")
     values = frappe.parse_json(values)
     data = EWaybillData(doc).get_update_transporter_data(values)
-    EWaybillAPI(doc).update_transporter(data)
+    EWaybillAPI.create(doc).update_transporter(data)
 
     frappe.msgprint(
         _("Transporter Info updated successfully"),
@@ -499,7 +500,7 @@ def extend_validity(*, doctype, docname, values, scheduled=False):
         )
 
     data = EWaybillData(doc).get_extend_validity_data(values)
-    result = EWaybillAPI(doc).extend_validity(data)
+    result = EWaybillAPI.create(doc).extend_validity(data)
 
     doc.db_set("distance", values.remaining_distance)
 
@@ -654,7 +655,7 @@ def fetch_e_waybill_data(*, doctype, docname, attach=False):
 
 
 def _fetch_e_waybill_data(doc, log):
-    result = EWaybillAPI(doc).get_e_waybill(log.e_waybill_number)
+    result = EWaybillAPI.create(doc).get_e_waybill(log.e_waybill_number)
     log.db_set(
         {
             "data": frappe.as_json(result, indent=4),
@@ -667,7 +668,7 @@ def _fetch_e_waybill_data(doc, log):
 def find_matching_e_waybill(*, doctype, docname, e_waybill_date):
     doc = load_doc(doctype, docname, "submit")
 
-    response = EWaybillAPI(doc).get_e_waybills_by_date(
+    response = EWaybillAPI.create(doc).get_e_waybills_by_date(
         format_date(e_waybill_date, "dd/mm/yyyy")
     )
 

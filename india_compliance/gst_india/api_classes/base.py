@@ -1,3 +1,4 @@
+from base64 import b64decode
 from urllib.parse import urljoin
 
 import requests
@@ -28,6 +29,8 @@ class BaseAPI:
                 )
             )
 
+        self.company_gstin = None
+        self.auth_strategy = None
         self.sandbox_mode = self.settings.sandbox_mode
         self.default_headers = {
             "x-api-key": (
@@ -59,10 +62,14 @@ class BaseAPI:
 
         self.username = row.username
         self.company = row.company
+        self.app_key = row.app_key or self.generate_app_key(service)
         self._fetch_credentials(row, require_password=require_password)
 
     def _fetch_credentials(self, row, require_password=True):
         self.password = row.get_password(raise_exception=require_password)
+        self.session_key = b64decode(row.session_key or "")
+        self.session_expiry = row.session_expiry
+        self.auth_token = row.auth_token
 
     def get_url(self, *parts):
         parts = list(parts)
@@ -188,10 +195,15 @@ class BaseAPI:
                 frappe.flags.ic_sandbox_message_shown = True
 
     def before_request(self, request_args):
-        return
+        if getattr(self, "auth_strategy", None):
+            self.auth_strategy.prepare_request(request_args)
 
     def process_response(self, response):
         self.handle_error_response(response)
+
+        if getattr(self, "auth_strategy", None):
+            response = self.auth_strategy.process_response(response)
+
         self.response = response
         return response
 
@@ -202,7 +214,7 @@ class BaseAPI:
             success_value = sbool(success_value)
 
         if not success_value:
-            self.handle_server_error(response_json)
+            self.handle_server_error([response_json.get("message")])
 
         if not success_value and not self.is_ignored_error(response_json):
             frappe.throw(
@@ -212,7 +224,7 @@ class BaseAPI:
                 title=_("API Request Failed"),
             )
 
-    def handle_server_error(self, response_json):
+    def handle_server_error(self, error_messages):
         error_message_list = [
             "GSPGSTDOWN",
             "GSPERR300",
@@ -220,9 +232,10 @@ class BaseAPI:
             "No route to host",
         ]
 
-        for error in error_message_list:
-            if error in response_json.get("message"):
-                raise GSPServerError
+        for message in error_messages:
+            for error in error_message_list:
+                if error in message:
+                    raise GSPServerError
 
     def is_ignored_error(self, response_json):
         # Override in subclass, return truthy value to stop frappe.throw
@@ -285,6 +298,21 @@ class BaseAPI:
             if request_body and key in request_body:
                 request_body[key] = placeholder
 
+    def generate_app_key(self, service):
+        app_key = frappe.generate_hash(length=32)
+
+        frappe.db.set_value(
+            "GST Credential",
+            {
+                "gstin": self.company_gstin,
+                "username": self.username,
+                "service": service,
+            },
+            {"app_key": app_key},
+        )
+
+        return app_key
+
 
 def check_scheduler_status():
     """
@@ -308,3 +336,22 @@ def check_scheduler_status():
                 """
             )
         )
+
+
+def change_base_path(new_base_path):
+    """
+    Decorator to change the base path of the API class for wrapped method only.
+    """
+
+    def decorator(func):
+        def wrapper(self, *args, **kwargs):
+            original_base_path = self.BASE_PATH
+            self.BASE_PATH = new_base_path
+            try:
+                return func(self, *args, **kwargs)
+            finally:
+                self.BASE_PATH = original_base_path
+
+        return wrapper
+
+    return decorator

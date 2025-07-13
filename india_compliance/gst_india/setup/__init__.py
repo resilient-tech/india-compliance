@@ -222,6 +222,7 @@ def set_default_gst_settings():
         "validate_gstin_status": 0,
         "gstin_status_refresh_interval": 30,
         "enable_retry_einv_ewb_generation": 1,
+        "encrypt_nic_requests": 1,
         # Auto - Reconciliation
         "enable_auto_reconciliation": 1,
         "inward_supply_period": 2,
