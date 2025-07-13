@@ -15,7 +15,7 @@ from frappe.utils import (
 )
 
 from india_compliance.exceptions import GSPServerError
-from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
+from india_compliance.gst_india.api_classes.nic.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.taxpayer_base import otp_handler
 from india_compliance.gst_india.api_classes.taxpayer_e_invoice import (
     EInvoiceAPI as TaxpayerEInvoiceAPI,
@@ -140,7 +140,7 @@ def generate_e_invoice(docname, throw=True, force=False):
             )
 
         data = EInvoiceData(doc).get_data()
-        api = EInvoiceAPI(doc)
+        api = EInvoiceAPI.create(doc)
         result = api.generate_irn(data)
 
         # Handle Duplicate IRN
@@ -225,7 +225,7 @@ def handle_duplicate_irn_error(
         response = frappe._dict(response.data or response.error)
 
     else:
-        api = EInvoiceAPI(doc)
+        api = EInvoiceAPI.create(doc)
         response = api.get_e_invoice_by_irn(irn_data.Irn)
 
     # Handle error 2283:
@@ -365,7 +365,7 @@ def _cancel_e_invoice(doc, values):
         "Cnlrem": values.remark if values.remark else values.reason,
     }
 
-    result = EInvoiceAPI(doc).cancel_irn(data)
+    result = EInvoiceAPI.create(doc).cancel_irn(data)
 
     log_and_process_e_invoice_cancellation(
         doc, values, result, "e-Invoice cancelled successfully"
