@@ -6,7 +6,7 @@ import responses
 from responses import matchers
 
 import frappe
-from frappe.tests import IntegrationTestCase
+from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_to_date, now_datetime
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
@@ -24,7 +24,7 @@ from india_compliance.gst_india.utils.cryptography import (
 from india_compliance.gst_india.utils.tests import create_sales_invoice
 
 
-class TestNICAuth(IntegrationTestCase):
+class TestNICAuth(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
