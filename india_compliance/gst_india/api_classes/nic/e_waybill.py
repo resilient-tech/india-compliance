@@ -59,6 +59,8 @@ class EWaybillAPI(BaseAPI):
                 reference_doctype=doc.doctype,
                 reference_name=doc.name,
             )
+        else:
+            self.company_gstin = company_gstin
 
     def set_default_headers(self):
         self.default_headers.update(
