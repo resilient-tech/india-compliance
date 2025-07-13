@@ -119,7 +119,7 @@ class EInvoiceAPI(BaseAPI):
         return self.post(endpoint="ewayapi", json=data)
 
     def update_distance(self, result):
-        if not (info := self.response.get("info")):
+        if not (info := self.get_response_info()):
             return
 
         alert = next((alert for alert in info if alert.get("InfCd") == "EWBPPD"), None)
@@ -137,6 +137,9 @@ class EInvoiceAPI(BaseAPI):
     def sync_gstin_info(self, gstin):
         return self.get(endpoint="master/syncgstin", params={"gstin": gstin})
 
+    def get_response_info(self):
+        return None
+
 
 class EnrichedEInvoiceAPI(EInvoiceAPI):
     BASE_PATH = "ei/api"
@@ -153,6 +156,9 @@ class EnrichedEInvoiceAPI(EInvoiceAPI):
 
         self.auth_strategy = EnrichedAuth(self)
         self.set_default_headers()
+
+    def get_response_info(self):
+        return self.response.get("info")
 
 
 class StandardEInvoiceAPI(EInvoiceAPI):
@@ -232,3 +238,6 @@ class StandardEInvoiceAPI(EInvoiceAPI):
             return True
 
         return False
+
+    def get_response_info(self):
+        return self.response.get("InfoDtls")
