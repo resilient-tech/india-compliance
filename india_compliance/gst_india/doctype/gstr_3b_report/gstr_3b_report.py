@@ -14,11 +14,11 @@ from frappe.utils import cint, cstr, flt, get_first_day, get_last_day
 
 from india_compliance.gst_india.constants import INVOICE_DOCTYPES, STATE_NUMBERS
 from india_compliance.gst_india.overrides.transaction import is_inter_state_supply
-from india_compliance.gst_india.report.gstr_1.gstr_1 import GSTR11A11BData
 from india_compliance.gst_india.report.gstr_3b_details.gstr_3b_details import (
     IneligibleITC,
 )
 from india_compliance.gst_india.utils import get_gst_accounts_by_type, get_period
+from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR11A11BData
 
 VALUES_TO_UPDATE = ["iamt", "camt", "samt", "csamt"]
 GST_TAX_TYPE_MAP = {

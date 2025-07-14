@@ -629,7 +629,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
             error_log = frappe.log_error(
                 title="GSTR-1 Generation Failed",
                 message=str(error),
-                reference_doctype="GSTR-1 Beta",
+                reference_doctype="GSTR-1",
             )
             return callback and callback(filters, error_log.name)
 
@@ -696,7 +696,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         return download_gstr1_json_data(self)
 
     def get_books_gstr1_data(self, filters, aggregate=False):
-        from india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta import (
+        from india_compliance.gst_india.doctype.gstr_1.gstr_1 import (
             get_gstr_1_from_and_to_date,
         )
 

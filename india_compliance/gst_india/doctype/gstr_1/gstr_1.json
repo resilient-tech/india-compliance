@@ -1,6 +1,5 @@
 {
  "actions": [],
- "beta": 1,
  "creation": "2024-03-27 17:59:36.078726",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -110,7 +109,7 @@
  "modified": "2025-02-06 12:26:08.792234",
  "modified_by": "Administrator",
  "module": "GST India",
- "name": "GSTR-1 Beta",
+ "name": "GSTR-1",
  "owner": "Administrator",
  "permissions": [
   {

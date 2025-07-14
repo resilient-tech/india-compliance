@@ -46,7 +46,7 @@ def authenticate_otp(company_gstin, otp):
 
 @frappe.whitelist()
 def generate_evc_otp(company_gstin, pan, request_type):
-    frappe.has_permission("GSTR-1 Beta", "write", throw=True)
+    frappe.has_permission("GSTR-1", "write", throw=True)
     return TaxpayerBaseAPI(company_gstin).initiate_otp_for_evc(pan, request_type)
 
 
@@ -140,7 +140,7 @@ def publish_action_status_notification(
     }
 
     if return_type == "GSTR-1":
-        document_type = "GSTR-1 Beta"
+        document_type = "GSTR-1"
     elif return_type == "IMS":
         document_type = "GST Invoice Management System"
 
