@@ -1255,7 +1255,11 @@ class GSTR11A11BData:
         data = {}
         for entry in records:
             taxable_value = flt(entry.taxable_value, 2)
-            tax_rate = round(((entry.tax_amount / taxable_value) * 100))
+            tax_rate = (
+                round(((entry.tax_amount / taxable_value) * 100))
+                if taxable_value
+                else 0
+            )
 
             data.setdefault((entry.place_of_supply, tax_rate), [0.0, 0.0])
 
@@ -1507,10 +1511,7 @@ class GSTR1DocumentIssuedSummary:
         if suffix_length:
             n_0, n_1 = n_0[:-suffix_length], n_1[:-suffix_length]
 
-        if cint(n_1) - cint(n_0) != 1:
-            return False
-
-        return True
+        return cint(n_1) - cint(n_0) == 1
 
     def seperate_data_by_nature_of_document(self, data, doctype):
         nature_of_document = {

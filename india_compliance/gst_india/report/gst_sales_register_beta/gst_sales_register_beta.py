@@ -22,11 +22,12 @@ def validate_filters(filters):
     filters["from_date"] = filters.date_range[0]
     filters["to_date"] = filters.date_range[1]
 
-    if filters.from_date and filters.to_date:
-        if getdate(filters.from_date) > getdate(filters.to_date):
-            frappe.throw(
-                _("From Date must be before To Date"), title=_("Invalid Filter")
-            )
+    if (
+        filters.from_date
+        and filters.to_date
+        and getdate(filters.from_date) > getdate(filters.to_date)
+    ):
+        frappe.throw(_("From Date must be before To Date"), title=_("Invalid Filter"))
 
     return filters
 
@@ -304,7 +305,7 @@ def get_columns(filters):
                 "options": company_currency,
             },
             {
-                "label": _("Retured Invoice Total"),
+                "label": _("Returned Invoice Total"),
                 "fieldname": "returned_invoice_total",
                 "width": 120,
                 "fieldtype": "Currency",
