@@ -643,7 +643,7 @@ INVOICES = [
 ]
 
 
-class TestSalesRegisterBeta(IntegrationTestCase):
+class TestSalesRegister(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

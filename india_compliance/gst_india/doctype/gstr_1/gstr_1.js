@@ -3023,7 +3023,7 @@ class GSTR1Action extends FileGSTR1Dialog {
 
         const doc = this.frm.doc;
         const on_current_document =
-            window.location.pathname.includes("gstr-1-beta") &&
+            window.location.pathname.includes("gstr-1") &&
             doc.company_gstin == response.company_gstin &&
             doc.month_or_quarter == response.month_or_quarter &&
             doc.year == response.year;
