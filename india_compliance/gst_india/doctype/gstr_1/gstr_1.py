@@ -28,7 +28,7 @@ from india_compliance.gst_india.utils import (
 from india_compliance.gst_india.utils.gstin_info import get_gstr_1_return_status
 
 
-class GSTR1Beta(Document):
+class GSTR1(Document):
     @frappe.whitelist()
     def recompute_books(self):
         return self.generate_gstr1(recompute_books=True)
@@ -192,7 +192,7 @@ def perform_gstr1_action(action, month_or_quarter, year, company_gstin, **kwargs
     del kwargs["cmd"]
 
     if action == "upload_gstr1":
-        from india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export import (
+        from india_compliance.gst_india.doctype.gstr_1.gstr_1_export import (
             get_gstr_1_json,
         )
 
@@ -398,7 +398,7 @@ def get_net_gst_liability(
     Returns the net output balance for the given return period as per ledger entries
     """
 
-    frappe.has_permission("GSTR-1 Beta", throw=True)
+    frappe.has_permission("GSTR-1", throw=True)
 
     from_date, to_date = get_gstr_1_from_and_to_date(
         month_or_quarter, year, filing_preference

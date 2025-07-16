@@ -1,16 +1,16 @@
-div[data-page-route="GSTR-1 Beta"] {
+div[data-page-route="GSTR-1"] {
     --dt-row-height: 34px;
 }
 
-div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_html"] .section-body {
+div[data-page-route="GSTR-1"] [data-fieldname="tabs_html"] .section-body {
     margin-top: 0;
 }
 
-div[data-page-route="GSTR-1 Beta"] .section-body {
+div[data-page-route="GSTR-1"] .section-body {
     max-width: 100% !important;
 }
 
-div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_html"] .form-tabs-list {
+div[data-page-route="GSTR-1"] [data-fieldname="tabs_html"] .form-tabs-list {
     margin-top: var(--margin-sm);
     display: flex;
     justify-content: space-between;
@@ -19,24 +19,24 @@ div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_html"] .form-tabs-list 
     position: inherit;
 }
 
-div[data-page-route="GSTR-1 Beta"]
+div[data-page-route="GSTR-1"]
     [data-fieldname="tabs_html"]
     .form-tabs-list
     .custom-button-group {
     display: flex;
 }
 
-div[data-page-route="GSTR-1 Beta"]
+div[data-page-route="GSTR-1"]
     [data-fieldname="tabs_html"]
     .form-tabs-list
     .inner-group-button,
-div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_html"] .filter-selector,
-div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_html"] .view-group {
+div[data-page-route="GSTR-1"] [data-fieldname="tabs_html"] .filter-selector,
+div[data-page-route="GSTR-1"] [data-fieldname="tabs_html"] .view-group {
     margin-bottom: 8px;
     margin-left: 8px;
 }
 
-div[data-page-route="GSTR-1 Beta"]
+div[data-page-route="GSTR-1"]
     [data-fieldname="tabs_html"]
     .form-tabs-list
     .custom-button-group
@@ -44,32 +44,32 @@ div[data-page-route="GSTR-1 Beta"]
     padding: 5px 10px;
 }
 
-div[data-page-route="GSTR-1 Beta"] .tab-title-text {
+div[data-page-route="GSTR-1"] .tab-title-text {
     font-size: 1.2rem;
 }
 
-div[data-page-route="GSTR-1 Beta"] .tab-subtitle-text {
+div[data-page-route="GSTR-1"] .tab-subtitle-text {
     font-size: 0.8rem;
 }
 
-div[data-page-route="GSTR-1 Beta"] .datatable .dt-scrollable {
+div[data-page-route="GSTR-1"] .datatable .dt-scrollable {
     overflow-y: auto !important;
 }
 
-div[data-page-route="GSTR-1 Beta"] .datatable .dt-row {
+div[data-page-route="GSTR-1"] .datatable .dt-row {
     height: unset;
 }
 
-div[data-page-route="GSTR-1 Beta"] .datatable .dt-row-filter {
+div[data-page-route="GSTR-1"] .datatable .dt-row-filter {
     height: var(--dt-row-height);
 }
 
-div[data-page-route="GSTR-1 Beta"] .datatable .dt-row-filter .dt-cell {
+div[data-page-route="GSTR-1"] .datatable .dt-row-filter .dt-cell {
     max-height: var(--dt-row-height);
 }
 
-div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_empty_state"],
-div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_no_data"] {
+div[data-page-route="GSTR-1"] [data-fieldname="tabs_empty_state"],
+div[data-page-route="GSTR-1"] [data-fieldname="tabs_no_data"] {
     min-height: 320px;
     display: flex;
     align-items: center;
@@ -77,34 +77,34 @@ div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_no_data"] {
     flex-direction: column;
 }
 
-div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_empty_state"] > img,
-div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_no_data"] > img {
+div[data-page-route="GSTR-1"] [data-fieldname="tabs_empty_state"] > img,
+div[data-page-route="GSTR-1"] [data-fieldname="tabs_no_data"] > img {
     margin-bottom: var(--margin-md);
     max-height: 100px;
 }
 
-div[data-page-route="GSTR-1 Beta"] .tab-actions {
+div[data-page-route="GSTR-1"] .tab-actions {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
 }
 
-div[data-page-route="GSTR-1 Beta"] .frappe-control [data-fieldtype="HTML"] {
+div[data-page-route="GSTR-1"] .frappe-control [data-fieldtype="HTML"] {
     margin-left: -11px;
     margin-right: -15px;
 }
 
-div[data-page-route="GSTR-1 Beta"] .custom-tabs > .nav-item > .nav-link {
+div[data-page-route="GSTR-1"] .custom-tabs > .nav-item > .nav-link {
     padding: 4px 8px;
 }
 
-div[data-page-route="GSTR-1 Beta"] .custom-tabs > .nav-item > .nav-link.active {
+div[data-page-route="GSTR-1"] .custom-tabs > .nav-item > .nav-link.active {
     background-color: #e2e2e2;
     color: var(--primary);
 }
 
-div[data-page-route="GSTR-1 Beta"]
+div[data-page-route="GSTR-1"]
     .custom-tabs
     > .nav-item:first-child:not(:has(.disabled)):hover {
     background-color: var(--btn-default-hover-bg);
@@ -112,7 +112,7 @@ div[data-page-route="GSTR-1 Beta"]
     color: var(--text-color);
 }
 
-div[data-page-route="GSTR-1 Beta"]
+div[data-page-route="GSTR-1"]
     .custom-tabs
     > .nav-item:last-child:not(:has(.disabled)):hover {
     background-color: var(--btn-default-hover-bg);
@@ -120,20 +120,20 @@ div[data-page-route="GSTR-1 Beta"]
     color: var(--text-color);
 }
 
-div[data-page-route="GSTR-1 Beta"] .custom-tabs > .nav-item > .nav-link.active:hover {
+div[data-page-route="GSTR-1"] .custom-tabs > .nav-item > .nav-link.active:hover {
     background-color: #ededed;
     color: var(--primary);
 }
 
-div[data-page-route="GSTR-1 Beta"] .custom-tabs > .nav-item:first-child > .nav-link {
+div[data-page-route="GSTR-1"] .custom-tabs > .nav-item:first-child > .nav-link {
     border-radius: 0.4rem 0 0 0.4rem;
 }
 
-div[data-page-route="GSTR-1 Beta"] .custom-tabs > .nav-item:last-child > .nav-link {
+div[data-page-route="GSTR-1"] .custom-tabs > .nav-item:last-child > .nav-link {
     border-radius: 0 0.4rem 0.4rem 0;
 }
 
-div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_html"] .reconcile-row {
+div[data-page-route="GSTR-1"] [data-fieldname="tabs_html"] .reconcile-row {
     position: absolute;
     top: 50%;
     left: 50%;

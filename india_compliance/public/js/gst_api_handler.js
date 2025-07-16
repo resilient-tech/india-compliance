@@ -48,7 +48,9 @@ Object.assign(india_compliance, {
                         },
                     });
                 },
+                static: true,
             });
+            prompt.get_close_btn().show();
             prompt.show();
         });
     },

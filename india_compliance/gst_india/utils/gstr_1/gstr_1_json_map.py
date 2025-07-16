@@ -6,10 +6,6 @@ import frappe
 from frappe.utils import cint, flt
 
 from india_compliance.gst_india.constants import UOM_MAP
-from india_compliance.gst_india.report.gstr_1.gstr_1 import (
-    GSTR1DocumentIssuedSummary,
-    GSTR11A11BData,
-)
 from india_compliance.gst_india.utils import (
     MONTHS,
     get_gst_accounts_by_type,
@@ -32,7 +28,11 @@ from india_compliance.gst_india.utils.gstr_1 import GSTR1_ItemField as item_f
 from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_SubCategory,
 )
-from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
+from india_compliance.gst_india.utils.gstr_1.gstr_1_data import (
+    GSTR1DocumentIssuedSummary,
+    GSTR1Invoices,
+    GSTR11A11BData,
+)
 from india_compliance.gst_india.utils.gstr_mapper_utils import GovDataMapper
 
 ############################################################################################################
