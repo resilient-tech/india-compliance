@@ -23,7 +23,7 @@
   "is_retry_einv_ewb_generation_pending",
   "column_break_rk3h",
   "sandbox_mode",
-  "encrypt_nic_requests",
+  "use_fallback_for_nic",
   "e_waybill_section",
   "enable_e_waybill",
   "enable_e_waybill_from_dn",
@@ -700,17 +700,17 @@
   {
    "default": "1",
    "depends_on": "eval: india_compliance.is_api_enabled(doc)",
-   "description": "If enabled, encrypts all API requests to NIC portal <br>Note: Return APIs are already encrypted and are not affected by this setting.",
-   "fieldname": "encrypt_nic_requests",
+   "description": "Check this box only if API requests are failing with invalid certificate error",
+   "fieldname": "use_fallback_for_nic",
    "fieldtype": "Check",
-   "label": "Encrypt e-Invoice & e-Waybill API Requests"
+   "label": "Use Fallback APIs for e-Waybill and e-Invoice"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-07-12 17:53:51.515911",
+ "modified": "2025-07-16 19:40:18.381272",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
