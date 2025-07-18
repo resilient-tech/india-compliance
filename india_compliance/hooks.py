@@ -41,10 +41,20 @@ setup_wizard_stages = "india_compliance.setup_wizard.get_setup_wizard_stages"
 app_include_js = "india_compliance.bundle.js"
 
 doctype_js = {
-    "Address": "gst_india/client_scripts/address.js",
-    "Company": "gst_india/client_scripts/company.js",
-    "Customer": "gst_india/client_scripts/customer.js",
+    "Address": [
+        "gst_india/client_scripts/party.js",
+        "gst_india/client_scripts/address.js",
+    ],
+    "Company": [
+        "gst_india/client_scripts/party.js",
+        "gst_india/client_scripts/company.js",
+    ],
+    "Customer": [
+        "gst_india/client_scripts/party.js",
+        "gst_india/client_scripts/customer.js",
+    ],
     "Delivery Note": [
+        "gst_india/client_scripts/e_waybill_applicability.js",
         "gst_india/client_scripts/e_waybill_actions.js",
         "gst_india/client_scripts/delivery_note.js",
     ],
@@ -57,31 +67,40 @@ doctype_js = {
     "Journal Entry": "gst_india/client_scripts/journal_entry.js",
     "Payment Entry": "gst_india/client_scripts/payment_entry.js",
     "Purchase Invoice": [
+        "gst_india/client_scripts/e_waybill_applicability.js",
         "gst_india/client_scripts/e_waybill_actions.js",
         "gst_india/client_scripts/purchase_invoice.js",
     ],
     "Purchase Receipt": [
+        "gst_india/client_scripts/e_waybill_applicability.js",
         "gst_india/client_scripts/e_waybill_actions.js",
         "gst_india/client_scripts/purchase_receipt.js",
     ],
     "Sales Invoice": [
         "gst_india/client_scripts/e_invoice_actions.js",
+        "gst_india/client_scripts/e_waybill_applicability.js",
         "gst_india/client_scripts/e_waybill_actions.js",
         "gst_india/client_scripts/sales_invoice.js",
     ],
     "Stock Entry": [
         "gst_india/client_scripts/stock_entry.js",
+        "gst_india/client_scripts/e_waybill_applicability.js",
         "gst_india/client_scripts/e_waybill_actions.js",
     ],
     "Subcontracting Order": [
         "gst_india/client_scripts/subcontracting_order.js",
+        "gst_india/client_scripts/e_waybill_applicability.js",
         "gst_india/client_scripts/e_waybill_actions.js",
     ],
     "Subcontracting Receipt": [
         "gst_india/client_scripts/subcontracting_receipt.js",
+        "gst_india/client_scripts/e_waybill_applicability.js",
         "gst_india/client_scripts/e_waybill_actions.js",
     ],
-    "Supplier": "gst_india/client_scripts/supplier.js",
+    "Supplier": [
+        "gst_india/client_scripts/party.js",
+        "gst_india/client_scripts/supplier.js",
+    ],
     "Accounts Settings": "audit_trail/client_scripts/accounts_settings.js",
     "Customize Form": "audit_trail/client_scripts/customize_form.js",
     "Document Naming Settings": "gst_india/client_scripts/document_naming_settings.js",
@@ -90,6 +109,7 @@ doctype_js = {
 
 doctype_list_js = {
     "Sales Invoice": [
+        "gst_india/client_scripts/e_waybill_applicability.js",
         "gst_india/client_scripts/e_waybill_actions.js",
         "gst_india/client_scripts/sales_invoice_list.js",
     ]
