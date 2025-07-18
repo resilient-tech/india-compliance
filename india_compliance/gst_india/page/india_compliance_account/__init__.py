@@ -8,10 +8,14 @@ from frappe.utils.password import (
     set_encrypted_password,
 )
 
+from india_compliance.gst_india.utils import has_permission_of_page
+
+page_name = "india-compliance-account"
+
 
 @frappe.whitelist()
 def get_api_secret():
-    frappe.only_for("System Manager")
+    has_permission_of_page(page_name, throw=True)
 
     return get_decrypted_password(
         "GST Settings",
@@ -23,7 +27,7 @@ def get_api_secret():
 
 @frappe.whitelist()
 def set_api_secret(api_secret: str):
-    frappe.only_for("System Manager")
+    has_permission_of_page(page_name, throw=True)
 
     if not api_secret:
         return logout()
@@ -49,7 +53,7 @@ def logout():
 
 @frappe.whitelist()
 def get_auth_session():
-    frappe.only_for("System Manager")
+    has_permission_of_page(page_name, throw=True)
 
     session = frappe.db.get_global("ic_auth_session")
     return session and json.loads(session)
@@ -57,7 +61,7 @@ def get_auth_session():
 
 @frappe.whitelist()
 def set_auth_session(session: str = None):
-    frappe.only_for("System Manager")
+    has_permission_of_page(page_name, throw=True)
 
     if not session:
         _set_auth_session(None)
