@@ -323,6 +323,18 @@ def log_and_process_e_waybill_cancellation(doc, values, result):
 @frappe.whitelist()
 def update_vehicle_info(*, doctype, docname, values):
     doc = load_doc(doctype, docname, "submit")
+
+    values_in_comment = {
+        "Vehicle No": doc.vehicle_no,
+        "LR No": doc.lr_no,
+        "LR Date": doc.lr_date,
+        "Mode of Transport": doc.mode_of_transport,
+        "GST Vehicle Type": doc.gst_vehicle_type,
+        # How to get previous values?
+        # "Place of Change": doc.place_of_change,
+        # "State": doc.state,
+    }
+
     values = frappe.parse_json(values)
     doc.db_set(
         {
@@ -344,22 +356,11 @@ def update_vehicle_info(*, doctype, docname, values):
     )
 
     comment = _(
-        "Vehicle Info has been updated by {user}.<br><br> New details are: <br>"
+        "Vehicle Info has been updated by {user}.<br><br> Old details are: <br>"
     ).format(user=frappe.bold(get_fullname()))
 
-    values_in_comment = {
-        "Vehicle No": values.vehicle_no,
-        "LR No": values.lr_no,
-        "LR Date": values.lr_date,
-        "Mode of Transport": values.mode_of_transport,
-        "GST Vehicle Type": values.gst_vehicle_type,
-        "Place of Change": values.place_of_change,
-        "State": values.state,
-    }
-
     for key, value in values_in_comment.items():
-        if value:
-            comment += "{0}: {1} <br>".format(frappe.bold(_(key)), value)
+        comment += "{0}: {1} <br>".format(frappe.bold(_(key)), value or "<empty>")
 
     log_and_process_e_waybill(
         doc,
@@ -437,6 +438,8 @@ def _bulk_update_transporter_in_docs(doctype, docnames, values):
 @frappe.whitelist()
 def update_transporter(*, doctype, docname, values):
     doc = load_doc(doctype, docname, "submit")
+    old_transporter_id = doc.gst_transporter_id
+
     values = frappe.parse_json(values)
     data = EWaybillData(doc).get_update_transporter_data(values)
     EWaybillAPI.create(doc).update_transporter(data)
@@ -463,11 +466,11 @@ def update_transporter(*, doctype, docname, values):
     )
 
     comment = (
-        "Transporter Info has been updated by {user}. New Transporter ID is"
+        "Transporter Info has been updated by {user}. Old Transporter ID was"
         " {transporter_id}."
     ).format(
         user=frappe.bold(get_fullname()),
-        transporter_id=frappe.bold(values.gst_transporter_id),
+        transporter_id=frappe.bold(old_transporter_id or "not set"),
     )
 
     log_and_process_e_waybill(
