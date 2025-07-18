@@ -1115,7 +1115,7 @@ def has_permission_of_page(page_name, throw=False):
             return False
 
         raise frappe.PermissionError(
-            _("You do not have permission to access this page.")
+            _("You do not have permission to access page: {0}").format(page_name)
         )
 
     return True
