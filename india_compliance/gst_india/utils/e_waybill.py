@@ -8,6 +8,7 @@ from frappe.utils import (
     add_days,
     add_to_date,
     format_date,
+    get_date_str,
     get_datetime,
     get_datetime_str,
     get_fullname,
@@ -324,18 +325,18 @@ def log_and_process_e_waybill_cancellation(doc, values, result):
 def update_vehicle_info(*, doctype, docname, values):
     doc = load_doc(doctype, docname, "submit")
 
-    values_in_comment = {
-        "Vehicle No": doc.vehicle_no,
-        "LR No": doc.lr_no,
-        "LR Date": doc.lr_date,
-        "Mode of Transport": doc.mode_of_transport,
-        "GST Vehicle Type": doc.gst_vehicle_type,
-        # How to get previous values?
-        # "Place of Change": doc.place_of_change,
-        # "State": doc.state,
+    old_values = {
+        "vehicle_no": doc.vehicle_no,
+        "lr_no": doc.lr_no,
+        "lr_date": doc.lr_date,
+        "mode_of_transport": doc.mode_of_transport,
+        "gst_vehicle_type": doc.gst_vehicle_type,
+        "place_of_change": "-",
+        "state": "-",
     }
 
     values = frappe.parse_json(values)
+
     doc.db_set(
         {
             "vehicle_no": values.get("vehicle_no", "").replace(" ", ""),
@@ -355,12 +356,7 @@ def update_vehicle_info(*, doctype, docname, values):
         alert=True,
     )
 
-    comment = _(
-        "Vehicle Info has been updated by {user}.<br><br> Old details are: <br>"
-    ).format(user=frappe.bold(get_fullname()))
-
-    for key, value in values_in_comment.items():
-        comment += "{0}: {1} <br>".format(frappe.bold(_(key)), value or "<empty>")
+    comment = _generate_comment(old_values, values)
 
     log_and_process_e_waybill(
         doc,
@@ -374,6 +370,81 @@ def update_vehicle_info(*, doctype, docname, values):
     )
 
     return send_updated_doc(doc)
+
+
+LABEL_MAP = {
+    "vehicle_no": "Vehicle No",
+    "lr_no": "LR No",
+    "lr_date": "LR Date",
+    "mode_of_transport": "Mode of Transport",
+    "gst_vehicle_type": "GST Vehicle Type",
+    "place_of_change": "Place of Change",
+    "state": "State",
+}
+
+DATE_FIELDS = ("lr_date",)
+
+
+def _generate_comment(old_values, new_values):
+    table = _generate_table(old_values, new_values)
+
+    if not table:
+        return
+
+    return (
+        _("Vehicle Info has been updated by {user}.<br><br>").format(
+            user=frappe.bold(get_fullname())
+        )
+        + table
+    )
+
+
+def _generate_table(old_values, new_values):
+    table_rows = _generate_table_rows(old_values, new_values)
+
+    if not table_rows:
+        return
+
+    return """
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Field</th>
+                    <th>From</th>
+                    <th>To</th>
+                </tr>
+            </thead>
+            <tbody>
+                {table_rows}
+            </tbody>
+        </table>
+    """.format(
+        table_rows=table_rows
+    )
+
+
+def _generate_table_rows(old_values, new_values):
+    table_rows = []
+
+    for key, label in LABEL_MAP.items():
+        old_value = old_values.get(key)
+        new_value = new_values.get(key)
+
+        if key in DATE_FIELDS:
+            old_value = get_date_str(old_value)
+            new_value = get_date_str(new_value)
+
+        if old_value == new_value:
+            continue
+
+        old_value = "<empty>" if old_value is None else old_value
+        new_value = "<empty>" if new_value is None else new_value
+
+        table_rows.append(
+            f"<tr><td>{frappe.bold(_(label))}</td><td>{old_value}</td><td>{new_value}</td></tr>"
+        )
+
+    return "".join(table_rows)
 
 
 def _bulk_update_transporter_in_docs(doctype, docnames, values):
