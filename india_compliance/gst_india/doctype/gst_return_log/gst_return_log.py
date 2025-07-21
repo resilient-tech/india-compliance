@@ -109,7 +109,7 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
 
         file = get_file_doc(self.doctype, self.name, file_field)
         if file:
-            file.delete()
+            file.delete(ignore_permissions=True)
 
         self.db_set(file_field, None)
 
