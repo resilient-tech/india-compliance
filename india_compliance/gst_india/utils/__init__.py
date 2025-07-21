@@ -1020,3 +1020,19 @@ def get_month_or_quarter_dict():
 
 
 MONTHS = list(get_month_or_quarter_dict().keys())[4:]
+
+
+def has_permission_of_page(page_name, throw=False):
+    """
+    Check if the user has permission to access the page.
+    """
+    page = frappe.get_doc("Page", page_name)
+    if not page.is_permitted():
+        if not throw:
+            return False
+
+        raise frappe.PermissionError(
+            _("You do not have permission to access page: {0}").format(page_name)
+        )
+
+    return True
