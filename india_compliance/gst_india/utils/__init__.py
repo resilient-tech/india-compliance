@@ -1110,3 +1110,19 @@ def get_company_gstin_number(company, address=None, all_gstins=False):
         )
 
     return gstin
+
+
+def has_permission_of_page(page_name, throw=False):
+    """
+    Check if the user has permission to access the page.
+    """
+    page = frappe.get_doc("Page", page_name)
+    if not page.is_permitted():
+        if not throw:
+            return False
+
+        raise frappe.PermissionError(
+            _("You do not have permission to access page: {0}").format(page_name)
+        )
+
+    return True
