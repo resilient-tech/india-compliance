@@ -836,7 +836,7 @@ class GSTR1 {
     async show_rounding_diff_journal_entry() {
         if (!frappe.perm.has_perm("Journal Entry")) return;
 
-        let rounding_difference = this.data.books?.rounding_difference[0];
+        const rounding_difference = this.data.books?.rounding_difference?.[0];
         if (!rounding_difference || Object.values(rounding_difference).every(v => !v))
             return;
 
@@ -865,7 +865,7 @@ class GSTR1 {
     }
 
     create_rounding_diff_journal_entry(account, posting_date) {
-        let rounding_difference = this.data.books?.rounding_difference[0];
+        const rounding_difference = this.data.books?.rounding_difference?.[0];
 
         const je_details = {
             posting_date: posting_date,
@@ -1041,7 +1041,7 @@ class TabManager {
         this.data = data;
         this.summary = summary_data;
         this.status = status;
-        this.rounding_difference = this.data?.rounding_difference[0];
+        this.rounding_difference = this.data?.rounding_difference?.[0];
         this.remove_tab_custom_buttons();
         this.setup_actions();
         this.datatable.refresh(this.summary, null, this.get_no_data_message());
