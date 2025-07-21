@@ -1080,3 +1080,19 @@ def enable_autocommit(fn):
             db.auto_commit_on_many_writes = autocommit
 
     return wrapper
+
+
+def has_permission_of_page(page_name, throw=False):
+    """
+    Check if the user has permission to access the page.
+    """
+    page = frappe.get_doc("Page", page_name)
+    if not page.is_permitted():
+        if not throw:
+            return False
+
+        raise frappe.PermissionError(
+            _("You do not have permission to access page: {0}").format(page_name)
+        )
+
+    return True
