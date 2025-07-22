@@ -25,9 +25,27 @@ def set_bootinfo(bootinfo):
     bootinfo["india_state_options"] = list(INDIAN_STATES)
     bootinfo["ic_api_enabled_from_conf"] = bool(frappe.conf.ic_api_secret)
 
+    set_is_indian_registered_company(bootinfo)
     set_trigger_for_audit_trail_notification(bootinfo)
     set_trigger_for_item_tax_template_notification(bootinfo)
     set_trigger_for_new_gst_category_notification(bootinfo)
+
+
+def set_is_indian_registered_company(bootinfo):
+    companies = frappe.get_all(
+        "Company",
+        fields=["name", "gstin", "gst_category", "country"],
+    )
+
+    bootinfo["is_indian_registered_company"] = {
+        company.name: _is_indian_registered_company(company) for company in companies
+    }
+
+
+def _is_indian_registered_company(company):
+    return bool(company.gstin) or (
+        company.gst_category != "Unregistered" and company.country == "India"
+    )
 
 
 def set_trigger_for_audit_trail_notification(bootinfo):
