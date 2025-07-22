@@ -56,7 +56,7 @@ def execute():
                 f"Please upgrade {app_name} to version {required_version} or above to use the current version of"
                 " India Compliance.\n"
                 f"Alternatively, you may need to downgrade the version of India Compliance App to {app_version}"
-                f" tomatch your {app_name} version.\n"
+                f" to match your {app_name} version.\n"
             )
 
 
