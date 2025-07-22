@@ -179,7 +179,7 @@ class TestEWaybill(IntegrationTestCase):
             {
                 "reference_doctype": "e-Waybill Log",
                 "reference_name": transporter_data.get("request_data").get("ewbNo"),
-                "content": "Transporter Info has been updated by <strong>Administrator</strong>. New Transporter ID is <strong>05AAACG2140A1ZL</strong>.",
+                "content": "Transporter Info has been updated by <strong>Administrator</strong>. Transporter ID changed from <strong>&lt;empty&gt;</strong> to <strong>05AAACG2140A1ZL</strong>.",
             },
             frappe.get_doc(
                 "Comment",

@@ -537,11 +537,12 @@ def update_transporter(*, doctype, docname, values):
     )
 
     comment = (
-        "Transporter Info has been updated by {user}. Old Transporter ID was"
-        " {transporter_id}."
+        "Transporter Info has been updated by {user}. Transporter ID changed from"
+        " {old_transporter_id} to {new_transporter_id}."
     ).format(
         user=frappe.bold(get_fullname()),
-        transporter_id=frappe.bold(old_transporter_id or "not set"),
+        old_transporter_id=frappe.bold(old_transporter_id or "<empty>"),
+        new_transporter_id=frappe.bold(values.gst_transporter_id or "<empty>"),
     )
 
     log_and_process_e_waybill(
