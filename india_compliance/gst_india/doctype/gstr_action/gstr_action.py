@@ -24,4 +24,6 @@ def set_gstr_actions(doc, request_type, token, request_id, status=None):
         row["status"] = status
 
     doc.append("actions", row)
+    # Integration Requests may be cleared by a scheduler job
+    doc.flags.ignore_links = True
     doc.save()
