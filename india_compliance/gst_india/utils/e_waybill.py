@@ -431,8 +431,8 @@ def _generate_table_rows(old_values, new_values):
         new_value = new_values.get(key)
 
         if key in DATE_FIELDS:
-            old_value = get_date_str(old_value)
-            new_value = get_date_str(new_value)
+            old_value = old_value and get_date_str(old_value)
+            new_value = new_value and get_date_str(new_value)
 
         if old_value == new_value:
             continue
