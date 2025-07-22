@@ -123,6 +123,7 @@ class TaxpayerAuthenticate(BaseAPI):
         "AUTH4033": "invalid_otp",  # Invalid Session
         # "AUTH4034": "invalid_otp",  # Invalid OTP
         "AUTH4038": "authorization_failed",  # Session Expired
+        "OTP0011": "authorization_failed",  # EVC OTP GSTR-1
         "TEC4002": "invalid_public_key",
         "RET13506": "OTP is either expired or incorrect",
         "RET00003": "Return Form already ready to be filed",  # Actions performed on portal directly
