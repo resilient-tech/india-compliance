@@ -1,3 +1,4 @@
+import copy
 from base64 import b64decode
 from urllib.parse import urljoin
 
@@ -18,7 +19,28 @@ BASE_URL = "https://asp.resilient.tech"
 class BaseAPI:
     API_NAME = "GST"
     BASE_PATH = ""
-    SENSITIVE_INFO = ("x-api-key",)
+    PLACEHOLDER = "*****"
+    DEFAULT_MASK_MAP = {
+        "headers": [
+            "x-api-key",
+            "auth-token",
+            "auth_token",
+            "AuthToken",
+            "password",
+            "Password",
+        ],
+        "output": [
+            "auth-token",
+            "auth_token",
+            "AuthToken",
+            "sek",
+            "Sek",
+            "rek",
+            "Rek",
+        ],
+        "data": ["app_key", "AppKey", "password", "Password"],
+        "body": ["app_key", "AppKey", "password", "Password"],
+    }
 
     def __init__(self, *args, **kwargs):
         self.settings = frappe.get_cached_doc("GST Settings")
@@ -43,7 +65,6 @@ class BaseAPI:
         self.setup(*args, **kwargs)
 
     def setup(*args, **kwargs):
-        # Override in subclass
         pass
 
     def fetch_credentials(self, gstin, service, require_password=True):
@@ -74,7 +95,6 @@ class BaseAPI:
     def get_url(self, *parts):
         parts = list(parts)
 
-        # If the first part is a URL, return it as it is
         if parts and parts[0].startswith("https"):
             return parts[0]
 
@@ -111,7 +131,6 @@ class BaseAPI:
             url=self.get_url(endpoint),
             params=params,
             headers={
-                # auto-generated hash, required by some endpoints
                 **self.default_headers,
                 **(headers or {}),
             },
@@ -280,23 +299,65 @@ class BaseAPI:
         output = log.output
         data = log.data
         request_body = data and data.get("body")
-        placeholder = "*****"
 
-        for key in self.SENSITIVE_INFO:
-            if key in request_headers:
-                request_headers[key] = placeholder
+        # Define specific locations where each type of sensitive info should be masked
+        sensitive_info_mapping = self._get_sensitive_info_mapping()
 
-            if output and key in output:
-                output[key] = placeholder
+        self._mask_sensitive_info(
+            request_headers, sensitive_info_mapping.get("headers")
+        )
 
-            if not data:
-                continue
+        self._mask_sensitive_info(output, sensitive_info_mapping.get("output"))
+        self._mask_sensitive_info(data, sensitive_info_mapping.get("data"))
+        self._mask_sensitive_info(request_body, sensitive_info_mapping.get("body"))
 
-            if key in data:
-                data[key] = placeholder
+    def _get_sensitive_info_mapping(self):
+        """
+        Define specific locations where different types of sensitive information should be masked.
+        Override _get_sensitive_info_overrides() in subclasses to customize specific locations.
 
-            if request_body and key in request_body:
-                request_body[key] = placeholder
+        Returns:
+            dict: Mapping of data location to list of sensitive keys
+        """
+
+        default_mapping = copy.deepcopy(self.DEFAULT_MASK_MAP)
+
+        # Get subclass-specific overrides
+        overrides = self._get_sensitive_info_overrides()
+
+        # Merge overrides with default mapping
+        if overrides:
+            for location, keys in overrides.items():
+                if location in default_mapping:
+                    # Replace the entire list for this location
+                    default_mapping[location] = keys if keys is not None else []
+                else:
+                    # Add new location
+                    default_mapping[location] = keys if keys is not None else []
+
+        return default_mapping
+
+    def _get_sensitive_info_overrides(self):
+        """
+        Override this method in subclasses to customize sensitive info mapping for specific locations.
+        Only specify the locations you want to change - others will use the default mapping.
+
+        Returns:
+            dict: Mapping of data location to list of sensitive keys (only for locations to override)
+        """
+        return {}
+
+    def _mask_sensitive_info(self, target, sensitive_keys):
+        """
+        Mask sensitive information in the target dictionary based on the provided keys.
+        This method is called by mask_sensitive_info to apply masking based on the mapping.
+        """
+        if not (target and sensitive_keys):
+            return
+
+        for key in sensitive_keys:
+            if key in target:
+                target[key] = self.PLACEHOLDER
 
     def generate_app_key(self, service):
         app_key = frappe.generate_hash(length=32)
