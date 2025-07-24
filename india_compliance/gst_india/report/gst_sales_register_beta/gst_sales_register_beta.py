@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 from frappe.utils import getdate
 
-from india_compliance.gst_india.utils.gstr_1 import GSTR1_Category
+from india_compliance.gst_india.utils.gstr_1 import GSTR1_Category, GSTR1_SubCategory
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
 
 
@@ -19,6 +19,14 @@ def execute(filters=None):
 
 def validate_filters(filters):
     filters = frappe._dict(filters)
+
+    invoice_sub_category = getattr(
+        GSTR1_SubCategory, filters.invoice_sub_category, None
+    )
+
+    if invoice_sub_category:
+        filters.invoice_sub_category = invoice_sub_category.value
+
     filters["from_date"] = filters.date_range[0]
     filters["to_date"] = filters.date_range[1]
 
