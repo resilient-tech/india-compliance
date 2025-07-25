@@ -188,7 +188,7 @@ function validate_overseas_gst_category(doctype) {
             if (
                 !is_overseas_transaction(frm) ||
                 enable_overseas_transactions ||
-                !frappe.boot.is_indian_registered_company[frm.doc.company]
+                !india_compliance.is_indian_registered_company(frm.doc.company)
             )
                 return;
 
@@ -287,7 +287,7 @@ async function _set_gstin_status(frm, gstin_field_name) {
 function validate_gstin_status(gstin_doc, frm, gstin_field_name) {
     if (
         !gst_settings.validate_gstin_status ||
-        !frappe.boot.is_indian_registered_company[frm.doc.company]
+        !india_compliance.is_indian_registered_company(frm.doc.company)
     )
         return;
 

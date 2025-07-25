@@ -120,7 +120,7 @@ function toggle_reverse_charge(frm) {
 function validate_gst_hsn_code(frm) {
     if (
         frm.doc.gst_category !== "Overseas" ||
-        !frappe.boot.is_indian_registered_company[frm.doc.company]
+        !india_compliance.is_indian_registered_company(frm.doc.company)
     )
         return;
 
