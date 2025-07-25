@@ -5,6 +5,7 @@ from india_compliance.gst_india.uninstall import before_uninstall as remove_gst
 from india_compliance.gst_india.uninstall import (
     delete_education_custom_fields,
     delete_hrms_custom_fields,
+    delete_healthcare_custom_fields,
 )
 from india_compliance.income_tax_india.uninstall import (
     before_uninstall as remove_income_tax,
@@ -37,3 +38,6 @@ def before_app_uninstall(app_name):
 
     if app_name == "education":
         delete_education_custom_fields()
+
+    if app_name == "healthcare":
+        delete_healthcare_custom_fields()
