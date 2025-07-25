@@ -20,11 +20,11 @@ def execute(filters=None):
 def validate_filters(filters):
     filters = frappe._dict(filters)
 
-    invoice_sub_category = getattr(
-        GSTR1_SubCategory, filters.invoice_sub_category, None
-    )
+    if filters.invoice_sub_category:
+        invoice_sub_category = getattr(
+            GSTR1_SubCategory, filters.invoice_sub_category, None
+        )
 
-    if invoice_sub_category:
         filters.invoice_sub_category = invoice_sub_category.value
 
     filters["from_date"] = filters.date_range[0]
