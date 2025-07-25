@@ -345,8 +345,28 @@ doc_events = {
         "on_trash": "india_compliance.audit_trail.overrides.version.on_trash",
     },
     "Fee Category": {
-        "before_insert": "india_compliance.gst_india.overrides.fee_category.before_update",
-        "before_validate": "india_compliance.gst_india.overrides.fee_category.before_update",
+        "before_insert": "india_compliance.gst_india.overrides.cross_app_hsn_code.before_update",
+        "before_validate": "india_compliance.gst_india.overrides.cross_app_hsn_code.before_update",
+    },
+    "Clinical Procedure Template": {
+        "before_insert": "india_compliance.gst_india.overrides.cross_app_hsn_code.before_update",
+        "before_validate": "india_compliance.gst_india.overrides.cross_app_hsn_code.before_update",
+    },
+    "Observation Template": {
+        "before_insert": "india_compliance.gst_india.overrides.cross_app_hsn_code.before_update",
+        "before_validate": "india_compliance.gst_india.overrides.cross_app_hsn_code.before_update",
+    },
+    "Therapy Type": {
+        "before_insert": "india_compliance.gst_india.overrides.cross_app_hsn_code.before_update",
+        "before_validate": "india_compliance.gst_india.overrides.cross_app_hsn_code.before_update",
+    },
+    "Healthcare Service Unit Type": {
+        "before_insert": "india_compliance.gst_india.overrides.cross_app_hsn_code.before_update",
+        "before_validate": "india_compliance.gst_india.overrides.cross_app_hsn_code.before_update",
+    },
+    "Therapy Plan Template": {
+        "before_insert": "india_compliance.gst_india.overrides.cross_app_hsn_code.before_update",
+        "before_validate": "india_compliance.gst_india.overrides.cross_app_hsn_code.before_update",
     },
 }
 

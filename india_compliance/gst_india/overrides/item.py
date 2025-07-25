@@ -13,13 +13,13 @@ def validate(doc, method=None):
 
 def update_hsn_code(doc):
     """
-    Update HSN Code from Fee Category (education)
+    Update HSN Code from Fee Category (education), Healthcare Services (healthcare)
     """
-    if not frappe.flags.category_hsn_code:
+    if not frappe.flags.cross_app_hsn_code:
         return
 
-    doc.gst_hsn_code = frappe.flags.category_hsn_code
-    del frappe.flags.category_hsn_code
+    doc.gst_hsn_code = frappe.flags.cross_app_hsn_code
+    del frappe.flags.cross_app_hsn_code
 
 
 def validate_hsn_code(doc):
