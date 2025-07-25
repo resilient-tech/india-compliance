@@ -138,7 +138,7 @@ class TestEWaybill(IntegrationTestCase):
             "<td>GJ07DL9009</td>",
             "<td>GJ07DL9001</td>",
             "<td><strong>LR Date</strong></td>",
-            "<td>2025-07-22</td>",
+            f"<td>{today()}</td>",
             "<td>&lt;empty&gt;</td>",
             "<td><strong>Place of Change</strong></td>",
             "<td>-</td>",

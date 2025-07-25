@@ -8,7 +8,6 @@ from frappe.utils import (
     add_days,
     add_to_date,
     format_date,
-    get_date_str,
     get_datetime,
     get_datetime_str,
     get_fullname,
@@ -47,6 +46,7 @@ from india_compliance.gst_india.utils import (
     update_onload,
 )
 from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
+from india_compliance.utils.change_log_utils import create_change_log_comment
 
 #######################################################################################
 ### Manual JSON Generation for e-Waybill ##############################################
@@ -356,7 +356,26 @@ def update_vehicle_info(*, doctype, docname, values):
         alert=True,
     )
 
-    comment = _generate_comment(old_values, values)
+    # Vehicle Info update labels and date fields for change log
+    VEHICLE_INFO_LABEL_MAP = {
+        "vehicle_no": "Vehicle No",
+        "lr_no": "LR No",
+        "lr_date": "LR Date",
+        "mode_of_transport": "Mode of Transport",
+        "gst_vehicle_type": "GST Vehicle Type",
+        "place_of_change": "Place of Change",
+        "state": "State",
+    }
+
+    VEHICLE_INFO_DATE_FIELDS = ("lr_date",)
+
+    comment = create_change_log_comment(
+        old_values,
+        values,
+        field_labels=VEHICLE_INFO_LABEL_MAP,
+        date_fields=VEHICLE_INFO_DATE_FIELDS,
+        comment_prefix=_("Vehicle Info has been updated by {user}"),
+    )
 
     log_and_process_e_waybill(
         doc,
@@ -370,81 +389,6 @@ def update_vehicle_info(*, doctype, docname, values):
     )
 
     return send_updated_doc(doc)
-
-
-LABEL_MAP = {
-    "vehicle_no": "Vehicle No",
-    "lr_no": "LR No",
-    "lr_date": "LR Date",
-    "mode_of_transport": "Mode of Transport",
-    "gst_vehicle_type": "GST Vehicle Type",
-    "place_of_change": "Place of Change",
-    "state": "State",
-}
-
-DATE_FIELDS = ("lr_date",)
-
-
-def _generate_comment(old_values, new_values):
-    table = _generate_table(old_values, new_values)
-
-    if not table:
-        return
-
-    return (
-        _("Vehicle Info has been updated by {user}.<br><br>").format(
-            user=frappe.bold(get_fullname())
-        )
-        + table
-    )
-
-
-def _generate_table(old_values, new_values):
-    table_rows = _generate_table_rows(old_values, new_values)
-
-    if not table_rows:
-        return
-
-    return """
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>Field</th>
-                    <th>From</th>
-                    <th>To</th>
-                </tr>
-            </thead>
-            <tbody>
-                {table_rows}
-            </tbody>
-        </table>
-    """.format(
-        table_rows=table_rows
-    )
-
-
-def _generate_table_rows(old_values, new_values):
-    table_rows = []
-
-    for key, label in LABEL_MAP.items():
-        old_value = old_values.get(key)
-        new_value = new_values.get(key)
-
-        if key in DATE_FIELDS:
-            old_value = old_value and get_date_str(old_value)
-            new_value = new_value and get_date_str(new_value)
-
-        if old_value == new_value:
-            continue
-
-        old_value = "<empty>" if old_value is None else old_value
-        new_value = "<empty>" if new_value is None else new_value
-
-        table_rows.append(
-            f"<tr><td>{frappe.bold(_(label))}</td><td>{old_value}</td><td>{new_value}</td></tr>"
-        )
-
-    return "".join(table_rows)
 
 
 def _bulk_update_transporter_in_docs(doctype, docnames, values):
