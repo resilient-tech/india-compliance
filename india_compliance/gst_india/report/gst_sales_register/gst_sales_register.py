@@ -8,6 +8,15 @@ from frappe.utils import getdate
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_Category, GSTR1_SubCategory
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
 
+SHORT_INVOICE_SUB_CATEGORIES = [
+    "EXPWP",
+    "EXPWOP",
+    "CDNR",
+    "CDNUR",
+    "SEZWP",
+    "SEZWOP",
+]
+
 
 def execute(filters=None):
     filters = validate_filters(filters)
@@ -20,10 +29,8 @@ def execute(filters=None):
 def validate_filters(filters):
     filters = frappe._dict(filters)
 
-    if filters.invoice_sub_category:
-        invoice_sub_category = getattr(
-            GSTR1_SubCategory, filters.invoice_sub_category, None
-        )
+    if filters.invoice_sub_category in SHORT_INVOICE_SUB_CATEGORIES:
+        invoice_sub_category = getattr(GSTR1_SubCategory, filters.invoice_sub_category)
 
         filters.invoice_sub_category = invoice_sub_category.value
 
