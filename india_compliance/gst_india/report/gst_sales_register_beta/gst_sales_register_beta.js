@@ -79,7 +79,6 @@ frappe.query_reports["GST Sales Register Beta"] = {
             on_change: report => {
                 report.set_filter_value("invoice_sub_category", "");
                 set_sub_category_options(report);
-                report.refresh();
             },
             depends_on:
                 'eval:doc.summary_by=="Summary by HSN" || doc.summary_by=="Summary by Item"',
@@ -124,7 +123,7 @@ function set_sub_category_options(report) {
             "invoice_sub_category",
             INVOICE_TYPE[invoice_category][0]
         );
-    }
+    } else report.refresh();
 }
 
 custom_report_column_total = function (...args) {
