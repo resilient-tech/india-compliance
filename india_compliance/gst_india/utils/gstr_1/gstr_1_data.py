@@ -443,9 +443,6 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
         "total_cess_amount": 0,
     }
 
-    def __init__(self, filters=None):
-        super().__init__(filters)
-
     def process_invoices(self, invoices, bifurcate_hsn=None):
         settings = frappe.get_cached_doc("GST Settings")
         identified_uom = {}
