@@ -4,16 +4,16 @@ const INVOICE_TYPE = {
     "B2B, SEZ, DE": [
         "B2B Regular",
         "B2B Reverse Charge",
-        "SEZWP",
-        "SEZWOP",
+        "SEZ With Payment of Tax",
+        "SEZ Without Payment of Tax",
         "Deemed Exports",
     ],
     "B2C (Large)": ["B2C (Large)"],
-    Exports: ["EXPWP", "EXPWOP"],
+    Exports: ["Export With Payment of Tax", "Export Without Payment of Tax"],
     "B2C (Others)": ["B2C (Others)"],
-    "Nil-Rated, Exempted, Non-GST": ["Nil-Rated", "Exempted", "Non-GST"],
-    "Credit/Debit Notes (Registered)": ["CDNR"],
-    "Credit/Debit Notes (Unregistered)": ["CDNUR"],
+    "Nil-Rated, Exempted, Non-GST": ["Nil-Rated, Exempted, Non-GST"],
+    "Credit/Debit Notes (Registered)": ["Credit/Debit Notes (Registered)"],
+    "Credit/Debit Notes (Unregistered)": ["Credit/Debit Notes (Unregistered)"],
 };
 
 if (gst_settings.enable_sales_through_ecommerce_operators) {
@@ -82,7 +82,6 @@ frappe.query_reports["GST Sales Register"] = {
             on_change: report => {
                 report.set_filter_value("invoice_sub_category", "");
                 set_sub_category_options(report);
-                report.refresh();
             },
             depends_on:
                 'eval:doc.summary_by=="Summary by HSN" || doc.summary_by=="Summary by Item"',
@@ -127,7 +126,7 @@ function set_sub_category_options(report) {
             "invoice_sub_category",
             INVOICE_TYPE[invoice_category][0]
         );
-    }
+    } else report.refresh();
 }
 
 custom_report_column_total = function (...args) {
