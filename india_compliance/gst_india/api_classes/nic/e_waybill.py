@@ -167,6 +167,9 @@ class StandardEWaybillAPI(EWaybillAPI):
     def _make_request(self, *args, **kwargs):
         response = super()._make_request(*args, **kwargs)
 
+        if isinstance(response, list | tuple):
+            return response
+
         # Invalid Token
         if response.error_code == "238":
             self.auth_token = None
