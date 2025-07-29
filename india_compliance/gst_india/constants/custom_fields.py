@@ -1322,89 +1322,58 @@ HRMS_CUSTOM_FIELDS = {
     ],
 }
 
+HSN_CODE_FIELD = {
+    "fieldname": "gst_hsn_code",
+    "label": "HSN/SAC",
+    "fieldtype": "Link",
+    "options": "GST HSN Code",
+    "description": "You can search code by the description of the category.",
+}
+
 EDUCATION_CUSTOM_FIELDS = {
-    "Fee Category": [
-        {
-            "fieldname": "gst_hsn_code",
-            "label": "HSN/SAC",
-            "fieldtype": "Link",
-            "options": "GST HSN Code",
-            "insert_after": "description",
-            "description": "You can search code by the description of the category.",
-        }
-    ]
+    "Fee Category": [{**HSN_CODE_FIELD, "insert_after": "description"}]
 }
 
 HEALTHCARE_CUSTOM_FIELDS = {
     "Clinical Procedure Template": [
         {
-            "fieldname": "gst_hsn_code",
-            "label": "HSN/SAC",
-            "fieldtype": "Link",
-            "options": "GST HSN Code",
+            **HSN_CODE_FIELD,
             "insert_after": "item_group",
             "reqd": 1,
             "read_only_depends_on": "eval:doc.link_existing_item",
-            "description": "You can search code by the description of the category.",
         }
     ],
     "Observation Template": [
         {
-            "fieldname": "gst_hsn_code",
-            "label": "HSN/SAC",
-            "fieldtype": "Link",
-            "options": "GST HSN Code",
+            **HSN_CODE_FIELD,
             "insert_after": "item_group",
             "mandatory_depends_on": "eval:doc.is_billable;",
             "depends_on": "eval:doc.is_billable;",
             "read_only_depends_on": "eval:doc.link_existing_item",
-            "description": "You can search code by the description of the category.",
         }
     ],
-    "Therapy Type": [
-        {
-            "fieldname": "gst_hsn_code",
-            "label": "HSN/SAC",
-            "fieldtype": "Link",
-            "options": "GST HSN Code",
-            "insert_after": "item_group",
-            "reqd": 1,
-            "description": "You can search code by the description of the category.",
-        }
-    ],
+    "Therapy Type": [{**HSN_CODE_FIELD, "insert_after": "item_group", "reqd": 1}],
     "Healthcare Service Unit Type": [
         {
-            "fieldname": "gst_hsn_code",
-            "label": "HSN/SAC",
-            "fieldtype": "Link",
-            "options": "GST HSN Code",
+            **HSN_CODE_FIELD,
             "insert_after": "item_group",
             "mandatory_depends_on": "eval:doc.is_billable;",
             "depends_on": "eval:doc.is_billable;",
-            "description": "You can search code by the description of the category.",
         }
     ],
     "Therapy Plan Template": [
         {
-            "fieldname": "gst_hsn_code",
-            "label": "HSN/SAC",
-            "fieldtype": "Link",
-            "options": "GST HSN Code",
+            **HSN_CODE_FIELD,
             "insert_after": "item_group",
             "reqd": 1,
             "read_only_depends_on": "eval:doc.link_existing_item",
-            "description": "You can search code by the description of the category.",
         }
     ],
     "Medication Linked Item": [
         {
-            "fieldname": "gst_hsn_code",
-            "label": "HSN/SAC",
-            "fieldtype": "Link",
-            "options": "GST HSN Code",
+            **HSN_CODE_FIELD,
             "insert_after": "item_group",
             "in_list_view": 1,
-            "description": "You can search code by the description of the category.",
         }
     ],
 }
