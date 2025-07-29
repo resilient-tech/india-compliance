@@ -448,6 +448,39 @@ Object.assign(india_compliance, {
 
         return alert;
     },
+<<<<<<< HEAD
+=======
+
+    is_e_waybill_applicable_for_subcontracting(doc) {
+        if (
+            !(
+                gst_settings.enable_api &&
+                gst_settings.enable_e_waybill &&
+                gst_settings.enable_e_waybill_for_sc
+            )
+        ) {
+            return false;
+        }
+
+        if (doc.doctype != "Stock Entry") return true;
+
+        if (
+            !["Material Transfer", "Material Issue", "Send to Subcontractor"].includes(
+                doc.purpose
+            )
+        ) {
+            return false;
+        }
+
+        return true;
+    },
+
+    is_indian_registered_company(company) {
+        if (!company) return false;
+
+        return frappe.boot.indian_registered_companies?.includes(company);
+    },
+>>>>>>> d40f56ac (fix: add support for identifying Indian registered companies in GST validation in JS; (#3546))
 });
 
 function is_gstin_check_digit_valid(gstin) {
