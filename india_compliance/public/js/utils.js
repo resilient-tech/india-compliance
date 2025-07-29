@@ -448,6 +448,12 @@ Object.assign(india_compliance, {
 
         return alert;
     },
+
+    is_indian_registered_company(company) {
+        if (!company) return false;
+
+        return frappe.boot.indian_registered_companies?.includes(company);
+    },
 });
 
 function is_gstin_check_digit_valid(gstin) {
