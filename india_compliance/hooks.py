@@ -344,9 +344,18 @@ doc_events = {
         "validate": "india_compliance.audit_trail.overrides.version.validate",
         "on_trash": "india_compliance.audit_trail.overrides.version.on_trash",
     },
-    "Fee Category": {
-        "before_insert": "india_compliance.gst_india.overrides.fee_category.before_update",
-        "before_validate": "india_compliance.gst_india.overrides.fee_category.before_update",
+    # Update HSN Code from other doctypes to Item
+    (
+        "Fee Category",
+        "Clinical Procedure Template",
+        "Observation Template",
+        "Therapy Type",
+        "Healthcare Service Unit Type",
+        "Therapy Plan Template",
+        "Medication Linked Item",
+    ): {
+        "before_insert": "india_compliance.gst_india.overrides.cross_app_hsn_code.before_update",
+        "before_validate": "india_compliance.gst_india.overrides.cross_app_hsn_code.before_update",
     },
 }
 
