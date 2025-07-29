@@ -548,7 +548,7 @@ Object.assign(india_compliance, {
     is_indian_registered_company(company) {
         if (!company) return false;
 
-        return frappe.boot.indian_registered_companies.includes(company);
+        return frappe.boot.indian_registered_companies?.includes(company);
     },
 });
 
