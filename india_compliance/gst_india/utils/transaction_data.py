@@ -9,11 +9,7 @@ from india_compliance.gst_india.constants import (
     GST_REFUND_TAX_TYPES,
     GST_TAX_RATES,
     GST_TAX_TYPES,
-<<<<<<< HEAD
-    SUBCONTRACTING_DOCTYPES,
     TAXABLE_GST_TREATMENTS,
-=======
->>>>>>> 82699b04 (refactor: Use GST Details for e-Waybill and e-Invoice Transactions (#3227))
 )
 from india_compliance.gst_india.constants.e_waybill import (
     TRANSPORT_MODES,
@@ -419,55 +415,6 @@ class GSTTransactionData:
             }
         )
 
-<<<<<<< HEAD
-    def update_item_tax_details_using_taxes(self, item_details, item):
-        for tax in GST_TAX_TYPES:
-            item_details.update({f"{tax}_amount": 0, f"{tax}_rate": 0})
-
-        for row in self.doc.taxes:
-            if (
-                not row.tax_amount
-                or self.is_purchase_rcm
-                or row.gst_tax_type not in GST_TAX_TYPES
-            ):
-                continue
-
-            tax = row.gst_tax_type
-            tax_rate = self.rounded(
-                frappe.parse_json(row.item_wise_tax_detail).get(
-                    item.item_code or item.item_name
-                )[0],
-                3,
-            )
-
-            # considers senarios where same item is there multiple times
-            tax_amount = self.get_progressive_item_tax_amount(
-                (
-                    tax_rate * item.qty
-                    if row.charge_type == "On Item Quantity"
-                    else tax_rate * item.taxable_value / 100
-                ),
-                tax,
-            )
-
-            item_details.update(
-                {
-                    f"{tax}_rate": tax_rate,
-                    f"{tax}_amount": tax_amount,
-                }
-            )
-
-    def update_item_tax_details_using_item_gst_details(self, item_details, item):
-        for tax in GST_TAX_TYPES:
-            item_details.update(
-                {
-                    f"{tax}_amount": item.get(f"{tax}_amount"),
-                    f"{tax}_rate": item.get(f"{tax}_rate"),
-                }
-            )
-
-=======
->>>>>>> 82699b04 (refactor: Use GST Details for e-Waybill and e-Invoice Transactions (#3227))
     def get_progressive_item_tax_amount(self, amount, tax_type):
         """
         Helper function to calculate progressive tax amount for an item to remove
