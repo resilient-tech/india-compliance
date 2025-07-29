@@ -2,8 +2,8 @@ import frappe
 
 from india_compliance.gst_india.setup import (
     EDUCATION_CUSTOM_FIELDS,
-    HRMS_CUSTOM_FIELDS,
     HEALTHCARE_CUSTOM_FIELDS,
+    HRMS_CUSTOM_FIELDS,
     ITEM_VARIANT_FIELDNAMES,
     get_all_custom_fields,
     get_property_setters,
