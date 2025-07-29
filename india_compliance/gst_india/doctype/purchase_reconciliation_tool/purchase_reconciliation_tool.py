@@ -656,7 +656,7 @@ class AutoReconcile:
         if not is_api_enabled(self.gst_settings):
             return False
 
-        if self.settings.sandbox_mode:
+        if self.gst_settings.sandbox_mode:
             return False
 
         return self.gst_settings.enable_auto_reconciliation and self.gst_settings.get(
