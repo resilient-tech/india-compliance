@@ -12,6 +12,7 @@ from india_compliance.gst_india.constants.custom_fields import (
     E_INVOICE_FIELDS,
     E_WAYBILL_FIELDS,
     EDUCATION_CUSTOM_FIELDS,
+    HEALTHCARE_CUSTOM_FIELDS,
     HRMS_CUSTOM_FIELDS,
     SALES_REVERSE_CHARGE_FIELDS,
 )
@@ -52,6 +53,9 @@ def create_custom_fields():
     if "education" in installed_apps:
         create_education_custom_fields()
 
+    if "healthcare" in installed_apps:
+        create_healthcare_custom_fields()
+
 
 def create_hrms_custom_fields():
     _create_custom_fields(HRMS_CUSTOM_FIELDS, ignore_validate=True)
@@ -59,6 +63,10 @@ def create_hrms_custom_fields():
 
 def create_education_custom_fields():
     _create_custom_fields(EDUCATION_CUSTOM_FIELDS, ignore_validate=True)
+
+
+def create_healthcare_custom_fields():
+    _create_custom_fields(HEALTHCARE_CUSTOM_FIELDS, ignore_validate=True)
 
 
 def create_accounting_dimension_fields():

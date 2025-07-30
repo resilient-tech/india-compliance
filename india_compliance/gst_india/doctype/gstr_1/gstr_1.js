@@ -3,7 +3,7 @@
 
 frappe.provide("india_compliance");
 
-const DOCTYPE = "GSTR-1 Beta";
+const DOCTYPE = "GSTR-1";
 const GSTR1_Category = {
     B2B: "B2B, SEZ, DE",
     EXP: "Exports",
@@ -799,20 +799,126 @@ class GSTR1 {
     }
 
     async show_suggested_jv_dialog() {
+        await this.show_rounding_diff_journal_entry();
+        await this.show_rcm_journal_entry();
+    }
+
+    async show_rcm_journal_entry() {
         if (!frappe.perm.has_perm("Journal Entry")) return;
 
         const { month_or_quarter, year, company, filing_preference } = this.frm.doc;
         const { message: je_details } = await frappe.call({
-            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_journal_entries",
+            method: "india_compliance.gst_india.doctype.gstr_1.gstr_1.get_journal_entries",
             args: { month_or_quarter, year, company, filing_preference },
         });
 
         if (!je_details) return;
 
-        this.create_journal_entry_dialog(je_details);
+        return new Promise(resolve => {
+            const remarks = `Reduced Output GST Liability to the extent of Sales Reverse Charge as per GSTR-1 for ${this.frm.doc.month_or_quarter} - ${this.frm.doc.year}`;
+            const dialog = this.create_journal_entry_dialog(je_details, remarks);
+
+            dialog.onhide = () => {
+                resolve();
+            };
+
+            dialog.show();
+        });
     }
 
-    create_journal_entry_dialog(je_details) {
+    TAX_TO_ACCOUNT_MAP = {
+        total_igst_amount: "igst_account",
+        total_cgst_amount: "cgst_account",
+        total_sgst_amount: "sgst_account",
+        total_cess_amount: ["cess_account", "cess_non_advol_account"],
+    };
+
+    async show_rounding_diff_journal_entry() {
+        if (!frappe.perm.has_perm("Journal Entry")) return;
+
+        const rounding_difference = this.data.books?.rounding_difference?.[0];
+        if (!rounding_difference || Object.values(rounding_difference).every(v => !v))
+            return;
+
+        const { month_or_quarter, year, company, filing_preference } = this.frm.doc;
+        const { message: data } = await frappe.call({
+            method: "india_compliance.gst_india.doctype.gstr_1.gstr_1.get_gst_and_round_off_accounts",
+            args: { month_or_quarter, year, company, filing_preference },
+        });
+
+        if (!data) return;
+
+        return new Promise(resolve => {
+            const dialog = this.create_rounding_diff_journal_entry(
+                data.account,
+                data.posting_date
+            );
+
+            if (!dialog) return resolve();
+
+            dialog.onhide = () => {
+                resolve();
+            };
+
+            dialog.show();
+        });
+    }
+
+    create_rounding_diff_journal_entry(account, posting_date) {
+        const rounding_difference = this.data.books?.rounding_difference?.[0];
+
+        const je_details = {
+            posting_date: posting_date,
+            data: [],
+        };
+
+        const get_account_name = account_field => {
+            if (!Array.isArray(account_field)) return account[account_field];
+            for (const acc of account_field) {
+                if (account[acc]) {
+                    return account[acc];
+                }
+            }
+            return null;
+        };
+
+        let total = 0;
+
+        for (const [tax_field, account_field] of Object.entries(
+            this.TAX_TO_ACCOUNT_MAP
+        )) {
+            let value = rounding_difference[tax_field];
+
+            if (!value) continue;
+
+            let account_name = get_account_name(account_field);
+
+            if (!account_name) continue;
+
+            total += value;
+
+            je_details.data.push({
+                account: account_name,
+                debit_in_account_currency: value > 0 ? value : 0,
+                credit_in_account_currency: value < 0 ? Math.abs(value) : 0,
+            });
+        }
+
+        if (je_details.data.length === 0) return;
+
+        if (total !== 0) {
+            je_details.data.push({
+                account: account.round_off_account,
+                debit_in_account_currency: total < 0 ? Math.abs(total) : 0,
+                credit_in_account_currency: total > 0 ? total : 0,
+            });
+        }
+
+        const remarks = `Rounding Difference in Output GST Liability for ${this.frm.doc.month_or_quarter} - ${this.frm.doc.year}`;
+        return this.create_journal_entry_dialog(je_details, remarks);
+    }
+
+    create_journal_entry_dialog(je_details, remarks) {
         const dialog = new frappe.ui.Dialog({
             title: "Suggested Journal Entry",
             fields: [
@@ -833,7 +939,7 @@ class GSTR1 {
                     fieldtype: "Text",
                     label: "Remarks",
                     read_only: 1,
-                    default: `Reduced Output GST Liability to the extent of Sales Reverse Charge as per GSTR-1 for ${this.frm.doc.month_or_quarter} - ${this.frm.doc.year}`,
+                    default: remarks,
                 },
                 {
                     fieldname: "auto_submit",
@@ -847,7 +953,7 @@ class GSTR1 {
                 const { company, company_gstin, month_or_quarter, year } = this.frm.doc;
 
                 frappe.call({
-                    method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.make_journal_entry",
+                    method: "india_compliance.gst_india.doctype.gstr_1.gstr_1.make_journal_entry",
                     args: {
                         company,
                         company_gstin,
@@ -865,7 +971,7 @@ class GSTR1 {
             },
         });
 
-        dialog.show();
+        return dialog;
     }
 
     generate_tax_table(data) {
@@ -935,6 +1041,7 @@ class TabManager {
         this.data = data;
         this.summary = summary_data;
         this.status = status;
+        this.rounding_difference = this.data?.rounding_difference?.[0];
         this.remove_tab_custom_buttons();
         this.setup_actions();
         this.datatable.refresh(this.summary, null, this.get_no_data_message());
@@ -1100,9 +1207,15 @@ class TabManager {
                     },
                 },
             },
+            ...this.get_additional_datatable_config(),
         });
 
         this.setup_datatable_listeners(treeView);
+    }
+
+    get_additional_datatable_config() {
+        // Override this method in subclasses to provide additional configuration
+        return {};
     }
 
     setup_datatable_listeners(isSummaryView) {
@@ -1733,6 +1846,26 @@ class BooksTab extends GSTR1_TabManager {
 
     DEFAULT_TITLE = "Summary of Books";
 
+    get_additional_datatable_config() {
+        return {
+            additional_total_rows: [
+                {
+                    label: "Rounding Difference",
+                    row_id: "rounding_difference",
+                    label_column: "description",
+                    exclude_columns: ["_rowIndex", "_checkbox", "no_of_records"],
+                    data: () => this.rounding_difference,
+                    show: () => {
+                        if (!this.rounding_difference) return false;
+
+                        return Object.values(this.rounding_difference).some(v => v);
+                    },
+                    css_styles: { "font-weight": "bold" },
+                },
+            ],
+        };
+    }
+
     setup_actions() {
         this.add_tab_custom_button("Download Excel", () =>
             this.download_books_as_excel()
@@ -1744,12 +1877,11 @@ class BooksTab extends GSTR1_TabManager {
         data = super.filter_data(data, filters);
         return data.filter(row => row.upload_status !== "Missing in Books");
     }
-
     // ACTIONS
 
     download_books_as_excel() {
         const url =
-            "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export.download_books_as_excel";
+            "india_compliance.gst_india.doctype.gstr_1.gstr_1_export.download_books_as_excel";
 
         open_url_post(`/api/method/${url}`, {
             company_gstin: this.instance.frm.doc.company_gstin,
@@ -1963,7 +2095,7 @@ class FiledTab extends GSTR1_TabManager {
 
     download_filed_as_excel() {
         const url =
-            "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export.download_filed_as_excel";
+            "india_compliance.gst_india.doctype.gstr_1.gstr_1_export.download_filed_as_excel";
 
         open_url_post(`/api/method/${url}`, {
             company_gstin: this.instance.frm.doc.company_gstin,
@@ -1990,7 +2122,7 @@ class FiledTab extends GSTR1_TabManager {
             const doc = me.instance.frm.doc;
 
             frappe.call({
-                method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export.get_gstr_1_json",
+                method: "india_compliance.gst_india.doctype.gstr_1.gstr_1_export.get_gstr_1_json",
                 args: {
                     company_gstin: doc.company_gstin,
                     year: doc.year,
@@ -2227,7 +2359,7 @@ class ReconcileTab extends FiledTab {
 
     download_reconcile_as_excel() {
         const url =
-            "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export.download_reconcile_as_excel";
+            "india_compliance.gst_india.doctype.gstr_1.gstr_1_export.download_reconcile_as_excel";
 
         open_url_post(`/api/method/${url}`, {
             company_gstin: this.instance.frm.doc.company_gstin,
@@ -2496,6 +2628,7 @@ class FileGSTR1Dialog {
 
                 this.update_actions_for_filing(pan);
             },
+            static: true,
         });
 
         // get last used pan
@@ -2511,7 +2644,7 @@ class FileGSTR1Dialog {
 
         // update total amendes
         taxpayer_api.call({
-            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.perform_gstr1_action",
+            method: "india_compliance.gst_india.doctype.gstr_1.gstr_1.perform_gstr1_action",
             args: {
                 action: "get_amendment_data",
                 month_or_quarter: this.frm.doc.month_or_quarter,
@@ -2535,6 +2668,7 @@ class FileGSTR1Dialog {
             },
         });
 
+        this.filing_dialog.get_close_btn().show();
         this.filing_dialog.show();
     }
 
@@ -2747,7 +2881,7 @@ class GSTR1Action extends FileGSTR1Dialog {
         };
 
         frappe.call({
-            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.mark_as_unfiled",
+            method: "india_compliance.gst_india.doctype.gstr_1.gstr_1.mark_as_unfiled",
             args: { filters: filters, force: this.frm.__action_performed == undefined },
             callback: () => {
                 this.frm.gstr1.status = "Not Filed";
@@ -2767,7 +2901,7 @@ class GSTR1Action extends FileGSTR1Dialog {
         };
 
         taxpayer_api.call({
-            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.perform_gstr1_action",
+            method: "india_compliance.gst_india.doctype.gstr_1.gstr_1.perform_gstr1_action",
             args: args,
             callback: response => callback && callback(response),
         });
@@ -2777,7 +2911,7 @@ class GSTR1Action extends FileGSTR1Dialog {
         setTimeout(
             async () => {
                 const { message } = await taxpayer_api.call({
-                    method: `india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.check_action_status`,
+                    method: `india_compliance.gst_india.doctype.gstr_1.gstr_1.check_action_status`,
                     args: { ...this.defaults, action },
                 });
 
@@ -2889,7 +3023,7 @@ class GSTR1Action extends FileGSTR1Dialog {
 
         const doc = this.frm.doc;
         const on_current_document =
-            window.location.pathname.includes("gstr-1-beta") &&
+            window.location.pathname.includes("gstr-1") &&
             doc.company_gstin == response.company_gstin &&
             doc.month_or_quarter == response.month_or_quarter &&
             doc.year == response.year;
@@ -2992,7 +3126,7 @@ function update_filing_preference(frm) {
     if (!month_or_quarter || !year || !company_gstin) return;
 
     frappe.call({
-        method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_filing_preference_from_log",
+        method: "india_compliance.gst_india.doctype.gstr_1.gstr_1.get_filing_preference_from_log",
         args: { month_or_quarter, year, company_gstin },
         callback: r => {
             frm.set_value("filing_preference", r.message || "Monthly");
@@ -3055,7 +3189,7 @@ async function get_net_gst_liability(frm) {
         frm.doc;
 
     const response = await frappe.call({
-        method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_net_gst_liability",
+        method: "india_compliance.gst_india.doctype.gstr_1.gstr_1.get_net_gst_liability",
         args: {
             company,
             company_gstin,

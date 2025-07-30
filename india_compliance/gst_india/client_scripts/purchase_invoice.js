@@ -106,14 +106,23 @@ function toggle_reverse_charge(frm) {
     let is_read_only = 0;
     if (frm.doc.gst_category !== "Overseas") is_read_only = 0;
     // has_goods_item
-    else if (frm.doc.items.some(item => !item.gst_hsn_code.startsWith("99")))
+    else if (
+        frm.doc.items.length > 0 &&
+        frm.doc.items.some(
+            item => item.gst_hsn_code && !item.gst_hsn_code.startsWith("99")
+        )
+    )
         is_read_only = 1;
 
     frm.set_df_property("is_reverse_charge", "read_only", is_read_only);
 }
 
 function validate_gst_hsn_code(frm) {
-    if (frm.doc.gst_category !== "Overseas") return;
+    if (
+        frm.doc.gst_category !== "Overseas" ||
+        !india_compliance.is_indian_registered_company(frm.doc.company)
+    )
+        return;
 
     if (frm.doc.items.some(item => item.item_name && !item.gst_hsn_code)) {
         frappe.throw(__("GST HSN Code is mandatory for Overseas Purchase Invoice."));

@@ -48,7 +48,9 @@ Object.assign(india_compliance, {
                         },
                     });
                 },
+                static: true,
             });
+            prompt.get_close_btn().show();
             prompt.show();
         });
     },
@@ -80,7 +82,7 @@ Object.assign(india_compliance, {
     },
 
     generate_evc_otp(company_gstin, pan, request_type) {
-        return frappe.call({
+        return taxpayer_api.call({
             method: "india_compliance.gst_india.utils.gstr_utils.generate_evc_otp",
             args: {
                 company_gstin: company_gstin,

@@ -109,7 +109,7 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
 
         file = get_file_doc(self.doctype, self.name, file_field)
         if file:
-            file.delete()
+            file.delete(ignore_permissions=True)
 
         self.db_set(file_field, None)
 
@@ -306,8 +306,8 @@ def update_is_not_latest_gstr1_data(posting_date, company_gstin):
     frappe.publish_realtime(
         "is_not_latest_gstr1_data",
         message={"filters": {"company_gstin": company_gstin, "period": period}},
-        doctype="GSTR-1 Beta",
-        docname="GSTR-1 Beta",
+        doctype="GSTR-1",
+        docname="GSTR-1",
     )
 
 

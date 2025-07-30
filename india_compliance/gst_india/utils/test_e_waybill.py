@@ -125,25 +125,44 @@ class TestEWaybill(IntegrationTestCase):
             values=frappe._dict(vehicle_data.get("values")),
         )
 
-        # assertions
-        expected_comment = "Vehicle Info has been updated by <strong>Administrator</strong>.<br><br> New details are: <br><strong>Vehicle No</strong>: GJ07DL9001 <br><strong>Mode of Transport</strong>: Road <br><strong>GST Vehicle Type</strong>: Regular <br><strong>Place of Change</strong>: Test City <br><strong>State</strong>: Gujarat <br>"
+        expected_info = [
+            "Vehicle Info has been updated by <strong>Administrator</strong>",
+            '<table class="table table-bordered">',
+            "<thead>",
+            "<th>Field</th>",
+            "<th>From</th>",
+            "<th>To</th>",
+            "</thead>",
+            "<tbody>",
+            "<td><strong>Vehicle No</strong></td>",
+            "<td>GJ07DL9009</td>",
+            "<td>GJ07DL9001</td>",
+            "<td><strong>LR Date</strong></td>",
+            f"<td>{today()}</td>",
+            "<td>&lt;empty&gt;</td>",
+            "<td><strong>Place of Change</strong></td>",
+            "<td>-</td>",
+            "<td>Test City</td>",
+            "<td><strong>State</strong></td>",
+            "<td>Gujarat</td>",
+            "</tbody>",
+            "</table>",
+        ]
 
+        # assertions
         self.assertDocumentEqual(
             {"name": vehicle_data.get("request_data").get("ewbNo")},
             frappe.get_doc("e-Waybill Log", {"reference_name": si.name}),
         )
 
-        self.assertDocumentEqual(
-            {
-                "reference_doctype": "e-Waybill Log",
-                "reference_name": vehicle_data.get("request_data").get("ewbNo"),
-                "content": expected_comment,
-            },
-            frappe.get_doc(
-                "Comment",
-                {"reference_name": vehicle_data.get("request_data").get("ewbNo")},
-            ),
+        comment_doc = frappe.get_doc(
+            "Comment",
+            {"reference_name": vehicle_data.get("request_data").get("ewbNo")},
         )
+
+        # Test that all expected strings are present in the comment content
+        for expected_string in expected_info:
+            self.assertIn(expected_string, comment_doc.content)
 
     @responses.activate
     def test_update_transporter(self):
@@ -179,7 +198,10 @@ class TestEWaybill(IntegrationTestCase):
             {
                 "reference_doctype": "e-Waybill Log",
                 "reference_name": transporter_data.get("request_data").get("ewbNo"),
-                "content": "Transporter Info has been updated by <strong>Administrator</strong>. New Transporter ID is <strong>05AAACG2140A1ZL</strong>.",
+                "content": (
+                    "Transporter Info has been updated by <strong>Administrator</strong>. "
+                    "Transporter ID changed from <strong>&lt;empty&gt;</strong> to <strong>05AAACG2140A1ZL</strong>."
+                ),
             },
             frappe.get_doc(
                 "Comment",

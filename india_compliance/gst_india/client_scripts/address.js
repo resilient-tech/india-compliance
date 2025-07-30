@@ -1,5 +1,3 @@
-{% include "india_compliance/gst_india/client_scripts/party.js" %}
-
 const DOCTYPE = "Address";
 
 validate_gstin(DOCTYPE);

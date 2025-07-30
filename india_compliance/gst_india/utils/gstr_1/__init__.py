@@ -146,7 +146,7 @@ class GSTR1_DataField:
     ERROR_MSG = "error_message"
 
 
-class GSTR1_ItemField(Enum):
+class GSTR1_ItemField:
     INDEX = "idx"
     TAXABLE_VALUE = "taxable_value"
     IGST = "igst_amount"
@@ -158,7 +158,7 @@ class GSTR1_ItemField(Enum):
     ADDITIONAL_AMOUNT = "additional_amount"
 
 
-class GovDataField(Enum):
+class GovDataField:
     CUST_GSTIN = "ctin"
     ECOMMERCE_GSTIN = "etin"
     DOC_DATE = "idt"
@@ -225,7 +225,7 @@ class GovDataField(Enum):
     CHECKSUM = "chksum"
 
 
-class GovExcelField(Enum):
+class GovExcelField:
     CUST_GSTIN = "GSTIN/UIN of Recipient"
     CUST_NAME = "Receiver Name"
     INVOICE_NUMBER = "Invoice Number"
@@ -295,7 +295,7 @@ class GovExcelSheetName(Enum):
     Categories / Worksheets as per Gov Excel file
     """
 
-    B2B = "b2b, sez, de"
+    B2B = "b2b,sez,de"
     EXP = "exp"
     B2CL = "b2cl"
     B2CS = "b2cs"

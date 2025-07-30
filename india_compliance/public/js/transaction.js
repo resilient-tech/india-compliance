@@ -185,7 +185,12 @@ function validate_overseas_gst_category(doctype) {
     frappe.ui.form.on(doctype, {
         gst_category(frm) {
             const { enable_overseas_transactions } = gst_settings;
-            if (!is_overseas_transaction(frm) || enable_overseas_transactions) return;
+            if (
+                !is_overseas_transaction(frm) ||
+                enable_overseas_transactions ||
+                !india_compliance.is_indian_registered_company(frm.doc.company)
+            )
+                return;
 
             frappe.throw(
                 __("Please enable SEZ / Overseas transactions in GST Settings first")
@@ -280,7 +285,11 @@ async function _set_gstin_status(frm, gstin_field_name) {
 }
 
 function validate_gstin_status(gstin_doc, frm, gstin_field_name) {
-    if (!gst_settings.validate_gstin_status) return;
+    if (
+        !gst_settings.validate_gstin_status ||
+        !india_compliance.is_indian_registered_company(frm.doc.company)
+    )
+        return;
 
     const date_field =
         frm.get_field("posting_date") || frm.get_field("transaction_date");
