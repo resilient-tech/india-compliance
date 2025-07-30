@@ -160,15 +160,11 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                     purchase_invoice.company_gstin
                     != IfNull(purchase_invoice.supplier_gstin, "")
                 )
-<<<<<<< HEAD
-                & (Ifnull(purchase_invoice.itc_classification, "") != "")
-=======
                 & (IfNull(purchase_invoice.itc_classification, "") != "")
                 & (
                     IfNull(purchase_invoice.ineligibility_reason, "")
                     != "ITC restricted due to PoS rules"
                 )  # Ignore as it is Ineligible for ITC
->>>>>>> f3e71270 (fix: chore use correct qb function)
             )
             .groupby(purchase_invoice.name)
         )
