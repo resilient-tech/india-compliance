@@ -5,9 +5,9 @@ from frappe.utils import add_days, flt, fmt_money, get_datetime
 
 from india_compliance.gst_india.overrides.payment_entry import get_taxes_summary
 from india_compliance.gst_india.overrides.transaction import (
-    _validate_hsn_codes,
     ignore_gst_validations,
     validate_backdated_transaction,
+    validate_hsn_codes,
     validate_mandatory_fields,
     validate_transaction,
 )
@@ -106,10 +106,10 @@ def validate_fields_and_set_status_for_e_invoice(doc, gst_settings=None):
     )
 
     # Mandatory for e-Invoice before save
-    _validate_hsn_codes(
+    validate_hsn_codes(
         doc,
-        valid_hsn_length=[6, 8],
         message=_("Since HSN/SAC Code is mandatory for generating e-Invoices.<br>"),
+        force=True,
     )
 
     if is_foreign_doc(doc):

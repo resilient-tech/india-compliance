@@ -704,10 +704,10 @@ def validate_backdated_transaction(doc, gst_settings=None, action="submit"):
         )
 
 
-def validate_hsn_codes(doc, throw=False, message=None):
+def validate_hsn_codes(doc, throw=False, message=None, force=False):
     validate_hsn_code, valid_hsn_length = get_hsn_settings()
 
-    if not validate_hsn_code:
+    if not validate_hsn_code and not force:
         return
 
     return _validate_hsn_codes(doc, valid_hsn_length, throw, message)
