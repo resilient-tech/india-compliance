@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 from frappe.query_builder import Case, DatePart
 from frappe.query_builder.custom import ConstantColumn
-from frappe.query_builder.functions import Extract, Ifnull, LiteralValue, Sum
+from frappe.query_builder.functions import Extract, IfNull, LiteralValue, Sum
 from frappe.utils import cint, get_first_day, get_last_day
 
 from india_compliance.gst_india.utils import get_period
@@ -169,7 +169,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                     purchase_invoice.company_gstin
                     != IfNull(purchase_invoice.supplier_gstin, "")
                 )
-                & (Ifnull(purchase_invoice.itc_classification, "") != "")
+                & (IfNull(purchase_invoice.itc_classification, "") != "")
                 & (
                     IfNull(purchase_invoice.ineligibility_reason, "")
                     != "ITC restricted due to PoS rules"
