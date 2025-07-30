@@ -39,8 +39,8 @@ from india_compliance.gst_india.utils import (
     send_updated_doc,
     update_onload,
 )
-from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
 from india_compliance.gst_india.utils.change_log_utils import create_change_log_comment
+from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
 
 #######################################################################################
 ### Manual JSON Generation for e-Waybill ##############################################
