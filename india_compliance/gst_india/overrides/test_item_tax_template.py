@@ -46,7 +46,7 @@ class TestTransaction(IntegrationTestCase):
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(r"^(Plese make sure account tax rates.*)$"),
+            re.compile(r"^(Please make sure account tax rates.*)$"),
             doc.save,
         )
 
