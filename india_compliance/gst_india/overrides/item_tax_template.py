@@ -57,8 +57,8 @@ def validate_tax_rates(doc):
 
     # throw
     message = (
-        "Plese make sure account tax rates are in sync with GST rate mentioned."
-        " Following rows have inconsistant tax rates: <br><br>"
+        "Please make sure account tax rates are in sync with GST rate mentioned."
+        " Following rows have inconsistent tax rates: <br><br>"
     )
 
     for idx, tax_rate in invalid_tax_rates.items():
