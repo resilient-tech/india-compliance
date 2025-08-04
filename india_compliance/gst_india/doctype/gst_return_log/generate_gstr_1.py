@@ -570,6 +570,21 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
         data["filing_preference"] = self.filing_preference
 
         if error_data := self.get_json_for("upload_error"):
+            error_data["error_report"] = [
+                error
+                for error in error_data.get("error_report", [])
+                if error.get("error_code") or error.get("error_message")
+            ]
+
+            for error in error_data.get("error_report", []):
+                if "HSN Summary" in error.get("category") and (
+                    hsn_code := error.get("hsn_code")
+                ):
+                    error_message = error.get("error_message") or ""
+                    error["error_message"] = (
+                        f"{error_message} - HSN Code: {hsn_code}".strip()
+                    )
+
             data["errors"] = error_data
 
         data["pending_actions"] = set(
