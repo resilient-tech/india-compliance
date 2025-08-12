@@ -134,7 +134,7 @@ jobs:
           uses: actions/checkout@v4
 
         - name: Download artifacts
-          uses: actions/download-artifact@v4
+          uses: actions/download-artifact@v5
 
         - name: Upload coverage data
           if: github.event.repository.name == 'india-compliance' || env.CODECOV_TOKEN != ''
