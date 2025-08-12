@@ -65,6 +65,7 @@ class BaseAPI:
         self.setup(*args, **kwargs)
 
     def setup(*args, **kwargs):
+        # Override in subclass
         pass
 
     def fetch_credentials(self, gstin, service, require_password=True):
@@ -312,14 +313,6 @@ class BaseAPI:
         self._mask_sensitive_info(request_body, sensitive_info_mapping.get("body"))
 
     def _get_sensitive_info_mapping(self):
-        """
-        Define specific locations where different types of sensitive information should be masked.
-        Override _get_sensitive_info_overrides() in subclasses to customize specific locations.
-
-        Returns:
-            dict: Mapping of data location to list of sensitive keys
-        """
-
         default_mapping = copy.deepcopy(self.DEFAULT_MASK_MAP)
 
         # Get subclass-specific overrides
@@ -327,31 +320,14 @@ class BaseAPI:
 
         # Merge overrides with default mapping
         if overrides:
-            for location, keys in overrides.items():
-                if location in default_mapping:
-                    # Replace the entire list for this location
-                    default_mapping[location] = keys if keys is not None else []
-                else:
-                    # Add new location
-                    default_mapping[location] = keys if keys is not None else []
+            default_mapping.update(overrides)
 
         return default_mapping
 
     def _get_sensitive_info_overrides(self):
-        """
-        Override this method in subclasses to customize sensitive info mapping for specific locations.
-        Only specify the locations you want to change - others will use the default mapping.
-
-        Returns:
-            dict: Mapping of data location to list of sensitive keys (only for locations to override)
-        """
         return {}
 
     def _mask_sensitive_info(self, target, sensitive_keys):
-        """
-        Mask sensitive information in the target dictionary based on the provided keys.
-        This method is called by mask_sensitive_info to apply masking based on the mapping.
-        """
         if not (target and sensitive_keys):
             return
 
