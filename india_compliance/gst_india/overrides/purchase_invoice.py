@@ -41,8 +41,9 @@ def onload(doc, method=None):
         gst_settings.enable_e_waybill
         and gst_settings.enable_e_waybill_from_pi
         and doc.ewaybill
+        and (e_waybill_info := get_e_waybill_info(doc))
     ):
-        doc.set_onload("e_waybill_info", get_e_waybill_info(doc))
+        doc.set_onload("e_waybill_info", e_waybill_info)
 
 
 def validate(doc, method=None):

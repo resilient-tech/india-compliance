@@ -24,7 +24,8 @@ def onload(doc, method=None):
     ):
         return
 
-    doc.set_onload("e_waybill_info", get_e_waybill_info(doc))
+    if e_waybill_info := get_e_waybill_info(doc):
+        doc.set_onload("e_waybill_info", e_waybill_info)
 
 
 def before_cancel(doc, method=None):
