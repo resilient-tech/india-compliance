@@ -3,6 +3,7 @@ from pypika import Order
 import frappe
 from frappe import _, bold
 from frappe.contacts.doctype.address.address import get_address_display
+from frappe.desk.form.load import run_onload
 from frappe.utils import flt
 from erpnext.accounts.party import get_address_tax_category
 from erpnext.stock.get_item_details import get_item_tax_template
@@ -31,7 +32,10 @@ from india_compliance.gst_india.utils import (
 from india_compliance.gst_india.utils import (
     validate_invoice_number as validate_transaction_name,
 )
-from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
+from india_compliance.gst_india.utils.e_waybill import (
+    auto_cancel_e_waybill,
+    get_e_waybill_info,
+)
 from india_compliance.gst_india.utils.taxes_controller import (
     CustomTaxController,
     update_gst_details,
@@ -217,6 +221,16 @@ def before_save(doc, method=None):
                     "Tax Row #{0}: Charge Type cannot be {1}. Try setting it to 'On Net Total' or 'On Item Quantity'."
                 ).format(row.idx, bold(row.charge_type))
             )
+
+
+def before_cancel(doc, method=None):
+    run_onload(doc)
+    gst_settings = frappe.get_cached_doc("GST Settings")
+
+    if not is_api_enabled(gst_settings):
+        return
+
+    auto_cancel_e_waybill(doc, gst_settings=gst_settings)
 
 
 def validate_doc_references(doc, method=None):

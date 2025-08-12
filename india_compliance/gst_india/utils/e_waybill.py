@@ -1786,3 +1786,37 @@ class EWaybillData(GSTTransactionData):
             "cessRate": item_details.cess_rate,
             "cessNonAdvol": item_details.cess_non_advol_rate,
         }
+
+
+#######################################################################################
+### Auto Cancel e-Waybill Functions ###################################################
+#######################################################################################
+
+
+def auto_cancel_e_waybill(doc, gst_settings=None):
+    gst_settings = gst_settings or frappe.get_cached_doc("GST Settings")
+
+    if not (
+        doc.ewaybill
+        and gst_settings.enable_e_waybill
+        and gst_settings.auto_cancel_e_waybill
+    ):
+        return
+
+    generated_on = doc.get_onload().get("e_waybill_info", {}).get("created_on")
+    reason = gst_settings.reason_for_e_waybill_cancellation
+
+    if not generated_on or (add_days(generated_on, 1) < get_datetime()):
+        return
+
+    values = frappe._dict(
+        {
+            "ewaybill": doc.ewaybill,
+            "reason": reason,
+            "remark": "",
+        }
+    )
+
+    _cancel_e_waybill(doc, values)
+
+    return True

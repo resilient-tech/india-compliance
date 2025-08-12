@@ -1,5 +1,6 @@
 import frappe
 from frappe import _
+from frappe.desk.form.load import run_onload
 from frappe.model.meta import get_field_precision
 from frappe.utils import flt
 
@@ -12,7 +13,10 @@ from india_compliance.gst_india.overrides.transaction import (
     validate_transaction,
 )
 from india_compliance.gst_india.utils import is_api_enabled, validate_invoice_number
-from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
+from india_compliance.gst_india.utils.e_waybill import (
+    auto_cancel_e_waybill,
+    get_e_waybill_info,
+)
 
 
 def onload(doc, method=None):
@@ -56,6 +60,16 @@ def validate(doc, method=None):
     validate_with_inward_supply(doc)
     set_reconciliation_status(doc)
     set_pending_boe_qty(doc)
+
+
+def before_cancel(doc, method=None):
+    run_onload(doc)
+    gst_settings = frappe.get_cached_doc("GST Settings")
+
+    if not is_api_enabled(gst_settings):
+        return
+
+    auto_cancel_e_waybill(doc, gst_settings=gst_settings)
 
 
 def on_cancel(doc, method=None):
