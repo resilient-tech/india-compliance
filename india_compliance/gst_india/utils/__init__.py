@@ -92,7 +92,7 @@ def send_updated_doc(doc, set_docinfo=False):
 
 
 @frappe.whitelist()
-def get_gstin_list(party, party_type="Company", include_isd=False):
+def get_gstin_list(party, party_type="Company", exclude_isd=False):
     """
     Returns a list the party's GSTINs.
     """
@@ -104,7 +104,7 @@ def get_gstin_list(party, party_type="Company", include_isd=False):
         "gstin": ("is", "set"),
     }
 
-    if not include_isd:
+    if exclude_isd:
         filters.update({"gst_category": ["!=", "Input Service Distributor"]})
 
     gstin_list = frappe.get_all(
