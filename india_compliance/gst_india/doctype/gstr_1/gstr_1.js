@@ -200,7 +200,7 @@ frappe.ui.form.on(DOCTYPE, {
         render_empty_state(frm);
 
         if (!frm.doc.company) return;
-        const options = await india_compliance.set_gstin_options(frm);
+        const options = await india_compliance.set_gstin_options(frm, false, true);
 
         frm.set_value("company_gstin", options[0]);
     },

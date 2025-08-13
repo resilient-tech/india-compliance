@@ -94,7 +94,7 @@ frappe.ui.form.on(DOCTYPE, {
     async company(frm) {
         render_empty_state(frm);
         if (!frm.doc.company) return;
-        const options = await india_compliance.set_gstin_options(frm, true);
+        const options = await india_compliance.set_gstin_options(frm, true, true);
 
         frm.set_value("company_gstin", options[0]);
     },
