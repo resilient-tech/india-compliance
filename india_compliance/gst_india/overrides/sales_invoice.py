@@ -108,7 +108,7 @@ def validate_fields_and_set_status_for_e_invoice(doc, gst_settings=None):
     # Mandatory for e-Invoice before save
     _validate_hsn_codes(
         doc,
-        valid_hsn_length=[6, 8],
+        valid_hsn_length=[4, 6, 8],
         message=_("Since HSN/SAC Code is mandatory for generating e-Invoices.<br>"),
     )
 
