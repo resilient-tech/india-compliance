@@ -58,8 +58,12 @@ def onload(doc, method=None):
     ):
         doc.set_onload("e_waybill_info", e_waybill_info)
 
-    if gst_settings.enable_e_invoice and doc.irn:
-        doc.set_onload("e_invoice_info", get_e_invoice_info(doc))
+    if (
+        gst_settings.enable_e_invoice
+        and doc.irn
+        and (e_invoice_info := get_e_invoice_info(doc))
+    ):
+        doc.set_onload("e_invoice_info", e_invoice_info)
 
 
 def validate(doc, method=None):
