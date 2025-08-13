@@ -92,7 +92,7 @@ def send_updated_doc(doc, set_docinfo=False):
 
 
 @frappe.whitelist()
-def get_gstin_list(party, party_type="Company", exclude_isd=False):
+def get_gstin_list(party: str, party_type: str = "Company", exclude_isd: bool = False):
     """
     Returns a list the party's GSTINs.
     """
