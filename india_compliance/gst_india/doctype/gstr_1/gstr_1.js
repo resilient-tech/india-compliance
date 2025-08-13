@@ -3113,7 +3113,7 @@ async function set_default_company_gstin(frm) {
 
     const { message: gstin_list } = await frappe.call(
         "india_compliance.gst_india.utils.get_gstin_list",
-        { party: company }
+        { party: company, exclude_isd: true }
     );
 
     if (gstin_list && gstin_list.length) {

@@ -1094,7 +1094,7 @@ class ImportDialog {
                 get_query: async () => {
                     let { message: gstin_list } = await frappe.call({
                         method: "india_compliance.gst_india.utils.get_gstin_list",
-                        args: { party: this.frm.doc.company },
+                        args: { party: this.frm.doc.company, exclude_isd: true },
                     });
 
                     gstin_list.unshift("All");
