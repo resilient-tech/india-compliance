@@ -198,7 +198,7 @@ def validate_with_inward_supply(doc):
 
     if mismatch_fields:
         message = (
-            "Purchase Invoice does not match with releted GST Inward Supply.<br>"
+            "Purchase Invoice does not match with related GST Inward Supply.<br>"
             "Following values are not matching from 2A/2B: <br>"
         )
         for field, value in mismatch_fields.items():
