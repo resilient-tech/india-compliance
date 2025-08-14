@@ -20,10 +20,7 @@ from india_compliance.gst_india.utils.e_waybill import (
 
 
 def onload(doc, method=None):
-    if doc.docstatus != 1:
-        return
-
-    if doc.gst_category == "Overseas":
+    if doc.docstatus == 1 and doc.gst_category == "Overseas":
         doc.set_onload(
             "bill_of_entry_exists",
             not any(item.pending_boe_qty > 0 for item in doc.items),
