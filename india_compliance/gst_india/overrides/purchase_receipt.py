@@ -43,15 +43,18 @@ def onload(doc, method=None):
     set_ineligibility_reason(doc, show_alert=False)
 
     # Load e-waybill info if applicable
-    if doc.get("ewaybill"):
-        gst_settings = frappe.get_cached_doc("GST Settings")
-        if (
-            is_api_enabled(gst_settings)
-            and gst_settings.enable_e_waybill
-            and gst_settings.enable_e_waybill_from_pr
-            and (e_waybill_info := get_e_waybill_info(doc))
-        ):
-            doc.set_onload("e_waybill_info", e_waybill_info)
+    if not doc.get("ewaybill"):
+        return
+
+    gst_settings = frappe.get_cached_doc("GST Settings")
+
+    if (
+        is_api_enabled(gst_settings)
+        and gst_settings.enable_e_waybill
+        and gst_settings.enable_e_waybill_from_pr
+        and (e_waybill_info := get_e_waybill_info(doc))
+    ):
+        doc.set_onload("e_waybill_info", e_waybill_info)
 
 
 def validate(doc, method=None):
