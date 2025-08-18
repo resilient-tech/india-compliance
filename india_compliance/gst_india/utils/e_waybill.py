@@ -3,7 +3,7 @@ import os
 
 import frappe
 from frappe import _
-from frappe.desk.form.load import get_docinfo
+from frappe.desk.form.load import get_docinfo, run_onload
 from frappe.utils import (
     add_days,
     add_to_date,
@@ -1793,7 +1793,19 @@ class EWaybillData(GSTTransactionData):
 #######################################################################################
 
 
-def auto_cancel_e_waybill(doc, gst_settings=None):
+def before_cancel(doc, method=None):
+    if not doc.get("ewaybill"):
+        return
+
+    run_onload(doc)
+
+    if not (e_waybill_info := doc.get_onload().get("e_waybill_info")):
+        return
+
+    auto_cancel_e_waybill(doc, e_waybill_info=e_waybill_info)
+
+
+def auto_cancel_e_waybill(doc, gst_settings=None, e_waybill_info=None):
     gst_settings = gst_settings or frappe.get_cached_doc("GST Settings")
 
     if not (
@@ -1803,7 +1815,8 @@ def auto_cancel_e_waybill(doc, gst_settings=None):
     ):
         return
 
-    generated_on = doc.get_onload().get("e_waybill_info", {}).get("created_on")
+    e_waybill_info = e_waybill_info or doc.get_onload().get("e_waybill_info", {})
+    generated_on = e_waybill_info.get("created_on")
     reason = gst_settings.reason_for_e_waybill_cancellation
 
     if not generated_on or (add_days(generated_on, 1) < get_datetime()):

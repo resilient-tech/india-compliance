@@ -1,5 +1,4 @@
 import frappe
-from frappe.desk.form.load import run_onload
 
 from india_compliance.gst_india.overrides.purchase_invoice import (
     set_ineligibility_reason,
@@ -13,10 +12,7 @@ from india_compliance.gst_india.overrides.transaction import (
     validate_transaction,
 )
 from india_compliance.gst_india.utils import is_api_enabled
-from india_compliance.gst_india.utils.e_waybill import (
-    auto_cancel_e_waybill,
-    get_e_waybill_info,
-)
+from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 
 
 def get_dashboard_data(data):
@@ -62,13 +58,3 @@ def validate(doc, method=None):
         return
 
     set_ineligibility_reason(doc)
-
-
-def before_cancel(doc, method=None):
-    run_onload(doc)
-    gst_settings = frappe.get_cached_doc("GST Settings")
-
-    if not is_api_enabled(gst_settings):
-        return
-
-    auto_cancel_e_waybill(doc, gst_settings=gst_settings)
