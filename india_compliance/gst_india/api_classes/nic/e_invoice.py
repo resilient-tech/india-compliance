@@ -105,6 +105,10 @@ class EInvoiceAPI(BaseAPI):
         if isinstance(result, list):
             result = result[0]
 
+        # Duplicate IRN: Standard APIs
+        if not result.Irn and result.InfoDtls and isinstance(result.InfoDtls, list):
+            result = result.InfoDtls[0]
+
         self.update_distance(result)
         return result
 
