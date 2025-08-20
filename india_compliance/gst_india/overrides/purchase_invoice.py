@@ -32,7 +32,9 @@ def onload(doc, method=None):
 
     if (
         gst_settings.enable_e_waybill
-        and gst_settings.enable_e_waybill_from_pi
+        and (
+            gst_settings.enable_e_waybill_from_pi or gst_settings.auto_cancel_e_waybill
+        )
         and (e_waybill_info := get_e_waybill_info(doc))
     ):
         doc.set_onload("e_waybill_info", e_waybill_info)
