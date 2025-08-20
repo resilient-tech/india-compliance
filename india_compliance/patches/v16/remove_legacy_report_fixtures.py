@@ -26,5 +26,5 @@ def execute():
             delete_permanently=True,
         )
 
-    except Exception as e:
-        print(f"Error removing report: {str(e)}")
+    except Exception:
+        frappe.log_error(title="remove_legacy_report_fixtures failed")
