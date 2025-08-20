@@ -69,7 +69,7 @@ frappe.ui.form.on("Bill of Entry", {
             return;
         }
 
-        const options = await india_compliance.set_gstin_options(frm);
+        const options = await india_compliance.set_gstin_options(frm, false, true);
         frm.set_value("company_gstin", options[0]);
 
         const { message } = await frappe.db.get_value("Company", frm.doc.company, [
