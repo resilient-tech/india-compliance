@@ -818,6 +818,156 @@ class TestEInvoice(IntegrationTestCase):
             si.name,
         )
 
+    @responses.activate
+    def test_failed_e_invoice_generation(self):
+        """Test error handling when e-Invoice generation fails (empty IRN)"""
+        test_data = self.e_invoice_test_data.get("failed_e_invoice_generation")
+
+        si = create_sales_invoice(
+            rate=1000,
+            is_in_state=True,
+            company_address="_Test Indian Registered Company-Billing",
+        )
+
+        # Mock response for failed e-Invoice generation
+        self._mock_e_invoice_response(data=test_data)
+
+        # Assert that proper error is thrown when IRN is empty
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            re.compile(r"^(e-Invoice generation failed)$"),
+            generate_e_invoice,
+            si.name,
+        )
+
+        # Ensure no e-Invoice Log is created
+        self.assertFalse(
+            frappe.db.get_value("e-Invoice Log", {"reference_name": si.name}, "name")
+        )
+
+        # Ensure Sales Invoice status is not updated
+        si.reload()
+        self.assertEqual(si.einvoice_status, "Failed")
+
+    def test_handle_duplicate_irn_response_enriched_api(self):
+        """Test handle_duplicate_irn_response method for Enriched API"""
+        from india_compliance.gst_india.api_classes.nic.e_invoice import (
+            EnrichedEInvoiceAPI,
+        )
+
+        # Create API instance without initialization to avoid setup issues
+        api = EnrichedEInvoiceAPI.__new__(EnrichedEInvoiceAPI)
+
+        # Test case 1: Result is a list (typical for enriched API duplicate IRN)
+        result_list = [
+            frappe._dict(
+                {
+                    "InfCd": "DUPIRN",
+                    "Desc": {
+                        "Irn": "duplicate_irn_123",
+                        "AckDt": "2025-08-20 12:00:00",
+                        "AckNo": "123456789",
+                    },
+                }
+            ),
+            frappe._dict(
+                {
+                    "InfCd": "OTHER",
+                    "Desc": {"Irn": "other_irn_456", "AckDt": "2025-08-20 13:00:00"},
+                }
+            ),
+        ]
+
+        processed_result = api.handle_duplicate_irn_response(result_list)
+
+        # Should return the first DUPIRN info or first item
+        self.assertEqual(processed_result.Desc.get("Irn"), "duplicate_irn_123")
+        self.assertEqual(processed_result.InfCd, "DUPIRN")
+
+        # Test case 2: Result is already a dict (normal case)
+        result_dict = frappe._dict(
+            {"Irn": "normal_irn_789", "AckDt": "2025-08-20 14:00:00"}
+        )
+
+        processed_result = api.handle_duplicate_irn_response(result_dict)
+
+        # Should return the same dict
+        self.assertEqual(processed_result.Irn, "normal_irn_789")
+
+    def test_handle_duplicate_irn_response_standard_api(self):
+        """Test handle_duplicate_irn_response method for Standard API"""
+        from india_compliance.gst_india.api_classes.nic.e_invoice import (
+            StandardEInvoiceAPI,
+        )
+
+        # Create API instance with mock setup to avoid initialization issues
+        api = StandardEInvoiceAPI.__new__(StandardEInvoiceAPI)
+
+        # Test case 1: Empty IRN with InfoDtls containing DUPIRN
+        result_with_info_dtls = frappe._dict(
+            {
+                "Irn": "",
+                "Status": 0,
+                "InfoDtls": [
+                    {
+                        "InfCd": "DUPIRN",
+                        "Desc": {
+                            "Irn": "duplicate_irn_123",
+                            "AckDt": "2025-08-20 12:00:00",
+                            "AckNo": "123456789",
+                        },
+                    },
+                    {
+                        "InfCd": "OTHER",
+                        "Desc": {
+                            "Irn": "other_irn_456",
+                            "AckDt": "2025-08-20 13:00:00",
+                        },
+                    },
+                ],
+            }
+        )
+
+        processed_result = api.handle_duplicate_irn_response(result_with_info_dtls)
+
+        # Should return the DUPIRN info from InfoDtls
+        self.assertEqual(processed_result.get("InfCd"), "DUPIRN")
+        self.assertEqual(processed_result.get("Desc").get("Irn"), "duplicate_irn_123")
+
+        # Test case 2: Empty IRN with InfoDtls but no DUPIRN
+        result_no_dupirn = frappe._dict(
+            {
+                "Irn": "",
+                "Status": 0,
+                "InfoDtls": [
+                    {
+                        "InfCd": "OTHER",
+                        "Desc": {
+                            "Irn": "other_irn_789",
+                            "AckDt": "2025-08-20 15:00:00",
+                        },
+                    }
+                ],
+            }
+        )
+
+        processed_result = api.handle_duplicate_irn_response(result_no_dupirn)
+
+        # Should return the first item from InfoDtls
+        self.assertEqual(processed_result.get("InfCd"), "OTHER")
+        self.assertEqual(processed_result.get("Desc").get("Irn"), "other_irn_789")
+
+        # Test case 3: Normal result with IRN (no processing needed)
+        result_normal = frappe._dict(
+            {"Irn": "normal_irn_999", "AckDt": "2025-08-20 16:00:00", "Status": 1}
+        )
+
+        processed_result = api.handle_duplicate_irn_response(result_normal)
+
+        # Should return the same result unchanged
+        self.assertEqual(processed_result.Irn, "normal_irn_999")
+        self.assertEqual(processed_result.Status, 1)
+
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     @change_settings("System Settings", {"currency_precision": 3})
     def test_refund_transaction_invoice_total(self):
