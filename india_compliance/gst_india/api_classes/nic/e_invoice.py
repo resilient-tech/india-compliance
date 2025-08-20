@@ -101,15 +101,14 @@ class EInvoiceAPI(BaseAPI):
     def generate_irn(self, data):
         result = self.post(endpoint="invoice", json=data)
 
-        # In case of Duplicate IRN, result is a list
-        if isinstance(result, list):
-            result = result[0]
-
-        # Duplicate IRN: Standard APIs
-        if not result.Irn and result.InfoDtls and isinstance(result.InfoDtls, list):
-            result = result.InfoDtls[0]
+        # Handle duplicate IRN scenarios
+        result = self.handle_duplicate_irn_response(result)
 
         self.update_distance(result)
+        return result
+
+    def handle_duplicate_irn_response(self, result):
+        # This method will be overridden in subclasses
         return result
 
     def cancel_irn(self, data):
@@ -164,6 +163,15 @@ class EnrichedEInvoiceAPI(EInvoiceAPI):
 
     def get_response_info(self):
         return self.response.get("info")
+
+    def handle_duplicate_irn_response(self, result):
+        if isinstance(result, list):
+            dup_info = next(
+                (info for info in result if info.get("InfCd") == "DUPIRN"), None
+            )
+            result = dup_info or result[0]
+
+        return result
 
 
 class StandardEInvoiceAPI(EInvoiceAPI):
@@ -246,3 +254,13 @@ class StandardEInvoiceAPI(EInvoiceAPI):
 
     def get_response_info(self):
         return self.response.get("InfoDtls")
+
+    def handle_duplicate_irn_response(self, result):
+        info_details = result.get("InfoDtls")
+        if not result.Irn and isinstance(info_details, list):
+            dup_info = next(
+                (info for info in info_details if info.get("InfCd") == "DUPIRN"), None
+            )
+            result = dup_info or info_details[0]
+
+        return result
