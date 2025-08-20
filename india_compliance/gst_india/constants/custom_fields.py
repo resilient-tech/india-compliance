@@ -1322,17 +1322,60 @@ HRMS_CUSTOM_FIELDS = {
     ],
 }
 
+HSN_CODE_FIELD = {
+    "fieldname": "gst_hsn_code",
+    "label": "HSN/SAC",
+    "fieldtype": "Link",
+    "options": "GST HSN Code",
+    "description": "You can search code by the description of the category.",
+}
+
 EDUCATION_CUSTOM_FIELDS = {
-    "Fee Category": [
+    "Fee Category": [{**HSN_CODE_FIELD, "insert_after": "description"}]
+}
+
+HEALTHCARE_CUSTOM_FIELDS = {
+    "Clinical Procedure Template": [
         {
-            "fieldname": "gst_hsn_code",
-            "label": "HSN/SAC",
-            "fieldtype": "Link",
-            "options": "GST HSN Code",
-            "insert_after": "description",
-            "description": "You can search code by the description of the category.",
+            **HSN_CODE_FIELD,
+            "insert_after": "item_group",
+            "reqd": 1,
+            "read_only_depends_on": "eval:doc.link_existing_item",
         }
-    ]
+    ],
+    "Observation Template": [
+        {
+            **HSN_CODE_FIELD,
+            "insert_after": "item_group",
+            "mandatory_depends_on": "eval:doc.is_billable;",
+            "depends_on": "eval:doc.is_billable;",
+            "read_only_depends_on": "eval:doc.link_existing_item",
+        }
+    ],
+    "Therapy Type": [{**HSN_CODE_FIELD, "insert_after": "item_group", "reqd": 1}],
+    "Healthcare Service Unit Type": [
+        {
+            **HSN_CODE_FIELD,
+            "insert_after": "item_group",
+            "mandatory_depends_on": "eval:doc.is_billable;",
+            "depends_on": "eval:doc.is_billable;",
+        }
+    ],
+    "Therapy Plan Template": [
+        {
+            **HSN_CODE_FIELD,
+            "insert_after": "item_group",
+            "reqd": 1,
+            "read_only_depends_on": "eval:doc.link_existing_item",
+        }
+    ],
+    "Medication Linked Item": [
+        {
+            **HSN_CODE_FIELD,
+            "insert_after": "item_group",
+            "in_list_view": 1,
+        }
+    ],
 }
 
 reverse_charge_field = {
