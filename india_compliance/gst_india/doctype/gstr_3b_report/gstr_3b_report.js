@@ -10,7 +10,7 @@ frappe.ui.form.on("GSTR 3B Report", {
         set_options_for_year_month(frm);
 
         if (frm.doc.company)
-            india_compliance.set_gstin_options(frm).then(options => {
+            india_compliance.set_gstin_options(frm, false, true).then(options => {
                 frm.set_value("company_gstin", options[0]);
             });
 
@@ -97,7 +97,7 @@ frappe.ui.form.on("GSTR 3B Report", {
             return;
         }
 
-        const options = await india_compliance.set_gstin_options(frm);
+        const options = await india_compliance.set_gstin_options(frm, false, true);
         frm.set_value("company_gstin", options[0]);
     },
 });

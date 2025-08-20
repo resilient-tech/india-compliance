@@ -200,7 +200,7 @@ frappe.ui.form.on(DOCTYPE, {
         render_empty_state(frm);
 
         if (!frm.doc.company) return;
-        const options = await india_compliance.set_gstin_options(frm);
+        const options = await india_compliance.set_gstin_options(frm, false, true);
 
         frm.set_value("company_gstin", options[0]);
     },
@@ -3113,7 +3113,7 @@ async function set_default_company_gstin(frm) {
 
     const { message: gstin_list } = await frappe.call(
         "india_compliance.gst_india.utils.get_gstin_list",
-        { party: company }
+        { party: company, exclude_isd: true }
     );
 
     if (gstin_list && gstin_list.length) {

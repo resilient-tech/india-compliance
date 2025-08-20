@@ -94,7 +94,7 @@ frappe.ui.form.on(DOCTYPE, {
     async company(frm) {
         render_empty_state(frm);
         if (!frm.doc.company) return;
-        const options = await india_compliance.set_gstin_options(frm, true);
+        const options = await india_compliance.set_gstin_options(frm, true, true);
 
         frm.set_value("company_gstin", options[0]);
     },
@@ -1094,7 +1094,7 @@ class ImportDialog {
                 get_query: async () => {
                     let { message: gstin_list } = await frappe.call({
                         method: "india_compliance.gst_india.utils.get_gstin_list",
-                        args: { party: this.frm.doc.company },
+                        args: { party: this.frm.doc.company, exclude_isd: true },
                     });
 
                     gstin_list.unshift("All");
