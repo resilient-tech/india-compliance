@@ -165,6 +165,9 @@ def generate_e_invoice(docname, throw=True, force=False):
 
             result = api.generate_irn(data)
 
+        if not result.Irn:
+            frappe.throw(_("e-Invoice generation failed"))
+
     except GSPServerError as e:
         handle_server_errors(settings, doc, "e-Invoice", e)
         return
@@ -251,6 +254,9 @@ def handle_duplicate_irn_error(
 
     if response.error_code:
         response = irn_data
+
+    if not response.Irn:
+        frappe.throw(_("e-Invoice generation failed"))
 
     return log_and_process_e_invoice_generation(doc, response, api.sandbox_mode)
 
