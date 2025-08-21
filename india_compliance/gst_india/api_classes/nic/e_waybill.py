@@ -16,7 +16,7 @@ from india_compliance.gst_india.constants import DISTANCE_REGEX
 
 class EWaybillAPI(BaseAPI):
     API_NAME = "e-Waybill"
-    SENSITIVE_INFO = BaseAPI.SENSITIVE_INFO + ("password", "app_key")
+
     IGNORED_ERROR_CODES = {
         "238": "Invalid auth token",
         #  Cancel e-waybill errors

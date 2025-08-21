@@ -108,13 +108,6 @@ class FilesAPI(BaseAPI):
 
 
 class TaxpayerAuthenticate(BaseAPI):
-    SENSITIVE_INFO = BaseAPI.SENSITIVE_INFO + (
-        "auth-token",
-        "auth_token",
-        "app_key",
-        "sek",
-        "rek",
-    )
 
     IGNORED_ERROR_CODES = {
         "RETOTPREQUEST": "otp_requested",
