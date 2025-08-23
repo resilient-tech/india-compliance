@@ -861,8 +861,15 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
      - tax template
      - taxes in the tax template
     """
-    is_sales_transaction = doctype in SALES_DOCTYPES or doctype == "Payment Entry"
     party_details = frappe.parse_json(party_details)
+
+    if not (
+        party_details.company_gstin
+        or is_indian_registered_company(frappe._dict(company=company))
+    ):
+        return {}
+
+    is_sales_transaction = doctype in SALES_DOCTYPES or doctype == "Payment Entry"
     gst_details = frappe._dict()
 
     allow_same_gstin = False
