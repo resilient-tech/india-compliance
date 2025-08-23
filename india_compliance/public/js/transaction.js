@@ -122,7 +122,7 @@ async function update_gst_details(frm, event) {
     const party_details = {};
 
     // set "customer" or "supplier" (not applicable for Quotations with Lead)
-    if (frm.doc.doctype !== "Quotation" || frm.doc.party_type === "Customer") {
+    if (frm.doc.doctype !== "Quotation" || frm.doc.quotation_to === "Customer") {
         party_details[party_type] = party;
     }
 
