@@ -404,7 +404,7 @@ class UserReport(BaseAuditTrail):
 
 
 @frappe.whitelist()
-def get_relevant_doctypes():
+def get_relevant_doctypes() -> set[str]:
     doctypes = get_audit_trail_doctypes()
     doctypes.remove("Accounts Settings")
 

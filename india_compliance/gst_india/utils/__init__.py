@@ -92,7 +92,9 @@ def send_updated_doc(doc, set_docinfo=False):
 
 
 @frappe.whitelist()
-def get_gstin_list(party: str, party_type: str = "Company", exclude_isd: bool = False):
+def get_gstin_list(
+    party: str, party_type: str = "Company", exclude_isd: bool = False
+) -> list:
     """
     Returns a list the party's GSTINs.
     """
@@ -123,7 +125,7 @@ def get_gstin_list(party: str, party_type: str = "Company", exclude_isd: bool = 
 
 @frappe.whitelist()
 @frappe.request_cache
-def get_party_for_gstin(gstin, party_type="Supplier"):
+def get_party_for_gstin(gstin: str, party_type: str = "Supplier") -> str | None:
     if not gstin:
         return
 
@@ -149,7 +151,7 @@ def get_party_for_gstin(gstin, party_type="Supplier"):
 
 
 @frappe.whitelist()
-def get_party_contact_details(party, party_type="Supplier"):
+def get_party_contact_details(party: str, party_type: str = "Supplier") -> dict | None:
     if party and (contact := get_default_contact(party_type, party)):
         return get_contact_details(contact)
 
@@ -614,7 +616,7 @@ def get_gst_account_gst_tax_type_map():
 
 
 @frappe.whitelist()
-def get_all_gst_accounts(company):
+def get_all_gst_accounts(company: str) -> list:
     """
     Permission not checked here:
     List of GST account names isn't considered sensitive data
@@ -932,12 +934,12 @@ def tar_gz_bytes_to_data(tar_gz_bytes: bytes) -> str | None:
 
 
 @frappe.whitelist(methods=["POST"])
-def disable_item_tax_template_notification():
+def disable_item_tax_template_notification() -> None:
     frappe.defaults.clear_user_default("needs_item_tax_template_notification")
 
 
 @frappe.whitelist(methods=["POST"])
-def disable_new_gst_category_notification():
+def disable_new_gst_category_notification() -> None:
     frappe.defaults.clear_user_default("needs_new_gst_category_notification")
 
 

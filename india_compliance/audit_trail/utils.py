@@ -7,7 +7,7 @@ def is_audit_trail_enabled():
 
 
 @frappe.whitelist()
-def get_audit_trail_doctypes():
+def get_audit_trail_doctypes() -> set:
     return set(frappe.get_hooks("audit_trail_doctypes"))
 
 
@@ -19,12 +19,12 @@ def enqueue_disable_audit_trail_notification():
 
 
 @frappe.whitelist(methods=["POST"])
-def disable_audit_trail_notification():
+def disable_audit_trail_notification() -> None:
     frappe.defaults.clear_user_default("needs_audit_trail_notification")
 
 
 @frappe.whitelist(methods=["POST"])
-def enable_audit_trail():
+def enable_audit_trail() -> None:
     accounts_settings = frappe.get_doc("Accounts Settings")
     accounts_settings.enable_audit_trail = 1
     accounts_settings.save()

@@ -14,7 +14,7 @@ page_name = "india-compliance-account"
 
 
 @frappe.whitelist()
-def get_api_secret():
+def get_api_secret() -> str | None:
     has_permission_of_page(page_name, throw=True)
 
     return get_decrypted_password(
@@ -26,7 +26,7 @@ def get_api_secret():
 
 
 @frappe.whitelist()
-def set_api_secret(api_secret: str):
+def set_api_secret(api_secret: str) -> None:
     has_permission_of_page(page_name, throw=True)
 
     if not api_secret:
@@ -52,7 +52,7 @@ def logout():
 
 
 @frappe.whitelist()
-def get_auth_session():
+def get_auth_session() -> dict | None:
     has_permission_of_page(page_name, throw=True)
 
     session = frappe.db.get_global("ic_auth_session")
@@ -60,7 +60,7 @@ def get_auth_session():
 
 
 @frappe.whitelist()
-def set_auth_session(session: str = None):
+def set_auth_session(session: str | None = None) -> None:
     has_permission_of_page(page_name, throw=True)
 
     if not session:

@@ -400,7 +400,7 @@ def set_address_display(doc):
 
 
 @frappe.whitelist()
-def get_relevant_references(filters=None):
+def get_relevant_references(filters: dict | str | None = None) -> dict:
     if isinstance(filters, str):
         filters = frappe.parse_json(filters)
 

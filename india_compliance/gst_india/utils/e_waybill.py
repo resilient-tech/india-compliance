@@ -4,6 +4,7 @@ import os
 import frappe
 from frappe import _
 from frappe.desk.form.load import get_docinfo, run_onload
+from frappe.model.document import Document
 from frappe.utils import (
     add_days,
     add_to_date,
@@ -56,7 +57,9 @@ from india_compliance.utils.change_log_utils import create_change_log_comment
 
 
 @frappe.whitelist()
-def generate_e_waybill_json(doctype: str, docnames, values=None):
+def generate_e_waybill_json(
+    doctype: str, docnames: str, values: str | None = None
+) -> str:
     docnames = frappe.parse_json(docnames) if docnames.startswith("[") else [docnames]
     ewb_data = {
         "version": "1.0.0621",
@@ -81,7 +84,9 @@ def generate_e_waybill_json(doctype: str, docnames, values=None):
 
 
 @frappe.whitelist()
-def bulk_update_transporter_in_docs(doctype, docnames, values):
+def bulk_update_transporter_in_docs(
+    doctype: str, docnames: str, values: dict | str
+) -> None:
     frappe.has_permission(doctype, "submit", throw=True)
 
     docnames = frappe.parse_json(docnames) if docnames.startswith("[") else [docnames]
@@ -91,7 +96,7 @@ def bulk_update_transporter_in_docs(doctype, docnames, values):
 
 
 @frappe.whitelist()
-def enqueue_bulk_e_waybill_generation(doctype, docnames):
+def enqueue_bulk_e_waybill_generation(doctype: str, docnames: list[str] | str) -> str:
     """
     Enqueue bulk generation of e-Waybill for the given documents.
     """
@@ -137,7 +142,9 @@ def generate_e_waybills(doctype, docnames, force=False):
 
 
 @frappe.whitelist()
-def generate_e_waybill(*, doctype, docname, values=None, force: bool = False):
+def generate_e_waybill(
+    *, doctype: str, docname: str, values: dict | str | None = None, force: bool = False
+) -> None:
     doc = load_doc(doctype, docname, "submit")
     if values:
         update_transaction(doc, frappe.parse_json(values))
@@ -291,7 +298,7 @@ def log_and_process_e_waybill_generation(doc, result, *, with_irn=False):
 
 
 @frappe.whitelist()
-def cancel_e_waybill(*, doctype, docname, values):
+def cancel_e_waybill(*, doctype: str, docname: str, values: dict | str) -> None:
     doc = load_doc(doctype, docname, "cancel")
     values = frappe.parse_json(values)
     _cancel_e_waybill(doc, values)
@@ -352,7 +359,7 @@ def log_and_process_e_waybill_cancellation(doc, values, result):
 
 
 @frappe.whitelist()
-def update_vehicle_info(*, doctype, docname, values):
+def update_vehicle_info(*, doctype: str, docname: str, values: dict | str) -> None:
     doc = load_doc(doctype, docname, "submit")
 
     old_values = {
@@ -481,7 +488,7 @@ def _bulk_update_transporter_in_docs(doctype, docnames, values):
 
 
 @frappe.whitelist()
-def update_transporter(*, doctype, docname, values):
+def update_transporter(*, doctype: str, docname: str, values: dict | str) -> None:
     doc = load_doc(doctype, docname, "submit")
     old_transporter_id = doc.gst_transporter_id
 
@@ -533,7 +540,9 @@ def update_transporter(*, doctype, docname, values):
 
 
 @frappe.whitelist()
-def extend_validity(*, doctype, docname, values, scheduled: bool = False):
+def extend_validity(
+    *, doctype: str, docname: str, values: dict | str, scheduled: bool = False
+) -> None:
     doc = load_doc(doctype, docname, "submit")
     values = frappe.parse_json(values)
 
@@ -627,7 +636,9 @@ def validate_data_before_schedule(doc, values):
 
 
 @frappe.whitelist()
-def schedule_ewaybill_for_extension(doctype, docname, values, scheduled_time):
+def schedule_ewaybill_for_extension(
+    doctype: str, docname: str, values: dict | str, scheduled_time: str
+) -> None:
     values = frappe.parse_json(values)
     if not values:
         return
@@ -686,8 +697,8 @@ def generate_pending_e_waybills():
 
 @frappe.whitelist()
 def fetch_e_waybill_data(
-    *, doctype, docname, attach: bool = False, force: bool = False
-):
+    *, doctype: str, docname: str, attach: bool = False, force: bool = False
+) -> None:
     doc = load_doc(doctype, docname, "write" if attach else "print")
     log = frappe.get_doc("e-Waybill Log", doc.ewaybill)
     if not log.is_latest_data or force:
@@ -717,7 +728,7 @@ def _fetch_e_waybill_data(doc, log):
 
 
 @frappe.whitelist()
-def find_matching_e_waybill(*, doctype, docname, e_waybill_date):
+def find_matching_e_waybill(*, doctype: str, docname: str, e_waybill_date: str) -> None:
     doc = load_doc(doctype, docname, "submit")
 
     response = EWaybillAPI.create(doc).get_e_waybills_by_date(
@@ -750,7 +761,7 @@ def find_matching_e_waybill(*, doctype, docname, e_waybill_date):
 
 
 @frappe.whitelist()
-def mark_e_waybill_as_generated(doctype, docname, values):
+def mark_e_waybill_as_generated(doctype: str, docname: str, values: dict | str) -> None:
     doc = load_doc(doctype, docname, "submit")
     values = frappe.parse_json(values)
     result = {
@@ -766,7 +777,7 @@ def mark_e_waybill_as_generated(doctype, docname, values):
 
 
 @frappe.whitelist()
-def mark_e_waybill_as_cancelled(doctype, docname, values):
+def mark_e_waybill_as_cancelled(doctype: str, docname: str, values: dict | str) -> None:
     doc = load_doc(doctype, docname, "cancel")
     values = frappe.parse_json(values)
     result = frappe._dict(
@@ -835,9 +846,9 @@ def get_pdf_filename(e_waybill_number):
 
 @frappe.whitelist()
 def get_valid_and_invalid_e_waybill_log(
-    doctype,
-    docs,
-):
+    doctype: str,
+    docs: list | str,
+) -> dict:
     """
     - Validate e-Waybill Log
     - If not latest update
@@ -1107,7 +1118,9 @@ def get_address_map(doc):
 
 
 @frappe.whitelist()
-def get_source_destination_address(doctype, docname, address_type):
+def get_source_destination_address(
+    doctype: str, docname: str, address_type: str
+) -> Document:
     # using load_doc for onload trigger required for stock entry.
     doc = load_doc(doctype, docname)
     address_map = get_billing_shipping_address_map(doc)

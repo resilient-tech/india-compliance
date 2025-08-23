@@ -17,7 +17,7 @@ from india_compliance.gst_india.utils.gstin_info import get_gstin_info
 
 
 @frappe.whitelist()
-def enable_setup_wizard_complete():
+def enable_setup_wizard_complete() -> None:
     frappe.db.set_value(
         "Installed Application",
         {"app_name": "india_compliance"},

@@ -42,7 +42,7 @@ def execute(filters=None):
 
 
 @frappe.whitelist()
-def get_pending_voucher_types(company=None):
+def get_pending_voucher_types(company: str | None = None) -> tuple:
     frappe.has_permission("GST Settings", "read", throw=True)
 
     company_accounts = ""
@@ -53,7 +53,7 @@ def get_pending_voucher_types(company=None):
 
 
 @frappe.whitelist()
-def update_company_gstin():
+def update_company_gstin() -> list:
     frappe.has_permission("GST Settings", "write", throw=True)
     return _update_company_gstin()
 
@@ -294,7 +294,6 @@ class GSTBalanceReport:
         return query
 
     def prepare_conditions(self, query):
-
         if self.filters.company_gstin:
             query = query.where(
                 self.gl_entry.company_gstin == self.filters.company_gstin

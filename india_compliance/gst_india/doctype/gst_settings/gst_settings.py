@@ -405,13 +405,13 @@ class GSTSettings(Document):
 
 
 @frappe.whitelist()
-def disable_api_promo():
+def disable_api_promo() -> None:
     if frappe.has_permission("GST Settings", "write"):
         _disable_api_promo()
 
 
 @frappe.whitelist()
-def enqueue_update_gst_category():
+def enqueue_update_gst_category() -> None:
     frappe.has_permission("GST Settings", "write", throw=True)
     frappe.enqueue(update_gst_category, queue="long", timeout=6000)
     frappe.msgprint(

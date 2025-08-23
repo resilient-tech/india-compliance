@@ -39,7 +39,7 @@ inverse_table = [0, 4, 3, 2, 1, 5, 6, 7, 8, 9]
 
 class PAN(Document):
     @frappe.whitelist()
-    def update_pan_status(self):
+    def update_pan_status(self) -> None:
         fetch_and_update_pan_status(self.pan, True)
         frappe.msgprint(_("PAN Status Updated"))
 
@@ -48,7 +48,7 @@ class PAN(Document):
 
 
 @frappe.whitelist()
-def get_pan_status(pan, force_update: bool = False):
+def get_pan_status(pan: str, force_update: bool = False) -> tuple[str, str] | None:
     if not force_update and (
         pan_status := frappe.db.get_value("PAN", pan, ["pan_status", "last_updated_on"])
     ):

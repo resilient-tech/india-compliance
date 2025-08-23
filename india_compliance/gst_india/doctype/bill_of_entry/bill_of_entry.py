@@ -388,7 +388,7 @@ class BillofEntry(Document):
         return asset_items
 
     @frappe.whitelist()
-    def get_items_from_purchase_invoice(self, purchase_invoices):
+    def get_items_from_purchase_invoice(self, purchase_invoices: list[str]) -> None:
         if not purchase_invoices:
             frappe.msgprint(_("No Purchase Invoices selected"))
             return
@@ -509,7 +509,9 @@ def set_missing_values(source, target=None):
 
 
 @frappe.whitelist()
-def make_bill_of_entry(source_name, target_doc=None):
+def make_bill_of_entry(
+    source_name: str, target_doc: dict | str | None = None
+) -> Document:
     """
     Permission checked in get_mapped_doc
     """
@@ -547,7 +549,9 @@ def make_bill_of_entry(source_name, target_doc=None):
 
 
 @frappe.whitelist()
-def make_journal_entry_for_payment(source_name, target_doc=None):
+def make_journal_entry_for_payment(
+    source_name: str, target_doc: dict | str | None = None
+) -> Document:
     """
     Permission checked in get_mapped_doc
     """
@@ -597,7 +601,9 @@ def make_journal_entry_for_payment(source_name, target_doc=None):
 
 
 @frappe.whitelist()
-def make_landed_cost_voucher(source_name, target_doc=None):
+def make_landed_cost_voucher(
+    source_name: str, target_doc: dict | str | None = None
+) -> Document:
     """
     Permission checked in get_mapped_doc
     """

@@ -178,7 +178,7 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
 
 
 @frappe.whitelist()
-def download_file():
+def download_file() -> None:
     frappe.has_permission("GST Return Log", "read", throw=True)
 
     data = frappe._dict(frappe.local.form_dict)

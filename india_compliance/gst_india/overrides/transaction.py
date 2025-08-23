@@ -786,7 +786,9 @@ def update_party_details(party_details, doctype, company):
 
 
 @frappe.whitelist()
-def get_party_details_for_subcontracting(party_details, doctype, company):
+def get_party_details_for_subcontracting(
+    party_details: dict | str, doctype: str, company: str
+) -> dict:
     party_details = frappe.parse_json(party_details)
 
     if doctype == "Stock Entry":
@@ -818,8 +820,12 @@ def get_party_details_for_subcontracting(party_details, doctype, company):
 
 @frappe.whitelist()
 def get_gst_details(
-    party_details, doctype, company, *, update_place_of_supply: bool = False
-):
+    party_details: dict | str,
+    doctype: str,
+    company: str,
+    *,
+    update_place_of_supply: bool = False,
+) -> dict:
     """
     This function does not check for permissions since it returns insensitive data
     based on already sensitive input (party details)

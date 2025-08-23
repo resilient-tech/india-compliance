@@ -163,7 +163,7 @@ def process_hsn_data(invoices):
 
 
 @frappe.whitelist()
-def get_json(filters, report_name, data):
+def get_json(filters: str, report_name: str, data: str) -> dict:
     from india_compliance.gst_india.utils import (
         get_company_gstin_number,
     )
@@ -188,7 +188,7 @@ def get_json(filters, report_name, data):
 
 
 @frappe.whitelist()
-def download_json_file():
+def download_json_file() -> None:
     """download json content in a file"""
     data = frappe._dict(frappe.local.form_dict)
     frappe.response["filename"] = (
