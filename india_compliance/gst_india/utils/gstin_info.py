@@ -40,7 +40,7 @@ CHARACTERS_TO_STRIP = f"{whitespace},"
 
 
 @frappe.whitelist()
-def get_gstin_info(gstin, *, doc=None, throw_error=True):
+def get_gstin_info(gstin, *, doc=None, throw_error: bool = True):
     if doc and isinstance(doc, str):
         doc = frappe.parse_json(doc)
 

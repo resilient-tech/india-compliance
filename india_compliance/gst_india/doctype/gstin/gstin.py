@@ -134,7 +134,7 @@ def get_and_validate_gstin_status(gstin, doc):
 
 
 @frappe.whitelist()
-def get_gstin_status(gstin, doc=None, force_update=False):
+def get_gstin_status(gstin, doc=None, force_update: bool = False):
     """
     Get GSTIN status. Responds immediately, and best suited for Frontend use.
     Permission check not required as GSTIN details are public where GSTIN is known.
