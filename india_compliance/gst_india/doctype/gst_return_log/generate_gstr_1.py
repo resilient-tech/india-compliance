@@ -839,6 +839,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1, AggregateInvoices):
 
 class FileGSTR1:
     def reset_gstr1(self, is_nil_return, force):
+        print("resetting\n\n")
         verify_request_in_progress(self, force)
 
         # reset called after proceed to file
@@ -880,6 +881,7 @@ class FileGSTR1:
         return response
 
     def upload_gstr1(self, json_data, force):
+        print("uploading \n\n")
         if not json_data:
             return
 
@@ -903,6 +905,7 @@ class FileGSTR1:
         set_gstr_actions(self, "upload", response.get("reference_id"), api.request_id)
 
     def process_upload_gstr1(self):
+        print("processing upload\n\n")
         if not self.actions:
             return
 

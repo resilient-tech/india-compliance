@@ -1159,7 +1159,10 @@ class HSNSUM(GSTR1DataMapper):
 
     def __init__(self):
         super().__init__()
-        self.value_formatters_for_internal = {gov_f.UOM: self.map_uom}
+        self.value_formatters_for_internal = {
+            gov_f.UOM: self.map_uom,
+            gov_f.ERROR_MSG: self.get_error_message,
+        }
         self.value_formatters_for_gov = {
             inv_f.UOM: self.map_uom,
             inv_f.DESCRIPTION: lambda x, *args: x[:30],
@@ -1167,6 +1170,8 @@ class HSNSUM(GSTR1DataMapper):
 
     def convert_to_internal_data_format(self, input_data):
         output = {}
+
+        print("converting hsn summ")
 
         # error JSON is diff from normal JSON
         if isinstance(input_data, dict):
@@ -1269,6 +1274,13 @@ class HSNSUM(GSTR1DataMapper):
             return f"{uom}-{UOM_MAP[uom]}"
 
         return f"OTH-{UOM_MAP.get('OTH')}"
+
+    def get_error_message(self, error_msg, data=None):
+        print(error_msg, data, "\n\n\n")
+        if data and (hsn_code := data.get(inv_f.HSN_CODE)):
+            return f"HSN Code: {hsn_code} - {error_msg}".strip()
+
+        return error_msg
 
 
 class AT(GSTR1DataMapper):
@@ -1828,6 +1840,7 @@ def convert_to_internal_data_format(gov_data, for_errors=False):
     """
     Converts Gov data format to internal data format for all categories
     """
+    print("Converting Gov data to internal format...\n\n")
     output = {}
 
     for category, mapper_class in CLASS_MAP.items():
@@ -1844,6 +1857,9 @@ def convert_to_internal_data_format(gov_data, for_errors=False):
     errors = []
     for category, data in output.items():
         for row in data.values():
+            if not row.get("error_code") and not row.get("error_message"):
+                continue
+
             row["category"] = category
             errors.append(row)
 
@@ -1998,7 +2014,6 @@ def summarize_retsum_data(input_data):
 
 
 class BooksDataMapper:
-
     def get_transaction_type(self, invoice):
         if invoice.is_debit_note:
             return "Debit Note"
@@ -2218,7 +2233,6 @@ class BooksDataMapper:
                 invoice_list.append(invoice)
 
                 for key, field in self.DATA_TO_INVOICE_FIELD_MAPPING.items():
-
                     for item in items:
                         invoice[key] += item.get(field, 0)
 
