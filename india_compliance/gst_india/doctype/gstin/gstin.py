@@ -122,7 +122,11 @@ def get_and_validate_gstin_status(gstin, transaction_date):
 
 
 @frappe.whitelist()
+<<<<<<< HEAD
 def get_gstin_status(gstin, transaction_date=None, docstatus=0, force_update=False):
+=======
+def get_gstin_status(gstin, doc=None, force_update: bool = False):
+>>>>>>> faa6b136 (fix: add type hints for boolean parameters in various functions)
     """
     Get GSTIN status. Responds immediately, and best suited for Frontend use.
     Permission check not required as GSTIN details are public where GSTIN is known.

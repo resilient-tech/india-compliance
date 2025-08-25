@@ -21,7 +21,11 @@ from india_compliance.gst_india.utils import get_all_gst_accounts
 
 
 @frappe.whitelist()
+<<<<<<< HEAD
 def get_outstanding_reference_documents(args):
+=======
+def get_outstanding_reference_documents(args, validate: bool = False):
+>>>>>>> faa6b136 (fix: add type hints for boolean parameters in various functions)
     from erpnext.accounts.doctype.payment_entry.payment_entry import (
         get_outstanding_reference_documents,
     )

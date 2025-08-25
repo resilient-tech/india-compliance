@@ -36,7 +36,14 @@ CHARACTERS_TO_STRIP = f"{whitespace},"
 
 
 @frappe.whitelist()
+<<<<<<< HEAD
 def get_gstin_info(gstin, *, throw_error=True):
+=======
+def get_gstin_info(gstin, *, doc=None, throw_error: bool = True):
+    if doc and isinstance(doc, str):
+        doc = frappe.parse_json(doc)
+
+>>>>>>> faa6b136 (fix: add type hints for boolean parameters in various functions)
     if not frappe.get_cached_doc("User", frappe.session.user).has_desk_access():
         frappe.throw(_("Not allowed"), frappe.PermissionError)
 

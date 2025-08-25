@@ -913,7 +913,44 @@ def update_party_details(party_details, doctype, company):
 
 
 @frappe.whitelist()
+<<<<<<< HEAD
 def get_gst_details(party_details, doctype, company, *, update_place_of_supply=False):
+=======
+def get_party_details_for_subcontracting(party_details, doctype, company):
+    party_details = frappe.parse_json(party_details)
+
+    if doctype == "Stock Entry":
+        party_address_field = (
+            "bill_from_address"
+            if party_details.get("is_inward_stock_entry")
+            else "bill_to_address"
+        )
+    else:
+        party_address_field = "supplier_address"
+
+    party_details[party_address_field] = get_default_address(
+        "Supplier", party_details.supplier
+    )
+    party_details.update(
+        get_fetch_values(
+            doctype, party_address_field, party_details[party_address_field]
+        )
+    )
+
+    return party_details.update(
+        {
+            **get_gst_details(
+                party_details, doctype, company, update_place_of_supply=True
+            ),
+        }
+    )
+
+
+@frappe.whitelist()
+def get_gst_details(
+    party_details, doctype, company, *, update_place_of_supply: bool = False
+):
+>>>>>>> faa6b136 (fix: add type hints for boolean parameters in various functions)
     """
     This function does not check for permissions since it returns insensitive data
     based on already sensitive input (party details)

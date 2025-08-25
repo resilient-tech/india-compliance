@@ -110,7 +110,12 @@ class PurchaseReconciliationTool(Document):
         company_gstins,
         date_range,
         return_type=None,
+<<<<<<< HEAD
         force=False,
+=======
+        return_period=None,
+        force: bool = False,
+>>>>>>> faa6b136 (fix: add type hints for boolean parameters in various functions)
         gst_categories=None,
     ):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
@@ -125,7 +130,7 @@ class PurchaseReconciliationTool(Document):
 
     @frappe.whitelist()
     def get_import_history(
-        self, company_gstin, return_type, date_range, for_download=True
+        self, company_gstin, return_type, date_range, for_download: bool = True
     ):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
@@ -610,7 +615,7 @@ def generate_excel_attachment(data, doc):
 
 
 @frappe.whitelist()
-def download_excel_report(data, doc, is_supplier_specific=False):
+def download_excel_report(data, doc, is_supplier_specific: bool = False):
     frappe.has_permission("Purchase Reconciliation Tool", "export", throw=True)
 
     build_data = BuildExcel(doc, data, is_supplier_specific)
