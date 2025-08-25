@@ -246,8 +246,11 @@ class StandardEInvoiceAPI(EInvoiceAPI):
             return False
 
         error_code = error_details[0].get("ErrorCode")
+        error_message = error_details[0].get("ErrorMessage", "")
+
         if error_code in self.IGNORED_ERROR_CODES:
             response.error_code = error_code
+            response.message = f"{error_code}: {error_message}"
             return True
 
         return False
