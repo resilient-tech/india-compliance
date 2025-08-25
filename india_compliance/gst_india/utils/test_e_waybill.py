@@ -440,6 +440,60 @@ class TestEWaybill(IntegrationTestCase):
         {
             "auto_cancel_e_waybill": 1,
             "reason_for_e_waybill_cancellation": "Data Entry Mistake",
+            "enable_e_waybill_from_pr": 1,
+        },
+    )
+    @responses.activate
+    def test_auto_cancel_e_waybill_on_pr_cancel(self):
+        """Test that e-waybill is automatically cancelled when purchase receipt is cancelled and auto_cancel_e_waybill is enabled"""
+        # Use PI registered supplier data as PR shares same buying address mapping
+        pr_test_data = self.e_waybill_test_data.get("pi_data_for_registered_supplier")
+
+        pr = self._create_purchase_receipt("pi_data_for_registered_supplier")
+
+        # Generate e-waybill for Purchase Receipt using PI data (structure matches PR)
+        self._generate_e_waybill(pr.name, "Purchase Receipt", pr_test_data)
+
+        ewaybill_log = frappe.get_doc("e-Waybill Log", {"reference_name": pr.name})
+        self.assertFalse(ewaybill_log.is_cancelled)
+
+        e_waybill_cancel_data = self.e_waybill_test_data.get("cancel_e_waybill")
+
+        actual_ewaybill_no = ewaybill_log.name
+
+        cancel_response_data = copy.deepcopy(e_waybill_cancel_data.get("response_data"))
+        cancel_response_data["result"]["ewayBillNo"] = actual_ewaybill_no
+
+        self._mock_e_waybill_response(
+            data=cancel_response_data,
+            match_list=[
+                matchers.query_string_matcher(e_waybill_cancel_data.get("params")),
+                matchers.json_params_matcher(
+                    {
+                        "ewbNo": actual_ewaybill_no,
+                        "cancelRsnCode": "3",  # Data Entry Mistake
+                        "cancelRmrk": "Data Entry Mistake",
+                    }
+                ),
+            ],
+        )
+
+        pr.reload()
+        pr.cancel()
+
+        ewaybill_log.reload()
+        self.assertTrue(ewaybill_log.is_cancelled)
+        self.assertEqual(ewaybill_log.cancel_reason_code, "3")  # Data Entry Mistake
+        self.assertEqual(ewaybill_log.cancel_remark, "Data Entry Mistake")
+
+        pr.reload()
+        self.assertEqual(pr.ewaybill, "")
+
+    @change_settings(
+        "GST Settings",
+        {
+            "auto_cancel_e_waybill": 1,
+            "reason_for_e_waybill_cancellation": "Data Entry Mistake",
             "enable_e_waybill_from_pi": 1,
         },
     )
@@ -1280,6 +1334,14 @@ class TestEWaybill(IntegrationTestCase):
 
         stock_entry = create_transaction(**doc_args)
         return stock_entry
+
+    def _create_purchase_receipt(self, test_case):
+        """Generate Purchase Receipt to test e-Waybill functionalities"""
+        doc_args = self.e_waybill_test_data.get(test_case).get("kwargs")
+        doc_args.update({"doctype": "Purchase Receipt"})
+
+        purchase_receipt = create_transaction(**doc_args)
+        return purchase_receipt
 
     @change_settings("GST Settings", {"enable_e_waybill_for_sc": 1})
     @responses.activate
