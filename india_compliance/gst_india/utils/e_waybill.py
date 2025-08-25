@@ -18,9 +18,21 @@ from frappe.utils import (
 from frappe.utils.file_manager import save_file
 
 from india_compliance.exceptions import GSPServerError
+<<<<<<< HEAD
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
 from india_compliance.gst_india.constants import GST_TAX_TYPES, STATE_NUMBERS
+=======
+from india_compliance.gst_india.api_classes.nic.e_invoice import EInvoiceAPI
+from india_compliance.gst_india.api_classes.nic.e_waybill import EWaybillAPI
+from india_compliance.gst_india.constants import (
+    GST_TAX_TYPES,
+    GSTIN_FORMAT,
+    SALES_DOCTYPES,
+    STATE_NUMBERS,
+    TAXABLE_GST_TREATMENTS,
+)
+>>>>>>> 5b3fc815 (fix: enhance error handling for GSTIN in e-invoice and e-waybill for error 3028, 3029)
 from india_compliance.gst_india.constants.e_waybill import (
     ADDRESS_FIELDS,
     CANCEL_REASON_CODES,
@@ -164,6 +176,14 @@ def _generate_e_waybill(doc, throw=True, force=False):
 
         api = EWaybillAPI if not with_irn else EInvoiceAPI
         result = api(doc).generate_e_waybill(data)
+
+        if result.error_code in ("3028", "3029"):
+            gstin = GSTIN_FORMAT.search(result.message).group()
+
+            response = api.sync_gstin_info(gstin)
+
+            if response.Status != "ACT":
+                frappe.throw(_("GSTIN {0} status is not Active").format(gstin))
 
         if result.error_code == "4002":
             result = api(doc).get_e_waybill_by_irn(doc.get("irn"))

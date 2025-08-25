@@ -24,6 +24,7 @@ from india_compliance.gst_india.constants import (
     CURRENCY_CODES,
     EXPORT_TYPES,
     GST_CATEGORIES,
+    GSTIN_FORMAT,
     PORT_CODES,
 )
 from india_compliance.gst_india.constants.e_invoice import (
@@ -172,7 +173,11 @@ def generate_e_invoice(docname, throw=True, force=False):
 
         # Handle Invalid GSTIN Error
         if result.error_code in ("3028", "3029", "3001"):
-            gstin = data.get("BuyerDtls").get("Gstin")
+            if result.error_code == "3001":
+                gstin = data.get("BuyerDtls").get("Gstin")
+            else:
+                gstin = GSTIN_FORMAT.search(result.message).group()
+
             response = api.sync_gstin_info(gstin)
 
             if response.Status != "ACT":
