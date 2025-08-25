@@ -7,7 +7,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.functions import Date, Sum
-from frappe.utils import get_last_day, getdate
+from frappe.utils import get_last_day, getdate, sbool
 
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 from india_compliance.gst_india.utils.gstin_info import get_gstr_1_return_status
@@ -47,13 +47,13 @@ class GSTR1Beta(Document):
 
     @frappe.whitelist()
     def generate_gstr1(self, sync_for=None, recompute_books=False):
+        recompute_books = sbool(recompute_books)
         period = get_period(self.month_or_quarter, self.year)
 
         # get gstr1 log
         if log_name := frappe.db.exists(
             "GST Return Log", f"GSTR1-{period}-{self.company_gstin}"
         ):
-
             gstr1_log = frappe.get_doc("GST Return Log", log_name)
 
             message = None

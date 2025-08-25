@@ -13,6 +13,7 @@ from frappe.utils import (
     get_fullname,
     get_link_to_form,
     random_string,
+    sbool,
 )
 from frappe.utils.file_manager import save_file
 
@@ -138,7 +139,7 @@ def generate_e_waybill(*, doctype, docname, values=None, force=False):
     if values:
         update_transaction(doc, frappe.parse_json(values))
 
-    _generate_e_waybill(doc, throw=True if values else False, force=force)
+    _generate_e_waybill(doc, throw=True if values else False, force=sbool(force))
 
 
 def _generate_e_waybill(doc, throw=True, force=False):
@@ -498,6 +499,7 @@ def update_transporter(*, doctype, docname, values):
 
 @frappe.whitelist()
 def extend_validity(*, doctype, docname, values, scheduled=False):
+    scheduled = sbool(scheduled)
     doc = load_doc(doctype, docname, "submit")
     values = frappe.parse_json(values)
 
@@ -650,7 +652,7 @@ def generate_pending_e_waybills():
 
 @frappe.whitelist()
 def fetch_e_waybill_data(*, doctype, docname, attach=False):
-    doc = load_doc(doctype, docname, "write" if attach else "print")
+    doc = load_doc(doctype, docname, "write" if sbool(attach) else "print")
     log = frappe.get_doc("e-Waybill Log", doc.ewaybill)
     if not log.is_latest_data:
         _fetch_e_waybill_data(doc, log)
@@ -1233,7 +1235,6 @@ class EWaybillData(GSTTransactionData):
         return extension_details
 
     def validate_transaction(self):
-
         super().validate_transaction()
 
         if self.doc.ewaybill:
