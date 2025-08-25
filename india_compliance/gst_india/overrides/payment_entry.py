@@ -21,7 +21,7 @@ from india_compliance.gst_india.utils import get_all_gst_accounts
 
 
 @frappe.whitelist()
-def get_outstanding_reference_documents(args, validate=False):
+def get_outstanding_reference_documents(args, validate: bool = False):
     from erpnext.accounts.doctype.payment_entry.payment_entry import (
         get_outstanding_reference_documents,
     )
