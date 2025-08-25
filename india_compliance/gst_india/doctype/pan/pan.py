@@ -48,7 +48,7 @@ class PAN(Document):
 
 
 @frappe.whitelist()
-def get_pan_status(pan, force_update=False):
+def get_pan_status(pan, force_update: bool = False):
     if not force_update and (
         pan_status := frappe.db.get_value("PAN", pan, ["pan_status", "last_updated_on"])
     ):
