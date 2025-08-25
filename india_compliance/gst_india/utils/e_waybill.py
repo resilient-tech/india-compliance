@@ -38,6 +38,7 @@ from india_compliance.gst_india.constants.e_waybill import (
 )
 from india_compliance.gst_india.utils import (
     handle_server_errors,
+    is_api_enabled,
     is_foreign_doc,
     is_outward_stock_entry,
     load_doc,
@@ -1797,12 +1798,14 @@ def before_cancel(doc, method=None):
     if not doc.get("ewaybill"):
         return
 
-    run_onload(doc)
+    gst_settings = frappe.get_cached_doc("GST Settings")
 
-    if not (e_waybill_info := doc.get_onload().get("e_waybill_info")):
+    if not is_api_enabled(gst_settings):
         return
 
-    auto_cancel_e_waybill(doc, e_waybill_info=e_waybill_info)
+    run_onload(doc)
+
+    auto_cancel_e_waybill(doc, gst_settings=gst_settings)
 
 
 def auto_cancel_e_waybill(doc, gst_settings=None, e_waybill_info=None):
@@ -1824,7 +1827,6 @@ def auto_cancel_e_waybill(doc, gst_settings=None, e_waybill_info=None):
 
     values = frappe._dict(
         {
-            "ewaybill": doc.ewaybill,
             "reason": reason,
             "remark": "",
         }

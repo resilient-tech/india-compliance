@@ -1020,7 +1020,6 @@ def auto_cancel_e_invoice(doc, gst_settings=None):
 
     values = frappe._dict(
         {
-            "irn": doc.irn,
             "reason": reason,
             "remark": "",
         }
