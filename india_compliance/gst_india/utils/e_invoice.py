@@ -1,5 +1,4 @@
 import json
-from typing import Any, Union
 
 import jwt
 
@@ -370,7 +369,7 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False, messag
 
 
 @frappe.whitelist()
-def cancel_e_invoice(docname: str, values: str) -> dict | None:
+def cancel_e_invoice(docname: str, values: dict | str) -> dict | None:
     doc = load_doc("Sales Invoice", docname, "cancel")
     values = frappe.parse_json(values)
 

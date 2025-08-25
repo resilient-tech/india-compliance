@@ -1,5 +1,6 @@
 import json
 import os
+from datetime import datetime
 
 import frappe
 from frappe import _
@@ -637,7 +638,10 @@ def validate_data_before_schedule(doc, values):
 
 @frappe.whitelist()
 def schedule_ewaybill_for_extension(
-    doctype: str, docname: str, values: dict | str, scheduled_time: str
+    doctype: str,
+    docname: str,
+    values: dict | str,
+    scheduled_time: str | datetime,
 ) -> None:
     values = frappe.parse_json(values)
     if not values:
