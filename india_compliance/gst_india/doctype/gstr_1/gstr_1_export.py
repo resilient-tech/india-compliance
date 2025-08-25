@@ -2117,8 +2117,8 @@ def get_gstr_1_json(
     company_gstin,
     year,
     month_or_quarter,
-    include_uploaded=False,
-    delete_missing=False,
+    include_uploaded: bool = False,
+    delete_missing: bool = False,
 ):
     frappe.has_permission("GSTR-1", "export", throw=True)
 

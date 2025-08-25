@@ -117,7 +117,7 @@ def generate_e_invoices(docnames, force=False):
 
 
 @frappe.whitelist()
-def generate_e_invoice(docname, throw=True, force=False):
+def generate_e_invoice(docname, throw: bool = True, force: bool = False):
     doc = load_doc("Sales Invoice", docname, "submit")
 
     settings = frappe.get_cached_doc("GST Settings")
@@ -205,7 +205,7 @@ def handle_duplicate_irn_error(
     current_invoice_amount,
     doc=None,
     docname=None,
-    taxpayer_api=False,
+    taxpayer_api: bool = False,
 ):
     """
     Handle Duplicate IRN errors by fetching the IRN details and comparing with the current invoice.

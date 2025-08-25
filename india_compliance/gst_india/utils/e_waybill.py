@@ -138,7 +138,7 @@ def generate_e_waybills(doctype, docnames, force=False):
 
 
 @frappe.whitelist()
-def generate_e_waybill(*, doctype, docname, values=None, force=False):
+def generate_e_waybill(*, doctype, docname, values=None, force: bool = False):
     doc = load_doc(doctype, docname, "submit")
     if values:
         update_transaction(doc, frappe.parse_json(values))
@@ -503,7 +503,7 @@ def update_transporter(*, doctype, docname, values):
 
 
 @frappe.whitelist()
-def extend_validity(*, doctype, docname, values, scheduled=False):
+def extend_validity(*, doctype, docname, values, scheduled: bool = False):
     doc = load_doc(doctype, docname, "submit")
     values = frappe.parse_json(values)
 
@@ -655,7 +655,7 @@ def generate_pending_e_waybills():
 
 
 @frappe.whitelist()
-def fetch_e_waybill_data(*, doctype, docname, attach=False):
+def fetch_e_waybill_data(*, doctype, docname, attach: bool = False):
     doc = load_doc(doctype, docname, "write" if attach else "print")
     log = frappe.get_doc("e-Waybill Log", doc.ewaybill)
     if not log.is_latest_data:

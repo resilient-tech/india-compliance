@@ -62,7 +62,11 @@ class GSTR1(Document):
     @frappe.whitelist()
     @otp_handler
     def generate_gstr1(
-        self, sync_for=None, recompute_books=False, only_books_data=None, message=None
+        self,
+        sync_for=None,
+        recompute_books: bool = False,
+        only_books_data=None,
+        message=None,
     ):
         period = get_period(self.month_or_quarter, self.year)
         log_name = f"GSTR1-{period}-{self.company_gstin}"
@@ -234,7 +238,7 @@ def check_action_status(month_or_quarter, year, company_gstin, action):
 
 
 @frappe.whitelist()
-def mark_as_unfiled(filters, force):
+def mark_as_unfiled(filters, force: bool):
     frappe.has_permission("GST Return Log", "write", throw=True)
 
     filters = frappe._dict(json.loads(filters))
