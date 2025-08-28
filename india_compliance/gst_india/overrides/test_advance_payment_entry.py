@@ -478,6 +478,50 @@ class TestRegionalOverrides(TestAdvancePaymentEntry):
         payment_entry_amount = payment_entry[0].get("amount")
         self.assertNotEqual(400, payment_entry_amount)
 
+    def test_get_advance_payment_entries_for_regional_with_gst_accounts_in_deduction_table(
+        self,
+    ):
+        payment_doc = self._create_payment_entry(do_not_submit=True)
+        payment_doc.taxes = []
+        payment_doc.append(
+            "deductions",
+            {
+                "account": "Output Tax CGST - _TIRC",
+                "cost_center": "Main - _TIRC",
+                "amount": 45,
+            },
+        )
+        payment_doc.append(
+            "deductions",
+            {
+                "account": "Output Tax SGST - _TIRC",
+                "cost_center": "Main - _TIRC",
+                "amount": 45,
+            },
+        )
+        payment_doc.submit()
+        self.assertEqual(payment_doc.total_taxes_and_charges, 0)
+        invoice_doc = self._create_sales_invoice(payment_doc)
+
+        conditions = frappe._dict(
+            {"company": invoice_doc.get("company"), "name": payment_doc.name}
+        )
+
+        payment_entry = get_advance_payment_entries_for_regional(
+            party_type="Customer",
+            party=invoice_doc.customer,
+            party_account=[invoice_doc.debit_to],
+            order_list=[],
+            order_doctype="Sales Order",
+            include_unallocated=True,
+            condition=conditions,
+        )
+
+        payment_entry_amount = payment_entry[0].get("amount")
+        # Total Unallocated = 500+90 =>590
+        # Remaining Unallocated = 590 - 100 (sales invoice amount)
+        self.assertEqual(490, payment_entry_amount)
+
     def test_adjust_allocations_for_taxes(self):
         payment_doc = self._create_payment_entry()
         invoice_doc = self._create_sales_invoice()
