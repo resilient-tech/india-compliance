@@ -9,7 +9,6 @@ from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 from frappe.query_builder.functions import IfNull, Sum
 from frappe.utils import today
-import erpnext
 from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_entries
 from erpnext.controllers.accounts_controller import AccountsController
 from erpnext.stock.get_item_details import ItemDetailsCtx, _get_item_tax_template
@@ -36,6 +35,7 @@ class BillofEntry(Document):
         AccountsController.get_value_in_transaction_currency
     )
     get_voucher_subtype = AccountsController.get_voucher_subtype
+    company_currency = AccountsController.company_currency
 
     def onload(self):
         if self.docstatus != 1:
@@ -307,9 +307,6 @@ class BillofEntry(Document):
                         )
 
     def get_gl_entries(self):
-        # company_currency is required by get_gl_dict
-        self.company_currency = erpnext.get_company_currency(self.company)  # nosemgrep
-
         gl_entries = []
         remarks = "No Remarks"
 

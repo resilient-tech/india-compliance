@@ -4,9 +4,9 @@ from india_compliance.utils.custom_fields import delete_old_fields
 
 DOCTYPES = ("Purchase Invoice", "Sales Invoice")
 
-DOCTYPE_COLUMNS = {
-    doctype: frappe.db.get_table_columns(doctype) for doctype in DOCTYPES
-}
+
+def get_doctype_columns(doctypes):
+    return {doctype: frappe.db.get_table_columns(doctype) for doctype in doctypes}
 
 
 def execute():
@@ -15,7 +15,7 @@ def execute():
 
 
 def update_field_to_check(old_fieldname, new_fieldname, truthy_value):
-    for doctype, columns in DOCTYPE_COLUMNS.items():
+    for doctype, columns in get_doctype_columns(DOCTYPES).items():
         # Check for new fieldname, is_export_with_gst is only applicable for Sales Invoice
         if old_fieldname not in columns or new_fieldname not in columns:
             continue
