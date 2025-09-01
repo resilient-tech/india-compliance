@@ -183,12 +183,12 @@ class StandardEInvoiceAPI(EInvoiceAPI):
         if not self.company_gstin:
             frappe.throw(_("Company GSTIN is required to use the e-Invoice API"))
 
-        self.fetch_credentials(self.company_gstin, "e-Waybill / e-Invoice")
-        self.app_key = base64.b64encode(self.app_key.encode()).decode()
-        self.set_default_headers()
-
-        self.auth_strategy = StandardAuth(self)
-        self.auth_strategy.authenticate()
+        if not frappe.flags.in_test:
+            self.set_default_headers()
+            self.fetch_credentials(self.company_gstin, "e-Waybill / e-Invoice")
+            self.app_key = base64.b64encode(self.app_key.encode()).decode()
+            self.auth_strategy = StandardAuth(self)
+            self.auth_strategy.authenticate()
 
     def _make_request(self, method, endpoint="", params=None, headers=None, json=None):
         response = super()._make_request(method, endpoint, params, headers, json)
