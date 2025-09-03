@@ -242,6 +242,7 @@ class TestEInvoice(IntegrationTestCase):
         responses.add(
             responses.GET,
             BASE_URL + "/test/ei/api/master/syncgstin",
+            match=[matchers.query_param_matcher({"gstin": "29ABCDE1234F1Z5"})],
             json=sync_gstin_response,
             status=200,
         )
@@ -279,6 +280,7 @@ class TestEInvoice(IntegrationTestCase):
         responses.add(
             responses.GET,
             BASE_URL + "/standard/ei/api/master/syncgstin",
+            match=[matchers.query_param_matcher({"gstin": "29ABCDE1234F1Z5"})],
             json=sync_gstin_response,
             status=200,
         )
