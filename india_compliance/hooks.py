@@ -147,6 +147,7 @@ doc_events = {
         "before_print": "india_compliance.gst_india.overrides.transaction.before_print",
         "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
         "before_submit": "india_compliance.gst_india.overrides.transaction.update_gst_details",
+        "before_cancel": "india_compliance.gst_india.utils.e_waybill.before_cancel",
         "before_validate": "india_compliance.gst_india.overrides.transaction.set_gst_tax_type",
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
@@ -190,6 +191,7 @@ doc_events = {
         "before_submit": [
             "india_compliance.gst_india.overrides.transaction.update_gst_details",
         ],
+        "before_cancel": "india_compliance.gst_india.utils.e_waybill.before_cancel",
         "after_mapping": "india_compliance.gst_india.overrides.transaction.after_mapping",
         "on_cancel": "india_compliance.gst_india.overrides.purchase_invoice.on_cancel",
     },
@@ -225,6 +227,7 @@ doc_events = {
         "before_submit": [
             "india_compliance.gst_india.overrides.transaction.update_gst_details",
         ],
+        "before_cancel": "india_compliance.gst_india.utils.e_waybill.before_cancel",
     },
     "Sales Invoice": {
         "onload": [
@@ -266,6 +269,7 @@ doc_events = {
         "validate": "india_compliance.gst_india.overrides.subcontracting_transaction.validate",
         "before_save": "india_compliance.gst_india.overrides.subcontracting_transaction.before_save",
         "before_submit": "india_compliance.gst_india.overrides.subcontracting_transaction.validate_doc_references",
+        "before_cancel": "india_compliance.gst_india.utils.e_waybill.before_cancel",
         "after_mapping": "india_compliance.gst_india.overrides.subcontracting_transaction.after_mapping_stock_entry",
     },
     "Subcontracting Order": {
@@ -280,6 +284,7 @@ doc_events = {
             "india_compliance.gst_india.overrides.subcontracting_transaction.before_save",
             "india_compliance.gst_india.overrides.subcontracting_transaction.validate_doc_references",
         ],
+        "before_cancel": "india_compliance.gst_india.utils.e_waybill.before_cancel",
         "before_mapping": "india_compliance.gst_india.overrides.subcontracting_transaction.before_mapping_subcontracting_receipt",
     },
     "Supplier": {

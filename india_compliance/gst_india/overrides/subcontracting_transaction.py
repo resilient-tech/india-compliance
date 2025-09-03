@@ -168,14 +168,13 @@ def onload(doc, method=None):
 
     gst_settings = frappe.get_cached_doc("GST Settings")
 
-    if not (
+    if (
         is_api_enabled(gst_settings)
         and gst_settings.enable_e_waybill
-        and gst_settings.enable_e_waybill_for_sc
+        and (gst_settings.enable_e_waybill_for_sc or gst_settings.auto_cancel_e_waybill)
+        and (e_waybill_info := get_e_waybill_info(doc))
     ):
-        return
-
-    doc.set_onload("e_waybill_info", get_e_waybill_info(doc))
+        doc.set_onload("e_waybill_info", e_waybill_info)
 
 
 def validate(doc, method=None):

@@ -5,6 +5,7 @@ import jwt
 import frappe
 from frappe import _
 from frappe.utils import (
+    add_days,
     add_to_date,
     cstr,
     flt,
@@ -1002,3 +1003,34 @@ class EInvoiceData(GSTTransactionData):
             export_details["Port"] = self.doc.port_code
 
         return export_details
+
+
+#######################################################################################
+### Auto Cancel e-Invoice Functions ###################################################
+#######################################################################################
+
+
+def auto_cancel_e_invoice(doc, gst_settings=None):
+    gst_settings = gst_settings or frappe.get_cached_doc("GST Settings")
+
+    if not (
+        doc.irn and gst_settings.enable_e_invoice and gst_settings.auto_cancel_e_invoice
+    ):
+        return
+
+    generated_on = doc.get_onload().get("e_invoice_info", {}).get("acknowledged_on")
+    reason = gst_settings.reason_for_e_invoice_cancellation
+
+    if not generated_on or (add_days(generated_on, 1) < get_datetime()):
+        return
+
+    values = frappe._dict(
+        {
+            "reason": reason,
+            "remark": "",
+        }
+    )
+
+    _cancel_e_invoice(doc, values)
+
+    return True
