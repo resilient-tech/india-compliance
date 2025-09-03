@@ -158,7 +158,7 @@ class StandardEWaybillAPI(EWaybillAPI):
         if not self.company_gstin:
             frappe.throw(_("Company GSTIN is required to use the e-Waybill API"))
 
-        if not frappe.flags.in_test:
+        if not frappe.flags.bypass_auth:
             self.fetch_credentials(self.company_gstin, "e-Waybill / e-Invoice")
             self.set_default_headers()
 
