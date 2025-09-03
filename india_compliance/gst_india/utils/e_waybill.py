@@ -175,9 +175,16 @@ def _generate_e_waybill(doc, throw=True, force=False):
         data = EWaybillData(doc).get_data(with_irn=with_irn)
 
         api = EWaybillAPI if not with_irn else EInvoiceAPI
+<<<<<<< HEAD
         result = api(doc).generate_e_waybill(data)
+=======
+        api = api.create(doc)
+
+        result = api.generate_e_waybill(data)
+>>>>>>> b64a82a5 (fix: refactor API instance creation in e-waybill generation for improved clarity)
 
         if result.error_code in ("3028", "3029"):
+            # if the code reaches here, than api will always be EInvoiceAPI instance
             gstin = GSTIN_FORMAT.search(result.message).group()
 
             response = api.sync_gstin_info(gstin)
@@ -186,7 +193,11 @@ def _generate_e_waybill(doc, throw=True, force=False):
                 frappe.throw(_("GSTIN {0} status is not Active").format(gstin))
 
         if result.error_code == "4002":
+<<<<<<< HEAD
             result = api(doc).get_e_waybill_by_irn(doc.get("irn"))
+=======
+            result = api.get_e_waybill_by_irn(doc.get("irn"))
+>>>>>>> b64a82a5 (fix: refactor API instance creation in e-waybill generation for improved clarity)
 
         if result.error_code == "2148":
             with_irn = False
