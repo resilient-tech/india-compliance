@@ -183,6 +183,8 @@ def _generate_e_waybill(doc, throw=True, force=False):
                     result.error_message, title=_("Error Generating e-Waybill")
                 )
 
+            result = api.generate_e_waybill(data)
+
         if result.error_code == "4002":
             result = api.get_e_waybill_by_irn(doc.get("irn"))
 
@@ -190,6 +192,9 @@ def _generate_e_waybill(doc, throw=True, force=False):
             with_irn = False
             data = EWaybillData(doc).get_data(with_irn=with_irn)
             result = EWaybillAPI.create(doc).generate_e_waybill(data)
+
+        if not result.get("ewayBillNo" if not with_irn else "EwbNo"):
+            frappe.throw(_("e-Waybill generation failed"))
 
     except GSPServerError as e:
         handle_server_errors(settings, doc, "e-Waybill", e)
