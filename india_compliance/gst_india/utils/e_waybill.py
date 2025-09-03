@@ -94,10 +94,7 @@ def enqueue_bulk_e_waybill_generation(doctype, docnames):
     """
     Enqueue bulk generation of e-Waybill for the given documents.
     """
-
     frappe.has_permission(doctype, "submit", throw=True)
-
-    from india_compliance.gst_india.utils import is_api_enabled
 
     gst_settings = frappe.get_cached_doc("GST Settings")
     if not is_api_enabled(gst_settings) or not gst_settings.enable_e_waybill:
