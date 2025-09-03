@@ -1265,7 +1265,9 @@ class TestEWaybill(FrappeTestCase):
             doc = load_doc("Sales Invoice", si.name, "submit")
             _generate_e_waybill(doc)
 
-        self.assertIn("GSTIN 29ABCDE1234F1Z5 status is not Active", str(cm.exception))
+        self.assertIn(
+            "GSTIN -29ABCDE1234F1Z5 is inactive or cancelled", str(cm.exception)
+        )
 
     @responses.activate
     @change_settings(
@@ -1309,7 +1311,9 @@ class TestEWaybill(FrappeTestCase):
             frappe.flags.bypass_auth = True
             _generate_e_waybill(doc)
 
-        self.assertIn("GSTIN 29ABCDE1234F1Z5 status is not Active", str(cm.exception))
+        self.assertIn(
+            "GSTIN -29ABCDE1234F1Z5 is inactive or cancelled", str(cm.exception)
+        )
 
     # helper functions
     def _generate_e_waybill(
