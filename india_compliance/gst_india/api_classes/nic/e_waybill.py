@@ -158,11 +158,12 @@ class StandardEWaybillAPI(EWaybillAPI):
         if not self.company_gstin:
             frappe.throw(_("Company GSTIN is required to use the e-Waybill API"))
 
-        self.fetch_credentials(self.company_gstin, "e-Waybill / e-Invoice")
-        self.set_default_headers()
+        if not frappe.flags.in_test:
+            self.fetch_credentials(self.company_gstin, "e-Waybill / e-Invoice")
+            self.set_default_headers()
 
-        self.auth_strategy = StandardAuth(self)
-        self.auth_strategy.authenticate()
+            self.auth_strategy = StandardAuth(self)
+            self.auth_strategy.authenticate()
 
     def _make_request(self, *args, **kwargs):
         response = super()._make_request(*args, **kwargs)
