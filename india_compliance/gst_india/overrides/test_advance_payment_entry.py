@@ -410,18 +410,20 @@ class TestRegionalOverrides(TestAdvancePaymentEntry):
         self.assertEqual(payment_doc.total_taxes_and_charges, 0)
         invoice_doc = self._create_sales_invoice(payment_doc)
 
-        conditions = frappe._dict(
-            {"company": invoice_doc.get("company"), "name": payment_doc.name}
-        )
+        pe = frappe.qb.DocType("Payment Entry")
+        conditions = []
+        pe = frappe.qb.DocType("Payment Entry")
+        conditions.append(pe.company == invoice_doc.company)
 
         payment_entry = get_advance_payment_entries_for_regional(
             party_type="Customer",
             party=invoice_doc.customer,
-            party_account=[invoice_doc.debit_to],
+            party_account=invoice_doc.debit_to,
             order_list=[],
             order_doctype="Sales Order",
             include_unallocated=True,
             condition=conditions,
+            payment_name=payment_doc.name,
         )
 
         payment_entry_amount = payment_entry[0].get("amount")
