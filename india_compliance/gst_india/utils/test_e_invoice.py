@@ -282,6 +282,7 @@ class TestEInvoice(IntegrationTestCase):
         )
 
         with self.assertRaises(frappe.exceptions.ValidationError) as cm:
+            frappe.flags.bypass_auth = True
             generate_e_invoice(si.name)
 
         self.assertIn("GSTIN 29ABCDE1234F1Z5 status is not Active", str(cm.exception))

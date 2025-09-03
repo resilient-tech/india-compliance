@@ -1018,6 +1018,8 @@ class TestEWaybill(IntegrationTestCase):
 
         with self.assertRaises(frappe.exceptions.ValidationError) as cm:
             doc = load_doc("Sales Invoice", si.name, "submit")
+
+            frappe.flags.bypass_auth = True
             _generate_e_waybill(doc)
 
         self.assertIn("GSTIN 29ABCDE1234F1Z5 status is not Active", str(cm.exception))
