@@ -183,10 +183,10 @@ class StandardEInvoiceAPI(EInvoiceAPI):
         if not self.company_gstin:
             frappe.throw(_("Company GSTIN is required to use the e-Invoice API"))
 
-        if not frappe.flags.in_test:
-            self.set_default_headers()
+        if not frappe.flags.bypass_auth:
             self.fetch_credentials(self.company_gstin, "e-Waybill / e-Invoice")
             self.app_key = base64.b64encode(self.app_key.encode()).decode()
+            self.set_default_headers()
             self.auth_strategy = StandardAuth(self)
             self.auth_strategy.authenticate()
 
