@@ -21,6 +21,7 @@ from india_compliance.gst_india.utils.e_invoice import (
 )
 from india_compliance.gst_india.utils.e_waybill import (
     EWaybillData,
+    _generate_e_waybill,
     cancel_e_waybill,
     fetch_e_waybill_data,
     generate_e_waybill,
@@ -940,6 +941,87 @@ class TestEWaybill(IntegrationTestCase):
             frappe.get_doc("e-Waybill Log", {"reference_name": si.name}),
         )
 
+    @responses.activate
+    @change_settings("GST Settings", {"use_fallback_for_nic": 1, "enable_e_invoice": 1})
+    def test_generate_e_waybill_with_irn_with_cancelled_gstin_error_3029_enriched(self):
+        """Test error handling for cancelled GSTIN in e-waybill generation with Irn - Enriched API(error 3029)"""
+
+        test_data = self.e_waybill_test_data.get("ewaybill_gstin_error_3029")
+        si = create_sales_invoice(
+            **test_data.get("kwargs"),
+            qty=1000,
+            transporter="_Test Common Supplier",
+            distance=10,
+            mode_of_transport="Road",
+            irn="12345678901234567",
+        )
+
+        error_response = test_data.get("error_response_enriched")
+
+        responses.add(
+            responses.POST,
+            BASE_URL + "/test/ei/api/ewaybill",
+            json=error_response,
+            status=200,
+        )
+
+        sync_gstin_response = test_data.get("sync_gstin_response_inactive")
+
+        responses.add(
+            responses.GET,
+            BASE_URL + "/test/ei/api/master/syncgstin",
+            json=sync_gstin_response,
+            status=200,
+        )
+
+        with self.assertRaises(frappe.exceptions.ValidationError) as cm:
+            doc = load_doc("Sales Invoice", si.name, "submit")
+            _generate_e_waybill(doc)
+
+        self.assertIn("GSTIN 29ABCDE1234F1Z5 status is not Active", str(cm.exception))
+
+    @responses.activate
+    @change_settings(
+        "GST Settings",
+        {"use_fallback_for_nic": 0, "sandbox_mode": 0, "enable_e_invoice": 1},
+    )
+    def test_generate_e_waybill_with_cancelled_gstin_error_3029_standard(self):
+        """Test error handling for cancelled GSTIN in e-waybill generation with Irn - Standard API(error 3029)"""
+
+        test_data = self.e_waybill_test_data.get("ewaybill_gstin_error_3029")
+        si = create_sales_invoice(
+            **test_data.get("kwargs"),
+            qty=1000,
+            transporter="_Test Common Supplier",
+            distance=10,
+            mode_of_transport="Road",
+            irn="12345678901234567",
+        )
+
+        error_response = test_data.get("error_response_standard")
+
+        responses.add(
+            responses.POST,
+            BASE_URL + "/standard/ei/api/ewaybill",
+            json=error_response,
+            status=200,
+        )
+
+        sync_gstin_response = test_data.get("sync_gstin_response_inactive")
+
+        responses.add(
+            responses.GET,
+            BASE_URL + "/standard/ei/api/master/syncgstin",
+            json=sync_gstin_response,
+            status=200,
+        )
+
+        with self.assertRaises(frappe.exceptions.ValidationError) as cm:
+            doc = load_doc("Sales Invoice", si.name, "submit")
+            _generate_e_waybill(doc)
+
+        self.assertIn("GSTIN 29ABCDE1234F1Z5 status is not Active", str(cm.exception))
+
     # helper functions
     def _generate_e_waybill(
         self, docname=None, doctype="Sales Invoice", test_data=None, force=False
@@ -1124,7 +1206,7 @@ def update_dates_for_test_data(test_data):
             continue
 
         response_request = value.get("request_data")
-        response_result = value.get("response_data").get("result", {})
+        response_result = value.get("response_data", {}).get("result", {})
 
         for k, v in response_result.items():
             if k == "ewayBillDate":
