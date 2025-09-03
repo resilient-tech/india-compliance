@@ -12,6 +12,7 @@ from frappe.utils import (
     get_datetime,
     getdate,
     random_string,
+    sbool,
 )
 
 from india_compliance.exceptions import GSPServerError
@@ -116,6 +117,7 @@ def generate_e_invoices(docnames, force=False):
 
 @frappe.whitelist()
 def generate_e_invoice(docname, throw=True, force=False):
+    throw, force = sbool(throw), sbool(force)
     doc = load_doc("Sales Invoice", docname, "submit")
 
     settings = frappe.get_cached_doc("GST Settings")

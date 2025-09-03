@@ -4,7 +4,7 @@ from collections import defaultdict
 import frappe
 from frappe import _, bold
 from frappe.model import delete_doc
-from frappe.utils import cint, flt, format_date
+from frappe.utils import cint, flt, format_date, sbool
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 from erpnext.controllers.taxes_and_totals import (
     get_itemised_tax,
@@ -941,7 +941,7 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
             gst_details.update(party_gst_details)
 
     # POS
-    if not update_place_of_supply and party_details.place_of_supply:
+    if not sbool(update_place_of_supply) and party_details.place_of_supply:
         gst_details.place_of_supply = party_details.place_of_supply
     else:
         place_of_supply = get_place_of_supply(party_details, doctype)
