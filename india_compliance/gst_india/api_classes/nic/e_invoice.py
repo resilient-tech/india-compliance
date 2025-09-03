@@ -88,6 +88,7 @@ class EInvoiceAPI(BaseAPI):
         for error_code in self.IGNORED_ERROR_CODES:
             if message.startswith(error_code):
                 response_json.error_code = error_code
+                response_json.error_message = message
                 return True
 
         return False
@@ -250,7 +251,7 @@ class StandardEInvoiceAPI(EInvoiceAPI):
 
         if error_code in self.IGNORED_ERROR_CODES:
             response.error_code = error_code
-            response.message = f"{error_code}: {error_message}"
+            response.error_message = f"{error_code}: {error_message}"
             return True
 
         return False
