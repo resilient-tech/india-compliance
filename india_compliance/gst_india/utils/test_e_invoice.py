@@ -283,6 +283,10 @@ class TestEInvoice(FrappeTestCase):
     @responses.activate
     def test_generate_e_invoice_with_goods_item(self):
         """Generate test e-Invoice for goods item"""
+        frappe.db.set_single_value(
+            "GST Settings", {"auto_cancel_e_waybill": 0, "fetch_e_waybill_data": 0}
+        )
+
         test_data = self.e_invoice_test_data.get("goods_item_with_ewaybill")
 
         si = create_sales_invoice(
@@ -625,6 +629,10 @@ class TestEInvoice(FrappeTestCase):
     @responses.activate
     def test_mark_e_invoice_as_cancelled(self):
         """Test for mark e-Invoice as cancelled"""
+        frappe.db.set_single_value(
+            "GST Settings", {"auto_cancel_e_waybill": 0, "fetch_e_waybill_data": 0}
+        )
+
         test_data = self.e_invoice_test_data.get("goods_item_with_ewaybill")
 
         si = create_sales_invoice(
@@ -801,6 +809,10 @@ class TestEInvoice(FrappeTestCase):
 
     @responses.activate
     def test_invoice_update_after_submit(self):
+        frappe.db.set_single_value(
+            "GST Settings", {"auto_cancel_e_waybill": 0, "fetch_e_waybill_data": 0}
+        )
+
         test_data = self.e_invoice_test_data.get("goods_item_with_ewaybill")
 
         si = create_sales_invoice(**test_data.get("kwargs"), qty=1000, is_in_state=True)
