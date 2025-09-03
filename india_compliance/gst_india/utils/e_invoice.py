@@ -161,12 +161,14 @@ def generate_e_invoice(docname, throw: bool = True, force: bool = False):
             if result.error_code == "3001":
                 gstin = data.get("BuyerDtls").get("Gstin")
             else:
-                gstin = GSTIN_FORMAT.search(result.message).group()
+                gstin = GSTIN_FORMAT.search(result.error_message).group()
 
             response = api.sync_gstin_info(gstin)
 
             if response.Status != "ACT":
-                frappe.throw(_("GSTIN {0} status is not Active").format(gstin))
+                frappe.throw(
+                    result.error_message, title=_("Error Generating e-Invoice")
+                )
 
             result = api.generate_irn(data)
 

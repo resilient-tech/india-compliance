@@ -219,7 +219,7 @@ class TestEInvoice(IntegrationTestCase):
     @responses.activate
     @change_settings("GST Settings", {"use_fallback_for_nic": 1})
     def test_generate_e_invoice_with_cancelled_shipping_gstin_enriched(self):
-        """Test error handling for cancelled shipping GSTIN (error 3029)"""
+        """Test error handling for cancelled shipping GSTIN - Enriched API (error 3029)"""
 
         test_data = self.e_invoice_test_data.get("gstin_error_3029_cancelled")
         si = create_sales_invoice(
@@ -249,12 +249,14 @@ class TestEInvoice(IntegrationTestCase):
         with self.assertRaises(frappe.exceptions.ValidationError) as cm:
             generate_e_invoice(si.name)
 
-        self.assertIn("GSTIN 29ABCDE1234F1Z5 status is not Active", str(cm.exception))
+        self.assertIn(
+            "GSTIN -29ABCDE1234F1Z5 is inactive or cancelled", str(cm.exception)
+        )
 
     @responses.activate
     @change_settings("GST Settings", {"use_fallback_for_nic": 0, "sandbox_mode": 0})
     def test_generate_e_invoice_with_cancelled_shipping_gstin_standard(self):
-        """Test error handling for cancelled shipping GSTIN (error 3029)"""
+        """Test error handling for cancelled shipping GSTIN - Standard API (error 3029)"""
 
         test_data = self.e_invoice_test_data.get("gstin_error_3029_cancelled")
         si = create_sales_invoice(
@@ -285,7 +287,9 @@ class TestEInvoice(IntegrationTestCase):
             frappe.flags.bypass_auth = True
             generate_e_invoice(si.name)
 
-        self.assertIn("GSTIN 29ABCDE1234F1Z5 status is not Active", str(cm.exception))
+        self.assertIn(
+            "GSTIN -29ABCDE1234F1Z5 is inactive or cancelled", str(cm.exception)
+        )
 
     @responses.activate
     def test_generate_e_invoice_with_goods_item(self):
