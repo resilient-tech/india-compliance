@@ -1025,6 +1025,7 @@ class TestEWaybill(IntegrationTestCase):
 
             frappe.flags.bypass_auth = True
             _generate_e_waybill(doc)
+            frappe.flags.bypass_auth = False
 
         self.assertIn(
             "GSTIN -29ABCDE1234F1Z5 is inactive or cancelled", str(cm.exception)
