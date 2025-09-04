@@ -174,7 +174,16 @@ def _generate_e_waybill(doc, throw=True, force=False):
 
         if result.error_code in ("3028", "3029"):
             # if the code reaches here, than api will always be EInvoiceAPI instance
-            gstin = GSTIN_FORMAT.search(result.error_message).group()
+            match = GSTIN_FORMAT.search(result.error_message)
+
+            if not match:
+                frappe.throw(
+                    _("Could not identify GSTIN from error: {0}").format(
+                        result.error_message or _("Unknown error")
+                    )
+                )
+
+            gstin = match.group()
 
             response = api.sync_gstin_info(gstin)
 
