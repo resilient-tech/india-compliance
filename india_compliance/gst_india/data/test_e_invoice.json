@@ -899,5 +899,108 @@
             "success": false,
             "message": "e-Invoice generation failed"
         }
+    },
+    "gstin_error_3029_cancelled": {
+        "kwargs": {
+            "vehicle_no": "GJ07DL9009",
+            "company_address": "_Test Indian Registered Company-Billing"
+        },
+        "request_data": {
+            "BuyerDtls": {
+                "Addr1": "Test Address - 3",
+                "Gstin": "29ABCDE1234F1Z5",
+                "LglNm": "_Test Registered Customer",
+                "Loc": "Test City",
+                "Pin": 500055,
+                "Pos": "29",
+                "Stcd": "29",
+                "TrdNm": "_Test Registered Customer"
+            },
+            "DocDtls": {
+                "Dt": "16/09/2022",
+                "No": "test_invoice_no",
+                "Typ": "INV"
+            },
+            "ItemList": [
+                {
+                    "AssAmt": 100000.0,
+                    "CesAmt": 0,
+                    "CesNonAdvlAmt": 0,
+                    "CesRt": 0,
+                    "CgstAmt": 9000.0,
+                    "Discount": 0,
+                    "GstRt": 18,
+                    "HsnCd": "61149090",
+                    "IgstAmt": 0,
+                    "IsServc": "N",
+                    "PrdDesc": "Test Trading Goods 1",
+                    "Qty": 1000.0,
+                    "SgstAmt": 9000.0,
+                    "SlNo": "1",
+                    "TotAmt": 100000.0,
+                    "TotItemVal": 118000.0,
+                    "Unit": "NOS",
+                    "UnitPrice": 100.0
+                }
+            ],
+            "SellerDtls": {
+                "Addr1": "Test Address - 1",
+                "Gstin": "02AMBPG7773M002",
+                "LglNm": "_Test Indian Registered Company",
+                "Loc": "Test City",
+                "Pin": 171302,
+                "Stcd": "02",
+                "TrdNm": "_Test Indian Registered Company"
+            },
+            "TranDtls": {
+                "RegRev": "N",
+                "SupTyp": "B2B",
+                "TaxSch": "GST"
+            },
+            "ValDtls": {
+                "AssVal": 100000.0,
+                "CesVal": 0,
+                "CgstVal": 9000.0,
+                "Discount": 0,
+                "IgstVal": 0,
+                "OthChrg": 0.0,
+                "RndOffAmt": 0.0,
+                "SgstVal": 9000.0,
+                "TotInvVal": 118000.0
+            },
+            "Version": "1.1"
+        },
+        "error_response_standard": {
+            "ErrorDetails": [
+                {
+                    "ErrorCode": "3029",
+                    "ErrorMessage": "GSTIN -29ABCDE1234F1Z5 is inactive or cancelled"
+                }
+            ],
+            "Status": 0,
+            "error_code": "3029"
+        },
+        "error_response_enriched": {
+            "message": "3029: GSTIN -29ABCDE1234F1Z5 is inactive or cancelled",
+            "success": false
+        },
+        "sync_gstin_response_inactive": {
+            "Status": "CAN",
+            "StatusDesc": "Cancelled",
+            "CtjCd": "29",
+            "LgnNm": "Test Company Name",
+            "TrdNm": "Test Trade Name",
+            "Adt": {
+                "Addr": {
+                    "Bnm": "Test Building",
+                    "St": "Test Street",
+                    "Loc": "Test Location",
+                    "Pncd": "500055",
+                    "Stcd": "29"
+                }
+            },
+            "ErrCd": "",
+            "ErrMsg": ""
+        }
     }
 }
