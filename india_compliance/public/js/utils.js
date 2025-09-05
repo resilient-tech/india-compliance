@@ -135,7 +135,7 @@ Object.assign(india_compliance, {
         return message;
     },
 
-    async set_pan_status(field, force_update = null) {
+    async set_pan_status(field, force_update = false) {
         const pan = field.value;
         field.set_description("");
         if (!pan || pan.length !== 10) return;
