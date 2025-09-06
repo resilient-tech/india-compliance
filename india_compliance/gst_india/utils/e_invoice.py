@@ -5,6 +5,7 @@ import jwt
 import frappe
 from frappe import _
 from frappe.utils import (
+    add_days,
     add_to_date,
     cstr,
     flt,
@@ -24,6 +25,7 @@ from india_compliance.gst_india.constants import (
     CURRENCY_CODES,
     EXPORT_TYPES,
     GST_CATEGORIES,
+    GSTIN_FORMAT,
     PORT_CODES,
     TAXABLE_GST_TREATMENTS,
 )
@@ -117,7 +119,7 @@ def generate_e_invoices(docnames, force=False):
 
 
 @frappe.whitelist()
-def generate_e_invoice(docname, throw=True, force=False):
+def generate_e_invoice(docname, throw: bool = True, force: bool = False):
     doc = load_doc("Sales Invoice", docname, "submit")
 
     settings = frappe.get_cached_doc("GST Settings")
@@ -157,11 +159,25 @@ def generate_e_invoice(docname, throw=True, force=False):
 
         # Handle Invalid GSTIN Error
         if result.error_code in ("3028", "3029", "3001"):
-            gstin = data.get("BuyerDtls").get("Gstin")
+            if result.error_code == "3001":
+                gstin = data.get("BuyerDtls").get("Gstin")
+            else:
+                match = GSTIN_FORMAT.search(result.error_message)
+                if not match:
+                    frappe.throw(
+                        _("Could not identify GSTIN from error: {0}").format(
+                            result.error_message or _("Unknown error")
+                        )
+                    )
+
+                gstin = match.group()
+
             response = api.sync_gstin_info(gstin)
 
             if response.Status != "ACT":
-                frappe.throw(_("GSTIN {0} status is not Active").format(gstin))
+                frappe.throw(
+                    result.error_message, title=_("Error Generating e-Invoice")
+                )
 
             result = api.generate_irn(data)
 
@@ -205,7 +221,7 @@ def handle_duplicate_irn_error(
     current_invoice_amount,
     doc=None,
     docname=None,
-    taxpayer_api=False,
+    taxpayer_api: bool = False,
 ):
     """
     Handle Duplicate IRN errors by fetching the IRN details and comparing with the current invoice.
@@ -1002,3 +1018,34 @@ class EInvoiceData(GSTTransactionData):
             export_details["Port"] = self.doc.port_code
 
         return export_details
+
+
+#######################################################################################
+### Auto Cancel e-Invoice Functions ###################################################
+#######################################################################################
+
+
+def auto_cancel_e_invoice(doc, gst_settings=None):
+    gst_settings = gst_settings or frappe.get_cached_doc("GST Settings")
+
+    if not (
+        doc.irn and gst_settings.enable_e_invoice and gst_settings.auto_cancel_e_invoice
+    ):
+        return
+
+    generated_on = doc.get_onload().get("e_invoice_info", {}).get("acknowledged_on")
+    reason = gst_settings.reason_for_e_invoice_cancellation
+
+    if not generated_on or (add_days(generated_on, 1) < get_datetime()):
+        return
+
+    values = frappe._dict(
+        {
+            "reason": reason,
+            "remark": "",
+        }
+    )
+
+    _cancel_e_invoice(doc, values)
+
+    return True

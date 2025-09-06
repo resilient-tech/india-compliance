@@ -286,6 +286,10 @@ def get_data(filters):
     is_grouped_by_invoice = filters.summary_by != "Summary by Item"
     sub_section = filters.sub_section
 
+    # Set default invoice sub categories if only sub_section is selected
+    if not filters.invoice_sub_category:
+        filters.invoice_sub_category = get_invoice_sub_categories(sub_section)
+
     doctypes = ["Purchase Invoice"]
     if sub_section == "4":
         doctypes.extend(["Bill of Entry", "Journal Entry"])
@@ -302,6 +306,14 @@ def get_data(filters):
     )
 
     return data
+
+
+def get_invoice_sub_categories(sub_section):
+    section = SECTION_MAPPING.get(sub_section) or {}
+
+    return [
+        category for sub_categories in section.values() for category in sub_categories
+    ]
 
 
 def get_summary_view(data, sub_section):

@@ -1271,5 +1271,85 @@
             },
             "success": true
         }
+    },
+    "ewaybill_gstin_error_3029": {
+        "kwargs": {
+            "vehicle_no": "GJ07DL9009",
+            "company_address": "_Test Indian Registered Company-Billing",
+            "customer": "_Test Registered Customer",
+            "currency": "INR",
+            "is_in_state": false
+        },
+        "request_data": {
+            "userGstin": "05AAACG2115R1ZN",
+            "supplyType": "O",
+            "subSupplyType": 1,
+            "docType": "BIL",
+            "docNo": "test_invoice_no",
+            "docDate": "25/02/2024",
+            "transactionType": 1,
+            "fromTrdName": "_Test Indian Registered Company",
+            "fromGstin": "05AAACG2115R1ZN",
+            "fromAddr1": "Test Address - 1",
+            "fromPlace": "Test City",
+            "fromPincode": 380015,
+            "fromStateCode": 5,
+            "actFromStateCode": 5,
+            "toTrdName": "_Test Registered Customer",
+            "toGstin": "29ABCDE1234F1Z5",
+            "toAddr1": "Test Address - 3",
+            "toPlace": "Test City",
+            "toPincode": 500055,
+            "toStateCode": 29,
+            "actToStateCode": 29,
+            "totalValue": 100000.0,
+            "cgstValue": 0,
+            "sgstValue": 0,
+            "igstValue": 18000.0,
+            "cessValue": 0,
+            "cessNonAdvolValue": 0,
+            "otherValue": 0.0,
+            "totInvValue": 118000.0,
+            "transMode": 1,
+            "transDistance": 10,
+            "transporterName": "Test Common Supplier",
+            "vehicleNo": "GJ07DL9009",
+            "vehicleType": "R",
+            "itemList": [
+                {
+                    "itemNo": 1,
+                    "productDesc": "Test Trading Goods 1",
+                    "hsnCode": "61149090",
+                    "qtyUnit": "NOS",
+                    "quantity": 1000.0,
+                    "taxableAmount": 100000.0,
+                    "sgstRate": 0,
+                    "cgstRate": 0,
+                    "igstRate": 18,
+                    "cessRate": 0,
+                    "cessNonAdvolRate": 0
+                }
+            ],
+            "mainHsnCode": "61149090"
+        },
+        "params": "action=GENEWAYBILL",
+        "error_response_standard": {
+            "ErrorDetails": [
+                {
+                    "ErrorCode": "3029",
+                    "ErrorMessage": "GSTIN -29ABCDE1234F1Z5 is inactive or cancelled"
+                }
+            ],
+            "Status": 0,
+            "error_code": "3029"
+        },
+        "error_response_enriched": {
+            "message": "3029: GSTIN -29ABCDE1234F1Z5 is inactive or cancelled",
+            "success": false
+        },
+        "sync_gstin_response_inactive": {
+            "Status": "CAN",
+            "StatusDesc": "Cancelled"
+        }
     }
 }

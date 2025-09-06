@@ -21,7 +21,7 @@ from india_compliance.gst_india.utils import get_all_gst_accounts
 
 
 @frappe.whitelist()
-def get_outstanding_reference_documents(args, validate=False):
+def get_outstanding_reference_documents(args, validate: bool = False):
     from erpnext.accounts.doctype.payment_entry.payment_entry import (
         get_outstanding_reference_documents,
     )
@@ -444,6 +444,10 @@ def get_taxes_summary(company, payment_entries):
         .where(gl_entry.voucher_no.isin(references))
         .where(gl_entry.account.isin(gst_accounts))
         .where(gl_entry.company == company)
+        # This is temporary fix.
+        # It will still cause issues where
+        # other taxes are charged like TDS and GST Account are specified in deduction table.
+        .where(pe.total_taxes_and_charges != 0)
         .groupby(gl_entry.voucher_no)
         .run(as_dict=True)
     )
