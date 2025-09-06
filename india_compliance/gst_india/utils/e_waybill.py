@@ -18,13 +18,12 @@ from frappe.utils import (
 from frappe.utils.file_manager import save_file
 
 from india_compliance.exceptions import GSPServerError
-
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
 from india_compliance.gst_india.constants import (
     GST_TAX_TYPES,
-    STATE_NUMBERS,
     GSTIN_FORMAT,
+    STATE_NUMBERS,
 )
 from india_compliance.gst_india.constants.e_waybill import (
     ADDRESS_FIELDS,
