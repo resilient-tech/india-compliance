@@ -12,6 +12,7 @@ from frappe.utils import (
     get_datetime,
     getdate,
     random_string,
+    sbool,
 )
 
 from india_compliance.exceptions import GSPServerError
@@ -23,6 +24,7 @@ from india_compliance.gst_india.constants import (
     CURRENCY_CODES,
     EXPORT_TYPES,
     GST_CATEGORIES,
+    GSTIN_FORMAT,
     PORT_CODES,
 )
 from india_compliance.gst_india.constants.e_invoice import (
@@ -116,6 +118,7 @@ def generate_e_invoices(docnames, force=False):
 
 @frappe.whitelist()
 def generate_e_invoice(docname, throw=True, force=False):
+    throw, force = sbool(throw), sbool(force)
     doc = load_doc("Sales Invoice", docname, "submit")
 
     settings = frappe.get_cached_doc("GST Settings")
@@ -170,11 +173,25 @@ def generate_e_invoice(docname, throw=True, force=False):
 
         # Handle Invalid GSTIN Error
         if result.error_code in ("3028", "3029", "3001"):
-            gstin = data.get("BuyerDtls").get("Gstin")
+            if result.error_code == "3001":
+                gstin = data.get("BuyerDtls").get("Gstin")
+            else:
+                match = GSTIN_FORMAT.search(result.error_message)
+                if not match:
+                    frappe.throw(
+                        _("Could not identify GSTIN from error: {0}").format(
+                            result.error_message or _("Unknown error")
+                        )
+                    )
+
+                gstin = match.group()
+
             response = api.sync_gstin_info(gstin)
 
             if response.Status != "ACT":
-                frappe.throw(_("GSTIN {0} status is not Active").format(gstin))
+                frappe.throw(
+                    result.error_message, title=_("Error Generating e-Invoice")
+                )
 
             result = api.generate_irn(data)
 

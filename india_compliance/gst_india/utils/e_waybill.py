@@ -13,13 +13,18 @@ from frappe.utils import (
     get_fullname,
     get_link_to_form,
     random_string,
+    sbool,
 )
 from frappe.utils.file_manager import save_file
 
 from india_compliance.exceptions import GSPServerError
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
-from india_compliance.gst_india.constants import GST_TAX_TYPES, STATE_NUMBERS
+from india_compliance.gst_india.constants import (
+    GST_TAX_TYPES,
+    GSTIN_FORMAT,
+    STATE_NUMBERS,
+)
 from india_compliance.gst_india.constants.e_waybill import (
     ADDRESS_FIELDS,
     CANCEL_REASON_CODES,
@@ -138,7 +143,7 @@ def generate_e_waybill(*, doctype, docname, values=None, force=False):
     if values:
         update_transaction(doc, frappe.parse_json(values))
 
-    _generate_e_waybill(doc, throw=True if values else False, force=force)
+    _generate_e_waybill(doc, throw=True if values else False, force=sbool(force))
 
 
 def _generate_e_waybill(doc, throw=True, force=False):
@@ -162,15 +167,42 @@ def _generate_e_waybill(doc, throw=True, force=False):
         data = EWaybillData(doc).get_data(with_irn=with_irn)
 
         api = EWaybillAPI if not with_irn else EInvoiceAPI
-        result = api(doc).generate_e_waybill(data)
+        api = api(doc)
+
+        result = api.generate_e_waybill(data)
+
+        if result.error_code in ("3028", "3029"):
+            # if the code reaches here, than api will always be EInvoiceAPI instance
+            match = GSTIN_FORMAT.search(result.error_message)
+
+            if not match:
+                frappe.throw(
+                    _("Could not identify GSTIN from error: {0}").format(
+                        result.error_message or _("Unknown error")
+                    )
+                )
+
+            gstin = match.group()
+
+            response = api.sync_gstin_info(gstin)
+
+            if response.Status != "ACT":
+                frappe.throw(
+                    result.error_message, title=_("Error Generating e-Waybill")
+                )
+
+            result = api.generate_e_waybill(data)
 
         if result.error_code == "4002":
-            result = api(doc).get_e_waybill_by_irn(doc.get("irn"))
+            result = api.get_e_waybill_by_irn(doc.get("irn"))
 
         if result.error_code == "2148":
             with_irn = False
             data = EWaybillData(doc).get_data(with_irn=with_irn)
             result = EWaybillAPI(doc).generate_e_waybill(data)
+
+        if not result.get("ewayBillNo" if not with_irn else "EwbNo"):
+            frappe.throw(_("e-Waybill generation failed"))
 
     except GSPServerError as e:
         handle_server_errors(settings, doc, "e-Waybill", e)
@@ -498,6 +530,7 @@ def update_transporter(*, doctype, docname, values):
 
 @frappe.whitelist()
 def extend_validity(*, doctype, docname, values, scheduled=False):
+    scheduled = sbool(scheduled)
     doc = load_doc(doctype, docname, "submit")
     values = frappe.parse_json(values)
 
@@ -650,7 +683,7 @@ def generate_pending_e_waybills():
 
 @frappe.whitelist()
 def fetch_e_waybill_data(*, doctype, docname, attach=False):
-    doc = load_doc(doctype, docname, "write" if attach else "print")
+    doc = load_doc(doctype, docname, "write" if sbool(attach) else "print")
     log = frappe.get_doc("e-Waybill Log", doc.ewaybill)
     if not log.is_latest_data:
         _fetch_e_waybill_data(doc, log)
@@ -1233,7 +1266,6 @@ class EWaybillData(GSTTransactionData):
         return extension_details
 
     def validate_transaction(self):
-
         super().validate_transaction()
 
         if self.doc.ewaybill:

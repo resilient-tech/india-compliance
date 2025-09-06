@@ -68,6 +68,7 @@ class EInvoiceAPI(BaseAPI):
         for error_code in self.IGNORED_ERROR_CODES:
             if message.startswith(error_code):
                 response_json.error_code = error_code
+                response_json.error_message = message
                 return True
 
     def get_e_invoice_by_irn(self, irn):

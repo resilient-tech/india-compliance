@@ -4,7 +4,7 @@ from string import whitespace
 
 import frappe
 from frappe import _
-from frappe.utils import add_to_date
+from frappe.utils import add_to_date, sbool
 
 from india_compliance.exceptions import GSPServerError
 from india_compliance.gst_india.api_classes.base import BASE_URL
@@ -40,7 +40,7 @@ def get_gstin_info(gstin, *, throw_error=True):
     if not frappe.get_cached_doc("User", frappe.session.user).has_desk_access():
         frappe.throw(_("Not allowed"), frappe.PermissionError)
 
-    return _get_gstin_info(gstin, throw_error=throw_error)
+    return _get_gstin_info(gstin, throw_error=sbool(throw_error))
 
 
 def _get_gstin_info(gstin, *, throw_error=True):

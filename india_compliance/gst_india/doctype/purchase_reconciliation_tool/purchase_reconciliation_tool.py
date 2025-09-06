@@ -9,7 +9,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.functions import IfNull
-from frappe.utils import add_to_date, cint, now_datetime
+from frappe.utils import add_to_date, cint, now_datetime, sbool
 from frappe.utils.response import json_handler
 
 from india_compliance.gst_india.api_classes.taxpayer_base import TaxpayerBaseAPI
@@ -119,7 +119,7 @@ class PurchaseReconciliationTool(Document):
             company_gstins=company_gstins,
             date_range=date_range,
             return_type=return_type,
-            force=force,
+            force=sbool(force),
             gst_categories=gst_categories,
         )
 
@@ -142,7 +142,7 @@ class PurchaseReconciliationTool(Document):
         history = get_import_history(company_gstins, return_type, periods)
         history = {(log.return_period, log.gstin): log for log in history}
 
-        action = "Download" if for_download else "Upload"
+        action = "Download" if sbool(for_download) else "Upload"
         has_single_gstin = company_gstin != "All"
 
         pending_download = defaultdict(set)
@@ -613,7 +613,7 @@ def generate_excel_attachment(data, doc):
 def download_excel_report(data, doc, is_supplier_specific=False):
     frappe.has_permission("Purchase Reconciliation Tool", "export", throw=True)
 
-    build_data = BuildExcel(doc, data, is_supplier_specific)
+    build_data = BuildExcel(doc, data, sbool(is_supplier_specific))
     build_data.export_data()
 
 

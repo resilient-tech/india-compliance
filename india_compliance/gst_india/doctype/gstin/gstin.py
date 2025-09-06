@@ -4,7 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import date_diff, format_date, get_datetime
+from frappe.utils import date_diff, format_date, get_datetime, sbool
 
 from india_compliance.gst_india.utils import is_api_enabled, validate_gstin_check_digit
 from india_compliance.gst_india.utils.gstin_info import (
@@ -133,6 +133,7 @@ def get_gstin_status(gstin, transaction_date=None, docstatus=0, force_update=Fal
     if isinstance(docstatus, str):
         docstatus = int(docstatus)
 
+    force_update = sbool(force_update)
     if not force_update and not is_status_refresh_required(
         gstin, transaction_date, docstatus
     ):
