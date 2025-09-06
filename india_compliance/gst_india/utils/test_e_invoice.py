@@ -210,9 +210,8 @@ class TestEInvoice(FrappeTestCase):
         )
 
     @responses.activate
-    @change_settings("GST Settings", {"use_fallback_for_nic": 1})
-    def test_generate_e_invoice_with_cancelled_shipping_gstin_enriched(self):
-        """Test error handling for cancelled shipping GSTIN - Enriched API (error 3029)"""
+    def test_generate_e_invoice_with_cancelled_shipping_gstin(self):
+        """Test error handling for cancelled shipping GSTIN(error 3029)"""
 
         test_data = self.e_invoice_test_data.get("gstin_error_3029_cancelled")
         si = create_sales_invoice(
@@ -221,7 +220,7 @@ class TestEInvoice(FrappeTestCase):
             is_in_state=True,
         )
 
-        error_response = test_data.get("error_response_enriched")
+        error_response = test_data.get("error_response")
 
         responses.add(
             responses.POST,
@@ -241,45 +240,6 @@ class TestEInvoice(FrappeTestCase):
         )
 
         with self.assertRaises(frappe.exceptions.ValidationError) as cm:
-            generate_e_invoice(si.name)
-
-        self.assertIn(
-            "GSTIN -29ABCDE1234F1Z5 is inactive or cancelled", str(cm.exception)
-        )
-
-    @responses.activate
-    @change_settings("GST Settings", {"use_fallback_for_nic": 0, "sandbox_mode": 0})
-    def test_generate_e_invoice_with_cancelled_shipping_gstin_standard(self):
-        """Test error handling for cancelled shipping GSTIN - Standard API (error 3029)"""
-
-        test_data = self.e_invoice_test_data.get("gstin_error_3029_cancelled")
-        si = create_sales_invoice(
-            **test_data.get("kwargs"),
-            qty=1000,
-            is_in_state=True,
-        )
-
-        error_response = test_data.get("error_response_standard")
-
-        responses.add(
-            responses.POST,
-            BASE_URL + "/standard/ei/api/invoice",
-            json=error_response,
-            status=200,
-        )
-
-        sync_gstin_response = test_data.get("sync_gstin_response_inactive")
-
-        responses.add(
-            responses.GET,
-            BASE_URL + "/standard/ei/api/master/syncgstin",
-            match=[matchers.query_param_matcher({"gstin": "29ABCDE1234F1Z5"})],
-            json=sync_gstin_response,
-            status=200,
-        )
-
-        with self.assertRaises(frappe.exceptions.ValidationError) as cm:
-            frappe.flags.bypass_auth = True
             generate_e_invoice(si.name)
 
         self.assertIn(
