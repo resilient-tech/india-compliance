@@ -20,7 +20,11 @@ from frappe.utils.file_manager import save_file
 from india_compliance.exceptions import GSPServerError
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
-from india_compliance.gst_india.constants import GST_TAX_TYPES, STATE_NUMBERS
+from india_compliance.gst_india.constants import (
+    GST_TAX_TYPES,
+    GSTIN_FORMAT,
+    STATE_NUMBERS,
+)
 from india_compliance.gst_india.constants.e_waybill import (
     ADDRESS_FIELDS,
     CANCEL_REASON_CODES,
@@ -163,15 +167,42 @@ def _generate_e_waybill(doc, throw=True, force=False):
         data = EWaybillData(doc).get_data(with_irn=with_irn)
 
         api = EWaybillAPI if not with_irn else EInvoiceAPI
-        result = api(doc).generate_e_waybill(data)
+        api = api(doc)
+
+        result = api.generate_e_waybill(data)
+
+        if result.error_code in ("3028", "3029"):
+            # if the code reaches here, than api will always be EInvoiceAPI instance
+            match = GSTIN_FORMAT.search(result.error_message)
+
+            if not match:
+                frappe.throw(
+                    _("Could not identify GSTIN from error: {0}").format(
+                        result.error_message or _("Unknown error")
+                    )
+                )
+
+            gstin = match.group()
+
+            response = api.sync_gstin_info(gstin)
+
+            if response.Status != "ACT":
+                frappe.throw(
+                    result.error_message, title=_("Error Generating e-Waybill")
+                )
+
+            result = api.generate_e_waybill(data)
 
         if result.error_code == "4002":
-            result = api(doc).get_e_waybill_by_irn(doc.get("irn"))
+            result = api.get_e_waybill_by_irn(doc.get("irn"))
 
         if result.error_code == "2148":
             with_irn = False
             data = EWaybillData(doc).get_data(with_irn=with_irn)
             result = EWaybillAPI(doc).generate_e_waybill(data)
+
+        if not result.get("ewayBillNo" if not with_irn else "EwbNo"):
+            frappe.throw(_("e-Waybill generation failed"))
 
     except GSPServerError as e:
         handle_server_errors(settings, doc, "e-Waybill", e)
