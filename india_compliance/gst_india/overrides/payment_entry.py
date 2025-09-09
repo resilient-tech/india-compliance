@@ -10,6 +10,7 @@ from erpnext.controllers.accounts_controller import get_advance_payment_entries
 from india_compliance.gst_india.constants import TAX_TYPES
 from india_compliance.gst_india.overrides.transaction import (
     get_gst_details,
+    set_gst_tax_type,
 )
 from india_compliance.gst_india.overrides.transaction import (
     validate_backdated_transaction as _validate_backdated_transaction,
@@ -90,6 +91,7 @@ def validate(doc, method=None):
         validate_transaction_for_advance_payment(doc, method)
 
     else:
+        set_gst_tax_type(doc)
         for row in doc.taxes:
             if row.gst_tax_type in TAX_TYPES and row.tax_amount != 0:
                 frappe.throw(
