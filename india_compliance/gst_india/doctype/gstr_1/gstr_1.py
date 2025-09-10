@@ -28,6 +28,15 @@ from india_compliance.gst_india.utils import (
 from india_compliance.gst_india.utils.gstin_info import get_gstr_1_return_status
 
 
+# MASKING CODE
+def change_gstin(func):
+    def wrapper(self, *args, **kwargs):
+        self.company_gstin = frappe.db.get_value("Company", self.company, "gstin")
+        return func(self, *args, **kwargs)
+
+    return wrapper
+
+
 class GSTR1(Document):
     @frappe.whitelist()
     def recompute_books(self):
@@ -38,6 +47,7 @@ class GSTR1(Document):
         return self.generate_gstr1(sync_for=sync_for, recompute_books=True)
 
     @frappe.whitelist()
+    @change_gstin
     def mark_as_filed(self):
         period = get_period(self.month_or_quarter, self.year)
         return_status = get_gstr_1_return_status(
@@ -61,6 +71,7 @@ class GSTR1(Document):
 
     @frappe.whitelist()
     @otp_handler
+    @change_gstin
     def generate_gstr1(
         self,
         sync_for=None,
@@ -138,6 +149,7 @@ class GSTR1(Document):
 
         frappe.msgprint(_(message), alert=True)
 
+    @change_gstin
     def _generate_gstr1(self):
         """
         Try to generate GSTR-1 data. Wrapper for generating GSTR-1 data

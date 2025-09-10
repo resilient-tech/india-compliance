@@ -38,6 +38,8 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_re
     unlink_documents as _unlink_documents,
 )
 from india_compliance.gst_india.utils import (
+    format_gstin,
+    format_name,
     get_gstin_list,
     get_json_from_file,
     get_timespan_date_range,
@@ -838,9 +840,13 @@ class BuildExcel:
     def get_file_name(self):
         """Returns file name for the excel file"""
         if not self.is_supplier_specific:
-            return f"{self.doc.company_gstin}_{self.period}_report"
+            # return f"{self.doc.company_gstin}_{self.period}_report"
+            return f"{format_gstin(self.doc.company_gstin)}_{self.period}_report"  # MASKING CODE
 
-        file_name = f"{self.supplier_name}_{self.supplier_gstin}"
+        # file_name = f"{self.supplier_name}_{self.supplier_gstin}"
+        file_name = (
+            f"{format_name(self.supplier_name)}_{format_gstin(self.supplier_gstin)}"
+        )
         return file_name.replace(" ", "_")
 
     def get_match_summary_columns(self):

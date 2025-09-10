@@ -142,10 +142,16 @@ reconciliation.reconciliation_tabs = class ReconciliationTabs {
 
     get_supplier_name_gstin(row) {
         return `
-        ${row.supplier_name}
+        ${india_compliance.format_name(row.supplier_name)}
         <br />
-        <a href="#" style="font-size: 0.9em;" class="supplier-gstin">
-            ${row.supplier_gstin || ""}
+         <a href="#" style="font-size: 0.9em;" class="supplier-gstin" value=${
+             row.supplier_gstin
+         }>
+            ${
+                row.supplier_gstin
+                    ? india_compliance.format_gstin(row.supplier_gstin)
+                    : ""
+            }
         </a>
         `;
     }
@@ -234,8 +240,12 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
 
     init_dialog() {
         const supplier_details = `
-        <h5>${this.row.supplier_name}
-        ${this.row.supplier_gstin ? ` (${this.row.supplier_gstin})` : ""}
+        <h5>${india_compliance.format_name(this.row.supplier_name)}
+        ${
+            this.row.supplier_gstin
+                ? ` (${india_compliance.format_gstin(this.row.supplier_gstin)})`
+                : ""
+        }
         </h5>
         `;
 
@@ -270,7 +280,8 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
                 label: "GSTIN",
                 fieldtype: "Data",
                 fieldname: "supplier_gstin",
-                default: this.row.supplier_gstin,
+                // default: this.row.supplier_gstin,
+                default: india_compliance.format_gstin(this.row.supplier_gstin), // MASKING CODE
                 onchange: () => this.set_link_options(),
             },
             {
@@ -320,7 +331,8 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
         if (!this.dialog.get_value("doctype")) return;
 
         this.filters = {
-            supplier_gstin: this.dialog.get_value("supplier_gstin"),
+            // supplier_gstin: this.dialog.get_value("supplier_gstin"),
+            supplier_gstin: this.row.supplier_gstin, // MASKING CODE
             bill_from_date: this.dialog.get_value("date_range")[0],
             bill_to_date: this.dialog.get_value("date_range")[1],
             show_matched: this.dialog.get_value("show_matched"),

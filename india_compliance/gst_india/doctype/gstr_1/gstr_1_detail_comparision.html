@@ -4,7 +4,8 @@ var books = data.books%}
     {%if data.customer_name%}
     <div class="row m-2">
         <div class="col font-weight-bold">Customer Name:</div>
-        <div class="col">{{ data.customer_name}}</div>
+        <!-- <div class="col">{{ data.customer_name}}</div> -->
+        <div class="col">{{ india_compliance.format_name(data.customer_name) }}</div>
     </div>
     {% endif %}
 
@@ -70,12 +71,17 @@ var books = data.books%}
             var gov_value = is_currency_field ? format_currency(data.gov[fieldname] || 0) :
             (data.gov[fieldname] || "-");
 
+            if(fieldname==="customer_gstin") {
+            if(book_value !== "-") book_value = india_compliance.format_gstin(book_value);
+            if(gov_value !== "-") gov_value = india_compliance.format_gstin(gov_value);
+            }
+
             %}
 
             <tr class="text-center">
                 <td style="width: 30%"><b>{{ column_title }}</b></td>
                 <td style="width: 35%" data-label={{fieldname}}>{{ book_value }}</td>
-                <td style="width: 35%"  data-label={{fieldname}}>{{ gov_value }} </td>
+                <td style="width: 35%" data-label={{fieldname}}>{{ gov_value }} </td>
             </tr>
             {% endfor %}
         </tbody>

@@ -72,6 +72,9 @@ frappe.ui.form.on(DOCTYPE, {
 
         frm.ims_actions = new IMSAction(frm);
         frm.ims_actions.setup_actions();
+
+        // MASKING CODE
+        india_compliance.mask_gstin_field(frm, "company_gstin");
     },
 });
 
@@ -200,7 +203,8 @@ class IMS extends reconciliation.reconciliation_tabs {
             "click",
             ".supplier-gstin",
             function (e) {
-                me.update_filter(e, "supplier_gstin", $(this).text().trim(), me);
+                // MASKING CODE
+                me.update_filter(e, "supplier_gstin", $(this).attr("value").trim(), me);
             }
         );
 

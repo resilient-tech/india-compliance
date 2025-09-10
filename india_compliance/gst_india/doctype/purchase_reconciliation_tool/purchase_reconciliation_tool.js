@@ -89,6 +89,10 @@ frappe.ui.form.on(DOCTYPE, {
     refresh(frm) {
         frm.reco_tool_actions = new PurchaseReconciliationToolAction(frm);
         frm.reco_tool_actions.setup_actions();
+
+        // MASKING CODE
+        if (frm.doc.company_gstin !== "All")
+           india_compliance.mask_gstin_field(frm, "company_gstin");
     },
 
     async company(frm) {
@@ -389,7 +393,8 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                             DOCTYPE,
                             filter_map[tab][selector],
                             "=",
-                            $(this).text().trim(),
+                            // $(this).text().trim(),
+                           $(this).attr("value") || $(this).text(), // MASKING CODE
                         ]);
                         me.filter_group.apply();
                     }
@@ -1090,7 +1095,8 @@ class ImportDialog {
                 label: "Company GSTIN",
                 fieldname: "company_gstin",
                 fieldtype: "Autocomplete",
-                default: this.frm.doc.company_gstin,
+                // default: this.frm.doc.company_gstin, // MASKING CODE
+               default: india_compliance.format_gstin(this.frm.doc.company_gstin),
                 get_query: async () => {
                     let { message: gstin_list } = await frappe.call({
                         method: "india_compliance.gst_india.utils.get_gstin_list",
@@ -1104,6 +1110,8 @@ class ImportDialog {
                     this.company_gstin = this.dialog.get_value("company_gstin");
                     this.fetch_import_history();
                 },
+                // MASKING CODE
+                _value: (...args) => india_compliance.format_gstin(args[0]),
             },
             {
                 fieldtype: "Column Break",
@@ -1282,6 +1290,10 @@ class EmailDialog {
     }
 
     async get_recipients() {
+        // MASKING CODE
+        return "example@gmail.com";
+        // ---- + ---- //
+
         if (!this.data) return [];
 
         const { message } = await frappe.call({

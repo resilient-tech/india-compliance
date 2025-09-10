@@ -323,7 +323,11 @@ def get_period_options(company, company_gstin):
     six_months_ago = format_period(six_months_ago)
 
     if latest_3b_filed_period <= six_months_ago and can_fetch_gstin_info():
-        update_gstr_returns_info(company, company_gstin)
+        # MASKING CODE
+        try:
+            update_gstr_returns_info(company, company_gstin)
+        except Exception:
+            pass
 
     # Generate last six months of valid periods
     periods = []

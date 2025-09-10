@@ -89,6 +89,14 @@ frappe.ui.form.on("GSTR 3B Report", {
                 },
             });
         });
+
+        // MASKING CODE
+        india_compliance.mask_gstin_field(frm, "company_gstin");
+    },
+
+    // MASKING CODE
+    company_gstin: function (frm) {
+        india_compliance.mask_gstin_field(frm, "company_gstin");
     },
 
     company: async function (frm) {

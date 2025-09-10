@@ -1131,3 +1131,18 @@ def has_permission_of_page(page_name, throw=False):
         )
 
     return True
+
+
+# MASKING CODE
+def format_gstin(gstin: str) -> str:
+    if not gstin:
+        return "XXXXXXXXXXXXXXX"
+
+    return f"{gstin[:2]}XXXXXXXXXXXXX"
+
+
+def format_name(name: str) -> str:
+    if not name:
+        return "XXXXXXXXXX"
+
+    return f"{name[:2]}XXXXXXXX"

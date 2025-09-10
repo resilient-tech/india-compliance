@@ -21,6 +21,12 @@ frappe.query_reports["GSTR-3B Details"] = {
                 const company = frappe.query_report.get_filter_value("company");
                 return india_compliance.get_gstin_query(company);
             },
+            // MASKING CODE
+            on_change: report => {
+                report.page.wrapper
+                    .find("[data-fieldname='company_gstin']")
+                    .val("24XXXXXXXXXXXXX");
+            },
         },
         {
             fieldname: "year",

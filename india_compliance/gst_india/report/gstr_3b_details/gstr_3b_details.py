@@ -17,6 +17,13 @@ def execute(filters=None):
 
     report_type = filters.get("section")
 
+    # MASKING CODE
+    # Hardcoded GSTIN for fetched from the company selected in the filters
+    filters.__setattr__(
+        "company_gstin",
+        frappe.get_cached_value("Company", filters.get("company"), "gstin"),
+    )
+
     if report_type == "4":
         report = GSTR3B_ITC_Details(filters)
 

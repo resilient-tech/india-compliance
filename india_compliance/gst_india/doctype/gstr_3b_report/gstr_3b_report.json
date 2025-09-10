@@ -1,6 +1,6 @@
 {
  "actions": [],
- "autoname": "format:GSTR3B-{month_or_quarter}-{year}-{company_gstin}",
+ "autoname": "format:GSTR3B-{month_or_quarter}-{year}",
  "creation": "2019-02-04 11:35:55.964639",
  "doctype": "DocType",
  "editable_grid": 1,
@@ -95,7 +95,7 @@
   }
  ],
  "links": [],
- "modified": "2024-11-22 18:36:30.385643",
+ "modified": "2025-09-10 12:47:24.635920",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR 3B Report",
@@ -104,23 +104,27 @@
  "permissions": [
   {
    "create": 1,
+   "delete": 1,
    "read": 1,
    "role": "Accounts Manager",
    "write": 1
   },
   {
    "create": 1,
+   "delete": 1,
    "read": 1,
    "role": "Accounts User",
    "write": 1
   },
   {
    "create": 1,
+   "delete": 1,
    "read": 1,
    "role": "System Manager",
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],

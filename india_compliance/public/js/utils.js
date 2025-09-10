@@ -550,6 +550,24 @@ Object.assign(india_compliance, {
 
         return frappe.boot.indian_registered_companies?.includes(company);
     },
+
+    // MASKING CODE
+    mask_gstin_field(frm, fieldname) {
+        frm.get_field(fieldname)
+            .$wrapper.find("input")
+            .val(this.format_gstin(frm.doc[fieldname]));
+    },
+
+    format_gstin(gstin) {
+        if (!gstin) return "XXXXXXXXXXXXXXX";
+        return gstin.slice(0, 2) + "XXXXXXXXXXX" + gstin.slice(-2);
+    },
+
+    format_name(name) {
+        if (!name) return "XXXXXXXX";
+        return name.slice(0, 2) + "XXXXXX";
+    },
+    // ---- + ---- //
 });
 
 function get_doc_details(doc) {
