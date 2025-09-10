@@ -169,16 +169,18 @@ Object.assign(india_compliance, {
             "pan-last-synced"
         );
 
+        field.set_description(pan_desc);
+
         const refresh_btn = this.get_status_refresh_button(
             "refresh-pan",
-            pan_desc.find(".pan-last-synced")
+            field.$wrapper.find(".pan-last-synced")
         );
 
         refresh_btn.on("click", async function () {
             await india_compliance.set_pan_status(field, true);
         });
 
-        return field.set_description(pan_desc);
+        return;
     },
 
     validate_gst_transporter_id(transporter_id, doc) {
@@ -239,7 +241,7 @@ Object.assign(india_compliance, {
         const user_date = frappe.datetime.str_to_user(datetime);
         const pretty_date = frappe.datetime.prettyDate(datetime);
 
-        return $(`<div class="d-flex indicator ${indicator}" style="font-size: 12px">
+        return `<div class="d-flex indicator ${indicator}" style="font-size: 12px">
                     <strong>${status}</strong>
                     <span class="d-flex justify-content-between align-items-center ${classes}"
                         title="${user_date}" style="margin-left: auto;gap: 2px">
@@ -247,7 +249,7 @@ Object.assign(india_compliance, {
                            datetime ? "Synced " + pretty_date : ""
                        }</span>
                     </span>
-                </div>`);
+                </div>`;
     },
 
     get_status_refresh_button(classes, append_to = null, style = null) {
