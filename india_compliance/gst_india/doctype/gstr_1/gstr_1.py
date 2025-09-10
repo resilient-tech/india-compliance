@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import json
+from functools import wraps
 
 import frappe
 from frappe import _
@@ -30,8 +31,14 @@ from india_compliance.gst_india.utils.gstin_info import get_gstr_1_return_status
 
 # MASKING CODE
 def change_gstin(func):
+    """Decorator to fetch and set company GSTIN before method execution"""
+
+    @wraps(func)
     def wrapper(self, *args, **kwargs):
-        self.company_gstin = frappe.db.get_value("Company", self.company, "gstin")
+        try:
+            self.company_gstin = frappe.db.get_value("Company", self.company, "gstin")
+        except Exception as e:
+            frappe.throw(f"Failed to fetch GSTIN for company {self.company}: {str(e)}")
         return func(self, *args, **kwargs)
 
     return wrapper
@@ -70,8 +77,8 @@ class GSTR1(Document):
         return self.generate_gstr1()
 
     @frappe.whitelist()
-    @otp_handler
     @change_gstin
+    @otp_handler
     def generate_gstr1(
         self,
         sync_for=None,
