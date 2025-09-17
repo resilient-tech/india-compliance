@@ -63,6 +63,9 @@ def create_or_update_gstin_status(
     is_transporter_id=False,
     throw=False,
 ):
+    if frappe.flags.in_import:
+        return
+
     doctype = "GSTIN"
 
     if not response:
