@@ -2645,9 +2645,16 @@ class GSTR1BooksData(BooksDataMapper):
             )
 
             if not gstr1_log.filed:
-                gstr1_log.generate_gstr1_data(self.filters)
+                # Create modified filters with monthly filing preference to avoid recursion
+                # when getting already filed docs from previous months
+                prev_month_filters = frappe._dict(self.filters)
+                prev_month_filters.filing_preference = "Monthly"
+                gstr1_log.generate_gstr1_data(prev_month_filters)
 
             filed_data = gstr1_log.get_json_for("filed")
+
+            if not filed_data:
+                continue
 
             for category, invoices in filed_data.items():
                 if category not in m1_m2_subcategories:
