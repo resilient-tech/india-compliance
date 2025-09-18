@@ -49,7 +49,7 @@ def _process_item_batch(batch_items, taxes):
 
     # TODO: Add Versioning?
 
-    frappe.db.commit()
+    frappe.db.commit()  # nosemgrep
 
 
 def _bulk_insert_item_taxes(item_names, taxes):
