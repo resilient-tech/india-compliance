@@ -83,11 +83,11 @@ def _bulk_insert_item_taxes(item_names, taxes):
                     item_name,  # parent
                     "Item",  # parenttype
                     "taxes",  # parentfield
-                    tax.item_tax_template,
-                    tax.tax_category,
-                    tax.valid_from,
-                    tax.minimum_net_rate,
-                    tax.maximum_net_rate,
+                    tax.get("item_tax_template"),
+                    tax.get("tax_category"),
+                    tax.get("valid_from"),
+                    tax.get("minimum_net_rate", 0),
+                    tax.get("maximum_net_rate", 0),
                     current_time,  # creation
                     current_time,  # modified
                     current_user,  # modified_by
