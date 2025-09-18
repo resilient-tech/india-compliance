@@ -3,8 +3,8 @@
 
 import frappe
 from frappe import _
-from frappe.model.document import Document
-from frappe.utils import now, random_string
+from frappe.model.document import Document, bulk_insert
+from frappe.utils import random_string
 
 from india_compliance.gst_india.utils import (
     get_hsn_settings,
@@ -23,9 +23,6 @@ def update_taxes_in_item_master(taxes, hsn_code):
     return 1
 
 
-BATCH_SIZE = 100
-
-
 def update_item_document(taxes, hsn_code):
     """Update taxes for all items with the given HSN code using bulk operations for performance."""
     taxes = frappe.parse_json(taxes)
@@ -34,70 +31,38 @@ def update_item_document(taxes, hsn_code):
     if not items:
         return
 
-    for i in range(0, len(items), BATCH_SIZE):
-        batch_items = items[i : i + BATCH_SIZE]
-        _process_item_batch(batch_items, taxes)
-
-
-def _process_item_batch(batch_items, taxes):
-    frappe.db.delete("Item Tax", {"parent": ["in", batch_items]})
+    frappe.db.delete("Item Tax", {"parent": ["in", items]})
 
     if taxes:
-        _bulk_insert_item_taxes(batch_items, taxes)
+        _bulk_insert_item_taxes(items, taxes)
 
-    _update_item_modified_timestamp(batch_items)
-
-    # TODO: Add Versioning?
-
-    frappe.db.commit()  # nosemgrep
+    _update_item_modified_timestamp(items)
 
 
 def _bulk_insert_item_taxes(item_names, taxes):
-    fields = [
-        "name",
-        "parent",
-        "parenttype",
-        "parentfield",
-        "item_tax_template",
-        "tax_category",
-        "valid_from",
-        "minimum_net_rate",
-        "maximum_net_rate",
-        "creation",
-        "modified",
-        "modified_by",
-        "owner",
-        "idx",
-    ]
-
-    current_time = now()
-    current_user = frappe.session.user
-
-    values = []
+    documents = []
     for item_name in item_names:
-        for index, tax in enumerate(taxes):
+        for tax in taxes:
             tax = frappe._dict(tax)
-            values.append(
-                (
-                    random_string(10),  # name
-                    item_name,  # parent
-                    "Item",  # parenttype
-                    "taxes",  # parentfield
-                    tax.get("item_tax_template"),
-                    tax.get("tax_category"),
-                    tax.get("valid_from"),
-                    tax.get("minimum_net_rate", 0),
-                    tax.get("maximum_net_rate", 0),
-                    current_time,  # creation
-                    current_time,  # modified
-                    current_user,  # modified_by
-                    current_user,  # owner
-                    index + 1,  # idx
-                )
+            doc = frappe.new_doc("Item Tax")
+            doc.update(
+                {
+                    "name": random_string(10),
+                    "parent": item_name,
+                    "parenttype": "Item",
+                    "parentfield": "taxes",
+                    "item_tax_template": tax.get("item_tax_template"),
+                    "tax_category": tax.get("tax_category"),
+                    "valid_from": tax.get("valid_from"),
+                    "minimum_net_rate": tax.get("minimum_net_rate", 0),
+                    "maximum_net_rate": tax.get("maximum_net_rate", 0),
+                    "idx": tax.get("idx"),
+                }
             )
+            documents.append(doc)
 
-    if values:
-        frappe.db.bulk_insert("Item Tax", fields, values)
+    if documents:
+        bulk_insert("Item Tax", documents)
 
 
 def _update_item_modified_timestamp(item_names):
