@@ -4,9 +4,9 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import now, random_string
 
 from india_compliance.gst_india.utils import (
-    enable_autocommit,
     get_hsn_settings,
     join_list_with_custom_separators,
 )
@@ -23,28 +23,87 @@ def update_taxes_in_item_master(taxes, hsn_code):
     return 1
 
 
-@enable_autocommit
-def update_item_document(taxes, hsn_code):
-    taxes = frappe.parse_json(taxes)
-    items = frappe.get_list("Item", filters={"gst_hsn_code": hsn_code})
+BATCH_SIZE = 100
 
-    for index, item in enumerate(items):
-        item_to_be_updated = frappe.get_doc("Item", item.name)
-        item_to_be_updated.taxes = []
-        for tax in taxes:
+
+def update_item_document(taxes, hsn_code):
+    """Update taxes for all items with the given HSN code using bulk operations for performance."""
+    taxes = frappe.parse_json(taxes)
+    items = frappe.get_list("Item", filters={"gst_hsn_code": hsn_code}, pluck="name")
+
+    if not items:
+        return
+
+    for i in range(0, len(items), BATCH_SIZE):
+        batch_items = items[i : i + BATCH_SIZE]
+        _process_item_batch(batch_items, taxes)
+
+
+def _process_item_batch(batch_items, taxes):
+    frappe.db.delete("Item Tax", {"parent": ["in", batch_items]})
+
+    if taxes:
+        _bulk_insert_item_taxes(batch_items, taxes)
+
+    _update_item_modified_timestamp(batch_items)
+
+    # TODO: Add Versioning?
+
+    frappe.db.commit()
+
+
+def _bulk_insert_item_taxes(item_names, taxes):
+    fields = [
+        "name",
+        "parent",
+        "parenttype",
+        "parentfield",
+        "item_tax_template",
+        "tax_category",
+        "valid_from",
+        "minimum_net_rate",
+        "maximum_net_rate",
+        "creation",
+        "modified",
+        "modified_by",
+        "owner",
+        "idx",
+    ]
+
+    current_time = now()
+    current_user = frappe.session.user
+
+    values = []
+    for item_name in item_names:
+        for index, tax in enumerate(taxes):
             tax = frappe._dict(tax)
-            item_to_be_updated.append(
-                "taxes",
-                {
-                    "item_tax_template": tax.item_tax_template,
-                    "tax_category": tax.tax_category,
-                    "valid_from": tax.valid_from,
-                    "minimum_net_rate": tax.minimum_net_rate,
-                    "maximum_net_rate": tax.maximum_net_rate,
-                },
+            values.append(
+                (
+                    random_string(10),  # name
+                    item_name,  # parent
+                    "Item",  # parenttype
+                    "taxes",  # parentfield
+                    tax.item_tax_template,
+                    tax.tax_category,
+                    tax.valid_from,
+                    tax.minimum_net_rate,
+                    tax.maximum_net_rate,
+                    current_time,  # creation
+                    current_time,  # modified
+                    current_user,  # modified_by
+                    current_user,  # owner
+                    index + 1,  # idx
+                )
             )
 
-        item_to_be_updated.save()
+    if values:
+        frappe.db.bulk_insert("Item Tax", fields, values)
+
+
+def _update_item_modified_timestamp(item_names):
+    frappe.qb.update(frappe.qb.DocType("Item")).set("modified", frappe.utils.now()).set(
+        "modified_by", frappe.session.user
+    ).where(frappe.qb.DocType("Item").name.isin(item_names)).run()
 
 
 def validate_hsn_code(hsn_code):
