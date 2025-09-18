@@ -1998,7 +1998,6 @@ def summarize_retsum_data(input_data):
 
 
 class BooksDataMapper:
-
     def get_transaction_type(self, invoice):
         if invoice.is_debit_note:
             return "Debit Note"
@@ -2218,7 +2217,6 @@ class BooksDataMapper:
                 invoice_list.append(invoice)
 
                 for key, field in self.DATA_TO_INVOICE_FIELD_MAPPING.items():
-
                     for item in items:
                         invoice[key] += item.get(field, 0)
 
@@ -2567,16 +2565,23 @@ class GSTR1BooksData(BooksDataMapper):
             self.process_excluded_docs_for_quarterly(data, m1_m2_subcategories)
 
     def process_included_docs_for_quarterly(self, data, m1_m2_subcategories):
+        if not data or not isinstance(data, dict):
+            return
+
         included_docs = self.get_already_filed_docs(m1_m2_subcategories)
 
-        for category in data:
-            if category not in m1_m2_subcategories:
-                continue
+        categories_to_process = [
+            cat for cat in data.keys() if cat in m1_m2_subcategories
+        ]
 
-            included = data.setdefault("already_included_docs_for_quarterly", [])
+        if not categories_to_process:
+            return
 
+        included = data.setdefault("already_included_docs_for_quarterly", [])
+
+        for category in categories_to_process:
             for key, row in data[category].copy().items():
-                if key in included_docs:
+                if key not in included_docs:
                     continue
 
                 row["sub_category"] = category
@@ -2584,6 +2589,9 @@ class GSTR1BooksData(BooksDataMapper):
                 del data[category][key]
 
     def process_excluded_docs_for_quarterly(self, data, m1_m2_subcategories):
+        if not data or not isinstance(data, dict):
+            return
+
         for category in data.copy():
             if category in m1_m2_subcategories:
                 continue
