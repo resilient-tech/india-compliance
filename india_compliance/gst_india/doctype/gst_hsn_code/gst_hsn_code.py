@@ -36,7 +36,10 @@ def update_item_document(taxes, hsn_code):
     if taxes:
         _bulk_insert_item_taxes(items, taxes)
 
-    _update_item_modified_timestamp(items)
+    timestamp = frappe.utils.now()
+
+    _update_item_modified_timestamp(items, timestamp)
+    _add_comment_to_items(items, hsn_code, timestamp)
 
 
 def _bulk_insert_item_taxes(item_names, taxes):
@@ -65,14 +68,50 @@ def _bulk_insert_item_taxes(item_names, taxes):
         bulk_insert("Item Tax", documents)
 
 
-def _update_item_modified_timestamp(item_names):
+def _update_item_modified_timestamp(item_names, timestamp=None):
     item = frappe.qb.DocType("Item")
     (
         frappe.qb.update(item)
-        .set(item.modified, frappe.utils.now())
+        .set(item.modified, timestamp or frappe.utils.now())
         .set(item.modified_by, frappe.session.user)
         .where(frappe.qb.DocType("Item").name.isin(item_names))
     ).run()
+
+
+def _add_comment_to_items(item_names, hsn_code, timestamp=None):
+    """Add a comment to each Item document about the tax update from HSN code."""
+    if not item_names:
+        return
+
+    comment_text = (
+        f"Item tax was changed because of change from GST HSN Code {hsn_code}"
+    )
+
+    comment_docs = []
+    current_time = timestamp or frappe.utils.now()
+    current_user = frappe.session.user
+
+    for item_name in item_names:
+        comment_doc = frappe.new_doc("Comment")
+        comment_doc.update(
+            {
+                "name": random_string(10),
+                "comment_type": "Info",
+                "comment_email": current_user,
+                "comment_by": current_user,
+                "creation": current_time,
+                "modified": current_time,
+                "modified_by": current_user,
+                "owner": current_user,
+                "reference_doctype": "Item",
+                "reference_name": item_name,
+                "content": comment_text,
+            }
+        )
+        comment_docs.append(comment_doc)
+
+    if comment_docs:
+        bulk_insert("Comment", comment_docs)
 
 
 def validate_hsn_code(hsn_code):
