@@ -42,7 +42,7 @@ def update_item_document(taxes, hsn_code):
 def _bulk_insert_item_taxes(item_names, taxes):
     documents = []
     for item_name in item_names:
-        for tax in taxes:
+        for index, tax in enumerate(taxes):
             tax = frappe._dict(tax)
             doc = frappe.new_doc("Item Tax")
             doc.update(
@@ -56,7 +56,7 @@ def _bulk_insert_item_taxes(item_names, taxes):
                     "valid_from": tax.get("valid_from"),
                     "minimum_net_rate": tax.get("minimum_net_rate", 0),
                     "maximum_net_rate": tax.get("maximum_net_rate", 0),
-                    "idx": tax.get("idx"),
+                    "idx": tax.get("idx", index + 1),
                 }
             )
             documents.append(doc)
