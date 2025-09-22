@@ -1389,6 +1389,7 @@ GST_TAX_RATES = {
     12.000,
     18.000,
     28.000,
+    40.000,
 }
 
 # REGEX PATTERNS (https://developer.gst.gov.in/apiportal/taxpayer/returns)
