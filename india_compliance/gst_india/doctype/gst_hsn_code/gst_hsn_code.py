@@ -24,7 +24,6 @@ def update_taxes_in_item_master(taxes, hsn_code):
 
 
 def update_item_document(taxes, hsn_code):
-    """Update taxes for all items with the given HSN code using bulk operations for performance."""
     taxes = frappe.parse_json(taxes)
     items = frappe.get_list("Item", filters={"gst_hsn_code": hsn_code}, pluck="name")
 
@@ -79,13 +78,10 @@ def _update_item_modified_timestamp(item_names, timestamp=None):
 
 
 def _add_comment_to_items(item_names, hsn_code, timestamp=None):
-    """Add a comment to each Item document about the tax update from HSN code."""
     if not item_names:
         return
 
-    comment_text = (
-        f"Item tax was changed because of change from GST HSN Code {hsn_code}"
-    )
+    comment_text = f"changed item tax from GST HSN Code {hsn_code}"
 
     comment_docs = []
     current_time = timestamp or frappe.utils.now()
