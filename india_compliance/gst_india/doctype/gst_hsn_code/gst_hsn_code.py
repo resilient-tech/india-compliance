@@ -3,10 +3,10 @@
 
 import frappe
 from frappe import _
-from frappe.model.document import Document
+from frappe.model.document import Document, bulk_insert
+from frappe.utils import random_string
 
 from india_compliance.gst_india.utils import (
-    enable_autocommit,
     get_hsn_settings,
     join_list_with_custom_separators,
 )
@@ -23,28 +23,91 @@ def update_taxes_in_item_master(taxes, hsn_code):
     return 1
 
 
-@enable_autocommit
 def update_item_document(taxes, hsn_code):
     taxes = frappe.parse_json(taxes)
-    items = frappe.get_list("Item", filters={"gst_hsn_code": hsn_code})
+    items = frappe.get_list("Item", filters={"gst_hsn_code": hsn_code}, pluck="name")
 
-    for index, item in enumerate(items):
-        item_to_be_updated = frappe.get_doc("Item", item.name)
-        item_to_be_updated.taxes = []
-        for tax in taxes:
+    if not items:
+        return
+
+    frappe.db.delete("Item Tax", {"parent": ["in", items]})
+
+    if taxes:
+        _bulk_insert_item_taxes(items, taxes)
+
+    timestamp = frappe.utils.now()
+
+    _update_item_modified_timestamp(items, timestamp)
+    _add_comment_to_items(items, hsn_code, timestamp)
+
+
+def _bulk_insert_item_taxes(item_names, taxes):
+    documents = []
+    for item_name in item_names:
+        for index, tax in enumerate(taxes):
             tax = frappe._dict(tax)
-            item_to_be_updated.append(
-                "taxes",
+            doc = frappe.new_doc("Item Tax")
+            doc.update(
                 {
-                    "item_tax_template": tax.item_tax_template,
-                    "tax_category": tax.tax_category,
-                    "valid_from": tax.valid_from,
-                    "minimum_net_rate": tax.minimum_net_rate,
-                    "maximum_net_rate": tax.maximum_net_rate,
-                },
+                    "name": random_string(10),
+                    "parent": item_name,
+                    "parenttype": "Item",
+                    "parentfield": "taxes",
+                    "item_tax_template": tax.get("item_tax_template"),
+                    "tax_category": tax.get("tax_category"),
+                    "valid_from": tax.get("valid_from"),
+                    "minimum_net_rate": tax.get("minimum_net_rate", 0),
+                    "maximum_net_rate": tax.get("maximum_net_rate", 0),
+                    "idx": tax.get("idx", index + 1),
+                }
             )
+            documents.append(doc)
 
-        item_to_be_updated.save()
+    if documents:
+        bulk_insert("Item Tax", documents)
+
+
+def _update_item_modified_timestamp(item_names, timestamp=None):
+    item = frappe.qb.DocType("Item")
+    (
+        frappe.qb.update(item)
+        .set(item.modified, timestamp or frappe.utils.now())
+        .set(item.modified_by, frappe.session.user)
+        .where(item.name.isin(item_names))
+    ).run()
+
+
+def _add_comment_to_items(item_names, hsn_code, timestamp=None):
+    if not item_names:
+        return
+
+    comment_text = f"changed item tax from GST HSN Code {hsn_code}"
+
+    comment_docs = []
+    current_time = timestamp or frappe.utils.now()
+    current_user = frappe.session.user
+
+    for item_name in item_names:
+        comment_doc = frappe.new_doc("Comment")
+        comment_doc.update(
+            {
+                "name": random_string(10),
+                "comment_type": "Info",
+                "comment_email": current_user,
+                "comment_by": current_user,
+                "creation": current_time,
+                "modified": current_time,
+                "modified_by": current_user,
+                "owner": current_user,
+                "reference_doctype": "Item",
+                "reference_name": item_name,
+                "content": comment_text,
+            }
+        )
+        comment_docs.append(comment_doc)
+
+    if comment_docs:
+        bulk_insert("Comment", comment_docs)
 
 
 def validate_hsn_code(hsn_code):
