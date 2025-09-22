@@ -55,12 +55,12 @@ class BillofEntry(Document):
 
     def before_validate(self):
         self.set_taxes_and_totals()
-        set_gst_tax_type(self)
 
     def before_submit(self):
         self.validate_qty()
 
     def validate(self):
+        set_gst_tax_type(self)
         self.validate_purchase_invoice()
         self.validate_taxes()
         self.reconciliation_status = "Unreconciled"
