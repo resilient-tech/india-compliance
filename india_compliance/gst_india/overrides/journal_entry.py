@@ -7,7 +7,7 @@ from india_compliance.gst_india.overrides.transaction import (
 from india_compliance.gst_india.utils import get_gst_account_gst_tax_type_map
 
 
-def before_validate(doc, method=None):
+def set_gst_tax_type(doc, method=None):
     if not doc.accounts:
         return
 
@@ -23,6 +23,8 @@ def before_validate(doc, method=None):
 def validate(doc, method=None):
     if doc.company_gstin or not is_indian_registered_company(doc):
         return
+
+    set_gst_tax_type(doc)
 
     # validate company_gstin
     contains_gst_account = False
