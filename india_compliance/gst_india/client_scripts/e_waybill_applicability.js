@@ -277,11 +277,6 @@ class StockEntryEwaybill extends EwaybillApplicability {
             message_list.push("Bill From GSTIN and Bill To GSTIN are same.");
         }
 
-        if (!same_gstin && applicable_for_same_gstin) {
-            is_ewb_applicable = false;
-            message_list.push("Bill From GSTIN and Bill To GSTIN are different.");
-        }
-
         if (this.frm.doc.is_opening === "Yes") {
             is_ewb_applicable = false;
             message_list.push(
