@@ -908,10 +908,10 @@
         "request_data": {
             "BuyerDtls": {
                 "Addr1": "Test Address - 3",
-                "Gstin": "29ABCDE1234F1Z5",
+                "Gstin": "29AAACI1195H2ZH",
                 "LglNm": "_Test Registered Customer",
                 "Loc": "Test City",
-                "Pin": 500055,
+                "Pin": 560001,
                 "Pos": "29",
                 "Stcd": "29",
                 "TrdNm": "_Test Registered Customer"
@@ -974,14 +974,14 @@
             "ErrorDetails": [
                 {
                     "ErrorCode": "3029",
-                    "ErrorMessage": "GSTIN -29ABCDE1234F1Z5 is inactive or cancelled"
+                    "ErrorMessage": "GSTIN -29AAACI1195H2ZH is inactive or cancelled"
                 }
             ],
             "Status": 0,
             "error_code": "3029"
         },
         "error_response_enriched": {
-            "message": "3029: GSTIN -29ABCDE1234F1Z5 is inactive or cancelled",
+            "message": "3029: GSTIN -29AAACI1195H2ZH is inactive or cancelled",
             "success": false
         },
         "sync_gstin_response_inactive": {
@@ -995,7 +995,7 @@
                     "Bnm": "Test Building",
                     "St": "Test Street",
                     "Loc": "Test Location",
-                    "Pncd": "500055",
+                    "Pncd": "560001",
                     "Stcd": "29"
                 }
             },
