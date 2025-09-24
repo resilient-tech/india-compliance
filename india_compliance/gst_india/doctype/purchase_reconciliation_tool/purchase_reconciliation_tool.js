@@ -68,6 +68,9 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         new india_compliance.quick_info_popover(frm, tooltip_info);
 
         await frappe.require("purchase_reconciliation_tool.bundle.js");
+         if (!frm.doc.company) {
+            frm.doc.company = frappe.defaults.get_user_default("Company");
+        }
         frm.trigger("company");
         frm.purchase_reconciliation_tool = new PurchaseReconciliationTool(frm);
 
