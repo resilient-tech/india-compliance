@@ -3,8 +3,11 @@
 
 import frappe
 from frappe import _
-from frappe.query_builder.functions import Sum
-from frappe.utils import cstr
+from frappe.query_builder.functions import IfNull, Sum
+from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
+    get_accounting_dimensions,
+    get_dimension_with_children,
+)
 
 from india_compliance.gst_india.utils import get_all_gst_accounts, get_gstin_list
 from india_compliance.patches.post_install.update_company_gstin import (
@@ -60,9 +63,6 @@ class GSTBalanceReport:
         self.validate_filters()
         self.gst_accounts = get_all_gst_accounts(filters.company)
         self.gl_entry = frappe.qb.DocType("GL Entry")
-        self.default_finance_book = frappe.get_cached_value(
-            "Company", self.filters.company, "default_finance_book"
-        )
 
     def validate_filters(self):
         if not self.filters.company:
@@ -258,17 +258,56 @@ class GSTBalanceReport:
             .where(self.gl_entry.is_cancelled == 0)
             .where(self.gl_entry.company == self.filters.company)
             .where(self.gl_entry.account.isin(self.gst_accounts))
-            .where(
-                (self.gl_entry.finance_book.isin(["", cstr(self.default_finance_book)]))
-                | (self.gl_entry.finance_book.isnull())
-            )
             .groupby(self.gl_entry.account)
         )
+
+        query = self.prepare_conditions(query)
+
+        return query
+
+    def prepare_conditions(self, query):
 
         if self.filters.company_gstin:
             query = query.where(
                 self.gl_entry.company_gstin == self.filters.company_gstin
             )
+
+        if self.filters.finance_book:
+            query = query.where(
+                IfNull(self.gl_entry.finance_book, "") == self.filters.finance_book
+            )
+
+        if self.filters.cost_center:
+            query = query.where(
+                (self.gl_entry.cost_center).isin(self.filters.cost_center)
+            )
+
+        if self.filters.project:
+            query = query.where((self.gl_entry.project).isin(self.filters.project))
+
+        accounting_dimensions = get_accounting_dimensions(as_list=False)
+
+        if accounting_dimensions:
+            for dimension in accounting_dimensions:
+                if self.filters.get(dimension.fieldname):
+                    if frappe.get_cached_value(
+                        "DocType", dimension.document_type, "is_tree"
+                    ):
+                        self.filters[dimension.fieldname] = get_dimension_with_children(
+                            dimension.document_type,
+                            self.filters.get(dimension.fieldname),
+                        )
+                        query = query.where(
+                            (self.gl_entry[dimension.fieldname]).isin(
+                                self.filters.get(dimension.fieldname)
+                            )
+                        )
+                    else:
+                        query = query.where(
+                            (self.gl_entry[dimension.fieldname]).isin(
+                                self.filters.get(dimension.fieldname)
+                            )
+                        )
 
         return query
 
