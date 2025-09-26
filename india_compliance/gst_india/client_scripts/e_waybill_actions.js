@@ -339,7 +339,11 @@ function show_generate_e_waybill_dialog(frm) {
 
 function get_generate_e_waybill_dialog(opts, frm) {
     if (!frm) frm = { doc: {} };
-    const ewaybill_defaults = get_sub_suppy_type_options(frm);
+    const is_foreign_transaction =
+        frm.doc.gst_category === "Overseas" &&
+        frm.doc.place_of_supply === "96-Other Countries";
+
+    const ewaybill_defaults = get_sub_suppy_type_options(frm, is_foreign_transaction);
 
     const fields = [
         {
@@ -476,10 +480,6 @@ function get_generate_e_waybill_dialog(opts, frm) {
         },
     ];
 
-    const is_foreign_transaction =
-        frm.doc.gst_category === "Overseas" &&
-        frm.doc.place_of_supply === "96-Other Countries";
-
     if (frm.doctype === "Sales Invoice" && is_foreign_transaction) {
         fields.splice(5, 0, {
             label: "Origin Port / Border Checkpost Address",
@@ -509,7 +509,7 @@ function get_generate_e_waybill_dialog(opts, frm) {
     return d;
 }
 
-function get_sub_suppy_type_options(frm) {
+function get_sub_suppy_type_options(frm, is_foreign_transaction) {
     let supply_type, sub_supply_type, sub_supply_desc, document_type;
 
     if (frm.doctype === "Delivery Note") {
@@ -561,12 +561,20 @@ function get_sub_suppy_type_options(frm) {
                 ];
             }
         }
+    } else if (
+        frm.doctype === "Sales Invoice" &&
+        frm.doc.is_return === 0 &&
+        is_foreign_transaction
+    ) {
+        supply_type = "Outward";
+        sub_supply_type = ["Export"];
+        document_type = "Tax Invoice";
     } else {
         const key = `${frm.doctype}_${frm.doc.is_return || 0}`;
         const default_supply_types = {
             "Sales Invoice_0": {
                 supply_type: "Outward",
-                sub_supply_type: ["Supply", "Export"],
+                sub_supply_type: ["Supply"],
                 document_type: "Tax Invoice",
             },
             "Sales Invoice_1": {
