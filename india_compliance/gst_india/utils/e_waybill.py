@@ -164,7 +164,9 @@ def _generate_e_waybill(doc, throw=True, force=False):
 
         with_irn = (
             doc.get("irn")
-            and all(item.gst_treatment in TAXABLE_GST_TREATMENTS for item in doc.items)
+            and all(
+                item.gst_treatment in ("Taxable", "Zero-Rated") for item in doc.items
+            )
             and not (doc.is_return or doc.get("is_debit_note") or is_foreign_doc(doc))
         )
 

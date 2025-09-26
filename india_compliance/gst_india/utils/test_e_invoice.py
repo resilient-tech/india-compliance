@@ -247,48 +247,6 @@ class TestEInvoice(FrappeTestCase):
         )
 
     @responses.activate
-<<<<<<< HEAD
-=======
-    @change_settings("GST Settings", {"use_fallback_for_nic": 0, "sandbox_mode": 0})
-    def test_generate_e_invoice_with_cancelled_shipping_gstin_standard(self):
-        """Test error handling for cancelled shipping GSTIN - Standard API (error 3029)"""
-
-        test_data = self.e_invoice_test_data.get("gstin_error_3029_cancelled")
-        si = create_sales_invoice(
-            **test_data.get("kwargs"),
-            qty=1000,
-            is_in_state=True,
-        )
-
-        error_response = test_data.get("error_response_standard")
-
-        responses.add(
-            responses.POST,
-            BASE_URL + "/standard/ei/api/invoice",
-            json=error_response,
-            status=200,
-        )
-
-        sync_gstin_response = test_data.get("sync_gstin_response_inactive")
-
-        responses.add(
-            responses.GET,
-            BASE_URL + "/standard/ei/api/master/syncgstin",
-            match=[matchers.query_param_matcher({"gstin": "29AAACI1195H2ZH"})],
-            json=sync_gstin_response,
-            status=200,
-        )
-
-        with self.assertRaises(frappe.exceptions.ValidationError) as cm:
-            frappe.flags.bypass_auth = True
-            generate_e_invoice(si.name)
-
-        self.assertIn(
-            "GSTIN -29AAACI1195H2ZH is inactive or cancelled", str(cm.exception)
-        )
-
-    @responses.activate
->>>>>>> 46a6d269 (test: update correct GSTIN and address details in test data for e-invoice and e-waybill)
     def test_generate_e_invoice_with_goods_item(self):
         """Generate test e-Invoice for goods item"""
         frappe.db.set_single_value(
