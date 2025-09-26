@@ -68,11 +68,20 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         new india_compliance.quick_info_popover(frm, tooltip_info);
 
         await frappe.require("purchase_reconciliation_tool.bundle.js");
+<<<<<<< HEAD
          if (!frm.doc.company) {
             frm.doc.company = frappe.defaults.get_user_default("Company");
         }
         frm.trigger("company");
         frm.purchase_reconciliation_tool = new PurchaseReconciliationTool(frm);
+=======
+        frm.set_value("company", frappe.defaults.get_user_default("Company"));
+        frm.reconciliation_tabs = new PurchaseReconciliationTool(
+            frm,
+            ["invoice", "supplier", "summary"],
+            "reconciliation_html"
+        );
+>>>>>>> f82ae9d7 (fix: set session default company in ims,pur reco and gstr-1)
 
         frm.events.handle_download_message(frm);
     },

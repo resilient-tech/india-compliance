@@ -105,15 +105,14 @@ const GSTR1_DataField = {
 
 frappe.ui.form.on(DOCTYPE, {
     async setup(frm) {
-        frappe.require("gstr1.bundle.js").then(() => {
+        await frappe.require("gstr1.bundle.js").then(() => {
             frm.gstr1 = new GSTR1(frm);
-            frm.trigger("company");
         });
 
         frm.filing_frequency = gst_settings.filing_frequency;
 
         // Set Default Values
-        set_default_company_gstin(frm);
+        frm.set_value("company", frappe.defaults.get_user_default("Company"));
         set_options_for_year(frm);
         set_options_for_month_or_quarter(frm);
 
@@ -175,7 +174,6 @@ frappe.ui.form.on(DOCTYPE, {
 
     async company(frm) {
         render_empty_state(frm);
-
         if (!frm.doc.company) return;
         const options = await india_compliance.set_gstin_options(frm);
 
@@ -2118,6 +2116,7 @@ function patch_set_indicator(frm) {
     frm.toolbar.set_indicator = function () {};
 }
 
+<<<<<<< HEAD:india_compliance/gst_india/doctype/gstr_1_beta/gstr_1_beta.js
 async function set_default_company_gstin(frm) {
     frm.set_value("company_gstin", "");
 
@@ -2133,6 +2132,8 @@ async function set_default_company_gstin(frm) {
         frm.set_value("company_gstin", gstin_list[0]);
     }
 }
+=======
+>>>>>>> f82ae9d7 (fix: set session default company in ims,pur reco and gstr-1):india_compliance/gst_india/doctype/gstr_1/gstr_1.js
 
 function set_options_for_year(frm) {
     const today = new Date();
