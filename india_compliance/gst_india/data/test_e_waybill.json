@@ -1278,7 +1278,9 @@
             "company_address": "_Test Indian Registered Company-Billing",
             "customer": "_Test Registered Customer",
             "currency": "INR",
-            "is_in_state": false
+            "is_in_state": false,
+            "is_out_state": true,
+            "customer_address": "_Test Registered Customer-Billing-3"
         },
         "request_data": {
             "userGstin": "05AAACG2115R1ZN",
@@ -1296,10 +1298,10 @@
             "fromStateCode": 5,
             "actFromStateCode": 5,
             "toTrdName": "_Test Registered Customer",
-            "toGstin": "29ABCDE1234F1Z5",
+            "toGstin": "29AAACI1195H2ZH",
             "toAddr1": "Test Address - 3",
             "toPlace": "Test City",
-            "toPincode": 500055,
+            "toPincode": 560001,
             "toStateCode": 29,
             "actToStateCode": 29,
             "totalValue": 100000.0,
@@ -1337,14 +1339,14 @@
             "ErrorDetails": [
                 {
                     "ErrorCode": "3029",
-                    "ErrorMessage": "GSTIN -29ABCDE1234F1Z5 is inactive or cancelled"
+                    "ErrorMessage": "GSTIN -29AAACI1195H2ZH is inactive or cancelled"
                 }
             ],
             "Status": 0,
             "error_code": "3029"
         },
         "error_response_enriched": {
-            "message": "3029: GSTIN -29ABCDE1234F1Z5 is inactive or cancelled",
+            "message": "3029: GSTIN -29AAACI1195H2ZH is inactive or cancelled",
             "success": false
         },
         "sync_gstin_response_inactive": {
