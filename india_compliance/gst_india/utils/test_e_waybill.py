@@ -1257,7 +1257,7 @@ class TestEWaybill(FrappeTestCase):
         responses.add(
             responses.GET,
             BASE_URL + "/test/ei/api/master/syncgstin",
-            match=[matchers.query_param_matcher({"gstin": "29ABCDE1234F1Z5"})],
+            match=[matchers.query_param_matcher({"gstin": "29AAACI1195H2ZH"})],
             json=sync_gstin_response,
             status=200,
         )
@@ -1267,7 +1267,7 @@ class TestEWaybill(FrappeTestCase):
             _generate_e_waybill(doc)
 
         self.assertIn(
-            "GSTIN -29ABCDE1234F1Z5 is inactive or cancelled", str(cm.exception)
+            "GSTIN -29AAACI1195H2ZH is inactive or cancelled", str(cm.exception)
         )
 
     @responses.activate
@@ -1302,7 +1302,7 @@ class TestEWaybill(FrappeTestCase):
         responses.add(
             responses.GET,
             BASE_URL + "/standard/ei/api/master/syncgstin",
-            match=[matchers.query_param_matcher({"gstin": "29ABCDE1234F1Z5"})],
+            match=[matchers.query_param_matcher({"gstin": "29AAACI1195H2ZH"})],
             json=sync_gstin_response,
             status=200,
         )
@@ -1315,7 +1315,7 @@ class TestEWaybill(FrappeTestCase):
             frappe.flags.bypass_auth = False
 
         self.assertIn(
-            "GSTIN -29ABCDE1234F1Z5 is inactive or cancelled", str(cm.exception)
+            "GSTIN -29AAACI1195H2ZH is inactive or cancelled", str(cm.exception)
         )
 
     # helper functions
