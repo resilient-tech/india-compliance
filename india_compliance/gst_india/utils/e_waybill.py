@@ -1057,7 +1057,12 @@ def update_transaction(doc, values):
 
     doc.db_set(data)
 
-    if doc.doctype in ("Delivery Note", "Stock Entry", "Subcontracting Receipt"):
+    if doc.doctype in (
+        "Delivery Note",
+        "Stock Entry",
+        "Subcontracting Receipt",
+        "Sales Invoice",
+    ):
         doc._sub_supply_type = SUB_SUPPLY_TYPES[values.sub_supply_type]
     if doc.doctype in ("Delivery Note", "Stock Entry"):
         doc._sub_supply_desc = values.sub_supply_desc
@@ -1506,7 +1511,7 @@ class EWaybillData(GSTTransactionData):
             # Key: (doctype, is_return)
             ("Sales Invoice", 0): {
                 "supply_type": "O",
-                "sub_supply_type": 1,  # Supply
+                "sub_supply_type": doc.get("_sub_supply_type", ""),
                 "document_type": "INV",
             },
             ("Sales Invoice", 1): {
