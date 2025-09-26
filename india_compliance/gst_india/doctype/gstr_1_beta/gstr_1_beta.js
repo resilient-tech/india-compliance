@@ -105,13 +105,12 @@ const GSTR1_DataField = {
 
 frappe.ui.form.on(DOCTYPE, {
     async setup(frm) {
-        frappe.require("gstr1.bundle.js").then(() => {
+        await frappe.require("gstr1.bundle.js").then(() => {
             frm.gstr1 = new GSTR1(frm);
-            frm.trigger("company");
         });
 
         // Set Default Values
-        set_default_company_gstin(frm);
+        frm.set_value("company", frappe.defaults.get_user_default("Company"));
         set_options_for_year(frm);
         set_options_for_month_or_quarter(frm);
 
@@ -198,7 +197,6 @@ frappe.ui.form.on(DOCTYPE, {
 
     async company(frm) {
         render_empty_state(frm);
-
         if (!frm.doc.company) return;
         const options = await india_compliance.set_gstin_options(frm, false, true);
 
@@ -3105,21 +3103,6 @@ function patch_set_indicator(frm) {
     frm.toolbar.set_indicator = function () {};
 }
 
-async function set_default_company_gstin(frm) {
-    frm.set_value("company_gstin", "");
-
-    const company = frm.doc.company;
-    if (!company) return;
-
-    const { message: gstin_list } = await frappe.call(
-        "india_compliance.gst_india.utils.get_gstin_list",
-        { party: company, exclude_isd: true }
-    );
-
-    if (gstin_list && gstin_list.length) {
-        frm.set_value("company_gstin", gstin_list[0]);
-    }
-}
 
 function update_filing_preference(frm) {
     const { month_or_quarter, year, company_gstin } = frm.doc;
