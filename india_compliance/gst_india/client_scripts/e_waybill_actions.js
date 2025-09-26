@@ -566,7 +566,7 @@ function get_sub_suppy_type_options(frm) {
         const default_supply_types = {
             "Sales Invoice_0": {
                 supply_type: "Outward",
-                sub_supply_type: ["Supply"],
+                sub_supply_type: ["Supply", "Export"],
                 document_type: "Tax Invoice",
             },
             "Sales Invoice_1": {
