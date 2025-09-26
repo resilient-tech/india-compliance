@@ -29,8 +29,7 @@ frappe.ui.form.on(DOCTYPE, {
             "invoice_html"
         );
 
-        frm.trigger("company");
-
+        frm.set_value("company", frappe.defaults.get_user_default("Company"));
         // Setup Listeners
 
         // Download Queued
