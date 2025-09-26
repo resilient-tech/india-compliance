@@ -63,6 +63,21 @@ class GSTBalanceReport:
         self.validate_filters()
         self.gst_accounts = get_all_gst_accounts(filters.company)
         self.gl_entry = frappe.qb.DocType("GL Entry")
+        self.accounting_dimensions = get_accounting_dimensions(as_list=False) or []
+        self.accounting_dimensions.extend(
+            [
+                {
+                    "fieldname": "cost_center",
+                    "document_type": "Cost Center",
+                },
+                {
+                    "fieldname": "project",
+                    "document_type": "Project",
+                },
+            ]
+        )
+
+        self.update_child_filters()
 
     def validate_filters(self):
         if not self.filters.company:
@@ -76,6 +91,18 @@ class GSTBalanceReport:
 
         if self.filters.from_date and self.filters.from_date > self.filters.to_date:
             frappe.throw(_("From Date cannot be greater than To Date"))
+
+    def update_child_filters(self):
+        for dimension in self.accounting_dimensions:
+            dimension = frappe._dict(dimension)
+            if self.filters.get(dimension.fieldname):
+                if frappe.get_cached_value(
+                    "DocType", dimension.document_type, "is_tree"
+                ):
+                    self.filters[dimension.fieldname] = get_dimension_with_children(
+                        dimension.document_type,
+                        self.filters.get(dimension.fieldname),
+                    )
 
     def get_columns(self):
         company_currency = frappe.get_cached_value(
@@ -277,37 +304,14 @@ class GSTBalanceReport:
                 IfNull(self.gl_entry.finance_book, "") == self.filters.finance_book
             )
 
-        if self.filters.cost_center:
-            query = query.where(
-                (self.gl_entry.cost_center).isin(self.filters.cost_center)
-            )
-
-        if self.filters.project:
-            query = query.where((self.gl_entry.project).isin(self.filters.project))
-
-        accounting_dimensions = get_accounting_dimensions(as_list=False)
-
-        if accounting_dimensions:
-            for dimension in accounting_dimensions:
-                if self.filters.get(dimension.fieldname):
-                    if frappe.get_cached_value(
-                        "DocType", dimension.document_type, "is_tree"
-                    ):
-                        self.filters[dimension.fieldname] = get_dimension_with_children(
-                            dimension.document_type,
-                            self.filters.get(dimension.fieldname),
-                        )
-                        query = query.where(
-                            (self.gl_entry[dimension.fieldname]).isin(
-                                self.filters.get(dimension.fieldname)
-                            )
-                        )
-                    else:
-                        query = query.where(
-                            (self.gl_entry[dimension.fieldname]).isin(
-                                self.filters.get(dimension.fieldname)
-                            )
-                        )
+        for dimension in self.accounting_dimensions:
+            dimension = frappe._dict(dimension)
+            if self.filters.get(dimension.fieldname):
+                query = query.where(
+                    (self.gl_entry[dimension.fieldname]).isin(
+                        self.filters.get(dimension.fieldname)
+                    )
+                )
 
         return query
 
