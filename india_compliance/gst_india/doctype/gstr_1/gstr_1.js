@@ -105,12 +105,12 @@ const GSTR1_DataField = {
 
 frappe.ui.form.on(DOCTYPE, {
     async setup(frm) {
-        await frappe.require("gstr1.bundle.js").then(() => {
-            frm.gstr1 = new GSTR1(frm);
-        });
+        await frappe.require("gstr1.bundle.js");
+        frm.gstr1 = new GSTR1(frm);
 
         // Set Default Values
-        frm.set_value("company", frappe.defaults.get_user_default("Company"));
+        frm.doc.company = frappe.defaults.get_user_default("Company");
+        frm.trigger("company");
         set_options_for_year(frm);
         set_options_for_month_or_quarter(frm);
 
@@ -3102,7 +3102,6 @@ function is_gstr1_api_enabled() {
 function patch_set_indicator(frm) {
     frm.toolbar.set_indicator = function () {};
 }
-
 
 function update_filing_preference(frm) {
     const { month_or_quarter, year, company_gstin } = frm.doc;
