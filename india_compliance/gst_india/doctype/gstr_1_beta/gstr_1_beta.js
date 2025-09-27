@@ -105,14 +105,14 @@ const GSTR1_DataField = {
 
 frappe.ui.form.on(DOCTYPE, {
     async setup(frm) {
-        await frappe.require("gstr1.bundle.js").then(() => {
-            frm.gstr1 = new GSTR1(frm);
-        });
+        await frappe.require("gstr1.bundle.js");
+        frm.gstr1 = new GSTR1(frm);
 
         frm.filing_frequency = gst_settings.filing_frequency;
 
         // Set Default Values
-        frm.set_value("company", frappe.defaults.get_user_default("Company"));
+        frm.doc.company = frappe.defaults.get_user_default("Company");
+        frm.trigger("company");
         set_options_for_year(frm);
         set_options_for_month_or_quarter(frm);
 
@@ -2117,11 +2117,17 @@ function patch_set_indicator(frm) {
 }
 
 <<<<<<< HEAD:india_compliance/gst_india/doctype/gstr_1_beta/gstr_1_beta.js
+<<<<<<< HEAD:india_compliance/gst_india/doctype/gstr_1_beta/gstr_1_beta.js
 async function set_default_company_gstin(frm) {
     frm.set_value("company_gstin", "");
 
     const company = frm.doc.company;
     if (!company) return;
+=======
+function update_filing_preference(frm) {
+    const { month_or_quarter, year, company_gstin } = frm.doc;
+    if (!month_or_quarter || !year || !company_gstin) return;
+>>>>>>> 8a4506ac (fix: trigger is important; set_value only triggers if value changes):india_compliance/gst_india/doctype/gstr_1/gstr_1.js
 
     const { message: gstin_list } = await frappe.call(
         "india_compliance.gst_india.utils.get_gstin_list",

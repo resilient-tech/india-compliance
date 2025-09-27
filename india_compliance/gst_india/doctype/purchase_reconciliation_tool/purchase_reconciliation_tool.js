@@ -69,6 +69,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
 
         await frappe.require("purchase_reconciliation_tool.bundle.js");
 <<<<<<< HEAD
+<<<<<<< HEAD
          if (!frm.doc.company) {
             frm.doc.company = frappe.defaults.get_user_default("Company");
         }
@@ -76,6 +77,12 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         frm.purchase_reconciliation_tool = new PurchaseReconciliationTool(frm);
 =======
         frm.set_value("company", frappe.defaults.get_user_default("Company"));
+=======
+
+        frm.doc.company = frappe.defaults.get_user_default("Company");
+        frm.trigger("company");
+
+>>>>>>> 8a4506ac (fix: trigger is important; set_value only triggers if value changes)
         frm.reconciliation_tabs = new PurchaseReconciliationTool(
             frm,
             ["invoice", "supplier", "summary"],
