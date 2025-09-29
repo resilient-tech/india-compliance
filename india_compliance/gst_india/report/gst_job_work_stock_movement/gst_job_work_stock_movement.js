@@ -58,15 +58,26 @@ frappe.query_reports["GST Job Work Stock Movement"] = {
         },
     ],
     onload: function (query_report) {
+        const handle_download = (response) => {
+            india_compliance.trigger_file_download(
+                JSON.stringify(response.data),
+                response.filename
+            );
+        };
+
         query_report.page.add_inner_button(__("Export JSON"), function () {
             frappe.call({
                 method: "india_compliance.gst_india.utils.itc_04.itc_04_export.download_itc_04_json",
                 args: { filters: query_report.get_values() },
                 callback: r => {
-                    india_compliance.trigger_file_download(
-                        JSON.stringify(r.message.data),
-                        r.message.filename
-                    );
+                    if (r.message && r.message.has_invalid_data) {
+                        frappe.confirm(
+                            __("Some entries are skipped in Table 5A because <strong>Original Challan No</strong> is missing.<br><br>Do you want to continue with the download?"),
+                            () => handle_download(r.message),
+                        );
+                    } else {
+                        handle_download(r.message);
+                    }
                 },
             });
         });
