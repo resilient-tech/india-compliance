@@ -200,6 +200,7 @@ class ITC04Query:
             self.get_base_query_table_5A(self.sr, self.sr_item, self.ref_doc)
             .select(
                 IfNull(self.sr.supplier_delivery_note, "").as_("invoice_no"),
+                self.sr.name.as_("original_invoice_no"),
                 self.sr_item.stock_uom.as_("uom"),
                 self.sr.company_gstin,
                 self.sr.supplier_gstin,
