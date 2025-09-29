@@ -140,7 +140,7 @@ class ITC04Query:
             frappe.qb.from_(doc)
             .inner_join(doc_item)
             .on(doc.name == doc_item.parent)
-            .inner_join(ref_doc)
+            .left_join(ref_doc)
             .on(ref_doc.parent == doc.name)
             .select(
                 IfNull(doc_item.item_code, doc_item.item_name).as_("item_code"),
