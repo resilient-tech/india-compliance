@@ -57,6 +57,22 @@ frappe.query_reports["GST Job Work Stock Movement"] = {
             reqd: 1,
         },
     ],
+
+    formatter: (value, row, column, data, default_formatter) => {
+        value = default_formatter(value, row, column, data);
+        // replace href with link to original return doc
+        if (data && column.fieldname === "invoice_no" && data.invoice_no && data.original_invoice_no) {
+            value = frappe.utils.get_form_link(
+                data.invoice_type,
+                data.original_invoice_no,
+                true,
+                data.invoice_no
+            );
+        }
+
+        return value;
+    },
+
     onload: function (query_report) {
         const handle_download = (response) => {
             india_compliance.trigger_file_download(
