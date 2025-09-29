@@ -26,10 +26,11 @@ def download_itc_04_json(filters):
     ret_period = get_return_period(filters)
 
     data = get_data(filters)
+    has_invalid_data = data.pop("has_invalid_data", False)
 
     GenerateGSTR1().normalize_data(data)
 
-    return {
+    response = {
         "data": {
             "gstin": company_gstin,
             "fp": ret_period,
@@ -37,6 +38,11 @@ def download_itc_04_json(filters):
         },
         "filename": f"ITC-04-Gov-{company_gstin}-{ret_period}.json",
     }
+
+    if has_invalid_data:
+        response["has_invalid_data"] = True
+
+    return response
 
 
 def get_return_period(filters):
@@ -86,10 +92,18 @@ def get_data(filters):
         as_dict=True
     ) + itc04.get_query_table_5A_sr().run(as_dict=True)
 
-    return {
-        ITC04JsonKey.FG_RECEIVED.value: process_table_5a_data(table_5a_data),
+    fg_received_data = process_table_5a_data(table_5a_data)
+    has_invalid_data = fg_received_data.pop("has_invalid_data", False)
+
+    data = {
+        ITC04JsonKey.FG_RECEIVED.value: fg_received_data,
         ITC04JsonKey.RM_SENT.value: process_table_4_data(table_4_data),
     }
+
+    if has_invalid_data:
+        data["has_invalid_data"] = True
+
+    return data
 
 
 def process_table_4_data(invoice_data):
@@ -141,8 +155,13 @@ def process_table_5a_data(invoice_data):
         }
 
     res = {}
+    has_invalid_data = False
 
     for invoice in invoice_data:
+        if not invoice.original_challan_no:
+            has_invalid_data = True
+            continue
+
         key = f"{invoice.original_challan_no} - {invoice.invoice_no}"
         uom = invoice.uom.upper()
 
@@ -166,5 +185,8 @@ def process_table_5a_data(invoice_data):
             res[key][ITC04_DataField.ITEMS.value].append(
                 create_item(invoice, uom, jw_challan_date, challan_date)
             )
+
+    if has_invalid_data:
+        res["has_invalid_data"] = True
 
     return res
