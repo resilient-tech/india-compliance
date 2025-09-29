@@ -1323,15 +1323,9 @@ class EWaybillData(GSTTransactionData):
         if not self.doc.gst_transporter_id:
             self.validate_mode_of_transport()
 
-<<<<<<< HEAD
         self.validate_non_gst_items()
 
-        if is_outward_stock_entry(self.doc):
-            self.validate_different_gstin()
-        else:
-=======
         if not is_outward_stock_entry(self.doc):
->>>>>>> 2dbe3ba5 (fix: allow e-waybill for different GSTIN from Material Transfer Stock Entry)
             self.validate_same_gstin()
 
     def validate_same_gstin(self):
