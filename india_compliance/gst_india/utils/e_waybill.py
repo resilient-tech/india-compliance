@@ -1059,7 +1059,7 @@ def update_transaction(doc, values):
 
     if doc.doctype in ("Delivery Note", "Stock Entry", "Subcontracting Receipt"):
         doc._sub_supply_type = SUB_SUPPLY_TYPES[values.sub_supply_type]
-    if doc.doctype == "Delivery Note":
+    if doc.doctype in ("Delivery Note", "Stock Entry"):
         doc._sub_supply_desc = values.sub_supply_desc
 
 
@@ -1325,19 +1325,8 @@ class EWaybillData(GSTTransactionData):
 
         self.validate_non_gst_items()
 
-        if is_outward_stock_entry(self.doc):
-            self.validate_different_gstin()
-        else:
+        if not is_outward_stock_entry(self.doc):
             self.validate_same_gstin()
-
-    def validate_different_gstin(self):
-        if self.doc.company_gstin != self.doc.get("supplier_gstin"):
-            frappe.throw(
-                _(
-                    "e-Waybill cannot be generated because party GSTIN and company GSTIN are different"
-                ),
-                title=_("Invalid Data"),
-            )
 
     def validate_same_gstin(self):
         if self.doc.doctype == "Delivery Note":
@@ -1562,6 +1551,7 @@ class EWaybillData(GSTTransactionData):
             ("Stock Entry", 0): {
                 "supply_type": "O",
                 "sub_supply_type": doc.get("_sub_supply_type", ""),
+                "sub_supply_desc": doc.get("_sub_supply_desc", ""),
                 "document_type": "CHL",
             },
             ("Stock Entry", 1): {

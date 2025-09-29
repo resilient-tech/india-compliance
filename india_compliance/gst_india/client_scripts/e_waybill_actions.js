@@ -560,6 +560,10 @@ function get_sub_suppy_type_options(frm) {
                     "Others",
                 ];
             }
+            else {
+                supply_type = "Outward";
+                sub_supply_type = ["Job Work", "SKD/CKD", "Others"];
+            }
         }
     } else {
         const key = `${frm.doctype}_${frm.doc.is_return || 0}`;
