@@ -3,7 +3,8 @@
 
 import frappe
 from frappe import _
-from frappe.query_builder.functions import IfNull, Sum
+from frappe.query_builder.functions import Sum
+from frappe.utils import cstr
 from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
     get_accounting_dimensions,
     get_dimension_with_children,
@@ -299,10 +300,10 @@ class GSTBalanceReport:
                 self.gl_entry.company_gstin == self.filters.company_gstin
             )
 
-        if self.filters.finance_book:
-            query = query.where(
-                IfNull(self.gl_entry.finance_book, "") == self.filters.finance_book
-            )
+        query = query.where(
+            (self.gl_entry.finance_book.isin([cstr(self.filters.finance_book), ""]))
+            | (self.gl_entry.finance_book.isnull())
+        )
 
         for dimension in self.accounting_dimensions:
             dimension = frappe._dict(dimension)
