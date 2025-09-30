@@ -62,7 +62,7 @@ class GSTBalanceReport:
     def __init__(self, filters=None):
         self.filters = frappe._dict(filters or {})
         self.validate_filters()
-        self.gst_accounts = get_all_gst_accounts(filters.company)
+        self.gst_accounts = get_all_gst_accounts(self.filters.company)
         self.gl_entry = frappe.qb.DocType("GL Entry")
         self.accounting_dimensions = get_accounting_dimensions(as_list=False) or []
         self.accounting_dimensions.extend(
