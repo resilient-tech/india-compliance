@@ -27,5 +27,4 @@ def disable_audit_trail_notification():
 def enable_audit_trail():
     accounts_settings = frappe.get_doc("Accounts Settings")
     accounts_settings.enable_audit_trail = 1
-    accounts_settings.flags.ignore_version = True
     accounts_settings.save()
