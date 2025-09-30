@@ -2116,31 +2116,6 @@ function patch_set_indicator(frm) {
     frm.toolbar.set_indicator = function () {};
 }
 
-<<<<<<< HEAD:india_compliance/gst_india/doctype/gstr_1_beta/gstr_1_beta.js
-<<<<<<< HEAD:india_compliance/gst_india/doctype/gstr_1_beta/gstr_1_beta.js
-async function set_default_company_gstin(frm) {
-    frm.set_value("company_gstin", "");
-
-    const company = frm.doc.company;
-    if (!company) return;
-=======
-function update_filing_preference(frm) {
-    const { month_or_quarter, year, company_gstin } = frm.doc;
-    if (!month_or_quarter || !year || !company_gstin) return;
->>>>>>> 8a4506ac (fix: trigger is important; set_value only triggers if value changes):india_compliance/gst_india/doctype/gstr_1/gstr_1.js
-
-    const { message: gstin_list } = await frappe.call(
-        "india_compliance.gst_india.utils.get_gstin_list",
-        { party: company }
-    );
-
-    if (gstin_list && gstin_list.length) {
-        frm.set_value("company_gstin", gstin_list[0]);
-    }
-}
-=======
->>>>>>> f82ae9d7 (fix: set session default company in ims,pur reco and gstr-1):india_compliance/gst_india/doctype/gstr_1/gstr_1.js
-
 function set_options_for_year(frm) {
     const today = new Date();
     let current_year = today.getFullYear();
