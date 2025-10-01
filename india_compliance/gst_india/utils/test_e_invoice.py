@@ -234,7 +234,7 @@ class TestEInvoice(FrappeTestCase):
         responses.add(
             responses.GET,
             BASE_URL + "/test/ei/api/master/syncgstin",
-            match=[matchers.query_param_matcher({"gstin": "29ABCDE1234F1Z5"})],
+            match=[matchers.query_param_matcher({"gstin": "29AAACI1195H2ZH"})],
             json=sync_gstin_response,
             status=200,
         )
@@ -243,7 +243,7 @@ class TestEInvoice(FrappeTestCase):
             generate_e_invoice(si.name)
 
         self.assertIn(
-            "GSTIN -29ABCDE1234F1Z5 is inactive or cancelled", str(cm.exception)
+            "GSTIN -29AAACI1195H2ZH is inactive or cancelled", str(cm.exception)
         )
 
     @responses.activate

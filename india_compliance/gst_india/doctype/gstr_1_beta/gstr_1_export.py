@@ -50,7 +50,6 @@ CATEGORIES_WITH_ITEMS = {
 
 
 class DataProcessor:
-
     # transform input data to required format
     FIELD_TRANSFORMATIONS = {}
 
