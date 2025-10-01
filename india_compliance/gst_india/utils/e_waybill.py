@@ -1105,7 +1105,8 @@ def get_address_map(doc):
 
 @frappe.whitelist()
 def get_source_destination_address(doctype, docname, address_type):
-    doc = frappe.get_doc(doctype, docname)
+    # using load_doc for onload trigger required for stock entry.
+    doc = load_doc(doctype, docname)
     address_map = get_billing_shipping_address_map(doc)
 
     if address_type == "source_address":
