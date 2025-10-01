@@ -27,6 +27,7 @@ from india_compliance.gst_india.utils.e_waybill import (
     fetch_e_waybill_data,
     generate_e_waybill,
     get_e_waybills_to_extend,
+    get_source_destination_address,
     schedule_ewaybill_for_extension,
     update_transporter,
     update_vehicle_info,
@@ -599,6 +600,30 @@ class TestEWaybill(IntegrationTestCase):
 
         se.reload()
         self.assertEqual(se.ewaybill, "")
+
+    def test_get_source_destination_address_for_stock_entry(self):
+        """Test get_source_destination_address function with Stock Entry doctype"""
+
+        # Create a Stock Entry for testing
+        se = self._create_stock_entry("stock_entry")
+
+        # Test source address
+        source_address = get_source_destination_address(
+            doctype="Stock Entry", docname=se.name, address_type="source_address"
+        )
+
+        # Verify that the function returns an Address document
+        self.assertEqual(source_address.doctype, "Address")
+        self.assertIsNotNone(source_address.name)
+
+        # Test destination address
+        destination_address = get_source_destination_address(
+            doctype="Stock Entry", docname=se.name, address_type="destination_address"
+        )
+
+        # Verify that the function returns an Address document
+        self.assertEqual(destination_address.doctype, "Address")
+        self.assertIsNotNone(destination_address.name)
 
     def test_get_all_item_details(self):
         """Tests:
