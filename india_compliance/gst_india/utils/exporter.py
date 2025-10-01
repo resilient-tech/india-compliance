@@ -126,30 +126,6 @@ class Worksheet:
 
         self.apply_conditional_formatting(add_totals)
 
-<<<<<<< HEAD
-=======
-    def insert_data(
-        self,
-        workbook,
-        sheet_name,
-        headers,
-        data,
-        start_row=1,
-        start_column=1,
-    ):
-        sheet = workbook[sheet_name]
-
-        for i, row in enumerate(data, start_row):
-            for j, header in enumerate(headers, start_column):
-                fieldname, transform = header.get("fieldname"), header.get("transform")
-                value = row.get(fieldname)
-
-                if transform:
-                    value = transform(value, row)
-
-                sheet.cell(row=i, column=j, value=value or "")
-
->>>>>>> cfa14329 (fix: update transform functions to accept additional row argument for data processing)
     def add_data(self, data, **kwargs):
         if not data:
             return
