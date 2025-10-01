@@ -70,6 +70,7 @@ response = {
         ],
     },
     "filename": "ITC-04-Gov-24AAQCA8719H1ZC-182024.json",
+    "has_invalid_data": False,
 }
 
 
