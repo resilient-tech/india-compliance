@@ -252,6 +252,10 @@ class GovExcel(DataProcessor):
                 "fieldname": df.DOC_DATE,
                 "data_format": {"number_format": self.DATE_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+<<<<<<< HEAD
+=======
+                "transform": lambda x, *args: x.strftime("%d-%b-%y") if x else None,
+>>>>>>> cfa14329 (fix: update transform functions to accept additional row argument for data processing)
             },
             {
                 "label": _(GovExcelField.INVOICE_VALUE.value),
@@ -273,6 +277,10 @@ class GovExcel(DataProcessor):
                 "fieldname": df.DIFF_PERCENTAGE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+<<<<<<< HEAD
+=======
+                "transform": lambda x, *args: x if x else None,
+>>>>>>> cfa14329 (fix: update transform functions to accept additional row argument for data processing)
             },
             {
                 "label": _(GovExcelField.INVOICE_TYPE.value),
@@ -313,6 +321,10 @@ class GovExcel(DataProcessor):
                 "fieldname": df.DOC_DATE,
                 "data_format": {"number_format": self.DATE_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+<<<<<<< HEAD
+=======
+                "transform": lambda x, *args: x.strftime("%d-%b-%y") if x else None,
+>>>>>>> cfa14329 (fix: update transform functions to accept additional row argument for data processing)
             },
             {
                 "label": _(GovExcelField.INVOICE_VALUE.value),
@@ -324,8 +336,20 @@ class GovExcel(DataProcessor):
                 "fieldname": df.POS,
             },
             {
+<<<<<<< HEAD
                 "label": _(GovExcelField.DIFF_PERCENTAGE.value),
                 "fieldname": df.DIFF_PERCENTAGE,
+=======
+                "label": _(gov_xl.DIFF_PERCENTAGE),
+                "fieldname": inv_f.DIFF_PERCENTAGE,
+                "data_format": {"number_format": self.PERCENT_FORMAT},
+                "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x, *args: x if x else None,
+            },
+            {
+                "label": _(gov_xl.TAX_RATE),
+                "fieldname": inv_f.TAX_RATE,
+>>>>>>> cfa14329 (fix: update transform functions to accept additional row argument for data processing)
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
             },
@@ -363,8 +387,20 @@ class GovExcel(DataProcessor):
                 "fieldname": df.POS,
             },
             {
+<<<<<<< HEAD
                 "label": _(GovExcelField.DIFF_PERCENTAGE.value),
                 "fieldname": df.DIFF_PERCENTAGE,
+=======
+                "label": _(gov_xl.DIFF_PERCENTAGE),
+                "fieldname": inv_f.DIFF_PERCENTAGE,
+                "data_format": {"number_format": self.PERCENT_FORMAT},
+                "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x, *args: x if x else None,
+            },
+            {
+                "label": _(gov_xl.TAX_RATE),
+                "fieldname": inv_f.TAX_RATE,
+>>>>>>> cfa14329 (fix: update transform functions to accept additional row argument for data processing)
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
             },
@@ -413,10 +449,19 @@ class GovExcel(DataProcessor):
                 "fieldname": df.DOC_DATE,
                 "data_format": {"number_format": self.DATE_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+<<<<<<< HEAD
             },
             {
                 "label": _(GovExcelField.NOTE_TYPE.value),
                 "fieldname": df.TRANSACTION_TYPE,
+=======
+                "transform": lambda x, *args: x.strftime("%d-%b-%y") if x else None,
+            },
+            {
+                "label": _(gov_xl.NOTE_TYPE),
+                "fieldname": inv_f.TRANSACTION_TYPE,
+                "transform": lambda x, *args: x[0],
+>>>>>>> cfa14329 (fix: update transform functions to accept additional row argument for data processing)
             },
             {
                 "label": _(GovExcelField.POS.value),
@@ -438,8 +483,20 @@ class GovExcel(DataProcessor):
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
+<<<<<<< HEAD
                 "label": _(GovExcelField.DIFF_PERCENTAGE.value),
                 "fieldname": df.DIFF_PERCENTAGE,
+=======
+                "label": _(gov_xl.DIFF_PERCENTAGE),
+                "fieldname": inv_f.DIFF_PERCENTAGE,
+                "data_format": {"number_format": self.PERCENT_FORMAT},
+                "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x, *args: x if x else None,
+            },
+            {
+                "label": _(gov_xl.TAX_RATE),
+                "fieldname": inv_f.TAX_RATE,
+>>>>>>> cfa14329 (fix: update transform functions to accept additional row argument for data processing)
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
             },
@@ -477,6 +534,10 @@ class GovExcel(DataProcessor):
                 "fieldname": df.DOC_DATE,
                 "data_format": {"number_format": self.DATE_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+<<<<<<< HEAD
+=======
+                "transform": lambda x, *args: x.strftime("%d-%b-%y") if x else None,
+>>>>>>> cfa14329 (fix: update transform functions to accept additional row argument for data processing)
             },
             {
                 "label": _(GovExcelField.NOTE_TYPE.value),
@@ -492,8 +553,20 @@ class GovExcel(DataProcessor):
                 "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
             {
+<<<<<<< HEAD
                 "label": _(GovExcelField.DIFF_PERCENTAGE.value),
                 "fieldname": df.DIFF_PERCENTAGE,
+=======
+                "label": _(gov_xl.DIFF_PERCENTAGE),
+                "fieldname": inv_f.DIFF_PERCENTAGE,
+                "data_format": {"number_format": self.PERCENT_FORMAT},
+                "header_format": {"width": ExcelWidth.XS.value},
+                "transform": lambda x, *args: x if x else None,
+            },
+            {
+                "label": _(gov_xl.TAX_RATE),
+                "fieldname": inv_f.TAX_RATE,
+>>>>>>> cfa14329 (fix: update transform functions to accept additional row argument for data processing)
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
             },
@@ -531,6 +604,10 @@ class GovExcel(DataProcessor):
                 "fieldname": df.DOC_DATE,
                 "data_format": {"number_format": self.DATE_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+<<<<<<< HEAD
+=======
+                "transform": lambda x, *args: x.strftime("%d-%b-%y") if x else None,
+>>>>>>> cfa14329 (fix: update transform functions to accept additional row argument for data processing)
             },
             {
                 "label": _(GovExcelField.INVOICE_VALUE.value),
@@ -551,6 +628,10 @@ class GovExcel(DataProcessor):
                 "fieldname": df.SHIPPING_BILL_DATE,
                 "data_format": {"number_format": self.DATE_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+<<<<<<< HEAD
+=======
+                "transform": lambda x, *args: x.strftime("%d-%b-%y") if x else None,
+>>>>>>> cfa14329 (fix: update transform functions to accept additional row argument for data processing)
             },
             {
                 "label": _(GovExcelField.TAX_RATE.value),
@@ -583,6 +664,10 @@ class GovExcel(DataProcessor):
                     "number_format": self.PERCENT_FORMAT,
                 },
                 "header_format": {"width": ExcelWidth.XS.value},
+<<<<<<< HEAD
+=======
+                "transform": lambda x, *args: x if x else None,
+>>>>>>> cfa14329 (fix: update transform functions to accept additional row argument for data processing)
             },
             {
                 "label": _(GovExcelField.TAX_RATE.value),
@@ -613,6 +698,10 @@ class GovExcel(DataProcessor):
                 "fieldname": df.DIFF_PERCENTAGE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
+<<<<<<< HEAD
+=======
+                "transform": lambda x, *args: x if x else None,
+>>>>>>> cfa14329 (fix: update transform functions to accept additional row argument for data processing)
             },
             {
                 "label": _(GovExcelField.TAX_RATE.value),
