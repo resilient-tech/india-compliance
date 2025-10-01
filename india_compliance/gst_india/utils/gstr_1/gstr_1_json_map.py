@@ -1030,7 +1030,7 @@ class CDNUR(GSTR1DataMapper):
         }
 
         self.ignore_key_for_gov = {
-            inv_f.POS: self.ignore_pos_if_export,
+            df.POS: self.ignore_pos_if_export,
         }
 
     def convert_to_internal_data_format(self, input_data):
@@ -1087,7 +1087,7 @@ class CDNUR(GSTR1DataMapper):
         if (
             args
             and isinstance(args[0], dict)
-            and args[0].get(inv_f.DOC_TYPE) in ("EXPWP", "EXPWOP")
+            and args[0].get(df.DOC_TYPE) in ("EXPWP", "EXPWOP")
         ):
             return True
 
