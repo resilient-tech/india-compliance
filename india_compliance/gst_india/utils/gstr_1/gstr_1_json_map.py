@@ -2645,11 +2645,11 @@ class GSTR1BooksData(BooksDataMapper):
             )
 
             if not gstr1_log.filed:
-                # Create modified filters with monthly filing preference to avoid recursion
-                # when getting already filed docs from previous months
-                prev_month_filters = frappe._dict(self.filters)
-                prev_month_filters.filing_preference = "Monthly"
-                gstr1_log.generate_gstr1_data(prev_month_filters)
+                # Extract month number from log_name (format: GSTR1-MMYYYY-GSTIN)
+                month_num = int(log_name.split("-")[1][:2])
+                new_filters = frappe._dict(self.filters)
+                new_filters.month_or_quarter = MONTHS[month_num - 1]
+                gstr1_log.generate_gstr1_data(new_filters)
 
             filed_data = gstr1_log.get_json_for("filed")
 
