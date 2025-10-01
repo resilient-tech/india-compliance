@@ -2579,16 +2579,23 @@ class GSTR1BooksData(BooksDataMapper):
             self.process_excluded_docs_for_quarterly(data, m1_m2_subcategories)
 
     def process_included_docs_for_quarterly(self, data, m1_m2_subcategories):
+        if not data or not isinstance(data, dict):
+            return
+
         included_docs = self.get_already_filed_docs(m1_m2_subcategories)
 
-        for category in data:
-            if category not in m1_m2_subcategories:
-                continue
+        categories_to_process = [
+            cat for cat in data.keys() if cat in m1_m2_subcategories
+        ]
 
-            included = data.setdefault("already_included_docs_for_quarterly", [])
+        if not categories_to_process:
+            return
 
+        included = data.setdefault("already_included_docs_for_quarterly", [])
+
+        for category in categories_to_process:
             for key, row in data[category].copy().items():
-                if key in included_docs:
+                if key not in included_docs:
                     continue
 
                 row["sub_category"] = category
@@ -2596,6 +2603,9 @@ class GSTR1BooksData(BooksDataMapper):
                 del data[category][key]
 
     def process_excluded_docs_for_quarterly(self, data, m1_m2_subcategories):
+        if not data or not isinstance(data, dict):
+            return
+
         for category in data.copy():
             if category in m1_m2_subcategories:
                 continue
@@ -2649,9 +2659,16 @@ class GSTR1BooksData(BooksDataMapper):
             )
 
             if not gstr1_log.filed:
-                gstr1_log.generate_gstr1_data(self.filters)
+                # Extract month number from log_name (format: GSTR1-MMYYYY-GSTIN)
+                month_num = int(log_name.split("-")[1][:2])
+                new_filters = frappe._dict(self.filters)
+                new_filters.month_or_quarter = MONTHS[month_num - 1]
+                gstr1_log.generate_gstr1_data(new_filters)
 
             filed_data = gstr1_log.get_json_for("filed")
+
+            if not filed_data:
+                continue
 
             for category, invoices in filed_data.items():
                 if category not in m1_m2_subcategories:
