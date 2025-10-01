@@ -519,6 +519,10 @@ class GovExcel(DataProcessor):
         ]
 
     def get_cdnur_headers(self):
+        def ignore_if_export(value, row):
+            if row.get(inv_f.DOC_TYPE) not in ("EXPWP", "EXPWOP"):
+                return value
+
         return [
             {
                 "label": _("UR Type"),
@@ -544,8 +548,14 @@ class GovExcel(DataProcessor):
                 "fieldname": df.TRANSACTION_TYPE,
             },
             {
+<<<<<<< HEAD
                 "label": _(GovExcelField.POS.value),
                 "fieldname": df.POS,
+=======
+                "label": _(gov_xl.POS),
+                "fieldname": inv_f.POS,
+                "transform": ignore_if_export,
+>>>>>>> e7b5dd21 (feat: add transformation function to conditionally ignore export type for CDNUR)
             },
             {
                 "label": _(GovExcelField.NOTE_VALUE.value),
