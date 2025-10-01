@@ -1029,6 +1029,10 @@ class CDNUR(GSTR1DataMapper):
             df.DOC_DATE: self.format_date_for_gov,
         }
 
+        self.ignore_key_for_gov = {
+            df.POS: self.ignore_pos_if_export,
+        }
+
     def convert_to_internal_data_format(self, input_data):
         output = {}
 
@@ -1078,6 +1082,16 @@ class CDNUR(GSTR1DataMapper):
 
     def format_doc_value(self, value, data):
         return value * -1 if data[GovDataField.NOTE_TYPE.value] == "C" else value
+
+    def ignore_pos_if_export(self, _, *args):
+        if (
+            args
+            and isinstance(args[0], dict)
+            and args[0].get(df.DOC_TYPE) in ("EXPWP", "EXPWOP")
+        ):
+            return True
+
+        return False
 
 
 class HSNSUM(GSTR1DataMapper):
@@ -1946,7 +1960,6 @@ def summarize_retsum_data(input_data):
 
 
 class BooksDataMapper:
-
     def get_transaction_type(self, invoice):
         if invoice.is_debit_note:
             return "Debit Note"
@@ -2166,7 +2179,6 @@ class BooksDataMapper:
                 invoice_list.append(invoice)
 
                 for key, field in self.DATA_TO_INVOICE_FIELD_MAPPING.items():
-
                     for item in items:
                         invoice[key] += item.get(field, 0)
 
