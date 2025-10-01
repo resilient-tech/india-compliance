@@ -27,6 +27,7 @@ from india_compliance.gst_india.utils.e_waybill import (
     fetch_e_waybill_data,
     generate_e_waybill,
     get_e_waybills_to_extend,
+    get_source_destination_address,
     schedule_ewaybill_for_extension,
     update_transporter,
     update_vehicle_info,
@@ -599,6 +600,30 @@ class TestEWaybill(FrappeTestCase):
 
         se.reload()
         self.assertEqual(se.ewaybill, "")
+
+    def test_get_source_destination_address_for_stock_entry(self):
+        """Test get_source_destination_address function with Stock Entry doctype"""
+
+        # Create a Stock Entry for testing
+        se = self._create_stock_entry("stock_entry")
+
+        # Test source address
+        source_address = get_source_destination_address(
+            doctype="Stock Entry", docname=se.name, address_type="source_address"
+        )
+
+        # Verify that the function returns an Address document
+        self.assertEqual(source_address.doctype, "Address")
+        self.assertIsNotNone(source_address.name)
+
+        # Test destination address
+        destination_address = get_source_destination_address(
+            doctype="Stock Entry", docname=se.name, address_type="destination_address"
+        )
+
+        # Verify that the function returns an Address document
+        self.assertEqual(destination_address.doctype, "Address")
+        self.assertIsNotNone(destination_address.name)
 
     def test_get_all_item_details(self):
         """Tests:
@@ -1257,7 +1282,7 @@ class TestEWaybill(FrappeTestCase):
         responses.add(
             responses.GET,
             BASE_URL + "/test/ei/api/master/syncgstin",
-            match=[matchers.query_param_matcher({"gstin": "29ABCDE1234F1Z5"})],
+            match=[matchers.query_param_matcher({"gstin": "29AAACI1195H2ZH"})],
             json=sync_gstin_response,
             status=200,
         )
@@ -1267,7 +1292,7 @@ class TestEWaybill(FrappeTestCase):
             _generate_e_waybill(doc)
 
         self.assertIn(
-            "GSTIN -29ABCDE1234F1Z5 is inactive or cancelled", str(cm.exception)
+            "GSTIN -29AAACI1195H2ZH is inactive or cancelled", str(cm.exception)
         )
 
     @responses.activate
@@ -1302,7 +1327,7 @@ class TestEWaybill(FrappeTestCase):
         responses.add(
             responses.GET,
             BASE_URL + "/standard/ei/api/master/syncgstin",
-            match=[matchers.query_param_matcher({"gstin": "29ABCDE1234F1Z5"})],
+            match=[matchers.query_param_matcher({"gstin": "29AAACI1195H2ZH"})],
             json=sync_gstin_response,
             status=200,
         )
@@ -1315,7 +1340,7 @@ class TestEWaybill(FrappeTestCase):
             frappe.flags.bypass_auth = False
 
         self.assertIn(
-            "GSTIN -29ABCDE1234F1Z5 is inactive or cancelled", str(cm.exception)
+            "GSTIN -29AAACI1195H2ZH is inactive or cancelled", str(cm.exception)
         )
 
     # helper functions
