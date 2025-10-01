@@ -1098,7 +1098,7 @@ class CDNUR(GSTR1DataMapper):
     def format_doc_value(self, value, data):
         return value * -1 if data[gov_f.NOTE_TYPE] == "C" else value
 
-    def ignore_pos_if_export(self, pos, *args):
+    def ignore_pos_if_export(self, _, *args):
         if (
             args
             and isinstance(args[0], dict)
