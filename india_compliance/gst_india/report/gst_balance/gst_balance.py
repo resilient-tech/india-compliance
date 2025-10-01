@@ -5,6 +5,10 @@ import frappe
 from frappe import _
 from frappe.query_builder.functions import Sum
 from frappe.utils import cstr
+from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
+    get_accounting_dimensions,
+    get_dimension_with_children,
+)
 
 from india_compliance.gst_india.utils import get_all_gst_accounts, get_gstin_list
 from india_compliance.patches.post_install.update_company_gstin import (
@@ -58,11 +62,23 @@ class GSTBalanceReport:
     def __init__(self, filters=None):
         self.filters = frappe._dict(filters or {})
         self.validate_filters()
-        self.gst_accounts = get_all_gst_accounts(filters.company)
+        self.gst_accounts = get_all_gst_accounts(self.filters.company)
         self.gl_entry = frappe.qb.DocType("GL Entry")
-        self.default_finance_book = frappe.get_cached_value(
-            "Company", self.filters.company, "default_finance_book"
+        self.accounting_dimensions = get_accounting_dimensions(as_list=False) or []
+        self.accounting_dimensions.extend(
+            [
+                {
+                    "fieldname": "cost_center",
+                    "document_type": "Cost Center",
+                },
+                {
+                    "fieldname": "project",
+                    "document_type": "Project",
+                },
+            ]
         )
+
+        self.update_child_filters()
 
     def validate_filters(self):
         if not self.filters.company:
@@ -76,6 +92,18 @@ class GSTBalanceReport:
 
         if self.filters.from_date and self.filters.from_date > self.filters.to_date:
             frappe.throw(_("From Date cannot be greater than To Date"))
+
+    def update_child_filters(self):
+        for dimension in self.accounting_dimensions:
+            dimension = frappe._dict(dimension)
+            if self.filters.get(dimension.fieldname):
+                if frappe.get_cached_value(
+                    "DocType", dimension.document_type, "is_tree"
+                ):
+                    self.filters[dimension.fieldname] = get_dimension_with_children(
+                        dimension.document_type,
+                        self.filters.get(dimension.fieldname),
+                    )
 
     def get_columns(self):
         company_currency = frappe.get_cached_value(
@@ -258,17 +286,33 @@ class GSTBalanceReport:
             .where(self.gl_entry.is_cancelled == 0)
             .where(self.gl_entry.company == self.filters.company)
             .where(self.gl_entry.account.isin(self.gst_accounts))
-            .where(
-                (self.gl_entry.finance_book.isin(["", cstr(self.default_finance_book)]))
-                | (self.gl_entry.finance_book.isnull())
-            )
             .groupby(self.gl_entry.account)
         )
+
+        query = self.prepare_conditions(query)
+
+        return query
+
+    def prepare_conditions(self, query):
 
         if self.filters.company_gstin:
             query = query.where(
                 self.gl_entry.company_gstin == self.filters.company_gstin
             )
+
+        query = query.where(
+            (self.gl_entry.finance_book.isin([cstr(self.filters.finance_book), ""]))
+            | (self.gl_entry.finance_book.isnull())
+        )
+
+        for dimension in self.accounting_dimensions:
+            dimension = frappe._dict(dimension)
+            if self.filters.get(dimension.fieldname):
+                query = query.where(
+                    (self.gl_entry[dimension.fieldname]).isin(
+                        self.filters.get(dimension.fieldname)
+                    )
+                )
 
         return query
 
