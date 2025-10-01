@@ -189,22 +189,15 @@ class SummarizeGSTR1:
 
     @staticmethod
     def count_doc_issue_summary(summary_row, data_row):
-<<<<<<< HEAD
-        summary_row["no_of_records"] += data_row.get(df.TOTAL_COUNT, 0) - data_row.get(
-            df.CANCELLED_COUNT, 0
-=======
-        if data_row.get(inv_f.DOC_TYPE) in (
+        if data_row.get(df.DOC_TYPE) in (
             "Excluded from Report (Invalid Invoice Number)",
             "Excluded from Report (Same GSTIN Billing)",
             "Excluded from Report (Is Opening Entry)",
         ):
             return
 
-        summary_row["no_of_records"] += (
-            data_row.get(inv_f.TOTAL_COUNT, 0)
-            - data_row.get(inv_f.CANCELLED_COUNT, 0)
-            - data_row.get(inv_f.DRAFT_COUNT, 0)
->>>>>>> fb70e1d3 (fix: exclude specific document types from count in summary of Document Issued)
+        summary_row["no_of_records"] += data_row.get(df.TOTAL_COUNT, 0) - data_row.get(
+            df.CANCELLED_COUNT, 0
         )
 
     @staticmethod
