@@ -2221,6 +2221,8 @@ def get_gstr1_excel(filters, data=None, columns=None):
             headers = report_data[0] or []
             data = format_data_to_dict(report_data)
 
+        data = apply_transformation(type_of_business, data)
+
         if type_of_business == "Document Issued Summary":
             format_doc_issued_excel_data(headers, data)
 
@@ -2236,6 +2238,7 @@ def get_gstr1_excel(filters, data=None, columns=None):
 
             headers = report_data[0] or []
             data = format_data_to_dict(report_data)
+            data = apply_transformation(type_of_business, data)
 
             if type_of_business == "Document Issued Summary":
                 format_doc_issued_excel_data(headers, data)
@@ -2248,6 +2251,29 @@ def get_gstr1_excel(filters, data=None, columns=None):
 
     filename.extend([gstin, report_dict["fp"]])
     excel.export("_".join(filename))
+
+
+def _ignore_if_export(value, row):
+    if row.get("invoice_type") in ("EXPWP", "EXPWOP"):
+        return ""
+
+    return value
+
+
+TRANSFORM_MAP = {"CDNR-UNREG": {"place_of_supply": _ignore_if_export}}
+
+
+def apply_transformation(type_of_business, data):
+    transformation = TRANSFORM_MAP.get(type_of_business, {})
+    if not transformation:
+        return data
+
+    for row in data:
+        for field, transform in transformation.items():
+            if field in row and callable(transform):
+                row[field] = transform(row[field], row)
+
+    return data
 
 
 def format_doc_issued_excel_data(headers, data):
