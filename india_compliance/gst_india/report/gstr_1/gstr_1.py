@@ -42,6 +42,7 @@ TYPES_OF_BUSINESS = {
     "Section 14": "supeco",
 }
 
+
 INDEX_FOR_NIL_EXEMPT_DICT = {"Nil-Rated": 0, "Exempted": 1, "Non-GST": 2}
 
 
@@ -1949,14 +1950,22 @@ def get_cdnr_unreg_json(res, gstin):
     out = []
 
     for invoice, items in res.items():
+        inv_type = get_invoice_type(items[0])
+
         inv_item = {
             "nt_num": items[0]["invoice_number"],
             "nt_dt": getdate(items[0]["posting_date"]).strftime("%d-%m-%Y"),
             "val": abs(flt(items[0]["invoice_value"], 2)),
             "ntty": items[0]["document_type"],
-            "pos": "%02d" % int(items[0]["place_of_supply"].split("-")[0]),
-            "typ": get_invoice_type(items[0]),
+            "typ": inv_type,
         }
+
+        if inv_type not in ("EXPWP", "EXPWOP"):
+            inv_item.update(
+                {
+                    "pos": "%02d" % int(items[0]["place_of_supply"].split("-")[0]),
+                }
+            )
 
         inv_item["itms"] = []
         for item in items:
@@ -2212,6 +2221,8 @@ def get_gstr1_excel(filters, data=None, columns=None):
             headers = report_data[0] or []
             data = format_data_to_dict(report_data)
 
+        data = apply_transformation(type_of_business, data)
+
         if type_of_business == "Document Issued Summary":
             format_doc_issued_excel_data(headers, data)
 
@@ -2227,6 +2238,7 @@ def get_gstr1_excel(filters, data=None, columns=None):
 
             headers = report_data[0] or []
             data = format_data_to_dict(report_data)
+            data = apply_transformation(type_of_business, data)
 
             if type_of_business == "Document Issued Summary":
                 format_doc_issued_excel_data(headers, data)
@@ -2239,6 +2251,29 @@ def get_gstr1_excel(filters, data=None, columns=None):
 
     filename.extend([gstin, report_dict["fp"]])
     excel.export("_".join(filename))
+
+
+def _ignore_if_export(value, row):
+    if row.get("invoice_type") in ("EXPWP", "EXPWOP"):
+        return ""
+
+    return value
+
+
+TRANSFORM_MAP = {"CDNR-UNREG": {"place_of_supply": _ignore_if_export}}
+
+
+def apply_transformation(type_of_business, data):
+    transformation = TRANSFORM_MAP.get(type_of_business, {})
+    if not transformation:
+        return data
+
+    for row in data:
+        for field, transform in transformation.items():
+            if field in row and callable(transform):
+                row[field] = transform(row[field], row)
+
+    return data
 
 
 def format_doc_issued_excel_data(headers, data):

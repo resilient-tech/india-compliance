@@ -16,6 +16,9 @@ class GovDataMapper:
         self.value_formatters_for_internal = {}
         self.value_formatters_for_gov = {}
 
+        self.ignore_key_for_internal = {}
+        self.ignore_key_for_gov = {}
+
         # value formatting constants
         self.STATE_NUMBERS = self.reverse_dict(STATE_NUMBERS)
 
@@ -57,8 +60,19 @@ class GovDataMapper:
             else self.value_formatters_for_internal
         )
 
+        ignore_key = (
+            self.ignore_key_for_gov if for_gov else self.ignore_key_for_internal
+        )
+
         for old_key, new_key in key_mapping.items():
             invoice_data_value = data.get(old_key, "")
+
+            if (
+                old_key in ignore_key
+                and callable(ignore_key[old_key])
+                and ignore_key[old_key](invoice_data_value, data)
+            ):
+                continue
 
             if not for_gov and old_key == "flag":
                 continue
