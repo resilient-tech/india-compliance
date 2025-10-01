@@ -42,6 +42,7 @@ TYPES_OF_BUSINESS = {
     "Section 14": "supeco",
 }
 
+
 INDEX_FOR_NIL_EXEMPT_DICT = {"Nil-Rated": 0, "Exempted": 1, "Non-GST": 2}
 
 
@@ -1949,14 +1950,22 @@ def get_cdnr_unreg_json(res, gstin):
     out = []
 
     for invoice, items in res.items():
+        inv_type = get_invoice_type(items[0])
+
         inv_item = {
             "nt_num": items[0]["invoice_number"],
             "nt_dt": getdate(items[0]["posting_date"]).strftime("%d-%m-%Y"),
             "val": abs(flt(items[0]["invoice_value"], 2)),
             "ntty": items[0]["document_type"],
-            "pos": "%02d" % int(items[0]["place_of_supply"].split("-")[0]),
-            "typ": get_invoice_type(items[0]),
+            "typ": inv_type,
         }
+
+        if inv_type not in ("EXPWP", "EXPWOP"):
+            inv_item.update(
+                {
+                    "pos": "%02d" % int(items[0]["place_of_supply"].split("-")[0]),
+                }
+            )
 
         inv_item["itms"] = []
         for item in items:
