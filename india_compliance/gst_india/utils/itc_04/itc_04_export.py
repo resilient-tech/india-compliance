@@ -26,17 +26,21 @@ def download_itc_04_json(filters):
     ret_period = get_return_period(filters)
 
     data = get_data(filters)
+    has_invalid_data = data.pop("has_invalid_data", False)
 
     GenerateGSTR1().normalize_data(data)
 
-    return {
+    response = {
         "data": {
             "gstin": company_gstin,
             "fp": ret_period,
             **convert_to_gov_data_format(data, company_gstin),
         },
         "filename": f"ITC-04-Gov-{company_gstin}-{ret_period}.json",
+        "has_invalid_data": has_invalid_data,
     }
+
+    return response
 
 
 def get_return_period(filters):
@@ -86,10 +90,17 @@ def get_data(filters):
         as_dict=True
     ) + itc04.get_query_table_5A_sr().run(as_dict=True)
 
-    return {
-        ITC04JsonKey.FG_RECEIVED.value: process_table_5a_data(table_5a_data),
+    fg_received_data = process_table_5a_data(table_5a_data)
+
+    data = {
+        ITC04JsonKey.FG_RECEIVED.value: fg_received_data,
         ITC04JsonKey.RM_SENT.value: process_table_4_data(table_4_data),
+        "has_invalid_data": any(
+            not invoice.original_challan_no for invoice in table_5a_data
+        ),
     }
+
+    return data
 
 
 def process_table_4_data(invoice_data):
@@ -143,6 +154,9 @@ def process_table_5a_data(invoice_data):
     res = {}
 
     for invoice in invoice_data:
+        if not invoice.original_challan_no:
+            continue
+
         key = f"{invoice.original_challan_no} - {invoice.invoice_no}"
         uom = invoice.uom.upper()
 
