@@ -283,7 +283,7 @@ class GovExcel(DataProcessor):
                 "fieldname": inv_f.DOC_DATE,
                 "data_format": {"number_format": self.DATE_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
-                "transform": lambda x: x.strftime("%d-%b-%y") if x else None,
+                "transform": lambda x, *args: x.strftime("%d-%b-%y") if x else None,
             },
             {
                 "label": _(gov_xl.INVOICE_VALUE),
@@ -305,7 +305,7 @@ class GovExcel(DataProcessor):
                 "fieldname": inv_f.DIFF_PERCENTAGE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
-                "transform": lambda x: x if x else None,
+                "transform": lambda x, *args: x if x else None,
             },
             {
                 "label": _(gov_xl.INVOICE_TYPE),
@@ -346,7 +346,7 @@ class GovExcel(DataProcessor):
                 "fieldname": inv_f.DOC_DATE,
                 "data_format": {"number_format": self.DATE_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
-                "transform": lambda x: x.strftime("%d-%b-%y") if x else None,
+                "transform": lambda x, *args: x.strftime("%d-%b-%y") if x else None,
             },
             {
                 "label": _(gov_xl.INVOICE_VALUE),
@@ -362,7 +362,7 @@ class GovExcel(DataProcessor):
                 "fieldname": inv_f.DIFF_PERCENTAGE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
-                "transform": lambda x: x if x else None,
+                "transform": lambda x, *args: x if x else None,
             },
             {
                 "label": _(gov_xl.TAX_RATE),
@@ -402,7 +402,7 @@ class GovExcel(DataProcessor):
                 "fieldname": inv_f.DIFF_PERCENTAGE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
-                "transform": lambda x: x if x else None,
+                "transform": lambda x, *args: x if x else None,
             },
             {
                 "label": _(gov_xl.TAX_RATE),
@@ -449,12 +449,12 @@ class GovExcel(DataProcessor):
                 "fieldname": inv_f.DOC_DATE,
                 "data_format": {"number_format": self.DATE_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
-                "transform": lambda x: x.strftime("%d-%b-%y") if x else None,
+                "transform": lambda x, *args: x.strftime("%d-%b-%y") if x else None,
             },
             {
                 "label": _(gov_xl.NOTE_TYPE),
                 "fieldname": inv_f.TRANSACTION_TYPE,
-                "transform": lambda x: x[0],
+                "transform": lambda x, *args: x[0],
             },
             {
                 "label": _(gov_xl.POS),
@@ -480,7 +480,7 @@ class GovExcel(DataProcessor):
                 "fieldname": inv_f.DIFF_PERCENTAGE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
-                "transform": lambda x: x if x else None,
+                "transform": lambda x, *args: x if x else None,
             },
             {
                 "label": _(gov_xl.TAX_RATE),
@@ -516,7 +516,7 @@ class GovExcel(DataProcessor):
                 "fieldname": inv_f.DOC_DATE,
                 "data_format": {"number_format": self.DATE_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
-                "transform": lambda x: x.strftime("%d-%b-%y") if x else None,
+                "transform": lambda x, *args: x.strftime("%d-%b-%y") if x else None,
             },
             {
                 "label": _(gov_xl.NOTE_TYPE),
@@ -536,7 +536,7 @@ class GovExcel(DataProcessor):
                 "fieldname": inv_f.DIFF_PERCENTAGE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
-                "transform": lambda x: x if x else None,
+                "transform": lambda x, *args: x if x else None,
             },
             {
                 "label": _(gov_xl.TAX_RATE),
@@ -572,7 +572,7 @@ class GovExcel(DataProcessor):
                 "fieldname": inv_f.DOC_DATE,
                 "data_format": {"number_format": self.DATE_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
-                "transform": lambda x: x.strftime("%d-%b-%y") if x else None,
+                "transform": lambda x, *args: x.strftime("%d-%b-%y") if x else None,
             },
             {
                 "label": _(gov_xl.INVOICE_VALUE),
@@ -593,7 +593,7 @@ class GovExcel(DataProcessor):
                 "fieldname": inv_f.SHIPPING_BILL_DATE,
                 "data_format": {"number_format": self.DATE_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
-                "transform": lambda x: x.strftime("%d-%b-%y") if x else None,
+                "transform": lambda x, *args: x.strftime("%d-%b-%y") if x else None,
             },
             {
                 "label": _(gov_xl.TAX_RATE),
@@ -626,7 +626,7 @@ class GovExcel(DataProcessor):
                     "number_format": self.PERCENT_FORMAT,
                 },
                 "header_format": {"width": ExcelWidth.XS.value},
-                "transform": lambda x: x if x else None,
+                "transform": lambda x, *args: x if x else None,
             },
             {
                 "label": _(gov_xl.TAX_RATE),
@@ -657,7 +657,7 @@ class GovExcel(DataProcessor):
                 "fieldname": inv_f.DIFF_PERCENTAGE,
                 "data_format": {"number_format": self.PERCENT_FORMAT},
                 "header_format": {"width": ExcelWidth.XS.value},
-                "transform": lambda x: x if x else None,
+                "transform": lambda x, *args: x if x else None,
             },
             {
                 "label": _(gov_xl.TAX_RATE),
