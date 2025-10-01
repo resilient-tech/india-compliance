@@ -27,6 +27,7 @@ class ReturnType(Enum):
 
 
 @frappe.whitelist()
+@otp_handler
 def request_otp(company_gstin):
     frappe.has_permission("GST Settings", throw=True)
 
