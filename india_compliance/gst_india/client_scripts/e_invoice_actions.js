@@ -28,11 +28,7 @@ frappe.ui.form.on("Sales Invoice", {
         if (frm.doc.docstatus === 0 || !is_einv_generatable) {
             frm.add_custom_button(
                 __("Applicability Status"),
-                () =>
-                    show_e_invoice_applicability_status(
-                        frm,
-                        is_einv_generatable
-                    ),
+                () => show_e_invoice_applicability_status(frm, is_einv_generatable),
                 "e-Invoice"
             );
 
@@ -137,7 +133,12 @@ frappe.ui.form.on("Sales Invoice", {
 
                     Are you sure you want to continue?`
                 );
-                const d = frappe.warn(__("Cannot Cancel IRN"), message, continueCancellation, __("Yes"));
+                const d = frappe.warn(
+                    __("Cannot Cancel IRN"),
+                    message,
+                    continueCancellation,
+                    __("Yes")
+                );
 
                 d.set_secondary_action_label(__("No"));
                 return;
@@ -191,11 +192,11 @@ function show_cancel_e_invoice_dialog(frm, callback) {
     india_compliance.primary_to_danger_btn(d);
     d.show();
 
-    $(`
-        <div class="alert alert-warning" role="alert">
-            ${__("Sales invoice will be cancelled along with the IRN.")}
-        </div>
-    `).prependTo(d.wrapper);
+    d.show_message(
+        __("Sales invoice will be cancelled along with the IRN."),
+        "yellow",
+        1 // permanent
+    );
 }
 
 function show_mark_e_invoice_as_generated_dialog(frm) {
@@ -287,7 +288,7 @@ function get_cancel_e_invoice_dialog_fields(frm, manual_cancel = false) {
             default: manual_cancel
                 ? "Others"
                 : gst_settings.reason_for_e_invoice_cancellation ||
-                "Data Entry Mistake",
+                  "Data Entry Mistake",
             options: ["Duplicate", "Data Entry Mistake", "Order Cancelled", "Others"],
         },
         {
@@ -396,7 +397,9 @@ function show_e_invoice_applicability_status(frm, is_einv_applicable) {
     }
 
     frappe.msgprint({
-        title: is_einv_applicable ? __("e-Invoice can be generated") : __("e-Invoice cannot be generated"),
+        title: is_einv_applicable
+            ? __("e-Invoice can be generated")
+            : __("e-Invoice cannot be generated"),
         message: frm._einv_message,
         indicator: is_einv_applicable ? "green" : "red",
     });
