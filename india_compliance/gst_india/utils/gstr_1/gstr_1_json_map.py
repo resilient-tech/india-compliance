@@ -1264,6 +1264,11 @@ class HSNSUM(GSTR1DataMapper):
             )
         )
 
+        if data.get(inv_f.ERROR_CD) and data.get(inv_f.ERROR_MSG):
+            data[inv_f.ERROR_MSG] = self.get_formatted_error_message(
+                data[inv_f.ERROR_MSG], data
+            )
+
         return data
 
     def map_uom(self, uom, data=None):
@@ -1283,6 +1288,12 @@ class HSNSUM(GSTR1DataMapper):
             return f"{uom}-{UOM_MAP[uom]}"
 
         return f"OTH-{UOM_MAP.get('OTH')}"
+
+    def get_formatted_error_message(self, error_message, data=None):
+        if not error_message or not data:
+            return error_message
+
+        return f"HSN Code: {data.get(inv_f.HSN_CODE)} - {error_message}".strip()
 
 
 class AT(GSTR1DataMapper):
@@ -1858,6 +1869,9 @@ def convert_to_internal_data_format(gov_data, for_errors=False):
     errors = []
     for category, data in output.items():
         for row in data.values():
+            if not (row.get(inv_f.ERROR_CD) or row.get(inv_f.ERROR_MSG)):
+                continue
+
             row["category"] = category
             errors.append(row)
 
