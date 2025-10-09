@@ -184,7 +184,8 @@ def get_json(filters, report_name, data):
 
     gst_json["hsn"] = get_hsn_wise_json_data(report_data, filters)
 
-    return {"report_name": report_name, "data": gst_json}
+    filename = frappe.scrub("{0}".format(report_name)) + ".json"
+    return {"data": gst_json, "filename": filename}
 
 
 @frappe.whitelist()
