@@ -1264,9 +1264,11 @@ class HSNSUM(GSTR1DataMapper):
             )
         )
 
-        if data.get(inv_f.ERROR_CD) and data.get(inv_f.ERROR_MSG):
-            data[inv_f.ERROR_MSG] = self.get_formatted_error_message(
-                data[inv_f.ERROR_MSG], data
+        if data.get(inv_f.ERROR_MSG) and data.get(inv_f.HSN_CODE):
+            data[inv_f.ERROR_MSG] = (
+                f"HSN Code: {data.get(inv_f.HSN_CODE)} - {
+                data.get(inv_f.ERROR_MSG)
+            }".strip()
             )
 
         return data
@@ -1288,12 +1290,6 @@ class HSNSUM(GSTR1DataMapper):
             return f"{uom}-{UOM_MAP[uom]}"
 
         return f"OTH-{UOM_MAP.get('OTH')}"
-
-    def get_formatted_error_message(self, error_message, data=None):
-        if not error_message or not data:
-            return error_message
-
-        return f"HSN Code: {data.get(inv_f.HSN_CODE)} - {error_message}".strip()
 
 
 class AT(GSTR1DataMapper):
