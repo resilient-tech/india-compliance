@@ -190,7 +190,11 @@ def get_json(filters, report_name, data):
 
 @frappe.whitelist()
 def download_json_file():
-    """download json content in a file"""
+    """
+    DEPRECATED: download json content in a file
+    This method is no longer used. File download is now handled client-side using blob creation.
+    Kept for backwards compatibility only.
+    """
     data = frappe._dict(frappe.local.form_dict)
     frappe.response["filename"] = (
         frappe.scrub("{0}".format(data["report_name"])) + ".json"
