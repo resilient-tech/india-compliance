@@ -1264,12 +1264,10 @@ class HSNSUM(GSTR1DataMapper):
             )
         )
 
-        if data.get(inv_f.ERROR_MSG) and data.get(inv_f.HSN_CODE):
-            data[inv_f.ERROR_MSG] = (
-                f"HSN Code: {data.get(inv_f.HSN_CODE)} - {
-                data.get(inv_f.ERROR_MSG)
-            }".strip()
-            )
+        if (message := data.get(inv_f.ERROR_MSG, "").strip()) and (
+            hsn_code := data.get(inv_f.HSN_CODE)
+        ):
+            data[inv_f.ERROR_MSG] = f"HSN Code: {hsn_code} - {message}"
 
         return data
 
