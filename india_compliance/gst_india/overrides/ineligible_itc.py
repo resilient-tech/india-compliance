@@ -321,7 +321,7 @@ class IneligibleITC:
                 frappe.scrub(self.doc.doctype): self.doc.name,
             },
             {
-                "gross_purchase_amount": flt(item.valuation_rate),
+                "net_purchase_amount": flt(item.valuation_rate),
                 "purchase_amount": flt(item.valuation_rate),
             },
         )

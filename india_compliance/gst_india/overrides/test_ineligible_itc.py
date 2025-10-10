@@ -881,7 +881,7 @@ class TestIneligibleITC(IntegrationTestCase):
             asset_purchase_value = frappe.db.get_value(
                 "Asset",
                 {f"{frappe.scrub(doctype)}": docname, "item_code": asset},
-                "gross_purchase_amount",
+                "net_purchase_amount",
             )
             self.assertEqual(asset_purchase_value, value)
 
