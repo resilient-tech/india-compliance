@@ -1221,13 +1221,13 @@ class ItemGSTDetails:
         - Item count added to handle rounding errors
         """
 
-        tax_differences = frappe._dict(
-            {
-                tax_row.gst_tax_type: tax_row.get(self.tax_amount_field(), 0)
-                for tax_row in self.doc.taxes
-                if self.is_gst_tax_row(tax_row)
-            }
-        )
+        tax_differences = defaultdict(float)
+        for tax_row in self.doc.taxes:
+            if not self.is_gst_tax_row(tax_row):
+                continue
+            tax_type = tax_row.gst_tax_type
+            tax_differences[tax_type] += tax_row.get(self.tax_amount_field(), 0)
+
         last_item_with_tax = None
         last_item_defaults = None
 
