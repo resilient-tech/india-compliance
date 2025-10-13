@@ -261,7 +261,7 @@ class BaseAPI:
     def handle_server_error(self, error_messages):
         for exception, error_message_list in self.ERROR_MESSAGES.items():
             for error_pattern in error_message_list:
-                if any(error_pattern in msg for msg in error_messages):
+                if any(error_pattern in msg for msg in error_messages if msg):
                     frappe.throw(
                         msg=exception.message,
                         exc=exception,
