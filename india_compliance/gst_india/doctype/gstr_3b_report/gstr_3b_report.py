@@ -758,24 +758,15 @@ def make_json(name):
 
 @frappe.whitelist()
 def download_gstr3b_as_excel(name):
-    """
-    Download GSTR 3B report as Excel file
-    args:
-        name (str): GSTR 3B Report document name
-
-    Returns:
-        File download response with Excel file
-    """
+    """Download GSTR 3B report as Excel file"""
     doc = frappe.get_doc("GSTR 3B Report", name)
+
     if not doc.json_output:
         frappe.throw(_("Report data not found. Please generate the report."))
 
     try:
         data = json.loads(doc.json_output)
-
-        exporter = GSTR3BExcelExporter(
-            gstin=data.get("gstin"), period=data.get("ret_period"), data=data
-        )
+        exporter = GSTR3BExcelExporter(data)
         exporter.generate_excel()
 
     except Exception as e:
@@ -791,363 +782,304 @@ def download_gstr3b_as_excel(name):
 
 
 class GSTR3BExcelExporter:
-    """
-    Export GSTR 3B data to Excel format using template
+    """Export GSTR 3B data to Excel format using template"""
 
-    This class handles the generation of Excel reports for GSTR 3B data
-    using a predefined template file and mapping data to specific cells.
-    """
-
-    TEMPLATE_EXCEL_FILE = get_data_file_path("gstr3b_excel_utility_v5.7.xlsx")
+    TEMPLATE_FILE = get_data_file_path("gstr3b_excel_utility_v5.7.xlsx")
     WORKSHEET_NAME = "GSTR-3B"
 
-    def __init__(self, gstin, period, data):
-        """
-        Initialize the exporter with GSTR 3B data
+    # Row mappings for each section
+    ROWS = {
+        # Header info
+        "gstin": 5,
+        "year": 5,
+        "month": 6,
+        # Section 3.1 - Outward supplies
+        "osup_det": 11,
+        "zero_rated": 12,
+        "nil_exempt": 13,
+        "reverse_charge": 14,
+        "non_gst": 15,
+        # Section 3.1.1 - E-commerce
+        "ecom_tcs": 22,
+        "ecom_supplies": 23,
+        # Section 3.2 - Inter-state
+        "inter_state_start": 88,
+        # Section 4 - ITC
+        "itc_import_goods": 31,
+        "itc_import_services": 32,
+        "itc_reverse_charge": 33,
+        "itc_isd": 34,
+        "itc_others": 35,
+        "itc_reversed_rules": 37,
+        "itc_reversed_others": 38,
+        # Section 5 - Inward supplies
+        "inward_gst": 48,
+        "inward_non_gst": 49,
+    }
 
-        Args:
-            gstin (str): The GSTIN number
-            period (str): The period in MMYYYY format
-            data (dict): The GSTR 3B report data
-        """
-        self.gstin = gstin
-        self.period = period
+    # Column mappings for different sections
+    HEADER_COLUMNS = {
+        "gstin": 3,
+        "year": 7,
+        "month": 7,
+    }
+
+    # Section 3.1 - Tax columns (includes taxable value)
+    TAX_COLUMNS = {
+        "txval": 3,  # Taxable Value
+        "iamt": 4,  # Integrated Tax
+        "camt": 5,  # Central Tax
+        "samt": 6,  # State Tax
+        "csamt": 7,  # Cess
+    }
+
+    # Section 4 - ITC columns (no taxable value column)
+    ITC_COLUMNS = {
+        "iamt": 3,  # Integrated Tax
+        "camt": 4,  # Central Tax
+        "samt": 5,  # State Tax
+        "csamt": 6,  # Cess
+    }
+
+    # Section 5 - Inward supplies columns
+    INWARD_COLUMNS = {
+        "inter": 4,  # Inter-state
+        "intra": 5,  # Intra-state
+    }
+
+    def __init__(self, data):
+        """Initialize with GSTR 3B data"""
         self.data = data
+        self.gstin = data.get("gstin")
+        self.period = data.get("ret_period")
+        self.worksheet = None
 
     def generate_excel(self):
-        """
-        Generate Excel file using template and updating cells
-        """
-        template_file = self.TEMPLATE_EXCEL_FILE
-        if not os.path.exists(template_file):
-            frappe.throw(_(f"GSTR 3B Excel template not found at {template_file}"))
+        """Generate and export Excel file"""
+        if not os.path.exists(self.TEMPLATE_FILE):
+            frappe.throw(_("GSTR 3B Excel template not found"))
 
-        excel = ExcelExporter(file=template_file)
-        self._update_template_data(excel)
+        excel = ExcelExporter(file=self.TEMPLATE_FILE)
+        self._update_worksheet(excel)
 
         file_name = f"GSTR-3B-{self.gstin}-{self.period}"
         excel.export(file_name)
 
-    def _update_template_data(self, excel):
-        """
-        Update template cells with GSTR 3B data
+    def _update_worksheet(self, excel):
+        """Update worksheet with data"""
+        self.worksheet = excel.wb[self.WORKSHEET_NAME]
+        if not self.worksheet:
+            frappe.throw(_("GSTR 3B worksheet not found in template"))
 
-        Args:
-            excel: ExcelExporter instance with loaded template
-        """
-        ws = excel.wb[self.WORKSHEET_NAME]
-        if ws is None:
-            frappe.throw(_("GSTR 3B sheet not found in the template"))
+        try:
+            self._set_header_info()
+            self._set_section_3_1()
+            self._set_section_3_1_1()
+            self._set_section_3_2()
+            self._set_section_4()
+            self._set_section_5()
+        except Exception as e:
+            frappe.log_error(title="GSTR 3B Excel Export Error", message=str(e))
+            raise
 
-        self._update_gstr3b_data(ws)
+    def _set_header_info(self):
+        """Set header information"""
+        self._set_value(self.ROWS["gstin"], self.HEADER_COLUMNS["gstin"], self.gstin)
 
-    def _update_gstr3b_data(self, ws):
-        """
-        Update GSTR 3B data with correct cell references based on template analysis
+        if self.period and len(self.period) >= 6:
+            month = self.period[:2]
+            year = self.period[2:6]
+            self._set_value(self.ROWS["year"], self.HEADER_COLUMNS["year"], year)
+            self._set_value(self.ROWS["month"], self.HEADER_COLUMNS["month"], month)
 
-        Args:
-            ws: openpyxl worksheet object
-        """
-        # Update header information
-        self._update_header_info(ws)
-
-        # Update main data sections
-        self._update_section_3_1(ws)  # Outward supplies
-        self._update_section_3_1_1(ws)  # E-commerce supplies
-        self._update_section_3_2(ws)  # Inter-state supplies
-        self._update_section_4(ws)  # ITC details
-        self._update_section_5(ws)  # Nil rated/exempt supplies
-        self._update_section_6(ws)  # Payment of tax
-
-    def _update_header_info(self, ws):
-        """Update header information (GSTIN, Year, Month)"""
-        # GSTIN at C5
-        self.set_value(ws, 5, 3, self.gstin)
-
-        # Parse period to get month and year
-        month = self.period[:2]
-        year = self.period[2:6]
-
-        # Year at G5, Month at G6
-        self.set_value(ws, 5, 7, year)
-        self.set_value(ws, 6, 7, month)
-
-    def _update_section_3_1(self, ws):
-        """Update Section 3.1 - Details of Outward Supplies"""
+    def _set_section_3_1(self):
+        """Set Section 3.1 - Outward supplies"""
         sup_details = self.data.get("sup_details", {})
 
-        # Section 3.1(a) - Outward taxable supplies (Row 11)
+        # Outward taxable supplies
         osup_det = sup_details.get("osup_det", {})
-        self._set_tax_values(ws, 11, osup_det)
+        self._set_tax_values("osup_det", osup_det)
 
-        # Section 3.1(b) - Zero rated supplies (Row 12)
+        # Zero rated supplies
         osup_zero = sup_details.get("osup_zero", {})
-        self.set_value(
-            ws, 12, 3, flt(osup_zero.get("txval", 0), 2)
-        )  # Total Taxable Value
-        self.set_value(ws, 12, 4, flt(osup_zero.get("iamt", 0), 2))  # Integrated Tax
-        self.set_value(ws, 12, 7, flt(osup_zero.get("csamt", 0), 2))  # Cess
+        self._set_value(
+            self.ROWS["zero_rated"],
+            self.TAX_COLUMNS["txval"],
+            osup_zero.get("txval", 0),
+        )
+        self._set_value(
+            self.ROWS["zero_rated"], self.TAX_COLUMNS["iamt"], osup_zero.get("iamt", 0)
+        )
+        self._set_value(
+            self.ROWS["zero_rated"],
+            self.TAX_COLUMNS["csamt"],
+            osup_zero.get("csamt", 0),
+        )
 
-        # Section 3.1(c) - Nil rated/exempted supplies (Row 13)
+        # Nil rated/exempt supplies
         osup_nil_exmp = sup_details.get("osup_nil_exmp", {})
-        self.set_value(ws, 13, 3, flt(osup_nil_exmp.get("txval", 0), 2))
+        self._set_value(
+            self.ROWS["nil_exempt"],
+            self.TAX_COLUMNS["txval"],
+            osup_nil_exmp.get("txval", 0),
+        )
 
-        # Section 3.1(d) - Reverse charge supplies (Row 14)
+        # Reverse charge supplies
         isup_rev = sup_details.get("isup_rev", {})
-        self._set_tax_values(ws, 14, isup_rev)
+        self._set_tax_values("reverse_charge", isup_rev)
 
-        # Section 3.1(e) - Non-GST supplies (Row 15)
+        # Non-GST supplies
         osup_nongst = sup_details.get("osup_nongst", {})
-        self.set_value(ws, 15, 3, flt(osup_nongst.get("txval", 0), 2))
+        self._set_value(
+            self.ROWS["non_gst"], self.TAX_COLUMNS["txval"], osup_nongst.get("txval", 0)
+        )
 
-    def _update_section_3_1_1(self, ws):
-        """Update Section 3.1.1 - E-commerce supplies"""
+    def _set_section_3_1_1(self):
+        """Set Section 3.1.1 - E-commerce supplies"""
         eco_dtls = self.data.get("eco_dtls", {})
 
-        # Section 3.1.1(i) - TCS by e-commerce operator (Row 22)
-        # Usually zero - TCS is collected by operator
-        self.set_value(ws, 22, 3, 0.00)  # Total Taxable Value
-        self.set_value(ws, 22, 4, 0.00)  # Integrated Tax
-        self.set_value(ws, 22, 5, 0.00)  # Central Tax
-        self.set_value(ws, 22, 7, 0.00)  # Cess
+        # TCS by e-commerce operator (usually zero)
+        self._set_value(self.ROWS["ecom_tcs"], self.TAX_COLUMNS["txval"], 0)
+        self._set_value(self.ROWS["ecom_tcs"], self.TAX_COLUMNS["iamt"], 0)
+        self._set_value(self.ROWS["ecom_tcs"], self.TAX_COLUMNS["camt"], 0)
+        self._set_value(self.ROWS["ecom_tcs"], self.TAX_COLUMNS["csamt"], 0)
 
-        # Section 3.1.1(ii) - Supplies made through e-commerce operator (Row 23)
+        # Supplies through e-commerce operator
         eco_reg_sup = eco_dtls.get("eco_reg_sup", {})
-        self.set_value(ws, 23, 3, flt(eco_reg_sup.get("txval", 0), 2))
+        self._set_value(
+            self.ROWS["ecom_supplies"],
+            self.TAX_COLUMNS["txval"],
+            eco_reg_sup.get("txval", 0),
+        )
 
-    def _update_section_3_2(self, ws):
-        """Update Section 3.2 - Inter-state supplies to unregistered persons, composition dealers, and UIN holders
-
-        Section 3.2 is located at row 84 in the template with the following structure:
-        - Data starts from row 88
-        - Each row represents a place of supply with values for all three categories
-        - Column B: Place of Supply (State/UT code)
-        - Column C & D: Unregistered Persons (Taxable Value & IGST)
-        - Column E & F: Composition Taxable Persons (Taxable Value & IGST)
-        - Column G & H: UIN holders (Taxable Value & IGST)
-        """
+    def _set_section_3_2(self):
+        """Set Section 3.2 - Inter-state supplies"""
         inter_sup = self.data.get("inter_sup", {})
+        pos_data = self._group_by_place_of_supply(inter_sup)
 
-        # Group data by place of supply
-        pos_grouped_data = self._group_section_3_2_by_place_of_supply(inter_sup)
+        if not pos_data:
+            # Set default row with zeros
+            self._set_inter_state_row(self.ROWS["inter_state_start"], {})
+            return
 
-        # Populate the worksheet with grouped data
-        self._populate_section_3_2_by_place_of_supply(ws, pos_grouped_data)
+        # Set data for each place of supply
+        for i, (pos, data) in enumerate(sorted(pos_data.items())):
+            row = self.ROWS["inter_state_start"] + i
+            self._set_inter_state_row(row, data)
 
-    def _group_section_3_2_by_place_of_supply(self, inter_sup):
-        """Group Section 3.2 data by place of supply
-
-        Each place of supply becomes a row with all three categories (Unregistered, Composition, UIN)
-
-        Args:
-            inter_sup (dict): Inter-state supply data
-
-        Returns:
-            dict: Data grouped by place of supply
-        """
+    def _group_by_place_of_supply(self, inter_sup):
+        """Group inter-state data by place of supply"""
         pos_data = {}
 
-        # Define category mappings
-        category_mappings = {
+        categories = {
             "unreg_details": "unreg",
             "comp_details": "comp",
             "uin_details": "uin",
         }
 
-        # Process each category
-        for category_key, category_name in category_mappings.items():
-            details_list = inter_sup.get(category_key, [])
+        for category_key, category_name in categories.items():
+            for item in inter_sup.get(category_key, []):
+                pos = item.get("pos", "00")
 
-            for item in details_list:
-                pos = item.get("pos", "00")  # Place of supply code
-
-                # Initialize place of supply entry if not exists
                 if pos not in pos_data:
                     pos_data[pos] = {
-                        "pos": pos,
-                        "unreg": {"txval": 0.0, "iamt": 0.0},
-                        "comp": {"txval": 0.0, "iamt": 0.0},
-                        "uin": {"txval": 0.0, "iamt": 0.0},
+                        "unreg": {"txval": 0, "iamt": 0},
+                        "comp": {"txval": 0, "iamt": 0},
+                        "uin": {"txval": 0, "iamt": 0},
                     }
 
-                # Add values to the appropriate category for this place of supply
                 pos_data[pos][category_name]["txval"] += flt(item.get("txval", 0), 2)
                 pos_data[pos][category_name]["iamt"] += flt(item.get("iamt", 0), 2)
 
         return pos_data
 
-    def _populate_section_3_2_by_place_of_supply(self, ws, pos_grouped_data):
-        """Populate Section 3.2 data in the worksheet grouped by place of supply
+    def _set_inter_state_row(self, row, data):
+        """Set values for one inter-state row"""
+        # Unregistered (columns C, D)
+        unreg = data.get("unreg", {"txval": 0, "iamt": 0})
+        self._set_value(row, 3, unreg["txval"])
+        self._set_value(row, 4, unreg["iamt"])
 
-        Args:
-            ws: openpyxl worksheet object
-            pos_grouped_data (dict): Data grouped by place of supply
-        """
-        DATA_START_ROW = 88
+        # Composition (columns E, F)
+        comp = data.get("comp", {"txval": 0, "iamt": 0})
+        self._set_value(row, 5, comp["txval"])
+        self._set_value(row, 6, comp["iamt"])
 
-        # Sort places of supply for consistent ordering
-        sorted_pos = sorted(pos_grouped_data.keys()) if pos_grouped_data else []
+        # UIN (columns G, H)
+        uin = data.get("uin", {"txval": 0, "iamt": 0})
+        self._set_value(row, 7, uin["txval"])
+        self._set_value(row, 8, uin["iamt"])
 
-        # If no data, ensure at least one row of zeros
-        if not sorted_pos:
-            self._set_section_3_2_row_data(
-                ws,
-                DATA_START_ROW,
-                {
-                    "pos": "",
-                    "unreg": {"txval": 0.0, "iamt": 0.0},
-                    "comp": {"txval": 0.0, "iamt": 0.0},
-                    "uin": {"txval": 0.0, "iamt": 0.0},
-                },
-            )
-            return
-
-        # Process each place of supply as a separate row
-        for i, pos in enumerate(sorted_pos):
-            current_row = DATA_START_ROW + i
-            pos_data = pos_grouped_data[pos]
-            self._set_section_3_2_row_data(ws, current_row, pos_data)
-
-    def _set_section_3_2_row_data(self, ws, row, pos_data):
-        # Columns C & D: Unregistered Persons
-        unreg = pos_data.get("unreg", {"txval": 0.0, "iamt": 0.0})
-        self.set_value(ws, row, 3, flt(unreg["txval"], 2))  # Taxable Value
-        self.set_value(ws, row, 4, flt(unreg["iamt"], 2))  # IGST
-
-        # Columns E & F: Composition Taxable Persons
-        comp = pos_data.get("comp", {"txval": 0.0, "iamt": 0.0})
-        self.set_value(ws, row, 5, flt(comp["txval"], 2))  # Taxable Value
-        self.set_value(ws, row, 6, flt(comp["iamt"], 2))  # IGST
-
-        # Columns G & H: UIN holders
-        uin = pos_data.get("uin", {"txval": 0.0, "iamt": 0.0})
-        self.set_value(ws, row, 7, flt(uin["txval"], 2))  # Taxable Value
-        self.set_value(ws, row, 8, flt(uin["iamt"], 2))  # IGST
-
-    def _update_section_4(self, ws):
-        """Update Section 4 - Eligible ITC"""
+    def _set_section_4(self):
+        """Set Section 4 - ITC"""
         itc_elg = self.data.get("itc_elg", {})
 
-        # Section 4(A) - ITC Available
-        self._update_itc_available(ws, itc_elg.get("itc_avl", []))
+        # ITC Available
+        itc_avl = itc_elg.get("itc_avl", [])
+        itc_rows = [
+            "itc_import_goods",
+            "itc_import_services",
+            "itc_reverse_charge",
+            "itc_isd",
+            "itc_others",
+        ]
 
-        # Section 4(B) - ITC Reversed
-        self._update_itc_reversed(ws, itc_elg.get("itc_rev", []))
+        for i, row_key in enumerate(itc_rows):
+            if i < len(itc_avl):
+                self._set_itc_values(row_key, itc_avl[i])
 
-    def _update_itc_available(self, ws, itc_avl):
-        """Update ITC Available section (4A)"""
-        # Ensure we have enough items in the list
-        while len(itc_avl) < 5:
-            itc_avl.append({})
+        # ITC Reversed
+        itc_rev = itc_elg.get("itc_rev", [])
+        rev_rows = ["itc_reversed_rules", "itc_reversed_others"]
 
-        # Row 31: Import of goods
-        self._set_itc_values(ws, 31, itc_avl[0])
+        for i, row_key in enumerate(rev_rows):
+            if i < len(itc_rev):
+                self._set_itc_values(row_key, itc_rev[i])
 
-        # Row 32: Import of services
-        self._set_itc_values(ws, 32, itc_avl[1])
-
-        # Row 33: Reverse charge supplies
-        self._set_itc_values(ws, 33, itc_avl[2])
-
-        # Row 34: Input Service Distributor
-        self._set_itc_values(ws, 34, itc_avl[3])
-
-        # Row 35: All other ITC
-        self._set_itc_values(ws, 35, itc_avl[4])
-
-    def _update_itc_reversed(self, ws, itc_rev):
-        """Update ITC Reversed section (4B)"""
-        # Ensure we have enough items in the list
-        while len(itc_rev) < 2:
-            itc_rev.append({})
-
-        # Row 37: As per rules 38, 42 & 43
-        self._set_itc_values(ws, 37, itc_rev[0])
-
-        # Row 38: Others
-        self._set_itc_values(ws, 38, itc_rev[1])
-
-    def _update_section_5(self, ws):
-        """Update Section 5 - Nil rated and exempt supplies"""
+    def _set_section_5(self):
+        """Set Section 5 - Inward supplies"""
         inward_sup = self.data.get("inward_sup", {})
         isup_details = inward_sup.get("isup_details", [])
 
-        # Ensure we have enough items
-        while len(isup_details) < 2:
-            isup_details.append({})
+        # GST supplies
+        if len(isup_details) > 0:
+            gst_data = isup_details[0]
+            self._set_inward_values("inward_gst", gst_data)
 
-        # Row 48: From composition supplier, exempt and nil rated
-        self.set_value(
-            ws, 48, 4, flt(isup_details[0].get("inter", 0), 2)
-        )  # Inter-state
-        self.set_value(
-            ws, 48, 5, flt(isup_details[0].get("intra", 0), 2)
-        )  # Intra-state
+        # Non-GST supplies
+        if len(isup_details) > 1:
+            non_gst_data = isup_details[1]
+            self._set_inward_values("inward_non_gst", non_gst_data)
 
-        # Row 49: Non GST supply
-        self.set_value(
-            ws, 49, 4, flt(isup_details[1].get("inter", 0), 2)
-        )  # Inter-state
-        self.set_value(
-            ws, 49, 5, flt(isup_details[1].get("intra", 0), 2)
-        )  # Intra-state
+    def _set_tax_values(self, row_key, data):
+        """Set tax values for Section 3.1 (includes txval)"""
+        row = self.ROWS[row_key]
+        for key in ["txval", "iamt", "camt", "samt", "csamt"]:
+            if key in self.TAX_COLUMNS:
+                value = flt(data.get(key, 0), 2)
+                self._set_value(row, self.TAX_COLUMNS[key], value)
 
-    def _update_section_6(self, ws):
-        """Update Section 6 - Payment of Tax (if data available)"""
-        # This section contains formulas that auto-calculate from previous sections
-        # We don't need to update these cells as they have Excel formulas
-        pass
+    def _set_itc_values(self, row_key, data):
+        """Set ITC values for Section 4 (no txval column)"""
+        row = self.ROWS[row_key]
+        for key in ["iamt", "camt", "samt", "csamt"]:
+            if key in self.ITC_COLUMNS:
+                value = flt(data.get(key, 0), 2)
+                self._set_value(row, self.ITC_COLUMNS[key], value)
 
-    def _set_tax_values(self, ws, row, data):
-        """
-        Set tax values for a given row - only set values for keys that exist in data
-        Data-driven approach using column mapping
+    def _set_inward_values(self, row_key, data):
+        """Set inward supply values for Section 5"""
+        row = self.ROWS[row_key]
+        for key in ["inter", "intra"]:
+            if key in self.INWARD_COLUMNS:
+                value = flt(data.get(key, 0), 2)
+                self._set_value(row, self.INWARD_COLUMNS[key], value)
 
-        Args:
-            ws: worksheet object
-            row (int): row number
-            data (dict): dictionary containing tax values
-        """
-        # Column mapping for tax values
-        tax_column_mapping = {
-            "txval": 3,  # Column C: Taxable Value
-            "iamt": 4,  # Column D: Integrated Tax
-            "camt": 5,  # Column E: Central Tax
-            "samt": 6,  # Column F: State Tax
-            "csamt": 7,  # Column G: Cess
-        }
-
-        # Set values only for keys that exist in data
-        for key, column in tax_column_mapping.items():
-            if key in data:
-                self.set_value(ws, row, column, flt(data[key], 2))
-
-    def set_value(self, ws, row, column, value):
-
-        cell = ws.cell(row, column)
-        if cell.__class__.__name__ != "MergedCell":
-            return
-        cell.value = value
-
-    def _set_itc_values(self, ws, row, data):
-        """
-        Set ITC values for a given row - only set values for keys that exist in data
-        Data-driven approach using column mapping
-
-        Args:
-            ws: worksheet object
-            row (int): row number
-            data (dict): dictionary containing ITC values
-        """
-        # Column mapping for ITC values
-        itc_column_mapping = {
-            "iamt": 3,  # Column C: Integrated Tax
-            "camt": 4,  # Column D: Central Tax
-            "samt": 5,  # Column E: State Tax
-            "csamt": 6,  # Column F: Cess
-        }
-
-        # Set values only for keys that exist in data
-        for key, column in itc_column_mapping.items():
-            if key in data:
-                self.set_value(ws, row, column, flt(data[key], 2))
+    def _set_value(self, row, column, value):
+        """Set cell value with validation"""
+        try:
+            cell = self.worksheet.cell(row, column)
+            if cell.__class__.__name__ != "MergedCell":
+                cell.value = value
+        except Exception as e:
+            frappe.log_error(f"Error setting cell ({row}, {column}): {str(e)}")
