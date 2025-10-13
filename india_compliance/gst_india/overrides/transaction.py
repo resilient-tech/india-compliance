@@ -1408,14 +1408,11 @@ class ItemGSTDetails:
 
         for item in self.doc.get("items"):
             for tax in GST_TAX_TYPES:
-                amount_field = f"{tax}_amount"
-                precision = self.precision.get(amount_field)
-                actual_amt = round(flt(item.get(amount_field), precision), 0)
-                expected_amt = round(
-                    self.get_item_tax_amount(item, item.get(f"{tax}_rate"), tax), 0
+                expected_amt = self.get_item_tax_amount(
+                    item, item.get(f"{tax}_rate"), tax
                 )
 
-                diff = abs(actual_amt - expected_amt)
+                diff = abs(item.get(f"{tax}_amount") - expected_amt)
 
                 if diff > ALLOWED_TAX_DIFFERENCE:
                     invalid_rows[item.idx].append(tax.upper())
