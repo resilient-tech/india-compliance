@@ -755,6 +755,19 @@ class TestTransaction(IntegrationTestCase):
             doc.items[0],
         )
 
+    def test_invalid_item_gst_details(self):
+        doc = create_transaction(
+            **self.transaction_details, rate=200, is_out_state=True, do_not_save=True
+        )
+        row = frappe.copy_doc(doc.taxes[0])
+        doc.append("taxes", row)
+        doc.place_of_supply = "27-Maharashtra"
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(.*GST amounts do not match the calculated values.*)$"),
+            doc.insert,
+        )
+
     def test_rounding_gst_details(self):
         doc = create_transaction(
             **self.transaction_details, rate=62.51, is_in_state=True, do_not_save=True

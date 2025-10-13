@@ -1203,6 +1203,8 @@ class ItemGSTDetails:
         else:
             self.set_item_name_wise_tax_details()
 
+        self.validate_item_gst_details()
+
     def get_item_defaults(self):
         item_defaults = frappe._dict(count=0)
 
@@ -1398,6 +1400,40 @@ class ItemGSTDetails:
             response.update({tax_amount_field: tax_amount})
 
         return response
+
+    def validate_item_gst_details(self):
+        invalid_rows = defaultdict(list)
+
+        for item in self.doc.get("items"):
+            for tax in GST_TAX_TYPES:
+                amount_field = f"{tax}_amount"
+                precision = self.precision.get(amount_field)
+                actual_amt = flt(item.get(amount_field), precision)
+                expected_amt = self.get_item_tax_amount(
+                    item, item.get(f"{tax}_rate"), tax
+                )
+
+                if actual_amt != expected_amt:
+                    invalid_rows[item.idx].append(tax.upper())
+
+        if invalid_rows:
+            msg = (
+                _(
+                    "GST amounts do not match the calculated values based on tax rates for the following Item rows:<br><br>"
+                )
+                + "<ul>"
+            )
+            for idx, fields in invalid_rows.items():
+                msg += _(
+                    "<li><strong>Row #{0}</strong>: {1} amount mismatch</li>"
+                ).format(idx, ", ".join(fields))
+
+            msg += "</ul>"
+
+            frappe.throw(
+                msg,
+                title=_("Incorrect Item GST Details"),
+            )
 
     def set_tax_amount_precisions(self, doctype):
         item_doctype = frappe.get_meta(doctype).get_field("items").options
