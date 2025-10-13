@@ -250,7 +250,7 @@ class BaseAPI:
 
     ERROR_MESSAGES = {
         GSPServerError: (
-            "GSTGSTDOWN",
+            "GSPGSTDOWN",
             "GSPERR300",
             "Connection reset",
             "No route to host",
