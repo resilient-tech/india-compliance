@@ -1209,7 +1209,76 @@ class ItemGSTDetails:
 
         self.item_defaults = item_defaults
 
+<<<<<<< HEAD
     def set_item_wise_tax_details(self):
+=======
+    def set_item_name_wise_tax_details(self):
+        """
+        Update Item Tax Details
+
+        Possible Exceptions Handled:
+        - There could be more than one row for same account
+        - Item count added to handle rounding errors
+        """
+
+        tax_differences = defaultdict(float)
+        for tax_row in self.doc.taxes:
+            if not self.is_gst_tax_row(tax_row):
+                continue
+            tax_type = tax_row.gst_tax_type
+            tax_differences[tax_type] += tax_row.get(self.tax_amount_field(), 0)
+
+        last_item_with_tax = None
+        last_item_defaults = None
+
+        for item in self.doc.get("items"):
+            item_defaults = self.item_defaults.copy()
+            tax_amount = 0
+
+            for tax_row in self.doc.taxes:
+                if not self.is_gst_tax_row(tax_row):
+                    continue
+
+                tax = tax_row.gst_tax_type
+                tax_rate_field = f"{tax}_rate"
+                tax_amount_field = f"{tax}_amount"
+
+                old = self.get_tax_details(tax_row)
+                old = frappe.parse_json(tax_row.get(self.tax_details_field(), "{}"))
+
+                if self.get_item_key(item) not in old:
+                    # Do not compute if Item is not present in Item table
+                    # There can be difference in Item Table and Item Wise Tax Details
+                    continue
+
+                tax_rate = self.get_item_tax_rate(item, tax_row)
+                tax_amount = self.get_item_tax_amount(item, tax_rate, tax)
+
+                # cases when charge type == "Actual"
+                if tax_amount and not tax_rate:
+                    continue
+
+                tax_differences[tax] -= tax_amount
+                item_defaults[tax_rate_field] = tax_rate
+                item_defaults[tax_amount_field] += tax_amount
+
+            item.update(item_defaults)
+
+            # update tax difference only for taxable items
+            if tax_amount:
+                last_item_with_tax = item
+                last_item_defaults = item_defaults
+
+        # Handle rounding errors
+        if tax_differences and last_item_with_tax:
+            for tax, tax_amount in tax_differences.items():
+                last_item_defaults[f"{tax}_amount"] += flt(tax_amount, 5)
+
+            for fieldname, value in last_item_defaults.items():
+                last_item_with_tax.set(fieldname, value)
+
+    def set_item_code_wise_tax_details(self):
+>>>>>>> 80db94b2 (fix: correct item gst details with same account in multiple tax rows)
         """
         Item Tax Details complied
         Example:
