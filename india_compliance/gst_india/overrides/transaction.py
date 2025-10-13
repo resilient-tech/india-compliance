@@ -1408,9 +1408,9 @@ class ItemGSTDetails:
             for tax in GST_TAX_TYPES:
                 amount_field = f"{tax}_amount"
                 precision = self.precision.get(amount_field)
-                actual_amt = flt(item.get(amount_field), precision)
-                expected_amt = self.get_item_tax_amount(
-                    item, item.get(f"{tax}_rate"), tax
+                actual_amt = round(flt(item.get(amount_field), precision), 0)
+                expected_amt = round(
+                    self.get_item_tax_amount(item, item.get(f"{tax}_rate"), tax), 0
                 )
 
                 if actual_amt != expected_amt:
