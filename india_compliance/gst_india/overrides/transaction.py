@@ -53,6 +53,8 @@ DOCTYPES_WITH_GST_DETAIL = {
     "POS Invoice",
 }
 
+ALLOWED_TAX_DIFFERENCE = 1  # Allowable difference in tax amount due to rounding off
+
 
 def set_gst_breakup(doc):
     gst_breakup_html = frappe.render_template(
@@ -180,7 +182,7 @@ def validate_item_wise_tax_detail(doc):
             )
             tax_difference = abs(multiplier * tax_rate - tax_amount)
 
-            if tax_difference > 1:
+            if tax_difference > ALLOWED_TAX_DIFFERENCE:
                 correct_charge_type = (
                     "On Item Quantity" if is_cess_non_advol else "On Net Total"
                 )
@@ -1413,7 +1415,9 @@ class ItemGSTDetails:
                     self.get_item_tax_amount(item, item.get(f"{tax}_rate"), tax), 0
                 )
 
-                if actual_amt != expected_amt:
+                diff = abs(actual_amt - expected_amt)
+
+                if diff > ALLOWED_TAX_DIFFERENCE:
                     invalid_rows[item.idx].append(tax.upper())
 
         if invalid_rows:
