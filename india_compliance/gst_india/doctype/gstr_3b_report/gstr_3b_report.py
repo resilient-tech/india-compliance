@@ -887,18 +887,12 @@ class GSTR3BExcelExporter:
 
     def _set_header_info(self):
         """Set header information"""
-        self._set_value(self.ROWS["gstin"], self.HEADER_COLUMNS["gstin"], self.gstin)
-
         # Parse period format like "012023" where 01=January, 2023=year
-        # 2023 corresponds to fiscal year 2022-23
         period = self.data.get("ret_period")
         month_num = int(period[:2])  # Extract month (01, 02, etc.)
         year = period[2:6]  # Extract year (2023, 2024, etc.)
         calendar_year = int(year)
 
-        # Determine fiscal year based on Indian fiscal year (April-March)
-        # For April to December, fiscal year starts in current calendar year
-        # For January to March, fiscal year starts in previous calendar year
         if month_num >= 4:  # April to December
             fiscal_year_start = str(calendar_year)
             fiscal_year_end = str(calendar_year + 1)[2:]
@@ -909,6 +903,7 @@ class GSTR3BExcelExporter:
         self.month = calendar.month_name[month_num]
         self.fiscal_year = f"{fiscal_year_start}-{fiscal_year_end}"
 
+        self._set_value(self.ROWS["gstin"], self.HEADER_COLUMNS["gstin"], self.gstin)
         self._set_value(
             self.ROWS["year"], self.HEADER_COLUMNS["year"], self.fiscal_year
         )
@@ -1099,9 +1094,6 @@ class GSTR3BExcelExporter:
 
     def _set_value(self, row, column, value):
         """Set cell value with validation"""
-        try:
-            cell = self.worksheet.cell(row, column)
-            if cell.__class__.__name__ != "MergedCell":
-                cell.value = value
-        except Exception as e:
-            frappe.log_error(f"Error setting cell ({row}, {column}): {str(e)}")
+        cell = self.worksheet.cell(row, column)
+        if cell.__class__.__name__ != "MergedCell":
+            cell.value = value
