@@ -7,6 +7,8 @@ import json
 import os
 from collections import defaultdict
 
+from openpyxl.cell.cell import MergedCell
+
 import frappe
 from frappe import _
 from frappe.model.document import Document
@@ -1040,7 +1042,7 @@ class GSTR3BExcelExporter:
 
     def _set_cell(self, row, column, value):
         cell = self.worksheet.cell(row, column)
-        if cell.__class__.__name__ != "MergedCell":
+        if not isinstance(cell, MergedCell):
             cell.value = value
 
     @classmethod
