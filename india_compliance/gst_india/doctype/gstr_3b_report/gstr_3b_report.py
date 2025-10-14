@@ -765,21 +765,9 @@ def download_gstr3b_as_excel(name):
     if not doc.json_output:
         frappe.throw(_("Report data not found. Please generate the report."))
 
-    try:
-        data = json.loads(doc.json_output)
-        exporter = GSTR3BExcelExporter(data)
-        exporter.generate_excel()
-
-    except Exception as e:
-        frappe.log_error(
-            message=f"GSTR 3B Excel Export Error: {str(e)}",
-            title="GSTR 3B Excel Export Failed",
-        )
-        frappe.throw(
-            _(
-                "Failed to generate Excel file. Please try again or contact administrator."
-            )
-        )
+    data = json.loads(doc.json_output)
+    exporter = GSTR3BExcelExporter(data)
+    exporter.generate_excel()
 
 
 class GSTR3BExcelExporter:
@@ -904,16 +892,12 @@ class GSTR3BExcelExporter:
         if not self.worksheet:
             frappe.throw(_("GSTR 3B worksheet not found in template"))
 
-        try:
-            self._set_header_info()
-            self._set_outward_supplies()
-            self._set_ecommerce_supplies()
-            self._set_inter_state_supplies()
-            self._set_itc_details()
-            self._set_inward_supplies()
-        except Exception as e:
-            frappe.log_error(title="GSTR 3B Excel Export Error", message=str(e))
-            raise
+        self._set_header_info()
+        self._set_outward_supplies()
+        self._set_ecommerce_supplies()
+        self._set_inter_state_supplies()
+        self._set_itc_details()
+        self._set_inward_supplies()
 
     def _set_header_info(self):
         """Set header information"""
