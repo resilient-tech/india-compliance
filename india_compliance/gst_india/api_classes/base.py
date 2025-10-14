@@ -9,7 +9,11 @@ from frappe import _
 from frappe.utils import sbool
 from frappe.utils.scheduler import is_scheduler_disabled
 
-from india_compliance.exceptions import GatewayTimeoutError, GSPServerError
+from india_compliance.exceptions import (
+    GatewayTimeoutError,
+    GSPLimitExceededError,
+    GSPServerError,
+)
 from india_compliance.gst_india.utils import is_api_enabled
 from india_compliance.gst_india.utils.api import enqueue_integration_request
 
@@ -244,18 +248,25 @@ class BaseAPI:
                 title=_("API Request Failed"),
             )
 
-    def handle_server_error(self, error_messages):
-        error_message_list = [
+    ERROR_MESSAGES = {
+        GSPServerError: (
             "GSPGSTDOWN",
             "GSPERR300",
             "Connection reset",
             "No route to host",
-        ]
+        ),
+        GSPLimitExceededError: ("GEN5005",),
+    }
 
-        for message in error_messages:
-            for error in error_message_list:
-                if error in message:
-                    raise GSPServerError
+    def handle_server_error(self, error_messages):
+        for exception, error_message_list in self.ERROR_MESSAGES.items():
+            for error_pattern in error_message_list:
+                if any(error_pattern in msg for msg in error_messages if msg):
+                    frappe.throw(
+                        msg=exception.message,
+                        exc=exception,
+                        title=exception.title,
+                    )
 
     def is_ignored_error(self, response_json):
         # Override in subclass, return truthy value to stop frappe.throw
