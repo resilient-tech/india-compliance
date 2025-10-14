@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 
+import calendar
 import json
 import os
 from collections import defaultdict
@@ -851,8 +852,9 @@ class GSTR3BExcelExporter:
         """Initialize with GSTR 3B data"""
         self.data = data
         self.gstin = data.get("gstin")
-        self.period = data.get("ret_period")
         self.worksheet = None
+        self.month = None
+        self.year = None
 
     def generate_excel(self):
         """Generate and export Excel file"""
@@ -862,7 +864,8 @@ class GSTR3BExcelExporter:
         excel = ExcelExporter(file=self.TEMPLATE_FILE)
         self._update_worksheet(excel)
 
-        file_name = f"GSTR-3B-{self.gstin}-{self.period}"
+        file_name = f"GSTR-3B-{self.gstin}-{self.month}-{self.fiscal_year}.xlsx"
+
         excel.export(file_name)
 
     def _update_worksheet(self, excel):
@@ -886,11 +889,30 @@ class GSTR3BExcelExporter:
         """Set header information"""
         self._set_value(self.ROWS["gstin"], self.HEADER_COLUMNS["gstin"], self.gstin)
 
-        if self.period and len(self.period) >= 6:
-            month = self.period[:2]
-            year = self.period[2:6]
-            self._set_value(self.ROWS["year"], self.HEADER_COLUMNS["year"], year)
-            self._set_value(self.ROWS["month"], self.HEADER_COLUMNS["month"], month)
+        # Parse period format like "012023" where 01=January, 2023=year
+        # 2023 corresponds to fiscal year 2022-23
+        period = self.data.get("ret_period")
+        month_num = int(period[:2])  # Extract month (01, 02, etc.)
+        year = period[2:6]  # Extract year (2023, 2024, etc.)
+        calendar_year = int(year)
+
+        # Determine fiscal year based on Indian fiscal year (April-March)
+        # For April to December, fiscal year starts in current calendar year
+        # For January to March, fiscal year starts in previous calendar year
+        if month_num >= 4:  # April to December
+            fiscal_year_start = str(calendar_year)
+            fiscal_year_end = str(calendar_year + 1)[2:]
+        else:  # January to March
+            fiscal_year_start = str(calendar_year - 1)
+            fiscal_year_end = str(calendar_year)[2:]
+
+        self.month = calendar.month_name[month_num]
+        self.fiscal_year = f"{fiscal_year_start}-{fiscal_year_end}"
+
+        self._set_value(
+            self.ROWS["year"], self.HEADER_COLUMNS["year"], self.fiscal_year
+        )
+        self._set_value(self.ROWS["month"], self.HEADER_COLUMNS["month"], self.month)
 
     def _set_section_3_1(self):
         """Set Section 3.1 - Outward supplies"""
