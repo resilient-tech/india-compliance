@@ -783,12 +783,16 @@ def download_gstr3b_as_excel(name):
 
 
 class GSTR3BExcelExporter:
-    """Export GSTR 3B data to Excel format using template"""
+    """
+    Export GSTR-3B data to Excel format using the official template.
+
+    This class handles data transformation and mapping from JSON to Excel cells
+    following the official GSTR-3B offline utility format.
+    """
 
     TEMPLATE_FILE = get_data_file_path("gstr3b_excel_utility_v5.7.xlsx")
     WORKSHEET_NAME = "GSTR-3B"
 
-    # Cache the reversed state mapping for efficient lookups
     _STATE_CODE_TO_NAME = {code: state for state, code in STATE_NUMBERS.items()}
 
     # Row mappings for each section (consistent with JSON keys)
@@ -819,7 +823,6 @@ class GSTR3BExcelExporter:
         "inward_non_gst": 49,
     }
 
-    # Column mappings for different sections
     HEADER_COLUMNS = {
         "gstin": 3,
         "year": 7,
@@ -828,52 +831,59 @@ class GSTR3BExcelExporter:
 
     # Section 3.1 - Tax columns
     TAX_COLUMNS = {
-        "txval": 3,  # Taxable Value
-        "iamt": 4,  # Integrated Tax
-        "camt": 5,  # Central Tax
-        "csamt": 7,  # Cess
+        "txval": 3,
+        "iamt": 4,
+        "camt": 5,
+        "csamt": 7,
     }
 
     # Section 4 - ITC columns
     ITC_COLUMNS = {
-        "iamt": 3,  # Integrated Tax
-        "camt": 4,  # Central Tax
-        "csamt": 6,  # Cess
+        "iamt": 3,
+        "camt": 4,
+        "csamt": 6,
     }
 
     # Section 5 - Inward supplies columns
     INWARD_COLUMNS = {
-        "inter": 4,  # Inter-state
-        "intra": 5,  # Intra-state
+        "inter": 4,
+        "intra": 5,
     }
 
     # ITC type mappings based on 'ty' field in JSON
     ITC_AVAILABLE_TYPES = {
-        "IMPG": "itc_import_goods",  # Import of goods
-        "IMPS": "itc_import_services",  # Import of services
-        "ISRC": "itc_reverse_charge",  # Input supplies liable to reverse charge
-        "ISD": "itc_isd",  # From ISD
-        "OTH": "itc_others",  # Others
+        "IMPG": "itc_import_goods",
+        "IMPS": "itc_import_services",
+        "ISRC": "itc_reverse_charge",
+        "ISD": "itc_isd",
+        "OTH": "itc_others",
     }
 
     ITC_REVERSED_TYPES = {
-        "RUL": "itc_reversed_rules",  # As per CGST Rules
-        "OTH": "itc_reversed_others",  # Others
+        "RUL": "itc_reversed_rules",
+        "OTH": "itc_reversed_others",
     }
 
-    # Section 5 - Inward supply type mappings
     INWARD_SUPPLY_TYPES = {
-        "GST": "inward_gst",  # GST supplies
-        "NONGST": "inward_non_gst",  # Non-GST supplies
+        "GST": "inward_gst",
+        "NONGST": "inward_non_gst",
+    }
+
+    COLUMN_SETS = {
+        "tax": ["txval", "iamt", "camt", "csamt"],
+        "itc": ["iamt", "camt", "csamt"],
+        "import_itc": ["iamt", "csamt"],
+        "inward": ["inter", "intra"],
+        "zero_rated": ["txval", "iamt", "csamt"],
+        "taxable_only": ["txval"],
     }
 
     def __init__(self, data):
-        """Initialize with GSTR 3B data"""
         self.data = data
         self.gstin = data.get("gstin")
         self.worksheet = None
         self.month = None
-        self.year = None
+        self.fiscal_year = None
 
     def generate_excel(self):
         """Generate and export Excel file"""
@@ -883,180 +893,147 @@ class GSTR3BExcelExporter:
         excel = ExcelExporter(file=self.TEMPLATE_FILE)
         self._update_worksheet(excel)
 
-        file_name = f"GSTR-3B-{self.gstin}-{self.month}-{self.fiscal_year}.xlsx"
-
+        file_name = self._get_filename()
         excel.export(file_name)
 
+    def _get_filename(self):
+        return f"GSTR-3B-{self.gstin}-{self.month}-{self.fiscal_year}.xlsx"
+
     def _update_worksheet(self, excel):
-        """Update worksheet with data"""
         self.worksheet = excel.wb[self.WORKSHEET_NAME]
         if not self.worksheet:
             frappe.throw(_("GSTR 3B worksheet not found in template"))
 
         try:
             self._set_header_info()
-            self._set_section_3_1()
-            self._set_section_3_1_1()
-            self._set_section_3_2()
-            self._set_section_4()
-            self._set_section_5()
+            self._set_outward_supplies()
+            self._set_ecommerce_supplies()
+            self._set_inter_state_supplies()
+            self._set_itc_details()
+            self._set_inward_supplies()
         except Exception as e:
             frappe.log_error(title="GSTR 3B Excel Export Error", message=str(e))
             raise
 
     def _set_header_info(self):
         """Set header information"""
-        # Parse period format like "012023" where 01=January, 2023=year
-        period = self.data.get("ret_period")
-        month_num = int(period[:2])  # Extract month (01, 02, etc.)
-        year = period[2:6]  # Extract year (2023, 2024, etc.)
-        calendar_year = int(year)
+        period = self.data.get("ret_period", "")
+        if not period or len(period) < 6:
+            return
 
-        if month_num >= 4:  # April to December
+        month_num = int(period[:2])
+        calendar_year = int(period[2:6])
+
+        self.month = calendar.month_name[month_num]
+        self.fiscal_year = self._get_fiscal_year(month_num, calendar_year)
+
+        self._set_cell(self.ROWS["gstin"], self.HEADER_COLUMNS["gstin"], self.gstin)
+        self._set_cell(self.ROWS["year"], self.HEADER_COLUMNS["year"], self.fiscal_year)
+        self._set_cell(self.ROWS["month"], self.HEADER_COLUMNS["month"], self.month)
+
+    def _get_fiscal_year(self, month_num, calendar_year):
+        if month_num >= 4:
             fiscal_year_start = str(calendar_year)
             fiscal_year_end = str(calendar_year + 1)[2:]
-        else:  # January to March
+        else:
             fiscal_year_start = str(calendar_year - 1)
             fiscal_year_end = str(calendar_year)[2:]
 
-        self.month = calendar.month_name[month_num]
-        self.fiscal_year = f"{fiscal_year_start}-{fiscal_year_end}"
+        return f"{fiscal_year_start}-{fiscal_year_end}"
 
-        self._set_value(self.ROWS["gstin"], self.HEADER_COLUMNS["gstin"], self.gstin)
-        self._set_value(
-            self.ROWS["year"], self.HEADER_COLUMNS["year"], self.fiscal_year
-        )
-        self._set_value(self.ROWS["month"], self.HEADER_COLUMNS["month"], self.month)
-
-    def _set_section_3_1(self):
-        """Set Section 3.1 - Outward supplies"""
+    def _set_outward_supplies(self):
         sup_details = self.data.get("sup_details", {})
 
-        # Outward taxable supplies - full tax values
-        osup_det = sup_details.get("osup_det", {})
-        self._set_tax_values("osup_det", osup_det)
+        section_mappings = [
+            ("osup_det", "tax"),
+            ("osup_zero", "zero_rated"),
+            ("osup_nil_exmp", "taxable_only"),
+            ("isup_rev", "tax"),
+            ("osup_nongst", "taxable_only"),
+        ]
 
-        # Zero rated supplies - limited tax values (txval, iamt, csamt only)
-        osup_zero = sup_details.get("osup_zero", {})
-        self._set_zero_rated_values("osup_zero", osup_zero)
+        for json_key, column_set in section_mappings:
+            data = sup_details.get(json_key, {})
+            self._set_section_data(json_key, data, column_set)
 
-        # Nil rated/exempt supplies - taxable value only
-        osup_nil_exmp = sup_details.get("osup_nil_exmp", {})
-        self._set_taxable_value("osup_nil_exmp", osup_nil_exmp)
-
-        # Reverse charge supplies - full tax values
-        isup_rev = sup_details.get("isup_rev", {})
-        self._set_tax_values("isup_rev", isup_rev)
-
-        # Non-GST supplies - taxable value only
-        osup_nongst = sup_details.get("osup_nongst", {})
-        self._set_taxable_value("osup_nongst", osup_nongst)
-
-    def _set_section_3_1_1(self):
-        """Set Section 3.1.1 - E-commerce supplies"""
+    def _set_ecommerce_supplies(self):
         eco_dtls = self.data.get("eco_dtls", {})
+        self._set_section_data(
+            "eco_reg_sup", eco_dtls.get("eco_reg_sup", {}), "taxable_only"
+        )
 
-        # Supplies through e-commerce operator
-        eco_reg_sup = eco_dtls.get("eco_reg_sup", {})
-        self._set_taxable_value("eco_reg_sup", eco_reg_sup)
-
-    def _set_section_3_2(self):
-        """Set Section 3.2 - Inter-state supplies"""
+    def _set_inter_state_supplies(self):
         inter_sup = self.data.get("inter_sup", {})
         pos_data = self._group_by_place_of_supply(inter_sup)
 
         if not pos_data:
             return
 
-        # Set data for each place of supply
         for i, (pos, data) in enumerate(sorted(pos_data.items())):
             row = self.ROWS["inter_state_start"] + i
             self._set_inter_state_row(row, pos, data)
 
     def _group_by_place_of_supply(self, inter_sup):
-        """Group inter-state data by place of supply"""
         pos_data = {}
-
         categories = {
             "unreg_details": "unreg",
             "comp_details": "comp",
             "uin_details": "uin",
         }
-        default = {
-            "unreg": {"txval": 0, "iamt": 0},
-            "comp": {"txval": 0, "iamt": 0},
-            "uin": {"txval": 0, "iamt": 0},
-        }
 
         for category_key, category_name in categories.items():
             for item in inter_sup.get(category_key, []):
-                state = item.get("pos", "00")
-                # Normalize pos to ensure consistent formatting
-                state = self._get_state_name_from_code(state)
+                state_code = item.get("pos", "00")
+                state_name = self._format_place_of_supply(state_code)
 
-                pos_data.setdefault(state, default.copy())
+                if state_name not in pos_data:
+                    pos_data[state_name] = {
+                        "unreg": {"txval": 0, "iamt": 0},
+                        "comp": {"txval": 0, "iamt": 0},
+                        "uin": {"txval": 0, "iamt": 0},
+                    }
 
-                pos_data[state][category_name]["txval"] += flt(item.get("txval", 0), 2)
-                pos_data[state][category_name]["iamt"] += flt(item.get("iamt", 0), 2)
+                pos_data[state_name][category_name]["txval"] += flt(
+                    item.get("txval", 0), 2
+                )
+                pos_data[state_name][category_name]["iamt"] += flt(
+                    item.get("iamt", 0), 2
+                )
 
         return pos_data
 
     def _set_inter_state_row(self, row, pos, data):
-        """Set values for one inter-state row"""
+        self._set_cell(row, 2, pos)
 
-        # Place of Supply (column B)
-        self._set_value(row, 2, pos)
+        categories = [
+            ("unreg", 3, 4),
+            ("comp", 5, 6),
+            ("uin", 7, 8),
+        ]
 
-        # Unregistered (columns C, D)
-        unreg = data.get("unreg", {"txval": 0, "iamt": 0})
-        self._set_value(row, 3, unreg["txval"])
-        self._set_value(row, 4, unreg["iamt"])
+        for category, val_col, tax_col in categories:
+            category_data = data.get(category, {"txval": 0, "iamt": 0})
+            self._set_cell(row, val_col, category_data["txval"])
+            self._set_cell(row, tax_col, category_data["iamt"])
 
-        # Composition (columns E, F)
-        comp = data.get("comp", {"txval": 0, "iamt": 0})
-        self._set_value(row, 5, comp["txval"])
-        self._set_value(row, 6, comp["iamt"])
-
-        # UIN (columns G, H)
-        uin = data.get("uin", {"txval": 0, "iamt": 0})
-        self._set_value(row, 7, uin["txval"])
-        self._set_value(row, 8, uin["iamt"])
-
-    def _set_section_4(self):
-        """Set Section 4 - ITC"""
+    def _set_itc_details(self):
         itc_elg = self.data.get("itc_elg", {})
+        self._populate_itc_sections(
+            itc_elg.get("itc_avl", []), self.ITC_AVAILABLE_TYPES
+        )
+        self._populate_itc_sections(itc_elg.get("itc_rev", []), self.ITC_REVERSED_TYPES)
 
-        # ITC Available sections
-        self._set_itc_available_sections(itc_elg.get("itc_avl", []))
-
-        # ITC Reversed sections
-        self._set_itc_reversed_sections(itc_elg.get("itc_rev", []))
-
-    def _set_itc_available_sections(self, itc_avl):
-        """Set ITC Available sections using type-based mapping"""
-        # Process each ITC available entry using class-level type mapping
-        for itc_entry in itc_avl:
+    def _populate_itc_sections(self, itc_entries, type_mapping):
+        for itc_entry in itc_entries:
             itc_type = itc_entry.get("ty", "")
-            if itc_type in self.ITC_AVAILABLE_TYPES:
-                row_key = self.ITC_AVAILABLE_TYPES[itc_type]
+            if itc_type not in type_mapping:
+                continue
 
-                # Import of goods and services - columns D and E are read-only
-                if itc_type in ["IMPG", "IMPS"]:
-                    self._set_import_itc_values(row_key, itc_entry)
-                else:
-                    self._set_itc_values(row_key, itc_entry)
+            row_key = type_mapping[itc_type]
+            column_set = "import_itc" if itc_type in ["IMPG", "IMPS"] else "itc"
+            self._set_section_data(row_key, itc_entry, column_set, self.ITC_COLUMNS)
 
-    def _set_itc_reversed_sections(self, itc_rev):
-        """Set ITC Reversed sections using type-based mapping"""
-        # Process each ITC reversed entry using class-level type mapping
-        for itc_entry in itc_rev:
-            itc_type = itc_entry.get("ty", "")
-            if itc_type in self.ITC_REVERSED_TYPES:
-                row_key = self.ITC_REVERSED_TYPES[itc_type]
-                self._set_itc_values(row_key, itc_entry)
-
-    def _set_section_5(self):
-        """Set Section 5 - Inward supplies"""
+    def _set_inward_supplies(self):
         inward_sup = self.data.get("inward_sup", {})
         isup_details = inward_sup.get("isup_details", [])
 
@@ -1064,65 +1041,27 @@ class GSTR3BExcelExporter:
             supply_type = supply_data.get("ty")
             if supply_type in self.INWARD_SUPPLY_TYPES:
                 row_key = self.INWARD_SUPPLY_TYPES[supply_type]
-                self._set_inward_values(row_key, supply_data)
+                self._set_section_data(
+                    row_key, supply_data, "inward", self.INWARD_COLUMNS
+                )
 
-    def _set_tax_values(self, row_key, data):
-        """Set tax values for Section 3.1"""
+    def _set_section_data(self, row_key, data, column_set, columns_dict=None):
         row = self.ROWS[row_key]
-        for key in ["txval", "iamt", "camt", "csamt"]:
-            if key in self.TAX_COLUMNS:
+        columns = self.COLUMN_SETS[column_set]
+        mapping = columns_dict or self.TAX_COLUMNS
+
+        for key in columns:
+            if key in mapping:
                 value = flt(data.get(key, 0), 2)
-                self._set_value(row, self.TAX_COLUMNS[key], value)
+                self._set_cell(row, mapping[key], value)
 
-    def _set_itc_values(self, row_key, data):
-        """Set ITC values for Section 4"""
-        row = self.ROWS[row_key]
-        for key in ["iamt", "camt", "csamt"]:
-            if key in self.ITC_COLUMNS:
-                value = flt(data.get(key, 0), 2)
-                self._set_value(row, self.ITC_COLUMNS[key], value)
-
-    def _set_import_itc_values(self, row_key, data):
-        """Set ITC values for import rows (excludes columns D and E - camt)"""
-        row = self.ROWS[row_key]
-        for key in ["iamt", "csamt"]:  # Exclude camt (column D)
-            if key in self.ITC_COLUMNS:
-                value = flt(data.get(key, 0), 2)
-                self._set_value(row, self.ITC_COLUMNS[key], value)
-
-    def _set_inward_values(self, row_key, data):
-        """Set inward supply values for Section 5"""
-        row = self.ROWS[row_key]
-        for key in ["inter", "intra"]:
-            if key in self.INWARD_COLUMNS:
-                value = flt(data.get(key, 0), 2)
-                self._set_value(row, self.INWARD_COLUMNS[key], value)
-
-    def _set_zero_rated_values(self, row_key, data):
-        """Set zero-rated supply values (txval, iamt, csamt only)"""
-        row = self.ROWS[row_key]
-        zero_rated_columns = ["txval", "iamt", "csamt"]
-        for key in zero_rated_columns:
-            if key in self.TAX_COLUMNS:
-                value = flt(data.get(key, 0), 2)
-                self._set_value(row, self.TAX_COLUMNS[key], value)
-
-    def _set_taxable_value(self, row_key, data):
-        """Set only taxable value (commonly used for nil-rated/exempt and non-GST supplies)"""
-        row = self.ROWS[row_key]
-        value = flt(data.get("txval", 0), 2)
-        self._set_value(row, self.TAX_COLUMNS["txval"], value)
-
-    def _set_value(self, row, column, value):
-        """Set cell value with validation"""
+    def _set_cell(self, row, column, value):
         cell = self.worksheet.cell(row, column)
         if cell.__class__.__name__ != "MergedCell":
             cell.value = value
 
     @classmethod
-    def _get_state_name_from_code(cls, state_code):
-        """Convert state code (e.g., '06') to 'Code-StateName' format (e.g., '06-Haryana')"""
+    def _format_place_of_supply(cls, state_code):
         formatted_code = state_code.zfill(2)
         state_name = cls._STATE_CODE_TO_NAME.get(formatted_code, "Other Territory")
-
         return f"{formatted_code}-{state_name}"
