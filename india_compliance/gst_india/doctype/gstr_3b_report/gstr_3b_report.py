@@ -760,12 +760,13 @@ def make_json(name):
 @frappe.whitelist()
 def download_gstr3b_as_excel(name):
     """Download GSTR 3B report as Excel file"""
-    doc = frappe.get_doc("GSTR 3B Report", name)
+    frappe.has_permission("GSTR 3B Report", throw=True)
+    json_data = frappe.get_value("GSTR 3B Report", name, "json_output")
 
-    if not doc.json_output:
+    if not json_data:
         frappe.throw(_("Report data not found. Please generate the report."))
 
-    data = json.loads(doc.json_output)
+    data = json.loads(json_data)
     exporter = GSTR3BExcelExporter(data)
     exporter.generate_excel()
 
