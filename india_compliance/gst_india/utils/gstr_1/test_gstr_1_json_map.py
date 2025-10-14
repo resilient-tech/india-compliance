@@ -1492,7 +1492,7 @@ class TestHSNSUMError(IntegrationTestCase):
                     inv_f.TAX_RATE: 0.1,
                     inv_f.DOC_VALUE: 524.75,
                     inv_f.ERROR_CD: "RET191350",
-                    inv_f.ERROR_MSG: "Length of entered HSN code is not valid as per AATO",
+                    inv_f.ERROR_MSG: "HSN Code: 1010 - Length of entered HSN code is not valid as per AATO",
                 },
                 "1011 - NOS-NUMBERS - 5.0": {
                     inv_f.DOC_TYPE: GSTR1_SubCategory.HSN.value,
@@ -1506,7 +1506,7 @@ class TestHSNSUMError(IntegrationTestCase):
                     inv_f.TAX_RATE: 5,
                     inv_f.DOC_VALUE: 524.75,
                     inv_f.ERROR_CD: "RET191350",
-                    inv_f.ERROR_MSG: "Length of entered HSN code is not valid as per AATO",
+                    inv_f.ERROR_MSG: "HSN Code: 1011 - Length of entered HSN code is not valid as per AATO",
                 },
             }
         }
