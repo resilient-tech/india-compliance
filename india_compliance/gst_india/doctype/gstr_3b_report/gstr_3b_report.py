@@ -21,17 +21,12 @@ from india_compliance.gst_india.report.gstr_1.gstr_1 import GSTR11A11BData
 from india_compliance.gst_india.report.gstr_3b_details.gstr_3b_details import (
     IneligibleITC,
 )
-<<<<<<< HEAD
-from india_compliance.gst_india.utils import get_gst_accounts_by_type, get_period
-=======
 from india_compliance.gst_india.utils import (
     get_data_file_path,
     get_gst_accounts_by_type,
     get_period,
 )
 from india_compliance.gst_india.utils.exporter import ExcelExporter
-from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR11A11BData
->>>>>>> c62722eb (fix: excel export gstr3b)
 
 VALUES_TO_UPDATE = ["iamt", "camt", "samt", "csamt"]
 GST_TAX_TYPE_MAP = {
