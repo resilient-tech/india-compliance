@@ -2595,7 +2595,7 @@ class GSTR1BooksData(BooksDataMapper):
 
         for category in categories_to_process:
             for key, row in data[category].copy().items():
-                if key not in included_docs:
+                if key in included_docs:
                     continue
 
                 row["sub_category"] = category
