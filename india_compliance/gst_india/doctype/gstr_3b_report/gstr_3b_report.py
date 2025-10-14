@@ -803,9 +803,7 @@ class GSTR3BExcelExporter:
         "osup_nil_exmp": 13,
         "isup_rev": 14,
         "osup_nongst": 15,
-        # Section 3.1.1 - E-commerce
-        "ecom_tcs": 22,
-        "ecom_supplies": 23,
+        "eco_reg_sup": 23,
         # Section 3.2 - Inter-state
         "inter_state_start": 88,
         # Section 4 - ITC
@@ -828,7 +826,7 @@ class GSTR3BExcelExporter:
         "month": 7,
     }
 
-    # Section 3.1 - Tax columns (includes taxable value)
+    # Section 3.1 - Tax columns
     TAX_COLUMNS = {
         "txval": 3,  # Taxable Value
         "iamt": 4,  # Integrated Tax
@@ -836,7 +834,7 @@ class GSTR3BExcelExporter:
         "csamt": 7,  # Cess
     }
 
-    # Section 4 - ITC columns (no taxable value column)
+    # Section 4 - ITC columns
     ITC_COLUMNS = {
         "iamt": 3,  # Integrated Tax
         "camt": 4,  # Central Tax
@@ -861,6 +859,12 @@ class GSTR3BExcelExporter:
     ITC_REVERSED_TYPES = {
         "RUL": "itc_reversed_rules",  # As per CGST Rules
         "OTH": "itc_reversed_others",  # Others
+    }
+
+    # Section 5 - Inward supply type mappings
+    INWARD_SUPPLY_TYPES = {
+        "GST": "inward_gst",  # GST supplies
+        "NONGST": "inward_non_gst",  # Non-GST supplies
     }
 
     def __init__(self, data):
@@ -954,7 +958,7 @@ class GSTR3BExcelExporter:
 
         # Supplies through e-commerce operator
         eco_reg_sup = eco_dtls.get("eco_reg_sup", {})
-        self._set_taxable_value("ecom_supplies", eco_reg_sup)
+        self._set_taxable_value("eco_reg_sup", eco_reg_sup)
 
     def _set_section_3_2(self):
         """Set Section 3.2 - Inter-state supplies"""
@@ -1051,28 +1055,24 @@ class GSTR3BExcelExporter:
         inward_sup = self.data.get("inward_sup", {})
         isup_details = inward_sup.get("isup_details", [])
 
-        # GST supplies
-        if len(isup_details) > 0:
-            gst_data = isup_details[0]
-            self._set_inward_values("inward_gst", gst_data)
-
-        # Non-GST supplies
-        if len(isup_details) > 1:
-            non_gst_data = isup_details[1]
-            self._set_inward_values("inward_non_gst", non_gst_data)
+        for supply_data in isup_details:
+            supply_type = supply_data.get("ty")
+            if supply_type in self.INWARD_SUPPLY_TYPES:
+                row_key = self.INWARD_SUPPLY_TYPES[supply_type]
+                self._set_inward_values(row_key, supply_data)
 
     def _set_tax_values(self, row_key, data):
-        """Set tax values for Section 3.1 (includes txval)"""
+        """Set tax values for Section 3.1"""
         row = self.ROWS[row_key]
-        for key in ["txval", "iamt", "camt", "samt", "csamt"]:
+        for key in ["txval", "iamt", "camt", "csamt"]:
             if key in self.TAX_COLUMNS:
                 value = flt(data.get(key, 0), 2)
                 self._set_value(row, self.TAX_COLUMNS[key], value)
 
     def _set_itc_values(self, row_key, data):
-        """Set ITC values for Section 4 (no txval column)"""
+        """Set ITC values for Section 4"""
         row = self.ROWS[row_key]
-        for key in ["iamt", "camt", "samt", "csamt"]:
+        for key in ["iamt", "camt", "csamt"]:
             if key in self.ITC_COLUMNS:
                 value = flt(data.get(key, 0), 2)
                 self._set_value(row, self.ITC_COLUMNS[key], value)
