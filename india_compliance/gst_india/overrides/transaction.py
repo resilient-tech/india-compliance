@@ -53,6 +53,8 @@ DOCTYPES_WITH_GST_DETAIL = {
     "POS Invoice",
 }
 
+ALLOWED_TAX_DIFFERENCE = 1  # Allowable difference in tax amount due to rounding off
+
 
 def set_gst_breakup(doc):
     gst_breakup_html = frappe.render_template(
@@ -180,7 +182,7 @@ def validate_item_wise_tax_detail(doc):
             )
             tax_difference = abs(multiplier * tax_rate - tax_amount)
 
-            if tax_difference > 1:
+            if tax_difference > ALLOWED_TAX_DIFFERENCE:
                 correct_charge_type = (
                     "On Item Quantity" if is_cess_non_advol else "On Net Total"
                 )
@@ -1203,6 +1205,8 @@ class ItemGSTDetails:
         else:
             self.set_item_name_wise_tax_details()
 
+        self.validate_item_gst_details()
+
     def get_item_defaults(self):
         item_defaults = frappe._dict(count=0)
 
@@ -1221,13 +1225,13 @@ class ItemGSTDetails:
         - Item count added to handle rounding errors
         """
 
-        tax_differences = frappe._dict(
-            {
-                tax_row.gst_tax_type: tax_row.get(self.tax_amount_field(), 0)
-                for tax_row in self.doc.taxes
-                if self.is_gst_tax_row(tax_row)
-            }
-        )
+        tax_differences = defaultdict(float)
+        for tax_row in self.doc.taxes:
+            if not self.is_gst_tax_row(tax_row):
+                continue
+            tax_type = tax_row.gst_tax_type
+            tax_differences[tax_type] += tax_row.get(self.tax_amount_field(), 0)
+
         last_item_with_tax = None
         last_item_defaults = None
 
@@ -1398,6 +1402,39 @@ class ItemGSTDetails:
             response.update({tax_amount_field: tax_amount})
 
         return response
+
+    def validate_item_gst_details(self):
+        invalid_rows = defaultdict(list)
+
+        for item in self.doc.get("items"):
+            for tax in GST_TAX_TYPES:
+                expected_amt = self.get_item_tax_amount(
+                    item, item.get(f"{tax}_rate"), tax
+                )
+
+                diff = abs(item.get(f"{tax}_amount") - expected_amt)
+
+                if diff > ALLOWED_TAX_DIFFERENCE:
+                    invalid_rows[item.idx].append(tax.upper())
+
+        if invalid_rows:
+            msg = (
+                _(
+                    "GST amounts do not match the calculated values based on tax rates for the following Item rows:<br><br>"
+                )
+                + "<ul>"
+            )
+            for idx, fields in invalid_rows.items():
+                msg += _(
+                    "<li><strong>Row #{0}</strong>: {1} amount mismatch</li>"
+                ).format(idx, ", ".join(fields))
+
+            msg += "</ul>"
+
+            frappe.throw(
+                msg,
+                title=_("Incorrect Item GST Details"),
+            )
 
     def set_tax_amount_precisions(self, doctype):
         item_doctype = frappe.get_meta(doctype).get_field("items").options
