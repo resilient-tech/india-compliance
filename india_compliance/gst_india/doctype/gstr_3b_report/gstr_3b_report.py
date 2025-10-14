@@ -890,8 +890,6 @@ class GSTR3BExcelExporter:
 
     def _update_worksheet(self, excel):
         self.worksheet = excel.wb[self.WORKSHEET_NAME]
-        if not self.worksheet:
-            frappe.throw(_("GSTR 3B worksheet not found in template"))
 
         self._set_header_info()
         self._set_outward_supplies()
