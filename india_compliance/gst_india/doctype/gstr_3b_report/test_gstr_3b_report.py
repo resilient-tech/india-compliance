@@ -7,6 +7,9 @@ import frappe
 from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import getdate
 
+from india_compliance.gst_india.doctype.gstr_3b_report.gstr_3b_report import (
+    GSTR3BExcelExporter,
+)
 from india_compliance.gst_india.utils.tests import (
     create_purchase_invoice,
     create_sales_invoice,
@@ -189,6 +192,9 @@ class TestGSTR3BReport(IntegrationTestCase):
                 },
             },
         )
+
+        exporter = GSTR3BExcelExporter(output)
+        exporter.generate_excel()
 
     def test_gst_rounding(self):
         gst_settings = frappe.get_cached_doc("GST Settings")
