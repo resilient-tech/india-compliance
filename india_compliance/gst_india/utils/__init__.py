@@ -1022,6 +1022,92 @@ def get_month_or_quarter_dict():
 MONTHS = list(get_month_or_quarter_dict().keys())[4:]
 
 
+<<<<<<< HEAD
+=======
+def get_period(month_or_quarter, year=None):
+    month_or_quarter_no = get_month_or_quarter_dict().get(month_or_quarter)
+
+    if isinstance(month_or_quarter_no, int):
+        month_or_quarter_no = (month_or_quarter_no, month_or_quarter_no)
+
+    if year:
+        return str(month_or_quarter_no[1]).zfill(2) + str(year)
+
+    return month_or_quarter_no
+
+
+def is_outward_stock_entry(doc):
+    if (
+        doc.doctype == "Stock Entry"
+        and doc.purpose in ["Material Transfer", "Material Issue"]
+        and not doc.is_return
+    ):
+        return True
+
+
+def create_notification(
+    message_content, document_type, document_name=None, request_id=None
+):
+    # request_id shows failure response
+    if request_id and (
+        doc_name := frappe.db.get_value(
+            "Integration Request", {"request_id": request_id}
+        )
+    ):
+        document_type = "Integration Request"
+        document_name = doc_name
+
+    notification = frappe.get_doc(
+        {
+            "doctype": "Notification Log",
+            "for_user": frappe.session.user,
+            "type": "Alert",
+            "document_type": document_type,
+            "document_name": document_name or document_type,
+            "subject": message_content.get("subject"),
+            "email_content": message_content.get("body"),
+        }
+    )
+    notification.insert(ignore_permissions=True)
+
+
+def enable_autocommit(fn):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        db = frappe.local.db
+        autocommit = db.auto_commit_on_many_writes
+        db.auto_commit_on_many_writes = 1
+
+        try:
+            return fn(*args, **kwargs)
+        finally:
+            db.auto_commit_on_many_writes = autocommit
+
+    return wrapper
+
+
+def get_company_gstin_number(company, address=None, all_gstins=False):
+    gstin = ""
+    if address:
+        gstin = frappe.db.get_value("Address", address, "gstin")
+
+    if not gstin:
+        gstin = get_gstin_list(company)
+        if gstin and not all_gstins:
+            gstin = gstin[0]
+
+    if not gstin:
+        address = frappe.bold(address) if address else ""
+        frappe.throw(
+            _("Please set valid GSTIN No. in Company Address {} for company {}").format(
+                address, frappe.bold(company)
+            )
+        )
+
+    return gstin
+
+
+>>>>>>> dff68e62 (fix: ignore permissions for notification insertion)
 def has_permission_of_page(page_name, throw=False):
     """
     Check if the user has permission to access the page.
