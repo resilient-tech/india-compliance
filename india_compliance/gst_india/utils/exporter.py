@@ -95,7 +95,8 @@ class Worksheet:
             "wrap_text": False,
         }
     )
-    filter_format = data_format.copy().update({"bg_color": None, "bold": True})
+    filter_format = data_format.copy()
+    filter_format.update({"bg_color": None, "bold": True})
     header_format = frappe._dict(
         {
             "font_family": "Calibri",

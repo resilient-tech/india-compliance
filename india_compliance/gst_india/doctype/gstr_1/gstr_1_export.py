@@ -159,7 +159,7 @@ class GovExcel(DataProcessor):
         self.build_excel(data, file)
 
     def process_data(self, data):
-        data = data.update(data.pop("aggregate_data", {}))
+        data.update(data.pop("aggregate_data", {}))
         category_wise_data = super().process_data(data)
 
         for category, category_data in category_wise_data.items():
@@ -2130,7 +2130,7 @@ def get_gstr_1_json(
     gstr1_log = frappe.get_doc("GST Return Log", f"GSTR1-{period}-{company_gstin}")
 
     data = gstr1_log.get_json_for("books")
-    data = data.update(data.pop("aggregate_data", {}))
+    data.update(data.pop("aggregate_data", {}))
 
     for subcategory, subcategory_data in data.items():
         if subcategory in {
