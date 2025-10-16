@@ -52,6 +52,8 @@ DOCTYPES_WITH_GST_DETAIL = {
     "POS Invoice",
 }
 
+ALLOWED_TAX_DIFFERENCE = 1  # Allowable difference in tax amount due to rounding off
+
 
 def set_gst_breakup(doc):
     gst_breakup_html = frappe.render_template(
@@ -180,7 +182,7 @@ def validate_item_wise_tax_detail(doc):
             )
             tax_difference = abs(multiplier * tax_rate - tax_amount)
 
-            if tax_difference > 1:
+            if tax_difference > ALLOWED_TAX_DIFFERENCE:
                 correct_charge_type = (
                     "On Item Quantity" if is_cess_non_advol else "On Net Total"
                 )
@@ -1200,6 +1202,8 @@ class ItemGSTDetails:
         self.set_item_wise_tax_details()
         self.update_item_tax_details()
 
+        self.validate_item_gst_details()
+
     def get_item_defaults(self):
         item_defaults = frappe._dict(count=0)
 
@@ -1324,18 +1328,54 @@ class ItemGSTDetails:
                 continue
 
             tax_amount_field = f"{tax}_amount"
-            precision = self.precision.get(tax_amount_field)
-
-            multiplier = (
-                item.qty if tax == "cess_non_advol" else item.taxable_value / 100
-            )
-            tax_amount = flt(tax_rate * multiplier, precision)
+            tax_amount = self.get_item_tax_amount(item, tax_rate, tax)
 
             item_tax_detail[tax_amount_field] -= tax_amount
 
             response.update({tax_amount_field: tax_amount})
 
         return response
+
+    def get_item_tax_amount(self, item, tax_rate, tax):
+        tax_amount_field = f"{tax}_amount"
+        precision = self.precision.get(tax_amount_field)
+
+        multiplier = item.qty if tax == "cess_non_advol" else item.taxable_value / 100
+        tax_amount = flt(tax_rate * multiplier, precision)
+        return tax_amount
+
+    def validate_item_gst_details(self):
+        invalid_rows = defaultdict(list)
+
+        for item in self.doc.get("items"):
+            for tax in GST_TAX_TYPES:
+                expected_amt = self.get_item_tax_amount(
+                    item, item.get(f"{tax}_rate"), tax
+                )
+
+                diff = abs(item.get(f"{tax}_amount") - expected_amt)
+
+                if diff > ALLOWED_TAX_DIFFERENCE:
+                    invalid_rows[item.idx].append(tax.upper())
+
+        if invalid_rows:
+            msg = (
+                _(
+                    "GST amounts do not match the calculated values based on tax rates for the following Item rows:<br><br>"
+                )
+                + "<ul>"
+            )
+            for idx, fields in invalid_rows.items():
+                msg += _(
+                    "<li><strong>Row #{0}</strong>: {1} amount mismatch</li>"
+                ).format(idx, ", ".join(fields))
+
+            msg += "</ul>"
+
+            frappe.throw(
+                msg,
+                title=_("Incorrect Item GST Details"),
+            )
 
     def set_tax_amount_precisions(self, doctype):
         item_doctype = f"{doctype} Item"
@@ -1382,34 +1422,24 @@ class ItemGSTTreatment:
 
     def update_gst_treatment_map(self):
         item_templates = set()
-        gst_treatments = set()
-        gst_treatment_map = {}
 
         for item in self.doc.items:
             item_templates.add(item.item_tax_template)
-            gst_treatments.add(item.gst_treatment)
 
-        if any(
-            gst_treatment in gst_treatments
-            for gst_treatment in ["Zero-Rated", "Nil-Rated"]
-        ):
-            # doc changed from overseas to local sale post
-            # taxes added after save
-            _gst_treatments = frappe.get_all(
+        self.gst_treatment_map = frappe._dict(
+            frappe.get_all(
                 "Item Tax Template",
                 filters={"name": ("in", item_templates)},
                 fields=["name", "gst_treatment"],
+                as_list=True,
             )
-            gst_treatment_map = {row.name: row.gst_treatment for row in _gst_treatments}
-
-        self.gst_treatment_map = gst_treatment_map
+        )
 
     def set_default_treatment(self):
         default_treatment = self.get_default_treatment()
 
         for item in self.doc.items:
-            if item.gst_treatment in ("Zero-Rated", "Nil-Rated"):
-                item.gst_treatment = self.gst_treatment_map.get(item.item_tax_template)
+            item.gst_treatment = self.gst_treatment_map.get(item.item_tax_template)
 
             if not item.gst_treatment or not item.item_tax_template:
                 item.gst_treatment = default_treatment

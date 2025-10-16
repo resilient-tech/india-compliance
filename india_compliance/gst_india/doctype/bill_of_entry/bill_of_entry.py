@@ -62,18 +62,9 @@ class BOEGSTDetails(ItemGSTDetails):
 
                 item_taxes = tax_details[row_name]
                 tax_rate = item_wise_tax_rates.get(row_name)
-                precision = self.precision.get(tax_amount_field)
                 item = item_map.get(row_name)
 
-                multiplier = (
-                    item.qty if tax == "cess_non_advol" else item.taxable_value / 100
-                )
-
-                # cases when charge type == "Actual"
-                if not tax_rate:
-                    continue
-
-                tax_amount = flt(tax_rate * multiplier, precision)
+                tax_amount = self.get_item_tax_amount(item, tax_rate, tax)
                 item_taxes[tax_rate_field] = tax_rate
                 item_taxes[tax_amount_field] += tax_amount
 
