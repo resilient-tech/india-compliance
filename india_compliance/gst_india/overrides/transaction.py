@@ -1529,34 +1529,24 @@ class ItemGSTTreatment:
 
     def update_gst_treatment_map(self):
         item_templates = set()
-        gst_treatments = set()
-        gst_treatment_map = {}
 
         for item in self.doc.items:
             item_templates.add(item.item_tax_template)
-            gst_treatments.add(item.gst_treatment)
 
-        if any(
-            gst_treatment in gst_treatments
-            for gst_treatment in ["Zero-Rated", "Nil-Rated"]
-        ):
-            # doc changed from overseas to local sale post
-            # taxes added after save
-            _gst_treatments = frappe.get_all(
+        self.gst_treatment_map = frappe._dict(
+            frappe.get_all(
                 "Item Tax Template",
                 filters={"name": ("in", item_templates)},
                 fields=["name", "gst_treatment"],
+                as_list=True,
             )
-            gst_treatment_map = {row.name: row.gst_treatment for row in _gst_treatments}
-
-        self.gst_treatment_map = gst_treatment_map
+        )
 
     def set_default_treatment(self):
         default_treatment = self.get_default_treatment()
 
         for item in self.doc.items:
-            if item.gst_treatment in ("Zero-Rated", "Nil-Rated"):
-                item.gst_treatment = self.gst_treatment_map.get(item.item_tax_template)
+            item.gst_treatment = self.gst_treatment_map.get(item.item_tax_template)
 
             if not item.gst_treatment or not item.item_tax_template:
                 item.gst_treatment = default_treatment
