@@ -1264,6 +1264,11 @@ class HSNSUM(GSTR1DataMapper):
             )
         )
 
+        if (message := data.get(inv_f.ERROR_MSG, "").strip()) and (
+            hsn_code := data.get(inv_f.HSN_CODE)
+        ):
+            data[inv_f.ERROR_MSG] = f"HSN Code: {hsn_code} - {message}"
+
         return data
 
     def map_uom(self, uom, data=None):
@@ -1858,6 +1863,9 @@ def convert_to_internal_data_format(gov_data, for_errors=False):
     errors = []
     for category, data in output.items():
         for row in data.values():
+            if not (row.get(inv_f.ERROR_CD) or row.get(inv_f.ERROR_MSG)):
+                continue
+
             row["category"] = category
             errors.append(row)
 
@@ -2595,7 +2603,7 @@ class GSTR1BooksData(BooksDataMapper):
 
         for category in categories_to_process:
             for key, row in data[category].copy().items():
-                if key not in included_docs:
+                if key in included_docs:
                     continue
 
                 row["sub_category"] = category
