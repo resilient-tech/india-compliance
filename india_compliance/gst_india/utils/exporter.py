@@ -171,7 +171,7 @@ class Worksheet:
                 value = row.get(fieldname)
 
                 if transform:
-                    value = transform(value)
+                    value = transform(value, row)
 
                 sheet.cell(row=i, column=j, value=value or "")
 

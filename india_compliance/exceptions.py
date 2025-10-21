@@ -1,11 +1,19 @@
-class GSPServerError(Exception):
-    def __init__(self, message="GSP/GST server is down", *args, **kwargs):
-        super().__init__(message, *args, **kwargs)
+import frappe
+
+
+class GSPServerError(frappe.ValidationError):
+    message = "GSP/GST server is down"
+    title = "GSP/GST Server Error"
+
+
+class GSPLimitExceededError(GSPServerError):
+    message = "GSP/GST account limit exceeded"
+    http_status_code = 429
 
 
 class GatewayTimeoutError(GSPServerError):
-    def __init__(self, message="The server took too long to respond", *args, **kwargs):
-        super().__init__(message, *args, **kwargs)
+    message = "The server took too long to respond"
+    http_status_code = 504
 
 
 class OTPRequestedError(Exception):

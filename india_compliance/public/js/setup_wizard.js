@@ -88,6 +88,7 @@ function update_erpnext_slides_settings() {
             "12.0",
             "18.0",
             "28.0",
+            "40.0",
         ],
         default: "18.0",
     });

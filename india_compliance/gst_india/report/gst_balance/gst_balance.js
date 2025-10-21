@@ -38,6 +38,34 @@ frappe.query_reports["GST Balance"] = {
             default: india_compliance.last_month_end(),
         },
         {
+			fieldname: "finance_book",
+			label: __("Finance Book"),
+			fieldtype: "Link",
+			options: "Finance Book",
+		},
+        	{
+			fieldname: "cost_center",
+			label: __("Cost Center"),
+			fieldtype: "MultiSelectList",
+			options: "Cost Center",
+			get_data: function (txt) {
+				return frappe.db.get_link_options("Cost Center", txt, {
+					company: frappe.query_report.get_filter_value("company"),
+				});
+			},
+		},
+		{
+			fieldname: "project",
+			label: __("Project"),
+			fieldtype: "MultiSelectList",
+			options: "Project",
+			get_data: function (txt) {
+				return frappe.db.get_link_options("Project", txt, {
+					company: frappe.query_report.get_filter_value("company"),
+				});
+			},
+		},
+        {
             fieldname: "show_summary",
             label: __("Show Summary"),
             fieldtype: "Check",
@@ -54,6 +82,9 @@ frappe.query_reports["GST Balance"] = {
         add_custom_button_to_update_gstin(report);
     },
 };
+
+erpnext.utils.add_dimensions("GST Balance", 4);
+
 
 async function set_gstin_options(report) {
     const options = await india_compliance.get_gstin_options(

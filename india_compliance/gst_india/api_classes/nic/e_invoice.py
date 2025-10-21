@@ -88,6 +88,7 @@ class EInvoiceAPI(BaseAPI):
         for error_code in self.IGNORED_ERROR_CODES:
             if message.startswith(error_code):
                 response_json.error_code = error_code
+                response_json.error_message = message
                 return True
 
         return False
@@ -183,12 +184,12 @@ class StandardEInvoiceAPI(EInvoiceAPI):
         if not self.company_gstin:
             frappe.throw(_("Company GSTIN is required to use the e-Invoice API"))
 
-        self.fetch_credentials(self.company_gstin, "e-Waybill / e-Invoice")
-        self.app_key = base64.b64encode(self.app_key.encode()).decode()
-        self.set_default_headers()
-
-        self.auth_strategy = StandardAuth(self)
-        self.auth_strategy.authenticate()
+        if not frappe.flags.bypass_auth:
+            self.fetch_credentials(self.company_gstin, "e-Waybill / e-Invoice")
+            self.app_key = base64.b64encode(self.app_key.encode()).decode()
+            self.set_default_headers()
+            self.auth_strategy = StandardAuth(self)
+            self.auth_strategy.authenticate()
 
     def _make_request(self, method, endpoint="", params=None, headers=None, json=None):
         response = super()._make_request(method, endpoint, params, headers, json)
@@ -246,8 +247,11 @@ class StandardEInvoiceAPI(EInvoiceAPI):
             return False
 
         error_code = error_details[0].get("ErrorCode")
+        error_message = error_details[0].get("ErrorMessage", "")
+
         if error_code in self.IGNORED_ERROR_CODES:
             response.error_code = error_code
+            response.error_message = f"{error_code}: {error_message}"
             return True
 
         return False

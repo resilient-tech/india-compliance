@@ -3,7 +3,7 @@ import os
 
 import frappe
 from frappe import _
-from frappe.desk.form.load import get_docinfo
+from frappe.desk.form.load import get_docinfo, run_onload
 from frappe.utils import (
     add_days,
     add_to_date,
@@ -21,6 +21,7 @@ from india_compliance.gst_india.api_classes.nic.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.nic.e_waybill import EWaybillAPI
 from india_compliance.gst_india.constants import (
     GST_TAX_TYPES,
+    GSTIN_FORMAT,
     SALES_DOCTYPES,
     STATE_NUMBERS,
     TAXABLE_GST_TREATMENTS,
@@ -38,6 +39,7 @@ from india_compliance.gst_india.constants.e_waybill import (
 )
 from india_compliance.gst_india.utils import (
     handle_server_errors,
+    is_api_enabled,
     is_foreign_doc,
     is_outward_stock_entry,
     load_doc,
@@ -93,10 +95,7 @@ def enqueue_bulk_e_waybill_generation(doctype, docnames):
     """
     Enqueue bulk generation of e-Waybill for the given documents.
     """
-
     frappe.has_permission(doctype, "submit", throw=True)
-
-    from india_compliance.gst_india.utils import is_api_enabled
 
     gst_settings = frappe.get_cached_doc("GST Settings")
     if not is_api_enabled(gst_settings) or not gst_settings.enable_e_waybill:
@@ -138,7 +137,7 @@ def generate_e_waybills(doctype, docnames, force=False):
 
 
 @frappe.whitelist()
-def generate_e_waybill(*, doctype, docname, values=None, force=False):
+def generate_e_waybill(*, doctype, docname, values=None, force: bool = False):
     doc = load_doc(doctype, docname, "submit")
     if values:
         update_transaction(doc, frappe.parse_json(values))
@@ -158,24 +157,55 @@ def _generate_e_waybill(doc, throw=True, force=False):
             raise GSPServerError
 
         # Via e-Invoice API if not Return or Debit Note
+        # Via e-Waybill API if has Non-Taxable items
         # Handles following error when generating e-Waybill using IRN:
         # 4010: E-way Bill cannot generated for Debit Note, Credit Note and Services
-        with_irn = doc.get("irn") and not (
-            doc.is_return or doc.get("is_debit_note") or is_foreign_doc(doc)
+
+        with_irn = (
+            doc.get("irn")
+            and all(item.gst_treatment in TAXABLE_GST_TREATMENTS for item in doc.items)
+            and not (doc.is_return or doc.get("is_debit_note") or is_foreign_doc(doc))
         )
 
         data = EWaybillData(doc).get_data(with_irn=with_irn)
 
         api = EWaybillAPI if not with_irn else EInvoiceAPI
-        result = api.create(doc).generate_e_waybill(data)
+        api = api.create(doc)
+
+        result = api.generate_e_waybill(data)
+
+        if result.error_code in ("3028", "3029"):
+            # if the code reaches here, than api will always be EInvoiceAPI instance
+            match = GSTIN_FORMAT.search(result.error_message)
+
+            if not match:
+                frappe.throw(
+                    _("Could not identify GSTIN from error: {0}").format(
+                        result.error_message or _("Unknown error")
+                    )
+                )
+
+            gstin = match.group()
+
+            response = api.sync_gstin_info(gstin)
+
+            if response.Status != "ACT":
+                frappe.throw(
+                    result.error_message, title=_("Error Generating e-Waybill")
+                )
+
+            result = api.generate_e_waybill(data)
 
         if result.error_code == "4002":
-            result = api.create(doc).get_e_waybill_by_irn(doc.get("irn"))
+            result = api.get_e_waybill_by_irn(doc.get("irn"))
 
         if result.error_code == "2148":
             with_irn = False
             data = EWaybillData(doc).get_data(with_irn=with_irn)
             result = EWaybillAPI.create(doc).generate_e_waybill(data)
+
+        if not result.get("ewayBillNo" if not with_irn else "EwbNo"):
+            frappe.throw(_("e-Waybill generation failed"))
 
     except GSPServerError as e:
         handle_server_errors(settings, doc, "e-Waybill", e)
@@ -503,7 +533,7 @@ def update_transporter(*, doctype, docname, values):
 
 
 @frappe.whitelist()
-def extend_validity(*, doctype, docname, values, scheduled=False):
+def extend_validity(*, doctype, docname, values, scheduled: bool = False):
     doc = load_doc(doctype, docname, "submit")
     values = frappe.parse_json(values)
 
@@ -655,7 +685,7 @@ def generate_pending_e_waybills():
 
 
 @frappe.whitelist()
-def fetch_e_waybill_data(*, doctype, docname, attach=False):
+def fetch_e_waybill_data(*, doctype, docname, attach: bool = False):
     doc = load_doc(doctype, docname, "write" if attach else "print")
     log = frappe.get_doc("e-Waybill Log", doc.ewaybill)
     if not log.is_latest_data:
@@ -1029,7 +1059,7 @@ def update_transaction(doc, values):
 
     if doc.doctype in ("Delivery Note", "Stock Entry", "Subcontracting Receipt"):
         doc._sub_supply_type = SUB_SUPPLY_TYPES[values.sub_supply_type]
-    if doc.doctype == "Delivery Note":
+    if doc.doctype in ("Delivery Note", "Stock Entry"):
         doc._sub_supply_desc = values.sub_supply_desc
 
 
@@ -1075,7 +1105,8 @@ def get_address_map(doc):
 
 @frappe.whitelist()
 def get_source_destination_address(doctype, docname, address_type):
-    doc = frappe.get_doc(doctype, docname)
+    # using load_doc for onload trigger required for stock entry.
+    doc = load_doc(doctype, docname)
     address_map = get_billing_shipping_address_map(doc)
 
     if address_type == "source_address":
@@ -1295,19 +1326,8 @@ class EWaybillData(GSTTransactionData):
 
         self.validate_non_gst_items()
 
-        if is_outward_stock_entry(self.doc):
-            self.validate_different_gstin()
-        else:
+        if not is_outward_stock_entry(self.doc):
             self.validate_same_gstin()
-
-    def validate_different_gstin(self):
-        if self.doc.company_gstin != self.doc.get("supplier_gstin"):
-            frappe.throw(
-                _(
-                    "e-Waybill cannot be generated because party GSTIN and company GSTIN are different"
-                ),
-                title=_("Invalid Data"),
-            )
 
     def validate_same_gstin(self):
         if self.doc.doctype == "Delivery Note":
@@ -1532,6 +1552,7 @@ class EWaybillData(GSTTransactionData):
             ("Stock Entry", 0): {
                 "supply_type": "O",
                 "sub_supply_type": doc.get("_sub_supply_type", ""),
+                "sub_supply_desc": doc.get("_sub_supply_desc", ""),
                 "document_type": "CHL",
             },
             ("Stock Entry", 1): {
@@ -1789,3 +1810,51 @@ class EWaybillData(GSTTransactionData):
             "cessRate": item_details.cess_rate,
             "cessNonAdvol": item_details.cess_non_advol_rate,
         }
+
+
+#######################################################################################
+### Auto Cancel e-Waybill Functions ###################################################
+#######################################################################################
+
+
+def before_cancel(doc, method=None):
+    if not doc.get("ewaybill"):
+        return
+
+    gst_settings = frappe.get_cached_doc("GST Settings")
+
+    if not is_api_enabled(gst_settings):
+        return
+
+    run_onload(doc)
+
+    auto_cancel_e_waybill(doc, gst_settings=gst_settings)
+
+
+def auto_cancel_e_waybill(doc, gst_settings=None, e_waybill_info=None):
+    gst_settings = gst_settings or frappe.get_cached_doc("GST Settings")
+
+    if not (
+        doc.ewaybill
+        and gst_settings.enable_e_waybill
+        and gst_settings.auto_cancel_e_waybill
+    ):
+        return
+
+    e_waybill_info = e_waybill_info or doc.get_onload().get("e_waybill_info", {})
+    generated_on = e_waybill_info.get("created_on")
+    reason = gst_settings.reason_for_e_waybill_cancellation
+
+    if not generated_on or (add_days(generated_on, 1) < get_datetime()):
+        return
+
+    values = frappe._dict(
+        {
+            "reason": reason,
+            "remark": "",
+        }
+    )
+
+    _cancel_e_waybill(doc, values)
+
+    return True

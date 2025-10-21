@@ -49,7 +49,7 @@ def fetch_or_guess_gst_category(doc):
     if doc.gstin and doc.gst_category == "Deemed Export":
         return doc.gst_category
 
-    if doc.gstin and is_autofill_party_info_enabled():
+    if doc.gstin and is_autofill_party_info_enabled() and not frappe.flags.in_import:
         gstin_info = _get_gstin_info(doc.gstin, doc=doc, throw_error=False) or {}
 
         if gstin_info.get("gst_category"):
