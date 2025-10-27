@@ -685,7 +685,7 @@ class EInvoiceData(GSTTransactionData):
         )
 
         if self.doc.is_reverse_charge:
-            item_details["total_value"] = item.taxable_value
+            item_details["total_value"] = abs(self.rounded(item.taxable_value, 3))
 
         if batch_no := self.sanitize_value(
             item.batch_no, max_length=20, truncate=False
