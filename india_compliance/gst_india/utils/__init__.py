@@ -1078,7 +1078,7 @@ def create_notification(
             "email_content": message_content.get("body"),
         }
     )
-    notification.insert()
+    notification.insert(ignore_permissions=True)
 
 
 def enable_autocommit(fn):
