@@ -307,8 +307,14 @@ Object.assign(india_compliance, {
     },
 
     validate_gstin(gstin, show_msg = true) {
+        const info = { title: __("GSTIN Validation"), indicator: "red" };
+
         if (!gstin || gstin.length !== 15) {
-            if (show_msg) frappe.msgprint(__("GSTIN must be 15 characters long"));
+            if (show_msg)
+                frappe.msgprint({
+                    message: __("GSTIN must be 15 characters long"),
+                    ...info,
+                });
             return;
         }
 
@@ -317,7 +323,11 @@ Object.assign(india_compliance, {
         if (GSTIN_REGEX.test(gstin) && is_gstin_check_digit_valid(gstin)) {
             return gstin;
         } else {
-            if (show_msg) frappe.msgprint(__("Invalid GSTIN"));
+            if (show_msg)
+                frappe.msgprint({
+                    message: __("Invalid GSTIN"),
+                    ...info,
+                });
         }
     },
 
