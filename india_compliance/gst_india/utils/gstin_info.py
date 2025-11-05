@@ -2,6 +2,7 @@ import json
 from datetime import timedelta
 from string import whitespace
 
+import requests
 from pypika import Order
 
 import frappe
@@ -37,6 +38,7 @@ GST_CATEGORIES = {
 KEYS_TO_SANITIZE = ("dst", "stcd", "pncd", "bno", "flno", "bnm", "st", "loc", "city")
 KEYS_TO_FILTER_DUPLICATES = frozenset(("dst", "bnm", "st", "loc", "city"))
 CHARACTERS_TO_STRIP = f"{whitespace},"
+PUBLIC_GSTIN_API = "https://public.api"
 
 
 @frappe.whitelist()
@@ -48,6 +50,41 @@ def get_gstin_info(gstin, *, doc=None, throw_error: bool = True):
         frappe.throw(_("Not allowed"), frappe.PermissionError)
 
     return _get_gstin_info(gstin, doc=doc, throw_error=throw_error)
+
+
+@frappe.whitelist(methods=["GET"])
+def get_gstin_info_on_setup_wizard(gstin: str) -> dict | None:
+    if not gstin:
+        return
+
+    url = f"{PUBLIC_GSTIN_API}/{gstin}"
+    error_message = _("Could not fetch GSTIN info")
+
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "application/json",
+    }
+
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        data = response.json(object_hook=frappe._dict)
+    except Exception as exc:
+        frappe.log_error("Error fetching GSTIN info on Setup Wizard", exc)
+        frappe.throw(error_message)
+
+    taxpayer = data.get("taxpayerInfo")
+    if not taxpayer:
+        frappe.throw(error_message)
+
+    if taxpayer.get("sts") != "Active":
+        frappe.throw(_("GSTIN status is not Active"))
+
+    return {
+        "gstin": taxpayer.get("gstin"),
+        "business_name": get_business_name(taxpayer),
+        "status": taxpayer.get("sts"),
+    }
 
 
 def _get_gstin_info(gstin, *, doc=None, throw_error=True):
@@ -77,15 +114,9 @@ def _get_gstin_info(gstin, *, doc=None, throw_error=True):
             frappe.clear_last_message()
             return frappe._dict()
 
-    business_name = (
-        response.tradeNam
-        if response.ctb in ["Proprietorship", "Hindu Undivided Family"]
-        else response.lgnm
-    )
-
     gstin_info = frappe._dict(
         gstin=response.gstin,
-        business_name=titlecase(business_name or ""),
+        business_name=get_business_name(response),
         gst_category=GST_CATEGORIES.get(response.dty, ""),
         status=response.sts,
     )
@@ -97,6 +128,21 @@ def _get_gstin_info(gstin, *, doc=None, throw_error=True):
         gstin_info.permanent_address = gstin_info.all_addresses[0]
 
     return gstin_info
+
+
+def get_business_name(response: frappe._dict) -> str:
+    """
+    Get business name based on constitution of taxpayer.
+
+    - Titlecase the name before returning.
+    """
+    name = (
+        response.tradeNam
+        if response.ctb in ["Proprietorship", "Hindu Undivided Family"]
+        else response.lgnm
+    )
+
+    return titlecase(name or "")
 
 
 def get_archived_gstin_info(gstin):
