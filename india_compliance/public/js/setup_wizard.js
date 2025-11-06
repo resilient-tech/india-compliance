@@ -31,8 +31,8 @@ function complete_setup_wizard() {
         method: "india_compliance.setup_wizard.enable_setup_wizard_complete",
         callback: function (r) {
             frappe.ui.toolbar.clear_cache();
-        }
-    })
+        },
+    });
 }
 
 function toggle_india_specific_fields(country) {
@@ -61,37 +61,44 @@ function update_erpnext_slides_settings() {
         erpnext.setup?.slides_settings && erpnext.setup.slides_settings.slice(-1)[0];
     if (!slide) return;
 
-    company_gstin_field = {
-        fieldname: "company_gstin",
-        fieldtype: "Data",
-        label: __("Company GSTIN"),
-    };
+    const gstin_section = [
+        {
+            fieldname: "company_gstin",
+            fieldtype: "Data",
+            label: __("Company GSTIN"),
+        },
+        {
+            fieldtype: "Column Break",
+        },
+        {
+            fieldname: "default_gst_rate",
+            fieldtype: "Select",
+            label: __("Default GST Rate"),
+            options: [
+                "0.0",
+                "0.1",
+                "0.25",
+                "1.0",
+                "1.5",
+                "3.0",
+                "5.0",
+                "6.0",
+                "7.5",
+                "12.0",
+                "18.0",
+                "28.0",
+                "40.0",
+            ],
+            default: "18.0",
+        },
+        {
+            fieldtype: "Section Break",
+        },
+    ];
 
-    const _index = can_fetch_gstin_info() ? 0 : 1;
+    const _index = can_fetch_gstin_info() ? 0 : 4;
 
-    slide.fields.splice(_index, 0, company_gstin_field);
-
-    slide.fields.splice(4, 0, {
-        fieldname: "default_gst_rate",
-        fieldtype: "Select",
-        label: __("Default GST Rate"),
-        options: [
-            "0.0",
-            "0.1",
-            "0.25",
-            "1.0",
-            "1.5",
-            "3.0",
-            "5.0",
-            "6.0",
-            "7.5",
-            "12.0",
-            "18.0",
-            "28.0",
-            "40.0",
-        ],
-        default: "18.0",
-    });
+    slide.fields.splice(_index, 0, ...gstin_section);
 
     slide.fields.push({
         fieldname: "enable_audit_trail",
