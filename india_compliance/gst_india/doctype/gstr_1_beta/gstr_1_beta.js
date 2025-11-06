@@ -2966,7 +2966,7 @@ class GSTR1Action extends FileGSTR1Dialog {
         // summary matched
         if (filing_status == "Ready to File") {
             // only show filed tab
-            ["books", "unfiled", "reconcile"].map(tab =>
+            ["books", "unfiled", "reconcile", "errors"].map(tab =>
                 this.frm.gstr1.tabs[`${tab}_tab`].hide()
             );
             this.frm.gstr1.tabs.filed_tab.set_active();
