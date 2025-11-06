@@ -362,6 +362,7 @@ class GSTR3BReport(Document):
             and (i.gst_treatment != 'Taxable' or p.gst_category = 'Registered Composition') and
             p.posting_date between %s and %s
             and p.company = %s and p.company_gstin = %s
+            and p.gst_category != "Overseas"
             """,
             (
                 self.from_date,
