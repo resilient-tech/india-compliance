@@ -132,17 +132,14 @@ india_compliance.taxes_controller = class TaxesController {
         let amount;
 
         // Function to calculate amount
-        const calculateAmount = (rate, precisionType) => {
-            return flt(
-                flt(row.transfer_qty) * flt(rate),
-                precision(precisionType, row)
-            );
+        const calculateAmount = (qty, rate, precisionType) => {
+            return flt(flt(qty) * flt(rate), precision(precisionType, row));
         };
 
         if (this.frm.doc.doctype === "Subcontracting Receipt") {
-            amount = calculateAmount(row.rate, "amount");
+            amount = calculateAmount(row.qty, row.rate, "amount");
         } else if (this.frm.doc.doctype === "Stock Entry") {
-            amount = calculateAmount(row.basic_rate, "basic_amount");
+            amount = calculateAmount(row.transfer_qty, row.basic_rate, "basic_amount");
         }
 
         row.taxable_value = amount;
