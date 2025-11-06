@@ -146,6 +146,7 @@ india_compliance.taxes_controller = class TaxesController {
         }
 
         row.taxable_value = amount;
+        this.frm.refresh_field("items");
     }
 
     async update_tax_amount() {
