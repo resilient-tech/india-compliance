@@ -31,8 +31,8 @@ function complete_setup_wizard() {
         method: "india_compliance.setup_wizard.enable_setup_wizard_complete",
         callback: function (r) {
             frappe.ui.toolbar.clear_cache();
-        }
-    })
+        },
+    });
 }
 
 function toggle_india_specific_fields(country) {
@@ -61,15 +61,13 @@ function update_erpnext_slides_settings() {
         erpnext.setup?.slides_settings && erpnext.setup.slides_settings.slice(-1)[0];
     if (!slide) return;
 
-    company_gstin_field = {
+    const _index = can_fetch_gstin_info() ? 0 : 3;
+
+    slide.fields.splice(_index, 0, {
         fieldname: "company_gstin",
         fieldtype: "Data",
         label: __("Company GSTIN"),
-    };
-
-    const _index = can_fetch_gstin_info() ? 0 : 1;
-
-    slide.fields.splice(_index, 0, company_gstin_field);
+    });
 
     slide.fields.splice(4, 0, {
         fieldname: "default_gst_rate",
