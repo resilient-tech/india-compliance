@@ -178,6 +178,13 @@ def onload(doc, method=None):
 
 
 def validate(doc, method=None):
+    field_map = (
+        STOCK_ENTRY_FIELD_MAP
+        if doc.doctype == "Stock Entry"
+        else SUBCONTRACTING_ORDER_RECEIPT_FIELD_MAP
+    )
+    CustomTaxController(doc, field_map).set_taxes_and_totals()
+
     if ignore_gst_validations_for_subcontracting(doc):
         return
 
@@ -186,13 +193,6 @@ def validate(doc, method=None):
 
     if doc.doctype in ("Stock Entry", "Subcontracting Receipt"):
         validate_transaction_name(doc)
-
-    field_map = (
-        STOCK_ENTRY_FIELD_MAP
-        if doc.doctype == "Stock Entry"
-        else SUBCONTRACTING_ORDER_RECEIPT_FIELD_MAP
-    )
-    CustomTaxController(doc, field_map).set_taxes_and_totals()
 
     set_gst_tax_type(doc)
     validate_taxes(doc)
