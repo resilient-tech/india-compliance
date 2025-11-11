@@ -251,7 +251,7 @@ class TestSubcontractingTransaction(IntegrationTestCase):
         )
 
         sco = create_subcontracting_order(po_name=po.name)
-        self.assertEqual(sco.total_taxes, None)
+        self.assertEqual(sco.total_taxes, 0.0)
 
         rm_items = get_rm_items(sco.supplied_items)
         args = {
@@ -271,7 +271,7 @@ class TestSubcontractingTransaction(IntegrationTestCase):
         se = make_stock_entry()
         se.save()
 
-        self.assertEqual(se.total_taxes, None)
+        self.assertEqual(se.total_taxes, 0.0)
 
     def test_subcontracting_validations(self):
         po = create_purchase_order(
