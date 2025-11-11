@@ -22,6 +22,10 @@ frappe.ui.form.on(DOCTYPE, {
             "default_customs_payable_account",
             { root_type: "Liability" },
         ]);
+        erpnext.company.set_custom_query(frm, [
+            "default_gst_expense_account",
+            {},
+        ]);
 
         frm.set_query("print_label", "bank_details_for_printing", (_, cdt, cdn) => {
             return  {
