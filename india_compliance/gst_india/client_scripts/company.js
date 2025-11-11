@@ -19,6 +19,26 @@ frappe.ui.form.on(DOCTYPE, {
             "default_customs_payable_account",
             { root_type: "Liability" },
         ]);
+<<<<<<< HEAD
+=======
+        erpnext.company.set_custom_query(frm, [
+            "default_gst_expense_account",
+            {},
+        ]);
+
+        frm.set_query("print_label", "bank_details_for_printing", (_, cdt, cdn) => {
+            return  {
+                query: "india_compliance.gst_india.overrides.company.get_default_print_options",
+                params : {for_bank : 1}
+            }
+        });
+        frm.set_query("print_label", "registration_details_for_printing", (_, cdt, cdn) => {
+            return {
+                query: "india_compliance.gst_india.overrides.company.get_default_print_options",
+                params : {for_bank : 0}
+            }
+        });
+>>>>>>> e1f1c4fe (fix: add company and is_group filter to "default_gst_expense_account" search query)
     },
 
     make_default_tax_template: function (frm) {
