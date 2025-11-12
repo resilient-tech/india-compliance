@@ -523,6 +523,8 @@ def is_e_waybill_applicable(doc):
         "Material Transfer",
         "Material Issue",
         "Send to Subcontractor",
+        "Subcontracting Delivery",
+        "Return Raw Material to Customer",
     ]:
         return False
 

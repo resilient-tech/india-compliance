@@ -1501,7 +1501,8 @@ class EWaybillData(GSTTransactionData):
             if not item.get("scio_detail"):
                 return
             
-            # Get the rate from the Subcontracting Inward Order's required_items table
+            # scio_detail points to a row in the required_items table
+            # Get the rate from that row
             rate = frappe.db.get_value(
                 "Subcontracting Inward Order Item",
                 item.scio_detail,
@@ -1517,20 +1518,29 @@ class EWaybillData(GSTTransactionData):
             if not item.get("scio_detail"):
                 return
             
-            # Get the Subcontracting Inward Order Item to find the FG item
-            scio_item = frappe.get_doc("Subcontracting Inward Order Item", item.scio_detail)
+            # scio_detail points to the FG item in the Subcontracting Inward Order's items table
+            # Get the parent document name; the item's name is used as reference in required_items
+            scio_parent = frappe.db.get_value(
+                "Subcontracting Inward Order Item",
+                item.scio_detail,
+                "parent"
+            )
+            
+            if not scio_parent:
+                return
             
             # Get all customer-provided raw materials for this FG item
-            # by querying the required_items table for items linked to this FG
+            # The required_items table has a reference_name field linking to the FG item's name
             customer_rm_cost = frappe.db.sql(
                 """
                 SELECT SUM(rate * consumed_qty)
                 FROM `tabSubcontracting Inward Order Item`
                 WHERE parent = %s
-                    AND item_code = %s
+                    AND reference_name = %s
                     AND is_customer_provided_item = 1
+                    AND parentfield = 'required_items'
                 """,
-                (scio_item.parent, scio_item.raw_material_item_code),
+                (scio_parent, item.scio_detail),
             )[0][0] or 0
             
             # Add customer-provided RM cost to the existing FG value
