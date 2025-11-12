@@ -1480,10 +1480,11 @@ class EWaybillData(GSTTransactionData):
         return hsn_wise_items.values()
 
     def update_item_details(self, item_details, item):
+        # Handle Subcontracting Inward e-waybill value calculation
+        if self.doc.doctype == "Stock Entry":
+            self._update_subcontracting_item_value(item_details, item)
+        
         if not self.doc.get("is_reverse_charge"):
-            # Handle Subcontracting Inward e-waybill value calculation
-            if self.doc.doctype == "Stock Entry":
-                self._update_subcontracting_item_value(item_details, item)
             return
 
         for tax in GST_TAX_TYPES:
