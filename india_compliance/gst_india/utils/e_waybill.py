@@ -1481,10 +1481,62 @@ class EWaybillData(GSTTransactionData):
 
     def update_item_details(self, item_details, item):
         if not self.doc.get("is_reverse_charge"):
+            # Handle Subcontracting Inward e-waybill value calculation
+            if self.doc.doctype == "Stock Entry":
+                self._update_subcontracting_item_value(item_details, item)
             return
 
         for tax in GST_TAX_TYPES:
             item_details.update({f"{tax}_amount": 0, f"{tax}_rate": 0})
+
+    def _update_subcontracting_item_value(self, item_details, item):
+        """
+        Update item value for Subcontracting Inward e-waybill generation.
+        
+        For Subcontracting Delivery: Add customer-provided raw material costs to FG value
+        For Return Raw Material to Customer: Use rate from scio_detail
+        """
+        # Return Raw Material to Customer
+        if self.doc.purpose == "Return Raw Material to Customer":
+            if not item.get("scio_detail"):
+                return
+            
+            # Get the rate from the Subcontracting Inward Order's required_items table
+            rate = frappe.db.get_value(
+                "Subcontracting Inward Order Item",
+                item.scio_detail,
+                "rate"
+            )
+            
+            if rate:
+                # Update taxable_value to rate * qty
+                item_details["taxable_value"] = abs(self.rounded(rate * item.qty))
+        
+        # Subcontracting Delivery
+        elif self.doc.purpose == "Subcontracting Delivery":
+            if not item.get("scio_detail"):
+                return
+            
+            # Get the Subcontracting Inward Order Item to find the FG item
+            scio_item = frappe.get_doc("Subcontracting Inward Order Item", item.scio_detail)
+            
+            # Get all customer-provided raw materials for this FG item
+            # by querying the required_items table for items linked to this FG
+            customer_rm_cost = frappe.db.sql(
+                """
+                SELECT SUM(rate * consumed_qty)
+                FROM `tabSubcontracting Inward Order Item`
+                WHERE parent = %s
+                    AND item_code = %s
+                    AND is_customer_provided_item = 1
+                """,
+                (scio_item.parent, scio_item.raw_material_item_code),
+            )[0][0] or 0
+            
+            # Add customer-provided RM cost to the existing FG value
+            item_details["taxable_value"] = abs(
+                self.rounded(item_details["taxable_value"] + customer_rm_cost)
+            )
 
     def update_transaction_details(self):
         # first HSN Code for goods
