@@ -172,7 +172,7 @@ class PartyQuickEntryForm extends GSTQuickEntryForm {
 				label: __("First Name"),
 				fieldname: "map_to_first_name",
 				fieldtype: "Data",
-				depends_on: "eval:doc.customer_type=='Company'",
+				depends_on: "eval:doc.customer_type=='Company' || doc.supplier_type=='Company'",
 			},
              {
                 fieldtype: "Column Break",
@@ -181,7 +181,7 @@ class PartyQuickEntryForm extends GSTQuickEntryForm {
 				label: __("Last Name"),
 				fieldname: "map_to_last_name",
 				fieldtype: "Data",
-				depends_on: "eval:doc.customer_type=='Company'",
+				depends_on: "eval:doc.customer_type=='Company' || doc.supplier_type=='Company'",
 			},
              {
                 fieldname: "primary_contact_section_2",
