@@ -1052,7 +1052,7 @@ def update_transaction(doc, values):
         "gst_vehicle_type": values.gst_vehicle_type,
     }
 
-    if doc.doctype == "Sales Invoice":
+    if doc.doctype in ["Sales Invoice", "Delivery Note"]:
         data["port_address"] = values.port_address
 
     doc.db_set(data)

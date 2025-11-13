@@ -148,9 +148,7 @@ doc_events = {
         "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
         "before_submit": "india_compliance.gst_india.overrides.transaction.update_gst_details",
         "before_cancel": "india_compliance.gst_india.utils.e_waybill.before_cancel",
-        "validate": (
-            "india_compliance.gst_india.overrides.transaction.validate_transaction"
-        ),
+        "validate": "india_compliance.gst_india.overrides.delivery_note.validate",
     },
     "Email Template": {
         "after_rename": "india_compliance.gst_india.overrides.email_template.after_rename",
