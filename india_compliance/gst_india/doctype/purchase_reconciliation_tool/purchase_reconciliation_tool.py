@@ -53,6 +53,7 @@ from india_compliance.gst_india.utils.gstr_2 import (
     save_gstr_2a,
     save_gstr_2b,
 )
+from india_compliance.utils import get_hash
 
 STATUS_MAP = {
     "Accept": "Reconciled",
@@ -135,6 +136,16 @@ class PurchaseReconciliationTool(Document):
 
         TaxpayerBaseAPI(company_gstin).validate_auth_token()
 
+        job_id = get_hash(
+            {
+                "company_gstin": company_gstin,
+                "date_range": date_range,
+                "return_type": return_type,
+                "return_period": return_period,
+                "gst_categories": gst_categories,
+            }
+        )
+
         frappe.enqueue(
             download_gstr,
             company_gstin=company_gstin,
@@ -144,6 +155,7 @@ class PurchaseReconciliationTool(Document):
             force=force,
             gst_categories=gst_categories,
             queue="long",
+            job_id=job_id,
             now=frappe.flags.in_test,
             timeout=1800,
         )
