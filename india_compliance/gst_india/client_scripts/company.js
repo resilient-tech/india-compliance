@@ -19,6 +19,11 @@ frappe.ui.form.on(DOCTYPE, {
             "default_customs_payable_account",
             { root_type: "Liability" },
         ]);
+
+        erpnext.company.set_custom_query(frm, [
+            "default_gst_expense_account",
+            {},
+        ]);
     },
 
     make_default_tax_template: function (frm) {
