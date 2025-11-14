@@ -1483,7 +1483,7 @@ class EWaybillData(GSTTransactionData):
         # Handle Subcontracting Inward e-waybill value calculation
         if self.doc.doctype == "Stock Entry":
             self._update_subcontracting_item_value(item_details, item)
-        
+
         if not self.doc.get("is_reverse_charge"):
             return
 
@@ -1493,7 +1493,7 @@ class EWaybillData(GSTTransactionData):
     def _update_subcontracting_item_value(self, item_details, item):
         """
         Update item value for Subcontracting Inward e-waybill generation.
-        
+
         For Subcontracting Delivery: Add customer-provided raw material costs to FG value
         For Return Raw Material to Customer: Use rate from scio_detail
         """
@@ -1501,39 +1501,36 @@ class EWaybillData(GSTTransactionData):
         if self.doc.purpose == "Return Raw Material to Customer":
             if not item.get("scio_detail"):
                 return
-            
+
             # scio_detail points to a row in the required_items table
             # Get the rate from that row
             rate = frappe.db.get_value(
-                "Subcontracting Inward Order Item",
-                item.scio_detail,
-                "rate"
+                "Subcontracting Inward Order Item", item.scio_detail, "rate"
             )
-            
+
             if rate:
                 # Update taxable_value to rate * qty
                 item_details["taxable_value"] = abs(self.rounded(rate * item.qty))
-        
+
         # Subcontracting Delivery
         elif self.doc.purpose == "Subcontracting Delivery":
             if not item.get("scio_detail"):
                 return
-            
+
             # scio_detail points to the FG item in the Subcontracting Inward Order's items table
             # Get the parent document name; the item's name is used as reference in required_items
             scio_parent = frappe.db.get_value(
-                "Subcontracting Inward Order Item",
-                item.scio_detail,
-                "parent"
+                "Subcontracting Inward Order Item", item.scio_detail, "parent"
             )
-            
+
             if not scio_parent:
                 return
-            
+
             # Get all customer-provided raw materials for this FG item
             # The required_items table has a reference_name field linking to the FG item's name
-            customer_rm_cost = frappe.db.sql(
-                """
+            customer_rm_cost = (
+                frappe.db.sql(
+                    """
                 SELECT SUM(rate * consumed_qty)
                 FROM `tabSubcontracting Inward Order Item`
                 WHERE parent = %s
@@ -1541,9 +1538,11 @@ class EWaybillData(GSTTransactionData):
                     AND is_customer_provided_item = 1
                     AND parentfield = 'required_items'
                 """,
-                (scio_parent, item.scio_detail),
-            )[0][0] or 0
-            
+                    (scio_parent, item.scio_detail),
+                )[0][0]
+                or 0
+            )
+
             # Add customer-provided RM cost to the existing FG value
             item_details["taxable_value"] = abs(
                 self.rounded(item_details["taxable_value"] + customer_rm_cost)
