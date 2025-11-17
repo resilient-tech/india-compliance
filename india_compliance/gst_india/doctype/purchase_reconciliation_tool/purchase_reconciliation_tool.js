@@ -1225,10 +1225,10 @@ async function download_gstr(
         frm.events.show_progress(frm, "download");
         const { message } = await frm.taxpayer_api_call("download_gstr", args);
 
-        if (message.message) {
+        if (message?.message) {
             frappe.show_alert({
                 message: message.message,
-                indicator: message.indicator || "blue",
+                indicator: message?.indicator || "blue",
             });
         }
     });
