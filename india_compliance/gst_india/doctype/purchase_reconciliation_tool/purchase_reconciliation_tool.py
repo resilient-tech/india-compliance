@@ -139,10 +139,7 @@ class PurchaseReconciliationTool(Document):
         job_id = get_hash(
             {
                 "company_gstin": company_gstin,
-                "date_range": date_range,
                 "return_type": return_type,
-                "return_period": return_period,
-                "gst_categories": gst_categories,
             }
         )
 
