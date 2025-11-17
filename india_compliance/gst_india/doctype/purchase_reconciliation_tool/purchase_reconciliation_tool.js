@@ -1223,7 +1223,14 @@ async function download_gstr(
             gst_categories,
         };
         frm.events.show_progress(frm, "download");
-        await frm.taxpayer_api_call("download_gstr", args);
+        const { message } = await frm.taxpayer_api_call("download_gstr", args);
+
+        if (message.message) {
+            frappe.show_alert({
+                message: message.message,
+                indicator: message.indicator || "blue",
+            });
+        }
     });
 }
 

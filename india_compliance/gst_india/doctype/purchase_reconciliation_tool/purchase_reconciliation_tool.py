@@ -9,6 +9,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.functions import IfNull
 from frappe.utils import add_to_date, cint, now_datetime
+from frappe.utils.background_jobs import is_job_enqueued
 from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
     get_accounting_dimensions,
 )
@@ -53,7 +54,6 @@ from india_compliance.gst_india.utils.gstr_2 import (
     save_gstr_2a,
     save_gstr_2b,
 )
-from india_compliance.utils import get_hash
 
 STATUS_MAP = {
     "Accept": "Reconciled",
@@ -134,14 +134,16 @@ class PurchaseReconciliationTool(Document):
     ):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
-        TaxpayerBaseAPI(company_gstin).validate_auth_token()
+        job_id = f"purchase_reconciliation_tool:{company_gstin}:{return_type}"
 
-        job_id = get_hash(
-            {
-                "company_gstin": company_gstin,
-                "return_type": return_type,
+        if is_job_enqueued(job_id):
+            return {
+                "message": _(
+                    "A download job is already in progress for the GSTIN - {0} and Return Type - {1}"
+                ).format(company_gstin, return_type),
             }
-        )
+
+        TaxpayerBaseAPI(company_gstin).validate_auth_token()
 
         frappe.enqueue(
             download_gstr,
