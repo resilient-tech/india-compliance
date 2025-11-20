@@ -670,21 +670,27 @@ class TestTransaction(IntegrationTestCase):
             ["CGST", "SGST"],
             charge_type="Actual",
             tax_amount=9,
-            item_wise_tax_detail=json.dumps(
-                {
-                    "_Test Trading Goods 1": {
-                        "tax_rate": 9,
-                        "tax_amount": -9,
-                        "net_amount": -100,
-                    }
-                }
-            ),
             dont_recompute_tax=1,
         )
 
+        doc._item_wise_tax_details = [
+            frappe._dict(
+                {
+                    "item": doc.items[0],
+                    "tax": doc.taxes[0],
+                    "rate": 9,
+                    "amount": -9,
+                    "taxable_amount": -100,
+                }
+            )
+        ]
+
+        # Validation in ERPNext
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(r"^(.*Charge Type is set to Actual. However, Tax Amount.*)$"),
+            re.compile(
+                r"^(.*Item Wise Tax Details do not match with Taxes and Charges at the following rows.*)$"
+            ),
             doc.save,
         )
 

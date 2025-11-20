@@ -139,60 +139,22 @@ def validate_item_wise_tax_detail(doc):
     if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
         return
 
-    item_taxable_values = defaultdict(float)
-    item_qty_map = defaultdict(float)
-
-    for row in doc.items:
-        item_key = row.item_code or row.item_name
-        item_taxable_values[item_key] += row.taxable_value
-        item_qty_map[item_key] += row.qty
-
-    for row in doc.taxes:
-        if not row.gst_tax_type:
+    for row in doc.get("_item_wise_tax_details", []):
+        tax = row.tax
+        if not tax.gst_tax_type:
             continue
 
-        if row.charge_type != "Actual":
+        if tax.charge_type != "Actual":
             continue
 
-        item_wise_tax_detail = frappe.parse_json(row.item_wise_tax_detail or "{}")
-
-        for item_name, tax_row in item_wise_tax_detail.items():
-            tax_rate = tax_row.get("tax_rate")
-            tax_amount = tax_row.get("tax_amount")
-
-            if tax_amount and not tax_rate:
-                frappe.throw(
-                    _(
-                        "Tax Row #{0}: Charge Type is set to Actual. However, this would"
-                        " not compute item taxes, and your further reporting will be affected."
-                    ).format(row.idx),
-                    title=_("Invalid Charge Type"),
-                )
-
-            # Sales Invoice is created with manual tax amount. So, when a sales return is created,
-            # the tax amount is not recalculated, causing the issue.
-
-            is_cess_non_advol = (
-                row.gst_tax_type and "cess_non_advol" in row.gst_tax_type
+        if row.amount and not row.rate:
+            frappe.throw(
+                _(
+                    "Tax Row #{0}: Charge Type is set to Actual. However, this would"
+                    " not compute item taxes, and your further reporting will be affected."
+                ).format(tax.idx),
+                title=_("Invalid Charge Type"),
             )
-            multiplier = (
-                item_qty_map.get(item_name, 0)
-                if is_cess_non_advol
-                else item_taxable_values.get(item_name, 0) / 100
-            )
-            tax_difference = abs(multiplier * tax_rate - tax_amount)
-
-            if tax_difference > ALLOWED_TAX_DIFFERENCE:
-                correct_charge_type = (
-                    "On Item Quantity" if is_cess_non_advol else "On Net Total"
-                )
-
-                frappe.throw(
-                    _(
-                        "Tax Row #{0}: Charge Type is set to Actual. However, Tax Amount {1} as computed for Item {2}"
-                        " is incorrect. Try setting the Charge Type to {3}"
-                    ).format(row.idx, tax_amount, bold(item_name), correct_charge_type)
-                )
 
 
 def get_tds_amount(doc):
@@ -1164,10 +1126,102 @@ def is_export_without_payment_of_gst(doc):
 
 class ItemGSTDetails:
     def get(self, docs, doctype, company):
-        pass
+        response = frappe._dict()
+        item_defaults = self.get_item_defaults()
+
+        for doc in docs:
+            if not doc.get("items"):
+                continue
+
+            self.doc = doc
+            gst_tax_type_map = frappe._dict(
+                {row.name: row.gst_tax_type for row in doc.taxes if row.gst_tax_type}
+            )
+
+            for row in doc.get("item_wise_tax_details") or []:
+                tax_type = gst_tax_type_map.get(row.tax_row)
+                if not tax_type:
+                    continue
+
+                item = response.setdefault(row.item_row, item_defaults.copy())
+                item[f"{tax_type}_rate"] = row.rate
+                item[f"{tax_type}_amount"] += row.amount
+
+        return response
 
     def update(self, doc):
-        pass
+        self.doc = doc
+        if not self.doc.get("items"):
+            return
+
+        self.set_item_defaults()
+        self.set_item_name_wise_tax_details()
+        self.validate_item_gst_details()
+
+    def set_item_defaults(self):
+        item_defaults = self.get_item_defaults()
+
+        for item in self.doc.get("items"):
+            item.update(item_defaults)
+
+    def get_item_defaults(self):
+        item_defaults = frappe._dict()
+
+        for row in GST_TAX_TYPES:
+            item_defaults[f"{row}_rate"] = 0
+            item_defaults[f"{row}_amount"] = 0
+
+        return item_defaults
+
+    def set_item_name_wise_tax_details(self):
+        for row in self.doc._item_wise_tax_details or []:
+            tax_type = row.tax.gst_tax_type
+
+            if not tax_type:
+                continue
+
+            tax_amount = row.item.get(f"{tax_type}_amount", 0) + row.amount
+            row.item.update(
+                {f"{tax_type}_rate": row.rate, f"{tax_type}_amount": tax_amount}
+            )
+
+    def validate_item_gst_details(self):
+        invalid_rows = defaultdict(list)
+
+        for item in self.doc.get("items"):
+            for tax in GST_TAX_TYPES:
+                expected_amt = self.get_item_tax_amount(
+                    item, item.get(f"{tax}_rate"), tax
+                )
+
+                diff = abs(item.get(f"{tax}_amount") - expected_amt)
+
+                if diff > ALLOWED_TAX_DIFFERENCE:
+                    invalid_rows[item.idx].append(tax.upper())
+
+        if invalid_rows:
+            msg = (
+                _(
+                    "GST amounts do not match the calculated values based on tax rates for the following Item rows:<br><br>"
+                )
+                + "<ul>"
+            )
+            for idx, fields in invalid_rows.items():
+                msg += _(
+                    "<li><strong>Row #{0}</strong>: {1} amount mismatch</li>"
+                ).format(idx, ", ".join(fields))
+
+            msg += "</ul>"
+
+            frappe.throw(
+                msg,
+                title=_("Incorrect Item GST Details"),
+            )
+
+    def get_item_tax_amount(self, item, tax_rate, tax):
+        multiplier = item.qty if tax == "cess_non_advol" else item.taxable_value / 100
+
+        return tax_rate * multiplier
 
 
 class ItemGSTTreatment:

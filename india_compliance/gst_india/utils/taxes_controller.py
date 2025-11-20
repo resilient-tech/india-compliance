@@ -34,6 +34,7 @@ class ItemGSTDetails:
             if not doc.get("items") or not doc.get("taxes"):
                 continue
 
+            # TODO: To Deprecate
             self.set_item_code_wise_tax_details()
 
             for item in doc.get("items"):
@@ -52,7 +53,7 @@ class ItemGSTDetails:
         self.get_item_defaults()
         self.set_tax_amount_precisions(doc.doctype)
 
-        # To Deprecate
+        # TODO: To Deprecate
         if self.dont_recompute_tax_is_set():
             self.set_item_code_wise_tax_details()
             self.update_tax_details_by_item_code()

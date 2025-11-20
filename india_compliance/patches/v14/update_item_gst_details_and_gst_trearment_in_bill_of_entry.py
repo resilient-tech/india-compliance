@@ -73,7 +73,7 @@ def update_gst_details(company, doctype, docs):
 
             taxes = get_taxes_for_docs(chunk, doctype)
             items = get_items_for_docs(chunk, doctype)
-            complied_docs = compile_docs(taxes, items, doctype=doctype)
+            complied_docs = compile_docs(taxes, items, [], doctype=doctype)
 
             if not complied_docs:
                 continue
