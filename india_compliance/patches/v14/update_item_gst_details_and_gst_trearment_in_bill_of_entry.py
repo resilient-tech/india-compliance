@@ -4,7 +4,7 @@ import frappe
 from frappe.query_builder.functions import IfNull
 
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
-from india_compliance.gst_india.utils.taxes_controller import CustomItemGSTDetails
+from india_compliance.gst_india.utils.taxes_controller import ItemGSTDetails
 from india_compliance.patches.post_install.improve_item_tax_template import (
     build_query_and_update_gst_details,
     compile_docs,
@@ -78,9 +78,7 @@ def update_gst_details(company, doctype, docs):
             if not complied_docs:
                 continue
 
-            gst_details = CustomItemGSTDetails().get(
-                complied_docs.values(), doctype, company
-            )
+            gst_details = ItemGSTDetails().get(complied_docs.values(), doctype, company)
 
             if not gst_details:
                 continue
@@ -114,7 +112,6 @@ def get_taxes_query(docs, doctype, taxes):
 
 
 def set_gst_treatment():
-
     # based on item_tax_template
     boe = frappe.qb.DocType("Bill of Entry")
     boe_item = frappe.qb.DocType("Bill of Entry Item", alias="boe_item")
