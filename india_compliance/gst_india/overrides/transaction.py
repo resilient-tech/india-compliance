@@ -1176,14 +1176,21 @@ class ItemGSTDetails:
     def set_item_name_wise_tax_details(self):
         for row in self.doc._item_wise_tax_details or []:
             tax_type = row.tax.gst_tax_type
+            item = row.item
+            tax = row.tax
 
             if not tax_type:
                 continue
 
-            tax_amount = (row.item.get(f"{tax_type}_amount") or 0) + row.amount
-            row.item.update(
-                {f"{tax_type}_rate": row.rate, f"{tax_type}_amount": tax_amount}
-            )
+            rate = row.rate
+
+            if tax.get("dont_recompute_tax"):
+                tax_amount = row.amount
+            else:
+                tax_amount = self.get_item_tax_amount(item, rate, tax_type)
+
+            amount = (item.get(f"{tax_type}_amount") or 0) + tax_amount
+            item.update({f"{tax_type}_rate": row.rate, f"{tax_type}_amount": amount})
 
     def validate_item_gst_details(self):
         invalid_rows = defaultdict(list)
