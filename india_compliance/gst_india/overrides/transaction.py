@@ -1180,7 +1180,7 @@ class ItemGSTDetails:
             if not tax_type:
                 continue
 
-            tax_amount = row.item.get(f"{tax_type}_amount", 0) + row.amount
+            tax_amount = (row.item.get(f"{tax_type}_amount") or 0) + row.amount
             row.item.update(
                 {f"{tax_type}_rate": row.rate, f"{tax_type}_amount": tax_amount}
             )
