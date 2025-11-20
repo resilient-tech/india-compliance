@@ -8,10 +8,10 @@ from erpnext.controllers.taxes_and_totals import (
     get_round_off_applicable_accounts as fetch_round_off_accounts,
 )
 
+from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.overrides.transaction import (
     ItemGSTTreatment,
 )
-from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.utils import get_all_gst_accounts
 
 ALLOWED_TAX_DIFFERENCE = 1  # Allowable difference in tax amount due to rounding off
