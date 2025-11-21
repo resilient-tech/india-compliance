@@ -633,6 +633,22 @@ CUSTOM_FIELDS = {
     # Sales Shipping Fields
     ("Delivery Note", "Sales Invoice"): [
         {
+            "fieldname": "port_address",
+            "label": "Origin Port / Border Checkpost Address Name",
+            "fieldtype": "Link",
+            "options": "Address",
+            "print_hide": 1,
+            "description": (
+                "Address of the place / port in India from where goods are being"
+                " exported <br>(for generating e-Waybill against export of goods)"
+            ),
+            "insert_after": "shipping_address",
+            "depends_on": (
+                "eval:doc.company_gstin && doc.gst_category === 'Overseas' &&"
+                " doc.place_of_supply == '96-Other Countries' && gst_settings.enable_e_waybill"
+            ),
+        },
+        {
             "fieldname": "port_code",
             "label": "Port Code",
             "fieldtype": "Autocomplete",
@@ -937,22 +953,6 @@ CUSTOM_FIELDS = {
         },
     ],
     "Sales Invoice": [
-        {
-            "fieldname": "port_address",
-            "label": "Origin Port / Border Checkpost Address Name",
-            "fieldtype": "Link",
-            "options": "Address",
-            "print_hide": 1,
-            "description": (
-                "Address of the place / port in India from where goods are being"
-                " exported <br>(for generating e-Waybill against export of goods)"
-            ),
-            "insert_after": "shipping_address",
-            "depends_on": (
-                "eval:doc.company_gstin && doc.gst_category === 'Overseas' &&"
-                " doc.place_of_supply == '96-Other Countries' && gst_settings.enable_e_waybill"
-            ),
-        },
         {
             "fieldname": "invoice_copy",
             "label": "Invoice Copy",

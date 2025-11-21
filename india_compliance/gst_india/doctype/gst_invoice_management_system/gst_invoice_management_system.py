@@ -6,6 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.functions import IfNull
 from frappe.utils import add_to_date, format_date
+from frappe.utils.background_jobs import is_job_enqueued
 
 from india_compliance.gst_india.api_classes.taxpayer_base import (
     TaxpayerBaseAPI,
@@ -248,9 +249,24 @@ class GSTInvoiceManagementSystem(Document):
 def download_invoices(company_gstin):
     frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
+    job_id = f"gst_ims:{company_gstin}"
+
+    if is_job_enqueued(job_id):
+        return {
+            "message": _(
+                "A download job is already in progress for the GSTIN - {0}"
+            ).format(company_gstin),
+        }
+
     TaxpayerBaseAPI(company_gstin).validate_auth_token()
 
-    frappe.enqueue(download_ims_invoices, queue="long", gstin=company_gstin)
+    frappe.enqueue(
+        download_ims_invoices,
+        queue="long",
+        gstin=company_gstin,
+        job_id=job_id,
+        deduplicate=True,
+    )
 
 
 @frappe.whitelist()
