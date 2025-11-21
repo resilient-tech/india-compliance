@@ -169,6 +169,27 @@ class PartyQuickEntryForm extends GSTQuickEntryForm {
                 collapsible: 0,
             },
             {
+				label: __("First Name"),
+				fieldname: "map_to_first_name",
+				fieldtype: "Data",
+				depends_on: "eval:doc.customer_type=='Company' || doc.supplier_type=='Company'",
+			},
+             {
+                fieldtype: "Column Break",
+            },
+			{
+				label: __("Last Name"),
+				fieldname: "map_to_last_name",
+				fieldtype: "Data",
+				depends_on: "eval:doc.customer_type=='Company' || doc.supplier_type=='Company'",
+			},
+             {
+                fieldname: "primary_contact_section_2",
+                fieldtype: "Section Break",
+                collapsible: 0,
+                hide_border: 1,
+            },
+            {
                 label: __("Email ID"),
                 fieldname: "_email_id",
                 fieldtype: "Data",
@@ -195,6 +216,8 @@ class PartyQuickEntryForm extends GSTQuickEntryForm {
         // these fields were suffixed with _ to prevent them from being read only
         doc.email_id = doc._email_id;
         doc.mobile_no = doc._mobile_no;
+        doc.first_name = doc.map_to_first_name;
+        doc.last_name = doc.map_to_last_name;
 
         return doc;
     }
