@@ -157,6 +157,7 @@ class PurchaseReconciliationTool(Document):
             job_id=job_id,
             now=frappe.flags.in_test,
             timeout=1800,
+            deduplicate=True,
         )
 
     @frappe.whitelist()
