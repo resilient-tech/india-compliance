@@ -1195,18 +1195,18 @@ class ItemGSTDetails:
             if not self.is_gst_tax_row(tax_row):
                 continue
 
-            tax = tax_row.gst_tax_type
-            tax_rate_field = f"{tax}_rate"
-            tax_amount_field = f"{tax}_amount"
+            tax_type = tax_row.gst_tax_type
+            tax_rate_field = f"{tax_type}_rate"
+            tax_amount_field = f"{tax_type}_amount"
 
             tax_rate = row.rate
-            tax_amount = self.get_item_tax_amount(item, tax_rate, tax)
+            tax_amount = self.get_item_tax_amount(item, tax_rate, tax_type)
 
             # cases when charge type == "Actual"
             if tax_amount and not tax_rate:
                 continue
 
-            tax_differences[tax] -= tax_amount
+            tax_differences[tax_type] -= tax_amount
 
             amount = flt(item.get(tax_amount_field)) + tax_amount
             item.update(
