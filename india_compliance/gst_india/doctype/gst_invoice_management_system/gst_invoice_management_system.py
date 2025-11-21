@@ -265,6 +265,7 @@ def download_invoices(company_gstin):
         queue="long",
         gstin=company_gstin,
         job_id=job_id,
+        deduplicate=True,
     )
 
 
