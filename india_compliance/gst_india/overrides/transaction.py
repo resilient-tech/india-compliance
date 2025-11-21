@@ -1190,7 +1190,6 @@ class ItemGSTDetails:
         for row in self.doc.get("_item_wise_tax_details") or []:
             item = row.get("item")
             tax_row = row.get("tax")
-            tax_amount = 0
 
             if not self.is_gst_tax_row(tax_row):
                 continue
@@ -1222,9 +1221,11 @@ class ItemGSTDetails:
 
         # Handle rounding errors
         if tax_differences and last_item_with_tax:
-            for tax, tax_amount in tax_differences.items():
-                amount = flt(last_item_with_tax.get(f"{tax}_amount") + tax_amount, 5)
-                last_item_with_tax.set(f"{tax}_amount", amount)
+            for tax_type, difference in tax_differences.items():
+                amount = flt(
+                    last_item_with_tax.get(f"{tax_type}_amount") + difference, 5
+                )
+                last_item_with_tax.set(f"{tax_type}_amount", amount)
 
     def set_item_defaults(self):
         for item in self.doc.get("items"):
@@ -1273,7 +1274,10 @@ class ItemGSTDetails:
         for row in self.doc.get("item_wise_tax_details") or []:
             tax_row = tax_map.get(row.get("tax_row"))
             item = item_map.get(row.get("item_row"))
-            tax_amount = 0
+
+            # Skip if item or tax row not found (could be deleted)
+            if not item or not tax_row:
+                continue
 
             if not self.is_gst_tax_row(tax_row):
                 continue
@@ -1300,8 +1304,8 @@ class ItemGSTDetails:
                 last_item_with_tax = item_taxes
 
         if tax_differences and last_item_with_tax:
-            for tax_type, tax_amount in tax_differences.items():
-                last_item_with_tax[f"{tax_type}_amount"] += flt(tax_amount, 5)
+            for tax_type, difference_amount in tax_differences.items():
+                last_item_with_tax[f"{tax_type}_amount"] += flt(difference_amount, 5)
 
         self.item_tax_details = tax_details
 
