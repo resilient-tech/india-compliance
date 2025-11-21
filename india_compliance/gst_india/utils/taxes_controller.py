@@ -7,7 +7,6 @@ from erpnext.controllers.taxes_and_totals import (
     get_round_off_applicable_accounts as fetch_round_off_accounts,
 )
 
-from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.overrides.transaction import (
     ItemGSTDetails,
     ItemGSTTreatment,
@@ -59,89 +58,28 @@ class CustomItemGSTDetails(ItemGSTDetails):
                     )
                 )
 
-    def get_item_name_wise_tax_details(self):
+    def build_item_wise_tax_detail_from_data(self):
         """
-        Item Tax Details complied
-        Example:
-        {
-            "Item Code 1": {
-                "count": 2,
-                "cgst_rate": 9,
-                "cgst_amount": 18,
-                "sgst_rate": 9,
-                "sgst_amount": 18,
-                ...
-            },
-            ...
-        }
-
-        Possible Exceptions Handled:
-        - There could be more than one row for same account
-        - Item count added to handle rounding errors
+        Build item_wise_tax_details structure from JSON for patch/get operations.
+        This mimics the child table structure expected by base class get_item_name_wise_tax_details()
         """
-
-        tax_details = frappe._dict()
-
-        for row in self.doc.get("items"):
-            key = row.name
-
-            if key not in tax_details:
-                tax_details[key] = self.item_defaults.copy()
-
-            tax_details[key]["count"] += 1
+        self.doc.item_wise_tax_details = []
 
         for row in self.doc.taxes:
-            if not self.is_gst_tax_row(row):
+            if not row.gst_tax_type:
                 continue
 
-            tax = row.gst_tax_type
-            tax_rate_field = f"{tax}_rate"
-            tax_amount_field = f"{tax}_amount"
-
-            old = json.loads(row.get(self.tax_details_field(), "{}"))
-
-            tax_difference = row.tax_amount
-            last_item_with_tax = None
-
-            # update item taxes
-            for item_name in old:
-                if item_name not in tax_details:
-                    # Do not compute if Item is not present in Item table
-                    # There can be difference in Item Table and Item Wise Tax Details
-                    continue
-
-                item_taxes = tax_details[item_name]
-                tax_rate = old[item_name].get("tax_rate")
-                tax_amount = old[item_name].get("tax_amount")
-
-                tax_difference -= tax_amount
-
-                # cases when charge type == "Actual"
-                if tax_amount and not tax_rate:
-                    continue
-
-                item_taxes[tax_rate_field] = tax_rate
-                item_taxes[tax_amount_field] += tax_amount
-
-                # update tax difference only for taxable items
-                if tax_amount:
-                    last_item_with_tax = item_taxes
-
-            # Floating point errors
-            tax_difference = flt(tax_difference, 5)
-
-            # Handle rounding errors
-            if tax_difference and last_item_with_tax:
-                last_item_with_tax[tax_amount_field] += tax_difference
-
-        self.item_tax_details = tax_details
-
-    def is_gst_tax_row(self, row):
-        return (
-            row.gst_tax_type
-            and row.gst_tax_type in GST_TAX_TYPES
-            and row.get(self.tax_details_field())
-        )
+            item_wise_tax_rates = self.get_tax_details(row)
+            for item_name, rate in item_wise_tax_rates.items():
+                self.doc.item_wise_tax_details.append(
+                    frappe._dict(
+                        {
+                            "item_row": item_name,
+                            "tax_row": row.name,
+                            "rate": rate,
+                        }
+                    )
+                )
 
 
 def update_gst_details(doc, method=None):

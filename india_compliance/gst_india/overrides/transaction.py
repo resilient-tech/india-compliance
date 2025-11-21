@@ -1141,6 +1141,7 @@ class ItemGSTDetails:
             if not doc.get("items") or not doc.get("taxes"):
                 continue
 
+            self.build_item_wise_tax_detail_from_data()
             self.get_item_name_wise_tax_details()
 
             for item in doc.get("items"):
@@ -1397,6 +1398,10 @@ class ItemGSTDetails:
         return tax_row.__tax_details
 
     def set_temp_item_wise_tax_detail_object(self):
+        # for custom tax controller
+        pass
+
+    def build_item_wise_tax_detail_from_data(self):
         # for custom tax controller
         pass
 
