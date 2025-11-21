@@ -128,6 +128,7 @@ class BaseAPI:
                     "body": json_data,
                 }
 
+        response = None
         response_json = None
 
         try:
@@ -172,6 +173,11 @@ class BaseAPI:
         finally:
             if response_json:
                 log.output = response_json.copy()
+            elif response:
+                log.output = {
+                    "status_code": response.status_code,
+                    "content": response.text,
+                }
 
             self.mask_sensitive_info(log)
 
