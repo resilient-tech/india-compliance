@@ -684,14 +684,21 @@ class IMSAction {
     }
 
     async download_ims_data() {
-        await taxpayer_api.call({
+        const { message } = await taxpayer_api.call({
             method: `${DOC_PATH}.download_invoices`,
             args: { company_gstin: this.frm.doc.company_gstin },
         });
 
-        frappe.show_alert({
-            message: __("Downloading Invoices"),
-        });
+        if (message?.message) {
+            frappe.show_alert({
+                message: message.message,
+                indicator: message?.indicator || "blue",
+            });
+        } else {
+            frappe.show_alert({
+                message: __("Downloading Invoices"),
+            });
+        }
     }
 
     async get_ims_data() {
