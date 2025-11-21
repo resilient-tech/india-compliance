@@ -19,9 +19,6 @@ class CustomItemGSTDetails(ItemGSTDetails):
     Support use of Item wise tax rates in Taxes and Charges table
     """
 
-    def get_item_key(self, item):
-        return item.name
-
     @staticmethod
     def tax_amount_field():
         return "tax_amount"
@@ -36,6 +33,53 @@ class CustomItemGSTDetails(ItemGSTDetails):
         """
         item_tax_rates = self.get_tax_details(tax_row)
         return item_tax_rates.get(item.name)
+
+    def set_temp_item_wise_tax_detail_object(self):
+        self.doc._item_wise_tax_details = []
+        item_map = {item.name: item for item in self.doc.items}
+
+        for row in self.doc.taxes:
+            if not row.gst_tax_type:
+                continue
+
+            item_wise_tax_rates = self.get_tax_details(row)
+            for item_name, rate in item_wise_tax_rates.items():
+                item = item_map.get(item_name)
+                if not item:
+                    continue
+
+                self.doc._item_wise_tax_details.append(
+                    frappe._dict(
+                        {
+                            "item": item,
+                            "tax": row,
+                            "rate": rate,
+                        }
+                    )
+                )
+
+    def build_item_wise_tax_detail_from_data(self):
+        """
+        Build item_wise_tax_details structure from JSON for patch/get operations.
+        This mimics the child table structure expected by base class get_item_name_wise_tax_details()
+        """
+        self.doc.item_wise_tax_details = []
+
+        for row in self.doc.taxes:
+            if not row.gst_tax_type:
+                continue
+
+            item_wise_tax_rates = self.get_tax_details(row)
+            for item_name, rate in item_wise_tax_rates.items():
+                self.doc.item_wise_tax_details.append(
+                    frappe._dict(
+                        {
+                            "item_row": item_name,
+                            "tax_row": row.name,
+                            "rate": rate,
+                        }
+                    )
+                )
 
 
 def update_gst_details(doc, method=None):

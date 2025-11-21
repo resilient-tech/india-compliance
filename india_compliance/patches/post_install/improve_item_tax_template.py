@@ -354,7 +354,8 @@ def _update_gst_details(company, doctype, is_sales_doctype, docs):
 
             taxes = get_taxes_for_docs(chunk, doctype, is_sales_doctype)
             items = get_items_for_docs(chunk, doctype)
-            complied_docs = compile_docs(taxes, items, doctype)
+            item_taxes = get_item_taxes_for_docs(chunk, doctype)
+            complied_docs = compile_docs(taxes, items, item_taxes, doctype)
 
             if not complied_docs:
                 continue
@@ -390,10 +391,10 @@ def get_taxes_for_docs(docs, doctype, is_sales_doctype):
     return (
         frappe.qb.from_(taxes)
         .select(
-            taxes.base_tax_amount_after_discount_amount,
+            taxes.name,
             taxes.gst_tax_type,
             taxes.parent,
-            taxes.item_wise_tax_detail,
+            taxes.base_tax_amount_after_discount_amount,
         )
         .where(taxes.parenttype == doctype)
         .where(taxes.parent.isin(docs))
@@ -420,7 +421,24 @@ def get_items_for_docs(docs, doctype):
     )
 
 
-def compile_docs(taxes, items, doctype):
+def get_item_taxes_for_docs(docs, doctype):
+    item_tax = frappe.qb.DocType("Item Wise Tax Detail")
+    return (
+        frappe.qb.from_(item_tax)
+        .select(
+            item_tax.parent,
+            item_tax.item_row,
+            item_tax.tax_row,
+            item_tax.rate,
+            item_tax.amount,
+        )
+        .where(item_tax.parenttype == doctype)
+        .where(item_tax.parent.isin(docs))
+        .run(as_dict=True)
+    )
+
+
+def compile_docs(taxes, items, item_taxes, doctype):
     """
     Complie docs, so that each one could be accessed as if it's a single doc.
     """
@@ -428,15 +446,27 @@ def compile_docs(taxes, items, doctype):
 
     for tax in taxes:
         if tax.parent not in response:
-            response[tax.parent] = frappe._dict(taxes=[], items=[], doctype=doctype)
+            response[tax.parent] = frappe._dict(
+                taxes=[], items=[], item_wise_tax_details=[], doctype=doctype
+            )
 
         response[tax.parent]["taxes"].append(tax)
 
     for item in items:
         if item.parent not in response:
-            response[item.parent] = frappe._dict(taxes=[], items=[], doctype=doctype)
+            response[item.parent] = frappe._dict(
+                taxes=[], items=[], item_wise_tax_details=[], doctype=doctype
+            )
 
         response[item.parent]["items"].append(item)
+
+    for item_tax in item_taxes:
+        if item_tax.parent not in response:
+            response[item_tax.parent] = frappe._dict(
+                taxes=[], items=[], item_wise_tax_details=[], doctype=doctype
+            )
+
+        response[item_tax.parent]["item_wise_tax_details"].append(item_tax)
 
     return response
 

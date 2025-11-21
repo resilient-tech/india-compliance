@@ -139,60 +139,22 @@ def validate_item_wise_tax_detail(doc):
     if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
         return
 
-    item_taxable_values = defaultdict(float)
-    item_qty_map = defaultdict(float)
-
-    for row in doc.items:
-        item_key = row.item_code or row.item_name
-        item_taxable_values[item_key] += row.taxable_value
-        item_qty_map[item_key] += row.qty
-
-    for row in doc.taxes:
-        if not row.gst_tax_type:
+    for row in doc.get("_item_wise_tax_details", []):
+        tax = row.tax
+        if not tax.gst_tax_type:
             continue
 
-        if row.charge_type != "Actual":
+        if tax.charge_type != "Actual":
             continue
 
-        item_wise_tax_detail = frappe.parse_json(row.item_wise_tax_detail or "{}")
-
-        for item_name, tax_row in item_wise_tax_detail.items():
-            tax_rate = tax_row.get("tax_rate")
-            tax_amount = tax_row.get("tax_amount")
-
-            if tax_amount and not tax_rate:
-                frappe.throw(
-                    _(
-                        "Tax Row #{0}: Charge Type is set to Actual. However, this would"
-                        " not compute item taxes, and your further reporting will be affected."
-                    ).format(row.idx),
-                    title=_("Invalid Charge Type"),
-                )
-
-            # Sales Invoice is created with manual tax amount. So, when a sales return is created,
-            # the tax amount is not recalculated, causing the issue.
-
-            is_cess_non_advol = (
-                row.gst_tax_type and "cess_non_advol" in row.gst_tax_type
+        if row.amount and not row.rate:
+            frappe.throw(
+                _(
+                    "Tax Row #{0}: Charge Type is set to Actual. However, this would"
+                    " not compute item taxes, and your further reporting will be affected."
+                ).format(tax.idx),
+                title=_("Invalid Charge Type"),
             )
-            multiplier = (
-                item_qty_map.get(item_name, 0)
-                if is_cess_non_advol
-                else item_taxable_values.get(item_name, 0) / 100
-            )
-            tax_difference = abs(multiplier * tax_rate - tax_amount)
-
-            if tax_difference > ALLOWED_TAX_DIFFERENCE:
-                correct_charge_type = (
-                    "On Item Quantity" if is_cess_non_advol else "On Net Total"
-                )
-
-                frappe.throw(
-                    _(
-                        "Tax Row #{0}: Charge Type is set to Actual. However, Tax Amount {1} as computed for Item {2}"
-                        " is incorrect. Try setting the Charge Type to {3}"
-                    ).format(row.idx, tax_amount, bold(item_name), correct_charge_type)
-                )
 
 
 def get_tds_amount(doc):
@@ -1179,10 +1141,11 @@ class ItemGSTDetails:
             if not doc.get("items") or not doc.get("taxes"):
                 continue
 
-            self.set_item_code_wise_tax_details()
+            self.build_item_wise_tax_detail_from_data()
+            self.get_item_name_wise_tax_details()
 
             for item in doc.get("items"):
-                response[item.name] = self.get_tax_detail_by_item_code(item)
+                response[item.name] = self.get_tax_detail_by_item_name(item)
 
         return response
 
@@ -1196,15 +1159,9 @@ class ItemGSTDetails:
 
         self.get_item_defaults()
         self.set_tax_amount_precisions(doc.doctype)
+        self.set_temp_item_wise_tax_detail_object()
 
-        # To Deprecate
-        if self.dont_recompute_tax_is_set():
-            self.set_item_code_wise_tax_details()
-            self.update_tax_details_by_item_code()
-
-        else:
-            self.set_item_name_wise_tax_details()
-
+        self.set_item_name_wise_tax_details()
         self.validate_item_gst_details()
 
     def get_item_defaults(self):
@@ -1219,13 +1176,10 @@ class ItemGSTDetails:
     def set_item_name_wise_tax_details(self):
         """
         Update Item Tax Details
-
-        Possible Exceptions Handled:
-        - There could be more than one row for same account
-        - Item count added to handle rounding errors
         """
-
         tax_differences = defaultdict(float)
+        self.set_item_defaults()
+
         for tax_row in self.doc.taxes:
             if not self.is_gst_tax_row(tax_row):
                 continue
@@ -1233,61 +1187,57 @@ class ItemGSTDetails:
             tax_differences[tax_type] += tax_row.get(self.tax_amount_field(), 0)
 
         last_item_with_tax = None
-        last_item_defaults = None
 
-        for item in self.doc.get("items"):
-            item_defaults = self.item_defaults.copy()
-            tax_amount = 0
+        for row in self.doc.get("_item_wise_tax_details") or []:
+            item = row.get("item")
+            tax_row = row.get("tax")
 
-            for tax_row in self.doc.taxes:
-                if not self.is_gst_tax_row(tax_row):
-                    continue
+            if not self.is_gst_tax_row(tax_row):
+                continue
 
-                tax = tax_row.gst_tax_type
-                tax_rate_field = f"{tax}_rate"
-                tax_amount_field = f"{tax}_amount"
+            tax_type = tax_row.gst_tax_type
+            tax_rate_field = f"{tax_type}_rate"
+            tax_amount_field = f"{tax_type}_amount"
 
-                old = self.get_tax_details(tax_row)
-                old = frappe.parse_json(tax_row.get(self.tax_details_field(), "{}"))
+            tax_rate = row.rate
+            tax_amount = self.get_item_tax_amount(item, tax_rate, tax_type)
 
-                if self.get_item_key(item) not in old:
-                    # Do not compute if Item is not present in Item table
-                    # There can be difference in Item Table and Item Wise Tax Details
-                    continue
+            # cases when charge type == "Actual"
+            if tax_amount and not tax_rate:
+                continue
 
-                tax_rate = self.get_item_tax_rate(item, tax_row)
-                tax_amount = self.get_item_tax_amount(item, tax_rate, tax)
+            tax_differences[tax_type] -= tax_amount
 
-                # cases when charge type == "Actual"
-                if tax_amount and not tax_rate:
-                    continue
-
-                tax_differences[tax] -= tax_amount
-                item_defaults[tax_rate_field] = tax_rate
-                item_defaults[tax_amount_field] += tax_amount
-
-            item.update(item_defaults)
+            amount = flt(item.get(tax_amount_field)) + tax_amount
+            item.update(
+                {
+                    tax_rate_field: tax_rate,
+                    tax_amount_field: amount,
+                }
+            )
 
             # update tax difference only for taxable items
             if tax_amount:
                 last_item_with_tax = item
-                last_item_defaults = item_defaults
 
         # Handle rounding errors
         if tax_differences and last_item_with_tax:
-            for tax, tax_amount in tax_differences.items():
-                last_item_defaults[f"{tax}_amount"] += flt(tax_amount, 5)
+            for tax_type, difference in tax_differences.items():
+                amount = flt(
+                    last_item_with_tax.get(f"{tax_type}_amount") + difference, 5
+                )
+                last_item_with_tax.set(f"{tax_type}_amount", amount)
 
-            for fieldname, value in last_item_defaults.items():
-                last_item_with_tax.set(fieldname, value)
+    def set_item_defaults(self):
+        for item in self.doc.get("items"):
+            item.update(self.item_defaults.copy())
 
-    def set_item_code_wise_tax_details(self):
+    def get_item_name_wise_tax_details(self):
         """
         Item Tax Details complied
         Example:
         {
-            "Item Code 1": {
-                "count": 2,
+            "Item Name": {
                 "cgst_rate": 9,
                 "cgst_amount": 18,
                 "sgst_rate": 9,
@@ -1303,105 +1253,72 @@ class ItemGSTDetails:
         """
 
         tax_details = frappe._dict()
+        item_map = frappe._dict()
+        tax_map = frappe._dict()
+        tax_differences = defaultdict(float)
+        last_item_with_tax = None
+
+        for row in self.doc.get("taxes"):
+            if not self.is_gst_tax_row(row):
+                continue
+            tax_type = row.gst_tax_type
+            tax_differences[tax_type] += row.get(self.tax_amount_field(), 0)
+            tax_map[row.name] = row
 
         for row in self.doc.get("items"):
-            key = self.get_item_key(row)
+            key = row.name
+            item_map[key] = row
 
             if key not in tax_details:
                 tax_details[key] = self.item_defaults.copy()
 
-            tax_details[key]["count"] += 1
+        for row in self.doc.get("item_wise_tax_details") or []:
+            tax_row = tax_map.get(row.get("tax_row"))
+            item = item_map.get(row.get("item_row"))
 
-        for row in self.doc.taxes:
-            if not self.is_gst_tax_row(row):
+            # Skip if item or tax row not found (could be deleted)
+            if not item or not tax_row:
                 continue
 
-            tax = row.gst_tax_type
-            tax_rate_field = f"{tax}_rate"
-            tax_amount_field = f"{tax}_amount"
+            if not self.is_gst_tax_row(tax_row):
+                continue
 
-            old = json.loads(row.get(self.tax_details_field(), "{}"))
+            tax_type = tax_row.gst_tax_type
+            tax_rate_field = f"{tax_type}_rate"
+            tax_amount_field = f"{tax_type}_amount"
 
-            tax_difference = row.base_tax_amount_after_discount_amount
-            last_item_with_tax = None
+            item_taxes = tax_details[item.name]
+            tax_rate = row.get("rate")
+            tax_amount = self.get_item_tax_amount(item, tax_rate, tax_type)
 
-            # update item taxes
-            for item_name in old:
-                if item_name not in tax_details:
-                    # Do not compute if Item is not present in Item table
-                    # There can be difference in Item Table and Item Wise Tax Details
-                    continue
+            tax_differences[tax_type] -= tax_amount
 
-                item_taxes = tax_details[item_name]
-                tax_rate = old[item_name].get("tax_rate")
-                tax_amount = old[item_name].get("tax_amount")
+            # cases when charge type == "Actual"
+            if tax_amount and not tax_rate:
+                continue
 
-                tax_difference -= tax_amount
+            item_taxes[tax_rate_field] = tax_rate
+            item_taxes[tax_amount_field] += tax_amount
 
-                # cases when charge type == "Actual"
-                if tax_amount and not tax_rate:
-                    continue
+            # update tax difference only for taxable items
+            if tax_amount:
+                last_item_with_tax = item_taxes
 
-                item_taxes[tax_rate_field] = tax_rate
-                item_taxes[tax_amount_field] += tax_amount
-
-                # update tax difference only for taxable items
-                if tax_amount:
-                    last_item_with_tax = item_taxes
-
-            # Floating point errors
-            tax_difference = flt(tax_difference, 5)
-
-            # Handle rounding errors
-            if tax_difference and last_item_with_tax:
-                last_item_with_tax[tax_amount_field] += tax_difference
+        if tax_differences and last_item_with_tax:
+            for tax_type, difference_amount in tax_differences.items():
+                last_item_with_tax[f"{tax_type}_amount"] += flt(difference_amount, 5)
 
         self.item_tax_details = tax_details
 
-    def update_tax_details_by_item_code(self):
-        for item in self.doc.get("items"):
-            item.update(self.get_tax_detail_by_item_code(item))
-
-    def get_item_key(self, item):
-        return item.item_code or item.item_name
-
-    def get_tax_detail_by_item_code(self, item):
+    def get_tax_detail_by_item_name(self, item):
         """
         - get item_tax_detail as it is if
-            - only one row exists for same item
-            - it is the last item
 
-        - If count is greater than 1,
-            - Manually calculate tax_amount for item
-            - Reduce item_tax_detail with
-                - tax_amount
-                - count
         """
-        item_key = self.get_item_key(item)
+        item_key = item.name
 
         item_tax_detail = self.item_tax_details.get(item_key)
-        if not item_tax_detail:
-            return {}
-
-        if item_tax_detail.count == 1:
-            return item_tax_detail
-
-        item_tax_detail["count"] -= 1
-
-        # Handle rounding errors
-        response = item_tax_detail.copy()
-        for tax in GST_TAX_TYPES:
-            if (tax_rate := item_tax_detail[f"{tax}_rate"]) == 0:
-                continue
-
-            tax_amount = self.get_item_tax_amount(item, tax_rate, tax)
-
-            tax_amount_field = f"{tax}_amount"
-            item_tax_detail[tax_amount_field] -= tax_amount
-
-            response.update({tax_amount_field: tax_amount})
-
-        return response
+        return item_tax_detail
 
     def validate_item_gst_details(self):
         invalid_rows = defaultdict(list)
@@ -1452,22 +1369,11 @@ class ItemGSTDetails:
 
             self.precision[fieldname] = field.precision or default_precision
 
-    def dont_recompute_tax_is_set(self):
-        for row in self.doc.taxes:
-            if not self.is_gst_tax_row(row):
-                continue
-
-            if row.get("dont_recompute_tax"):
-                return True
-
-        return False
-
     def is_gst_tax_row(self, row):
-        return (
-            row.gst_tax_type
-            and row.gst_tax_type in GST_TAX_TYPES
-            and row.get(self.tax_details_field())
-        )
+        if not row:
+            return
+
+        return row.get("gst_tax_type") and row.gst_tax_type in GST_TAX_TYPES
 
     def get_item_tax_rate(self, item, tax_row):
         item_tax_rates = frappe.parse_json(item.item_tax_rate)
@@ -1490,6 +1396,14 @@ class ItemGSTDetails:
             )
 
         return tax_row.__tax_details
+
+    def set_temp_item_wise_tax_detail_object(self):
+        # for custom tax controller
+        pass
+
+    def build_item_wise_tax_detail_from_data(self):
+        # for custom tax controller
+        pass
 
     @staticmethod
     def tax_amount_field():

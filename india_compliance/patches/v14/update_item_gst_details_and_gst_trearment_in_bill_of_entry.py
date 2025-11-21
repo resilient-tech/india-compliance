@@ -73,7 +73,7 @@ def update_gst_details(company, doctype, docs):
 
             taxes = get_taxes_for_docs(chunk, doctype)
             items = get_items_for_docs(chunk, doctype)
-            complied_docs = compile_docs(taxes, items, doctype=doctype)
+            complied_docs = compile_docs(taxes, items, [], doctype=doctype)
 
             if not complied_docs:
                 continue
@@ -114,7 +114,6 @@ def get_taxes_query(docs, doctype, taxes):
 
 
 def set_gst_treatment():
-
     # based on item_tax_template
     boe = frappe.qb.DocType("Bill of Entry")
     boe_item = frappe.qb.DocType("Bill of Entry Item", alias="boe_item")
