@@ -480,7 +480,7 @@ function get_generate_e_waybill_dialog(opts, frm) {
         },
     ];
 
-    if (frm.doctype === "Sales Invoice" && is_foreign_transaction) {
+    if (["Sales Invoice","Delivery Note"].includes(frm.doctype) && is_foreign_transaction) {
         fields.splice(5, 0, {
             label: "Origin Port / Border Checkpost Address",
             fieldname: "port_address",
