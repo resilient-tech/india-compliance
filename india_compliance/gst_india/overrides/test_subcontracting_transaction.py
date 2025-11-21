@@ -387,3 +387,49 @@ class TestSubcontractingTransaction(IntegrationTestCase):
         sco.supplier_warehouse = "Finished Goods - _TIUC"
         sco.save()
         sco.submit()
+
+    def test_e_waybill_applicable_for_new_subcontracting_purposes(self):
+        """Test that new Stock Entry purposes are recognized for e-waybill"""
+        from india_compliance.gst_india.overrides.subcontracting_transaction import (
+            is_e_waybill_applicable,
+        )
+
+        # Test Subcontracting Delivery
+        se_delivery = frappe.new_doc("Stock Entry")
+        se_delivery.purpose = "Subcontracting Delivery"
+        se_delivery.doctype = "Stock Entry"
+        
+        self.assertTrue(
+            is_e_waybill_applicable(se_delivery),
+            "Subcontracting Delivery should be applicable for e-waybill"
+        )
+
+        # Test Return Raw Material to Customer
+        se_return = frappe.new_doc("Stock Entry")
+        se_return.purpose = "Return Raw Material to Customer"
+        se_return.doctype = "Stock Entry"
+        
+        self.assertTrue(
+            is_e_waybill_applicable(se_return),
+            "Return Raw Material to Customer should be applicable for e-waybill"
+        )
+
+        # Test that other purposes still work
+        se_send = frappe.new_doc("Stock Entry")
+        se_send.purpose = "Send to Subcontractor"
+        se_send.doctype = "Stock Entry"
+        
+        self.assertTrue(
+            is_e_waybill_applicable(se_send),
+            "Send to Subcontractor should be applicable for e-waybill"
+        )
+
+        # Test that non-applicable purpose returns False
+        se_receipt = frappe.new_doc("Stock Entry")
+        se_receipt.purpose = "Material Receipt"
+        se_receipt.doctype = "Stock Entry"
+        
+        self.assertFalse(
+            is_e_waybill_applicable(se_receipt),
+            "Material Receipt should not be applicable for e-waybill"
+        )

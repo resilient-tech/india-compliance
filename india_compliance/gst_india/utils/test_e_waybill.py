@@ -1335,6 +1335,235 @@ class TestEWaybill(IntegrationTestCase):
             "GSTIN -29AAACI1195H2ZH is inactive or cancelled", str(cm.exception)
         )
 
+    def test_subcontracting_delivery_item_value_calculation(self):
+        """Test e-waybill value calculation for Subcontracting Delivery with customer-provided items"""
+        # Create a mock Stock Entry for Subcontracting Delivery
+        se = frappe.new_doc("Stock Entry")
+        se.purpose = "Subcontracting Delivery"
+        se.company = "_Test Indian Registered Company"
+        se.stock_entry_type = "Subcontracting Delivery"
+        
+        # Add an item with scio_detail
+        se.append("items", {
+            "item_code": "_Test Trading Goods 1",
+            "qty": 10,
+            "gst_hsn_code": "61149090",
+            "s_warehouse": "Stores - _TIRC",
+            "t_warehouse": "Finished Goods - _TIRC",
+            "scio_detail": "test_scio_detail_123",
+            "amount": 1000,  # Base FG value
+        })
+        
+        # Mock the database calls
+        original_get_value = frappe.db.get_value
+        original_get_all = frappe.get_all
+        
+        def mock_get_value(doctype, name, fieldname, *args, **kwargs):
+            if doctype == "Subcontracting Inward Order Item" and name == "test_scio_detail_123":
+                if fieldname == "parent":
+                    return "SCIO-00001"
+            return original_get_value(doctype, name, fieldname, *args, **kwargs)
+        
+        def mock_get_all(doctype, *args, **kwargs):
+            if doctype == "Subcontracting Inward Order Item":
+                filters = kwargs.get("filters", {})
+                if (filters.get("parent") == "SCIO-00001" and 
+                    filters.get("reference_name") == "test_scio_detail_123" and
+                    filters.get("is_customer_provided_item") == 1):
+                    # Return mock customer RM cost: rate=50, consumed_qty=10 = 500
+                    return [[500]]
+            return original_get_all(doctype, *args, **kwargs)
+        
+        frappe.db.get_value = mock_get_value
+        frappe.get_all = mock_get_all
+        
+        try:
+            ewb_data = EWaybillData(se)
+            item_details = frappe._dict({
+                "taxable_value": 1000,  # Base FG value
+                "item_no": 1,
+                "qty": 10,
+            })
+            
+            # Call the method
+            ewb_data._update_subcontracting_item_value(item_details, se.items[0])
+            
+            # Assert that customer RM cost (500) is added to base FG value (1000)
+            self.assertEqual(item_details["taxable_value"], 1500)
+            
+        finally:
+            # Restore original methods
+            frappe.db.get_value = original_get_value
+            frappe.get_all = original_get_all
+
+    def test_subcontracting_delivery_without_scio_detail(self):
+        """Test that e-waybill value calculation skips items without scio_detail"""
+        se = frappe.new_doc("Stock Entry")
+        se.purpose = "Subcontracting Delivery"
+        se.company = "_Test Indian Registered Company"
+        
+        se.append("items", {
+            "item_code": "_Test Trading Goods 1",
+            "qty": 10,
+            "gst_hsn_code": "61149090",
+            "amount": 1000,
+            # No scio_detail field
+        })
+        
+        ewb_data = EWaybillData(se)
+        item_details = frappe._dict({
+            "taxable_value": 1000,
+            "item_no": 1,
+            "qty": 10,
+        })
+        
+        # Should return early without modification
+        ewb_data._update_subcontracting_item_value(item_details, se.items[0])
+        
+        # Value should remain unchanged
+        self.assertEqual(item_details["taxable_value"], 1000)
+
+    def test_return_raw_material_to_customer_value_calculation(self):
+        """Test e-waybill value calculation for Return Raw Material to Customer"""
+        se = frappe.new_doc("Stock Entry")
+        se.purpose = "Return Raw Material to Customer"
+        se.company = "_Test Indian Registered Company"
+        se.stock_entry_type = "Return Raw Material to Customer"
+        
+        # Add an item with scio_detail
+        se.append("items", {
+            "item_code": "Customer RM Item",
+            "qty": 5,
+            "gst_hsn_code": "61149090",
+            "s_warehouse": "Stores - _TIRC",
+            "scio_detail": "test_rm_detail_456",
+        })
+        
+        # Mock the database call
+        original_get_value = frappe.db.get_value
+        
+        def mock_get_value(doctype, name, fieldname, *args, **kwargs):
+            if (doctype == "Subcontracting Inward Order Item" and 
+                name == "test_rm_detail_456" and 
+                fieldname == "rate"):
+                return 25.50  # Rate per unit
+            return original_get_value(doctype, name, fieldname, *args, **kwargs)
+        
+        frappe.db.get_value = mock_get_value
+        
+        try:
+            ewb_data = EWaybillData(se)
+            item_details = frappe._dict({
+                "taxable_value": 0,
+                "item_no": 1,
+                "qty": 5,
+            })
+            
+            # Call the method
+            ewb_data._update_subcontracting_item_value(item_details, se.items[0])
+            
+            # Assert that taxable_value = rate * qty = 25.50 * 5 = 127.50
+            self.assertEqual(item_details["taxable_value"], 127.5)
+            
+        finally:
+            # Restore original method
+            frappe.db.get_value = original_get_value
+
+    def test_return_raw_material_without_rate(self):
+        """Test that e-waybill handles missing rate gracefully for Return Raw Material"""
+        se = frappe.new_doc("Stock Entry")
+        se.purpose = "Return Raw Material to Customer"
+        se.company = "_Test Indian Registered Company"
+        
+        se.append("items", {
+            "item_code": "Customer RM Item",
+            "qty": 5,
+            "gst_hsn_code": "61149090",
+            "scio_detail": "test_rm_detail_789",
+        })
+        
+        # Mock the database call to return None
+        original_get_value = frappe.db.get_value
+        
+        def mock_get_value(doctype, name, fieldname, *args, **kwargs):
+            if (doctype == "Subcontracting Inward Order Item" and 
+                name == "test_rm_detail_789" and 
+                fieldname == "rate"):
+                return None
+            return original_get_value(doctype, name, fieldname, *args, **kwargs)
+        
+        frappe.db.get_value = mock_get_value
+        
+        try:
+            ewb_data = EWaybillData(se)
+            item_details = frappe._dict({
+                "taxable_value": 0,
+                "item_no": 1,
+                "qty": 5,
+            })
+            
+            # Call the method
+            ewb_data._update_subcontracting_item_value(item_details, se.items[0])
+            
+            # Value should remain 0 when rate is None
+            self.assertEqual(item_details["taxable_value"], 0)
+            
+        finally:
+            # Restore original method
+            frappe.db.get_value = original_get_value
+
+    def test_subcontracting_delivery_with_no_customer_items(self):
+        """Test e-waybill value when no customer-provided items exist"""
+        se = frappe.new_doc("Stock Entry")
+        se.purpose = "Subcontracting Delivery"
+        se.company = "_Test Indian Registered Company"
+        
+        se.append("items", {
+            "item_code": "_Test Trading Goods 1",
+            "qty": 10,
+            "gst_hsn_code": "61149090",
+            "scio_detail": "test_scio_detail_999",
+            "amount": 1000,
+        })
+        
+        # Mock the database calls
+        original_get_value = frappe.db.get_value
+        original_get_all = frappe.get_all
+        
+        def mock_get_value(doctype, name, fieldname, *args, **kwargs):
+            if doctype == "Subcontracting Inward Order Item" and name == "test_scio_detail_999":
+                if fieldname == "parent":
+                    return "SCIO-00002"
+            return original_get_value(doctype, name, fieldname, *args, **kwargs)
+        
+        def mock_get_all(doctype, *args, **kwargs):
+            if doctype == "Subcontracting Inward Order Item":
+                # Return 0 customer RM cost (no customer-provided items)
+                return [[0]]
+            return original_get_all(doctype, *args, **kwargs)
+        
+        frappe.db.get_value = mock_get_value
+        frappe.get_all = mock_get_all
+        
+        try:
+            ewb_data = EWaybillData(se)
+            item_details = frappe._dict({
+                "taxable_value": 1000,
+                "item_no": 1,
+                "qty": 10,
+            })
+            
+            # Call the method
+            ewb_data._update_subcontracting_item_value(item_details, se.items[0])
+            
+            # Value should remain same when no customer items (1000 + 0 = 1000)
+            self.assertEqual(item_details["taxable_value"], 1000)
+            
+        finally:
+            # Restore original methods
+            frappe.db.get_value = original_get_value
+            frappe.get_all = original_get_all
+
     # helper functions
     def _generate_e_waybill(
         self, docname=None, doctype="Sales Invoice", test_data=None, force=False
