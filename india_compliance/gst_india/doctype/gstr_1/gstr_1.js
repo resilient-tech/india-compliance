@@ -174,9 +174,9 @@ frappe.ui.form.on(DOCTYPE, {
             if (error_log) {
                 frappe.msgprint({
                     message: __(
-                        "Error while preparing GSTR-1 data, please check {0} for more deatils.",
+                        "Error while preparing GSTR-1 data, please {0} for more details.",
                         [
-                            `<a href='/app/error-log/${error_log}' class='variant-click'>error log</a>`,
+                            frappe.utils.get_form_link("Error Log", error_log, true, "check the error log"),
                         ]
                     ),
                     title: "GSTR-1 Download Failed",

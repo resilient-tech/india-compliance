@@ -7,7 +7,7 @@ app_color = "grey"
 app_email = "hello@indiacompliance.app"
 app_license = "GNU General Public License (v3)"
 required_apps = ["frappe/erpnext"]
-app_home = "/app/gst-india"
+app_home = "/desk/gst-india"
 
 add_to_apps_screen = [
     {
