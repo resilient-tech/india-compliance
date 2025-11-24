@@ -18,7 +18,7 @@ class IndiaComplianceAccountPage {
     }
 
     createRouter() {
-        const history = createWebHistory("/app/india-compliance-account");
+        const history = createWebHistory(frappe.utils.generate_route({type: 'Page', name: 'india-compliance-account'}));
 
         history.listen(to => {
             if (frappe.get_route_str().startsWith(this.pageName)) return;

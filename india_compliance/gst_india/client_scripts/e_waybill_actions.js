@@ -1427,7 +1427,7 @@ function show_sandbox_mode_indicator() {
                 <p><label class="indicator-pill no-indicator-dot yellow" title="${__(
                     "Your site has enabled Sandbox Mode in GST Settings."
                 )}">${__("Sandbox Mode")}</label></p>
-                <p><a class="small text-muted" href="/app/gst-settings" target="_blank">${__(
+                <p><a class="small text-muted" href="${frappe.utils.get_form_link("GST Settings", "GST Settings")}" target="_blank">${__(
                     "Sandbox Mode is enabled for GST APIs."
                 )}</a></p>
             </div>

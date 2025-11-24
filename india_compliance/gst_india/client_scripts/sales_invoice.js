@@ -62,8 +62,8 @@ async function gst_invoice_warning(frm) {
     if (is_gst_invoice(frm) && !contains_gst_account) {
         frm.dashboard.add_comment(
             __(
-                `GST is applicable for this invoice but no tax accounts specified in <a href="/app/gst-settings">
-                GST Settings</a> are charged.`
+                "GST is applicable for this invoice but no tax accounts specified in {0} are charged.",
+                [frappe.utils.get_form_link("GST Settings", "GST Settings", true)]
             ),
             "red",
             true

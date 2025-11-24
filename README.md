@@ -50,16 +50,16 @@ Simplified invoice actions to ensure accurate and efficient GSTR-3B submissions
 
 ### Other Features
 
-- **Advanced Purchase Reconciliation**  
+- **Advanced Purchase Reconciliation**
  Maximize ITC claims with automated reconciliation based on GSTR-2B and GSTR-2A
 
-- **E-Invoice & E-Waybill Integration**  
+- **E-Invoice & E-Waybill Integration**
   Seamless integration with NIC portal (IRP)
 
-- **Real-time Validation**  
+- **Real-time Validation**
   Instant GSTIN verification and document validation against government APIs
 
-- **Intelligent Reporting**  
+- **Intelligent Reporting**
   Pre-built reports for GSTR-1, GSTR-2A/2B reconciliation, and tax liability
 
 ## Quick Start
@@ -70,7 +70,7 @@ For detailed instructions, please [refer to the documentation](https://docs.indi
 
 ### In-app Purchases
 
-Some of the automation features available in India Compliance require access to [GST APIs](https://discuss.erpnext.com/t/introducing-india-compliance/86335#a-note-on-gst-apis-3). Since there are some costs associated with these APIs, they can be accessed by signing up for an India Compliance Account after installing this app.
+Some of the automation features available in India Compliance require access to [GST APIs](https://discuss.frappe.io/t/introducing-india-compliance/86335#a-note-on-gst-apis-3). Since there are some costs associated with these APIs, they can be accessed by signing up for an India Compliance Account after installing this app.
 
 ## Contributing
 

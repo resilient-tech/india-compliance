@@ -59,7 +59,7 @@ function show_ic_api_promo(frm) {
     if (!frm.doc.__onload?.can_show_promo) return;
     const alert_message = `
     Looking for API Features?
-    <a href="/app/india-compliance-account" class="alert-link">
+    <a href="${frappe.utils.generate_route({type: 'Page', name: 'india-compliance-account'})}" class="alert-link">
         Get started with the India Compliance API!
     </a>`;
 
