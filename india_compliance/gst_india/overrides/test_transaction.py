@@ -1394,19 +1394,19 @@ class TestPlaceOfSupply(IntegrationTestCase):
             "shipping_address_name": "_Test Indian Registered Company-Billing",
         }
 
-        settings = ["Accounts Settings", None, "determine_address_tax_category_from"]
+        settings = ["Accounts Settings", "determine_address_tax_category_from"]
 
         # Shipping Address
-        frappe.db.set_value(*settings, "Shipping Address")
+        frappe.db.set_single_value(*settings, "Shipping Address")
         doc = create_transaction(**doc_args)
         self.assertEqual(doc.place_of_supply, "24-Gujarat")
 
         # Billing Address
-        frappe.db.set_value(*settings, "Billing Address")
+        frappe.db.set_single_value(*settings, "Billing Address")
         doc = create_transaction(**doc_args)
         self.assertEqual(doc.place_of_supply, "29-Karnataka")
 
-        frappe.db.set_value(*settings, "Shipping Address")
+        frappe.db.set_single_value(*settings, "Shipping Address")
 
         # Sales Invoice with only Billing Address
         doc_args = {
