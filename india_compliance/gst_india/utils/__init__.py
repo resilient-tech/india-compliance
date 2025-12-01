@@ -1131,3 +1131,135 @@ def has_permission_of_page(page_name, throw=False):
         )
 
     return True
+
+
+@frappe.whitelist()
+def check_duplicate_pan(pan, party_type, party):
+    frappe.has_permission(party_type, doc=party, throw=True)
+
+    _check_duplicate_pan(pan, party_type, party)
+
+
+def _check_duplicate_pan(pan, party_type, party):
+    """
+    Check if PAN already exists for another party of the same doctype.
+    """
+
+    if not pan:
+        return
+
+    pan = pan.upper().strip()
+    existing_parties = frappe.get_all(
+        party_type,
+        filters={"pan": ("=", pan), "name": ("!=", party)},
+        pluck="name",
+    )
+
+    if not existing_parties:
+        return
+
+    msg = _(
+        "PAN {0} is already registered with the following {1}(s):<br><br>"
+        "<ul>{2}</ul><br>"
+        "Please verify if you want to create a duplicate entry."
+    ).format(
+        frappe.bold(pan),
+        party_type,
+        "".join(
+            f"<li>{get_link_to_form(party_type, party)}</li>"
+            for party in existing_parties
+        ),
+    )
+
+    frappe.msgprint(msg=msg, indicator="orange")
+
+
+@frappe.whitelist()
+def check_duplicate_gstin(gstin, party_type, party, address_name=None):
+    frappe.has_permission(party_type, doc=party, throw=True)
+
+    _check_duplicate_gstin(gstin, party_type, party, address_name)
+
+
+def _check_duplicate_gstin(gstin, party_type, party, address_name=None):
+    """
+    Check if GSTIN already exists for another party of the same doctype.
+    Shows a single alert with all duplicates found.
+
+    :param gstin: GSTIN to check for duplicates
+    :param party_type: Type of party (Customer, Supplier, Company)
+    :param party_name: Current party name (to exclude from check during updates)
+    :param address_name: Current address name (to exclude when checking from Address)
+    """
+    if not gstin:
+        return
+
+    gstin = gstin.upper().strip()
+
+    existing_parties = frappe.get_all(
+        party_type,
+        filters={"gstin": ("=", gstin), "name": ("!=", party)},
+        pluck="name",
+    )
+
+    # Check in Address linked to parties of the same doctype
+    address = frappe.qb.DocType("Address")
+    links = frappe.qb.DocType("Dynamic Link")
+    query = (
+        frappe.qb.from_(address)
+        .join(links)
+        .on(links.parent == address.name)
+        .select(links.link_name, address.name.as_("address_name"))
+        .where(links.link_doctype == party_type)
+        .where(address.gstin == gstin)
+        .where(links.link_name != party)
+    )
+
+    # Exclude current address when checking from Address
+    if address_name:
+        query = query.where(address.name != address_name)
+
+    if existing_parties:
+        query = query.where(links.link_name.notin(existing_parties))
+
+    address_results = query.run(as_dict=True)
+
+    duplicates = []
+    for party in existing_parties:
+        duplicates.append({"name": party, "via_address": False})
+
+    for result in address_results:
+        duplicates.append(
+            {
+                "name": result.link_name,
+                "via_address": True,
+                "address": result.address_name,
+            }
+        )
+
+    if not duplicates:
+        return
+
+    # Build combined message
+    duplicate_links = []
+    for dup in duplicates:
+        party_link = get_link_to_form(party_type, dup["name"])
+        if dup["via_address"]:
+            address_link = get_link_to_form("Address", dup["address"])
+            duplicate_links.append(
+                f"<li>{party_link} (via Address: {address_link})</li>"
+            )
+        else:
+            duplicate_links.append(f"<li>{party_link}</li>")
+
+    msg = _(
+        "{0} {1} is already registered with the following {2}(s):<br><br>"
+        "<ul>{3}</ul><br>"
+    ).format(
+        "GSTIN",
+        frappe.bold(gstin),
+        party_type,
+        "".join(duplicate_links),
+    )
+
+    frappe.msgprint(msg=msg, indicator="orange")
