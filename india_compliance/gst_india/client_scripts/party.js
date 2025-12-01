@@ -58,6 +58,7 @@ function validate_gstin(doctype) {
             }
 
             gstin = india_compliance.validate_gstin(gstin);
+            check_duplicate_gstin(frm.doc);
 
             frm.doc.gstin = gstin;
             frm.refresh_field("gstin");
@@ -79,6 +80,37 @@ function validate_gstin(doctype) {
     });
 }
 
+function check_duplicate_gstin(doc) {
+    // For Address, get party info from the links (Dynamic Link) table
+    // Only validate if there is exactly one link
+
+    let args = {
+        gstin: doc.gstin,
+        party_type: doc.doctype,
+        party: doc.name,
+    }
+
+    if (doc.doctype === "Address") {
+        if (!doc.links || doc.links.length !== 1) return;
+
+        const link = doc.links[0];
+        if (!frappe.boot.gst_party_types.includes(link.link_doctype)) return;
+
+        args = {
+            gstin: doc.gstin,
+            party_type: link.link_doctype,
+            party: link.link_name,
+            address_name: doc.name,
+        };
+    }
+
+    frappe.call({
+        method: "india_compliance.gst_india.utils.check_duplicate_gstin",
+        args: { ...args },
+    });
+}
+
+
 function validate_pan(doctype) {
     frappe.ui.form.on(doctype, {
         pan(frm) {
@@ -86,11 +118,19 @@ function validate_pan(doctype) {
             if (!pan || pan.length < 10) return;
 
             pan = india_compliance.validate_pan(pan);
+            check_duplicate_pan(frm.doc);
 
             frm.doc.pan = pan;
             frm.refresh_field("pan");
             set_party_type(frm);
         },
+    });
+}
+
+function check_duplicate_pan(doc) {
+    frappe.call({
+        method: "india_compliance.gst_india.utils.check_duplicate_pan",
+        args: { pan: doc.pan, party_type: doc.doctype, party: doc.name },
     });
 }
 
