@@ -58,9 +58,9 @@ function validate_gstin(doctype) {
             }
 
             gstin = india_compliance.validate_gstin(gstin);
-            check_duplicate_gstin(frm.doc);
 
             frm.doc.gstin = gstin;
+            check_duplicate_gstin(frm.doc);
             frm.refresh_field("gstin");
 
             if (!frm.fields_dict.pan) return;
@@ -81,15 +81,16 @@ function validate_gstin(doctype) {
 }
 
 function check_duplicate_gstin(doc) {
-    // For Address, get party info from the links (Dynamic Link) table
-    // Only validate if there is exactly one link
+    if (!doc.gstin) return;
 
     let args = {
         gstin: doc.gstin,
         party_type: doc.doctype,
         party: doc.name,
-    }
+    };
 
+    // For Address, get party info from the links (Dynamic Link) table
+    // Only validate if there is exactly one link
     if (doc.doctype === "Address") {
         if (!doc.links || doc.links.length !== 1) return;
 
@@ -110,7 +111,6 @@ function check_duplicate_gstin(doc) {
     });
 }
 
-
 function validate_pan(doctype) {
     frappe.ui.form.on(doctype, {
         pan(frm) {
@@ -118,9 +118,9 @@ function validate_pan(doctype) {
             if (!pan || pan.length < 10) return;
 
             pan = india_compliance.validate_pan(pan);
-            check_duplicate_pan(frm.doc);
 
             frm.doc.pan = pan;
+            check_duplicate_pan(frm.doc);
             frm.refresh_field("pan");
             set_party_type(frm);
         },
@@ -128,6 +128,7 @@ function validate_pan(doctype) {
 }
 
 function check_duplicate_pan(doc) {
+    if (!doc.pan) return;
     frappe.call({
         method: "india_compliance.gst_india.utils.check_duplicate_pan",
         args: { pan: doc.pan, party_type: doc.doctype, party: doc.name },
