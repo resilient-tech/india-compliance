@@ -1161,7 +1161,6 @@ def _check_duplicate_pan(pan, party_type, party):
     msg = _(
         "PAN {0} is already registered with the following {1}(s):<br><br>"
         "<ul>{2}</ul><br>"
-        "Please verify if you want to create a duplicate entry."
     ).format(
         frappe.bold(pan),
         party_type,
@@ -1184,12 +1183,6 @@ def check_duplicate_gstin(gstin, party_type, party, address_name=None):
 def _check_duplicate_gstin(gstin, party_type, party, address_name=None):
     """
     Check if GSTIN already exists for another party of the same doctype.
-    Shows a single alert with all duplicates found.
-
-    :param gstin: GSTIN to check for duplicates
-    :param party_type: Type of party (Customer, Supplier, Company)
-    :param party_name: Current party name (to exclude from check during updates)
-    :param address_name: Current address name (to exclude when checking from Address)
     """
     if not gstin:
         return
@@ -1242,21 +1235,20 @@ def _check_duplicate_gstin(gstin, party_type, party, address_name=None):
 
     # Build combined message
     duplicate_links = []
-    for dup in duplicates:
-        party_link = get_link_to_form(party_type, dup["name"])
-        if dup["via_address"]:
-            address_link = get_link_to_form("Address", dup["address"])
-            duplicate_links.append(
-                f"<li>{party_link} (via Address: {address_link})</li>"
-            )
-        else:
-            duplicate_links.append(f"<li>{party_link}</li>")
+    for row in duplicates:
+        party_link = get_link_to_form(party_type, row["name"])
+        msg = f"{party_link}"
+        if row["via_address"]:
+            address_link = get_link_to_form("Address", row["address"])
+            msg += f" (via Address {address_link})"
+
+        msg = _("{}").format(msg)
+        duplicate_links.append(f"<li>{msg}</li>")
 
     msg = _(
-        "{0} {1} is already registered with the following {2}(s):<br><br>"
-        "<ul>{3}</ul><br>"
+        "GSTIN {0} is already registered with the following {1}(s):<br><br>"
+        "<ul>{2}</ul>"
     ).format(
-        "GSTIN",
         frappe.bold(gstin),
         party_type,
         "".join(duplicate_links),
