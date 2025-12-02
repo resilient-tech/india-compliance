@@ -1158,17 +1158,15 @@ def _check_duplicate_pan(pan, party_type, party):
     if not existing_parties:
         return
 
-    msg = _(
-        "PAN {0} is already registered with the following {1}(s):<br><br>"
-        "<ul>{2}</ul><br>"
-    ).format(
+    duplicate_links = "".join(
+        f"<li>{get_link_to_form(party_type, name)}</li>" for name in existing_parties
+    )
+
+    msg = _("PAN {0} is already registered with the following {1}(s):").format(
         frappe.bold(pan),
         party_type,
-        "".join(
-            f"<li>{get_link_to_form(party_type, party)}</li>"
-            for party in existing_parties
-        ),
     )
+    msg += f"<br><br><ul>{duplicate_links}</ul>"
 
     frappe.msgprint(msg=msg, indicator="orange")
 
@@ -1237,21 +1235,18 @@ def _check_duplicate_gstin(gstin, party_type, party, address_name=None):
     duplicate_links = []
     for row in duplicates:
         party_link = get_link_to_form(party_type, row["name"])
-        msg = f"{party_link}"
         if row["via_address"]:
             address_link = get_link_to_form("Address", row["address"])
-            msg += f" (via Address {address_link})"
+            link_msg = _("{0} (via Address {1})").format(party_link, address_link)
+        else:
+            link_msg = party_link
 
-        msg = _("{}").format(msg)
-        duplicate_links.append(f"<li>{msg}</li>")
+        duplicate_links.append(f"<li>{link_msg}</li>")
 
-    msg = _(
-        "GSTIN {0} is already registered with the following {1}(s):<br><br>"
-        "<ul>{2}</ul>"
-    ).format(
+    msg = _("GSTIN {0} is already registered with the following {1}(s):").format(
         frappe.bold(gstin),
         party_type,
-        "".join(duplicate_links),
     )
+    msg += f"<br><br><ul>{''.join(duplicate_links)}</ul>"
 
     frappe.msgprint(msg=msg, indicator="orange")
