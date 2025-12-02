@@ -33,6 +33,7 @@ from india_compliance.gst_india.constants import (
     E_INVOICE_MASTER_CODES_URL,
     GST_ACCOUNT_FIELDS,
     GST_INVOICE_NUMBER_FORMAT,
+    GST_PARTY_TYPES,
     GSTIN_FORMATS,
     PAN_NUMBER,
     PINCODE_FORMAT,
@@ -1133,105 +1134,71 @@ def has_permission_of_page(page_name, throw=False):
     return True
 
 
+def _show_duplicate_alert(field_label, value, party_type, duplicate_links):
+    msg = _("{0} {1} is already registered with the following {2}(s):").format(
+        field_label,
+        frappe.bold(value),
+        party_type,
+    )
+    msg += f"<br><br><ul>{''.join(duplicate_links)}</ul>"
+
+    frappe.msgprint(msg=msg, indicator="orange")
+
+
+def validate_party_type(party_type, party):
+    if party_type not in GST_PARTY_TYPES:
+        return
+
+    frappe.has_permission(party_type, doc=party, throw=True)
+    return True
+
+
 @frappe.whitelist()
 def check_duplicate_pan(pan, party_type, party):
-    frappe.has_permission(party_type, doc=party, throw=True)
-
-    _check_duplicate_pan(pan, party_type, party)
-
-
-def _check_duplicate_pan(pan, party_type, party):
-    """
-    Check if PAN already exists for another party of the same doctype.
-    """
-
     if not pan:
         return
 
+    if not validate_party_type(party_type, party):
+        return
+
     pan = pan.upper().strip()
-    existing_parties = frappe.get_all(
+
+    existing_parties = _get_duplicate_pan_party(pan, party_type, party)
+    if not existing_parties:
+        return
+
+    duplicate_links = [
+        f"<li>{get_link_to_form(party_type, name)}</li>" for name in existing_parties
+    ]
+
+    _show_duplicate_alert("PAN", pan, party_type, duplicate_links)
+
+
+def _get_duplicate_pan_party(pan, party_type, party):
+    """
+    Check if PAN already exists for another party of the same doctype.
+    """
+    return frappe.get_all(
         party_type,
         filters={"pan": ("=", pan), "name": ("!=", party)},
         pluck="name",
     )
 
-    if not existing_parties:
-        return
-
-    duplicate_links = "".join(
-        f"<li>{get_link_to_form(party_type, name)}</li>" for name in existing_parties
-    )
-
-    msg = _("PAN {0} is already registered with the following {1}(s):").format(
-        frappe.bold(pan),
-        party_type,
-    )
-    msg += f"<br><br><ul>{duplicate_links}</ul>"
-
-    frappe.msgprint(msg=msg, indicator="orange")
-
 
 @frappe.whitelist()
 def check_duplicate_gstin(gstin, party_type, party, address_name=None):
-    frappe.has_permission(party_type, doc=party, throw=True)
-
-    _check_duplicate_gstin(gstin, party_type, party, address_name)
-
-
-def _check_duplicate_gstin(gstin, party_type, party, address_name=None):
-    """
-    Check if GSTIN already exists for another party of the same doctype.
-    """
     if not gstin:
+        return
+
+    if not validate_party_type(party_type, party):
         return
 
     gstin = gstin.upper().strip()
 
-    existing_parties = frappe.get_all(
-        party_type,
-        filters={"gstin": ("=", gstin), "name": ("!=", party)},
-        pluck="name",
-    )
-
-    # Check in Address linked to parties of the same doctype
-    address = frappe.qb.DocType("Address")
-    links = frappe.qb.DocType("Dynamic Link")
-    query = (
-        frappe.qb.from_(address)
-        .join(links)
-        .on(links.parent == address.name)
-        .select(links.link_name, address.name.as_("address_name"))
-        .where(links.link_doctype == party_type)
-        .where(address.gstin == gstin)
-        .where(links.link_name != party)
-    )
-
-    # Exclude current address when checking from Address
-    if address_name:
-        query = query.where(address.name != address_name)
-
-    if existing_parties:
-        query = query.where(links.link_name.notin(existing_parties))
-
-    address_results = query.run(as_dict=True)
-
-    duplicates = []
-    for party in existing_parties:
-        duplicates.append({"name": party, "via_address": False})
-
-    for result in address_results:
-        duplicates.append(
-            {
-                "name": result.link_name,
-                "via_address": True,
-                "address": result.address_name,
-            }
-        )
-
+    duplicates = _get_duplicate_gstin_party(gstin, party_type, party, address_name)
     if not duplicates:
         return
 
-    # Build combined message
     duplicate_links = []
     for row in duplicates:
         party_link = get_link_to_form(party_type, row["name"])
@@ -1243,10 +1210,43 @@ def _check_duplicate_gstin(gstin, party_type, party, address_name=None):
 
         duplicate_links.append(f"<li>{link_msg}</li>")
 
-    msg = _("GSTIN {0} is already registered with the following {1}(s):").format(
-        frappe.bold(gstin),
-        party_type,
-    )
-    msg += f"<br><br><ul>{''.join(duplicate_links)}</ul>"
+    _show_duplicate_alert("GSTIN", gstin, party_type, duplicate_links)
 
-    frappe.msgprint(msg=msg, indicator="orange")
+
+def _get_duplicate_gstin_party(gstin, party_type, party, address_name=None):
+    parties_with_gstin = frappe.get_all(
+        party_type,
+        filters={"gstin": ("=", gstin), "name": ("!=", party)},
+        pluck="name",
+    )
+
+    # Check parties linked via Address with same GSTIN
+    address = frappe.qb.DocType("Address")
+    dynamic_link = frappe.qb.DocType("Dynamic Link")
+
+    query = (
+        frappe.qb.from_(address)
+        .join(dynamic_link)
+        .on(dynamic_link.parent == address.name)
+        .select(dynamic_link.link_name, address.name.as_("address_name"))
+        .where(dynamic_link.link_doctype == party_type)
+        .where(address.gstin == gstin)
+        .where(dynamic_link.link_name != party)
+    )
+
+    if address_name:
+        query = query.where(address.name != address_name)
+
+    if parties_with_gstin:
+        query = query.where(dynamic_link.link_name.notin(parties_with_gstin))
+
+    address_results = query.run(as_dict=True)
+
+    # Build result list
+    duplicates = [{"name": name, "via_address": False} for name in parties_with_gstin]
+    duplicates.extend(
+        {"name": row.link_name, "via_address": True, "address": row.address_name}
+        for row in address_results
+    )
+
+    return duplicates
