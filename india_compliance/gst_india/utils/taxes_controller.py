@@ -151,7 +151,7 @@ class CustomTaxController:
         for item in self.doc.get("items"):
             taxable_value = self.get_value("amount", item)
             taxable_value += flt(
-                item.get("customer_provided_value"), item.precision("taxable_value")
+                item.get("customer_provided_value", 0), item.precision("taxable_value")
             )
 
             item.taxable_value = taxable_value
