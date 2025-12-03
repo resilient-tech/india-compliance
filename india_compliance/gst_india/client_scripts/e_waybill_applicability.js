@@ -273,7 +273,12 @@ class StockEntryEwaybill extends EwaybillApplicability {
 
         const same_gstin = this.frm.doc.bill_from_gstin === this.frm.doc.bill_to_gstin;
         const applicable_for_same_gstin = !(
-            is_return || this.frm.doc.purpose === "Send to Subcontractor"
+            is_return ||
+            [
+                "Send to Subcontractor",
+                "Subcontracting Delivery",
+                "Return Raw Material to Customer",
+            ].includes(this.frm.doc.purpose)
         );
 
         if (same_gstin && !applicable_for_same_gstin) {

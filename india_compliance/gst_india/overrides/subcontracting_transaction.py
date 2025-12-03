@@ -406,16 +406,6 @@ def set_address_display(doc):
 
 
 def set_customer_provided_value(doc):
-    """
-    Set customer_provided_value field for Subcontracting Inward related Stock Entries.
-    For Subcontracting Delivery:
-        - customer_provided_value = SUM(received_items.rate × consumed_qty)
-          where is_customer_provided_item = 1
-
-    For Return Raw Material to Customer:
-        - customer_provided_value = (SIO required_items.rate × qty) - item.amount
-          This represents the difference between SIO rate and stock valuation rate
-    """
     if doc.doctype != "Stock Entry":
         return
 
@@ -436,7 +426,7 @@ def set_customer_provided_value(doc):
 
 def _set_subcontracting_delivery_customer_value(doc):
     """
-    Customer_provided_value = SUM(received_items.rate * received_items.consumed_qty)
+    customer_provided_value = SUM(received_items.rate * received_items.consumed_qty)
     """
     scio_details = [item.scio_detail for item in doc.items if item.get("scio_detail")]
 
@@ -470,7 +460,7 @@ def _set_subcontracting_delivery_customer_value(doc):
 
 def _set_return_raw_material_customer_value(doc):
     """
-    customer_provided_value = (SIO rate × qty) - amount
+    customer_provided_value = (SIO rate * qty) - amount
     """
     scio_details = [item.scio_detail for item in doc.items if item.get("scio_detail")]
 

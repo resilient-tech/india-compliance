@@ -547,9 +547,13 @@ Object.assign(india_compliance, {
         if (doc.doctype != "Stock Entry") return true;
 
         if (
-            !["Material Transfer", "Material Issue", "Send to Subcontractor"].includes(
-                doc.purpose
-            )
+            ![
+                "Material Transfer",
+                "Material Issue",
+                "Send to Subcontractor",
+                "Subcontracting Delivery",
+                "Return Raw Material to Customer",
+            ].includes(doc.purpose)
         ) {
             return false;
         }

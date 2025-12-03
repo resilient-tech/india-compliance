@@ -112,7 +112,7 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     company(frm) {
-        if (frm.doc.company && frm.doc.purpose === "Send to Subcontractor") {
+        if (frm.doc.company && is_subcontracting_entry(frm)) {
             frappe.call({
                 method: "frappe.contacts.doctype.address.address.get_default_address",
                 args: {
@@ -207,6 +207,20 @@ function get_items(doc) {
     return Array.from(new Set(doc.items.map(row => row.item_code)));
 }
 
+function is_subcontracting_entry(frm) {
+    return [
+        "Send to Subcontractor",
+        "Subcontracting Delivery",
+        "Return Raw Material to Customer",
+    ].includes(frm.doc.purpose);
+}
+
+function is_subcontracting_inward_entry(frm) {
+    return ["Subcontracting Delivery", "Return Raw Material to Customer"].includes(
+        frm.doc.purpose
+    );
+}
+
 function get_field_and_label(frm, field) {
     let field_label_dict = {};
 
@@ -219,11 +233,7 @@ function get_field_and_label(frm, field) {
             ],
             company_field: ["bill_to_address", __("Bill To")],
         };
-    } else if (
-        ["Subcontracting Delivery", "Return Raw Material to Customer"].includes(
-            frm.doc.purpose
-        )
-    ) {
+    } else if (is_subcontracting_inward_entry(frm)) {
         // For Subcontracting Inward related entries
         // company bills to the customer
         field_label_dict = {
