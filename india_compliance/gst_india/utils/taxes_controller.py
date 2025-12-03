@@ -149,7 +149,12 @@ class CustomTaxController:
 
     def update_item_taxable_value(self):
         for item in self.doc.get("items"):
-            item.taxable_value = self.get_value("amount", item)
+            taxable_value = self.get_value("amount", item)
+            taxable_value += flt(
+                item.get("customer_provided_value"), item.precision("taxable_value")
+            )
+
+            item.taxable_value = taxable_value
 
     def update_tax_amount(self):
         total_taxes = 0

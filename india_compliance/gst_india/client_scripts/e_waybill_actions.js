@@ -544,6 +544,14 @@ function get_sub_suppy_type_options(frm, is_foreign_transaction) {
         if (frm.doc.purpose === "Send to Subcontractor") {
             supply_type = "Outward";
             sub_supply_type = ["Job Work"];
+        } else if (frm.doc.purpose === "Subcontracting Delivery") {
+            supply_type = "Outward";
+            sub_supply_type = ["Others"];
+            sub_supply_desc = "Job Work Delivery";
+        } else if (frm.doc.purpose === "Return Raw Material to Customer") {
+            supply_type = "Outward";
+            sub_supply_type = ["Others"];
+            sub_supply_desc = "Return Raw Material";
         } else if (["Material Transfer", "Material Issue"].includes(frm.doc.purpose)) {
             const same_gstin = frm.doc.bill_from_gstin === frm.doc.bill_to_gstin;
 

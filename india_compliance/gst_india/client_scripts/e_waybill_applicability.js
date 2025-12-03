@@ -243,9 +243,13 @@ class StockEntryEwaybill extends EwaybillApplicability {
         if (
             !gst_settings.enable_e_waybill ||
             !gst_settings.enable_e_waybill_for_sc ||
-            !["Material Transfer", "Material Issue", "Send to Subcontractor"].includes(
-                this.frm.doc.purpose
-            )
+            ![
+                "Material Transfer",
+                "Material Issue",
+                "Send to Subcontractor",
+                "Subcontracting Delivery",
+                "Return Raw Material to Customer",
+            ].includes(this.frm.doc.purpose)
         )
             return false;
 
@@ -319,9 +323,13 @@ class StockEntryEwaybill extends EwaybillApplicability {
 
     is_e_waybill_api_enabled() {
         return (
-            ["Material Transfer", "Material Issue", "Send to Subcontractor"].includes(
-                this.frm.doc.purpose
-            ) &&
+            [
+                "Material Transfer",
+                "Material Issue",
+                "Send to Subcontractor",
+                "Subcontracting Delivery",
+                "Return Raw Material to Customer",
+            ].includes(this.frm.doc.purpose) &&
             super.is_e_waybill_api_enabled() &&
             gst_settings.enable_e_waybill_for_sc
         );

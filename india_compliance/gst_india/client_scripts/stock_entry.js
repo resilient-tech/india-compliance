@@ -219,6 +219,21 @@ function get_field_and_label(frm, field) {
             ],
             company_field: ["bill_to_address", __("Bill To")],
         };
+    } else if (
+        ["Subcontracting Delivery", "Return Raw Material to Customer"].includes(
+            frm.doc.purpose
+        )
+    ) {
+        // For Subcontracting Inward related entries
+        // company bills to the customer
+        field_label_dict = {
+            party_field: [
+                "bill_to_address",
+                __("Bill To (same as Customer Address)"),
+                __("Bill To"),
+            ],
+            company_field: ["bill_from_address", __("Bill From")],
+        };
     } else {
         field_label_dict = {
             party_field: [

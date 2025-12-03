@@ -40,6 +40,10 @@ from india_compliance.gst_india.utils.taxes_controller import (
 
 STOCK_ENTRY_FIELD_MAP = {"total_taxable_value": "total_taxable_value"}
 SUBCONTRACTING_ORDER_RECEIPT_FIELD_MAP = {"total_taxable_value": "total"}
+SUBCONTRACTING_INWARD_PURPOSES = (
+    "Subcontracting Delivery",
+    "Return Raw Material to Customer",
+)
 
 
 # Functions to perform operations before and after mapping of transactions
@@ -178,6 +182,8 @@ def onload(doc, method=None):
 
 
 def validate(doc, method=None):
+    set_customer_provided_value(doc)
+
     field_map = (
         STOCK_ENTRY_FIELD_MAP
         if doc.doctype == "Stock Entry"
@@ -399,6 +405,130 @@ def set_address_display(doc):
             setattr(doc, address + "_display", get_address_display(doc.get(address)))
 
 
+def set_customer_provided_value(doc):
+    """
+    Set customer_provided_value field for Subcontracting Inward related Stock Entries.
+    For Subcontracting Delivery:
+        - customer_provided_value = SUM(received_items.rate × consumed_qty)
+          where is_customer_provided_item = 1
+
+    For Return Raw Material to Customer:
+        - customer_provided_value = (SIO required_items.rate × qty) - item.amount
+          This represents the difference between SIO rate and stock valuation rate
+    """
+    if doc.doctype != "Stock Entry":
+        return
+
+    if doc.purpose not in SUBCONTRACTING_INWARD_PURPOSES:
+        return
+
+    if not doc.items:
+        return
+
+    for item in doc.items:
+        item.customer_provided_value = 0
+
+    if doc.purpose == "Subcontracting Delivery":
+        _set_subcontracting_delivery_customer_value(doc)
+    elif doc.purpose == "Return Raw Material to Customer":
+        _set_return_raw_material_customer_value(doc)
+
+
+def _set_subcontracting_delivery_customer_value(doc):
+    """
+    For Subcontracting Delivery (delivering FG back to customer):
+
+    customer_provided_value = SUM(received_items.rate × received_items.consumed_qty)
+        where is_customer_provided_item = 1 and scio_item_detail matches item.scio_detail
+
+    The CustomTaxController will then set:
+        taxable_value = amount + customer_provided_value
+    """
+    # Get all scio_detail references from stock entry items
+    scio_details = [item.scio_detail for item in doc.items if item.get("scio_detail")]
+
+    if not scio_details:
+        return
+
+    # Get Subcontracting Inward Order name from first item
+    sio_name = doc.items[0].get("subcontracting_inward_order") if doc.items else None
+
+    if not sio_name:
+        return
+
+    # Fetch customer-provided material costs from received_items table
+    received_items = frappe.get_all(
+        "Subcontracting Inward Order Received Item",
+        filters={
+            "parent": sio_name,
+            "scio_item_detail": ["in", scio_details],
+            "is_customer_provided_item": 1,
+        },
+        fields=["scio_item_detail", "rate", "consumed_qty"],
+    )
+
+    if not received_items:
+        return
+
+    # Calculate total material cost per FG item
+    fg_material_cost = {}
+    for received_item in received_items:
+        key = received_item.scio_item_detail
+        cost = flt(received_item.rate) * flt(received_item.consumed_qty)
+        fg_material_cost[key] = fg_material_cost.get(key, 0) + cost
+
+    # Set customer_provided_value for each item
+    for item in doc.items:
+        if item.get("scio_detail") and item.scio_detail in fg_material_cost:
+            item.customer_provided_value = fg_material_cost[item.scio_detail]
+
+
+def _set_return_raw_material_customer_value(doc):
+    """
+    For Return Raw Material to Customer (returning unused RM):
+
+    The taxable value should be: SIO required_items.rate × qty
+    Since CustomTaxController sets taxable_value = amount + customer_provided_value,
+    we need: customer_provided_value = (SIO rate × qty) - amount
+    """
+    # Get scio_detail references from stock entry items
+    scio_details = [item.scio_detail for item in doc.items if item.get("scio_detail")]
+
+    if not scio_details:
+        return
+
+    # Get Subcontracting Inward Order name from first item
+    sio_name = doc.items[0].get("subcontracting_inward_order") if doc.items else None
+
+    if not sio_name:
+        return
+
+    # Fetch rates from required_items table
+    required_items = frappe.get_all(
+        "Subcontracting Inward Order Required Item",
+        filters={
+            "parent": sio_name,
+            "name": ["in", scio_details],
+        },
+        fields=["name", "rate"],
+    )
+
+    if not required_items:
+        return
+
+    # Create rate lookup map
+    rate_map = {item.name: flt(item.rate) for item in required_items}
+
+    # Set customer_provided_value for each item
+    # taxable_value should be = rate × qty
+    # controller sets taxable_value = amount + customer_provided_value
+    # so customer_provided_value = (rate × qty) - amount
+    for item in doc.items:
+        if item.get("scio_detail") and item.scio_detail in rate_map:
+            sio_value = rate_map[item.scio_detail] * flt(item.qty)
+            item.customer_provided_value = sio_value - flt(item.amount)
+
+
 @frappe.whitelist()
 def get_relevant_references(filters=None):
     if isinstance(filters, str):
@@ -523,6 +653,8 @@ def is_e_waybill_applicable(doc):
         "Material Transfer",
         "Material Issue",
         "Send to Subcontractor",
+        "Subcontracting Delivery",
+        "Return Raw Material to Customer",
     ]:
         return False
 
