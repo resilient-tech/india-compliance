@@ -4,6 +4,9 @@ import frappe
 
 
 def execute():
+    if not frappe.db.has_column("GST Account", "is_reverse_charge_account"):
+        return
+
     gst_accounts = frappe.get_all(
         "GST Account",
         filters={"parent": "GST Settings", "account_type": ("is", "not set")},
