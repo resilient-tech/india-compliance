@@ -516,8 +516,9 @@
     "is_return_dn_with_same_gstin": {
         "kwargs": {
             "qty": 1000,
-            "customer_address": "_Test Registered Customer-Billing",
-            "company_address": "_Test Registered Customer-Billing"
+            "customer_address": "_Test Indian Registered Company-Billing",
+            "company_address": "_Test Indian Registered Company-Billing",
+            "shipping_address_name": "_Test Indian Registered Company-Billing"
         },
         "values": {
             "distance": 100,
@@ -535,7 +536,7 @@
             "docDate": "07/08/2023",
             "docNo": "test_invoice_no",
             "docType": "CHL",
-            "fromAddr1": "Test Address - 3",
+            "fromAddr1": "Test Address - 1",
             "fromGstin": "05AAACG2115R1ZN",
             "fromPincode": 380015,
             "fromPlace": "Test City",
@@ -561,7 +562,7 @@
             "sgstValue": 0,
             "subSupplyType": 12,
             "supplyType": "I",
-            "toAddr1": "Test Address - 3",
+            "toAddr1": "Test Address - 1",
             "toGstin": "05AAACG2115R1ZN",
             "toPincode": 380015,
             "toPlace": "Test City",
@@ -739,7 +740,9 @@
     "dn_with_same_gstin": {
         "kwargs": {
             "qty": 1000,
-            "company_address": "_Test Registered Customer-Billing"
+            "company_address": "_Test Indian Registered Company-Billing",
+            "customer_address": "_Test Indian Registered Company-Billing",
+            "shipping_address_name": "_Test Indian Registered Company-Billing"
         },
         "values": {
             "distance": 100,
@@ -757,7 +760,7 @@
             "docDate": "07/08/2023",
             "docNo": "test_invoice_no",
             "docType": "CHL",
-            "fromAddr1": "Test Address - 3",
+            "fromAddr1": "Test Address - 1",
             "fromGstin": "05AAACG2115R1ZN",
             "fromPincode": 380015,
             "fromPlace": "Test City",
@@ -783,7 +786,7 @@
             "sgstValue": 0,
             "subSupplyType": 5,
             "supplyType": "O",
-            "toAddr1": "Test Address - 3",
+            "toAddr1": "Test Address - 1",
             "toGstin": "05AAACG2115R1ZN",
             "toPincode": 380015,
             "toPlace": "Test City",
