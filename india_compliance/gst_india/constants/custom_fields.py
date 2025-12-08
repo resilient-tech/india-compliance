@@ -771,6 +771,7 @@ CUSTOM_FIELDS = {
             "no_copy": 1,
             "print_hide": 1,
             "hidden": 0,
+            "depends_on": 'eval:["Subcontracting Delivery", "Return Raw Material to Customer"].includes(parent.purpose)',
             "description": "Value of customer-provided materials for Subcontracting Inward",
         },
     ],
