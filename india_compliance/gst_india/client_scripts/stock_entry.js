@@ -76,7 +76,7 @@ frappe.ui.form.on(DOCTYPE, {
         if (is_e_waybill_applicable(frm) && !is_e_waybill_generatable(frm))
             frappe.show_alert(
                 {
-                    message: __("Supplier Address is required to create e-Waybill"),
+                    message: __("Party Address is required to create e-Waybill"),
                     indicator: "yellow",
                 },
                 10

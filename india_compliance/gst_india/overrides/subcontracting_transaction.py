@@ -40,10 +40,6 @@ from india_compliance.gst_india.utils.taxes_controller import (
 
 STOCK_ENTRY_FIELD_MAP = {"total_taxable_value": "total_taxable_value"}
 SUBCONTRACTING_ORDER_RECEIPT_FIELD_MAP = {"total_taxable_value": "total"}
-SUBCONTRACTING_INWARD_PURPOSES = (
-    "Subcontracting Delivery",
-    "Return Raw Material to Customer",
-)
 
 
 # Functions to perform operations before and after mapping of transactions
@@ -182,7 +178,6 @@ def onload(doc, method=None):
 
 
 def validate(doc, method=None):
-    set_customer_provided_value(doc)
 
     field_map = (
         STOCK_ENTRY_FIELD_MAP
@@ -403,88 +398,6 @@ def set_address_display(doc):
     for address in adddress_fields:
         if doc.get(address):
             setattr(doc, address + "_display", get_address_display(doc.get(address)))
-
-
-def set_customer_provided_value(doc):
-    if doc.doctype != "Stock Entry":
-        return
-
-    if doc.purpose not in SUBCONTRACTING_INWARD_PURPOSES:
-        return
-
-    if not doc.items:
-        return
-
-    for item in doc.items:
-        item.customer_provided_value = 0
-
-    if doc.purpose == "Subcontracting Delivery":
-        _set_subcontracting_delivery_customer_value(doc)
-    elif doc.purpose == "Return Raw Material to Customer":
-        _set_return_raw_material_customer_value(doc)
-
-
-def _set_subcontracting_delivery_customer_value(doc):
-    """
-    customer_provided_value = SUM(received_items.rate * received_items.consumed_qty)
-    """
-    scio_details = [item.scio_detail for item in doc.items if item.get("scio_detail")]
-
-    if not scio_details:
-        return
-
-    received_items = frappe.get_all(
-        "Subcontracting Inward Order Received Item",
-        filters={
-            "scio_item_detail": ["in", scio_details],
-            "is_customer_provided_item": 1,
-        },
-        fields=["scio_item_detail", "rate", "consumed_qty"],
-    )
-
-    if not received_items:
-        return
-
-    # Calculate total material cost per FG item
-    fg_material_cost = {}
-    for received_item in received_items:
-        key = received_item.scio_item_detail
-        cost = flt(received_item.rate) * flt(received_item.consumed_qty)
-        fg_material_cost[key] = fg_material_cost.get(key, 0) + cost
-
-    # Set customer_provided_value for each item
-    for item in doc.items:
-        if item.get("scio_detail"):
-            item.customer_provided_value = fg_material_cost.get(item.scio_detail, 0)
-
-
-def _set_return_raw_material_customer_value(doc):
-    """
-    customer_provided_value = (SIO rate * qty) - amount
-    """
-    scio_details = [item.scio_detail for item in doc.items if item.get("scio_detail")]
-
-    if not scio_details:
-        return
-
-    required_items = frappe._dict(
-        frappe.get_all(
-            "Subcontracting Inward Order Required Item",
-            filters={
-                "name": ["in", scio_details],
-            },
-            fields=["name", "rate"],
-            as_list=True,
-        )
-    )
-
-    if not required_items:
-        return
-
-    for item in doc.items:
-        if item.get("scio_detail"):
-            sio_value = required_items.get(item.scio_detail, 0) * flt(item.qty)
-            item.customer_provided_value = sio_value - flt(item.amount)
 
 
 @frappe.whitelist()

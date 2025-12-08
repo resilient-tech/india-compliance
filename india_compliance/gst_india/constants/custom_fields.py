@@ -761,8 +761,8 @@ CUSTOM_FIELDS = {
             "hidden": 0,
         },
         {
-            "fieldname": "customer_provided_value",
-            "label": "Customer Provided Value",
+            "fieldname": "additional_taxable_value",
+            "label": "Additional Taxable Value",
             "fieldtype": "Currency",
             "insert_after": "taxable_value",
             "options": "Company:company:default_currency",
