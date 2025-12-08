@@ -316,7 +316,7 @@ def _set_subcontracting_delivery_additional_value(doc):
         cost = flt(received_item.rate) * flt(received_item.consumed_qty)
         fg_material_cost[key] += cost
 
-    precision = doc.precision("additional_taxable_value", "taxes")
+    precision = doc.precision("additional_taxable_value", "items")
 
     # Set additional_taxable_value for each item
     for item in doc.items:
@@ -350,7 +350,7 @@ def _set_return_raw_material_additional_value(doc):
     if not received_items:
         return
 
-    precision = doc.precision("additional_taxable_value", "taxes")
+    precision = doc.precision("additional_taxable_value", "items")
 
     for item in doc.items:
         scio_detail = item.get("scio_detail")
