@@ -300,10 +300,10 @@ def _set_subcontracting_delivery_additional_value(doc):
     received_items = frappe.get_all(
         "Subcontracting Inward Order Received Item",
         filters={
-            "scio_item_detail": ["in", scio_details],
+            "reference_name": ["in", scio_details],
             "is_customer_provided_item": 1,
         },
-        fields=["scio_item_detail", "rate", "consumed_qty"],
+        fields=["reference_name", "rate", "consumed_qty"],
     )
 
     if not received_items:
@@ -312,7 +312,7 @@ def _set_subcontracting_delivery_additional_value(doc):
     # Calculate total material cost per FG item
     fg_material_cost = defaultdict(float)
     for received_item in received_items:
-        key = received_item.scio_item_detail
+        key = received_item.reference_name
         cost = flt(received_item.rate) * flt(received_item.consumed_qty)
         fg_material_cost[key] += cost
 
