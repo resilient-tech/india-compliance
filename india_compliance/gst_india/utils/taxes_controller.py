@@ -1,4 +1,5 @@
 import json
+from collections import defaultdict
 
 import frappe
 from frappe import _
@@ -309,16 +310,21 @@ def _set_subcontracting_delivery_additional_value(doc):
         return
 
     # Calculate total material cost per FG item
-    fg_material_cost = {}
+    fg_material_cost = defaultdict(float)
     for received_item in received_items:
         key = received_item.scio_item_detail
         cost = flt(received_item.rate) * flt(received_item.consumed_qty)
-        fg_material_cost[key] = fg_material_cost.get(key, 0) + cost
+        fg_material_cost[key] += cost
+
+    precision = doc.precision("additional_taxable_value", "taxes")
 
     # Set additional_taxable_value for each item
     for item in doc.items:
-        if item.get("scio_detail"):
-            item.additional_taxable_value = fg_material_cost.get(item.scio_detail, 0)
+        if not item.get("scio_detail"):
+            continue
+        item.additional_taxable_value = flt(
+            fg_material_cost.get(item.scio_detail), precision
+        )
 
 
 def _set_return_raw_material_additional_value(doc):
@@ -344,7 +350,16 @@ def _set_return_raw_material_additional_value(doc):
     if not received_items:
         return
 
+    precision = doc.precision("additional_taxable_value", "taxes")
+
     for item in doc.items:
-        if item.get("scio_detail"):
-            scio_value = received_items.get(item.scio_detail, 0) * flt(item.qty)
-            item.additional_taxable_value = scio_value - flt(item.amount)
+        scio_detail = item.get("scio_detail")
+        if not scio_detail:
+            continue
+
+        scio_rate = received_items.get(scio_detail)
+        if not scio_rate:
+            continue
+
+        scio_value = flt(scio_rate) * flt(item.qty)
+        item.additional_taxable_value = flt(scio_value - flt(item.amount), precision)
