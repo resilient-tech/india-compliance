@@ -297,6 +297,15 @@ def _set_subcontracting_delivery_additional_value(doc):
     if not scio_details:
         return
 
+    quantity_processed = frappe._dict(
+        frappe.get_all(
+            "Subcontracting Inward Order Item",
+            filters={"name": ["in", scio_details]},
+            fields=["name", "produced_qty"],
+            as_list=True,
+        )
+    )
+
     received_items = frappe.get_all(
         "Subcontracting Inward Order Received Item",
         filters={
@@ -323,7 +332,10 @@ def _set_subcontracting_delivery_additional_value(doc):
         if not item.get("scio_detail"):
             continue
         item.additional_taxable_value = flt(
-            fg_material_cost.get(item.scio_detail), precision
+            fg_material_cost.get(item.scio_detail)
+            / quantity_processed.get(item.scio_detail, 1)
+            * item.qty,
+            precision,
         )
 
 

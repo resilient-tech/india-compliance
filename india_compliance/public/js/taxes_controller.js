@@ -133,7 +133,12 @@ india_compliance.taxes_controller = class TaxesController {
 
         // Function to calculate amount
         const calculateAmount = (qty, rate, precisionType) => {
-            return flt(flt(qty) * flt(rate), precision(precisionType, row));
+            let amount = flt(flt(qty) * flt(rate), precision(precisionType, row));
+
+            if (this.frm.doc.doctype === "Stock Entry") {
+                amount += flt(row.additional_taxable_value, precision(precisionType, row));
+            }
+            return amount;
         };
 
         if (this.frm.doc.doctype === "Subcontracting Receipt") {
