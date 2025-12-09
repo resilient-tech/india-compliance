@@ -2845,7 +2845,7 @@ class GSTR1Action extends FileGSTR1Dialog {
                 this.perform_gstr1_action(
                     action,
                     () => this.check_action_status_with_retry(action),
-                    { is_nil_return: this.frm.doc.file_nil_gstr1 }
+                    { is_nil_return: this.frm.doc.file_nil_gstr1 ? true : false }
                 );
             }
         );
@@ -2863,7 +2863,7 @@ class GSTR1Action extends FileGSTR1Dialog {
                 if (r.message) this.handle_proceed_to_file_response(r.message);
                 else this.check_action_status_with_retry(action);
             },
-            { is_nil_return: this.frm.doc.file_nil_gstr1 }
+            { is_nil_return: this.frm.doc.file_nil_gstr1 ? true : false }
         );
     }
 
