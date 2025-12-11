@@ -591,7 +591,6 @@ class TestEWaybillAuth(TestNICAuth):
         # Test the full cycle
         # Initialize e-Waybill API (this will trigger auth)
         self._mock_get_nic_public_key()
-        self._mock_asp_get_public_ip()
         self._mock_ewaybill_auth_response(auth_response)
 
         api = StandardEWaybillAPI(si)
@@ -660,15 +659,6 @@ class TestEWaybillAuth(TestNICAuth):
             responses.GET,
             f"{BASE_URL}/static/nic_public_key",
             json={"message": self.test_data.public_key},
-            status=200,
-        )
-
-    def _mock_asp_get_public_ip(self):
-        """Mock ASP endpoint for fetching public IP address"""
-        responses.add(
-            responses.GET,
-            "https://asp.resilient.tech/get-public-ip",
-            json={"ip": "203.0.113.1"},
             status=200,
         )
 
@@ -802,7 +792,6 @@ class TestEInvoiceAuth(TestNICAuth):
 
         # Initialize e-Invoice API (this will trigger auth)
         self._mock_get_nic_public_key()
-        self._mock_asp_get_public_ip()
         self._mock_einvoice_auth_response(auth_response)
 
         api = StandardEInvoiceAPI(si)
