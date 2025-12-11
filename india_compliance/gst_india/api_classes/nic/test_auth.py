@@ -369,6 +369,142 @@ class TestStandardAuth(TestNICAuth):
         result = auth.process_response(response)
         self.assertEqual(result, original_response)
 
+    def test_ip_usr_header_included_when_session_ip_set(self):
+        """Test that ip-usr header is included when session_ip is set"""
+        from india_compliance.gst_india.api_classes.taxpayer_base import TaxpayerBaseAPI
+
+        # Prevent automatic setup in __init__
+        with patch(
+            "india_compliance.gst_india.api_classes.base.BaseAPI.__init__",
+            return_value=None,
+        ):
+            api = TaxpayerBaseAPI()
+
+            # Set required attributes manually
+            api.company_gstin = "24AAQCA8719H1ZC"
+            api.username = "test_user"
+            api.session_ip = "192.168.1.100"
+            api.sandbox_mode = False
+            api.default_headers = {}
+
+            # Test setup method with mocked credential fetch
+            with patch.object(api, "fetch_credentials"):
+                api.setup("24AAQCA8719H1ZC")
+
+            # Verify ip-usr header is set correctly
+            self.assertEqual(api.default_headers["ip-usr"], "192.168.1.100")
+
+    @responses.activate
+    def test_returns_api_ip_fetch_with_auth_token(self):
+        """Test that Returns API fetches IP during auth token generation"""
+        from india_compliance.exceptions import OTPRequestedError
+        from india_compliance.gst_india.api_classes.taxpayer_base import (
+            TaxpayerAuthenticate,
+        )
+
+        # Mock HTTP endpoints only
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}/get-public-ip",
+            json={"ip": "203.0.113.1"},
+            status=200,
+        )
+
+        responses.add(
+            responses.POST,
+            f"{BASE_URL}/authenticate",
+            json={"status_cd": 1, "message": "OTP sent successfully"},
+            status=200,
+        )
+
+        # Prevent automatic setup in __init__
+        with patch(
+            "india_compliance.gst_india.api_classes.base.BaseAPI.__init__",
+            return_value=None,
+        ):
+            api = TaxpayerAuthenticate()
+
+            # Set required attributes directly
+            api.company_gstin = "24AAQCA8719H1ZC"
+            api.username = "test_user"
+            api.app_key = "12345678901234567890123456789012"
+            api.default_headers = {}
+
+            # Test auth reset with minimal mocking
+            with patch("frappe.db.set_value") as mock_db_set:
+                with patch.object(api, "get_public_ip", return_value="203.0.113.1"):
+                    with patch.object(
+                        api, "request_otp", side_effect=OTPRequestedError()
+                    ):
+                        try:
+                            api.autheticate_with_otp(otp=None)
+                        except OTPRequestedError:
+                            pass  # Expected behavior
+
+                        # Verify database call and IP setting
+                        mock_db_set.assert_called_once_with(
+                            "GST Credential",
+                            {
+                                "gstin": "24AAQCA8719H1ZC",
+                                "username": "test_user",
+                                "service": "Returns",
+                            },
+                            {"auth_token": None, "session_ip": "203.0.113.1"},
+                        )
+                        self.assertEqual(api.session_ip, "203.0.113.1")
+
+    @responses.activate
+    def test_authenticate_with_otp_includes_ip_usr_header(self):
+        """Test that authenticate_with_otp includes ip-usr header in API calls"""
+        from india_compliance.gst_india.api_classes.taxpayer_base import (
+            TaxpayerAuthenticate,
+        )
+
+        # Mock HTTP endpoint
+        responses.add(
+            responses.POST,
+            f"{BASE_URL}/authenticate",
+            json={
+                "status_cd": 1,
+                "auth_token": "test_token",
+                "sek": "test_sek",
+                "expiry": "360",
+            },
+            status=200,
+        )
+
+        # Prevent automatic setup in __init__
+        with patch(
+            "india_compliance.gst_india.api_classes.base.BaseAPI.__init__",
+            return_value=None,
+        ):
+            api = TaxpayerAuthenticate()
+
+            # Set required attributes
+            api.company_gstin = "24AAQCA8719H1ZC"
+            api.username = "test_user"
+            api.app_key = "12345678901234567890123456789012"
+            api.sandbox_mode = False
+            api.base_url = BASE_URL
+            api.default_headers = {"ip-usr": "192.168.1.100"}
+            api.default_log_values = {}
+            api.base_path = ""
+
+            # Mock encryption and database operations
+            with patch.object(api, "encrypt_request"):
+                with patch("frappe.db.set_value"):
+                    with patch("frappe.cache.set_value"):
+                        # Call authenticate with OTP
+                        api.autheticate_with_otp(otp="123456")
+
+                        # Verify the request was made with ip-usr header
+                        self.assertEqual(len(responses.calls), 1)
+                        request_headers = responses.calls[0].request.headers
+
+                        # Check that ip-usr header was included in the request
+                        self.assertIn("ip-usr", request_headers)
+                        self.assertEqual(request_headers["ip-usr"], "192.168.1.100")
+
 
 class TestEWaybillAuth(TestNICAuth):
     @classmethod
@@ -455,6 +591,7 @@ class TestEWaybillAuth(TestNICAuth):
         # Test the full cycle
         # Initialize e-Waybill API (this will trigger auth)
         self._mock_get_nic_public_key()
+        self._mock_asp_get_public_ip()
         self._mock_ewaybill_auth_response(auth_response)
 
         api = StandardEWaybillAPI(si)
@@ -523,6 +660,15 @@ class TestEWaybillAuth(TestNICAuth):
             responses.GET,
             f"{BASE_URL}/static/nic_public_key",
             json={"message": self.test_data.public_key},
+            status=200,
+        )
+
+    def _mock_asp_get_public_ip(self):
+        """Mock ASP endpoint for fetching public IP address"""
+        responses.add(
+            responses.GET,
+            "https://asp.resilient.tech/get-public-ip",
+            json={"ip": "203.0.113.1"},
             status=200,
         )
 
@@ -656,6 +802,7 @@ class TestEInvoiceAuth(TestNICAuth):
 
         # Initialize e-Invoice API (this will trigger auth)
         self._mock_get_nic_public_key()
+        self._mock_asp_get_public_ip()
         self._mock_einvoice_auth_response(auth_response)
 
         api = StandardEInvoiceAPI(si)

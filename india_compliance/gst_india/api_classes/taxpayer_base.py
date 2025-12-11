@@ -154,7 +154,8 @@ class TaxpayerAuthenticate(BaseAPI):
                 frappe.local.job.after_job.add(self.reset_auth_token)
                 raise InvalidAuthTokenError
 
-            # reset auth token
+            session_ip = self.get_public_ip()
+
             frappe.db.set_value(
                 "GST Credential",
                 {
@@ -162,11 +163,15 @@ class TaxpayerAuthenticate(BaseAPI):
                     "username": self.username,
                     "service": "Returns",
                 },
-                {"auth_token": None, "session_ip": None},
+                {"auth_token": None, "session_ip": session_ip},
             )
+            frappe.clear_document_cache("GST Settings")
 
             self.auth_token = None
-            self.session_ip = self.get_public_ip()
+            self.session_ip = session_ip
+
+            self.default_headers["ip-usr"] = self.session_ip
+
             return self.request_otp()
 
         response = super().post(
@@ -316,15 +321,6 @@ class TaxpayerAuthenticate(BaseAPI):
         if not session_ip:
             frappe.throw(_("Could not fetch Public IP address."))
 
-        frappe.db.set_value(
-            "GST Credential",
-            {
-                "gstin": self.company_gstin,
-                "username": self.username,
-                "service": "Returns",
-            },
-            {"session_ip": session_ip},
-        )
         return session_ip
 
 
