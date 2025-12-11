@@ -155,11 +155,11 @@ class TaxpayerAuthenticate(BaseAPI):
                     "username": self.username,
                     "service": "Returns",
                 },
-                {"auth_token": None, "ip_address": None},
+                {"auth_token": None, "session_ip": None},
             )
 
             self.auth_token = None
-            self.ip_address = self.get_public_ip()
+            self.session_ip = self.get_public_ip()
             return self.request_otp()
 
         response = super().post(
@@ -291,7 +291,7 @@ class TaxpayerAuthenticate(BaseAPI):
                 "username": self.username,
                 "service": "Returns",
             },
-            {"auth_token": None, "ip_address": None},
+            {"auth_token": None, "session_ip": None},
         )
 
         if not frappe.flags.in_test:
@@ -304,9 +304,9 @@ class TaxpayerAuthenticate(BaseAPI):
         """
         response = super().get(endpoint="get-public-ip")
 
-        ip_address = response.get("ip")
+        session_ip = response.get("ip")
 
-        if not ip_address:
+        if not session_ip:
             frappe.throw(_("Could not fetch Public IP address."))
 
         frappe.db.set_value(
@@ -316,9 +316,9 @@ class TaxpayerAuthenticate(BaseAPI):
                 "username": self.username,
                 "service": "Returns",
             },
-            {"ip_address": ip_address},
+            {"session_ip": session_ip},
         )
-        return ip_address
+        return session_ip
 
 
 class TaxpayerBaseAPI(TaxpayerAuthenticate):
@@ -336,8 +336,8 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
 
         self.company_gstin = company_gstin
         self.fetch_credentials(self.company_gstin, "Returns", require_password=False)
-        if not self.ip_address:
-            self.ip_address = self.get_public_ip()
+        if not self.session_ip:
+            self.session_ip = self.get_public_ip()
 
         self.default_headers.update(
             {
@@ -345,7 +345,7 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
                 "state-cd": self.company_gstin[:2],
                 "username": self.username,
                 "txn": self.generate_request_id(length=32),
-                "ip-usr": self.ip_address,
+                "ip-usr": self.session_ip,
             }
         )
 

@@ -96,7 +96,7 @@ class BaseAPI:
         self.session_key = b64decode(row.session_key or "")
         self.session_expiry = row.session_expiry
         self.auth_token = row.auth_token
-        self.ip_address = row.ip_address
+        self.session_ip = row.session_ip
 
     def get_url(self, *parts):
         parts = list(parts)
