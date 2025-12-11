@@ -327,7 +327,7 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
     IGNORED_ERROR_CODES = {
         **TaxpayerAuthenticate.IGNORED_ERROR_CODES,
         "RT-R1R3BAV-1007": "authorization_failed",  # Either auth-token or username is invalid. Raised in get_filing_preference
-        "RT-R1R3BAV-1013": "authorization_failed",  # "Invalid ip-usr." Change in request IP
+        # "RT-R1R3BAV-1013": "authorization_failed",  # "Invalid ip-usr." Change in request IP
     }
 
     def setup(self, company_gstin):
