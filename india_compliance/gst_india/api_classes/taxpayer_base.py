@@ -336,8 +336,6 @@ class TaxpayerBaseAPI(TaxpayerAuthenticate):
 
         self.company_gstin = company_gstin
         self.fetch_credentials(self.company_gstin, "Returns", require_password=False)
-        if not self.session_ip:
-            self.session_ip = self.get_public_ip()
 
         self.default_headers.update(
             {
