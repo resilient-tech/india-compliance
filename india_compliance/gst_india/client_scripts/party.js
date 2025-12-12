@@ -89,14 +89,10 @@ function check_duplicate_gstin(doc) {
         party: doc.name,
     };
 
-    // For Address, get party info from the links (Dynamic Link) table
-    // Only validate if there is exactly one link
     if (doc.doctype === "Address") {
         if (!doc.links || doc.links.length !== 1) return;
 
         const link = doc.links[0];
-        if (!frappe.boot.gst_party_types.includes(link.link_doctype)) return;
-
         args = {
             gstin: doc.gstin,
             party_type: link.link_doctype,
@@ -104,6 +100,8 @@ function check_duplicate_gstin(doc) {
             address_name: doc.name,
         };
     }
+
+    if (!frappe.boot.gst_party_types.includes(args.party_type)) return;
 
     frappe.call({
         method: "india_compliance.gst_india.utils.check_duplicate_gstin",
@@ -129,9 +127,18 @@ function validate_pan(doctype) {
 
 function check_duplicate_pan(doc) {
     if (!doc.pan) return;
+
+    let args = {
+        pan: doc.pan,
+        party_type: doc.doctype,
+        party: doc.name,
+    };
+
+    if (!frappe.boot.gst_party_types.includes(args.party_type)) return;
+
     frappe.call({
         method: "india_compliance.gst_india.utils.check_duplicate_pan",
-        args: { pan: doc.pan, party_type: doc.doctype, party: doc.name },
+        args: { ...args },
     });
 }
 
