@@ -23,7 +23,6 @@ def update_hsn_code(doc):
 
 
 def validate_hsn_code(doc):
-    doc.gst_hsn_code = (doc.gst_hsn_code or "").replace(" ", "")
     # HSN Code is being validated only for sales items
     if not doc.is_sales_item:
         return
