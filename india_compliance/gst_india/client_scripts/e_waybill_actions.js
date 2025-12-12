@@ -337,55 +337,71 @@ function show_generate_e_waybill_dialog(frm) {
     }
 }
 
-function get_generate_e_waybill_dialog(opts, frm) {
+function get_generate_e_waybill_dialog(opts, frm, transporter_only = false) {
     if (!frm) frm = { doc: {} };
     const is_foreign_transaction =
         frm.doc.gst_category === "Overseas" &&
         frm.doc.place_of_supply === "96-Other Countries";
 
-    const ewaybill_defaults = get_sub_suppy_type_options(frm, is_foreign_transaction);
+    const fields = [];
 
-    const fields = [
-        {
-            label: "Document Details",
-            fieldname: "section_doc_details",
-            fieldtype: "Section Break",
-            // collapsible: ewaybill_defaults.sub_supply_type.length === 1,
-        },
-        {
-            label: "Supply Type",
-            fieldname: "supply_type",
-            fieldtype: "Data",
-            read_only: 1,
-            default: ewaybill_defaults.supply_type,
-        },
-        {
-            label: "Document Type",
-            fieldname: "document_type",
-            fieldtype: "Data",
-            read_only: 1,
-            default: ewaybill_defaults.document_type,
-        },
-        {
-            fieldtype: "Column Break",
-        },
-        {
-            label: "Sub Supply Type",
-            fieldname: "sub_supply_type",
-            fieldtype: "Select",
-            options: ewaybill_defaults.sub_supply_type.join("\n"),
-            default: ewaybill_defaults.sub_supply_type[0],
-            read_only: ewaybill_defaults.sub_supply_type.length === 1,
-            reqd: ewaybill_defaults.sub_supply_type.length !== 1,
-        },
-        {
-            label: "Sub Supply Description",
-            fieldname: "sub_supply_desc",
-            fieldtype: "Data",
-            depends_on: "eval: doc.sub_supply_type == 'Others'",
-            mandatory_depends_on: "eval: doc.sub_supply_type == 'Others'",
-            default: ewaybill_defaults.sub_supply_desc,
-        },
+    if (!transporter_only) {
+        const ewaybill_defaults = get_sub_suppy_type_options(
+            frm,
+            is_foreign_transaction
+        );
+
+        fields.push(
+            {
+                label: "Document Details",
+                fieldname: "section_doc_details",
+                fieldtype: "Section Break",
+            },
+            {
+                label: "Supply Type",
+                fieldname: "supply_type",
+                fieldtype: "Select",
+                read_only: ewaybill_defaults.supply_type.length === 1,
+                default: ewaybill_defaults.supply_type[0],
+                options: ewaybill_defaults.supply_type.join("\n"),
+                reqd: ewaybill_defaults.supply_type.length !== 1,
+                onchange: () => {
+                    if (ewaybill_defaults.supply_type.length > 1) {
+                        update_sub_supply_type_options(d, frm);
+                    }
+                },
+            },
+            {
+                label: "Document Type",
+                fieldname: "document_type",
+                fieldtype: "Data",
+                read_only: 1,
+                default: ewaybill_defaults.document_type,
+            },
+            {
+                fieldtype: "Column Break",
+            },
+            {
+                label: "Sub Supply Type",
+                fieldname: "sub_supply_type",
+                fieldtype: "Select",
+                options: ewaybill_defaults.sub_supply_type.join("\n"),
+                default: ewaybill_defaults.sub_supply_type[0],
+                read_only: ewaybill_defaults.sub_supply_type.length === 1,
+                reqd: ewaybill_defaults.sub_supply_type.length !== 1,
+            },
+            {
+                label: "Sub Supply Description",
+                fieldname: "sub_supply_desc",
+                fieldtype: "Data",
+                depends_on: "eval: doc.sub_supply_type == 'Others'",
+                mandatory_depends_on: "eval: doc.sub_supply_type == 'Others'",
+                default: ewaybill_defaults.sub_supply_desc,
+            }
+        );
+    }
+
+    fields.push(
         {
             label: "Part A",
             fieldname: "section_part_a",
@@ -477,10 +493,13 @@ function get_generate_e_waybill_dialog(opts, frm) {
             depends_on: 'eval:["Road", "Ship"].includes(doc.mode_of_transport)',
             read_only_depends_on: "eval: doc.mode_of_transport == 'Ship'",
             default: frm.doc.gst_vehicle_type || "Regular",
-        },
-    ];
+        }
+    );
 
-    if (["Sales Invoice","Delivery Note"].includes(frm.doctype) && is_foreign_transaction) {
+    if (
+        ["Sales Invoice", "Delivery Note"].includes(frm.doctype) &&
+        is_foreign_transaction
+    ) {
         fields.splice(5, 0, {
             label: "Origin Port / Border Checkpost Address",
             fieldname: "port_address",
@@ -512,11 +531,11 @@ function get_generate_e_waybill_dialog(opts, frm) {
 function get_sub_suppy_type_options(frm, is_foreign_transaction) {
     let supply_type, sub_supply_type, sub_supply_desc, document_type;
 
-    if (frm.doctype === "Delivery Note") {
+    if (frm.doctype === "Delivery Note" && frm?.doc?.company_gstin) {
         const same_gstin = frm.doc.billing_address_gstin == frm.doc.company_gstin;
 
         if (frm.doc.is_return) {
-            supply_type = "Inward";
+            supply_type = ["Inward"];
             document_type = "Delivery Challan";
             if (same_gstin) {
                 sub_supply_type = ["For Own Use", "Exhibition or Fairs", "Others"];
@@ -524,7 +543,7 @@ function get_sub_suppy_type_options(frm, is_foreign_transaction) {
                 sub_supply_type = ["Job Work Returns", "SKD/CKD", "Others"];
             }
         } else {
-            supply_type = "Outward";
+            supply_type = ["Outward"];
             document_type = "Delivery Challan";
             if (same_gstin) {
                 sub_supply_type = [
@@ -538,20 +557,43 @@ function get_sub_suppy_type_options(frm, is_foreign_transaction) {
                 sub_supply_type = ["Job Work", "SKD/CKD", "Others"];
             }
         }
+    } else if (frm.doctype === "Delivery Note") {
+        supply_type = ["Inward", "Outward"];
+        document_type = "Delivery Challan";
+
+        if (frm.doc.is_return === 1) {
+            sub_supply_type = [
+                "For Own Use",
+                "Exhibition or Fairs",
+                "Job Work Returns",
+                "SKD/CKD",
+                "Others",
+            ];
+        } else {
+            sub_supply_type = [
+                "For Own Use",
+                "Exhibition or Fairs",
+                "Job Work",
+                "SKD/CKD",
+                "Line Sales",
+                "Recipient Not Known",
+                "Others",
+            ];
+        }
     } else if (frm.doctype === "Stock Entry") {
         document_type = "Delivery Challan";
 
         if (frm.doc.purpose === "Send to Subcontractor") {
-            supply_type = "Outward";
+            supply_type = ["Outward"];
             sub_supply_type = ["Job Work"];
         } else if (["Material Transfer", "Material Issue"].includes(frm.doc.purpose)) {
             const same_gstin = frm.doc.bill_from_gstin === frm.doc.bill_to_gstin;
 
             if (frm.doc.is_return) {
-                supply_type = "Inward";
+                supply_type = ["Inward"];
                 sub_supply_type = ["Job Work Returns"];
             } else if (same_gstin) {
-                supply_type = "Outward";
+                supply_type = ["Outward"];
                 sub_supply_type = [
                     "For Own Use",
                     "Exhibition or Fairs",
@@ -559,9 +601,8 @@ function get_sub_suppy_type_options(frm, is_foreign_transaction) {
                     "Recipient Not Known",
                     "Others",
                 ];
-            }
-            else {
-                supply_type = "Outward";
+            } else {
+                supply_type = ["Outward"];
                 sub_supply_type = ["Job Work", "SKD/CKD", "Others"];
             }
         }
@@ -570,51 +611,51 @@ function get_sub_suppy_type_options(frm, is_foreign_transaction) {
         frm.doc.is_return === 0 &&
         is_foreign_transaction
     ) {
-        supply_type = "Outward";
+        supply_type = ["Outward"];
         sub_supply_type = ["Export"];
         document_type = "Tax Invoice";
     } else {
         const key = `${frm.doctype}_${frm.doc.is_return || 0}`;
         const default_supply_types = {
             "Sales Invoice_0": {
-                supply_type: "Outward",
+                supply_type: ["Outward"],
                 sub_supply_type: ["Supply"],
                 document_type: "Tax Invoice",
             },
             "Sales Invoice_1": {
-                supply_type: "Inward",
+                supply_type: ["Inward"],
                 sub_supply_type: ["Sales Return"],
                 document_type: "Delivery Challan",
             },
             "Purchase Invoice_0": {
-                supply_type: "Inward",
+                supply_type: ["Inward"],
                 sub_supply_type: ["Supply"],
                 document_type: "Tax Invoice",
             },
             "Purchase Invoice_1": {
-                supply_type: "Outward",
+                supply_type: ["Outward"],
                 sub_supply_type: ["Others"],
                 sub_supply_desc: "Purchase Return",
                 document_type: "Others",
             },
             "Purchase Receipt_0": {
-                supply_type: "Inward",
+                supply_type: ["Inward"],
                 sub_supply_type: ["Supply"],
                 document_type: "Tax Invoice",
             },
             "Purchase Receipt_1": {
-                supply_type: "Outward",
+                supply_type: ["Outward"],
                 sub_supply_type: ["Others"],
                 sub_supply_desc: "Purchase Return",
                 document_type: "Delivery Challan",
             },
             "Subcontracting Receipt_0": {
-                supply_type: "Inward",
+                supply_type: ["Inward"],
                 sub_supply_type: ["Job Work Returns"],
                 document_type: "Delivery Challan",
             },
             "Subcontracting Receipt_1": {
-                supply_type: "Outward",
+                supply_type: ["Outward"],
                 sub_supply_type: ["Job Work"],
                 document_type: "Delivery Challan",
             },
@@ -624,6 +665,23 @@ function get_sub_suppy_type_options(frm, is_foreign_transaction) {
     }
 
     return { supply_type, sub_supply_type, sub_supply_desc, document_type };
+}
+
+function update_sub_supply_type_options(dialog, frm) {
+    const supply_type = dialog.get_value("supply_type");
+    if (!supply_type) return;
+
+    // Create temporary frm object with selected supply type to get correct options
+    const temp_frm = {
+        ...frm,
+        doc: { ...frm.doc, is_return: supply_type === "Inward" ? 1 : 0 },
+    };
+    const options = get_sub_suppy_type_options(temp_frm);
+
+    const sub_supply_field = dialog.get_field("sub_supply_type");
+    sub_supply_field.df.options = options.sub_supply_type.join("\n");
+    sub_supply_field.refresh();
+    dialog.set_value("sub_supply_type", options.sub_supply_type[0]);
 }
 
 function show_fetch_if_generated_dialog(frm) {
@@ -1427,10 +1485,290 @@ function show_sandbox_mode_indicator() {
                 <p><label class="indicator-pill no-indicator-dot yellow" title="${__(
                     "Your site has enabled Sandbox Mode in GST Settings."
                 )}">${__("Sandbox Mode")}</label></p>
-                <p><a class="small text-muted" href="${frappe.utils.get_form_link("GST Settings", "GST Settings")}" target="_blank">${__(
-                    "Sandbox Mode is enabled for GST APIs."
-                )}</a></p>
+                <p><a class="small text-muted" href="${frappe.utils.get_form_link(
+                    "GST Settings",
+                    "GST Settings"
+                )}" target="_blank">${__(
+                "Sandbox Mode is enabled for GST APIs."
+            )}</a></p>
             </div>
             `
         );
+}
+
+/********
+ * Bulk Operations for List Views
+ *******/
+
+function setup_bulk_e_waybill_actions(doctype, list_view) {
+    if (!frappe.perm.has_perm(doctype, 0, "submit")) return;
+
+    setup_bulk_e_waybill_json_action(doctype, list_view);
+    setup_bulk_transporter_update_action(doctype, list_view);
+    setup_bulk_e_waybill_generation_action(doctype, list_view);
+    setup_bulk_e_waybill_print_action(doctype, list_view);
+    setup_bulk_e_invoice_generation_action(doctype, list_view);
+}
+
+function setup_bulk_e_waybill_json_action(doctype, list_view) {
+    if (!gst_settings.enable_e_waybill) return;
+    if (doctype !== "Sales Invoice") return;
+
+    add_bulk_action_for_documents(list_view, __("Generate e-Waybill JSON"), docnames =>
+        generate_e_waybill_json_for_doctype(doctype, docnames)
+    );
+}
+
+function setup_bulk_transporter_update_action(doctype, list_view) {
+    if (!gst_settings.enable_e_waybill) return;
+
+    if (doctype === "Delivery Note" && !gst_settings.enable_e_waybill_from_dn) {
+        return;
+    }
+
+    add_bulk_action_for_documents(
+        list_view,
+        __("Bulk Update Transporter Detail"),
+        docnames => show_bulk_update_transporter_dialog_for_doctype(doctype, docnames),
+        [0, 1]
+    );
+}
+
+function setup_bulk_e_waybill_generation_action(doctype, list_view) {
+    if (!gst_settings.enable_e_waybill) return;
+
+    if (doctype === "Delivery Note" && !gst_settings.enable_e_waybill_from_dn) {
+        return;
+    }
+
+    if (doctype === "Sales Invoice") {
+        add_bulk_action_for_documents(
+            list_view,
+            __("Enqueue Bulk e-Waybill Generation"),
+            docnames => enqueue_bulk_e_waybill_generation_for_doctype(doctype, docnames)
+        );
+    } else {
+        add_bulk_action_for_documents(
+            list_view,
+            __("Enqueue Bulk e-Waybill Generation"),
+            docnames => show_bulk_e_waybill_generation_dialog(doctype, docnames)
+        );
+    }
+}
+
+function setup_bulk_e_waybill_print_action(doctype, list_view) {
+    if (!frappe.model.can_print("e-Waybill Log")) return;
+
+    add_bulk_action_for_documents(list_view, __("Print e-Waybill"), docnames =>
+        bulk_e_waybill_print_for_doctype(doctype, docnames)
+    );
+}
+
+function setup_bulk_e_invoice_generation_action(doctype, list_view) {
+    if (doctype === "Sales Invoice" && india_compliance.is_e_invoice_enabled()) {
+        add_bulk_action_for_documents(
+            list_view,
+            __("Enqueue Bulk e-Invoice Generation"),
+            enqueue_bulk_e_invoice_generation
+        );
+    }
+}
+
+function add_bulk_action_for_documents(list_view, label, callback, allowed_status) {
+    if (!allowed_status) allowed_status = [1];
+    list_view.page.add_actions_menu_item(label, async () => {
+        const selected_docs = list_view.get_checked_items();
+        const submitted_docs = await validate_doc_status(selected_docs, allowed_status);
+        if (submitted_docs) callback(submitted_docs);
+    });
+}
+
+async function generate_e_waybill_json_for_doctype(doctype, docnames) {
+    const ewb_data = await frappe.xcall(
+        "india_compliance.gst_india.utils.e_waybill.generate_e_waybill_json",
+        { doctype: doctype, docnames }
+    );
+
+    india_compliance.trigger_file_download(ewb_data, get_e_waybill_file_name());
+}
+
+function show_bulk_update_transporter_dialog_for_doctype(doctype, docnames) {
+    const frm = { doctype: doctype, doc: {} };
+    const d = get_generate_e_waybill_dialog(
+        {
+            title: __("Update Transporter Detail"),
+            primary_action_label: __("Update {0}", [doctype]),
+            primary_action(values) {
+                d.hide();
+
+                frappe.call({
+                    method: "india_compliance.gst_india.utils.e_waybill.bulk_update_transporter_in_docs",
+                    args: {
+                        doctype: doctype,
+                        docnames,
+                        values,
+                    },
+                });
+            },
+        },
+        frm,
+        true // transporter_only = true
+    );
+
+    d.show();
+}
+
+async function bulk_e_waybill_print_for_doctype(doctype, docnames) {
+    frappe.call({
+        method: "india_compliance.gst_india.utils.e_waybill.get_valid_and_invalid_e_waybill_log",
+        args: {
+            doctype: doctype,
+            docs: JSON.stringify(docnames),
+        },
+        callback: function (r) {
+            if (r.message) {
+                if (r.message.invalid_log.length > 1) {
+                    const invalid_docs = r.message.invalid_log.map(
+                        doc => `${doc.link} - ${doc.reason}`
+                    );
+                    frappe.msgprint(
+                        __(
+                            "Cannot print e-Waybill for following documents:<br><br>{0}",
+                            [invalid_docs.join("<br>")]
+                        )
+                    );
+                }
+
+                window.open_url_post(
+                    "/api/method/frappe.utils.print_format.download_multi_pdf",
+                    {
+                        doctype: "e-Waybill Log",
+                        name: JSON.stringify(r.message.valid_log),
+                    },
+                    true
+                );
+            }
+        },
+    });
+}
+
+async function enqueue_bulk_e_waybill_generation_for_doctype(
+    doctype,
+    docnames,
+    values
+) {
+    const args = { doctype, docnames };
+    if (values) args.values = values;
+    await enqueue_bulk_generation(
+        "india_compliance.gst_india.utils.e_waybill.enqueue_bulk_e_waybill_generation",
+        args
+    );
+}
+
+async function enqueue_bulk_e_invoice_generation(docnames) {
+    enqueue_bulk_generation(
+        "india_compliance.gst_india.utils.e_invoice.enqueue_bulk_e_invoice_generation",
+        { docnames }
+    );
+}
+
+function show_bulk_e_waybill_generation_dialog(doctype, docnames) {
+    const frm = { doctype: doctype, doc: {} };
+    const d = get_generate_e_waybill_dialog(
+        {
+            title: __("Bulk e-Waybill Generation"),
+            primary_action_label: __("Generate e-Waybills"),
+            primary_action(values) {
+                d.hide();
+                enqueue_bulk_e_waybill_generation_for_doctype(
+                    doctype,
+                    docnames,
+                    values
+                );
+            },
+        },
+        frm
+    );
+
+    d.show();
+}
+
+async function enqueue_bulk_generation(method, args) {
+    const job_id = await frappe.xcall(method, args);
+
+    const now = frappe.datetime.system_datetime();
+    const creation_filter = `[">", "${now}"]`;
+    const api_requests_link = frappe.utils.generate_route({
+        type: "doctype",
+        name: "Integration Request",
+        route_options: {
+            integration_request_service: "India Compliance API",
+            creation: creation_filter,
+        },
+    });
+    const error_logs_link = frappe.utils.generate_route({
+        type: "doctype",
+        name: "Error Log",
+        route_options: {
+            creation: creation_filter,
+        },
+    });
+
+    frappe.msgprint(
+        __(
+            `Bulk Generation has been queued. You can track the
+            <a href='{0}'>Background Job</a>,
+            <a href='{1}'>API Request(s)</a>,
+            and <a href='{2}'>Error Log(s)</a>.`,
+            [
+                frappe.utils.get_form_link("RQ Job", job_id),
+                api_requests_link,
+                error_logs_link,
+            ]
+        )
+    );
+}
+
+async function validate_doc_status(selected_docs, allowed_status) {
+    const valid_docs = [];
+    const invalid_docs = [];
+    const status_map = {
+        0: "draft",
+        1: "submitted",
+        2: "cancelled",
+    };
+
+    for (const doc of selected_docs) {
+        if (!allowed_status.includes(doc.docstatus)) {
+            invalid_docs.push(doc.name);
+        } else {
+            valid_docs.push(doc.name);
+        }
+    }
+
+    if (!invalid_docs.length) return valid_docs;
+
+    const allowed_status_str = allowed_status
+        .map(status => status_map[status])
+        .join(" or ");
+
+    if (!valid_docs.length) {
+        frappe.throw(
+            __("This action can only be performed on {0} documents", [
+                allowed_status_str,
+            ])
+        );
+    }
+
+    const confirmed = await new Promise(resolve => {
+        frappe.confirm(
+            __(
+                "This action can only be performed on {0} documents. Do you want to continue without the following documents?<br><br><strong>{1}</strong>",
+                [allowed_status_str, invalid_docs.join("<br>")]
+            ),
+            () => resolve(true)
+        );
+    });
+
+    return confirmed ? valid_docs : false;
 }

@@ -91,7 +91,7 @@ def bulk_update_transporter_in_docs(doctype, docnames, values):
 
 
 @frappe.whitelist()
-def enqueue_bulk_e_waybill_generation(doctype, docnames):
+def enqueue_bulk_e_waybill_generation(doctype, docnames, values=None):
     """
     Enqueue bulk generation of e-Waybill for the given documents.
     """
@@ -101,6 +101,11 @@ def enqueue_bulk_e_waybill_generation(doctype, docnames):
     if not is_api_enabled(gst_settings) or not gst_settings.enable_e_waybill:
         frappe.throw(_("Please enable e-Waybill in GST Settings first."))
 
+    if doctype == "Delivery Note" and not gst_settings.enable_e_waybill_from_dn:
+        frappe.throw(
+            _("Please enable e-Waybill for Delivery Note in GST Settings first.")
+        )
+
     docnames = frappe.parse_json(docnames) if docnames.startswith("[") else [docnames]
     rq_job = frappe.enqueue(
         "india_compliance.gst_india.utils.e_waybill.generate_e_waybills",
@@ -108,12 +113,13 @@ def enqueue_bulk_e_waybill_generation(doctype, docnames):
         timeout=len(docnames) * 240,  # 4 mins per e-Waybill
         doctype=doctype,
         docnames=docnames,
+        values=values,
     )
 
     return rq_job.id
 
 
-def generate_e_waybills(doctype, docnames, force=False):
+def generate_e_waybills(doctype, docnames, force=False, values=None):
     """
     Bulk generate e-Waybill for the given documents.
     """
@@ -121,6 +127,15 @@ def generate_e_waybills(doctype, docnames, force=False):
     for docname in docnames:
         try:
             doc = load_doc(doctype, docname, "submit")
+
+            # Apply values to document if provided (for bulk operations)
+            if values:
+                update_transaction(
+                    doc,
+                    frappe.parse_json(values) if isinstance(values, str) else values,
+                )
+                send_updated_doc(doc)
+
             _generate_e_waybill(doc, force=force)
         except Exception:
             frappe.log_error(
@@ -1573,6 +1588,8 @@ class EWaybillData(GSTTransactionData):
             default_supply_types.get((doc.doctype, doc.get("is_return") or 0), {})
         )
 
+        self.validate_sub_supply_type()
+
         if is_foreign_doc(self.doc):
             self.transaction_details.update(sub_supply_type=3)  # Export
             if not doc.is_export_with_gst:
@@ -1589,6 +1606,81 @@ class EWaybillData(GSTTransactionData):
 
         if self.doc.doctype == "Purchase Invoice" and not self.doc.is_return:
             self.transaction_details.name = self.doc.bill_no or self.doc.name
+
+    def validate_sub_supply_type(self):
+        """
+        Validate sub supply type for Delivery Note based on GSTIN comparison and business rules.
+        """
+        sub_supply_type = self.transaction_details.get("sub_supply_type")
+
+        if not sub_supply_type:
+            frappe.throw(_("Sub Supply Type is required for generating e-Waybill"))
+
+        if self.doc.doctype not in (
+            "Delivery Note",
+            "Stock Entry",
+            "Subcontracting Receipt",
+        ):
+            return
+
+        sub_supply_type = next(
+            (k for k, v in SUB_SUPPLY_TYPES.items() if v == sub_supply_type),
+            None,
+        )
+
+        self._validate_sub_supply_description(sub_supply_type)
+        self._validate_sub_supply_for_same_gstin(sub_supply_type)
+
+    def _validate_sub_supply_description(self, sub_supply_type):
+        description = self.transaction_details.get("sub_supply_desc")
+        if sub_supply_type == "Others" and not description:
+            frappe.throw(
+                _("Sub Supply Description is required when Sub Supply Type is 'Others'")
+            )
+
+    def _validate_sub_supply_for_same_gstin(self, sub_supply_type):
+        if self.doc.doctype != "Delivery Note":
+            return
+
+        doc = self.doc
+
+        company_gstin = self.doc.company_gstin
+        billing_address_gstin = self.doc.billing_address_gstin
+        same_gstin = billing_address_gstin == company_gstin
+
+        if self.doc.is_return:
+            if same_gstin:
+                allowed_types = ["For Own Use", "Exhibition or Fairs", "Others"]
+            else:
+                allowed_types = ["Job Work Returns", "SKD/CKD", "Others"]
+        else:
+            if same_gstin:
+                allowed_types = [
+                    "For Own Use",
+                    "Exhibition or Fairs",
+                    "Line Sales",
+                    "Recipient Not Known",
+                    "Others",
+                ]
+            else:
+                allowed_types = ["Job Work", "SKD/CKD", "Others"]
+
+        if sub_supply_type not in allowed_types:
+            gstin_context = "same GSTIN" if same_gstin else "different GSTIN"
+            return_context = "return" if doc.is_return else "outward"
+
+            frappe.throw(
+                _(
+                    "Sub Supply Type '{0}' is not allowed for {1} {2} with {3}. "
+                    "Allowed types are: {4}"
+                ).format(
+                    sub_supply_type,
+                    self.doc.doctype,
+                    return_context,
+                    gstin_context,
+                    ", ".join(allowed_types),
+                )
+            )
 
     def set_party_address_details(self):
         self.set_address_gstin_map()

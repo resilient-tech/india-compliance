@@ -1,4 +1,4 @@
-const DOCTYPE = "Sales Invoice";
+const DOCTYPE = "Delivery Note";
 
 const erpnext_onload = frappe.listview_settings[DOCTYPE].onload;
 frappe.listview_settings[DOCTYPE].onload = function (list_view) {
