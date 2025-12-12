@@ -692,6 +692,8 @@ def _validate_hsn_codes(doc, valid_hsn_length, throw=False, message=None):
     rows_with_invalid_hsn = []
 
     for item in doc.items:
+        item.gst_hsn_code = (item.gst_hsn_code or "").replace(" ", "")
+
         if not (hsn_code := item.get("gst_hsn_code")):
             rows_with_missing_hsn.append(str(item.idx))
 
