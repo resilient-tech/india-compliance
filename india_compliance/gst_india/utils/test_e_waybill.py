@@ -979,6 +979,29 @@ class TestEWaybill(IntegrationTestCase):
             purchase_order,
         )
 
+    def test_validate_sub_supply_type_for_same_gstin(self):
+        """Test sub supply type validation for same GSTIN scenarios"""
+        dn = create_transaction(
+            doctype="Delivery Note",
+            company_gstin="05AAACG2115R1ZN",
+            billing_address_gstin="05AAACG2115R1ZN",
+            do_not_submit=True,
+        )
+
+        # Test invalid sub supply type "Job Work" for same GSTIN outward supply
+        ewaybill_data = EWaybillData(dn)
+        ewaybill_data.transaction_details = frappe._dict(
+            {"supply_type": "O", "sub_supply_type": "Job Work"}  # Outward
+        )
+        ewaybill_data.bill_from = frappe._dict({"gstin": "05AAACG2115R1ZN"})
+        ewaybill_data.bill_to = frappe._dict({"gstin": "05AAACG2115R1ZN"})
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"Sub Supply Type .* is not allowed with.*same GSTIN"),
+            ewaybill_data.validate_sub_supply_type,
+        )
+
     @responses.activate
     def test_invoice_update_after_submit(self):
         si = self.create_sales_invoice_for("goods_item_with_ewaybill")

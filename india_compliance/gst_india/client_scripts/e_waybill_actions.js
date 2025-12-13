@@ -1504,7 +1504,7 @@ function is_e_waybill_enabled(doctype) {
     if (doctype === "Delivery Note") {
         return gst_settings.enable_e_waybill_from_dn;
     }
-    if (doctype === "Purchase Invoice") {
+    if  (["Purchase Invoice", "Purchase Receipt"].includes(doctype)) {
         return gst_settings.enable_e_waybill_from_pi;
     }
     if (["Stock Entry", "Subcontracting Receipt"].includes(doctype)) {
