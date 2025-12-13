@@ -1215,7 +1215,7 @@
         "request_data": {
             "userGstin": "05AAACG2115R1ZN",
             "supplyType": "O",
-            "subSupplyType": 4,
+            "subSupplyType": 5,
             "docType": "CHL",
             "docNo": "test_invoice_no",
             "docDate": "19/07/2024",
