@@ -521,6 +521,13 @@ function get_generate_e_waybill_dialog(opts, frm, transporter_only = false) {
     return d;
 }
 
+function is_foreign_transaction(frm) {
+    return (
+        frm.doc?.gst_category === "Overseas" &&
+        frm.doc?.place_of_supply === "96-Other Countries"
+    );
+}
+
 function get_sub_supply_type_options(frm) {
     let supply_type, sub_supply_type, sub_supply_desc, document_type;
 
@@ -556,18 +563,18 @@ function get_sub_supply_type_options(frm) {
 
         if (frm.doc.is_return === 1) {
             sub_supply_type = [
-                "For Own Use",
-                "Exhibition or Fairs",
                 "Job Work Returns",
                 "SKD/CKD",
+                "For Own Use",
+                "Exhibition or Fairs",
                 "Others",
             ];
         } else {
             sub_supply_type = [
-                "For Own Use",
-                "Exhibition or Fairs",
                 "Job Work",
                 "SKD/CKD",
+                "For Own Use",
+                "Exhibition or Fairs",
                 "Line Sales",
                 "Recipient Not Known",
                 "Others",

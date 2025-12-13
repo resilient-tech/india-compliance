@@ -1670,6 +1670,9 @@ class EWaybillData(GSTTransactionData):
         return type_map.get(supply_type, {}).get(same_gstin, [])
 
     def _validate_sub_supply_for_same_gstin(self, sub_supply_type):
+        if sub_supply_type == "Export":
+            return
+
         same_gstin = self.bill_from.gstin == self.bill_to.gstin
         supply_type = self.transaction_details.get("supply_type")
         supply_type = "Inward" if supply_type == "I" else "Outward"
