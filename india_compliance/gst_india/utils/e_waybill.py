@@ -128,12 +128,8 @@ def generate_e_waybills(doctype, docnames, force=False, values=None):
         try:
             doc = load_doc(doctype, docname, "submit")
 
-            # Apply values to document if provided (for bulk operations)
             if values:
-                update_transaction(
-                    doc,
-                    frappe.parse_json(values) if isinstance(values, str) else values,
-                )
+                update_transaction(doc, frappe.parse_json(values))
                 send_updated_doc(doc)
 
             _generate_e_waybill(doc, force=force)
