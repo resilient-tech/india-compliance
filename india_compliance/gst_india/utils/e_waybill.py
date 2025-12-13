@@ -122,7 +122,6 @@ def generate_e_waybills(doctype, docnames, force=False, values=None):
 
             if values:
                 update_transaction(doc, frappe.parse_json(values))
-                send_updated_doc(doc)
 
             _generate_e_waybill(doc, force=force)
         except Exception:
