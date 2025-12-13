@@ -1591,7 +1591,9 @@ function add_bulk_action_for_documents(list_view, label, callback, allowed_statu
     list_view.page.add_actions_menu_item(label, async () => {
         const selected_docs = list_view.get_checked_items();
         const submitted_docs = await validate_doc_status(selected_docs, allowed_status);
-        if (submitted_docs) callback(submitted_docs);
+        if (submitted_docs && submitted_docs.length > 0) {
+            callback(submitted_docs);
+        }
     });
 }
 
