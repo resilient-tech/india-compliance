@@ -1129,7 +1129,7 @@ def validate_is_e_waybill_api_enabled(doctype: str, throw: bool = True) -> bool:
     enabled = setting_map.get(doctype, False)
 
     if not enabled:
-        _throw(f"Please enable e-Waybill for {doctype} in GST Settings")
+        _throw(_("Please enable e-Waybill for {0} in GST Settings").format(doctype))
 
     return enabled
 
