@@ -1508,7 +1508,7 @@ function is_e_waybill_enabled(doctype) {
         return gst_settings.enable_e_waybill_from_pi;
     }
     if (["Stock Entry", "Subcontracting Receipt"].includes(doctype)) {
-        return gst_settings.enable_e_waybill_from_sc;
+        return gst_settings.enable_e_waybill_for_sc;
     }
 
     return false;

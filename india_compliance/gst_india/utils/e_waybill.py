@@ -1119,9 +1119,9 @@ def validate_is_e_waybill_api_enabled(doctype: str, throw: bool = True) -> bool:
 
     setting_map = {
         "Sales Invoice": True,
-        "Delivery Note": gst_settings.enable_e_waybill_for_delivery_note,
-        "Purchase Invoice": gst_settings.enable_e_waybill_for_pi,
-        "Purchase Receipt": gst_settings.enable_e_waybill_for_pi,
+        "Delivery Note": gst_settings.enable_e_waybill_from_dn,
+        "Purchase Invoice": gst_settings.enable_e_waybill_from_pi,
+        "Purchase Receipt": gst_settings.enable_e_waybill_from_pi,
         "Stock Entry": gst_settings.enable_e_waybill_for_sc,
         "Subcontracting Receipt": gst_settings.enable_e_waybill_for_sc,
     }
