@@ -339,17 +339,10 @@ function show_generate_e_waybill_dialog(frm) {
 
 function get_generate_e_waybill_dialog(opts, frm, transporter_only = false) {
     if (!frm) frm = { doc: {} };
-    const is_foreign_transaction =
-        frm.doc.gst_category === "Overseas" &&
-        frm.doc.place_of_supply === "96-Other Countries";
 
     const fields = [];
-
     if (!transporter_only) {
-        const ewaybill_defaults = get_sub_suppy_type_options(
-            frm,
-            is_foreign_transaction
-        );
+        const ewaybill_defaults = get_sub_supply_type_options(frm);
 
         fields.push(
             {
@@ -498,7 +491,7 @@ function get_generate_e_waybill_dialog(opts, frm, transporter_only = false) {
 
     if (
         ["Sales Invoice", "Delivery Note"].includes(frm.doctype) &&
-        is_foreign_transaction
+        is_foreign_transaction(frm)
     ) {
         fields.splice(5, 0, {
             label: "Origin Port / Border Checkpost Address",
@@ -528,7 +521,7 @@ function get_generate_e_waybill_dialog(opts, frm, transporter_only = false) {
     return d;
 }
 
-function get_sub_suppy_type_options(frm, is_foreign_transaction) {
+function get_sub_supply_type_options(frm) {
     let supply_type, sub_supply_type, sub_supply_desc, document_type;
 
     if (frm.doctype === "Delivery Note" && frm?.doc?.company_gstin) {
@@ -558,7 +551,7 @@ function get_sub_suppy_type_options(frm, is_foreign_transaction) {
             }
         }
     } else if (frm.doctype === "Delivery Note") {
-        supply_type = ["Inward", "Outward"];
+        supply_type = ["Outward", "Inward"];
         document_type = "Delivery Challan";
 
         if (frm.doc.is_return === 1) {
@@ -609,7 +602,7 @@ function get_sub_suppy_type_options(frm, is_foreign_transaction) {
     } else if (
         frm.doctype === "Sales Invoice" &&
         frm.doc.is_return === 0 &&
-        is_foreign_transaction
+        is_foreign_transaction(frm)
     ) {
         supply_type = ["Outward"];
         sub_supply_type = ["Export"];
@@ -671,17 +664,20 @@ function update_sub_supply_type_options(dialog, frm) {
     const supply_type = dialog.get_value("supply_type");
     if (!supply_type) return;
 
-    // Create temporary frm object with selected supply type to get correct options
     const temp_frm = {
         ...frm,
-        doc: { ...frm.doc, is_return: supply_type === "Inward" ? 1 : 0 },
+        doc: {
+            ...frm.doc,
+            is_return: supply_type === "Inward" ? 1 : 0,
+        },
     };
-    const options = get_sub_suppy_type_options(temp_frm);
 
+    const options = get_sub_supply_type_options(temp_frm);
+    const sub_supply_options = options?.sub_supply_type || [];
     const sub_supply_field = dialog.get_field("sub_supply_type");
-    sub_supply_field.df.options = options.sub_supply_type.join("\n");
+    sub_supply_field.df.options = sub_supply_options.join("\n");
     sub_supply_field.refresh();
-    dialog.set_value("sub_supply_type", options.sub_supply_type[0]);
+    dialog.set_value("sub_supply_type", sub_supply_options[0]);
 }
 
 function show_fetch_if_generated_dialog(frm) {
@@ -1504,7 +1500,7 @@ function is_e_waybill_enabled(doctype) {
     if (doctype === "Delivery Note") {
         return gst_settings.enable_e_waybill_from_dn;
     }
-    if  (["Purchase Invoice", "Purchase Receipt"].includes(doctype)) {
+    if (["Purchase Invoice", "Purchase Receipt"].includes(doctype)) {
         return gst_settings.enable_e_waybill_from_pi;
     }
     if (["Stock Entry", "Subcontracting Receipt"].includes(doctype)) {
