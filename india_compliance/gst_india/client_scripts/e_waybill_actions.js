@@ -1496,62 +1496,74 @@ function show_sandbox_mode_indicator() {
         );
 }
 
+function is_e_waybill_enabled(doctype) {
+    if (!gst_settings.enable_e_waybill) return false;
+
+    if (doctype === "Sales Invoice") return true;
+
+    if (doctype === "Delivery Note") {
+        return gst_settings.enable_e_waybill_from_dn;
+    }
+    if (doctype === "Purchase Invoice") {
+        return gst_settings.enable_e_waybill_from_pi;
+    }
+    if (["Stock Entry", "Subcontracting Receipt"].includes(doctype)) {
+        return gst_settings.enable_e_waybill_from_sc;
+    }
+
+    return false;
+}
+
 /********
  * Bulk Operations for List Views
  *******/
 
 function setup_bulk_e_waybill_actions(doctype, list_view) {
     if (!frappe.perm.has_perm(doctype, 0, "submit")) return;
+    if (!is_e_waybill_enabled(doctype)) return;
 
     setup_bulk_e_waybill_json_action(doctype, list_view);
     setup_bulk_transporter_update_action(doctype, list_view);
     setup_bulk_e_waybill_generation_action(doctype, list_view);
     setup_bulk_e_waybill_print_action(doctype, list_view);
+}
+
+function setup_bulk_e_invoice_actions(doctype, list_view) {
+    if (!frappe.perm.has_perm(doctype, 0, "submit")) return;
+    if (!india_compliance.is_e_invoice_enabled()) return;
+
     setup_bulk_e_invoice_generation_action(doctype, list_view);
 }
 
 function setup_bulk_e_waybill_json_action(doctype, list_view) {
-    if (!gst_settings.enable_e_waybill) return;
     if (doctype !== "Sales Invoice") return;
 
     add_bulk_action_for_documents(list_view, __("Generate e-Waybill JSON"), docnames =>
-        generate_e_waybill_json_for_doctype(doctype, docnames)
+        generate_e_waybill_json(doctype, docnames)
     );
 }
 
 function setup_bulk_transporter_update_action(doctype, list_view) {
-    if (!gst_settings.enable_e_waybill) return;
-
-    if (doctype === "Delivery Note" && !gst_settings.enable_e_waybill_from_dn) {
-        return;
-    }
-
     add_bulk_action_for_documents(
         list_view,
         __("Bulk Update Transporter Detail"),
-        docnames => show_bulk_update_transporter_dialog_for_doctype(doctype, docnames),
+        docnames => show_bulk_update_transporter_dialog(doctype, docnames),
         [0, 1]
     );
 }
 
 function setup_bulk_e_waybill_generation_action(doctype, list_view) {
-    if (!gst_settings.enable_e_waybill) return;
-
-    if (doctype === "Delivery Note" && !gst_settings.enable_e_waybill_from_dn) {
-        return;
-    }
-
     if (doctype === "Sales Invoice") {
         add_bulk_action_for_documents(
             list_view,
             __("Enqueue Bulk e-Waybill Generation"),
-            docnames => enqueue_bulk_e_waybill_generation_for_doctype(doctype, docnames)
+            docnames => enqueue_bulk_e_waybill_generation(doctype, docnames)
         );
     } else {
         add_bulk_action_for_documents(
             list_view,
             __("Enqueue Bulk e-Waybill Generation"),
-            docnames => show_bulk_e_waybill_generation_dialog(doctype, docnames)
+            docnames => show_bulk_generate_e_waybill_dialog(doctype, docnames)
         );
     }
 }
@@ -1560,18 +1572,18 @@ function setup_bulk_e_waybill_print_action(doctype, list_view) {
     if (!frappe.model.can_print("e-Waybill Log")) return;
 
     add_bulk_action_for_documents(list_view, __("Print e-Waybill"), docnames =>
-        bulk_e_waybill_print_for_doctype(doctype, docnames)
+        bulk_e_waybill_print(doctype, docnames)
     );
 }
 
 function setup_bulk_e_invoice_generation_action(doctype, list_view) {
-    if (doctype === "Sales Invoice" && india_compliance.is_e_invoice_enabled()) {
-        add_bulk_action_for_documents(
-            list_view,
-            __("Enqueue Bulk e-Invoice Generation"),
-            enqueue_bulk_e_invoice_generation
-        );
-    }
+    if (doctype !== "Sales Invoice") return;
+
+    add_bulk_action_for_documents(
+        list_view,
+        __("Enqueue Bulk e-Invoice Generation"),
+        enqueue_bulk_e_invoice_generation
+    );
 }
 
 function add_bulk_action_for_documents(list_view, label, callback, allowed_status) {
@@ -1583,7 +1595,7 @@ function add_bulk_action_for_documents(list_view, label, callback, allowed_statu
     });
 }
 
-async function generate_e_waybill_json_for_doctype(doctype, docnames) {
+async function generate_e_waybill_json(doctype, docnames) {
     const ewb_data = await frappe.xcall(
         "india_compliance.gst_india.utils.e_waybill.generate_e_waybill_json",
         { doctype: doctype, docnames }
@@ -1592,7 +1604,7 @@ async function generate_e_waybill_json_for_doctype(doctype, docnames) {
     india_compliance.trigger_file_download(ewb_data, get_e_waybill_file_name());
 }
 
-function show_bulk_update_transporter_dialog_for_doctype(doctype, docnames) {
+function show_bulk_update_transporter_dialog(doctype, docnames) {
     const frm = { doctype: doctype, doc: {} };
     const d = get_generate_e_waybill_dialog(
         {
@@ -1618,7 +1630,7 @@ function show_bulk_update_transporter_dialog_for_doctype(doctype, docnames) {
     d.show();
 }
 
-async function bulk_e_waybill_print_for_doctype(doctype, docnames) {
+async function bulk_e_waybill_print(doctype, docnames) {
     frappe.call({
         method: "india_compliance.gst_india.utils.e_waybill.get_valid_and_invalid_e_waybill_log",
         args: {
@@ -1652,11 +1664,7 @@ async function bulk_e_waybill_print_for_doctype(doctype, docnames) {
     });
 }
 
-async function enqueue_bulk_e_waybill_generation_for_doctype(
-    doctype,
-    docnames,
-    values
-) {
+async function enqueue_bulk_e_waybill_generation(doctype, docnames, values) {
     const args = { doctype, docnames };
     if (values) args.values = values;
     await enqueue_bulk_generation(
@@ -1672,7 +1680,7 @@ async function enqueue_bulk_e_invoice_generation(docnames) {
     );
 }
 
-function show_bulk_e_waybill_generation_dialog(doctype, docnames) {
+function show_bulk_generate_e_waybill_dialog(doctype, docnames) {
     const frm = { doctype: doctype, doc: {} };
     const d = get_generate_e_waybill_dialog(
         {
@@ -1680,11 +1688,7 @@ function show_bulk_e_waybill_generation_dialog(doctype, docnames) {
             primary_action_label: __("Generate e-Waybills"),
             primary_action(values) {
                 d.hide();
-                enqueue_bulk_e_waybill_generation_for_doctype(
-                    doctype,
-                    docnames,
-                    values
-                );
+                enqueue_bulk_e_waybill_generation(doctype, docnames, values);
             },
         },
         frm
