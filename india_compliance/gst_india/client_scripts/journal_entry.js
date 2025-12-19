@@ -1,12 +1,17 @@
 frappe.ui.form.on("Journal Entry", {
-    company: set_gstin_options,
+    onload: (frm) => set_gstin_options(frm, frm.is_new()),
+    company: (frm) => set_gstin_options(frm, true),
 });
 
-async function set_gstin_options(frm) {
-    const options = await india_compliance.get_gstin_options(frm.doc.company);
+async function set_gstin_options(frm, set_value) {
+    const company = frm.doc.company;
+    if (!company) return;
+
+    const options = await india_compliance.get_gstin_options(company);
 	frm.get_field("company_gstin").set_data(options);
 
-    frm.set_value("company_gstin", options.length === 1 ? options[0] : "");
+    if (set_value)
+        frm.set_value("company_gstin", options.length === 1 ? options[0] : "");
 }
 
 frappe.ui.form.on("Journal Entry Account", {
