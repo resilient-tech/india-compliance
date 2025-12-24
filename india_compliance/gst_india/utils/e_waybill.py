@@ -1726,6 +1726,7 @@ class EWaybillData(GSTTransactionData):
 
             self.bill_from.gstin = _get_sandbox_gstin(self.bill_from, 0)
             self.bill_to.gstin = _get_sandbox_gstin(self.bill_to, 1)
+
         data = {
             "userGstin": self.transaction_details.company_gstin,
             "supplyType": self.transaction_details.supply_type,
@@ -1749,7 +1750,7 @@ class EWaybillData(GSTTransactionData):
             "toAddr2": self.ship_to.address_line2,
             "toPlace": self.ship_to.city,
             "toPincode": self.ship_to.pincode,
-            "toStateCode": self.bill_to.state_number,
+            "toStateCode": self.transaction_details.place_of_supply,
             "actToStateCode": self.ship_to.state_number,
             "totalValue": self.transaction_details.total,
             "cgstValue": self.transaction_details.total_cgst_amount,

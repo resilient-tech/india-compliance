@@ -94,6 +94,9 @@ class GSTTransactionData:
             for tax_key in tax_total_keys:
                 self.transaction_details[tax_key] += abs(row.get(tax_key[6:], 0))
 
+        place_of_supply = self.doc.get("place_of_supply")
+        place_of_supply = int(place_of_supply[:2]) if place_of_supply else None
+
         self.transaction_details.update(
             {
                 "company_name": self.sanitize_value(self.doc.company),
@@ -124,6 +127,7 @@ class GSTTransactionData:
                 "company_gstin": self.doc.company_gstin,
                 "name": self.doc.name,
                 "other_charges": 0,
+                "place_of_supply": place_of_supply,
             }
         )
 
