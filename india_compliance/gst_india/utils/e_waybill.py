@@ -1710,7 +1710,7 @@ class EWaybillData(GSTTransactionData):
             "toAddr2": self.ship_to.address_line2,
             "toPlace": self.ship_to.city,
             "toPincode": self.ship_to.pincode,
-            "toStateCode": self.bill_to.state_number,
+            "toStateCode": self.transaction_details.place_of_supply,
             "actToStateCode": self.ship_to.state_number,
             "totalValue": self.transaction_details.total,
             "cgstValue": self.transaction_details.total_cgst_amount,

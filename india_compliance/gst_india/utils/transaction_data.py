@@ -68,6 +68,24 @@ class GSTTransactionData:
             if row.gst_treatment in ("Taxable", "Zero-Rated"):
                 total_taxable_value += row.taxable_value
 
+<<<<<<< HEAD
+=======
+            if self.is_purchase_rcm:
+                continue
+
+            # eg: Skip reverse charge tax for e-Waybill
+            if self.doc.get("is_reverse_charge") and getattr(
+                self, "exclude_reverse_charge_tax", False
+            ):
+                continue
+
+            for tax_key in tax_total_keys:
+                self.transaction_details[tax_key] += abs(row.get(tax_key[6:], 0))
+
+        place_of_supply = self.doc.get("place_of_supply")
+        place_of_supply = int(place_of_supply[:2]) if place_of_supply else None
+
+>>>>>>> 461e2343 (fix: handle overseas billing and transport within India)
         self.transaction_details.update(
             {
                 "company_name": self.sanitize_value(self.doc.company),
@@ -98,6 +116,7 @@ class GSTTransactionData:
                 "company_gstin": self.doc.company_gstin,
                 "name": self.doc.name,
                 "other_charges": 0,
+                "place_of_supply": place_of_supply,
             }
         )
         self.update_transaction_details()
