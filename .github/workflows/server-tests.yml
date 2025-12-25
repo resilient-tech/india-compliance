@@ -44,7 +44,7 @@ jobs:
 
         services:
             mariadb:
-                image: mariadb:10.6
+                image: mariadb:11.8
                 env:
                     MARIADB_ROOT_PASSWORD: 'travis'
                 ports:
@@ -58,12 +58,12 @@ jobs:
             - name: Setup Python
               uses: actions/setup-python@v6
               with:
-                  python-version: "3.11"
+                  python-version: "3.14"
 
             - name: Setup Node
               uses: actions/setup-node@v6
               with:
-                  node-version: 20
+                  node-version: 24
                   check-latest: true
 
             - name: Add to Hosts
