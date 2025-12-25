@@ -81,10 +81,8 @@ class TestEWaybill(IntegrationTestCase):
             "request_data"
         )
 
-        self.assertDictContainsSubset(
-            e_waybill_data,
-            test_data,
-        )
+        for key, value in e_waybill_data.items():
+            self.assertEqual(test_data.get(key), value, f"Mismatch for key '{key}'")
 
     @change_settings("GST Settings", {"fetch_e_waybill_data": 1})
     @responses.activate
@@ -1126,10 +1124,10 @@ class TestEWaybill(IntegrationTestCase):
         purchase_invoice.submit()
 
         #  Test get_data
-        self.assertDictContainsSubset(
-            EWaybillData(purchase_invoice).get_data(),
-            purchase_invoice_data.get("request_data"),
-        )
+        e_waybill_data = EWaybillData(purchase_invoice).get_data()
+        test_data = purchase_invoice_data.get("request_data")
+        for key, value in e_waybill_data.items():
+            self.assertEqual(test_data.get(key), value, f"Mismatch for key '{key}'")
 
         self._generate_e_waybill(
             purchase_invoice.name, "Purchase Invoice", purchase_invoice_data
