@@ -2308,9 +2308,8 @@ class BooksDataMapper:
 
                     invoice[key] = flt(invoice[key], self.PRECISION)
 
-                doc_value = flt(
-                    sum([invoice.get(field, 0) for field in tax_fields]), self.PRECISION
-                )
+                doc_value = sum([invoice.get(field, 0) for field in tax_fields])
+
                 invoice[inv_f.DOC_VALUE] = flt(doc_value, self.PRECISION)
 
             if hasattr(self, "invoice_totals"):
