@@ -12,6 +12,7 @@ on:
       secrets:
         codecov_token:
 
+
     pull_request:
         paths-ignore:
             - "**.css"
@@ -126,18 +127,10 @@ jobs:
     coverage:
         name: Coverage Wrap Up
         env:
-            CODECOV_TOKEN: ${{ secrets.codecov_token || secrets.CODECOV_TOKEN }}
+          CODECOV_TOKEN: ${{ secrets.codecov_token || secrets.CODECOV_TOKEN }}
         needs: tests
         runs-on: ubuntu-latest
         steps:
-        - name: Check for Codecov Token
-          shell: bash
-          run: |
-            if [ -z "$CODECOV_TOKEN" ]; then
-              echo "::error::CODECOV_TOKEN is missing!"
-              exit 1
-            fi
-
         - name: Clone
           uses: actions/checkout@v6
 
@@ -145,10 +138,8 @@ jobs:
           uses: actions/download-artifact@v7
 
         - name: Upload coverage data
-          if: github.event.repository.name == 'india-compliance' || env.CODECOV_TOKEN != ''
+          if: env.CODECOV_TOKEN != ''
           uses: codecov/codecov-action@v5
-          env:
-            CODECOV_TOKEN: ${{ env.CODECOV_TOKEN }}
           with:
             name: MariaDB
             fail_ci_if_error: true
