@@ -12,6 +12,7 @@ on:
       secrets:
         codecov_token:
 
+
     pull_request:
         paths-ignore:
             - "**.css"
@@ -44,7 +45,7 @@ jobs:
 
         services:
             mariadb:
-                image: mariadb:10.6
+                image: mariadb:11.8
                 env:
                     MARIADB_ROOT_PASSWORD: 'travis'
                 ports:
@@ -58,12 +59,12 @@ jobs:
             - name: Setup Python
               uses: actions/setup-python@v6
               with:
-                  python-version: "3.11"
+                  python-version: "3.14"
 
             - name: Setup Node
               uses: actions/setup-node@v6
               with:
-                  node-version: 20
+                  node-version: 24
                   check-latest: true
 
             - name: Add to Hosts
@@ -125,7 +126,7 @@ jobs:
 
     coverage:
         name: Coverage Wrap Up
-        if: secrets.CODECOV_TOKEN != ''
+        if: github.event_name == 'push'
         needs: tests
         runs-on: ubuntu-latest
         steps:
@@ -141,4 +142,4 @@ jobs:
             name: MariaDB
             fail_ci_if_error: true
             verbose: true
-            token: ${{ secrets.CODECOV_TOKEN }}
+            token: ${{ secrets.codecov_token || secrets.CODECOV_TOKEN }}
