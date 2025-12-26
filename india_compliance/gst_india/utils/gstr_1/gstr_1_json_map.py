@@ -763,7 +763,7 @@ class NilRated(GSTR1DataMapper):
         if all(amount == 0 for amount in amounts):
             return
 
-        invoice_data[inv_f.TAXABLE_VALUE] = sum(amounts)
+        invoice_data[inv_f.TAXABLE_VALUE] = flt(sum(amounts), 2)
         return invoice_data
 
     # value formatters
@@ -1254,14 +1254,17 @@ class HSNSUM(GSTR1DataMapper):
         if for_gov:
             return data
 
-        data[inv_f.DOC_VALUE] = sum(
-            (
-                data.get(inv_f.TAXABLE_VALUE, 0),
-                data.get(inv_f.IGST, 0),
-                data.get(inv_f.CGST, 0),
-                data.get(inv_f.SGST, 0),
-                data.get(inv_f.CESS, 0),
-            )
+        data[inv_f.DOC_VALUE] = flt(
+            sum(
+                (
+                    data.get(inv_f.TAXABLE_VALUE, 0),
+                    data.get(inv_f.IGST, 0),
+                    data.get(inv_f.CGST, 0),
+                    data.get(inv_f.SGST, 0),
+                    data.get(inv_f.CESS, 0),
+                )
+            ),
+            2,
         )
 
         if (message := data.get(inv_f.ERROR_MSG, "").strip()) and (
@@ -2305,7 +2308,9 @@ class BooksDataMapper:
 
                     invoice[key] = flt(invoice[key], self.PRECISION)
 
-                doc_value = sum([invoice.get(field, 0) for field in tax_fields])
+                doc_value = flt(
+                    sum([invoice.get(field, 0) for field in tax_fields]), self.PRECISION
+                )
                 invoice[inv_f.DOC_VALUE] = flt(doc_value, self.PRECISION)
 
             if hasattr(self, "invoice_totals"):
