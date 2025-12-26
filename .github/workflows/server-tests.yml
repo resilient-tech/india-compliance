@@ -126,8 +126,6 @@ jobs:
 
     coverage:
         name: Coverage Wrap Up
-        env:
-          CODECOV_TOKEN: ${{ secrets.codecov_token || secrets.CODECOV_TOKEN }}
         needs: tests
         runs-on: ubuntu-latest
         steps:
@@ -138,9 +136,9 @@ jobs:
           uses: actions/download-artifact@v7
 
         - name: Upload coverage data
-          if: env.CODECOV_TOKEN != ''
           uses: codecov/codecov-action@v5
           with:
             name: MariaDB
             fail_ci_if_error: true
             verbose: true
+            token: ${{ secrets.codecov_token || secrets.CODECOV_TOKEN }}
