@@ -733,7 +733,6 @@ class EInvoiceData(GSTTransactionData):
                 ),
                 "invoice_type": invoice_type,
                 "ecommerce_gstin": self.doc.ecommerce_gstin,
-                "place_of_supply": self.doc.place_of_supply.split("-")[0],
             }
         )
 
@@ -862,9 +861,9 @@ class EInvoiceData(GSTTransactionData):
                     self.shipping_address.update(buyer)
 
                 if self.transaction_details.total_igst_amount > 0:
-                    self.transaction_details.place_of_supply = "36"
+                    self.transaction_details.pos_state_code = "36"
                 else:
-                    self.transaction_details.place_of_supply = "02"
+                    self.transaction_details.pos_state_code = "02"
 
         invoice_data = {
             "Version": "1.1",
@@ -898,7 +897,7 @@ class EInvoiceData(GSTTransactionData):
                 "Loc": self.billing_address.city,
                 "Pin": self.billing_address.pincode,
                 "Stcd": self.billing_address.state_number,
-                "Pos": self.transaction_details.place_of_supply,
+                "Pos": self.transaction_details.pos_state_code,
             },
             "ItemList": self.item_list,
             "ValDtls": {
