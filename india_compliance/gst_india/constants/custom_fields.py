@@ -116,7 +116,7 @@ CUSTOM_FIELDS = {
             "label": "Company GSTIN",
             "fieldtype": "Data",
             "insert_after": "billing_address_display",
-            "fetch_from": "company.gstin",
+            "fetch_from": "billing_address.gstin",
             "print_hide": 1,
             "read_only": 1,
             "translatable": 0,
