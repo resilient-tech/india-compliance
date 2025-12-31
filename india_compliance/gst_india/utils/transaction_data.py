@@ -68,6 +68,8 @@ class GSTTransactionData:
             if row.gst_treatment in ("Taxable", "Zero-Rated"):
                 total_taxable_value += row.taxable_value
 
+        pos_state_code = self.doc.place_of_supply.split("-")[0]
+
         self.transaction_details.update(
             {
                 "company_name": self.sanitize_value(self.doc.company),
@@ -98,6 +100,7 @@ class GSTTransactionData:
                 "company_gstin": self.doc.company_gstin,
                 "name": self.doc.name,
                 "other_charges": 0,
+                "pos_state_code": pos_state_code,
             }
         )
         self.update_transaction_details()

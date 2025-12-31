@@ -172,6 +172,7 @@ class TestTransactionData(FrappeTestCase):
                 "total_cess_amount": 0,
                 "total_cess_non_advol_amount": 0,
                 "other_charges": 0.0,
+                "pos_state_code": doc.place_of_supply.split("-")[0],
             },
         )
 
@@ -215,6 +216,7 @@ class TestTransactionData(FrappeTestCase):
                 "total_igst_amount": 0,
                 "total_cess_amount": 0,
                 "total_cess_non_advol_amount": 0,
+                "pos_state_code": doc.place_of_supply.split("-")[0],
             },
         )
 
