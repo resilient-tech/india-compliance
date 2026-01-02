@@ -53,7 +53,7 @@ from india_compliance.gst_india.utils.gstr_utils import (
     publish_action_status_notification,
 )
 from india_compliance.gst_india.utils.itc_claim import (
-    bulk_update_itc_claim_period_for_ims_action,
+    set_itc_claim_period_on_ims_action,
 )
 from india_compliance.setup_wizard import can_fetch_gstin_info
 
@@ -186,7 +186,7 @@ class GSTInvoiceManagementSystem(Document):
 
         # Bulk update ITC claim periods for linked Purchase Invoices
 
-        bulk_update_itc_claim_period_for_ims_action(
+        set_itc_claim_period_on_ims_action(
             invoice_names, action, ims_period=self.period
         )
 

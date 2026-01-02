@@ -18,7 +18,7 @@ from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
 from india_compliance.gst_india.constants import GST_TAX_TYPES, TAXABLE_GST_TREATMENTS
 from india_compliance.gst_india.utils import get_gstin_list, get_party_for_gstin
 from india_compliance.gst_india.utils.gstr_2 import IMPORT_CATEGORY, ReturnType
-from india_compliance.gst_india.utils.itc_claim import bulk_set_itc_claim_period
+from india_compliance.gst_india.utils.itc_claim import set_itc_claim_period_on_match
 
 
 class Fields(Enum):
@@ -958,7 +958,9 @@ class Reconciler(BaseReconciliation):
                 k: v for k, v in inward_supply_map.items() if v in doc_names
             }
             if doc_inward_map:
-                bulk_set_itc_claim_period(doc_names, doc_inward_map, doctype=doctype)
+                set_itc_claim_period_on_match(
+                    doc_names, doc_inward_map, doctype=doctype
+                )
 
     def get_pan_level_data(self, data):
         out = {}

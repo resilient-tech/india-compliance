@@ -191,7 +191,9 @@ class GSTR3BQuery:
             .where(IfNull(self.PI.itc_classification, "") != "Import Of Goods")
         )
 
-        return self.get_query_with_common_filters(query, self.PI)
+        return self.get_query_with_common_filters(
+            query, self.PI, use_itc_claim_period=True
+        )
 
     def get_base_boe_query(self):
         query = (
@@ -290,12 +292,34 @@ class GSTR3BQuery:
 
         return self.get_query_with_common_filters(query, self.JE)
 
-    def get_query_with_common_filters(self, query, doc):
+    def get_query_with_common_filters(self, query, doc, use_itc_claim_period=False):
+        """
+        Apply common filters to the query.
+
+        Args:
+            use_itc_claim_period: If True and filter_by_claim_period is enabled,
+                filter Purchase Invoices by itc_claim_period instead of posting_date.
+        """
         query = query.where(
-            (doc.docstatus == 1)
-            & (doc.posting_date[self.filters.from_date : self.filters.to_date])
-            & (doc.company == self.filters.company)
+            (doc.docstatus == 1) & (doc.company == self.filters.company)
         )
+
+        # TODO: Modify reports
+        # Determine date/period filter based on settings
+        if (
+            use_itc_claim_period
+            and self.filters.get("filter_by_claim_period")
+            and self.filters.get("return_period")
+        ):
+            # Filter by ITC claim period (MMYYYY format)
+            query = query.where(
+                IfNull(doc.itc_claim_period, "") == self.filters.return_period
+            )
+        else:
+            # Default: Filter by posting date range
+            query = query.where(
+                doc.posting_date[self.filters.from_date : self.filters.to_date]
+            )
 
         if self.filters.company_gstin:
             query = query.where(doc.company_gstin == self.filters.company_gstin)
