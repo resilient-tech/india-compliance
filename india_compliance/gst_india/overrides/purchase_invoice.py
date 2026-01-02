@@ -13,6 +13,7 @@ from india_compliance.gst_india.overrides.transaction import (
 )
 from india_compliance.gst_india.utils import is_api_enabled, validate_invoice_number
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
+from india_compliance.gst_india.utils.itc_claim import set_or_validate_itc_claim_period
 
 
 def onload(doc, method=None):
@@ -53,6 +54,7 @@ def validate(doc, method=None):
     validate_reverse_charge(doc)
     validate_supplier_invoice_number(doc)
     validate_with_inward_supply(doc)
+    set_or_validate_itc_claim_period(doc)
     set_reconciliation_status(doc)
     set_pending_boe_qty(doc)
 

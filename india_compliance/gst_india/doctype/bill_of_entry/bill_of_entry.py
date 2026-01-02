@@ -23,6 +23,7 @@ from india_compliance.gst_india.overrides.transaction import (
     set_gst_tax_type,
 )
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
+from india_compliance.gst_india.utils.itc_claim import set_or_validate_itc_claim_period
 from india_compliance.gst_india.utils.taxes_controller import (
     CustomTaxController,
     update_gst_details,
@@ -66,6 +67,7 @@ class BillofEntry(Document):
         self.reconciliation_status = "Unreconciled"
         update_gst_details(self)
         update_valuation_rate(self)
+        set_or_validate_itc_claim_period(self)
 
     def on_submit(self):
         gl_entries = self.get_gl_entries()

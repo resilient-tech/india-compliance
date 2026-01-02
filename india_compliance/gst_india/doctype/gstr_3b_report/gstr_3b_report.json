@@ -8,9 +8,11 @@
  "field_order": [
   "company",
   "enqueue_report",
+  "filter_by",
   "column_break_pvct",
   "company_gstin",
   "generation_status",
+  "filing_status",
   "column_break_ddqq",
   "year",
   "column_break_vtyi",
@@ -54,6 +56,14 @@
    "report_hide": 1
   },
   {
+   "default": "ITC Claim Period",
+   "description": "Filter purchases by ITC Claim Period or Posting Date",
+   "fieldname": "filter_by",
+   "fieldtype": "Select",
+   "label": "Filter By",
+   "options": "ITC Claim Period\nPosting Date"
+  },
+  {
    "fieldname": "section_break_yqh7",
    "fieldtype": "Section Break",
    "hide_border": 1
@@ -63,6 +73,14 @@
    "fieldtype": "Data",
    "hidden": 1,
    "label": "Status",
+   "read_only": 1
+  },
+  {
+   "default": "Not Filed",
+   "fieldname": "filing_status",
+   "fieldtype": "Select",
+   "label": "Filing Status",
+   "options": "Not Filed\nFiled",
    "read_only": 1
   },
   {
