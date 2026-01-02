@@ -4,7 +4,7 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     BaseUtil,
     ReconciledData,
 )
-from india_compliance.gst_india.utils.itc_claim import bulk_set_itc_claim_period
+from india_compliance.gst_india.utils.itc_claim import set_itc_claim_period_on_match
 
 
 def link_documents(purchase_invoice_name, inward_supply_name, link_doctype):
@@ -38,7 +38,7 @@ def link_documents(purchase_invoice_name, inward_supply_name, link_doctype):
     frappe.db.set_value("GST Inward Supply", inward_supply_name, link_doc)
     set_reconciliation_status(link_doctype, (purchase_invoice_name,), "Match Found")
 
-    bulk_set_itc_claim_period(
+    set_itc_claim_period_on_match(
         [purchase_invoice_name],
         {inward_supply_name: purchase_invoice_name},
         doctype=link_doctype,
