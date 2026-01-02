@@ -27,6 +27,7 @@ from india_compliance.gst_india.utils import (
 )
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR11A11BData
+from india_compliance.gst_india.utils.itc_claim import format_period
 
 VALUES_TO_UPDATE = ["iamt", "camt", "samt", "csamt"]
 GST_TAX_TYPE_MAP = {
@@ -68,6 +69,9 @@ class GSTR3BReport(Document):
             self.to_date = get_last_day(
                 f"{cint(self.year)}-{self.month_or_quarter_no[1]}-01"
             )
+
+            # MMYYYY format for ITC claim period
+            self.return_period = format_period(self.from_date)
 
             self.get_outward_supply_details("Sales Invoice")
             self.set_outward_taxable_supplies()
@@ -268,7 +272,6 @@ class GSTR3BReport(Document):
             .where(
                 (purchase_invoice.docstatus == 1)
                 & (purchase_invoice.is_opening == "No")
-                & (purchase_invoice.posting_date[self.from_date : self.to_date])
                 & (purchase_invoice.company == self.company)
                 & (purchase_invoice.company_gstin == self.company_gstin)
                 & (
@@ -282,7 +285,11 @@ class GSTR3BReport(Document):
                 )  # Ignore as it is Ineligible for ITC
             )
             .groupby(purchase_invoice.itc_classification)
-            .run(as_dict=True)
+        )
+
+        # Filter by ITC claim period if available, otherwise by posting date
+        itc_amounts = self._apply_itc_period_filter(itc_amounts, purchase_invoice).run(
+            as_dict=True
         )
 
         itc_details = {}
@@ -306,25 +313,39 @@ class GSTR3BReport(Document):
         boe_taxes = frappe.qb.DocType("India Compliance Taxes and Charges")
 
         def _get_tax_amount(account_type):
-            return (
+            query = (
                 frappe.qb.from_(boe)
                 .select(Sum(boe_taxes.tax_amount))
                 .join(boe_taxes)
                 .on(boe_taxes.parent == boe.name)
                 .where(
-                    boe.posting_date[self.from_date : self.to_date]
-                    & boe.company_gstin.eq(self.gst_details.get("gstin"))
+                    boe.company_gstin.eq(self.gst_details.get("gstin"))
                     & boe.docstatus.eq(1)
                     & boe_taxes.gst_tax_type.eq(account_type)
                 )
                 .where(boe_taxes.parenttype == "Bill of Entry")
-                .run()
-            )[0][0] or 0
+            )
+
+            # Filter by ITC claim period if available, otherwise by posting date
+            query = self._apply_itc_period_filter(query, boe)
+
+            return query.run()[0][0] or 0
 
         igst, cess = _get_tax_amount("igst"), _get_tax_amount("cess")
         itc_details.setdefault("Import Of Goods", {"iamt": 0, "csamt": 0})
         itc_details["Import Of Goods"]["iamt"] += igst
         itc_details["Import Of Goods"]["csamt"] += cess
+
+    def _apply_itc_period_filter(self, query, doc):
+        use_itc_claim_period = (
+            getattr(self, "filter_by", "ITC Claim Period") == "ITC Claim Period"
+        )
+
+        if use_itc_claim_period:
+            return query.where(IfNull(doc.itc_claim_period, "") == self.return_period)
+        else:
+            # Original posting_date filtering
+            return query.where(doc.posting_date[self.from_date : self.to_date])
 
     def set_reclaim_of_itc_reversal(self):
         journal_entry = frappe.qb.DocType("Journal Entry")
