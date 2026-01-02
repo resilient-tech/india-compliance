@@ -16,6 +16,17 @@ frappe.ui.form.on(DOCTYPE, {
                 },
             };
         });
+
+        // autocomplete
+        frm.set_query("itc_claim_period", () => {
+            return {
+                query: "india_compliance.gst_india.utils.itc_claim.get_itc_period_options",
+                filters: {
+                    company_gstin: frm.doc.company_gstin,
+                    posting_date: frm.doc.posting_date,
+                },
+            };
+        });
     },
 
     onload: toggle_reverse_charge,

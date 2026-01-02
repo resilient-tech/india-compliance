@@ -105,6 +105,36 @@ frappe.ui.form.on("GSTR 3B Report", {
                 },
             });
         });
+
+        let action = "";
+
+        if (frm.doc.filing_status === "Filed") action = "unfiled";
+        else action = "filed";
+
+        frm.add_custom_button(
+            __("Mark as " + action),
+            function () {
+                frappe.confirm(
+                    __(
+                        `Mark GSTR-3B for ${frm.doc.month_or_quarter} ${frm.doc.year} as ${action}?`
+                    ),
+                    () => {
+                        frappe.call({
+                            method:
+                                "india_compliance.gst_india.utils.itc_claim.mark_gstr3b_as_" +
+                                action,
+                            args: {
+                                company_gstin: frm.doc.company_gstin,
+                                month_or_quarter: frm.doc.month_or_quarter,
+                                year: frm.doc.year,
+                            },
+                            callback: () => frm.reload_doc(),
+                        });
+                    }
+                );
+            },
+            __("Filing Status")
+        );
     },
 
     company: async function (frm) {
