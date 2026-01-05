@@ -1154,7 +1154,7 @@ def validate_party_type(party_type, party):
 
 
 @frappe.whitelist()
-def check_duplicate_pan(pan, party_type, party):
+def check_duplicate_pan(pan, party_type, party=None):
     if not pan:
         return
 
@@ -1174,19 +1174,23 @@ def check_duplicate_pan(pan, party_type, party):
     _show_duplicate_alert("PAN", pan, party_type, duplicate_links)
 
 
-def _get_duplicate_pan_party(pan, party_type, party):
+def _get_duplicate_pan_party(pan, party_type, party=None):
     """
     Check if PAN already exists for another party of the same doctype.
     """
+    filters = {"pan": ("=", pan)}
+    if party:
+        filters["name"] = ("!=", party)
+
     return frappe.get_all(
         party_type,
-        filters={"pan": ("=", pan), "name": ("!=", party)},
+        filters=filters,
         pluck="name",
     )
 
 
 @frappe.whitelist()
-def check_duplicate_gstin(gstin, party_type, party, address_name=None):
+def check_duplicate_gstin(gstin, party_type, party=None, address_name=None):
     if not gstin:
         return
 
@@ -1213,10 +1217,14 @@ def check_duplicate_gstin(gstin, party_type, party, address_name=None):
     _show_duplicate_alert("GSTIN", gstin, party_type, duplicate_links)
 
 
-def _get_duplicate_gstin_party(gstin, party_type, party, address_name=None):
+def _get_duplicate_gstin_party(gstin, party_type, party=None, address_name=None):
+    party_filters = {"gstin": ("=", gstin)}
+    if party:
+        party_filters["name"] = ("!=", party)
+
     parties_with_gstin = frappe.get_all(
         party_type,
-        filters={"gstin": ("=", gstin), "name": ("!=", party)},
+        filters=party_filters,
         pluck="name",
     )
 
@@ -1231,8 +1239,10 @@ def _get_duplicate_gstin_party(gstin, party_type, party, address_name=None):
         .select(dynamic_link.link_name, address.name.as_("address_name"))
         .where(dynamic_link.link_doctype == party_type)
         .where(address.gstin == gstin)
-        .where(dynamic_link.link_name != party)
     )
+
+    if party:
+        query = query.where(dynamic_link.link_name != party)
 
     if address_name:
         query = query.where(address.name != address_name)

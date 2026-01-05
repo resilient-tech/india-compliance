@@ -86,7 +86,7 @@ function check_duplicate_gstin(doc) {
     let args = {
         gstin: doc.gstin,
         party_type: doc.doctype,
-        party: doc.name,
+        party: doc.__islocal ? null : doc.name,
     };
 
     if (doc.doctype === "Address") {
@@ -97,7 +97,7 @@ function check_duplicate_gstin(doc) {
             gstin: doc.gstin,
             party_type: link.link_doctype,
             party: link.link_name,
-            address_name: doc.name,
+            address_name: doc.__islocal ? null : doc.name,
         };
     }
 
@@ -131,7 +131,7 @@ function check_duplicate_pan(doc) {
     let args = {
         pan: doc.pan,
         party_type: doc.doctype,
-        party: doc.name,
+        party: doc.__islocal ? null : doc.name,
     };
 
     if (!frappe.boot.gst_party_types.includes(args.party_type)) return;
