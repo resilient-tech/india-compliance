@@ -619,6 +619,20 @@ class IMSAction {
         this.frm = frm;
     }
 
+    validate_filters() {
+        if (!this.frm.doc.company) {
+            frappe.throw(__("Please select Company."));
+        }
+
+        if (!this.frm.doc.company_gstin) {
+            frappe.throw(__("Please select Company GSTIN."));
+        }
+
+        if (!this.frm.doc.period) {
+            frappe.throw(__("Please select Period."));
+        }
+    }
+
     setup_actions() {
         this.setup_document_actions();
         this.setup_row_actions();
@@ -684,6 +698,8 @@ class IMSAction {
     }
 
     async download_ims_data() {
+        this.validate_filters();
+
         const { message } = await taxpayer_api.call({
             method: `${DOC_PATH}.download_invoices`,
             args: { company_gstin: this.frm.doc.company_gstin },
@@ -702,6 +718,8 @@ class IMSAction {
     }
 
     async get_ims_data() {
+        this.validate_filters();
+
         const { message } = await this.frm.call("autoreconcile_and_get_data");
         this.frm.__invoice_data = message.invoice_data;
 
@@ -719,6 +737,8 @@ class IMSAction {
     }
 
     async upload_ims_data() {
+        this.validate_filters();
+
         if (!this.filter_invoices_to_upload().length) {
             frappe.msgprint({
                 title: __("No Data Found"),
@@ -837,6 +857,8 @@ class IMSAction {
     }
 
     async export_data() {
+        this.validate_filters();
+
         if (!this.frm.reconciliation_tabs.filtered_data) {
             await this.frm.ims_actions.get_ims_data();
         }
