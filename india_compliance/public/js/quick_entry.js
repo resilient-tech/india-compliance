@@ -28,11 +28,11 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 fieldtype: "Section Break",
                 description: this.api_enabled
                     ? __(
-                        `When you enter a GSTIN, the permanent address linked to it is
+                          `When you enter a GSTIN, the permanent address linked to it is
                         autofilled.<br>
                         Change the {0} to autofill other addresses.`,
-                        [frappe.meta.get_label("Address", "pincode")]
-                    )
+                          [frappe.meta.get_label("Address", "pincode")]
+                      )
                     : "",
                 collapsible: 0,
             },
@@ -102,7 +102,8 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                     if (["Customer", "Supplier"].includes(this.doctype)) {
                         d.set_value(
                             `${this.doctype.toLowerCase()}_type`,
-                            this.gstin_to_party_type_map[d.doc._gstin[5]] || "Individual"
+                            this.gstin_to_party_type_map[d.doc._gstin[5]] ||
+                                "Individual"
                         );
                     }
 
@@ -174,7 +175,8 @@ class PartyQuickEntryForm extends GSTQuickEntryForm {
                 label: __("First Name"),
                 fieldname: "map_to_first_name",
                 fieldtype: "Data",
-                depends_on: "eval:doc.customer_type=='Company' || doc.supplier_type=='Company'",
+                depends_on:
+                    "eval:doc.customer_type=='Company' || doc.supplier_type=='Company'",
             },
             {
                 fieldtype: "Column Break",
@@ -183,7 +185,8 @@ class PartyQuickEntryForm extends GSTQuickEntryForm {
                 label: __("Last Name"),
                 fieldname: "map_to_last_name",
                 fieldtype: "Data",
-                depends_on: "eval:doc.customer_type=='Company' || doc.supplier_type=='Company'",
+                depends_on:
+                    "eval:doc.customer_type=='Company' || doc.supplier_type=='Company'",
             },
             {
                 fieldname: "primary_contact_section_2",
@@ -345,7 +348,7 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
                 "Customer",
                 "Supplier",
                 "Company",
-                "Lead"
+                "Lead",
             ].includes(doc.doctype)
         )
             return;
@@ -495,7 +498,6 @@ function get_gstin_description() {
 
     return __("Autofill is not supported in sandbox mode");
 }
-
 
 function check_duplicate_gstin(dialog, doctype) {
     let gstin = dialog.doc._gstin;
