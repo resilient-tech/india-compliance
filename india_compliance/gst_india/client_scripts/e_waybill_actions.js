@@ -339,6 +339,20 @@ function show_generate_e_waybill_dialog(frm) {
 
 function get_transporter_fields(frm) {
     return [
+        ...get_transporter_part_a_fields(frm),
+        {
+            label: "Part B",
+            fieldname: "section_part_b",
+            fieldtype: "Section Break",
+        },
+        ...get_transporter_part_b_fields(frm),
+    ];
+}
+
+function get_transporter_part_a_fields(frm) {
+    if (!frm) frm = { doc: {} };
+
+    return [
         {
             label: "Transporter",
             fieldname: "transporter",
@@ -381,11 +395,13 @@ function get_transporter_fields(frm) {
                 validate_gst_transporter_id(this.layout, frm.doc);
             },
         },
-        {
-            label: "Part B",
-            fieldname: "section_part_b",
-            fieldtype: "Section Break",
-        },
+    ];
+}
+
+function get_transporter_part_b_fields(frm) {
+    if (!frm) frm = { doc: {} };
+
+    return [
         {
             label: "Vehicle No",
             fieldname: "vehicle_no",
@@ -436,93 +452,6 @@ function get_transporter_fields(frm) {
             depends_on: 'eval:["Road", "Ship"].includes(doc.mode_of_transport)',
             read_only_depends_on: "eval: doc.mode_of_transport == 'Ship'",
             default: frm.doc.gst_vehicle_type || "Regular",
-        },
-    ];
-}
-
-function get_bulk_transporter_part_a_fields() {
-    return [
-        {
-            label: "Transporter",
-            fieldname: "transporter",
-            fieldtype: "Link",
-            options: "Supplier",
-            get_query: () => {
-                return {
-                    filters: {
-                        is_transporter: 1,
-                    },
-                };
-            },
-            onchange: function () {
-                if (!this.layout) return;
-                update_gst_tranporter_id(this.layout);
-            },
-        },
-        {
-            label: "Distance (in km)",
-            fieldname: "distance",
-            fieldtype: "Float",
-            default: 0,
-            description:
-                "Set as zero to update distance as per the e-Waybill portal (if available)",
-        },
-        {
-            fieldtype: "Column Break",
-        },
-        {
-            label: "GST Transporter ID",
-            fieldname: "gst_transporter_id",
-            fieldtype: "Data",
-            onchange: function () {
-                if (!this.layout) return;
-                validate_gst_transporter_id(this.layout, {});
-            },
-        },
-    ];
-}
-
-function get_bulk_transporter_part_b_fields() {
-    return [
-        {
-            label: "Vehicle No",
-            fieldname: "vehicle_no",
-            fieldtype: "Data",
-        },
-        {
-            label: "Transport Receipt No",
-            fieldname: "lr_no",
-            fieldtype: "Data",
-        },
-        {
-            label: "Transport Receipt Date",
-            fieldname: "lr_date",
-            fieldtype: "Date",
-            default: "Today",
-            mandatory_depends_on: "eval:doc.lr_no",
-        },
-        {
-            fieldtype: "Column Break",
-        },
-        {
-            label: "Mode Of Transport",
-            fieldname: "mode_of_transport",
-            fieldtype: "Select",
-            options: `\nRoad\nAir\nRail\nShip`,
-            default: "Road",
-            onchange: function () {
-                if (!this.layout) return;
-                update_vehicle_type(this.layout);
-            },
-        },
-        {
-            label: "GST Vehicle Type",
-            fieldname: "gst_vehicle_type",
-            fieldtype: "Select",
-            options: `Regular\nOver Dimensional Cargo (ODC)`,
-            depends_on: 'eval:["Road", "Ship"].includes(doc.mode_of_transport)',
-            read_only_depends_on: "eval: doc.mode_of_transport == 'Ship'",
-            default: "Regular",
         },
     ];
 }
@@ -1842,14 +1771,14 @@ function get_bulk_generate_dialog_fields(doctype) {
             fieldtype: "Section Break",
             depends_on: "eval: doc.update_transporter_details",
         },
-        ...get_bulk_transporter_part_a_fields(),
+        ...get_transporter_part_a_fields(frm),
         {
             label: "Part B",
             fieldname: "section_part_b",
             fieldtype: "Section Break",
             depends_on: "eval: doc.update_transporter_details",
         },
-        ...get_bulk_transporter_part_b_fields(),
+        ...get_transporter_part_b_fields(frm),
     ];
 }
 
