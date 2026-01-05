@@ -291,9 +291,9 @@ function show_generate_e_waybill_dialog(frm) {
                 api_enabled && frm.doc.doctype ? __("Download JSON") : null,
             secondary_action: api_enabled
                 ? () => {
-                      d.hide();
-                      json_action(d.get_values());
-                  }
+                    d.hide();
+                    json_action(d.get_values());
+                }
                 : null,
         },
         frm
@@ -337,69 +337,8 @@ function show_generate_e_waybill_dialog(frm) {
     }
 }
 
-function get_generate_e_waybill_dialog(opts, frm, transporter_only = false) {
-    if (!frm) frm = { doc: {} };
-
-    const fields = [];
-    if (!transporter_only) {
-        const ewaybill_defaults = get_sub_supply_type_options(frm);
-
-        fields.push(
-            {
-                label: "Document Details",
-                fieldname: "section_doc_details",
-                fieldtype: "Section Break",
-            },
-            {
-                label: "Supply Type",
-                fieldname: "supply_type",
-                fieldtype: "Select",
-                read_only: ewaybill_defaults.supply_type.length === 1,
-                default: ewaybill_defaults.supply_type[0],
-                options: ewaybill_defaults.supply_type.join("\n"),
-                reqd: ewaybill_defaults.supply_type.length !== 1,
-                onchange: () => {
-                    if (ewaybill_defaults.supply_type.length > 1) {
-                        update_sub_supply_type_options(d, frm);
-                    }
-                },
-            },
-            {
-                label: "Document Type",
-                fieldname: "document_type",
-                fieldtype: "Data",
-                read_only: 1,
-                default: ewaybill_defaults.document_type,
-            },
-            {
-                fieldtype: "Column Break",
-            },
-            {
-                label: "Sub Supply Type",
-                fieldname: "sub_supply_type",
-                fieldtype: "Select",
-                options: ewaybill_defaults.sub_supply_type.join("\n"),
-                default: ewaybill_defaults.sub_supply_type[0],
-                read_only: ewaybill_defaults.sub_supply_type.length === 1,
-                reqd: ewaybill_defaults.sub_supply_type.length !== 1,
-            },
-            {
-                label: "Sub Supply Description",
-                fieldname: "sub_supply_desc",
-                fieldtype: "Data",
-                depends_on: "eval: doc.sub_supply_type == 'Others'",
-                mandatory_depends_on: "eval: doc.sub_supply_type == 'Others'",
-                default: ewaybill_defaults.sub_supply_desc,
-            }
-        );
-    }
-
-    fields.push(
-        {
-            label: "Part A",
-            fieldname: "section_part_a",
-            fieldtype: "Section Break",
-        },
+function get_transporter_fields(frm) {
+    return [
         {
             label: "Transporter",
             fieldname: "transporter",
@@ -413,7 +352,10 @@ function get_generate_e_waybill_dialog(opts, frm, transporter_only = false) {
                     },
                 };
             },
-            onchange: () => update_gst_tranporter_id(d),
+            onchange: function () {
+                if (!this.layout) return;
+                update_gst_tranporter_id(this.layout);
+            },
         },
         {
             label: "Distance (in km)",
@@ -434,27 +376,35 @@ function get_generate_e_waybill_dialog(opts, frm, transporter_only = false) {
                 frm.doc.gst_transporter_id?.length == 15
                     ? frm.doc.gst_transporter_id
                     : "",
-            onchange: () => validate_gst_transporter_id(d, frm.doc),
+            onchange: function () {
+                if (!this.layout) return;
+                validate_gst_transporter_id(this.layout, frm.doc);
+            },
         },
         {
             label: "Part B",
             fieldname: "section_part_b",
             fieldtype: "Section Break",
         },
-
         {
             label: "Vehicle No",
             fieldname: "vehicle_no",
             fieldtype: "Data",
             default: frm.doc.vehicle_no,
-            onchange: () => update_generation_dialog(d, frm.doc),
+            onchange: function () {
+                if (!this.layout) return;
+                update_generation_dialog(this.layout, frm.doc);
+            },
         },
         {
             label: "Transport Receipt No",
             fieldname: "lr_no",
             fieldtype: "Data",
             default: frm.doc.lr_no,
-            onchange: () => update_generation_dialog(d, frm.doc),
+            onchange: function () {
+                if (!this.layout) return;
+                update_generation_dialog(this.layout, frm.doc);
+            },
         },
         {
             label: "Transport Receipt Date",
@@ -466,16 +416,16 @@ function get_generate_e_waybill_dialog(opts, frm, transporter_only = false) {
         {
             fieldtype: "Column Break",
         },
-
         {
             label: "Mode Of Transport",
             fieldname: "mode_of_transport",
             fieldtype: "Select",
             options: `\nRoad\nAir\nRail\nShip`,
             default: frm.doc.mode_of_transport || "Road",
-            onchange: () => {
-                update_generation_dialog(d, frm.doc);
-                update_vehicle_type(d);
+            onchange: function () {
+                if (!this.layout) return;
+                update_generation_dialog(this.layout, frm.doc);
+                update_vehicle_type(this.layout);
             },
         },
         {
@@ -486,8 +436,163 @@ function get_generate_e_waybill_dialog(opts, frm, transporter_only = false) {
             depends_on: 'eval:["Road", "Ship"].includes(doc.mode_of_transport)',
             read_only_depends_on: "eval: doc.mode_of_transport == 'Ship'",
             default: frm.doc.gst_vehicle_type || "Regular",
-        }
-    );
+        },
+    ];
+}
+
+function get_bulk_transporter_part_a_fields() {
+    return [
+        {
+            label: "Transporter",
+            fieldname: "transporter",
+            fieldtype: "Link",
+            options: "Supplier",
+            get_query: () => {
+                return {
+                    filters: {
+                        is_transporter: 1,
+                    },
+                };
+            },
+            onchange: function () {
+                if (!this.layout) return;
+                update_gst_tranporter_id(this.layout);
+            },
+        },
+        {
+            label: "Distance (in km)",
+            fieldname: "distance",
+            fieldtype: "Float",
+            default: 0,
+            description:
+                "Set as zero to update distance as per the e-Waybill portal (if available)",
+        },
+        {
+            fieldtype: "Column Break",
+        },
+        {
+            label: "GST Transporter ID",
+            fieldname: "gst_transporter_id",
+            fieldtype: "Data",
+            onchange: function () {
+                if (!this.layout) return;
+                validate_gst_transporter_id(this.layout, {});
+            },
+        },
+    ];
+}
+
+function get_bulk_transporter_part_b_fields() {
+    return [
+        {
+            label: "Vehicle No",
+            fieldname: "vehicle_no",
+            fieldtype: "Data",
+        },
+        {
+            label: "Transport Receipt No",
+            fieldname: "lr_no",
+            fieldtype: "Data",
+        },
+        {
+            label: "Transport Receipt Date",
+            fieldname: "lr_date",
+            fieldtype: "Date",
+            default: "Today",
+            mandatory_depends_on: "eval:doc.lr_no",
+        },
+        {
+            fieldtype: "Column Break",
+        },
+        {
+            label: "Mode Of Transport",
+            fieldname: "mode_of_transport",
+            fieldtype: "Select",
+            options: `\nRoad\nAir\nRail\nShip`,
+            default: "Road",
+            onchange: function () {
+                if (!this.layout) return;
+                update_vehicle_type(this.layout);
+            },
+        },
+        {
+            label: "GST Vehicle Type",
+            fieldname: "gst_vehicle_type",
+            fieldtype: "Select",
+            options: `Regular\nOver Dimensional Cargo (ODC)`,
+            depends_on: 'eval:["Road", "Ship"].includes(doc.mode_of_transport)',
+            read_only_depends_on: "eval: doc.mode_of_transport == 'Ship'",
+            default: "Regular",
+        },
+    ];
+}
+
+function get_document_detail_fields(frm) {
+    const ewaybill_defaults = get_sub_supply_type_options(frm);
+
+    return [
+        {
+            label: "Document Details",
+            fieldname: "section_doc_details",
+            fieldtype: "Section Break",
+        },
+        {
+            label: "Supply Type",
+            fieldname: "supply_type",
+            fieldtype: "Select",
+            read_only: ewaybill_defaults.supply_type.length === 1,
+            default: ewaybill_defaults.supply_type[0],
+            options: ewaybill_defaults.supply_type.join("\n"),
+            reqd: ewaybill_defaults.supply_type.length !== 1,
+            onchange: function () {
+                if (ewaybill_defaults.supply_type.length > 1 && this.layout) {
+                    update_sub_supply_type_options(this.layout, frm);
+                }
+            },
+        },
+        {
+            label: "Document Type",
+            fieldname: "document_type",
+            fieldtype: "Data",
+            read_only: 1,
+            default: ewaybill_defaults.document_type,
+        },
+        {
+            fieldtype: "Column Break",
+        },
+        {
+            label: "Sub Supply Type",
+            fieldname: "sub_supply_type",
+            fieldtype: "Select",
+            options: ewaybill_defaults.sub_supply_type.join("\n"),
+            default: ewaybill_defaults.sub_supply_type[0],
+            read_only: ewaybill_defaults.sub_supply_type.length === 1,
+            reqd: ewaybill_defaults.sub_supply_type.length !== 1,
+        },
+        {
+            label: "Sub Supply Description",
+            fieldname: "sub_supply_desc",
+            fieldtype: "Data",
+            depends_on: "eval: doc.sub_supply_type == 'Others'",
+            mandatory_depends_on: "eval: doc.sub_supply_type == 'Others'",
+            default: ewaybill_defaults.sub_supply_desc,
+        },
+    ];
+}
+
+
+function get_generate_e_waybill_dialog(opts, frm) {
+    if (!frm) frm = { doc: {} };
+
+    let fields = [
+        ...get_document_detail_fields(frm),
+        {
+            label: "Part A",
+            fieldname: "section_part_a",
+            fieldtype: "Section Break",
+        },
+        ...get_transporter_fields(frm),
+    ];
 
     if (
         ["Sales Invoice", "Delivery Note"].includes(frm.doctype) &&
@@ -514,6 +619,27 @@ function get_generate_e_waybill_dialog(opts, frm, transporter_only = false) {
 
     // HACK!
     // To prevent triggering of change event on input twice
+    frappe.ui.form.ControlData.trigger_change_on_input_event = false;
+    const d = new frappe.ui.Dialog(opts);
+    frappe.ui.form.ControlData.trigger_change_on_input_event = true;
+
+    return d;
+}
+
+function get_transporter_update_dialog(opts, frm) {
+    if (!frm) frm = { doc: {} };
+
+    let fields = [
+        {
+            label: "Part A",
+            fieldname: "section_part_a",
+            fieldtype: "Section Break",
+        },
+        ...get_transporter_fields(frm),
+    ];
+
+    opts.fields = fields;
+
     frappe.ui.form.ControlData.trigger_change_on_input_event = false;
     const d = new frappe.ui.Dialog(opts);
     frappe.ui.form.ControlData.trigger_change_on_input_event = true;
@@ -1001,7 +1127,7 @@ function show_update_transporter_dialog(frm) {
                 reqd: 1,
                 default:
                     frm.doc.gst_transporter_id &&
-                    frm.doc.gst_transporter_id.length === 15
+                        frm.doc.gst_transporter_id.length === 15
                         ? frm.doc.gst_transporter_id
                         : "",
                 onchange: () => validate_gst_transporter_id(d, frm.doc),
@@ -1486,12 +1612,12 @@ function show_sandbox_mode_indicator() {
             `
             <div class="sidebar-section ic-sandbox-mode">
                 <p><label class="indicator-pill no-indicator-dot yellow" title="${__(
-                    "Your site has enabled Sandbox Mode in GST Settings."
-                )}">${__("Sandbox Mode")}</label></p>
+                "Your site has enabled Sandbox Mode in GST Settings."
+            )}">${__("Sandbox Mode")}</label></p>
                 <p><a class="small text-muted" href="${frappe.utils.get_form_link(
-                    "GST Settings",
-                    "GST Settings"
-                )}" target="_blank">${__(
+                "GST Settings",
+                "GST Settings"
+            )}" target="_blank">${__(
                 "Sandbox Mode is enabled for GST APIs."
             )}</a></p>
             </div>
@@ -1556,19 +1682,11 @@ function setup_bulk_transporter_update_action(doctype, list_view) {
 }
 
 function setup_bulk_e_waybill_generation_action(doctype, list_view) {
-    if (doctype === "Sales Invoice") {
-        add_bulk_action_for_documents(
-            list_view,
-            __("Enqueue Bulk e-Waybill Generation"),
-            docnames => enqueue_bulk_e_waybill_generation(doctype, docnames)
-        );
-    } else {
-        add_bulk_action_for_documents(
-            list_view,
-            __("Enqueue Bulk e-Waybill Generation"),
-            docnames => show_bulk_generate_e_waybill_dialog(doctype, docnames)
-        );
-    }
+    add_bulk_action_for_documents(
+        list_view,
+        __("Enqueue Bulk e-Waybill Generation"),
+        docnames => show_bulk_generate_e_waybill_dialog(doctype, docnames)
+    );
 }
 
 function setup_bulk_e_waybill_print_action(doctype, list_view) {
@@ -1611,7 +1729,7 @@ async function generate_e_waybill_json(doctype, docnames) {
 
 function show_bulk_update_transporter_dialog(doctype, docnames) {
     const frm = { doctype: doctype, doc: {} };
-    const d = get_generate_e_waybill_dialog(
+    const d = get_transporter_update_dialog(
         {
             title: __("Update Transporter Detail"),
             primary_action_label: __("Update {0}", [doctype]),
@@ -1628,8 +1746,7 @@ function show_bulk_update_transporter_dialog(doctype, docnames) {
                 });
             },
         },
-        frm,
-        true // transporter_only = true
+        frm
     );
 
     d.show();
@@ -1686,20 +1803,54 @@ async function enqueue_bulk_e_invoice_generation(docnames) {
 }
 
 function show_bulk_generate_e_waybill_dialog(doctype, docnames) {
-    const frm = { doctype: doctype, doc: {} };
-    const d = get_generate_e_waybill_dialog(
-        {
-            title: __("Bulk e-Waybill Generation"),
-            primary_action_label: __("Generate e-Waybills"),
-            primary_action(values) {
-                d.hide();
-                enqueue_bulk_e_waybill_generation(doctype, docnames, values);
-            },
+    frappe.ui.form.ControlData.trigger_change_on_input_event = false;
+    const d = new frappe.ui.Dialog({
+        title: __("Bulk e-Waybill Generation"),
+        fields: get_bulk_generate_dialog_fields(doctype),
+        primary_action_label: __("Generate e-Waybills"),
+        primary_action(values) {
+            d.hide();
+            if (!values.update_transporter_details) {
+                values = null;
+            }
+            enqueue_bulk_e_waybill_generation(doctype, docnames, values);
         },
-        frm
-    );
+    });
+    frappe.ui.form.ControlData.trigger_change_on_input_event = true;
 
     d.show();
+}
+
+function get_bulk_generate_dialog_fields(doctype) {
+    const frm = { doctype: doctype, doc: {} };
+    return [
+        ...get_document_detail_fields(frm),
+        {
+            fieldname: "section_transporter_toggle",
+            fieldtype: "Section Break",
+            hide_border: 1,
+        },
+        {
+            label: "Update Transporter Details",
+            fieldname: "update_transporter_details",
+            fieldtype: "Check",
+            default: 0,
+        },
+        {
+            label: "Part A",
+            fieldname: "section_part_a",
+            fieldtype: "Section Break",
+            depends_on: "eval: doc.update_transporter_details",
+        },
+        ...get_bulk_transporter_part_a_fields(),
+        {
+            label: "Part B",
+            fieldname: "section_part_b",
+            fieldtype: "Section Break",
+            depends_on: "eval: doc.update_transporter_details",
+        },
+        ...get_bulk_transporter_part_b_fields(),
+    ];
 }
 
 async function enqueue_bulk_generation(method, args) {
