@@ -1112,7 +1112,7 @@ def validate_is_e_waybill_api_enabled(doctype: str, throw: bool = True) -> bool:
 
     def _throw(message: str):
         if throw:
-            frappe.throw(_(message))
+            frappe.throw(message)
 
     gst_settings = frappe.get_cached_doc("GST Settings")
     if not is_api_enabled(gst_settings) or not gst_settings.enable_e_waybill:
