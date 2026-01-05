@@ -115,13 +115,15 @@ def generate_e_waybills(doctype, docnames, force=False, values=None):
     """
     Bulk generate e-Waybill for the given documents.
     """
+    if values:
+        values = frappe.parse_json(values)
 
     for docname in docnames:
         try:
             doc = load_doc(doctype, docname, "submit")
 
             if values:
-                update_transaction(doc, frappe.parse_json(values))
+                update_transaction(doc, values)
 
             _generate_e_waybill(doc, force=force)
         except Exception:
@@ -1639,6 +1641,13 @@ class EWaybillData(GSTTransactionData):
             (k for k, v in SUB_SUPPLY_TYPES.items() if v == sub_supply_type),
             None,
         )
+
+        if not sub_supply_type:
+            frappe.throw(
+                _("Invalid Sub Supply Type: {0}").format(
+                    self.transaction_details.get("sub_supply_type")
+                )
+            )
 
         self._validate_sub_supply_description(sub_supply_type)
         self._validate_sub_supply_for_same_gstin(sub_supply_type)

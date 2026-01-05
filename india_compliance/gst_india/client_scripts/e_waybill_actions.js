@@ -580,7 +580,6 @@ function get_document_detail_fields(frm) {
     ];
 }
 
-
 function get_generate_e_waybill_dialog(opts, frm) {
     if (!frm) frm = { doc: {} };
 
@@ -844,6 +843,7 @@ function show_fetch_if_generated_dialog(frm) {
 
     d.show();
 }
+
 function show_mark_e_waybill_as_generated_dialog(frm) {
     const d = new frappe.ui.Dialog({
         title: __("Update e-Waybill Details"),
@@ -1761,7 +1761,7 @@ async function bulk_e_waybill_print(doctype, docnames) {
         },
         callback: function (r) {
             if (r.message) {
-                if (r.message.invalid_log.length > 1) {
+                if (r.message.invalid_log.length > 0) {
                     const invalid_docs = r.message.invalid_log.map(
                         doc => `${doc.link} - ${doc.reason}`
                     );
@@ -1926,7 +1926,8 @@ async function validate_doc_status(selected_docs, allowed_status) {
                 "This action can only be performed on {0} documents. Do you want to continue without the following documents?<br><br><strong>{1}</strong>",
                 [allowed_status_str, invalid_docs.join("<br>")]
             ),
-            () => resolve(true)
+            () => resolve(true),
+            () => resolve(false)
         );
     });
 
