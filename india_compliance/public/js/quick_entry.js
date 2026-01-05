@@ -176,11 +176,16 @@ class PartyQuickEntryForm extends GSTQuickEntryForm {
                 fieldname: "map_to_first_name",
                 fieldtype: "Data",
 <<<<<<< HEAD
+<<<<<<< HEAD
                 depends_on:
                     "eval:doc.customer_type=='Company' || doc.supplier_type=='Company'",
 =======
                 depends_on: "eval:doc.customer_type=='Company' || doc.supplier_type=='Company'",
 >>>>>>> 5c96a450 (fix: add duplicate check to quick entry)
+=======
+                depends_on:
+                    "eval:doc.customer_type=='Company' || doc.supplier_type=='Company'",
+>>>>>>> e2ee5690 (chore: formatting changes)
             },
             {
                 fieldtype: "Column Break",
@@ -190,11 +195,16 @@ class PartyQuickEntryForm extends GSTQuickEntryForm {
                 fieldname: "map_to_last_name",
                 fieldtype: "Data",
 <<<<<<< HEAD
+<<<<<<< HEAD
                 depends_on:
                     "eval:doc.customer_type=='Company' || doc.supplier_type=='Company'",
 =======
                 depends_on: "eval:doc.customer_type=='Company' || doc.supplier_type=='Company'",
 >>>>>>> 5c96a450 (fix: add duplicate check to quick entry)
+=======
+                depends_on:
+                    "eval:doc.customer_type=='Company' || doc.supplier_type=='Company'",
+>>>>>>> e2ee5690 (chore: formatting changes)
             },
             {
                 fieldname: "primary_contact_section_2",
@@ -524,7 +534,6 @@ function get_gstin_description() {
 
     return __("Autofill is not supported in sandbox mode");
 }
-
 
 function check_duplicate_gstin(dialog, doctype) {
     let gstin = dialog.doc._gstin;
