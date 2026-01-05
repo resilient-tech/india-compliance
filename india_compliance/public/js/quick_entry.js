@@ -97,6 +97,8 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 onchange: () => {
                     const d = this.dialog;
 
+                    check_duplicate_gstin(d, this.doctype);
+
                     if (["Customer", "Supplier"].includes(this.doctype)) {
                         d.set_value(
                             `${this.doctype.toLowerCase()}_type`,
@@ -173,8 +175,12 @@ class PartyQuickEntryForm extends GSTQuickEntryForm {
                 label: __("First Name"),
                 fieldname: "map_to_first_name",
                 fieldtype: "Data",
+<<<<<<< HEAD
                 depends_on:
                     "eval:doc.customer_type=='Company' || doc.supplier_type=='Company'",
+=======
+                depends_on: "eval:doc.customer_type=='Company' || doc.supplier_type=='Company'",
+>>>>>>> 5c96a450 (fix: add duplicate check to quick entry)
             },
             {
                 fieldtype: "Column Break",
@@ -183,8 +189,12 @@ class PartyQuickEntryForm extends GSTQuickEntryForm {
                 label: __("Last Name"),
                 fieldname: "map_to_last_name",
                 fieldtype: "Data",
+<<<<<<< HEAD
                 depends_on:
                     "eval:doc.customer_type=='Company' || doc.supplier_type=='Company'",
+=======
+                depends_on: "eval:doc.customer_type=='Company' || doc.supplier_type=='Company'",
+>>>>>>> 5c96a450 (fix: add duplicate check to quick entry)
             },
             {
                 fieldname: "primary_contact_section_2",
@@ -513,4 +523,31 @@ function get_gstin_description() {
     }
 
     return __("Autofill is not supported in sandbox mode");
+}
+
+
+function check_duplicate_gstin(dialog, doctype) {
+    let gstin = dialog.doc._gstin;
+
+    if (!gstin || gstin.length < 15) return;
+
+    let party_type = doctype;
+    let party_name = null;
+
+    if (doctype === "Address") {
+        party_type = dialog.doc.link_doctype;
+        party_name = dialog.doc.link_name;
+    }
+
+    if (!party_type) return;
+    if (!frappe.boot.gst_party_types.includes(party_type)) return;
+
+    frappe.call({
+        method: "india_compliance.gst_india.utils.check_duplicate_gstin",
+        args: {
+            gstin: gstin,
+            party_type: party_type,
+            party: party_name,
+        },
+    });
 }
