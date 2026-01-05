@@ -1218,45 +1218,58 @@ def check_duplicate_gstin(gstin, party_type, party=None, address_name=None):
 
 
 def _get_duplicate_gstin_party(gstin, party_type, party=None, address_name=None):
-    party_filters = {"gstin": ("=", gstin)}
-    if party:
-        party_filters["name"] = ("!=", party)
-
-    parties_with_gstin = frappe.get_all(
-        party_type,
-        filters=party_filters,
-        pluck="name",
-    )
-
-    # Check parties linked via Address with same GSTIN
+    party_table = frappe.qb.DocType(party_type)
     address = frappe.qb.DocType("Address")
     dynamic_link = frappe.qb.DocType("Dynamic Link")
 
     query = (
+        frappe.qb.from_(party_table)
+        .select(
+            party_table.name,
+            frappe.qb.terms.ValueWrapper(None).as_("address_name"),
+            frappe.qb.terms.ValueWrapper(0).as_("via_address"),
+        )
+        .where(party_table.gstin == gstin)
+    )
+
+    if party:
+        query = query.where(party_table.name != party)
+
+    address_query = (
         frappe.qb.from_(address)
         .join(dynamic_link)
         .on(dynamic_link.parent == address.name)
-        .select(dynamic_link.link_name, address.name.as_("address_name"))
+        .select(
+            dynamic_link.link_name.as_("name"),
+            address.name.as_("address_name"),
+            frappe.qb.terms.ValueWrapper(1).as_("via_address"),
+        )
         .where(dynamic_link.link_doctype == party_type)
         .where(address.gstin == gstin)
     )
 
     if party:
-        query = query.where(dynamic_link.link_name != party)
+        address_query = address_query.where(dynamic_link.link_name != party)
 
     if address_name:
-        query = query.where(address.name != address_name)
+        address_query = address_query.where(address.name != address_name)
 
-    if parties_with_gstin:
-        query = query.where(dynamic_link.link_name.notin(parties_with_gstin))
+    results = (query + address_query).run(as_dict=True)
 
-    address_results = query.run(as_dict=True)
+    duplicates_dict = {}
+    for row in results:
+        if row.name in duplicates_dict:
+            if not row.via_address:
+                duplicates_dict[row.name] = {
+                    "name": row.name,
+                    "via_address": False,
+                    "address": None,
+                }
+        else:
+            duplicates_dict[row.name] = {
+                "name": row.name,
+                "via_address": bool(row.via_address),
+                "address": row.address_name,
+            }
 
-    # Build result list
-    duplicates = [{"name": name, "via_address": False} for name in parties_with_gstin]
-    duplicates.extend(
-        {"name": row.link_name, "via_address": True, "address": row.address_name}
-        for row in address_results
-    )
-
-    return duplicates
+    return list(duplicates_dict.values())
