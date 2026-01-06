@@ -417,16 +417,9 @@ CUSTOM_FIELDS = {
             "fieldtype": "Check",
         },
         {
-            "label": "Company Logo",
-            "fieldname": "logo_for_printing",
-            "insert_after": "show_physical_signature",
-            "fieldtype": "Attach",
-            "translatable": 0,
-        },
-        {
             "label": "Bank Details",
             "fieldname": "bank_details_for_printing",
-            "insert_after": "logo_for_printing",
+            "insert_after": "show_physical_signature",
             "fieldtype": "Table",
             "options": "Company Print Options",
         },
