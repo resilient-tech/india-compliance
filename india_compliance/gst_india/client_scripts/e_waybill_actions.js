@@ -157,10 +157,13 @@ function setup_e_waybill_actions(doctype) {
                 );
 
                 frm.add_custom_button(
-                    __("Fetch Latest"),
-                    () => fetch_e_waybill_data(frm, { force: true }, () => {
-                        frappe.show_alert(__('Latest e-Waybill fetched successfully'));
-                    }),
+                    __("Fetch Latest Data"),
+                    () =>
+                        fetch_e_waybill_data(frm, { force: true }, () => {
+                            frappe.show_alert(
+                                __("Latest e-Waybill data fetched successfully")
+                            );
+                        }),
                     "e-Waybill"
                 );
             }
