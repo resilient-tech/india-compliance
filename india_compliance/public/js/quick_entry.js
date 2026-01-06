@@ -28,11 +28,11 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 fieldtype: "Section Break",
                 description: this.api_enabled
                     ? __(
-                        `When you enter a GSTIN, the permanent address linked to it is
+                          `When you enter a GSTIN, the permanent address linked to it is
                         autofilled.<br>
                         Change the {0} to autofill other addresses.`,
-                        [frappe.meta.get_label("Address", "pincode")]
-                    )
+                          [frappe.meta.get_label("Address", "pincode")]
+                      )
                     : "",
                 collapsible: 0,
             },
@@ -100,7 +100,8 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                     if (["Customer", "Supplier"].includes(this.doctype)) {
                         d.set_value(
                             `${this.doctype.toLowerCase()}_type`,
-                            this.gstin_to_party_type_map[d.doc._gstin[5]] || "Individual"
+                            this.gstin_to_party_type_map[d.doc._gstin[5]] ||
+                                "Individual"
                         );
                     }
 
@@ -169,21 +170,23 @@ class PartyQuickEntryForm extends GSTQuickEntryForm {
                 collapsible: 0,
             },
             {
-				label: __("First Name"),
-				fieldname: "map_to_first_name",
-				fieldtype: "Data",
-				depends_on: "eval:doc.customer_type=='Company' || doc.supplier_type=='Company'",
-			},
-             {
+                label: __("First Name"),
+                fieldname: "map_to_first_name",
+                fieldtype: "Data",
+                depends_on:
+                    "eval:doc.customer_type=='Company' || doc.supplier_type=='Company'",
+            },
+            {
                 fieldtype: "Column Break",
             },
-			{
-				label: __("Last Name"),
-				fieldname: "map_to_last_name",
-				fieldtype: "Data",
-				depends_on: "eval:doc.customer_type=='Company' || doc.supplier_type=='Company'",
-			},
-             {
+            {
+                label: __("Last Name"),
+                fieldname: "map_to_last_name",
+                fieldtype: "Data",
+                depends_on:
+                    "eval:doc.customer_type=='Company' || doc.supplier_type=='Company'",
+            },
+            {
                 fieldname: "primary_contact_section_2",
                 fieldtype: "Section Break",
                 collapsible: 0,
@@ -343,7 +346,7 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
                 "Customer",
                 "Supplier",
                 "Company",
-                "Lead"
+                "Lead",
             ].includes(doc.doctype)
         )
             return;
@@ -423,18 +426,36 @@ function setup_pincode_field(dialog, gstin_info) {
     if (!gstin_info.all_addresses) return;
 
     const pincode_field = dialog.fields_dict._pincode;
+    const all_addresses = gstin_info.all_addresses;
+    let last_index = null;
+
     pincode_field.set_data(
-        gstin_info.all_addresses.map(address => {
-            return {
-                label: address.pincode,
-                value: address.pincode,
-                description: `${address.address_line1}, ${address.address_line2}, ${address.city}, ${address.state}`,
-            };
-        })
+        all_addresses.map((address, index) => ({
+            label: `${address.pincode}<br>${address.address_line1}, ${address.address_line2}, ${address.city}, ${address.state}`,
+            value: `${index}:${address.pincode}`,
+        }))
     );
 
+    pincode_field.format_for_input = value => {
+        if (value === "" || value == null) return "";
+        if (!value.includes(":")) return value;
+        let pincode = null;
+
+        [last_index, pincode] = value.split(":");
+
+        return pincode || "";
+    };
+
     pincode_field.df.onchange = () => {
-        autofill_address(dialog.doc, gstin_info);
+        if (last_index != null) {
+            const address = all_addresses[last_index];
+            last_index = null;
+            if (address) {
+                update_address_info(dialog.doc, address);
+            }
+        } else {
+            autofill_address(dialog.doc, gstin_info);
+        }
         dialog.refresh();
     };
 }
