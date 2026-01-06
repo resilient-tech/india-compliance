@@ -4,9 +4,13 @@
 frappe.ui.form.on("e-Waybill Log", {
     refresh: function (frm) {
         frm.add_custom_button(__("Fetch Latest"), () =>
-            fetch_e_waybill_data(frm, { force: true }, () => {
-                frm.refresh();
-                frappe.show_alert(__("Latest e-Waybill fetched successfully"));
+            frappe.call({
+                method: "india_compliance.gst_india.utils.e_waybill.fetch_e_waybill_data",
+                args: { doctype: frm.doctype, docname: frm.doc.name, force: true },
+                callback: () => {
+                    frm.refresh();
+                    frappe.show_alert(__("Latest e-Waybill fetched successfully"));
+                },
             })
         );
     },
