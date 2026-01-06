@@ -709,6 +709,7 @@ def _fetch_e_waybill_data(doc, log):
         {
             "data": frappe.as_json(result, indent=4),
             "is_latest_data": 1,
+            "valid_upto": result.get("validUpto"),
         }
     )
 
