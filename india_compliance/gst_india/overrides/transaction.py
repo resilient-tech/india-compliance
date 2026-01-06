@@ -1595,10 +1595,47 @@ def before_validate_transaction(doc, method=None):
     if ignore_gst_validations(doc):
         return False
 
+    _store_address_fields(doc)
+
     if not doc.place_of_supply:
         doc.place_of_supply = get_place_of_supply(doc, doc.doctype)
 
-    set_reverse_charge_as_per_gst_settings(doc)
+    if doc.doctype not in SALES_DOCTYPES:
+        set_reverse_charge_as_per_gst_settings(doc)
+
+
+def _store_address_fields(doc):
+    fields_to_track = _get_address_fields(doc)
+    doc.flags._address_fields_before_validate = {
+        field: doc.get(field) for field in fields_to_track
+    }
+
+
+def _get_address_fields(doc):
+    """
+    Get all fields that affect place of supply calculation.
+    """
+    all_trigger_fields = (
+        "company_gstin",
+        "bill_from_gstin",
+        "bill_to_address",
+        "customer_address",
+        "shipping_address_name",
+        "supplier_address",
+    )
+
+    return tuple(field for field in all_trigger_fields if doc.meta.has_field(field))
+
+
+def has_address_fields_changed(doc):
+    if not doc.flags.get("_address_fields_before_validate"):
+        return False
+
+    for field, val in doc.flags._address_fields_before_validate.items():
+        if doc.get(field) != val:
+            return True
+
+    return False
 
 
 def validate_transaction(doc, method=None):
@@ -1608,10 +1645,11 @@ def validate_transaction(doc, method=None):
     set_gst_tax_type(doc)
     validate_items(doc)
 
+    if not doc.place_of_supply or has_address_fields_changed(doc):
+        doc.place_of_supply = get_place_of_supply(doc, doc.doctype)
+
     if doc.place_of_supply:
         validate_place_of_supply(doc)
-    else:
-        doc.place_of_supply = get_place_of_supply(doc, doc.doctype)
 
     if validate_company_address_field(doc) is False:
         return False
