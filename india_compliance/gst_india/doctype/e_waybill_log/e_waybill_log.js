@@ -7,9 +7,15 @@ frappe.ui.form.on("e-Waybill Log", {
             frappe.call({
                 method: "india_compliance.gst_india.utils.e_waybill.fetch_e_waybill_data",
                 args: { doctype: frm.doctype, docname: frm.doc.name, force: true },
+                freeze: true,
+                freeze_message: __("Fetching latest e-Waybill data..."),
                 callback: () => {
                     frm.refresh();
                     frappe.show_alert(__("Latest e-Waybill fetched successfully"));
+                },
+                error: error => {
+                    console.error(error);
+                    frappe.show_alert(__("Failed to fetch latest e-Waybill data"));
                 },
             })
         );
