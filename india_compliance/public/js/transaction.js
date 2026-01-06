@@ -7,6 +7,7 @@ const TRANSACTION_DOCTYPES = [
     "Sales Order",
     "Delivery Note",
     "Sales Invoice",
+    "Supplier Quotation",
     "Purchase Order",
     "Purchase Receipt",
     "Purchase Invoice",
