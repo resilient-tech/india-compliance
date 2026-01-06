@@ -109,11 +109,14 @@ doctype_js = {
 
 doctype_list_js = {
     "Sales Invoice": [
+        "gst_india/client_scripts/bulk_actions_utils.js",
         "gst_india/client_scripts/e_waybill_applicability.js",
         "gst_india/client_scripts/e_waybill_actions.js",
+        "gst_india/client_scripts/e_invoice_actions.js",
         "gst_india/client_scripts/sales_invoice_list.js",
     ],
     "Delivery Note": [
+        "gst_india/client_scripts/bulk_actions_utils.js",
         "gst_india/client_scripts/e_waybill_applicability.js",
         "gst_india/client_scripts/e_waybill_actions.js",
         "gst_india/client_scripts/delivery_note_list.js",

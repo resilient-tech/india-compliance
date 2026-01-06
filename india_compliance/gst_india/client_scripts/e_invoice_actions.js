@@ -419,3 +419,31 @@ function is_valid_e_invoice_applicability_date(frm) {
         ? true
         : false;
 }
+
+/********
+ * Bulk Operations for List Views
+ *******/
+
+function setup_bulk_e_invoice_actions(doctype, list_view) {
+    if (!frappe.perm.has_perm(doctype, 0, "submit")) return;
+    if (!india_compliance.is_e_invoice_enabled()) return;
+
+    setup_bulk_e_invoice_generation_action(doctype, list_view);
+}
+
+function setup_bulk_e_invoice_generation_action(doctype, list_view) {
+    if (doctype !== "Sales Invoice") return;
+
+    add_bulk_action_for_documents(
+        list_view,
+        __("Enqueue Bulk e-Invoice Generation"),
+        enqueue_bulk_e_invoice_generation
+    );
+}
+
+async function enqueue_bulk_e_invoice_generation(docnames) {
+    enqueue_bulk_generation(
+        "india_compliance.gst_india.utils.e_invoice.enqueue_bulk_e_invoice_generation",
+        { docnames }
+    );
+}
