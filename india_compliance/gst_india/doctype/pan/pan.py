@@ -111,6 +111,9 @@ def fetch_pan_status(pan, throw=False):
     Use random generated aadhaar number to ensure request is not blocked
     """
 
+    # Feature disabled - unofficial API no longer reliable
+    return
+
     url = "https://eportal.incometax.gov.in/iec/servicesapi/getEntity"
 
     try:

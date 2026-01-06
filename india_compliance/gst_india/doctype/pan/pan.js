@@ -5,8 +5,8 @@ frappe.ui.form.on("PAN", {
     refresh(frm) {
         frm.disable_form();
 
-        frm.add_custom_button(__("Refresh PAN Status"), () => {
-            frm.call("update_pan_status");
-        });
+        // frm.add_custom_button(__("Refresh PAN Status"), () => {
+        //     frm.call("update_pan_status");
+        // });
     },
 });
