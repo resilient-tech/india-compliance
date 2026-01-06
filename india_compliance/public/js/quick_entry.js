@@ -423,18 +423,33 @@ function setup_pincode_field(dialog, gstin_info) {
     if (!gstin_info.all_addresses) return;
 
     const pincode_field = dialog.fields_dict._pincode;
+    const all_addresses = gstin_info.all_addresses;
+    let last_index = null;
+
     pincode_field.set_data(
-        gstin_info.all_addresses.map(address => {
-            return {
-                label: address.pincode,
-                value: address.pincode,
-                description: `${address.address_line1}, ${address.address_line2}, ${address.city}, ${address.state}`,
-            };
-        })
+        all_addresses.map((address, index) => ({
+            label: `${address.pincode}<br>${address.address_line1}, ${address.address_line2}, ${address.city}, ${address.state}`,
+            value: `idx:${index}`,
+        }))
     );
 
+    pincode_field.format_for_input = value => {
+        if (value === "" || value == null) return "";
+        if (!value.startsWith("idx:")) return value;
+        last_index = cint(value.replace("idx:", ""));
+        return all_addresses[last_index]?.pincode || "";
+    };
+
     pincode_field.df.onchange = () => {
-        autofill_address(dialog.doc, gstin_info);
+        if (last_index != null) {
+            const address = all_addresses[last_index];
+            last_index = null;
+            if (address) {
+                update_address_info(dialog.doc, address);
+            }
+        } else {
+            autofill_address(dialog.doc, gstin_info);
+        }
         dialog.refresh();
     };
 }
