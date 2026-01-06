@@ -991,7 +991,7 @@ class TestEWaybill(IntegrationTestCase):
         # Test invalid sub supply type "Job Work" for same GSTIN outward supply
         ewaybill_data = EWaybillData(dn)
         ewaybill_data.transaction_details = frappe._dict(
-            {"supply_type": "O", "sub_supply_type": "Job Work"}  # Outward
+            {"supply_type": "O", "sub_supply_type": 4}  # Outward - Job Work
         )
         ewaybill_data.bill_from = frappe._dict({"gstin": "05AAACG2115R1ZN"})
         ewaybill_data.bill_to = frappe._dict({"gstin": "05AAACG2115R1ZN"})
