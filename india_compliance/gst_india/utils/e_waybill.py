@@ -685,10 +685,12 @@ def generate_pending_e_waybills():
 
 
 @frappe.whitelist()
-def fetch_e_waybill_data(*, doctype, docname, attach: bool = False):
+def fetch_e_waybill_data(
+    *, doctype, docname, attach: bool = False, force: bool = False
+):
     doc = load_doc(doctype, docname, "write" if attach else "print")
     log = frappe.get_doc("e-Waybill Log", doc.ewaybill)
-    if not log.is_latest_data:
+    if not log.is_latest_data or force:
         _fetch_e_waybill_data(doc, log)
 
     if not attach:

@@ -155,6 +155,14 @@ function setup_e_waybill_actions(doctype) {
                     () => fetch_e_waybill_data(frm, { attach: 1 }, () => frm.refresh()),
                     "e-Waybill"
                 );
+
+                frm.add_custom_button(
+                    __("Fetch Latest"),
+                    () => fetch_e_waybill_data(frm, { force: true }, () => {
+                        frappe.show_alert(__('Latest e-Waybill fetched successfully'));
+                    }),
+                    "e-Waybill"
+                );
             }
 
             if (frappe.perm.has_perm(frm.doctype, 0, "cancel", frm.doc.name)) {
