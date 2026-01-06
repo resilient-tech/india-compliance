@@ -76,3 +76,4 @@ india_compliance.patches.v15.remove_itc_amount_custom_fields
 india_compliance.patches.v14.update_tax_withholding_categories
 india_compliance.patches.v16.remove_legacy_report_fixtures
 india_compliance.patches.v15.unset_auth_token
+india_compliance.patches.v15.migrate_logo_for_printing
