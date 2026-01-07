@@ -685,10 +685,12 @@ def generate_pending_e_waybills():
 
 
 @frappe.whitelist()
-def fetch_e_waybill_data(*, doctype, docname, attach: bool = False):
+def fetch_e_waybill_data(
+    *, doctype, docname, attach: bool = False, force: bool = False
+):
     doc = load_doc(doctype, docname, "write" if attach else "print")
     log = frappe.get_doc("e-Waybill Log", doc.ewaybill)
-    if not log.is_latest_data:
+    if not log.is_latest_data or force:
         _fetch_e_waybill_data(doc, log)
 
     if not attach:
@@ -709,6 +711,7 @@ def _fetch_e_waybill_data(doc, log):
         {
             "data": frappe.as_json(result, indent=4),
             "is_latest_data": 1,
+            "valid_upto": parse_datetime(result.get("validUpto"), day_first=True),
         }
     )
 
@@ -1729,6 +1732,9 @@ class EWaybillData(GSTTransactionData):
 
             self.bill_from.gstin = _get_sandbox_gstin(self.bill_from, 0)
             self.bill_to.gstin = _get_sandbox_gstin(self.bill_to, 1)
+
+        to_state_code = int(self.transaction_details.pos_state_code)
+
         data = {
             "userGstin": self.transaction_details.company_gstin,
             "supplyType": self.transaction_details.supply_type,
@@ -1752,7 +1758,7 @@ class EWaybillData(GSTTransactionData):
             "toAddr2": self.ship_to.address_line2,
             "toPlace": self.ship_to.city,
             "toPincode": self.ship_to.pincode,
-            "toStateCode": self.bill_to.state_number,
+            "toStateCode": to_state_code,
             "actToStateCode": self.ship_to.state_number,
             "totalValue": self.transaction_details.total,
             "cgstValue": self.transaction_details.total_cgst_amount,
