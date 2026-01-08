@@ -1903,6 +1903,54 @@ def update_gst_details(doc, method=None):
         doc.update_valuation_rate()
 
 
+<<<<<<< HEAD
+=======
+def validate_item_tax_template(doc):
+    if not doc.items or not doc.taxes:
+        return
+
+    non_taxable_items_with_tax = []
+    taxable_items_with_no_tax = []
+
+    for item in doc.items:
+        if item.taxable_value == 0:
+            continue
+
+        if item.gst_treatment == "Zero-Rated" and not doc.get("is_export_with_gst"):
+            continue
+
+        is_gst_applied = bool(item.igst_rate + item.cgst_rate + item.sgst_rate)
+
+        if is_gst_applied and item.gst_treatment not in TAXABLE_GST_TREATMENTS:
+            non_taxable_items_with_tax.append(item.idx)
+
+        if not is_gst_applied and item.gst_treatment in TAXABLE_GST_TREATMENTS:
+            taxable_items_with_no_tax.append(item.idx)
+
+    # Case: Zero Tax template with taxes or missing GST Accounts
+    if non_taxable_items_with_tax:
+        frappe.throw(
+            _(
+                "Cannot charge GST on Non-Taxable Items.<br>"
+                "Are the taxes setup correctly in Item Tax Template? Please select"
+                " the correct Item Tax Template for following row numbers:<br>{0}"
+            ).format(", ".join(bold(row_no) for row_no in non_taxable_items_with_tax)),
+            title=_("Invalid Items"),
+        )
+
+    # Case: Taxable template with missing GST Accounts
+    if taxable_items_with_no_tax:
+        frappe.throw(
+            _(
+                "No GST is being charged on Taxable Items.<br>"
+                "Are there missing GST accounts in Item Tax Template? Please"
+                " verify the Item Tax Template for following row numbers:<br>{0}"
+            ).format(", ".join(bold(row_no) for row_no in taxable_items_with_no_tax)),
+            title=_("Invalid Items"),
+        )
+
+
+>>>>>>> 7872dab9 (fix: validate item tax template based on gst rate instead of amount to avoid precision issue)
 def after_mapping(target_doc, method=None, source_doc=None):
     # Copy e-Waybill fields only from DN to SI
     if not source_doc or source_doc.doctype not in (
