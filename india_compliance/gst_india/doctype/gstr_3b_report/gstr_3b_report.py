@@ -71,7 +71,7 @@ class GSTR3BReport(Document):
             )
 
             # MMYYYY format for ITC claim period
-            self.return_period = format_period(self.from_date)
+            self.return_period = format_period(self.to_date)
 
             self.get_outward_supply_details("Sales Invoice")
             self.set_outward_taxable_supplies()
