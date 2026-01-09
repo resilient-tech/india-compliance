@@ -291,7 +291,6 @@ class GSTR3BReport(Document):
             .groupby(purchase_invoice.itc_classification)
         )
 
-        # Filter by ITC claim period if available, otherwise by posting date
         itc_amounts = self._apply_itc_period_filter(itc_amounts, purchase_invoice).run(
             as_dict=True
         )
