@@ -627,6 +627,7 @@ class AutoReconcile:
         """Returns True if reconciliation is enabled for the company and the session is valid"""
         return (
             credential_row.company in self.reconciliation_companies
+            and credential_row.session_expiry
             and credential_row.session_expiry >= now_datetime()
         )
 
