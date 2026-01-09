@@ -7,16 +7,16 @@
  "engine": "InnoDB",
  "field_order": [
   "company",
-  "enqueue_report",
   "filter_by",
   "column_break_pvct",
   "company_gstin",
   "generation_status",
-  "filing_status",
   "column_break_ddqq",
   "year",
+  "filing_status",
   "column_break_vtyi",
   "month_or_quarter",
+  "enqueue_report",
   "section_break_yqh7",
   "gstr3b_form",
   "json_output",
@@ -117,7 +117,11 @@
   }
  ],
  "links": [],
+<<<<<<< HEAD
  "modified": "2026-02-13 19:43:36.278214",
+=======
+ "modified": "2026-01-03 16:56:38.441930",
+>>>>>>> 48984db1 (chore: correct field order in gstr3b)
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR 3B Report",
