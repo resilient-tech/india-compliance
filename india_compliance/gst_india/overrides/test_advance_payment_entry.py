@@ -49,7 +49,9 @@ def toggle_seperate_advance_accounting():
 
 class TestAdvancePaymentEntry(IntegrationTestCase):
     EXPECTED_GL = [
-        {"account": "Cash - _TIRC", "debit": 590.0, "credit": 0.0},
+        {"account": "Cash - _TIRC", "debit": 45.0, "credit": 0.0},
+        {"account": "Cash - _TIRC", "debit": 45.0, "credit": 0.0},
+        {"account": "Cash - _TIRC", "debit": 500.0, "credit": 0.0},
         {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 500.0},
         {"account": "Output Tax SGST - _TIRC", "debit": 0.0, "credit": 45.0},
         {"account": "Output Tax CGST - _TIRC", "debit": 0.0, "credit": 45.0},
@@ -84,7 +86,9 @@ class TestAdvancePaymentEntry(IntegrationTestCase):
         self.assertGLEntries(
             payment_doc,
             [
-                {"account": "Cash - _TIRC", "debit": 590.0, "credit": 0.0},
+                {"account": "Cash - _TIRC", "debit": 45.0, "credit": 0.0},
+                {"account": "Cash - _TIRC", "debit": 45.0, "credit": 0.0},
+                {"account": "Cash - _TIRC", "debit": 500.0, "credit": 0.0},
                 {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 500.0},
                 {"account": "Output Tax CGST - _TIRC", "debit": 0.0, "credit": 45.0},
                 {"account": "Output Tax SGST - _TIRC", "debit": 0.0, "credit": 45.0},
@@ -125,7 +129,9 @@ class TestAdvancePaymentEntry(IntegrationTestCase):
         self.assertGLEntries(
             payment_doc,
             [
-                {"account": "Cash - _TIRC", "debit": 590.0, "credit": 0.0},
+                {"account": "Cash - _TIRC", "debit": 45.0, "credit": 0.0},
+                {"account": "Cash - _TIRC", "debit": 45.0, "credit": 0.0},
+                {"account": "Cash - _TIRC", "debit": 500.0, "credit": 0.0},
                 {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 100.0},
                 {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 400.0},
                 {"account": "Output Tax SGST - _TIRC", "debit": 0.0, "credit": 45.0},
@@ -163,7 +169,9 @@ class TestAdvancePaymentEntry(IntegrationTestCase):
         self.assertGLEntries(
             payment_doc,
             [
-                {"account": "Cash - _TIRC", "debit": 590.0, "credit": 0.0},
+                {"account": "Cash - _TIRC", "debit": 45.0, "credit": 0.0},
+                {"account": "Cash - _TIRC", "debit": 45.0, "credit": 0.0},
+                {"account": "Cash - _TIRC", "debit": 500.0, "credit": 0.0},
                 {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 100.0},
                 {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 400.0},
                 {"account": "Output Tax CGST - _TIRC", "debit": 0.0, "credit": 45.0},
@@ -195,7 +203,9 @@ class TestAdvancePaymentEntry(IntegrationTestCase):
         expected_str = json.dumps(
             sorted(
                 [
-                    {"account": "Cash - _TIRC", "debit": 590.0, "credit": ""},
+                    {"account": "Cash - _TIRC", "debit": 45.0, "credit": ""},
+                    {"account": "Cash - _TIRC", "debit": 45.0, "credit": ""},
+                    {"account": "Cash - _TIRC", "debit": 500.0, "credit": ""},
                     {"account": "Debtors - _TIRC", "debit": "", "credit": 100.0},
                     {"account": "Debtors - _TIRC", "debit": "", "credit": 18.0},
                     {"account": "Debtors - _TIRC", "debit": "", "credit": 400.0},
@@ -264,7 +274,9 @@ class TestAdvancePaymentEntry(IntegrationTestCase):
         self.assertGLEntries(
             payment_doc,
             [
-                {"account": "Cash - _TIRC", "debit": 590.0, "credit": 0.0},
+                {"account": "Cash - _TIRC", "debit": 45.0, "credit": 0.0},
+                {"account": "Cash - _TIRC", "debit": 45.0, "credit": 0.0},
+                {"account": "Cash - _TIRC", "debit": 500.0, "credit": 0.0},
                 {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 500.0},
                 {"account": "Output Tax CGST - _TIRC", "debit": 0.0, "credit": 45.0},
                 {"account": "Output Tax SGST - _TIRC", "debit": 0.0, "credit": 45.0},
@@ -323,7 +335,9 @@ class TestAdvancePaymentEntry(IntegrationTestCase):
         self.assertGLEntries(
             payment_doc,
             [
-                {"account": "Cash - _TIRC", "debit": 590.0, "credit": 0.0},
+                {"account": "Cash - _TIRC", "debit": 45.0, "credit": 0.0},
+                {"account": "Cash - _TIRC", "debit": 45.0, "credit": 0.0},
+                {"account": "Cash - _TIRC", "debit": 500.0, "credit": 0.0},
                 # 20 / 1.18 * 0.18
                 {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 3.06},
                 {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 500.0},
