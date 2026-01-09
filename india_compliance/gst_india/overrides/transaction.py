@@ -1713,12 +1713,12 @@ def validate_item_tax_template(doc):
         if item.gst_treatment == "Zero-Rated" and not doc.get("is_export_with_gst"):
             continue
 
-        total_taxes = abs(item.igst_amount + item.cgst_amount + item.sgst_amount)
+        is_gst_applied = bool(item.igst_rate + item.cgst_rate + item.sgst_rate)
 
-        if total_taxes and item.gst_treatment not in TAXABLE_GST_TREATMENTS:
+        if is_gst_applied and item.gst_treatment not in TAXABLE_GST_TREATMENTS:
             non_taxable_items_with_tax.append(item.idx)
 
-        if not total_taxes and item.gst_treatment in TAXABLE_GST_TREATMENTS:
+        if not is_gst_applied and item.gst_treatment in TAXABLE_GST_TREATMENTS:
             taxable_items_with_no_tax.append(item.idx)
 
     # Case: Zero Tax template with taxes or missing GST Accounts
