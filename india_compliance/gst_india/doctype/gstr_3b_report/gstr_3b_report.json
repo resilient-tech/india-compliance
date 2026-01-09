@@ -7,16 +7,16 @@
  "engine": "InnoDB",
  "field_order": [
   "company",
-  "enqueue_report",
   "filter_by",
   "column_break_pvct",
   "company_gstin",
   "generation_status",
-  "filing_status",
   "column_break_ddqq",
   "year",
+  "filing_status",
   "column_break_vtyi",
   "month_or_quarter",
+  "enqueue_report",
   "section_break_yqh7",
   "gstr3b_form",
   "json_output",
@@ -113,7 +113,7 @@
   }
  ],
  "links": [],
- "modified": "2024-11-22 18:36:30.385643",
+ "modified": "2026-01-03 16:56:38.441930",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR 3B Report",
@@ -139,6 +139,7 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
