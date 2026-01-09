@@ -1357,6 +1357,37 @@ class TestEWaybill(IntegrationTestCase):
                 expected_request_data.get(key), value, f"Mismatch for key '{key}'"
             )
 
+    def test_e_waybill_for_inter_state_sales_return(self):
+        """Test e-waybill generation for inter-state sales return.
+
+        For return documents (is_return=1) with inter-state transport,
+        the toStateCode should come from bill_to's state number.
+        """
+        si = create_sales_invoice(
+            vehicle_no="GJ07DL9009",
+            company_address="_Test Indian Registered Company-Billing",
+            customer="_Test Registered Customer",
+            customer_address="_Test Registered Customer-Billing-3",
+            is_out_state=1,
+        )
+
+        credit_note = make_return_doc("Sales Invoice", si.name)
+        credit_note.vehicle_no = "GJ07DL9009"
+        credit_note.save()
+        credit_note.submit()
+
+        e_waybill_data = EWaybillData(credit_note).get_data()
+
+        # For inter-state return, toStateCode should be company's state (bill_to after swap)
+        self.assertEqual(
+            e_waybill_data.get("toStateCode"),
+            24,
+            "For inter-state returns, toStateCode should be from bill_to.state_number",
+        )
+
+        self.assertEqual(e_waybill_data.get("supplyType"), "I")
+        self.assertEqual(e_waybill_data.get("subSupplyType"), 7)
+
     # helper functions
     def _generate_e_waybill(
         self, docname=None, doctype="Sales Invoice", test_data=None, force=False
