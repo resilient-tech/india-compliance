@@ -6,7 +6,6 @@ frappe.ui.form.on("Bill of Entry", {
         frm.fields_dict.items.grid.cannot_add_rows = true;
         frm.bill_of_entry_controller = new BillOfEntryController(frm);
 
-        // autocomplete
         frm.set_query("itc_claim_period", () => {
             return {
                 query: "india_compliance.gst_india.utils.itc_claim.get_itc_period_options",
