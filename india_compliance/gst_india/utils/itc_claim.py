@@ -255,9 +255,16 @@ def _get_next_unfiled_period(gstin, start_period, posting_date, filed=None):
 
 
 def _sync_gstr3b_report_status(gstin, month_or_quarter, year, status):
-    report_name = f"GSTR3B-{month_or_quarter}-{year}-{gstin}"
-    if frappe.db.exists("GSTR 3B Report", report_name):
-        frappe.db.set_value("GSTR 3B Report", report_name, "filing_status", status)
+    frappe.db.set_value(
+        "GSTR 3B Report",
+        {
+            "company_gstin": gstin,
+            "month_or_quarter": month_or_quarter,
+            "year": year,
+        },
+        "filing_status",
+        status,
+    )
 
 
 # =============================================================================
