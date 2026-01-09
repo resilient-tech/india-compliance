@@ -1333,6 +1333,30 @@ class TestEWaybill(IntegrationTestCase):
             "GSTIN -29AAACI1195H2ZH is inactive or cancelled", str(cm.exception)
         )
 
+    @responses.activate
+    def test_e_waybill_overseas_customer_with_domestic_shipping(self):
+        """Test e-waybill for overseas customer with domestic shipping address.
+
+        When an overseas customer has goods shipped within India the toStateCode should be set based on
+        the place of supply, not as 96-Other Countries.
+        """
+        test_data = self.e_waybill_test_data.get("overseas_customer_domestic_shipping")
+        si = self.create_sales_invoice_for("overseas_customer_domestic_shipping")
+
+        e_waybill_data = EWaybillData(si).get_data()
+
+        self.assertEqual(
+            e_waybill_data.get("toStateCode"),
+            24,
+            "toStateCode should be set from place of supply (shipping address state)",
+        )
+
+        expected_request_data = test_data.get("request_data")
+        for key, value in e_waybill_data.items():
+            self.assertEqual(
+                expected_request_data.get(key), value, f"Mismatch for key '{key}'"
+            )
+
     # helper functions
     def _generate_e_waybill(
         self, docname=None, doctype="Sales Invoice", test_data=None, force=False
