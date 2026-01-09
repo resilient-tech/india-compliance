@@ -1730,7 +1730,10 @@ class EWaybillData(GSTTransactionData):
             self.bill_from.gstin = _get_sandbox_gstin(self.bill_from, 0)
             self.bill_to.gstin = _get_sandbox_gstin(self.bill_to, 1)
 
-        to_state_code = int(self.transaction_details.pos_state_code)
+        if self.doc.get("is_return"):
+            to_state_code = self.bill_to.state_number
+        else:
+            to_state_code = int(self.transaction_details.pos_state_code)
 
         data = {
             "userGstin": self.transaction_details.company_gstin,

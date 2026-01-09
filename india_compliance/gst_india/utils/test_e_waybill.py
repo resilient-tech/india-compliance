@@ -1333,6 +1333,61 @@ class TestEWaybill(IntegrationTestCase):
             "GSTIN -29AAACI1195H2ZH is inactive or cancelled", str(cm.exception)
         )
 
+    @responses.activate
+    def test_e_waybill_overseas_customer_with_domestic_shipping(self):
+        """Test e-waybill for overseas customer with domestic shipping address.
+
+        When an overseas customer has goods shipped within India the toStateCode should be set based on
+        the place of supply, not as 96-Other Countries.
+        """
+        test_data = self.e_waybill_test_data.get("overseas_customer_domestic_shipping")
+        si = self.create_sales_invoice_for("overseas_customer_domestic_shipping")
+
+        e_waybill_data = EWaybillData(si).get_data()
+
+        self.assertEqual(
+            e_waybill_data.get("toStateCode"),
+            24,
+            "toStateCode should be set from place of supply (shipping address state)",
+        )
+
+        expected_request_data = test_data.get("request_data")
+        for key, value in e_waybill_data.items():
+            self.assertEqual(
+                expected_request_data.get(key), value, f"Mismatch for key '{key}'"
+            )
+
+    def test_e_waybill_for_inter_state_sales_return(self):
+        """Test e-waybill generation for inter-state sales return.
+
+        For return documents (is_return=1) with inter-state transport,
+        the toStateCode should come from bill_to's state number.
+        """
+        si = create_sales_invoice(
+            vehicle_no="GJ07DL9009",
+            company_address="_Test Indian Registered Company-Billing",
+            customer="_Test Registered Customer",
+            customer_address="_Test Registered Customer-Billing-3",
+            is_out_state=1,
+        )
+
+        credit_note = make_return_doc("Sales Invoice", si.name)
+        credit_note.vehicle_no = "GJ07DL9009"
+        credit_note.save()
+        credit_note.submit()
+
+        e_waybill_data = EWaybillData(credit_note).get_data()
+
+        # For inter-state return, toStateCode should be company's state (bill_to after swap)
+        self.assertEqual(
+            e_waybill_data.get("toStateCode"),
+            24,
+            "For inter-state returns, toStateCode should be from bill_to.state_number",
+        )
+
+        self.assertEqual(e_waybill_data.get("supplyType"), "I")
+        self.assertEqual(e_waybill_data.get("subSupplyType"), 7)
+
     # helper functions
     def _generate_e_waybill(
         self, docname=None, doctype="Sales Invoice", test_data=None, force=False
