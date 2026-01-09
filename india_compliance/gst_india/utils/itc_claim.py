@@ -6,7 +6,7 @@ from collections import defaultdict
 
 import frappe
 from frappe.model.document import bulk_insert
-from frappe.utils import add_months, get_first_day, get_last_day, getdate
+from frappe.utils import add_months, get_first_day, get_last_day, getdate, random_string
 
 from india_compliance.gst_india.utils import get_period
 
@@ -337,22 +337,28 @@ def _bulk_update(updates, doctype, source):
         )
 
     user = frappe.session.user
+    current_time = frappe.utils.now()
     comments = []
     for period, names in updates.items():
         content = f"ITC Claim Period {'set to ' + period if period else 'deferred'} via {source}"
         for name in names:
-            comments.append(
-                frappe._dict(
-                    {
-                        "doctype": "Comment",
-                        "comment_type": "Info",
-                        "comment_email": user,
-                        "reference_doctype": doctype,
-                        "reference_name": name,
-                        "content": content,
-                    }
-                )
+            comment = frappe.new_doc("Comment")
+            comment.update(
+                {
+                    "name": random_string(10),
+                    "comment_type": "Info",
+                    "comment_email": user,
+                    "comment_by": user,
+                    "creation": current_time,
+                    "modified": current_time,
+                    "modified_by": user,
+                    "owner": user,
+                    "reference_doctype": doctype,
+                    "reference_name": name,
+                    "content": content,
+                }
             )
+            comments.append(comment)
 
     if comments:
         bulk_insert("Comment", comments, ignore_duplicates=True)
