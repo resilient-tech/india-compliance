@@ -17,7 +17,6 @@ frappe.ui.form.on(DOCTYPE, {
             };
         });
 
-        // autocomplete
         frm.set_query("itc_claim_period", () => {
             return {
                 query: "india_compliance.gst_india.utils.itc_claim.get_itc_period_options",
