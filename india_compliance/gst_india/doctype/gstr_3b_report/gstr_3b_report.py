@@ -760,7 +760,7 @@ def make_json(name: str) -> None:
 
 
 @frappe.whitelist()
-def download_gstr3b_as_excel(name):
+def download_gstr3b_as_excel(name: str) -> None:
     """Download GSTR 3B report as Excel file"""
     frappe.has_permission("GSTR 3B Report", throw=True)
     json_data = frappe.get_value("GSTR 3B Report", name, "json_output")

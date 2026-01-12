@@ -388,7 +388,7 @@ class BillofEntry(Document):
         return asset_items
 
     @frappe.whitelist()
-    def get_items_from_purchase_invoice(self, purchase_invoices: list[str]) -> None:
+    def get_items_from_purchase_invoice(self, purchase_invoices: list) -> None:
         if not purchase_invoices:
             frappe.msgprint(_("No Purchase Invoices selected"))
             return
@@ -797,7 +797,10 @@ def get_pi_items(purchase_invoices):
 
 
 @frappe.whitelist()
-def fetch_pending_boe_invoices(doctype, txt, searchfield, start, page_len, filters):
+@frappe.validate_and_sanitize_search_inputs
+def fetch_pending_boe_invoices(
+    doctype: str, txt: str, searchfield: str, start: int, page_len: int, filters: dict
+) -> list:
     frappe.has_permission("Purchase Invoice", "read", throw=True)
 
     filters = frappe._dict(filters)

@@ -41,7 +41,7 @@ CHARACTERS_TO_STRIP = f"{whitespace},"
 
 @frappe.whitelist()
 def get_gstin_info(
-    gstin, *, doc: dict | str | None = None, throw_error: bool = True
+    gstin: str, *, doc: dict | str | None = None, throw_error: bool = True
 ) -> dict:
     if doc and isinstance(doc, str):
         doc = frappe.parse_json(doc)

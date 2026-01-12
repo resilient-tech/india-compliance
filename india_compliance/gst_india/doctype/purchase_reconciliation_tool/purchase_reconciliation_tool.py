@@ -544,7 +544,7 @@ def generate_excel_attachment(data: dict | str, doc: dict | str) -> list:
 @frappe.whitelist()
 def download_excel_report(
     data: str | dict, doc: str | dict, is_supplier_specific: bool = False
-):
+) -> None:
     frappe.has_permission("Purchase Reconciliation Tool", "export", throw=True)
 
     build_data = BuildExcel(doc, data, is_supplier_specific)

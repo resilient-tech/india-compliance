@@ -375,7 +375,7 @@ def make_journal_entry(
     year: str,
     accounts: str,
     values: dict | str,
-) -> str:
+) -> str | None:
     if not frappe.has_permission("Journal Entry", "create"):
         return
 

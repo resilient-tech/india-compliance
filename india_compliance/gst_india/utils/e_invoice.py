@@ -225,7 +225,7 @@ def handle_duplicate_irn_error(
     doc: Document | None = None,
     docname: str | None = None,
     taxpayer_api: bool = False,
-):
+) -> dict | None:
     """
     Handle Duplicate IRN errors by fetching the IRN details and comparing with the current invoice.
 

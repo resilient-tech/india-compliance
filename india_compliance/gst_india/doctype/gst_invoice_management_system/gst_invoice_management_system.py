@@ -208,7 +208,7 @@ class GSTInvoiceManagementSystem(Document):
     @frappe.whitelist()
     def link_documents(
         self, purchase_invoice_name: str, inward_supply_name: str, link_doctype: str
-    ) -> None:
+    ) -> list[dict]:
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         purchases, inward_supplies = _link_documents(
@@ -218,7 +218,7 @@ class GSTInvoiceManagementSystem(Document):
         return self.get_invoice_data(inward_supplies, purchases)
 
     @frappe.whitelist()
-    def unlink_documents(self, data: dict | str) -> dict:
+    def unlink_documents(self, data: dict | str) -> list[dict]:
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         purchases, inward_supplies = _unlink_documents(data)

@@ -416,6 +416,7 @@ def get_relevant_references(filters: dict | str | None = None) -> dict:
 
 
 @frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
 def get_subcontracting_receipt_references(
     doctype=None, txt=None, searchfield=None, start=None, page_len=None, filters=None
 ):

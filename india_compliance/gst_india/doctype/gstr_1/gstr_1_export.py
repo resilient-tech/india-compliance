@@ -2129,7 +2129,7 @@ def get_gstr_1_json(
     month_or_quarter: str,
     include_uploaded: bool = False,
     delete_missing: bool = False,
-):
+) -> dict:
     frappe.has_permission("GSTR-1", "export", throw=True)
 
     period = get_period(month_or_quarter, year)

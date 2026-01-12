@@ -12,7 +12,7 @@ from india_compliance.audit_trail.utils import (
 
 class CustomizeForm(_CustomizeForm):
     @frappe.whitelist()
-    def fetch_to_customize(self) -> dict:
+    def fetch_to_customize(self) -> None:
         self.set_onload(
             "audit_trail_enabled",
             self.doc_type
@@ -23,7 +23,7 @@ class CustomizeForm(_CustomizeForm):
         return super().fetch_to_customize()
 
     @frappe.whitelist()
-    def save_customization(self) -> str:
+    def save_customization(self) -> None:
         self.validate_audit_trail_integrity()
         return super().save_customization()
 
