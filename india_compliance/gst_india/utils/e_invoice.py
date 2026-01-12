@@ -234,6 +234,8 @@ def handle_duplicate_irn_error(
     2. If the IRN details cannot be fetched, fetch the IRN details from the GST Portal.
     3. Compare the buyer GSTIN and invoice amount with the current invoice and throw an error if they don't match.
     """
+    if isinstance(irn_data, dict):
+        irn_data = frappe._dict(irn_data)
 
     if isinstance(irn_data, str):
         irn_data = json.loads(irn_data, object_hook=frappe._dict)
@@ -426,7 +428,7 @@ def log_and_process_e_invoice_cancellation(doc, values, result, message):
 
 
 @frappe.whitelist()
-def mark_e_invoice_as_generated(doctype: str, docname: str, values: dict | str) -> dict:
+def mark_e_invoice_as_generated(doctype: str, docname: str, values: dict | str) -> None:
     doc = load_doc(doctype, docname, "submit")
 
     values = frappe.parse_json(values)

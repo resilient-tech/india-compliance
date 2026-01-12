@@ -107,7 +107,11 @@ def enqueue_bulk_e_waybill_generation(doctype: str, docnames: list[str] | str) -
     if not is_api_enabled(gst_settings) or not gst_settings.enable_e_waybill:
         frappe.throw(_("Please enable e-Waybill in GST Settings first."))
 
-    docnames = frappe.parse_json(docnames) if docnames.startswith("[") else [docnames]
+    if isinstance(docnames, str):
+        docnames = (
+            frappe.parse_json(docnames) if docnames.startswith("[") else [docnames]
+        )
+
     rq_job = frappe.enqueue(
         "india_compliance.gst_india.utils.e_waybill.generate_e_waybills",
         queue="long",
