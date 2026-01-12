@@ -150,6 +150,8 @@ def get_party_for_gstin(gstin, party_type="Supplier"):
 
 @frappe.whitelist()
 def get_party_contact_details(party, party_type="Supplier"):
+    frappe.has_permission(party_type, "read", throw=True)
+
     if party and (contact := get_default_contact(party_type, party)):
         return get_contact_details(contact)
 
