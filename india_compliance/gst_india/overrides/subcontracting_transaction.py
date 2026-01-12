@@ -416,6 +416,7 @@ def get_relevant_references(filters=None):
 
 
 @frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
 def get_subcontracting_receipt_references(
     doctype=None, txt=None, searchfield=None, start=None, page_len=None, filters=None
 ):
@@ -437,7 +438,7 @@ def get_subcontracting_receipt_references(
     if txt:
         _filters.append(["name", "like", f"%{txt}%"])
 
-    return frappe.db.get_all(
+    return frappe.get_list(
         "Subcontracting Receipt",
         filters=_filters,
         fields=["name", "posting_date"],
@@ -447,6 +448,7 @@ def get_subcontracting_receipt_references(
 
 
 @frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
 def get_stock_entry_references(
     doctype=None,
     txt=None,
@@ -478,7 +480,7 @@ def get_stock_entry_references(
             ["subcontracting_order", "in", filters.subcontracting_orders],
         ]
 
-    return frappe.db.get_all(
+    return frappe.get_list(
         "Stock Entry",
         filters=_filters,
         or_filters=or_filters,
