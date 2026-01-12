@@ -791,9 +791,8 @@ def get_pi_items(purchase_invoices):
 
 
 @frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
 def fetch_pending_boe_invoices(doctype, txt, searchfield, start, page_len, filters):
-    frappe.has_permission("Purchase Invoice", "read", throw=True)
-
     filters = frappe._dict(filters)
 
     if txt and not filters.get("name"):
@@ -803,7 +802,7 @@ def fetch_pending_boe_invoices(doctype, txt, searchfield, start, page_len, filte
     if filters.name and filters.name[1] is None:
         filters.name = ["!=", ""]
 
-    return frappe.get_all(
+    return frappe.get_list(
         "Purchase Invoice",
         filters={
             **filters,
