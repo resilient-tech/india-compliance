@@ -121,6 +121,7 @@ def generate_e_invoices(docnames, force=False):
 
 @frappe.whitelist()
 def generate_e_invoice(docname, throw: bool = True, force: bool = False):
+    """Permission check not required as load_doc checks permissions."""
     doc = load_doc("Sales Invoice", docname, "submit")
 
     settings = frappe.get_cached_doc("GST Settings")
