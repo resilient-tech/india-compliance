@@ -94,7 +94,7 @@ class PurchaseReconciliationTool(Document):
         )
 
     @frappe.whitelist()
-    def reconcile_and_generate_data(self) -> dict:
+    def reconcile_and_generate_data(self) -> list:
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         # reconcile purchases and inward supplies
@@ -131,7 +131,7 @@ class PurchaseReconciliationTool(Document):
         return_period: str | None = None,
         force: bool = False,
         gst_categories: list | None = None,
-    ):
+    ) -> None:
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         job_id = f"purchase_reconciliation_tool:{company_gstin}:{return_type}"
@@ -269,7 +269,7 @@ class PurchaseReconciliationTool(Document):
     @frappe.whitelist()
     def link_documents(
         self, purchase_invoice_name: str, inward_supply_name: str, link_doctype: str
-    ) -> dict:
+    ) -> list:
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         purchases, inward_supplies = _link_documents(
@@ -279,7 +279,7 @@ class PurchaseReconciliationTool(Document):
         return self.ReconciledData.get(purchases, inward_supplies)
 
     @frappe.whitelist()
-    def unlink_documents(self, data: str) -> dict:
+    def unlink_documents(self, data: str) -> list:
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         purchases, inward_supplies = _unlink_documents(data)
@@ -513,7 +513,7 @@ def has_missing_2b_documents(
 
 
 @frappe.whitelist()
-def generate_excel_attachment(data: str, doc: str) -> list:
+def generate_excel_attachment(data: dict | str, doc: dict | str) -> list:
     frappe.has_permission("Purchase Reconciliation Tool", "email", throw=True)
 
     build_data = BuildExcel(doc, data, is_supplier_specific=True, email=True)
