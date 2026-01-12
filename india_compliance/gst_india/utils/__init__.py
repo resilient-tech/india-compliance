@@ -124,6 +124,8 @@ def get_gstin_list(party: str, party_type: str = "Company", exclude_isd: bool = 
 @frappe.whitelist()
 @frappe.request_cache
 def get_party_for_gstin(gstin, party_type="Supplier"):
+    frappe.has_permission(party_type, "read", throw=True)
+
     if not gstin:
         return
 
