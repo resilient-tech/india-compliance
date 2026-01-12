@@ -7,8 +7,9 @@ def execute():
     # Sales Invoice should have field signed_einvoice
     # and E Invoice Settings should be enabled
 
-    if not frappe.db.has_column("Sales Invoice", "signed_einvoice") or not sbool(
-        frappe.db.get_single_value("E Invoice Settings", "enable")
+    if (
+        not frappe.db.has_column("Sales Invoice", "signed_einvoice")
+        or not is_einvoice_enabled()
     ):
         set_not_applicable_status()
         return
@@ -50,3 +51,15 @@ def set_not_applicable_status():
         & (Coalesce(sales_invoice.einvoice_status, "") == "")
         & (Coalesce(sales_invoice.irn, "") == "")
     ).run()
+
+
+def is_einvoice_enabled():
+    singles = frappe.qb.DocType("Singles")
+    result = (
+        frappe.qb.from_(singles)
+        .select(singles.value)
+        .where((singles.doctype == "E Invoice Settings") & (singles.field == "enable"))
+        .run()
+    )
+
+    return sbool(result[0][0]) if result else False
