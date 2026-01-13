@@ -9,33 +9,7 @@ from erpnext.accounts.utils import get_fiscal_year
 
 
 def before_tests():
-    frappe.clear_cache()
-
-    if not frappe.db.a_row_exists("Company"):
-        today = getdate()
-        year = today.year if today.month > 3 else today.year - 1
-
-        setup_complete(
-            {
-                "currency": "INR",
-                "full_name": "Test User",
-                "company_name": "Wind Power LLP",
-                "timezone": "Asia/Kolkata",
-                "company_abbr": "WP",
-                "industry": "Manufacturing",
-                "country": "India",
-                "fy_start_date": f"{year}-04-01",
-                "fy_end_date": f"{year + 1}-03-31",
-                "language": "English",
-                "company_tagline": "Testing",
-                "email": "test@example.com",
-                "password": "test",
-                "chart_of_accounts": "Standard",
-                "company_gstin": "29MUMB22923F1D",
-                "default_gst_rate": "18.0",
-                "enable_audit_trail": 0,
-            }
-        )
+    setup_india_company()
 
     set_default_settings_for_tests()
     create_test_records()
@@ -45,6 +19,41 @@ def before_tests():
     frappe.flags.country = "India"
     frappe.flags.skip_test_records = True
     frappe.enqueue = partial(frappe.enqueue, now=True)
+
+
+def setup_india_company():
+    frappe.clear_cache()
+
+    if not frappe.db.a_row_exists("Company"):
+        today = getdate()
+        year = today.year if today.month > 3 else today.year - 1
+
+        setup_args = {
+            "currency": "INR",
+            "full_name": "Test User",
+            "company_name": "Wind Power LLP",
+            "timezone": "Asia/Kolkata",
+            "company_abbr": "WP",
+            "industry": "Manufacturing",
+            "country": "India",
+            "fy_start_date": f"{year}-04-01",
+            "fy_end_date": f"{year + 1}-03-31",
+            "language": "English",
+            "company_tagline": "Testing",
+            "email": "test@example.com",
+            "password": "test",
+            "chart_of_accounts": "Standard",
+            "enable_audit_trail": 0,
+            "company_gstin": "29MUMB22923F1D",
+            "default_gst_rate": "18.0",
+        }
+
+        setup_complete(setup_args)
+
+
+def setup_post_install_test_data():
+    setup_india_company()
+    frappe.db.commit()
 
 
 def set_default_settings_for_tests():
