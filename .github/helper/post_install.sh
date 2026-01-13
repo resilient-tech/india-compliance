@@ -68,7 +68,7 @@ bench get-app india_compliance "${GITHUB_WORKSPACE}"
 # Create an India company BEFORE installing India Compliance
 echo "Creating India Company..."
 cd ~/frappe-bench/sites
-python -c "
+../env/bin/python -c "
 import frappe
 frappe.init('test_site')
 frappe.connect()
