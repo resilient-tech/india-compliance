@@ -67,10 +67,7 @@ bench get-app india_compliance "${GITHUB_WORKSPACE}"
 
 # Create an India company BEFORE installing India Compliance
 echo "Creating India Company..."
-cd ~/frappe-bench && bench --site test_site console <<EOF
-from india_compliance.tests import setup_post_install_test_data
-setup_post_install_test_data()
-EOF
+cd ~/frappe-bench && ./env/bin/python ${GITHUB_WORKSPACE}/.github/helper/setup_post_install_data.py
 
 # Install India Compliance
 echo "Installing India Compliance..."
