@@ -8,7 +8,6 @@ from india_compliance.gst_india.api_classes.taxpayer_base import (
 
 
 class ReturnsAPI(TaxpayerBaseAPI):
-    API_NAME = "GST Returns"
     IGNORED_ERROR_CODES = {
         **TaxpayerBaseAPI.IGNORED_ERROR_CODES,
         "RET11416": "no_docs_found",
