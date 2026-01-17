@@ -97,11 +97,7 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 onchange: () => {
                     const d = this.dialog;
 
-                    if (this.doctype !== "Address")
-                        india_compliance.check_duplicate_gstin(
-                            d.doc._gstin,
-                            this.doctype,
-                        );
+                    india_compliance.check_duplicate_gstin(d.doc._gstin, this.doctype);
 
                     if (["Customer", "Supplier"].includes(this.doctype)) {
                         d.set_value(
