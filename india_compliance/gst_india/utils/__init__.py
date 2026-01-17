@@ -1163,9 +1163,9 @@ def check_duplicate_party(field, value, party_type, party=None):
     # Show message
     duplicate_links = []
     for row in existing_parties:
-        party_link = get_link_to_form(party_type, row["name"])
-        if row["via_address"]:
-            address_link = get_link_to_form("Address", row["address"])
+        party_link = get_link_to_form(party_type, row.name)
+        if row.via_address:
+            address_link = get_link_to_form("Address", row.address)
             link_msg = _("{0} (via Address {1})").format(party_link, address_link)
 
         else:
