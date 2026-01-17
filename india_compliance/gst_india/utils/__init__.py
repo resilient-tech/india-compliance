@@ -33,6 +33,7 @@ from india_compliance.gst_india.constants import (
     E_INVOICE_MASTER_CODES_URL,
     GST_ACCOUNT_FIELDS,
     GST_INVOICE_NUMBER_FORMAT,
+    GST_PARTY_TYPES,
     GSTIN_FORMATS,
     PAN_NUMBER,
     PINCODE_FORMAT,
@@ -1131,3 +1132,108 @@ def has_permission_of_page(page_name, throw=False):
         )
 
     return True
+
+
+@frappe.whitelist()
+def check_duplicate_party(field, value, party_type, party=None):
+    """
+    Check duplicates based on PAN/GSTIN for the given party type.
+    """
+    if not value:
+        return
+
+    if party_type not in GST_PARTY_TYPES:
+        return
+
+    frappe.has_permission(party_type, doc=party, throw=True)
+
+    value = value.upper().strip()
+
+    # Check for duplicates
+    if field == "pan":
+        existing_parties = _get_duplicate_pan_party(value, party_type, party)
+    elif field == "gstin":
+        existing_parties = _get_duplicate_gstin_party(value, party_type, party)
+    else:
+        return
+
+    if not existing_parties:
+        return
+
+    # Show message
+    duplicate_links = []
+    for row in existing_parties:
+        party_link = get_link_to_form(party_type, row.name)
+        if row.via_address:
+            address_link = get_link_to_form("Address", row.address)
+            link_msg = _("{0} (via Address {1})").format(party_link, address_link)
+
+        else:
+            link_msg = party_link
+
+        duplicate_links.append(f"<li>{link_msg}</li>")
+
+    msg = _("{0} {1} is already registered with the following {2}(s):").format(
+        field.capitalize(), frappe.bold(value), party_type
+    )
+    msg += f"<br><br><ul>{''.join(duplicate_links)}</ul>"
+
+    frappe.msgprint(msg=msg, indicator="orange")
+
+
+def _get_duplicate_pan_party(pan, party_type, party=None):
+    filters = {"pan": ("=", pan)}
+    if party:
+        filters["name"] = ("!=", party)
+
+    return frappe.get_all(party_type, filters=filters)
+
+
+def _get_duplicate_gstin_party(gstin, party_type, party=None):
+    party_table = frappe.qb.DocType(party_type)
+    address = frappe.qb.DocType("Address")
+    dynamic_link = frappe.qb.DocType("Dynamic Link")
+
+    party_query = (
+        frappe.qb.from_(party_table)
+        .select(
+            party_table.name,
+            frappe.qb.terms.ValueWrapper(None).as_("address_name"),
+            frappe.qb.terms.ValueWrapper(0).as_("via_address"),
+        )
+        .where(party_table.gstin == gstin)
+    )
+
+    if party:
+        party_query = party_query.where(party_table.name != party)
+
+    address_query = (
+        frappe.qb.from_(address)
+        .join(dynamic_link)
+        .on(dynamic_link.parent == address.name)
+        .select(
+            dynamic_link.link_name.as_("name"),
+            address.name.as_("address_name"),
+            frappe.qb.terms.ValueWrapper(1).as_("via_address"),
+        )
+        .where(dynamic_link.link_doctype == party_type)
+        .where(address.gstin == gstin)
+    )
+
+    if party:
+        address_query = address_query.where(dynamic_link.link_name != party)
+
+    results = (party_query + address_query).orderby("via_address").run(as_dict=True)
+
+    duplicates_dict = {}
+    for row in results:
+        if row.name in duplicates_dict:
+            continue
+
+        duplicates_dict[row.name] = {
+            "name": row.name,
+            "via_address": bool(row.via_address),
+            "address": row.address_name,
+        }
+
+    return list(duplicates_dict.values())
