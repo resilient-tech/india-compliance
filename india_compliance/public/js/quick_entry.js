@@ -97,7 +97,11 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 onchange: () => {
                     const d = this.dialog;
 
-                    check_duplicate_gstin(d, this.doctype);
+                    if (this.doctype !== "Address")
+                        india_compliance.check_duplicate_gstin(
+                            d.doc._gstin,
+                            this.doctype,
+                        );
 
                     if (["Customer", "Supplier"].includes(this.doctype)) {
                         d.set_value(
@@ -112,7 +116,10 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
 
                     d.set_value(
                         "gst_category",
-                        india_compliance.guess_gst_category(d.doc._gstin, d.doc.country)
+                        india_compliance.guess_gst_category(
+                            d.doc._gstin,
+                            d.doc.country,
+                        ),
                     );
                 },
             },
@@ -497,30 +504,4 @@ function get_gstin_description() {
     }
 
     return __("Autofill is not supported in sandbox mode");
-}
-
-function check_duplicate_gstin(dialog, doctype) {
-    let gstin = dialog.doc._gstin;
-
-    if (!gstin || gstin.length < 15) return;
-
-    let party_type = doctype;
-    let party_name = null;
-
-    if (doctype === "Address") {
-        party_type = dialog.doc.link_doctype;
-        party_name = dialog.doc.link_name;
-    }
-
-    if (!party_type) return;
-    if (!frappe.boot.gst_party_types.includes(party_type)) return;
-
-    frappe.call({
-        method: "india_compliance.gst_india.utils.check_duplicate_gstin",
-        args: {
-            gstin: gstin,
-            party_type: party_type,
-            party: party_name,
-        },
-    });
 }

@@ -60,8 +60,9 @@ function validate_gstin(doctype) {
             gstin = india_compliance.validate_gstin(gstin);
 
             frm.doc.gstin = gstin;
-            check_duplicate_gstin(frm.doc);
             frm.refresh_field("gstin");
+
+            india_compliance.check_duplicate_gstin(gstin, frm.doctype, frm.docname);
 
             if (!frm.fields_dict.pan) return;
 
@@ -80,35 +81,6 @@ function validate_gstin(doctype) {
     });
 }
 
-function check_duplicate_gstin(doc) {
-    if (!doc.gstin) return;
-
-    let args = {
-        gstin: doc.gstin,
-        party_type: doc.doctype,
-        party: doc.__islocal ? null : doc.name,
-    };
-
-    if (doc.doctype === "Address") {
-        if (!doc.links || doc.links.length !== 1) return;
-
-        const link = doc.links[0];
-        args = {
-            gstin: doc.gstin,
-            party_type: link.link_doctype,
-            party: link.link_name,
-            address_name: doc.__islocal ? null : doc.name,
-        };
-    }
-
-    if (!frappe.boot.gst_party_types.includes(args.party_type)) return;
-
-    frappe.call({
-        method: "india_compliance.gst_india.utils.check_duplicate_gstin",
-        args: { ...args },
-    });
-}
-
 function validate_pan(doctype) {
     frappe.ui.form.on(doctype, {
         pan(frm) {
@@ -118,27 +90,11 @@ function validate_pan(doctype) {
             pan = india_compliance.validate_pan(pan);
 
             frm.doc.pan = pan;
-            check_duplicate_pan(frm.doc);
             frm.refresh_field("pan");
+
+            india_compliance.check_duplicate_pan(pan, frm.doctype, frm.docname);
             set_party_type(frm);
         },
-    });
-}
-
-function check_duplicate_pan(doc) {
-    if (!doc.pan) return;
-
-    let args = {
-        pan: doc.pan,
-        party_type: doc.doctype,
-        party: doc.__islocal ? null : doc.name,
-    };
-
-    if (!frappe.boot.gst_party_types.includes(args.party_type)) return;
-
-    frappe.call({
-        method: "india_compliance.gst_india.utils.check_duplicate_pan",
-        args: { ...args },
     });
 }
 

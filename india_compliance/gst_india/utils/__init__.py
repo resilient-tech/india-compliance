@@ -1134,95 +1134,67 @@ def has_permission_of_page(page_name, throw=False):
     return True
 
 
-def _show_duplicate_alert(field_label, value, party_type, duplicate_links):
+@frappe.whitelist()
+def check_duplicate_party(field, value, party_type, party=None):
+    """
+    Check duplicates based on PAN/GSTIN for the given party type.
+    """
+    if not value:
+        return
+
+    if party_type not in GST_PARTY_TYPES:
+        return
+
+    frappe.has_permission(party_type, doc=party, throw=True)
+
+    value = value.upper().strip()
+
+    # Check for duplicates
+    if field == "pan":
+        existing_parties = _get_duplicate_pan_party(value, party_type, party)
+    elif field == "gstin":
+        existing_parties = _get_duplicate_gstin_party(value, party_type, party)
+    else:
+        return
+
+    if not existing_parties:
+        return
+
+    # Show message
+    duplicate_links = []
+    for row in existing_parties:
+        party_link = get_link_to_form(party_type, row["name"])
+        if row["via_address"]:
+            address_link = get_link_to_form("Address", row["address"])
+            link_msg = _("{0} (via Address {1})").format(party_link, address_link)
+
+        else:
+            link_msg = party_link
+
+        duplicate_links.append(f"<li>{link_msg}</li>")
+
     msg = _("{0} {1} is already registered with the following {2}(s):").format(
-        field_label,
-        frappe.bold(value),
-        party_type,
+        field.capitalize(), frappe.bold(value), party_type
     )
     msg += f"<br><br><ul>{''.join(duplicate_links)}</ul>"
 
     frappe.msgprint(msg=msg, indicator="orange")
 
 
-def validate_party_type(party_type, party):
-    if party_type not in GST_PARTY_TYPES:
-        return
-
-    frappe.has_permission(party_type, doc=party, throw=True)
-    return True
-
-
-@frappe.whitelist()
-def check_duplicate_pan(pan, party_type, party=None):
-    if not pan:
-        return
-
-    if not validate_party_type(party_type, party):
-        return
-
-    pan = pan.upper().strip()
-
-    existing_parties = _get_duplicate_pan_party(pan, party_type, party)
-    if not existing_parties:
-        return
-
-    duplicate_links = [
-        f"<li>{get_link_to_form(party_type, name)}</li>" for name in existing_parties
-    ]
-
-    _show_duplicate_alert("PAN", pan, party_type, duplicate_links)
-
-
 def _get_duplicate_pan_party(pan, party_type, party=None):
-    """
-    Check if PAN already exists for another party of the same doctype.
-    """
     filters = {"pan": ("=", pan)}
     if party:
         filters["name"] = ("!=", party)
 
-    return frappe.get_all(
-        party_type,
-        filters=filters,
-        pluck="name",
-    )
+    return frappe.get_all(party_type, filters=filters)
 
 
-@frappe.whitelist()
-def check_duplicate_gstin(gstin, party_type, party=None, address_name=None):
-    if not gstin:
-        return
-
-    if not validate_party_type(party_type, party):
-        return
-
-    gstin = gstin.upper().strip()
-
-    duplicates = _get_duplicate_gstin_party(gstin, party_type, party, address_name)
-    if not duplicates:
-        return
-
-    duplicate_links = []
-    for row in duplicates:
-        party_link = get_link_to_form(party_type, row["name"])
-        if row["via_address"]:
-            address_link = get_link_to_form("Address", row["address"])
-            link_msg = _("{0} (via Address {1})").format(party_link, address_link)
-        else:
-            link_msg = party_link
-
-        duplicate_links.append(f"<li>{link_msg}</li>")
-
-    _show_duplicate_alert("GSTIN", gstin, party_type, duplicate_links)
-
-
-def _get_duplicate_gstin_party(gstin, party_type, party=None, address_name=None):
+def _get_duplicate_gstin_party(gstin, party_type, party=None):
     party_table = frappe.qb.DocType(party_type)
     address = frappe.qb.DocType("Address")
     dynamic_link = frappe.qb.DocType("Dynamic Link")
 
-    query = (
+    party_query = (
         frappe.qb.from_(party_table)
         .select(
             party_table.name,
@@ -1233,7 +1205,7 @@ def _get_duplicate_gstin_party(gstin, party_type, party=None, address_name=None)
     )
 
     if party:
-        query = query.where(party_table.name != party)
+        party_query = party_query.where(party_table.name != party)
 
     address_query = (
         frappe.qb.from_(address)
@@ -1251,25 +1223,17 @@ def _get_duplicate_gstin_party(gstin, party_type, party=None, address_name=None)
     if party:
         address_query = address_query.where(dynamic_link.link_name != party)
 
-    if address_name:
-        address_query = address_query.where(address.name != address_name)
-
-    results = (query + address_query).run(as_dict=True)
+    results = (party_query + address_query).orderby("via_address").run(as_dict=True)
 
     duplicates_dict = {}
     for row in results:
         if row.name in duplicates_dict:
-            if not row.via_address:
-                duplicates_dict[row.name] = {
-                    "name": row.name,
-                    "via_address": False,
-                    "address": None,
-                }
-        else:
-            duplicates_dict[row.name] = {
-                "name": row.name,
-                "via_address": bool(row.via_address),
-                "address": row.address_name,
-            }
+            continue
+
+        duplicates_dict[row.name] = {
+            "name": row.name,
+            "via_address": bool(row.via_address),
+            "address": row.address_name,
+        }
 
     return list(duplicates_dict.values())
