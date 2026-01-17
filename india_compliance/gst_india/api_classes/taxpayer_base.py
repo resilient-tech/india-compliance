@@ -108,6 +108,8 @@ class FilesAPI(BaseAPI):
 
 
 class TaxpayerAuthenticate(BaseAPI):
+    API_NAME = "GST Returns"
+
     SENSITIVE_INFO = BaseAPI.SENSITIVE_INFO + (
         "auth-token",
         "auth_token",
