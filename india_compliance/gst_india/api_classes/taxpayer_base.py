@@ -108,7 +108,8 @@ class FilesAPI(BaseAPI):
 
 
 class TaxpayerAuthenticate(BaseAPI):
-<<<<<<< HEAD
+    API_NAME = "GST Returns"
+
     SENSITIVE_INFO = BaseAPI.SENSITIVE_INFO + (
         "auth-token",
         "auth_token",
@@ -116,9 +117,6 @@ class TaxpayerAuthenticate(BaseAPI):
         "sek",
         "rek",
     )
-=======
-    API_NAME = "GST Returns"
->>>>>>> 8f8989dc (fix: set API_NAME for TaxpayerAuthenticate class)
 
     IGNORED_ERROR_CODES = {
         "RETOTPREQUEST": "otp_requested",
