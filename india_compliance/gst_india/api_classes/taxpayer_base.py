@@ -108,6 +108,7 @@ class FilesAPI(BaseAPI):
 
 
 class TaxpayerAuthenticate(BaseAPI):
+    API_NAME = "GST Returns"
 
     IGNORED_ERROR_CODES = {
         "RETOTPREQUEST": "otp_requested",
