@@ -450,7 +450,6 @@ def get_subcontracting_receipt_references(
 
 
 @frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
 def get_stock_entry_references(
     doctype=None,
     txt=None,
