@@ -474,7 +474,7 @@ def get_gstr_1_from_and_to_date(
 
 @frappe.whitelist()
 def get_filing_preference_from_log(month_or_quarter: str, year: str, company_gstin):
-    frappe.has_permission("GST Return Log", "read", throw=True)
+    frappe.has_permission("GSTR-1", throw=True)
 
     period = get_period(month_or_quarter, year)
     filing_preference = frappe.db.get_value(
