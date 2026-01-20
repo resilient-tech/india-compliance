@@ -1034,28 +1034,29 @@ def update_e_waybill_log_for_extention(
 
 
 def update_transaction(doc, values):
-    transporter_name = (
-        frappe.db.get_value("Supplier", values.transporter, "supplier_name")
-        if values.transporter
-        else None
-    )
+    if values.get("update_transporter_details", True):
+        transporter_name = (
+            frappe.db.get_value("Supplier", values.transporter, "supplier_name")
+            if values.transporter
+            else None
+        )
 
-    data = {
-        "transporter": values.transporter,
-        "transporter_name": transporter_name,
-        "gst_transporter_id": values.gst_transporter_id,
-        "vehicle_no": values.vehicle_no,
-        "distance": values.distance,
-        "lr_no": values.lr_no,
-        "lr_date": values.lr_date,
-        "mode_of_transport": values.mode_of_transport,
-        "gst_vehicle_type": values.gst_vehicle_type,
-    }
+        data = {
+            "transporter": values.transporter,
+            "transporter_name": transporter_name,
+            "gst_transporter_id": values.gst_transporter_id,
+            "vehicle_no": values.vehicle_no,
+            "distance": values.distance,
+            "lr_no": values.lr_no,
+            "lr_date": values.lr_date,
+            "mode_of_transport": values.mode_of_transport,
+            "gst_vehicle_type": values.gst_vehicle_type,
+        }
 
-    if doc.doctype in ["Sales Invoice", "Delivery Note"]:
-        data["port_address"] = values.port_address
+        if doc.doctype in ["Sales Invoice", "Delivery Note"]:
+            data["port_address"] = values.port_address
 
-    doc.db_set(data)
+        doc.db_set(data)
 
     if doc.doctype in ("Delivery Note", "Stock Entry", "Subcontracting Receipt"):
         doc._sub_supply_type = SUB_SUPPLY_TYPES[values.sub_supply_type]

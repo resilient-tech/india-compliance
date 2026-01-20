@@ -1705,9 +1705,6 @@ function show_bulk_generate_e_waybill_dialog(doctype, docnames) {
         primary_action_label: __("Generate e-Waybills"),
         primary_action(values) {
             d.hide();
-            if (!values.update_transporter_details) {
-                values = null;
-            }
             enqueue_bulk_e_waybill_generation(doctype, docnames, values);
         },
     });
