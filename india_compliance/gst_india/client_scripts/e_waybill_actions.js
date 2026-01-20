@@ -249,6 +249,7 @@ function show_generate_e_waybill_dialog(frm) {
                 docname: frm.doc.name,
                 values: values,
                 force: true,
+                throw: true
             },
             callback: () => {
                 return frm.refresh();

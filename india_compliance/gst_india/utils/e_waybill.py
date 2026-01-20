@@ -111,21 +111,15 @@ def enqueue_bulk_e_waybill_generation(doctype, docnames, values=None):
     return rq_job.id
 
 
-def generate_e_waybills(doctype, docnames, force=False, values=None):
+def generate_e_waybills(doctype, docnames, values=None, force=False):
     """
     Bulk generate e-Waybill for the given documents.
     """
-    if values:
-        values = frappe.parse_json(values)
-
     for docname in docnames:
         try:
-            doc = load_doc(doctype, docname, "submit")
-
-            if values:
-                update_transaction(doc, values)
-
-            _generate_e_waybill(doc, force=force)
+            generate_e_waybill(
+                doctype=doctype, docname=docname, values=values, force=force, throw=True
+            )
         except Exception:
             frappe.log_error(
                 title=_("e-Waybill generation failed for {0} {1}").format(
@@ -141,12 +135,14 @@ def generate_e_waybills(doctype, docnames, force=False, values=None):
 
 
 @frappe.whitelist()
-def generate_e_waybill(*, doctype, docname, values=None, force: bool = False):
+def generate_e_waybill(
+    *, doctype, docname, values=None, force: bool = False, throw: bool = False
+):
     doc = load_doc(doctype, docname, "submit")
     if values:
         update_transaction(doc, frappe.parse_json(values))
 
-    _generate_e_waybill(doc, throw=True if values else False, force=force)
+    _generate_e_waybill(doc, throw=throw, force=force)
 
 
 def _generate_e_waybill(doc, throw=True, force=False):
