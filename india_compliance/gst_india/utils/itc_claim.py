@@ -94,7 +94,7 @@ def set_itc_claim_period_on_ims_action(invoice_names, action, ims_period=None):
 
 
 @frappe.whitelist()
-def get_itc_period_options(company_gstin, posting_date):
+def get_itc_period_options(company_gstin=None, posting_date=None):
     if not company_gstin or not posting_date:
         return []
 
