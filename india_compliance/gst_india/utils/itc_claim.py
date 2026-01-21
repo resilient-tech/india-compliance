@@ -156,7 +156,7 @@ def format_period(date):
 
 def _period_to_date(period, day="first"):
     if not period or len(period) != 6:
-        frappe.throw(f"Invalid period format: {period}. Expected MMYYYY.")
+        frappe.throw(_("Invalid period format: {0}. Expected MMYYYY.").format(period))
 
     month, year = int(period[:2]), int(period[2:])
     date = getdate(f"{year}-{month:02d}-01")
@@ -181,7 +181,9 @@ def _max_period(p1, p2):
 
 def _validate_period_format(period):
     if period and not re.match(r"^(0[1-9]|1[0-2])\d{4}$", period):
-        frappe.throw(f"ITC Claim Period '{period}' must be in MMYYYY format")
+        frappe.throw(
+            _("ITC Claim Period '{0}' must be in MMYYYY format").format(period)
+        )
 
 
 # =============================================================================
@@ -301,7 +303,9 @@ def _validate_itc_claim_period(doc):
         or _is_gstr3b_filed(doc.company_gstin, doc.itc_claim_period)
     ):
         frappe.throw(
-            f"Cannot change ITC Claim Period from {previous.itc_claim_period} to {doc.itc_claim_period}. GSTR-3B already filed."
+            _(
+                "Cannot change ITC Claim Period from {0} to {1}. GSTR-3B already filed."
+            ).format(previous.itc_claim_period, doc.itc_claim_period)
         )
 
 
