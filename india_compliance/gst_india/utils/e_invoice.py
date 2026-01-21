@@ -15,7 +15,7 @@ from frappe.utils import (
     random_string,
 )
 
-from india_compliance.exceptions import GSPServerError
+from india_compliance.exceptions import EInvoiceAlreadyGenerated, GSPServerError
 from india_compliance.gst_india.api_classes.nic.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.taxpayer_base import otp_handler
 from india_compliance.gst_india.api_classes.taxpayer_e_invoice import (
@@ -123,6 +123,14 @@ def generate_e_invoice(docname, throw: bool = True, force: bool = False):
     doc = load_doc("Sales Invoice", docname, "submit")
 
     settings = frappe.get_cached_doc("GST Settings")
+
+    if doc.irn:
+        frappe.throw(
+            _("e-Invoice has already been generated for Sales Invoice {0}").format(
+                frappe.bold(doc.name)
+            ),
+            EInvoiceAlreadyGenerated,
+        )
 
     try:
         if (
@@ -492,18 +500,18 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
         if throw:
             frappe.throw(error)
 
+    if doc.irn:
+        raise EInvoiceAlreadyGenerated(
+            _("e-Invoice has already been generated for Sales Invoice {0}").format(
+                frappe.bold(doc.name)
+            )
+        )
+
     if doc.company_gstin == doc.billing_address_gstin:
         return _throw(
             _(
                 "e-Invoice is not applicable for invoices with same company and billing"
                 " GSTIN"
-            )
-        )
-
-    if doc.irn:
-        return _throw(
-            _("e-Invoice has already been generated for Sales Invoice {0}").format(
-                frappe.bold(doc.name)
             )
         )
 
