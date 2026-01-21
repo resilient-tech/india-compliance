@@ -30,8 +30,8 @@ frappe.ui.form.on("GSTR 3B Report", {
             var w = window.open(
                 frappe.urllib.get_full_url(
                     "/api/method/india_compliance.gst_india.doctype.gstr_3b_report.gstr_3b_report.make_json?" +
-                        "name=" +
-                        encodeURIComponent(frm.doc.name)
+                    "name=" +
+                    encodeURIComponent(frm.doc.name)
                 )
             );
 
@@ -46,8 +46,8 @@ frappe.ui.form.on("GSTR 3B Report", {
             var w = window.open(
                 frappe.urllib.get_full_url(
                     "/api/method/india_compliance.gst_india.doctype.gstr_3b_report.gstr_3b_report.download_gstr3b_as_excel?" +
-                        "name=" +
-                        encodeURIComponent(frm.doc.name)
+                    "name=" +
+                    encodeURIComponent(frm.doc.name)
                 )
             );
 
@@ -106,27 +106,27 @@ frappe.ui.form.on("GSTR 3B Report", {
             });
         });
 
-        let action = "";
-
-        if (frm.doc.filing_status === "Filed") action = "unfiled";
-        else action = "filed";
+        let action = frm.doc.filing_status === "Filed" ? "Not Filed" : "Filed";
+        let status_label = action === "Filed" ? __("Filed") : __("Unfiled");
 
         frm.add_custom_button(
-            __("Mark as " + action),
+            __("Mark as {0}", [status_label]),
             function () {
                 frappe.confirm(
-                    __(
-                        `Mark GSTR-3B for ${frm.doc.month_or_quarter} ${frm.doc.year} as ${action}?`
-                    ),
+                    __("Mark GSTR-3B for {0} {1} as {2}?", [
+                        frm.doc.month_or_quarter,
+                        frm.doc.year,
+                        status_label,
+                    ]),
                     () => {
                         frappe.call({
                             method:
-                                "india_compliance.gst_india.utils.itc_claim.mark_gstr3b_as_" +
-                                action,
+                                "india_compliance.gst_india.utils.itc_claim.update_gstr3b_filing_status",
                             args: {
                                 company_gstin: frm.doc.company_gstin,
                                 month_or_quarter: frm.doc.month_or_quarter,
                                 year: frm.doc.year,
+                                status: action,
                             },
                             callback: () => frm.reload_doc(),
                         });
