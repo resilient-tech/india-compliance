@@ -5,6 +5,7 @@ import re
 from collections import defaultdict
 
 import frappe
+from frappe import _
 from frappe.model.document import bulk_insert
 from frappe.utils import add_months, get_first_day, get_last_day, getdate, random_string
 
@@ -120,48 +121,28 @@ def get_itc_period_options(company_gstin, posting_date):
 
 
 @frappe.whitelist()
-def mark_gstr3b_as_filed(company_gstin, month_or_quarter, year):
+def update_gstr3b_filing_status(company_gstin, month_or_quarter, year, status):
     frappe.has_permission("GST Return Log", "write", throw=True)
 
     period = get_period(month_or_quarter, year)
-    log_name = f"GSTR3B-{period}-{company_gstin}"
+    filters = {"gstin": company_gstin, "return_period": period, "return_type": "GSTR3B"}
+    log_name = frappe.db.get_value("GST Return Log", filters)
 
-    if not frappe.db.exists("GST Return Log", log_name):
+    if log_name:
+        frappe.db.set_value("GST Return Log", log_name, "filing_status", status)
+    else:
         frappe.get_doc(
-            {
-                "doctype": "GST Return Log",
-                "name": log_name,
-                "gstin": company_gstin,
-                "return_period": period,
-                "return_type": "GSTR3B",
-                "filing_status": "Filed",
-            }
+            {"doctype": "GST Return Log", "filing_status": status, **filters}
         ).insert(ignore_permissions=True)
-    else:
-        frappe.db.set_value("GST Return Log", log_name, "filing_status", "Filed")
 
-    _sync_gstr3b_report_status(company_gstin, month_or_quarter, year, "Filed")
+    _sync_gstr3b_report_status(company_gstin, month_or_quarter, year, status)
+
     frappe.msgprint(
-        f"GSTR-3B for {month_or_quarter} {year} marked as filed.", indicator="green"
+        _("GSTR-3B for {0} {1} marked as {2}.").format(
+            month_or_quarter, year, _("Filed") if status == "Filed" else _("Unfiled")
+        ),
+        indicator="green",
     )
-
-
-@frappe.whitelist()
-def mark_gstr3b_as_unfiled(company_gstin, month_or_quarter, year):
-    frappe.has_permission("GST Return Log", "write", throw=True)
-
-    period = get_period(month_or_quarter, year)
-    log_name = f"GSTR3B-{period}-{company_gstin}"
-
-    if frappe.db.exists("GST Return Log", log_name):
-        frappe.db.set_value("GST Return Log", log_name, "filing_status", "Not Filed")
-        _sync_gstr3b_report_status(company_gstin, month_or_quarter, year, "Not Filed")
-        frappe.msgprint(
-            f"GSTR-3B for {month_or_quarter} {year} marked as unfiled.",
-            indicator="orange",
-        )
-    else:
-        frappe.msgprint("No GSTR-3B record found.", indicator="yellow")
 
 
 # =============================================================================
