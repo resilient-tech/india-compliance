@@ -7,6 +7,7 @@ from collections import defaultdict
 import frappe
 from frappe import _
 from frappe.model.document import bulk_insert
+from frappe.query_builder.functions import IfNull
 from frappe.utils import add_months, get_first_day, get_last_day, getdate, random_string
 
 from india_compliance.gst_india.utils import get_period
@@ -152,6 +153,27 @@ def update_gstr3b_filing_status(company_gstin, month_or_quarter, year, status):
 
 def format_period(date):
     return getdate(date).strftime("%m%Y")
+
+
+def apply_itc_period_filter(query, doc, filter_by, return_period, from_date, to_date):
+    """
+    Apply ITC period filter to a query.
+
+    Args:
+        query: The query builder query
+        doc: The doctype table reference (frappe.qb.DocType)
+        filter_by: "ITC Claim Period" or "Posting Date"
+        return_period: The return period in MMYYYY format
+        from_date: Start date for posting date filter
+        to_date: End date for posting date filter
+
+    Returns:
+        Modified query with the appropriate filter applied
+    """
+    if filter_by == "ITC Claim Period":
+        return query.where(IfNull(doc.itc_claim_period, "") == return_period)
+
+    return query.where(doc.posting_date[from_date:to_date])
 
 
 def _period_to_date(period, day="first"):
