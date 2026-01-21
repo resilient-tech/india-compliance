@@ -27,7 +27,10 @@ from india_compliance.gst_india.utils import (
 )
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR11A11BData
-from india_compliance.gst_india.utils.itc_claim import format_period
+from india_compliance.gst_india.utils.itc_claim import (
+    apply_itc_period_filter,
+    format_period,
+)
 
 VALUES_TO_UPDATE = ["iamt", "camt", "samt", "csamt"]
 GST_TAX_TYPE_MAP = {
@@ -161,8 +164,10 @@ class GSTR3BReport(Document):
         ineligible_credit = IneligibleITC(
             self.company,
             self.gst_details.get("gstin"),
-            self.month_or_quarter_no,
-            self.year,
+            self.filter_by,
+            self.return_period,
+            self.from_date,
+            self.to_date,
         ).get_for_purchase(
             "ITC restricted due to PoS rules", group_by="ineligibility_reason"
         )
@@ -173,8 +178,10 @@ class GSTR3BReport(Document):
         ineligible_credit = IneligibleITC(
             self.company,
             self.gst_details.get("gstin"),
-            self.month_or_quarter_no,
-            self.year,
+            self.filter_by,
+            self.return_period,
+            self.from_date,
+            self.to_date,
         ).get_for_purchase(
             "Ineligible As Per Section 17(5)", group_by="ineligibility_reason"
         )
@@ -185,8 +192,10 @@ class GSTR3BReport(Document):
         ineligible_credit = IneligibleITC(
             self.company,
             self.gst_details.get("gstin"),
-            self.month_or_quarter_no,
-            self.year,
+            self.filter_by,
+            self.return_period,
+            self.from_date,
+            self.to_date,
         ).get_for_bill_of_entry()
 
         self.process_ineligible_credit(ineligible_credit)
@@ -287,9 +296,14 @@ class GSTR3BReport(Document):
             .groupby(purchase_invoice.itc_classification)
         )
 
-        itc_amounts = self._apply_itc_period_filter(itc_amounts, purchase_invoice).run(
-            as_dict=True
-        )
+        itc_amounts = apply_itc_period_filter(
+            itc_amounts,
+            purchase_invoice,
+            self.filter_by,
+            self.return_period,
+            self.from_date,
+            self.to_date,
+        ).run(as_dict=True)
 
         itc_details = {}
         for d in itc_amounts:
@@ -325,8 +339,14 @@ class GSTR3BReport(Document):
                 .where(boe_taxes.parenttype == "Bill of Entry")
             )
 
-            # Filter by ITC claim period if available, otherwise by posting date
-            query = self._apply_itc_period_filter(query, boe)
+            query = apply_itc_period_filter(
+                query,
+                boe,
+                self.filter_by,
+                self.return_period,
+                self.from_date,
+                self.to_date,
+            )
 
             return query.run()[0][0] or 0
 
@@ -334,17 +354,6 @@ class GSTR3BReport(Document):
         itc_details.setdefault("Import Of Goods", {"iamt": 0, "csamt": 0})
         itc_details["Import Of Goods"]["iamt"] += igst
         itc_details["Import Of Goods"]["csamt"] += cess
-
-    def _apply_itc_period_filter(self, query, doc):
-        use_itc_claim_period = (
-            getattr(self, "filter_by", "ITC Claim Period") == "ITC Claim Period"
-        )
-
-        if use_itc_claim_period:
-            return query.where(IfNull(doc.itc_claim_period, "") == self.return_period)
-        else:
-            # Original posting_date filtering
-            return query.where(doc.posting_date[self.from_date : self.to_date])
 
     def set_reclaim_of_itc_reversal(self):
         journal_entry = frappe.qb.DocType("Journal Entry")
@@ -371,27 +380,35 @@ class GSTR3BReport(Document):
             self.report_dict["itc_elg"]["itc_inelg"][0][tax_amount_key] += entry.amount
 
     def get_inward_nil_exempt(self, state):
-        inward_nil_exempt = frappe.db.sql(
-            """
-            SELECT p.place_of_supply, p.supplier_address,
-            i.taxable_value, i.gst_treatment
-            FROM `tabPurchase Invoice` p , `tabPurchase Invoice Item` i
-            WHERE p.docstatus = 1 and p.name = i.parent
-            and p.is_opening = 'No'
-            and p.company_gstin != IFNULL(p.supplier_gstin, "")
-            and (i.gst_treatment != 'Taxable' or p.gst_category = 'Registered Composition') and
-            p.posting_date between %s and %s
-            and p.company = %s and p.company_gstin = %s
-            and p.gst_category != "Overseas"
-            """,
-            (
-                self.from_date,
-                self.to_date,
-                self.company,
-                self.gst_details.get("gstin"),
-            ),
-            as_dict=1,
+        pi = frappe.qb.DocType("Purchase Invoice")
+        pi_item = frappe.qb.DocType("Purchase Invoice Item")
+
+        query = (
+            frappe.qb.from_(pi)
+            .join(pi_item)
+            .on(pi.name == pi_item.parent)
+            .select(
+                pi.place_of_supply,
+                pi.supplier_address,
+                pi_item.taxable_value,
+                pi_item.gst_treatment,
+            )
+            .where(pi.docstatus == 1)
+            .where(pi.is_opening == "No")
+            .where(pi.company_gstin != IfNull(pi.supplier_gstin, ""))
+            .where(
+                (pi_item.gst_treatment != "Taxable")
+                | (pi.gst_category == "Registered Composition")
+            )
+            .where(pi.company == self.company)
+            .where(pi.company_gstin == self.gst_details.get("gstin"))
+            .where(pi.gst_category != "Overseas")
         )
+
+        query = apply_itc_period_filter(
+            query, pi, self.filter_by, self.return_period, self.from_date, self.to_date
+        )
+        inward_nil_exempt = query.run(as_dict=True)
 
         inward_nil_exempt_details = {
             "gst": {"intra": 0.0, "inter": 0.0},
@@ -510,7 +527,12 @@ class GSTR3BReport(Document):
             party_gstin = invoice.billing_address_gstin
 
         query = frappe.qb.from_(invoice).select(*fields)
-        query = self.get_query_with_conditions(invoice, query, party_gstin)
+
+        # For Purchase Invoice with reverse charge, use ITC period filter
+        use_itc_period_filter = doctype == "Purchase Invoice" and reverse_charge
+        query = self.get_query_with_conditions(
+            invoice, query, party_gstin, use_itc_period_filter
+        )
 
         if reverse_charge:
             query = query.where(invoice.is_reverse_charge == 1)
@@ -558,15 +580,31 @@ class GSTR3BReport(Document):
         for key in totals:
             self.report_dict["sup_details"]["osup_det"][key] += totals[key]
 
-    def get_query_with_conditions(self, invoice, query, party_gstin):
-        return (
+    def get_query_with_conditions(
+        self, invoice, query, party_gstin, use_itc_period_filter=False
+    ):
+        query = (
             query.where(invoice.docstatus == 1)
-            .where(invoice.posting_date[self.from_date : self.to_date])
             .where(invoice.company == self.company)
             .where(invoice.company_gstin == self.gst_details.get("gstin"))
             .where(invoice.is_opening == "No")
             .where(invoice.company_gstin != IfNull(party_gstin, ""))
         )
+
+        # Apply date filter based on use_itc_period_filter flag
+        if use_itc_period_filter:
+            query = apply_itc_period_filter(
+                query,
+                invoice,
+                self.filter_by,
+                self.return_period,
+                self.from_date,
+                self.to_date,
+            )
+        else:
+            query = query.where(invoice.posting_date[self.from_date : self.to_date])
+
+        return query
 
     def get_outward_items(self, doctype):
         if not self.invoice_map:
