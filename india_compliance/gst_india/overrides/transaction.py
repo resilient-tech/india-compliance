@@ -939,6 +939,7 @@ def update_party_details(party_details, doctype, company):
 @frappe.whitelist()
 def get_party_details_for_subcontracting(party_details, doctype, company):
     party_details = frappe.parse_json(party_details)
+    frappe.has_permission("Supplier", "read", throw=True)
 
     if doctype == "Stock Entry":
         party_address_field = (
@@ -1310,6 +1311,11 @@ class ItemGSTDetails:
             return
 
         self.get_item_defaults()
+        self.set_item_defaults()
+
+        if ignore_gst_validations(doc):
+            return
+
         self.set_tax_amount_precisions(doc.doctype)
 
         # To Deprecate
@@ -1330,6 +1336,10 @@ class ItemGSTDetails:
             item_defaults[f"{row}_amount"] = 0
 
         self.item_defaults = item_defaults
+
+    def set_item_defaults(self):
+        for item in self.doc.get("items"):
+            item.update(self.item_defaults.copy())
 
     def set_item_name_wise_tax_details(self):
         """

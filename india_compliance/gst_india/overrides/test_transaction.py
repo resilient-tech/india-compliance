@@ -22,8 +22,11 @@ from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
     update_regional_gl_entries,
 )
 
-from india_compliance.gst_india.constants import SALES_DOCTYPES
-from india_compliance.gst_india.overrides.transaction import DOCTYPES_WITH_GST_DETAIL
+from india_compliance.gst_india.constants import GST_TAX_TYPES, SALES_DOCTYPES
+from india_compliance.gst_india.overrides.transaction import (
+    DOCTYPES_WITH_GST_DETAIL,
+    ItemGSTDetails,
+)
 from india_compliance.gst_india.utils.tests import (
     _append_taxes,
     append_item,
@@ -992,6 +995,47 @@ class TestTransaction(FrappeTestCase):
             re.compile(r"^(.*Tax amount should be negative for GST Account.*)$"),
             doc.save,
         )
+
+    def test_item_gst_details_for_non_gst_transactions(self):
+        """
+        Test Non-GST Transactions can be processed without errors.
+        """
+        if self.doctype not in DOCTYPES_WITH_GST_DETAIL:
+            return
+
+        doc = create_transaction(
+            **self.transaction_details,
+            is_in_state=True,
+            do_not_submit=True,
+        )
+        for item in doc.items:
+            for tax in ["cgst", "sgst"]:
+                self.assertNotEqual(item.get(f"{tax}_rate"), 0)
+                self.assertNotEqual(item.get(f"{tax}_amount"), 0)
+
+        doc.is_opening = "Yes"  # opening transaction
+        doc.save()
+
+        # validate item gst details
+        for item in doc.items:
+            for tax in GST_TAX_TYPES:
+                self.assertEqual(item.get(f"{tax}_rate"), 0)
+                self.assertEqual(item.get(f"{tax}_amount"), 0)
+
+    def test_none_taxable_values(self):
+        """
+        For Non-GST Transactions (POS Merge Log) taxable value can be none
+        """
+        doc = create_transaction(
+            **self.transaction_details,
+            is_in_state=True,
+            is_opening="Yes",
+            do_not_save=True,
+        )
+        for item in doc.items:
+            item.taxable_value = None
+
+        ItemGSTDetails().update(doc)
 
 
 def create_refund_transaction():

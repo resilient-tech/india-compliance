@@ -70,6 +70,26 @@ Object.assign(india_compliance, {
         return `${month}${year}`;
     },
 
+    check_duplicate_gstin(gstin, party_type, party = null) {
+        if (!gstin || gstin.length !== 15) return;
+        this.check_duplicate_party("gstin", gstin, party_type, party);
+    },
+
+    check_duplicate_pan(pan, party_type, party = null) {
+        if (!pan || pan.length !== 10) return;
+        this.check_duplicate_party("pan", pan, party_type, party);
+    },
+
+    check_duplicate_party(field, value, party_type, party = null) {
+        if (!party_type) return;
+        if (!frappe.boot.gst_party_types.includes(party_type)) return;
+
+        frappe.call({
+            method: "india_compliance.gst_india.utils.check_duplicate_party",
+            args: { field, value, party_type, party },
+        });
+    },
+
     get_gstin_query(party, party_type = "Company", exclude_isd = false) {
         if (!party) {
             frappe.show_alert({
