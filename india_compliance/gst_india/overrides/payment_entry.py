@@ -54,7 +54,7 @@ def get_reconciliation_status_for_invoice_list(invoice_list):
     invoice_list = frappe.parse_json(invoice_list)
 
     reconciliation_status_dict = dict(
-        frappe.get_all(
+        frappe.get_list(
             "Purchase Invoice",
             filters={"name": ["in", invoice_list]},
             fields=("name", "reconciliation_status"),
