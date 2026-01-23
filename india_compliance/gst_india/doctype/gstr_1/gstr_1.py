@@ -31,14 +31,23 @@ from india_compliance.gst_india.utils.gstin_info import get_gstr_1_return_status
 class GSTR1(Document):
     @frappe.whitelist()
     def recompute_books(self):
+        """
+        Permission check not required as user has access to doc.
+        """
         return self.generate_gstr1(recompute_books=True)
 
     @frappe.whitelist()
     def sync_with_gstn(self, sync_for):
+        """
+        Permission check not required as user has access to doc.
+        """
         return self.generate_gstr1(sync_for=sync_for, recompute_books=True)
 
     @frappe.whitelist()
     def mark_as_filed(self):
+        """
+        Permission check not required as user has access to doc.
+        """
         period = get_period(self.month_or_quarter, self.year)
         return_status = get_gstr_1_return_status(
             self.company, self.company_gstin, period
@@ -465,6 +474,8 @@ def get_gstr_1_from_and_to_date(
 
 @frappe.whitelist()
 def get_filing_preference_from_log(month_or_quarter: str, year: str, company_gstin):
+    frappe.has_permission("GSTR-1", throw=True)
+
     period = get_period(month_or_quarter, year)
     filing_preference = frappe.db.get_value(
         "GST Return Log", f"GSTR1-{period}-{company_gstin}", "filing_preference"
