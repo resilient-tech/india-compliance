@@ -4,6 +4,7 @@ import jwt
 
 import frappe
 from frappe import _
+from frappe.model.document import Document
 from frappe.utils import (
     add_days,
     add_to_date,
@@ -120,6 +121,7 @@ def generate_e_invoices(docnames, force=False):
 
 @frappe.whitelist()
 def generate_e_invoice(docname, throw: bool = True, force: bool = False):
+    """Permission check not required as load_doc checks permissions."""
     doc = load_doc("Sales Invoice", docname, "submit")
 
     settings = frappe.get_cached_doc("GST Settings")
@@ -235,6 +237,9 @@ def handle_duplicate_irn_error(
     if isinstance(irn_data, str):
         irn_data = json.loads(irn_data, object_hook=frappe._dict)
         current_invoice_amount = flt(current_invoice_amount)
+
+    if doc and not isinstance(doc, Document):
+        doc = None  # To avoid doc injection
 
     doc = doc or load_doc("Sales Invoice", docname, "submit")
 
