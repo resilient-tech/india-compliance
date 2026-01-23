@@ -22,17 +22,11 @@ from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
     update_regional_gl_entries,
 )
 
-<<<<<<< HEAD
-from india_compliance.gst_india.constants import SALES_DOCTYPES
-from india_compliance.gst_india.overrides.transaction import DOCTYPES_WITH_GST_DETAIL
-=======
 from india_compliance.gst_india.constants import GST_TAX_TYPES, SALES_DOCTYPES
 from india_compliance.gst_india.overrides.transaction import (
     DOCTYPES_WITH_GST_DETAIL,
     ItemGSTDetails,
-    validate_item_tax_template,
 )
->>>>>>> b9fbe292 (fix: do not update or validate gst details for non-gst transactions)
 from india_compliance.gst_india.utils.tests import (
     _append_taxes,
     append_item,
