@@ -1311,6 +1311,11 @@ class ItemGSTDetails:
             return
 
         self.get_item_defaults()
+        self.set_item_defaults()
+
+        if ignore_gst_validations(doc):
+            return
+
         self.set_tax_amount_precisions(doc.doctype)
 
         # To Deprecate
@@ -1331,6 +1336,10 @@ class ItemGSTDetails:
             item_defaults[f"{row}_amount"] = 0
 
         self.item_defaults = item_defaults
+
+    def set_item_defaults(self):
+        for item in self.doc.get("items"):
+            item.update(self.item_defaults.copy())
 
     def set_item_name_wise_tax_details(self):
         """
