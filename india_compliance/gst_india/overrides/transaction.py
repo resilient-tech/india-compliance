@@ -788,6 +788,7 @@ def update_party_details(party_details, doctype, company):
 @frappe.whitelist()
 def get_party_details_for_subcontracting(party_details, doctype, company):
     party_details = frappe.parse_json(party_details)
+    frappe.has_permission("Supplier", "read", throw=True)
 
     if doctype == "Stock Entry":
         party_address_field = (
