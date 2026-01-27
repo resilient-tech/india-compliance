@@ -312,7 +312,6 @@ class GSTR3BQuery:
             (doc.docstatus == 1) & (doc.company == self.filters.company)
         )
 
-        # Apply date filter (automatically handles ITC period filter for supported doctypes)
         query = self.apply_itc_period_filter(query, doc, doctype)
 
         if self.filters.company_gstin:

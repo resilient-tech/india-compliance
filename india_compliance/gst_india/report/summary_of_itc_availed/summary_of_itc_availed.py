@@ -181,7 +181,6 @@ class ITCAvailedData:
             (doc_item.cess_amount + doc_item.cess_non_advol_amount).as_("cess_amount"),
         ).where((doc.docstatus == 1) & (doc.company == self.filters.get("company")))
 
-        # Apply ITC period filter (automatically falls back to posting date for non-ITC doctypes)
         query = self.apply_itc_period_filter(query, doc, doctype)
 
         if self.filters.get("company_gstin"):
