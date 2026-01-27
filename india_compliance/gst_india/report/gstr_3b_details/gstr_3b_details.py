@@ -9,10 +9,7 @@ from frappe.query_builder.functions import IfNull, LiteralValue, Sum
 from frappe.utils import cint, get_first_day, get_last_day
 
 from india_compliance.gst_india.utils import get_period
-from india_compliance.gst_india.utils.itc_claim import (
-    apply_itc_period_filter,
-    format_period,
-)
+from india_compliance.gst_india.utils.itc_claim import apply_period_filter
 
 
 def execute(filters=None):
@@ -68,7 +65,6 @@ class BaseGSTR3BDetails:
         self.company = self.filters.company
         self.company_gstin = self.filters.company_gstin
         self.filter_by = self.filters.filter_by or "ITC Claim Period"
-        self.return_period = format_period(self.to_date)
 
     def run(self):
         self.extend_columns()
@@ -76,10 +72,15 @@ class BaseGSTR3BDetails:
 
         return self.columns, self.data
 
-    def _apply_itc_period_filter(self, query, doc):
+    def _apply_itc_period_filter(self, query, doc, doctype):
         """Apply date filter based on filter_by setting."""
-        return apply_itc_period_filter(
-            query, doc, self.filter_by, self.return_period, self.from_date, self.to_date
+        return apply_period_filter(
+            query,
+            doc,
+            self.from_date,
+            self.to_date,
+            doctype=doctype,
+            filter_by=self.filter_by,
         )
 
     def extend_columns(self):
@@ -189,7 +190,9 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
             .groupby(purchase_invoice_item.parent)
         )
 
-        query = self._apply_itc_period_filter(query, purchase_invoice)
+        query = self._apply_itc_period_filter(
+            query, purchase_invoice, "Purchase Invoice"
+        )
 
         return query.run(as_dict=True)
 
@@ -234,7 +237,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
             .groupby(boe.name)
         )
 
-        query = self._apply_itc_period_filter(query, boe)
+        query = self._apply_itc_period_filter(query, boe, "Bill of Entry")
 
         return query.run(as_dict=True)
 
@@ -289,13 +292,15 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
             .where(
                 (journal_entry.docstatus == 1)
                 & (journal_entry.is_opening == "No")
-                & (journal_entry.posting_date[self.from_date : self.to_date])
                 & (journal_entry.company == self.company)
                 & (journal_entry.company_gstin == self.company_gstin)
                 & (journal_entry.voucher_type == "Reversal of ITC")
             )
             .groupby(journal_entry.name)
         )
+
+        query = self._apply_itc_period_filter(query, journal_entry, "Journal Entry")
+
         return query.run(as_dict=True)
 
     def get_ineligible_itc_from_purchase(self):
@@ -303,7 +308,6 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
             self.company,
             self.company_gstin,
             self.filter_by,
-            self.return_period,
             self.from_date,
             self.to_date,
         ).get_for_purchase("Ineligible As Per Section 17(5)")
@@ -315,7 +319,6 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
             self.company,
             self.company_gstin,
             self.filter_by,
-            self.return_period,
             self.from_date,
             self.to_date,
         ).get_for_bill_of_entry()
@@ -454,7 +457,9 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
             .groupby(purchase_invoice.name)
         )
 
-        query = self._apply_itc_period_filter(query, purchase_invoice)
+        query = self._apply_itc_period_filter(
+            query, purchase_invoice, "Purchase Invoice"
+        )
 
         return query.run(as_dict=True)
 
@@ -465,14 +470,12 @@ class IneligibleITC:
         company,
         gstin,
         filter_by,
-        return_period,
         from_date,
         to_date,
     ) -> None:
         self.company = company
         self.gstin = gstin
         self.filter_by = filter_by
-        self.return_period = return_period
         self.from_date = from_date
         self.to_date = to_date
 
@@ -528,6 +531,11 @@ class IneligibleITC:
             .where(dt.company == self.company)
         )
 
-        return apply_itc_period_filter(
-            query, dt, self.filter_by, self.return_period, self.from_date, self.to_date
+        return apply_period_filter(
+            query,
+            dt,
+            self.from_date,
+            self.to_date,
+            doctype=doctype,
+            filter_by=self.filter_by,
         )

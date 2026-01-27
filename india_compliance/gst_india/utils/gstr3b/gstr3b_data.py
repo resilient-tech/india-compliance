@@ -7,6 +7,9 @@ from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.overrides.transaction import is_inter_state_supply
 from india_compliance.gst_india.utils import get_full_gst_uom
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategory
+from india_compliance.gst_india.utils.itc_claim import (
+    apply_period_filter as _apply_itc_period_filter,
+)
 
 PURCHASE_CATEGORY_CONDITIONS = {
     "Composition Scheme, Exempted, Nil Rated": {
@@ -138,6 +141,17 @@ class GSTR3BQuery:
         self.JE_ACCOUNT = frappe.qb.DocType("Journal Entry Account")
         self.filters = frappe._dict(filters or {})
 
+    def apply_itc_period_filter(self, query, doc, doctype):
+        """Apply ITC period filter"""
+        return _apply_itc_period_filter(
+            query,
+            doc,
+            self.filters.get("from_date"),
+            self.filters.get("to_date"),
+            doctype=doctype,
+            filter_by=self.filters.get("filter_by"),
+        )
+
     def get_base_purchase_query(self):
         query = (
             frappe.qb.from_(self.PI)
@@ -191,9 +205,7 @@ class GSTR3BQuery:
             .where(IfNull(self.PI.itc_classification, "") != "Import Of Goods")
         )
 
-        return self.get_query_with_common_filters(
-            query, self.PI, use_itc_claim_period=True
-        )
+        return self.get_query_with_common_filters(query, self.PI, "Purchase Invoice")
 
     def get_base_boe_query(self):
         query = (
@@ -239,7 +251,7 @@ class GSTR3BQuery:
             )
         )
 
-        return self.get_query_with_common_filters(query, self.BOE)
+        return self.get_query_with_common_filters(query, self.BOE, "Bill of Entry")
 
     def get_base_je_query(self):
         key_field_map = {
@@ -290,36 +302,18 @@ class GSTR3BQuery:
             .groupby(self.JE.name)
         )
 
-        return self.get_query_with_common_filters(query, self.JE)
+        return self.get_query_with_common_filters(query, self.JE, "Journal Entry")
 
-    def get_query_with_common_filters(self, query, doc, use_itc_claim_period=False):
+    def get_query_with_common_filters(self, query, doc, doctype=None):
         """
         Apply common filters to the query.
-
-        Args:
-            use_itc_claim_period: If True and filter_by_claim_period is enabled,
-                filter Purchase Invoices by itc_claim_period instead of posting_date.
         """
         query = query.where(
             (doc.docstatus == 1) & (doc.company == self.filters.company)
         )
 
-        # TODO: Modify reports
-        # Determine date/period filter based on settings
-        if (
-            use_itc_claim_period
-            and self.filters.get("filter_by_claim_period")
-            and self.filters.get("return_period")
-        ):
-            # Filter by ITC claim period (MMYYYY format)
-            query = query.where(
-                IfNull(doc.itc_claim_period, "") == self.filters.return_period
-            )
-        else:
-            # Default: Filter by posting date range
-            query = query.where(
-                doc.posting_date[self.filters.from_date : self.filters.to_date]
-            )
+        # Apply date filter (automatically handles ITC period filter for supported doctypes)
+        query = self.apply_itc_period_filter(query, doc, doctype)
 
         if self.filters.company_gstin:
             query = query.where(doc.company_gstin == self.filters.company_gstin)

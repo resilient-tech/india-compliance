@@ -79,6 +79,13 @@ frappe.query_reports["GST Purchase Register"] = {
             width: "80",
         },
         {
+            fieldname: "filter_by",
+            label: __("Filter By"),
+            fieldtype: "Select",
+            default: "ITC Claim Period",
+            options: ["ITC Claim Period", "Posting Date"],
+        },
+        {
             fieldtype: "Select",
             fieldname: "summary_by",
             label: __("Summary By"),
