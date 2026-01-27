@@ -329,9 +329,10 @@ def _validate_itc_claim_period(doc):
     period = doc.itc_claim_period
     _validate_period_format(period)
 
-    # For Unregistered supplier RCM, ITC must be claimed in the same period as posting
+    # For Unregistered supplier RCM (Purchase Invoice only), ITC must be claimed in the same period as posting
     if (
-        doc.gst_category == "Unregistered"
+        doc.doctype == "Purchase Invoice"
+        and doc.gst_category == "Unregistered"
         and doc.is_reverse_charge
         and period
         and period != format_period(doc.posting_date)
