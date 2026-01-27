@@ -165,7 +165,7 @@ def apply_period_filter(
     return_period=None,
 ):
     """
-    Apply ITC period filter to a query.
+    Apply Date period filter to a query.
 
     Args:
         query: The query builder query
@@ -175,27 +175,14 @@ def apply_period_filter(
         doctype: The doctype name (string) to check if it's in SUPPORTED_DOCTYPES
         filter_by: (Optional) "ITC Claim Period" or "Posting Date". Defaults to "Posting Date"
         return_period: (Optional) The return period in MMYYYY format.
-                      Auto-calculated from to_date if not provided.
-
-    Returns:
-        Modified query with the appropriate filter applied
-
-    Note:
-        ITC Claim Period filter only applies to Purchase Invoice and Bill of Entry.
-        For other doctypes, it falls back to posting_date filter.
+                      Auto-calculated from to_date if not provided
     """
-    # Default to ITC Claim Period if not specified
-    if not filter_by:
-        filter_by = "Posting Date"
-
-    # Check if the doctype supports ITC claim period filtering
     if filter_by == "ITC Claim Period" and doctype in SUPPORTED_DOCTYPES:
         # Use provided return_period or auto-calculate from to_date
         if not return_period:
             return_period = format_period(to_date)
         return query.where(IfNull(doc.itc_claim_period, "") == return_period)
 
-    # Fall back to posting_date filter
     return query.where(doc.posting_date[from_date:to_date])
 
 
@@ -341,6 +328,19 @@ def _calculate_itc_claim_period(
 def _validate_itc_claim_period(doc):
     period = doc.itc_claim_period
     _validate_period_format(period)
+
+    # For Unregistered supplier RCM, ITC must be claimed in the same period as posting
+    if (
+        doc.gst_category == "Unregistered"
+        and doc.is_reverse_charge
+        and period
+        and period != format_period(doc.posting_date)
+    ):
+        frappe.throw(
+            _(
+                "ITC Claim Period must be {0} for purchases from Unregistered suppliers under Reverse Charge."
+            ).format(format_period(doc.posting_date))
+        )
 
     previous = doc.get_doc_before_save()
     if previous.itc_claim_period != doc.itc_claim_period and (

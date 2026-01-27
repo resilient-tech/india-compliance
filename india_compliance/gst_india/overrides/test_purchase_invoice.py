@@ -107,3 +107,29 @@ class TestPurchaseInvoice(IntegrationTestCase):
         )
 
         frappe.db.set_value("Item", "_Test Service Item", "gst_hsn_code", "999900")
+
+    def test_itc_claim_period_for_unregistered_rcm(self):
+        """
+        For Unregistered supplier RCM, ITC Claim Period must match the posting period
+        """
+        from india_compliance.gst_india.utils.itc_claim import format_period
+
+        pinv = create_purchase_invoice(
+            supplier="_Test Unregistered Supplier",
+            is_reverse_charge=True,
+            do_not_submit=True,
+        )
+
+        posting_period = format_period(pinv.posting_date)
+        self.assertEqual(pinv.itc_claim_period, posting_period)
+
+        # Try to change itc_claim_period to a different period - should fail
+        pinv.itc_claim_period = "012099"  # Different period
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(
+                r"ITC Claim Period must be .* for purchases from Unregistered suppliers under Reverse Charge"
+            ),
+            pinv.save,
+        )
