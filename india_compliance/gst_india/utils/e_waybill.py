@@ -16,7 +16,11 @@ from frappe.utils import (
 )
 from frappe.utils.file_manager import save_file
 
-from india_compliance.exceptions import GSPServerError
+from india_compliance.exceptions import (
+    AlreadyGeneratedError,
+    GSPServerError,
+    NotApplicableError,
+)
 from india_compliance.gst_india.api_classes.nic.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.nic.e_waybill import EWaybillAPI
 from india_compliance.gst_india.constants import (
@@ -148,6 +152,14 @@ def generate_e_waybill(*, doctype, docname, values=None, force: bool = False):
 def _generate_e_waybill(doc, throw=True, force=False):
     settings = frappe.get_cached_doc("GST Settings")
 
+    if doc.ewaybill:
+        frappe.throw(
+            _("e-Waybill has already been generated for {0} {1}").format(
+                _(doc.doctype), frappe.bold(doc.name)
+            ),
+            exc=AlreadyGeneratedError,
+        )
+
     try:
         if (
             not force
@@ -211,7 +223,17 @@ def _generate_e_waybill(doc, throw=True, force=False):
         handle_server_errors(settings, doc, "e-Waybill", e)
         return
 
+    except (AlreadyGeneratedError, NotApplicableError) as e:
+        if throw:
+            raise e
+
+        frappe.clear_last_message()
+        return
+
     except frappe.ValidationError as e:
+        if doc.doctype == "Sales Invoice":
+            doc.db_set({"e_waybill_status": "Failed"})
+
         if throw:
             raise e
 
@@ -225,6 +247,11 @@ def _generate_e_waybill(doc, throw=True, force=False):
             indicator="yellow",
         )
         return
+
+    except Exception as e:
+        if doc.doctype == "Sales Invoice":
+            doc.db_set({"e_waybill_status": "Failed"})
+        raise e
 
     if result.error_code == "604":
         error_message = (
@@ -1280,7 +1307,8 @@ class EWaybillData(GSTTransactionData):
             frappe.throw(
                 _("e-Waybill already generated for {0} {1}").format(
                     _(self.doc.doctype), frappe.bold(self.doc.name)
-                )
+                ),
+                exc=AlreadyGeneratedError,
             )
 
         self.validate_applicability()
@@ -1288,7 +1316,10 @@ class EWaybillData(GSTTransactionData):
 
     def validate_settings(self):
         if not self.settings.enable_e_waybill:
-            frappe.throw(_("Please enable e-Waybill in GST Settings"))
+            frappe.throw(
+                _("Please enable e-Waybill in GST Settings"),
+                exc=NotApplicableError,
+            )
 
     def validate_applicability(self):
         """
@@ -1321,6 +1352,7 @@ class EWaybillData(GSTTransactionData):
                     " codes"
                 ),
                 title=_("Invalid Data"),
+                exc=NotApplicableError,
             )
 
         if not self.doc.gst_transporter_id:
@@ -1345,6 +1377,7 @@ class EWaybillData(GSTTransactionData):
                     " company GSTIN"
                 ),
                 title=_("Invalid Data"),
+                exc=NotApplicableError,
             )
 
     def validate_bill_no_for_purchase(self):
@@ -1357,6 +1390,7 @@ class EWaybillData(GSTTransactionData):
             frappe.throw(
                 _("Bill No is mandatory to generate e-Waybill for Purchase Invoice"),
                 title=_("Invalid Data"),
+                exc=frappe.MandatoryError,
             )
 
     def validate_doctype_for_e_waybill(self):
@@ -1366,6 +1400,7 @@ class EWaybillData(GSTTransactionData):
                     self.doc.doctype
                 ),
                 title=_("Unsupported DocType"),
+                exc=NotApplicableError,
             )
 
     def validate_if_e_waybill_is_set(self):

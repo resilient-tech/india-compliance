@@ -15,7 +15,11 @@ from frappe.utils import (
     random_string,
 )
 
-from india_compliance.exceptions import GSPServerError
+from india_compliance.exceptions import (
+    AlreadyGeneratedError,
+    GSPServerError,
+    NotApplicableError,
+)
 from india_compliance.gst_india.api_classes.nic.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.taxpayer_base import otp_handler
 from india_compliance.gst_india.api_classes.taxpayer_e_invoice import (
@@ -97,17 +101,6 @@ def generate_e_invoices(docnames, force=False):
         try:
             generate_e_invoice(docname, throw=False, force=force)
 
-        except GSPServerError:
-            frappe.db.set_value(
-                "Sales Invoice",
-                {"name": ("in", docnames), "irn": ("is", "not set")},
-                "einvoice_status",
-                "Auto-Retry",
-            )
-
-            log_error()
-            frappe.clear_last_message()
-
         except Exception:
             log_error()
             frappe.clear_last_message()
@@ -128,7 +121,8 @@ def generate_e_invoice(docname, throw: bool = True, force: bool = False):
         frappe.throw(
             _("e-Invoice has already been generated for Sales Invoice {0}").format(
                 frappe.bold(doc.name)
-            )
+            ),
+            exc=AlreadyGeneratedError,
         )
 
     try:
@@ -193,6 +187,16 @@ def generate_e_invoice(docname, throw: bool = True, force: bool = False):
 
     except GSPServerError as e:
         handle_server_errors(settings, doc, "e-Invoice", e)
+        return
+
+    except (AlreadyGeneratedError, NotApplicableError) as e:
+        # Don't set status to Failed for these errors
+        # - AlreadyGeneratedError: IRN already exists, no action needed
+        # - NotApplicableError: e-Invoice not applicable, not a failure
+        if throw:
+            raise e
+
+        frappe.clear_last_message()
         return
 
     except frappe.ValidationError as e:
@@ -495,15 +499,16 @@ def _log_e_invoice(log_data):
 
 
 def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
-    def _throw(error):
+    def _throw(error, exc=NotApplicableError):
         if throw:
-            frappe.throw(error)
+            frappe.throw(error, exc=exc)
 
     if doc.irn:
         return _throw(
             _("e-Invoice has already been generated for Sales Invoice {0}").format(
                 frappe.bold(doc.name)
-            )
+            ),
+            exc=AlreadyGeneratedError,
         )
 
     if doc.company_gstin == doc.billing_address_gstin:
@@ -564,6 +569,7 @@ def validate_taxable_item(doc, throw=True):
 
     frappe.throw(
         _("e-Invoice is not applicable for invoice with only Nil-Rated/Exempted items"),
+        exc=NotApplicableError,
     )
 
 
