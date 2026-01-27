@@ -155,24 +155,47 @@ def format_period(date):
     return getdate(date).strftime("%m%Y")
 
 
-def apply_itc_period_filter(query, doc, filter_by, return_period, from_date, to_date):
+def apply_period_filter(
+    query,
+    doc,
+    from_date,
+    to_date,
+    doctype=None,
+    filter_by=None,
+    return_period=None,
+):
     """
     Apply ITC period filter to a query.
 
     Args:
         query: The query builder query
         doc: The doctype table reference (frappe.qb.DocType)
-        filter_by: "ITC Claim Period" or "Posting Date"
-        return_period: The return period in MMYYYY format
         from_date: Start date for posting date filter
         to_date: End date for posting date filter
+        doctype: The doctype name (string) to check if it's in SUPPORTED_DOCTYPES
+        filter_by: (Optional) "ITC Claim Period" or "Posting Date". Defaults to "Posting Date"
+        return_period: (Optional) The return period in MMYYYY format.
+                      Auto-calculated from to_date if not provided.
 
     Returns:
         Modified query with the appropriate filter applied
+
+    Note:
+        ITC Claim Period filter only applies to Purchase Invoice and Bill of Entry.
+        For other doctypes, it falls back to posting_date filter.
     """
-    if filter_by == "ITC Claim Period":
+    # Default to ITC Claim Period if not specified
+    if not filter_by:
+        filter_by = "Posting Date"
+
+    # Check if the doctype supports ITC claim period filtering
+    if filter_by == "ITC Claim Period" and doctype in SUPPORTED_DOCTYPES:
+        # Use provided return_period or auto-calculate from to_date
+        if not return_period:
+            return_period = format_period(to_date)
         return query.where(IfNull(doc.itc_claim_period, "") == return_period)
 
+    # Fall back to posting_date filter
     return query.where(doc.posting_date[from_date:to_date])
 
 
