@@ -9,6 +9,10 @@ from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import IfNull
 
+from india_compliance.gst_india.utils.itc_claim import (
+    apply_period_filter as _apply_itc_period_filter,
+)
+
 TAX_FIELDS = (
     "igst_amount",
     "cgst_amount",
@@ -105,12 +109,24 @@ class ITCAvailedData:
         filters.from_date, filters.to_date = filters.date_range
         self.filters = filters
 
+    def apply_itc_period_filter(self, query, doc, doctype):
+        """Apply ITC period filter for supported doctypes"""
+        return _apply_itc_period_filter(
+            query,
+            doc,
+            self.filters.get("from_date"),
+            self.filters.get("to_date"),
+            doctype=doctype,
+            filter_by=self.filters.get("filter_by"),
+        )
+
     def _get_data(self) -> list[dict]:
         return self._get_bill_of_entry_data() + self._get_purchase_invoice_data()
 
     def _get_purchase_invoice_data(self) -> list[dict]:
-        doc = frappe.qb.DocType("Purchase Invoice")
-        doc_item = frappe.qb.DocType("Purchase Invoice Item")
+        doctype = "Purchase Invoice"
+        doc = frappe.qb.DocType(doctype)
+        doc_item = frappe.qb.DocType(f"{doctype} Item")
 
         query = (
             frappe.qb.from_(doc)
@@ -128,14 +144,15 @@ class ITCAvailedData:
             )
         )
 
-        query = self._add_tax_fields_and_filters(query, doc, doc_item)
+        query = self._add_tax_fields_and_filters(query, doc, doc_item, doctype)
 
         return query.run(as_dict=True)
 
     def _get_bill_of_entry_data(self) -> list[dict]:
-        doc = frappe.qb.DocType("Bill of Entry")
+        doctype = "Bill of Entry"
+        doc = frappe.qb.DocType(doctype)
         item = frappe.qb.DocType("Item")
-        doc_item = frappe.qb.DocType("Bill of Entry Item")
+        doc_item = frappe.qb.DocType(f"{doctype} Item")
 
         query = (
             frappe.qb.from_(doc)
@@ -152,25 +169,20 @@ class ITCAvailedData:
             )
         )
 
-        query = self._add_tax_fields_and_filters(query, doc, doc_item)
+        query = self._add_tax_fields_and_filters(query, doc, doc_item, doctype)
 
         return query.run(as_dict=True)
 
-    def _add_tax_fields_and_filters(self, query, doc, doc_item):
+    def _add_tax_fields_and_filters(self, query, doc, doc_item, doctype=None):
         query = query.select(
             doc_item.cgst_amount,
             doc_item.sgst_amount,
             doc_item.igst_amount,
             (doc_item.cess_amount + doc_item.cess_non_advol_amount).as_("cess_amount"),
-        ).where(
-            (doc.docstatus == 1)
-            & (
-                doc.posting_date[
-                    self.filters.get("from_date") : self.filters.get("to_date")
-                ]
-            )
-            & (doc.company == self.filters.get("company"))
-        )
+        ).where((doc.docstatus == 1) & (doc.company == self.filters.get("company")))
+
+        # Apply ITC period filter (automatically falls back to posting date for non-ITC doctypes)
+        query = self.apply_itc_period_filter(query, doc, doctype)
 
         if self.filters.get("company_gstin"):
             query = query.where(doc.company_gstin == self.filters.get("company_gstin"))
