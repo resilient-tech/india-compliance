@@ -935,7 +935,7 @@ class GSTR3BExcelExporter:
         excel.export(file_name)
 
     def _get_filename(self):
-        return f"GSTR-3B-{self.gstin}-{self.month}-{self.fiscal_year}.xlsx"
+        return f"GSTR-3B-{self.gstin}-{self.month}-{self.fiscal_year}"
 
     def _update_worksheet(self, excel):
         self.worksheet = excel.wb[self.WORKSHEET_NAME]

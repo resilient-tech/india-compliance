@@ -40,6 +40,9 @@ inverse_table = [0, 4, 3, 2, 1, 5, 6, 7, 8, 9]
 class PAN(Document):
     @frappe.whitelist()
     def update_pan_status(self):
+        """
+        Permission check not required as user has access to doc.
+        """
         fetch_and_update_pan_status(self.pan, True)
         frappe.msgprint(_("PAN Status Updated"))
 
@@ -49,6 +52,9 @@ class PAN(Document):
 
 @frappe.whitelist()
 def get_pan_status(pan, force_update: bool = False):
+    """
+    Permission check not required as PAN details are public.
+    """
     if not force_update and (
         pan_status := frappe.db.get_value("PAN", pan, ["pan_status", "last_updated_on"])
     ):
@@ -110,6 +116,9 @@ def fetch_pan_status(pan, throw=False):
     This is an unofficial API
     Use random generated aadhaar number to ensure request is not blocked
     """
+
+    # Feature disabled - unofficial API no longer reliable
+    return
 
     url = "https://eportal.incometax.gov.in/iec/servicesapi/getEntity"
 

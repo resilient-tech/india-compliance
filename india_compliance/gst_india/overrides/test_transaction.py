@@ -22,9 +22,10 @@ from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
     update_regional_gl_entries,
 )
 
-from india_compliance.gst_india.constants import SALES_DOCTYPES
+from india_compliance.gst_india.constants import GST_TAX_TYPES, SALES_DOCTYPES
 from india_compliance.gst_india.overrides.transaction import (
     DOCTYPES_WITH_GST_DETAIL,
+    ItemGSTDetails,
     validate_item_tax_template,
 )
 from india_compliance.gst_india.utils.tests import (
@@ -1034,6 +1035,47 @@ class TestTransaction(IntegrationTestCase):
             doc.save,
         )
 
+    def test_item_gst_details_for_non_gst_transactions(self):
+        """
+        Test Non-GST Transactions can be processed without errors.
+        """
+        if self.doctype not in DOCTYPES_WITH_GST_DETAIL:
+            return
+
+        doc = create_transaction(
+            **self.transaction_details,
+            is_in_state=True,
+            do_not_submit=True,
+        )
+        for item in doc.items:
+            for tax in ["cgst", "sgst"]:
+                self.assertNotEqual(item.get(f"{tax}_rate"), 0)
+                self.assertNotEqual(item.get(f"{tax}_amount"), 0)
+
+        doc.is_opening = "Yes"  # opening transaction
+        doc.save()
+
+        # validate item gst details
+        for item in doc.items:
+            for tax in GST_TAX_TYPES:
+                self.assertEqual(item.get(f"{tax}_rate"), 0)
+                self.assertEqual(item.get(f"{tax}_amount"), 0)
+
+    def test_none_taxable_values(self):
+        """
+        For Non-GST Transactions (POS Merge Log) taxable value can be none
+        """
+        doc = create_transaction(
+            **self.transaction_details,
+            is_in_state=True,
+            is_opening="Yes",
+            do_not_save=True,
+        )
+        for item in doc.items:
+            item.taxable_value = None
+
+        ItemGSTDetails().update(doc)
+
 
 def create_refund_transaction():
     gst_settings = frappe.get_cached_doc("GST Settings")
@@ -1394,19 +1436,19 @@ class TestPlaceOfSupply(IntegrationTestCase):
             "shipping_address_name": "_Test Indian Registered Company-Billing",
         }
 
-        settings = ["Accounts Settings", None, "determine_address_tax_category_from"]
+        settings = ["Accounts Settings", "determine_address_tax_category_from"]
 
         # Shipping Address
-        frappe.db.set_value(*settings, "Shipping Address")
+        frappe.db.set_single_value(*settings, "Shipping Address")
         doc = create_transaction(**doc_args)
         self.assertEqual(doc.place_of_supply, "24-Gujarat")
 
         # Billing Address
-        frappe.db.set_value(*settings, "Billing Address")
+        frappe.db.set_single_value(*settings, "Billing Address")
         doc = create_transaction(**doc_args)
         self.assertEqual(doc.place_of_supply, "29-Karnataka")
 
-        frappe.db.set_value(*settings, "Shipping Address")
+        frappe.db.set_single_value(*settings, "Shipping Address")
 
         # Sales Invoice with only Billing Address
         doc_args = {
