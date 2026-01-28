@@ -8,14 +8,22 @@ import frappe
 from frappe import _
 from frappe.model.document import bulk_insert
 from frappe.query_builder.functions import IfNull
-from frappe.utils import add_months, get_first_day, get_last_day, getdate, random_string
+from frappe.utils import (
+    add_months,
+    get_first_day,
+    get_last_day,
+    get_table_name,
+    getdate,
+    random_string,
+)
 
 from india_compliance.gst_india.utils import get_period
 
-SUPPORTED_DOCTYPES = ("Purchase Invoice", "Bill of Entry")
+SUPPORTED_DOCTYPES = frozenset(("Purchase Invoice", "Bill of Entry"))
+SUPPORTED_TABLE_NAMES = frozenset(get_table_name(dt) for dt in SUPPORTED_DOCTYPES)
 
 
-# =============================================================================
+# =============================================================================# =============================================================================
 # PUBLIC API
 # =============================================================================
 
@@ -160,7 +168,6 @@ def apply_period_filter(
     doc,
     from_date,
     to_date,
-    doctype=None,
     filter_by=None,
     return_period=None,
 ):
@@ -172,13 +179,11 @@ def apply_period_filter(
         doc: The doctype table reference (frappe.qb.DocType)
         from_date: Start date for posting date filter
         to_date: End date for posting date filter
-        doctype: The doctype name (string) to check if it's in SUPPORTED_DOCTYPES
         filter_by: (Optional) "ITC Claim Period" or "Posting Date". Defaults to "Posting Date"
         return_period: (Optional) The return period in MMYYYY format.
                       Auto-calculated from to_date if not provided
     """
-    if filter_by == "ITC Claim Period" and doctype in SUPPORTED_DOCTYPES:
-        # Use provided return_period or auto-calculate from to_date
+    if filter_by == "ITC Claim Period" and doc._table_name in SUPPORTED_TABLE_NAMES:
         if not return_period:
             return_period = format_period(to_date)
         return query.where(IfNull(doc.itc_claim_period, "") == return_period)
