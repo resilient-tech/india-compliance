@@ -61,6 +61,7 @@ frappe.query_reports["GSTR-3B Details"] = {
             fieldtype: "Select",
             default: "ITC Claim Period",
             options: ["ITC Claim Period", "Posting Date"],
+            reqd: 1,
         },
         {
             fieldname: "section",

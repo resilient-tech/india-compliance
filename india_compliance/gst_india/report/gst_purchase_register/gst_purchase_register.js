@@ -84,6 +84,7 @@ frappe.query_reports["GST Purchase Register"] = {
             fieldtype: "Select",
             default: "ITC Claim Period",
             options: ["ITC Claim Period", "Posting Date"],
+            reqd: 1,
         },
         {
             fieldtype: "Select",
