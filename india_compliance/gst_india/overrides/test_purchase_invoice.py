@@ -2,12 +2,14 @@ import re
 
 import frappe
 from frappe.tests import IntegrationTestCase, change_settings
+from frappe.utils import add_months, getdate
 from erpnext.accounts.doctype.account.test_account import create_account
 
 from india_compliance.gst_india.utils.itc_claim import (
     ITC_CLAIM_PERIOD_DEFERRED,
     _validate_period_format,
     format_period,
+    update_gstr3b_filing_status,
 )
 from india_compliance.gst_india.utils.tests import append_item, create_purchase_invoice
 
@@ -209,4 +211,65 @@ class TestPurchaseInvoice(IntegrationTestCase):
 
         # Submit and verify it's still valid
         pinv.submit()
+        self.assertEqual(pinv.itc_claim_period, ITC_CLAIM_PERIOD_DEFERRED)
+
+    def test_itc_claim_period_update_restriction_when_filed(self):
+        """
+        Test that ITC Claim Period cannot be changed when GSTR-3B is filed
+        """
+        pinv = create_purchase_invoice(do_not_submit=True)
+        current_period = format_period(pinv.posting_date)
+        pinv.submit()
+
+        self.assertEqual(pinv.itc_claim_period, current_period)
+
+        posting_date = getdate(pinv.posting_date)
+        month_or_quarter = posting_date.strftime("%B")
+        year = posting_date.year
+
+        # Mark GSTR-3B as filed for the current period
+        update_gstr3b_filing_status(
+            company_gstin=pinv.company_gstin,
+            month_or_quarter=month_or_quarter,
+            year=year,
+            status="Filed",
+        )
+
+        # Try to change to a different period - should fail
+        next_period = format_period(add_months(pinv.posting_date, 1))
+        pinv.itc_claim_period = next_period
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(
+                r"Cannot change ITC Claim Period from .* to .*\. GSTR-3B already filed\."
+            ),
+            pinv.save,
+        )
+
+        # Reload and try to change to "Deferred" - should also fail
+        pinv.reload()
+        pinv.itc_claim_period = ITC_CLAIM_PERIOD_DEFERRED
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(
+                r"Cannot change ITC Claim Period from .* to .*\. GSTR-3B already filed\."
+            ),
+            pinv.save,
+        )
+
+        # Mark the current period as unfiled
+        update_gstr3b_filing_status(
+            company_gstin=pinv.company_gstin,
+            month_or_quarter=month_or_quarter,
+            year=year,
+            status="Not Filed",
+        )
+
+        # Now it should be possible to change
+        pinv.reload()
+        pinv.itc_claim_period = ITC_CLAIM_PERIOD_DEFERRED
+        pinv.save()
+
         self.assertEqual(pinv.itc_claim_period, ITC_CLAIM_PERIOD_DEFERRED)

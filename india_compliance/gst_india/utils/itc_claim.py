@@ -367,6 +367,9 @@ def _validate_itc_claim_period(doc):
         )
 
     previous = doc.get_doc_before_save()
+    if not previous:
+        return
+
     if previous.itc_claim_period != doc.itc_claim_period and (
         _is_gstr3b_filed(doc.company_gstin, previous.itc_claim_period)
         or _is_gstr3b_filed(doc.company_gstin, doc.itc_claim_period)
