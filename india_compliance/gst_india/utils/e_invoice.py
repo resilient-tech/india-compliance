@@ -99,7 +99,7 @@ def generate_e_invoices(docnames, force=False):
 
     for docname in docnames:
         try:
-            generate_e_invoice(docname, throw=False, force=force)
+            generate_e_invoice(docname, force=force)
 
         except Exception:
             log_error()
