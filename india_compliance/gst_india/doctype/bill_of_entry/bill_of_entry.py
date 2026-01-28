@@ -78,7 +78,7 @@ class BillofEntry(Document):
         make_gl_entries(gl_entries)
         self.update_pending_boe_qty()
 
-    def on_update_after_submit(self):
+    def before_update_after_submit(self):
         _validate_itc_claim_period(self)
 
     def on_cancel(self):
