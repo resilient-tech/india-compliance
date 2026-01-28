@@ -1029,7 +1029,7 @@ CUSTOM_FIELDS = {
             "print_hide": 1,
             "no_copy": 1,
             "translatable": 0,
-            "description": "GSTR-3B period for claiming ITC (MMYYYY). Leave empty to defer.",
+            "description": "GSTR-3B period for claiming ITC (MMYYYY) or 'Deferred' to postpone.",
             "allow_on_submit": 1,
         },
     ],
