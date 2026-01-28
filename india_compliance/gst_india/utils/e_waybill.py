@@ -7,6 +7,7 @@ from frappe.desk.form.load import get_docinfo, run_onload
 from frappe.utils import (
     add_days,
     add_to_date,
+    escape_html,
     format_date,
     get_datetime,
     get_datetime_str,
@@ -542,8 +543,10 @@ def update_transporter(*, doctype, docname, values):
         " {old_transporter_id} to {new_transporter_id}."
     ).format(
         user=frappe.bold(get_fullname()),
-        old_transporter_id=frappe.bold(old_transporter_id or "<empty>"),
-        new_transporter_id=frappe.bold(values.gst_transporter_id or "<empty>"),
+        old_transporter_id=frappe.bold(escape_html(old_transporter_id or "<empty>")),
+        new_transporter_id=frappe.bold(
+            escape_html(values.gst_transporter_id or "<empty>")
+        ),
     )
 
     log_and_process_e_waybill(
