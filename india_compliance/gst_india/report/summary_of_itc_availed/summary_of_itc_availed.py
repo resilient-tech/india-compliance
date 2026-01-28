@@ -110,7 +110,6 @@ class ITCAvailedData:
         self.filters = filters
 
     def apply_itc_period_filter(self, query, doc):
-        """Apply ITC period filter for supported doctypes"""
         return _apply_itc_period_filter(
             query,
             doc,
