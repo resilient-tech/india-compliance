@@ -116,13 +116,12 @@ class GSTR3BReport(Document):
                 "gstr3b_report_generation", doctype=self.doctype, docname=self.name
             )
 
-    def apply_itc_period_filter(self, query, doc, doctype):
+    def apply_itc_period_filter(self, query, doc):
         return _apply_itc_period_filter(
             query,
             doc,
             self.from_date,
             self.to_date,
-            doctype=doctype,
             filter_by=self.filter_by,
         )
 
@@ -226,9 +225,8 @@ class GSTR3BReport(Document):
                     self.report_dict["itc_elg"]["itc_inelg"][1][key] += row[key]
 
     def update_itc_reversal_from_journal_entry(self):
-        doctype = "Journal Entry"
-        journal_entry = frappe.qb.DocType(doctype)
-        journal_entry_account = frappe.qb.DocType(f"{doctype} Account")
+        journal_entry = frappe.qb.DocType("Journal Entry")
+        journal_entry_account = frappe.qb.DocType("Journal Entry Account")
 
         reversal_entries = (
             frappe.qb.from_(journal_entry)
@@ -303,7 +301,6 @@ class GSTR3BReport(Document):
         itc_amounts = self.apply_itc_period_filter(
             itc_amounts,
             purchase_invoice,
-            "Purchase Invoice",
         ).run(as_dict=True)
 
         itc_details = {}
@@ -343,7 +340,6 @@ class GSTR3BReport(Document):
             query = self.apply_itc_period_filter(
                 query,
                 boe,
-                "Bill of Entry",
             )
 
             return query.run()[0][0] or 0
@@ -354,9 +350,8 @@ class GSTR3BReport(Document):
         itc_details["Import Of Goods"]["csamt"] += cess
 
     def set_reclaim_of_itc_reversal(self):
-        doctype = "Journal Entry"
-        journal_entry = frappe.qb.DocType(doctype)
-        journal_entry_account = frappe.qb.DocType(f"{doctype} Account")
+        journal_entry = frappe.qb.DocType("Journal Entry")
+        journal_entry_account = frappe.qb.DocType("Journal Entry Account")
 
         reclaimed_entries = (
             frappe.qb.from_(journal_entry)
@@ -379,9 +374,8 @@ class GSTR3BReport(Document):
             self.report_dict["itc_elg"]["itc_inelg"][0][tax_amount_key] += entry.amount
 
     def get_inward_nil_exempt(self, state):
-        doctype = "Purchase Invoice"
-        pi = frappe.qb.DocType(doctype)
-        pi_item = frappe.qb.DocType(f"{doctype} Item")
+        pi = frappe.qb.DocType("Purchase Invoice")
+        pi_item = frappe.qb.DocType("Purchase Invoice Item")
 
         query = (
             frappe.qb.from_(pi)
@@ -405,7 +399,7 @@ class GSTR3BReport(Document):
             .where(pi.gst_category != "Overseas")
         )
 
-        query = self.apply_itc_period_filter(query, pi, doctype=doctype)
+        query = self.apply_itc_period_filter(query, pi)
         inward_nil_exempt = query.run(as_dict=True)
 
         inward_nil_exempt_details = {
@@ -584,15 +578,9 @@ class GSTR3BReport(Document):
             .where(invoice.company_gstin != IfNull(party_gstin, ""))
         )
 
-        # Section 3.1 - Outward Supplies & Inward Supplies liable to Reverse Charge
-        # Always use posting_date for liability reporting (not ITC claim period)
-        # ITC claim period is only applicable for Section 4 - ITC claiming
-        return _apply_itc_period_filter(
+        return self.apply_itc_period_filter(
             query,
             invoice,
-            self.from_date,
-            self.to_date,
-            filter_by="Posting Date",
         )
 
     def get_outward_items(self, doctype):

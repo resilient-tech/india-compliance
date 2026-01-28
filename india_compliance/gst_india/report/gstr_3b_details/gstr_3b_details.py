@@ -72,14 +72,13 @@ class BaseGSTR3BDetails:
 
         return self.columns, self.data
 
-    def _apply_itc_period_filter(self, query, doc, doctype):
+    def _apply_itc_period_filter(self, query, doc):
         """Apply date filter based on filter_by setting."""
         return apply_period_filter(
             query,
             doc,
             self.from_date,
             self.to_date,
-            doctype=doctype,
             filter_by=self.filter_by,
         )
 
@@ -190,9 +189,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
             .groupby(purchase_invoice_item.parent)
         )
 
-        query = self._apply_itc_period_filter(
-            query, purchase_invoice, "Purchase Invoice"
-        )
+        query = self._apply_itc_period_filter(query, purchase_invoice)
 
         return query.run(as_dict=True)
 
@@ -237,7 +234,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
             .groupby(boe.name)
         )
 
-        query = self._apply_itc_period_filter(query, boe, "Bill of Entry")
+        query = self._apply_itc_period_filter(query, boe)
 
         return query.run(as_dict=True)
 
@@ -299,7 +296,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
             .groupby(journal_entry.name)
         )
 
-        query = self._apply_itc_period_filter(query, journal_entry, "Journal Entry")
+        query = self._apply_itc_period_filter(query, journal_entry)
 
         return query.run(as_dict=True)
 
@@ -457,9 +454,7 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
             .groupby(purchase_invoice.name)
         )
 
-        query = self._apply_itc_period_filter(
-            query, purchase_invoice, "Purchase Invoice"
-        )
+        query = self._apply_itc_period_filter(query, purchase_invoice)
 
         return query.run(as_dict=True)
 
@@ -480,12 +475,11 @@ class IneligibleITC:
         self.to_date = to_date
 
     def get_for_purchase(self, ineligibility_reason, group_by="name"):
-        doctype = "Purchase Invoice"
-        dt = frappe.qb.DocType(doctype)
-        dt_item = frappe.qb.DocType(f"{doctype} Item")
+        dt = frappe.qb.DocType("Purchase Invoice")
+        dt_item = frappe.qb.DocType("Purchase Invoice Item")
 
         query = (
-            self.get_common_query(doctype, dt, dt_item)
+            self.get_common_query("Purchase Invoice", dt, dt_item)
             .select((dt.ineligibility_reason).as_("itc_classification"))
             .where((dt.is_opening == "No"))
             .where(IfNull(dt.ineligibility_reason, "") == ineligibility_reason)
@@ -497,11 +491,10 @@ class IneligibleITC:
         return query.groupby(dt[group_by]).run(as_dict=True)
 
     def get_for_bill_of_entry(self, group_by="name"):
-        doctype = "Bill of Entry"
-        dt = frappe.qb.DocType(doctype)
-        dt_item = frappe.qb.DocType(f"{doctype} Item")
+        dt = frappe.qb.DocType("Bill of Entry")
+        dt_item = frappe.qb.DocType("Bill of Entry Item")
         query = (
-            self.get_common_query(doctype, dt, dt_item)
+            self.get_common_query("Bill of Entry", dt, dt_item)
             .select(
                 ConstantColumn("Ineligible As Per Section 17(5)").as_(
                     "itc_classification"
@@ -536,6 +529,5 @@ class IneligibleITC:
             dt,
             self.from_date,
             self.to_date,
-            doctype=doctype,
             filter_by=self.filter_by,
         )
