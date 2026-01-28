@@ -17,10 +17,12 @@ from frappe.utils import (
     random_string,
 )
 
+from india_compliance.gst_india.overrides.transaction import validate_mandatory_fields
 from india_compliance.gst_india.utils import get_period
 
 SUPPORTED_DOCTYPES = frozenset(("Purchase Invoice", "Bill of Entry"))
 SUPPORTED_TABLE_NAMES = frozenset(get_table_name(dt) for dt in SUPPORTED_DOCTYPES)
+ITC_CLAIM_PERIOD_DEFERRED = "Deferred"
 
 
 # =============================================================================# =============================================================================
@@ -126,6 +128,7 @@ def get_itc_period_options(company_gstin=None, posting_date=None):
             periods.append(period)
         current = add_months(current, 1)
 
+    periods.append(ITC_CLAIM_PERIOD_DEFERRED)
     return periods
 
 
@@ -217,6 +220,9 @@ def _max_period(p1, p2):
 
 
 def _validate_period_format(period):
+    if period == ITC_CLAIM_PERIOD_DEFERRED:
+        return
+
     if period and not re.match(r"^(0[1-9]|1[0-2])\d{4}$", period):
         frappe.throw(
             _("ITC Claim Period '{0}' must be in MMYYYY format").format(period)
@@ -246,6 +252,9 @@ def _get_section_16_4_deadline(posting_date):
 
 
 def _is_gstr3b_filed(gstin, period):
+    if period == ITC_CLAIM_PERIOD_DEFERRED or not period:
+        return False
+
     log_name = f"GSTR3B-{period}-{gstin}"
     return frappe.db.get_value("GST Return Log", log_name, "filing_status") == "Filed"
 
@@ -308,7 +317,7 @@ def _calculate_itc_claim_period(
     # FIRST PREFERENCE: IMS ACTION
 
     if ims_action in ("Rejected", "Pending"):
-        return ""  # clear
+        return ITC_CLAIM_PERIOD_DEFERRED  # defer to next period
 
     if ims_action == "Accepted" and ims_period:
         return ims_period
@@ -316,7 +325,7 @@ def _calculate_itc_claim_period(
     # NEXT PREFERENCE: MATCH FOUND
 
     if inward_supply and inward_supply.get("ims_action") in ("Rejected", "Pending"):
-        return ""  # clear
+        return ITC_CLAIM_PERIOD_DEFERRED  # defer to next period
 
     # default
     posting_period = format_period(doc.posting_date)
@@ -325,12 +334,21 @@ def _calculate_itc_claim_period(
     if inward_supply and inward_supply.get("return_period_2b"):
         default_period = _max_period(posting_period, inward_supply.return_period_2b)
 
+    if (
+        doc.get("doctype") == "Purchase Invoice"
+        and doc.get("gst_category") == "Unregistered"
+        and doc.get("is_reverse_charge")
+    ):
+        return posting_period
+
     return _get_next_unfiled_period(
         doc.company_gstin, default_period, doc.posting_date, filed
     )
 
 
 def _validate_itc_claim_period(doc):
+    validate_mandatory_fields(doc, "itc_claim_period")
+
     period = doc.itc_claim_period
     _validate_period_format(period)
 
@@ -383,7 +401,7 @@ def _bulk_update(updates, doctype, source):
     current_time = frappe.utils.now()
     comments = []
     for period, names in updates.items():
-        content = f"ITC Claim Period {'set to ' + period if period else 'deferred'} via {source}"
+        content = f"ITC Claim Period set to {period} via {source}"
         for name in names:
             comment = frappe.new_doc("Comment")
             comment.update(

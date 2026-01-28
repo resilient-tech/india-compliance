@@ -4,6 +4,11 @@ import frappe
 from frappe.tests import IntegrationTestCase, change_settings
 from erpnext.accounts.doctype.account.test_account import create_account
 
+from india_compliance.gst_india.utils.itc_claim import (
+    ITC_CLAIM_PERIOD_DEFERRED,
+    _validate_period_format,
+    format_period,
+)
 from india_compliance.gst_india.utils.tests import append_item, create_purchase_invoice
 
 
@@ -108,12 +113,56 @@ class TestPurchaseInvoice(IntegrationTestCase):
 
         frappe.db.set_value("Item", "_Test Service Item", "gst_hsn_code", "999900")
 
+    def test_itc_claim_period_invalid_format(self):
+        """
+        Test that invalid period formats are rejected
+        """
+        # Test invalid formats
+        invalid_periods = [
+            "1320",  # Too short (only 4 digits)
+            "132024",  # Month > 12
+            "002024",  # Month = 00
+            "12-2024",  # Wrong separator
+            "Dec2024",  # Text format
+            "MMYYYY",  # Literal text
+            "abcdef",  # All text
+            "12 2024",  # Space separator
+        ]
+
+        # Test at document level as well
+        pinv = create_purchase_invoice(do_not_submit=True)
+        pinv.itc_claim_period = invalid_periods[1]  # "132024"
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"ITC Claim Period '.*' must be in MMYYYY format"),
+            pinv.save,
+        )
+
+        pinv.reload()
+        pinv.itc_claim_period = ""
+        pinv.submit()
+
+        self.assertEqual(pinv.itc_claim_period, format_period(pinv.posting_date))
+
+        pinv.itc_claim_period = ""
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"ITC Claim Period.*is a mandatory field"),
+            pinv.save,
+        )
+
+        for invalid_period in invalid_periods:
+            with self.assertRaisesRegex(
+                frappe.exceptions.ValidationError,
+                re.compile(r"ITC Claim Period '.*' must be in MMYYYY format"),
+            ):
+                _validate_period_format(invalid_period)
+
     def test_itc_claim_period_for_unregistered_rcm(self):
         """
         For Unregistered supplier RCM, ITC Claim Period must match the posting period
         """
-        from india_compliance.gst_india.utils.itc_claim import format_period
-
         pinv = create_purchase_invoice(
             supplier="_Test Unregistered Supplier",
             is_reverse_charge=True,
@@ -133,3 +182,31 @@ class TestPurchaseInvoice(IntegrationTestCase):
             ),
             pinv.save,
         )
+
+        # Try to set to "Deferred" - should also fail for Unregistered RCM
+        pinv.reload()
+        pinv.itc_claim_period = ITC_CLAIM_PERIOD_DEFERRED
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(
+                r"ITC Claim Period must be .* for purchases from Unregistered suppliers under Reverse Charge"
+            ),
+            pinv.save,
+        )
+
+    def test_itc_claim_period_deferred(self):
+        """
+        Test that 'Deferred' is a valid ITC Claim Period for regular invoices
+        """
+        pinv = create_purchase_invoice(do_not_submit=True)
+
+        # Set to "Deferred" - should be valid
+        pinv.itc_claim_period = ITC_CLAIM_PERIOD_DEFERRED
+        pinv.save()
+
+        self.assertEqual(pinv.itc_claim_period, ITC_CLAIM_PERIOD_DEFERRED)
+
+        # Submit and verify it's still valid
+        pinv.submit()
+        self.assertEqual(pinv.itc_claim_period, ITC_CLAIM_PERIOD_DEFERRED)
