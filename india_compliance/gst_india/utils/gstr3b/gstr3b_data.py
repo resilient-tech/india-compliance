@@ -142,7 +142,6 @@ class GSTR3BQuery:
         self.filters = frappe._dict(filters or {})
 
     def apply_itc_period_filter(self, query, doc):
-        """Apply ITC period filter"""
         return _apply_itc_period_filter(
             query,
             doc,

@@ -75,8 +75,8 @@ def set_itc_claim_period_on_ims_action(invoice_names, action, ims_period=None):
 
     # Group by doctype
     by_doctype = defaultdict(list)
-    for l in linked:
-        by_doctype[l.link_doctype].append(l.link_name)
+    for link in linked:
+        by_doctype[link.link_doctype].append(link.link_name)
 
     for doctype, doc_names in by_doctype.items():
         updates = defaultdict(set)

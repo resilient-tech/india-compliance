@@ -433,9 +433,8 @@ class GSTR3BReport(Document):
         return inward_nil_exempt_details
 
     def set_reverse_charge_supply_through_ecomm_operators(self):
-        doctype = "Sales Invoice"
-        si = frappe.qb.DocType(doctype)
-        si_item = frappe.qb.DocType(f"{doctype} Item")
+        si = frappe.qb.DocType("Sales Invoice")
+        si_item = frappe.qb.DocType("Sales Invoice Item")
         query = (
             frappe.qb.from_(si)
             .join(si_item)
