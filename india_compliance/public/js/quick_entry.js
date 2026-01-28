@@ -97,6 +97,8 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 onchange: () => {
                     const d = this.dialog;
 
+                    india_compliance.check_duplicate_gstin(d.doc._gstin, this.doctype);
+
                     if (["Customer", "Supplier"].includes(this.doctype)) {
                         d.set_value(
                             `${this.doctype.toLowerCase()}_type`,
@@ -110,7 +112,10 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
 
                     d.set_value(
                         "gst_category",
-                        india_compliance.guess_gst_category(d.doc._gstin, d.doc.country)
+                        india_compliance.guess_gst_category(
+                            d.doc._gstin,
+                            d.doc.country,
+                        ),
                     );
                 },
             },
