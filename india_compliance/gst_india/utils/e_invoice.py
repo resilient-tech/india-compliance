@@ -202,12 +202,12 @@ def generate_e_invoice(docname, throw: bool = True, force: bool = False):
         handle_server_errors(settings, doc, "e-Invoice", e)
         return
 
-    except (AlreadyGeneratedError, NotApplicableError) as e:
+    except (AlreadyGeneratedError, NotApplicableError):
         # Don't set status to Failed for these errors
         # - AlreadyGeneratedError: IRN already exists, no action needed
         # - NotApplicableError: e-Invoice not applicable, not a failure
         if throw:
-            raise e
+            raise
 
         frappe.clear_last_message()
         return
@@ -216,7 +216,7 @@ def generate_e_invoice(docname, throw: bool = True, force: bool = False):
         set_einvoice_status(doc, "Failed")
 
         if throw:
-            raise e
+            raise
 
         if frappe.request:
             frappe.clear_last_message()
@@ -231,9 +231,9 @@ def generate_e_invoice(docname, throw: bool = True, force: bool = False):
 
         return
 
-    except Exception as e:
+    except Exception:
         set_einvoice_status(doc, "Failed")
-        raise e
+        raise
 
     return log_and_process_e_invoice_generation(doc, result, api.sandbox_mode)
 
