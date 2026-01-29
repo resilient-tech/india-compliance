@@ -119,12 +119,19 @@ def generate_e_invoice(docname, throw: bool = True, force: bool = False):
     settings = frappe.get_cached_doc("GST Settings")
 
     if doc.irn:
-        frappe.throw(
-            _("e-Invoice has already been generated for Sales Invoice {0}").format(
-                frappe.bold(doc.name)
-            ),
-            exc=AlreadyGeneratedError,
-        )
+        message = _(
+            "e-Invoice has already been generated for Sales Invoice {0}"
+        ).format(frappe.bold(doc.name))
+
+        if not throw and frappe.request:
+            return frappe.msgprint(
+                message,
+                _("Warning"),
+                indicator="yellow",
+                alert=True,
+            )
+
+        frappe.throw(message, exc=AlreadyGeneratedError)
 
     try:
         if (
