@@ -1358,11 +1358,11 @@ class EWaybillData(GSTTransactionData):
                 )
 
         # Atleast one item with HSN code of goods is required
-        for item in self.doc.items:
-            if not item.gst_hsn_code.startswith("99"):
-                break
+        has_atleast_one_goods_item = any(
+            not item.gst_hsn_code.startswith("99") for item in self.doc.items
+        )
 
-        else:
+        if not has_atleast_one_goods_item:
             frappe.throw(
                 _(
                     "e-Waybill cannot be generated because all items have service HSN"
