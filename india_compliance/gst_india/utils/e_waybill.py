@@ -235,9 +235,9 @@ def _generate_e_waybill(doc, throw=True, force=False):
         handle_server_errors(settings, doc, "e-Waybill", e)
         return
 
-    except (AlreadyGeneratedError, NotApplicableError) as e:
+    except (AlreadyGeneratedError, NotApplicableError):
         if throw:
-            raise e
+            raise
 
         frappe.clear_last_message()
         return
@@ -247,7 +247,7 @@ def _generate_e_waybill(doc, throw=True, force=False):
             set_ewaybill_status(doc, "Failed")
 
         if throw:
-            raise e
+            raise
 
         if frappe.request:
             frappe.clear_last_message()
@@ -262,11 +262,11 @@ def _generate_e_waybill(doc, throw=True, force=False):
 
         return
 
-    except Exception as e:
+    except Exception:
         if doc.doctype == "Sales Invoice":
             set_ewaybill_status(doc, "Failed")
 
-        raise e
+        raise
 
     if result.error_code == "604":
         error_message = (
