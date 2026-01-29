@@ -1,8 +1,7 @@
-import frappe
 from frappe import ValidationError
 
 
-class GSPServerError(frappe.ValidationError):
+class GSPServerError(ValidationError):
     message = "GSP/GST server is down"
     title = "GSP/GST Server Error"
 
