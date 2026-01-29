@@ -50,6 +50,7 @@ from india_compliance.gst_india.utils import (
     load_doc,
     parse_datetime,
     send_updated_doc,
+    set_ewaybill_status,
     update_onload,
 )
 from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
@@ -154,12 +155,22 @@ def _generate_e_waybill(doc, throw=True, force=False):
     settings = frappe.get_cached_doc("GST Settings")
 
     if doc.ewaybill:
-        frappe.throw(
-            _("e-Waybill has already been generated for {0} {1}").format(
-                _(doc.doctype), frappe.bold(doc.name)
-            ),
-            exc=AlreadyGeneratedError,
+        message = _("e-Waybill has already been generated for {0} {1}").format(
+            _(doc.doctype), frappe.bold(doc.name)
         )
+
+        if throw:
+            frappe.throw(message, exc=AlreadyGeneratedError)
+
+        if frappe.request:
+            frappe.msgprint(
+                message,
+                _("Warning"),
+                indicator="yellow",
+                alert=True,
+            )
+
+            return
 
     try:
         if (
@@ -231,27 +242,30 @@ def _generate_e_waybill(doc, throw=True, force=False):
         frappe.clear_last_message()
         return
 
-    except frappe.ValidationError as e:
+    except (frappe.ValidationError, frappe.MandatoryError) as e:
         if doc.doctype == "Sales Invoice":
-            doc.db_set({"e_waybill_status": "Failed"})
+            set_ewaybill_status(doc, "Failed")
 
         if throw:
             raise e
 
-        frappe.clear_last_message()
-        frappe.msgprint(
-            _(
-                "e-Waybill auto-generation failed with error:<br>{0}<br><br>"
-                "Please rectify this issue and generate e-Waybill manually."
-            ).format(str(e)),
-            _("Warning"),
-            indicator="yellow",
-        )
+        if frappe.request:
+            frappe.clear_last_message()
+            frappe.msgprint(
+                _(
+                    "e-Waybill auto-generation failed with error:<br>{0}<br><br>"
+                    "Please rectify this issue and generate e-Waybill manually."
+                ).format(str(e)),
+                _("Warning"),
+                indicator="yellow",
+            )
+
         return
 
     except Exception as e:
         if doc.doctype == "Sales Invoice":
-            doc.db_set({"e_waybill_status": "Failed"})
+            set_ewaybill_status(doc, "Failed")
+
         raise e
 
     if result.error_code == "604":

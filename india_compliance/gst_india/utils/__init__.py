@@ -1246,3 +1246,8 @@ def set_einvoice_status(doc, status):
         return
 
     doc.db_set("einvoice_status", status)
+
+
+@execute_in_new_transaction
+def set_ewaybill_status(doc, status):
+    doc.db_set("e_waybill_status", status)
