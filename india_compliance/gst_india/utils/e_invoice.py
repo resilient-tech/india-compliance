@@ -123,15 +123,18 @@ def generate_e_invoice(docname, throw: bool = True, force: bool = False):
             "e-Invoice has already been generated for Sales Invoice {0}"
         ).format(frappe.bold(doc.name))
 
-        if not throw and frappe.request:
-            return frappe.msgprint(
+        if throw:
+            frappe.throw(message, exc=AlreadyGeneratedError)
+
+        if frappe.request:
+            frappe.msgprint(
                 message,
                 _("Warning"),
                 indicator="yellow",
                 alert=True,
             )
 
-        frappe.throw(message, exc=AlreadyGeneratedError)
+        return
 
     try:
         if (
