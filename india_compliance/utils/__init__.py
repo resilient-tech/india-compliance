@@ -14,7 +14,8 @@ def execute_in_new_transaction(fn):
             return result
 
         finally:
-            frappe.db.close()
-            frappe.local.db = _db
+            if frappe.local.db is not _db:
+                frappe.db.close()
+                frappe.local.db = _db
 
     return wrapper
