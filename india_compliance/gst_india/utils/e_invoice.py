@@ -50,6 +50,7 @@ from india_compliance.gst_india.utils import (
     load_doc,
     parse_datetime,
     send_updated_doc,
+    set_einvoice_status,
     update_onload,
 )
 from india_compliance.gst_india.utils.e_waybill import (
@@ -199,26 +200,27 @@ def generate_e_invoice(docname, throw: bool = True, force: bool = False):
         frappe.clear_last_message()
         return
 
-    except frappe.ValidationError as e:
-        doc.db_set({"einvoice_status": "Failed"})
+    except (frappe.ValidationError, frappe.MandatoryError) as e:
+        set_einvoice_status(doc, "Failed")
 
         if throw:
             raise e
 
-        frappe.clear_last_message()
-        frappe.msgprint(
-            _(
-                "e-Invoice auto-generation failed with error:<br>{0}<br><br>"
-                "Please rectify this issue and generate e-Invoice manually."
-            ).format(str(e)),
-            _("Warning"),
-            indicator="yellow",
-        )
+        if frappe.request:
+            frappe.clear_last_message()
+            frappe.msgprint(
+                _(
+                    "e-Invoice auto-generation failed with error:<br>{0}<br><br>"
+                    "Please rectify this issue and generate e-Invoice manually."
+                ).format(str(e)),
+                _("Error Generating e-Invoice"),
+                indicator="red",
+            )
 
         return
 
     except Exception as e:
-        doc.db_set({"einvoice_status": "Failed"})
+        set_einvoice_status(doc, "Failed")
         raise e
 
     return log_and_process_e_invoice_generation(doc, result, api.sandbox_mode)
