@@ -34,6 +34,7 @@
   "accounting_dimensions_section",
   "cost_center",
   "dimension_col_break",
+  "project",
   "section_break_nlqh",
   "get_items_from_purchase_invoice",
   "items",
@@ -50,7 +51,8 @@
   "column_break_nsns",
   "total_taxes",
   "column_break_kgnb",
-  "total_amount_payable"
+  "total_amount_payable",
+  "column_break_tzdn"
  ],
  "fields": [
   {
@@ -288,6 +290,12 @@
   {
    "fieldname": "column_break_tzdn",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "label": "Project",
+   "options": "Project"
   }
  ],
  "index_web_pages_for_search": 1,
@@ -305,7 +313,7 @@
    "link_fieldname": "link_name"
   }
  ],
- "modified": "2025-02-06 18:45:23.478878",
+ "modified": "2026-01-29 18:42:07.384797",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Bill of Entry",
@@ -357,6 +365,7 @@
    "role": "Auditor"
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
