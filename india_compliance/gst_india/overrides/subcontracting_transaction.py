@@ -405,7 +405,14 @@ def get_relevant_references(filters=None):
     if isinstance(filters, str):
         filters = frappe.parse_json(filters)
 
-    receipt_returns = get_subcontracting_receipt_references(filters=filters)
+    receipt_returns = get_subcontracting_receipt_references(
+        filters=filters,
+        doctype=None,
+        txt=None,
+        searchfield=None,
+        start=None,
+        page_len=None,
+    )
     stock_entries = get_stock_entry_references(
         filters=filters, only_linked_references=True
     )
