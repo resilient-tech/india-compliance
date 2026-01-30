@@ -4,6 +4,9 @@ import frappe
 
 
 def execute_in_new_transaction(fn):
+    if frappe.flags.in_test:
+        return fn
+
     @wraps(fn)
     def wrapper(*args, **kwargs):
         _db = frappe.local.db
