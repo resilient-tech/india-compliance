@@ -1245,9 +1245,9 @@ def set_einvoice_status(doc, status):
     if doc.doctype != "Sales Invoice":
         return
 
-    frappe.set_value(doc.doctype, doc.name, "einvoice_status", status)
+    doc.db_set("einvoice_status", status)
 
 
 @execute_in_new_transaction
 def set_ewaybill_status(doc, status):
-    frappe.set_value(doc.doctype, doc.name, "e_waybill_status", status)
+    doc.db_set("e_waybill_status", status)
