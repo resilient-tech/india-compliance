@@ -154,25 +154,15 @@ def generate_e_waybill(*, doctype, docname, values=None, force: bool = False):
 def _generate_e_waybill(doc, throw=True, force=False):
     settings = frappe.get_cached_doc("GST Settings")
 
-    if doc.ewaybill:
-        message = _("e-Waybill has already been generated for {0} {1}").format(
-            _(doc.doctype), frappe.bold(doc.name)
-        )
-
-        if throw:
-            frappe.throw(message, exc=AlreadyGeneratedError)
-
-        if frappe.request:
-            frappe.msgprint(
-                message,
-                _("Warning"),
-                indicator="yellow",
-                alert=True,
+    try:
+        if doc.ewaybill:
+            frappe.throw(
+                _("e-Waybill has already been generated for {0} {1}").format(
+                    _(doc.doctype), frappe.bold(doc.name)
+                ),
+                exc=AlreadyGeneratedError,
             )
 
-            return
-
-    try:
         if (
             not force
             and settings.enable_retry_einv_ewb_generation
@@ -235,11 +225,24 @@ def _generate_e_waybill(doc, throw=True, force=False):
         handle_server_errors(settings, doc, "e-Waybill", e)
         return
 
-    except (AlreadyGeneratedError, NotApplicableError):
+    except AlreadyGeneratedError as e:
         if throw:
             raise
 
-        frappe.clear_last_message()
+        if frappe.request:
+            frappe.clear_last_message()
+            frappe.msgprint(str(e), _("Warning"), indicator="yellow", alert=True)
+
+        return
+
+    except NotApplicableError as e:
+        if throw:
+            raise
+
+        if frappe.request:
+            frappe.clear_last_message()
+            frappe.msgprint(str(e), _("e-Waybill Not Applicable"))
+
         return
 
     except (frappe.ValidationError, frappe.MandatoryError) as e:

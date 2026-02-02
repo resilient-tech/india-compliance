@@ -118,25 +118,15 @@ def generate_e_invoice(docname, throw: bool = True, force: bool = False):
 
     settings = frappe.get_cached_doc("GST Settings")
 
-    if doc.irn:
-        message = _(
-            "e-Invoice has already been generated for Sales Invoice {0}"
-        ).format(frappe.bold(doc.name))
-
-        if throw:
-            frappe.throw(message, exc=AlreadyGeneratedError)
-
-        if frappe.request:
-            frappe.msgprint(
-                message,
-                _("Warning"),
-                indicator="yellow",
-                alert=True,
+    try:
+        if doc.irn:
+            frappe.throw(
+                _("e-Invoice has already been generated for Sales Invoice {0}").format(
+                    frappe.bold(doc.name)
+                ),
+                exc=AlreadyGeneratedError,
             )
 
-        return
-
-    try:
         if (
             not force
             and settings.enable_retry_einv_ewb_generation
@@ -200,14 +190,24 @@ def generate_e_invoice(docname, throw: bool = True, force: bool = False):
         handle_server_errors(settings, doc, "e-Invoice", e)
         return
 
-    except (AlreadyGeneratedError, NotApplicableError):
-        # Don't set status to Failed for these errors
-        # - AlreadyGeneratedError: IRN already exists, no action needed
-        # - NotApplicableError: e-Invoice not applicable, not a failure
+    except AlreadyGeneratedError as e:
         if throw:
             raise
 
-        frappe.clear_last_message()
+        if frappe.request:
+            frappe.clear_last_message()
+            frappe.msgprint(str(e), _("Warning"), indicator="yellow", alert=True)
+
+        return
+
+    except NotApplicableError as e:
+        if throw:
+            raise
+
+        if frappe.request:
+            frappe.clear_last_message()
+            frappe.msgprint(str(e), _("e-Invoice Not Applicable"))
+
         return
 
     except (frappe.ValidationError, frappe.MandatoryError) as e:
