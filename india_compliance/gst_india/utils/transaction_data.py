@@ -191,7 +191,11 @@ class GSTTransactionData:
     def validate_mode_of_transport(self, throw=True):
         def _throw(error):
             if throw:
-                frappe.throw(error, title=_("Invalid Transporter Details"))
+                frappe.throw(
+                    error,
+                    title=_("Invalid Transporter Details"),
+                    exc=frappe.MandatoryError,
+                )
 
         if not (mode_of_transport := self.doc.mode_of_transport):
             return _throw(
