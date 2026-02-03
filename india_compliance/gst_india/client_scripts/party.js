@@ -62,6 +62,8 @@ function validate_gstin(doctype) {
             frm.doc.gstin = gstin;
             frm.refresh_field("gstin");
 
+            india_compliance.check_duplicate_gstin(gstin, frm.doctype, frm.docname);
+
             if (!frm.fields_dict.pan) return;
 
             // extract PAN from GSTIN
@@ -89,6 +91,8 @@ function validate_pan(doctype) {
 
             frm.doc.pan = pan;
             frm.refresh_field("pan");
+
+            india_compliance.check_duplicate_pan(pan, frm.doctype, frm.docname);
             set_party_type(frm);
         },
     });
