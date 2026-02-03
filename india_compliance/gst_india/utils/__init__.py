@@ -44,6 +44,7 @@ from india_compliance.gst_india.constants import (
     TIMEZONE,
     UOM_MAP,
 )
+from india_compliance.utils import execute_in_new_transaction
 
 
 def get_state(state_number):
@@ -1204,10 +1205,25 @@ def _get_duplicate_gstin_party(gstin, party_type, party=None):
         if row.name in duplicates_dict:
             continue
 
-        duplicates_dict[row.name] = {
-            "name": row.name,
-            "via_address": bool(row.via_address),
-            "address": row.address_name,
-        }
+        duplicates_dict[row.name] = frappe._dict(
+            {
+                "name": row.name,
+                "via_address": bool(row.via_address),
+                "address": row.address_name,
+            }
+        )
 
     return list(duplicates_dict.values())
+
+
+@execute_in_new_transaction
+def set_einvoice_status(doc, status):
+    if doc.doctype != "Sales Invoice":
+        return
+
+    doc.db_set("einvoice_status", status)
+
+
+@execute_in_new_transaction
+def set_ewaybill_status(doc, status):
+    doc.db_set("e_waybill_status", status)
