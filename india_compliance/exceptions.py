@@ -1,20 +1,9 @@
-<<<<<<< HEAD
-class GSPServerError(Exception):
-    def __init__(self, message="GSP/GST server is down", *args, **kwargs):
-        super().__init__(message, *args, **kwargs)
-=======
 from frappe import ValidationError
 
 
-class GSPServerError(ValidationError):
-    message = "GSP/GST server is down"
-    title = "GSP/GST Server Error"
-
-
-class GSPLimitExceededError(GSPServerError):
-    message = "GSP/GST account limit exceeded"
-    http_status_code = 429
->>>>>>> c9f457eb (Merge pull request #3918 from karm1000/e-invoice/handle-already-generated)
+class GSPServerError(Exception):
+    def __init__(self, message="GSP/GST server is down", *args, **kwargs):
+        super().__init__(message, *args, **kwargs)
 
 
 class GatewayTimeoutError(GSPServerError):

@@ -15,18 +15,12 @@ from frappe.utils import (
     sbool,
 )
 
-<<<<<<< HEAD
-from india_compliance.exceptions import GSPServerError
-from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
-=======
 from india_compliance.exceptions import (
     AlreadyGeneratedError,
     GSPServerError,
     NotApplicableError,
 )
-from india_compliance.gst_india.api_classes.nic.e_invoice import EInvoiceAPI
-from india_compliance.gst_india.api_classes.taxpayer_base import otp_handler
->>>>>>> c9f457eb (Merge pull request #3918 from karm1000/e-invoice/handle-already-generated)
+from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.taxpayer_e_invoice import (
     EInvoiceAPI as TaxpayerEInvoiceAPI,
 )
