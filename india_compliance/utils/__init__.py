@@ -4,11 +4,11 @@ import frappe
 
 
 def execute_in_new_transaction(fn):
-    if frappe.flags.in_test:
-        return fn
-
     @wraps(fn)
     def wrapper(*args, **kwargs):
+        if frappe.flags.in_test:
+            return fn(*args, **kwargs)
+        
         _db = frappe.local.db
         try:
             frappe.connect(set_admin_as_user=False)
