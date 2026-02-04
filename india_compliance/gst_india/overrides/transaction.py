@@ -205,7 +205,6 @@ def validate_mandatory_fields(doc, fields, error_message=None, throw=True):
         frappe.throw(
             error_message.format(bold(_(doc.meta.get_label(field)))),
             title=_("Missing Required Field"),
-            exc=frappe.MandatoryError,
         )
 
 
