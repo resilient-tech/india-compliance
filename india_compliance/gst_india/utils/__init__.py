@@ -43,7 +43,6 @@ from india_compliance.gst_india.constants import (
     TIMEZONE,
     UOM_MAP,
 )
-from india_compliance.utils import execute_in_new_transaction
 
 
 def get_state(state_number):
@@ -1037,16 +1036,3 @@ def has_permission_of_page(page_name, throw=False):
         )
 
     return True
-
-
-@execute_in_new_transaction
-def set_einvoice_status(doc, status):
-    if doc.doctype != "Sales Invoice":
-        return
-
-    doc.db_set("einvoice_status", status)
-
-
-@execute_in_new_transaction
-def set_ewaybill_status(doc, status):
-    doc.db_set("e_waybill_status", status)
