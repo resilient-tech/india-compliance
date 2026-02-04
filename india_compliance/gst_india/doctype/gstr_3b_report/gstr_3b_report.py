@@ -586,21 +586,25 @@ class GSTR3BReport(Document):
         if not self.invoice_map:
             return {}
 
-        tax_fields = ", ".join(f"{tax}_amount" for tax in GST_TAX_TYPE_MAP)
+        item_doctype = f"{doctype} Item"
+        item = frappe.qb.DocType(item_doctype)
 
-        item_details = frappe.db.sql(
-            f"""
-            SELECT
-               {tax_fields}, item_code, item_name, parent, taxable_value, gst_treatment
-            FROM
-                `tab{doctype} Item`
-            WHERE parent in ({", ".join(["%s"] * len(self.invoice_map))})
-            """,
-            tuple(self.invoice_map),
-            as_dict=1,
+        tax_fields = [getattr(item, f"{tax}_amount") for tax in GST_TAX_TYPE_MAP]
+
+        query = (
+            frappe.qb.from_(item)
+            .select(
+                *tax_fields,
+                item.item_code,
+                item.item_name,
+                item.parent,
+                item.taxable_value,
+                item.gst_treatment,
+            )
+            .where(item.parent.isin(list(self.invoice_map.keys())))
         )
 
-        return item_details
+        return query.run(as_dict=True)
 
     def set_outward_taxable_supplies(self):
         inter_state_supply_details = {}
@@ -715,27 +719,24 @@ class GSTR3BReport(Document):
         missing_field_invoices = []
 
         for doctype in INVOICE_DOCTYPES:
+            invoice = frappe.qb.DocType(doctype)
             party_gstin = (
-                "billing_address_gstin"
+                invoice.billing_address_gstin
                 if doctype == "Sales Invoice"
-                else "supplier_gstin"
+                else invoice.supplier_gstin
             )
-            docnames = frappe.db.sql(
-                f"""
-                    SELECT name FROM `tab{doctype}`
-                    WHERE docstatus = 1 and is_opening = 'No'
-                    and posting_date between %s and %s
-                    and company = %s and place_of_supply IS NULL
-                    and company_gstin != IFNULL({party_gstin},"")
-                    and gst_category != 'Overseas'
-                """,
-                (
-                    self.from_date,
-                    self.to_date,
-                    self.company,
-                ),
-                as_dict=1,
-            )  # nosec
+
+            docnames = (
+                frappe.qb.from_(invoice)
+                .select(invoice.name)
+                .where(invoice.docstatus == 1)
+                .where(invoice.is_opening == "No")
+                .where(invoice.posting_date.between(self.from_date, self.to_date))
+                .where(invoice.company == self.company)
+                .where(invoice.place_of_supply.isnull())
+                .where(invoice.company_gstin != IfNull(party_gstin, ""))
+                .where(invoice.gst_category != "Overseas")
+            ).run(as_dict=True)
 
             for d in docnames:
                 missing_field_invoices.append(d.name)
