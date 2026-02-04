@@ -160,6 +160,7 @@ def on_submit(doc, method=None):
             enqueue_after_commit=True,
             queue="short",
             docname=doc.name,
+            throw=False,
         )
 
         return
