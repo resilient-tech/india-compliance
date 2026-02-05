@@ -400,7 +400,7 @@ def set_address_display(doc):
 
 
 @frappe.whitelist()
-def get_relevant_references(filters: str | dict | None = None):
+def get_relevant_references(filters: str | dict | frappe._dict | None = None):
     """Permission check not required as get_list in called functions checks permissions."""
     if isinstance(filters, str):
         filters = frappe.parse_json(filters)
@@ -431,7 +431,7 @@ def get_subcontracting_receipt_references(
     searchfield: str | None = None,
     start: int | None = None,
     page_len: int | None = None,
-    filters: str | dict | None = None,
+    filters: str | dict | frappe._dict | None = None,
 ):
     """Permission check not required as get_list checks permissions."""
     filters = frappe._dict(filters)
@@ -468,7 +468,7 @@ def get_stock_entry_references(
     searchfield: str | None = None,
     start: int | None = None,
     page_len: int | None = None,
-    filters: str | dict | None = None,
+    filters: str | dict | frappe._dict | None = None,
     only_linked_references: bool = False,
 ):
     """Permission check not required as get_list checks permissions."""

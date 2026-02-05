@@ -797,7 +797,7 @@ def fetch_pending_boe_invoices(
     searchfield: str,
     start: int,
     page_len: int,
-    filters: str | dict,
+    filters: str | dict | frappe._dict,
 ):
     """
     Permission check not required as using get_list
