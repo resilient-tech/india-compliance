@@ -150,9 +150,12 @@ def generate_e_waybills(doctype, docnames, force=False):
 
 
 @frappe.whitelist()
-# nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
 def generate_e_waybill(
-    *, doctype: str, docname: str, values: str | dict | None = None, force: bool = False
+    *,  # nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
+    doctype: str,
+    docname: str,
+    values: str | dict | None = None,
+    force: bool = False,
 ):
     """Permission check not required as load_doc checks permissions."""
     doc = load_doc(doctype, docname, "submit")
@@ -371,8 +374,12 @@ def log_and_process_e_waybill_generation(doc, result, *, with_irn=False):
 
 
 @frappe.whitelist()
-# nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
-def cancel_e_waybill(*, doctype: str, docname: str, values: str | dict):
+def cancel_e_waybill(
+    *,  # nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
+    doctype: str,
+    docname: str,
+    values: str | dict,
+):
     """Permission check not required as load_doc checks permissions."""
     doc = load_doc(doctype, docname, "cancel")
     values = frappe.parse_json(values)
@@ -434,8 +441,12 @@ def log_and_process_e_waybill_cancellation(doc, values, result):
 
 
 @frappe.whitelist()
-# nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
-def update_vehicle_info(*, doctype: str, docname: str, values: str | dict):
+def update_vehicle_info(
+    *,  # nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
+    doctype: str,
+    docname: str,
+    values: str | dict,
+):
     """Permission check not required as load_doc checks permissions."""
     doc = load_doc(doctype, docname, "submit")
 
@@ -565,8 +576,12 @@ def _bulk_update_transporter_in_docs(doctype, docnames, values):
 
 
 @frappe.whitelist()
-# nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
-def update_transporter(*, doctype: str, docname: str, values: str | dict):
+def update_transporter(
+    *,  # nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
+    doctype: str,
+    docname: str,
+    values: str | dict,
+):
     """Permission check not required as load_doc checks permissions."""
     doc = load_doc(doctype, docname, "submit")
     old_transporter_id = doc.gst_transporter_id
@@ -621,9 +636,12 @@ def update_transporter(*, doctype: str, docname: str, values: str | dict):
 
 
 @frappe.whitelist()
-# nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
 def extend_validity(
-    *, doctype: str, docname: str, values: str | dict, scheduled: bool = False
+    *,  # nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
+    doctype: str,
+    docname: str,
+    values: str | dict,
+    scheduled: bool = False,
 ):
     """Permission check not required as load_doc checks permissions."""
     doc = load_doc(doctype, docname, "submit")
@@ -780,9 +798,12 @@ def generate_pending_e_waybills():
 
 
 @frappe.whitelist()
-# nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
 def fetch_e_waybill_data(
-    *, doctype: str, docname: str, attach: bool = False, force: bool = False
+    *,  # nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
+    doctype: str,
+    docname: str,
+    attach: bool = False,
+    force: bool = False,
 ):
     """Permission check not required as load_doc checks permissions."""
     doc = load_doc(doctype, docname, "write" if attach else "print")
@@ -814,8 +835,12 @@ def _fetch_e_waybill_data(doc, log):
 
 
 @frappe.whitelist()
-# nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
-def find_matching_e_waybill(*, doctype: str, docname: str, e_waybill_date: str):
+def find_matching_e_waybill(
+    *,  # nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
+    doctype: str,
+    docname: str,
+    e_waybill_date: str,
+):
     """Permission check not required as load_doc checks permissions."""
     doc = load_doc(doctype, docname, "submit")
 
