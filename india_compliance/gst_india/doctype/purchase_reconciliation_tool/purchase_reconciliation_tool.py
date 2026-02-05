@@ -285,7 +285,7 @@ class PurchaseReconciliationTool(Document):
         return self.ReconciledData.get(purchases, inward_supplies)
 
     @frappe.whitelist()
-    def apply_action(self, data: str | dict | list, action: str):
+    def apply_action(self, data: str | dict | frappe._dict | list, action: str):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         data = frappe.parse_json(data)
@@ -321,7 +321,7 @@ class PurchaseReconciliationTool(Document):
         set_reconciliation_status("Bill of Entry", boe, status)
 
     @frappe.whitelist()
-    def get_link_options(self, doctype: str, filters: str | dict):
+    def get_link_options(self, doctype: str, filters: str | dict | frappe._dict):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         if isinstance(filters, dict):
@@ -511,7 +511,7 @@ def has_missing_2b_documents(
 
 
 @frappe.whitelist()
-def generate_excel_attachment(data: str | list, doc: str | dict):
+def generate_excel_attachment(data: str | list, doc: str | dict | frappe._dict):
     frappe.has_permission("Purchase Reconciliation Tool", "email", throw=True)
 
     build_data = BuildExcel(doc, data, is_supplier_specific=True, email=True)
@@ -541,7 +541,7 @@ def generate_excel_attachment(data: str | list, doc: str | dict):
 
 @frappe.whitelist()
 def download_excel_report(
-    data: str | list, doc: str | dict, is_supplier_specific: bool = False
+    data: str | list, doc: str | dict | frappe._dict, is_supplier_specific: bool = False
 ):
     frappe.has_permission("Purchase Reconciliation Tool", "export", throw=True)
 
