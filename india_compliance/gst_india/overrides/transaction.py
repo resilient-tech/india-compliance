@@ -820,12 +820,11 @@ def get_party_details_for_subcontracting(
 
 
 @frappe.whitelist()
-# nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
 def get_gst_details(
     party_details: str | dict,
     doctype: str,
     company: str,
-    *,
+    *,  # nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
     update_place_of_supply: bool = False,
 ):
     """
