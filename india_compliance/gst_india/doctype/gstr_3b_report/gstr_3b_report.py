@@ -577,10 +577,7 @@ class GSTR3BReport(Document):
             .where(invoice.company_gstin != IfNull(party_gstin, ""))
         )
 
-        return self.apply_itc_period_filter(
-            query,
-            invoice,
-        )
+        return self.apply_itc_period_filter(query, invoice)
 
     def get_outward_items(self, doctype):
         if not self.invoice_map:
