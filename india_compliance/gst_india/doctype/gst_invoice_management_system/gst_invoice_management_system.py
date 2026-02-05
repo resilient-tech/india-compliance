@@ -1,6 +1,8 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
 
+from __future__ import annotations
+
 import frappe
 from frappe import _
 from frappe.model.document import Document
@@ -66,7 +68,7 @@ CATEGORY_MAP = {
 
 class GSTInvoiceManagementSystem(Document):
     @frappe.whitelist()
-    def autoreconcile_and_get_data(self):
+    def autoreconcile_and_get_data(self: GSTInvoiceManagementSystem):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         filters = frappe._dict(
@@ -143,7 +145,9 @@ class GSTInvoiceManagementSystem(Document):
         )
 
     @frappe.whitelist()
-    def update_action(self, invoice_names: str | list, action: str):
+    def update_action(
+        self: GSTInvoiceManagementSystem, invoice_names: str | list, action: str
+    ):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         invoice_names = frappe.parse_json(invoice_names)
