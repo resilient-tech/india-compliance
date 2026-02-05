@@ -1,5 +1,6 @@
 import json
 import os
+from datetime import datetime
 
 import frappe
 from frappe import _
@@ -650,7 +651,7 @@ def validate_data_before_schedule(doc, values):
 
 @frappe.whitelist()
 def schedule_ewaybill_for_extension(
-    doctype: str, docname: str, values: str | dict, scheduled_time: str
+    doctype: str, docname: str, values: str | dict, scheduled_time: str | datetime
 ):
     """Permission check not required as load_doc checks permissions."""
     values = frappe.parse_json(values)

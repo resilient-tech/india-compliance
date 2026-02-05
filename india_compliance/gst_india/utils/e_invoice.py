@@ -221,7 +221,7 @@ def handle_duplicate_irn_error(
     irn_data: str | dict,
     current_gstin: str,
     current_invoice_amount: float,
-    doc: str | dict | None = None,
+    doc: str | dict | Document | None = None,
     docname: str | None = None,
     taxpayer_api: bool = False,
 ):
