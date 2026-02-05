@@ -254,7 +254,7 @@ def check_action_status(
 
 
 @frappe.whitelist()
-def mark_as_unfiled(filters: str | dict, force: bool):
+def mark_as_unfiled(filters: str | dict | frappe._dict, force: bool):
     frappe.has_permission("GST Return Log", "write", throw=True)
 
     filters = frappe._dict(frappe.parse_json(filters))
@@ -387,7 +387,7 @@ def make_journal_entry(
     month_or_quarter: str,
     year: str,
     accounts: str | list,
-    values: str | dict,
+    values: str | dict | frappe._dict,
 ):
     if not frappe.has_permission("Journal Entry", "create"):
         return
