@@ -18,7 +18,7 @@ from india_compliance.gst_india.utils.itc_04.itc_04_json_map import (
 
 
 @frappe.whitelist()
-def download_itc_04_json(filters):
+def download_itc_04_json(filters: str | dict):
     frappe.has_permission("GST Job Work Stock Movement", "export", throw=True)
 
     filters = frappe.parse_json(filters)

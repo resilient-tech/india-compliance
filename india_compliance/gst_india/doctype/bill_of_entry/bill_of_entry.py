@@ -388,7 +388,7 @@ class BillofEntry(Document):
         return asset_items
 
     @frappe.whitelist()
-    def get_items_from_purchase_invoice(self, purchase_invoices):
+    def get_items_from_purchase_invoice(self, purchase_invoices: str | list):
         if not purchase_invoices:
             frappe.msgprint(_("No Purchase Invoices selected"))
             return
@@ -509,7 +509,7 @@ def set_missing_values(source, target=None):
 
 
 @frappe.whitelist()
-def make_bill_of_entry(source_name, target_doc=None):
+def make_bill_of_entry(source_name: str, target_doc: str | None = None):
     """
     Permission checked in get_mapped_doc
     """
@@ -547,7 +547,7 @@ def make_bill_of_entry(source_name, target_doc=None):
 
 
 @frappe.whitelist()
-def make_journal_entry_for_payment(source_name, target_doc=None):
+def make_journal_entry_for_payment(source_name: str, target_doc: str | None = None):
     """
     Permission checked in get_mapped_doc
     """
@@ -597,7 +597,7 @@ def make_journal_entry_for_payment(source_name, target_doc=None):
 
 
 @frappe.whitelist()
-def make_landed_cost_voucher(source_name, target_doc=None):
+def make_landed_cost_voucher(source_name: str, target_doc: str | None = None):
     """
     Permission checked in get_mapped_doc
     """
@@ -791,7 +791,14 @@ def get_pi_items(purchase_invoices):
 
 
 @frappe.whitelist()
-def fetch_pending_boe_invoices(doctype, txt, searchfield, start, page_len, filters):
+def fetch_pending_boe_invoices(
+    doctype: str,
+    txt: str,
+    searchfield: str,
+    start: int,
+    page_len: int,
+    filters: str | dict,
+):
     """
     Permission check not required as using get_list
     """

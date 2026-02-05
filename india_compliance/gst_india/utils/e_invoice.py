@@ -58,7 +58,7 @@ from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
 
 
 @frappe.whitelist()
-def enqueue_bulk_e_invoice_generation(docnames):
+def enqueue_bulk_e_invoice_generation(docnames: str | list):
     """
     Enqueue bulk generation of e-Invoices for the given Sales Invoices.
     """
@@ -120,7 +120,7 @@ def generate_e_invoices(docnames, force=False):
 
 
 @frappe.whitelist()
-def generate_e_invoice(docname, throw: bool = True, force: bool = False):
+def generate_e_invoice(docname: str, throw: bool = True, force: bool = False):
     """Permission check not required as load_doc checks permissions."""
     doc = load_doc("Sales Invoice", docname, "submit")
 
@@ -218,11 +218,11 @@ def generate_e_invoice(docname, throw: bool = True, force: bool = False):
 @frappe.whitelist()
 @otp_handler
 def handle_duplicate_irn_error(
-    irn_data,
-    current_gstin,
-    current_invoice_amount,
-    doc=None,
-    docname=None,
+    irn_data: str | dict,
+    current_gstin: str,
+    current_invoice_amount: float,
+    doc: str | dict | None = None,
+    docname: str | None = None,
     taxpayer_api: bool = False,
 ):
     """
@@ -371,7 +371,7 @@ def log_and_process_e_invoice_generation(doc, result, sandbox_mode=False, messag
 
 
 @frappe.whitelist()
-def cancel_e_invoice(docname, values):
+def cancel_e_invoice(docname: str, values: str | dict):
     doc = load_doc("Sales Invoice", docname, "cancel")
     values = frappe.parse_json(values)
 
@@ -428,7 +428,7 @@ def log_and_process_e_invoice_cancellation(doc, values, result, message):
 
 
 @frappe.whitelist()
-def mark_e_invoice_as_generated(doctype, docname, values):
+def mark_e_invoice_as_generated(doctype: str, docname: str, values: str | dict):
     doc = load_doc(doctype, docname, "submit")
 
     values = frappe.parse_json(values)
@@ -447,7 +447,7 @@ def mark_e_invoice_as_generated(doctype, docname, values):
 
 
 @frappe.whitelist()
-def mark_e_invoice_as_cancelled(doctype, docname, values):
+def mark_e_invoice_as_cancelled(doctype: str, docname: str, values: str | dict):
     doc = load_doc(doctype, docname, "cancel")
 
     if doc.docstatus != 2:
