@@ -1234,10 +1234,12 @@ def _get_duplicate_gstin_party(gstin, party_type, party=None):
         if row.name in duplicates_dict:
             continue
 
-        duplicates_dict[row.name] = {
-            "name": row.name,
-            "via_address": bool(row.via_address),
-            "address": row.address_name,
-        }
+        duplicates_dict[row.name] = frappe._dict(
+            {
+                "name": row.name,
+                "via_address": bool(row.via_address),
+                "address": row.address_name,
+            }
+        )
 
     return list(duplicates_dict.values())

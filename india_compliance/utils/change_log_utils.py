@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-from frappe.utils import get_date_str, get_fullname
+from frappe.utils import escape_html, get_date_str, get_fullname
 
 
 def create_change_log_comment(
@@ -68,7 +68,7 @@ def create_change_log_comment(
     # Build table
     table_rows = "".join(
         [
-            f"<tr><td>{frappe.bold(_(label))}</td><td>{old_val}</td><td>{new_val}</td></tr>"
+            f"<tr><td>{frappe.bold(_(label))}</td><td>{escape_html(old_val)}</td><td>{escape_html(new_val)}</td></tr>"
             for label, old_val, new_val in changed_fields
         ]
     )
