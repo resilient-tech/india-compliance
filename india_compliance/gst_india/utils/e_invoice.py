@@ -237,6 +237,8 @@ def handle_duplicate_irn_error(
     if isinstance(irn_data, str):
         irn_data = json.loads(irn_data, object_hook=frappe._dict)
         current_invoice_amount = flt(current_invoice_amount)
+    elif isinstance(irn_data, dict):
+        irn_data = frappe._dict(irn_data)
 
     if doc and not isinstance(doc, Document):
         doc = None  # To avoid doc injection
