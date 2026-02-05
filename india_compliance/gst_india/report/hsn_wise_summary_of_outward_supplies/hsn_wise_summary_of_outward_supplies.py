@@ -163,8 +163,15 @@ def process_hsn_data(invoices):
 
 
 @frappe.whitelist()
+<<<<<<< HEAD
 def get_json(filters, report_name, data):
     from india_compliance.gst_india.report.gstr_1.gstr_1 import get_company_gstin_number
+=======
+def get_json(filters: str, report_name: str, data: str):
+    from india_compliance.gst_india.utils import (
+        get_company_gstin_number,
+    )
+>>>>>>> 27d9b65b (chore: added type hints to whitelisted functions)
 
     filters = json.loads(filters)
     report_data = json.loads(data)

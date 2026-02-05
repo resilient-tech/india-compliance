@@ -86,7 +86,7 @@ class CForm(Document):
         frappe.db.set(self, "total_invoiced_amount", total)
 
     @frappe.whitelist()
-    def get_invoice_details(self, invoice_no):
+    def get_invoice_details(self, invoice_no: str):
         """Pull details from invoice for reference"""
 
         if not invoice_no:
