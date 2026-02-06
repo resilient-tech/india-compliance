@@ -1,8 +1,10 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
 
+import datetime
 import re
 from collections import defaultdict
+from typing import Literal, Sequence
 
 import frappe
 from frappe import _
@@ -25,12 +27,7 @@ SUPPORTED_TABLE_NAMES = frozenset(get_table_name(dt) for dt in SUPPORTED_DOCTYPE
 ITC_CLAIM_PERIOD_DEFERRED = "Deferred"
 
 
-# =============================================================================# =============================================================================
-# PUBLIC API
-# =============================================================================
-
-
-def set_or_validate_itc_claim_period(doc):
+def set_or_validate_itc_claim_period(doc) -> None:
     """Set ITC claim period if empty, otherwise validate it."""
 
     if not doc.get("itc_claim_period"):
@@ -40,8 +37,10 @@ def set_or_validate_itc_claim_period(doc):
 
 
 def set_itc_claim_period_on_match(
-    doc_names, inward_supply_map, doctype="Purchase Invoice"
-):
+    doc_names: list[str],
+    inward_supply_map: dict[str, str],
+    doctype: str = "Purchase Invoice",
+) -> None:
     if not doc_names or not inward_supply_map or doctype not in SUPPORTED_DOCTYPES:
         return
 
@@ -67,7 +66,9 @@ def set_itc_claim_period_on_match(
     _bulk_update(updates, doctype, "Reconciliation")
 
 
-def set_itc_claim_period_on_ims_action(invoice_names, action, ims_period=None):
+def set_itc_claim_period_on_ims_action(
+    invoice_names: Sequence[str], action: str, ims_period: str | None = None
+) -> None:
     if not invoice_names:
         return
 
@@ -98,14 +99,21 @@ def set_itc_claim_period_on_ims_action(invoice_names, action, ims_period=None):
             filed = filed_map.get(d.company_gstin, set())
             period = _calculate_itc_claim_period(d, None, filed, action, ims_period)
 
-            if period is not None:
+            if period:
                 updates[period].add(d.name)
 
         _bulk_update(updates, doctype, f"IMS Action ({action})")
 
 
+# =============================================================================
+# PUBLIC API
+# =============================================================================
+
+
 @frappe.whitelist()
-def get_itc_period_options(company_gstin=None, posting_date=None):
+def get_itc_period_options(
+    company_gstin: str | None = None, posting_date: str | None = None
+) -> list[str]:
     if not company_gstin or not posting_date:
         return []
 
@@ -133,7 +141,9 @@ def get_itc_period_options(company_gstin=None, posting_date=None):
 
 
 @frappe.whitelist()
-def update_gstr3b_filing_status(company_gstin, month_or_quarter, year, status):
+def update_gstr3b_filing_status(
+    company_gstin: str, month_or_quarter: str, year: str, status: str
+) -> None:
     frappe.has_permission("GST Return Log", "write", throw=True)
 
     period = get_period(month_or_quarter, year)
@@ -162,17 +172,17 @@ def update_gstr3b_filing_status(company_gstin, month_or_quarter, year, status):
 # =============================================================================
 
 
-def format_period(date):
+def format_period(date: str | datetime.date | datetime.datetime) -> str:
     return getdate(date).strftime("%m%Y")
 
 
 def apply_period_filter(
     query,
     doc,
-    from_date,
-    to_date,
-    filter_by=None,
-    return_period=None,
+    from_date: str | datetime.date | datetime.datetime,
+    to_date: str | datetime.date | datetime.datetime,
+    filter_by: Literal["ITC Claim Period", "Posting Date"] | None = None,
+    return_period: str | None = None,
 ):
     """
     Apply Date period filter to a query.
@@ -194,7 +204,9 @@ def apply_period_filter(
     return query.where(doc.posting_date[from_date:to_date])
 
 
-def _period_to_date(period, day="first"):
+def _period_to_date(
+    period: str, day: Literal["first", "last"] = "first"
+) -> datetime.date:
     if not period or len(period) != 6:
         frappe.throw(_("Invalid period format: {0}. Expected MMYYYY.").format(period))
 
@@ -203,7 +215,7 @@ def _period_to_date(period, day="first"):
     return get_last_day(date) if day == "last" else date
 
 
-def _compare_periods(p1, p2):
+def _compare_periods(p1: str, p2: str) -> int:
     return (
         -1
         if p1[2:] + p1[:2] < p2[2:] + p2[:2]
@@ -211,15 +223,15 @@ def _compare_periods(p1, p2):
     )
 
 
-def _next_period(period):
+def _next_period(period: str) -> str:
     return format_period(add_months(_period_to_date(period), 1))
 
 
-def _max_period(p1, p2):
+def _max_period(p1: str, p2: str) -> str:
     return p1 if _compare_periods(p1, p2) >= 0 else p2
 
 
-def _validate_period_format(period):
+def _validate_period_format(period: str) -> None:
     if period == ITC_CLAIM_PERIOD_DEFERRED:
         return
 
@@ -234,13 +246,15 @@ def _validate_period_format(period):
 # =============================================================================
 
 
-def _get_gst_fy_start(date):
+def _get_gst_fy_start(date: str | datetime.date | datetime.datetime) -> datetime.date:
     date = getdate(date)
     year = date.year if date.month >= 4 else date.year - 1
     return getdate(f"{year}-04-01")
 
 
-def _get_section_16_4_deadline(posting_date):
+def _get_section_16_4_deadline(
+    posting_date: str | datetime.date | datetime.datetime,
+) -> str:
     date = getdate(posting_date)
     year = date.year + 1 if date.month >= 4 else date.year
     return f"11{year}"
@@ -251,7 +265,7 @@ def _get_section_16_4_deadline(posting_date):
 # =============================================================================
 
 
-def _is_gstr3b_filed(gstin, period):
+def _is_gstr3b_filed(gstin: str, period: str | None) -> bool:
     if period == ITC_CLAIM_PERIOD_DEFERRED or not period:
         return False
 
@@ -259,7 +273,7 @@ def _is_gstr3b_filed(gstin, period):
     return frappe.db.get_value("GST Return Log", log_name, "filing_status") == "Filed"
 
 
-def _get_filed_periods(gstin):
+def _get_filed_periods(gstin: str) -> set[str]:
     return set(
         frappe.get_all(
             "GST Return Log",
@@ -269,7 +283,12 @@ def _get_filed_periods(gstin):
     )
 
 
-def _get_next_unfiled_period(gstin, start_period, posting_date, filed=None):
+def _get_next_unfiled_period(
+    gstin: str,
+    start_period: str,
+    posting_date: str | datetime.date | datetime.datetime,
+    filed: set[str] | None = None,
+) -> str | None:
     deadline = _get_section_16_4_deadline(posting_date)
     is_filed = (
         (lambda p: p in filed) if filed else (lambda p: _is_gstr3b_filed(gstin, p))
@@ -283,7 +302,9 @@ def _get_next_unfiled_period(gstin, start_period, posting_date, filed=None):
     return None
 
 
-def _sync_gstr3b_report_status(gstin, month_or_quarter, year, status):
+def _sync_gstr3b_report_status(
+    gstin: str, month_or_quarter: str, year: str, status: str
+) -> None:
     frappe.db.set_value(
         "GSTR 3B Report",
         {
@@ -301,15 +322,13 @@ def _sync_gstr3b_report_status(gstin, month_or_quarter, year, status):
 # =============================================================================
 
 
-def _is_period_locked(doc):
-    return doc.get("itc_claim_period") and _is_gstr3b_filed(
-        doc.company_gstin, doc.itc_claim_period
-    )
-
-
 def _calculate_itc_claim_period(
-    doc, inward_supply=None, filed=None, ims_action=None, ims_period=None
-):
+    doc,
+    inward_supply: dict | None = None,
+    filed: set[str] | None = None,
+    ims_action: str | None = None,
+    ims_period: str | None = None,
+) -> str | None:
     # already filed
     if filed and doc.itc_claim_period not in filed:
         return None
@@ -346,7 +365,7 @@ def _calculate_itc_claim_period(
     )
 
 
-def _validate_itc_claim_period(doc):
+def _validate_itc_claim_period(doc) -> None:
     validate_mandatory_fields(doc, "itc_claim_period")
 
     period = doc.itc_claim_period
@@ -386,7 +405,7 @@ def _validate_itc_claim_period(doc):
 # =============================================================================
 
 
-def _bulk_update(updates, doctype, source):
+def _bulk_update(updates: dict[str, set[str]], doctype: str, source: str) -> None:
     """Bulk update with audit trail."""
     if not updates:
         return
@@ -428,7 +447,9 @@ def _bulk_update(updates, doctype, source):
         bulk_insert("Comment", comments, ignore_duplicates=True)
 
 
-def _fetch_document_data(doctype, names, only_claim_period_set=False):
+def _fetch_document_data(
+    doctype: str, names: list[str], only_claim_period_set: bool = False
+) -> list[dict]:
     doc = frappe.qb.DocType(doctype)
     query = (
         frappe.qb.from_(doc)
@@ -442,7 +463,7 @@ def _fetch_document_data(doctype, names, only_claim_period_set=False):
     return query.run(as_dict=True)
 
 
-def _fetch_inward_supply_data(names):
+def _fetch_inward_supply_data(names: list[str]) -> list[dict]:
     GSTR2 = frappe.qb.DocType("GST Inward Supply")
     return (
         frappe.qb.from_(GSTR2)
@@ -452,7 +473,7 @@ def _fetch_inward_supply_data(names):
     )
 
 
-def _fetch_linked_documents(invoice_names):
+def _fetch_linked_documents(invoice_names: Sequence[str]) -> list[dict]:
     GSTR2 = frappe.qb.DocType("GST Inward Supply")
     return (
         frappe.qb.from_(GSTR2)
