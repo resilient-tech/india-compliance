@@ -59,7 +59,7 @@ from india_compliance.utils.change_log_utils import create_change_log_comment
 
 @frappe.whitelist()
 def generate_e_waybill_json(
-    doctype: str, docnames: str | list, values: str | dict | None = None
+    doctype: str, docnames: str, values: str | dict | None = None
 ):
     """Permission check not required as load_doc checks permissions."""
     docnames = frappe.parse_json(docnames) if docnames.startswith("[") else [docnames]
@@ -87,7 +87,7 @@ def generate_e_waybill_json(
 
 @frappe.whitelist()
 def bulk_update_transporter_in_docs(
-    doctype: str, docnames: str | list, values: str | dict | frappe._dict
+    doctype: str, docnames: str, values: str | dict | frappe._dict
 ):
     frappe.has_permission(doctype, "submit", throw=True)
 
@@ -98,7 +98,7 @@ def bulk_update_transporter_in_docs(
 
 
 @frappe.whitelist()
-def enqueue_bulk_e_waybill_generation(doctype: str, docnames: str | list):
+def enqueue_bulk_e_waybill_generation(doctype: str, docnames: str):
     """
     Enqueue bulk generation of e-Waybill for the given documents.
     """

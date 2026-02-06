@@ -58,7 +58,7 @@ from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
 
 
 @frappe.whitelist()
-def enqueue_bulk_e_invoice_generation(docnames: str | list):
+def enqueue_bulk_e_invoice_generation(docnames: str):
     """
     Enqueue bulk generation of e-Invoices for the given Sales Invoices.
     """
