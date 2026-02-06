@@ -18,7 +18,10 @@ from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
 from india_compliance.gst_india.constants import GST_TAX_TYPES, TAXABLE_GST_TREATMENTS
 from india_compliance.gst_india.utils import get_gstin_list, get_party_for_gstin
 from india_compliance.gst_india.utils.gstr_2 import IMPORT_CATEGORY, ReturnType
-from india_compliance.gst_india.utils.itc_claim import set_itc_claim_period_on_match
+from india_compliance.gst_india.utils.itc_claim import (
+    SUPPORTED_DOCTYPES,
+    set_itc_claim_period_on_match,
+)
 
 
 class Fields(Enum):
@@ -835,7 +838,7 @@ class Reconciler(BaseReconciliation):
                         purchase.name
                     )
 
-                    if purchase.doctype == "Purchase Invoice":
+                    if purchase.doctype in SUPPORTED_DOCTYPES:
                         inward_supply_map[inward_supply.name] = purchase.name
 
                     # Remove from current data to ensure matching is done only once.
