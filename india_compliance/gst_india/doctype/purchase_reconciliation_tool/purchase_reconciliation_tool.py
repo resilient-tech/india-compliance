@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
-from typing import List
 
 import frappe
 from frappe import _
@@ -455,7 +454,7 @@ def filter_redownload_periods(company_gstin, return_type, periods):
 def get_import_history(
     company_gstins: list | str,
     return_type: ReturnType,
-    periods: List[str],
+    periods: list[str],
     *,
     fields=None,
     pluck=None,
