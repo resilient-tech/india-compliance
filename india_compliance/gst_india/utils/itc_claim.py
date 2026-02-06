@@ -334,8 +334,8 @@ def _calculate_itc_claim_period(
     ims_action: str | None = None,
     ims_period: str | None = None,
 ) -> str | None:
-    # already filed
-    if filed and doc.itc_claim_period not in filed:
+    # skip if already filed
+    if filed and doc.itc_claim_period and doc.itc_claim_period in filed:
         return None
 
     # FIRST PREFERENCE: IMS ACTION
