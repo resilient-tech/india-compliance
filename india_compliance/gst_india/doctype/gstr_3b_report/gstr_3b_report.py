@@ -723,17 +723,18 @@ class GSTR3BReport(Document):
                 else invoice.supplier_gstin
             )
 
-            docnames = (
+            query = (
                 frappe.qb.from_(invoice)
                 .select(invoice.name)
                 .where(invoice.docstatus == 1)
                 .where(invoice.is_opening == "No")
-                .where(invoice.posting_date.between(self.from_date, self.to_date))
                 .where(invoice.company == self.company)
                 .where(invoice.place_of_supply.isnull())
                 .where(invoice.company_gstin != IfNull(party_gstin, ""))
                 .where(invoice.gst_category != "Overseas")
-            ).run(as_dict=True)
+            )
+
+            docnames = self.apply_itc_period_filter(query, invoice).run(as_dict=True)
 
             for d in docnames:
                 missing_field_invoices.append(d.name)
