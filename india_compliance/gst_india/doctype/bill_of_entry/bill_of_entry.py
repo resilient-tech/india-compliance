@@ -318,8 +318,10 @@ class BillofEntry(Document):
                         "debit": item.customs_duty,
                         "credit": 0,
                         "cost_center": item.cost_center,
+                        "project": item.project,
                         "remarks": remarks,
                     },
+                    item=item,
                 )
             )
 
