@@ -388,7 +388,7 @@ class BillofEntry(Document):
         return asset_items
 
     @frappe.whitelist()
-    def get_items_from_purchase_invoice(self, purchase_invoices: str | list):
+    def get_items_from_purchase_invoice(self, purchase_invoices: list):
         if not purchase_invoices:
             frappe.msgprint(_("No Purchase Invoices selected"))
             return
