@@ -366,11 +366,7 @@ def _calculate_itc_claim_period(
     if inward_supply and inward_supply.get("return_period_2b"):
         default_period = _max_period(posting_period, inward_supply.return_period_2b)
 
-    if (
-        doc.get("doctype") == "Purchase Invoice"
-        and doc.get("gst_category") == "Unregistered"
-        and doc.get("is_reverse_charge")
-    ):
+    if doc.get("gst_category") == "Unregistered" and doc.get("is_reverse_charge"):
         return posting_period
 
     return _get_next_unfiled_period(
