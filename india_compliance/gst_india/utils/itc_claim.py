@@ -470,6 +470,9 @@ def _fetch_document_data(
         .where(doc.name.isin(names))
     )
 
+    if doctype == "Purchase Invoice":
+        query = query.select(doc.gst_category, doc.is_reverse_charge)
+
     if only_claim_period_set:
         query = query.where(doc.itc_claim_period.isnotnull())
         query = query.where(doc.itc_claim_period != ITC_CLAIM_PERIOD_DEFERRED)
