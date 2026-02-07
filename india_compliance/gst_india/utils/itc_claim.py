@@ -68,14 +68,14 @@ def set_itc_claim_period_on_match(
 
 def set_itc_claim_period_on_ims_action(
     invoice_names: Sequence[str],
-    action: Literal["Accepted", "Rejected", "Pending"],
+    action: str,
     ims_period: str | None = None,
 ) -> None:
     if not invoice_names:
         return
 
     if action not in ("Accepted", "Rejected", "Pending"):
-        frappe.throw(_("Invalid action: {0}").format(action))
+        return
 
     linked = _fetch_linked_documents(invoice_names)
     if not linked:
@@ -147,7 +147,7 @@ def get_itc_period_options(
 
 @frappe.whitelist()
 def update_gstr3b_filing_status(
-    company_gstin: str, month_or_quarter: str, year: str, status: str
+    company_gstin: str, month_or_quarter: str, year: int | str, status: str
 ) -> None:
     frappe.has_permission("GST Return Log", "write", throw=True)
 
