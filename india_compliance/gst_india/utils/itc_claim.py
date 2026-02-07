@@ -25,6 +25,10 @@ from india_compliance.gst_india.utils import get_period
 SUPPORTED_DOCTYPES = frozenset(("Purchase Invoice", "Bill of Entry"))
 SUPPORTED_TABLE_NAMES = frozenset(get_table_name(dt) for dt in SUPPORTED_DOCTYPES)
 ITC_CLAIM_PERIOD_DEFERRED = "Deferred"
+FILING_STATUS = {
+    "Filed": "Filed",  # ACTION : STATUS
+    "Not Filed": "Unfiled",
+}
 
 
 def set_or_validate_itc_claim_period(doc) -> None:
@@ -77,7 +81,7 @@ def set_itc_claim_period_on_ims_action(
     if action not in ("Accepted", "Rejected", "Pending"):
         return
 
-    linked = _fetch_linked_documents(invoice_names)
+    linked = _fetch_inward_supply_data(invoice_names, only_linked=True)
     if not linked:
         return
 
@@ -88,15 +92,10 @@ def set_itc_claim_period_on_ims_action(
 
     for doctype, doc_names in by_doctype.items():
         updates = defaultdict(set)
-
-        if action == "Accepted":
-            doc_data = _fetch_document_data(doctype, doc_names)
-
-        elif action in ("Rejected", "Pending"):
-            doc_data = _fetch_document_data(
-                doctype, doc_names, only_claim_period_set=True
-            )
-
+        only_claim_period_set = bool(action in ("Rejected", "Pending"))
+        doc_data = _fetch_document_data(
+            doctype, doc_names, only_claim_period_set=only_claim_period_set
+        )
         gstins = {d.company_gstin for d in doc_data if d.company_gstin}
         filed_map = {gstin: _get_filed_periods(gstin) for gstin in gstins}
 
@@ -150,12 +149,10 @@ def update_gstr3b_filing_status(
     company_gstin: str, month_or_quarter: str, year: int | str, status: str
 ) -> None:
     frappe.has_permission("GST Return Log", "write", throw=True)
-
-    allowed_status = ("Filed", "Not Filed")
-    if status not in allowed_status:
+    if status not in FILING_STATUS:
         frappe.throw(
             _("Invalid filing status: {0}. Allowed values are: {1}").format(
-                status, ", ".join(allowed_status)
+                status, ", ".join(FILING_STATUS)
             )
         )
 
@@ -174,7 +171,7 @@ def update_gstr3b_filing_status(
 
     frappe.msgprint(
         _("GSTR-3B for {0} {1} marked as {2}.").format(
-            month_or_quarter, year, _("Filed") if status == "Filed" else _("Unfiled")
+            month_or_quarter, year, FILING_STATUS[status]
         ),
         indicator="green",
     )
@@ -282,8 +279,9 @@ def _is_gstr3b_filed(gstin: str, period: str | None) -> bool:
     if period == ITC_CLAIM_PERIOD_DEFERRED or not period:
         return False
 
-    log_name = f"GSTR3B-{period}-{gstin}"
-    return frappe.db.get_value("GST Return Log", log_name, "filing_status") == "Filed"
+    filters = {"gstin": gstin, "return_period": period, "return_type": "GSTR3B"}
+
+    return frappe.db.get_value("GST Return Log", filters, "filing_status") == "Filed"
 
 
 def _get_filed_periods(gstin: str) -> set[str]:
@@ -376,24 +374,12 @@ def _calculate_itc_claim_period(
 
 def _validate_itc_claim_period(doc) -> None:
     validate_mandatory_fields(doc, "itc_claim_period")
+    _validate_period_format(doc.itc_claim_period)
+    _validate_itc_claim_period_for_rcm_invoice(doc)
+    _validate_itc_claim_period_as_per_filing(doc)
 
-    period = doc.itc_claim_period
-    _validate_period_format(period)
 
-    # For Unregistered supplier RCM (Purchase Invoice only), ITC must be claimed in the same period as posting
-    if (
-        doc.doctype == "Purchase Invoice"
-        and doc.gst_category == "Unregistered"
-        and doc.is_reverse_charge
-        and period
-        and period != format_period(doc.posting_date)
-    ):
-        frappe.throw(
-            _(
-                "ITC Claim Period must be {0} for purchases from Unregistered suppliers under Reverse Charge."
-            ).format(format_period(doc.posting_date))
-        )
-
+def _validate_itc_claim_period_as_per_filing(doc) -> None:
     previous = doc.get_doc_before_save()
     if not previous:
         return
@@ -406,6 +392,21 @@ def _validate_itc_claim_period(doc) -> None:
             _(
                 "Cannot change ITC Claim Period from {0} to {1}. GSTR-3B already filed."
             ).format(previous.itc_claim_period, doc.itc_claim_period)
+        )
+
+
+def _validate_itc_claim_period_for_rcm_invoice(doc) -> None:
+    """For Unregistered RCM, ITC must be claimed in the same period as posting."""
+    if (
+        doc.doctype == "Purchase Invoice"
+        and doc.gst_category == "Unregistered"
+        and doc.is_reverse_charge
+        and doc.itc_claim_period != format_period(doc.posting_date)
+    ):
+        frappe.throw(
+            _(
+                "ITC Claim Period must be {0} for purchases from Unregistered suppliers under Reverse Charge."
+            ).format(format_period(doc.posting_date))
         )
 
 
@@ -462,7 +463,12 @@ def _fetch_document_data(
     doc = frappe.qb.DocType(doctype)
     query = (
         frappe.qb.from_(doc)
-        .select(doc.name, doc.posting_date, doc.company_gstin, doc.itc_claim_period)
+        .select(
+            doc.name,
+            doc.posting_date,
+            doc.company_gstin,
+            doc.itc_claim_period,
+        )
         .where(doc.name.isin(names))
     )
 
@@ -477,29 +483,24 @@ def _fetch_document_data(
     return query.run(as_dict=True)
 
 
-def _fetch_inward_supply_data(names: list[str]) -> list[dict]:
+def _fetch_inward_supply_data(
+    names: Sequence[str], only_linked: bool = False
+) -> list[dict]:
     GSTR2 = frappe.qb.DocType("GST Inward Supply")
-    return (
-        frappe.qb.from_(GSTR2)
-        .select(GSTR2.name, GSTR2.return_period_2b, GSTR2.ims_action)
-        .where(GSTR2.name.isin(names))
-        .run(as_dict=True)
-    )
-
-
-def _fetch_linked_documents(invoice_names: Sequence[str]) -> list[dict]:
-    GSTR2 = frappe.qb.DocType("GST Inward Supply")
-    return (
+    query = (
         frappe.qb.from_(GSTR2)
         .select(
             GSTR2.name,
-            GSTR2.link_name,
-            GSTR2.link_doctype,
             GSTR2.return_period_2b,
             GSTR2.ims_action,
+            GSTR2.link_name,
+            GSTR2.link_doctype,
         )
-        .where(GSTR2.name.isin(invoice_names))
-        .where(GSTR2.link_name.isnotnull())
-        .where(GSTR2.link_doctype.isin(SUPPORTED_DOCTYPES))
-        .run(as_dict=True)
+        .where(GSTR2.name.isin(names))
     )
+
+    if only_linked:
+        query = query.where(GSTR2.link_name.isnotnull())
+        query = query.where(GSTR2.link_doctype.isin(SUPPORTED_DOCTYPES))
+
+    return query.run(as_dict=True)
