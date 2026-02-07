@@ -151,6 +151,14 @@ def update_gstr3b_filing_status(
 ) -> None:
     frappe.has_permission("GST Return Log", "write", throw=True)
 
+    allowed_status = ("Filed", "Not Filed")
+    if status not in allowed_status:
+        frappe.throw(
+            _("Invalid filing status: {0}. Allowed values are: {1}").format(
+                status, ", ".join(allowed_status)
+            )
+        )
+
     period = get_period(month_or_quarter, year)
     filters = {"gstin": company_gstin, "return_period": period, "return_type": "GSTR3B"}
     log_name = frappe.db.get_value("GST Return Log", filters)
@@ -464,6 +472,8 @@ def _fetch_document_data(
 
     if only_claim_period_set:
         query = query.where(doc.itc_claim_period.isnotnull())
+        query = query.where(doc.itc_claim_period != ITC_CLAIM_PERIOD_DEFERRED)
+        query = query.where(doc.itc_claim_period != "")
 
     return query.run(as_dict=True)
 
