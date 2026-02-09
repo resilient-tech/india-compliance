@@ -127,7 +127,7 @@ def get_itc_period_options(
     fy_start = _get_gst_fy_start(posting_date)
     start_date = min(fy_start, get_first_day(add_months(posting_date, -3)))
 
-    deadline_date = _period_to_date(_get_section_16_4_deadline(posting_date), "last")
+    deadline_date = period_to_date(_get_section_16_4_deadline(posting_date), "last")
     end_date = min(get_last_day(today), deadline_date)
 
     filed = _get_filed_periods(company_gstin)
@@ -214,7 +214,7 @@ def apply_period_filter(
     return query.where(doc.posting_date[from_date:to_date])
 
 
-def _period_to_date(
+def period_to_date(
     period: str, day: Literal["first", "last"] = "first"
 ) -> datetime.date:
     if not period or len(period) != 6:
@@ -237,7 +237,7 @@ def compare_periods(p1: str, p2: str) -> int:
 
 
 def _next_period(period: str) -> str:
-    return format_period(add_months(_period_to_date(period), 1))
+    return format_period(add_months(period_to_date(period), 1))
 
 
 def _max_period(p1: str, p2: str) -> str:
@@ -504,6 +504,7 @@ def _fetch_inward_supply_data(
 
     if only_linked:
         query = query.where(gstr2.link_name.isnotnull())
+        query = query.where(gstr2.link_name != "")
         query = query.where(gstr2.link_doctype.isin(SUPPORTED_DOCTYPES))
 
     return query.run(as_dict=True)
