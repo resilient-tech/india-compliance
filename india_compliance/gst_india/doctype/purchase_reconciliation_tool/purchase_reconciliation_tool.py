@@ -8,7 +8,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.functions import IfNull
-from frappe.utils import add_to_date, cint, getdate, now_datetime
+from frappe.utils import add_to_date, cint, now_datetime
 from frappe.utils.background_jobs import is_job_enqueued
 from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
     get_accounting_dimensions,
@@ -62,7 +62,9 @@ from india_compliance.gst_india.utils.gstr_2 import (
 )
 from india_compliance.gst_india.utils.itc_claim import (
     compare_periods,
+    format_period,
     period_sort_key,
+    period_to_date,
 )
 from india_compliance.setup_wizard import can_fetch_gstin_info
 
@@ -444,9 +446,7 @@ def _check_gstr3b_status(gstin, return_period):
     if last_filed_period:
         last_filed_period = last_filed_period[0]
 
-    prev_period = getdate(
-        add_to_date(f"{return_period[2:]}-{return_period[:2]}-01", months=-1)
-    ).strftime("%m%Y")
+    prev_period = format_period(add_to_date(period_to_date(return_period), months=-1))
 
     # If last filed period is recent enough (>= prev_period), local data is fresh
     if last_filed_period and compare_periods(last_filed_period, prev_period) >= 0:

@@ -16,12 +16,12 @@ from india_compliance.gst_india.utils.itc_claim import (
     _is_gstr3b_filed,
     _max_period,
     _next_period,
-    _period_to_date,
     _validate_period_format,
     compare_periods,
     format_period,
     get_itc_period_options,
     period_sort_key,
+    period_to_date,
     update_gstr3b_filing_status,
 )
 
@@ -57,16 +57,16 @@ class TestITCClaim(IntegrationTestCase):
         self.assertEqual(format_period("2024-03-31"), "032024")
 
     def test_period_to_date(self):
-        self.assertEqual(_period_to_date("012024"), getdate("2024-01-01"))
-        self.assertEqual(_period_to_date("012024", "last"), getdate("2024-01-31"))
+        self.assertEqual(period_to_date("012024"), getdate("2024-01-01"))
+        self.assertEqual(period_to_date("012024", "last"), getdate("2024-01-31"))
         # leap year
-        self.assertEqual(_period_to_date("022024", "last"), getdate("2024-02-29"))
-        self.assertEqual(_period_to_date("022023", "last"), getdate("2023-02-28"))
+        self.assertEqual(period_to_date("022024", "last"), getdate("2024-02-29"))
+        self.assertEqual(period_to_date("022023", "last"), getdate("2023-02-28"))
 
     def test_period_to_date_invalid(self):
         for invalid in ("", "12345", "1234567"):
             with self.assertRaises(frappe.exceptions.ValidationError):
-                _period_to_date(invalid)
+                period_to_date(invalid)
 
     def test_next_period(self):
         self.assertEqual(_next_period("012024"), "022024")
