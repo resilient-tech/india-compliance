@@ -1,0 +1,14 @@
+[
+  {
+    "account_category_name": "Capital Work in Progress",
+    "description": "Assets under construction or development that are not yet ready for intended use. Examples: Buildings under construction, plant installation in progress, software under development."
+  },
+  {
+    "account_category_name": "Deferred Tax Assets",
+    "description": "Future tax benefits arising from temporary differences, unused tax losses, and unused tax credits. Examples: Deferred tax asset on depreciation timing difference, carried forward losses."
+  },
+  {
+    "account_category_name": "Deferred Tax Liabilities",
+    "description": "Future tax obligations arising from temporary differences between accounting and tax treatment. Examples: Deferred tax liability on depreciation, revaluation surplus."
+  }
+]
