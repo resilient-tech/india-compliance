@@ -1,6 +1,9 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
+from __future__ import annotations
+
+from typing import Self
 
 import frappe
 from frappe import _
@@ -86,7 +89,7 @@ class CForm(Document):
         frappe.db.set(self, "total_invoiced_amount", total)
 
     @frappe.whitelist()
-    def get_invoice_details(self, invoice_no: str):
+    def get_invoice_details(self: Self, invoice_no: str):
         """Pull details from invoice for reference"""
 
         if not invoice_no:

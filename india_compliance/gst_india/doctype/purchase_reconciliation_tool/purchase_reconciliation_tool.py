@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
+from typing import Self
 
 import frappe
 from frappe import _
@@ -95,7 +96,7 @@ class PurchaseReconciliationTool(Document):
         )
 
     @frappe.whitelist()
-    def reconcile_and_generate_data(self: PurchaseReconciliationTool):
+    def reconcile_and_generate_data(self: Self):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         # reconcile purchases and inward supplies
@@ -111,7 +112,7 @@ class PurchaseReconciliationTool(Document):
         return self.ReconciledData.get()
 
     @frappe.whitelist()
-    def upload_gstr(self, return_type: str, period: str, file_path: str):
+    def upload_gstr(self: Self, return_type: str, period: str, file_path: str):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         return_type = ReturnType(return_type)
@@ -125,7 +126,7 @@ class PurchaseReconciliationTool(Document):
     @frappe.whitelist()
     @otp_handler
     def download_gstr(
-        self,
+        self: Self,
         company_gstin: str,
         date_range: str | list,
         return_type: str | None = None,
@@ -163,7 +164,7 @@ class PurchaseReconciliationTool(Document):
 
     @frappe.whitelist()
     def get_import_history(
-        self,
+        self: Self,
         company_gstin: str,
         return_type: str,
         date_range: str | list,
@@ -212,7 +213,7 @@ class PurchaseReconciliationTool(Document):
         }
 
     @frappe.whitelist()
-    def get_return_period_from_file(self, return_type: str, file_path: str):
+    def get_return_period_from_file(self: Self, return_type: str, file_path: str):
         """
         Permissions check not necessary as response is not sensitive
         """
@@ -232,7 +233,7 @@ class PurchaseReconciliationTool(Document):
             pass
 
     @frappe.whitelist()
-    def get_date_range(self, period: str):
+    def get_date_range(self: Self, period: str):
         """
         Permissions check not necessary as response is not sensitive
         """
@@ -242,7 +243,7 @@ class PurchaseReconciliationTool(Document):
         return get_timespan_date_range(period.lower(), self.company)
 
     @frappe.whitelist()
-    def get_date_range_and_check_missing_documents(self, period: str):
+    def get_date_range_and_check_missing_documents(self: Self, period: str):
         date_range = self.get_date_range(period)
 
         if not date_range:
@@ -258,7 +259,7 @@ class PurchaseReconciliationTool(Document):
         return date_range
 
     @frappe.whitelist()
-    def get_invoice_details(self, purchase_name: str, inward_supply_name: str):
+    def get_invoice_details(self: Self, purchase_name: str, inward_supply_name: str):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         return self.ReconciledData.get_manually_matched_data(
@@ -267,7 +268,10 @@ class PurchaseReconciliationTool(Document):
 
     @frappe.whitelist()
     def link_documents(
-        self, purchase_invoice_name: str, inward_supply_name: str, link_doctype: str
+        self: Self,
+        purchase_invoice_name: str,
+        inward_supply_name: str,
+        link_doctype: str,
     ):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
@@ -278,7 +282,7 @@ class PurchaseReconciliationTool(Document):
         return self.ReconciledData.get(purchases, inward_supplies)
 
     @frappe.whitelist()
-    def unlink_documents(self, data: str | list):
+    def unlink_documents(self: Self, data: str | list):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         purchases, inward_supplies = _unlink_documents(data)
@@ -286,7 +290,7 @@ class PurchaseReconciliationTool(Document):
         return self.ReconciledData.get(purchases, inward_supplies)
 
     @frappe.whitelist()
-    def apply_action(self, data: str | dict | frappe._dict | list, action: str):
+    def apply_action(self: Self, data: str | dict | frappe._dict | list, action: str):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         data = frappe.parse_json(data)
@@ -322,7 +326,7 @@ class PurchaseReconciliationTool(Document):
         set_reconciliation_status("Bill of Entry", boe, status)
 
     @frappe.whitelist()
-    def get_link_options(self, doctype: str, filters: dict | frappe._dict):
+    def get_link_options(self: Self, doctype: str, filters: dict | frappe._dict):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         if isinstance(filters, dict):
