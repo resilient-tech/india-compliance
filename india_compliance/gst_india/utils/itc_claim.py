@@ -225,12 +225,15 @@ def _period_to_date(
     return get_last_day(date) if day == "last" else date
 
 
-def _compare_periods(p1: str, p2: str) -> int:
-    return (
-        -1
-        if p1[2:] + p1[:2] < p2[2:] + p2[:2]
-        else (1 if p1[2:] + p1[:2] > p2[2:] + p2[:2] else 0)
-    )
+def _period_sort_key(period: str) -> str:
+    """Convert MMYYYY → YYYYMM for natural string comparison."""
+    return period[2:] + period[:2]
+
+
+def compare_periods(p1: str, p2: str) -> int:
+    """Compare two MMYYYY periods. Returns -1, 0, or 1."""
+    key1, key2 = _period_sort_key(p1), _period_sort_key(p2)
+    return (key1 > key2) - (key1 < key2)
 
 
 def _next_period(period: str) -> str:
@@ -238,7 +241,7 @@ def _next_period(period: str) -> str:
 
 
 def _max_period(p1: str, p2: str) -> str:
-    return p1 if _compare_periods(p1, p2) >= 0 else p2
+    return max(p1, p2, key=_period_sort_key)
 
 
 def _validate_period_format(period: str) -> None:
@@ -306,7 +309,7 @@ def _get_next_unfiled_period(
     )
 
     current = start_period
-    while _compare_periods(current, deadline) <= 0:
+    while compare_periods(current, deadline) <= 0:
         if not is_filed(current):
             return current
         current = _next_period(current)

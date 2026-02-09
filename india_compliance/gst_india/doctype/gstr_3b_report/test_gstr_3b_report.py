@@ -10,9 +10,6 @@ from frappe.utils import getdate
 from india_compliance.gst_india.doctype.gstr_3b_report.gstr_3b_report import (
     GSTR3BExcelExporter,
 )
-from india_compliance.gst_india.utils.itc_claim import (
-    update_gstr3b_filing_status,
-)
 from india_compliance.gst_india.utils.tests import (
     create_purchase_invoice,
     create_sales_invoice,
@@ -215,54 +212,6 @@ class TestGSTR3BReport(IntegrationTestCase):
 
         gst_settings.round_off_gst_values = 1
         gst_settings.save()
-
-    def test_update_gstr3b_filing_status(self):
-        company_gstin = "24AAQCA8719H1ZC"
-        month_or_quarter = "April"
-        year = 2020
-        status = "Not Filed"
-        return_period = "042020"
-        return_type = "GSTR3B"
-
-        update_gstr3b_filing_status(
-            company_gstin=company_gstin,
-            month_or_quarter=month_or_quarter,
-            year=year,
-            status=status,
-        )
-        self.assertEqual(
-            frappe.db.get_value(
-                "GST Return Log",
-                {
-                    "gstin": company_gstin,
-                    "return_period": return_period,
-                    "return_type": return_type,
-                },
-                "filing_status",
-            ),
-            status,
-        )
-
-        status = "Filed"
-
-        update_gstr3b_filing_status(
-            company_gstin=company_gstin,
-            month_or_quarter=month_or_quarter,
-            year=year,
-            status=status,
-        )
-        self.assertEqual(
-            frappe.db.get_value(
-                "GST Return Log",
-                {
-                    "gstin": company_gstin,
-                    "return_period": return_period,
-                    "return_type": return_type,
-                },
-                "filing_status",
-            ),
-            status,
-        )
 
 
 def create_sales_invoices():

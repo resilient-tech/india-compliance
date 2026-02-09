@@ -15,6 +15,7 @@ from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
 )
 from india_compliance.gst_india.overrides.test_transaction import create_cess_accounts
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
+from india_compliance.gst_india.utils.itc_claim import format_period
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
 
 IGNORE_TEST_RECORD_DEPENDENCIES = [
@@ -305,3 +306,16 @@ class TestBillofEntry(IntegrationTestCase):
             },
             pi.items[0],
         )
+
+    def test_itc_claim_period_auto_set(self):
+        """Test that ITC claim period is auto-set on Bill of Entry creation."""
+        pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
+
+        boe = make_bill_of_entry(pi.name)
+        boe.bill_of_entry_no = "123"
+        boe.bill_of_entry_date = today()
+        boe.save()
+
+        # ITC claim period should be set to posting period by default
+        expected_period = format_period(boe.posting_date)
+        self.assertEqual(boe.itc_claim_period, expected_period)
