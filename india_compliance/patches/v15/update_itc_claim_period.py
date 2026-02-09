@@ -21,6 +21,6 @@ def update_itc_claim_period(doctype):
         frappe.qb.update(doc)
         .set(doc.itc_claim_period, posting_period)
         .where(doc.itc_claim_period.isnull())
-        .where(doc.docstatus != 0)
+        .where(doc.docstatus == 1)
         .run()
     )

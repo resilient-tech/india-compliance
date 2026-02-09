@@ -61,8 +61,8 @@ from india_compliance.gst_india.utils.gstr_2 import (
     save_gstr_2b,
 )
 from india_compliance.gst_india.utils.itc_claim import (
-    _period_sort_key,
     compare_periods,
+    period_sort_key,
 )
 from india_compliance.setup_wizard import can_fetch_gstin_info
 
@@ -409,7 +409,7 @@ def download_gstr(
     if not periods:
         return
 
-    latest_period = max(periods, key=_period_sort_key)
+    latest_period = max(periods, key=period_sort_key)
     _check_gstr3b_status(company_gstin, latest_period)
 
     try:
