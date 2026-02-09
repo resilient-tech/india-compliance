@@ -16,12 +16,12 @@ from india_compliance.gst_india.utils.itc_claim import (
     _is_gstr3b_filed,
     _max_period,
     _next_period,
-    _period_sort_key,
     _period_to_date,
     _validate_period_format,
     compare_periods,
     format_period,
     get_itc_period_options,
+    period_sort_key,
     update_gstr3b_filing_status,
 )
 
@@ -33,12 +33,12 @@ class TestITCClaim(IntegrationTestCase):
 
     def test_period_sort_key(self):
         # MMYYYY → YYYYMM conversion
-        self.assertEqual(_period_sort_key("012024"), "202401")
-        self.assertEqual(_period_sort_key("122023"), "202312")
+        self.assertEqual(period_sort_key("012024"), "202401")
+        self.assertEqual(period_sort_key("122023"), "202312")
 
         # ordering
-        self.assertLess(_period_sort_key("012024"), _period_sort_key("022024"))
-        self.assertLess(_period_sort_key("122023"), _period_sort_key("012024"))
+        self.assertLess(period_sort_key("012024"), period_sort_key("022024"))
+        self.assertLess(period_sort_key("122023"), period_sort_key("012024"))
 
     def test_compare_periods(self):
         self.assertEqual(compare_periods("012024", "012024"), 0)
