@@ -1,6 +1,9 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
 
+from __future__ import annotations
+
+from typing import Self
 
 import frappe
 from frappe import _
@@ -29,21 +32,21 @@ from india_compliance.gst_india.utils.gstin_info import get_gstr_1_return_status
 
 class GSTR1(Document):
     @frappe.whitelist()
-    def recompute_books(self):
+    def recompute_books(self: Self):
         """
         Permission check not required as user has access to doc.
         """
         return self.generate_gstr1(recompute_books=True)
 
     @frappe.whitelist()
-    def sync_with_gstn(self, sync_for: str):
+    def sync_with_gstn(self: Self, sync_for: str):
         """
         Permission check not required as user has access to doc.
         """
         return self.generate_gstr1(sync_for=sync_for, recompute_books=True)
 
     @frappe.whitelist()
-    def mark_as_filed(self):
+    def mark_as_filed(self: Self):
         """
         Permission check not required as user has access to doc.
         """
@@ -70,7 +73,7 @@ class GSTR1(Document):
     @frappe.whitelist()
     @otp_handler
     def generate_gstr1(
-        self,
+        self: Self,
         sync_for: str | None = None,
         recompute_books: bool = False,
         only_books_data: bool = False,

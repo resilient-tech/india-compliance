@@ -1,5 +1,8 @@
 # Copyright (c) 2023, Resilient Tech and contributors
 # For license information, please see license.txt
+from __future__ import annotations
+
+from typing import Self
 
 import frappe
 from frappe import _
@@ -33,7 +36,7 @@ class GSTIN(Document):
             self.cancelled_date = self.registration_date
 
     @frappe.whitelist()
-    def update_gstin_status(self):
+    def update_gstin_status(self: Self):
         """
         Permission check not required as GSTIN details are public and user has access to doc.
         """
@@ -41,7 +44,7 @@ class GSTIN(Document):
         create_or_update_gstin_status(self.gstin, throw=True, doc=self)
 
     @frappe.whitelist()
-    def update_transporter_id_status(self):
+    def update_transporter_id_status(self: Self):
         """
         Permission check not required as GSTIN details are public and user has access to doc.
         """
