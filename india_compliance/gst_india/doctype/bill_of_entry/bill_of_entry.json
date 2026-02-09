@@ -276,7 +276,7 @@
   },
   {
    "allow_on_submit": 1,
-   "description": "GSTR-3B period for claiming ITC (MMYYYY). Leave empty to defer.",
+   "description": "GSTR-3B period for claiming ITC (MMYYYY) or 'Deferred' to postpone.",
    "fieldname": "itc_claim_period",
    "fieldtype": "Autocomplete",
    "label": "ITC Claim Period",
