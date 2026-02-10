@@ -7,7 +7,11 @@ from india_compliance.audit_trail.utils import (
     enqueue_disable_audit_trail_notification,
     is_audit_trail_enabled,
 )
-from india_compliance.gst_india.constants import GST_PARTY_TYPES, INDIAN_STATES
+from india_compliance.gst_india.constants import (
+    GST_PARTY_TYPES,
+    INDIAN_STATES,
+    STATE_NUMBERS,
+)
 
 
 def set_bootinfo(bootinfo):
@@ -18,11 +22,25 @@ def set_bootinfo(bootinfo):
     gst_settings = frappe.get_cached_doc("GST Settings").as_dict()
     gst_settings.api_secret = "***" if gst_settings.api_secret else ""
 
-    for key in ("gst_accounts", "credentials"):
+    # Build state-wise e-Waybill configuration for client-side access
+    state_wise_e_waybill_config = {}
+    for row in gst_settings.get("e_waybill_applicability_for_intrastate") or []:
+        state_wise_e_waybill_config[row.get("state")] = {
+            "intrastate_applicable": row.get("intrastate_applicable"),
+            "intrastate_threshold": row.get("intrastate_threshold"),
+        }
+
+    for key in (
+        "gst_accounts",
+        "credentials",
+        "e_waybill_applicability_for_intrastate",
+    ):
         gst_settings.pop(key, None)
 
     bootinfo["gst_settings"] = gst_settings
+    bootinfo["state_wise_e_waybill_config"] = state_wise_e_waybill_config
     bootinfo["india_state_options"] = list(INDIAN_STATES)
+    bootinfo["state_numbers"] = STATE_NUMBERS
     bootinfo["ic_api_enabled_from_conf"] = bool(frappe.conf.ic_api_secret)
 
     set_indian_registered_companies(bootinfo)

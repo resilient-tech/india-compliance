@@ -64,6 +64,8 @@
   "gstin_status_refresh_interval",
   "uom_mapping_section",
   "gst_uom_map",
+  "ewaybill_applicability_configuration_tab",
+  "e_waybill_applicability_for_intrastate",
   "accounts_tab",
   "gst_accounts",
   "purchase_reconciliation_tab",
@@ -704,13 +706,24 @@
    "fieldname": "use_fallback_for_nic",
    "fieldtype": "Check",
    "label": "Use Fallback APIs for e-Waybill and e-Invoice"
+  },
+  {
+   "fieldname": "ewaybill_applicability_configuration_tab",
+   "fieldtype": "Tab Break",
+   "label": "e-Waybill Applicability Configuration"
+  },
+  {
+   "fieldname": "e_waybill_applicability_for_intrastate",
+   "fieldtype": "Table",
+   "label": "e-Waybill Applicability for Intrastate",
+   "options": "State-wise e-Waybill Applicability"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-07-16 19:40:18.381272",
+ "modified": "2026-01-30 18:24:53.773617",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
@@ -737,6 +750,7 @@
  ],
  "quick_entry": 1,
  "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],

@@ -52,6 +52,7 @@ from india_compliance.gst_india.utils import (
 from india_compliance.gst_india.utils.e_waybill import (
     _cancel_e_waybill,
     generate_pending_e_waybills,
+    get_e_waybill_threshold,
     log_and_process_e_waybill_generation,
 )
 from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
@@ -790,9 +791,12 @@ class EInvoiceData(GSTTransactionData):
         return supply_type
 
     def set_transporter_details(self):
+        # Get dynamic threshold based on transaction type and state
+        threshold = get_e_waybill_threshold(self.doc, self.settings)
+
         if (
             # e-waybill threshold is not met
-            self.transaction_details.grand_total < self.settings.e_waybill_threshold
+            self.transaction_details.grand_total < threshold
             # e-waybill auto-generation is disabled by user
             or not self.settings.generate_e_waybill_with_e_invoice
             # e-waybill is already generated
