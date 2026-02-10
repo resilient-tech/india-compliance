@@ -305,3 +305,40 @@ class TestBillofEntry(IntegrationTestCase):
             },
             pi.items[0],
         )
+
+    def test_project_in_gl_entries(self):
+        """Test that project from Purchase Invoice is auto-copied to Bill of Entry and passed to GL Entry"""
+        from erpnext.projects.doctype.project.test_project import make_project
+
+        project = make_project(
+            {
+                "project_name": "_Test BOE Project",
+                "company": "_Test Indian Registered Company",
+            }
+        )
+
+        pi = create_purchase_invoice(
+            supplier="_Test Foreign Supplier", update_stock=1, do_not_submit=True
+        )
+        pi.items[0].project = project.name
+        pi.submit()
+
+        boe = make_bill_of_entry(pi.name)
+        self.assertEqual(boe.items[0].project, project.name)
+
+        boe.items[0].customs_duty = 100
+        boe.bill_of_entry_no = "456"
+        boe.bill_of_entry_date = today()
+        boe.save()
+        boe.submit()
+
+        gl_entry = frappe.get_value(
+            "GL Entry",
+            {
+                "voucher_type": "Bill of Entry",
+                "voucher_no": boe.name,
+                "account": boe.customs_expense_account,
+            },
+            "project",
+        )
+        self.assertEqual(gl_entry, project.name)
