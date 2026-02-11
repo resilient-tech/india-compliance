@@ -651,7 +651,9 @@ class TestSalesRegister(IntegrationTestCase):
         cls.create_test_records()
 
     @classmethod
-    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    @change_settings(
+        "GST Settings", {"enable_overseas_transactions": 1, "enable_e_waybill": 0}
+    )
     def create_test_records(cls):
         for invoice in INVOICES:
             create_sales_invoice(**invoice)
