@@ -229,71 +229,6 @@ class TestBillofEntry(FrappeTestCase):
         )
 
         boe.save()
-<<<<<<< HEAD
-=======
-
-    def test_pending_boe_qty(self):
-        pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
-
-        self.assertDocumentEqual(
-            {
-                "pending_boe_qty": 1,
-            },
-            pi.items[0],
-        )
-
-        # Create BOE
-        boe = make_bill_of_entry(pi.name)
-        boe.bill_of_entry_no = "123"
-        boe.bill_of_entry_date = today()
-        boe.save()
-        boe.submit()
-
-        pi.reload()
-        self.assertDocumentEqual(
-            {
-                "pending_boe_qty": 0,
-            },
-            pi.items[0],
-        )
-
-        boe.cancel()
-        pi.reload()
-
-        self.assertDocumentEqual(
-            {
-                "pending_boe_qty": 1,
-            },
-            pi.items[0],
-        )
-
-        # with partial boe
-        pi = create_purchase_invoice(
-            supplier="_Test Foreign Supplier", update_stock=1, qty=2
-        )
-        boe = make_bill_of_entry(pi.name)
-        boe.bill_of_entry_no = "123"
-        boe.bill_of_entry_date = today()
-        boe.items[0].qty = 1
-        boe.save()
-        boe.submit()
-
-        pi.reload()
-        self.assertDocumentEqual(
-            {
-                "pending_boe_qty": 1,
-            },
-            pi.items[0],
-        )
-
-        boe.cancel()
-        pi.reload()
-        self.assertDocumentEqual(
-            {
-                "pending_boe_qty": 2,
-            },
-            pi.items[0],
-        )
 
     def test_project_in_gl_entries(self):
         """Test that project from Purchase Invoice is auto-copied to Bill of Entry and passed to GL Entry"""
@@ -331,4 +266,3 @@ class TestBillofEntry(FrappeTestCase):
             "project",
         )
         self.assertEqual(gl_entry, project.name)
->>>>>>> 23e71bb0 (fix: add project and other dimensions  to item gL entries in Bill of Entry)
