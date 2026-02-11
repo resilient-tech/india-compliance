@@ -16,7 +16,11 @@ from frappe.utils import (
     random_string,
 )
 
-from india_compliance.exceptions import GSPServerError
+from india_compliance.exceptions import (
+    AlreadyGeneratedError,
+    GSPServerError,
+    NotApplicableError,
+)
 from india_compliance.gst_india.api_classes.nic.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.taxpayer_base import otp_handler
 from india_compliance.gst_india.api_classes.taxpayer_e_invoice import (
@@ -47,6 +51,7 @@ from india_compliance.gst_india.utils import (
     load_doc,
     parse_datetime,
     send_updated_doc,
+    set_einvoice_status,
     update_onload,
 )
 from india_compliance.gst_india.utils.e_waybill import (
@@ -86,31 +91,22 @@ def generate_e_invoices(docnames, force=False):
     Permission checks are done in the `generate_e_invoice` function.
     """
 
-    def log_error():
+    def log_error(docname=None):
         frappe.log_error(
             title=_("e-Invoice generation failed for Sales Invoice {0}").format(
                 docname
             ),
             message=frappe.get_traceback(),
+            reference_doctype="Sales Invoice",
+            reference_name=docname,
         )
 
     for docname in docnames:
         try:
-            generate_e_invoice(docname, throw=False, force=force)
-
-        except GSPServerError:
-            frappe.db.set_value(
-                "Sales Invoice",
-                {"name": ("in", docnames), "irn": ("is", "not set")},
-                "einvoice_status",
-                "Auto-Retry",
-            )
-
-            log_error()
-            frappe.clear_last_message()
+            generate_e_invoice(docname, force=force)
 
         except Exception:
-            log_error()
+            log_error(docname=docname)
             frappe.clear_last_message()
 
         finally:
@@ -127,6 +123,14 @@ def generate_e_invoice(docname, throw: bool = True, force: bool = False):
     settings = frappe.get_cached_doc("GST Settings")
 
     try:
+        if doc.irn:
+            frappe.throw(
+                _("e-Invoice has already been generated for Sales Invoice {0}").format(
+                    frappe.bold(doc.name)
+                ),
+                exc=AlreadyGeneratedError,
+            )
+
         if (
             not force
             and settings.enable_retry_einv_ewb_generation
@@ -190,27 +194,75 @@ def generate_e_invoice(docname, throw: bool = True, force: bool = False):
         handle_server_errors(settings, doc, "e-Invoice", e)
         return
 
-    except frappe.ValidationError as e:
-        doc.db_set({"einvoice_status": "Failed"})
-
+    except AlreadyGeneratedError as e:
         if throw:
-            raise e
+            raise
 
-        frappe.clear_last_message()
-        frappe.msgprint(
-            _(
-                "e-Invoice auto-generation failed with error:<br>{0}<br><br>"
-                "Please rectify this issue and generate e-Invoice manually."
-            ).format(str(e)),
-            _("Warning"),
-            indicator="yellow",
-        )
+        if frappe.request:
+            frappe.clear_last_message()
+            frappe.msgprint(str(e), _("Warning"), indicator="yellow", alert=True)
 
         return
 
-    except Exception as e:
-        doc.db_set({"einvoice_status": "Failed"})
-        raise e
+    except NotApplicableError as e:
+        if not frappe.flags.in_test:
+            frappe.db.rollback()
+
+        set_einvoice_status(
+            doc,
+            "Not Applicable",
+            commit=not frappe.flags.in_test,
+            notify=bool(frappe.request),
+        )
+
+        if throw:
+            raise
+
+        if frappe.request:
+            frappe.clear_last_message()
+            frappe.msgprint(str(e), _("e-Invoice Not Applicable"))
+
+        return
+
+    except (frappe.ValidationError, frappe.MandatoryError) as e:
+        if not frappe.flags.in_test:
+            frappe.db.rollback()
+
+        set_einvoice_status(
+            doc,
+            "Failed",
+            commit=not frappe.flags.in_test,
+            notify=bool(frappe.request),
+        )
+
+        if throw:
+            raise
+
+        if frappe.request:
+            frappe.clear_last_message()
+            frappe.msgprint(
+                _(
+                    "e-Invoice auto-generation failed with error:<br>{0}<br><br>"
+                    "Please rectify this issue and generate e-Invoice manually."
+                ).format(str(e)),
+                _("Error Generating e-Invoice"),
+                indicator="red",
+            )
+
+        return
+
+    except Exception:
+        if not frappe.flags.in_test:
+            frappe.db.rollback()
+
+        set_einvoice_status(
+            doc,
+            "Failed",
+            commit=not frappe.flags.in_test,
+            notify=bool(frappe.request),
+        )
+
+        raise
 
     return log_and_process_e_invoice_generation(doc, result, api.sandbox_mode)
 
@@ -493,22 +545,23 @@ def _log_e_invoice(log_data):
 
 
 def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
-    def _throw(error):
+    def _throw(error, exc=NotApplicableError):
         if throw:
-            frappe.throw(error)
+            frappe.throw(error, exc=exc)
+
+    if doc.irn:
+        return _throw(
+            _("e-Invoice has already been generated for Sales Invoice {0}").format(
+                frappe.bold(doc.name)
+            ),
+            exc=AlreadyGeneratedError,
+        )
 
     if doc.company_gstin == doc.billing_address_gstin:
         return _throw(
             _(
                 "e-Invoice is not applicable for invoices with same company and billing"
                 " GSTIN"
-            )
-        )
-
-    if doc.irn:
-        return _throw(
-            _("e-Invoice has already been generated for Sales Invoice {0}").format(
-                frappe.bold(doc.name)
             )
         )
 
@@ -562,6 +615,7 @@ def validate_taxable_item(doc, throw=True):
 
     frappe.throw(
         _("e-Invoice is not applicable for invoice with only Nil-Rated/Exempted items"),
+        exc=NotApplicableError,
     )
 
 
