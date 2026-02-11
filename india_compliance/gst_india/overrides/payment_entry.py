@@ -22,7 +22,9 @@ from india_compliance.gst_india.utils import get_all_gst_accounts
 
 
 @frappe.whitelist()
-def get_outstanding_reference_documents(args, validate: bool = False):
+def get_outstanding_reference_documents(
+    args: str | dict | frappe._dict, validate: bool = False
+):
     from erpnext.accounts.doctype.payment_entry.payment_entry import (
         get_outstanding_reference_documents,
     )
@@ -125,7 +127,9 @@ def validate_backdated_transaction(doc, action="submit"):
 
 
 @frappe.whitelist()
-def update_party_details(party_details, doctype, company):
+def update_party_details(
+    party_details: str | dict | frappe._dict, doctype: str, company: str
+):
     party_details = frappe.parse_json(party_details)
 
     address = get_default_address("Customer", party_details.get("customer"))

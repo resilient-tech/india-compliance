@@ -1,7 +1,10 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
 
+from __future__ import annotations
+
 import random
+from typing import Self
 
 import requests
 
@@ -39,7 +42,7 @@ inverse_table = [0, 4, 3, 2, 1, 5, 6, 7, 8, 9]
 
 class PAN(Document):
     @frappe.whitelist()
-    def update_pan_status(self):
+    def update_pan_status(self: Self):
         """
         Permission check not required as user has access to doc.
         """
@@ -51,7 +54,7 @@ class PAN(Document):
 
 
 @frappe.whitelist()
-def get_pan_status(pan, force_update: bool = False):
+def get_pan_status(pan: str, force_update: bool = False):
     """
     Permission check not required as PAN details are public.
     """
