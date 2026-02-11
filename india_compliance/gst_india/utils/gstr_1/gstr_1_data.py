@@ -179,6 +179,13 @@ class GSTR1Query:
                 Date(self.si.posting_date) <= getdate(self.filters.to_date)
             )
 
+        if frappe.flags.in_test:
+            if sales_invoices := self.filters.get("sales_invoices"):
+                if isinstance(sales_invoices, str):
+                    sales_invoices = [sales_invoices]
+
+                query = query.where(self.si.name.isin(sales_invoices))
+
         return query
 
     def get_taxes_query(self):
