@@ -244,7 +244,7 @@ class TestEInvoiceWorkflow(WorkflowTestBase):
         self.assertTrue(_response_message_contains(response, "Not applicable"))
 
         self.si.reload()
-        self.assertNotEqual(self.si.einvoice_status, "Failed")
+        self.assertEqual(self.si.einvoice_status, "Not Applicable")
 
     def test_auto_gen_ui_validation_error_shows_warning(self):
         with patch(E_INVOICE_DATA) as mock_data:
