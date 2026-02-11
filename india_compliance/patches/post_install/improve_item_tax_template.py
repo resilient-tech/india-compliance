@@ -366,7 +366,7 @@ def _update_gst_details(company, doctype, is_sales_doctype, docs):
                 continue
 
             build_query_and_update_gst_details(gst_details, doctype)
-            frappe.db.commit()
+            frappe.db.commit()  # nosemgrep
 
 
 def get_docs_with_gst_accounts(doctype, gst_accounts):
