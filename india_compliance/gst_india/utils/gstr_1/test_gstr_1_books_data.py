@@ -265,16 +265,12 @@ class TestGSTR1BooksData(IntegrationTestCase):
                 )
 
             si.save()
-            return si.submit()
+            si.submit()
 
-        sales_invoices = []
         for _ in range(11):
-            si = create_invoice()
-            sales_invoices.append(si.name)
+            create_invoice()
 
-        _class = GSTR1BooksData(
-            filters=frappe._dict({**FILTERS, "sales_invoices": sales_invoices})
-        )
+        _class = GSTR1BooksData(filters=FILTERS)
         data = _class.prepare_mapped_data()
         self.assertDictEq(
             {
