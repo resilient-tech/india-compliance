@@ -134,6 +134,8 @@ def generate_e_waybills(doctype, docnames, force=False):
                     doctype, docname
                 ),
                 message=frappe.get_traceback(),
+                reference_doctype=doctype,
+                reference_name=docname,
             )
 
         finally:

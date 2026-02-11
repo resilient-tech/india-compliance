@@ -90,12 +90,14 @@ def generate_e_invoices(docnames, force=False):
     Permission checks are done in the `generate_e_invoice` function.
     """
 
-    def log_error():
+    def log_error(docname=None):
         frappe.log_error(
             title=_("e-Invoice generation failed for Sales Invoice {0}").format(
                 docname
             ),
             message=frappe.get_traceback(),
+            reference_doctype="Sales Invoice",
+            reference_name=docname,
         )
 
     for docname in docnames:
@@ -103,7 +105,7 @@ def generate_e_invoices(docnames, force=False):
             generate_e_invoice(docname, force=force)
 
         except Exception:
-            log_error()
+            log_error(docname=docname)
             frappe.clear_last_message()
 
         finally:
