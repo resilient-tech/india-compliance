@@ -311,8 +311,7 @@ class BillofEntry(Document):
 
     def get_gl_entries(self):
         # company_currency is required by get_gl_dict
-        # nosemgrep
-        self.company_currency = erpnext.get_company_currency(self.company)
+        self.company_currency = erpnext.get_company_currency(self.company)  # nosemgrep
 
         gl_entries = []
         remarks = "No Remarks"
@@ -325,8 +324,10 @@ class BillofEntry(Document):
                         "debit": item.customs_duty,
                         "credit": 0,
                         "cost_center": item.cost_center,
+                        "project": item.project,
                         "remarks": remarks,
                     },
+                    item=item,
                 )
             )
 
