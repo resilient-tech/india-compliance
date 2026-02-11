@@ -258,16 +258,15 @@ def _generate_e_waybill(doc, throw=True, force=False):
         return
 
     except (frappe.ValidationError, frappe.MandatoryError) as e:
-        if doc.doctype == "Sales Invoice":
-            if not frappe.flags.in_test:
-                frappe.db.rollback()
+        if not frappe.flags.in_test:
+            frappe.db.rollback()
 
-            set_ewaybill_status(
-                doc,
-                "Failed",
-                commit=not frappe.flags.in_test,
-                notify=bool(frappe.request),
-            )
+        set_ewaybill_status(
+            doc,
+            "Failed",
+            commit=not frappe.flags.in_test,
+            notify=bool(frappe.request),
+        )
 
         if throw:
             raise
@@ -286,16 +285,15 @@ def _generate_e_waybill(doc, throw=True, force=False):
         return
 
     except Exception:
-        if doc.doctype == "Sales Invoice":
-            if not frappe.flags.in_test:
-                frappe.db.rollback()
+        if not frappe.flags.in_test:
+            frappe.db.rollback()
 
-            set_ewaybill_status(
-                doc,
-                "Failed",
-                commit=not frappe.flags.in_test,
-                notify=bool(frappe.request),
-            )
+        set_ewaybill_status(
+            doc,
+            "Failed",
+            commit=not frappe.flags.in_test,
+            notify=bool(frappe.request),
+        )
 
         raise
 
