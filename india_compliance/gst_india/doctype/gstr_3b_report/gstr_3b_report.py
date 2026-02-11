@@ -105,7 +105,7 @@ class GSTR3BReport(Document):
         except Exception as e:
             self.generation_status = "Failed"
             self.db_set({"generation_status": self.generation_status})
-            frappe.db.commit()
+            frappe.db.commit()  # nosemgrep
             raise e
 
         finally:

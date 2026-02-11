@@ -107,7 +107,7 @@ class TestEInvoiceWorkflow(FrappeAPITestCase):
     def setUpClass(cls):
         super().setUpClass()
         frappe.db.set_single_value("GST Settings", GST_SETTINGS)
-        frappe.db.commit()  # Make settings visible to WSGI thread
+        frappe.db.commit()  # nosemgrep # Make settings visible to WSGI thread
 
     def _create_si(self, **kwargs):
         """Create a Sales Invoice suitable for e-Invoice generation."""
@@ -126,7 +126,7 @@ class TestEInvoiceWorkflow(FrappeAPITestCase):
         thread can read any WSGI-committed changes.
         """
         sid = self.sid
-        frappe.db.commit()
+        frappe.db.commit()  # nosemgrep
         response = self.post(
             self.method(E_INVOICE_API),
             {"docname": docname, "throw": throw, "force": force, "sid": sid},
@@ -200,7 +200,7 @@ class TestEInvoiceWorkflow(FrappeAPITestCase):
         frappe.db.set_single_value(
             "GST Settings", "is_retry_einv_ewb_generation_pending", 0
         )
-        frappe.db.commit()
+        frappe.db.commit()  # nosemgrep
 
     def test_ui_manual_unhandled_exception_raises(self):
         """UI Manual: Unhandled exceptions returned as HTTP 500."""
@@ -282,7 +282,7 @@ class TestEInvoiceWorkflow(FrappeAPITestCase):
         frappe.db.set_single_value(
             "GST Settings", "is_retry_einv_ewb_generation_pending", 0
         )
-        frappe.db.commit()
+        frappe.db.commit()  # nosemgrep
 
     def test_auto_gen_ui_unhandled_exception_still_raises(self):
         si = self._create_si()
@@ -340,7 +340,7 @@ class TestEInvoiceWorkflow(FrappeAPITestCase):
         frappe.db.set_single_value(
             "GST Settings", "is_retry_einv_ewb_generation_pending", 0
         )
-        frappe.db.commit()
+        frappe.db.commit()  # nosemgrep
 
     def test_auto_gen_server_unhandled_exception_raises(self):
         si = self._create_si()
@@ -373,7 +373,7 @@ class TestEWaybillWorkflow(FrappeAPITestCase):
     def setUpClass(cls):
         super().setUpClass()
         frappe.db.set_single_value("GST Settings", GST_SETTINGS)
-        frappe.db.commit()
+        frappe.db.commit()  # nosemgrep
 
     def _create_si(self, **kwargs):
         """Create a Sales Invoice suitable for e-Waybill generation."""
@@ -387,7 +387,7 @@ class TestEWaybillWorkflow(FrappeAPITestCase):
     def _post_e_waybill(self, doctype, docname, values=None, force=False):
         """Make a real HTTP POST to the generate_e_waybill API endpoint."""
         sid = self.sid
-        frappe.db.commit()
+        frappe.db.commit()  # nosemgrep
         data = {"doctype": doctype, "docname": docname, "force": force, "sid": sid}
         if values is not None:
             data["values"] = frappe.as_json(values)
@@ -462,7 +462,7 @@ class TestEWaybillWorkflow(FrappeAPITestCase):
         frappe.db.set_single_value(
             "GST Settings", "is_retry_einv_ewb_generation_pending", 0
         )
-        frappe.db.commit()
+        frappe.db.commit()  # nosemgrep
 
     def test_ui_manual_unhandled_exception_raises(self):
         si = self._create_si()
@@ -532,7 +532,7 @@ class TestEWaybillWorkflow(FrappeAPITestCase):
         frappe.db.set_single_value(
             "GST Settings", "is_retry_einv_ewb_generation_pending", 0
         )
-        frappe.db.commit()
+        frappe.db.commit()  # nosemgrep
 
     def test_auto_gen_unhandled_exception_always_raises(self):
         si = self._create_si()
@@ -562,7 +562,7 @@ class TestBulkGeneration(FrappeAPITestCase):
     def setUpClass(cls):
         super().setUpClass()
         frappe.db.set_single_value("GST Settings", GST_SETTINGS)
-        frappe.db.commit()
+        frappe.db.commit()  # nosemgrep
 
     def _create_si(self, **kwargs):
         defaults = {
