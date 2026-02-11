@@ -201,6 +201,16 @@ def generate_e_invoice(docname, throw: bool = True, force: bool = False):
         return
 
     except NotApplicableError as e:
+        if not frappe.flags.in_test:
+            frappe.db.rollback()
+
+        set_einvoice_status(
+            doc,
+            "Not Applicable",
+            commit=not frappe.flags.in_test,
+            notify=bool(frappe.request),
+        )
+
         if throw:
             raise
 
@@ -211,7 +221,15 @@ def generate_e_invoice(docname, throw: bool = True, force: bool = False):
         return
 
     except (frappe.ValidationError, frappe.MandatoryError) as e:
-        set_einvoice_status(doc, "Failed")
+        if not frappe.flags.in_test:
+            frappe.db.rollback()
+
+        set_einvoice_status(
+            doc,
+            "Failed",
+            commit=not frappe.flags.in_test,
+            notify=bool(frappe.request),
+        )
 
         if throw:
             raise
@@ -230,7 +248,16 @@ def generate_e_invoice(docname, throw: bool = True, force: bool = False):
         return
 
     except Exception:
-        set_einvoice_status(doc, "Failed")
+        if not frappe.flags.in_test:
+            frappe.db.rollback()
+
+        set_einvoice_status(
+            doc,
+            "Failed",
+            commit=not frappe.flags.in_test,
+            notify=bool(frappe.request),
+        )
+
         raise
 
     return log_and_process_e_invoice_generation(doc, result, api.sandbox_mode)
