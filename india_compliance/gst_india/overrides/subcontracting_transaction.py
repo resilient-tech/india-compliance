@@ -69,7 +69,7 @@ def after_mapping_subcontracting_order(doc, method, source_doc):
     args = {"company": doc.company, "tax_category": tax_category}
 
     for item in doc.items:
-        out = {}
+        out = frappe._dict()
         item_doc = frappe.get_cached_doc("Item", item.item_code)
         get_item_tax_template(args, item_doc, out)
         item.item_tax_template = out.get("item_tax_template")
