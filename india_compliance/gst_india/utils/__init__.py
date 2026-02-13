@@ -1243,3 +1243,29 @@ def _get_duplicate_gstin_party(gstin, party_type, party=None):
         )
 
     return list(duplicates_dict.values())
+
+
+def set_einvoice_status(
+    doc,
+    status,
+    *,
+    commit=False,
+    notify=True,
+):
+    if doc.doctype != "Sales Invoice":
+        return
+
+    doc.db_set("einvoice_status", status, commit=commit, notify=notify)
+
+
+def set_ewaybill_status(
+    doc,
+    status,
+    *,
+    commit=False,
+    notify=True,
+):
+    if doc.doctype != "Sales Invoice":
+        return
+
+    doc.db_set("e_waybill_status", status, commit=commit, notify=notify)

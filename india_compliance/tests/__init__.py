@@ -40,7 +40,7 @@ def before_tests():
     set_default_settings_for_tests()
     create_test_records()
     set_default_company_for_tests()
-    frappe.db.commit()
+    frappe.db.commit()  # nosemgrep
 
     frappe.flags.country = "India"
     frappe.flags.skip_test_records = True
