@@ -109,7 +109,9 @@ def get_docs_with_previous_gstin(gstin, doctype, docname):
 
 
 @frappe.whitelist()
-def update_docs_with_previous_gstin(gstin, gst_category, docs_with_previous_gstin):
+def update_docs_with_previous_gstin(
+    gstin: str, gst_category: str, docs_with_previous_gstin: str
+):
     """
     Permission check not required as doc.save check permissions.
     """

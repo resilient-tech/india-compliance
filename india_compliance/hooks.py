@@ -501,6 +501,8 @@ fields_for_group_similar_items = [
     "cess_non_advol_amount",
 ]
 
+require_type_annotated_api_methods = True
+
 
 # Includes in <head>
 # ------------------

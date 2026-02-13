@@ -114,7 +114,7 @@ def update_gl_entries(gst_accounts):
             _update_gl_entries(gstin_voucher_map)
 
             # nosemgrep
-            frappe.db.commit()  # commit after every 50000 entries
+            frappe.db.commit()  # nosemgrep  # commit after every 50000 entries
 
     if error_voucher_types:
         click.secho(

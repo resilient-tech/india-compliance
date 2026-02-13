@@ -47,7 +47,7 @@ def rename_hsn_codes(new_hsn_codes):
         count += 1
 
         if count % commit_interval == 0:
-            frappe.db.commit()
+            frappe.db.commit()  # nosemgrep
 
     frappe.enqueue("frappe.utils.global_search.rebuild_for_doctype", doctype=DOCTYPE)
 

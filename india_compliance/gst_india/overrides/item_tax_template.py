@@ -68,7 +68,7 @@ def validate_tax_rates(doc):
 
 
 @frappe.whitelist()
-def get_valid_gst_accounts(company):
+def get_valid_gst_accounts(company: str):
     frappe.has_permission("Item Tax Template", "read", throw=True)
 
     return [

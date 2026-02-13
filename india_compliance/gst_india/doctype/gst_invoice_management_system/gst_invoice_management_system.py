@@ -1,6 +1,10 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
 
+from __future__ import annotations
+
+from typing import Self
+
 import frappe
 from frappe import _
 from frappe.model.document import Document
@@ -69,7 +73,7 @@ CATEGORY_MAP = {
 
 class GSTInvoiceManagementSystem(Document):
     @frappe.whitelist()
-    def autoreconcile_and_get_data(self):
+    def autoreconcile_and_get_data(self: Self):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         filters = frappe._dict(
@@ -146,7 +150,7 @@ class GSTInvoiceManagementSystem(Document):
         )
 
     @frappe.whitelist()
-    def update_action(self, invoice_names, action):
+    def update_action(self: Self, invoice_names: str | list, action: str):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         invoice_names = frappe.parse_json(invoice_names)
@@ -191,7 +195,7 @@ class GSTInvoiceManagementSystem(Document):
         )
 
     @frappe.whitelist()
-    def get_invoice_details(self, purchase_name, inward_supply_name):
+    def get_invoice_details(self: Self, purchase_name: str, inward_supply_name: str):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         inward_supply = InwardSupply().get_all(
@@ -215,7 +219,12 @@ class GSTInvoiceManagementSystem(Document):
         return reconciliation_data[0]
 
     @frappe.whitelist()
-    def link_documents(self, purchase_invoice_name, inward_supply_name, link_doctype):
+    def link_documents(
+        self: Self,
+        purchase_invoice_name: str,
+        inward_supply_name: str,
+        link_doctype: str,
+    ):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         purchases, inward_supplies = _link_documents(
@@ -225,7 +234,7 @@ class GSTInvoiceManagementSystem(Document):
         return self.get_invoice_data(inward_supplies, purchases)
 
     @frappe.whitelist()
-    def unlink_documents(self, data):
+    def unlink_documents(self: Self, data: str | list):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         purchases, inward_supplies = _unlink_documents(data)
@@ -233,7 +242,7 @@ class GSTInvoiceManagementSystem(Document):
         return self.get_invoice_data(inward_supplies, purchases)
 
     @frappe.whitelist()
-    def get_link_options(self, doctype, filters):
+    def get_link_options(self: Self, doctype: str, filters: dict | frappe._dict):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         if isinstance(filters, dict):
@@ -255,7 +264,7 @@ class GSTInvoiceManagementSystem(Document):
 
 @frappe.whitelist()
 @otp_handler
-def download_invoices(company_gstin):
+def download_invoices(company_gstin: str):
     frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
     job_id = f"gst_ims:{company_gstin}"
@@ -280,7 +289,7 @@ def download_invoices(company_gstin):
 
 @frappe.whitelist()
 @otp_handler
-def save_invoices(company_gstin):
+def save_invoices(company_gstin: str):
     frappe.has_permission("GST Invoice Management System", "write", throw=True)
     frappe.has_permission("GST Return Log", "write", throw=True)
 
@@ -289,7 +298,7 @@ def save_invoices(company_gstin):
 
 @frappe.whitelist()
 @otp_handler
-def reset_invoices(company_gstin):
+def reset_invoices(company_gstin: str):
     frappe.has_permission("GST Invoice Management System", "write", throw=True)
     frappe.has_permission("GST Return Log", "write", throw=True)
 
@@ -298,7 +307,7 @@ def reset_invoices(company_gstin):
 
 @frappe.whitelist()
 @otp_handler
-def sync_with_gstn_and_reupload(company_gstin):
+def sync_with_gstn_and_reupload(company_gstin: str):
     frappe.has_permission("GST Invoice Management System", "write", throw=True)
     frappe.has_permission("GST Return Log", "write", throw=True)
 
@@ -313,7 +322,7 @@ def sync_with_gstn_and_reupload(company_gstin):
 
 @frappe.whitelist()
 @otp_handler
-def check_action_status(company_gstin, action):
+def check_action_status(company_gstin: str, action: str):
     frappe.has_permission("GST Return Log", "write", throw=True)
 
     ims_log = frappe.get_doc(
@@ -325,7 +334,7 @@ def check_action_status(company_gstin, action):
 
 
 @frappe.whitelist()
-def download_excel_report(data, doc):
+def download_excel_report(data: str | list, doc: str | dict | frappe._dict):
     frappe.has_permission("GST Invoice Management System", "export", throw=True)
 
     build_data = BuildExcelIMS(doc, data)
@@ -333,7 +342,7 @@ def download_excel_report(data, doc):
 
 
 @frappe.whitelist()
-def get_period_options(company, company_gstin):
+def get_period_options(company: str, company_gstin: str):
     def format_period(period):
         return period[2:] + period[:2]
 

@@ -124,7 +124,7 @@ def get_gstin_list(party: str, party_type: str = "Company", exclude_isd: bool = 
 
 @frappe.whitelist()
 @frappe.request_cache
-def get_party_for_gstin(gstin, party_type="Supplier"):
+def get_party_for_gstin(gstin: str, party_type: str = "Supplier"):
     frappe.has_permission(party_type, "read", throw=True)
 
     if not gstin:
@@ -152,7 +152,7 @@ def get_party_for_gstin(gstin, party_type="Supplier"):
 
 
 @frappe.whitelist()
-def get_party_contact_details(party, party_type="Supplier"):
+def get_party_contact_details(party: str, party_type: str = "Supplier"):
     frappe.has_permission(party_type, "read", throw=True)
 
     if party and (contact := get_default_contact(party_type, party)):
@@ -619,7 +619,7 @@ def get_gst_account_gst_tax_type_map():
 
 
 @frappe.whitelist()
-def get_all_gst_accounts(company):
+def get_all_gst_accounts(company: str):
     """
     Permission not checked here:
     List of GST account names isn't considered sensitive data
@@ -1139,7 +1139,9 @@ def has_permission_of_page(page_name, throw=False):
 
 
 @frappe.whitelist()
-def check_duplicate_party(field, value, party_type, party=None):
+def check_duplicate_party(
+    field: str, value: str, party_type: str, party: str | None = None
+):
     """
     Check duplicates based on PAN/GSTIN for the given party type.
     """
@@ -1243,3 +1245,29 @@ def _get_duplicate_gstin_party(gstin, party_type, party=None):
         )
 
     return list(duplicates_dict.values())
+
+
+def set_einvoice_status(
+    doc,
+    status,
+    *,
+    commit=False,
+    notify=True,
+):
+    if doc.doctype != "Sales Invoice":
+        return
+
+    doc.db_set("einvoice_status", status, commit=commit, notify=notify)
+
+
+def set_ewaybill_status(
+    doc,
+    status,
+    *,
+    commit=False,
+    notify=True,
+):
+    if doc.doctype != "Sales Invoice":
+        return
+
+    doc.db_set("e_waybill_status", status, commit=commit, notify=notify)
