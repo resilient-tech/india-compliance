@@ -355,6 +355,24 @@ class TestTransaction(IntegrationTestCase):
             doc.submit,
         )
 
+    @change_settings("GST Settings", {"validate_hsn_code": 1, "min_hsn_digits": 8})
+    def test_invalid_hsn_digits_with_8_digit_setting(self):
+        if not self.is_sales_doctype:
+            return
+
+        doc = create_transaction(**self.transaction_details, do_not_submit=True)
+        doc.items[0].gst_hsn_code = "100000"
+        doc.save()
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(HSN/SAC must exist and should be 8 digits long for.*)$"),
+            doc.submit,
+        )
+
+        doc.reload()
+        doc.items[0].gst_hsn_code = "10000000"
+        doc.submit()
+
     def test_reverse_charge_transaction(self):
         if self.is_sales_doctype:
             return
