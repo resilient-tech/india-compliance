@@ -175,9 +175,12 @@ def get_tds_amount(doc):
 
 def is_indian_registered_company(doc):
     if not doc.get("company_gstin"):
-        country, gst_category = frappe.get_cached_value(
+        result=frappe.get_cached_value(
             "Company", doc.company, ("country", "gst_category")
         )
+        if result is None:
+            frappe.throw(_("{0} Company does not exist").format(doc.company), frappe.DoesNotExistError)
+        country, gst_category = result
 
         if country != "India" or gst_category == "Unregistered":
             return False
@@ -767,6 +770,8 @@ def validate_overseas_gst_category(doc):
 
 def get_regional_round_off_accounts(company, account_list):
     country = frappe.get_cached_value("Company", company, "country")
+    if country is None:
+        frappe.throw(_("Country does not exist"),frappe.DoesNotExistError)
     if country != "India" or not frappe.get_cached_value(
         "GST Settings", "GST Settings", "round_off_gst_values"
     ):
@@ -1508,6 +1513,9 @@ def set_reverse_charge_as_per_gst_settings(doc):
         ("enable_rcm_for_unregistered_supplier", "rcm_threshold"),
         as_dict=1,
     )
+
+    if gst_settings is None:
+        frappe.throw(_("GST Settings does not exist"),frappe.DoesNotExistError)
 
     if (
         not gst_settings.enable_rcm_for_unregistered_supplier

@@ -450,6 +450,9 @@ class GSTTransactionData:
             as_dict=True,
         )
 
+        if address is None:
+            frappe.throw(_("Address does not exist"),frappe.DoesNotExistError)
+
         if address.gst_state_number == "97":  # For Other Territory
             address.pincode = "999999"
 
