@@ -1517,9 +1517,6 @@ def set_reverse_charge_as_per_gst_settings(doc):
         as_dict=1,
     )
 
-    if gst_settings is None:
-        frappe.throw(_("GST Settings does not exist"), frappe.DoesNotExistError)
-
     if (
         not gst_settings.enable_rcm_for_unregistered_supplier
         or not doc.gst_category == "Unregistered"
