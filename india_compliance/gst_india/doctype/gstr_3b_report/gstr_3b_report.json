@@ -79,6 +79,7 @@
    "default": "Not Filed",
    "fieldname": "filing_status",
    "fieldtype": "Select",
+   "is_virtual": 1,
    "label": "Filing Status",
    "options": "Not Filed\nFiled",
    "read_only": 1

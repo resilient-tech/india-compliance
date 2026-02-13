@@ -106,35 +106,38 @@ frappe.ui.form.on("GSTR 3B Report", {
             });
         });
 
-        let action = frm.doc.filing_status === "Filed" ? "Not Filed" : "Filed";
-        let status_label = action === "Filed" ? __("Filed") : __("Unfiled");
+        if (!frm.is_new()) {
+            let action =
+                frm.doc.filing_status === "Filed" ? "Not Filed" : "Filed";
+            let status_label =
+                action === "Filed" ? __("Filed") : __("Unfiled");
 
-        frm.add_custom_button(
-            __("Mark as {0}", [status_label]),
-            function () {
-                frappe.confirm(
-                    __("Mark GSTR-3B for {0} {1} as {2}?", [
-                        frm.doc.month_or_quarter,
-                        frm.doc.year,
-                        status_label,
-                    ]),
-                    () => {
-                        frappe.call({
-                            method:
-                                "india_compliance.gst_india.utils.itc_claim.update_gstr3b_filing_status",
-                            args: {
-                                company_gstin: frm.doc.company_gstin,
-                                month_or_quarter: frm.doc.month_or_quarter,
-                                year: frm.doc.year,
-                                status: action,
-                            },
-                            callback: () => frm.reload_doc(),
-                        });
-                    }
-                );
-            },
-            __("Filing Status")
-        );
+            frm.add_custom_button(
+                __("Mark as {0}", [status_label]),
+                function () {
+                    frappe.confirm(
+                        __("Mark GSTR-3B for {0} {1} as {2}?", [
+                            frm.doc.month_or_quarter,
+                            frm.doc.year,
+                            status_label,
+                        ]),
+                        () => {
+                            frappe.call({
+                                method: "india_compliance.gst_india.utils.itc_claim.update_gstr3b_filing_status",
+                                args: {
+                                    company_gstin: frm.doc.company_gstin,
+                                    month_or_quarter: frm.doc.month_or_quarter,
+                                    year: frm.doc.year,
+                                    status: action,
+                                },
+                                callback: () => frm.reload_doc(),
+                            });
+                        }
+                    );
+                },
+                __("Filing Status")
+            );
+        }
     },
 
     company: async function (frm) {

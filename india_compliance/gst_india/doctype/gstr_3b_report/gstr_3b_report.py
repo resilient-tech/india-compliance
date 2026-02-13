@@ -42,6 +42,22 @@ GST_TAX_TYPE_MAP = {
 
 
 class GSTR3BReport(Document):
+    @property
+    def filing_status(self):
+        status = "Not Filed"
+        if not (self.company_gstin and self.month_or_quarter and self.year):
+            return status
+
+        period = get_period(self.month_or_quarter, self.year)
+        filters = {
+            "gstin": self.company_gstin,
+            "return_period": period,
+            "return_type": "GSTR3B",
+        }
+        status = frappe.db.get_value("GST Return Log", filters, "filing_status")
+
+        return status or "Not Filed"
+
     def validate(self):
         self.json_output = ""
         self.missing_field_invoices = ""
