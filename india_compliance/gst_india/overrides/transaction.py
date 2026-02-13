@@ -774,7 +774,7 @@ def validate_overseas_gst_category(doc):
 def get_regional_round_off_accounts(company, account_list):
     country = frappe.get_cached_value("Company", company, "country")
     if country is None:
-        frappe.throw(_("Country does not exist"), frappe.DoesNotExistError)
+        frappe.throw(_("Company does not exist"), frappe.DoesNotExistError)
     if country != "India" or not frappe.get_cached_value(
         "GST Settings", "GST Settings", "round_off_gst_values"
     ):
