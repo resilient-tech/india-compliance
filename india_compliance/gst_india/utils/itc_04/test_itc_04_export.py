@@ -55,7 +55,7 @@ response = {
                         "uqc": "NOS",
                         "qty": 10.0,
                         "desc": "Subcontracted SRM Item 1",
-                        "txval": 0.0,
+                        "txval": 200.0,
                         "goods_ty": "8b",
                         "tx_i": 0.0,
                         "tx_c": 0.0,
