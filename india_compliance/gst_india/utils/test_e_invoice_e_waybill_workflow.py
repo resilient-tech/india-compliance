@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 import frappe
 from frappe.tests.test_api import FrappeAPITestCase
+from frappe.tests.utils import patch_hooks
 
 from india_compliance.exceptions import (
     AlreadyGeneratedError,
@@ -197,6 +198,14 @@ class TestEInvoiceWorkflow(WorkflowTestBase):
         self.assertEqual(response.status_code, 417)
         self.assertEqual(response.json["exc_type"], "MandatoryError")
 
+    @patch_hooks(
+        {
+            "before_request": [
+                *frappe.get_hooks("before_request"),
+                "india_compliance.gst_india.utils.test_e_invoice_e_waybill_workflow.set_in_test_as_true",
+            ]
+        }
+    )
     def test_ui_manual_gsp_server_error_never_raises(self):
         with patch(E_INVOICE_DATA) as mock_data:
             mock_data.side_effect = GSPServerError
@@ -410,6 +419,14 @@ class TestEWaybillWorkflow(WorkflowTestBase):
         self.assertEqual(response.status_code, 417)
         self.assertEqual(response.json["exc_type"], "MandatoryError")
 
+    @patch_hooks(
+        {
+            "before_request": [
+                *frappe.get_hooks("before_request"),
+                "india_compliance.gst_india.utils.test_e_invoice_e_waybill_workflow.set_in_test_as_true",
+            ]
+        }
+    )
     def test_ui_manual_gsp_server_error_never_raises(self):
         with patch(E_WAYBILL_DATA) as mock_data:
             mock_data.side_effect = GSPServerError
@@ -647,3 +664,8 @@ class TestBulkGeneration(WorkflowTestBase):
             generate_e_waybills("Sales Invoice", [self.si1.name, self.si2.name])
 
         self.assertEqual(mock_gen.call_count, 2)
+
+
+def set_in_test_as_true():
+    """Hook method to set a flag in frappe.local during tests."""
+    frappe.flags.in_test = True
