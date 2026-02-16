@@ -180,7 +180,7 @@ def is_indian_registered_company(doc):
         )
         if result is None:
             frappe.throw(
-                _("{0} Company does not exist").format(doc.company),
+                _("Company {0} does not exist").format(doc.company),
                 frappe.DoesNotExistError,
             )
         country, gst_category = result
@@ -773,8 +773,10 @@ def validate_overseas_gst_category(doc):
 
 def get_regional_round_off_accounts(company, account_list):
     country = frappe.get_cached_value("Company", company, "country")
+    
     if country is None:
-        frappe.throw(_("Company does not exist"), frappe.DoesNotExistError)
+        frappe.throw(_("Company {0} does not exist").format(company), frappe.DoesNotExistError)
+    
     if country != "India" or not frappe.get_cached_value(
         "GST Settings", "GST Settings", "round_off_gst_values"
     ):
