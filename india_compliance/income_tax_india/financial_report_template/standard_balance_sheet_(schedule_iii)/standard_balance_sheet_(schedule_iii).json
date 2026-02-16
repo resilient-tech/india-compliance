@@ -4,7 +4,7 @@
  "docstatus": 0,
  "doctype": "Financial Report Template",
  "idx": 0,
- "modified": "2026-02-16 01:45:49.647756",
+ "modified": "2026-02-16 02:49:02.399219",
  "modified_by": "Administrator",
  "module": "Income Tax India",
  "name": "Standard Balance Sheet (Schedule III)",
@@ -16,7 +16,7 @@
    "balance_type": "",
    "bold_text": 1,
    "data_source": "Blank Line",
-   "display_name": "EQUITY AND LIABILITIES",
+   "display_name": "I. EQUITY AND LIABILITIES",
    "fieldtype": "",
    "hidden_calculation": 0,
    "hide_when_empty": 0,
@@ -339,7 +339,7 @@
    "balance_type": "",
    "bold_text": 1,
    "data_source": "Blank Line",
-   "display_name": "ASSETS",
+   "display_name": "II. ASSETS",
    "fieldtype": "",
    "hidden_calculation": 0,
    "hide_when_empty": 0,
@@ -666,4 +666,3 @@
  ],
  "template_name": "Standard Balance Sheet (Schedule III)"
 }
-
