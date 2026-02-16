@@ -389,7 +389,13 @@ def get_hsn_settings():
         ("validate_hsn_code", "min_hsn_digits"),
     )
 
-    valid_hsn_length = (4, 6, 8) if cint(min_hsn_digits) == 4 else (6, 8)
+    min_hsn_digits = cint(min_hsn_digits)
+
+    VALID_HSN_LENGTHS = (4, 6, 8)
+
+    valid_hsn_length = tuple(
+        length for length in VALID_HSN_LENGTHS if length >= min_hsn_digits
+    )
 
     return validate_hsn_code, valid_hsn_length
 
