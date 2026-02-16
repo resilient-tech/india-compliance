@@ -10,5 +10,65 @@
   {
     "account_category_name": "Deferred Tax Liabilities",
     "description": "Future tax obligations arising from temporary differences between accounting and tax treatment. Examples: Deferred tax liability on depreciation, revaluation surplus."
+  },
+  {
+    "account_category_name": "Depreciation and Amortization",
+    "description": "Systematic allocation of depreciable amount of tangible and intangible assets over their useful life. Examples: Depreciation on buildings, machinery, vehicles, amortization of software, patents."
+  },
+  {
+    "account_category_name": "Discontinuing Operations",
+    "description": "Income and expenses from operations that are being discontinued or disposed of. Examples: Revenue from discontinued business segment, wind-down costs."
+  },
+  {
+    "account_category_name": "Employee Benefits Expense",
+    "description": "Costs related to employee compensation and benefits. Examples: Salaries and wages, provident fund contributions, gratuity, staff welfare, bonus."
+  },
+  {
+    "account_category_name": "Exceptional Items",
+    "description": "Items of income or expense that arise from events or transactions that are clearly distinct from ordinary activities. Examples: Profit or loss on disposal of fixed assets, impairment losses, restructuring costs."
+  },
+  {
+    "account_category_name": "Extraordinary Items",
+    "description": "Items of income or expense that arise from events or transactions that are clearly distinct from ordinary activities and are not expected to recur frequently or regularly. Examples: Natural disaster losses, expropriation of assets."
+  },
+  {
+    "account_category_name": "Intangible Assets Under Development",
+    "description": "Intangible assets that are in the process of being developed and not yet ready for intended use. Examples: Software under development, patents pending registration."
+  },
+  {
+    "account_category_name": "Long-Term Loans and Advances",
+    "description": "Non-current loans given and advances recoverable after one year. Examples: Security deposits, long-term employee loans, advances for capital goods."
+  },
+  {
+    "account_category_name": "Long-term Provisions",
+    "description": "Present obligations beyond one year with uncertain timing/amount. Examples: Asset retirement obligations, environmental remediation, legal settlements."
+  },
+  {
+    "account_category_name": "Money Received Against Share Warrants",
+    "description": "Amounts received from holders of share warrants that have not yet been converted into shares. Examples: Share warrant application money, convertible warrant deposits."
+  },
+  {
+    "account_category_name": "Provisional Profit and Loss",
+    "description": "Provisional or interim profit and loss balance for the current period before period closing. Represents unclosed Income and Expense account balances on the Balance Sheet."
+  },
+  {
+    "account_category_name": "Share Application Money",
+    "description": "Money received from applicants for shares that have not yet been allotted. Examples: Share application money pending allotment."
+  },
+  {
+    "account_category_name": "Short-Term Loans and Advances",
+    "description": "Current loans given and advances recoverable within one year. Examples: Short-term employee advances, prepaid expenses, advance to suppliers."
+  },
+  {
+    "account_category_name": "Tax on Discontinuing Operations",
+    "description": "Tax expense specifically attributable to discontinuing operations. Examples: Income tax on discontinued segment profits."
+  },
+  {
+    "account_category_name": "Total Expenses",
+    "description": "All expense accounts across the entity for validation purposes. This is a catch-all category covering all root-type Expense accounts."
+  },
+  {
+    "account_category_name": "Total Income",
+    "description": "All income accounts across the entity for validation purposes. This is a catch-all category covering all root-type Income accounts."
   }
 ]
