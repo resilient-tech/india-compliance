@@ -25,12 +25,14 @@
    "fieldname": "company",
    "fieldtype": "Link",
    "label": "Company",
-   "options": "Company"
+   "options": "Company",
+   "set_only_once": 1
   },
   {
    "fieldname": "year",
    "fieldtype": "Select",
-   "label": "Year"
+   "label": "Year",
+   "set_only_once": 1
   },
   {
    "fieldname": "json_output",
@@ -68,7 +70,8 @@
   {
    "fieldname": "company_gstin",
    "fieldtype": "Autocomplete",
-   "label": "Company GSTIN"
+   "label": "Company GSTIN",
+   "set_only_once": 1
   },
   {
    "fieldname": "column_break_ddqq",
@@ -91,15 +94,16 @@
    "fieldname": "month_or_quarter",
    "fieldtype": "Select",
    "label": "Month or Quarter",
-   "options": "Apr - Jun\nJul - Sep\nOct - Dec\nJan - Mar\nJanuary\nFebruary\nMarch\nApril\nMay\nJune\nJuly\nAugust\nSeptember\nOctober\nNovember\nDecember"
+   "options": "Apr - Jun\nJul - Sep\nOct - Dec\nJan - Mar\nJanuary\nFebruary\nMarch\nApril\nMay\nJune\nJuly\nAugust\nSeptember\nOctober\nNovember\nDecember",
+   "set_only_once": 1
   }
  ],
  "links": [],
- "modified": "2024-11-22 18:36:30.385643",
+ "modified": "2026-02-13 19:43:36.278214",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR 3B Report",
- "naming_rule": "Expression",
+ "naming_rule": "Expression (old style)",
  "owner": "Administrator",
  "permissions": [
   {
@@ -121,6 +125,7 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
