@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class StatewiseeWaybillApplicability(Document):
+class StatewiseeWaybillThreshold(Document):
     pass

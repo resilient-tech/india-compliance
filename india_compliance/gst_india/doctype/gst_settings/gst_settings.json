@@ -34,9 +34,11 @@
   "attach_e_waybill_print",
   "column_break_10",
   "auto_generate_e_waybill",
-  "e_waybill_threshold",
   "auto_cancel_e_waybill",
   "reason_for_e_waybill_cancellation",
+  "section_break_qtlk",
+  "e_waybill_threshold",
+  "e_waybill_threshold_for_intrastate",
   "e_invoice_section",
   "enable_e_invoice",
   "generate_e_waybill_with_e_invoice",
@@ -64,8 +66,7 @@
   "gstin_status_refresh_interval",
   "uom_mapping_section",
   "gst_uom_map",
-  "ewaybill_applicability_configuration_tab",
-  "e_waybill_applicability_for_intrastate",
+  "ewaybill_threshold_configuration_tab",
   "accounts_tab",
   "gst_accounts",
   "purchase_reconciliation_tab",
@@ -134,7 +135,7 @@
   },
   {
    "default": "1",
-   "description": "As per <a href=\"https://old.cbic.gov.in/resources/htdocs-cbec/gst/notfctn-78-central-tax-english-2020.pdf\">Central Tax Notification No. 78/2020</a>, HSN/SAC code must be specified in Sales Invoice with atleast 4 or 6 digits (based on turnover)",
+   "description": "As per <a href=\"https://old.cbic.gov.in/resources/htdocs-cbec/gst/notfctn-78-central-tax-english-2020.pdf\" rel=\"noopener noreferrer\">Central Tax Notification No. 78/2020</a>, HSN/SAC code must be specified in Sales Invoice with atleast 4 or 6 digits (based on turnover)",
    "fieldname": "validate_hsn_code",
    "fieldtype": "Check",
    "label": "Validate HSN/SAC Code in Sales Items and Transactions"
@@ -225,7 +226,7 @@
    "description": "When selling goods with total Sales Invoice value greater than this amount, a prompt will be displayed if e-Waybill hasn't been generated upon submission",
    "fieldname": "e_waybill_threshold",
    "fieldtype": "Currency",
-   "label": "Invoice Value Threshold for e-Waybill Generation"
+   "label": "Default Threshold Value for e-Waybill Generation"
   },
   {
    "default": "1",
@@ -708,22 +709,26 @@
    "label": "Use Fallback APIs for e-Waybill and e-Invoice"
   },
   {
-   "fieldname": "ewaybill_applicability_configuration_tab",
-   "fieldtype": "Tab Break",
-   "label": "e-Waybill Applicability Configuration"
+   "fieldname": "section_break_qtlk",
+   "fieldtype": "Section Break"
   },
   {
-   "fieldname": "e_waybill_applicability_for_intrastate",
+   "fieldname": "e_waybill_threshold_for_intrastate",
    "fieldtype": "Table",
-   "label": "e-Waybill Applicability for Intrastate",
-   "options": "State-wise e-Waybill Applicability"
+   "label": "e-Waybill Threshold for Intrastate",
+   "options": "State-wise e-Waybill Threshold"
+  },
+  {
+   "fieldname": "ewaybill_threshold_configuration_tab",
+   "fieldtype": "Tab Break",
+   "label": "e-Waybill threshold Configuration"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-01-30 18:24:53.773617",
+ "modified": "2026-02-17 17:57:00.936935",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

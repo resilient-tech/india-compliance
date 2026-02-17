@@ -1919,7 +1919,7 @@ def get_state_wise_config(gst_settings=None):
         gst_settings = frappe.get_cached_doc("GST Settings")
 
     state_config = {}
-    for row in gst_settings.get("e_waybill_applicability_for_intrastate") or []:
+    for row in gst_settings.get("e_waybill_threshold_for_intrastate") or []:
         state_config[row.state] = {
             "intrastate_applicable": row.intrastate_applicable,
             "intrastate_threshold": row.intrastate_threshold,

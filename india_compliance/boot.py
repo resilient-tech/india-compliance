@@ -24,7 +24,7 @@ def set_bootinfo(bootinfo):
 
     # Build state-wise e-Waybill configuration for client-side access
     state_wise_e_waybill_config = {}
-    for row in gst_settings.get("e_waybill_applicability_for_intrastate") or []:
+    for row in gst_settings.get("e_waybill_threshold_for_intrastate") or []:
         state_wise_e_waybill_config[row.get("state")] = {
             "intrastate_applicable": row.get("intrastate_applicable"),
             "intrastate_threshold": row.get("intrastate_threshold"),
@@ -33,7 +33,7 @@ def set_bootinfo(bootinfo):
     for key in (
         "gst_accounts",
         "credentials",
-        "e_waybill_applicability_for_intrastate",
+        "e_waybill_threshold_for_intrastate",
     ):
         gst_settings.pop(key, None)
 
