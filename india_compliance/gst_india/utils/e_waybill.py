@@ -1902,7 +1902,7 @@ def get_intrastate_threshold(doc, gst_settings=None):
 
     state = get_source_state_code(doc)
 
-    state_config = get_state_wise_config(gst_settings)
+    state_config = get_state_code_wise_config(gst_settings)
 
     if state in state_config:
         config = state_config[state]
@@ -1914,13 +1914,15 @@ def get_intrastate_threshold(doc, gst_settings=None):
     return gst_settings.e_waybill_threshold
 
 
-def get_state_wise_config(gst_settings=None):
+def get_state_code_wise_config(gst_settings=None):
     if not gst_settings:
         gst_settings = frappe.get_cached_doc("GST Settings")
 
     state_config = {}
     for row in gst_settings.get("e_waybill_threshold_for_intrastate") or []:
-        state_config[row.state] = {
+        state_code = STATE_NUMBERS.get(row.state)
+
+        state_config[state_code] = {
             "intrastate_applicable": row.intrastate_applicable,
             "intrastate_threshold": row.intrastate_threshold,
         }
@@ -1932,7 +1934,7 @@ def is_e_waybill_applicable_for_intrastate(state, gst_settings=None):
     if not gst_settings:
         gst_settings = frappe.get_cached_doc("GST Settings")
 
-    state_config = get_state_wise_config(gst_settings)
+    state_config = get_state_code_wise_config(gst_settings)
 
     if state in state_config:
         return state_config[state].get("intrastate_applicable", True)

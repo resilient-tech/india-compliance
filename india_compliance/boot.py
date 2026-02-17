@@ -23,12 +23,14 @@ def set_bootinfo(bootinfo):
     gst_settings.api_secret = "***" if gst_settings.api_secret else ""
 
     # Build state-wise e-Waybill configuration for client-side access
-    state_wise_e_waybill_config = {}
+    state_code_wise_e_waybill_config = {}
     for row in gst_settings.get("e_waybill_threshold_for_intrastate") or []:
-        state_wise_e_waybill_config[row.get("state")] = {
-            "intrastate_applicable": row.get("intrastate_applicable"),
-            "intrastate_threshold": row.get("intrastate_threshold"),
-        }
+        state_code = STATE_NUMBERS.get(row.get("state"))
+        if state_code:
+            state_code_wise_e_waybill_config[state_code] = {
+                "intrastate_applicable": row.get("intrastate_applicable"),
+                "intrastate_threshold": row.get("intrastate_threshold"),
+            }
 
     for key in (
         "gst_accounts",
@@ -38,7 +40,7 @@ def set_bootinfo(bootinfo):
         gst_settings.pop(key, None)
 
     bootinfo["gst_settings"] = gst_settings
-    bootinfo["state_wise_e_waybill_config"] = state_wise_e_waybill_config
+    bootinfo["state_code_wise_e_waybill_config"] = state_code_wise_e_waybill_config
     bootinfo["india_state_options"] = list(INDIAN_STATES)
     bootinfo["state_numbers"] = STATE_NUMBERS
     bootinfo["ic_api_enabled_from_conf"] = bool(frappe.conf.ic_api_secret)

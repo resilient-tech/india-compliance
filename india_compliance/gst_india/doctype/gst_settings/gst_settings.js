@@ -27,8 +27,7 @@ frappe.ui.form.on("GST Settings", {
     onload: show_ic_api_promo,
     refresh(frm) {
         show_update_gst_category_button(frm);
-        frm.fields_dict.e_waybill_threshold_for_intrastate.grid.fields_map.state.options =
-            frappe.boot.india_state_options;
+        set_state_options_for_e_waybill_threshold(frm);
     },
     attach_e_waybill_print(frm) {
         if (!frm.doc.attach_e_waybill_print || frm.doc.fetch_e_waybill_data) return;
@@ -149,5 +148,10 @@ function update_boot_e_waybill_config(frm) {
             intrastate_threshold: row.intrastate_threshold,
         };
     }
-    frappe.boot.state_wise_e_waybill_config = state_wise_config;
+    frappe.boot.state_code_wise_e_waybill_config = state_wise_config;
+}
+
+function set_state_options_for_e_waybill_threshold(frm) {
+    frm.fields_dict.e_waybill_threshold_for_intrastate.grid.fields_map.state.options =
+        frappe.boot.india_state_options;
 }

@@ -1245,7 +1245,7 @@ function get_e_waybill_threshold(frm) {
 function get_intrastate_threshold(frm) {
     const source_state_code = get_source_state_code(frm);
 
-    const state_config = get_state_wise_config();
+    const state_config = frappe.boot.state_code_wise_e_waybill_config || {};
 
     if (state_config[source_state_code]) {
         const config = state_config[source_state_code];
@@ -1257,22 +1257,6 @@ function get_intrastate_threshold(frm) {
     }
 
     return gst_settings.e_waybill_threshold;
-}
-
-function get_state_wise_config() {
-    // Convert state names to state codes for config lookup
-    const state_config_by_name = frappe.boot.state_wise_e_waybill_config || {};
-    const state_numbers = frappe.boot.state_numbers || {};
-    const state_config = {};
-
-    for (const [state_name, config] of Object.entries(state_config_by_name)) {
-        const state_code = state_numbers[state_name];
-        if (state_code) {
-            state_config[state_code] = config;
-        }
-    }
-
-    return state_config;
 }
 
 function is_inter_state_supply(frm) {
