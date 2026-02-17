@@ -79,14 +79,47 @@ def after_mapping_stock_entry(doc, method, source_doc):
         doc.taxes_and_charges = ""
         doc.taxes = []
 
-    if doc.purpose != "Material Transfer" or not doc.is_return:
+    address_map = _get_fields_mapping(doc, source_doc)
+
+    if not address_map:
         return
 
-    doc.bill_to_address = source_doc.billing_address
-    doc.bill_from_address = source_doc.supplier_address
-    doc.bill_to_gstin = source_doc.company_gstin
-    doc.bill_from_gstin = source_doc.supplier_gstin
+    (bill_from_address, bill_from_gstin), (bill_to_address, bill_to_gstin) = address_map
+
+    doc.bill_from_address = source_doc.get(bill_from_address)
+    doc.bill_from_gstin = source_doc.get(bill_from_gstin)
+    doc.bill_to_address = source_doc.get(bill_to_address)
+    doc.bill_to_gstin = source_doc.get(bill_to_gstin)
+
     set_address_display(doc)
+
+
+def _get_fields_mapping(doc, source_doc):
+    from_fields = ("billing_address", "company_gstin")
+    to_fields = ("supplier_address", "supplier_gstin")
+
+    if source_doc.doctype == "Subcontracting Order":
+        if doc.purpose == "Send to Subcontractor":
+            return from_fields, to_fields
+
+        elif doc.purpose == "Material Transfer" and doc.is_return:
+            return to_fields, from_fields
+
+    elif (
+        source_doc.doctype == "Purchase Receipt"
+        and doc.purpose == "Material Transfer"
+        and not doc.is_return
+    ):
+        return from_fields, to_fields
+
+    elif (
+        source_doc.doctype == "Stock Entry"
+        and doc.purpose == "Material Transfer"
+        and not doc.is_return
+    ):
+        return from_fields, to_fields
+
+    return None
 
 
 def before_mapping_subcontracting_receipt(doc, method, source_doc, table_maps):
