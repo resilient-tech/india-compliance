@@ -496,15 +496,10 @@ def get_gstr_1_from_and_to_date(
 
 
 @frappe.whitelist()
-<<<<<<< HEAD:india_compliance/gst_india/doctype/gstr_1_beta/gstr_1_beta.py
-def get_filing_preference_from_log(month_or_quarter: str, year: str, company_gstin):
-    frappe.has_permission("GSTR-1 Beta", throw=True)
-=======
 def get_filing_preference_from_log(
     month_or_quarter: str, year: str, company_gstin: str
 ):
-    frappe.has_permission("GSTR-1", throw=True)
->>>>>>> 27d9b65b (chore: added type hints to whitelisted functions):india_compliance/gst_india/doctype/gstr_1/gstr_1.py
+    frappe.has_permission("GSTR-1 Beta", throw=True)
 
     period = get_period(month_or_quarter, year)
     filing_preference = frappe.db.get_value(

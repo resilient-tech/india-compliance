@@ -2095,37 +2095,22 @@ class ReconcileExcel:
 
 
 @frappe.whitelist()
-<<<<<<< HEAD:india_compliance/gst_india/doctype/gstr_1_beta/gstr_1_export.py
-def download_filed_as_excel(company_gstin, month_or_quarter, year):
-    frappe.has_permission("GSTR-1 Beta", "export", throw=True)
-=======
 def download_filed_as_excel(company_gstin: str, month_or_quarter: str, year: str):
-    frappe.has_permission("GSTR-1", "export", throw=True)
->>>>>>> 27d9b65b (chore: added type hints to whitelisted functions):india_compliance/gst_india/doctype/gstr_1/gstr_1_export.py
+    frappe.has_permission("GSTR-1 Beta", "export", throw=True)
     GovExcel().generate(company_gstin, get_period(month_or_quarter, year))
 
 
 @frappe.whitelist()
-<<<<<<< HEAD:india_compliance/gst_india/doctype/gstr_1_beta/gstr_1_export.py
-def download_books_as_excel(company_gstin, month_or_quarter, year):
-    frappe.has_permission("GSTR-1 Beta", "export", throw=True)
-=======
 def download_books_as_excel(company_gstin: str, month_or_quarter: str, year: str):
-    frappe.has_permission("GSTR-1", "export", throw=True)
->>>>>>> 27d9b65b (chore: added type hints to whitelisted functions):india_compliance/gst_india/doctype/gstr_1/gstr_1_export.py
+    frappe.has_permission("GSTR-1 Beta", "export", throw=True)
 
     books_excel = BooksExcel(company_gstin, month_or_quarter, year)
     books_excel.export_data()
 
 
 @frappe.whitelist()
-<<<<<<< HEAD:india_compliance/gst_india/doctype/gstr_1_beta/gstr_1_export.py
-def download_reconcile_as_excel(company_gstin, month_or_quarter, year):
-    frappe.has_permission("GSTR-1 Beta", "export", throw=True)
-=======
 def download_reconcile_as_excel(company_gstin: str, month_or_quarter: str, year: str):
-    frappe.has_permission("GSTR-1", "export", throw=True)
->>>>>>> 27d9b65b (chore: added type hints to whitelisted functions):india_compliance/gst_india/doctype/gstr_1/gstr_1_export.py
+    frappe.has_permission("GSTR-1 Beta", "export", throw=True)
 
     reconcile_excel = ReconcileExcel(company_gstin, month_or_quarter, year)
     reconcile_excel.export_data()
