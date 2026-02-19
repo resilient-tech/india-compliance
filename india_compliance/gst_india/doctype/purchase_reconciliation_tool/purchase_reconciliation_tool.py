@@ -1,8 +1,10 @@
 # Copyright (c) 2022, Resilient Tech and contributors
 # For license information, please see license.txt
+from __future__ import annotations
+
 import re
 from collections import defaultdict
-from typing import List
+from typing import Self
 
 import frappe
 from frappe import _
@@ -94,7 +96,7 @@ class PurchaseReconciliationTool(Document):
         )
 
     @frappe.whitelist()
-    def reconcile_and_generate_data(self):
+    def reconcile_and_generate_data(self: Self):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         # reconcile purchases and inward supplies
@@ -110,7 +112,7 @@ class PurchaseReconciliationTool(Document):
         return self.ReconciledData.get()
 
     @frappe.whitelist()
-    def upload_gstr(self, return_type, period, file_path):
+    def upload_gstr(self: Self, return_type: str, period: str, file_path: str):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         return_type = ReturnType(return_type)
@@ -124,13 +126,13 @@ class PurchaseReconciliationTool(Document):
     @frappe.whitelist()
     @otp_handler
     def download_gstr(
-        self,
-        company_gstin,
-        date_range,
-        return_type=None,
-        return_period=None,
+        self: Self,
+        company_gstin: str,
+        date_range: str | list,
+        return_type: str | None = None,
+        return_period: str | None = None,
         force: bool = False,
-        gst_categories=None,
+        gst_categories: str | list | None = None,
     ):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
@@ -162,7 +164,11 @@ class PurchaseReconciliationTool(Document):
 
     @frappe.whitelist()
     def get_import_history(
-        self, company_gstin, return_type, date_range, for_download: bool = True
+        self: Self,
+        company_gstin: str,
+        return_type: str,
+        date_range: str | list,
+        for_download: bool = True,
     ):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
@@ -207,7 +213,7 @@ class PurchaseReconciliationTool(Document):
         }
 
     @frappe.whitelist()
-    def get_return_period_from_file(self, return_type, file_path):
+    def get_return_period_from_file(self: Self, return_type: str, file_path: str):
         """
         Permissions check not necessary as response is not sensitive
         """
@@ -227,7 +233,7 @@ class PurchaseReconciliationTool(Document):
             pass
 
     @frappe.whitelist()
-    def get_date_range(self, period):
+    def get_date_range(self: Self, period: str):
         """
         Permissions check not necessary as response is not sensitive
         """
@@ -237,7 +243,7 @@ class PurchaseReconciliationTool(Document):
         return get_timespan_date_range(period.lower(), self.company)
 
     @frappe.whitelist()
-    def get_date_range_and_check_missing_documents(self, period):
+    def get_date_range_and_check_missing_documents(self: Self, period: str):
         date_range = self.get_date_range(period)
 
         if not date_range:
@@ -253,7 +259,7 @@ class PurchaseReconciliationTool(Document):
         return date_range
 
     @frappe.whitelist()
-    def get_invoice_details(self, purchase_name, inward_supply_name):
+    def get_invoice_details(self: Self, purchase_name: str, inward_supply_name: str):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         return self.ReconciledData.get_manually_matched_data(
@@ -261,7 +267,12 @@ class PurchaseReconciliationTool(Document):
         )
 
     @frappe.whitelist()
-    def link_documents(self, purchase_invoice_name, inward_supply_name, link_doctype):
+    def link_documents(
+        self: Self,
+        purchase_invoice_name: str,
+        inward_supply_name: str,
+        link_doctype: str,
+    ):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         purchases, inward_supplies = _link_documents(
@@ -271,7 +282,7 @@ class PurchaseReconciliationTool(Document):
         return self.ReconciledData.get(purchases, inward_supplies)
 
     @frappe.whitelist()
-    def unlink_documents(self, data):
+    def unlink_documents(self: Self, data: str | list):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         purchases, inward_supplies = _unlink_documents(data)
@@ -279,7 +290,7 @@ class PurchaseReconciliationTool(Document):
         return self.ReconciledData.get(purchases, inward_supplies)
 
     @frappe.whitelist()
-    def apply_action(self, data, action):
+    def apply_action(self: Self, data: str | dict | frappe._dict | list, action: str):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         data = frappe.parse_json(data)
@@ -315,7 +326,7 @@ class PurchaseReconciliationTool(Document):
         set_reconciliation_status("Bill of Entry", boe, status)
 
     @frappe.whitelist()
-    def get_link_options(self, doctype, filters):
+    def get_link_options(self: Self, doctype: str, filters: dict | frappe._dict):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         if isinstance(filters, dict):
@@ -447,7 +458,7 @@ def filter_redownload_periods(company_gstin, return_type, periods):
 def get_import_history(
     company_gstins: list | str,
     return_type: ReturnType,
-    periods: List[str],
+    periods: list[str],
     *,
     fields=None,
     pluck=None,
@@ -505,7 +516,7 @@ def has_missing_2b_documents(
 
 
 @frappe.whitelist()
-def generate_excel_attachment(data, doc):
+def generate_excel_attachment(data: str | list, doc: str | dict | frappe._dict):
     frappe.has_permission("Purchase Reconciliation Tool", "email", throw=True)
 
     build_data = BuildExcel(doc, data, is_supplier_specific=True, email=True)
@@ -534,7 +545,9 @@ def generate_excel_attachment(data, doc):
 
 
 @frappe.whitelist()
-def download_excel_report(data, doc, is_supplier_specific: bool = False):
+def download_excel_report(
+    data: str | list, doc: str | dict | frappe._dict, is_supplier_specific: bool = False
+):
     frappe.has_permission("Purchase Reconciliation Tool", "export", throw=True)
 
     build_data = BuildExcel(doc, data, is_supplier_specific)
