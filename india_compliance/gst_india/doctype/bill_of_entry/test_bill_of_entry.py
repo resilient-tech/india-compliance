@@ -336,7 +336,7 @@ class TestBillofEntry(FrappeTestCase):
         pi2 = create_purchase_invoice(
             supplier="_Test Foreign Supplier", update_stock=1, do_not_submit=True
         )
-        pi2.project = project.name
+        pi2.project = project
         pi2.items[0].project = None
         pi2.submit()
 
