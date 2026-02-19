@@ -787,7 +787,9 @@ def update_party_details(party_details, doctype, company):
 
 
 @frappe.whitelist()
-def get_party_details_for_subcontracting(party_details, doctype, company):
+def get_party_details_for_subcontracting(
+    party_details: str | dict | frappe._dict, doctype: str, company: str
+):
     party_details = frappe.parse_json(party_details)
     frappe.has_permission("Supplier", "read", throw=True)
 
@@ -818,9 +820,14 @@ def get_party_details_for_subcontracting(party_details, doctype, company):
     )
 
 
+# nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
 @frappe.whitelist()
 def get_gst_details(
-    party_details, doctype, company, *, update_place_of_supply: bool = False
+    party_details: str | dict | frappe._dict,
+    doctype: str,
+    company: str,
+    *,
+    update_place_of_supply: bool = False,
 ):
     """
     This function does not check for permissions since it returns insensitive data
