@@ -43,6 +43,7 @@ from india_compliance.gst_india.constants import (
     TCS,
     TIMEZONE,
     UOM_MAP,
+    VALID_HSN_LENGTHS,
 )
 
 
@@ -391,8 +392,6 @@ def get_hsn_settings():
 
     min_hsn_digits = cint(min_hsn_digits)
 
-    VALID_HSN_LENGTHS = (4, 6, 8)
-
     valid_hsn_length = tuple(
         length for length in VALID_HSN_LENGTHS if length >= min_hsn_digits
     )
@@ -698,7 +697,7 @@ def get_json_from_file(path):
 
 
 def join_list_with_custom_separators(input, separator=", ", last_separator=" or "):
-    if type(input) not in (list, tuple):
+    if not isinstance(input, (list, tuple)):
         return
 
     if not input:
