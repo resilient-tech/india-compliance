@@ -10,6 +10,7 @@ from india_compliance.gst_india.constants import (
     GST_TAX_RATES,
     GST_TAX_TYPES,
     TAXABLE_GST_TREATMENTS,
+    VALID_HSN_LENGTHS,
 )
 from india_compliance.gst_india.constants.e_waybill import (
     TRANSPORT_MODES,
@@ -307,7 +308,7 @@ class GSTTransactionData:
 
         _validate_hsn_codes(
             self.doc,
-            valid_hsn_length=[4, 6, 8],
+            valid_hsn_length=VALID_HSN_LENGTHS,
             message=_(
                 "Since HSN/SAC Code is mandatory for generating e-Waybill/e-Invoices.<br>"
             ),
