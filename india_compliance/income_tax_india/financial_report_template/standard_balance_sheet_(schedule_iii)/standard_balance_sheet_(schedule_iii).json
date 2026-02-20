@@ -152,10 +152,10 @@
    "reverse_sign": 1
   },
   {
-   "advanced_filtering": 1,
+   "advanced_filtering": 0,
    "balance_type": "Closing Balance",
    "bold_text": 0,
-   "calculation_formula": "{\"and\": [[\"account_name\", \"like\", \"Deferred Tax\"], [\"root_type\", \"=\", \"Liability\"]]}",
+   "calculation_formula": "[\"account_name\", \"like\", \"Deferred Tax Liabilit\"]",
    "data_source": "Account Data",
    "display_name": "b. Deferred Tax Liabilities (Net)",
    "fieldtype": "",
@@ -248,10 +248,10 @@
    "reverse_sign": 1
   },
   {
-   "advanced_filtering": 1,
+   "advanced_filtering": 0,
    "balance_type": "Closing Balance",
    "bold_text": 0,
-   "calculation_formula": "{\"or\": [[\"account_category\", \"=\", \"Other Current Liabilities\"], [\"account_category\", \"=\", \"Other Payables\"]]}",
+   "calculation_formula": "[\"account_category\", \"in\", [\"Other Current Liabilities\", \"Other Payables\"]]",
    "data_source": "Account Data",
    "display_name": "c. Other Current Liabilities",
    "fieldtype": "",
@@ -264,10 +264,10 @@
    "reverse_sign": 1
   },
   {
-   "advanced_filtering": 1,
+   "advanced_filtering": 0,
    "balance_type": "Closing Balance",
    "bold_text": 0,
-   "calculation_formula": "{\"or\": [[\"account_category\", \"=\", \"Short-term Provisions\"], [\"account_category\", \"=\", \"Current Tax Liabilities\"]]}",
+   "calculation_formula": "[\"account_category\", \"in\", [\"Short-term Provisions\", \"Current Tax Liabilities\"]]",
    "data_source": "Account Data",
    "display_name": "d. Short-Term Provisions",
    "fieldtype": "",
@@ -475,10 +475,10 @@
    "reverse_sign": 0
   },
   {
-   "advanced_filtering": 1,
+   "advanced_filtering": 0,
    "balance_type": "Closing Balance",
    "bold_text": 0,
-   "calculation_formula": "{\"and\": [[\"account_name\", \"like\", \"Deferred Tax\"], [\"root_type\", \"=\", \"Asset\"]]}",
+   "calculation_formula": "[\"account_name\", \"like\", \"Deferred Tax Asset\"]",
    "data_source": "Account Data",
    "display_name": "c. Deferred Tax Assets (Net)",
    "fieldtype": "",
@@ -491,10 +491,10 @@
    "reverse_sign": 0
   },
   {
-   "advanced_filtering": 1,
+   "advanced_filtering": 0,
    "balance_type": "Closing Balance",
    "bold_text": 0,
-   "calculation_formula": "{\"and\": [{\"or\": [[\"account_name\", \"like\", \"Long Term Loan\"], [\"account_name\", \"like\", \"Long-Term Loan\"], [\"account_name\", \"like\", \"Capital Advance\"]]}, [\"root_type\", \"=\", \"Asset\"]]}",
+   "calculation_formula": "[\"account_category\", \"=\", \"Other Non-current Assets\"]",
    "data_source": "Account Data",
    "display_name": "d. Long-Term Loans and Advances",
    "fieldtype": "",
@@ -603,10 +603,10 @@
    "reverse_sign": 0
   },
   {
-   "advanced_filtering": 1,
+   "advanced_filtering": 0,
    "balance_type": "Closing Balance",
    "bold_text": 0,
-   "calculation_formula": "{\"and\": [{\"or\": [[\"account_name\", \"like\", \"Short Term Loan\"], [\"account_name\", \"like\", \"Short-Term Loan\"], [\"account_name\", \"like\", \"Loans and Advance\"]]}, [\"root_type\", \"=\", \"Asset\"]]}",
+   "calculation_formula": "[\"account_category\", \"=\", \"Other Receivables\"]",
    "data_source": "Account Data",
    "display_name": "e. Short-Term Loans and Advances",
    "fieldtype": "",
