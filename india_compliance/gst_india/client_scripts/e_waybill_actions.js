@@ -1229,102 +1229,26 @@ function is_e_waybill_valid(frm) {
     );
 }
 
-function has_e_waybill_threshold_met(frm) {
-    const threshold = get_e_waybill_threshold(frm);
-    if (Math.abs(frm.doc.base_grand_total) >= threshold) return true;
-}
-
-function get_e_waybill_threshold(frm) {
-    if (is_inter_state_supply(frm)) {
-        return gst_settings.e_waybill_threshold;
-    }
-
-    return get_intrastate_threshold(frm);
-}
-
-function get_intrastate_threshold(frm) {
-    const source_state_code = get_source_state_code(frm);
-
-    const state_config = frappe.boot.state_code_wise_e_waybill_config || {};
-
-    if (state_config[source_state_code]) {
-        const config = state_config[source_state_code];
-        if (!config.intrastate_applicable) {
-            return Infinity;
-        }
-
-        return config.intrastate_threshold;
-    }
-
-    return gst_settings.e_waybill_threshold;
-}
-
-function is_inter_state_supply(frm) {
-    let party_gst_category;
-    if (frm.doctype === "Stock Entry") {
-        party_gst_category = frm.doc.is_return
-            ? frm.doc.bill_from_gst_category
-            : frm.doc.bill_to_gst_category;
-    } else {
-        party_gst_category = frm.doc.gst_category;
-    }
-
-    if (party_gst_category === "SEZ") {
+async function has_e_waybill_threshold_met(frm) {
+    const threshold = await get_e_waybill_threshold(frm);
+    if (threshold != null && Math.abs(frm.doc.base_grand_total) >= threshold) {
         return true;
     }
 
-    // Compare place of supply with source state code
-    const place_of_supply = frm.doc.place_of_supply;
-    if (!place_of_supply) {
-        return false;
-    }
-
-    const place_of_supply_code = place_of_supply.substring(0, 2);
-    const source_state_code = get_source_state_code(frm);
-
-    return place_of_supply_code !== source_state_code;
+    return false;
 }
 
-function get_source_state_code(frm) {
-    // reference: india_compliance.gst_india.overrides.transaction.get_source_state_code
+async function get_e_waybill_threshold(frm) {
+    const { message } = await frappe.call(
+        "india_compliance.gst_india.utils.e_waybill.get_e_waybill_threshold",
+        { doctype: frm.doctype, docname: frm.doc.name },
+    );
 
-    if (
-        frappe.boot.sales_doctypes.includes(frm.doctype) ||
-        frm.doctype === "Payment Entry"
-    ) {
-        return frm.doc.company_gstin ? frm.doc.company_gstin.substring(0, 2) : null;
+    if (message === undefined) {
+        return Infinity;
     }
 
-    if (frm.doctype === "Stock Entry") {
-        if (
-            frm.doc.bill_from_gst_category === "Unregistered" &&
-            frm.doc.bill_from_address
-        ) {
-            return frappe.db.get_value(
-                "Address",
-                frm.doc.bill_from_address,
-                "gst_state_code",
-            );
-        }
-
-        const billing_gstin = frm.doc.bill_from_gstin || frm.doc.bill_to_gstin;
-        return billing_gstin ? billing_gstin.substring(0, 2) : null;
-    }
-
-    if (frm.doc.gst_category === "Overseas") {
-        return "96";
-    }
-
-    if (frm.doc.gst_category === "Unregistered" && frm.doc.supplier_address) {
-        return frappe.db.get_value(
-            "Address",
-            frm.doc.supplier_address,
-            "gst_state_code",
-        );
-    }
-
-    const source_gstin = frm.doc.supplier_gstin || frm.doc.company_gstin;
-    return source_gstin ? source_gstin.substring(0, 2) : null;
+    return message;
 }
 
 function is_e_waybill_applicable(frm, show_message) {

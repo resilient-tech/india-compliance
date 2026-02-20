@@ -1886,7 +1886,13 @@ def auto_cancel_e_waybill(doc, gst_settings=None, e_waybill_info=None):
 #######################################################################################
 
 
-def get_e_waybill_threshold(doc, gst_settings=None):
+@frappe.whitelist()
+def get_e_waybill_threshold(doctype: str, docname: str):
+    doc = frappe.get_doc(doctype, docname)
+    return _get_e_waybill_threshold(doc)
+
+
+def _get_e_waybill_threshold(doc, gst_settings=None):
     if not gst_settings:
         gst_settings = frappe.get_cached_doc("GST Settings")
 
@@ -1907,7 +1913,7 @@ def get_intrastate_threshold(doc, gst_settings=None):
     if state in state_config:
         config = state_config[state]
         if not config.get("intrastate_applicable"):
-            return float("inf")
+            return None
 
         return config.get("intrastate_threshold")
 

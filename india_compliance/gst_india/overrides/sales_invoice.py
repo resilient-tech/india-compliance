@@ -28,9 +28,9 @@ from india_compliance.gst_india.utils.e_invoice import (
     validate_if_e_invoice_can_be_cancelled,
 )
 from india_compliance.gst_india.utils.e_waybill import (
+    _get_e_waybill_threshold,
     auto_cancel_e_waybill,
     get_e_waybill_info,
-    get_e_waybill_threshold,
 )
 from india_compliance.gst_india.utils.transaction_data import (
     validate_unique_hsn_and_uom,
@@ -273,7 +273,10 @@ def is_e_waybill_applicable(doc, gst_settings=None):
     ):
         return False
 
-    threshold = get_e_waybill_threshold(doc, gst_settings)
+    threshold = _get_e_waybill_threshold(doc, gst_settings)
+
+    if threshold is None:
+        return False
 
     return abs(doc.base_grand_total) >= threshold
 
