@@ -167,13 +167,14 @@ data() {
   },
   computed: {
     last_synced_on() {
-      // TODO: set based on user datetime format?
       let { last_usage_synced_on } = this.subscriptionDetails;
-      last_usage_synced_on = last_usage_synced_on
-        ? moment.unix(last_usage_synced_on)
-        : moment();
+      if (!last_usage_synced_on) return "";
 
-      return last_usage_synced_on.format("DD-MM-YYYY HH:mm A");
+      const datetime = moment
+        .unix(last_usage_synced_on)
+        .format(frappe.defaultDatetimeFormat);
+
+      return frappe.datetime.str_to_user(datetime);
     },
 
     subscriptionDetails() {
