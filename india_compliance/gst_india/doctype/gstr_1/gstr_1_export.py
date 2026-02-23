@@ -2095,13 +2095,13 @@ class ReconcileExcel:
 
 
 @frappe.whitelist()
-def download_filed_as_excel(company_gstin, month_or_quarter, year):
+def download_filed_as_excel(company_gstin: str, month_or_quarter: str, year: str):
     frappe.has_permission("GSTR-1", "export", throw=True)
     GovExcel().generate(company_gstin, get_period(month_or_quarter, year))
 
 
 @frappe.whitelist()
-def download_books_as_excel(company_gstin, month_or_quarter, year):
+def download_books_as_excel(company_gstin: str, month_or_quarter: str, year: str):
     frappe.has_permission("GSTR-1", "export", throw=True)
 
     books_excel = BooksExcel(company_gstin, month_or_quarter, year)
@@ -2109,7 +2109,7 @@ def download_books_as_excel(company_gstin, month_or_quarter, year):
 
 
 @frappe.whitelist()
-def download_reconcile_as_excel(company_gstin, month_or_quarter, year):
+def download_reconcile_as_excel(company_gstin: str, month_or_quarter: str, year: str):
     frappe.has_permission("GSTR-1", "export", throw=True)
 
     reconcile_excel = ReconcileExcel(company_gstin, month_or_quarter, year)
@@ -2118,9 +2118,9 @@ def download_reconcile_as_excel(company_gstin, month_or_quarter, year):
 
 @frappe.whitelist()
 def get_gstr_1_json(
-    company_gstin,
-    year,
-    month_or_quarter,
+    company_gstin: str,
+    year: str,
+    month_or_quarter: str,
     include_uploaded: bool = False,
     delete_missing: bool = False,
 ):

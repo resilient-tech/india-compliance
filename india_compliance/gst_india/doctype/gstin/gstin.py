@@ -1,5 +1,8 @@
 # Copyright (c) 2023, Resilient Tech and contributors
 # For license information, please see license.txt
+from __future__ import annotations
+
+from typing import Self
 
 import frappe
 from frappe import _
@@ -33,7 +36,7 @@ class GSTIN(Document):
             self.cancelled_date = self.registration_date
 
     @frappe.whitelist()
-    def update_gstin_status(self):
+    def update_gstin_status(self: Self):
         """
         Permission check not required as GSTIN details are public and user has access to doc.
         """
@@ -41,7 +44,7 @@ class GSTIN(Document):
         create_or_update_gstin_status(self.gstin, throw=True, doc=self)
 
     @frappe.whitelist()
-    def update_transporter_id_status(self):
+    def update_transporter_id_status(self: Self):
         """
         Permission check not required as GSTIN details are public and user has access to doc.
         """
@@ -137,7 +140,9 @@ def get_and_validate_gstin_status(gstin, doc):
 
 
 @frappe.whitelist()
-def get_gstin_status(gstin, doc=None, force_update: bool = False):
+def get_gstin_status(
+    gstin: str, doc: str | dict | frappe._dict | None = None, force_update: bool = False
+):
     """
     Get GSTIN status. Responds immediately, and best suited for Frontend use.
     Permission check not required as GSTIN details are public where GSTIN is known.
@@ -245,7 +250,9 @@ def is_status_refresh_required(gstin, transaction_date, docstatus=0):
 
 
 @frappe.whitelist()
-def validate_gst_transporter_id(transporter_id, doc=None):
+def validate_gst_transporter_id(
+    transporter_id: str, doc: str | dict | frappe._dict | None = None
+):
     """
     Validates GST Transporter ID and warns user if transporter_id is not Active.
     Just suggestive and not enforced.

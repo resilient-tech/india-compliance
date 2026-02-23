@@ -147,7 +147,7 @@
    "fieldtype": "Select",
    "label": "Minimum HSN/SAC Code Digits",
    "mandatory_depends_on": "eval: doc.validate_hsn_code",
-   "options": "4\n6"
+   "options": "4\n6\n8"
   },
   {
    "fieldname": "accounts_tab",

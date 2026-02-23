@@ -7,8 +7,10 @@ import re
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import today
+from erpnext.projects.doctype.project.test_project import make_project
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
+    get_pi_items,
     make_bill_of_entry,
     make_journal_entry_for_payment,
     make_landed_cost_voucher,
@@ -305,3 +307,56 @@ class TestBillofEntry(IntegrationTestCase):
             },
             pi.items[0],
         )
+
+    def test_project_in_gl_entries(self):
+        """Test that project from Purchase Invoice is auto-copied to Bill of Entry and passed to GL Entry"""
+
+        project = make_project(
+            {
+                "project_name": "_Test BOE Project",
+                "company": "_Test Indian Registered Company",
+            }
+        ).name
+
+        # Test 1: Project set on PI item
+        pi = create_purchase_invoice(
+            supplier="_Test Foreign Supplier", update_stock=1, do_not_submit=True
+        )
+        pi.items[0].project = project
+        pi.submit()
+
+        boe = make_bill_of_entry(pi.name)
+        self.assertEqual(boe.items[0].project, project)
+
+        boe.items[0].customs_duty = 100
+        boe.bill_of_entry_no = "456"
+        boe.bill_of_entry_date = today()
+        boe.save()
+        boe.submit()
+
+        gl_entry = frappe.get_value(
+            "GL Entry",
+            {
+                "voucher_type": "Bill of Entry",
+                "voucher_no": boe.name,
+                "account": boe.customs_expense_account,
+            },
+            "project",
+        )
+        self.assertEqual(gl_entry, project)
+
+        # Test 2: Project set on PI header only (not on item) - should fallback
+        pi2 = create_purchase_invoice(
+            supplier="_Test Foreign Supplier", update_stock=1, do_not_submit=True
+        )
+        pi2.project = project
+        pi2.items[0].project = None
+        pi2.submit()
+
+        boe2 = make_bill_of_entry(pi2.name)
+        self.assertEqual(boe2.items[0].project, project)
+
+        # Test get_pi_items function
+
+        pi_items = get_pi_items([pi2.name])
+        self.assertEqual(pi_items[0].project, project)
