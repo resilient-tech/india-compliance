@@ -27,7 +27,7 @@
             </div>
           </div>
           <router-link v-if="!is_unlimited_account"
-            class="btn btn-primary btn-md"
+            class="btn btn-primary btn-lg"
             to="/purchase-credits"
           >
             Purchase Credits
