@@ -42,9 +42,6 @@ frappe.ui.form.on("GST Settings", {
         // sets latest values in frappe.boot for current user
         // other users will still need to refresh page
         Object.assign(gst_settings, frm.doc);
-
-        // Update boot data for state-wise e-Waybill config
-        update_boot_e_waybill_config(frm);
     },
 });
 
@@ -136,19 +133,6 @@ function reason_for_e_invoice_cancellation(frm) {
         "reason_for_e_waybill_cancellation",
         frm.doc.reason_for_e_invoice_cancellation,
     );
-}
-
-function update_boot_e_waybill_config(frm) {
-    // Rebuild state-wise config for boot data
-    const state_wise_config = {};
-    for (const row of frm.doc.e_waybill_threshold_for_intrastate || []) {
-        if (!row.state) continue;
-        state_wise_config[row.state] = {
-            intrastate_applicable: row.intrastate_applicable,
-            intrastate_threshold: row.intrastate_threshold,
-        };
-    }
-    frappe.boot.state_code_wise_e_waybill_config = state_wise_config;
 }
 
 function set_state_options_for_e_waybill_threshold(frm) {
