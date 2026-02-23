@@ -168,11 +168,10 @@ data() {
   computed: {
     last_synced_on() {
       let { last_usage_synced_on } = this.subscriptionDetails;
-      if (!last_usage_synced_on) return "";
 
-      const datetime = moment
-        .unix(last_usage_synced_on)
-        .format(frappe.defaultDatetimeFormat);
+      const datetime = (
+        last_usage_synced_on ? moment.unix(last_usage_synced_on) : moment()
+      ).format(frappe.defaultDatetimeFormat);
 
       return frappe.datetime.str_to_user(datetime);
     },
