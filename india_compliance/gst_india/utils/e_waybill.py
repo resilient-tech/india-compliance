@@ -1934,15 +1934,3 @@ def get_state_code_wise_config(gst_settings=None):
         }
 
     return state_config
-
-
-def is_e_waybill_applicable_for_intrastate(state, gst_settings=None):
-    if not gst_settings:
-        gst_settings = frappe.get_cached_doc("GST Settings")
-
-    state_config = get_state_code_wise_config(gst_settings)
-
-    if state in state_config:
-        return state_config[state].get("intrastate_applicable", True)
-
-    return True
