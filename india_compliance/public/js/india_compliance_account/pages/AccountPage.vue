@@ -5,7 +5,7 @@
       <PageTitle title="India Compliance Account" />
       <div class="subtext">
         <span class="subtext-item">
-          Registered Email: {{ subscriptionDetails.email }}
+         <strong>Registered Email:</strong> <a :href="`mailto:${subscriptionDetails.email}`">{{ subscriptionDetails.email }}</a>
         </span>
       </div>
       <Message
