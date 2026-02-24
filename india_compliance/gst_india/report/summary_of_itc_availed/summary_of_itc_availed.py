@@ -122,10 +122,7 @@ class ITCAvailedData:
                 doc_item.is_fixed_asset,
                 doc.is_reverse_charge,
             )
-            .where(
-                (doc.company_gstin != IfNull(doc.supplier_gstin, ""))
-                & (doc.is_opening == "No")
-            )
+            .where((doc.company_gstin != IfNull(doc.supplier_gstin, "")) & (doc.is_opening == "No"))
         )
 
         query = self._add_tax_fields_and_filters(query, doc, doc_item)
@@ -164,11 +161,7 @@ class ITCAvailedData:
             (doc_item.cess_amount + doc_item.cess_non_advol_amount).as_("cess_amount"),
         ).where(
             (doc.docstatus == 1)
-            & (
-                doc.posting_date[
-                    self.filters.get("from_date") : self.filters.get("to_date")
-                ]
-            )
+            & (doc.posting_date[self.filters.get("from_date") : self.filters.get("to_date")])
             & (doc.company == self.filters.get("company"))
         )
 
@@ -183,9 +176,7 @@ class ITCAvailed(ITCAvailedCategory, ITCAvailedData):
         summary = {}
 
         for category, subcategories in ITC_AVAILED_CATEGORY_MAPPING.items():
-            summary[category] = {
-                subcategory: defaultdict(float) for subcategory in subcategories
-            }
+            summary[category] = {subcategory: defaultdict(float) for subcategory in subcategories}
 
         return summary
 

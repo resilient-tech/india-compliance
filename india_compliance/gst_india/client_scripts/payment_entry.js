@@ -47,7 +47,7 @@ frappe.ui.form.on("Payment Entry", {
     party(frm) {
         update_gst_details(
             frm,
-            "india_compliance.gst_india.overrides.payment_entry.update_party_details"
+            "india_compliance.gst_india.overrides.payment_entry.update_party_details",
         );
     },
 
@@ -81,7 +81,7 @@ function override_get_outstanding_documents(frm) {
     frm.events.get_outstanding_documents = new_fn;
     const handlers = frappe.ui.form.handlers[frm.doctype];
     handlers["get_outstanding_documents"] = handlers["get_outstanding_documents"].map(
-        fn => (fn === old_fn ? new_fn : fn)
+        fn => (fn === old_fn ? new_fn : fn),
     );
 }
 
@@ -95,7 +95,7 @@ frappe.ui.form.on("Payment Entry Reference", {
             .get_value(
                 row.reference_doctype,
                 row.reference_name,
-                "reconciliation_status"
+                "reconciliation_status",
             )
             .then(response => {
                 if (!response.message) return;
@@ -107,7 +107,7 @@ frappe.ui.form.on("Payment Entry Reference", {
                 add_warning_indicator(
                     frm,
                     reconciliation_status_dict,
-                    row.reference_name
+                    row.reference_name,
                 );
             });
     },
@@ -117,7 +117,7 @@ function add_warning_indicator(frm, reconciliation_status_dict, name) {
     if (!reconciliation_status_dict) return;
 
     let rows = frm.fields_dict.references.grid.grid_rows.filter(
-        r => r.doc.reference_doctype === "Purchase Invoice"
+        r => r.doc.reference_doctype === "Purchase Invoice",
     );
 
     // Add warning indicator to a particular row only

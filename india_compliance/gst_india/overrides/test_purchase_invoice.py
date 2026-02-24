@@ -1,8 +1,8 @@
 import re
 
 import frappe
-from frappe.tests import IntegrationTestCase, change_settings
 from erpnext.accounts.doctype.account.test_account import create_account
+from frappe.tests import IntegrationTestCase, change_settings
 
 from india_compliance.gst_india.utils.tests import append_item, create_purchase_invoice
 
@@ -39,9 +39,7 @@ class TestPurchaseInvoice(IntegrationTestCase):
             company=company,
         )
 
-        frappe.db.set_value(
-            "Company", company, "unrealized_profit_loss_account", account
-        )
+        frappe.db.set_value("Company", company, "unrealized_profit_loss_account", account)
         pinv = create_purchase_invoice(
             supplier="Test Internal with ISD Supplier",
             qty=-1,

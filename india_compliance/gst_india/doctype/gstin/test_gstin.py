@@ -1,9 +1,8 @@
 # Copyright (c) 2023, Resilient Tech and Contributors
 # See license.txt
 import responses
-from responses import matchers
-
 from frappe.tests import IntegrationTestCase, change_settings
+from responses import matchers
 
 from india_compliance.gst_india.doctype.gstin.gstin import validate_gst_transporter_id
 

@@ -137,12 +137,12 @@ frappe.ui.form.on(DOCTYPE, {
             if (frm.$wrapper.find(".form-message.orange").length) return;
             frm.set_intro(
                 __(
-                    "Books data was updated after the computation of GSTR-1 data. Please generate GSTR-1 again."
+                    "Books data was updated after the computation of GSTR-1 data. Please generate GSTR-1 again.",
                 ),
-                "orange"
+                "orange",
             );
             frm.page.set_primary_action(__("Generate"), () =>
-                frm.gstr1.gstr1_action.generate_gstr1_data(frm)
+                frm.gstr1.gstr1_action.generate_gstr1_data(frm),
             );
         });
 
@@ -176,8 +176,13 @@ frappe.ui.form.on(DOCTYPE, {
                     message: __(
                         "Error while preparing GSTR-1 data, please {0} for more details.",
                         [
-                            frappe.utils.get_form_link("Error Log", error_log, true, "check the error log"),
-                        ]
+                            frappe.utils.get_form_link(
+                                "Error Log",
+                                error_log,
+                                true,
+                                "check the error log",
+                            ),
+                        ],
                     ),
                     title: "GSTR-1 Download Failed",
                     indicator: "red",
@@ -360,7 +365,7 @@ class GSTR1 {
             tab.tabmanager.refresh_data(
                 this.data[tab_name] || {},
                 this.data[`${tab_name}_summary`] || [],
-                this.status
+                this.status,
             );
         });
     }
@@ -382,7 +387,7 @@ class GSTR1 {
             this.tabs[`${tab.name}_tab`].tabmanager.refresh_view(
                 this.active_view,
                 this.filter_category,
-                detailed_view_filters
+                detailed_view_filters,
             );
         });
     }
@@ -418,7 +423,7 @@ class GSTR1 {
                     fieldname: `${tab.name}_html`,
                 },
             ],
-            []
+            [],
         );
 
         this.tab_group = new frappe.ui.FieldGroup({
@@ -436,7 +441,7 @@ class GSTR1 {
 
         // make tabs_dict for easy access
         this.tabs = Object.fromEntries(
-            this.tab_group.tabs.map(tab => [tab.df.fieldname, tab])
+            this.tab_group.tabs.map(tab => [tab.df.fieldname, tab]),
         );
 
         // Fix css
@@ -461,7 +466,7 @@ class GSTR1 {
 
         this.viewgroup.disable_view(
             "Detailed",
-            "Click on a category from summary to view details"
+            "Click on a category from summary to view details",
         );
     }
 
@@ -472,7 +477,7 @@ class GSTR1 {
                 this,
                 wrapper,
                 this.show_filtered_category,
-                this.filter_detailed_view
+                this.filter_detailed_view,
             );
         });
     }
@@ -500,7 +505,7 @@ class GSTR1 {
             if (!is_gstr1_api_enabled()) return;
 
             this.frm.add_custom_button(__("Reset"), () =>
-                this.gstr1_action.reset_gstr1_data()
+                this.gstr1_action.reset_gstr1_data(),
             );
         }
 
@@ -538,7 +543,7 @@ class GSTR1 {
         }
 
         this.frm.page.set_primary_action(__(primary_button_label), () =>
-            actions[primary_button_label].call(this.gstr1_action)
+            actions[primary_button_label].call(this.gstr1_action),
         );
     }
 
@@ -647,7 +652,7 @@ class GSTR1 {
             ];
         } else if (
             [GSTR1_SubCategory.EXPWP, GSTR1_SubCategory.EXPWOP].includes(
-                this.filter_category
+                this.filter_category,
             )
         ) {
             fields = [
@@ -675,7 +680,7 @@ class GSTR1 {
             ];
         } else if (
             [GSTR1_SubCategory.NIL_EXEMPT, GSTR1_SubCategory.DOC_ISSUE].includes(
-                this.filter_category
+                this.filter_category,
             )
         ) {
             fields = [
@@ -775,7 +780,7 @@ class GSTR1 {
                 <h5>${type} Account</h5>
                 <h4 class="text-center">
                     ${format_currency(net_amount)}</h4>
-            </div>`
+            </div>`,
             )
             .join("");
 
@@ -849,7 +854,7 @@ class GSTR1 {
         return new Promise(resolve => {
             const dialog = this.create_rounding_diff_journal_entry(
                 data.account,
-                data.posting_date
+                data.posting_date,
             );
 
             if (!dialog) return resolve();
@@ -883,7 +888,7 @@ class GSTR1 {
         let total = 0;
 
         for (const [tax_field, account_field] of Object.entries(
-            this.TAX_TO_ACCOUNT_MAP
+            this.TAX_TO_ACCOUNT_MAP,
         )) {
             let value = rounding_difference[tax_field];
 
@@ -1059,7 +1064,7 @@ class TabManager {
 
         if (view === "Detailed") {
             this.filter_fieldnames = this.instance.filter_fields.map(
-                filter => filter.fieldname
+                filter => filter.fieldname,
             );
 
             const columns_func = this.CATEGORY_COLUMNS[category];
@@ -1069,14 +1074,14 @@ class TabManager {
             this.setup_datatable(
                 this.wrapper,
                 this.filter_data(this.data[category], filters),
-                this.category_columns
+                this.category_columns,
             );
             this.set_title(category, null, true);
         } else if (view === "Summary") {
             this.setup_datatable(
                 this.wrapper,
                 this.summary,
-                this.get_summary_columns()
+                this.get_summary_columns(),
             );
             subtitle = this.DEFAULT_SUBTITLE;
             this.set_title(this.DEFAULT_TITLE, subtitle);
@@ -1094,8 +1099,8 @@ class TabManager {
             return filters.every(filter =>
                 india_compliance.FILTER_OPERATORS[filter[2]](
                     filter[3] || "",
-                    row[filter[1]] || ""
-                )
+                    row[filter[1]] || "",
+                ),
             );
         });
     }
@@ -1191,7 +1196,7 @@ class TabManager {
                             if (
                                 row.consider_in_total_taxable_value &&
                                 ["no_of_records", "total_taxable_value"].includes(
-                                    column_field
+                                    column_field,
                                 )
                             )
                                 acc += row[column_field] || 0;
@@ -1279,7 +1284,7 @@ class TabManager {
         this.wrapper
             .find(".report-footer")
             .append(
-                `<div class="creation-time text-muted float-right">${creation_time_string}</div>`
+                `<div class="creation-time text-muted float-right">${creation_time_string}</div>`,
             );
     }
 
@@ -1287,7 +1292,7 @@ class TabManager {
         if (!this.data.creation) return;
 
         const creation = frappe.utils.to_title_case(
-            frappe.datetime.prettyDate(this.data.creation)
+            frappe.datetime.prettyDate(this.data.creation),
         );
 
         return `Created ${creation}`;
@@ -1297,7 +1302,7 @@ class TabManager {
 
     add_tab_custom_button(label, action) {
         let button = this.wrapper.find(
-            `button[data-label="${encodeURIComponent(label)}"]`
+            `button[data-label="${encodeURIComponent(label)}"]`,
         );
         if (button.length) return;
 
@@ -1795,7 +1800,7 @@ class GSTR1_TabManager extends TabManager {
                 fieldname: GSTR1_DataField.CESS,
                 fieldtype: "Float",
                 width: 100,
-            }
+            },
         );
 
         return columns;
@@ -1866,7 +1871,7 @@ class BooksTab extends GSTR1_TabManager {
 
     setup_actions() {
         this.add_tab_custom_button("Download Excel", () =>
-            this.download_books_as_excel()
+            this.download_books_as_excel(),
         );
         this.add_tab_custom_button("Recompute", () => this.recompute_books());
     }
@@ -1911,8 +1916,8 @@ class BooksTab extends GSTR1_TabManager {
         columns = columns.filter(
             col =>
                 ![GSTR1_DataField.CUST_GSTIN, GSTR1_DataField.REVERSE_CHARGE].includes(
-                    col.fieldname
-                )
+                    col.fieldname,
+                ),
         );
 
         return columns;
@@ -2063,19 +2068,19 @@ class FiledTab extends GSTR1_TabManager {
 
     setup_actions() {
         this.add_tab_custom_button("Download Excel", () =>
-            this.download_filed_as_excel()
+            this.download_filed_as_excel(),
         );
 
         if (this.status !== "Filed")
             this.add_tab_custom_button("Download JSON", () =>
-                this.download_filed_json()
+                this.download_filed_json(),
             );
 
         if (!is_gstr1_api_enabled()) return;
 
         if (this.status === "Filed")
             this.add_tab_custom_button("Sync with GSTN", () =>
-                this.sync_with_gstn("filed")
+                this.sync_with_gstn("filed"),
             );
         else {
             this.add_tab_custom_button("Mark as Filed", () => this.mark_as_filed());
@@ -2131,7 +2136,7 @@ class FiledTab extends GSTR1_TabManager {
                 callback: r => {
                     india_compliance.trigger_file_download(
                         JSON.stringify(r.message.data),
-                        r.message.filename
+                        r.message.filename,
                     );
                     dialog && dialog.hide();
                 },
@@ -2155,17 +2160,17 @@ class FiledTab extends GSTR1_TabManager {
                         `This will include invoices already uploaded (and matching)
                          to GSTN (possibly e-Invoices) and overwrite them in GST Portal.
                          This is <strong>not recommended</strong> if e-Invoice is applicable to you
-                         as it will overwrite the e-Invoice data in GST Portal.`
+                         as it will overwrite the e-Invoice data in GST Portal.`,
                     ),
                     fieldtype: "Check",
                 },
                 {
                     fieldname: "delete_missing",
                     label: __(
-                        "Delete records that are missing in the Books from GST Portal"
+                        "Delete records that are missing in the Books from GST Portal",
                     ),
                     description: __(
-                        "This will delete invoices that are not present in ERP but are present in GST Portal."
+                        "This will delete invoices that are not present in ERP but are present in GST Portal.",
                     ),
                     fieldtype: "Check",
                     default: 1,
@@ -2184,7 +2189,7 @@ class FiledTab extends GSTR1_TabManager {
             .then(
                 () =>
                     this.instance.frm.trigger("load_gstr1_data") &&
-                    this.instance.show_suggested_jv_dialog()
+                    this.instance.show_suggested_jv_dialog(),
             );
     }
 
@@ -2329,7 +2334,7 @@ class UnfiledTab extends FiledTab {
         if (!is_gstr1_api_enabled()) return;
 
         this.add_tab_custom_button("Sync with GSTN", () =>
-            this.sync_with_gstn("unfiled")
+            this.sync_with_gstn("unfiled"),
         );
     }
 
@@ -2351,7 +2356,7 @@ class ReconcileTab extends FiledTab {
 
     setup_actions() {
         this.add_tab_custom_button("Download Excel", () =>
-            this.download_reconcile_as_excel()
+            this.download_reconcile_as_excel(),
         );
     }
 
@@ -2514,7 +2519,7 @@ class DetailViewDialog {
     render_table() {
         const detail_table = this.dialog.fields_dict.reconcile_data;
         const field_label_map = this.field_label_map.filter(
-            field => !this.IGNORED_FIELDS.includes(field[0])
+            field => !this.IGNORED_FIELDS.includes(field[0]),
         );
 
         detail_table.html(
@@ -2522,7 +2527,7 @@ class DetailViewDialog {
                 data: this.data,
                 fieldname_map: field_label_map,
                 currency_map: this.CURRENCY_FIELD_MAP,
-            })
+            }),
         );
         this._set_value_color(detail_table.$wrapper, this.data);
     }
@@ -2614,7 +2619,7 @@ class FileGSTR1Dialog {
                 await india_compliance.generate_evc_otp(
                     this.frm.doc.company_gstin,
                     pan,
-                    "R1"
+                    "R1",
                 );
 
                 // show otp field
@@ -2654,7 +2659,7 @@ class FileGSTR1Dialog {
                 const { amended_liability, non_amended_liability } = r.message;
                 const liability_html = this.generate_liability_table(
                     amended_liability,
-                    non_amended_liability
+                    non_amended_liability,
                 );
                 const field = this.filing_dialog.get_field("liability_breakup_html");
 
@@ -2687,7 +2692,7 @@ class FileGSTR1Dialog {
 
         table_html += this.generate_table_row(
             "For current period",
-            non_amended_liability
+            non_amended_liability,
         );
         table_html += this.generate_table_row("From amendments", amended_liability);
         // TODO: Add total row
@@ -2704,16 +2709,16 @@ class FileGSTR1Dialog {
             <tr>
                 <td>${description}</td>
                 <td style="text-align: right;">${format_currency(
-                    liability.total_igst_amount
+                    liability.total_igst_amount,
                 )}</td>
                 <td style="text-align: right;">${format_currency(
-                    liability.total_cgst_amount
+                    liability.total_cgst_amount,
                 )}</td>
                 <td style="text-align: right;">${format_currency(
-                    liability.total_sgst_amount
+                    liability.total_sgst_amount,
                 )}</td>
                 <td style="text-align: right;">${format_currency(
-                    liability.total_cess_amount
+                    liability.total_cess_amount,
                 )}</td>
             </tr>
         `;
@@ -2724,7 +2729,7 @@ class FileGSTR1Dialog {
             this.perform_gstr1_action(
                 "file",
                 r => this.handle_filing_response(r.message),
-                { pan: pan, otp: this.filing_dialog.get_value("otp").trim() }
+                { pan: pan, otp: this.filing_dialog.get_value("otp").trim() },
             );
 
             this.toggle_actions(true);
@@ -2741,7 +2746,7 @@ class FileGSTR1Dialog {
             this.filing_dialog
                 .get_field("otp")
                 .set_description(
-                    `<p style="color: red">OTP is either expired or incorrect.</p>`
+                    `<p style="color: red">OTP is either expired or incorrect.</p>`,
                 );
 
             return;
@@ -2755,8 +2760,8 @@ class FileGSTR1Dialog {
             this.frm.gstr1.status = "Not Filed";
             frappe.msgprint(
                 __(
-                    "Latest Summary is not available. Please generate summary and try again."
-                )
+                    "Latest Summary is not available. Please generate summary and try again.",
+                ),
             );
         }
 
@@ -2796,7 +2801,7 @@ class GSTR1Action extends FileGSTR1Dialog {
             if (!r.message.pending_actions) return;
 
             r.message.pending_actions.forEach(request_type =>
-                this.check_action_status_with_retry(request_type, 0, true)
+                this.check_action_status_with_retry(request_type, 0, true),
             );
         });
     }
@@ -2820,15 +2825,15 @@ class GSTR1Action extends FileGSTR1Dialog {
 
         // has draft invoices
         const draft_invoices = this.frm.gstr1.data.books["Document Issued"]?.filter(
-            row => row.draft_count > 0
+            row => row.draft_count > 0,
         );
         if (!draft_invoices?.length) return upload();
 
         frappe.confirm(
             __(
-                "There are <b>draft</b> invoices in books which are <b>excluded</b> in upload. Do you want to proceed with uploading?"
+                "There are <b>draft</b> invoices in books which are <b>excluded</b> in upload. Do you want to proceed with uploading?",
             ),
-            () => upload()
+            () => upload(),
         );
     }
 
@@ -2838,16 +2843,16 @@ class GSTR1Action extends FileGSTR1Dialog {
 
         frappe.confirm(
             __(
-                "All the details saved in different tables shall be deleted after reset.<br>Are you sure, you want to reset the already saved data?"
+                "All the details saved in different tables shall be deleted after reset.<br>Are you sure, you want to reset the already saved data?",
             ),
             () => {
                 frappe.show_alert(__("Resetting GSTR-1 data"));
                 this.perform_gstr1_action(
                     action,
                     () => this.check_action_status_with_retry(action),
-                    { is_nil_return: this.frm.doc.file_nil_gstr1 ? true : false }
+                    { is_nil_return: this.frm.doc.file_nil_gstr1 ? true : false },
                 );
-            }
+            },
         );
     }
 
@@ -2863,7 +2868,7 @@ class GSTR1Action extends FileGSTR1Dialog {
                 if (r.message) this.handle_proceed_to_file_response(r.message);
                 else this.check_action_status_with_retry(action);
             },
-            { is_nil_return: this.frm.doc.file_nil_gstr1 ? true : false }
+            { is_nil_return: this.frm.doc.file_nil_gstr1 ? true : false },
         );
     }
 
@@ -2949,7 +2954,7 @@ class GSTR1Action extends FileGSTR1Dialog {
 
                 this.handle_notification(message, action);
             },
-            now ? 0 : this.RETRY_INTERVALS[retries]
+            now ? 0 : this.RETRY_INTERVALS[retries],
         );
     }
 
@@ -2967,7 +2972,7 @@ class GSTR1Action extends FileGSTR1Dialog {
         if (filing_status == "Ready to File") {
             // only show filed tab
             ["books", "unfiled", "reconcile", "errors"].map(tab =>
-                this.frm.gstr1.tabs[`${tab}_tab`].hide()
+                this.frm.gstr1.tabs[`${tab}_tab`].hide(),
             );
             this.frm.gstr1.tabs.filed_tab.set_active();
 
@@ -2985,7 +2990,7 @@ class GSTR1Action extends FileGSTR1Dialog {
 
         const message = `
         <p>${__(
-            "Summary for the following categories has not matched. Please sync with GSTIN."
+            "Summary for the following categories has not matched. Please sync with GSTIN.",
         )}</p>
         <ul>${differing_categories}</ul>
     `;
@@ -3187,7 +3192,7 @@ async function get_net_gst_liability(frm) {
 function refresh_filing_preference(frm) {
     // update html/css to show refresh button next to filing preference
     const $pref_wrapper = $(
-        '[data-fieldname="filing_preference"] .control-value.like-disabled-input'
+        '[data-fieldname="filing_preference"] .control-value.like-disabled-input',
     );
     if (!$pref_wrapper.length) return;
 
@@ -3201,7 +3206,7 @@ function refresh_filing_preference(frm) {
         .append(
             $("<span></span>")
                 .attr("title", "Refresh Filing Preference from GSTN")
-                .html(ref_btn_html)
+                .html(ref_btn_html),
         );
 
     // bind click event
@@ -3231,7 +3236,7 @@ function refresh_filing_preference(frm) {
 
 function set_options_for_year(frm) {
     const { options, current_year } = india_compliance.get_options_for_year(
-        frm.doc.filing_preference
+        frm.doc.filing_preference,
     );
     frm.get_field("year").set_data(options);
     frm.set_value("year", current_year);

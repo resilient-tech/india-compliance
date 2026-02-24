@@ -12,9 +12,7 @@ from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 class TestTransaction(IntegrationTestCase):
     def test_item_tax_template_for_foreign_company(self):
-        doc = create_item_tax_template(
-            company="_Test Foreign Company", gst_rate=0, gst_treatment="Exempt"
-        )
+        doc = create_item_tax_template(company="_Test Foreign Company", gst_rate=0, gst_treatment="Exempt")
         self.assertTrue(doc.gst_rate == 0)
         self.assertTrue(doc.gst_treatment == "Exempt")
 
@@ -82,9 +80,7 @@ def create_item_tax_template(**data):
             pluck="name",
         )
 
-    rcm_accounts = (
-        get_gst_accounts_by_type(doc.company, "Sales Reverse Charge", throw=False)
-    ).values()
+    rcm_accounts = (get_gst_accounts_by_type(doc.company, "Sales Reverse Charge", throw=False)).values()
 
     for account in intra_state_accounts:
         tax_rate = gst_rate

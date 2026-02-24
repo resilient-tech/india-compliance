@@ -12,14 +12,14 @@ class EwaybillApplicability {
         if (!this.frm.doc.company_gstin) {
             is_ewb_applicable = false;
             message_list.push(
-                "Company GSTIN is not set. Ensure its set in Company Address."
+                "Company GSTIN is not set. Ensure its set in Company Address.",
             );
         }
 
         if (this.frm.doc.is_opening === "Yes") {
             is_ewb_applicable = false;
             message_list.push(
-                "e-Waybill cannot be generated for transaction with 'Is Opening Entry' set to Yes."
+                "e-Waybill cannot be generated for transaction with 'Is Opening Entry' set to Yes.",
             );
         }
 
@@ -62,7 +62,7 @@ class EwaybillApplicability {
         let message_list = [];
 
         let is_invalid_invoice_number = india_compliance.validate_invoice_number(
-            this.frm.doc.name
+            this.frm.doc.name,
         );
 
         if (is_invalid_invoice_number.length > 0) {
@@ -244,7 +244,7 @@ class StockEntryEwaybill extends EwaybillApplicability {
             !gst_settings.enable_e_waybill ||
             !gst_settings.enable_e_waybill_for_sc ||
             !["Material Transfer", "Material Issue", "Send to Subcontractor"].includes(
-                this.frm.doc.purpose
+                this.frm.doc.purpose,
             )
         )
             return false;
@@ -256,14 +256,14 @@ class StockEntryEwaybill extends EwaybillApplicability {
         if (is_return && !this.frm.doc.bill_to_gstin) {
             is_ewb_applicable = false;
             message_list.push(
-                "Bill To GSTIN is not set. Ensure its set in Bill To Address."
+                "Bill To GSTIN is not set. Ensure its set in Bill To Address.",
             );
         }
 
         if (!is_return && !this.frm.doc.bill_from_gstin) {
             is_ewb_applicable = false;
             message_list.push(
-                "Bill From GSTIN is not set. Ensure its set in Bill From Address."
+                "Bill From GSTIN is not set. Ensure its set in Bill From Address.",
             );
         }
 
@@ -280,7 +280,7 @@ class StockEntryEwaybill extends EwaybillApplicability {
         if (this.frm.doc.is_opening === "Yes") {
             is_ewb_applicable = false;
             message_list.push(
-                "e-Waybill cannot be generated for transaction with 'Is Opening Entry' set to Yes."
+                "e-Waybill cannot be generated for transaction with 'Is Opening Entry' set to Yes.",
             );
         }
 
@@ -320,7 +320,7 @@ class StockEntryEwaybill extends EwaybillApplicability {
     is_e_waybill_api_enabled() {
         return (
             ["Material Transfer", "Material Issue", "Send to Subcontractor"].includes(
-                this.frm.doc.purpose
+                this.frm.doc.purpose,
             ) &&
             super.is_e_waybill_api_enabled() &&
             gst_settings.enable_e_waybill_for_sc
@@ -344,7 +344,7 @@ class SubcontractingReceiptEwaybill extends EwaybillApplicability {
         if (!this.frm.doc.supplier_address) {
             is_ewb_generatable = false;
             message_list.push(
-                "Supplier addresss is mandatory for e-waybill generation."
+                "Supplier addresss is mandatory for e-waybill generation.",
             );
         }
 

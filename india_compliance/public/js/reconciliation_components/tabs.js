@@ -52,7 +52,7 @@ reconciliation.reconciliation_tabs = class ReconciliationTabs {
 
         // make tabs_dict for easy access
         this.tabs = Object.fromEntries(
-            this.tab_group.tabs.map(tab => [tab.df.fieldname, tab])
+            this.tab_group.tabs.map(tab => [tab.df.fieldname, tab]),
         );
     }
 
@@ -108,8 +108,8 @@ reconciliation.reconciliation_tabs = class ReconciliationTabs {
             return filters.every(filter =>
                 india_compliance.FILTER_OPERATORS[filter[2]](
                     filter[3] || "",
-                    row[filter[1]] || ""
-                )
+                    row[filter[1]] || "",
+                ),
             );
         });
     }
@@ -352,7 +352,7 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
                     this._apply_custom_action(action);
                     this.dialog.hide();
                 },
-                `mr-2 ${this._get_button_css(action)}`
+                `mr-2 ${this._get_button_css(action)}`,
             );
         });
 
@@ -436,7 +436,7 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
             frappe.render_template("invoice_detail_comparison", {
                 purchase: this.data._purchase_invoice,
                 inward_supply: this.data._inward_supply,
-            })
+            }),
         );
         detail_table.$wrapper.removeClass("not-matched");
         this._set_value_color(detail_table.$wrapper);

@@ -2,13 +2,13 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe import _
-from frappe.query_builder.functions import Sum
-from frappe.utils import cstr
 from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
     get_accounting_dimensions,
     get_dimension_with_children,
 )
+from frappe import _
+from frappe.query_builder.functions import Sum
+from frappe.utils import cstr
 
 from india_compliance.gst_india.utils import get_all_gst_accounts, get_gstin_list
 from india_compliance.patches.post_install.update_company_gstin import (
@@ -97,18 +97,14 @@ class GSTBalanceReport:
         for dimension in self.accounting_dimensions:
             dimension = frappe._dict(dimension)
             if self.filters.get(dimension.fieldname):
-                if frappe.get_cached_value(
-                    "DocType", dimension.document_type, "is_tree"
-                ):
+                if frappe.get_cached_value("DocType", dimension.document_type, "is_tree"):
                     self.filters[dimension.fieldname] = get_dimension_with_children(
                         dimension.document_type,
                         self.filters.get(dimension.fieldname),
                     )
 
     def get_columns(self):
-        company_currency = frappe.get_cached_value(
-            "Company", self.filters.get("company"), "default_currency"
-        )
+        company_currency = frappe.get_cached_value("Company", self.filters.get("company"), "default_currency")
 
         if not self.filters.show_summary:
             return [
@@ -216,9 +212,9 @@ class GSTBalanceReport:
                 }
             )
 
-            closing_balance = (
-                data[account]["opening_debit"] + data[account]["debit"]
-            ) - (data[account]["opening_credit"] + data[account]["credit"])
+            closing_balance = (data[account]["opening_debit"] + data[account]["debit"]) - (
+                data[account]["opening_credit"] + data[account]["credit"]
+            )
 
             if closing_balance > 0:
                 data[account]["closing_debit"] = closing_balance
@@ -237,9 +233,7 @@ class GSTBalanceReport:
                 data.setdefault(account, frappe._dict(account=account))
                 row = balance.get(account, {})
 
-                data[account][f"gstin_{company_gstin}"] = row.get("debit", 0) - row.get(
-                    "credit", 0
-                )
+                data[account][f"gstin_{company_gstin}"] = row.get("debit", 0) - row.get("credit", 0)
 
         return list(data.values())
 
@@ -270,9 +264,7 @@ class GSTBalanceReport:
 
     def get_closing_balance(self):
         return self.get_account_wise_dict(
-            self.get_gl_query()
-            .where((self.gl_entry.posting_date <= self.filters.to_date))
-            .run(as_dict=True)
+            self.get_gl_query().where((self.gl_entry.posting_date <= self.filters.to_date)).run(as_dict=True)
         )
 
     def get_gl_query(self):
@@ -294,11 +286,8 @@ class GSTBalanceReport:
         return query
 
     def prepare_conditions(self, query):
-
         if self.filters.company_gstin:
-            query = query.where(
-                self.gl_entry.company_gstin == self.filters.company_gstin
-            )
+            query = query.where(self.gl_entry.company_gstin == self.filters.company_gstin)
 
         query = query.where(
             (self.gl_entry.finance_book.isin([cstr(self.filters.finance_book), ""]))
@@ -309,9 +298,7 @@ class GSTBalanceReport:
             dimension = frappe._dict(dimension)
             if self.filters.get(dimension.fieldname):
                 query = query.where(
-                    (self.gl_entry[dimension.fieldname]).isin(
-                        self.filters.get(dimension.fieldname)
-                    )
+                    (self.gl_entry[dimension.fieldname]).isin(self.filters.get(dimension.fieldname))
                 )
 
         return query

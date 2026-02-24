@@ -61,12 +61,17 @@ frappe.query_reports["GST Job Work Stock Movement"] = {
     formatter: (value, row, column, data, default_formatter) => {
         value = default_formatter(value, row, column, data);
         // replace href with link to original return doc
-        if (data && column.fieldname === "invoice_no" && data.invoice_no && data.original_invoice_no) {
+        if (
+            data &&
+            column.fieldname === "invoice_no" &&
+            data.invoice_no &&
+            data.original_invoice_no
+        ) {
             value = frappe.utils.get_form_link(
                 data.invoice_type,
                 data.original_invoice_no,
                 true,
-                data.invoice_no
+                data.invoice_no,
             );
         }
 
@@ -74,10 +79,10 @@ frappe.query_reports["GST Job Work Stock Movement"] = {
     },
 
     onload: function (query_report) {
-        const handle_download = (response) => {
+        const handle_download = response => {
             india_compliance.trigger_file_download(
                 JSON.stringify(response.data),
-                response.filename
+                response.filename,
             );
         };
 
@@ -88,7 +93,9 @@ frappe.query_reports["GST Job Work Stock Movement"] = {
                 callback: r => {
                     if (r.message && r.message.has_invalid_data) {
                         frappe.confirm(
-                            __("Some entries are skipped in Table 5A because <strong>Original Challan No</strong> is missing.<br><br>Do you want to continue with the download?"),
+                            __(
+                                "Some entries are skipped in Table 5A because <strong>Original Challan No</strong> is missing.<br><br>Do you want to continue with the download?",
+                            ),
                             () => handle_download(r.message),
                         );
                     } else {

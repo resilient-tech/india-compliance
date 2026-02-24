@@ -19,13 +19,13 @@ $(document).on("app_ready", async function () {
             <strong>Action Required:</strong>
             <br>
             If you have been using the ISD under the <strong>Registered Regular</strong> GST category, please update your records to reflect the new <strong>Input Service Distributor</strong> category.
-            `
+            `,
         ),
     });
 
     d.onhide = () => {
         frappe.xcall(
-            "india_compliance.gst_india.utils.disable_new_gst_category_notification"
+            "india_compliance.gst_india.utils.disable_new_gst_category_notification",
         );
     };
 });

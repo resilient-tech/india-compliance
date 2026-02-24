@@ -7,14 +7,14 @@ from collections import defaultdict
 from typing import Self
 
 import frappe
+from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
+    get_accounting_dimensions,
+)
 from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.functions import IfNull
 from frappe.utils import add_to_date, cint, now_datetime
 from frappe.utils.background_jobs import is_job_enqueued
-from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
-    get_accounting_dimensions,
-)
 
 from india_compliance.gst_india.api_classes.taxpayer_base import (
     TaxpayerBaseAPI,
@@ -30,12 +30,10 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
 )
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
     get_formatted_options,
+    set_reconciliation_status,
 )
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
     link_documents as _link_documents,
-)
-from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
-    set_reconciliation_status,
 )
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_utils import (
     unlink_documents as _unlink_documents,
@@ -90,9 +88,7 @@ class PurchaseReconciliationTool(Document):
 
         self.set_onload(
             "has_missing_2b_documents",
-            has_missing_2b_documents(
-                date_range, ReturnType.GSTR2B, self.company_gstin, self.company
-            ),
+            has_missing_2b_documents(date_range, ReturnType.GSTR2B, self.company_gstin, self.company),
         )
 
     @frappe.whitelist()
@@ -182,9 +178,7 @@ class PurchaseReconciliationTool(Document):
         action = "Download" if for_download else "Upload"
 
         return_type = ReturnType(return_type)
-        company_gstins = (
-            get_gstin_list(self.company) if company_gstin == "All" else [company_gstin]
-        )
+        company_gstins = get_gstin_list(self.company) if company_gstin == "All" else [company_gstin]
 
         for gst_no in company_gstins:
             periods = BaseUtil.get_periods(date_range, return_type, gst_no, True)
@@ -199,9 +193,7 @@ class PurchaseReconciliationTool(Document):
                     pending_download[period].add(gst_no)
 
                 elif has_single_gstin:
-                    download_history[period].add(
-                        download_row.last_updated_on.strftime("%d-%m-%Y %H:%M:%S")
-                    )
+                    download_history[period].add(download_row.last_updated_on.strftime("%d-%m-%Y %H:%M:%S"))
 
         # ensure data order is maintained
         def get_map(data):
@@ -251,9 +243,7 @@ class PurchaseReconciliationTool(Document):
 
         self.set_onload(
             "has_missing_2b_documents",
-            has_missing_2b_documents(
-                date_range, ReturnType.GSTR2B, self.company_gstin, self.company
-            ),
+            has_missing_2b_documents(date_range, ReturnType.GSTR2B, self.company_gstin, self.company),
         )
 
         return date_range
@@ -262,9 +252,7 @@ class PurchaseReconciliationTool(Document):
     def get_invoice_details(self: Self, purchase_name: str, inward_supply_name: str):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
-        return self.ReconciledData.get_manually_matched_data(
-            purchase_name, inward_supply_name
-        )
+        return self.ReconciledData.get_manually_matched_data(purchase_name, inward_supply_name)
 
     @frappe.whitelist()
     def link_documents(
@@ -275,9 +263,7 @@ class PurchaseReconciliationTool(Document):
     ):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
-        purchases, inward_supplies = _link_documents(
-            purchase_invoice_name, inward_supply_name, link_doctype
-        )
+        purchases, inward_supplies = _link_documents(purchase_invoice_name, inward_supply_name, link_doctype)
 
         return self.ReconciledData.get(purchases, inward_supplies)
 
@@ -318,9 +304,7 @@ class PurchaseReconciliationTool(Document):
                 boe.append(doc.get("purchase_invoice_name"))
 
         if inward_supplies:
-            frappe.db.set_value(
-                "GST Inward Supply", {"name": ("in", inward_supplies)}, "action", action
-            )
+            frappe.db.set_value("GST Inward Supply", {"name": ("in", inward_supplies)}, "action", action)
 
         set_reconciliation_status("Purchase Invoice", purchases, status)
         set_reconciliation_status("Bill of Entry", boe, status)
@@ -350,9 +334,7 @@ class PurchaseReconciliationTool(Document):
         )
 
         if not filters.show_matched:
-            query = query.where(
-                PI.name.notin(PurchaseInvoice.query_matched_purchase_invoice())
-            )
+            query = query.where(PI.name.notin(PurchaseInvoice.query_matched_purchase_invoice()))
 
         return get_formatted_options(query.run(as_dict=True))
 
@@ -381,9 +363,7 @@ class PurchaseReconciliationTool(Document):
         )
 
         if not filters.show_matched:
-            query = query.where(
-                BOE.name.notin(BillOfEntry.query_matched_bill_of_entry())
-            )
+            query = query.where(BOE.name.notin(BillOfEntry.query_matched_bill_of_entry()))
 
         return get_formatted_options(query.run(as_dict=True))
 
@@ -402,9 +382,7 @@ def download_gstr(
         periods = [return_period]
     else:
         periods = BaseUtil.get_periods(date_range, return_type, company_gstin)
-        periods = get_periods_to_download(
-            company_gstin, return_type, periods, download_all=force
-        )
+        periods = get_periods_to_download(company_gstin, return_type, periods, download_all=force)
 
     if not periods:
         return
@@ -436,9 +414,7 @@ def get_periods_to_download(company_gstin, return_type, periods, download_all=Fa
         return periods
 
     # get missing periods
-    existing_periods = get_import_history(
-        company_gstin, return_type, periods, pluck="return_period"
-    )
+    existing_periods = get_import_history(company_gstin, return_type, periods, pluck="return_period")
 
     return [period for period in periods if period not in existing_periods]
 
@@ -448,9 +424,7 @@ def filter_redownload_periods(company_gstin, return_type, periods):
     dont_redownload = get_import_history(
         company_gstin, return_type, periods, fields=("return_period", "dont_redownload")
     )
-    dont_redownload = [
-        log.return_period for log in dont_redownload if log.dont_redownload
-    ]
+    dont_redownload = [log.return_period for log in dont_redownload if log.dont_redownload]
 
     return [period for period in periods if period not in dont_redownload]
 
@@ -488,12 +462,8 @@ def get_import_history(
     )
 
 
-def has_missing_2b_documents(
-    date_range, return_type: ReturnType, company_gstin, company
-):
-    company_gstins = (
-        get_gstin_list(company) if company_gstin == "All" else [company_gstin]
-    )
+def has_missing_2b_documents(date_range, return_type: ReturnType, company_gstin, company):
+    company_gstins = get_gstin_list(company) if company_gstin == "All" else [company_gstin]
 
     for gstin in company_gstins:
         periods = BaseUtil.get_periods(date_range, return_type, gstin, True)
@@ -579,9 +549,7 @@ def auto_refresh_authtoken():
         },
         fields=["session_key", "session_expiry", "gstin", "auth_token"],
     ):
-        if credential.session_key and credential.session_expiry < add_to_date(
-            now_datetime(), minutes=10
-        ):
+        if credential.session_key and credential.session_expiry < add_to_date(now_datetime(), minutes=10):
             api = TaxpayerBaseAPI(credential.gstin)
             response = api.refresh_auth_token()
             api.process_response(response)
@@ -781,9 +749,7 @@ class BuildExcel:
         """Add filters to the sheet"""
 
         label = "2B" if self.doc.gst_return == "GSTR 2B" else "2A/2B"
-        self.period = (
-            f"{self.doc.inward_supply_from_date} to {self.doc.inward_supply_to_date}"
-        )
+        self.period = f"{self.doc.inward_supply_from_date} to {self.doc.inward_supply_to_date}"
 
         self.filters = frappe._dict(
             {
@@ -809,9 +775,7 @@ class BuildExcel:
         )
 
     def get_supplier_data(self):
-        return self.process_data(
-            self.data.get("supplier_summary"), self.supplier_header
-        )
+        return self.process_data(self.data.get("supplier_summary"), self.supplier_header)
 
     def get_invoice_data(self):
         data = ReconciledData(**self.doc).get_consolidated_data(

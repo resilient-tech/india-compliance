@@ -31,8 +31,8 @@ frappe.ui.form.on("GSTR 3B Report", {
                 frappe.urllib.get_full_url(
                     "/api/method/india_compliance.gst_india.doctype.gstr_3b_report.gstr_3b_report.make_json?" +
                         "name=" +
-                        encodeURIComponent(frm.doc.name)
-                )
+                        encodeURIComponent(frm.doc.name),
+                ),
             );
 
             if (!w) {
@@ -47,8 +47,8 @@ frappe.ui.form.on("GSTR 3B Report", {
                 frappe.urllib.get_full_url(
                     "/api/method/india_compliance.gst_india.doctype.gstr_3b_report.gstr_3b_report.download_gstr3b_as_excel?" +
                         "name=" +
-                        encodeURIComponent(frm.doc.name)
-                )
+                        encodeURIComponent(frm.doc.name),
+                ),
             );
 
             if (!w) {
@@ -90,7 +90,7 @@ frappe.ui.form.on("GSTR 3B Report", {
                 gstin: frm.doc.company_gstin,
                 return_period: india_compliance.get_period(
                     frm.doc.month_or_quarter,
-                    frm.doc.year
+                    frm.doc.year,
                 ),
                 doctype: frm.doc.doctype,
                 callback: function (regeneration_status) {
@@ -125,7 +125,7 @@ function append_form(frm) {
     $(
         frappe.render_template("gstr_3b_report", {
             data: JSON.parse(frm.doc.json_output),
-        })
+        }),
     ).appendTo(frm.fields_dict.gstr3b_form.wrapper);
 }
 

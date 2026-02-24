@@ -2,9 +2,8 @@ import copy
 from base64 import b64decode
 from urllib.parse import urljoin
 
-import requests
-
 import frappe
+import requests
 from frappe import _
 from frappe.utils import sbool
 from frappe.utils.scheduler import is_scheduler_disabled
@@ -49,11 +48,7 @@ class BaseAPI:
     def __init__(self, *args, **kwargs):
         self.settings = frappe.get_cached_doc("GST Settings")
         if not is_api_enabled(self.settings):
-            frappe.throw(
-                _("Please enable API in GST Settings to use the {0} API").format(
-                    self.API_NAME
-                )
-            )
+            frappe.throw(_("Please enable API in GST Settings to use the {0} API").format(self.API_NAME))
 
         self.company_gstin = None
         self.auth_strategy = None
@@ -79,8 +74,7 @@ class BaseAPI:
         else:
             frappe.throw(
                 _(
-                    "Please set the relevant credentials for GSTIN {0} in GST Settings to use the"
-                    " {1} API"
+                    "Please set the relevant credentials for GSTIN {0} in GST Settings to use the" " {1} API"
                 ).format(gstin, self.API_NAME),
                 frappe.DoesNotExistError,
                 title=_("Credentials Unavailable"),
@@ -190,9 +184,7 @@ class BaseAPI:
                     response_json = response.content
 
                 else:
-                    frappe.throw(
-                        _("Error parsing response: {0}").format(response.content)
-                    )
+                    frappe.throw(_("Error parsing response: {0}").format(response.content))
 
             response_json = self.process_response(response_json)
 
@@ -282,9 +274,7 @@ class BaseAPI:
     def handle_http_code(self, status_code, response_json):
         # GSP connectivity issues
         if status_code == 401 or (
-            status_code == 403
-            and response_json
-            and response_json.get("error") == "access_denied"
+            status_code == 403 and response_json and response_json.get("error") == "access_denied"
         ):
             frappe.throw(
                 _(
@@ -322,9 +312,7 @@ class BaseAPI:
         # Define specific locations where each type of sensitive info should be masked
         sensitive_info_mapping = self._get_sensitive_info_mapping()
 
-        self._mask_sensitive_info(
-            request_headers, sensitive_info_mapping.get("headers")
-        )
+        self._mask_sensitive_info(request_headers, sensitive_info_mapping.get("headers"))
 
         self._mask_sensitive_info(output, sensitive_info_mapping.get("output"))
         self._mask_sensitive_info(data, sensitive_info_mapping.get("data"))

@@ -51,7 +51,7 @@ function fetch_gst_details(doctype) {
         event_fields.push(
             "customer_address",
             "shipping_address_name",
-            "is_export_with_gst"
+            "is_export_with_gst",
         );
     } else if (doctype === "Stock Entry") {
         event_fields.push("bill_from_address", "bill_to_address");
@@ -62,7 +62,7 @@ function fetch_gst_details(doctype) {
     }
 
     const events = Object.fromEntries(
-        event_fields.map(field => [field, frm => update_gst_details(frm, field)])
+        event_fields.map(field => [field, frm => update_gst_details(frm, field)]),
     );
 
     frappe.ui.form.on(doctype, events);
@@ -140,14 +140,14 @@ async function update_gst_details(frm, event) {
             "customer_address",
             "shipping_address_name",
             "billing_address_gstin",
-            "is_export_with_gst"
+            "is_export_with_gst",
         );
     } else if (frm.doc.doctype === "Stock Entry") {
         fieldnames_to_set.push(
             "bill_from_gstin",
             "bill_to_gstin",
             "bill_from_address",
-            "bill_to_address"
+            "bill_to_address",
         );
 
         party_details["is_outward_stock_entry"] = same_gstin_stock_entry;
@@ -194,7 +194,7 @@ function validate_overseas_gst_category(doctype) {
                 return;
 
             frappe.throw(
-                __("Please enable SEZ / Overseas transactions in GST Settings first")
+                __("Please enable SEZ / Overseas transactions in GST Settings first"),
             );
         },
     });
@@ -240,7 +240,7 @@ function set_and_validate_gstin_status(doctype) {
         gst_transporter_id(frm) {
             india_compliance.validate_gst_transporter_id(
                 frm.doc.gst_transporter_id,
-                frm.doc
+                frm.doc,
             );
         },
 
@@ -277,8 +277,8 @@ async function _set_gstin_status(frm, gstin_field_name) {
         gstin_field.set_description(
             india_compliance.get_gstin_status_desc(
                 gstin_doc?.status,
-                gstin_doc?.last_updated_on
-            )
+                gstin_doc?.last_updated_on,
+            ),
         );
     }
 
@@ -308,7 +308,7 @@ function validate_gstin_status(gstin_doc, frm, gstin_field_name) {
                     gstin_field.df.label,
                     frappe.datetime.str_to_user(gstin_doc.registration_date),
                     date_field.df.label,
-                ]
+                ],
             ),
             title: __("Invalid Party GSTIN"),
         });
@@ -321,7 +321,7 @@ function validate_gstin_status(gstin_doc, frm, gstin_field_name) {
                     gstin_field.df.label,
                     frappe.datetime.str_to_user(gstin_doc.cancelled_date),
                     date_field.df.label,
-                ]
+                ],
             ),
             title: __("Invalid Party GSTIN"),
         });
@@ -340,14 +340,14 @@ function show_gst_invoice_no_banner(frm) {
     frm.dashboard.clear_headline();
     if (
         !is_invoice_no_validation_required(
-            frm.doc.transaction_type || frm.doc.document_type
+            frm.doc.transaction_type || frm.doc.document_type,
         )
     )
         return;
 
     frm.dashboard.set_headline_alert(
         `Naming Series should <strong>not</strong> exceed 16 characters for GST. <a href="https://docs.indiacompliance.app/docs/miscellaneous/transaction_validations#document-name" target="_blank">Know more</a>`,
-        "blue"
+        "blue",
     );
 }
 
@@ -370,7 +370,7 @@ function set_e_commerce_ecommerce_supply_type(doctype) {
         event_fields.map(field => [
             field,
             frm => _set_e_commerce_ecommerce_supply_type(frm),
-        ])
+        ]),
     );
 
     frappe.ui.form.on(doctype, events);
@@ -428,7 +428,7 @@ function fetch_party_details(doctype) {
                     args,
                     () => {
                         toggle_link_validation(frm, ["supplier_address"], true);
-                    }
+                    },
                 );
             }, 0);
         },

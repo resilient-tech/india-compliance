@@ -20,7 +20,7 @@ india_compliance.FILTER_OPERATORS = {
     },
 };
 
-FILTER_GROUP_BUTTON = $(
+const FILTER_GROUP_BUTTON = $(
     `
     <div class="custom-button-group">
         <div class="filter-selector">
@@ -34,7 +34,7 @@ FILTER_GROUP_BUTTON = $(
                     <span>
                 </button>
                 <button class="btn btn-default btn-sm filter-x-button" title="${__(
-                    "Clear all filters"
+                    "Clear all filters",
                 )}">
                     <span class="filter-icon">
                         ${frappe.utils.icon("filter-x")}
@@ -43,7 +43,7 @@ FILTER_GROUP_BUTTON = $(
             </div>
         </div>
     </div>
-    `
+    `,
 );
 
 class _Filter extends frappe.ui.Filter {
@@ -58,7 +58,7 @@ class _Filter extends frappe.ui.Filter {
         }
 
         this.conditions = this.conditions.filter(
-            condition => india_compliance.FILTER_OPERATORS[condition && condition[0]]
+            condition => india_compliance.FILTER_OPERATORS[condition && condition[0]],
         );
     }
 }
@@ -107,7 +107,7 @@ india_compliance.FilterGroup = class FilterGroup extends frappe.ui.FilterGroup {
 
             const remove = frappe.utils.arrays_equal(
                 f_value.slice(0, 4),
-                filter_value.slice(0, 4)
+                filter_value.slice(0, 4),
             );
             if (remove) f.remove();
 

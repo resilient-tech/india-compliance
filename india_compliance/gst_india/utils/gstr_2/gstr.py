@@ -107,17 +107,15 @@ class GSTR:
         if transaction.get("items"):
             self.update_totals(transaction)
 
-        transaction["unique_key"] = (
-            f"{transaction.get('supplier_gstin', '')}-{transaction.get('bill_no', '')}"
-        )
+        transaction[
+            "unique_key"
+        ] = f"{transaction.get('supplier_gstin', '')}-{transaction.get('bill_no', '')}"
 
         return transaction
 
     def update_totals(self, transaction):
         for field in ["taxable_value", "igst", "cgst", "sgst", "cess"]:
-            transaction[field] = sum(
-                [row.get(field) for row in transaction.get("items") if row.get(field)]
-            )
+            transaction[field] = sum([row.get(field) for row in transaction.get("items") if row.get(field)])
 
     def get_supplier_details(self, supplier):
         return {}

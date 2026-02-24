@@ -1,11 +1,11 @@
 from functools import partial
 
 import frappe
+from erpnext.accounts.utils import get_fiscal_year
 from frappe.desk.page.setup_wizard.setup_wizard import setup_complete
 from frappe.tests.utils import make_test_objects
 from frappe.utils import getdate
 from frappe.utils.nestedset import get_root_of
-from erpnext.accounts.utils import get_fiscal_year
 
 
 def before_tests():
@@ -60,9 +60,7 @@ def set_default_settings_for_tests():
 
 
 def create_test_records():
-    test_records = frappe.get_file_json(
-        frappe.get_app_path("india_compliance", "tests", "test_records.json")
-    )
+    test_records = frappe.get_file_json(frappe.get_app_path("india_compliance", "tests", "test_records.json"))
 
     for doctype, data in test_records.items():
         make_test_objects(doctype, data)

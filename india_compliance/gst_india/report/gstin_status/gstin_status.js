@@ -92,14 +92,14 @@ frappe.query_reports["GSTIN Status"] = {
             "button[fieldname='update_gstin_details_btn']",
             async e => {
                 await this.handle_click_listner(e);
-            }
+            },
         );
     },
 
     async handle_click_listner(e) {
         const gstin = e.target.attributes["data-gstin"].value;
 
-        this.toggle_gstin_update_btn(gstin, (disabled = true));
+        this.toggle_gstin_update_btn(gstin, true);
         this.set_btn_text(gstin, __("Updating"));
 
         try {
@@ -124,18 +124,18 @@ frappe.query_reports["GSTIN Status"] = {
         } catch (error) {
             frappe.show_alert({
                 message: __(
-                    "Error while updating GSTIN status. Please try again later."
+                    "Error while updating GSTIN status. Please try again later.",
                 ),
                 indicator: "red",
             });
-            this.toggle_gstin_update_btn(gstin, (disabled = false));
+            this.toggle_gstin_update_btn(gstin, false);
             this.set_btn_text(gstin, __("Update"));
         }
     },
 
     toggle_gstin_update_btn(gstin, disabled = null) {
         let btn = $(
-            `button[fieldname='update_gstin_details_btn'][data-gstin='${gstin}']`
+            `button[fieldname='update_gstin_details_btn'][data-gstin='${gstin}']`,
         );
         if (disabled == null) {
             disabled = btn.prop("disabled");
@@ -171,7 +171,7 @@ frappe.query_reports["GSTIN Status"] = {
 
     update_value(row, fieldname, value) {
         const ele = $(
-            `.dt-row.dt-row-${row}.vrow > div > div > [fieldname='${fieldname}']`
+            `.dt-row.dt-row-${row}.vrow > div > div > [fieldname='${fieldname}']`,
         );
         let { fieldtype } = frappe.query_report.columns.find(column => {
             return column.fieldname == fieldname;

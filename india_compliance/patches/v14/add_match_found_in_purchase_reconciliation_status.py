@@ -18,6 +18,4 @@ def execute():
         if not doc_names:
             continue
 
-        frappe.db.set_value(
-            doctype, {"name": ("in", doc_names)}, "reconciliation_status", "Match Found"
-        )
+        frappe.db.set_value(doctype, {"name": ("in", doc_names)}, "reconciliation_status", "Match Found")

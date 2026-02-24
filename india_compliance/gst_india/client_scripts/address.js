@@ -37,7 +37,7 @@ frappe.ui.form.on(DOCTYPE, {
             const { message } = await frappe.db.get_value(
                 row.link_doctype,
                 row.link_name,
-                ["gstin", "gst_category"]
+                ["gstin", "gst_category"],
             );
 
             if (message) {
@@ -76,7 +76,7 @@ function update_address_fields(frm) {
             DOCTYPE,
             null,
             dialog => dialog.set_value("_gstin", frm.doc.gstin),
-            doc
+            doc,
         );
         frappe.ui.form.AddressQuickEntryForm = original_quick_entry_form;
     });

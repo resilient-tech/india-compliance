@@ -35,7 +35,7 @@ india_compliance.taxes_controller = class TaxesController {
             return erpnext.TransactionController.prototype.set_query_for_item_tax_template(
                 doc,
                 cdt,
-                cdn
+                cdn,
             );
         });
 
@@ -66,7 +66,7 @@ india_compliance.taxes_controller = class TaxesController {
                     master_doctype: frappe.meta.get_docfield(
                         this.frm.doc.doctype,
                         "taxes_and_charges",
-                        this.frm.doc.name
+                        this.frm.doc.name,
                     ).options,
                     master_name: this.frm.doc.taxes_and_charges,
                 },
@@ -185,7 +185,7 @@ india_compliance.taxes_controller = class TaxesController {
     update_total_taxes() {
         const total_taxes = this.frm.doc.taxes.reduce(
             (total, row) => total + row.tax_amount,
-            0
+            0,
         );
         this.frm.set_value("total_taxes", total_taxes);
     }

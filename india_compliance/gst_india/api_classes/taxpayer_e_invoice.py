@@ -63,6 +63,4 @@ class EInvoiceAPI(TaxpayerBaseAPI):
         )
 
     def download_files(self, return_period, token, otp=None):
-        return super().get_files(
-            return_period, token, action="FILEDETL", endpoint=self.endpoint, otp=otp
-        )
+        return super().get_files(return_period, token, action="FILEDETL", endpoint=self.endpoint, otp=otp)

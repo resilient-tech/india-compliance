@@ -50,9 +50,7 @@ def execute(filters: dict | None = None):
 
 
 def get_columns(filters):
-    company_currency = frappe.get_cached_value(
-        "Company", filters.get("company"), "default_currency"
-    )
+    company_currency = frappe.get_cached_value("Company", filters.get("company"), "default_currency")
 
     return [
         {
@@ -114,9 +112,7 @@ def process_data(data):
 
     for invoice in data:
         # Determine the key field
-        key_field = (
-            "tax_rate" if invoice.get("gst_treatment") == "Taxable" else "gst_treatment"
-        )
+        key_field = "tax_rate" if invoice.get("gst_treatment") == "Taxable" else "gst_treatment"
         key_value = invoice.get(key_field)
 
         if key_value not in invoice_wise_data:
@@ -139,9 +135,7 @@ def process_data(data):
     ]
 
     # Sort the dictionary based on the sort order
-    sorted_data = sorted(
-        invoice_wise_data.items(), key=lambda item: sort_order.index(item[0])
-    )
+    sorted_data = sorted(invoice_wise_data.items(), key=lambda item: sort_order.index(item[0]))
     return [value for _, value in sorted_data]
 
 
@@ -160,9 +154,7 @@ def get_doctype_wise_data(filters, doctype):
             doc_item.igst_amount.as_("igst_amount"),
             (doc_item.cess_amount + doc_item.cess_non_advol_amount).as_("cess_amount"),
             doc_item.gst_treatment.as_("gst_treatment"),
-            (doc_item.igst_rate + doc_item.cgst_rate + doc_item.sgst_rate).as_(
-                "tax_rate"
-            ),
+            (doc_item.igst_rate + doc_item.cgst_rate + doc_item.sgst_rate).as_("tax_rate"),
         )
         .where(
             (doc.docstatus == 1)

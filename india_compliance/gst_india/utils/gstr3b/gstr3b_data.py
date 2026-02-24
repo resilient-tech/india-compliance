@@ -114,9 +114,7 @@ class GSTR3BSubcategory(GSTR3BCategoryConditions):
         invoice.invoice_sub_category = invoice.itc_classification
 
     def set_for_itc_reversed(self, invoice):
-        invoice.invoice_sub_category = (
-            "As per rules 42 & 43 of CGST Rules and section 17(5)"
-        )
+        invoice.invoice_sub_category = "As per rules 42 & 43 of CGST Rules and section 17(5)"
 
     def set_for_ineligible_itc(self, invoice):
         invoice.invoice_sub_category = "ITC restricted due to PoS rules"
@@ -158,18 +156,12 @@ class GSTR3BQuery:
                 self.PI_ITEM.gst_hsn_code,
                 self.PI_ITEM.uom,
                 self.PI_ITEM.qty,
-                (
-                    self.PI_ITEM.cgst_rate
-                    + self.PI_ITEM.sgst_rate
-                    + self.PI_ITEM.igst_rate
-                ).as_("gst_rate"),
+                (self.PI_ITEM.cgst_rate + self.PI_ITEM.sgst_rate + self.PI_ITEM.igst_rate).as_("gst_rate"),
                 self.PI_ITEM.taxable_value,
                 self.PI_ITEM.cgst_amount,
                 self.PI_ITEM.sgst_amount,
                 self.PI_ITEM.igst_amount,
-                (self.PI_ITEM.cess_amount + self.PI_ITEM.cess_non_advol_amount).as_(
-                    "cess_amount"
-                ),
+                (self.PI_ITEM.cess_amount + self.PI_ITEM.cess_non_advol_amount).as_("cess_amount"),
                 (
                     self.PI_ITEM.cgst_amount
                     + self.PI_ITEM.sgst_amount
@@ -207,18 +199,12 @@ class GSTR3BQuery:
                 self.BOE_ITEM.gst_hsn_code,
                 self.BOE_ITEM.uom,
                 self.BOE_ITEM.qty,
-                (
-                    self.BOE_ITEM.cgst_rate
-                    + self.BOE_ITEM.sgst_rate
-                    + self.BOE_ITEM.igst_rate
-                ).as_("gst_rate"),
+                (self.BOE_ITEM.cgst_rate + self.BOE_ITEM.sgst_rate + self.BOE_ITEM.igst_rate).as_("gst_rate"),
                 self.BOE_ITEM.taxable_value,
                 self.BOE_ITEM.cgst_amount,
                 self.BOE_ITEM.sgst_amount,
                 self.BOE_ITEM.igst_amount,
-                (self.BOE_ITEM.cess_amount + self.BOE_ITEM.cess_non_advol_amount).as_(
-                    "cess_amount"
-                ),
+                (self.BOE_ITEM.cess_amount + self.BOE_ITEM.cess_non_advol_amount).as_("cess_amount"),
                 (
                     self.BOE_ITEM.cgst_amount
                     + self.BOE_ITEM.sgst_amount
@@ -280,11 +266,7 @@ class GSTR3BQuery:
                 ],
             )
             .where(self.JE.is_opening == "No")
-            .where(
-                self.JE.voucher_type.isin(
-                    ["Reclaim of ITC Reversal", "Reversal of ITC"]
-                )
-            )
+            .where(self.JE.voucher_type.isin(["Reclaim of ITC Reversal", "Reversal of ITC"]))
             .groupby(self.JE.name)
         )
 
@@ -414,8 +396,4 @@ class GSTR3BInvoices(GSTR3BQuery, GSTR3BSubcategory):
         if not subcategories:
             return invoices
 
-        return [
-            invoice
-            for invoice in invoices
-            if invoice.invoice_sub_category in subcategories
-        ]
+        return [invoice for invoice in invoices if invoice.invoice_sub_category in subcategories]

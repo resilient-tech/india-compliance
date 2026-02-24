@@ -25,11 +25,7 @@ class CForm(Document):
                 )
 
                 if inv and inv[0][0] != "Yes":
-                    frappe.throw(
-                        _("C-form is not applicable for Invoice: {0}").format(
-                            d.invoice_no
-                        )
-                    )
+                    frappe.throw(_("C-form is not applicable for Invoice: {0}").format(d.invoice_no))
 
                 elif inv and inv[0][1] and inv[0][1] != self.name:
                     frappe.throw(
@@ -46,9 +42,7 @@ class CForm(Document):
                     frappe.throw(
                         _(
                             "Row {0}: Invoice {1} is invalid, it might be cancelled /"
-                            " does not exist. Please enter a valid Invoice.".format(
-                                d.idx, d.invoice_no
-                            )
+                            " does not exist. Please enter a valid Invoice.".format(d.idx, d.invoice_no)
                         )
                     )
 

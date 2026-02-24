@@ -1,7 +1,6 @@
 import re
 
 import frappe
-from frappe.tests import IntegrationTestCase
 from erpnext.controllers.subcontracting_controller import (
     get_materials_from_supplier,
     make_rm_stock_entry,
@@ -14,6 +13,7 @@ from erpnext.subcontracting.doctype.subcontracting_order.subcontracting_order im
 from erpnext.subcontracting.doctype.subcontracting_order.test_subcontracting_order import (
     create_subcontracting_order,
 )
+from frappe.tests import IntegrationTestCase
 
 from india_compliance.gst_india.utils.tests import create_transaction
 
@@ -96,9 +96,7 @@ def make_item(item_code=None, properties=None):
         item.update(properties)
 
     if item.is_stock_item:
-        for item_default in [
-            doc for doc in item.get("item_defaults") if not doc.default_warehouse
-        ]:
+        for item_default in [doc for doc in item.get("item_defaults") if not doc.default_warehouse]:
             item_default.default_warehouse = "Stores - _TIRC"
             item_default.company = "_Test Indian Registered Company"
 
@@ -138,10 +136,8 @@ def make_stock_transfer_entry(**args):
     ste_dict = make_rm_stock_entry(args.sco_no, items)
     ste_dict.update(
         {
-            "bill_from_address": args.bill_from_address
-            or "_Test Indian Registered Company-Billing",
-            "bill_to_address": args.bill_to_address
-            or "_Test Registered Supplier-Billing",
+            "bill_from_address": args.bill_from_address or "_Test Indian Registered Company-Billing",
+            "bill_to_address": args.bill_to_address or "_Test Registered Supplier-Billing",
         }
     )
 
@@ -274,9 +270,7 @@ class TestSubcontractingTransaction(IntegrationTestCase):
         self.assertEqual(se.total_taxes, 0.0)
 
     def test_subcontracting_validations(self):
-        po = create_purchase_order(
-            **SERVICE_ITEM, supplier_warehouse="Finished Goods - _TIRC"
-        )
+        po = create_purchase_order(**SERVICE_ITEM, supplier_warehouse="Finished Goods - _TIRC")
         sco = create_subcontracting_order(po_name=po.name)
 
         rm_items = get_rm_items(sco.supplied_items)
@@ -322,17 +316,13 @@ class TestSubcontractingTransaction(IntegrationTestCase):
             get_stock_entry_references,
         )
 
-        po = create_purchase_order(
-            **SERVICE_ITEM, supplier_warehouse="Finished Goods - _TIRC"
-        )
+        po = create_purchase_order(**SERVICE_ITEM, supplier_warehouse="Finished Goods - _TIRC")
         sco = create_subcontracting_order(po_name=po.name)
 
         rm_items = get_rm_items(sco.supplied_items)
         se = make_stock_transfer_entry(sco_no=sco.name, rm_items=rm_items)
 
-        return_se = get_materials_from_supplier(
-            sco.name, [d.name for d in sco.supplied_items]
-        )
+        return_se = get_materials_from_supplier(sco.name, [d.name for d in sco.supplied_items])
         return_se.save()
 
         scr = make_subcontracting_receipt(sco.name)
@@ -352,9 +342,7 @@ class TestSubcontractingTransaction(IntegrationTestCase):
             "supplied_items": [d.item_code for d in return_se.items],
             "subcontracting_orders": [return_se.subcontracting_order],
         }
-        doc_references_data = get_stock_entry_references(
-            filters=filters, only_linked_references=True
-        )
+        doc_references_data = get_stock_entry_references(filters=filters, only_linked_references=True)
         doc_references = [row[0] for row in doc_references_data]
 
         self.assertTrue(se.name in doc_references)

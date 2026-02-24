@@ -66,7 +66,7 @@ frappe.query_reports["GSTR-3B Details"] = {
                 {
                     value: "5",
                     label: __(
-                        "5. Values of exempt, nil rated and non-GST inward supplies"
+                        "5. Values of exempt, nil rated and non-GST inward supplies",
                     ),
                 },
             ],

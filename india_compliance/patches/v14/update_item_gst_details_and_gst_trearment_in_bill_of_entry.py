@@ -1,5 +1,4 @@
 import click
-
 import frappe
 from frappe.query_builder.functions import IfNull
 
@@ -28,9 +27,7 @@ def update_gst_details_for_transactions(companies):
         gst_accounts.extend(
             filter(
                 None,
-                get_gst_accounts_by_type(
-                    company, account_type="Input", throw=False
-                ).values(),
+                get_gst_accounts_by_type(company, account_type="Input", throw=False).values(),
             )
         )
 
@@ -78,9 +75,7 @@ def update_gst_details(company, doctype, docs):
             if not complied_docs:
                 continue
 
-            gst_details = CustomItemGSTDetails().get(
-                complied_docs.values(), doctype, company
-            )
+            gst_details = CustomItemGSTDetails().get(complied_docs.values(), doctype, company)
 
             if not gst_details:
                 continue
@@ -93,10 +88,9 @@ def get_taxes_for_docs(docs, doctype):
     boe_taxes = frappe.qb.DocType("Bill of Entry Taxes")
     ic_taxes = frappe.qb.DocType("India Compliance Taxes and Charges")
 
-    return (
-        get_taxes_query(docs, doctype, boe_taxes)
-        + get_taxes_query(docs, doctype, ic_taxes)
-    ).run(as_dict=True)
+    return (get_taxes_query(docs, doctype, boe_taxes) + get_taxes_query(docs, doctype, ic_taxes)).run(
+        as_dict=True
+    )
 
 
 def get_taxes_query(docs, doctype, taxes):

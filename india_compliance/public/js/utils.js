@@ -146,8 +146,8 @@ Object.assign(india_compliance, {
         field.set_description(
             india_compliance.get_gstin_status_desc(
                 message?.status,
-                message?.last_updated_on
-            )
+                message?.last_updated_on,
+            ),
         );
 
         this.set_gstin_refresh_btn(field, doc);
@@ -186,14 +186,14 @@ Object.assign(india_compliance, {
             pan_status,
             get_indicator(pan_status),
             datetime,
-            "pan-last-synced"
+            "pan-last-synced",
         );
 
         field.set_description(pan_desc);
 
         const refresh_btn = this.get_status_refresh_button(
             "refresh-pan",
-            field.$wrapper.find(".pan-last-synced")
+            field.$wrapper.find(".pan-last-synced"),
         );
 
         refresh_btn.on("click", async function () {
@@ -234,7 +234,7 @@ Object.assign(india_compliance, {
             status,
             get_indicator(status),
             datetime,
-            "gstin-last-synced"
+            "gstin-last-synced",
         );
     },
 
@@ -249,7 +249,7 @@ Object.assign(india_compliance, {
 
         const refresh_btn = this.get_status_refresh_button(
             "refresh-gstin",
-            field.$wrapper.find(".gstin-last-synced")
+            field.$wrapper.find(".gstin-last-synced"),
         );
 
         refresh_btn.on("click", async function () {
@@ -391,7 +391,7 @@ Object.assign(india_compliance, {
         frm.get_field(field).set_description(
             `<div class="d-flex indicator ${color}">
                 2A/2B Status:&nbsp;<strong>${frm.doc.reconciliation_status}</strong>
-            </div>`
+            </div>`,
         );
     },
 
@@ -400,13 +400,13 @@ Object.assign(india_compliance, {
         let message_list = [];
         if (invoice_number.length > 16) {
             message_list.push(
-                "Transaction Name must be 16 characters or fewer to meet GST requirements"
+                "Transaction Name must be 16 characters or fewer to meet GST requirements",
             );
         }
 
         if (!GST_INVOICE_NUMBER_FORMAT.test(invoice_number)) {
             message_list.push(
-                "Transaction Name should start with an alphanumeric character and can only contain alphanumeric characters, dash (-) and slash (/) to meet GST requirements."
+                "Transaction Name should start with an alphanumeric character and can only contain alphanumeric characters, dash (-) and slash (/) to meet GST requirements.",
             );
         }
 
@@ -491,7 +491,7 @@ Object.assign(india_compliance, {
         const start_year = 2017;
         const year_range = current_year - start_year + 1;
         const options = Array.from({ length: year_range }, (_, index) =>
-            (start_year + year_range - index - 1).toString()
+            (start_year + year_range - index - 1).toString(),
         );
 
         if (
@@ -568,7 +568,7 @@ Object.assign(india_compliance, {
 
         if (
             !["Material Transfer", "Material Issue", "Send to Subcontractor"].includes(
-                doc.purpose
+                doc.purpose,
             )
         ) {
             return false;

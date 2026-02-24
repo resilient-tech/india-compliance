@@ -28,8 +28,8 @@ Object.assign(reconciliation, {
             if (row.match_status.includes("Missing"))
                 frappe.throw(
                     __(
-                        "You have selected rows where no match is available. Please remove them before unlinking."
-                    )
+                        "You have selected rows where no match is available. Please remove them before unlinking.",
+                    ),
                 );
         });
 
@@ -45,7 +45,7 @@ Object.assign(reconciliation, {
                 !(
                     unlinked_docs.has(row.purchase_invoice_name) ||
                     unlinked_docs.has(row.inward_supply_name)
-                )
+                ),
         );
 
         new_data.push(...r);
@@ -58,7 +58,7 @@ Object.assign(reconciliation, {
         purchase_invoice_name,
         inward_supply_name,
         link_doctype,
-        alert = true
+        alert = true,
     ) {
         if (frm.get_active_tab()?.df.fieldname != "invoice_tab") return;
 
@@ -75,7 +75,7 @@ Object.assign(reconciliation, {
                 !(
                     row.purchase_invoice_name == purchase_invoice_name ||
                     row.inward_supply_name == inward_supply_name
-                )
+                ),
         );
 
         new_data.push(...r);
@@ -100,7 +100,7 @@ Object.assign(reconciliation, {
             "Address",
             { gstin: company_gstin, is_your_company_address: 1 },
             "name",
-            r => (company_address = r.name)
+            r => (company_address = r.name),
         );
 
         frappe.route_hooks.after_load = frm => {

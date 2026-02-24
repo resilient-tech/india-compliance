@@ -16,18 +16,14 @@ from india_compliance.gst_india.utils.gstr_1 import (
     HSN_BIFURCATION_FROM,
     JSON_CATEGORY_EXCEL_CATEGORY_MAPPING,
     QUARTERLY_KEYS,
-)
-from india_compliance.gst_india.utils.gstr_1 import GovExcelField as gov_xl
-from india_compliance.gst_india.utils.gstr_1 import (
     GovExcelSheetName,
     GovJsonKey,
-)
-from india_compliance.gst_india.utils.gstr_1 import GSTR1_DataField as inv_f
-from india_compliance.gst_india.utils.gstr_1 import GSTR1_ItemField as item_f
-from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_SubCategory,
     HSNKey,
 )
+from india_compliance.gst_india.utils.gstr_1 import GovExcelField as gov_xl
+from india_compliance.gst_india.utils.gstr_1 import GSTR1_DataField as inv_f
+from india_compliance.gst_india.utils.gstr_1 import GSTR1_ItemField as item_f
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     convert_to_gov_data_format,
     get_category_wise_data,
@@ -108,11 +104,7 @@ class DataProcessor:
 
         Purpose: Gov Excel format requires each row to have invoice values
         """
-        return [
-            {**invoice, **item}
-            for invoice in invoice_list
-            for item in invoice[inv_f.ITEMS]
-        ]
+        return [{**invoice, **item} for invoice in invoice_list for item in invoice[inv_f.ITEMS]]
 
 
 class GovExcel(DataProcessor):
@@ -165,9 +157,7 @@ class GovExcel(DataProcessor):
         for category, category_data in category_wise_data.items():
             # filter missing in books
             category_wise_data[category] = [
-                row
-                for row in category_data
-                if row.get("upload_status") != "Missing in Books"
+                row for row in category_data if row.get("upload_status") != "Missing in Books"
             ]
 
             if category == GovJsonKey.DOC_ISSUE.value:
@@ -185,13 +175,7 @@ class GovExcel(DataProcessor):
                 if doc.get(inv_f.DOC_TYPE) == "D":
                     continue
 
-                doc.update(
-                    {
-                        key: abs(value)
-                        for key, value in doc.items()
-                        if isinstance(value, (int, float))
-                    }
-                )
+                doc.update({key: abs(value) for key, value in doc.items() if isinstance(value, (int, float))})
 
         self.process_hsn_data(category_wise_data)
 
@@ -811,9 +795,7 @@ class BooksExcel(DataProcessor):
         self.year = year
 
         self.period = get_period(month_or_quarter, year)
-        gstr1_log = frappe.get_doc(
-            "GST Return Log", f"GSTR1-{self.period}-{company_gstin}"
-        )
+        gstr1_log = frappe.get_doc("GST Return Log", f"GSTR1-{self.period}-{company_gstin}")
 
         self.data = self.process_data(gstr1_log.load_data("books")["books"])
 
@@ -831,9 +813,7 @@ class BooksExcel(DataProcessor):
         for category, category_data in category_wise_data.items():
             # filter missing in books
             category_wise_data[category] = [
-                doc
-                for doc in category_data
-                if doc.get("upload_status") != "Missing in Books"
+                doc for doc in category_data if doc.get("upload_status") != "Missing in Books"
             ]
 
             # copy doc value to item fields
@@ -1231,9 +1211,7 @@ class ReconcileExcel:
         self.year = year
 
         self.period = get_period(month_or_quarter, year)
-        gstr1_log = frappe.get_doc(
-            "GST Return Log", f"GSTR1-{self.period}-{company_gstin}"
-        )
+        gstr1_log = frappe.get_doc("GST Return Log", f"GSTR1-{self.period}-{company_gstin}")
 
         self.summary = gstr1_log.load_data("reconcile_summary")["reconcile_summary"]
         data = gstr1_log.load_data("reconcile")["reconcile"]
@@ -1949,9 +1927,9 @@ class ReconcileExcel:
         sgst_key = inv_f.SGST
         cess_key = inv_f.CESS
 
-        row_dict["taxable_value_difference"] = (
-            row_dict.get("books_" + taxable_value_key, 0)
-        ) - (row_dict.get("gstr_1_" + taxable_value_key, 0))
+        row_dict["taxable_value_difference"] = (row_dict.get("books_" + taxable_value_key, 0)) - (
+            row_dict.get("gstr_1_" + taxable_value_key, 0)
+        )
 
         row_dict["tax_difference"] = 0
         for tax_key in [igst_key, cgst_key, sgst_key, cess_key]:

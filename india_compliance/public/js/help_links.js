@@ -45,7 +45,7 @@ frappe.help.help_links["Form/Sales Invoice"].push(
     {
         label: "e-Invoice",
         url: docsUrl + "ewaybill-and-einvoice/generating_e_invoice",
-    }
+    },
 );
 
 //Stock Entry

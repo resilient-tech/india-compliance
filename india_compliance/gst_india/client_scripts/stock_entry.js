@@ -1,5 +1,5 @@
 frappe.provide("india_compliance");
-DOCTYPE = "Stock Entry";
+const DOCTYPE = "Stock Entry";
 
 setup_e_waybill_actions(DOCTYPE);
 
@@ -54,7 +54,7 @@ frappe.ui.form.on(DOCTYPE, {
         on_change_set_address(
             frm,
             "supplier_address",
-            ...get_field_and_label(frm, "party_field")
+            ...get_field_and_label(frm, "party_field"),
         );
     },
 
@@ -79,7 +79,7 @@ frappe.ui.form.on(DOCTYPE, {
                     message: __("Supplier Address is required to create e-Waybill"),
                     indicator: "yellow",
                 },
-                10
+                10,
             );
     },
 
@@ -87,7 +87,7 @@ frappe.ui.form.on(DOCTYPE, {
         on_change_set_address(
             frm,
             "supplier_address",
-            ...get_field_and_label(frm, "party_field")
+            ...get_field_and_label(frm, "party_field"),
         );
     },
 
@@ -97,7 +97,7 @@ frappe.ui.form.on(DOCTYPE, {
             "source_warehouse_address",
             "ship_from_address",
             __("Ship From (same as Source Warehouse Address)"),
-            __("Ship From")
+            __("Ship From"),
         );
     },
 
@@ -107,7 +107,7 @@ frappe.ui.form.on(DOCTYPE, {
             "target_warehouse_address",
             "ship_to_address",
             __("Ship To (same as Target Warehouse Address)"),
-            __("Ship To")
+            __("Ship To"),
         );
     },
 
@@ -122,7 +122,7 @@ frappe.ui.form.on(DOCTYPE, {
                 callback(r) {
                     frm.set_value(
                         get_field_and_label(frm, "company_field")[0],
-                        r.message
+                        r.message,
                     );
                 },
             });
@@ -136,7 +136,7 @@ frappe.ui.form.on(DOCTYPE, {
     async fetch_original_doc_ref(frm) {
         let existing_references = frm.doc.doc_references.map(row => row.link_name);
 
-        data = await frappe.db.get_list(DOCTYPE, {
+        const data = await frappe.db.get_list(DOCTYPE, {
             filters: get_filters_for_relevant_stock_entries(frm.doc),
             group_by: "name",
         });
@@ -168,10 +168,10 @@ function set_address_display_events() {
                     frm,
                     field,
                     field + "_display",
-                    false
+                    false,
                 );
             },
-        ])
+        ]),
     );
 
     frappe.ui.form.on(DOCTYPE, events);

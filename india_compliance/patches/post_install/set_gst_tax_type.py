@@ -36,9 +36,7 @@ def update_documents(taxes_doctype, gst_accounts_by_tax_type):
     conditions = Case()
 
     for gst_tax_account, gst_tax_name in gst_accounts_by_tax_type.items():
-        conditions = conditions.when(
-            taxes_doctype.account_head.isin(gst_tax_name), gst_tax_account
-        )
+        conditions = conditions.when(taxes_doctype.account_head.isin(gst_tax_name), gst_tax_account)
 
     conditions = conditions.else_(None)
 

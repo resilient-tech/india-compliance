@@ -124,12 +124,12 @@ function set_sub_category_options(report) {
     if (invoice_category && INVOICE_TYPE[invoice_category].length === 1) {
         report.set_filter_value(
             "invoice_sub_category",
-            INVOICE_TYPE[invoice_category][0]
+            INVOICE_TYPE[invoice_category][0],
         );
     } else report.refresh();
 }
 
-custom_report_column_total = function (...args) {
+function custom_report_column_total(...args) {
     const summary_by = frappe.query_report.get_filter_value("summary_by");
     if (summary_by !== "Overview")
         return frappe.utils.report_column_total.apply(this, args);
@@ -147,4 +147,4 @@ custom_report_column_total = function (...args) {
     }, 0);
 
     return total;
-};
+}

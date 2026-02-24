@@ -1,10 +1,10 @@
 import frappe
-from frappe.query_builder import Case
-from frappe.query_builder.custom import ConstantColumn
-from frappe.query_builder.functions import Abs, IfNull, Sum
 from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
     get_accounting_dimensions,
 )
+from frappe.query_builder import Case
+from frappe.query_builder.custom import ConstantColumn
+from frappe.query_builder.functions import Abs, IfNull, Sum
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
@@ -260,10 +260,7 @@ class PurchaseInvoice:
         return fields
 
     def get_tax_fields(self):
-        return [
-            self.query_tax_amount(f"{tax_type}_amount").as_(tax_type)
-            for tax_type in GST_TAX_TYPES
-        ]
+        return [self.query_tax_amount(f"{tax_type}_amount").as_(tax_type) for tax_type in GST_TAX_TYPES]
 
     def query_tax_amount(self, field):
         return Abs(Sum(getattr(self.PI_ITEM, field)))

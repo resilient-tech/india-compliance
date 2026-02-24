@@ -22,12 +22,12 @@ frappe.ui.form.on("Bill of Entry", {
                         frm: frm,
                     });
                 },
-                __("Create")
+                __("Create"),
             );
         }
 
         const has_ineligible_items = frm.doc.items.some(
-            item => item.is_ineligible_for_itc
+            item => item.is_ineligible_for_itc,
         );
 
         if (
@@ -42,7 +42,7 @@ frappe.ui.form.on("Bill of Entry", {
                         frm: frm,
                     });
                 },
-                __("Create")
+                __("Create"),
             );
         }
 
@@ -59,7 +59,7 @@ frappe.ui.form.on("Bill of Entry", {
                 };
                 frappe.set_route("query-report", "General Ledger");
             },
-            __("View")
+            __("View"),
         );
     },
 
@@ -104,7 +104,7 @@ frappe.ui.form.on("Bill of Entry", {
                 if (selections.length === 0) {
                     frappe.msgprint(
                         __("Please select at least one Purchase Invoice"),
-                        __("No Selection")
+                        __("No Selection"),
                     );
                     return;
                 }
@@ -190,7 +190,7 @@ class BillOfEntryController {
             cdt,
             cdn,
             "taxable_value",
-            row.assessable_value + row.customs_duty
+            row.assessable_value + row.customs_duty,
         );
         this.update_total_taxable_value();
     }
@@ -200,7 +200,7 @@ class BillOfEntryController {
             "total_taxable_value",
             this.frm.doc.items.reduce((total, row) => {
                 return total + row.taxable_value;
-            }, 0)
+            }, 0),
         );
     }
 
@@ -209,14 +209,14 @@ class BillOfEntryController {
             "total_customs_duty",
             this.frm.doc.items.reduce((total, row) => {
                 return total + row.customs_duty;
-            }, 0)
+            }, 0),
         );
     }
 
     update_total_amount_payable() {
         this.frm.set_value(
             "total_amount_payable",
-            this.frm.doc.total_customs_duty + this.frm.doc.total_taxes
+            this.frm.doc.total_customs_duty + this.frm.doc.total_taxes,
         );
     }
 }

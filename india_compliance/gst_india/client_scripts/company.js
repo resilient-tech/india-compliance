@@ -9,9 +9,9 @@ set_gstin_options_and_status(DOCTYPE);
 
 frappe.ui.form.off(DOCTYPE, "make_default_tax_template");
 frappe.ui.form.on(DOCTYPE, {
-    refresh(frm){
-        frm.fields_dict.bank_details_for_printing.grid.fields_map.print_label.ignore_validation = 1
-        frm.fields_dict.registration_details_for_printing.grid.fields_map.print_label.ignore_validation = 1
+    refresh(frm) {
+        frm.fields_dict.bank_details_for_printing.grid.fields_map.print_label.ignore_validation = 1;
+        frm.fields_dict.registration_details_for_printing.grid.fields_map.print_label.ignore_validation = 1;
     },
     setup(frm) {
         erpnext.company.set_custom_query(frm, [
@@ -22,23 +22,24 @@ frappe.ui.form.on(DOCTYPE, {
             "default_customs_payable_account",
             { root_type: "Liability" },
         ]);
-        erpnext.company.set_custom_query(frm, [
-            "default_gst_expense_account",
-            {},
-        ]);
+        erpnext.company.set_custom_query(frm, ["default_gst_expense_account", {}]);
 
         frm.set_query("print_label", "bank_details_for_printing", (_, cdt, cdn) => {
-            return  {
-                query: "india_compliance.gst_india.overrides.company.get_default_print_options",
-                params : {for_bank : 1}
-            }
-        });
-        frm.set_query("print_label", "registration_details_for_printing", (_, cdt, cdn) => {
             return {
                 query: "india_compliance.gst_india.overrides.company.get_default_print_options",
-                params : {for_bank : 0}
-            }
+                params: { for_bank: 1 },
+            };
         });
+        frm.set_query(
+            "print_label",
+            "registration_details_for_printing",
+            (_, cdt, cdn) => {
+                return {
+                    query: "india_compliance.gst_india.overrides.company.get_default_print_options",
+                    params: { for_bank: 0 },
+                };
+            },
+        );
     },
 
     make_default_tax_template: function (frm) {
@@ -46,7 +47,7 @@ frappe.ui.form.on(DOCTYPE, {
 
         frappe.call({
             method: "india_compliance.gst_india.overrides.company.make_default_tax_templates",
-            args: { company: frm.doc.name, gst_rate: frm.doc.default_gst_rate},
+            args: { company: frm.doc.name, gst_rate: frm.doc.default_gst_rate },
             callback: function () {
                 frappe.msgprint(__("Default Tax Templates created"));
             },

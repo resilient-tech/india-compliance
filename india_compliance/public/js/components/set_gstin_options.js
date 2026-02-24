@@ -3,12 +3,12 @@ frappe.provide("india_compliance");
 india_compliance.set_gstin_options = async function (
     frm,
     show_all_option = false,
-    exclude_isd = false
+    exclude_isd = false,
 ) {
     const { query, params } = india_compliance.get_gstin_query(
         frm.doc.company,
         "Company",
-        exclude_isd
+        exclude_isd,
     );
     const { message } = await frappe.call({
         method: query,

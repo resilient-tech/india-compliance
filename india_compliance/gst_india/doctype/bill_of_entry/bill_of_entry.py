@@ -7,14 +7,14 @@ import json
 from typing import Self
 
 import frappe
+from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_entries
+from erpnext.controllers.accounts_controller import AccountsController
+from erpnext.stock.get_item_details import ItemDetailsCtx, _get_item_tax_template
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 from frappe.query_builder.functions import IfNull, Sum
 from frappe.utils import today
-from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_entries
-from erpnext.controllers.accounts_controller import AccountsController
-from erpnext.stock.get_item_details import ItemDetailsCtx, _get_item_tax_template
 
 from india_compliance.gst_india.overrides.ineligible_itc import (
     update_landed_cost_voucher_for_gst_expense,
@@ -34,9 +34,7 @@ from india_compliance.gst_india.utils.taxes_controller import (
 
 class BillofEntry(Document):
     get_gl_dict = AccountsController.get_gl_dict
-    get_value_in_transaction_currency = (
-        AccountsController.get_value_in_transaction_currency
-    )
+    get_value_in_transaction_currency = AccountsController.get_value_in_transaction_currency
     get_voucher_subtype = AccountsController.get_voucher_subtype
     company_currency = AccountsController.company_currency
 
@@ -94,14 +92,10 @@ class BillofEntry(Document):
 
     # Code adapted from AccountsController.on_trash
     def on_trash(self):
-        if not frappe.db.get_single_value(
-            "Accounts Settings", "delete_linked_ledger_entries"
-        ):
+        if not frappe.db.get_single_value("Accounts Settings", "delete_linked_ledger_entries"):
             return
 
-        frappe.db.delete(
-            "GL Entry", {"voucher_type": self.doctype, "voucher_no": self.name}
-        )
+        frappe.db.delete("GL Entry", {"voucher_type": self.doctype, "voucher_no": self.name})
 
     def set_defaults(self):
         self.set_item_defaults()
@@ -153,9 +147,7 @@ class BillofEntry(Document):
         for invoice in purchase_invoices:
             if invoice.company != self.company:
                 frappe.throw(
-                    _("Company for Purchase Invoice {0} must be {1}").format(
-                        invoice.name, self.company
-                    )
+                    _("Company for Purchase Invoice {0} must be {1}").format(invoice.name, self.company)
                 )
 
             if invoice.company_gstin != self.company_gstin:
@@ -167,9 +159,9 @@ class BillofEntry(Document):
 
             if invoice.docstatus != 1:
                 frappe.throw(
-                    _(
-                        "Purchase Invoice {0} must be submitted when creating a Bill of Entry"
-                    ).format(invoice.name)
+                    _("Purchase Invoice {0} must be submitted when creating a Bill of Entry").format(
+                        invoice.name
+                    )
                 )
 
             if invoice.gst_category != "Overseas":
@@ -188,16 +180,11 @@ class BillofEntry(Document):
 
         for item in self.items:
             if not item.pi_detail:
-                frappe.throw(
-                    _("Row #{0}: Purchase Invoice Item is required").format(item.idx)
-                )
+                frappe.throw(_("Row #{0}: Purchase Invoice Item is required").format(item.idx))
 
             if item.pi_detail not in pi_item_names:
                 frappe.throw(
-                    _(
-                        "Row #{0}: Purchase Invoice Item {1} not found in Purchase"
-                        " Invoice {2}"
-                    ).format(
+                    _("Row #{0}: Purchase Invoice Item {1} not found in Purchase" " Invoice {2}").format(
                         item.idx,
                         frappe.bold(item.pi_detail),
                         frappe.bold(item.purchase_invoice),
@@ -217,10 +204,9 @@ class BillofEntry(Document):
                 input_accounts.cess_non_advol_account,
             ):
                 frappe.throw(
-                    _(
-                        "Row #{0}: Only Input IGST and CESS accounts are allowed in"
-                        " Bill of Entry"
-                    ).format(tax.idx)
+                    _("Row #{0}: Only Input IGST and CESS accounts are allowed in" " Bill of Entry").format(
+                        tax.idx
+                    )
                 )
 
             GSTAccounts.validate_charge_type_for_cess_non_advol_accounts(tax)
@@ -251,9 +237,7 @@ class BillofEntry(Document):
 
             for item, rate in item_wise_tax_rates.items():
                 multiplier = (
-                    item_qty_map.get(item, 0)
-                    if is_non_cess_advol
-                    else taxable_value_map.get(item, 0) / 100
+                    item_qty_map.get(item, 0) if is_non_cess_advol else taxable_value_map.get(item, 0) / 100
                 )
                 total_tax += multiplier * rate
 
@@ -296,17 +280,15 @@ class BillofEntry(Document):
                     # No validation if no taxes in item or item group
                     continue
 
-                taxes = _get_item_tax_template(
-                    item_details, item_taxes + item_group_taxes, for_validate=True
-                )
+                taxes = _get_item_tax_template(item_details, item_taxes + item_group_taxes, for_validate=True)
 
                 if taxes:
                     if item.item_tax_template not in taxes:
                         item.item_tax_template = taxes[0]
                         frappe.msgprint(
-                            _(
-                                "Row {0}: Item Tax template updated as per validity and rate applied"
-                            ).format(item.idx, frappe.bold(item.item_code))
+                            _("Row {0}: Item Tax template updated as per validity and rate applied").format(
+                                item.idx, frappe.bold(item.item_code)
+                            )
                         )
 
     def get_gl_entries(self):
@@ -361,9 +343,7 @@ class BillofEntry(Document):
             return
 
         frappe.throw(
-            _("Row #{0}: Account {1} must be of INR currency").format(
-                self.idx, frappe.bold(account)
-            )
+            _("Row #{0}: Account {1} must be of INR currency").format(self.idx, frappe.bold(account))
         )
 
     def get_stock_items(self):
@@ -401,9 +381,7 @@ class BillofEntry(Document):
         frappe.has_permission("Bill Of Entry", "write", throw=True)
         frappe.has_permission("Purchase Invoice", "read", throw=True)
 
-        existing_items = [
-            item.pi_detail for item in self.get("items") if item.pi_detail
-        ]
+        existing_items = [item.pi_detail for item in self.get("items") if item.pi_detail]
         item_to_add = get_pi_items(purchase_invoices)
 
         if not existing_items:
@@ -429,11 +407,7 @@ class BillofEntry(Document):
 
         for item in self.items:
             if item.qty > pi_qty_map.get(item.pi_detail):
-                frappe.throw(
-                    _("Quantity of {0} is more than it's pending qty").format(
-                        item.item_code
-                    )
-                )
+                frappe.throw(_("Quantity of {0} is more than it's pending qty").format(item.item_code))
 
     def update_pending_boe_qty(self):
         pi_item_names = [item.pi_detail for item in self.items]
@@ -494,9 +468,7 @@ def set_missing_values(source, target=None):
     )
 
     if not has_igst_tax:
-        valid_tax_row = {
-            tax_row.account_head for tax_row in target.taxes if tax_row.account_head
-        }
+        valid_tax_row = {tax_row.account_head for tax_row in target.taxes if tax_row.account_head}
         if not valid_tax_row:
             target.taxes = []
 
@@ -649,12 +621,7 @@ def make_landed_cost_voucher(source_name: str, target_doc: str | None = None):
         )
 
         if total_customs_duty != source.total_customs_duty:
-            frappe.msgprint(
-                _(
-                    "Could not find purchase receipts for all items. Please check"
-                    " manually."
-                )
-            )
+            frappe.msgprint(_("Could not find purchase receipts for all items. Please check" " manually."))
 
         update_landed_cost_voucher_for_gst_expense(source, target)
 
@@ -727,9 +694,7 @@ def get_items_for_landed_cost_voucher(boe):
             item_qty_map = {item.name: item.qty for item in pi._items}
 
             for pr_item in pr_items:
-                customs_duty_for_item = item_customs_map.get(
-                    pr_item.purchase_invoice_item
-                )
+                customs_duty_for_item = item_customs_map.get(pr_item.purchase_invoice_item)
                 total_qty = item_qty_map.get(pr_item.purchase_invoice_item)
                 pr_item.customs_duty = customs_duty_for_item * pr_item.qty / total_qty
                 pr_item.boe_detail = item_name_map.get(pr_item.purchase_invoice_item)
@@ -756,9 +721,7 @@ def get_purchase_invoice_details(boe):
     )
 
     # items
-    pi_items = frappe.get_all(
-        "Purchase Invoice Item", filters={"name": ["in", pi_item_names]}, fields=["*"]
-    )
+    pi_items = frappe.get_all("Purchase Invoice Item", filters={"name": ["in", pi_item_names]}, fields=["*"])
 
     # build doc
     pi_details = {}

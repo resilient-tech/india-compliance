@@ -40,9 +40,7 @@ from india_compliance.gst_india.utils.transaction_data import (
 def onload(doc, method=None):
     if not doc.get("ewaybill"):
         if doc.gst_category == "Overseas" and is_e_waybill_applicable(doc):
-            doc.set_onload(
-                "shipping_address_in_india", is_shipping_address_in_india(doc)
-            )
+            doc.set_onload("shipping_address_in_india", is_shipping_address_in_india(doc))
 
         if not doc.get("irn"):
             return
@@ -52,18 +50,10 @@ def onload(doc, method=None):
     if not is_api_enabled(gst_settings):
         return
 
-    if (
-        gst_settings.enable_e_waybill
-        and doc.ewaybill
-        and (e_waybill_info := get_e_waybill_info(doc))
-    ):
+    if gst_settings.enable_e_waybill and doc.ewaybill and (e_waybill_info := get_e_waybill_info(doc)):
         doc.set_onload("e_waybill_info", e_waybill_info)
 
-    if (
-        gst_settings.enable_e_invoice
-        and doc.irn
-        and (e_invoice_info := get_e_invoice_info(doc))
-    ):
+    if gst_settings.enable_e_invoice and doc.irn and (e_invoice_info := get_e_invoice_info(doc)):
         doc.set_onload("e_invoice_info", e_invoice_info)
 
 
@@ -224,21 +214,15 @@ def before_cancel(doc, method=None):
         return
 
     for reference in payment_references:
-        reverse_gst_adjusted_against_payment_entry(
-            reference.voucher_detail_no, reference.payment_name
-        )
+        reverse_gst_adjusted_against_payment_entry(reference.voucher_detail_no, reference.payment_name)
 
 
 def validate_cancellation_based_on_e_invoice(doc):
     if not doc.irn:
         return
 
-    cannot_be_cancelled = (
-        validate_if_e_invoice_can_be_cancelled(doc, throw=False) is False
-    )
-    restrict_cancel = frappe.db.get_single_value(
-        "GST Settings", "restrict_cancel_if_e_invoice_final"
-    )
+    cannot_be_cancelled = validate_if_e_invoice_can_be_cancelled(doc, throw=False) is False
+    restrict_cancel = frappe.db.get_single_value("GST Settings", "restrict_cancel_if_e_invoice_final")
 
     if cannot_be_cancelled and restrict_cancel:
         frappe.throw(
@@ -349,20 +333,15 @@ def set_and_validate_advances_with_gst(doc):
         if not advance.allocated_amount:
             continue
 
-        tax_row = taxes.get(
-            advance.reference_name, frappe._dict(paid_amount=1, tax_amount=0)
-        )
+        tax_row = taxes.get(advance.reference_name, frappe._dict(paid_amount=1, tax_amount=0))
 
-        _tax_amount = flt(
-            advance.allocated_amount / tax_row.paid_amount * tax_row.tax_amount, 2
-        )
+        _tax_amount = flt(advance.allocated_amount / tax_row.paid_amount * tax_row.tax_amount, 2)
         tax_amount += _tax_amount
         allocated_amount_with_taxes += _tax_amount
         allocated_amount_with_taxes += advance.allocated_amount
 
     excess_allocation = flt(
-        flt(allocated_amount_with_taxes, 2)
-        - (doc.base_rounded_total or doc.base_grand_total),
+        flt(allocated_amount_with_taxes, 2) - (doc.base_rounded_total or doc.base_grand_total),
         2,
     )
     if excess_allocation > 0:
@@ -372,7 +351,9 @@ def set_and_validate_advances_with_gst(doc):
         ).format(bold(fmt_money(excess_allocation, currency=doc.currency)))
 
         if excess_allocation < 1:
-            message += "<br><br>Is it becasue of Rounding Adjustment? Try disabling Rounded Total in the document."
+            message += (
+                "<br><br>Is it becasue of Rounding Adjustment? Try disabling Rounded Total in the document."
+            )
 
         frappe.throw(message, title=_("Invalid Allocated Amount"))
 

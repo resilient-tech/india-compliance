@@ -6,9 +6,8 @@ from __future__ import annotations
 import random
 from typing import Self
 
-import requests
-
 import frappe
+import requests
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import now

@@ -56,10 +56,7 @@ def validate_gst_transporter_id(doc):
 
     if not REGISTERED.match(doc.gst_transporter_id):
         frappe.throw(
-            _(
-                "The GST Transporter ID you've entered doesn't match the required"
-                " format"
-            ),
+            _("The GST Transporter ID you've entered doesn't match the required" " format"),
             title=_("Invalid GST Transporter ID"),
         )
 

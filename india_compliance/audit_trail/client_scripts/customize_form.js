@@ -14,7 +14,7 @@ frappe.ui.form.on("Customize Form", {
             "description",
             audit_trail_enabled
                 ? __("This setting cannot be edited to ensure Audit Trail integrity.")
-                : ""
+                : "",
         );
     },
 });

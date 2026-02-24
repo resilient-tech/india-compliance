@@ -31,13 +31,13 @@ frappe.ui.form.on("GST Return Log", {
                         file_name: `${field}.json.gz`,
                     };
                     open_url_post(frappe.request.url, args);
-                }
+                },
             );
         });
     },
     refresh(frm) {
         const [month_or_quarter, year] = india_compliance.get_month_year_from_period(
-            frm.doc.return_period
+            frm.doc.return_period,
         );
 
         if (frm.doc.return_type !== "GSTR1") return;

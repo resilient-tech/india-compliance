@@ -56,7 +56,7 @@ async function add_gstr2b_alert(frm) {
                 ReturnType.GSTR2B,
                 frm.doc.company_gstin,
                 null,
-                true
+                true,
             );
             remove_gstr2b_alert(existing_alert);
         });
@@ -75,7 +75,7 @@ frappe.ui.form.on(DOCTYPE, {
         frm.reconciliation_tabs = new PurchaseReconciliationTool(
             frm,
             ["invoice", "supplier", "summary"],
-            "reconciliation_html"
+            "reconciliation_html",
         );
 
         frm.events.handle_download_message(frm);
@@ -107,7 +107,7 @@ frappe.ui.form.on(DOCTYPE, {
         await fetch_date_range(
             frm,
             "inward_supply",
-            "get_date_range_and_check_missing_documents"
+            "get_date_range_and_check_missing_documents",
         );
         add_gstr2b_alert(frm);
     },
@@ -123,7 +123,7 @@ frappe.ui.form.on(DOCTYPE, {
         await fetch_date_range(
             frm,
             "inward_supply",
-            "get_date_range_and_check_missing_documents"
+            "get_date_range_and_check_missing_documents",
         );
         set_date_range_description(frm, "inward_supply");
         add_gstr2b_alert(frm);
@@ -140,7 +140,7 @@ frappe.ui.form.on(DOCTYPE, {
                 () =>
                     frm.events.update_progress(
                         frm,
-                        "update_2a_2b_transactions_progress"
+                        "update_2a_2b_transactions_progress",
                     ),
             ]);
         } else if (type == "upload") {
@@ -161,7 +161,7 @@ frappe.ui.form.on(DOCTYPE, {
             frm.dashboard.show_progress(
                 "Import GSTR Progress",
                 current_progress,
-                message
+                message,
             );
             if (data.is_last_period) {
                 frm.flag_last_return_period = data.return_period;
@@ -198,7 +198,7 @@ frappe.ui.form.on(DOCTYPE, {
                 frappe.show_alert({
                     message: __(
                         "GSTR 2B download for period {0} is in progress, due to pending regeneration.",
-                        [args.return_period]
+                        [args.return_period],
                     ),
                     indicator: "orange",
                 });
@@ -226,7 +226,7 @@ frappe.ui.form.on(DOCTYPE, {
                 null,
                 ReturnType.GSTR2B,
                 args.gstin,
-                args.return_period
+                args.return_period,
             );
         }
     },
@@ -329,7 +329,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 fieldname: "purchase_doctype",
                 fieldtype: "Select",
                 options: ["Purchase Invoice", "Bill of Entry"],
-            }
+            },
         );
 
         fields.forEach(field => (field.parent = DOCTYPE));
@@ -344,7 +344,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
             function (e) {
                 const row = me.mapped_invoice_data[$(this).attr("data-name")];
                 me.dm = new DetailViewDialog(me.frm, row);
-            }
+            },
         );
 
         this.tabs.supplier_tab.datatable.$datatable.on(
@@ -352,10 +352,10 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
             ".btn.download",
             function (e) {
                 const row = me.tabs.supplier_tab.datatable.data.find(
-                    r => r.supplier_gstin === $(this).attr("data-name")
+                    r => r.supplier_gstin === $(this).attr("data-name"),
                 );
                 me.frm.reco_tool_actions.export_data(row);
-            }
+            },
         );
 
         this.tabs.supplier_tab.datatable.$datatable.on(
@@ -363,10 +363,10 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
             ".btn.envelope",
             function (e) {
                 const row = me.tabs.supplier_tab.datatable.data.find(
-                    r => r.supplier_gstin === $(this).attr("data-name")
+                    r => r.supplier_gstin === $(this).attr("data-name"),
                 );
                 me.dm = new EmailDialog(me.frm, row);
-            }
+            },
         );
 
         const filter_map = {
@@ -395,7 +395,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                             $(this).text().trim(),
                         ]);
                         me.filter_group.apply();
-                    }
+                    },
                 );
             });
         });
@@ -500,7 +500,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                     return (
                         roundNumber(
                             (args[2].action_taken_count / args[2].total_docs) * 100,
-                            2
+                            2,
                         ) + " %"
                     );
                 },
@@ -578,7 +578,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                     return (
                         roundNumber(
                             (args[2].action_taken_count / args[2].total_docs) * 100,
-                            2
+                            2,
                         ) + " %"
                     );
                 },
@@ -706,7 +706,7 @@ class PurchaseReconciliationToolAction {
         this.frm.page.set_primary_action(__("Generate"), async () => {
             if (!this.frm.doc.company && !this.frm.doc.company_gstin) {
                 frappe.throw(
-                    __("Please provide either a Company name or Company GSTIN.")
+                    __("Please provide either a Company name or Company GSTIN."),
                 );
             }
 
@@ -717,11 +717,11 @@ class PurchaseReconciliationToolAction {
         api_enabled
             ? this.frm.add_custom_button(
                   __("Download 2A/2B"),
-                  () => new ImportDialog(this.frm)
+                  () => new ImportDialog(this.frm),
               )
             : this.frm.add_custom_button(
                   __("Upload 2A/2B"),
-                  () => new ImportDialog(this.frm, false)
+                  () => new ImportDialog(this.frm, false),
               );
 
         // Export button
@@ -736,7 +736,7 @@ class PurchaseReconciliationToolAction {
             this.frm.add_custom_button(
                 __("Unlink"),
                 () => reconciliation.unlink_documents(this.frm),
-                action_group
+                action_group,
             );
             this.frm.add_custom_button(__("dropdown-divider"), () => {}, action_group);
         }
@@ -746,8 +746,8 @@ class PurchaseReconciliationToolAction {
             this.frm.add_custom_button(
                 __(action),
                 () => apply_action(this.frm, action),
-                action_group
-            )
+                action_group,
+            ),
         );
 
         // Add Dropdown Divider to differentiate between Actions
@@ -817,14 +817,14 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
                 this.data.purchase_invoice_name,
                 this.data.inward_supply_name,
                 this.data.purchase_doctype,
-                true
+                true,
             );
         } else if (action == "Create") {
             reconciliation.create_new_purchase_invoice(
                 this.data,
                 this.frm.doc.company,
                 this.frm.doc.company_gstin,
-                DOCTYPE
+                DOCTYPE,
             );
         } else {
             apply_action(this.frm, action, [this.row]);
@@ -955,8 +955,8 @@ class ImportDialog {
                 if (!period)
                     frappe.throw(
                         __(
-                            "Could not fetch period from file, make sure you have selected the correct file!"
-                        )
+                            "Could not fetch period from file, make sure you have selected the correct file!",
+                        ),
                     );
                 this.upload_gstr(period, file_path);
                 this.dialog.hide();
@@ -966,7 +966,7 @@ class ImportDialog {
 
     download_gstr_by_category(only_missing) {
         const marked_gst_categories = GST_CATEGORIES.filter(
-            category => this.dialog.fields_dict[category].value === 1
+            category => this.dialog.fields_dict[category].value === 1,
         );
         if (marked_gst_categories.length === 0) {
             frappe.throw(__("Please select at least one Category to Download"));
@@ -978,7 +978,7 @@ class ImportDialog {
             this.company_gstin,
             null,
             only_missing,
-            marked_gst_categories
+            marked_gst_categories,
         );
         this.dialog.hide();
     }
@@ -999,7 +999,7 @@ class ImportDialog {
             this.return_type,
             this.company_gstin,
             null,
-            only_missing
+            only_missing,
         );
 
         this.dialog.hide();
@@ -1027,7 +1027,7 @@ class ImportDialog {
         // render html
         let pending_download = { columns: ["Period", "GSTIN"], data: _pending };
         this.dialog.fields_dict.pending_download.html(
-            frappe.render_template("gstr_download_history", pending_download)
+            frappe.render_template("gstr_download_history", pending_download),
         );
 
         let download_history = { columns: ["Period", "Downloaded On"], data: _history };
@@ -1054,8 +1054,8 @@ class ImportDialog {
             frappe.throw(
                 __(
                     "Please make sure you have uploaded the correct file. File Uploaded is not for {0}",
-                    [this.return_type]
-                )
+                    [this.return_type],
+                ),
             );
         }
 
@@ -1206,7 +1206,7 @@ async function download_gstr(
     company_gstin,
     return_period,
     only_missing = true,
-    gst_categories = null
+    gst_categories = null,
 ) {
     let company_gstins;
     if (company_gstin == "All")
@@ -1399,8 +1399,8 @@ function apply_action(frm, action, selected_rows) {
         if (warn)
             frappe.msgprint(
                 __(
-                    "You can only Accept values where a match is available. Rows where match is missing will be ignored."
-                )
+                    "You can only Accept values where a match is available. Rows where match is missing will be ignored.",
+                ),
             );
     } else if (action == "Ignore") {
         let warn = false;
@@ -1415,8 +1415,8 @@ function apply_action(frm, action, selected_rows) {
         if (warn)
             frappe.msgprint(
                 __(
-                    "You can only apply <strong>Ignore</strong> action on rows where data is Missing in 2A/2B or Missing in PI. These rows will be ignored."
-                )
+                    "You can only apply <strong>Ignore</strong> action on rows where data is Missing in 2A/2B or Missing in PI. These rows will be ignored.",
+                ),
             );
     } else if (action == "Pending") {
         let warn = false;
@@ -1431,8 +1431,8 @@ function apply_action(frm, action, selected_rows) {
         if (warn)
             frappe.msgprint(
                 __(
-                    "You cannot apply <strong>Pending</strong> action on rows where data is Missing in 2A/2B. These rows will be ignored."
-                )
+                    "You cannot apply <strong>Pending</strong> action on rows where data is Missing in 2A/2B. These rows will be ignored.",
+                ),
             );
     }
 
@@ -1460,12 +1460,13 @@ function get_affected_rows(tab, selection, data) {
     if (tab == "supplier_tab")
         return data.filter(
             inv =>
-                selection.filter(row => row.supplier_gstin == inv.supplier_gstin).length
+                selection.filter(row => row.supplier_gstin == inv.supplier_gstin)
+                    .length,
         );
 
     if (tab == "summary_tab")
         return data.filter(
-            inv => selection.filter(row => row.match_status == inv.match_status).length
+            inv => selection.filter(row => row.match_status == inv.match_status).length,
         );
 }
 

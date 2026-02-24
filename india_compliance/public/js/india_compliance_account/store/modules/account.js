@@ -59,7 +59,7 @@ export default {
 
             const response = await create_order(
                 orderDetails.credits,
-                orderDetails.grandTotal
+                orderDetails.grandTotal,
             );
 
             if (response.invalid_token) {
@@ -79,9 +79,8 @@ export default {
         },
 
         setMessage({ commit }, { message, color }) {
-            commit("SET_MESSAGE",{ message, color});
-        }
-
+            commit("SET_MESSAGE", { message, color });
+        },
     },
 
     getters: {},

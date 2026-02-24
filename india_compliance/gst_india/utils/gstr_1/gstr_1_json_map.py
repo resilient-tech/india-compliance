@@ -16,18 +16,14 @@ from india_compliance.gst_india.utils.gstr_1 import (
     SUB_CATEGORY_GOV_CATEGORY_MAPPING,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
-)
-from india_compliance.gst_india.utils.gstr_1 import GovDataField as gov_f
-from india_compliance.gst_india.utils.gstr_1 import (
     GovJsonKey,
     GSTR1_B2B_InvoiceType,
     GSTR1_Category,
-)
-from india_compliance.gst_india.utils.gstr_1 import GSTR1_DataField as inv_f
-from india_compliance.gst_india.utils.gstr_1 import GSTR1_ItemField as item_f
-from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_SubCategory,
 )
+from india_compliance.gst_india.utils.gstr_1 import GovDataField as gov_f
+from india_compliance.gst_india.utils.gstr_1 import GSTR1_DataField as inv_f
+from india_compliance.gst_india.utils.gstr_1 import GSTR1_ItemField as item_f
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import (
     GSTR1DocumentIssuedSummary,
     GSTR1Invoices,
@@ -103,9 +99,7 @@ class GSTR1DataMapper(GovDataMapper):
         if party := self.gstin_party_map.get(gstin):
             return party
 
-        return self.gstin_party_map.setdefault(
-            gstin, get_party_for_gstin(gstin, "Customer") or "Unknown"
-        )
+        return self.gstin_party_map.setdefault(gstin, get_party_for_gstin(gstin, "Customer") or "Unknown")
 
     def format_date_for_internal(self, date, *args):
         return datetime.strptime(date, "%d-%m-%Y").strftime("%Y-%m-%d")
@@ -254,9 +248,7 @@ class B2B(GSTR1DataMapper):
                 invoice_data = self.format_data(invoice, default_invoice_data)
                 self.update_totals(invoice_data, invoice_data.get(inv_f.ITEMS))
 
-                subcategory_data = output.setdefault(
-                    self.get_document_subcategory(invoice), {}
-                )
+                subcategory_data = output.setdefault(self.get_document_subcategory(invoice), {})
                 subcategory_data[invoice_data[inv_f.DOC_NUMBER]] = invoice_data
 
         return output
@@ -515,9 +507,7 @@ class Exports(GSTR1DataMapper):
 
         for export_category in input_data:
             document_type = export_category.get(gov_f.EXPORT_TYPE)
-            subcategory_data = output.setdefault(
-                self.SUBCATEGORIES.get(document_type, document_type), {}
-            )
+            subcategory_data = output.setdefault(self.SUBCATEGORIES.get(document_type, document_type), {})
 
             default_invoice_data = {
                 inv_f.DOC_TYPE: document_type,
@@ -532,9 +522,7 @@ class Exports(GSTR1DataMapper):
                     invoice_level_data,
                     invoice_level_data.get(inv_f.ITEMS),
                 )
-                subcategory_data[invoice_level_data[inv_f.DOC_NUMBER]] = (
-                    invoice_level_data
-                )
+                subcategory_data[invoice_level_data[inv_f.DOC_NUMBER]] = invoice_level_data
 
         return output
 
@@ -550,9 +538,7 @@ class Exports(GSTR1DataMapper):
                 },
             )
 
-            export_category[gov_f.INVOICES].append(
-                self.format_data(invoice, for_gov=True)
-            )
+            export_category[gov_f.INVOICES].append(self.format_data(invoice, for_gov=True))
 
         return list(export_category_wise_data.values())
 
@@ -659,9 +645,7 @@ class B2CS(GSTR1DataMapper):
         if not for_gov:
             return data
 
-        data[gov_f.SUPPLY_TYPE] = (
-            "INTRA" if data[gov_f.POS] == self.company_gstin[:2] else "INTER"
-        )
+        data[gov_f.SUPPLY_TYPE] = "INTRA" if data[gov_f.POS] == self.company_gstin[:2] else "INTER"
         return data
 
 
@@ -715,9 +699,7 @@ class NilRated(GSTR1DataMapper):
     def __init__(self):
         super().__init__()
 
-        self.value_formatters_for_internal = {
-            gov_f.SUPPLY_TYPE: self.document_category_mapping
-        }
+        self.value_formatters_for_internal = {gov_f.SUPPLY_TYPE: self.document_category_mapping}
         self.value_formatters_for_gov = {inv_f.DOC_TYPE: self.document_category_mapping}
 
     def convert_to_internal_data_format(self, input_data):
@@ -741,11 +723,7 @@ class NilRated(GSTR1DataMapper):
     def convert_to_gov_data_format(self, input_data, **kwargs):
         self.DOCUMENT_CATEGORIES = self.reverse_dict(self.DOCUMENT_CATEGORIES)
 
-        return {
-            gov_f.INVOICES: [
-                self.format_data(invoice, for_gov=True) for invoice in input_data
-            ]
-        }
+        return {gov_f.INVOICES: [self.format_data(invoice, for_gov=True) for invoice in input_data]}
 
     def format_data(self, data, default_data=None, for_gov=False):
         invoice_data = super().format_data(data, default_data, for_gov)
@@ -912,9 +890,7 @@ class CDNR(GSTR1DataMapper):
                     gov_f.NOTE_DETAILS: [],
                 },
             )
-            customer[gov_f.NOTE_DETAILS].append(
-                self.format_data(document, for_gov=True)
-            )
+            customer[gov_f.NOTE_DETAILS].append(self.format_data(document, for_gov=True))
 
         return list(customer_data.values())
 
@@ -1099,11 +1075,7 @@ class CDNUR(GSTR1DataMapper):
         return value * -1 if data[gov_f.NOTE_TYPE] == "C" else value
 
     def ignore_pos_if_export(self, _, *args):
-        if (
-            args
-            and isinstance(args[0], dict)
-            and args[0].get(inv_f.DOC_TYPE) in ("EXPWP", "EXPWOP")
-        ):
+        if args and isinstance(args[0], dict) and args[0].get(inv_f.DOC_TYPE) in ("EXPWP", "EXPWOP"):
             return True
 
         return False
@@ -1198,9 +1170,7 @@ class HSNSUM(GSTR1DataMapper):
 
                 document_type = self.DOCUMENT_CATEGORIES.get(section, section)
 
-                formatted_invoices = self.get_formatted_invoices(
-                    invoices, document_type, default_data
-                )
+                formatted_invoices = self.get_formatted_invoices(invoices, document_type, default_data)
 
                 # This is required due to different format of error JSON
                 if output.get(document_type):
@@ -1267,9 +1237,7 @@ class HSNSUM(GSTR1DataMapper):
             2,
         )
 
-        if (message := data.get(inv_f.ERROR_MSG, "").strip()) and (
-            hsn_code := data.get(inv_f.HSN_CODE)
-        ):
+        if (message := data.get(inv_f.ERROR_MSG, "").strip()) and (hsn_code := data.get(inv_f.HSN_CODE)):
             data[inv_f.ERROR_MSG] = f"HSN Code: {hsn_code} - {message}"
 
         return data
@@ -1278,11 +1246,7 @@ class HSNSUM(GSTR1DataMapper):
         uom = uom.upper()
 
         if "-" in uom:
-            if (
-                data
-                and (hsn_code := data.get(inv_f.HSN_CODE) or "")
-                and hsn_code.startswith("99")
-            ):
+            if data and (hsn_code := data.get(inv_f.HSN_CODE) or "") and hsn_code.startswith("99"):
                 return "NA"
 
             return uom.split("-")[0]
@@ -1447,9 +1411,7 @@ class AT(GSTR1DataMapper):
         if not for_gov:
             return data
 
-        data[gov_f.SUPPLY_TYPE] = (
-            "INTRA" if data[gov_f.POS] == self.company_gstin[:2] else "INTER"
-        )
+        data[gov_f.SUPPLY_TYPE] = "INTRA" if data[gov_f.POS] == self.company_gstin[:2] else "INTER"
         return data
 
     def format_item_for_internal(self, items, *args):
@@ -1538,14 +1500,12 @@ class DOC_ISSUE(GSTR1DataMapper):
         output = {}
 
         for document in input_data[gov_f.DOC_ISSUE_DETAILS]:
-            document_nature = self.get_document_nature(
-                document.get(gov_f.DOC_ISSUE_NUMBER, "")
-            )
+            document_nature = self.get_document_nature(document.get(gov_f.DOC_ISSUE_NUMBER, ""))
             output.update(
                 {
-                    " - ".join(
-                        (document_nature, doc.get(gov_f.FROM_SR))
-                    ): self.format_data(doc, {inv_f.DOC_TYPE: document_nature})
+                    " - ".join((document_nature, doc.get(gov_f.FROM_SR))): self.format_data(
+                        doc, {inv_f.DOC_TYPE: document_nature}
+                    )
                     for doc in document[gov_f.DOC_ISSUE_LIST]
                 }
             )
@@ -1670,9 +1630,9 @@ class SUPECOM(GSTR1DataMapper):
 
         for invoice in input_data:
             section = invoice[inv_f.DOC_TYPE]
-            output.setdefault(
-                self.DOCUMENT_CATEGORIES.get(section, section), []
-            ).append(self.format_data(invoice, for_gov=True))
+            output.setdefault(self.DOCUMENT_CATEGORIES.get(section, section), []).append(
+                self.format_data(invoice, for_gov=True)
+            )
         return output
 
 
@@ -1790,9 +1750,7 @@ class RETSUM(GSTR1DataMapper):
 
         for section_data in input_data:
             section = section_data.get("sec_nm")
-            output[self.SECTION_NAMES.get(section, section)] = self.format_data(
-                section_data
-            )
+            output[self.SECTION_NAMES.get(section, section)] = self.format_data(section_data)
 
             if section not in self.SECTIONS_WITH_SUBSECTIONS:
                 continue
@@ -1856,9 +1814,7 @@ def convert_to_internal_data_format(gov_data, for_errors=False):
         if not gov_data.get(category):
             continue
 
-        output.update(
-            mapper_class().convert_to_internal_data_format(gov_data.get(category))
-        )
+        output.update(mapper_class().convert_to_internal_data_format(gov_data.get(category)))
 
     if not for_errors:
         return output
@@ -1986,15 +1942,10 @@ def summarize_retsum_data(input_data):
                     **input_data.get(sub_category),
                     "indent": 1,
                     "consider_in_total_taxable_value": (
-                        False
-                        if sub_category
-                        in SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE
-                        else True
+                        False if sub_category in SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE else True
                     ),
                     "consider_in_total_tax": (
-                        False
-                        if sub_category in SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX
-                        else True
+                        False if sub_category in SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX else True
                     ),
                 }
             )
@@ -2031,9 +1982,7 @@ class BooksDataMapper:
         else:
             return "Invoice"
 
-    def get_category_from_subcategory(
-        self, invoice_sub_category: str
-    ) -> GSTR1_Category:
+    def get_category_from_subcategory(self, invoice_sub_category: str) -> GSTR1_Category:
         invoice_sub_category = GSTR1_SubCategory(invoice_sub_category)
         for category, sub_category in CATEGORY_SUB_CATEGORY_MAPPING.items():
             if invoice_sub_category in sub_category:
@@ -2331,9 +2280,7 @@ class BooksDataMapper:
             inv_f.NET_ISSUE: row["total_submitted"],
         }
 
-    def process_data_for_advances_received_or_adjusted(
-        self, row, prepared_data, multiplier=1
-    ):
+    def process_data_for_advances_received_or_adjusted(self, row, prepared_data, multiplier=1):
         advances = {}
         tax_rate = round(((row["tax_amount"] / row["taxable_value"]) * 100))
         key = f"{row['place_of_supply']} - {flt(tax_rate)}"
@@ -2396,9 +2343,7 @@ class BooksDataMapper:
             self.rounding_difference[key] = flt(value, precision)
 
         # saved as object -> it's normalized
-        prepared_data["rounding_difference"] = {
-            "rounding_difference": self.rounding_difference
-        }
+        prepared_data["rounding_difference"] = {"rounding_difference": self.rounding_difference}
 
     def adjust_hsn_totals(self, sub_category, sub_category_dict):
         expected_totals = self.invoice_totals.get(sub_category)
@@ -2441,8 +2386,8 @@ class GSTR1BooksData(BooksDataMapper):
         # initialize rounding difference and hsn error
         self.initialize_totals()
 
-        data_for_hsn, data_for_invoice_no_key, data_for_nil_exempt, data_for_b2cs = (
-            self.get_structured_data(data)
+        data_for_hsn, data_for_invoice_no_key, data_for_nil_exempt, data_for_b2cs = self.get_structured_data(
+            data
         )
 
         self.process_data_for_invoice_no_key(data_for_invoice_no_key, prepared_data)
@@ -2565,9 +2510,7 @@ class GSTR1BooksData(BooksDataMapper):
         data = query.run(as_dict=True)
 
         for row in data:
-            self.process_data_for_advances_received_or_adjusted(
-                row, advances_data, multipler
-            )
+            self.process_data_for_advances_received_or_adjusted(row, advances_data, multipler)
 
         return advances_data
 
@@ -2596,9 +2539,7 @@ class GSTR1BooksData(BooksDataMapper):
 
         included_docs = self.get_already_filed_docs(m1_m2_subcategories)
 
-        categories_to_process = [
-            cat for cat in data.keys() if cat in m1_m2_subcategories
-        ]
+        categories_to_process = [cat for cat in data.keys() if cat in m1_m2_subcategories]
 
         if not categories_to_process:
             return

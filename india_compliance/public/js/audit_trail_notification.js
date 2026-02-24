@@ -1,4 +1,4 @@
-$(document).on("app_ready", async function() {
+$(document).on("app_ready", async function () {
     if (!frappe.boot.needs_audit_trail_notification) return;
 
     // let other processes finish
@@ -35,7 +35,7 @@ $(document).on("app_ready", async function() {
             </ul>
 
 
-            Would you like to enable the same?`
+            Would you like to enable the same?`,
         ),
     });
 
@@ -62,6 +62,8 @@ $(document).on("app_ready", async function() {
     });
 
     d.onhide = () => {
-        frappe.xcall("india_compliance.audit_trail.utils.disable_audit_trail_notification");
+        frappe.xcall(
+            "india_compliance.audit_trail.utils.disable_audit_trail_notification",
+        );
     };
 });

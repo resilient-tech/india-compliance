@@ -14,11 +14,7 @@ class PublicAPI(BaseAPI):
 
     def setup(self, doc=None):
         if self.sandbox_mode:
-            frappe.throw(
-                _(
-                    "Autofill Party Information based on GSTIN is not supported in sandbox mode"
-                )
-            )
+            frappe.throw(_("Autofill Party Information based on GSTIN is not supported in sandbox mode"))
 
         if doc:
             self.default_log_values.update(
@@ -42,9 +38,7 @@ class PublicAPI(BaseAPI):
         return response
 
     def get_returns_info(self, gstin, fy):
-        return self.get(
-            "returns", params={"action": "RETTRACK", "gstin": gstin, "fy": fy}
-        )
+        return self.get("returns", params={"action": "RETTRACK", "gstin": gstin, "fy": fy})
 
     def is_ignored_error(self, response_json):
         error_code = response_json.get("errorCode", "").strip()

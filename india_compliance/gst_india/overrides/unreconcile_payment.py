@@ -19,9 +19,7 @@ def before_submit(doc, method=None):
         )
 
         for voucher_detail_no in voucher_detail_nos:
-            reverse_gst_adjusted_against_payment_entry(
-                voucher_detail_no, doc.voucher_no
-            )
+            reverse_gst_adjusted_against_payment_entry(voucher_detail_no, doc.voucher_no)
 
 
 def reverse_gst_adjusted_against_payment_entry(voucher_detail_no, payment_name):

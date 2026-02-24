@@ -5,9 +5,7 @@ from frappe.utils import add_days, nowdate
 
 def execute():
     # check if e-waybill is enabled
-    e_waybill_enabled = frappe.db.get_value(
-        "Sales Invoice", {"ewaybill": ["is", "set"]}
-    )
+    e_waybill_enabled = frappe.db.get_value("Sales Invoice", {"ewaybill": ["is", "set"]})
 
     sales_invoice = frappe.qb.DocType("Sales Invoice")
     if not e_waybill_enabled:
@@ -54,17 +52,13 @@ def set_cancelled_status(sales_invoice):
 
 def set_pending_status(sales_invoice):
     if not frappe.flags.in_install:
-        e_waybill_applicable = frappe.db.get_single_value(
-            "GST Settings", "enable_e_waybill"
-        )
+        e_waybill_applicable = frappe.db.get_single_value("GST Settings", "enable_e_waybill")
 
         if not e_waybill_applicable:
             return
 
     from_date = add_days(nowdate(), -30)
-    e_waybill_threshold = frappe.db.get_single_value(
-        "GST Settings", "e_waybill_threshold"
-    )
+    e_waybill_threshold = frappe.db.get_single_value("GST Settings", "e_waybill_threshold")
 
     sales_invoice_item = frappe.qb.DocType("Sales Invoice Item")
 

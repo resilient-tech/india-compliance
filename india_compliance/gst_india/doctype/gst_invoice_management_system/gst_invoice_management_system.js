@@ -26,7 +26,7 @@ frappe.ui.form.on(DOCTYPE, {
         frm.reconciliation_tabs = new IMS(
             frm,
             ["invoice", "match_summary", "action_summary"],
-            "invoice_html"
+            "invoice_html",
         );
 
         frm.doc.company = frappe.defaults.get_user_default("Company");
@@ -184,7 +184,7 @@ class IMS extends reconciliation.reconciliation_tabs {
                 label: "Is Supplier Return Filed",
                 fieldname: "is_supplier_return_filed",
                 fieldtype: "Check",
-            }
+            },
         );
 
         fields.forEach(field => (field.parent = DOCTYPE));
@@ -201,7 +201,7 @@ class IMS extends reconciliation.reconciliation_tabs {
             ".supplier-gstin",
             function (e) {
                 me.update_filter(e, "supplier_gstin", $(this).text().trim(), me);
-            }
+            },
         );
 
         this.tabs.invoice_tab.datatable.$datatable.on(
@@ -209,7 +209,7 @@ class IMS extends reconciliation.reconciliation_tabs {
             ".match-status",
             function (e) {
                 me.update_filter(e, "match_status", $(this).text(), me);
-            }
+            },
         );
 
         this.tabs.match_summary_tab.datatable.$datatable.on(
@@ -217,7 +217,7 @@ class IMS extends reconciliation.reconciliation_tabs {
             ".match-status",
             function (e) {
                 me.update_filter(e, "match_status", $(this).text(), me);
-            }
+            },
         );
 
         this.tabs.invoice_tab.datatable.$datatable.on(
@@ -225,7 +225,7 @@ class IMS extends reconciliation.reconciliation_tabs {
             ".ims-action",
             function (e) {
                 me.update_filter(e, "ims_action", $(this).text(), me);
-            }
+            },
         );
 
         this.tabs.action_summary_tab.datatable.$datatable.on(
@@ -233,7 +233,7 @@ class IMS extends reconciliation.reconciliation_tabs {
             ".invoice-category",
             function (e) {
                 me.update_filter(e, "doc_type", category_map[$(this).text()], me);
-            }
+            },
         );
 
         this.tabs.invoice_tab.datatable.$datatable.on(
@@ -241,7 +241,7 @@ class IMS extends reconciliation.reconciliation_tabs {
             ".classification",
             function (e) {
                 me.update_filter(e, "classification", $(this).text(), me);
-            }
+            },
         );
 
         this.tabs.invoice_tab.datatable.$datatable.on(
@@ -250,7 +250,7 @@ class IMS extends reconciliation.reconciliation_tabs {
             function (e) {
                 const row = me.mapped_invoice_data[$(this).attr("data-name")];
                 me.dm = new DetailViewDialog(me.frm, row);
-            }
+            },
         );
     }
 
@@ -304,7 +304,7 @@ class IMS extends reconciliation.reconciliation_tabs {
                     return (
                         roundNumber(
                             (args[2].action_taken_count / args[2].total_docs) * 100,
-                            2
+                            2,
                         ) + " %"
                     );
                 },
@@ -643,11 +643,11 @@ class IMSAction {
         this.frm.disable_save();
         if (!this.frm.doc.data_state) {
             this.frm.page.set_primary_action(__("Show Invoices"), () =>
-                this.get_ims_data()
+                this.get_ims_data(),
             );
         } else {
             this.frm.page.set_primary_action(__("Upload Invoices"), () =>
-                this.upload_ims_data()
+                this.upload_ims_data(),
             );
         }
 
@@ -668,7 +668,7 @@ class IMSAction {
             this.frm.add_custom_button(
                 __("Unlink"),
                 () => reconciliation.unlink_documents(this.frm),
-                __("Actions")
+                __("Actions"),
             );
             this.frm.add_custom_button(__("dropdown-divider"), () => {}, __("Actions"));
         }
@@ -678,8 +678,8 @@ class IMSAction {
             this.frm.add_custom_button(
                 __(action),
                 () => apply_bulk_action(this.frm, ACTION_MAP[action]),
-                __("Actions")
-            )
+                __("Actions"),
+            ),
         );
 
         // Add Dropdown Divider to differentiate between IMS and Reconciliation Actions
@@ -689,7 +689,7 @@ class IMSAction {
 
         // move actions button next to filters
         for (let button of this.frm.$wrapper.find(
-            ".custom-actions .inner-group-button"
+            ".custom-actions .inner-group-button",
         )) {
             if (button.innerText?.trim() != __("Actions")) continue;
             this.frm.$wrapper.find(".custom-button-group .inner-group-button").remove();
@@ -800,7 +800,10 @@ class IMSAction {
                         retries < this.RETRY_INTERVALS.length
                     ) {
                         resolve(
-                            await this.get_upload_status_with_retry(action, retries + 1)
+                            await this.get_upload_status_with_retry(
+                                action,
+                                retries + 1,
+                            ),
                         );
                         return;
                     }
@@ -808,7 +811,7 @@ class IMSAction {
                     // Not IP
                     resolve(message);
                 },
-                now ? 0 : this.RETRY_INTERVALS[retries]
+                now ? 0 : this.RETRY_INTERVALS[retries],
             );
         });
     }
@@ -878,7 +881,7 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
     _get_custom_actions() {
         // setup actions
         let actions = ["No Action", "Reject"].filter(
-            action => ACTION_MAP[action] != this.row.ims_action
+            action => ACTION_MAP[action] != this.row.ims_action,
         );
 
         if (
@@ -905,14 +908,14 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
                 this.data.purchase_invoice_name,
                 this.data.inward_supply_name,
                 this.dialog.get_value("doctype"),
-                true
+                true,
             );
         } else if (action == "Create") {
             reconciliation.create_new_purchase_invoice(
                 this.data,
                 this.frm.doc.company,
                 this.frm.doc.company_gstin,
-                DOCTYPE
+                DOCTYPE,
             );
         } else {
             apply_action(this.frm, ACTION_MAP[action], [this.row.inward_supply_name]);
@@ -963,7 +966,7 @@ function apply_bulk_action(frm, action) {
     const affected_rows = get_affected_rows(
         active_tab,
         selected_rows,
-        frm.reconciliation_tabs.filtered_data
+        frm.reconciliation_tabs.filtered_data,
     );
 
     apply_action(frm, action, affected_rows);
@@ -1002,20 +1005,20 @@ async function apply_action(frm, action, invoice_names) {
 
     invoice_names = invoice_names.filter(
         name =>
-            !(pending_not_allowed.includes(name) || accept_not_allowed.includes(name))
+            !(pending_not_allowed.includes(name) || accept_not_allowed.includes(name)),
     );
 
     if (pending_not_allowed.length) {
         frappe.msgprint({
             message: __(
-                "Some invoices are not allowed to be marked as <strong>Pending</strong>."
+                "Some invoices are not allowed to be marked as <strong>Pending</strong>.",
             ),
             indicator: "red",
         });
     } else if (accept_not_allowed.length) {
         frappe.msgprint({
             message: __(
-                "Some invoices cannot be <strong>Accepted</strong>. Please ensure they are linked to a purchase."
+                "Some invoices cannot be <strong>Accepted</strong>. Please ensure they are linked to a purchase.",
             ),
             indicator: "red",
         });
@@ -1028,11 +1031,11 @@ async function apply_action(frm, action, invoice_names) {
         frappe.show_alert(
             {
                 message: __(
-                    "Some invoices are <strong>Accepted</strong> where the Supplier has not filed the return"
+                    "Some invoices are <strong>Accepted</strong> where the Supplier has not filed the return",
                 ),
                 indicator: "orange",
             },
-            10
+            10,
         );
     }
 
@@ -1066,14 +1069,14 @@ function get_affected_rows(tab, selection, data) {
 
     if (tab == "match_summary_tab")
         invoices = data.filter(
-            inv => selection.filter(row => row.match_status == inv.match_status).length
+            inv => selection.filter(row => row.match_status == inv.match_status).length,
         );
 
     if (tab == "action_summary_tab")
         invoices = data.filter(
             inv =>
                 selection.filter(row => category_map[row.category] == inv.doc_type)
-                    .length
+                    .length,
         );
 
     return invoices.map(row => row.inward_supply_name);

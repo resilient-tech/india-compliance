@@ -1,9 +1,8 @@
 import base64
 
+import frappe
 from cryptography.hazmat.primitives.asymmetric import padding as asym_padding
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
-
-import frappe
 from frappe import _
 from frappe.utils import add_to_date, now_datetime
 
@@ -87,15 +86,11 @@ class StandardAuth(Auth):
         if self._is_authentication_api(request_args.get("url")):
             serialized_data = frappe.as_json(json_data)
             encoded_data = base64.b64encode(serialized_data.encode())
-            encrypted_data = encrypt_using_public_key(
-                encoded_data, self._get_public_key()
-            )
+            encrypted_data = encrypt_using_public_key(encoded_data, self._get_public_key())
 
         else:
             # other requests => use session key
-            encrypted_data = aes_encrypt_data(
-                frappe.as_json(json_data), self.client.session_key
-            )
+            encrypted_data = aes_encrypt_data(frappe.as_json(json_data), self.client.session_key)
 
         # update request
         params = request_args.pop("params", {}) or {}
@@ -112,10 +107,7 @@ class StandardAuth(Auth):
             return
 
         # auth API responses contain auth token
-        is_auth_response = (
-            isinstance(response_data, dict)
-            and self.client.AUTH_TOKEN_KEY in response_data
-        )
+        is_auth_response = isinstance(response_data, dict) and self.client.AUTH_TOKEN_KEY in response_data
 
         if is_auth_response:
             self._decrypt_session_key(response_data)
@@ -158,24 +150,18 @@ class StandardAuth(Auth):
         """Decrypt response data from non-auth APIs and validate HMAC"""
         # decrypt REK if present
         rek_data = response.get(self.client.REK_KEY)
-        decrypted_rek = (
-            aes_decrypt_data(rek_data, self.client.session_key) if rek_data else None
-        )
+        decrypted_rek = aes_decrypt_data(rek_data, self.client.session_key) if rek_data else None
 
         # decrypt main response data
         response_data = response.get(self.client.DATA_KEY)
         if response_data and isinstance(response_data, str):
             decryption_key = decrypted_rek or self.client.session_key
-            decrypted_data = aes_decrypt_data(
-                response.pop(self.client.DATA_KEY), decryption_key
-            )
+            decrypted_data = aes_decrypt_data(response.pop(self.client.DATA_KEY), decryption_key)
 
             # validate HMAC if present
             expected_hmac = response.get(self.client.HMAC_KEY)
             if expected_hmac:
-                computed_hmac = hmac_sha256(
-                    base64.b64encode(decrypted_data), decrypted_rek
-                )
+                computed_hmac = hmac_sha256(base64.b64encode(decrypted_data), decrypted_rek)
                 if computed_hmac != expected_hmac:
                     frappe.throw(_("HMAC mismatch"))
 

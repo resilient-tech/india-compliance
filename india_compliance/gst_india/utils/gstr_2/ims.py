@@ -73,7 +73,6 @@ class IMS:
 
         for supplier in error_invoices:
             for invoice in supplier.get("inv"):
-
                 # same key across categories
                 errors.add(f"{invoice.get('inum')}_{supplier.get('stin')}")
 
@@ -92,9 +91,9 @@ class IMS:
             **self.get_invoice_details(invoice),
         )
 
-        transaction["unique_key"] = (
-            f"{transaction.get('supplier_gstin', '')}-{transaction.get('bill_no', '')}"
-        )
+        transaction[
+            "unique_key"
+        ] = f"{transaction.get('supplier_gstin', '')}-{transaction.get('bill_no', '')}"
 
         return transaction
 
@@ -102,17 +101,13 @@ class IMS:
         return {
             "supplier_gstin": invoice.stin,
             "sup_return_period": invoice.rtnprd,
-            "supply_type": get_mapped_value(
-                invoice.inv_typ, self.VALUE_MAPS.gst_category
-            ),
+            "supply_type": get_mapped_value(invoice.inv_typ, self.VALUE_MAPS.gst_category),
             "place_of_supply": get_mapped_value(invoice.pos, self.VALUE_MAPS.states),
             "document_value": invoice.val,
             "company": self.company,
             "company_gstin": self.company_gstin,
             "is_pending_action_allowed": invoice.ispendactblocked == "N",
-            "previous_ims_action": get_mapped_value(
-                invoice.action, self.VALUE_MAPS.action
-            ),
+            "previous_ims_action": get_mapped_value(invoice.action, self.VALUE_MAPS.action),
             "is_downloaded_from_ims": 1,
             "is_supplier_return_filed": 0 if invoice.srcfilstatus == "Not Filed" else 1,
             "supplier_return_form": invoice.srcform,
@@ -126,18 +121,12 @@ class IMS:
     def convert_data_to_gov_format(self, invoice):
         data = {
             "stin": invoice.supplier_gstin,
-            "inv_typ": get_mapped_value(
-                invoice.supply_type, self.VALUE_MAPS.reverse_gst_category
-            ),
+            "inv_typ": get_mapped_value(invoice.supply_type, self.VALUE_MAPS.reverse_gst_category),
             "srcform": invoice.supplier_return_form,
             "rtnprd": invoice.sup_return_period,
             "val": invoice.document_value,
-            "pos": get_mapped_value(
-                invoice.place_of_supply.split("-")[1], self.VALUE_MAPS.reverse_states
-            ),
-            "prev_status": get_mapped_value(
-                invoice.previous_ims_action, self.VALUE_MAPS.reverse_action
-            ),
+            "pos": get_mapped_value(invoice.place_of_supply.split("-")[1], self.VALUE_MAPS.reverse_states),
+            "prev_status": get_mapped_value(invoice.previous_ims_action, self.VALUE_MAPS.reverse_action),
             "iamt": invoice.igst,
             "camt": invoice.cgst,
             "samt": invoice.sgst,
@@ -146,23 +135,17 @@ class IMS:
         }
 
         if invoice.ims_action != "No Action":
-            data["action"] = get_mapped_value(
-                invoice.ims_action, self.VALUE_MAPS.reverse_action
-            )
+            data["action"] = get_mapped_value(invoice.ims_action, self.VALUE_MAPS.reverse_action)
 
         return data
 
     def get_existing_transactions(self):
-        category, doc_type = get_mapped_value(
-            self.ims_category(), self.VALUE_MAPS.classification
-        )
+        category, doc_type = get_mapped_value(self.ims_category(), self.VALUE_MAPS.classification)
 
         inward_supply = frappe.qb.DocType("GST Inward Supply")
         existing_transactions = (
             frappe.qb.from_(inward_supply)
-            .select(
-                inward_supply.name, inward_supply.supplier_gstin, inward_supply.bill_no
-            )
+            .select(inward_supply.name, inward_supply.supplier_gstin, inward_supply.bill_no)
             .where(inward_supply.is_downloaded_from_2b == 0)
             .where(inward_supply.is_downloaded_from_2a == 0)
             .where(inward_supply.is_downloaded_from_ims == 1)
@@ -188,9 +171,7 @@ class IMS:
             frappe.delete_doc("GST Inward Supply", inward_supply_name)
 
     def reset_previous_ims_action(self):
-        category, doc_type = get_mapped_value(
-            self.ims_category(), self.VALUE_MAPS.classification
-        )
+        category, doc_type = get_mapped_value(self.ims_category(), self.VALUE_MAPS.classification)
         inward_supply = frappe.qb.DocType("GST Inward Supply")
 
         (

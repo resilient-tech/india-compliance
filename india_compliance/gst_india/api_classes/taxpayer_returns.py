@@ -31,9 +31,7 @@ class ReturnsAPI(TaxpayerBaseAPI):
     }
 
     def download_files(self, return_period, token):
-        return super().get_files(
-            return_period, token, action="FILEDET", endpoint="returns"
-        )
+        return super().get_files(return_period, token, action="FILEDET", endpoint="returns")
 
     def get_return_status(self, return_period, reference_id, otp=None):
         return self.get(
@@ -347,9 +345,7 @@ class IMSAPI(ReturnsAPI):
         )
 
     def download_files(self, return_period, token):
-        return self.get_files(
-            return_period, token, action="FILEDET", endpoint=self.END_POINT
-        )
+        return self.get_files(return_period, token, action="FILEDET", endpoint=self.END_POINT)
 
     def get_files(self, return_period, token, action, endpoint):
         response = self.get(

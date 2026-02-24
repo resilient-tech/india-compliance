@@ -33,13 +33,13 @@ $(document).on("app_ready", async function () {
             <strong>Note:</strong>
             If the above assumptions are not valid for your organization, please update item tax templates
             accordingly for your items.
-            `
+            `,
         ),
     });
 
     d.onhide = () => {
         frappe.xcall(
-            "india_compliance.gst_india.utils.disable_item_tax_template_notification"
+            "india_compliance.gst_india.utils.disable_item_tax_template_notification",
         );
     };
 });

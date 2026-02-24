@@ -9,9 +9,7 @@ def execute():
     old_docs = frappe.qb.from_(old).select("*").run(as_dict=True)
 
     for doc in old_docs:
-        new_doc = frappe.get_doc(
-            {**doc, "doctype": "GST Return Log", "name": None, "return_type": "GSTR1"}
-        )
+        new_doc = frappe.get_doc({**doc, "doctype": "GST Return Log", "name": None, "return_type": "GSTR1"})
         new_doc.insert(ignore_if_duplicate=True)
 
     # Drop the old table

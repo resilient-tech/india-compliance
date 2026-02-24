@@ -1,4 +1,4 @@
-DOCTYPE = "Subcontracting Receipt";
+const DOCTYPE = "Subcontracting Receipt";
 setup_e_waybill_actions(DOCTYPE);
 
 frappe.ui.form.on(DOCTYPE, {
@@ -73,7 +73,7 @@ frappe.ui.form.on(DOCTYPE, {
                     message: __("Supplier Address is required to create e-Waybill"),
                     indicator: "yellow",
                 },
-                10
+                10,
             );
     },
 
@@ -115,7 +115,7 @@ frappe.ui.form.on(DOCTYPE, {
 
 frappe.ui.form.on(
     "Subcontracting Receipt Item",
-    india_compliance.taxes_controller_events
+    india_compliance.taxes_controller_events,
 );
 
 function get_existing_references(frm) {

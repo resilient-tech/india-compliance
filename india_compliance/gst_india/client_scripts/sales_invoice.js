@@ -51,7 +51,7 @@ frappe.ui.form.on(DOCTYPE, {
                 message: __("Billing Address is required to create e-Waybill"),
                 indicator: "yellow",
             },
-            10
+            10,
         );
     },
 });
@@ -63,10 +63,10 @@ async function gst_invoice_warning(frm) {
         frm.dashboard.add_comment(
             __(
                 "GST is applicable for this invoice but no tax accounts specified in {0} are charged.",
-                [frappe.utils.get_form_link("GST Settings", "GST Settings", true)]
+                [frappe.utils.get_form_link("GST Settings", "GST Settings", true)],
             ),
             "red",
-            true
+            true,
         );
     }
 }
@@ -86,11 +86,10 @@ function is_gst_invoice(frm) {
         frm.doc.company_gstin &&
         frm.doc.company_gstin != frm.doc.billing_address_gstin &&
         frm.doc.items.some(item =>
-            ["Taxable", "Zero-Rated"].includes(item.gst_treatment)
+            ["Taxable", "Zero-Rated"].includes(item.gst_treatment),
         );
 
     if (frm.doc.items[0].gst_treatment === "Zero-Rated")
         return gst_invoice_conditions && frm.doc.is_export_with_gst;
     else return gst_invoice_conditions;
 }
-

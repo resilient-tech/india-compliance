@@ -3,12 +3,11 @@
 import re
 from itertools import combinations
 
-from pypika import Order
-
 import frappe
 from frappe.query_builder import Case, Criterion
 from frappe.query_builder.functions import Date, IfNull, Sum
 from frappe.utils import cint, flt, getdate
+from pypika import Order
 
 from india_compliance.gst_india.constants import GST_REFUND_TAX_TYPES
 from india_compliance.gst_india.utils import (
@@ -62,9 +61,7 @@ CATEGORY_CONDITIONS = {
 
 
 class GSTR1Query:
-    def __init__(
-        self, filters=None, additional_si_columns=None, additional_si_item_columns=None
-    ):
+    def __init__(self, filters=None, additional_si_columns=None, additional_si_item_columns=None):
         self.si = frappe.qb.DocType("Sales Invoice")
         self.si_item = frappe.qb.DocType("Sales Invoice Item")
         self.si_taxes = frappe.qb.DocType("Sales Taxes and Charges")
@@ -106,20 +103,14 @@ class GSTR1Query:
                 self.si.shipping_bill_date,
                 self.si.gst_category,
                 IfNull(self.si_item.gst_treatment, "Not Defined").as_("gst_treatment"),
-                (
-                    self.si_item.cgst_rate
-                    + self.si_item.sgst_rate
-                    + self.si_item.igst_rate
-                ).as_("gst_rate"),
+                (self.si_item.cgst_rate + self.si_item.sgst_rate + self.si_item.igst_rate).as_("gst_rate"),
                 self.si_item.taxable_value,
                 self.si_item.cgst_amount,
                 self.si_item.sgst_amount,
                 self.si_item.igst_amount,
                 self.si_item.cess_amount,
                 self.si_item.cess_non_advol_amount,
-                (self.si_item.cess_amount + self.si_item.cess_non_advol_amount).as_(
-                    "total_cess_amount"
-                ),
+                (self.si_item.cess_amount + self.si_item.cess_non_advol_amount).as_("total_cess_amount"),
                 (
                     self.si_item.cgst_amount
                     + self.si_item.sgst_amount
@@ -170,14 +161,10 @@ class GSTR1Query:
             query = query.where(self.si.company_gstin == self.filters.company_gstin)
 
         if self.filters.from_date:
-            query = query.where(
-                Date(self.si.posting_date) >= getdate(self.filters.from_date)
-            )
+            query = query.where(Date(self.si.posting_date) >= getdate(self.filters.from_date))
 
         if self.filters.to_date:
-            query = query.where(
-                Date(self.si.posting_date) <= getdate(self.filters.to_date)
-            )
+            query = query.where(Date(self.si.posting_date) <= getdate(self.filters.to_date))
 
         return query
 
@@ -185,9 +172,7 @@ class GSTR1Query:
         return (
             frappe.qb.from_(self.si_taxes)
             .select(
-                Sum(self.si_taxes.base_tax_amount_after_discount_amount).as_(
-                    "refund_amount"
-                ),
+                Sum(self.si_taxes.base_tax_amount_after_discount_amount).as_("refund_amount"),
                 self.si_taxes.parent,
             )
             .where(self.si_taxes.gst_tax_type.isin(GST_REFUND_TAX_TYPES))
@@ -240,9 +225,7 @@ class GSTR1Conditions:
     @cache_invoice_condition
     def is_nil_rated_exempted_or_non_gst(self, invoice):
         return not self.is_export(invoice) and (
-            self.is_nil_rated(invoice)
-            or self.is_exempted(invoice)
-            or self.is_non_gst(invoice)
+            self.is_nil_rated(invoice) or self.is_exempted(invoice) or self.is_non_gst(invoice)
         )
 
     @cache_invoice_condition
@@ -255,10 +238,7 @@ class GSTR1Conditions:
 
     @cache_invoice_condition
     def is_export(self, invoice):
-        return (
-            invoice.place_of_supply == "96-Other Countries"
-            and invoice.gst_category == "Overseas"
-        )
+        return invoice.place_of_supply == "96-Other Countries" and invoice.gst_category == "Overseas"
 
     @cache_invoice_condition
     def is_inter_state(self, invoice):
@@ -276,24 +256,18 @@ class GSTR1Conditions:
             else invoice.invoice_total
         )
 
-        return (
-            abs(invoice_total) > get_b2c_limit(invoice.posting_date)
-        ) and self.is_inter_state(invoice)
+        return (abs(invoice_total) > get_b2c_limit(invoice.posting_date)) and self.is_inter_state(invoice)
 
     @cache_invoice_condition
     def is_b2cl_inv(self, invoice):
-        return abs(invoice.invoice_total) > get_b2c_limit(
-            invoice.posting_date
-        ) and self.is_inter_state(invoice)
+        return abs(invoice.invoice_total) > get_b2c_limit(invoice.posting_date) and self.is_inter_state(
+            invoice
+        )
 
 
 class GSTR1CategoryConditions(GSTR1Conditions):
     def is_nil_rated_exempted_non_gst_invoice(self, invoice):
-        return (
-            self.is_nil_rated(invoice)
-            or self.is_exempted(invoice)
-            or self.is_non_gst(invoice)
-        )
+        return self.is_nil_rated(invoice) or self.is_exempted(invoice) or self.is_non_gst(invoice)
 
     def is_b2b_invoice(self, invoice):
         return (
@@ -515,16 +489,12 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
                 query.gst_treatment,
                 query.uom,
             )
-            .orderby(
-                query.posting_date, query.invoice_no, query.item_code, order=Order.desc
-            )
+            .orderby(query.posting_date, query.invoice_no, query.item_code, order=Order.desc)
         )
 
         return query.run(as_dict=True)
 
-    def get_filtered_invoices(
-        self, invoices, invoice_category=None, invoice_sub_category=None
-    ):
+    def get_filtered_invoices(self, invoices, invoice_category=None, invoice_sub_category=None):
         filtered_invoices = []
         functions = CATEGORY_CONDITIONS.get(invoice_category)
         condition = getattr(self, functions["category"], None)
@@ -667,9 +637,7 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
     def is_hsn_bifurcation_needed(self):
         # From GSTR-1
         if self.filters.get("month_or_quarter"):
-            from_date = getdate(
-                f"01-{self.filters.month_or_quarter}-{self.filters.year}"
-            )
+            from_date = getdate(f"01-{self.filters.month_or_quarter}-{self.filters.year}")
         else:
             from_date = getdate(self.filters.from_date)
 
@@ -705,9 +673,7 @@ class GSTR1DocumentIssuedSummary:
                 seperated_data,
             ) in self.seperate_data_by_nature_of_document(data, doctype).items():
                 summarized_data.extend(
-                    self.seperate_data_by_naming_series(
-                        seperated_data, nature_of_document
-                    )
+                    self.seperate_data_by_naming_series(seperated_data, nature_of_document)
                 )
 
         return summarized_data
@@ -742,11 +708,7 @@ class GSTR1DocumentIssuedSummary:
                 .as_("same_gstin_billing"),
             )
             .where(doctype.company == self.filters.company)
-            .where(
-                doctype.posting_date.between(
-                    self.filters.from_date, self.filters.to_date
-                )
-            )
+            .where(doctype.posting_date.between(self.filters.from_date, self.filters.to_date))
             .orderby(doctype.name)
             .groupby(doctype.name)
         )
@@ -845,9 +807,7 @@ class GSTR1DocumentIssuedSummary:
                 continue
             slice_indices.append(i)
 
-        document_series_list = [
-            data[i:j] for i, j in zip([0] + slice_indices, slice_indices + [None])
-        ]
+        document_series_list = [data[i:j] for i, j in zip([0] + slice_indices, slice_indices + [None])]
 
         for series in document_series_list:
             draft_count = sum(1 for doc in series if doc.docstatus == 0)
@@ -863,9 +823,7 @@ class GSTR1DocumentIssuedSummary:
                     "total_submitted": total_submitted_count,
                     "cancelled": cancelled_count,
                     "total_draft": draft_count,
-                    "total_issued": draft_count
-                    + total_submitted_count
-                    + cancelled_count,
+                    "total_issued": draft_count + total_submitted_count + cancelled_count,
                 }
             )
 
@@ -937,22 +895,14 @@ class GSTR1DocumentIssuedSummary:
 
         for doc in data:
             if not validate_invoice_number(doc, throw=False):
-                nature_of_document[
-                    "Excluded from Report (Invalid Invoice Number)"
-                ].append(doc)
+                nature_of_document["Excluded from Report (Invalid Invoice Number)"].append(doc)
 
             elif doc.is_opening == "Yes":
-                nature_of_document["Excluded from Report (Is Opening Entry)"].append(
-                    doc
-                )
+                nature_of_document["Excluded from Report (Is Opening Entry)"].append(doc)
             elif doc.same_gstin_billing:
-                nature_of_document["Excluded from Report (Same GSTIN Billing)"].append(
-                    doc
-                )
+                nature_of_document["Excluded from Report (Same GSTIN Billing)"].append(doc)
             elif doctype == "Purchase Invoice":
-                nature_of_document[
-                    "Invoices for inward supply from unregistered person"
-                ].append(doc)
+                nature_of_document["Invoices for inward supply from unregistered person"].append(doc)
             elif doctype == "Stock Entry" or doctype == "Subcontracting Receipt":
                 nature_of_document["Delivery Challan for job work"].append(doc)
             # for Sales Invoice
@@ -1004,9 +954,7 @@ class GSTR11A11BData:
 
     def get_11A_query(self):
         return (
-            self.get_query("Advances")
-            .select(self.pe.paid_amount.as_("taxable_value"))
-            .groupby(self.pe.name)
+            self.get_query("Advances").select(self.pe.paid_amount.as_("taxable_value")).groupby(self.pe.name)
         )
 
     def get_11B_query(self):
@@ -1020,9 +968,7 @@ class GSTR11A11BData:
 
     def get_query(self, type_of_business):
         cr_or_dr = "credit" if type_of_business == "Advances" else "debit"
-        cr_or_dr_amount_field = getattr(
-            self.gl_entry, f"{cr_or_dr}_in_account_currency"
-        )
+        cr_or_dr_amount_field = getattr(self.gl_entry, f"{cr_or_dr}_in_account_currency")
         cess_account = get_escaped_name(self.gst_accounts.cess_account)
 
         return (
@@ -1053,9 +999,7 @@ class GSTR11A11BData:
         )
 
     def get_conditions(self):
-        gst_accounts_list = [
-            account_head for account_head in self.gst_accounts.values() if account_head
-        ]
+        gst_accounts_list = [account_head for account_head in self.gst_accounts.values() if account_head]
 
         conditions = []
 
@@ -1064,15 +1008,11 @@ class GSTR11A11BData:
         conditions.append(self.gl_entry.company == self.filters.get("company"))
         conditions.append(self.gl_entry.account.isin(gst_accounts_list))
         conditions.append(
-            self.gl_entry.posting_date[
-                self.filters.get("from_date") : self.filters.get("to_date")
-            ]
+            self.gl_entry.posting_date[self.filters.get("from_date") : self.filters.get("to_date")]
         )
 
         if self.filters.get("company_gstin"):
-            conditions.append(
-                self.gl_entry.company_gstin == self.filters.get("company_gstin")
-            )
+            conditions.append(self.gl_entry.company_gstin == self.filters.get("company_gstin"))
 
         return conditions
 
@@ -1080,11 +1020,7 @@ class GSTR11A11BData:
         data = {}
         for entry in records:
             taxable_value = flt(entry.taxable_value, 2)
-            tax_rate = (
-                round(((entry.tax_amount / taxable_value) * 100))
-                if taxable_value
-                else 0
-            )
+            tax_rate = round(((entry.tax_amount / taxable_value) * 100)) if taxable_value else 0
 
             data.setdefault((entry.place_of_supply, tax_rate), [0.0, 0.0])
 

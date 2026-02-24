@@ -2,12 +2,11 @@ import json
 from datetime import timedelta
 from string import whitespace
 
-from pypika import Order
-
 import frappe
 from frappe import _, request_cache
 from frappe.query_builder.functions import Concat, Substring
 from frappe.utils import add_to_date, cint
+from pypika import Order
 
 from india_compliance.exceptions import GSPServerError
 from india_compliance.gst_india.api_classes.base import BASE_URL
@@ -41,9 +40,7 @@ CHARACTERS_TO_STRIP = f"{whitespace},"
 
 # nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
 @frappe.whitelist()
-def get_gstin_info(
-    gstin: str | None, *, doc: str | dict | None = None, throw_error: bool = True
-):
+def get_gstin_info(gstin: str | None, *, doc: str | dict | None = None, throw_error: bool = True):
     if doc and isinstance(doc, str):
         doc = frappe.parse_json(doc)
 
@@ -81,9 +78,7 @@ def _get_gstin_info(gstin, *, doc=None, throw_error=True):
             return frappe._dict()
 
     business_name = (
-        response.tradeNam
-        if response.ctb in ["Proprietorship", "Hindu Undivided Family"]
-        else response.lgnm
+        response.tradeNam if response.ctb in ["Proprietorship", "Hindu Undivided Family"] else response.lgnm
     )
 
     gstin_info = frappe._dict(
@@ -106,9 +101,7 @@ def get_archived_gstin_info(gstin):
     """
     Use Integration Requests to get the GSTIN info if available
     """
-    archive_days = frappe.get_cached_value(
-        "GST Settings", None, "archive_party_info_days"
-    )
+    archive_days = frappe.get_cached_value("GST Settings", None, "archive_party_info_days")
 
     if not archive_days:
         return
@@ -171,14 +164,10 @@ def _extract_address_lines(address):
         address[key] = ""
 
     address_line1 = ", ".join(
-        titlecase(value)
-        for key in ("bno", "flno", "bnm")
-        if (value := address.get(key))
+        titlecase(value) for key in ("bno", "flno", "bnm") if (value := address.get(key))
     )
 
-    address_line2 = ", ".join(
-        titlecase(value) for key in ("loc", "city") if (value := address.get(key))
-    )
+    address_line2 = ", ".join(titlecase(value) for key in ("loc", "city") if (value := address.get(key)))
 
     if not (street := address.get("st")):
         return address_line1, address_line2
@@ -248,12 +237,8 @@ def get_formatted_response_for_status(response):
     return frappe._dict(
         {
             "gstin": response.gstin,
-            "registration_date": parse_datetime(
-                response.rgdt, day_first=True, throw=False
-            ),
-            "cancelled_date": parse_datetime(
-                response.cxdt, day_first=True, throw=False
-            ),
+            "registration_date": parse_datetime(response.rgdt, day_first=True, throw=False),
+            "cancelled_date": parse_datetime(response.cxdt, day_first=True, throw=False),
             "status": response.sts,
         }
     )
