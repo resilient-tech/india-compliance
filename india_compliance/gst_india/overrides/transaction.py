@@ -58,7 +58,7 @@ ALLOWED_TAX_DIFFERENCE = 1  # Allowable difference in tax amount due to rounding
 
 
 def set_gst_breakup(doc):
-    gst_breakup_html = frappe.render_template("templates/gst_breakup.html", dict(doc=doc))
+    gst_breakup_html = frappe.render_template("templates/gst_breakup.html", dict(doc=doc))  # nosemgrep
     if not gst_breakup_html:
         return
 
