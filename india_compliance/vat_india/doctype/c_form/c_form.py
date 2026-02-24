@@ -8,6 +8,7 @@ from typing import Self
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.query_builder.functions import IfNull
 from frappe.utils import flt
 
 
@@ -50,30 +51,38 @@ class CForm(Document):
 
     def before_cancel(self):
         # remove cform reference
-        frappe.db.sql(
-            """update `tabSales Invoice` set c_form_no=null where c_form_no=%s""",
-            self.name,
+        sales_invoice = frappe.qb.DocType("Sales Invoice")
+
+        (
+            frappe.qb.update(sales_invoice)
+            .set(sales_invoice.c_form_no, None)
+            .where(sales_invoice.c_form_no == self.name)
+            .run()
         )
 
     def set_cform_in_sales_invoices(self):
         inv = [d.invoice_no for d in self.get("invoices")]
         if inv:
-            frappe.db.sql(
-                """update `tabSales Invoice` set c_form_no={}, modified={} where name in ({})""".format(
-                    "%s", "%s", ", ".join(["%s"] * len(inv))
-                ),
-                tuple([self.name, self.modified, *inv]),
+            sales_invoice = frappe.qb.DocType("Sales Invoice")
+
+            (
+                frappe.qb.update(sales_invoice)
+                .set(sales_invoice.c_form_no, self.name)
+                .set(sales_invoice.modified, self.modified)
+                .where(sales_invoice.name.isin(inv))
+                .run()
             )
 
-            frappe.db.sql(
-                """update `tabSales Invoice` set c_form_no = null, modified = {}
-				where name not in ({}) and ifnull(c_form_no, '') = {}""".format(
-                    "%s", ", ".join(["%s"] * len(inv)), "%s"
-                ),
-                tuple([self.modified, *inv, self.name]),
+            (
+                frappe.qb.update(sales_invoice)
+                .set(sales_invoice.c_form_no, None)
+                .set(sales_invoice.modified, self.modified)
+                .where(sales_invoice.name.notin(inv))
+                .where(IfNull(sales_invoice.c_form_no, "") == self.name)
+                .run()
             )
         else:
-            frappe.throw(_("Please enter atleast 1 invoice in the table"))
+            frappe.throw(_("Please enter at least 1 invoice in the table"))
 
     def set_total_invoiced_amount(self):
         total = sum(flt(d.grand_total) for d in self.get("invoices"))
