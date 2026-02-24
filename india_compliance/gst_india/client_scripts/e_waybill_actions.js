@@ -1430,18 +1430,17 @@ function show_sandbox_mode_indicator() {
 
     if (!gst_settings.sandbox_mode) return;
 
+    const url = frappe.utils.get_form_link("GST Settings", "GST Settings");
+
     $(document)
         .find(".form-sidebar .sidebar-image-section")
         .after(
             `
             <div class="sidebar-section ic-sandbox-mode">
-                <p><label class="indicator-pill no-indicator-dot yellow" title="${__(
-                    "Your site has enabled Sandbox Mode in GST Settings."
-                )}">${__("Sandbox Mode")}</label></p>
-                <p><a class="small text-muted" href="${frappe.utils.get_form_link("GST Settings", "GST Settings")}" target="_blank">${__(
-                    "Sandbox Mode is enabled for GST APIs."
-                )}</a></p>
+                <a href="${url}" class="indicator-pill no-indicator-dot yellow">
+                    ${__("GST APIs in Sandbox Mode")}
+                </a>
             </div>
-            `
+            `,
         );
 }
