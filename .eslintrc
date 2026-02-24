@@ -42,7 +42,6 @@
         "Vue": true,
         "SetVueGlobals": true,
         "erpnext": true,
-
         "hub": true,
         "$": true,
         "jQuery": true,
