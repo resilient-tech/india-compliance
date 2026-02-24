@@ -1346,7 +1346,7 @@ function get_primary_action_label_for_generation(doc) {
 
 function is_empty(obj) {
     for (let prop in obj) {
-        if (obj.hasOwnProperty(prop)) {
+        if (Object.hasOwn(obj, prop)) {
             return false;
         }
     }
