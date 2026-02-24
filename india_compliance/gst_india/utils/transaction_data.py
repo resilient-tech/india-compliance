@@ -184,17 +184,17 @@ class GSTTransactionData:
 
         if not (mode_of_transport := self.doc.mode_of_transport):
             return _throw(
-                _("Either GST Transporter ID or Mode of Transport is required to" " generate e-Waybill")
+                _("Either GST Transporter ID or Mode of Transport is required to generate e-Waybill")
             )
 
         if mode_of_transport == "Road" and not self.doc.vehicle_no:
-            return _throw(_("Vehicle Number is required to generate e-Waybill for supply via" " Road"))
+            return _throw(_("Vehicle Number is required to generate e-Waybill for supply via Road"))
         if mode_of_transport == "Ship" and not (self.doc.vehicle_no and self.doc.lr_no):
             return _throw(
-                _("Vehicle Number and L/R No is required to generate e-Waybill for" " supply via Ship")
+                _("Vehicle Number and L/R No is required to generate e-Waybill for supply via Ship")
             )
         if mode_of_transport in ("Rail", "Air") and not self.doc.lr_no:
-            return _throw(_("L/R No. is required to generate e-Waybill for supply via Rail" " or Air"))
+            return _throw(_("L/R No. is required to generate e-Waybill for supply via Rail or Air"))
 
         return True
 
@@ -495,7 +495,7 @@ class GSTTransactionData:
             }
 
         if isinstance(d, list):
-            return [v for v in map(GSTTransactionData.sanitize_data, d) if _is_truthy(v)]
+            return [v for v in (GSTTransactionData.sanitize_data(item) for item in d) if _is_truthy(v)]
 
         return d
 
@@ -594,7 +594,7 @@ def validate_unique_hsn_and_uom(doc):
 
     def _throw(label, value):
         frappe.throw(
-            _("Row #{0}: {1}: {2} is different for Item: {3}. Grouping of items is" " not possible.").format(
+            _("Row #{0}: {1}: {2} is different for Item: {3}. Grouping of items is not possible.").format(
                 item.idx, label, value, frappe.bold(item.item_code)
             )
         )

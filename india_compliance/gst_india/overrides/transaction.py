@@ -340,7 +340,7 @@ class GSTAccounts:
             return
 
         self._throw(
-            _("Cannot charge GST in Row #{0} since Company GSTIN and Party GSTIN are" " same").format(
+            _("Cannot charge GST in Row #{0} since Company GSTIN and Party GSTIN are same").format(
                 self.first_gst_idx
             )
         )
@@ -385,7 +385,7 @@ class GSTAccounts:
 
         if not self.doc.is_reverse_charge and not self.doc.supplier_gstin:
             self._throw(
-                _("Cannot charge GST in Row #{0} since purchase is from a Supplier" " without GSTIN").format(
+                _("Cannot charge GST in Row #{0} since purchase is from a Supplier without GSTIN").format(
                     self.first_gst_idx
                 )
             )
@@ -426,7 +426,7 @@ class GSTAccounts:
             return
 
         if self.used_accounts and not set(self.intra_state_accounts[:2]).issubset(self.used_accounts):
-            self._throw(_("Cannot use only one of CGST or SGST account for intra-state" " supplies"))
+            self._throw(_("Cannot use only one of CGST or SGST account for intra-state supplies"))
 
     def validate_for_charge_type(self):
         previous_row_references = set()
@@ -532,9 +532,9 @@ def validate_items(doc):
     if items_with_duplicate_taxes:
         frappe.throw(
             _(
-                "Cannot use different Item Tax Templates in different rows for" " following items:<br> {0}"
+                "Cannot use different Item Tax Templates in different rows for following items:<br> {0}"
             ).format("<br>".join(items_with_duplicate_taxes)),
-            title="Inconsistent Item Tax Templates",
+            title=_("Inconsistent Item Tax Templates"),
         )
 
 
@@ -546,8 +546,7 @@ def validate_place_of_supply(doc):
     if doc.place_of_supply not in valid_options:
         frappe.throw(
             _(
-                '"<strong>{0}</strong>" is not a valid Place of Supply. Please choose'
-                " from available options."
+                '"<strong>{0}</strong>" is not a valid Place of Supply. Please choose from available options.'
             ).format(doc.place_of_supply),
             title=_("Invalid Place of Supply"),
         )
@@ -635,7 +634,7 @@ def validate_hsn_codes(doc, throw=False, message=None):
 
 def validate_sales_reverse_charge(doc):
     if doc.get("is_reverse_charge") and not doc.billing_address_gstin:
-        frappe.throw(_("Transaction cannot be reverse charge since sales is to customer" " without GSTIN"))
+        frappe.throw(_("Transaction cannot be reverse charge since sales is to customer without GSTIN"))
 
 
 def _validate_hsn_codes(doc, valid_hsn_length, throw=False, message=None):
@@ -660,9 +659,7 @@ def _validate_hsn_codes(doc, valid_hsn_length, throw=False, message=None):
 
         frappe.throw(
             _(
-                "{0}"
-                "HSN/SAC must exist and should be {1} digits long"
-                " for the following row numbers: <br>{2}"
+                "{0}HSN/SAC must exist and should be {1} digits long for the following row numbers: <br>{2}"
             ).format(
                 message or "",
                 join_list_with_custom_separators(valid_hsn_length),
@@ -682,9 +679,7 @@ def _validate_hsn_codes(doc, valid_hsn_length, throw=False, message=None):
 
     if rows_with_invalid_hsn:
         frappe.msgprint(
-            _(
-                "{0}" "HSN/SAC code should be {1} digits long for the following" " row numbers: <br>{2}"
-            ).format(
+            _("{0}HSN/SAC code should be {1} digits long for the following row numbers: <br>{2}").format(
                 message or "",
                 join_list_with_custom_separators(valid_hsn_length),
                 frappe.bold(", ".join(rows_with_invalid_hsn)),

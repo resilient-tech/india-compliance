@@ -25,7 +25,7 @@ $(document).on("app_ready", async function () {
             <strong>Breaking Change:</strong>
             <ul>
                 <li>GST Category for Nil-Rated, Exempted and Non-GST is introduced in Item Tax Template</li>
-                <li>Nil-Rated items are differentiated from Exempted for GST (configrable from Item Tax Template)</li>
+                <li>Nil-Rated items are differentiated from Exempted for GST (configurable from Item Tax Template)</li>
                 <li><strong>Assumption Made:</strong> All transactions that were marked as Nil or Exempt,
                 are now marked as Nil-Rated.</li>
             </ul>
