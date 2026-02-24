@@ -1,6 +1,7 @@
 import json
 import re
 from contextlib import contextmanager
+from typing import ClassVar
 
 import frappe
 from erpnext.accounts.doctype.payment_entry.payment_entry import (
@@ -48,7 +49,7 @@ def toggle_seperate_advance_accounting():
 
 
 class TestAdvancePaymentEntry(IntegrationTestCase):
-    EXPECTED_GL = [
+    EXPECTED_GL: ClassVar[list[dict]] = [
         {"account": "Cash - _TIRC", "debit": 45.0, "credit": 0.0},
         {"account": "Cash - _TIRC", "debit": 45.0, "credit": 0.0},
         {"account": "Cash - _TIRC", "debit": 500.0, "credit": 0.0},

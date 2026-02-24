@@ -39,7 +39,7 @@ def normalize_data(data):
 
 
 def process_mapped_data(data):
-    return list(get_category_wise_data(normalize_data(copy.deepcopy(data))).values())[0]
+    return next(iter(get_category_wise_data(normalize_data(copy.deepcopy(data))).values()))
 
 
 class TestB2B(IntegrationTestCase):

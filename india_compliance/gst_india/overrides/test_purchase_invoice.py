@@ -66,7 +66,7 @@ class TestPurchaseInvoice(IntegrationTestCase):
             is_reverse_charge=True,
             do_not_save=True,
         )
-        setattr(pinv, "__newname", "INV/2022/00001/asdfsadf")  # NOQA
+        setattr(pinv, "__newname", "INV/2022/00001/asdfsadf")
         pinv.meta.autoname = "prompt"
         pinv.save()
 
@@ -76,7 +76,7 @@ class TestPurchaseInvoice(IntegrationTestCase):
             is_reverse_charge=True,
             do_not_save=True,
         )
-        setattr(pinv, "__newname", "INV/2022/00001/asdfsadg")  # NOQA
+        setattr(pinv, "__newname", "INV/2022/00001/asdfsadg")
         pinv.save()
 
         self.assertEqual(

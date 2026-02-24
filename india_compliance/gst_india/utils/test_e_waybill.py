@@ -630,7 +630,7 @@ class TestEWaybill(IntegrationTestCase):
                 si,
                 frappe._dict(
                     item_code=item_code,
-                    item_name="Test Item {}".format(i),
+                    item_name=f"Test Item {i}",
                     rate=100,
                     gst_hsn_code=hsn_code,
                 ),
@@ -675,7 +675,7 @@ class TestEWaybill(IntegrationTestCase):
             EWaybillData(si).get_all_item_details(),
         )
 
-        for i in range(0, 250):
+        for _ in range(0, 250):
             append_item(si)
 
         _append_taxes(si, ("CGST", "SGST"))
@@ -1472,7 +1472,7 @@ def update_dates_for_test_data(test_data):
         response_request = value.get("request_data")
         response_result = value.get("response_data", {}).get("result", {})
 
-        for k, v in response_result.items():
+        for k in response_result.keys():
             if k == "ewayBillDate":
                 response_result.update({k: current_datetime})
             if k == "validUpto":

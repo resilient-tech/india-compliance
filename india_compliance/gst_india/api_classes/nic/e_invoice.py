@@ -1,5 +1,6 @@
 import base64
 import re
+from typing import ClassVar
 
 import frappe
 from frappe import _
@@ -12,7 +13,7 @@ from india_compliance.gst_india.constants import DISTANCE_REGEX
 class EInvoiceAPI(BaseAPI):
     API_NAME = "e-Invoice"
 
-    IGNORED_ERROR_CODES = {
+    IGNORED_ERROR_CODES: ClassVar[dict] = {
         "1005": "Invalid Token",
         # Generate IRN errors
         "2150": "Duplicate IRN",

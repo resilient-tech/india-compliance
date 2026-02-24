@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 from india_compliance.gst_india.constants import UOM_MAP
 from india_compliance.gst_india.utils.gstr_mapper_utils import GovDataMapper
 from india_compliance.gst_india.utils.itc_04 import (
@@ -21,7 +23,7 @@ class ITC04DataMapper(GovDataMapper):
     ITC-04 JSON format - https://developer.gst.gov.in/pages/apiportal/data/Returns/ITC04%20-%20Save/v1.2/ITC04%20-%20Save%20attributes.xlsx
     """
 
-    DEFAULT_ITEM_AMOUNTS = {
+    DEFAULT_ITEM_AMOUNTS: ClassVar[dict] = {
         ITC04_ItemField.TAXABLE_VALUE.value: 0,
         ITC04_ItemField.IGST.value: 0,
         ITC04_ItemField.CGST.value: 0,
@@ -29,7 +31,7 @@ class ITC04DataMapper(GovDataMapper):
         ITC04_ItemField.CESS_AMOUNT.value: 0,
     }
 
-    FLOAT_FIELDS = {
+    FLOAT_FIELDS: ClassVar[set] = {
         GovDataField.TAXABLE_VALUE.value,
         GovDataField.IGST.value,
         GovDataField.CGST.value,
@@ -65,9 +67,9 @@ class ITC04DataMapper(GovDataMapper):
 
 
 class FGReceived(ITC04DataMapper):
-    CATEGORY = ITC04JsonKey.FG_RECEIVED.value
+    CATEGORY: ClassVar[str] = ITC04JsonKey.FG_RECEIVED.value
 
-    KEY_MAPPING = {
+    KEY_MAPPING: ClassVar[dict] = {
         GovDataField.JOB_WORKER_GSTIN.value: ITC04_DataField.JOB_WORKER_GSTIN.value,
         GovDataField.JOB_WORKER_STATE_CODE.value: ITC04_DataField.JOB_WORKER_STATE_CODE.value,
         GovDataField.ITEMS.value: ITC04_DataField.ITEMS.value,
@@ -152,9 +154,9 @@ class FGReceived(ITC04DataMapper):
 
 
 class RMSent(ITC04DataMapper):
-    CATEGORY = ITC04JsonKey.RM_SENT.value
+    CATEGORY: ClassVar[str] = ITC04JsonKey.RM_SENT.value
 
-    KEY_MAPPING = {
+    KEY_MAPPING: ClassVar[dict] = {
         GovDataField.JOB_WORKER_GSTIN.value: ITC04_DataField.JOB_WORKER_GSTIN.value,
         GovDataField.JOB_WORKER_STATE_CODE.value: ITC04_DataField.JOB_WORKER_STATE_CODE.value,
         GovDataField_SE.ITEMS.value: ITC04_DataField.ITEMS.value,

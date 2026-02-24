@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 import re
 from itertools import combinations
+from typing import ClassVar
 
 import frappe
 from frappe.query_builder import Case, Criterion
@@ -409,7 +410,7 @@ class GSTR1Subcategory(GSTR1CategoryConditions):
 
 
 class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
-    AMOUNT_FIELDS = {
+    AMOUNT_FIELDS: ClassVar[dict[str, float]] = {
         "taxable_value": 0,
         "igst_amount": 0,
         "cgst_amount": 0,
@@ -807,7 +808,9 @@ class GSTR1DocumentIssuedSummary:
                 continue
             slice_indices.append(i)
 
-        document_series_list = [data[i:j] for i, j in zip([0] + slice_indices, slice_indices + [None])]
+        document_series_list = [
+            data[i:j] for i, j in zip([0, *slice_indices], [*slice_indices, None], strict=False)
+        ]
 
         for series in document_series_list:
             draft_count = sum(1 for doc in series if doc.docstatus == 0)
@@ -1020,7 +1023,7 @@ class GSTR11A11BData:
         data = {}
         for entry in records:
             taxable_value = flt(entry.taxable_value, 2)
-            tax_rate = round(((entry.tax_amount / taxable_value) * 100)) if taxable_value else 0
+            tax_rate = round((entry.tax_amount / taxable_value) * 100) if taxable_value else 0
 
             data.setdefault((entry.place_of_supply, tax_rate), [0.0, 0.0])
 

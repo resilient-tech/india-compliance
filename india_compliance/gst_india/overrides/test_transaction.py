@@ -1,5 +1,6 @@
 import json
 import re
+from typing import ClassVar
 
 import frappe
 from erpnext.accounts.doctype.purchase_invoice.purchase_invoice import (
@@ -1315,7 +1316,7 @@ class TestRegionalOverrides(IntegrationTestCase):
 
 
 class TestItemUpdate(IntegrationTestCase):
-    DATA = {
+    DATA: ClassVar[dict] = {
         "customer": "_Test Unregistered Customer",
         "item_code": "_Test Trading Goods 1",
         "qty": 1,

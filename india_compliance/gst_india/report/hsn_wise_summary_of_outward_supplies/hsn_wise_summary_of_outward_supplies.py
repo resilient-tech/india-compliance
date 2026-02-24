@@ -189,7 +189,7 @@ def get_json(filters: str, report_name: str, data: str):
 def download_json_file():
     """download json content in a file"""
     data = frappe._dict(frappe.local.form_dict)
-    frappe.response["filename"] = frappe.scrub("{0}".format(data["report_name"])) + ".json"
+    frappe.response["filename"] = frappe.scrub(data["report_name"]) + ".json"
     frappe.response["filecontent"] = data["data"]
     frappe.response["content_type"] = "application/json"
     frappe.response["type"] = "download"

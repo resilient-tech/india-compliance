@@ -428,7 +428,7 @@ class IneligibleITC:
         query = (
             self.get_common_query(doctype, dt, dt_item)
             .select((dt.ineligibility_reason).as_("itc_classification"))
-            .where((dt.is_opening == "No"))
+            .where(dt.is_opening == "No")
             .where(IfNull(dt.ineligibility_reason, "") == ineligibility_reason)
         )
 

@@ -31,4 +31,4 @@ class TestSalesInvoice(IntegrationTestCase):
             try:
                 validate_invoice_number(doc)
             except frappe.ValidationError:
-                self.fail("Valid name {} throwing error".format(name))
+                self.fail(f"Valid name {name} throwing error")

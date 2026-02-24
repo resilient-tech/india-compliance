@@ -1,14 +1,16 @@
+from typing import ClassVar
+
 from frappe.utils import flt
 
 from india_compliance.gst_india.constants import STATE_NUMBERS
 
 
 class GovDataMapper:
-    KEY_MAPPING = {}
-    FLOAT_FIELDS = {}
-    DISCARD_IF_ZERO_FIELDS = {}
-    TOTAL_DEFAULTS = {}
-    DEFAULT_ITEM_AMOUNTS = {}
+    KEY_MAPPING: ClassVar[dict] = {}
+    FLOAT_FIELDS: ClassVar[dict] = {}
+    DISCARD_IF_ZERO_FIELDS: ClassVar[dict] = {}
+    TOTAL_DEFAULTS: ClassVar[dict] = {}
+    DEFAULT_ITEM_AMOUNTS: ClassVar[dict] = {}
 
     def __init__(self):
         self.set_total_defaults()
@@ -22,7 +24,7 @@ class GovDataMapper:
         # value formatting constants
         self.STATE_NUMBERS = self.reverse_dict(STATE_NUMBERS)
 
-    def format_data(self, data: dict, default_data: dict = None, for_gov: bool = False) -> dict:
+    def format_data(self, data: dict, default_data: dict | None = None, for_gov: bool = False) -> dict:
         """
         Objective: Convert Object from one format to another.
             eg: Govt JSON to Internal Data Structure

@@ -955,7 +955,7 @@ class BuildExcel:
         ]
 
     def get_invoice_columns(self):
-        self.dimension_fields = ["project", "cost_center"] + get_accounting_dimensions()
+        self.dimension_fields = ["project", "cost_center", *get_accounting_dimensions()]
         dimension_columns = [
             {
                 "label": frappe.unscrub(dimension),

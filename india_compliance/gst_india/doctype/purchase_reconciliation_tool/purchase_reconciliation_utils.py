@@ -24,7 +24,7 @@ def link_documents(purchase_invoice_name, inward_supply_name, link_doctype):
         "link_name": purchase_invoice_name,
     }
     if pur_linked_with := frappe.db.get_all("GST Inward Supply", link_doc, pluck="name"):
-        _unlink_documents((pur_linked_with))
+        _unlink_documents(pur_linked_with)
         inward_supplies.extend(pur_linked_with)
 
     link_doc["match_status"] = "Manual Match"

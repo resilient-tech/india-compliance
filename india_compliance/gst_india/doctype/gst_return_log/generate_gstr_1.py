@@ -1,6 +1,7 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
 import itertools
+from typing import ClassVar
 
 import frappe
 from frappe import _, unscrub
@@ -37,7 +38,7 @@ from india_compliance.gst_india.utils.gstr_utils import (
 
 
 class SummarizeGSTR1:
-    AMOUNT_FIELDS = {
+    AMOUNT_FIELDS: ClassVar[dict] = {
         "total_taxable_value": 0,
         "total_igst_amount": 0,
         "total_cgst_amount": 0,
@@ -116,7 +117,7 @@ class SummarizeGSTR1:
         # Round Values
         for row in category_summary:
             for key, value in row.items():
-                if isinstance(value, (int, float)):
+                if isinstance(value, int | float):
                     row[key] = flt(value, 2)
         return category_summary
 
@@ -247,8 +248,8 @@ class SummarizeGSTR1:
 
 
 class ReconcileGSTR1:
-    IGNORED_FIELDS = {inv_f.TAX_RATE, inv_f.DOC_VALUE}
-    UNREQUIRED_KEYS = {
+    IGNORED_FIELDS: ClassVar[set] = {inv_f.TAX_RATE, inv_f.DOC_VALUE}
+    UNREQUIRED_KEYS: ClassVar[set] = {
         inv_f.TRANSACTION_TYPE,
         inv_f.DOC_NUMBER,
         inv_f.DOC_DATE,
@@ -403,7 +404,7 @@ class ReconcileGSTR1:
 
         # Compute Differences
         for key, value in reconcile_row.items():
-            if isinstance(value, (int, float)) and key not in AggregateInvoices.IGNORED_FIELDS:
+            if isinstance(value, int | float) and key not in AggregateInvoices.IGNORED_FIELDS:
                 reconcile_row[key] = flt((books_row.get(key) or 0) - (gov_row.get(key) or 0), 2)
                 has_different_value = reconcile_row[key] != 0
 
@@ -449,7 +450,7 @@ class ReconcileGSTR1:
                 empty_row[key] = None
                 continue
 
-            if isinstance(value, (int, float)):
+            if isinstance(value, int | float):
                 empty_row[key] = 0
 
             if key == "items":
@@ -466,7 +467,7 @@ class ReconcileGSTR1:
 
 
 class AggregateInvoices:
-    IGNORED_FIELDS = {inv_f.TAX_RATE, inv_f.DOC_VALUE}
+    IGNORED_FIELDS: ClassVar[set] = {inv_f.TAX_RATE, inv_f.DOC_VALUE}
 
     @staticmethod
     def get_aggregate_data(data: dict):
@@ -507,7 +508,7 @@ class AggregateInvoices:
         return aggregate_invoices
 
     @staticmethod
-    def get_aggregate_invoices(invoices: list, value_keys: list = None) -> dict:
+    def get_aggregate_invoices(invoices: list, value_keys: list | None = None) -> dict:
         """
         There can be multiple rows in books data for a single row in gov data
         Aggregate all the rows to a single row
@@ -527,7 +528,7 @@ class AggregateInvoices:
         keys = []
 
         for key, value in invoice.items():
-            if not isinstance(value, (int, float)):
+            if not isinstance(value, int | float):
                 continue
 
             if key in AggregateInvoices.IGNORED_FIELDS:

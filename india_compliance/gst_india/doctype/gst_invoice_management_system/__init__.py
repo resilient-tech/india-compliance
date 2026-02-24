@@ -154,8 +154,8 @@ class PurchaseInvoice:
         self.PI_ITEM = frappe.qb.DocType("Purchase Invoice Item")
 
     def get_all(self, names=None, filters=None):
-        dimension_fields = get_accounting_dimensions() + ["cost_center", "project"]
-        additional_fields = dimension_fields + ["posting_date"]
+        dimension_fields = [*get_accounting_dimensions(), "cost_center", "project"]
+        additional_fields = [*dimension_fields, "posting_date"]
 
         query = self.get_query(filters=filters, additional_fields=additional_fields)
 

@@ -1105,7 +1105,7 @@ def update_e_waybill_log_for_extention(
 
     for key, value in values_in_comment.items():
         if value:
-            comment += "{0}: {1} <br>".format(frappe.bold(_(key)), value)
+            comment += f"{frappe.bold(_(key))}: {value} <br>"
 
     log_and_process_e_waybill(
         doc,

@@ -6,6 +6,7 @@ import calendar
 import json
 import os
 from collections import defaultdict
+from typing import ClassVar
 
 import frappe
 from frappe import _
@@ -600,7 +601,7 @@ class GSTR3BReport(Document):
 
     def set_supplies_liable_to_reverse_charge(self):
         section = self.report_dict["sup_details"]["isup_rev"]
-        for inv, invoice_details in self.invoice_map.items():
+        for inv in self.invoice_map.keys():
             gst_treatment_section = self.invoice_item_wise_tax_details.get(inv, {})
             for item in gst_treatment_section.values():
                 section["txval"] += item.get("taxable_value")
@@ -666,21 +667,21 @@ def get_address_state_map():
 
 
 def get_json(template):
-    file_path = os.path.join(os.path.dirname(__file__), "{template}.json".format(template=template))
-    with open(file_path, "r") as f:
+    file_path = os.path.join(os.path.dirname(__file__), f"{template}.json")
+    with open(file_path) as f:
         return cstr(f.read())
 
 
 def format_values(data, precision=2):
     if isinstance(data, dict):
         for key, value in data.items():
-            if isinstance(value, (int, float)):
+            if isinstance(value, int | float):
                 data[key] = flt(value, precision)
             elif isinstance(value, dict) or isinstance(value, list):
                 format_values(value)
     elif isinstance(data, list):
         for i, item in enumerate(data):
-            if isinstance(item, (int, float)):
+            if isinstance(item, int | float):
                 data[i] = flt(item, precision)
             elif isinstance(item, dict) or isinstance(item, list):
                 format_values(item)
@@ -732,10 +733,10 @@ class GSTR3BExcelExporter:
     TEMPLATE_FILE = get_data_file_path("gstr3b_excel_utility_v5.7.xlsx")
     WORKSHEET_NAME = "GSTR-3B"
 
-    _STATE_CODE_TO_NAME = {code: state for state, code in STATE_NUMBERS.items()}
+    _STATE_CODE_TO_NAME: ClassVar[dict] = {code: state for state, code in STATE_NUMBERS.items()}
 
     # Row mappings for each section (consistent with JSON keys)
-    ROWS = {
+    ROWS: ClassVar[dict] = {
         # Header info
         "gstin": 5,
         "year": 5,
@@ -762,14 +763,14 @@ class GSTR3BExcelExporter:
         "inward_non_gst": 49,
     }
 
-    HEADER_COLUMNS = {
+    HEADER_COLUMNS: ClassVar[dict] = {
         "gstin": 3,
         "year": 7,
         "month": 7,
     }
 
     # Section 3.1 - Tax columns
-    TAX_COLUMNS = {
+    TAX_COLUMNS: ClassVar[dict] = {
         "txval": 3,
         "iamt": 4,
         "camt": 5,
@@ -777,20 +778,20 @@ class GSTR3BExcelExporter:
     }
 
     # Section 4 - ITC columns
-    ITC_COLUMNS = {
+    ITC_COLUMNS: ClassVar[dict] = {
         "iamt": 3,
         "camt": 4,
         "csamt": 6,
     }
 
     # Section 5 - Inward supplies columns
-    INWARD_COLUMNS = {
+    INWARD_COLUMNS: ClassVar[dict] = {
         "inter": 4,
         "intra": 5,
     }
 
     # ITC type mappings based on 'ty' field in JSON
-    ITC_AVAILABLE_TYPES = {
+    ITC_AVAILABLE_TYPES: ClassVar[dict] = {
         "IMPG": "itc_import_goods",
         "IMPS": "itc_import_services",
         "ISRC": "itc_reverse_charge",
@@ -798,17 +799,17 @@ class GSTR3BExcelExporter:
         "OTH": "itc_others",
     }
 
-    ITC_REVERSED_TYPES = {
+    ITC_REVERSED_TYPES: ClassVar[dict] = {
         "RUL": "itc_reversed_rules",
         "OTH": "itc_reversed_others",
     }
 
-    INWARD_SUPPLY_TYPES = {
+    INWARD_SUPPLY_TYPES: ClassVar[dict] = {
         "GST": "inward_gst",
         "NONGST": "inward_non_gst",
     }
 
-    COLUMN_SETS = {
+    COLUMN_SETS: ClassVar[dict] = {
         "tax": ["txval", "iamt", "camt", "csamt"],
         "itc": ["iamt", "camt", "csamt"],
         "import_itc": ["iamt", "csamt"],

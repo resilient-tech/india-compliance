@@ -1,5 +1,6 @@
 import copy
 from base64 import b64decode
+from typing import ClassVar
 from urllib.parse import urljoin
 
 import frappe
@@ -23,7 +24,7 @@ class BaseAPI:
     API_NAME = "GST"
     BASE_PATH = ""
     PLACEHOLDER = "*****"
-    DEFAULT_MASK_MAP = {
+    DEFAULT_MASK_MAP: ClassVar[dict] = {
         "headers": [
             "x-api-key",
             "auth-token",
@@ -247,7 +248,7 @@ class BaseAPI:
                 title=_("API Request Failed"),
             )
 
-    ERROR_MESSAGES = {
+    ERROR_MESSAGES: ClassVar[dict] = {
         GSPServerError: (
             "GSPGSTDOWN",
             "GSPERR300",

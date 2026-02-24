@@ -71,7 +71,7 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
         # new file
         if not getattr(self, file_field):
             content = get_compressed_data(json_data)
-            file_name = frappe.scrub("{0}-{1}.json.gz".format(self.name, file_field))
+            file_name = frappe.scrub(f"{self.name}-{file_field}.json.gz")
             file = frappe.get_doc(
                 {
                     "doctype": "File",

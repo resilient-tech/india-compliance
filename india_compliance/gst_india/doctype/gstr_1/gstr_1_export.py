@@ -5,6 +5,7 @@ Export GSTR-1 data to excel or json
 from collections import defaultdict
 from datetime import datetime
 from enum import Enum
+from typing import ClassVar
 
 import frappe
 from frappe import _
@@ -50,7 +51,7 @@ CATEGORIES_WITH_ITEMS = {
 
 class DataProcessor:
     # transform input data to required format
-    FIELD_TRANSFORMATIONS = {}
+    FIELD_TRANSFORMATIONS: ClassVar[dict] = {}
 
     def process_data(self, input_data):
         """
@@ -120,13 +121,13 @@ class GovExcel(DataProcessor):
     DATE_FORMAT = "dd-mmm-yy"
     PERCENT_FORMAT = "0.00"
 
-    FIELD_TRANSFORMATIONS = {
+    FIELD_TRANSFORMATIONS: ClassVar[dict] = {
         inv_f.DIFF_PERCENTAGE: lambda value: (value * 100 if value != 0 else None),
         inv_f.DOC_DATE: lambda value: datetime.strptime(value, "%Y-%m-%d"),
         inv_f.SHIPPING_BILL_DATE: lambda value: datetime.strptime(value, "%Y-%m-%d"),
     }
 
-    TEMPLATE_EXCEL_FILE = {
+    TEMPLATE_EXCEL_FILE: ClassVar[dict] = {
         "V2.0": get_data_file_path("gstr1_excel_template_v2.0.xlsx"),
         "V2.1": get_data_file_path("gstr1_excel_template_v2.1.xlsx"),
     }
@@ -175,7 +176,7 @@ class GovExcel(DataProcessor):
                 if doc.get(inv_f.DOC_TYPE) == "D":
                     continue
 
-                doc.update({key: abs(value) for key, value in doc.items() if isinstance(value, (int, float))})
+                doc.update({key: abs(value) for key, value in doc.items() if isinstance(value, int | float)})
 
         self.process_hsn_data(category_wise_data)
 
@@ -787,7 +788,7 @@ class BooksExcel(DataProcessor):
     AMOUNT_FORMAT = "#,##0.00"
     DATE_FORMAT = "dd-mmm-yy"
     PERCENT_FORMAT = "0.00"
-    DEFAULT_DATA_FORMAT = {"height": 15}
+    DEFAULT_DATA_FORMAT: ClassVar[dict] = {"height": 15}
 
     def __init__(self, company_gstin, month_or_quarter, year):
         self.company_gstin = company_gstin
@@ -1202,8 +1203,8 @@ class ReconcileExcel:
         }
     )
 
-    DEFAULT_HEADER_FORMAT = {"bg_color": COLOR_PALLATE.dark_gray}
-    DEFAULT_DATA_FORMAT = {"bg_color": COLOR_PALLATE.light_gray}
+    DEFAULT_HEADER_FORMAT: ClassVar[dict] = {"bg_color": COLOR_PALLATE.dark_gray}
+    DEFAULT_DATA_FORMAT: ClassVar[dict] = {"bg_color": COLOR_PALLATE.light_gray}
 
     def __init__(self, company_gstin, month_or_quarter, year):
         self.company_gstin = company_gstin

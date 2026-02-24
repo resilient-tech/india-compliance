@@ -663,7 +663,7 @@ def get_json_from_file(path):
 
 
 def join_list_with_custom_separators(input, separator=", ", last_separator=" or "):
-    if not isinstance(input, (list, tuple)):
+    if not isinstance(input, list | tuple):
         return
 
     if not input:
@@ -957,9 +957,7 @@ def handle_server_errors(settings, doc, document_type, error):
     if settings.enable_retry_einv_ewb_generation and (not settings.sandbox_mode or frappe.flags.in_test):
         document_status = "Auto-Retry"
         settings.db_set("is_retry_einv_ewb_generation_pending", 1, update_modified=False)
-        error_message += (" Your {0} generation will be automatically retried every 5 minutes.").format(
-            document_type
-        )
+        error_message += f" Your {document_type} generation will be automatically retried every 5 minutes."
     else:
         error_message += " Please try again after some time."
 
