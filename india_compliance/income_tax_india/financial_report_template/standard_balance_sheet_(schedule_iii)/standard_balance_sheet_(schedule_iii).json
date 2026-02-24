@@ -604,10 +604,10 @@
   },
   {
    "advanced_filtering": 0,
-   "balance_type": "",
+   "balance_type": "Closing Balance",
    "bold_text": 0,
-   "calculation_formula": "0",
-   "data_source": "Calculated Amount",
+   "calculation_formula": "[\"account_category\", \"=\", \"Other Receivables\"]",
+   "data_source": "Account Data",
    "display_name": "e. Short-Term Loans and Advances",
    "fieldtype": "",
    "hidden_calculation": 0,
