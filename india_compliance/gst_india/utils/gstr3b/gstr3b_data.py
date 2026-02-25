@@ -61,6 +61,7 @@ DOCTYPE_CONDITION_MAP = {
 }
 
 AMOUNT_FIELDS = (
+    "taxable_value",
     "igst_amount",
     "cgst_amount",
     "sgst_amount",
