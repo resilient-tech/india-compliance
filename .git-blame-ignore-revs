@@ -22,3 +22,17 @@ dec2438be2d63eff24da45d6c936ec846d8ab0df
 
 # updated black in pre-commit
 d8c2469651974cc82a2bb50c93e22f723cbb5b42
+
+### ruff implementation ###
+
+# eslint globals
+5bad5049e9b3f55c1c3240029f6f8602a51bd9a7
+
+# run pre-commit with ruff and fixes some errors
+d4986b31db0e89c290990d1bb8d33cbc66075a6b
+
+# add .eslintignore and .prettierignore
+8e072ca65b4e33e3a9f2fb0d9ee6304d29f91ca0
+
+# skip security review semgrep rule
+66c2ca01f834e0302ed205f71a297287850c650c
