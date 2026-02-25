@@ -30,7 +30,7 @@ on:
             - "**.html"
             - "**.csv"
 env:
-    BRANCH: ${{ inputs.base_ref || github.base_ref || github.ref_name }}
+    BRANCH: ${{ inputs.base_ref || 'develop' }}
     APP_NAME: ${{ inputs.app_name || 'india_compliance' }}
 
 jobs:
