@@ -42,7 +42,7 @@ def execute(filters=None):
 
 
 @frappe.whitelist()
-def get_pending_voucher_types(company=None):
+def get_pending_voucher_types(company: str | None = None):
     frappe.has_permission("GST Settings", "read", throw=True)
 
     company_accounts = ""

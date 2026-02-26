@@ -459,7 +459,7 @@ def end_transaction_progress(return_period):
 
 @frappe.whitelist()
 @otp_handler
-def regenerate_gstr_2b(gstin, return_period, doctype):
+def regenerate_gstr_2b(gstin: str, return_period: str, doctype: str):
     frappe.has_permission(doctype, throw=True)
 
     try:
@@ -474,7 +474,7 @@ def regenerate_gstr_2b(gstin, return_period, doctype):
 
 
 @frappe.whitelist()
-def check_regenerate_status(gstin, reference_id, doctype):
+def check_regenerate_status(gstin: str, reference_id: str, doctype: str):
     frappe.has_permission(doctype, throw=True)
 
     if not reference_id:

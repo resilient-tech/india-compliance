@@ -741,7 +741,7 @@ def format_values(data, precision=2):
 
 
 @frappe.whitelist()
-def view_report(name):
+def view_report(name: str):
     frappe.has_permission("GSTR 3B Report", throw=True)
 
     json_data = frappe.get_value("GSTR 3B Report", name, "json_output")
@@ -749,7 +749,7 @@ def view_report(name):
 
 
 @frappe.whitelist()
-def make_json(name):
+def make_json(name: str):
     frappe.has_permission("GSTR 3B Report", throw=True)
 
     json_data = frappe.get_value("GSTR 3B Report", name, "json_output")
@@ -760,7 +760,7 @@ def make_json(name):
 
 
 @frappe.whitelist()
-def download_gstr3b_as_excel(name):
+def download_gstr3b_as_excel(name: str):
     """Download GSTR 3B report as Excel file"""
     frappe.has_permission("GSTR 3B Report", throw=True)
     json_data = frappe.get_value("GSTR 3B Report", name, "json_output")

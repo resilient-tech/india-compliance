@@ -39,8 +39,11 @@ KEYS_TO_FILTER_DUPLICATES = frozenset(("dst", "bnm", "st", "loc", "city"))
 CHARACTERS_TO_STRIP = f"{whitespace},"
 
 
+# nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
 @frappe.whitelist()
-def get_gstin_info(gstin, *, doc=None, throw_error: bool = True):
+def get_gstin_info(
+    gstin: str | None, *, doc: str | dict | None = None, throw_error: bool = True
+):
     if doc and isinstance(doc, str):
         doc = frappe.parse_json(doc)
 
@@ -392,7 +395,7 @@ def get_latest_3b_filed_period(company, company_gstin):
 
 @frappe.whitelist()
 @otp_handler
-def get_and_update_filing_preference(gstin, period):
+def get_and_update_filing_preference(gstin: str, period: str):
     frappe.has_permission("GST Return Log", throw=True)
 
     response = fetch_filing_preference(gstin, get_fy(period))
