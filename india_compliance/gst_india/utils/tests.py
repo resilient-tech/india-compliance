@@ -94,6 +94,8 @@ def append_item(transaction, data=None, company_abbr="_TIRC"):
     if data.doctype in ["Payment Entry", "Journal Entry"]:
         return
 
+    allow_zero_valuation_rate = 1 if data.get("is_return") else 0
+
     return transaction.append(
         "items",
         {
@@ -110,6 +112,7 @@ def append_item(transaction, data=None, company_abbr="_TIRC"):
             "taxable_value": data.taxable_value or 0,
             "fg_item": data.fg_item,
             "fg_item_qty": data.fg_item_qty,
+            "allow_zero_valuation_rate": allow_zero_valuation_rate,
         },
     )
 
