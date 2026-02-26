@@ -1,9 +1,6 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
 
-from __future__ import annotations
-
-from typing import Self
 
 import frappe
 from frappe import _
@@ -70,7 +67,7 @@ CATEGORY_MAP = {
 
 class GSTInvoiceManagementSystem(Document):
     @frappe.whitelist()
-    def autoreconcile_and_get_data(self: Self):
+    def autoreconcile_and_get_data(self):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         filters = frappe._dict(
@@ -147,7 +144,7 @@ class GSTInvoiceManagementSystem(Document):
         )
 
     @frappe.whitelist()
-    def update_action(self: Self, invoice_names: str | list, action: str):
+    def update_action(self, invoice_names: str | list, action: str):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         invoice_names = frappe.parse_json(invoice_names)
@@ -186,7 +183,7 @@ class GSTInvoiceManagementSystem(Document):
         )
 
     @frappe.whitelist()
-    def get_invoice_details(self: Self, purchase_name: str, inward_supply_name: str):
+    def get_invoice_details(self, purchase_name: str, inward_supply_name: str):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         inward_supply = InwardSupply().get_all(
@@ -211,7 +208,7 @@ class GSTInvoiceManagementSystem(Document):
 
     @frappe.whitelist()
     def link_documents(
-        self: Self,
+        self,
         purchase_invoice_name: str,
         inward_supply_name: str,
         link_doctype: str,
@@ -225,7 +222,7 @@ class GSTInvoiceManagementSystem(Document):
         return self.get_invoice_data(inward_supplies, purchases)
 
     @frappe.whitelist()
-    def unlink_documents(self: Self, data: str | list):
+    def unlink_documents(self, data: str | list):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         purchases, inward_supplies = _unlink_documents(data)
@@ -233,7 +230,7 @@ class GSTInvoiceManagementSystem(Document):
         return self.get_invoice_data(inward_supplies, purchases)
 
     @frappe.whitelist()
-    def get_link_options(self: Self, doctype: str, filters: dict | frappe._dict):
+    def get_link_options(self, doctype: str, filters: dict | frappe._dict):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         if isinstance(filters, dict):
