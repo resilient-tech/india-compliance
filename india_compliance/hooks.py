@@ -12,7 +12,7 @@ app_home = "/desk/gst-india"
 add_to_apps_screen = [
     {
         "name": app_name,
-        "logo": "/assets/india_compliance/images/india-compliance-logo.png",
+        "logo": "/assets/india_compliance/images/india-compliance.svg",
         "title": app_title,
         "route": app_home,
         "has_permission": "india_compliance.check_app_permission",
@@ -499,6 +499,8 @@ fields_for_group_similar_items = [
     "cess_amount",
     "cess_non_advol_amount",
 ]
+
+require_type_annotated_api_methods = True
 
 
 # Includes in <head>

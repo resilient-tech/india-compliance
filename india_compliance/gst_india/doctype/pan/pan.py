@@ -51,7 +51,7 @@ class PAN(Document):
 
 
 @frappe.whitelist()
-def get_pan_status(pan, force_update: bool = False):
+def get_pan_status(pan: str, force_update: bool = False):
     """
     Permission check not required as PAN details are public.
     """
