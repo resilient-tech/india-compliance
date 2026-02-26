@@ -1,10 +1,7 @@
 # Copyright (c) 2023, Resilient Tech and contributors
 # For license information, please see license.txt
 
-from __future__ import annotations
-
 import json
-from typing import Self
 
 import frappe
 from frappe import _
@@ -393,7 +390,7 @@ class BillofEntry(Document):
         return asset_items
 
     @frappe.whitelist()
-    def get_items_from_purchase_invoice(self: Self, purchase_invoices: list[str]):
+    def get_items_from_purchase_invoice(self, purchase_invoices: list[str]):
         if not purchase_invoices:
             frappe.msgprint(_("No Purchase Invoices selected"))
             return
