@@ -82,7 +82,7 @@ def get_wdv_or_dd_depr_amount(
 
     if fb_row.frequency_of_depreciation == 12:
         if schedule_date < start_date_of_next_fiscal_year:
-            depreciation_amount = flt(asset.gross_purchase_amount) * (
+            depreciation_amount = flt(depreciable_value) * (
                 flt(rate_of_depreciation) / 100
             )
         else:
@@ -112,9 +112,7 @@ def get_wdv_or_dd_depr_amount(
 
         if schedule_date < start_date_of_next_fiscal_year:
             depreciation_amount = (
-                flt(asset.gross_purchase_amount)
-                * (flt(rate_of_depreciation) / 100)
-                * fraction
+                flt(depreciable_value) * (flt(rate_of_depreciation) / 100) * fraction
             )
         else:
             depreciation_amount = (
