@@ -1,16 +1,17 @@
 name: Semantic Commits
 
 on:
-    pull_request: {}
+  pull_request: {}
 
 permissions:
-    contents: read
+  contents: read
 
 concurrency:
-    group: commitcheck-frappe-${{ github.event.number }}
-    cancel-in-progress: true
+  group: commitcheck-frappe-${{ github.event.number }}
+  cancel-in-progress: true
 
 jobs:
+<<<<<<< HEAD
     commitlint:
         name: Check Commit Titles
         runs-on: ubuntu-latest
@@ -23,8 +24,22 @@ jobs:
               with:
                   node-version: 20
                   check-latest: true
+=======
+  commitlint:
+    name: Check Commit Titles
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 200
 
-            - name: Check commit titles
-              run: |
-                  npm install @commitlint/cli @commitlint/config-conventional
-                  npx commitlint --verbose --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          check-latest: true
+>>>>>>> a57edf10 (chore: format YAML files and update pre-commit configuration)
+
+      - name: Check commit titles
+        run: |
+          npm install @commitlint/cli @commitlint/config-conventional
+          npx commitlint --verbose --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }}

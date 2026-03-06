@@ -2,7 +2,7 @@ name: Documentation Required
 
 on:
   pull_request:
-    types: [ opened, synchronize, reopened, edited ]
+    types: [opened, synchronize, reopened, edited]
 
 jobs:
   build:
@@ -10,11 +10,19 @@ jobs:
     timeout-minutes: 10
 
     steps:
+<<<<<<< HEAD
       - name: 'Setup Environment'
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - uses: actions/checkout@v4
+=======
+      - name: "Setup Environment"
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - uses: actions/checkout@v6
+>>>>>>> a57edf10 (chore: format YAML files and update pre-commit configuration)
 
       - name: Validate Docs
         env:
