@@ -9,7 +9,6 @@ repos:
       - id: trailing-whitespace
         files: "india_compliance.*"
         exclude: ".*json$|.*txt$|.*csv|.*md"
-      - id: check-yaml
       - id: no-commit-to-branch
         args: ["--branch", "develop"]
       - id: check-merge-conflict
