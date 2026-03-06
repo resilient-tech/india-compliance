@@ -38,7 +38,7 @@ function fetch_gst_details(doctype) {
     const event_fields = ["tax_category", "company_gstin", "place_of_supply", "is_reverse_charge"];
 
     // we are using address below to prevent multiple event triggers
-    if (in_list(frappe.boot.sales_doctypes, doctype)) {
+    if (frappe.boot.sales_doctypes.includes(doctype)) {
         event_fields.push("customer_address", "shipping_address_name", "is_export_with_gst");
     } else if (doctype === "Stock Entry") {
         event_fields.push("bill_from_address", "bill_to_address");
@@ -121,7 +121,7 @@ async function update_gst_details(frm, event) {
         "is_reverse_charge",
     ];
 
-    if (in_list(frappe.boot.sales_doctypes, frm.doc.doctype)) {
+    if (frappe.boot.sales_doctypes.includes(frm.doc.doctype)) {
         fieldnames_to_set.push(
             "customer_address",
             "shipping_address_name",

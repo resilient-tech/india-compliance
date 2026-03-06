@@ -127,7 +127,7 @@ Object.assign(india_compliance, {
     },
 
     get_party_type(doctype) {
-        return in_list(frappe.boot.sales_doctypes, doctype) ? "Customer" : "Supplier";
+        return frappe.boot.sales_doctypes.includes(doctype) ? "Customer" : "Supplier";
     },
 
     async set_gstin_status(field, doc, force_update = false) {
