@@ -1,7 +1,3 @@
-from __future__ import annotations
-
-from typing import Self
-
 import frappe
 from frappe import _
 from frappe.custom.doctype.customize_form.customize_form import (
@@ -16,7 +12,7 @@ from india_compliance.audit_trail.utils import (
 
 class CustomizeForm(_CustomizeForm):
     @frappe.whitelist()
-    def fetch_to_customize(self: Self):
+    def fetch_to_customize(self):
         self.set_onload(
             "audit_trail_enabled",
             self.doc_type and is_audit_trail_enabled() and self.doc_type in get_audit_trail_doctypes(),
@@ -25,7 +21,7 @@ class CustomizeForm(_CustomizeForm):
         return super().fetch_to_customize()
 
     @frappe.whitelist()
-    def save_customization(self: Self):
+    def save_customization(self):
         self.validate_audit_trail_integrity()
         return super().save_customization()
 

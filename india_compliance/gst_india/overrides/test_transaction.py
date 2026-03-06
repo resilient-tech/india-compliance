@@ -500,6 +500,7 @@ class TestTransaction(IntegrationTestCase):
             item.qty = 0
             item.rate = 0
             item.price_list_rate = 0
+            item.allow_zero_valuation_rate = 1
 
         # Adding charges
         doc.append(
