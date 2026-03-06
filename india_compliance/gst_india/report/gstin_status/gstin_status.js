@@ -9,14 +9,7 @@ frappe.query_reports["GSTIN Status"] = {
             fieldname: "status",
             label: __("Status"),
             fieldtype: "Select",
-            options: [
-                "",
-                "Active",
-                "Cancelled",
-                "Inactive",
-                "Provisional",
-                "Suspended",
-            ],
+            options: ["", "Active", "Cancelled", "Inactive", "Provisional", "Suspended"],
         },
         {
             fieldname: "party_type",
@@ -62,9 +55,7 @@ frappe.query_reports["GSTIN Status"] = {
 
     get_colored_status(status) {
         return `<span
-            style="color: ${
-                this.STATUS_TO_COLOR_MAPPING[status]
-            }; text-align:center; width:100%;"
+            style="color: ${this.STATUS_TO_COLOR_MAPPING[status]}; text-align:center; width:100%;"
             fieldname="status"
         >
             ${frappe.utils.escape_html(status)}
@@ -87,13 +78,9 @@ frappe.query_reports["GSTIN Status"] = {
     },
 
     onload() {
-        $(document).on(
-            "click",
-            "button[fieldname='update_gstin_details_btn']",
-            async e => {
-                await this.handle_click_listner(e);
-            },
-        );
+        $(document).on("click", "button[fieldname='update_gstin_details_btn']", async (e) => {
+            await this.handle_click_listner(e);
+        });
     },
 
     async handle_click_listner(e) {
@@ -123,9 +110,7 @@ frappe.query_reports["GSTIN Status"] = {
             }
         } catch (error) {
             frappe.show_alert({
-                message: __(
-                    "Error while updating GSTIN status. Please try again later.",
-                ),
+                message: __("Error while updating GSTIN status. Please try again later."),
                 indicator: "red",
             });
             this.toggle_gstin_update_btn(gstin, false);
@@ -134,9 +119,7 @@ frappe.query_reports["GSTIN Status"] = {
     },
 
     toggle_gstin_update_btn(gstin, disabled = null) {
-        let btn = $(
-            `button[fieldname='update_gstin_details_btn'][data-gstin='${gstin}']`,
-        );
+        let btn = $(`button[fieldname='update_gstin_details_btn'][data-gstin='${gstin}']`);
         if (disabled == null) {
             disabled = btn.prop("disabled");
             disabled = !disabled;
@@ -150,13 +133,7 @@ frappe.query_reports["GSTIN Status"] = {
         btn.text(frappe.utils.escape_html(text));
     },
 
-    GSTIN_FIELDNAME: [
-        "status",
-        "registration_date",
-        "last_updated_on",
-        "cancelled_date",
-        "is_blocked",
-    ],
+    GSTIN_FIELDNAME: ["status", "registration_date", "last_updated_on", "cancelled_date", "is_blocked"],
 
     update_gstin_values(gstin, data) {
         const affectedElements = $(`div.dt-cell__content[title='${gstin}']`);
@@ -170,20 +147,14 @@ frappe.query_reports["GSTIN Status"] = {
     },
 
     update_value(row, fieldname, value) {
-        const ele = $(
-            `.dt-row.dt-row-${row}.vrow > div > div > [fieldname='${fieldname}']`,
-        );
-        let { fieldtype } = frappe.query_report.columns.find(column => {
+        const ele = $(`.dt-row.dt-row-${row}.vrow > div > div > [fieldname='${fieldname}']`);
+        let { fieldtype } = frappe.query_report.columns.find((column) => {
             return column.fieldname == fieldname;
         });
         let formatter;
         switch (fieldname) {
             case "is_blocked":
-                value = [undefined, null].includes(value)
-                    ? ""
-                    : value === 0
-                    ? "No"
-                    : "Yes";
+                value = [undefined, null].includes(value) ? "" : value === 0 ? "No" : "Yes";
                 break;
             case "status":
                 ele.css("color", this.STATUS_TO_COLOR_MAPPING[value]);

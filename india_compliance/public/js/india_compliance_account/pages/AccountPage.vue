@@ -4,43 +4,24 @@
         <div v-else>
             <PageTitle title="India Compliance Account" />
             <div class="subtext">
-                <span class="subtext-item">
-                    Registered Email: {{ subscriptionDetails.email }}
-                </span>
+                <span class="subtext-item"> Registered Email: {{ subscriptionDetails.email }} </span>
             </div>
             <Message v-if="message" :message="message.message" :color="message.color" />
             <div class="main-content">
                 <div class="card subscription-info">
-                    <p class="last-updated-text">
-                        Last Updated On {{ last_synced_on }}
-                    </p>
+                    <p class="last-updated-text">Last Updated On {{ last_synced_on }}</p>
                     <div class="subscription-details-item">
                         <p class="label">
-                            {{
-                                is_unlimited_account
-                                    ? "Used Credits"
-                                    : "Available Credits"
-                            }}
+                            {{ is_unlimited_account ? "Used Credits" : "Available Credits" }}
                         </p>
                         <p class="value">
-                            {{
-                                getReadableNumber(
-                                    is_unlimited_account
-                                        ? used_credits
-                                        : balance_credits,
-                                    0,
-                                )
-                            }}
+                            {{ getReadableNumber(is_unlimited_account ? used_credits : balance_credits, 0) }}
                         </p>
                     </div>
                     <div class="subscription-details-item">
                         <div v-show="valid_upto">
                             <p class="label">
-                                {{
-                                    is_unlimited_account
-                                        ? "Next Billing Date"
-                                        : "Valid Upto"
-                                }}
+                                {{ is_unlimited_account ? "Next Billing Date" : "Valid Upto" }}
                             </p>
                             <p class="value" :class="{ 'mb-4': is_unlimited_account }">
                                 {{ valid_upto }}
@@ -60,20 +41,15 @@
                     <ul class="links">
                         <a @click.prevent="showUsage"><li>Review API Usage</li></a>
                         <!-- <a href="#"><li>Check API Status</li></a> -->
-                        <a @click.prevent="openInvoiceDialog"
-                            ><li>Invoice History</li></a
-                        >
-                        <a
-                            href="https://discuss.frappe.io/c/erpnext/india-compliance/65"
+                        <a @click.prevent="openInvoiceDialog"><li>Invoice History</li></a>
+                        <a href="https://discuss.frappe.io/c/erpnext/india-compliance/65"
                             ><li>Community Forum</li></a
                         >
                         <a
                             href="https://github.com/resilient-tech/india-compliance/issues/new?template=bug_report.yaml"
                             ><li>Report a Bug</li></a
                         >
-                        <a href="mailto:api-support@indiacompliance.app"
-                            ><li>Email Support</li></a
-                        >
+                        <a href="mailto:api-support@indiacompliance.app"><li>Email Support</li></a>
                         <a @click.prevent="logout"><li>Logout</li></a>
                     </ul>
                 </div>
@@ -118,7 +94,7 @@ export default {
                 async () => {
                     await this.$store.dispatch("setApiSecret", null);
                     this.$router.replace({ name: "auth" });
-                },
+                }
             );
         },
         openInvoiceDialog() {
@@ -130,10 +106,7 @@ export default {
                         label: __("From Date"),
                         fieldtype: "Date",
                         reqd: 1,
-                        default: frappe.datetime.add_months(
-                            frappe.datetime.get_today(),
-                            -12,
-                        ),
+                        default: frappe.datetime.add_months(frappe.datetime.get_today(), -12),
                     },
                     {
                         fieldname: "email",
@@ -165,18 +138,16 @@ export default {
                     },
                 ],
                 primary_action_label: __("Get Invoice History"),
-                primary_action: async values => {
+                primary_action: async (values) => {
                     const { from_date, to_date } = values;
 
-                    if (from_date > to_date)
-                        frappe.throw(__("From Date cannot be greater than To Date"));
+                    if (from_date > to_date) frappe.throw(__("From Date cannot be greater than To Date"));
 
                     const response = await get_invoice_history(from_date, to_date);
                     const data = response.message?.length > 0 ? response.message : null;
-                    const invoiceHistoryTable = frappe.render_template(
-                        "invoice_history_table",
-                        { data_array: data },
-                    );
+                    const invoiceHistoryTable = frappe.render_template("invoice_history_table", {
+                        data_array: data,
+                    });
                     const invoice_history = dialog.fields_dict.invoice_history;
 
                     invoice_history.html(invoiceHistoryTable);
@@ -186,16 +157,11 @@ export default {
                             const invoice_name = $(this).data("invoice-name");
                             const email = dialog.get_value("email");
 
-                            const response = await send_invoice_email(
-                                invoice_name,
-                                email,
-                            );
+                            const response = await send_invoice_email(invoice_name, email);
                             if (response.success) {
                                 frappe.msgprint({
                                     title: __("Success"),
-                                    message: __("Invoice {0} sent successfully.", [
-                                        invoice_name,
-                                    ]),
+                                    message: __("Invoice {0} sent successfully.", [invoice_name]),
                                     indicator: "green",
                                 });
                             }
@@ -211,9 +177,7 @@ export default {
         last_synced_on() {
             // TODO: set based on user datetime format?
             let { last_usage_synced_on } = this.subscriptionDetails;
-            last_usage_synced_on = last_usage_synced_on
-                ? moment.unix(last_usage_synced_on)
-                : moment();
+            last_usage_synced_on = last_usage_synced_on ? moment.unix(last_usage_synced_on) : moment();
 
             return last_usage_synced_on.format("DD-MM-YYYY HH:mm A");
         },

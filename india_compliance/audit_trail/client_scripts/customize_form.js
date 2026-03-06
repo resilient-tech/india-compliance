@@ -1,7 +1,6 @@
 frappe.ui.form.on("Customize Form", {
     refresh: function (frm) {
-        const audit_trail_enabled =
-            frm.doc.doc_type && frm.doc.__onload?.audit_trail_enabled;
+        const audit_trail_enabled = frm.doc.doc_type && frm.doc.__onload?.audit_trail_enabled;
 
         // this should never happen, but just in case
         if (audit_trail_enabled && !frm.doc.track_changes) {
@@ -12,9 +11,7 @@ frappe.ui.form.on("Customize Form", {
         frm.set_df_property(
             "track_changes",
             "description",
-            audit_trail_enabled
-                ? __("This setting cannot be edited to ensure Audit Trail integrity.")
-                : "",
+            audit_trail_enabled ? __("This setting cannot be edited to ensure Audit Trail integrity.") : ""
         );
     },
 });

@@ -1,11 +1,6 @@
 <template>
     <div class="form-group frappe-control" :class="this.hasError && 'has-error'">
-        <label
-            :for="name"
-            class="control-label"
-            :class="required && 'reqd'"
-            v-if="label"
-        >
+        <label :for="name" class="control-label" :class="required && 'reqd'" v-if="label">
             {{ label }}
         </label>
         <div class="control-input">
@@ -23,22 +18,9 @@
                 @blur="$emit('blur', $event.target.value.trim())"
             />
             <div class="suffix-icon">
-                <Loading
-                    radius="15"
-                    color="var(--text-light)"
-                    stroke="1.8"
-                    v-if="isLoading"
-                />
-                <i
-                    class="fa fa-times-circle"
-                    style="color: var(--red-500)"
-                    v-else-if="hasError"
-                ></i>
-                <i
-                    class="fa fa-check-circle"
-                    style="color: var(--green-500)"
-                    v-else-if="isValid"
-                ></i>
+                <Loading radius="15" color="var(--text-light)" stroke="1.8" v-if="isLoading" />
+                <i class="fa fa-times-circle" style="color: var(--red-500)" v-else-if="hasError"></i>
+                <i class="fa fa-check-circle" style="color: var(--green-500)" v-else-if="isValid"></i>
             </div>
         </div>
         <div class="input-error" v-if="error">

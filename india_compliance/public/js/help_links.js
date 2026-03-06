@@ -45,7 +45,7 @@ frappe.help.help_links["Form/Sales Invoice"].push(
     {
         label: "e-Invoice",
         url: docsUrl + "ewaybill-and-einvoice/generating_e_invoice",
-    },
+    }
 );
 
 //Stock Entry
@@ -62,9 +62,7 @@ frappe.help.help_links["Form/Subcontracting Receipt"] = [
     },
     {
         label: "GST Job Work Stock Movement report",
-        url:
-            docsUrl +
-            "gst-reports/miscellaneous_reports#gst-job-work-stock-movement-report",
+        url: docsUrl + "gst-reports/miscellaneous_reports#gst-job-work-stock-movement-report",
     },
 ];
 
@@ -102,9 +100,7 @@ frappe.help.help_links["List/GSTR 3B Report"] = [
 frappe.help.help_links["query-report/GST Job Work Stock Movement"] = [
     {
         label: "GST Job Work Stock Movement",
-        url:
-            docsUrl +
-            "gst-reports/miscellaneous_reports#gst-job-work-stock-movement-report",
+        url: docsUrl + "gst-reports/miscellaneous_reports#gst-job-work-stock-movement-report",
     },
 ];
 

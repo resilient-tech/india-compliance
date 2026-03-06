@@ -11,12 +11,7 @@
                     <div class="billing-details">
                         <div class="sub-heading">
                             <p class="title">Billing Details</p>
-                            <a
-                                class="text-highlight text-right"
-                                @click.prevent="editAddress"
-                            >
-                                Edit
-                            </a>
+                            <a class="text-highlight text-right" @click.prevent="editAddress"> Edit </a>
                         </div>
                         <div class="billing-details-body">
                             <p class="company-title">{{ businessName }}</p>
@@ -28,20 +23,13 @@
                                     {{ pincode }}
                                 </p>
                             </div>
-                            <p class="company-footer">
-                                <strong>GSTIN: </strong> {{ billingGstin }}
-                            </p>
+                            <p class="company-footer"><strong>GSTIN: </strong> {{ billingGstin }}</p>
                         </div>
                     </div>
                     <div class="order-summary">
                         <div class="sub-heading">
                             <p class="title">Order Summary</p>
-                            <a
-                                @click="$router.back()"
-                                class="text-highlight text-right"
-                            >
-                                Edit
-                            </a>
+                            <a @click="$router.back()" class="text-highlight text-right"> Edit </a>
                         </div>
                         <div class="order-summary-body">
                             <div class="row">
@@ -204,7 +192,7 @@ export default {
                             dialog.set_df_property(
                                 "state",
                                 "options",
-                                this.value.toLowerCase() === "india" ? states : [],
+                                this.value.toLowerCase() === "india" ? states : []
                             );
                         },
                     },
@@ -223,9 +211,7 @@ export default {
                     const values = dialog.get_values();
 
                     // hack: comparing two objects
-                    if (
-                        JSON.stringify(this.billingDetails) === JSON.stringify(values)
-                    ) {
+                    if (JSON.stringify(this.billingDetails) === JSON.stringify(values)) {
                         dialog.hide();
                         return;
                     }
@@ -251,13 +237,12 @@ export default {
             const style = getComputedStyle(document.body);
             const primaryColor = style.getPropertyValue("--primary");
             const cardBg = style.getPropertyValue("--card-bg");
-            const theme =
-                document.documentElement.getAttribute("data-theme-mode") || "light";
+            const theme = document.documentElement.getAttribute("data-theme-mode") || "light";
 
             const dropConfig = {
                 components: ["card", "netbanking", "app", "upi"],
                 orderToken,
-                onSuccess: async data => {
+                onSuccess: async (data) => {
                     if (data.order && data.order.status == "PAID") {
                         const response = await verify_payment(data.order.orderId);
                         if (!response.success || response.error) {
@@ -266,20 +251,19 @@ export default {
                         }
                         this.redirectToHome(
                             `Thanks for purchasing API credits! We have successfully added <strong>${this.orderDetails.credits}</strong> credits to your account.`,
-                            "green",
+                            "green"
                         );
                     }
                 },
-                onFailure: data => {
+                onFailure: (data) => {
                     // redirecting on order related errors
                     if (data.order.errorText) {
                         return this.redirectToHome(data.order.errorText, "red");
                     }
 
                     frappe.throw(
-                        data.transaction?.txMsg ||
-                            "Something went wrong, please try again later",
-                        "Payment Failed",
+                        data.transaction?.txMsg || "Something went wrong, please try again later",
+                        "Payment Failed"
                     );
                 },
                 style: {
@@ -296,9 +280,7 @@ export default {
             const paymentElement = document.getElementById("payment-gateway");
             cashfree.initialiseDropin(paymentElement, dropConfig);
 
-            document
-                .querySelector("#payment-gateway iframe")
-                .setAttribute("scrolling", "no");
+            document.querySelector("#payment-gateway iframe").setAttribute("scrolling", "no");
         },
     },
 
@@ -311,10 +293,7 @@ export default {
         }
 
         const script = document.createElement("script");
-        script.setAttribute(
-            "src",
-            "https://sdk.cashfree.com/js/ui/1.0.26/dropinClient.prod.js",
-        );
+        script.setAttribute("src", "https://sdk.cashfree.com/js/ui/1.0.26/dropinClient.prod.js");
         document.head.appendChild(script);
         script.onload = async () => {
             this.initCashFree(this.orderDetails.token);

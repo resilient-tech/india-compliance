@@ -9,19 +9,11 @@ const SUB_SECTION_MAPPING = {
             "Input Service Distributor",
             "All Other ITC",
         ],
-        "ITC Reversed": [
-            "As per rules 42 & 43 of CGST Rules and section 17(5)",
-            "Others",
-        ],
-        "Ineligible ITC": [
-            "Reclaim of ITC Reversal",
-            "ITC restricted due to PoS rules",
-        ],
+        "ITC Reversed": ["As per rules 42 & 43 of CGST Rules and section 17(5)", "Others"],
+        "Ineligible ITC": ["Reclaim of ITC Reversal", "ITC restricted due to PoS rules"],
     },
     5: {
-        "Composition Scheme, Exempted, Nil Rated": [
-            "Composition Scheme, Exempted, Nil Rated",
-        ],
+        "Composition Scheme, Exempted, Nil Rated": ["Composition Scheme, Exempted, Nil Rated"],
         "Non-GST": ["Non-GST"],
     },
 };
@@ -45,7 +37,7 @@ frappe.query_reports["GST Purchase Register"] = {
             options: "Company",
             reqd: 1,
             default: frappe.defaults.get_user_default("Company"),
-            on_change: report => {
+            on_change: (report) => {
                 report.set_filter_value({
                     company_gstin: "",
                 });
@@ -72,10 +64,7 @@ frappe.query_reports["GST Purchase Register"] = {
             fieldname: "date_range",
             label: __("Date Range"),
             fieldtype: "DateRange",
-            default: [
-                india_compliance.last_month_start(),
-                india_compliance.last_month_end(),
-            ],
+            default: [india_compliance.last_month_start(), india_compliance.last_month_end()],
             width: "80",
         },
         {
@@ -93,9 +82,7 @@ frappe.query_reports["GST Purchase Register"] = {
                 { value: "4", label: __("Eligible ITC") },
                 {
                     value: "5",
-                    label: __(
-                        "Values of exempt, nil rated and non-GST inward supplies",
-                    ),
+                    label: __("Values of exempt, nil rated and non-GST inward supplies"),
                 },
             ],
             default: "4",

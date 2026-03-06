@@ -17,7 +17,7 @@ frappe.ui.form.on("e-Waybill Log", {
                     frm.refresh();
                     frappe.show_alert(__("Latest e-Waybill data fetched successfully"));
                 },
-            }),
+            })
         );
     },
 });

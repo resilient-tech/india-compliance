@@ -6,9 +6,7 @@
 
 frappe.ui.form.on("C-Form", {
     setup(frm) {
-        frm.fields_dict.invoices.grid.get_field("invoice_no").get_query = function (
-            doc,
-        ) {
+        frm.fields_dict.invoices.grid.get_field("invoice_no").get_query = function (doc) {
             return {
                 filters: {
                     docstatus: 1,
@@ -37,7 +35,7 @@ frappe.ui.form.on("C-Form Invoice Detail", {
         if (d.invoice_no) {
             frm.call("get_invoice_details", {
                 invoice_no: d.invoice_no,
-            }).then(r => {
+            }).then((r) => {
                 frappe.model.set_value(cdt, cdn, r.message);
             });
         }

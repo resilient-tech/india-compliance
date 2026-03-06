@@ -18,7 +18,7 @@ frappe.setup.on("before_load", function () {
 
         const country_input = frappe.wizard?.slide_dict[0].get_input("country");
         if (country_input) {
-            country_input.on("change", event => {
+            country_input.on("change", (event) => {
                 toggle_india_specific_fields(event.target.value);
             });
         }
@@ -41,16 +41,12 @@ function complete_setup_wizard() {
 function toggle_india_specific_fields(country) {
     if (!country) return;
 
-    const india_specific_fields = [
-        "company_gstin",
-        "default_gst_rate",
-        "enable_audit_trail",
-    ];
+    const india_specific_fields = ["company_gstin", "default_gst_rate", "enable_audit_trail"];
 
     const hide_field = country && country.toLowerCase() !== "india" ? 1 : 0;
 
-    Object.values(frappe.wizard.slide_dict || {}).forEach(slide => {
-        slide.form?.fields_list?.forEach(fieldobj => {
+    Object.values(frappe.wizard.slide_dict || {}).forEach((slide) => {
+        slide.form?.fields_list?.forEach((fieldobj) => {
             if (india_specific_fields.includes(fieldobj.df.fieldname)) {
                 fieldobj.df.hidden = hide_field;
                 fieldobj.refresh();
@@ -60,8 +56,7 @@ function toggle_india_specific_fields(country) {
 }
 
 function update_erpnext_slides_settings() {
-    const slide =
-        erpnext.setup?.slides_settings && erpnext.setup.slides_settings.slice(-1)[0];
+    const slide = erpnext.setup?.slides_settings && erpnext.setup.slides_settings.slice(-1)[0];
     if (!slide) return;
 
     const _index = can_fetch_gstin_info() ? 0 : 3;
@@ -103,7 +98,7 @@ function update_erpnext_slides_settings() {
               href='https://www.mca.gov.in/Ministry/pdf/AccountsAmendmentRules_24032021.pdf'
               target='_blank'
             > MCA Notification dated 24-03-2021</a>.<br>
-            Once enabled, Audit Trail cannot be disabled.`,
+            Once enabled, Audit Trail cannot be disabled.`
         ),
     });
 

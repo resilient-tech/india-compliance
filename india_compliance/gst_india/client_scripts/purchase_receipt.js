@@ -9,7 +9,7 @@ frappe.ui.form.on(DOCTYPE, {
             },
         });
 
-        frm.set_query("driver", doc => {
+        frm.set_query("driver", (doc) => {
             return {
                 filters: {
                     transporter: doc.transporter,
@@ -37,7 +37,7 @@ frappe.ui.form.on(DOCTYPE, {
                 message: __("Supplier Address is required to create e-Waybill"),
                 indicator: "yellow",
             },
-            10,
+            10
         );
     },
 });

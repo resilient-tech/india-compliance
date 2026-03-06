@@ -10,20 +10,14 @@ function update_gstin_in_other_documents(doctype) {
             const { gstin, gst_category } = frm.doc;
             let message = __(
                 "You were using the GSTIN <strong>{0}</strong> in the following other documents:<br>",
-                [previous_gstin],
+                [previous_gstin]
             );
 
-            for (const [doctype, docnames] of Object.entries(
-                docs_with_previous_gstin,
-            )) {
+            for (const [doctype, docnames] of Object.entries(docs_with_previous_gstin)) {
                 message += `<br><strong>${__(doctype)}</strong>:<br>`;
 
-                docnames.forEach(docname => {
-                    message += `${frappe.utils.get_form_link(
-                        doctype,
-                        docname,
-                        true,
-                    )}<br>`;
+                docnames.forEach((docname) => {
+                    message += `${frappe.utils.get_form_link(doctype, docname, true)}<br>`;
                 });
             }
             message += `<br>Do you want to update these with the following new values?
@@ -108,7 +102,7 @@ function show_overseas_disabled_warning(doctype) {
                 frappe.msgprint({
                     message: __(
                         `SEZ/Overseas transactions are disabled in GST Settings.
-                        Please enable this setting to create transactions for this party.`,
+                        Please enable this setting to create transactions for this party.`
                     ),
                     indicator: "orange",
                 });
@@ -155,7 +149,7 @@ function set_gst_category(doctype) {
         gstin(frm) {
             frm.set_value(
                 "gst_category",
-                india_compliance.guess_gst_category(frm.doc.gstin, frm.doc.country),
+                india_compliance.guess_gst_category(frm.doc.gstin, frm.doc.country)
             );
         },
     });
@@ -167,7 +161,6 @@ function set_party_type(frm) {
         F: "Partnership",
         C: "Company",
     };
-    const party_type =
-        frm.doc.doctype === "Customer" ? "customer_type" : "supplier_type";
+    const party_type = frm.doc.doctype === "Customer" ? "customer_type" : "supplier_type";
     frm.set_value(party_type, pan_to_party_type_map[frm.doc.pan[3]] || "Individual");
 }

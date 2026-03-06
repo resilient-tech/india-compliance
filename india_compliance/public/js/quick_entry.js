@@ -2,8 +2,7 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
     constructor(...args) {
         super(...args);
         this.skip_redirect_on_error = true;
-        this.api_enabled =
-            india_compliance.is_api_enabled() && gst_settings.autofill_party_info;
+        this.api_enabled = india_compliance.is_api_enabled() && gst_settings.autofill_party_info;
         this.gstin_to_party_type_map = {
             F: "Partnership",
             C: "Company",
@@ -31,7 +30,7 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                           `When you enter a GSTIN, the permanent address linked to it is
                         autofilled.<br>
                         Change the {0} to autofill other addresses.`,
-                          [frappe.meta.get_label("Address", "pincode")],
+                          [frappe.meta.get_label("Address", "pincode")]
                       )
                     : "",
                 collapsible: 0,
@@ -102,20 +101,15 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                     if (["Customer", "Supplier"].includes(this.doctype)) {
                         d.set_value(
                             `${this.doctype.toLowerCase()}_type`,
-                            this.gstin_to_party_type_map[d.doc._gstin[5]] ||
-                                "Individual",
+                            this.gstin_to_party_type_map[d.doc._gstin[5]] || "Individual"
                         );
                     }
 
-                    if (this.api_enabled && !gst_settings.sandbox_mode)
-                        return autofill_fields(d);
+                    if (this.api_enabled && !gst_settings.sandbox_mode) return autofill_fields(d);
 
                     d.set_value(
                         "gst_category",
-                        india_compliance.guess_gst_category(
-                            d.doc._gstin,
-                            d.doc.country,
-                        ),
+                        india_compliance.guess_gst_category(d.doc._gstin, d.doc.country)
                     );
                 },
             },
@@ -135,8 +129,7 @@ class PartyQuickEntryForm extends GSTQuickEntryForm {
         const fields = super.get_address_fields();
 
         for (const field of fields) {
-            const fieldname =
-                field.fieldname === "_pincode" ? "pincode" : field.fieldname;
+            const fieldname = field.fieldname === "_pincode" ? "pincode" : field.fieldname;
 
             if (!field.label && fieldname) {
                 field.label = frappe.meta.get_label("Address", fieldname);
@@ -178,8 +171,7 @@ class PartyQuickEntryForm extends GSTQuickEntryForm {
                 label: __("First Name"),
                 fieldname: "map_to_first_name",
                 fieldtype: "Data",
-                depends_on:
-                    "eval:doc.customer_type=='Company' || doc.supplier_type=='Company'",
+                depends_on: "eval:doc.customer_type=='Company' || doc.supplier_type=='Company'",
             },
             {
                 fieldtype: "Column Break",
@@ -188,8 +180,7 @@ class PartyQuickEntryForm extends GSTQuickEntryForm {
                 label: __("Last Name"),
                 fieldname: "map_to_last_name",
                 fieldtype: "Data",
-                depends_on:
-                    "eval:doc.customer_type=='Company' || doc.supplier_type=='Company'",
+                depends_on: "eval:doc.customer_type=='Company' || doc.supplier_type=='Company'",
             },
             {
                 fieldname: "primary_contact_section_2",
@@ -237,11 +228,9 @@ frappe.ui.form.SupplierQuickEntryForm = PartyQuickEntryForm;
 class AddressQuickEntryForm extends GSTQuickEntryForm {
     get_address_fields() {
         const fields = super.get_address_fields();
-        const pincode_field = fields.find(field => field.fieldname === "_pincode");
+        const pincode_field = fields.find((field) => field.fieldname === "_pincode");
 
-        for (const [key, value] of Object.entries(
-            frappe.meta.get_docfield("Address", "pincode"),
-        )) {
+        for (const [key, value] of Object.entries(frappe.meta.get_docfield("Address", "pincode"))) {
             if (pincode_field[key] === undefined) pincode_field[key] = value;
         }
 
@@ -256,9 +245,7 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
         this.mandatory = [
             ...this.get_dynamic_link_fields(),
             ...this.get_gstin_field(),
-            ...this.mandatory.filter(
-                field => !fields_to_exclude.includes(field.fieldname),
-            ),
+            ...this.mandatory.filter((field) => !fields_to_exclude.includes(field.fieldname)),
             ...address_fields,
         ];
         super.render_dialog();
@@ -297,19 +284,15 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
                 fieldname: "link_name",
                 fieldtype: "Dynamic Link",
                 label: "Link Name",
-                get_options: df => df.doc.link_doctype,
+                get_options: (df) => df.doc.link_doctype,
                 onchange: async () => {
                     const { link_doctype, link_name } = this.dialog.doc;
 
-                    if (
-                        !link_name ||
-                        !in_list(frappe.boot.gst_party_types, link_doctype)
-                    )
-                        return;
+                    if (!link_name || !in_list(frappe.boot.gst_party_types, link_doctype)) return;
 
                     const { message: gstin_list } = await frappe.call(
                         "india_compliance.gst_india.utils.get_gstin_list",
-                        { party_type: link_doctype, party: link_name },
+                        { party_type: link_doctype, party: link_name }
                     );
                     if (!gstin_list || !gstin_list.length) return;
 
@@ -388,7 +371,7 @@ class ItemQuickEntryForm extends frappe.ui.form.QuickEntryForm {
             const { message } = await frappe.db.get_value(
                 "Item Group",
                 item_group_field.value,
-                "gst_hsn_code",
+                "gst_hsn_code"
             );
             this.dialog.set_value("gst_hsn_code", message.gst_hsn_code);
         };
@@ -438,10 +421,10 @@ function setup_pincode_field(dialog, gstin_info) {
         all_addresses.map((address, index) => ({
             label: `${address.pincode}<br>${address.address_line1}, ${address.address_line2}, ${address.city}, ${address.state}`,
             value: `${index}:${address.pincode}`,
-        })),
+        }))
     );
 
-    pincode_field.format_for_input = value => {
+    pincode_field.format_for_input = (value) => {
         if (value === "" || value == null) return "";
         if (!value.includes(":")) return value;
         let pincode = null;
@@ -471,7 +454,7 @@ function get_gstin_info(gstin, doctype, throw_error = true) {
             method: "india_compliance.gst_india.utils.gstin_info.get_gstin_info",
             args: { gstin, throw_error, doc: { doctype: doctype } },
         })
-        .then(r => r.message);
+        .then((r) => r.message);
 }
 
 function map_gstin_info(doc, gstin_info) {
@@ -508,7 +491,7 @@ function autofill_address(doc, { all_addresses }) {
 
     update_address_info(
         doc,
-        all_addresses.find(address => address.pincode == pincode),
+        all_addresses.find((address) => address.pincode == pincode)
     );
 }
 

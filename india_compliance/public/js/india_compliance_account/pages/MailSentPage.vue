@@ -1,10 +1,6 @@
 <template>
     <div class="mail-sent-page container text-center">
-        <img
-            class="mail-box-img"
-            src="/assets/india_compliance/images/mail-box.png"
-            alt=""
-        />
+        <img class="mail-box-img" src="/assets/india_compliance/images/mail-box.png" alt="" />
         <h2 class="title">Verify your email<span class="text-highlight">.</span></h2>
         <p class="message">
             Almost there! We've sent a verification email to

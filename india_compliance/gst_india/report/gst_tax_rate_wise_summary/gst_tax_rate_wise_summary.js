@@ -10,7 +10,7 @@ frappe.query_reports["GST Tax Rate-wise Summary"] = {
             options: "Company",
             reqd: 1,
             default: frappe.defaults.get_user_default("Company"),
-            on_change: report => {
+            on_change: (report) => {
                 report.set_filter_value({
                     company_gstin: "",
                 });
@@ -37,10 +37,7 @@ frappe.query_reports["GST Tax Rate-wise Summary"] = {
             fieldname: "date_range",
             label: __("Date Range"),
             fieldtype: "DateRange",
-            default: [
-                india_compliance.last_month_start(),
-                india_compliance.last_month_end(),
-            ],
+            default: [india_compliance.last_month_start(), india_compliance.last_month_end()],
             reqd: 1,
             width: "80",
         },
@@ -50,12 +47,7 @@ frappe.query_reports["GST Tax Rate-wise Summary"] = {
             fieldtype: "Select",
             reqd: 1,
             default: "Sales Invoice",
-            options: [
-                "Purchase Invoice",
-                "Sales Invoice",
-                "Purchase Reverse Charge",
-                "Sales Reverse Charge",
-            ],
+            options: ["Purchase Invoice", "Sales Invoice", "Purchase Reverse Charge", "Sales Reverse Charge"],
         },
     ],
 };

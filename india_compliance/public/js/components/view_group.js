@@ -13,7 +13,7 @@ india_compliance.ViewGroup = class ViewGroup {
             <div class= "view-group">
                 <div class="view-switch"></div>
             </div>
-            `,
+            `
         );
 
         this.view_group_container = $(`
@@ -34,7 +34,7 @@ india_compliance.ViewGroup = class ViewGroup {
     }
 
     make_views() {
-        this.view_names.forEach(view => {
+        this.view_names.forEach((view) => {
             this.views[`${view}_view`] = $(
                 `
                 <li class="nav-item show">
@@ -51,13 +51,13 @@ india_compliance.ViewGroup = class ViewGroup {
             ${frappe.unscrub(view)}
                     </a>
                 </li>
-            `,
+            `
             ).appendTo(this.view_group_container);
         });
     }
 
     setup_events() {
-        this.view_group_container.off("click").on("click", ".nav-link", e => {
+        this.view_group_container.off("click").on("click", ".nav-link", (e) => {
             e.preventDefault();
             e.stopImmediatePropagation();
 

@@ -3,16 +3,10 @@
         <div class="main-content">
             <MarketingInfo class="marketing-info" />
             <div class="auth-form">
-                <h3 class="title text-center">
-                    {{ title }}<span class="full-stop-highlight">.</span>
-                </h3>
+                <h3 class="title text-center">{{ title }}<span class="full-stop-highlight">.</span></h3>
                 <AuthForm :isAccountRegistered="isAccountRegistered" />
                 <p class="change-view-btn">
-                    {{
-                        isAccountRegistered
-                            ? "Don't have an account?"
-                            : "Already have an account?"
-                    }}
+                    {{ isAccountRegistered ? "Don't have an account?" : "Already have an account?" }}
                     <a @click.prevent="toggleAuthView">
                         {{ isAccountRegistered ? "Sign Up" : "Login" }}
                     </a>

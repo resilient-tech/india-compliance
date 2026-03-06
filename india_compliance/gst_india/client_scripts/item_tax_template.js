@@ -5,12 +5,12 @@ frappe.ui.form.on("Item Tax Template", {
         if (frm.doc.gst_rate === null) return;
 
         await Promise.all(
-            frm.doc.taxes.map(async row => {
+            frm.doc.taxes.map(async (row) => {
                 const tax_rate = await get_tax_rate_for_account(frm, row.tax_type);
                 if (tax_rate == null) return;
 
                 row.tax_rate = tax_rate;
-            }),
+            })
         );
 
         frm.refresh_field("taxes");
@@ -27,7 +27,7 @@ async function show_missing_accounts_banner(frm) {
     frm.dashboard.add_comment(
         __(`<strong>Missing GST Accounts:</strong> {0}`, [missing_accounts.join(", ")]),
         "orange",
-        true,
+        true
     );
 }
 
@@ -36,14 +36,14 @@ async function fetch_and_update_missing_gst_accounts(frm) {
     if (!missing_accounts) return;
 
     // cleanup existing empty rows
-    frm.doc.taxes = frm.doc.taxes.filter(row => row.tax_type);
+    frm.doc.taxes = frm.doc.taxes.filter((row) => row.tax_type);
 
     // add missing rows
     await Promise.all(
-        missing_accounts.map(async account => {
+        missing_accounts.map(async (account) => {
             const tax_rate = await get_tax_rate_for_account(frm, account);
             frm.add_child("taxes", { tax_type: account, tax_rate: tax_rate });
-        }),
+        })
     );
 
     frm.refresh_field("taxes");
@@ -56,8 +56,7 @@ async function get_tax_rate_for_account(frm, account) {
     const gst_accounts = await get_gst_accounts(frm);
     if (!gst_accounts) return null;
 
-    const [_, intra_state_accounts, inter_state_accounts, negative_rate_accounts] =
-        gst_accounts;
+    const [_, intra_state_accounts, inter_state_accounts, negative_rate_accounts] = gst_accounts;
 
     if (negative_rate_accounts.includes(account)) gst_rate = gst_rate * -1;
 
@@ -71,10 +70,8 @@ async function get_missing_gst_accounts(frm) {
     if (!gst_accounts) return;
 
     const all_gst_accounts = gst_accounts[0];
-    const template_accounts = frm.doc.taxes.map(t => t.tax_type);
-    const missing_accounts = all_gst_accounts.filter(
-        a => a && !template_accounts.includes(a),
-    );
+    const template_accounts = frm.doc.taxes.map((t) => t.tax_type);
+    const missing_accounts = all_gst_accounts.filter((a) => a && !template_accounts.includes(a));
 
     if (missing_accounts.length) return missing_accounts;
 }

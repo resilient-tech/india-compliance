@@ -121,11 +121,10 @@ frappe.ui.form.on(DOCTYPE, {
         frm.__setup_complete = true;
 
         // Setup Listeners
-        frappe.realtime.on("is_not_latest_gstr1_data", message => {
+        frappe.realtime.on("is_not_latest_gstr1_data", (message) => {
             const { filters } = message;
 
-            const [month_or_quarter, year] =
-                india_compliance.get_month_year_from_period(filters.period);
+            const [month_or_quarter, year] = india_compliance.get_month_year_from_period(filters.period);
 
             if (
                 frm.doc.company_gstin !== filters.company_gstin ||
@@ -137,20 +136,20 @@ frappe.ui.form.on(DOCTYPE, {
             if (frm.$wrapper.find(".form-message.orange").length) return;
             frm.set_intro(
                 __(
-                    "Books data was updated after the computation of GSTR-1 data. Please generate GSTR-1 again.",
+                    "Books data was updated after the computation of GSTR-1 data. Please generate GSTR-1 again."
                 ),
-                "orange",
+                "orange"
             );
             frm.page.set_primary_action(__("Generate"), () =>
-                frm.gstr1.gstr1_action.generate_gstr1_data(frm),
+                frm.gstr1.gstr1_action.generate_gstr1_data(frm)
             );
         });
 
-        frappe.realtime.on("show_missing_gst_credentials_message", message => {
+        frappe.realtime.on("show_missing_gst_credentials_message", (message) => {
             frappe.msgprint(message);
         });
 
-        frappe.realtime.on("gstr1_generation_failed", message => {
+        frappe.realtime.on("gstr1_generation_failed", (message) => {
             const { error, filters } = message;
             let alert = `GSTR-1 Generation Failed for ${filters.company_gstin} - ${filters.month_or_quarter} - ${filters.year}.<br/><br/>${error}`;
 
@@ -160,7 +159,7 @@ frappe.ui.form.on(DOCTYPE, {
             });
         });
 
-        frappe.realtime.on("gstr1_data_prepared", message => {
+        frappe.realtime.on("gstr1_data_prepared", (message) => {
             const { filters, error_log } = message;
 
             if (
@@ -173,17 +172,9 @@ frappe.ui.form.on(DOCTYPE, {
             const only_books_data = error_log != undefined;
             if (error_log) {
                 frappe.msgprint({
-                    message: __(
-                        "Error while preparing GSTR-1 data, please {0} for more details.",
-                        [
-                            frappe.utils.get_form_link(
-                                "Error Log",
-                                error_log,
-                                true,
-                                "check the error log",
-                            ),
-                        ],
-                    ),
+                    message: __("Error while preparing GSTR-1 data, please {0} for more details.", [
+                        frappe.utils.get_form_link("Error Log", error_log, true, "check the error log"),
+                    ]),
                     title: "GSTR-1 Download Failed",
                     indicator: "red",
                 });
@@ -193,7 +184,7 @@ frappe.ui.form.on(DOCTYPE, {
                 frm.set_value("filing_preference", filters.filing_preference);
             }
 
-            frm.taxpayer_api_call("generate_gstr1", { only_books_data }).then(r => {
+            frm.taxpayer_api_call("generate_gstr1", { only_books_data }).then((r) => {
                 frm.doc.__gst_data = r.message;
                 frm.trigger("load_gstr1_data");
             });
@@ -326,7 +317,7 @@ class GSTR1 {
 
         // set idx for reconcile rows (for detail view)
         if (this.data["reconcile"]) {
-            Object.values(this.data["reconcile"]).forEach(category => {
+            Object.values(this.data["reconcile"]).forEach((category) => {
                 category instanceof Array &&
                     category.forEach((row, idx) => {
                         row.idx = idx;
@@ -338,7 +329,7 @@ class GSTR1 {
         this.toggle_file_nil_gstr1();
 
         // refresh tabs
-        this.TABS.forEach(_tab => {
+        this.TABS.forEach((_tab) => {
             const tab_name = _tab.name;
             const tab = this.tabs[`${tab_name}_tab`];
 
@@ -365,7 +356,7 @@ class GSTR1 {
             tab.tabmanager.refresh_data(
                 this.data[tab_name] || {},
                 this.data[`${tab_name}_summary`] || [],
-                this.status,
+                this.status
             );
         });
     }
@@ -382,12 +373,12 @@ class GSTR1 {
         }
 
         // refresh tabs
-        this.TABS.forEach(tab => {
+        this.TABS.forEach((tab) => {
             if (!tab.shown) return;
             this.tabs[`${tab.name}_tab`].tabmanager.refresh_view(
                 this.active_view,
                 this.filter_category,
-                detailed_view_filters,
+                detailed_view_filters
             );
         });
     }
@@ -423,7 +414,7 @@ class GSTR1 {
                     fieldname: `${tab.name}_html`,
                 },
             ],
-            [],
+            []
         );
 
         this.tab_group = new frappe.ui.FieldGroup({
@@ -440,9 +431,7 @@ class GSTR1 {
         this.tab_group.make();
 
         // make tabs_dict for easy access
-        this.tabs = Object.fromEntries(
-            this.tab_group.tabs.map(tab => [tab.df.fieldname, tab]),
-        );
+        this.tabs = Object.fromEntries(this.tab_group.tabs.map((tab) => [tab.df.fieldname, tab]));
 
         // Fix css
         this.$wrapper.find(".form-tabs-list").append(`<div class="tab-actions"></div>`);
@@ -464,20 +453,17 @@ class GSTR1 {
             callback: this.change_view,
         });
 
-        this.viewgroup.disable_view(
-            "Detailed",
-            "Click on a category from summary to view details",
-        );
+        this.viewgroup.disable_view("Detailed", "Click on a category from summary to view details");
     }
 
     render_tabs() {
-        this.TABS.forEach(tab => {
+        this.TABS.forEach((tab) => {
             const wrapper = this.tab_group.get_field(`${tab.name}_html`).$wrapper;
             this.tabs[`${tab.name}_tab`].tabmanager = new tab._TabManager(
                 this,
                 wrapper,
                 this.show_filtered_category,
-                this.filter_detailed_view,
+                this.filter_detailed_view
             );
         });
     }
@@ -504,9 +490,7 @@ class GSTR1 {
             if (this.status === "Filed") return;
             if (!is_gstr1_api_enabled()) return;
 
-            this.frm.add_custom_button(__("Reset"), () =>
-                this.gstr1_action.reset_gstr1_data(),
-            );
+            this.frm.add_custom_button(__("Reset"), () => this.gstr1_action.reset_gstr1_data());
         }
 
         // Primary Button
@@ -527,12 +511,10 @@ class GSTR1 {
 
         // No need to upload if nil gstr1
         if (this.frm.doc.__gst_data) {
-            if (this.frm.doc.file_nil_gstr1 != this.frm.doc.__gst_data.is_nil)
-                primary_button_label = "Reset";
+            if (this.frm.doc.file_nil_gstr1 != this.frm.doc.__gst_data.is_nil) primary_button_label = "Reset";
 
             if (this.status == "Not Filed")
-                if (this.frm.doc.file_nil_gstr1)
-                    primary_button_label = "Proceed to File";
+                if (this.frm.doc.file_nil_gstr1) primary_button_label = "Proceed to File";
                 else primary_button_label = "Upload";
         }
 
@@ -543,7 +525,7 @@ class GSTR1 {
         }
 
         this.frm.page.set_primary_action(__(primary_button_label), () =>
-            actions[primary_button_label].call(this.gstr1_action),
+            actions[primary_button_label].call(this.gstr1_action)
         );
     }
 
@@ -577,10 +559,7 @@ class GSTR1 {
             const data = me.data.reconcile[me.filter_category][row_index];
 
             const category_columns = me.tabs.filed_tab.tabmanager.category_columns;
-            const field_label_map = category_columns.map(col => [
-                col.fieldname,
-                col.name,
-            ]);
+            const field_label_map = category_columns.map((col) => [col.fieldname, col.name]);
 
             new DetailViewDialog(data, field_label_map);
         });
@@ -588,7 +567,7 @@ class GSTR1 {
 
     // UTILS
 
-    show_filtered_category = category => {
+    show_filtered_category = (category) => {
         category = category.trim();
 
         if (category != this.filter_category) {
@@ -650,11 +629,7 @@ class GSTR1 {
                     fieldtype: "Data",
                 },
             ];
-        } else if (
-            [GSTR1_SubCategory.EXPWP, GSTR1_SubCategory.EXPWOP].includes(
-                this.filter_category,
-            )
-        ) {
+        } else if ([GSTR1_SubCategory.EXPWP, GSTR1_SubCategory.EXPWOP].includes(this.filter_category)) {
             fields = [
                 {
                     label: "Port Code",
@@ -679,9 +654,7 @@ class GSTR1 {
                 },
             ];
         } else if (
-            [GSTR1_SubCategory.NIL_EXEMPT, GSTR1_SubCategory.DOC_ISSUE].includes(
-                this.filter_category,
-            )
+            [GSTR1_SubCategory.NIL_EXEMPT, GSTR1_SubCategory.DOC_ISSUE].includes(this.filter_category)
         ) {
             fields = [
                 {
@@ -705,17 +678,12 @@ class GSTR1 {
             ];
         }
 
-        fields.forEach(field => (field.parent = DOCTYPE));
+        fields.forEach((field) => (field.parent = DOCTYPE));
         return fields;
     }
 
     filter_detailed_view = async (fieldname, value) => {
-        await this.filter_group.add_or_remove_filter([
-            DOCTYPE,
-            fieldname,
-            "=",
-            value.trim(),
-        ]);
+        await this.filter_group.add_or_remove_filter([DOCTYPE, fieldname, "=", value.trim()]);
         this.filter_group.apply();
     };
 
@@ -724,7 +692,7 @@ class GSTR1 {
         this.change_view("Summary");
     };
 
-    change_view = target_view => {
+    change_view = (target_view) => {
         const current_view = this.active_view;
 
         if (!this.filter_category && current_view === "Summary") return;
@@ -742,12 +710,11 @@ class GSTR1 {
     toggle_file_nil_gstr1() {
         if (!this.data || !is_gstr1_api_enabled()) return;
 
-        const has_records = this.data.books_summary?.some(row => row.no_of_records > 0);
+        const has_records = this.data.books_summary?.some((row) => row.no_of_records > 0);
         // Nil return cannot be filed for quarterly M1 and M2
         const can_file_nil_return =
             this.frm.doc.filing_preference === "Monthly" ||
-            (this.frm.doc.filing_preference === "Quarterly" &&
-                this.frm.doc.month_or_quarter % 3 === 0);
+            (this.frm.doc.filing_preference === "Quarterly" && this.frm.doc.month_or_quarter % 3 === 0);
 
         if (!has_records && this.data.status != "Filed" && can_file_nil_return)
             this.frm.set_df_property("file_nil_gstr1", "hidden", 0);
@@ -780,7 +747,7 @@ class GSTR1 {
                 <h5>${type} Account</h5>
                 <h4 class="text-center">
                     ${format_currency(net_amount)}</h4>
-            </div>`,
+            </div>`
             )
             .join("");
 
@@ -817,7 +784,7 @@ class GSTR1 {
 
         if (!je_details) return;
 
-        return new Promise(resolve => {
+        return new Promise((resolve) => {
             const remarks = `Reduced Output GST Liability to the extent of Sales Reverse Charge as per GSTR-1 for ${this.frm.doc.month_or_quarter} - ${this.frm.doc.year}`;
             const dialog = this.create_journal_entry_dialog(je_details, remarks);
 
@@ -840,8 +807,7 @@ class GSTR1 {
         if (!frappe.perm.has_perm("Journal Entry")) return;
 
         const rounding_difference = this.data.books?.rounding_difference?.[0];
-        if (!rounding_difference || Object.values(rounding_difference).every(v => !v))
-            return;
+        if (!rounding_difference || Object.values(rounding_difference).every((v) => !v)) return;
 
         const { month_or_quarter, year, company, filing_preference } = this.frm.doc;
         const { message: data } = await frappe.call({
@@ -851,11 +817,8 @@ class GSTR1 {
 
         if (!data) return;
 
-        return new Promise(resolve => {
-            const dialog = this.create_rounding_diff_journal_entry(
-                data.account,
-                data.posting_date,
-            );
+        return new Promise((resolve) => {
+            const dialog = this.create_rounding_diff_journal_entry(data.account, data.posting_date);
 
             if (!dialog) return resolve();
 
@@ -875,7 +838,7 @@ class GSTR1 {
             data: [],
         };
 
-        const get_account_name = account_field => {
+        const get_account_name = (account_field) => {
             if (!Array.isArray(account_field)) return account[account_field];
             for (const acc of account_field) {
                 if (account[acc]) {
@@ -887,9 +850,7 @@ class GSTR1 {
 
         let total = 0;
 
-        for (const [tax_field, account_field] of Object.entries(
-            this.TAX_TO_ACCOUNT_MAP,
-        )) {
+        for (const [tax_field, account_field] of Object.entries(this.TAX_TO_ACCOUNT_MAP)) {
             let value = rounding_difference[tax_field];
 
             if (!value) continue;
@@ -952,7 +913,7 @@ class GSTR1 {
                 },
             ],
             primary_action_label: "Create",
-            primary_action: values => {
+            primary_action: (values) => {
                 const { company, company_gstin, month_or_quarter, year } = this.frm.doc;
 
                 frappe.call({
@@ -965,7 +926,7 @@ class GSTR1 {
                         accounts: je_details.data,
                         values: values,
                     },
-                    callback: r => {
+                    callback: (r) => {
                         frappe.open_in_new_tab = true;
                         frappe.set_route("journal-entry", r.message);
                         dialog.hide();
@@ -978,7 +939,7 @@ class GSTR1 {
     }
 
     generate_tax_table(data) {
-        const rows = data.map(entry => this.generate_table_row(entry)).join("");
+        const rows = data.map((entry) => this.generate_table_row(entry)).join("");
         return `
             <table class="table table-bordered">
                 <thead>
@@ -1063,9 +1024,7 @@ class TabManager {
         let subtitle = "";
 
         if (view === "Detailed") {
-            this.filter_fieldnames = this.instance.filter_fields.map(
-                filter => filter.fieldname,
-            );
+            this.filter_fieldnames = this.instance.filter_fields.map((filter) => filter.fieldname);
 
             const columns_func = this.CATEGORY_COLUMNS[category];
             if (!columns_func) return;
@@ -1074,15 +1033,11 @@ class TabManager {
             this.setup_datatable(
                 this.wrapper,
                 this.filter_data(this.data[category], filters),
-                this.category_columns,
+                this.category_columns
             );
             this.set_title(category, null, true);
         } else if (view === "Summary") {
-            this.setup_datatable(
-                this.wrapper,
-                this.summary,
-                this.get_summary_columns(),
-            );
+            this.setup_datatable(this.wrapper, this.summary, this.get_summary_columns());
             subtitle = this.DEFAULT_SUBTITLE;
             this.set_title(this.DEFAULT_TITLE, subtitle);
         }
@@ -1095,12 +1050,9 @@ class TabManager {
         if (!data) return [];
         if (!filters || !filters.length) return data;
 
-        return data.filter(row => {
-            return filters.every(filter =>
-                india_compliance.FILTER_OPERATORS[filter[2]](
-                    filter[3] || "",
-                    row[filter[1]] || "",
-                ),
+        return data.filter((row) => {
+            return filters.every((filter) =>
+                india_compliance.FILTER_OPERATORS[filter[2]](filter[3] || "", row[filter[1]] || "")
             );
         });
     }
@@ -1186,8 +1138,7 @@ class TabManager {
                     columnTotal: (_, row) => {
                         if (this.instance.active_view !== "Summary") return null;
 
-                        if (row.colIndex === 1)
-                            return (row.content = "Total Liability");
+                        if (row.colIndex === 1) return (row.content = "Total Liability");
 
                         const column_field = row.column.fieldname;
                         if (!this.summary) return null;
@@ -1195,13 +1146,10 @@ class TabManager {
                         const total = this.summary.reduce((acc, row) => {
                             if (
                                 row.consider_in_total_taxable_value &&
-                                ["no_of_records", "total_taxable_value"].includes(
-                                    column_field,
-                                )
+                                ["no_of_records", "total_taxable_value"].includes(column_field)
                             )
                                 acc += row[column_field] || 0;
-                            else if (row.consider_in_total_tax)
-                                acc += row[column_field] || 0;
+                            else if (row.consider_in_total_tax) acc += row[column_field] || 0;
 
                             return acc;
                         }, 0);
@@ -1230,21 +1178,19 @@ class TabManager {
                 e.preventDefault();
 
                 const summary_description = $(this).text();
-                me.summary_view_callback &&
-                    me.summary_view_callback(summary_description);
+                me.summary_view_callback && me.summary_view_callback(summary_description);
             });
             return;
         }
 
         // Detailed View
-        this.instance.filter_fields.forEach(field => {
+        this.instance.filter_fields.forEach((field) => {
             this.datatable.$datatable.on("click", `.${field.fieldname}`, function (e) {
                 e.preventDefault();
 
                 const fieldname = field.fieldname;
                 const value = $(this).text();
-                me.detailed_view_callback &&
-                    me.detailed_view_callback(fieldname, value);
+                me.detailed_view_callback && me.detailed_view_callback(fieldname, value);
             });
         });
     }
@@ -1264,7 +1210,7 @@ class TabManager {
 
     setup_footer_actions(wrapper) {
         const me = this;
-        ["expand", "collapse"].forEach(action => {
+        ["expand", "collapse"].forEach((action) => {
             $(wrapper).on("click", `.${action}`, function (e) {
                 e.preventDefault();
                 me.datatable.datatable.rowmanager[`${action}AllNodes`]();
@@ -1278,22 +1224,17 @@ class TabManager {
         const creation_time_string = this.get_creation_time_string();
         if (!creation_time_string) return;
 
-        if ($(this.wrapper).find(".creation-time").length)
-            $(this.wrapper).find(".creation-time").remove();
+        if ($(this.wrapper).find(".creation-time").length) $(this.wrapper).find(".creation-time").remove();
 
         this.wrapper
             .find(".report-footer")
-            .append(
-                `<div class="creation-time text-muted float-right">${creation_time_string}</div>`,
-            );
+            .append(`<div class="creation-time text-muted float-right">${creation_time_string}</div>`);
     }
 
     get_creation_time_string() {
         if (!this.data.creation) return;
 
-        const creation = frappe.utils.to_title_case(
-            frappe.datetime.prettyDate(this.data.creation),
-        );
+        const creation = frappe.utils.to_title_case(frappe.datetime.prettyDate(this.data.creation));
 
         return `Created ${creation}`;
     }
@@ -1301,9 +1242,7 @@ class TabManager {
     // UTILS
 
     add_tab_custom_button(label, action) {
-        let button = this.wrapper.find(
-            `button[data-label="${encodeURIComponent(label)}"]`,
-        );
+        let button = this.wrapper.find(`button[data-label="${encodeURIComponent(label)}"]`);
         if (button.length) return;
 
         $(`
@@ -1697,19 +1636,11 @@ class GSTR1_TabManager extends TabManager {
     }
 
     get_advances_received_columns() {
-        return [
-            ...this.get_detail_view_column(),
-            ...this.get_match_columns(),
-            ...this.get_tax_columns(true),
-        ];
+        return [...this.get_detail_view_column(), ...this.get_match_columns(), ...this.get_tax_columns(true)];
     }
 
     get_advances_adjusted_columns() {
-        return [
-            ...this.get_detail_view_column(),
-            ...this.get_match_columns(),
-            ...this.get_tax_columns(true),
-        ];
+        return [...this.get_detail_view_column(), ...this.get_match_columns(), ...this.get_tax_columns(true)];
     }
 
     // Common Columns
@@ -1800,7 +1731,7 @@ class GSTR1_TabManager extends TabManager {
                 fieldname: GSTR1_DataField.CESS,
                 fieldtype: "Float",
                 width: 100,
-            },
+            }
         );
 
         return columns;
@@ -1861,7 +1792,7 @@ class BooksTab extends GSTR1_TabManager {
                     show: () => {
                         if (!this.rounding_difference) return false;
 
-                        return Object.values(this.rounding_difference).some(v => v);
+                        return Object.values(this.rounding_difference).some((v) => v);
                     },
                     css_styles: { "font-weight": "bold" },
                 },
@@ -1870,21 +1801,18 @@ class BooksTab extends GSTR1_TabManager {
     }
 
     setup_actions() {
-        this.add_tab_custom_button("Download Excel", () =>
-            this.download_books_as_excel(),
-        );
+        this.add_tab_custom_button("Download Excel", () => this.download_books_as_excel());
         this.add_tab_custom_button("Recompute", () => this.recompute_books());
     }
 
     filter_data(data, filters) {
         data = super.filter_data(data, filters);
-        return data.filter(row => row.upload_status !== "Missing in Books");
+        return data.filter((row) => row.upload_status !== "Missing in Books");
     }
     // ACTIONS
 
     download_books_as_excel() {
-        const url =
-            "india_compliance.gst_india.doctype.gstr_1.gstr_1_export.download_books_as_excel";
+        const url = "india_compliance.gst_india.doctype.gstr_1.gstr_1_export.download_books_as_excel";
 
         open_url_post(`/api/method/${url}`, {
             company_gstin: this.instance.frm.doc.company_gstin,
@@ -1914,10 +1842,7 @@ class BooksTab extends GSTR1_TabManager {
     get_b2cs_columns() {
         let columns = this.get_document_columns(true);
         columns = columns.filter(
-            col =>
-                ![GSTR1_DataField.CUST_GSTIN, GSTR1_DataField.REVERSE_CHARGE].includes(
-                    col.fieldname,
-                ),
+            (col) => ![GSTR1_DataField.CUST_GSTIN, GSTR1_DataField.REVERSE_CHARGE].includes(col.fieldname)
         );
 
         return columns;
@@ -2067,21 +1992,15 @@ class FiledTab extends GSTR1_TabManager {
     };
 
     setup_actions() {
-        this.add_tab_custom_button("Download Excel", () =>
-            this.download_filed_as_excel(),
-        );
+        this.add_tab_custom_button("Download Excel", () => this.download_filed_as_excel());
 
         if (this.status !== "Filed")
-            this.add_tab_custom_button("Download JSON", () =>
-                this.download_filed_json(),
-            );
+            this.add_tab_custom_button("Download JSON", () => this.download_filed_json());
 
         if (!is_gstr1_api_enabled()) return;
 
         if (this.status === "Filed")
-            this.add_tab_custom_button("Sync with GSTN", () =>
-                this.sync_with_gstn("filed"),
-            );
+            this.add_tab_custom_button("Sync with GSTN", () => this.sync_with_gstn("filed"));
         else {
             this.add_tab_custom_button("Mark as Filed", () => this.mark_as_filed());
         }
@@ -2097,8 +2016,7 @@ class FiledTab extends GSTR1_TabManager {
     // ACTIONS
 
     download_filed_as_excel() {
-        const url =
-            "india_compliance.gst_india.doctype.gstr_1.gstr_1_export.download_filed_as_excel";
+        const url = "india_compliance.gst_india.doctype.gstr_1.gstr_1_export.download_filed_as_excel";
 
         open_url_post(`/api/method/${url}`, {
             company_gstin: this.instance.frm.doc.company_gstin,
@@ -2133,10 +2051,10 @@ class FiledTab extends GSTR1_TabManager {
                     include_uploaded,
                     delete_missing,
                 },
-                callback: r => {
+                callback: (r) => {
                     india_compliance.trigger_file_download(
                         JSON.stringify(r.message.data),
-                        r.message.filename,
+                        r.message.filename
                     );
                     dialog && dialog.hide();
                 },
@@ -2160,17 +2078,15 @@ class FiledTab extends GSTR1_TabManager {
                         `This will include invoices already uploaded (and matching)
                          to GSTN (possibly e-Invoices) and overwrite them in GST Portal.
                          This is <strong>not recommended</strong> if e-Invoice is applicable to you
-                         as it will overwrite the e-Invoice data in GST Portal.`,
+                         as it will overwrite the e-Invoice data in GST Portal.`
                     ),
                     fieldtype: "Check",
                 },
                 {
                     fieldname: "delete_missing",
-                    label: __(
-                        "Delete records that are missing in the Books from GST Portal",
-                    ),
+                    label: __("Delete records that are missing in the Books from GST Portal"),
                     description: __(
-                        "This will delete invoices that are not present in ERP but are present in GST Portal.",
+                        "This will delete invoices that are not present in ERP but are present in GST Portal."
                     ),
                     fieldtype: "Check",
                     default: 1,
@@ -2187,9 +2103,7 @@ class FiledTab extends GSTR1_TabManager {
         this.instance.frm
             .taxpayer_api_call("mark_as_filed")
             .then(
-                () =>
-                    this.instance.frm.trigger("load_gstr1_data") &&
-                    this.instance.show_suggested_jv_dialog(),
+                () => this.instance.frm.trigger("load_gstr1_data") && this.instance.show_suggested_jv_dialog()
             );
     }
 
@@ -2321,8 +2235,7 @@ class FiledTab extends GSTR1_TabManager {
 
     get_no_data_message() {
         if (this.instance.data?.is_nil)
-            if (this.status === "Filed")
-                return __("You have filed a Nil GSTR-1 for this period");
+            if (this.status === "Filed") return __("You have filed a Nil GSTR-1 for this period");
             else return __("You are filing a Nil GSTR-1 for this period");
 
         return this.DEFAULT_NO_DATA_MESSAGE;
@@ -2333,9 +2246,7 @@ class UnfiledTab extends FiledTab {
     setup_actions() {
         if (!is_gstr1_api_enabled()) return;
 
-        this.add_tab_custom_button("Sync with GSTN", () =>
-            this.sync_with_gstn("unfiled"),
-        );
+        this.add_tab_custom_button("Sync with GSTN", () => this.sync_with_gstn("unfiled"));
     }
 
     set_default_title() {
@@ -2346,8 +2257,7 @@ class UnfiledTab extends FiledTab {
 
 class ReconcileTab extends FiledTab {
     set_default_title() {
-        if (this.instance.data.status === "Filed")
-            this.DEFAULT_TITLE = "Books vs Filed";
+        if (this.instance.data.status === "Filed") this.DEFAULT_TITLE = "Books vs Filed";
         else this.DEFAULT_TITLE = "Books vs Unfiled";
 
         this.DEFAULT_SUBTITLE = "Only differences";
@@ -2355,14 +2265,11 @@ class ReconcileTab extends FiledTab {
     }
 
     setup_actions() {
-        this.add_tab_custom_button("Download Excel", () =>
-            this.download_reconcile_as_excel(),
-        );
+        this.add_tab_custom_button("Download Excel", () => this.download_reconcile_as_excel());
     }
 
     download_reconcile_as_excel() {
-        const url =
-            "india_compliance.gst_india.doctype.gstr_1.gstr_1_export.download_reconcile_as_excel";
+        const url = "india_compliance.gst_india.doctype.gstr_1.gstr_1_export.download_reconcile_as_excel";
 
         open_url_post(`/api/method/${url}`, {
             company_gstin: this.instance.frm.doc.company_gstin,
@@ -2519,7 +2426,7 @@ class DetailViewDialog {
     render_table() {
         const detail_table = this.dialog.fields_dict.reconcile_data;
         const field_label_map = this.field_label_map.filter(
-            field => !this.IGNORED_FIELDS.includes(field[0]),
+            (field) => !this.IGNORED_FIELDS.includes(field[0])
         );
 
         detail_table.html(
@@ -2527,7 +2434,7 @@ class DetailViewDialog {
                 data: this.data,
                 fieldname_map: field_label_map,
                 currency_map: this.CURRENCY_FIELD_MAP,
-            }),
+            })
         );
         this._set_value_color(detail_table.$wrapper, this.data);
     }
@@ -2541,9 +2448,7 @@ class DetailViewDialog {
         for (const key in gov_data) {
             if (gov_data[key] === books_data[key] || key === "description") continue;
 
-            wrapper
-                .find(`[data-label='${key}'], [data-label='${key}']`)
-                .addClass("not-matched");
+            wrapper.find(`[data-label='${key}'], [data-label='${key}']`).addClass("not-matched");
         }
     }
 }
@@ -2616,11 +2521,7 @@ class FileGSTR1Dialog {
                 india_compliance.validate_pan(pan);
 
                 // generate otp
-                await india_compliance.generate_evc_otp(
-                    this.frm.doc.company_gstin,
-                    pan,
-                    "R1",
-                );
+                await india_compliance.generate_evc_otp(this.frm.doc.company_gstin, pan, "R1");
 
                 // show otp field
                 this.filing_dialog.set_df_property("otp", "read_only", 0);
@@ -2638,9 +2539,7 @@ class FileGSTR1Dialog {
         frappe.db
             .get_value("GSTIN", this.frm.doc.company_gstin, ["last_pan_used_for_gstr"])
             .then(({ message }) => {
-                const pan_no =
-                    message.last_pan_used_for_gstr ||
-                    this.frm.doc.company_gstin.substr(2, 10);
+                const pan_no = message.last_pan_used_for_gstr || this.frm.doc.company_gstin.substr(2, 10);
 
                 this.filing_dialog.set_value("pan", pan_no);
             });
@@ -2654,12 +2553,12 @@ class FileGSTR1Dialog {
                 year: this.frm.doc.year,
                 company_gstin: this.frm.doc.company_gstin,
             },
-            callback: r => {
+            callback: (r) => {
                 if (!r.message) return;
                 const { amended_liability, non_amended_liability } = r.message;
                 const liability_html = this.generate_liability_table(
                     amended_liability,
-                    non_amended_liability,
+                    non_amended_liability
                 );
                 const field = this.filing_dialog.get_field("liability_breakup_html");
 
@@ -2690,10 +2589,7 @@ class FileGSTR1Dialog {
                 <tbody>
         `;
 
-        table_html += this.generate_table_row(
-            "For current period",
-            non_amended_liability,
-        );
+        table_html += this.generate_table_row("For current period", non_amended_liability);
         table_html += this.generate_table_row("From amendments", amended_liability);
         // TODO: Add total row
         table_html += `
@@ -2708,29 +2604,20 @@ class FileGSTR1Dialog {
         return `
             <tr>
                 <td>${description}</td>
-                <td style="text-align: right;">${format_currency(
-                    liability.total_igst_amount,
-                )}</td>
-                <td style="text-align: right;">${format_currency(
-                    liability.total_cgst_amount,
-                )}</td>
-                <td style="text-align: right;">${format_currency(
-                    liability.total_sgst_amount,
-                )}</td>
-                <td style="text-align: right;">${format_currency(
-                    liability.total_cess_amount,
-                )}</td>
+                <td style="text-align: right;">${format_currency(liability.total_igst_amount)}</td>
+                <td style="text-align: right;">${format_currency(liability.total_cgst_amount)}</td>
+                <td style="text-align: right;">${format_currency(liability.total_sgst_amount)}</td>
+                <td style="text-align: right;">${format_currency(liability.total_cess_amount)}</td>
             </tr>
         `;
     }
 
     update_actions_for_filing(pan) {
         this.filing_dialog.set_primary_action("File", () => {
-            this.perform_gstr1_action(
-                "file",
-                r => this.handle_filing_response(r.message),
-                { pan: pan, otp: this.filing_dialog.get_value("otp").trim() },
-            );
+            this.perform_gstr1_action("file", (r) => this.handle_filing_response(r.message), {
+                pan: pan,
+                otp: this.filing_dialog.get_value("otp").trim(),
+            });
 
             this.toggle_actions(true);
         });
@@ -2745,9 +2632,7 @@ class FileGSTR1Dialog {
         if (response.error?.error_cd === "RET13506") {
             this.filing_dialog
                 .get_field("otp")
-                .set_description(
-                    `<p style="color: red">OTP is either expired or incorrect.</p>`,
-                );
+                .set_description(`<p style="color: red">OTP is either expired or incorrect.</p>`);
 
             return;
         }
@@ -2758,11 +2643,7 @@ class FileGSTR1Dialog {
             this.frm.page.set_primary_action("Upload", () => this.upload_gstr1_data());
             this.frm.page.set_indicator("Not Filed", "orange");
             this.frm.gstr1.status = "Not Filed";
-            frappe.msgprint(
-                __(
-                    "Latest Summary is not available. Please generate summary and try again.",
-                ),
-            );
+            frappe.msgprint(__("Latest Summary is not available. Please generate summary and try again."));
         }
 
         if (response.ack_num) {
@@ -2770,7 +2651,7 @@ class FileGSTR1Dialog {
                 .taxpayer_api_call("generate_gstr1", {
                     message: "Verifying filed GSTR-1",
                 })
-                .then(r => {
+                .then((r) => {
                     this.frm.doc.__gst_data = r.message;
                     this.frm.trigger("load_gstr1_data");
                     this.frm.gstr1.show_suggested_jv_dialog();
@@ -2793,15 +2674,15 @@ class GSTR1Action extends FileGSTR1Dialog {
     }
 
     generate_gstr1_data() {
-        this.frm.taxpayer_api_call("generate_gstr1").then(r => {
+        this.frm.taxpayer_api_call("generate_gstr1").then((r) => {
             if (!r.message) return;
             this.frm.doc.__gst_data = r.message;
             this.frm.trigger("load_gstr1_data");
 
             if (!r.message.pending_actions) return;
 
-            r.message.pending_actions.forEach(request_type =>
-                this.check_action_status_with_retry(request_type, 0, true),
+            r.message.pending_actions.forEach((request_type) =>
+                this.check_action_status_with_retry(request_type, 0, true)
             );
         });
     }
@@ -2812,7 +2693,7 @@ class GSTR1Action extends FileGSTR1Dialog {
 
         const upload = () => {
             frappe.show_alert(__("Uploading data to GSTN"));
-            this.perform_gstr1_action(action, response => {
+            this.perform_gstr1_action(action, (response) => {
                 // No data to upload
                 if (response._server_messages && response._server_messages.length) {
                     this.proceed_to_file();
@@ -2825,15 +2706,15 @@ class GSTR1Action extends FileGSTR1Dialog {
 
         // has draft invoices
         const draft_invoices = this.frm.gstr1.data.books["Document Issued"]?.filter(
-            row => row.draft_count > 0,
+            (row) => row.draft_count > 0
         );
         if (!draft_invoices?.length) return upload();
 
         frappe.confirm(
             __(
-                "There are <b>draft</b> invoices in books which are <b>excluded</b> in upload. Do you want to proceed with uploading?",
+                "There are <b>draft</b> invoices in books which are <b>excluded</b> in upload. Do you want to proceed with uploading?"
             ),
-            () => upload(),
+            () => upload()
         );
     }
 
@@ -2843,16 +2724,14 @@ class GSTR1Action extends FileGSTR1Dialog {
 
         frappe.confirm(
             __(
-                "All the details saved in different tables shall be deleted after reset.<br>Are you sure, you want to reset the already saved data?",
+                "All the details saved in different tables shall be deleted after reset.<br>Are you sure, you want to reset the already saved data?"
             ),
             () => {
                 frappe.show_alert(__("Resetting GSTR-1 data"));
-                this.perform_gstr1_action(
-                    action,
-                    () => this.check_action_status_with_retry(action),
-                    { is_nil_return: this.frm.doc.file_nil_gstr1 ? true : false },
-                );
-            },
+                this.perform_gstr1_action(action, () => this.check_action_status_with_retry(action), {
+                    is_nil_return: this.frm.doc.file_nil_gstr1 ? true : false,
+                });
+            }
         );
     }
 
@@ -2863,12 +2742,12 @@ class GSTR1Action extends FileGSTR1Dialog {
 
         this.perform_gstr1_action(
             action,
-            r => {
+            (r) => {
                 // already proceed to file
                 if (r.message) this.handle_proceed_to_file_response(r.message);
                 else this.check_action_status_with_retry(action);
             },
-            { is_nil_return: this.frm.doc.file_nil_gstr1 ? true : false },
+            { is_nil_return: this.frm.doc.file_nil_gstr1 ? true : false }
         );
     }
 
@@ -2906,7 +2785,7 @@ class GSTR1Action extends FileGSTR1Dialog {
         taxpayer_api.call({
             method: "india_compliance.gst_india.doctype.gstr_1.gstr_1.perform_gstr1_action",
             args: args,
-            callback: response => callback && callback(response),
+            callback: (response) => callback && callback(response),
         });
     }
 
@@ -2920,10 +2799,7 @@ class GSTR1Action extends FileGSTR1Dialog {
 
                 if (!message.status_cd) return;
 
-                if (
-                    message.status_cd === "IP" &&
-                    retries < this.RETRY_INTERVALS.length
-                ) {
+                if (message.status_cd === "IP" && retries < this.RETRY_INTERVALS.length) {
                     return this.check_action_status_with_retry(action, retries + 1);
                 }
 
@@ -2936,12 +2812,11 @@ class GSTR1Action extends FileGSTR1Dialog {
 
                 this.toggle_actions(true);
 
-                if (message.status_cd == "ER")
-                    frappe.throw(__(message.error_report.error_msg));
+                if (message.status_cd == "ER") frappe.throw(__(message.error_report.error_msg));
 
                 if (action == "reset") {
                     render_empty_state(this.frm);
-                    this.frm.taxpayer_api_call("generate_gstr1").then(r => {
+                    this.frm.taxpayer_api_call("generate_gstr1").then((r) => {
                         this.frm.doc.__gst_data = r.message;
                         this.frm.trigger("load_gstr1_data");
                     });
@@ -2954,7 +2829,7 @@ class GSTR1Action extends FileGSTR1Dialog {
 
                 this.handle_notification(message, action);
             },
-            now ? 0 : this.RETRY_INTERVALS[retries],
+            now ? 0 : this.RETRY_INTERVALS[retries]
         );
     }
 
@@ -2971,8 +2846,8 @@ class GSTR1Action extends FileGSTR1Dialog {
         // summary matched
         if (filing_status == "Ready to File") {
             // only show filed tab
-            ["books", "unfiled", "reconcile", "errors"].map(tab =>
-                this.frm.gstr1.tabs[`${tab}_tab`].hide(),
+            ["books", "unfiled", "reconcile", "errors"].map((tab) =>
+                this.frm.gstr1.tabs[`${tab}_tab`].hide()
             );
             this.frm.gstr1.tabs.filed_tab.set_active();
 
@@ -2984,14 +2859,10 @@ class GSTR1Action extends FileGSTR1Dialog {
         // summary not matched
         this.frm.page.set_primary_action("Upload", () => this.upload_gstr1_data());
 
-        const differing_categories = response.differing_categories
-            .map(item => `<li>${item}</li>`)
-            .join("");
+        const differing_categories = response.differing_categories.map((item) => `<li>${item}</li>`).join("");
 
         const message = `
-        <p>${__(
-            "Summary for the following categories has not matched. Please sync with GSTIN.",
-        )}</p>
+        <p>${__("Summary for the following categories has not matched. Please sync with GSTIN.")}</p>
         <ul>${differing_categories}</ul>
     `;
 
@@ -3012,8 +2883,7 @@ class GSTR1Action extends FileGSTR1Dialog {
     }
 
     handle_notification(response, action) {
-        const request_status =
-            action === "proceed_to_file" ? "Proceed to file" : `Data ${action}ing`;
+        const request_status = action === "proceed_to_file" ? "Proceed to file" : `Data ${action}ing`;
 
         const status_message_map = {
             P: `${request_status} has been successfully completed.`,
@@ -3042,18 +2912,15 @@ class GSTR1Action extends FileGSTR1Dialog {
         if (!in_progress) return false;
         else if (in_progress == "proceed_to_file") in_progress = "upload";
 
-        const capitalize_first_letter = str =>
-            str.charAt(0).toUpperCase() + str.slice(1);
+        const capitalize_first_letter = (str) => str.charAt(0).toUpperCase() + str.slice(1);
 
         const in_progress_action = capitalize_first_letter(in_progress);
         action = capitalize_first_letter(action);
 
-        return new Promise(resolve => {
+        return new Promise((resolve) => {
             const d = frappe.msgprint({
                 message:
-                    `${in_progress_action} ` +
-                    __("is in progress. Do you want to perform") +
-                    ` ${action}?`,
+                    `${in_progress_action} ` + __("is in progress. Do you want to perform") + ` ${action}?`,
                 indicator: "red",
                 title: __("Process in Progress"),
                 primary_action: {
@@ -3083,7 +2950,7 @@ class GSTR1Action extends FileGSTR1Dialog {
 
     toggle_actions(show, action) {
         const actions = ["Upload", "Reset", "File", "Mark%20as%20Unfiled"];
-        const btns = $(actions.map(action => `[data-label="${action}"]`).join(","));
+        const btns = $(actions.map((action) => `[data-label="${action}"]`).join(","));
 
         if (show) {
             this.frm.__action_performed = null;
@@ -3097,11 +2964,7 @@ class GSTR1Action extends FileGSTR1Dialog {
 
 // UTILITY FUNCTIONS
 function is_gstr1_api_enabled() {
-    return (
-        india_compliance.is_api_enabled() &&
-        !gst_settings.sandbox_mode &&
-        gst_settings.enable_gstr_1_api
-    );
+    return india_compliance.is_api_enabled() && !gst_settings.sandbox_mode && gst_settings.enable_gstr_1_api;
 }
 
 function patch_set_indicator(frm) {
@@ -3115,7 +2978,7 @@ function update_filing_preference(frm) {
     frappe.call({
         method: "india_compliance.gst_india.doctype.gstr_1.gstr_1.get_filing_preference_from_log",
         args: { month_or_quarter, year, company_gstin },
-        callback: r => {
+        callback: (r) => {
             frm.set_value("filing_preference", r.message || "Monthly");
         },
     });
@@ -3172,8 +3035,7 @@ function render_empty_state(frm) {
 }
 
 async function get_net_gst_liability(frm) {
-    const { month_or_quarter, year, company, company_gstin, filing_preference } =
-        frm.doc;
+    const { month_or_quarter, year, company, company_gstin, filing_preference } = frm.doc;
 
     const response = await frappe.call({
         method: "india_compliance.gst_india.doctype.gstr_1.gstr_1.get_net_gst_liability",
@@ -3191,9 +3053,7 @@ async function get_net_gst_liability(frm) {
 
 function refresh_filing_preference(frm) {
     // update html/css to show refresh button next to filing preference
-    const $pref_wrapper = $(
-        '[data-fieldname="filing_preference"] .control-value.like-disabled-input',
-    );
+    const $pref_wrapper = $('[data-fieldname="filing_preference"] .control-value.like-disabled-input');
     if (!$pref_wrapper.length) return;
 
     const text = $pref_wrapper[0]?.textContent.trim();
@@ -3203,20 +3063,11 @@ function refresh_filing_preference(frm) {
         .empty()
         .addClass("flex align-center justify-content-between")
         .append($("<span></span>").text(text))
-        .append(
-            $("<span></span>")
-                .attr("title", "Refresh Filing Preference from GSTN")
-                .html(ref_btn_html),
-        );
+        .append($("<span></span>").attr("title", "Refresh Filing Preference from GSTN").html(ref_btn_html));
 
     // bind click event
     frm.$wrapper.find(".update-filing-preference").click(async function (e) {
-        const {
-            filing_preference: old_preference,
-            month_or_quarter,
-            year,
-            company_gstin,
-        } = frm.doc;
+        const { filing_preference: old_preference, month_or_quarter, year, company_gstin } = frm.doc;
 
         const month = india_compliance.MONTH.indexOf(month_or_quarter) + 1;
         const period = `${String(month).padStart(2, "0")}${year}`;
@@ -3226,8 +3077,7 @@ function refresh_filing_preference(frm) {
             args: { gstin: company_gstin, period },
         });
 
-        if (new_preference === old_preference)
-            return frappe.show_alert(__("No change in filing preference"));
+        if (new_preference === old_preference) return frappe.show_alert(__("No change in filing preference"));
 
         frappe.show_alert(__("Filing preference updated. Regenerate data."));
         frm.set_value("filing_preference", new_preference);
@@ -3235,9 +3085,7 @@ function refresh_filing_preference(frm) {
 }
 
 function set_options_for_year(frm) {
-    const { options, current_year } = india_compliance.get_options_for_year(
-        frm.doc.filing_preference,
-    );
+    const { options, current_year } = india_compliance.get_options_for_year(frm.doc.filing_preference);
     frm.get_field("year").set_data(options);
     frm.set_value("year", current_year);
 }

@@ -21,11 +21,7 @@
                 :state="gstin.state"
             />
         </transition>
-        <button
-            class="btn btn-primary btn-sm btn-block"
-            :disabled="actionDisabled"
-            type="submit"
-        >
+        <button class="btn btn-primary btn-sm btn-block" :disabled="actionDisabled" type="submit">
             {{ computedSubmitLabel }}
         </button>
         <p class="server-error" v-if="error" v-html="error"></p>
@@ -36,11 +32,7 @@
 import FormField from "../FormField.vue";
 import Loading from "../Loading.vue";
 import { UiState } from "../../constants";
-import {
-    login,
-    signup,
-    check_free_trial_eligibility,
-} from "../../services/AuthService";
+import { login, signup, check_free_trial_eligibility } from "../../services/AuthService";
 
 export default {
     props: { isAccountRegistered: Boolean },
@@ -77,21 +69,14 @@ export default {
         },
 
         actionDisabled() {
-            if (
-                this.isLoading ||
-                this.isRedirecting ||
-                this.hasInputError ||
-                !this.isSucess
-            )
-                return true;
+            if (this.isLoading || this.isRedirecting || this.hasInputError || !this.isSucess) return true;
             if (this.isAccountRegistered) return !this.email.value;
             return !this.email.value || !this.gstin.value;
         },
 
         isSucess() {
             let _isSucess = this.email.state === UiState.success;
-            if (!this.isAccountRegistered)
-                _isSucess = _isSucess && this.gstin.state === UiState.success;
+            if (!this.isAccountRegistered) _isSucess = _isSucess && this.gstin.state === UiState.success;
             return !!_isSucess;
         },
 
@@ -167,7 +152,7 @@ export default {
             field.error = null;
             field.state = UiState.loading;
 
-            const set_error = error_message => {
+            const set_error = (error_message) => {
                 field.error = error_message;
                 field.state = UiState.error;
             };

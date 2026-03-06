@@ -9,7 +9,7 @@ frappe.ui.form.on(DOCTYPE, {
             },
         });
 
-        frm.set_query("driver", doc => {
+        frm.set_query("driver", (doc) => {
             return {
                 filters: {
                     transporter: doc.transporter,
@@ -39,7 +39,7 @@ frappe.ui.form.on(DOCTYPE, {
                 message: __("Supplier Address is required to create e-Waybill"),
                 indicator: "yellow",
             },
-            10,
+            10
         );
     },
 
@@ -63,7 +63,7 @@ frappe.ui.form.on(DOCTYPE, {
                     frm: frm,
                 });
             },
-            __("Create"),
+            __("Create")
         );
     },
 
@@ -76,14 +76,14 @@ frappe.ui.form.on(DOCTYPE, {
         if (!frm._inward_supply) return;
         // go back to previous page and match the invoice with the inward supply
         setTimeout(() => {
-            frappe.route_hooks.after_load = source_frm => {
+            frappe.route_hooks.after_load = (source_frm) => {
                 if (!source_frm.reconciliation_tabs) return;
                 reconciliation.link_documents(
                     source_frm,
                     frm.doc.name,
                     frm._inward_supply.name,
                     "Purchase Invoice",
-                    false,
+                    false
                 );
             };
             frappe.set_route("Form", frm._inward_supply.source_doc);
@@ -108,9 +108,7 @@ function toggle_reverse_charge(frm) {
     // has_goods_item
     else if (
         frm.doc.items.length > 0 &&
-        frm.doc.items.some(
-            item => item.gst_hsn_code && !item.gst_hsn_code.startsWith("99"),
-        )
+        frm.doc.items.some((item) => item.gst_hsn_code && !item.gst_hsn_code.startsWith("99"))
     )
         is_read_only = 1;
 
@@ -124,7 +122,7 @@ function validate_gst_hsn_code(frm) {
     )
         return;
 
-    if (frm.doc.items.some(item => item.item_name && !item.gst_hsn_code)) {
+    if (frm.doc.items.some((item) => item.item_name && !item.gst_hsn_code)) {
         frappe.throw(__("GST HSN Code is mandatory for Overseas Purchase Invoice."));
     }
 }

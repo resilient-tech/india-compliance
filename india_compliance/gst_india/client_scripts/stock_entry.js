@@ -19,7 +19,7 @@ frappe.ui.form.on(DOCTYPE, {
             ],
         });
 
-        ["ship_from_address", "ship_to_address"].forEach(field => {
+        ["ship_from_address", "ship_to_address"].forEach((field) => {
             frm.set_query(field, { filters: { country: "India", disabled: 0 } });
         });
 
@@ -51,23 +51,14 @@ frappe.ui.form.on(DOCTYPE, {
             total_taxable_value: "total_taxable_value",
         });
 
-        on_change_set_address(
-            frm,
-            "supplier_address",
-            ...get_field_and_label(frm, "party_field"),
-        );
+        on_change_set_address(frm, "supplier_address", ...get_field_and_label(frm, "party_field"));
     },
 
     refresh(frm) {
-        frm.get_field("bill_to_address_display")
-            .$wrapper.find(".ql-editor")
-            .css("white-space", "normal");
-        frm.get_field("bill_from_address_display")
-            .$wrapper.find(".ql-editor")
-            .css("white-space", "normal");
+        frm.get_field("bill_to_address_display").$wrapper.find(".ql-editor").css("white-space", "normal");
+        frm.get_field("bill_from_address_display").$wrapper.find(".ql-editor").css("white-space", "normal");
 
-        if (!gst_settings.enable_e_waybill || !gst_settings.enable_e_waybill_for_sc)
-            return;
+        if (!gst_settings.enable_e_waybill || !gst_settings.enable_e_waybill_for_sc) return;
 
         show_sandbox_mode_indicator();
     },
@@ -79,16 +70,12 @@ frappe.ui.form.on(DOCTYPE, {
                     message: __("Supplier Address is required to create e-Waybill"),
                     indicator: "yellow",
                 },
-                10,
+                10
             );
     },
 
     supplier_address(frm) {
-        on_change_set_address(
-            frm,
-            "supplier_address",
-            ...get_field_and_label(frm, "party_field"),
-        );
+        on_change_set_address(frm, "supplier_address", ...get_field_and_label(frm, "party_field"));
     },
 
     source_warehouse_address(frm) {
@@ -97,7 +84,7 @@ frappe.ui.form.on(DOCTYPE, {
             "source_warehouse_address",
             "ship_from_address",
             __("Ship From (same as Source Warehouse Address)"),
-            __("Ship From"),
+            __("Ship From")
         );
     },
 
@@ -107,7 +94,7 @@ frappe.ui.form.on(DOCTYPE, {
             "target_warehouse_address",
             "ship_to_address",
             __("Ship To (same as Target Warehouse Address)"),
-            __("Ship To"),
+            __("Ship To")
         );
     },
 
@@ -120,10 +107,7 @@ frappe.ui.form.on(DOCTYPE, {
                     name: frm.doc.company,
                 },
                 callback(r) {
-                    frm.set_value(
-                        get_field_and_label(frm, "company_field")[0],
-                        r.message,
-                    );
+                    frm.set_value(get_field_and_label(frm, "company_field")[0], r.message);
                 },
             });
         }
@@ -134,14 +118,14 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     async fetch_original_doc_ref(frm) {
-        let existing_references = frm.doc.doc_references.map(row => row.link_name);
+        let existing_references = frm.doc.doc_references.map((row) => row.link_name);
 
         const data = await frappe.db.get_list(DOCTYPE, {
             filters: get_filters_for_relevant_stock_entries(frm.doc),
             group_by: "name",
         });
 
-        data.forEach(doc => {
+        data.forEach((doc) => {
             if (existing_references.includes(doc.name)) return;
             var row = frm.add_child("doc_references");
             row.link_doctype = DOCTYPE;
@@ -153,25 +137,15 @@ frappe.ui.form.on(DOCTYPE, {
 });
 
 function set_address_display_events() {
-    const event_fields = [
-        "bill_from_address",
-        "bill_to_address",
-        "ship_from_address",
-        "ship_to_address",
-    ];
+    const event_fields = ["bill_from_address", "bill_to_address", "ship_from_address", "ship_to_address"];
 
     const events = Object.fromEntries(
-        event_fields.map(field => [
+        event_fields.map((field) => [
             field,
-            frm => {
-                erpnext.utils.get_address_display(
-                    frm,
-                    field,
-                    field + "_display",
-                    false,
-                );
+            (frm) => {
+                erpnext.utils.get_address_display(frm, field, field + "_display", false);
             },
-        ]),
+        ])
     );
 
     frappe.ui.form.on(DOCTYPE, events);
@@ -204,7 +178,7 @@ function get_filters_for_relevant_stock_entries(doc) {
 }
 
 function get_items(doc) {
-    return Array.from(new Set(doc.items.map(row => row.item_code)));
+    return Array.from(new Set(doc.items.map((row) => row.item_code)));
 }
 
 function get_field_and_label(frm, field) {
@@ -212,20 +186,12 @@ function get_field_and_label(frm, field) {
 
     if (frm.doc.purpose === "Material Transfer" && frm.doc.is_return) {
         field_label_dict = {
-            party_field: [
-                "bill_from_address",
-                __("Bill From (same as Supplier Address)"),
-                __("Bill From"),
-            ],
+            party_field: ["bill_from_address", __("Bill From (same as Supplier Address)"), __("Bill From")],
             company_field: ["bill_to_address", __("Bill To")],
         };
     } else {
         field_label_dict = {
-            party_field: [
-                "bill_to_address",
-                __("Bill To (same as Supplier Address)"),
-                __("Bill To"),
-            ],
+            party_field: ["bill_to_address", __("Bill To (same as Supplier Address)"), __("Bill To")],
             company_field: ["bill_from_address", __("Bill From")],
         };
     }

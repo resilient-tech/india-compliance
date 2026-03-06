@@ -34,21 +34,15 @@
                     <div class="calculator-result mt-5">
                         <div class="row">
                             <p class="col">Net Amount</p>
-                            <p class="col calculator-net-value">
-                                ₹ {{ getReadableNumber(netTotal) }}
-                            </p>
+                            <p class="col calculator-net-value">₹ {{ getReadableNumber(netTotal) }}</p>
                         </div>
                         <div class="row">
                             <p class="col">GST @ {{ taxRate }}%</p>
-                            <p class="col calculator-net-value">
-                                ₹ {{ getReadableNumber(tax) }}
-                            </p>
+                            <p class="col calculator-net-value">₹ {{ getReadableNumber(tax) }}</p>
                         </div>
                         <div class="calculator-total row">
                             <p class="col">Amount Payable</p>
-                            <p class="col calculator-net-value">
-                                ₹ {{ getReadableNumber(grandTotal) }}
-                            </p>
+                            <p class="col calculator-net-value">₹ {{ getReadableNumber(grandTotal) }}</p>
                         </div>
                     </div>
                 </div>
@@ -64,26 +58,18 @@
                         </tr>
                         <tr v-for="(rate, credits, index) in rates" :key="index">
                             <td class="plan-list">
-                                {{
-                                    index == 0
-                                        ? "First"
-                                        : credits == Infinity
-                                        ? "Any Additional"
-                                        : "Next"
-                                }}
+                                {{ index == 0 ? "First" : credits == Infinity ? "Any Additional" : "Next" }}
                                 {{ credits != Infinity ? credits : "" }} Credits
                             </td>
-                            <td class="plan-list plan-price">
-                                ₹ {{ getReadableNumber(rate / 100) }}
-                            </td>
+                            <td class="plan-list plan-price">₹ {{ getReadableNumber(rate / 100) }}</td>
                         </tr>
                     </table>
                     <div>
                         <div>
                             <p class="validity-header">Lifetime Validity<sup>*</sup></p>
                             <p class="validity-footer">
-                                Initial validity is of {{ creditsValidity }} months.
-                                Gets extended whenever you make the next purchase.
+                                Initial validity is of {{ creditsValidity }} months. Gets extended whenever
+                                you make the next purchase.
                             </p>
                         </div>
                     </div>
@@ -207,22 +193,14 @@ export default {
                 tax: this.tax,
                 taxRate: this.taxRate,
                 grandTotal: this.grandTotal,
-                validity: frappe.datetime.add_months(
-                    frappe.datetime.now_date(),
-                    this.creditsValidity,
-                ),
+                validity: frappe.datetime.add_months(frappe.datetime.now_date(), this.creditsValidity),
             };
 
-            const orderCreated = await this.$store.dispatch(
-                "createOrder",
-                orderDetails,
-            );
+            const orderCreated = await this.$store.dispatch("createOrder", orderDetails);
             this.isRedirecting = false;
 
             if (!orderCreated) {
-                frappe.throw(
-                    "Something went wrong while creating order, please contact support!",
-                );
+                frappe.throw("Something went wrong while creating order, please contact support!");
             }
 
             this.$router.push({ name: "paymentPage" });
@@ -237,9 +215,7 @@ export default {
             } else if (this.credits < this.minOrderQty) {
                 this.credits = this.minOrderQty;
             } else if (this.credits % this.creditsMultiplier != 0) {
-                this.credits =
-                    Math.ceil(this.credits / this.creditsMultiplier) *
-                    this.creditsMultiplier;
+                this.credits = Math.ceil(this.credits / this.creditsMultiplier) * this.creditsMultiplier;
             }
 
             this.creditsInputValue = this.credits;

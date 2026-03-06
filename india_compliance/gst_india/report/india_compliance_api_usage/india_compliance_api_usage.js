@@ -27,7 +27,7 @@ frappe.query_reports["India Compliance API Usage"] = {
     ],
 
     onload(query_report) {
-        query_report.filters.forEach(filter => {
+        query_report.filters.forEach((filter) => {
             if (filter.fieldtype === "Date") {
                 filter.datepicker.update({ maxDate: new Date() });
             }
