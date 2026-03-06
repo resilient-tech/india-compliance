@@ -5,7 +5,7 @@ from frappe import _, bold
 from frappe.contacts.doctype.address.address import get_address_display
 from frappe.utils import flt
 from erpnext.accounts.party import get_address_tax_category
-from erpnext.stock.get_item_details import get_item_tax_template
+from erpnext.stock.get_item_details import ItemDetailsCtx, get_item_tax_template
 
 from india_compliance.gst_india.overrides.sales_invoice import (
     update_dashboard_with_gst_logs,
@@ -66,7 +66,7 @@ def after_mapping_subcontracting_order(doc, method, source_doc):
             source_doc.supplier_address,
         )
 
-    args = {"company": doc.company, "tax_category": tax_category}
+    args = ItemDetailsCtx({"company": doc.company, "tax_category": tax_category})
 
     for item in doc.items:
         out = frappe._dict()
