@@ -39,3 +39,6 @@ d4986b31db0e89c290990d1bb8d33cbc66075a6b
 
 # skip security review semgrep rule
 66c2ca01f834e0302ed205f71a297287850c650c
+
+# run prettier on javascript files
+02cd1ae9e657599f0230743018cedf2978b6cf34
