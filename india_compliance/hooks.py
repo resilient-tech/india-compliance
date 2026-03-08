@@ -12,7 +12,7 @@ app_home = "/desk/gst-india"
 add_to_apps_screen = [
     {
         "name": app_name,
-        "logo": "/assets/india_compliance/images/india-compliance-logo.png",
+        "logo": "/assets/india_compliance/images/india-compliance.svg",
         "title": app_title,
         "route": app_home,
         "has_permission": "india_compliance.check_app_permission",

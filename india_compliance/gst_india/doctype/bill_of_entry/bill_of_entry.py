@@ -1,10 +1,7 @@
 # Copyright (c) 2023, Resilient Tech and contributors
 # For license information, please see license.txt
 
-from __future__ import annotations
-
 import json
-from typing import Self
 
 import frappe
 from frappe import _
@@ -401,7 +398,7 @@ class BillofEntry(Document):
         return asset_items
 
     @frappe.whitelist()
-    def get_items_from_purchase_invoice(self: Self, purchase_invoices: list[str]):
+    def get_items_from_purchase_invoice(self, purchase_invoices: list[str]):
         if not purchase_invoices:
             frappe.msgprint(_("No Purchase Invoices selected"))
             return
@@ -529,6 +526,8 @@ def make_bill_of_entry(source_name: str, target_doc: str | None = None):
 
     def update_item_qty(source, target, source_parent):
         target.qty = source.get("pending_boe_qty")
+        if not target.project:
+            target.project = source_parent.project
 
     doc = get_mapped_doc(
         "Purchase Invoice",
@@ -780,9 +779,12 @@ def get_purchase_invoice_details(boe):
 
 def get_pi_items(purchase_invoices):
     pi_item = frappe.qb.DocType("Purchase Invoice Item")
+    pi = frappe.qb.DocType("Purchase Invoice")
 
     return (
         frappe.qb.from_(pi_item)
+        .join(pi)
+        .on(pi_item.parent == pi.name)
         .select(
             pi_item.item_code,
             pi_item.item_name,
@@ -794,7 +796,7 @@ def get_pi_items(purchase_invoices):
             pi_item.gst_treatment,
             pi_item.taxable_value.as_("assessable_value"),
             pi_item.taxable_value,
-            pi_item.project,
+            IfNull(pi_item.project, pi.project).as_("project"),
             pi_item.name.as_("pi_detail"),
         )
         .where(pi_item.parent.isin(purchase_invoices))

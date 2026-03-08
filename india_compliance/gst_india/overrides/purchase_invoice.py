@@ -3,7 +3,7 @@ from frappe import _
 from frappe.model.meta import get_field_precision
 from frappe.utils import flt
 
-from india_compliance.gst_india.constants import GST_TAX_TYPES
+from india_compliance.gst_india.constants import GST_TAX_TYPES, VALID_HSN_LENGTHS
 from india_compliance.gst_india.overrides.sales_invoice import (
     update_dashboard_with_gst_logs,
 )
@@ -274,7 +274,7 @@ def validate_hsn_codes(doc):
 
     _validate_hsn_codes(
         doc,
-        valid_hsn_length=[4, 6, 8],
+        valid_hsn_length=VALID_HSN_LENGTHS,
         throw=True,
         message=_("GST HSN Code is mandatory for Overseas Purchase Invoice.<br>"),
     )

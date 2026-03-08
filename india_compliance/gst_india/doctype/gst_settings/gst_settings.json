@@ -144,7 +144,7 @@
    "fieldtype": "Select",
    "label": "Minimum HSN/SAC Code Digits",
    "mandatory_depends_on": "eval: doc.validate_hsn_code",
-   "options": "4\n6"
+   "options": "4\n6\n8"
   },
   {
    "fieldname": "accounts_tab",
@@ -710,7 +710,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-07-16 19:40:18.381272",
+ "modified": "2026-02-13 19:47:13.959890",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
