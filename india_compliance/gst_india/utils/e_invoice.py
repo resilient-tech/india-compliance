@@ -851,7 +851,6 @@ class EInvoiceData(GSTTransactionData):
         return supply_type
 
     def set_transporter_details(self):
-        # Get dynamic threshold based on transaction type and state
         threshold = _get_e_waybill_threshold(self.doc, self.settings)
 
         if (
