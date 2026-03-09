@@ -309,7 +309,6 @@ class TestBillofEntry(IntegrationTestCase):
             pi.items[0],
         )
 
-<<<<<<< HEAD
     def test_project_in_gl_entries(self):
         """Test that project from Purchase Invoice is auto-copied to Bill of Entry and passed to GL Entry"""
 
@@ -362,7 +361,7 @@ class TestBillofEntry(IntegrationTestCase):
 
         pi_items = get_pi_items([pi2.name])
         self.assertEqual(pi_items[0].project, project)
-=======
+
     def test_itc_claim_period_auto_set(self):
         """Test that ITC claim period is auto-set on Bill of Entry creation."""
         pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
@@ -375,4 +374,3 @@ class TestBillofEntry(IntegrationTestCase):
         # ITC claim period should be set to posting period by default
         expected_period = format_period(boe.posting_date)
         self.assertEqual(boe.itc_claim_period, expected_period)
->>>>>>> 93950bed (test: added comprehensive test case)

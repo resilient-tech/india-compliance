@@ -117,15 +117,7 @@
   }
  ],
  "links": [],
-<<<<<<< HEAD
-<<<<<<< HEAD
- "modified": "2026-02-13 19:43:36.278214",
-=======
- "modified": "2026-01-03 16:56:38.441930",
->>>>>>> 48984db1 (chore: correct field order in gstr3b)
-=======
- "modified": "2026-01-21 13:03:20.966750",
->>>>>>> 716f8fb7 (fix: refactor ITC claim period handling in GSTR 3B report)
+ "modified": "2026-02-13 20:43:36.278214",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR 3B Report",
