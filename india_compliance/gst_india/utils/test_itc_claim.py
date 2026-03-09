@@ -252,7 +252,7 @@ class TestITCClaim(IntegrationTestCase):
         )
 
         self.assertGreater(len(periods), 0)
-        self.assertEqual(periods[-1], ITC_CLAIM_PERIOD_DEFERRED)
+        self.assertEqual(periods[0], ITC_CLAIM_PERIOD_DEFERRED)
 
         # Filed period should be excluded
         month_or_quarter = today.strftime("%B")
