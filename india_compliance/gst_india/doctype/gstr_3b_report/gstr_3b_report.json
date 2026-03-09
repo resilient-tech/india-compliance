@@ -78,7 +78,6 @@
    "read_only": 1
   },
   {
-   "default": "Not Filed",
    "fieldname": "filing_status",
    "fieldtype": "Select",
    "is_virtual": 1,
