@@ -3,26 +3,17 @@
 
 frappe.ui.form.on("Bill of Entry", {
     setup(frm) {
-        frm.set_query("itc_claim_period", () => {
-            return {
-                query: "india_compliance.gst_india.utils.itc_claim.get_itc_period_options",
-                params: {
-                    company_gstin: frm.doc.company_gstin,
-                    posting_date: frm.doc.posting_date,
-                },
-            };
-        });
+        india_compliance.setup_itc_claim_period_query(frm);
     },
 
     onload(frm) {
         frm.fields_dict.items.grid.cannot_add_rows = true;
         frm.bill_of_entry_controller = new BillOfEntryController(frm);
-
-        frm.set_df_property("itc_claim_period", "ignore_validation", 1);
     },
 
     refresh(frm) {
         india_compliance.set_reconciliation_status(frm, "bill_of_entry_no");
+        india_compliance.set_itc_claim_period_status(frm);
 
         if (frm.doc.docstatus === 0) return;
 
