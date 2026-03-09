@@ -6,6 +6,7 @@ india_compliance.patches.v15.remove_duplicate_web_template
 india_compliance.patches.v14.set_default_for_overridden_accounts_setting
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 execute:from india_compliance.gst_india.setup import create_custom_fields; create_custom_fields() #68
 =======
 execute:from india_compliance.gst_india.setup import create_custom_fields; create_custom_fields() #67
@@ -13,6 +14,9 @@ execute:from india_compliance.gst_india.setup import create_custom_fields; creat
 =======
 execute:from india_compliance.gst_india.setup import create_custom_fields; create_custom_fields() #68
 >>>>>>> 6ba131ea (fix: update patches.txt and type hints)
+=======
+execute:from india_compliance.gst_india.setup import create_custom_fields; create_custom_fields() #69
+>>>>>>> 55c5e912 (chore: increase patch number)
 execute:from india_compliance.gst_india.setup import create_property_setters; create_property_setters() #11
 execute:from india_compliance.income_tax_india.setup import create_custom_fields; create_custom_fields() #4
 india_compliance.patches.post_install.remove_old_fields #2
