@@ -395,9 +395,7 @@ Object.assign(india_compliance, {
             "itc_claim_period",
             "description",
             is_filed
-                ? __("GSTR-3B for {0} is filed. ITC Claim Period cannot be changed.", [
-                      frm.doc.itc_claim_period,
-                  ])
+                ? __("GSTR-3B for {0} is filed", [ frm.doc.itc_claim_period ])
                 : __(
                       "GSTR-3B period for claiming ITC (MMYYYY) or 'Deferred' to postpone."
                   )
