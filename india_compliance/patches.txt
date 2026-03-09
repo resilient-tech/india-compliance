@@ -4,7 +4,7 @@ india_compliance.patches.v15.remove_duplicate_web_template
 
 [post_model_sync]
 india_compliance.patches.v14.set_default_for_overridden_accounts_setting
-execute:from india_compliance.gst_india.setup import create_custom_fields; create_custom_fields() #68
+execute:from india_compliance.gst_india.setup import create_custom_fields; create_custom_fields() #69
 execute:from india_compliance.gst_india.setup import create_property_setters; create_property_setters() #11
 execute:from india_compliance.income_tax_india.setup import create_custom_fields; create_custom_fields() #4
 india_compliance.patches.post_install.remove_old_fields #2
@@ -76,4 +76,5 @@ india_compliance.patches.v15.remove_itc_amount_custom_fields
 india_compliance.patches.v14.update_tax_withholding_categories
 india_compliance.patches.v16.remove_legacy_report_fixtures
 india_compliance.patches.v15.unset_auth_token
+india_compliance.patches.v15.update_itc_claim_period
 india_compliance.patches.v15.migrate_logo_for_printing

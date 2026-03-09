@@ -15,6 +15,10 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool.test_purcha
     create_gst_inward_supply,
 )
 from india_compliance.gst_india.utils.api import create_integration_request
+from india_compliance.gst_india.utils.itc_claim import (
+    ITC_CLAIM_PERIOD_DEFERRED,
+    update_gstr3b_filing_status,
+)
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
 
 EXTRA_TEST_RECORD_DEPENDENCIES = []
@@ -240,3 +244,85 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         gstr3b_log.return_type = "GSTR3B"
         gstr3b_log.filing_status = "Filed"
         gstr3b_log.insert()
+
+    def test_itc_claim_period_on_ims_action(self):
+        """
+        Test ITC Claim Period is set correctly based on IMS action.
+
+        Logic:
+        - Rejected/Pending → 'Deferred'
+        - Accepted → ims_period (period from GST IMS)
+        """
+        ims_period = "122024"
+
+        frappe.db.set_value(
+            "GST Inward Supply",
+            self.invoice_name_1,
+            {"link_doctype": "Purchase Invoice", "link_name": self.pinv.name},
+        )
+
+        # Test Rejected action → Deferred
+        self.gst_ims.period = ims_period
+        self.gst_ims.update_action((self.invoice_name_1,), "Rejected")
+        itc_claim_period = frappe.db.get_value(
+            "Purchase Invoice", self.pinv.name, "itc_claim_period"
+        )
+        self.assertEqual(itc_claim_period, ITC_CLAIM_PERIOD_DEFERRED)
+
+        # Test Accepted action → ims_period
+        self.gst_ims.update_action((self.invoice_name_1,), "Accepted")
+        itc_claim_period = frappe.db.get_value(
+            "Purchase Invoice", self.pinv.name, "itc_claim_period"
+        )
+        self.assertEqual(itc_claim_period, ims_period)
+
+        # Test Pending action → Deferred
+        self.gst_ims.update_action((self.invoice_name_1,), "Pending")
+        itc_claim_period = frappe.db.get_value(
+            "Purchase Invoice", self.pinv.name, "itc_claim_period"
+        )
+        self.assertEqual(itc_claim_period, ITC_CLAIM_PERIOD_DEFERRED)
+
+    def test_itc_claim_period_no_change_when_filed(self):
+        """
+        IMS action should NOT update ITC Claim Period when the
+        current period is already filed.
+
+        _calculate_itc_claim_period skips if current period is in
+        the filed set.
+        """
+        ims_period = "122024"
+
+        frappe.db.set_value(
+            "GST Inward Supply",
+            self.invoice_name_1,
+            {"link_doctype": "Purchase Invoice", "link_name": self.pinv.name},
+        )
+
+        self.gst_ims.period = ims_period
+        self.gst_ims.update_action((self.invoice_name_1,), "Accepted")
+        itc_claim_period = frappe.db.get_value(
+            "Purchase Invoice", self.pinv.name, "itc_claim_period"
+        )
+        self.assertEqual(itc_claim_period, ims_period)
+
+        update_gstr3b_filing_status(
+            company_gstin="24AAQCA8719H1ZC",
+            month_or_quarter="December",
+            year=2024,
+            status="Filed",
+        )
+
+        # IMS Rejected → should NOT change (period is filed)
+        self.gst_ims.update_action((self.invoice_name_1,), "Rejected")
+        itc_claim_period = frappe.db.get_value(
+            "Purchase Invoice", self.pinv.name, "itc_claim_period"
+        )
+        self.assertEqual(itc_claim_period, ims_period)
+
+        update_gstr3b_filing_status(
+            company_gstin="24AAQCA8719H1ZC",
+            month_or_quarter="December",
+            year=2024,
+            status="Not Filed",
+        )

@@ -1021,6 +1021,17 @@ CUSTOM_FIELDS = {
             "no_copy": 1,
             "read_only": 1,
         },
+        {
+            "fieldname": "itc_claim_period",
+            "label": "ITC Claim Period",
+            "fieldtype": "Autocomplete",
+            "insert_after": "reconciliation_status",
+            "print_hide": 1,
+            "no_copy": 1,
+            "translatable": 0,
+            "description": "GSTR-3B period for claiming ITC (MMYYYY) or 'Deferred' to postpone.",
+            "allow_on_submit": 1,
+        },
     ],
     "Purchase Invoice Item": [
         {

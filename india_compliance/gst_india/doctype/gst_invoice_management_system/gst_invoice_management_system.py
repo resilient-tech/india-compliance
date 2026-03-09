@@ -53,6 +53,9 @@ from india_compliance.gst_india.utils.gstr_2 import (
 from india_compliance.gst_india.utils.gstr_utils import (
     publish_action_status_notification,
 )
+from india_compliance.gst_india.utils.itc_claim import (
+    set_itc_claim_period_on_ims_action,
+)
 from india_compliance.setup_wizard import can_fetch_gstin_info
 
 CATEGORY_MAP = {
@@ -180,6 +183,12 @@ class GSTInvoiceManagementSystem(Document):
             .set("ims_action", action)
             .where(GSTR2.name.isin(invoice_names))
             .run()
+        )
+
+        # Bulk update ITC claim periods for linked Purchase Invoices
+
+        set_itc_claim_period_on_ims_action(
+            invoice_names, action, ims_period=self.period
         )
 
     @frappe.whitelist()

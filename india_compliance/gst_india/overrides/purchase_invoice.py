@@ -9,10 +9,16 @@ from india_compliance.gst_india.overrides.sales_invoice import (
 )
 from india_compliance.gst_india.overrides.transaction import (
     _validate_hsn_codes,
+    ignore_gst_validations,
     validate_transaction,
 )
 from india_compliance.gst_india.utils import is_api_enabled, validate_invoice_number
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
+from india_compliance.gst_india.utils.itc_claim import (
+    _is_gstr3b_filed,
+    set_or_validate_itc_claim_period,
+    validate_itc_claim_period,
+)
 
 
 def onload(doc, method=None):
@@ -20,6 +26,12 @@ def onload(doc, method=None):
         doc.set_onload(
             "bill_of_entry_exists",
             not any(item.pending_boe_qty > 0 for item in doc.items),
+        )
+
+    if doc.docstatus == 1 and doc.get("itc_claim_period"):
+        doc.set_onload(
+            "is_itc_period_filed",
+            _is_gstr3b_filed(doc.company_gstin, doc.itc_claim_period),
         )
 
     if not doc.get("ewaybill"):
@@ -53,8 +65,16 @@ def validate(doc, method=None):
     validate_reverse_charge(doc)
     validate_supplier_invoice_number(doc)
     validate_with_inward_supply(doc)
+    set_or_validate_itc_claim_period(doc)
     set_reconciliation_status(doc)
     set_pending_boe_qty(doc)
+
+
+def before_update_after_submit(doc, method=None):
+    if ignore_gst_validations(doc):
+        return
+
+    validate_itc_claim_period(doc)
 
 
 def on_cancel(doc, method=None):
