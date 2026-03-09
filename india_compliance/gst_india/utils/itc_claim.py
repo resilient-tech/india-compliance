@@ -370,14 +370,21 @@ def _validate_itc_claim_period_as_per_filing(doc) -> None:
     if not previous:
         return
 
-    if previous.itc_claim_period != doc.itc_claim_period and (
-        _is_gstr3b_filed(doc.company_gstin, previous.itc_claim_period)
-        or _is_gstr3b_filed(doc.company_gstin, doc.itc_claim_period)
-    ):
+    if previous.itc_claim_period != doc.itc_claim_period:
+        filed_period = None
+        if _is_gstr3b_filed(doc.company_gstin, previous.itc_claim_period):
+            filed_period = previous.itc_claim_period
+        if _is_gstr3b_filed(doc.company_gstin, doc.itc_claim_period):
+            filed_period = doc.itc_claim_period
+
+        if not filed_period:
+            return
+
         frappe.throw(
             _(
-                "Cannot change ITC Claim Period from {0} to {1}. GSTR-3B already filed."
-            ).format(previous.itc_claim_period, doc.itc_claim_period)
+                "Cannot change ITC Claim Period from {0} to {1}. GSTR-3B already filed"
+                " for {2}."
+            ).format(previous.itc_claim_period, doc.itc_claim_period, filed_period)
         )
 
 
@@ -391,7 +398,8 @@ def _validate_itc_claim_period_for_rcm_invoice(doc) -> None:
     ):
         frappe.throw(
             _(
-                "ITC Claim Period must be {0} for purchases from Unregistered suppliers under Reverse Charge."
+                "ITC Claim Period must be {0} (same as posting date) for purchases from"
+                " Unregistered suppliers under Reverse Charge."
             ).format(format_period(doc.posting_date))
         )
 
