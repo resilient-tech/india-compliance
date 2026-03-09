@@ -119,7 +119,7 @@ jobs:
               run: cat ~/frappe-bench/bench_start.log || true
 
             - name: Upload coverage data
-              uses: actions/upload-artifact@v6
+              uses: actions/upload-artifact@v7
               with:
                 name: coverage
                 path: /home/runner/frappe-bench/sites/coverage.xml
