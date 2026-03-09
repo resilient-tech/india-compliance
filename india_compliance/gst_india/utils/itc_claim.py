@@ -133,14 +133,14 @@ def get_itc_period_options(
     filed = _get_filed_periods(company_gstin)
 
     periods = []
-    current = start_date
-    while current <= end_date:
+    current = end_date
+    while current >= start_date:
         period = format_period(current)
         if period not in filed:
             periods.append(period)
-        current = add_months(current, 1)
+        current = add_months(current, -1)
 
-    periods.append(ITC_CLAIM_PERIOD_DEFERRED)
+    periods.insert(0, ITC_CLAIM_PERIOD_DEFERRED)
     return periods
 
 
