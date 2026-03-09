@@ -256,7 +256,7 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         itc_claim_period = frappe.db.get_value(
             "Purchase Invoice", pinv.name, "itc_claim_period"
         )
-        # posting period (122023) > 2B period (102023), so posting
+        # posting period (012024) > 2B period (102023), so posting
         self.assertEqual(itc_claim_period, format_period(pinv.posting_date))
 
     def test_itc_claim_period_deferred_on_pending_ims(self):
