@@ -376,6 +376,34 @@ Object.assign(india_compliance, {
         };
     },
 
+    setup_itc_claim_period_query(frm) {
+        frm.set_query("itc_claim_period", () => ({
+            query: "india_compliance.gst_india.utils.itc_claim.get_itc_period_options",
+            params: {
+                company_gstin: frm.doc.company_gstin,
+                posting_date: frm.doc.posting_date,
+            },
+        }));
+    },
+
+    set_itc_claim_period_status(frm) {
+        frm.set_df_property("itc_claim_period", "ignore_validation", 1);
+
+        const is_filed = frm.doc.__onload?.is_itc_period_filed;
+        frm.set_df_property("itc_claim_period", "read_only", is_filed ? 1 : 0);
+        frm.set_df_property(
+            "itc_claim_period",
+            "description",
+            is_filed
+                ? __("GSTR-3B for {0} is filed. ITC Claim Period cannot be changed.", [
+                      frm.doc.itc_claim_period,
+                  ])
+                : __(
+                      "GSTR-3B period for claiming ITC (MMYYYY) or 'Deferred' to postpone."
+                  )
+        );
+    },
+
     set_reconciliation_status(frm, field) {
         if (!frm.doc.docstatus === 1 || !frm.doc.reconciliation_status) return;
 
