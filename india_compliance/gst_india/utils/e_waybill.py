@@ -2002,6 +2002,8 @@ def auto_cancel_e_waybill(doc, gst_settings=None, e_waybill_info=None):
 
 @frappe.whitelist()
 def get_e_waybill_threshold(doctype: str, docname: str):
+    frappe.has_permission(doctype, doc=docname, ptype="read", throw=True)
+
     doc = frappe.get_doc(doctype, docname)
     return _get_e_waybill_threshold(doc)
 
