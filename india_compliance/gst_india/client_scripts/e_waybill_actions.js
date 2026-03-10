@@ -191,7 +191,7 @@ function setup_e_waybill_actions(doctype) {
             }
         },
         async on_submit(frm) {
-            if (!auto_generate_e_waybill(frm)) return;
+            if (!(await auto_generate_e_waybill(frm))) return;
 
             frappe.show_alert(__("Attempting to generate e-Waybill"));
 
@@ -1270,8 +1270,8 @@ function is_e_waybill_generatable(frm, show_message) {
     return new E_WAYBILL_CLASS[frm.doctype](frm).is_e_waybill_generatable(show_message);
 }
 
-function auto_generate_e_waybill(frm) {
-    return new E_WAYBILL_CLASS[frm.doctype](frm).auto_generate_e_waybill();
+async function auto_generate_e_waybill(frm) {
+    return await new E_WAYBILL_CLASS[frm.doctype](frm).auto_generate_e_waybill();
 }
 
 function can_extend_e_waybill(frm) {

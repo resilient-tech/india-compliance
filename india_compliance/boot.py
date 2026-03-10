@@ -10,7 +10,6 @@ from india_compliance.audit_trail.utils import (
 from india_compliance.gst_india.constants import (
     GST_PARTY_TYPES,
     INDIAN_STATES,
-    STATE_NUMBERS,
 )
 
 
@@ -31,7 +30,6 @@ def set_bootinfo(bootinfo):
 
     bootinfo["gst_settings"] = gst_settings
     bootinfo["india_state_options"] = list(INDIAN_STATES)
-    bootinfo["state_numbers"] = STATE_NUMBERS
     bootinfo["ic_api_enabled_from_conf"] = bool(frappe.conf.ic_api_secret)
 
     set_indian_registered_companies(bootinfo)

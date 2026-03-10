@@ -84,17 +84,17 @@ class GSTSettings(Document):
         frappe.enqueue(update_e_invoice_status, queue="long", timeout=6000)
 
     def validate_unique_states(self):
-        config_length = len(self.e_waybill_threshold_for_intrastate)
-        unique_states_length = len(
-            set(
-                config.get("state")
-                for config in self.e_waybill_threshold_for_intrastate
-            )
-        )
-        if config_length != unique_states_length:
-            frappe.throw(
-                _("State must be unique in E-Waybill Threshold for Intrastate table")
-            )
+        seen_states = set()
+        for row in self.e_waybill_threshold_for_intrastate:
+            state = row.get("state")
+            if state in seen_states:
+                frappe.throw(
+                    _(
+                        "Row #{0}: State {1} appears multiple times in E-Waybill Threshold for Intrastate table"
+                    ).format(row.idx, frappe.bold(state))
+                )
+
+            seen_states.add(state)
 
     def clear_api_auth_session(self):
         if self.has_value_changed("api_secret") and self.api_secret:
