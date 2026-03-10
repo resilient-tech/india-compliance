@@ -10,6 +10,11 @@ from frappe.tests.utils import make_test_objects
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
 )
+from india_compliance.gst_india.utils.itc_claim import (
+    ITC_CLAIM_PERIOD_DEFERRED,
+    format_period,
+    update_gstr3b_filing_status,
+)
 from india_compliance.gst_india.utils.tests import (
     create_purchase_invoice as _create_purchase_invoice,
 )
@@ -140,6 +145,216 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
                 )
 
         frappe.db.set_single_value("GST Settings", "enable_overseas_transactions", 0)
+
+    def test_itc_claim_period_on_reconciliation_match(self):
+        """
+        Test ITC Claim Period is updated when a Purchase Invoice is matched
+        with a GST Inward Supply during reconciliation.
+        """
+        pinv = create_purchase_invoice(
+            bill_no="ITC-REC-003",
+            bill_date="2023-09-15",
+            posting_date="2023-09-15",
+        )
+
+        gst_is = create_gst_inward_supply(
+            bill_no="ITC-REC-003",
+            bill_date="2023-09-15",
+            return_period_2b="012024",
+        )
+
+        prt = frappe.get_doc("Purchase Reconciliation Tool")
+        prt.update(
+            {
+                "company_gstin": "24AAQCA8719H1ZC",
+                "purchase_period": "Custom",
+                "purchase_from_date": "2023-09-01",
+                "purchase_to_date": "2023-09-30",
+                "inward_supply_period": "Custom",
+                "inward_supply_from_date": "2023-09-01",
+                "inward_supply_to_date": "2024-01-31",
+                "gst_return": "GSTR 2B",
+            }
+        )
+        prt.reconcile_and_generate_data()
+
+        itc_claim_period = frappe.db.get_value(
+            "Purchase Invoice", pinv.name, "itc_claim_period"
+        )
+        self.assertEqual(itc_claim_period, gst_is.return_period_2b)
+
+    def test_itc_claim_period_deferred_on_rejected_ims(self):
+        """
+        Test ITC Claim Period is set to 'Deferred' when matched inward supply
+        has ims_action='Rejected'.
+        """
+        pinv = create_purchase_invoice(
+            bill_no="ITC-REC-004",
+            bill_date="2023-10-15",
+            posting_date="2023-10-15",
+        )
+
+        gst_is = create_gst_inward_supply(
+            bill_no="ITC-REC-004",
+            bill_date="2023-10-15",
+            return_period_2b="102023",
+        )
+        frappe.db.set_value("GST Inward Supply", gst_is.name, "ims_action", "Rejected")
+
+        prt = frappe.get_doc("Purchase Reconciliation Tool")
+        prt.update(
+            {
+                "company_gstin": "24AAQCA8719H1ZC",
+                "purchase_period": "Custom",
+                "purchase_from_date": "2023-10-01",
+                "purchase_to_date": "2023-10-31",
+                "inward_supply_period": "Custom",
+                "inward_supply_from_date": "2023-10-01",
+                "inward_supply_to_date": "2023-10-31",
+                "gst_return": "GSTR 2B",
+            }
+        )
+        prt.reconcile_and_generate_data()
+
+        itc_claim_period = frappe.db.get_value(
+            "Purchase Invoice", pinv.name, "itc_claim_period"
+        )
+        self.assertEqual(itc_claim_period, ITC_CLAIM_PERIOD_DEFERRED)
+
+    def test_itc_claim_period_posting_period_when_2b_earlier(self):
+        """
+        When 2B return_period < posting_period, ITC Claim Period
+        should use the posting period (the later one).
+        """
+        pinv = create_purchase_invoice(
+            bill_no="ITC-REC-005",
+            bill_date="2024-01-10",
+            posting_date="2024-01-10",
+        )
+
+        create_gst_inward_supply(
+            bill_no="ITC-REC-005",
+            bill_date="2024-01-10",
+            return_period_2b="102023",  # Earlier than posting (012024)
+        )
+
+        prt = frappe.get_doc("Purchase Reconciliation Tool")
+        prt.update(
+            {
+                "company_gstin": "24AAQCA8719H1ZC",
+                "purchase_period": "Custom",
+                "purchase_from_date": "2024-01-01",
+                "purchase_to_date": "2024-01-31",
+                "inward_supply_period": "Custom",
+                "inward_supply_from_date": "2023-10-01",
+                "inward_supply_to_date": "2024-01-31",
+                "gst_return": "GSTR 2B",
+            }
+        )
+        prt.reconcile_and_generate_data()
+
+        itc_claim_period = frappe.db.get_value(
+            "Purchase Invoice", pinv.name, "itc_claim_period"
+        )
+        # posting period (012024) > 2B period (102023), so posting
+        self.assertEqual(itc_claim_period, format_period(pinv.posting_date))
+
+    def test_itc_claim_period_deferred_on_pending_ims(self):
+        """
+        ITC Claim Period is set to 'Deferred' when matched inward supply
+        has ims_action='Pending'.
+        """
+        pinv = create_purchase_invoice(
+            bill_no="ITC-REC-006",
+            bill_date="2023-10-15",
+            posting_date="2023-10-15",
+        )
+
+        gst_is = create_gst_inward_supply(
+            bill_no="ITC-REC-006",
+            bill_date="2023-10-15",
+            return_period_2b="102023",
+        )
+        frappe.db.set_value("GST Inward Supply", gst_is.name, "ims_action", "Pending")
+
+        prt = frappe.get_doc("Purchase Reconciliation Tool")
+        prt.update(
+            {
+                "company_gstin": "24AAQCA8719H1ZC",
+                "purchase_period": "Custom",
+                "purchase_from_date": "2023-10-01",
+                "purchase_to_date": "2023-10-31",
+                "inward_supply_period": "Custom",
+                "inward_supply_from_date": "2023-10-01",
+                "inward_supply_to_date": "2023-10-31",
+                "gst_return": "GSTR 2B",
+            }
+        )
+        prt.reconcile_and_generate_data()
+
+        itc_claim_period = frappe.db.get_value(
+            "Purchase Invoice", pinv.name, "itc_claim_period"
+        )
+        self.assertEqual(itc_claim_period, ITC_CLAIM_PERIOD_DEFERRED)
+
+    def test_itc_claim_period_no_change_when_filed(self):
+        """
+        Reconciliation should NOT update ITC Claim Period if the
+        current period is already filed.
+        """
+        pinv = create_purchase_invoice(
+            bill_no="ITC-REC-007",
+            bill_date="2023-08-15",
+            posting_date="2023-08-15",
+        )
+
+        current_period = frappe.db.get_value(
+            "Purchase Invoice", pinv.name, "itc_claim_period"
+        )
+        self.assertEqual(current_period, "082023")
+
+        # File 082023
+        update_gstr3b_filing_status(
+            company_gstin="24AAQCA8719H1ZC",
+            month_or_quarter="August",
+            year=2023,
+            status="Filed",
+        )
+
+        create_gst_inward_supply(
+            bill_no="ITC-REC-007",
+            bill_date="2023-08-15",
+            return_period_2b="092023",  # Different period
+        )
+
+        prt = frappe.get_doc("Purchase Reconciliation Tool")
+        prt.update(
+            {
+                "company_gstin": "24AAQCA8719H1ZC",
+                "purchase_period": "Custom",
+                "purchase_from_date": "2023-08-01",
+                "purchase_to_date": "2023-08-31",
+                "inward_supply_period": "Custom",
+                "inward_supply_from_date": "2023-08-01",
+                "inward_supply_to_date": "2023-09-30",
+                "gst_return": "GSTR 2B",
+            }
+        )
+        prt.reconcile_and_generate_data()
+
+        # Period should remain unchanged (filed)
+        itc_claim_period = frappe.db.get_value(
+            "Purchase Invoice", pinv.name, "itc_claim_period"
+        )
+        self.assertEqual(itc_claim_period, "082023")
+
+        # cleanup
+        update_gstr3b_filing_status(
+            company_gstin="24AAQCA8719H1ZC",
+            month_or_quarter="August",
+            year=2023,
+            status="Not Filed",
+        )
 
 
 def create_purchase_invoice(**kwargs):
