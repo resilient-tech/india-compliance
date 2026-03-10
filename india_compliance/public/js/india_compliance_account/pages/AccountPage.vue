@@ -5,7 +5,7 @@
       <PageTitle title="India Compliance Account" />
       <div class="subtext">
         <span class="subtext-item">
-          Registered Email: {{ subscriptionDetails.email }}
+         <strong>Registered Email:</strong> <a :href="`mailto:${subscriptionDetails.email}`">{{ subscriptionDetails.email }}</a>
         </span>
       </div>
       <Message
@@ -27,7 +27,7 @@
             </div>
           </div>
           <router-link v-if="!is_unlimited_account"
-            class="btn btn-primary btn-sm btn-block"
+            class="btn btn-primary btn-lg"
             to="/purchase-credits"
           >
             Purchase Credits
@@ -167,13 +167,13 @@ data() {
   },
   computed: {
     last_synced_on() {
-      // TODO: set based on user datetime format?
       let { last_usage_synced_on } = this.subscriptionDetails;
-      last_usage_synced_on = last_usage_synced_on
-        ? moment.unix(last_usage_synced_on)
-        : moment();
 
-      return last_usage_synced_on.format("DD-MM-YYYY HH:mm A");
+      const datetime = (
+        last_usage_synced_on ? moment.unix(last_usage_synced_on) : moment()
+      ).format(frappe.defaultDatetimeFormat);
+
+      return frappe.datetime.str_to_user(datetime);
     },
 
     subscriptionDetails() {
