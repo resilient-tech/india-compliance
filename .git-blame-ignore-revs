@@ -42,3 +42,6 @@ d4986b31db0e89c290990d1bb8d33cbc66075a6b
 
 # run prettier on javascript files
 02cd1ae9e657599f0230743018cedf2978b6cf34
+
+# fix linters for wrong import
+9bc34dcd78b1d16c04e94000104dc6589a957635
