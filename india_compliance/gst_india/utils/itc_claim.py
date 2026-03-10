@@ -4,7 +4,8 @@
 import datetime
 import re
 from collections import defaultdict
-from typing import Literal, Sequence
+from collections.abc import Sequence
+from typing import Literal
 
 import frappe
 from frappe import _
@@ -93,9 +94,7 @@ def set_itc_claim_period_on_ims_action(
     for doctype, doc_names in by_doctype.items():
         updates = defaultdict(set)
         only_claim_period_set = bool(action in ("Rejected", "Pending"))
-        doc_data = _fetch_document_data(
-            doctype, doc_names, only_claim_period_set=only_claim_period_set
-        )
+        doc_data = _fetch_document_data(doctype, doc_names, only_claim_period_set=only_claim_period_set)
         gstins = {d.company_gstin for d in doc_data if d.company_gstin}
         filed_map = {gstin: _get_filed_periods(gstin) for gstin in gstins}
 
@@ -115,9 +114,7 @@ def set_itc_claim_period_on_ims_action(
 
 
 @frappe.whitelist()
-def get_itc_period_options(
-    company_gstin: str | None = None, posting_date: str | None = None
-) -> list[str]:
+def get_itc_period_options(company_gstin: str | None = None, posting_date: str | None = None) -> list[str]:
     if not company_gstin or not posting_date:
         return []
 
@@ -151,9 +148,7 @@ def update_gstr3b_filing_status(
     frappe.has_permission("GST Return Log", "write", throw=True)
     if status not in FILING_STATUS:
         frappe.throw(
-            _("Invalid filing status: {0}. Allowed values are: {1}").format(
-                status, ", ".join(FILING_STATUS)
-            )
+            _("Invalid filing status: {0}. Allowed values are: {1}").format(status, ", ".join(FILING_STATUS))
         )
 
     period = get_period(month_or_quarter, year)
@@ -163,14 +158,12 @@ def update_gstr3b_filing_status(
     if log_name:
         frappe.db.set_value("GST Return Log", log_name, "filing_status", status)
     else:
-        frappe.get_doc(
-            {"doctype": "GST Return Log", "filing_status": status, **filters}
-        ).insert(ignore_permissions=True)
+        frappe.get_doc({"doctype": "GST Return Log", "filing_status": status, **filters}).insert(
+            ignore_permissions=True
+        )
 
     frappe.msgprint(
-        _("GSTR-3B for {0} {1} marked as {2}.").format(
-            month_or_quarter, year, FILING_STATUS[status]
-        ),
+        _("GSTR-3B for {0} {1} marked as {2}.").format(month_or_quarter, year, FILING_STATUS[status]),
         indicator="green",
     )
 
@@ -212,9 +205,7 @@ def apply_period_filter(
     return query.where(doc.posting_date[from_date:to_date])
 
 
-def period_to_date(
-    period: str, day: Literal["first", "last"] = "first"
-) -> datetime.date:
+def period_to_date(period: str, day: Literal["first", "last"] = "first") -> datetime.date:
     if not period or len(period) != 6:
         frappe.throw(_("Invalid period format: {0}. Expected MMYYYY.").format(period))
 
@@ -247,9 +238,7 @@ def _validate_period_format(period: str) -> None:
         return
 
     if period and not re.match(r"^(0[1-9]|1[0-2])\d{4}$", period):
-        frappe.throw(
-            _("ITC Claim Period '{0}' must be in MMYYYY format").format(period)
-        )
+        frappe.throw(_("ITC Claim Period '{0}' must be in MMYYYY format").format(period))
 
 
 # =============================================================================
@@ -302,9 +291,7 @@ def _get_next_unfiled_period(
     filed: set[str] | None = None,
 ) -> str | None:
     deadline = _get_section_16_4_deadline(posting_date)
-    is_filed = (
-        (lambda p: p in filed) if filed else (lambda p: _is_gstr3b_filed(gstin, p))
-    )
+    is_filed = (lambda p: p in filed) if filed else (lambda p: _is_gstr3b_filed(gstin, p))
 
     current = start_period
     while compare_periods(current, deadline) <= 0:
@@ -353,9 +340,7 @@ def _calculate_itc_claim_period(
     if doc.get("gst_category") == "Unregistered" and doc.get("is_reverse_charge"):
         return posting_period
 
-    return _get_next_unfiled_period(
-        doc.company_gstin, default_period, doc.posting_date, filed
-    )
+    return _get_next_unfiled_period(doc.company_gstin, default_period, doc.posting_date, filed)
 
 
 def validate_itc_claim_period(doc) -> None:
@@ -381,10 +366,9 @@ def _validate_itc_claim_period_as_per_filing(doc) -> None:
             return
 
         frappe.throw(
-            _(
-                "Cannot change ITC Claim Period from {0} to {1}. GSTR-3B already filed"
-                " for {2}."
-            ).format(previous.itc_claim_period, doc.itc_claim_period, filed_period)
+            _("Cannot change ITC Claim Period from {0} to {1}. GSTR-3B already filed" " for {2}.").format(
+                previous.itc_claim_period, doc.itc_claim_period, filed_period
+            )
         )
 
 
@@ -451,9 +435,7 @@ def _bulk_update(updates: dict[str, set[str]], doctype: str, source: str) -> Non
         bulk_insert("Comment", comments, ignore_duplicates=True)
 
 
-def _fetch_document_data(
-    doctype: str, names: list[str], only_claim_period_set: bool = False
-) -> list[dict]:
+def _fetch_document_data(doctype: str, names: list[str], only_claim_period_set: bool = False) -> list[dict]:
     doc = frappe.qb.DocType(doctype)
     query = (
         frappe.qb.from_(doc)
@@ -477,9 +459,7 @@ def _fetch_document_data(
     return query.run(as_dict=True)
 
 
-def _fetch_inward_supply_data(
-    names: Sequence[str], only_linked: bool = False
-) -> list[dict]:
+def _fetch_inward_supply_data(names: Sequence[str], only_linked: bool = False) -> list[dict]:
     gstr2 = frappe.qb.DocType("GST Inward Supply")
     query = (
         frappe.qb.from_(gstr2)
