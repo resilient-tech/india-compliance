@@ -2042,7 +2042,8 @@ def get_state_code_wise_config(gst_settings=None):
 
     state_config = {}
     for row in gst_settings.get("e_waybill_threshold_for_intrastate") or []:
-        state_code = STATE_NUMBERS.get(row.state)
+        if not (state_code := STATE_NUMBERS.get(row.state)):
+            continue
 
         state_config[state_code] = {
             "intrastate_applicable": row.intrastate_applicable,
