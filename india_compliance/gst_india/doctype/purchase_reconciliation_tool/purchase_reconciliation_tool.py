@@ -39,10 +39,16 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_re
 from india_compliance.gst_india.utils import (
     get_gstin_list,
     get_json_from_file,
+    get_party_for_gstin,
     get_timespan_date_range,
     is_api_enabled,
 )
 from india_compliance.gst_india.utils.exporter import ExcelExporter
+from india_compliance.gst_india.utils.gstin_info import (
+    get_fy,
+    get_latest_3b_filed_period,
+    update_gstr_returns_info,
+)
 from india_compliance.gst_india.utils.gstr_2 import (
     GSTR_2A_ACTIONS,
     IMPORT_CATEGORY,
@@ -52,6 +58,13 @@ from india_compliance.gst_india.utils.gstr_2 import (
     save_gstr_2a,
     save_gstr_2b,
 )
+from india_compliance.gst_india.utils.itc_claim import (
+    compare_periods,
+    format_period,
+    period_sort_key,
+    period_to_date,
+)
+from india_compliance.setup_wizard import can_fetch_gstin_info
 
 STATUS_MAP = {
     "Accept": "Reconciled",
@@ -385,6 +398,9 @@ def download_gstr(
     if not periods:
         return
 
+    latest_period = max(periods, key=period_sort_key)
+    _check_gstr3b_status(company_gstin, latest_period)
+
     try:
         if return_type == ReturnType.GSTR2A:
             return download_gstr_2a(company_gstin, periods, gst_categories)
@@ -402,6 +418,34 @@ def download_gstr(
             },
             user=frappe.session.user,
         )
+
+
+def _check_gstr3b_status(gstin, return_period):
+    """
+    Checks if the previous return period's GSTR-3B filing status is up-to-date locally.
+    If not, initiates a status update from the GST Portal via Public API.
+    """
+    if not (gstin and return_period):
+        return
+
+    company = get_party_for_gstin(gstin, "Company")
+    last_filed_period = get_latest_3b_filed_period(company, gstin)
+    if last_filed_period:
+        last_filed_period = last_filed_period[0]
+
+    prev_period = format_period(add_to_date(period_to_date(return_period), months=-1))
+
+    # If last filed period is recent enough (>= prev_period), local data is fresh
+    if last_filed_period and compare_periods(last_filed_period, prev_period) >= 0:
+        return
+
+    if not can_fetch_gstin_info():
+        return
+
+    try:
+        update_gstr_returns_info(company, gstin, get_fy(prev_period))
+    except Exception:
+        frappe.log_error(title="GSTR-3B Status Update Failed")
 
 
 def get_periods_to_download(company_gstin, return_type, periods, download_all=False):

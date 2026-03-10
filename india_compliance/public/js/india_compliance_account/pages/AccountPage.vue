@@ -4,16 +4,17 @@
         <div v-else>
             <PageTitle title="India Compliance Account" />
             <div class="subtext">
-                <span class="subtext-item"> Registered Email: {{ subscriptionDetails.email }} </span>
+                <span class="subtext-item">
+                    <strong>Registered Email:</strong>
+                    <a :href="`mailto:${subscriptionDetails.email}`">{{ subscriptionDetails.email }}</a>
+                </span>
             </div>
             <Message v-if="message" :message="message.message" :color="message.color" />
             <div class="main-content">
                 <div class="card subscription-info">
                     <p class="last-updated-text">Last Updated On {{ last_synced_on }}</p>
                     <div class="subscription-details-item">
-                        <p class="label">
-                            {{ is_unlimited_account ? "Used Credits" : "Available Credits" }}
-                        </p>
+                        <p class="label">{{ is_unlimited_account ? "Used Credits" : "Available Credits" }}</p>
                         <p class="value">
                             {{ getReadableNumber(is_unlimited_account ? used_credits : balance_credits, 0) }}
                         </p>
@@ -23,14 +24,12 @@
                             <p class="label">
                                 {{ is_unlimited_account ? "Next Billing Date" : "Valid Upto" }}
                             </p>
-                            <p class="value" :class="{ 'mb-4': is_unlimited_account }">
-                                {{ valid_upto }}
-                            </p>
+                            <p class="value" :class="{ 'mb-4': is_unlimited_account }">{{ valid_upto }}</p>
                         </div>
                     </div>
                     <router-link
                         v-if="!is_unlimited_account"
-                        class="btn btn-primary btn-sm btn-block"
+                        class="btn btn-primary btn-lg"
                         to="/purchase-credits"
                     >
                         Purchase Credits
@@ -39,18 +38,27 @@
                 <div class="card">
                     <h3 class="title">Actions</h3>
                     <ul class="links">
-                        <a @click.prevent="showUsage"><li>Review API Usage</li></a>
+                        <a @click.prevent="showUsage">
+                            <li>Review API Usage</li>
+                        </a>
                         <!-- <a href="#"><li>Check API Status</li></a> -->
-                        <a @click.prevent="openInvoiceDialog"><li>Invoice History</li></a>
-                        <a href="https://discuss.frappe.io/c/erpnext/india-compliance/65"
-                            ><li>Community Forum</li></a
-                        >
+                        <a @click.prevent="openInvoiceDialog">
+                            <li>Invoice History</li>
+                        </a>
+                        <a href="https://discuss.frappe.io/c/erpnext/india-compliance/65">
+                            <li>Community Forum</li>
+                        </a>
                         <a
                             href="https://github.com/resilient-tech/india-compliance/issues/new?template=bug_report.yaml"
-                            ><li>Report a Bug</li></a
                         >
-                        <a href="mailto:api-support@indiacompliance.app"><li>Email Support</li></a>
-                        <a @click.prevent="logout"><li>Logout</li></a>
+                            <li>Report a Bug</li>
+                        </a>
+                        <a href="mailto:api-support@indiacompliance.app">
+                            <li>Email Support</li>
+                        </a>
+                        <a @click.prevent="logout">
+                            <li>Logout</li>
+                        </a>
                     </ul>
                 </div>
             </div>
@@ -175,11 +183,13 @@ export default {
     },
     computed: {
         last_synced_on() {
-            // TODO: set based on user datetime format?
             let { last_usage_synced_on } = this.subscriptionDetails;
-            last_usage_synced_on = last_usage_synced_on ? moment.unix(last_usage_synced_on) : moment();
 
-            return last_usage_synced_on.format("DD-MM-YYYY HH:mm A");
+            const datetime = (last_usage_synced_on ? moment.unix(last_usage_synced_on) : moment()).format(
+                frappe.defaultDatetimeFormat
+            );
+
+            return frappe.datetime.str_to_user(datetime);
         },
 
         subscriptionDetails() {

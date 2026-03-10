@@ -24,7 +24,7 @@
                             {{ creditsMultiplier }})
                         </p>
                         <button
-                            class="btn btn-primary btn-sm btn-block btn-tall mt-5"
+                            class="btn btn-primary btn-lg mt-5 d-block mx-auto"
                             @click="handleButtonClick"
                             :disabled="isRedirecting"
                         >
@@ -240,6 +240,7 @@ export default {
 .calculator .title {
     margin-bottom: 2em;
 }
+
 .calculator .description {
     margin-top: -0.5em;
 }
@@ -255,11 +256,13 @@ export default {
     text-align: end;
     font-size: 1.1em;
 }
+
 .calculator-total {
     font-size: 1.3em;
     font-weight: 600;
     margin-top: 0.9em;
 }
+
 .credits-input {
     padding: 22em;
 }
@@ -271,25 +274,31 @@ export default {
     margin-bottom: 1.6em;
     font-weight: 400;
 }
+
 .plan-header p {
     margin-bottom: 0.4em;
 }
+
 .plan-detail {
     font-size: 1.2em;
     font-weight: 500;
     margin-top: 2em;
 }
+
 .plan-price {
     text-align: end;
     font-weight: 600;
 }
+
 .plan-list {
     padding-bottom: 0.9em;
 }
+
 .validity-header {
     font-size: 1.4em;
     font-weight: 500;
 }
+
 .validity-footer {
     font-size: 0.9em;
 }

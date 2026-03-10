@@ -9,6 +9,10 @@ from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import IfNull
 
+from india_compliance.gst_india.utils.itc_claim import (
+    apply_period_filter as _apply_itc_period_filter,
+)
+
 TAX_FIELDS = (
     "igst_amount",
     "cgst_amount",
@@ -105,6 +109,15 @@ class ITCAvailedData:
         filters.from_date, filters.to_date = filters.date_range
         self.filters = filters
 
+    def apply_itc_period_filter(self, query, doc):
+        return _apply_itc_period_filter(
+            query,
+            doc,
+            self.filters.get("from_date"),
+            self.filters.get("to_date"),
+            filter_by=self.filters.get("filter_by"),
+        )
+
     def _get_data(self) -> list[dict]:
         return self._get_bill_of_entry_data() + self._get_purchase_invoice_data()
 
@@ -159,11 +172,9 @@ class ITCAvailedData:
             doc_item.sgst_amount,
             doc_item.igst_amount,
             (doc_item.cess_amount + doc_item.cess_non_advol_amount).as_("cess_amount"),
-        ).where(
-            (doc.docstatus == 1)
-            & (doc.posting_date[self.filters.get("from_date") : self.filters.get("to_date")])
-            & (doc.company == self.filters.get("company"))
-        )
+        ).where((doc.docstatus == 1) & (doc.company == self.filters.get("company")))
+
+        query = self.apply_itc_period_filter(query, doc)
 
         if self.filters.get("company_gstin"):
             query = query.where(doc.company_gstin == self.filters.get("company_gstin"))

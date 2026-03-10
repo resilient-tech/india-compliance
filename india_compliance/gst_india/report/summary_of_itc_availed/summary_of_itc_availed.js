@@ -41,6 +41,14 @@ frappe.query_reports["Summary of ITC Availed"] = {
             reqd: 1,
             width: "80",
         },
+        {
+            fieldname: "filter_by",
+            label: __("Filter By"),
+            fieldtype: "Select",
+            default: "ITC Claim Period",
+            options: ["ITC Claim Period", "Posting Date"],
+            reqd: 1,
+        },
     ],
 
     formatter: (value, row, column, data, default_formatter) => {
