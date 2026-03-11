@@ -27,17 +27,9 @@ from india_compliance.gst_india.utils import (
     get_period,
 )
 from india_compliance.gst_india.utils.exporter import ExcelExporter
-<<<<<<< HEAD
-=======
-from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR11A11BData
-<<<<<<< HEAD
-from india_compliance.gst_india.utils.itc_claim import format_period
->>>>>>> 0bc69747 (feat: introduce itc claim period to allow customizing how to claim itc)
-=======
 from india_compliance.gst_india.utils.itc_claim import (
     apply_period_filter as _apply_itc_period_filter,
 )
->>>>>>> 716f8fb7 (fix: refactor ITC claim period handling in GSTR 3B report)
 
 VALUES_TO_UPDATE = ["iamt", "camt", "samt", "csamt"]
 GST_TAX_TYPE_MAP = {

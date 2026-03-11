@@ -1,12 +1,8 @@
 import re
 
 import frappe
-<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase, change_settings
-=======
-from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import add_months, getdate
->>>>>>> 86b2db74 (fix: restrict itc claim period update after 3b is filed)
 from erpnext.accounts.doctype.account.test_account import create_account
 
 from india_compliance.gst_india.utils.itc_claim import (
