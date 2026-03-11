@@ -27,12 +27,12 @@ frappe.ui.form.on(DOCTYPE, {
         toggle_reverse_charge(frm);
     },
 
-    after_save(frm) {
+    async after_save(frm) {
         if (
             frm.doc.supplier_address ||
             !(frm.doc.gst_category == "Unregistered" || frm.doc.is_return) ||
             !is_e_waybill_applicable(frm) ||
-            !has_e_waybill_threshold_met(frm)
+            !(await has_e_waybill_threshold_met(frm))
         )
             return;
 
