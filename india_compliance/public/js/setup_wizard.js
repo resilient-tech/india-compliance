@@ -100,7 +100,7 @@ function update_erpnext_slides_settings() {
         label: __("Enable Audit Trail"),
         description: __(
             `In accordance with <a
-              href='https://www.mca.gov.in/Ministry/pdf/AccountsAmendmentRules_24032021.pdf'
+              href='https://egazette.gov.in/WriteReadData/2021/226081.pdf'
               target='_blank'
             > MCA Notification dated 24-03-2021</a>.<br>
             Once enabled, Audit Trail cannot be disabled.`,
