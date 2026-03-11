@@ -1,0 +1,52 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-01-30 17:59:31.740792",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "state",
+  "intrastate_applicable",
+  "intrastate_threshold"
+ ],
+ "fields": [
+  {
+   "fieldname": "state",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "label": "State",
+   "reqd": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "intrastate_applicable",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Intrastate Applicable"
+  },
+  {
+   "fieldname": "intrastate_threshold",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Intrastate Threshold",
+   "mandatory_depends_on": "eval: doc.intrastate_applicable",
+   "read_only_depends_on": "eval: !doc.intrastate_applicable"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-02-23 16:40:25.764474",
+ "modified_by": "Administrator",
+ "module": "GST India",
+ "name": "State-wise e-Waybill Threshold",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
