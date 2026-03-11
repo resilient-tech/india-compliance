@@ -16,6 +16,8 @@ frappe.ui.form.on(DOCTYPE, {
                 },
             };
         });
+
+        india_compliance.setup_itc_claim_period_query(frm);
     },
 
     onload: toggle_reverse_charge,
@@ -39,12 +41,13 @@ frappe.ui.form.on(DOCTYPE, {
                 message: __("Supplier Address is required to create e-Waybill"),
                 indicator: "yellow",
             },
-            10
+            10,
         );
     },
 
     refresh(frm) {
         india_compliance.set_reconciliation_status(frm, "bill_no");
+        india_compliance.set_itc_claim_period_status(frm);
         if (gst_settings.enable_e_waybill && gst_settings.enable_e_waybill_from_pi)
             show_sandbox_mode_indicator();
 
@@ -63,7 +66,7 @@ frappe.ui.form.on(DOCTYPE, {
                     frm: frm,
                 });
             },
-            __("Create")
+            __("Create"),
         );
     },
 
@@ -83,7 +86,7 @@ frappe.ui.form.on(DOCTYPE, {
                     frm.doc.name,
                     frm._inward_supply.name,
                     "Purchase Invoice",
-                    false
+                    false,
                 );
             };
             frappe.set_route("Form", frm._inward_supply.source_doc);
@@ -109,7 +112,7 @@ function toggle_reverse_charge(frm) {
     else if (
         frm.doc.items.length > 0 &&
         frm.doc.items.some(
-            item => item.gst_hsn_code && !item.gst_hsn_code.startsWith("99")
+            item => item.gst_hsn_code && !item.gst_hsn_code.startsWith("99"),
         )
     )
         is_read_only = 1;
