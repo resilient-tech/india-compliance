@@ -61,4 +61,21 @@ india_compliance.patches.v14.update_gstin_status_refresh_interval
 india_compliance.patches.v14.update_default_e_invoice_time_limit
 india_compliance.patches.v15.migrate_gstr1_log_to_returns_log
 india_compliance.patches.v15.update_action_for_gst_inward_supply
+<<<<<<< HEAD
 india_compliance.patches.v14.update_tax_withholding_categories
+=======
+india_compliance.patches.v15.set_default_for_new_gst_category_notification
+india_compliance.patches.v15.make_e_invoice_log_extensible
+india_compliance.patches.v15.migrate_boe_taxes_to_ic_taxes
+india_compliance.patches.v15.set_download_document_for_2a_2b
+india_compliance.patches.v15.multiple_pi_in_boe
+india_compliance.patches.v15.update_supplier_filing_status
+india_compliance.patches.v14.set_pending_boe_qty #1
+india_compliance.patches.v15.remove_itc_amount_custom_fields
+india_compliance.patches.v14.update_tax_withholding_categories
+india_compliance.patches.v16.remove_legacy_report_fixtures
+india_compliance.patches.v15.unset_auth_token
+india_compliance.patches.v15.update_itc_claim_period
+india_compliance.patches.v15.migrate_logo_for_printing
+execute:from india_compliance.audit_trail.setup import create_custom_fields; create_custom_fields()
+>>>>>>> 0d79f789 (fix: patch to update description of `enable_audit_trail`)
