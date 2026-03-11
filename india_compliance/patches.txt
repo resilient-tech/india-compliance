@@ -78,3 +78,4 @@ india_compliance.patches.v16.remove_legacy_report_fixtures
 india_compliance.patches.v15.unset_auth_token
 india_compliance.patches.v15.update_itc_claim_period
 india_compliance.patches.v15.migrate_logo_for_printing
+execute:from india_compliance.audit_trail.setup import create_custom_fields; create_custom_fields()
