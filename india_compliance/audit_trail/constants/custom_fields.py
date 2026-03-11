@@ -14,7 +14,7 @@ CUSTOM_FIELDS = {
             "label": "Enable Audit Trail",
             "description": (
                 "In accordance with <a"
-                " href='https://www.mca.gov.in/Ministry/pdf/AccountsAmendmentRules_24032021.pdf'"
+                " href='https://egazette.gov.in/WriteReadData/2021/226081.pdf'"
                 " target='_blank'> MCA Notification dated 24-03-2021</a>, enabling this"
                 " feature will ensure that each change made to the books of account"
                 " gets recorded. Once enabled, this feature cannot be disabled."
