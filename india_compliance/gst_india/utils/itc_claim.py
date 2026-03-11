@@ -496,6 +496,6 @@ def _fetch_inward_supply_data(
     if only_linked:
         query = query.where(gstr2.link_name.isnotnull())
         query = query.where(gstr2.link_name != "")
-        query = query.where(gstr2.link_doctype.isin(SUPPORTED_DOCTYPES))
+        query = query.where(gstr2.link_doctype.isin(tuple(SUPPORTED_DOCTYPES)))
 
     return query.run(as_dict=True)
