@@ -4,7 +4,7 @@
 import re
 
 import frappe
-from frappe.tests import FrappeTestCase
+from frappe.tests.utils import FrappeTestCase
 from frappe.utils import getdate
 
 from india_compliance.gst_india.utils.itc_claim import (
