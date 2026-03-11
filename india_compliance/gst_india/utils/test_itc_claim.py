@@ -4,7 +4,7 @@
 import re
 
 import frappe
-from frappe.tests import IntegrationTestCase
+from frappe.tests import FrappeTestCase
 from frappe.utils import getdate
 
 from india_compliance.gst_india.utils.itc_claim import (
@@ -26,7 +26,7 @@ from india_compliance.gst_india.utils.itc_claim import (
 )
 
 
-class TestITCClaim(IntegrationTestCase):
+class TestITCClaim(FrappeTestCase):
     # =================================================================
     # Period Utility Functions
     # =================================================================
