@@ -1,6 +1,7 @@
 [pre_model_sync]
 execute:import frappe; frappe.delete_doc_if_exists("DocType", "GSTIN")
 india_compliance.patches.v15.remove_duplicate_web_template
+execute:from frappe.installer import add_module_defs; add_module_defs("india_compliance",ignore_if_duplicate=True)
 
 [post_model_sync]
 india_compliance.patches.v14.set_default_for_overridden_accounts_setting
