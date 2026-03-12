@@ -92,6 +92,7 @@ def after_mapping_stock_entry(doc, method, source_doc):
     doc.bill_to_gstin = source_doc.get(bill_to_gstin)
 
     set_address_display(doc)
+    set_item_tax_template(doc, source_doc)
 
 
 def _get_fields_mapping(doc, source_doc):
@@ -120,6 +121,29 @@ def _get_fields_mapping(doc, source_doc):
         return from_fields, to_fields
 
     return None
+
+
+def set_item_tax_template(doc, source_doc):
+    rm_detail_field = "sco_rm_detail"
+    if source_doc.doctype == "Purchase Order":
+        rm_detail_field = "po_detail"
+
+    item_tax_template_map = frappe._dict()
+    for supplied_item in source_doc.supplied_items:
+        item_tax_template = next(
+            (
+                item.item_tax_template
+                for item in source_doc.items
+                if supplied_item.get("reference_name") == item.name
+            ),
+            None,
+        )
+
+        if item_tax_template:
+            item_tax_template_map[supplied_item.name] = item_tax_template
+
+    for item in doc.items:
+        item.item_tax_template = item_tax_template_map.get(item.get(rm_detail_field))
 
 
 def before_mapping_subcontracting_receipt(doc, method, source_doc, table_maps):
