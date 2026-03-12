@@ -358,19 +358,12 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
 
     def test_get_invoice_details_with_none_inward_supply_name(self):
         """
-        Regression test: get_invoice_details with inward_supply_name=None
-        must not raise FrappeTypeError.
-
-        Before fix: parameter was annotated as `str`, pydantic rejected None.
-        After fix:  parameter is annotated as `str | None`, None is accepted.
-
-        When inward_supply_name is None the result should reflect that the
-        purchase invoice is missing in 2A/2B.
+        get_invoice_details with inward_supply_name=None must not raise FrappeTypeError.
         """
         pinv = create_purchase_invoice(
             bill_no="GID-001",
-            bill_date="2023-12-01",
-            posting_date="2023-12-01",
+            bill_date="2024-01-01",
+            posting_date="2024-01-01",
         )
 
         prt = frappe.get_doc("Purchase Reconciliation Tool")
@@ -378,11 +371,11 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
             {
                 "company_gstin": "24AAQCA8719H1ZC",
                 "purchase_period": "Custom",
-                "purchase_from_date": "2023-12-01",
-                "purchase_to_date": "2023-12-31",
+                "purchase_from_date": "2024-01-01",
+                "purchase_to_date": "2024-01-31",
                 "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2023-12-01",
-                "inward_supply_to_date": "2023-12-31",
+                "inward_supply_from_date": "2024-01-01",
+                "inward_supply_to_date": "2024-01-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -399,19 +392,12 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
 
     def test_get_invoice_details_with_none_purchase_name(self):
         """
-        Regression test: get_invoice_details with purchase_name=None
-        must not raise FrappeTypeError.
-
-        Before fix: parameter was annotated as `str`, pydantic rejected None.
-        After fix:  parameter is annotated as `str | None`, None is accepted.
-
-        When purchase_name is None the result should reflect that the
-        inward supply is missing in PI.
+        get_invoice_details with purchase_name=None must not raise FrappeTypeError.
         """
         gst_is = create_gst_inward_supply(
             bill_no="GID-002",
-            bill_date="2023-12-01",
-            return_period_2b="122023",
+            bill_date="2024-01-01",
+            return_period_2b="012024",
         )
 
         prt = frappe.get_doc("Purchase Reconciliation Tool")
@@ -419,11 +405,11 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
             {
                 "company_gstin": "24AAQCA8719H1ZC",
                 "purchase_period": "Custom",
-                "purchase_from_date": "2023-12-01",
-                "purchase_to_date": "2023-12-31",
+                "purchase_from_date": "2024-01-01",
+                "purchase_to_date": "2024-01-31",
                 "inward_supply_period": "Custom",
-                "inward_supply_from_date": "2023-12-01",
-                "inward_supply_to_date": "2023-12-31",
+                "inward_supply_from_date": "2024-01-01",
+                "inward_supply_to_date": "2024-01-31",
                 "gst_return": "GSTR 2B",
             }
         )
@@ -437,6 +423,39 @@ class TestPurchaseReconciliationTool(IntegrationTestCase):
         self.assertEqual(result.inward_supply_name, gst_is.name)
         self.assertEqual(result.match_status, "Missing in PI")
         self.assertIsNone(result.purchase_invoice_name)
+
+    def test_link_documents_with_none_inward_supply_name(self):
+        """
+        link_documents with inward_supply_name=None must not raise FrappeTypeError.
+        """
+        pinv = create_purchase_invoice(
+            bill_no="GID-003",
+            bill_date="2024-01-01",
+            posting_date="2024-01-01",
+        )
+
+        prt = frappe.get_doc("Purchase Reconciliation Tool")
+        prt.update(
+            {
+                "company_gstin": "24AAQCA8719H1ZC",
+                "purchase_period": "Custom",
+                "purchase_from_date": "2024-01-01",
+                "purchase_to_date": "2024-01-31",
+                "inward_supply_period": "Custom",
+                "inward_supply_from_date": "2024-01-01",
+                "inward_supply_to_date": "2024-01-31",
+                "gst_return": "GSTR 2B",
+            }
+        )
+        prt.reconcile_and_generate_data()
+        result = prt.link_documents(
+            purchase_invoice_name=pinv.name,
+            inward_supply_name=None,
+            link_doctype="Purchase Invoice",
+        )
+        self.assertIsInstance(result, list)
+
+        self.assertTrue(any(r.purchase_invoice_name == pinv.name for r in result))
 
 
 def create_purchase_invoice(**kwargs):
