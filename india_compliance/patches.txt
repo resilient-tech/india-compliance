@@ -21,7 +21,6 @@ execute:from india_compliance.audit_trail.setup import setup_fixtures; setup_fix
 india_compliance.patches.v14.set_default_for_audit_trail_notification
 india_compliance.patches.post_install.update_state_name_to_puducherry
 india_compliance.patches.post_install.rename_import_of_capital_goods
-execute:from india_compliance.audit_trail.setup import create_custom_fields, CUSTOM_FIELDS; create_custom_fields(CUSTOM_FIELDS)
 india_compliance.patches.post_install.update_hsn_code
 execute:from india_compliance.gst_india.setup import map_default_uoms; map_default_uoms()
 india_compliance.patches.v14.rename_reverse_charge_to_purchase_reverse_charge
@@ -78,3 +77,4 @@ india_compliance.patches.v16.remove_legacy_report_fixtures
 india_compliance.patches.v15.unset_auth_token
 india_compliance.patches.v15.update_itc_claim_period
 india_compliance.patches.v15.migrate_logo_for_printing
+execute:from india_compliance.audit_trail.setup import create_custom_fields; create_custom_fields()
