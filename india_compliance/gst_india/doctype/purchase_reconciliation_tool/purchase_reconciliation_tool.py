@@ -282,9 +282,9 @@ class PurchaseReconciliationTool(Document):
     @frappe.whitelist()
     def link_documents(
         self,
-        purchase_invoice_name: str,
-        inward_supply_name: str,
-        link_doctype: str,
+        purchase_invoice_name: str | None,
+        inward_supply_name: str | None,
+        link_doctype: str | None,
     ):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
