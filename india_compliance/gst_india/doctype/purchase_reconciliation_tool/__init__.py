@@ -1007,7 +1007,9 @@ class ReconciledData(BaseReconciliation):
 
         return data
 
-    def get_manually_matched_data(self, purchase_name: str, inward_supply_name: str):
+    def get_manually_matched_data(
+        self, purchase_name: str | None, inward_supply_name: str | None
+    ):
         """
         Get manually matched data for given purchase invoice and inward supply.
         This can be used to show comparison of matched values.
