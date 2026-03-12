@@ -18,6 +18,10 @@ from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
 from india_compliance.gst_india.constants import GST_TAX_TYPES, TAXABLE_GST_TREATMENTS
 from india_compliance.gst_india.utils import get_gstin_list, get_party_for_gstin
 from india_compliance.gst_india.utils.gstr_2 import IMPORT_CATEGORY, ReturnType
+from india_compliance.gst_india.utils.itc_claim import (
+    SUPPORTED_DOCTYPES,
+    set_itc_claim_period_on_match,
+)
 
 
 class Fields(Enum):
@@ -794,6 +798,8 @@ class Reconciler(BaseReconciliation):
         """
 
         matching_purchases = {}
+        inward_supply_map = {}  # Maps inward_supply_name -> purchase_invoice_name
+
         for supplier_gstin in purchases:
             if not inward_supplies.get(supplier_gstin):
                 continue
@@ -832,12 +838,16 @@ class Reconciler(BaseReconciliation):
                         purchase.name
                     )
 
+                    if purchase.doctype in SUPPORTED_DOCTYPES:
+                        inward_supply_map[inward_supply.name] = purchase.name
+
                     # Remove from current data to ensure matching is done only once.
                     purchases[supplier_gstin].pop(purchase_invoice_name)
                     inward_supplies[supplier_gstin].pop(inward_supply_name)
                     break
 
         self.update_reconciliation_status(matching_purchases)
+        self.update_itc_claim_period(matching_purchases, inward_supply_map)
 
     def is_doc_matching(self, purchase, inward_supply, rules):
         """
@@ -940,6 +950,20 @@ class Reconciler(BaseReconciliation):
                 "reconciliation_status",
                 "Match Found",
             )
+
+    def update_itc_claim_period(self, matching_docs: dict, inward_supply_map: dict):
+        for doctype, doc_names in matching_docs.items():
+            if not doc_names:
+                continue
+
+            # Filter inward_supply_map for this doctype
+            doc_inward_map = {
+                k: v for k, v in inward_supply_map.items() if v in doc_names
+            }
+            if doc_inward_map:
+                set_itc_claim_period_on_match(
+                    doc_names, doc_inward_map, doctype=doctype
+                )
 
     def get_pan_level_data(self, data):
         out = {}
