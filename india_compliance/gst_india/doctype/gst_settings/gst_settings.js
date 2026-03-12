@@ -62,11 +62,7 @@ function show_ic_api_promo(frm) {
     if (!frm.doc.__onload?.can_show_promo) return;
     const alert_message = `
     Looking for API Features?
-<<<<<<< HEAD
-    <a href="/app/india-compliance-account" class="alert-link">
-=======
     <a href="${frappe.utils.generate_route({ type: "Page", name: "india-compliance-account" })}" class="alert-link">
->>>>>>> 31bd29ac (feat: Add state-wise e-Waybill applicability configuration (#3968))
         Get started with the India Compliance API!
     </a>`;
 
@@ -132,11 +128,6 @@ function auto_cancel_e_invoice(frm) {
     frm.set_value("auto_cancel_e_waybill", frm.doc.auto_cancel_e_invoice);
 }
 
-<<<<<<< HEAD
-function reason_for_e_invoice_cancellation(frm){
-    frm.set_value("reason_for_e_waybill_cancellation", frm.doc.reason_for_e_invoice_cancellation)
-}
-=======
 function reason_for_e_invoice_cancellation(frm) {
     frm.set_value(
         "reason_for_e_waybill_cancellation",
@@ -148,4 +139,3 @@ function set_state_options_for_e_waybill_threshold(frm) {
     frm.fields_dict.e_waybill_threshold_for_intrastate.grid.fields_map.state.options =
         frappe.boot.india_state_options;
 }
->>>>>>> 31bd29ac (feat: Add state-wise e-Waybill applicability configuration (#3968))
