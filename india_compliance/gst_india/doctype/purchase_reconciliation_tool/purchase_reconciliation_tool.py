@@ -270,7 +270,9 @@ class PurchaseReconciliationTool(Document):
         return date_range
 
     @frappe.whitelist()
-    def get_invoice_details(self, purchase_name: str, inward_supply_name: str):
+    def get_invoice_details(
+        self, purchase_name: str | None, inward_supply_name: str | None
+    ):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         return self.ReconciledData.get_manually_matched_data(
