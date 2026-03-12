@@ -2,6 +2,10 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Bill of Entry", {
+    setup(frm) {
+        india_compliance.setup_itc_claim_period_query(frm);
+    },
+
     onload(frm) {
         frm.fields_dict.items.grid.cannot_add_rows = true;
         frm.bill_of_entry_controller = new BillOfEntryController(frm);
@@ -9,6 +13,7 @@ frappe.ui.form.on("Bill of Entry", {
 
     refresh(frm) {
         india_compliance.set_reconciliation_status(frm, "bill_of_entry_no");
+        india_compliance.set_itc_claim_period_status(frm);
 
         if (frm.doc.docstatus === 0) return;
 

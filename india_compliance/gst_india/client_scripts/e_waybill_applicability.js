@@ -112,7 +112,7 @@ class SalesInvoiceEwaybill extends EwaybillApplicability {
         return is_ewb_generatable;
     }
 
-    auto_generate_e_waybill() {
+    async auto_generate_e_waybill() {
         if (
             this.frm.doc.is_return ||
             this.frm.doc.is_debit_note ||
@@ -120,7 +120,7 @@ class SalesInvoiceEwaybill extends EwaybillApplicability {
             !india_compliance.is_api_enabled() ||
             !gst_settings.auto_generate_e_waybill ||
             !this.is_e_waybill_generatable() ||
-            !has_e_waybill_threshold_met(this.frm) ||
+            !(await has_e_waybill_threshold_met(this.frm)) ||
             is_e_invoice_applicable(this.frm)
         )
             return false;
