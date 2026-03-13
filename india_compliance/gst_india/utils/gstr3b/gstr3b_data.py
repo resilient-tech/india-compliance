@@ -119,7 +119,9 @@ class GSTR3BSubcategory(GSTR3BCategoryConditions):
 
     def set_for_itc_reversed(self, invoice):
         invoice.invoice_sub_category = (
-            "As per rules 42 & 43 of CGST Rules and section 17(5)"
+            "Others"
+            if invoice.ineligibility_reason == "Others"
+            else ("As per rules 42 & 43 of CGST Rules and section 17(5)")
         )
 
     def set_for_ineligible_itc(self, invoice):
@@ -271,6 +273,7 @@ class GSTR3BQuery:
                 self.JE.voucher_type.as_("ineligibility_type"),
                 self.JE.name.as_("voucher_no"),
                 self.JE.posting_date,
+                IfNull(self.JE.ineligibility_reason, "").as_("ineligibility_reason"),
                 *[
                     Sum(
                         Case()
