@@ -12,15 +12,13 @@ from india_compliance.gst_india.report.gst_purchase_register.gst_purchase_regist
 REVERSAL_OF_ITC = "Reversal Of ITC"
 RECLAIM_OF_ITC_REVERSAL = "Reclaim of ITC Reversal"
 
-today = getdate()
 
-
-def _filters(**kwargs):
+def _filters(posting_date, **kwargs):
     return frappe._dict(
         {
             "company": "_Test Indian Registered Company",
             "company_gstin": "24AAQCA8719H1ZC",
-            "date_range": [today, today],
+            "date_range": [posting_date, posting_date],
             "sub_section": "4",
             "summary_by": "Invoice Wise",
             "invoice_sub_category": None,
@@ -33,12 +31,14 @@ class TestGSTPurchaseRegisterITCJournalEntries(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.reversal_je = create_itc_reversal_journal_entry()
+        cls.today = getdate()
+        cls.reversal_je = create_itc_reversal_journal_entry(cls.today)
         cls.reversal_je_others = create_itc_reversal_journal_entry(
+            cls.today,
             ineligibility_reason="Others",
             tax_amount=6,
         )
-        cls.reclaim_je = create_itc_reclaim_journal_entry()
+        cls.reclaim_je = create_itc_reclaim_journal_entry(cls.today)
 
     @classmethod
     def tearDownClass(cls):
@@ -50,7 +50,7 @@ class TestGSTPurchaseRegisterITCJournalEntries(IntegrationTestCase):
             REVERSAL_OF_ITC,
         )
 
-        _, data = execute(_filters())
+        _, data = execute(_filters(self.today))
 
         reversal_rows = [
             row for row in data if row.get("voucher_no") == self.reversal_je.name
@@ -72,7 +72,7 @@ class TestGSTPurchaseRegisterITCJournalEntries(IntegrationTestCase):
             RECLAIM_OF_ITC_REVERSAL,
         )
 
-        _, data = execute(_filters())
+        _, data = execute(_filters(self.today))
 
         reclaim_rows = [
             row for row in data if row.get("voucher_no") == self.reclaim_je.name
@@ -93,7 +93,7 @@ class TestGSTPurchaseRegisterITCJournalEntries(IntegrationTestCase):
             REVERSAL_OF_ITC,
         )
 
-        _, data = execute(_filters())
+        _, data = execute(_filters(self.today))
 
         reversal_rows = [
             row for row in data if row.get("voucher_no") == self.reversal_je_others.name
@@ -107,7 +107,7 @@ class TestGSTPurchaseRegisterITCJournalEntries(IntegrationTestCase):
         self.assertEqual(row["total_tax"], 12.0)
 
     def test_overview_shows_reversal_and_reclaim_amounts(self):
-        _, data = execute(_filters(summary_by="Overview"))
+        _, data = execute(_filters(self.today, summary_by="Overview"))
 
         by_description = {
             row["description"]: row for row in data if row.get("indent") == 1
@@ -132,14 +132,16 @@ class TestGSTPurchaseRegisterITCJournalEntries(IntegrationTestCase):
 
 
 def create_itc_reversal_journal_entry(
-    ineligibility_reason="As per rules 42 & 43 of CGST Rules", tax_amount=9
+    posting_date,
+    ineligibility_reason="As per rules 42 & 43 of CGST Rules",
+    tax_amount=9,
 ):
     journal_entry = frappe.get_doc(
         {
             "doctype": "Journal Entry",
             "company": "_Test Indian Registered Company",
             "company_gstin": "24AAQCA8719H1ZC",
-            "posting_date": today,
+            "posting_date": posting_date,
             "voucher_type": REVERSAL_OF_ITC,
             "ineligibility_reason": ineligibility_reason,
             "accounts": [
@@ -163,13 +165,13 @@ def create_itc_reversal_journal_entry(
     return journal_entry
 
 
-def create_itc_reclaim_journal_entry():
+def create_itc_reclaim_journal_entry(posting_date):
     journal_entry = frappe.get_doc(
         {
             "doctype": "Journal Entry",
             "company": "_Test Indian Registered Company",
             "company_gstin": "24AAQCA8719H1ZC",
-            "posting_date": today,
+            "posting_date": posting_date,
             "voucher_type": RECLAIM_OF_ITC_REVERSAL,
             "accounts": [
                 {"account": "GST Expense - _TIRC", "credit_in_account_currency": 18},
