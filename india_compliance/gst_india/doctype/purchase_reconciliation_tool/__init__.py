@@ -1014,11 +1014,14 @@ class ReconciledData(BaseReconciliation):
         Get manually matched data for given purchase invoice and inward supply.
         This can be used to show comparison of matched values.
         """
+        inward_supply_names = [inward_supply_name] if inward_supply_name else None
+        purchase_names = [purchase_name] if purchase_name else None
+
         inward_supplies = self.get_all_inward_supply(
-            names=[inward_supply_name], only_names=True
+            names=inward_supply_names, only_names=True
         )
         purchases = self.get_all_purchase_invoice_and_bill_of_entry(
-            "", [purchase_name], only_names=True
+            "", purchase_names, only_names=True
         )
 
         reconciliation_data = [
