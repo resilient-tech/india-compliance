@@ -290,7 +290,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                 & (journal_entry.is_opening == "No")
                 & (journal_entry.company == self.company)
                 & (journal_entry.company_gstin == self.company_gstin)
-                & (journal_entry.voucher_type == "Reversal of ITC")
+                & (journal_entry.voucher_type == "Reversal Of ITC")
             )
             .groupby(journal_entry.name)
         )

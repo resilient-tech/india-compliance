@@ -281,7 +281,7 @@ class GSTR3BQuery:
                             self.JE_ACCOUNT.gst_tax_type.isin(fields),
                             Case()
                             .when(
-                                self.JE.voucher_type == "Reversal of ITC",
+                                self.JE.voucher_type == "Reversal Of ITC",
                                 self.JE_ACCOUNT.credit_in_account_currency
                                 - self.JE_ACCOUNT.debit_in_account_currency,
                             )
@@ -298,7 +298,7 @@ class GSTR3BQuery:
             .where(self.JE.is_opening == "No")
             .where(
                 self.JE.voucher_type.isin(
-                    ["Reclaim of ITC Reversal", "Reversal of ITC"]
+                    ["Reclaim of ITC Reversal", "Reversal Of ITC"]
                 )
             )
             .groupby(self.JE.name)
