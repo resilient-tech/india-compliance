@@ -205,6 +205,7 @@ def validate_mandatory_fields(doc, fields, error_message=None, throw=True):
         frappe.throw(
             error_message.format(bold(_(doc.meta.get_label(field)))),
             title=_("Missing Required Field"),
+            exc=frappe.MandatoryError,
         )
 
 
@@ -692,6 +693,8 @@ def _validate_hsn_codes(doc, valid_hsn_length, throw=False, message=None):
     rows_with_invalid_hsn = []
 
     for item in doc.items:
+        item.gst_hsn_code = (item.gst_hsn_code or "").replace(" ", "")
+
         if not (hsn_code := item.get("gst_hsn_code")):
             rows_with_missing_hsn.append(str(item.idx))
 
@@ -784,8 +787,11 @@ def update_party_details(party_details, doctype, company):
 
 
 @frappe.whitelist()
-def get_party_details_for_subcontracting(party_details, doctype, company):
+def get_party_details_for_subcontracting(
+    party_details: str | dict | frappe._dict, doctype: str, company: str
+):
     party_details = frappe.parse_json(party_details)
+    frappe.has_permission("Supplier", "read", throw=True)
 
     if doctype == "Stock Entry":
         party_address_field = (
@@ -814,9 +820,14 @@ def get_party_details_for_subcontracting(party_details, doctype, company):
     )
 
 
+# nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
 @frappe.whitelist()
 def get_gst_details(
-    party_details, doctype, company, *, update_place_of_supply: bool = False
+    party_details: str | dict | frappe._dict,
+    doctype: str,
+    company: str,
+    *,
+    update_place_of_supply: bool = False,
 ):
     """
     This function does not check for permissions since it returns insensitive data
@@ -1158,6 +1169,11 @@ class ItemGSTDetails:
             return
 
         self.get_item_defaults()
+        self.set_item_defaults()
+
+        if ignore_gst_validations(doc):
+            return
+
         self.set_tax_amount_precisions(doc.doctype)
         self.set_temp_item_wise_tax_detail_object()
 
@@ -1178,7 +1194,6 @@ class ItemGSTDetails:
         Update Item Tax Details
         """
         tax_differences = defaultdict(float)
-        self.set_item_defaults()
 
         for tax_row in self.doc.taxes:
             if not self.is_gst_tax_row(tax_row):
@@ -1698,6 +1713,9 @@ def update_gst_details(doc, method=None):
 
 
 def validate_item_tax_template(doc):
+    if ignore_gst_validations(doc):
+        return
+
     if not doc.items or not doc.taxes:
         return
 
@@ -1711,12 +1729,12 @@ def validate_item_tax_template(doc):
         if item.gst_treatment == "Zero-Rated" and not doc.get("is_export_with_gst"):
             continue
 
-        total_taxes = abs(item.igst_amount + item.cgst_amount + item.sgst_amount)
+        is_gst_applied = bool(item.igst_rate + item.cgst_rate + item.sgst_rate)
 
-        if total_taxes and item.gst_treatment not in TAXABLE_GST_TREATMENTS:
+        if is_gst_applied and item.gst_treatment not in TAXABLE_GST_TREATMENTS:
             non_taxable_items_with_tax.append(item.idx)
 
-        if not total_taxes and item.gst_treatment in TAXABLE_GST_TREATMENTS:
+        if not is_gst_applied and item.gst_treatment in TAXABLE_GST_TREATMENTS:
             taxable_items_with_no_tax.append(item.idx)
 
     # Case: Zero Tax template with taxes or missing GST Accounts

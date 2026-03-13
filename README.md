@@ -1,5 +1,5 @@
 <div align="center">
-
+<img src="./india_compliance/public/images/india-compliance.svg" alt="India Compliance Logo" height="80px" width="80xp"/>
 <h1><a href="https://indiacompliance.app">India Compliance</a></h1>
 
 Simple, yet powerful compliance solutions for Indian businesses

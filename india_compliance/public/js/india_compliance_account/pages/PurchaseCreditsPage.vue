@@ -24,7 +24,7 @@
               {{ creditsMultiplier }})
             </p>
             <button
-              class="btn btn-primary btn-sm btn-block btn-tall mt-5"
+              class="btn btn-primary btn-lg mt-5 d-block mx-auto"
               @click="handleButtonClick"
               :disabled="isRedirecting"
             >

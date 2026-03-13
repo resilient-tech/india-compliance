@@ -1087,6 +1087,7 @@ class FileGSTR1:
 
 
 def verify_request_in_progress(return_log, force):
+    force = sbool(force)
     for row in return_log.actions:
         if row.status:
             continue

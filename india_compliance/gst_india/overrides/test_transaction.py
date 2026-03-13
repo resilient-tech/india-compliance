@@ -22,9 +22,10 @@ from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
     update_regional_gl_entries,
 )
 
-from india_compliance.gst_india.constants import SALES_DOCTYPES
+from india_compliance.gst_india.constants import GST_TAX_TYPES, SALES_DOCTYPES
 from india_compliance.gst_india.overrides.transaction import (
     DOCTYPES_WITH_GST_DETAIL,
+    ItemGSTDetails,
     validate_item_tax_template,
 )
 from india_compliance.gst_india.utils.tests import (
@@ -354,6 +355,24 @@ class TestTransaction(IntegrationTestCase):
             doc.submit,
         )
 
+    @change_settings("GST Settings", {"validate_hsn_code": 1, "min_hsn_digits": 8})
+    def test_invalid_hsn_digits_with_8_digit_setting(self):
+        if not self.is_sales_doctype:
+            return
+
+        doc = create_transaction(**self.transaction_details, do_not_submit=True)
+        doc.items[0].gst_hsn_code = "100000"
+        doc.save()
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(HSN/SAC must exist and should be 8 digits long for.*)$"),
+            doc.submit,
+        )
+
+        doc.reload()
+        doc.items[0].gst_hsn_code = "10000000"
+        doc.submit()
+
     def test_reverse_charge_transaction(self):
         if self.is_sales_doctype:
             return
@@ -505,6 +524,7 @@ class TestTransaction(IntegrationTestCase):
             item.qty = 0
             item.rate = 0
             item.price_list_rate = 0
+            item.allow_zero_valuation_rate = 1
 
         # Adding charges
         doc.append(
@@ -1034,6 +1054,47 @@ class TestTransaction(IntegrationTestCase):
             doc.save,
         )
 
+    def test_item_gst_details_for_non_gst_transactions(self):
+        """
+        Test Non-GST Transactions can be processed without errors.
+        """
+        if self.doctype not in DOCTYPES_WITH_GST_DETAIL:
+            return
+
+        doc = create_transaction(
+            **self.transaction_details,
+            is_in_state=True,
+            do_not_submit=True,
+        )
+        for item in doc.items:
+            for tax in ["cgst", "sgst"]:
+                self.assertNotEqual(item.get(f"{tax}_rate"), 0)
+                self.assertNotEqual(item.get(f"{tax}_amount"), 0)
+
+        doc.is_opening = "Yes"  # opening transaction
+        doc.save()
+
+        # validate item gst details
+        for item in doc.items:
+            for tax in GST_TAX_TYPES:
+                self.assertEqual(item.get(f"{tax}_rate"), 0)
+                self.assertEqual(item.get(f"{tax}_amount"), 0)
+
+    def test_none_taxable_values(self):
+        """
+        For Non-GST Transactions (POS Merge Log) taxable value can be none
+        """
+        doc = create_transaction(
+            **self.transaction_details,
+            is_in_state=True,
+            is_opening="Yes",
+            do_not_save=True,
+        )
+        for item in doc.items:
+            item.taxable_value = None
+
+        ItemGSTDetails().update(doc)
+
 
 def create_refund_transaction():
     gst_settings = frappe.get_cached_doc("GST Settings")
@@ -1394,19 +1455,19 @@ class TestPlaceOfSupply(IntegrationTestCase):
             "shipping_address_name": "_Test Indian Registered Company-Billing",
         }
 
-        settings = ["Accounts Settings", None, "determine_address_tax_category_from"]
+        settings = ["Accounts Settings", "determine_address_tax_category_from"]
 
         # Shipping Address
-        frappe.db.set_value(*settings, "Shipping Address")
+        frappe.db.set_single_value(*settings, "Shipping Address")
         doc = create_transaction(**doc_args)
         self.assertEqual(doc.place_of_supply, "24-Gujarat")
 
         # Billing Address
-        frappe.db.set_value(*settings, "Billing Address")
+        frappe.db.set_single_value(*settings, "Billing Address")
         doc = create_transaction(**doc_args)
         self.assertEqual(doc.place_of_supply, "29-Karnataka")
 
-        frappe.db.set_value(*settings, "Shipping Address")
+        frappe.db.set_single_value(*settings, "Shipping Address")
 
         # Sales Invoice with only Billing Address
         doc_args = {

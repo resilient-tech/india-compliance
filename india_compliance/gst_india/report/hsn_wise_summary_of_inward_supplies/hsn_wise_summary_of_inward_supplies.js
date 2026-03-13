@@ -56,5 +56,13 @@ frappe.query_reports["HSN-wise-summary of inward supplies"] = {
             default: india_compliance.last_month_end(),
             reqd: 1,
         },
+        {
+            fieldname: "filter_by",
+            label: __("Filter By"),
+            fieldtype: "Select",
+            default: "ITC Claim Period",
+            options: ["ITC Claim Period", "Posting Date"],
+            reqd: 1,
+        },
     ],
 };

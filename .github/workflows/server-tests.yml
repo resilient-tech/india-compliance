@@ -8,10 +8,11 @@ on:
 
         app_name:
           type : string
-      
+
       secrets:
         codecov_token:
-    
+
+
     pull_request:
         paths-ignore:
             - "**.css"
@@ -21,7 +22,7 @@ on:
             - "**.csv"
 
     push:
-        branches: [develop, version-14-hotfix, version-14, version-15-hotfix, version-15]
+        branches: [develop, version-14-hotfix, version-14, version-15-hotfix, version-15, version-16-hotfix, version-16]
         paths-ignore:
             - "**.css"
             - "**.js"
@@ -44,7 +45,7 @@ jobs:
 
         services:
             mariadb:
-                image: mariadb:10.6
+                image: mariadb:11.8
                 env:
                     MARIADB_ROOT_PASSWORD: 'travis'
                 ports:
@@ -53,24 +54,24 @@ jobs:
 
         steps:
             - name: Clone
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
 
             - name: Setup Python
-              uses: actions/setup-python@v5
+              uses: actions/setup-python@v6
               with:
-                  python-version: "3.11"
+                  python-version: "3.14"
 
             - name: Setup Node
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v6
               with:
-                  node-version: 20
+                  node-version: 24
                   check-latest: true
 
             - name: Add to Hosts
               run: echo "127.0.0.1 test_site" | sudo tee -a /etc/hosts
 
             - name: Cache pip
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               with:
                   path: ~/.cache/pip
                   key: ${{ runner.os }}-pip-${{ hashFiles('**/*requirements.txt') }}
@@ -79,7 +80,7 @@ jobs:
                       ${{ runner.os }}-
 
             - name: Cache node modules
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               env:
                   cache-name: cache-node-modules
               with:
@@ -94,7 +95,7 @@ jobs:
               id: yarn-cache-dir-path
               run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
 
-            - uses: actions/cache@v4
+            - uses: actions/cache@v5
               id: yarn-cache
               with:
                   path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
@@ -118,30 +119,27 @@ jobs:
               run: cat ~/frappe-bench/bench_start.log || true
 
             - name: Upload coverage data
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v7
               with:
                 name: coverage
                 path: /home/runner/frappe-bench/sites/coverage.xml
 
     coverage:
         name: Coverage Wrap Up
-        env:
-            CODECOV_TOKEN: ${{ secrets.codecov_token || secrets.CODECOV_TOKEN }}
+        if: github.event_name == 'push'
         needs: tests
         runs-on: ubuntu-latest
         steps:
         - name: Clone
-          uses: actions/checkout@v4
+          uses: actions/checkout@v6
 
         - name: Download artifacts
-          uses: actions/download-artifact@v4
+          uses: actions/download-artifact@v8
 
         - name: Upload coverage data
-          if: github.event.repository.name == 'india-compliance' || env.CODECOV_TOKEN != ''
           uses: codecov/codecov-action@v5
-          env:
-            CODECOV_TOKEN: ${{ env.CODECOV_TOKEN }}
           with:
             name: MariaDB
             fail_ci_if_error: true
             verbose: true
+            token: ${{ secrets.codecov_token || secrets.CODECOV_TOKEN }}

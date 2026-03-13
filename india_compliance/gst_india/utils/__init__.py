@@ -33,6 +33,7 @@ from india_compliance.gst_india.constants import (
     E_INVOICE_MASTER_CODES_URL,
     GST_ACCOUNT_FIELDS,
     GST_INVOICE_NUMBER_FORMAT,
+    GST_PARTY_TYPES,
     GSTIN_FORMATS,
     PAN_NUMBER,
     PINCODE_FORMAT,
@@ -42,6 +43,7 @@ from india_compliance.gst_india.constants import (
     TCS,
     TIMEZONE,
     UOM_MAP,
+    VALID_HSN_LENGTHS,
 )
 
 
@@ -123,7 +125,9 @@ def get_gstin_list(party: str, party_type: str = "Company", exclude_isd: bool = 
 
 @frappe.whitelist()
 @frappe.request_cache
-def get_party_for_gstin(gstin, party_type="Supplier"):
+def get_party_for_gstin(gstin: str, party_type: str = "Supplier"):
+    frappe.has_permission(party_type, "read", throw=True)
+
     if not gstin:
         return
 
@@ -149,7 +153,9 @@ def get_party_for_gstin(gstin, party_type="Supplier"):
 
 
 @frappe.whitelist()
-def get_party_contact_details(party, party_type="Supplier"):
+def get_party_contact_details(party: str, party_type: str = "Supplier"):
+    frappe.has_permission(party_type, "read", throw=True)
+
     if party and (contact := get_default_contact(party_type, party)):
         return get_contact_details(contact)
 
@@ -384,7 +390,11 @@ def get_hsn_settings():
         ("validate_hsn_code", "min_hsn_digits"),
     )
 
-    valid_hsn_length = (4, 6, 8) if cint(min_hsn_digits) == 4 else (6, 8)
+    min_hsn_digits = cint(min_hsn_digits)
+
+    valid_hsn_length = tuple(
+        length for length in VALID_HSN_LENGTHS if length >= min_hsn_digits
+    )
 
     return validate_hsn_code, valid_hsn_length
 
@@ -614,7 +624,7 @@ def get_gst_account_gst_tax_type_map():
 
 
 @frappe.whitelist()
-def get_all_gst_accounts(company):
+def get_all_gst_accounts(company: str):
     """
     Permission not checked here:
     List of GST account names isn't considered sensitive data
@@ -687,7 +697,7 @@ def get_json_from_file(path):
 
 
 def join_list_with_custom_separators(input, separator=", ", last_separator=" or "):
-    if type(input) not in (list, tuple):
+    if not isinstance(input, (list, tuple)):
         return
 
     if not input:
@@ -1131,3 +1141,138 @@ def has_permission_of_page(page_name, throw=False):
         )
 
     return True
+
+
+@frappe.whitelist()
+def check_duplicate_party(
+    field: str, value: str, party_type: str, party: str | None = None
+):
+    """
+    Check duplicates based on PAN/GSTIN for the given party type.
+    """
+    if not value:
+        return
+
+    if party_type not in GST_PARTY_TYPES:
+        return
+
+    frappe.has_permission(party_type, doc=party, throw=True)
+
+    value = value.upper().strip()
+
+    # Check for duplicates
+    if field == "pan":
+        existing_parties = _get_duplicate_pan_party(value, party_type, party)
+    elif field == "gstin":
+        existing_parties = _get_duplicate_gstin_party(value, party_type, party)
+    else:
+        return
+
+    if not existing_parties:
+        return
+
+    # Show message
+    duplicate_links = []
+    for row in existing_parties:
+        party_link = get_link_to_form(party_type, row.name)
+        if row.via_address:
+            address_link = get_link_to_form("Address", row.address)
+            link_msg = _("{0} (via Address {1})").format(party_link, address_link)
+
+        else:
+            link_msg = party_link
+
+        duplicate_links.append(f"<li>{link_msg}</li>")
+
+    msg = _("{0} {1} is already registered with the following {2}(s):").format(
+        field.capitalize(), frappe.bold(value), party_type
+    )
+    msg += f"<br><br><ul>{''.join(duplicate_links)}</ul>"
+
+    frappe.msgprint(msg=msg, indicator="orange")
+
+
+def _get_duplicate_pan_party(pan, party_type, party=None):
+    filters = {"pan": ("=", pan)}
+    if party:
+        filters["name"] = ("!=", party)
+
+    return frappe.get_all(party_type, filters=filters)
+
+
+def _get_duplicate_gstin_party(gstin, party_type, party=None):
+    party_table = frappe.qb.DocType(party_type)
+    address = frappe.qb.DocType("Address")
+    dynamic_link = frappe.qb.DocType("Dynamic Link")
+
+    party_query = (
+        frappe.qb.from_(party_table)
+        .select(
+            party_table.name,
+            frappe.qb.terms.ValueWrapper(None).as_("address_name"),
+            frappe.qb.terms.ValueWrapper(0).as_("via_address"),
+        )
+        .where(party_table.gstin == gstin)
+    )
+
+    if party:
+        party_query = party_query.where(party_table.name != party)
+
+    address_query = (
+        frappe.qb.from_(address)
+        .join(dynamic_link)
+        .on(dynamic_link.parent == address.name)
+        .select(
+            dynamic_link.link_name.as_("name"),
+            address.name.as_("address_name"),
+            frappe.qb.terms.ValueWrapper(1).as_("via_address"),
+        )
+        .where(dynamic_link.link_doctype == party_type)
+        .where(address.gstin == gstin)
+    )
+
+    if party:
+        address_query = address_query.where(dynamic_link.link_name != party)
+
+    results = (party_query + address_query).orderby("via_address").run(as_dict=True)
+
+    duplicates_dict = {}
+    for row in results:
+        if row.name in duplicates_dict:
+            continue
+
+        duplicates_dict[row.name] = frappe._dict(
+            {
+                "name": row.name,
+                "via_address": bool(row.via_address),
+                "address": row.address_name,
+            }
+        )
+
+    return list(duplicates_dict.values())
+
+
+def set_einvoice_status(
+    doc,
+    status,
+    *,
+    commit=False,
+    notify=True,
+):
+    if doc.doctype != "Sales Invoice":
+        return
+
+    doc.db_set("einvoice_status", status, commit=commit, notify=notify)
+
+
+def set_ewaybill_status(
+    doc,
+    status,
+    *,
+    commit=False,
+    notify=True,
+):
+    if doc.doctype != "Sales Invoice":
+        return
+
+    doc.db_set("e_waybill_status", status, commit=commit, notify=notify)

@@ -1,0 +1,21 @@
+{
+ "app": "india_compliance",
+ "bg_color": "blue",
+ "creation": "2026-02-17 16:10:15.527652",
+ "docstatus": 0,
+ "doctype": "Desktop Icon",
+ "hidden": 1,
+ "icon_type": "App",
+ "idx": 0,
+ "label": "India Compliance",
+ "link": "/desk/gst-india",
+ "link_type": "External",
+ "logo_url": "/assets/india_compliance/images/india-compliance.svg",
+ "modified": "2026-03-09 13:06:48.847359",
+ "modified_by": "Administrator",
+ "name": "India Compliance",
+ "owner": "Administrator",
+ "restrict_removal": 0,
+ "roles": [],
+ "standard": 1
+}

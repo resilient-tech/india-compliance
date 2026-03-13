@@ -90,7 +90,12 @@ def update_gst_details(doc, method=None):
 
 
 @frappe.whitelist()
-def set_item_wise_tax_rates(doc, item_name=None, tax_name=None):
+def set_item_wise_tax_rates(
+    doc: str, item_name: str | None = None, tax_name: str | None = None
+):
+    """
+    Permission check not required as it processes client-provided data.
+    """
     doc = json.loads(doc, object_hook=frappe._dict)
     CustomTaxController(doc).set_item_wise_tax_rates(item_name, tax_name)
 

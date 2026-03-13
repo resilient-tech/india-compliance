@@ -12,7 +12,7 @@ app_home = "/desk/gst-india"
 add_to_apps_screen = [
     {
         "name": app_name,
-        "logo": "/assets/india_compliance/images/india-compliance-logo.png",
+        "logo": "/assets/india_compliance/images/india-compliance.svg",
         "title": app_title,
         "route": app_home,
         "has_permission": "india_compliance.check_app_permission",
@@ -185,6 +185,7 @@ doc_events = {
         "before_submit": [
             "india_compliance.gst_india.overrides.transaction.update_gst_details",
         ],
+        "before_update_after_submit": "india_compliance.gst_india.overrides.purchase_invoice.before_update_after_submit",
         "before_cancel": "india_compliance.gst_india.utils.e_waybill.before_cancel",
         "after_mapping": "india_compliance.gst_india.overrides.transaction.after_mapping",
         "on_cancel": "india_compliance.gst_india.overrides.purchase_invoice.on_cancel",
@@ -499,6 +500,8 @@ fields_for_group_similar_items = [
     "cess_amount",
     "cess_non_advol_amount",
 ]
+
+require_type_annotated_api_methods = True
 
 
 # Includes in <head>

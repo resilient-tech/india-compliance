@@ -26,7 +26,7 @@ def validate_filters(filters=None):
 
     if not settings.enable_e_invoice:
         frappe.throw(
-            _("e-Invoice is not enabled for your company."),
+            _("e-Invoice is not enabled in GST Settings"),
             title=_("Invalid Filter"),
         )
 
