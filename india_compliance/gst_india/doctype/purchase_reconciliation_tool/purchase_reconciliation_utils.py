@@ -11,7 +11,7 @@ def link_documents(purchase_invoice_name, inward_supply_name, link_doctype):
     purchases = []
     inward_supplies = []
 
-    if not purchase_invoice_name or not inward_supply_name:
+    if not purchase_invoice_name or not inward_supply_name or not link_doctype:
         return purchases, inward_supplies
 
     # silently handle existing links
