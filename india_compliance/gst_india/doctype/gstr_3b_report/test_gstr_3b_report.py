@@ -2,18 +2,27 @@
 # See license.txt
 
 import json
+from types import SimpleNamespace
+from unittest.mock import patch
 
+from openpyxl import Workbook
 import frappe
-from frappe.tests import IntegrationTestCase, change_settings
+from frappe.tests import IntegrationTestCase, UnitTestCase, change_settings
 from frappe.utils import getdate
 
 from india_compliance.gst_india.doctype.gstr_3b_report.gstr_3b_report import (
     GSTR3BExcelExporter,
+    download_gstr3b_as_excel,
+    format_values,
+    make_json,
+    view_report,
 )
 from india_compliance.gst_india.utils.tests import (
     create_purchase_invoice,
     create_sales_invoice,
 )
+
+MODULE = "india_compliance.gst_india.doctype.gstr_3b_report.gstr_3b_report"
 
 
 class TestGSTR3BReport(IntegrationTestCase):
@@ -194,7 +203,12 @@ class TestGSTR3BReport(IntegrationTestCase):
         )
 
         exporter = GSTR3BExcelExporter(output)
-        exporter.generate_excel()
+        response = frappe._dict()
+
+        with patch.object(frappe.local, "response", response, create=True):
+            exporter.generate_excel()
+
+        self.assertEqual(response.type, "binary")
 
     def test_gst_rounding(self):
         gst_settings = frappe.get_cached_doc("GST Settings")
@@ -212,6 +226,191 @@ class TestGSTR3BReport(IntegrationTestCase):
 
         gst_settings.round_off_gst_values = 1
         gst_settings.save()
+
+
+class TestGSTR3BReportUnit(UnitTestCase):
+    def test_format_values_rounds_nested_numbers(self):
+        values = {
+            "amount": 12.3456,
+            "sections": [{"iamt": 1.235, "nested": [2.678, {"csamt": 9.876}]}],
+        }
+
+        self.assertEqual(
+            format_values(values),
+            {
+                "amount": 12.35,
+                "sections": [{"iamt": 1.24, "nested": [2.68, {"csamt": 9.88}]}],
+            },
+        )
+
+    @patch(f"{MODULE}.frappe.get_value", return_value='{"gstin": "24AAQCA8719H1ZC"}')
+    @patch(f"{MODULE}.frappe.has_permission")
+    def test_view_report_returns_json(self, permission_mock, get_value_mock):
+        self.assertEqual(
+            view_report("GSTR3B-TEST"),
+            {"gstin": "24AAQCA8719H1ZC"},
+        )
+
+        permission_mock.assert_called_once_with("GSTR 3B Report", throw=True)
+        get_value_mock.assert_called_once_with(
+            "GSTR 3B Report", "GSTR3B-TEST", "json_output"
+        )
+
+    @patch(f"{MODULE}.frappe.get_value", return_value='{"gstin": "24AAQCA8719H1ZC"}')
+    @patch(f"{MODULE}.frappe.has_permission")
+    def test_make_json_sets_download_response(self, permission_mock, get_value_mock):
+        response = frappe._dict()
+
+        with patch.object(frappe.local, "response", response, create=True):
+            make_json("GSTR3B-TEST")
+
+        self.assertEqual(response.filename, "GST3B.json")
+        self.assertEqual(response.filecontent, '{"gstin": "24AAQCA8719H1ZC"}')
+        self.assertEqual(response.type, "download")
+        permission_mock.assert_called_once_with("GSTR 3B Report", throw=True)
+        get_value_mock.assert_called_once_with(
+            "GSTR 3B Report", "GSTR3B-TEST", "json_output"
+        )
+
+    @patch(f"{MODULE}.GSTR3BExcelExporter")
+    @patch(
+        f"{MODULE}.frappe.get_value",
+        return_value='{"gstin": "24AAQCA8719H1ZC", "ret_period": "042024"}',
+    )
+    @patch(f"{MODULE}.frappe.has_permission")
+    def test_download_gstr3b_as_excel_exports_report(
+        self, permission_mock, get_value_mock, exporter_mock
+    ):
+        download_gstr3b_as_excel("GSTR3B-TEST")
+
+        permission_mock.assert_called_once_with("GSTR 3B Report", throw=True)
+        get_value_mock.assert_called_once_with(
+            "GSTR 3B Report", "GSTR3B-TEST", "json_output"
+        )
+        exporter_mock.assert_called_once_with(
+            {"gstin": "24AAQCA8719H1ZC", "ret_period": "042024"}
+        )
+        exporter_mock.return_value.generate_excel.assert_called_once_with()
+
+    @patch(f"{MODULE}.frappe.get_value", return_value="")
+    @patch(f"{MODULE}.frappe.has_permission")
+    def test_download_gstr3b_as_excel_requires_generated_data(
+        self, permission_mock, get_value_mock
+    ):
+        with self.assertRaisesRegex(
+            frappe.ValidationError, "Report data not found. Please generate the report."
+        ):
+            download_gstr3b_as_excel("GSTR3B-TEST")
+
+        permission_mock.assert_called_once_with("GSTR 3B Report", throw=True)
+        get_value_mock.assert_called_once_with(
+            "GSTR 3B Report", "GSTR3B-TEST", "json_output"
+        )
+
+    @patch(f"{MODULE}.os.path.exists")
+    def test_generate_excel_throws_when_template_is_missing(self, exists_mock):
+        exists_mock.return_value = False
+
+        with self.assertRaisesRegex(
+            frappe.ValidationError, "GSTR 3B Excel template not found"
+        ):
+            GSTR3BExcelExporter({"gstin": "24AAQCA8719H1ZC"}).generate_excel()
+
+    def test_update_worksheet_maps_report_sections_to_template_cells(self):
+        workbook = Workbook()
+        workbook.active.title = GSTR3BExcelExporter.WORKSHEET_NAME
+
+        exporter = GSTR3BExcelExporter(
+            {
+                "gstin": "24AAQCA8719H1ZC",
+                "ret_period": "042024",
+                "sup_details": {
+                    "osup_det": {"txval": 100, "iamt": 18, "camt": 9, "csamt": 1},
+                    "osup_zero": {"txval": 50, "iamt": 5, "csamt": 0.5},
+                    "osup_nil_exmp": {"txval": 10},
+                    "isup_rev": {"txval": 20, "iamt": 2, "camt": 1, "csamt": 0.2},
+                    "osup_nongst": {"txval": 5},
+                },
+                "eco_dtls": {"eco_reg_sup": {"txval": 7}},
+                "inter_sup": {
+                    "unreg_details": [
+                        {"pos": "06", "txval": 10, "iamt": 1.8},
+                        {"pos": "06", "txval": 5, "iamt": 0.9},
+                    ],
+                    "comp_details": [{"pos": "29", "txval": 20, "iamt": 3.6}],
+                    "uin_details": [{"pos": "00", "txval": 2, "iamt": 0.36}],
+                },
+                "itc_elg": {
+                    "itc_avl": [
+                        {"ty": "IMPG", "iamt": 4, "csamt": 0.5},
+                        {"ty": "IMPS", "iamt": 3},
+                        {"ty": "ISRC", "iamt": 2, "camt": 1, "csamt": 0.2},
+                        {"ty": "ISD", "iamt": 1, "camt": 0.5, "csamt": 0.1},
+                        {"ty": "OTH", "iamt": 6, "camt": 3, "csamt": 0.3},
+                        {"ty": "IGNORED", "iamt": 99},
+                    ],
+                    "itc_rev": [
+                        {"ty": "RUL", "iamt": 1, "camt": 0.5, "csamt": 0.05},
+                        {"ty": "OTH", "iamt": 0.5, "camt": 0.25, "csamt": 0.02},
+                    ],
+                },
+                "inward_sup": {
+                    "isup_details": [
+                        {"ty": "GST", "inter": 8, "intra": 4},
+                        {"ty": "NONGST", "inter": 1, "intra": 2},
+                        {"ty": "IGNORED", "inter": 9, "intra": 9},
+                    ]
+                },
+            }
+        )
+
+        exporter._update_worksheet(SimpleNamespace(wb=workbook))
+
+        worksheet = workbook[GSTR3BExcelExporter.WORKSHEET_NAME]
+        self.assertEqual(worksheet.cell(5, 3).value, "24AAQCA8719H1ZC")
+        self.assertEqual(worksheet.cell(5, 7).value, "2024-25")
+        self.assertEqual(worksheet.cell(6, 7).value, "April")
+        self.assertEqual(worksheet.cell(11, 3).value, 100.0)
+        self.assertEqual(worksheet.cell(11, 4).value, 18.0)
+        self.assertEqual(worksheet.cell(11, 5).value, 9.0)
+        self.assertEqual(worksheet.cell(11, 7).value, 1.0)
+        self.assertEqual(worksheet.cell(12, 3).value, 50.0)
+        self.assertEqual(worksheet.cell(12, 4).value, 5.0)
+        self.assertEqual(worksheet.cell(12, 7).value, 0.5)
+        self.assertEqual(worksheet.cell(23, 3).value, 7.0)
+        self.assertEqual(worksheet.cell(88, 2).value, "00-Other Territory")
+        self.assertEqual(worksheet.cell(88, 7).value, 2.0)
+        self.assertEqual(worksheet.cell(88, 8).value, 0.36)
+        self.assertEqual(worksheet.cell(89, 2).value, "06-Haryana")
+        self.assertEqual(worksheet.cell(89, 3).value, 15.0)
+        self.assertEqual(worksheet.cell(89, 4).value, 2.7)
+        self.assertEqual(worksheet.cell(90, 2).value, "29-Karnataka")
+        self.assertEqual(worksheet.cell(90, 5).value, 20.0)
+        self.assertEqual(worksheet.cell(90, 6).value, 3.6)
+        self.assertEqual(worksheet.cell(31, 3).value, 4.0)
+        self.assertEqual(worksheet.cell(31, 6).value, 0.5)
+        self.assertEqual(worksheet.cell(33, 3).value, 2.0)
+        self.assertEqual(worksheet.cell(33, 4).value, 1.0)
+        self.assertEqual(worksheet.cell(33, 6).value, 0.2)
+        self.assertEqual(worksheet.cell(37, 3).value, 1.0)
+        self.assertEqual(worksheet.cell(37, 4).value, 0.5)
+        self.assertEqual(worksheet.cell(37, 6).value, 0.05)
+        self.assertEqual(worksheet.cell(48, 4).value, 8.0)
+        self.assertEqual(worksheet.cell(48, 5).value, 4.0)
+        self.assertEqual(worksheet.cell(49, 4).value, 1.0)
+        self.assertEqual(worksheet.cell(49, 5).value, 2.0)
+
+    def test_set_cell_ignores_merged_cells(self):
+        workbook = Workbook()
+        worksheet = workbook.active
+        worksheet.title = GSTR3BExcelExporter.WORKSHEET_NAME
+        worksheet.merge_cells("B2:C2")
+
+        exporter = GSTR3BExcelExporter({})
+        exporter.worksheet = worksheet
+        exporter._set_cell(2, 3, "ignored")
+
+        self.assertIsNone(worksheet["B2"].value)
 
 
 def create_sales_invoices():
