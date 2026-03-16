@@ -31,6 +31,8 @@ from india_compliance.gst_india.utils import (
     get_hsn_settings,
     get_place_of_supply,
     get_place_of_supply_options,
+    is_import_of_goods,
+    is_import_of_services,
     is_overseas_doc,
     join_list_with_custom_separators,
     validate_gst_category,
@@ -1441,7 +1443,10 @@ class ItemGSTTreatment:
         has_gst_accounts = any(row.gst_tax_type in TAX_TYPES for row in self.doc.taxes)
 
         if not has_gst_accounts:
-            self.set_for_no_taxes()
+            if is_import_of_goods(self.doc) or is_import_of_services(self.doc):
+                self.set_for_import_transactions()
+            else:
+                self.set_for_no_taxes()
             return
 
         self.update_gst_treatment_map()
@@ -1450,6 +1455,10 @@ class ItemGSTTreatment:
     def set_for_overseas(self):
         for item in self.doc.items:
             item.gst_treatment = "Zero-Rated"
+
+    def set_for_import_transactions(self):
+        for item in self.doc.items:
+            item.gst_treatment = "Taxable"
 
     def set_for_no_taxes(self):
         for item in self.doc.items:

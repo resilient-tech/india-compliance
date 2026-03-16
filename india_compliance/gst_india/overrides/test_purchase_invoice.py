@@ -27,6 +27,7 @@ class TestPurchaseInvoice(IntegrationTestCase):
             item_code="_Test Service Item",
         )
         self.assertEqual(pinv.itc_classification, "Import Of Service")
+        self.assertEqual(pinv.items[0].gst_treatment, "Taxable")
 
         # Overseas goods-only invoice
         pinv = create_purchase_invoice(
@@ -34,6 +35,7 @@ class TestPurchaseInvoice(IntegrationTestCase):
             do_not_submit=1,
         )
         self.assertEqual(pinv.itc_classification, "Import Of Goods")
+        self.assertEqual(pinv.items[0].gst_treatment, "Taxable")
 
         pinv = create_purchase_invoice(
             supplier="_Test Registered Supplier",
@@ -43,6 +45,7 @@ class TestPurchaseInvoice(IntegrationTestCase):
         pinv.gst_category = "SEZ"
         pinv.save()
         self.assertEqual(pinv.itc_classification, "Import Of Goods")
+        self.assertEqual(pinv.items[0].gst_treatment, "Taxable")
 
         pinv = create_purchase_invoice(
             supplier="_Test Registered Supplier",
