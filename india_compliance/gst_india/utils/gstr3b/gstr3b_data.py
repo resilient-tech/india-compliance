@@ -3,7 +3,10 @@ from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import IfNull, Sum
 
-from india_compliance.gst_india.constants import GST_TAX_TYPES
+from india_compliance.gst_india.constants import (
+    GST_TAX_TYPES,
+    IGNORED_GST_TREATMENT,
+)
 from india_compliance.gst_india.overrides.transaction import is_inter_state_supply
 from india_compliance.gst_india.utils import get_full_gst_uom
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategory
@@ -204,6 +207,8 @@ class GSTR3BQuery:
             .where((self.PI.is_opening == "No"))
             .where(self.PI.company_gstin != IfNull(self.PI.supplier_gstin, ""))
             .where(IfNull(self.PI.itc_classification, "") != "Import Of Goods")
+            # Exclude items marked as ignored for GST
+            .where(IfNull(self.PI_ITEM.gst_treatment, "") != IGNORED_GST_TREATMENT)
         )
 
         return self.get_query_with_common_filters(query, self.PI)

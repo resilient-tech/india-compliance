@@ -9,6 +9,7 @@ from india_compliance.gst_india.constants import (
     GST_REFUND_TAX_TYPES,
     GST_TAX_RATES,
     GST_TAX_TYPES,
+    IGNORED_GST_TREATMENT,
     TAXABLE_GST_TREATMENTS,
     VALID_HSN_LENGTHS,
 )
@@ -325,6 +326,10 @@ class GSTTransactionData:
             items = self.group_same_items()
 
         for row in items:
+            # Skip items marked as ignored for GST
+            if row.gst_treatment == IGNORED_GST_TREATMENT:
+                continue
+
             item_details = frappe._dict(
                 {
                     "item_no": row.idx,

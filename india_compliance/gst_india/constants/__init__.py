@@ -61,6 +61,7 @@ EXPORT_TYPES = (
 )
 
 TAXABLE_GST_TREATMENTS = ("Taxable", "Zero-Rated")
+IGNORED_GST_TREATMENT = "Ignored for GST"
 
 
 STATE_NUMBERS = {

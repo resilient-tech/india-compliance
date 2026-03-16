@@ -227,6 +227,40 @@ class TestGSTR3BReport(IntegrationTestCase):
         self.assertEqual(output["itc_elg"]["itc_net"]["camt"], -9.0)
         self.assertEqual(output["itc_elg"]["itc_net"]["samt"], -9.0)
 
+    def test_ignored_items_excluded_from_itc(self):
+        """
+        Test that Purchase Invoice items marked as 'Ignored for GST' are excluded
+        from GSTR-3B ITC calculations.
+        """
+        # Create a purchase invoice with mixed items
+        pi = create_purchase_invoice(
+            is_in_state=True,
+            do_not_submit=True,
+            items=[
+                {
+                    "item_code": "_Test Trading Goods 1",
+                    "qty": 1.0,
+                    "rate": 100.0,
+                },
+                {
+                    "item_code": "_Test Trading Goods 1",
+                    "qty": 1.0,
+                    "rate": 200.0,
+                },
+            ],
+        )
+
+        # Mark second item as ignored for GST
+        pi.items[1].gst_treatment = "Ignored for GST"
+        pi.save()
+        pi.submit()
+
+        # The ignored item should not contribute to ITC
+        # Only first item's GST (9 CGST + 9 SGST) should be eligible
+        self.assertEqual(pi.items[0].cgst_amount, 9.0)
+        self.assertEqual(pi.items[1].cgst_amount, 0.0)  # Ignored item
+        self.assertEqual(pi.items[1].taxable_value, 0.0)  # Ignored item
+
 
 def create_sales_invoices():
     create_sales_invoice(is_in_state=True)

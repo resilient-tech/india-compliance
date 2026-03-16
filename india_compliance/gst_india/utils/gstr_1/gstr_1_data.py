@@ -10,7 +10,10 @@ from frappe.query_builder import Case, Criterion
 from frappe.query_builder.functions import Date, IfNull, Sum
 from frappe.utils import cint, flt, getdate
 
-from india_compliance.gst_india.constants import GST_REFUND_TAX_TYPES
+from india_compliance.gst_india.constants import (
+    GST_REFUND_TAX_TYPES,
+    IGNORED_GST_TREATMENT,
+)
 from india_compliance.gst_india.utils import (
     get_escaped_name,
     get_full_gst_uom,
@@ -139,6 +142,8 @@ class GSTR1Query:
             .where(self.si.docstatus == 1)
             .where(self.si.is_opening != "Yes")
             .where(IfNull(self.si.billing_address_gstin, "") != self.si.company_gstin)
+            # Exclude items marked as ignored for GST
+            .where(IfNull(self.si_item.gst_treatment, "") != IGNORED_GST_TREATMENT)
             .orderby(
                 self.si.posting_date,
                 self.si.name,

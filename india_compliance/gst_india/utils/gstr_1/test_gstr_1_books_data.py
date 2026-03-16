@@ -835,6 +835,61 @@ class TestGSTR1BooksData(IntegrationTestCase):
             ][0],
         )
 
+    def test_transaction_with_ignored_item(self):
+        """
+        Test that items marked as 'Ignored for GST' are excluded from GSTR-1 report.
+        Creates an invoice with one taxable item and one ignored item,
+        verifies only the taxable item appears in the report.
+        """
+        si = create_sales_invoice(
+            customer="_Test Registered Customer",
+            is_in_state=True,
+            do_not_submit=True,
+            items=[
+                {
+                    "item_code": "_Test Trading Goods 1",
+                    "qty": 1.0,
+                    "rate": 100.0,
+                },
+                {
+                    "item_code": "_Test Trading Goods 1",
+                    "qty": 1.0,
+                    "rate": 200.0,
+                },
+            ],
+        )
+
+        # Mark second item as ignored for GST
+        si.items[1].gst_treatment = "Ignored for GST"
+        si.save()
+        si.submit()
+
+        data = GSTR1BooksData(filters=FILTERS).prepare_mapped_data()
+
+        # Only the taxable item (100.0) should appear in report
+        # The ignored item (200.0) should be excluded
+        self.assertDictEq(
+            {
+                "transaction_type": "Invoice",
+                "total_taxable_value": 100.0,  # Only first item
+                "total_igst_amount": 0.0,
+                "total_cgst_amount": 9.0,
+                "total_sgst_amount": 9.0,
+                "total_cess_amount": 0.0,
+                "items": [
+                    {
+                        "taxable_value": 100.0,
+                        "igst_amount": 0.0,
+                        "cgst_amount": 9.0,
+                        "sgst_amount": 9.0,
+                        "cess_amount": 0.0,
+                        "tax_rate": 18.0,
+                    }
+                ],
+            },
+            data[GSTR1_SubCategory.B2B_REGULAR.value][si.name],
+        )
+
     def test_hsn_summary_with_bifurcation(self):
         si = create_sales_invoice(
             customer="_Test Registered Customer",

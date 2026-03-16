@@ -170,6 +170,125 @@ class TestTransaction(IntegrationTestCase):
             doc,
         )
 
+    def test_ignored_gst_treatment_resets_values(self):
+        """
+        Test that items marked as 'Ignored for GST' have their taxable value,
+        GST rates, and amounts reset to zero.
+        """
+        doc = create_transaction(
+            **self.transaction_details,
+            is_in_state=True,
+            do_not_submit=True,
+        )
+
+        # Mark item as ignored for GST
+        doc.items[0].gst_treatment = "Ignored for GST"
+        doc.save()
+
+        # All GST values should be reset to zero
+        self.assertDocumentEqual(
+            {
+                "gst_treatment": "Ignored for GST",
+                "taxable_value": 0,
+                "igst_rate": 0,
+                "cgst_rate": 0,
+                "sgst_rate": 0,
+                "igst_amount": 0,
+                "cgst_amount": 0,
+                "sgst_amount": 0,
+            },
+            doc.items[0],
+        )
+
+    def test_ignored_gst_treatment_skips_validation(self):
+        """
+        Test that items with 'Ignored for GST' treatment do not trigger
+        the validation error for non-taxable items with tax.
+        """
+        doc = create_transaction(
+            **self.transaction_details,
+            is_in_state=True,
+            item_tax_template="GST 28% - _TIRC",
+            do_not_submit=True,
+        )
+
+        # Mark item as ignored for GST - should not throw validation error
+        doc.items[0].gst_treatment = "Ignored for GST"
+
+        # This should NOT raise an error unlike Nil-Rated
+        validate_item_tax_template(doc)
+
+    def test_transaction_with_mixed_taxable_and_ignored_items(self):
+        """
+        Test workflow with both taxable items and ignored items in the same transaction.
+        """
+        doc = create_transaction(
+            **self.transaction_details,
+            is_in_state=True,
+            do_not_save=True,
+        )
+
+        # Add a second item
+        append_item(doc, frappe._dict(rate=200))
+        doc.insert()
+
+        # Mark the second item as ignored and save again
+        doc.items[1].gst_treatment = "Ignored for GST"
+        doc.save()
+
+        # First item should have normal GST calculation
+        self.assertEqual(doc.items[0].gst_treatment, "Taxable")
+        self.assertEqual(doc.items[0].taxable_value, 100)
+        self.assertEqual(doc.items[0].cgst_rate, 9)
+        self.assertEqual(doc.items[0].sgst_rate, 9)
+
+        # Second item should have all values as zero
+        self.assertDocumentEqual(
+            {
+                "gst_treatment": "Ignored for GST",
+                "taxable_value": 0,
+                "cgst_rate": 0,
+                "sgst_rate": 0,
+                "cgst_amount": 0,
+                "sgst_amount": 0,
+            },
+            doc.items[1],
+        )
+
+    def test_taxable_value_hook(self):
+        """
+        Test that the india_compliance_get_item_taxable_value hook allows
+        custom apps to override taxable value calculation.
+        """
+        custom_taxable_value = 50.0
+
+        def custom_hook(doc, item):
+            # Override taxable value for testing
+            return custom_taxable_value
+
+        # Register the hook temporarily
+        frappe.get_hooks.clear()
+
+        # Add custom hook
+        frappe.local.hooks = frappe._dict()
+        frappe.local.hooks["india_compliance_get_item_taxable_value"] = [custom_hook]
+
+        try:
+            doc = create_transaction(
+                **self.transaction_details,
+                is_in_state=True,
+                do_not_submit=True,
+            )
+            doc.save()
+
+            # The hook should have overridden the taxable value
+            self.assertEqual(doc.items[0].taxable_value, custom_taxable_value)
+        finally:
+            # Restore original hooks
+            if hasattr(frappe.local, "hooks"):
+                del frappe.local.hooks
+            frappe.get_hooks.clear()
+
     def test_validate_item_tax_template(self):
         item_tax_template = frappe.get_doc("Item Tax Template", "GST 28% - _TIRC")
         tax_accounts = item_tax_template.get("taxes")

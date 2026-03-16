@@ -12,6 +12,7 @@ from india_compliance.gst_india.constants import (
     GST_RCM_TAX_TYPES,
     GST_REFUND_TAX_TYPES,
     GST_TAX_TYPES,
+    IGNORED_GST_TREATMENT,
     SALES_DOCTYPES,
     STATE_NUMBERS,
     SUBCONTRACTING_DOCTYPES,
@@ -133,6 +134,14 @@ def update_taxable_values(doc):
 
     if apportioned_charges != total_charges:
         item.taxable_value += total_charges - apportioned_charges
+
+    # Allow custom apps to override taxable value calculation
+    for item in doc.items:
+        for method in frappe.get_hooks("india_compliance_get_item_taxable_value"):
+            custom_value = frappe.call(method, doc=doc, item=item)
+            if custom_value is not None:
+                item.taxable_value = custom_value
+                break
 
 
 def validate_item_wise_tax_detail(doc):
@@ -693,6 +702,10 @@ def _validate_hsn_codes(doc, valid_hsn_length, throw=False, message=None):
     rows_with_invalid_hsn = []
 
     for item in doc.items:
+        # Skip HSN validation for items marked as ignored for GST
+        if item.gst_treatment == IGNORED_GST_TREATMENT:
+            continue
+
         item.gst_hsn_code = (item.gst_hsn_code or "").replace(" ", "")
 
         if not (hsn_code := item.get("gst_hsn_code")):
@@ -1178,7 +1191,22 @@ class ItemGSTDetails:
         self.set_temp_item_wise_tax_detail_object()
 
         self.set_item_name_wise_tax_details()
+        self.reset_ignored_items()
         self.validate_item_gst_details()
+
+    def reset_ignored_items(self):
+        """
+        Reset taxable_value, tax rates, and tax amounts to zero for items marked as 'Ignored for GST'.
+        This ensures these items don't contribute to GST totals in statutory reports.
+        """
+        for item in self.doc.get("items"):
+            if item.gst_treatment != IGNORED_GST_TREATMENT:
+                continue
+
+            item.taxable_value = 0
+            for tax_type in GST_TAX_TYPES:
+                item.set(f"{tax_type}_rate", 0)
+                item.set(f"{tax_type}_amount", 0)
 
     def get_item_defaults(self):
         item_defaults = frappe._dict(count=0)
@@ -1475,6 +1503,10 @@ class ItemGSTTreatment:
         default_treatment = self.get_default_treatment()
 
         for item in self.doc.items:
+            # Preserve "Ignored for GST" treatment if already set
+            if item.gst_treatment == IGNORED_GST_TREATMENT:
+                continue
+
             item.gst_treatment = self.gst_treatment_map.get(item.item_tax_template)
 
             if not item.gst_treatment or not item.item_tax_template:
@@ -1724,6 +1756,10 @@ def validate_item_tax_template(doc):
 
     for item in doc.items:
         if item.taxable_value == 0:
+            continue
+
+        # Skip items marked as ignored for GST
+        if item.gst_treatment == IGNORED_GST_TREATMENT:
             continue
 
         if item.gst_treatment == "Zero-Rated" and not doc.get("is_export_with_gst"):

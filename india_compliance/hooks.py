@@ -443,6 +443,10 @@ ignore_links_on_delete = ["e-Waybill Log", "e-Invoice Log"]
 
 accounting_dimension_doctypes = ["Bill of Entry", "Bill of Entry Item"]
 
+# Hook for custom apps to override the taxable value calculation for items
+# Called with (doc, item) and should return the custom taxable value or None to skip
+india_compliance_get_item_taxable_value = []
+
 # DocTypes for which Audit Trail must be maintained
 audit_trail_doctypes = [
     # To track the "Enable Audit Trail" setting
