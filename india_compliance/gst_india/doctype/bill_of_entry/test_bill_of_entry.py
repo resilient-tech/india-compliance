@@ -378,3 +378,41 @@ class TestBillofEntry(IntegrationTestCase):
         # ITC claim period should be set to posting period by default
         expected_period = format_period(boe.posting_date)
         self.assertEqual(boe.itc_claim_period, expected_period)
+
+    def test_create_bill_of_entry_for_sez_goods_only(self):
+        """
+        SEZ goods-only invoice should allow BOE creation
+        """
+        pi = create_purchase_invoice(
+            supplier="_Test Registered Supplier",
+            update_stock=1,
+            do_not_submit=True,
+            do_not_save=True,
+        )
+        pi.gst_category = "SEZ"
+        pi.insert()
+        pi.submit()
+
+        pi.reload()
+        self.assertEqual(pi.items[0].pending_boe_qty, 1)
+
+        boe = make_bill_of_entry(pi.name)
+        self.assertEqual(len(boe.items), 1)
+        self.assertEqual(boe.items[0].pi_detail, pi.items[0].name)
+
+    def test_sez_service_invoice_no_boe(self):
+        """
+        SEZ service-only invoice should have pending_boe_qty = 0
+        """
+        pi = create_purchase_invoice(
+            supplier="_Test Registered Supplier",
+            item_code="_Test Service Item",
+            do_not_submit=True,
+            do_not_save=True,
+        )
+        pi.gst_category = "SEZ"
+        pi.insert()
+        pi.submit()
+
+        pi.reload()
+        self.assertEqual(pi.items[0].pending_boe_qty, 0)

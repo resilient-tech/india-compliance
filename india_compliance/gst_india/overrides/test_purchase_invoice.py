@@ -28,9 +28,31 @@ class TestPurchaseInvoice(IntegrationTestCase):
         )
         self.assertEqual(pinv.itc_classification, "Import Of Service")
 
-        append_item(pinv)
+        # Overseas goods-only invoice
+        pinv = create_purchase_invoice(
+            supplier="_Test Foreign Supplier",
+            do_not_submit=1,
+        )
+        self.assertEqual(pinv.itc_classification, "Import Of Goods")
+
+        pinv = create_purchase_invoice(
+            supplier="_Test Registered Supplier",
+            do_not_submit=1,
+            do_not_save=1,
+        )
+        pinv.gst_category = "SEZ"
         pinv.save()
         self.assertEqual(pinv.itc_classification, "Import Of Goods")
+
+        pinv = create_purchase_invoice(
+            supplier="_Test Registered Supplier",
+            do_not_submit=1,
+            do_not_save=1,
+            item_code="_Test Service Item",
+        )
+        pinv.gst_category = "SEZ"
+        pinv.save()
+        self.assertEqual(pinv.itc_classification, "All Other ITC")
 
         pinv = create_purchase_invoice(
             supplier="_Test Registered Supplier",
@@ -69,6 +91,34 @@ class TestPurchaseInvoice(IntegrationTestCase):
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             "Reverse Charge is not applicable on Import of Goods",
+            pinv.save,
+        )
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_both_goods_and_services_in_same_import_invoice(self):
+        pinv = create_purchase_invoice(
+            supplier="_Test Foreign Supplier",
+            do_not_save=1,
+            item_code="_Test Service Item",
+        )
+        append_item(pinv)  # adds a goods item
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            "Cannot have both goods and services",
+            pinv.save,
+        )
+
+        # SEZ: mixed goods and services should throw
+        pinv = create_purchase_invoice(
+            supplier="_Test Registered Supplier",
+            do_not_save=1,
+            item_code="_Test Service Item",
+        )
+        pinv.gst_category = "SEZ"
+        append_item(pinv)  # adds a goods item
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            "Cannot have both goods and services",
             pinv.save,
         )
 
