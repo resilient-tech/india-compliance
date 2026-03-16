@@ -35,6 +35,7 @@ from india_compliance.gst_india.constants import (
     GST_INVOICE_NUMBER_FORMAT,
     GST_PARTY_TYPES,
     GSTIN_FORMATS,
+    IMPORT_GST_CATEGORIES,
     PAN_NUMBER,
     PINCODE_FORMAT,
     SALES_DOCTYPES,
@@ -382,6 +383,14 @@ def is_foreign_doc(doc):
 
 def is_foreign_transaction(gst_category, place_of_supply):
     return gst_category == "Overseas" and place_of_supply == "96-Other Countries"
+
+
+def is_import_of_goods(doc):
+    return doc.gst_category in IMPORT_GST_CATEGORIES and are_goods_supplied(doc)
+
+
+def is_import_of_services(doc):
+    return doc.gst_category == "Overseas" and are_services_supplied(doc)
 
 
 def get_hsn_settings():
@@ -799,6 +808,16 @@ def are_goods_supplied(doc):
         for item in doc.items
         if item.gst_hsn_code
         and not item.gst_hsn_code.startswith(SERVICE_HSN_PREFIX)
+        and item.qty != 0
+    )
+
+
+def are_services_supplied(doc):
+    return any(
+        item
+        for item in doc.items
+        if item.gst_hsn_code
+        and item.gst_hsn_code.startswith(SERVICE_HSN_PREFIX)
         and item.qty != 0
     )
 
