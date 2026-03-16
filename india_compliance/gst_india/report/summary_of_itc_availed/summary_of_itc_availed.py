@@ -9,6 +9,7 @@ from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import IfNull
 
+from india_compliance.gst_india.constants import SERVICE_HSN_PREFIX
 from india_compliance.gst_india.utils.itc_claim import (
     apply_period_filter as _apply_itc_period_filter,
 )
@@ -97,7 +98,7 @@ class ITCAvailedCategory:
         elif row.get("is_fixed_asset") == 1:
             return SubCategory.CAPITAL_GOODS
 
-        elif (row.get("gst_hsn_code") or "").startswith("99"):
+        elif (row.get("gst_hsn_code") or "").startswith(SERVICE_HSN_PREFIX):
             return SubCategory.INPUT_SERVICES
 
         return SubCategory.INPUTS

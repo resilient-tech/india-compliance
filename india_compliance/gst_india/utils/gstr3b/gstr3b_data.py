@@ -3,7 +3,7 @@ from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import IfNull, Sum
 
-from india_compliance.gst_india.constants import GST_TAX_TYPES
+from india_compliance.gst_india.constants import GST_TAX_TYPES, SERVICE_HSN_PREFIX
 from india_compliance.gst_india.overrides.transaction import is_inter_state_supply
 from india_compliance.gst_india.utils import get_full_gst_uom
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategory
@@ -393,7 +393,7 @@ class GSTR3BInvoices(GSTR3BQuery, GSTR3BSubcategory):
         )
 
     def process_uom(self, invoice, identified_uom):
-        if invoice.gst_hsn_code and invoice.gst_hsn_code.startswith("99"):
+        if invoice.gst_hsn_code and invoice.gst_hsn_code.startswith(SERVICE_HSN_PREFIX):
             invoice["uom"] = "OTH-OTHERS"
             return
 

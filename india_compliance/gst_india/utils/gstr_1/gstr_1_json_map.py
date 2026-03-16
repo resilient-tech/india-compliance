@@ -5,7 +5,7 @@ from itertools import chain
 import frappe
 from frappe.utils import cint, flt
 
-from india_compliance.gst_india.constants import UOM_MAP
+from india_compliance.gst_india.constants import SERVICE_HSN_PREFIX, UOM_MAP
 from india_compliance.gst_india.utils import (
     MONTHS,
     get_gst_accounts_by_type,
@@ -1281,7 +1281,7 @@ class HSNSUM(GSTR1DataMapper):
             if (
                 data
                 and (hsn_code := data.get(inv_f.HSN_CODE) or "")
-                and hsn_code.startswith("99")
+                and hsn_code.startswith(SERVICE_HSN_PREFIX)
             ):
                 return "NA"
 

@@ -38,6 +38,7 @@ from india_compliance.gst_india.constants import (
     PAN_NUMBER,
     PINCODE_FORMAT,
     SALES_DOCTYPES,
+    SERVICE_HSN_PREFIX,
     STATE_NUMBERS,
     STATE_PINCODE_MAPPING,
     TCS,
@@ -797,7 +798,7 @@ def are_goods_supplied(doc):
         item
         for item in doc.items
         if item.gst_hsn_code
-        and not item.gst_hsn_code.startswith("99")
+        and not item.gst_hsn_code.startswith(SERVICE_HSN_PREFIX)
         and item.qty != 0
     )
 
