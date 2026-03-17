@@ -390,6 +390,14 @@ def is_import_of_goods(doc):
 
 
 def is_import_of_services(doc):
+    """
+    Note: https://hnallp.com/assets/articles/6c0b7-gst-applicability-on-sez-transactions_final.pdf
+    Only services with GST Category as Overseas are considered as import of services.
+    Section 7(5) of IGST supply of goods or service to or by SEZ will be considered as inter-
+    State supply.Therefore, the sez service purchase transaction shall be treated as a domestic supply of services and GST
+    would be collected and discharged by the SEZ Unit / SEZ Developer i.e., under Forward
+    Charge Mechanism.
+    """
     return doc.gst_category == "Overseas" and are_services_supplied(doc)
 
 

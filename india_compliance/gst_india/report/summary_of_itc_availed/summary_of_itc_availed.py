@@ -72,17 +72,17 @@ class ITCAvailedCategory:
         itc_classification = row.get("itc_classification")
         is_reverse_charge = row.get("is_reverse_charge")
 
-        if gst_category == "Unregistered" and is_reverse_charge:
+        if itc_classification == "Import Of Goods":
+            return Category.IMPORT_GOODS
+
+        elif itc_classification == "Import Of Service":
+            return Category.IMPORT_SERVICES
+
+        elif gst_category == "Unregistered" and is_reverse_charge:
             return Category.UNREG_RCM
 
         elif gst_category != "Unregistered" and is_reverse_charge:
             return Category.REG_RCM
-
-        elif itc_classification == "Import Of Goods":
-            return Category.IMPORT_GOODS
-
-        elif itc_classification == "Import Of Service" and gst_category != "SEZ":
-            return Category.IMPORT_SERVICES
 
         elif itc_classification == "Input Service Distributor":
             return Category.ITC_FROM_ISD
@@ -159,8 +159,6 @@ class ITCAvailedData:
             .on(doc_item.item_code == item.item_code)
             .select(
                 ConstantColumn("Import Of Goods").as_("itc_classification"),
-                # TODO: Remove "Overseas" classification and use actual GST category once GST category is added for BOE in the system (currently BOEs are classified as "Overseas" in GST category to distinguish them from regular purchase invoices)
-                ConstantColumn("Overseas").as_("gst_category"),
                 item.is_fixed_asset,
             )
         )

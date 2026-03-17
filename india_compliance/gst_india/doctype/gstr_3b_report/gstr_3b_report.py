@@ -359,10 +359,9 @@ class GSTR3BReport(Document):
                     .else_(0)
                 ).as_("csamt"),
             )
-            .where(
-                boe.company_gstin.eq(self.gst_details.get("gstin"))
-                & boe.docstatus.eq(1)
-            )
+            .where(boe.company_gstin.eq(self.gst_details.get("gstin")))
+            .where(boe.docstatus.eq(1))
+            .where(boe.company.eq(self.company))
             .where(boe_taxes.parenttype == "Bill of Entry")
         )
 

@@ -41,7 +41,7 @@ class TestSummaryOfITCAvailed(IntegrationTestCase):
 
         boe = make_bill_of_entry(pi.name)
         boe.items[0].customs_duty = 100
-        boe.items[0].gst_hsn_code = "999900"
+        boe.items[0].gst_hsn_code = "730419"
         boe.bill_of_entry_no = "BOE-ITC-001"
         boe.bill_of_entry_date = getdate()
         boe.save()
