@@ -449,11 +449,6 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
                     purchase_invoice.company_gstin
                     != IfNull(purchase_invoice.supplier_gstin, "")
                 )
-                & (
-                    IfNull(purchase_invoice.itc_classification, "").notin(
-                        ["Import Of Goods", "Import Of Service"]
-                    )
-                )
             )
             .groupby(purchase_invoice.name)
         )

@@ -79,3 +79,4 @@ india_compliance.patches.v15.unset_auth_token
 india_compliance.patches.v15.update_itc_claim_period
 india_compliance.patches.v15.migrate_logo_for_printing
 execute:from india_compliance.audit_trail.setup import create_custom_fields; create_custom_fields()
+india_compliance.patches.post_install.update_gst_treatment_for_import_transactions

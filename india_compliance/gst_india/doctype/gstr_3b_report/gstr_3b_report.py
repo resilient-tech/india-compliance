@@ -419,11 +419,6 @@ class GSTR3BReport(Document):
             )
             .where(pi.company == self.company)
             .where(pi.company_gstin == self.gst_details.get("gstin"))
-            .where(
-                IfNull(pi.itc_classification, "").notin(
-                    ["Import Of Goods", "Import Of Service"]
-                )
-            )
         )
 
         query = self.apply_itc_period_filter(query, pi)

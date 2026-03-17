@@ -10,7 +10,7 @@ from india_compliance.gst_india.utils.itc_claim import (
     format_period,
     update_gstr3b_filing_status,
 )
-from india_compliance.gst_india.utils.tests import create_purchase_invoice
+from india_compliance.gst_india.utils.tests import append_item, create_purchase_invoice
 
 with mock.patch("frappe.db"), mock.patch("frappe.new_doc"), mock.patch(
     "frappe.get_doc"
@@ -95,6 +95,29 @@ class TestPurchaseInvoice(IntegrationTestCase):
             "Reverse Charge is not applicable on Import of Goods",
             pinv.save,
         )
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_service_and_goods_import_invoice_itc_classification(self):
+        test_cases = (
+            ("Overseas", "_Test Foreign Supplier"),
+            ("SEZ", "_Test Registered Supplier"),
+        )
+
+        for gst_category, supplier in test_cases:
+            pinv = create_purchase_invoice(
+                supplier=supplier,
+                do_not_submit=1,
+                do_not_save=1,
+                item_code="_Test Service Item",
+            )
+            pinv.gst_category = gst_category
+            append_item(pinv)
+            pinv.save()
+
+            self.assertEqual(pinv.itc_classification, "Import Of Goods")
+            self.assertEqual(len(pinv.items), 2)
+            self.assertEqual(pinv.items[0].gst_treatment, "Taxable")
+            self.assertEqual(pinv.items[1].gst_treatment, "Taxable")
 
     def test_validate_invoice_length(self):
         # No error for registered supplier

@@ -76,25 +76,14 @@ AMOUNT_FIELDS = (
 
 class GSTR3BCategoryConditions:
     def is_composition_nil_rated_or_exempted(self, invoice):
-        itc_classification = invoice.get("itc_classification")
-
-        return itc_classification not in ("Import Of Goods", "Import Of Service") and (
+        return (
             invoice.gst_treatment == "Nil-Rated"
             or invoice.gst_treatment == "Exempted"
             or invoice.gst_category == "Registered Composition"
         )
 
     def is_non_gst(self, invoice):
-        itc_classification = invoice.get("itc_classification")
-
-        return (
-            itc_classification
-            not in (
-                "Import Of Goods",
-                "Import Of Service",
-            )
-            and invoice.gst_treatment == "Non-GST"
-        )
+        return invoice.gst_treatment == "Non-GST"
 
     def is_itc_available(self, invoice):
         return invoice.ineligibility_reason != "ITC restricted due to PoS rules"
