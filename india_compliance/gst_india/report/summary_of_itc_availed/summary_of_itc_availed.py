@@ -75,6 +75,7 @@ class ITCAvailedCategory:
         if itc_classification == "Import Of Goods":
             return Category.IMPORT_GOODS
 
+        # Import classifications take precedence over RCM
         elif itc_classification == "Import Of Service":
             return Category.IMPORT_SERVICES
 
