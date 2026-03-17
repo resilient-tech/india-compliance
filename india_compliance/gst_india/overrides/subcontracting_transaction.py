@@ -124,8 +124,14 @@ def _get_fields_mapping(doc, source_doc):
 
 
 def set_item_tax_template(doc, source_doc):
-    rm_detail_field = "sco_rm_detail"
-    if source_doc.doctype == "Purchase Order":
+    if source_doc.doctype not in ("Subcontracting Order", "Purchase Order"):
+        return
+
+    rm_detail_field = None
+    if source_doc.doctype == "Subcontracting Order":
+        rm_detail_field = "sco_rm_detail"
+
+    elif source_doc.doctype == "Purchase Order":
         rm_detail_field = "po_detail"
 
     item_tax_template_map = frappe._dict()
