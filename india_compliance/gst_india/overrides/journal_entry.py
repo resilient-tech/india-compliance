@@ -21,12 +21,14 @@ def set_gst_tax_type(doc, method=None):
 
 
 def validate(doc, method=None):
-    if doc.company_gstin or not is_indian_registered_company(doc):
+    if not is_indian_registered_company(doc):
         return
 
     set_gst_tax_type(doc)
 
-    # validate company_gstin
+    if doc.company_gstin:
+        return
+
     contains_gst_account = False
     for row in doc.accounts:
         if row.gst_tax_type:
