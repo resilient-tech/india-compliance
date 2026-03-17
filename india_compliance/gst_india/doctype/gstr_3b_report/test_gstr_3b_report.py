@@ -7,9 +7,17 @@ import frappe
 from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import get_month, getdate
 
+from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
+    make_bill_of_entry,
+)
 from india_compliance.gst_india.doctype.gstr_3b_report.gstr_3b_report import (
     GSTR3BExcelExporter,
 )
+from india_compliance.gst_india.overrides.test_transaction import create_cess_accounts
+from india_compliance.gst_india.report.gstr_3b_details.gstr_3b_details import (
+    GSTR3B_Inward_Nil_Exempt,
+)
+from india_compliance.gst_india.utils import get_gst_accounts_by_type
 from india_compliance.gst_india.utils.tests import (
     create_purchase_invoice,
     create_sales_invoice,
@@ -27,6 +35,7 @@ class TestGSTR3BReport(IntegrationTestCase):
             "Purchase Invoice",
             "GSTR 3B Report",
             "Journal Entry",
+            "Bill of Entry",
         ):
             frappe.db.delete(doctype, filters=filters)
 
@@ -226,6 +235,135 @@ class TestGSTR3BReport(IntegrationTestCase):
         self.assertEqual(output["itc_elg"]["itc_rev"][0]["samt"], 9.0)
         self.assertEqual(output["itc_elg"]["itc_net"]["camt"], -9.0)
         self.assertEqual(output["itc_elg"]["itc_net"]["samt"], -9.0)
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_inward_nil_non_gst_report_includes_sez_services(self):
+        pi = create_purchase_invoice(
+            supplier="_Test Registered Supplier",
+            do_not_save=1,
+            do_not_submit=1,
+            item_code="_Test Service Item",
+        )
+        pi.gst_category = "SEZ"
+        pi.insert()
+        pi.submit()
+
+        today = getdate()
+
+        report = GSTR3B_Inward_Nil_Exempt(
+            {
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+                "year": today.year,
+                "month_or_quarter": get_month(today),
+            }
+        )
+
+        rows = report.get_inward_nil_exempt()
+        self.assertIn(pi.name, [row.voucher_no for row in rows])
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_inward_nil_non_gst_report_excludes_overseas_import_services(self):
+        pi = create_purchase_invoice(
+            supplier="_Test Foreign Supplier",
+            do_not_save=1,
+            do_not_submit=1,
+            item_code="_Test Service Item",
+        )
+        pi.insert()
+        pi.submit()
+
+        self.assertEqual(pi.itc_classification, "Import Of Service")
+
+        today = getdate()
+
+        report = GSTR3B_Inward_Nil_Exempt(
+            {
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+                "year": today.year,
+                "month_or_quarter": get_month(today),
+            }
+        )
+
+        rows = report.get_inward_nil_exempt()
+        self.assertNotIn(pi.name, [row.voucher_no for row in rows])
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_gstr_3b_report_includes_boe_in_import_of_goods(self):
+        pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
+
+        boe = make_bill_of_entry(pi.name)
+        boe.items[0].customs_duty = 100
+        boe.bill_of_entry_no = "BOE-001"
+        boe.bill_of_entry_date = getdate()
+        boe.save()
+        boe.submit()
+
+        today = getdate()
+
+        report = frappe.get_doc(
+            {
+                "doctype": "GSTR 3B Report",
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+                "year": today.year,
+                "month_or_quarter": get_month(today),
+            }
+        ).insert()
+
+        output = json.loads(report.json_output)
+        itc_available = {
+            row["ty"]: row for row in output.get("itc_elg", {}).get("itc_avl", [])
+        }
+
+        self.assertEqual(itc_available["IMPG"].get("iamt"), 36.0)
+        self.assertEqual(itc_available["IMPG"].get("csamt"), 0.0)
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_gstr_3b_report_includes_boe_cess_non_advol_in_csamt(self):
+        pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
+
+        boe = make_bill_of_entry(pi.name)
+        boe.items[0].customs_duty = 100
+        boe.bill_of_entry_no = "BOE-002"
+        boe.bill_of_entry_date = getdate()
+
+        create_cess_accounts()
+        gst_accounts = get_gst_accounts_by_type(boe.company, "Input")
+        boe.append(
+            "taxes",
+            {
+                "charge_type": "On Item Quantity",
+                "account_head": gst_accounts.cess_non_advol_account,
+                "rate": 20,
+                "cost_center": "Main - _TIRC",
+                "item_wise_tax_rates": {},
+            },
+        )
+
+        boe.save()
+        boe.submit()
+
+        today = getdate()
+
+        report = frappe.get_doc(
+            {
+                "doctype": "GSTR 3B Report",
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+                "year": today.year,
+                "month_or_quarter": get_month(today),
+            }
+        ).insert()
+
+        output = json.loads(report.json_output)
+        itc_available = {
+            row["ty"]: row for row in output.get("itc_elg", {}).get("itc_avl", [])
+        }
+
+        self.assertEqual(itc_available["IMPG"].get("iamt"), 36.0)
+        self.assertEqual(itc_available["IMPG"].get("csamt"), 20.0)
 
 
 def create_sales_invoices():

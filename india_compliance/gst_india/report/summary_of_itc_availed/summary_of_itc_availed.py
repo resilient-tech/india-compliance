@@ -5,7 +5,6 @@ from collections import defaultdict
 
 import frappe
 from frappe import _
-from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import IfNull
 
@@ -139,6 +138,7 @@ class ITCAvailedData:
             .where(
                 (doc.company_gstin != IfNull(doc.supplier_gstin, ""))
                 & (doc.is_opening == "No")
+                & (IfNull(doc.itc_classification, "") != "Import Of Goods")
             )
         )
 
@@ -158,9 +158,8 @@ class ITCAvailedData:
             .inner_join(item)
             .on(doc_item.item_code == item.item_code)
             .select(
-                Case("itc_classification")
-                .when(doc_item.gst_hsn_code.like("99%"), "Import Of Service")
-                .else_("Import Of Goods"),
+                ConstantColumn("Import Of Goods").as_("itc_classification"),
+                # TODO: Remove "Overseas" classification and use actual GST category once GST category is added for BOE in the system (currently BOEs are classified as "Overseas" in GST category to distinguish them from regular purchase invoices)
                 ConstantColumn("Overseas").as_("gst_category"),
                 item.is_fixed_asset,
             )

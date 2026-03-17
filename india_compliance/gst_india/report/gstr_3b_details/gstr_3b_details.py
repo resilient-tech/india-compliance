@@ -427,6 +427,7 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
                 ConstantColumn("Purchase Invoice").as_("voucher_type"),
                 purchase_invoice.name.as_("voucher_no"),
                 purchase_invoice.posting_date,
+                purchase_invoice.gst_category,
                 purchase_invoice.place_of_supply,
                 purchase_invoice.supplier_address,
                 Sum(purchase_invoice_item.taxable_value).as_("taxable_value"),
@@ -448,7 +449,11 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
                     purchase_invoice.company_gstin
                     != IfNull(purchase_invoice.supplier_gstin, "")
                 )
-                & (purchase_invoice.gst_category != "Overseas")
+                & (
+                    IfNull(purchase_invoice.itc_classification, "").notin(
+                        ["Import Of Goods", "Import Of Service"]
+                    )
+                )
             )
             .groupby(purchase_invoice.name)
         )

@@ -76,14 +76,25 @@ AMOUNT_FIELDS = (
 
 class GSTR3BCategoryConditions:
     def is_composition_nil_rated_or_exempted(self, invoice):
-        return invoice.gst_category != "Overseas" and (
+        itc_classification = invoice.get("itc_classification")
+
+        return itc_classification not in ("Import Of Goods", "Import Of Service") and (
             invoice.gst_treatment == "Nil-Rated"
             or invoice.gst_treatment == "Exempted"
             or invoice.gst_category == "Registered Composition"
         )
 
     def is_non_gst(self, invoice):
-        return invoice.gst_category != "Overseas" and invoice.gst_treatment == "Non-GST"
+        itc_classification = invoice.get("itc_classification")
+
+        return (
+            itc_classification
+            not in (
+                "Import Of Goods",
+                "Import Of Service",
+            )
+            and invoice.gst_treatment == "Non-GST"
+        )
 
     def is_itc_available(self, invoice):
         return invoice.ineligibility_reason != "ITC restricted due to PoS rules"
@@ -217,6 +228,7 @@ class GSTR3BQuery:
                 ConstantColumn("Bill of Entry").as_("voucher_type"),
                 self.BOE.name.as_("voucher_no"),
                 self.BOE.posting_date,
+                ConstantColumn("Import Of Goods").as_("itc_classification"),
                 self.BOE_ITEM.is_ineligible_for_itc,
                 self.BOE_ITEM.item_code,
                 self.BOE_ITEM.gst_hsn_code,

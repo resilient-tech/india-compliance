@@ -309,7 +309,7 @@ class AccountWiseSummary:
                 .when(doc.ineligibility_reason == "ITC restricted due to PoS rules", 1)
                 .else_(0)
                 # From BOE
-            ).where(IfNull(doc.itc_classification, "") != "Import of Goods")
+            ).where(IfNull(doc.itc_classification, "") != "Import Of Goods")
 
         query = self.get_query_with_common_filters(query, doc, self.filters)
 

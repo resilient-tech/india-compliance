@@ -12,6 +12,7 @@ from openpyxl.cell.cell import MergedCell
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.query_builder import Case
 from frappe.query_builder.functions import IfNull, Sum
 from frappe.utils import cint, cstr, flt, get_first_day, get_last_day
 
@@ -339,31 +340,38 @@ class GSTR3BReport(Document):
         boe = frappe.qb.DocType("Bill of Entry")
         boe_taxes = frappe.qb.DocType("India Compliance Taxes and Charges")
 
-        def _get_tax_amount(account_type):
-            query = (
-                frappe.qb.from_(boe)
-                .select(Sum(boe_taxes.tax_amount))
-                .join(boe_taxes)
-                .on(boe_taxes.parent == boe.name)
-                .where(
-                    boe.company_gstin.eq(self.gst_details.get("gstin"))
-                    & boe.docstatus.eq(1)
-                    & boe_taxes.gst_tax_type.eq(account_type)
-                )
-                .where(boe_taxes.parenttype == "Bill of Entry")
+        query = (
+            frappe.qb.from_(boe)
+            .join(boe_taxes)
+            .on(boe_taxes.parent == boe.name)
+            .select(
+                Sum(
+                    Case()
+                    .when(boe_taxes.gst_tax_type == "igst", boe_taxes.tax_amount)
+                    .else_(0)
+                ).as_("iamt"),
+                Sum(
+                    Case()
+                    .when(
+                        boe_taxes.gst_tax_type.isin(["cess", "cess_non_advol"]),
+                        boe_taxes.tax_amount,
+                    )
+                    .else_(0)
+                ).as_("csamt"),
             )
-
-            query = self.apply_itc_period_filter(
-                query,
-                boe,
+            .where(
+                boe.company_gstin.eq(self.gst_details.get("gstin"))
+                & boe.docstatus.eq(1)
             )
+            .where(boe_taxes.parenttype == "Bill of Entry")
+        )
 
-            return query.run()[0][0] or 0
+        query = self.apply_itc_period_filter(query, boe)
 
-        igst, cess = _get_tax_amount("igst"), _get_tax_amount("cess")
-        itc_details.setdefault("Import Of Goods", {"iamt": 0, "csamt": 0})
-        itc_details["Import Of Goods"]["iamt"] += igst
-        itc_details["Import Of Goods"]["csamt"] += cess
+        for row in query.run(as_dict=True):
+            itc_details.setdefault("Import Of Goods", {"iamt": 0, "csamt": 0})
+            itc_details["Import Of Goods"]["iamt"] += row.iamt or 0
+            itc_details["Import Of Goods"]["csamt"] += row.csamt or 0
 
     def set_reclaim_of_itc_reversal(self):
         journal_entry = frappe.qb.DocType("Journal Entry")
@@ -412,7 +420,11 @@ class GSTR3BReport(Document):
             )
             .where(pi.company == self.company)
             .where(pi.company_gstin == self.gst_details.get("gstin"))
-            .where(pi.gst_category != "Overseas")
+            .where(
+                IfNull(pi.itc_classification, "").notin(
+                    ["Import Of Goods", "Import Of Service"]
+                )
+            )
         )
 
         query = self.apply_itc_period_filter(query, pi)
