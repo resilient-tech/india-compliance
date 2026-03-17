@@ -5,7 +5,7 @@ import frappe
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import getdate
 
-from india_compliance.gst_india.report.gst_purchase_register.gst_purchase_register import (
+from india_compliance.gst_india.report.gst_purchase_register_beta.gst_purchase_register_beta import (
     execute,
 )
 
