@@ -821,12 +821,10 @@ def are_goods_supplied(doc):
 
 
 def are_services_supplied(doc):
-    return any(
+    return all(
         item
         for item in doc.items
-        if item.gst_hsn_code
-        and item.gst_hsn_code.startswith(SERVICE_HSN_PREFIX)
-        and item.qty != 0
+        if item.gst_hsn_code and item.gst_hsn_code.startswith(SERVICE_HSN_PREFIX)
     )
 
 

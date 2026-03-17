@@ -17,7 +17,6 @@ from india_compliance.gst_india.overrides.transaction import (
     validate_transaction,
 )
 from india_compliance.gst_india.utils import (
-    are_services_supplied,
     is_api_enabled,
     is_import_of_goods,
     is_import_of_services,
@@ -67,7 +66,6 @@ def validate(doc, method=None):
         return
 
     validate_hsn_codes(doc)
-    validate_import_items(doc)
     if doc.is_reverse_charge and not doc.supplier_gstin:
         validate_invoice_number(doc)
 
@@ -126,24 +124,9 @@ def is_b2b_invoice(doc):
     )
 
 
-def validate_import_items(doc):
-    if not is_import_of_goods(doc):
-        return
-
-    has_services = are_services_supplied(doc)
-
-    if has_services:
-        frappe.throw(
-            _(
-                "Cannot have both goods and services in a single {0} Purchase"
-                " Invoice. Please create separate invoices for goods and services as"
-                " they have different tax treatments."
-            ).format(doc.gst_category),
-            title=_("Invalid Items"),
-        )
-
-
 def set_itc_classification(doc):
+    # If the document contains single goods item then it will be categorized as Import of Goods,
+
     if is_import_of_goods(doc):
         doc.itc_classification = "Import Of Goods"
     elif is_import_of_services(doc):
