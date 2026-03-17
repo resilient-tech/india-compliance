@@ -162,6 +162,7 @@ class TestGSTPurchaseRegister(IntegrationTestCase):
         reversal_row = by_description.get(
             "As per rules 42 & 43 of CGST Rules and section 17(5)"
         )
+        self.assertIsNotNone(reversal_row)
         self.assertEqual(reversal_row["cgst_amount"], 9.0)
         self.assertEqual(reversal_row["sgst_amount"], 9.0)
 
