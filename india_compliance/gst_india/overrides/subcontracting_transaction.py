@@ -79,6 +79,8 @@ def after_mapping_stock_entry(doc, method, source_doc):
         doc.taxes_and_charges = ""
         doc.taxes = []
 
+    set_item_tax_template(doc, source_doc)
+
     address_map = _get_fields_mapping(doc, source_doc)
 
     if not address_map:
@@ -92,7 +94,6 @@ def after_mapping_stock_entry(doc, method, source_doc):
     doc.bill_to_gstin = source_doc.get(bill_to_gstin)
 
     set_address_display(doc)
-    set_item_tax_template(doc, source_doc)
 
 
 def _get_fields_mapping(doc, source_doc):
