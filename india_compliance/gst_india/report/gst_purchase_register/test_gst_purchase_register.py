@@ -2,7 +2,7 @@
 # See license.txt
 
 import frappe
-from frappe.tests import IntegrationTestCase
+from frappe.tests.utils import FrappeTestCase
 from frappe.utils import getdate
 
 from india_compliance.gst_india.report.gst_purchase_register.gst_purchase_register import (
@@ -27,7 +27,7 @@ def _filters(posting_date, **kwargs):
     )
 
 
-class TestGSTPurchaseRegisterITCJournalEntries(IntegrationTestCase):
+class TestGSTPurchaseRegisterITCJournalEntries(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
