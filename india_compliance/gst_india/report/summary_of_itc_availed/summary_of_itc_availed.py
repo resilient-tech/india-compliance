@@ -135,6 +135,7 @@ class ITCAvailedData:
                 doc.itc_classification,
                 doc_item.is_fixed_asset,
                 doc.is_reverse_charge,
+                doc_item.gst_hsn_code,
             )
             .where(
                 (doc.company_gstin != IfNull(doc.supplier_gstin, ""))

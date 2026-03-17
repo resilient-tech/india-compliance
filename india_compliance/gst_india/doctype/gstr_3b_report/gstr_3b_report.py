@@ -16,7 +16,11 @@ from frappe.query_builder import Case
 from frappe.query_builder.functions import IfNull, Sum
 from frappe.utils import cint, cstr, flt, get_first_day, get_last_day
 
-from india_compliance.gst_india.constants import INVOICE_DOCTYPES, STATE_NUMBERS
+from india_compliance.gst_india.constants import (
+    INVOICE_DOCTYPES,
+    STATE_NUMBERS,
+    TAXABLE_GST_TREATMENTS,
+)
 from india_compliance.gst_india.overrides.transaction import is_inter_state_supply
 from india_compliance.gst_india.report.gstr_3b_details.gstr_3b_details import (
     IneligibleITC,
@@ -414,7 +418,7 @@ class GSTR3BReport(Document):
             .where(pi.is_opening == "No")
             .where(pi.company_gstin != IfNull(pi.supplier_gstin, ""))
             .where(
-                (pi_item.gst_treatment != "Taxable")
+                (pi_item.gst_treatment.notin(TAXABLE_GST_TREATMENTS))
                 | (pi.gst_category == "Registered Composition")
             )
             .where(pi.company == self.company)

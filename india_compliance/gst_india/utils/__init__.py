@@ -398,7 +398,7 @@ def is_import_of_services(doc):
     would be collected and discharged by the SEZ Unit / SEZ Developer i.e., under Forward
     Charge Mechanism.
     """
-    return doc.gst_category == "Overseas" and are_services_supplied(doc)
+    return doc.gst_category == "Overseas" and not are_goods_supplied(doc)
 
 
 def get_hsn_settings():
@@ -817,14 +817,6 @@ def are_goods_supplied(doc):
         if item.gst_hsn_code
         and not item.gst_hsn_code.startswith(SERVICE_HSN_PREFIX)
         and item.qty != 0
-    )
-
-
-def are_services_supplied(doc):
-    return all(
-        item
-        for item in doc.items
-        if item.gst_hsn_code and item.gst_hsn_code.startswith(SERVICE_HSN_PREFIX)
     )
 
 

@@ -74,3 +74,27 @@ class TestSummaryOfITCAvailed(IntegrationTestCase):
         self.assertIsNotNone(import_services_row)
         self.assertEqual(import_goods_row["igst_amount"], 36.0)
         self.assertEqual(import_services_row["igst_amount"], 0.0)
+
+    def test_service_purchase_is_grouped_under_input_services(self):
+        create_purchase_invoice(
+            supplier="_Test Registered Supplier",
+            item_code="_Test Service Item",
+            is_in_state=True,
+        )
+
+        _, data = execute(_filters(getdate()))
+
+        input_services_row = next(
+            (
+                row
+                for row in data
+                if row.get("indent") == 1
+                and row.get("details") == "Input Services"
+                and (row.get("cgst_amount") or 0) > 0
+            ),
+            None,
+        )
+
+        self.assertIsNotNone(input_services_row)
+        self.assertEqual(input_services_row["cgst_amount"], 9.0)
+        self.assertEqual(input_services_row["sgst_amount"], 9.0)
