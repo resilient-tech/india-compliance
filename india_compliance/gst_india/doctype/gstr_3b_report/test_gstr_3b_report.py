@@ -4,13 +4,8 @@
 import json
 
 import frappe
-<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase, change_settings
-from frappe.utils import getdate
-=======
-from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import get_month, getdate
->>>>>>> 316363c9 (fix: correct conditions in Journal Entry validation hook)
 
 from india_compliance.gst_india.doctype.gstr_3b_report.gstr_3b_report import (
     GSTR3BExcelExporter,
