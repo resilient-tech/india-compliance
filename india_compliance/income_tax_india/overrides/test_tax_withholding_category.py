@@ -206,24 +206,26 @@ def create_tax_withholding_category(category_name, account_name, **kwargs):
     single_threshold = kwargs.pop("single_threshold", 0)
     cumulative_threshold = kwargs.pop("cumulative_threshold", 0)
 
-    doc = frappe.get_doc(
-        {
-            "doctype": "Tax Withholding Category",
-            "name": category_name,
-            "category_name": category_name,
-            "rates": [
-                {
-                    "from_date": fiscal_year.year_start_date,
-                    "to_date": fiscal_year.year_end_date,
-                    "tax_withholding_rate": tax_withholding_rate,
-                    "single_threshold": single_threshold,
-                    "cumulative_threshold": cumulative_threshold,
-                }
-            ],
-            "accounts": [{"company": COMPANY, "account": account_name}],
-            **kwargs,
-        }
-    ).insert(ignore_if_duplicate=True)
+    rate_row = {
+        "from_date": fiscal_year.year_start_date,
+        "to_date": fiscal_year.year_end_date,
+        "tax_withholding_rate": tax_withholding_rate,
+        "single_threshold": single_threshold,
+        "cumulative_threshold": cumulative_threshold,
+    }
+    account_row = {"company": COMPANY, "account": account_name}
+
+    if frappe.db.exists("Tax Withholding Category", category_name):
+        doc = frappe.get_doc("Tax Withholding Category", category_name)
+
+    else:
+        doc = frappe.new_doc("Tax Withholding Category")
+        doc.name = category_name
+
+    doc.update(kwargs)
+    doc.set("accounts", [account_row])
+    doc.set("rates", [rate_row])
+    doc.save()
 
     return doc
 
