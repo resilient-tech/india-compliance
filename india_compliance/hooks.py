@@ -362,6 +362,9 @@ regional_overrides = {
         "erpnext.assets.doctype.asset.depreciation.cancel_depreciation_entries": (
             "india_compliance.income_tax_india.overrides.asset_depreciation_schedule.cancel_depreciation_entries"
         ),
+        "erpnext.accounts.doctype.tax_withholding_category.tax_withholding_category.get_tax_id_for_party": (
+            "india_compliance.income_tax_india.overrides.tax_withholding_category.get_tax_id_for_party"
+        ),
     }
 }
 
