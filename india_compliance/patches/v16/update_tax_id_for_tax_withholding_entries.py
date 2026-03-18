@@ -26,7 +26,6 @@ def update_tax_id(party_type, companies):
         .where(twe.company.isin(companies))
         .where(party.pan.isnotnull())
         .where(party.pan != "")
-        .where((twe.tax_id.isnull()) | (twe.tax_id == ""))
         .where(twe.created_by_migration == 0)
         .run()
     )
