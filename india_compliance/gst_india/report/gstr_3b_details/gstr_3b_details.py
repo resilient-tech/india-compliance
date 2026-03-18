@@ -8,6 +8,7 @@ from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import IfNull, LiteralValue, Sum
 from frappe.utils import cint, get_first_day, get_last_day
 
+from india_compliance.gst_india.constants import TAXABLE_GST_TREATMENTS
 from india_compliance.gst_india.utils import get_period
 from india_compliance.gst_india.utils.itc_claim import apply_period_filter
 
@@ -440,7 +441,7 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
                 & (purchase_invoice.is_opening == "No")
                 & (purchase_invoice.name == purchase_invoice_item.parent)
                 & (
-                    (purchase_invoice_item.gst_treatment != "Taxable")
+                    (purchase_invoice_item.gst_treatment.notin(TAXABLE_GST_TREATMENTS))
                     | (purchase_invoice.gst_category == "Registered Composition")
                 )
                 & (purchase_invoice.company == self.company)

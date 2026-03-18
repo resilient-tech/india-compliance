@@ -1039,6 +1039,7 @@ CUSTOM_FIELDS = {
             "label": "Pending BOE Qty",
             "fieldtype": "Float",
             "insert_after": "rejected_qty",
+            "read_only": 1,
         },
     ],
     "Purchase Receipt": [

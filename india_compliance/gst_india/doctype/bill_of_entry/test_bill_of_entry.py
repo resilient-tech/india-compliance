@@ -416,3 +416,33 @@ class TestBillofEntry(IntegrationTestCase):
 
         pi.reload()
         self.assertEqual(pi.items[0].pending_boe_qty, 0)
+
+    def test_sez_pending_boe_qty(self):
+        """
+        SEZ goods invoice: pending_boe_qty decrements on BOE submit,
+        restores on cancel, and handles partial BOE correctly.
+        """
+        pi = create_purchase_invoice(
+            supplier="_Test Registered Supplier",
+            update_stock=1,
+            qty=2,
+            do_not_submit=True,
+            do_not_save=True,
+        )
+        pi.gst_category = "SEZ"
+        pi.insert()
+        pi.submit()
+
+        boe = make_bill_of_entry(pi.name)
+        boe.bill_of_entry_no = "SEZ-BOE-002"
+        boe.bill_of_entry_date = today()
+        boe.items[0].qty = 1
+        boe.save()
+        boe.submit()
+
+        pi.reload()
+        self.assertEqual(pi.items[0].pending_boe_qty, 1)
+
+        boe.cancel()
+        pi.reload()
+        self.assertEqual(pi.items[0].pending_boe_qty, 2)
