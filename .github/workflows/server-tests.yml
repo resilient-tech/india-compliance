@@ -37,9 +37,37 @@ on:
       - "**.md"
       - "**.html"
       - "**.csv"
+
+  workflow_dispatch:
+    inputs:
+      frappe_remote:
+        description: "Frappe remote URL"
+        required: false
+        default: "https://github.com/frappe/frappe.git"
+        type: string
+      frappe_branch:
+        description: "Frappe branch"
+        required: false
+        default: "develop"
+        type: string
+      erpnext_remote:
+        description: "ERPNext remote URL"
+        required: false
+        default: "https://github.com/frappe/erpnext.git"
+        type: string
+      erpnext_branch:
+        description: "ERPNext branch"
+        required: false
+        default: "develop"
+        type: string
+
 env:
   BRANCH: ${{ inputs.base_ref || github.base_ref || github.ref_name }}
   APP_NAME: ${{ inputs.app_name || 'india_compliance' }}
+
+concurrency:
+  group: server-tests-${{ github.event_name }}-${{ github.event.number || github.event_name == 'workflow_dispatch' && github.run_id || '' }}
+  cancel-in-progress: true
 
 jobs:
   tests:
@@ -116,6 +144,10 @@ jobs:
           bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
         env:
           BRANCH_TO_CLONE: ${{ env.BRANCH }}
+          FRAPPE_REMOTE: ${{ inputs.frappe_remote }}
+          FRAPPE_BRANCH: ${{ inputs.frappe_branch }}
+          ERPNEXT_REMOTE: ${{ inputs.erpnext_remote }}
+          ERPNEXT_BRANCH: ${{ inputs.erpnext_branch }}
 
       - name: Run Tests
         run: cd ~/frappe-bench/ && bench --site test_site run-parallel-tests --app ${{ env.APP_NAME }} --with-coverage
