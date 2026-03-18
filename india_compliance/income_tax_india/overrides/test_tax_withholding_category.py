@@ -26,17 +26,19 @@ class TestTaxWithholdingCategory(IntegrationTestCase):
         create_tds_setup()
 
     def test_returns_pan_for_supplier(self):
-        supplier = create_supplier("_Test TDS Supplier With PAN", pan="ABCDE1234F")
+        pan = "ABCDE1234F"
+        supplier = create_supplier("_Test TDS Supplier With PAN", pan=pan)
         result = get_tax_id_for_party("Supplier", supplier)
-        self.assertEqual(result, "ABCDE1234F")
+        self.assertEqual(result, pan)
 
     def test_returns_pan_for_customer(self):
-        customer = create_customer("_Test TDS Customer With PAN", pan="XYZAB5678C")
+        pan = "XYZAB5678C"
+        customer = create_customer("_Test TDS Customer With PAN", pan=pan)
         result = get_tax_id_for_party("Customer", customer)
-        self.assertEqual(result, "XYZAB5678C")
+        self.assertEqual(result, pan)
 
     def test_tds_deducted_and_tax_id_set_as_pan(self):
-        pan = "ABCDE1234F"
+        pan = "ABCDE1235F"
         supplier = create_supplier("_Test TDS PAN Supplier", pan=pan)
         frappe.db.set_value("Supplier", supplier, "tax_withholding_category", CATEGORY)
 
