@@ -82,20 +82,20 @@ class GSTR1(Document):
             log_name, company=self.company, filing_preference=self.filing_preference
         )
 
-        message = None
+        busy_message = None
         if gstr1_log.status == "In Progress":
-            message = (
+            busy_message = (
                 "GSTR-1 is being prepared. Please wait for the process to complete."
             )
 
         elif gstr1_log.status == "Queued":
-            message = (
+            busy_message = (
                 "GSTR-1 download is queued and could take some time. Please wait"
                 " for the process to complete."
             )
 
-        if message:
-            frappe.msgprint(_(message), title=_("GSTR-1 Generation In Progress"))
+        if busy_message:
+            frappe.msgprint(_(busy_message), title=_("GSTR-1 Generation In Progress"))
             return
 
         settings = frappe.get_cached_doc("GST Settings")
