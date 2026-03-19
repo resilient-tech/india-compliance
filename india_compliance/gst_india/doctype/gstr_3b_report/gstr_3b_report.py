@@ -273,7 +273,10 @@ class GSTR3BReport(Document):
         if gst_category not in INTER_STATE_GST_CATEGORIES:
             return
 
-        place_of_supply = invoice.place_of_supply or "00-Other Territory"
+        place_of_supply = invoice.place_of_supply
+        if not place_of_supply:
+            return
+
         doc = frappe._dict(
             {
                 "gst_category": gst_category,
