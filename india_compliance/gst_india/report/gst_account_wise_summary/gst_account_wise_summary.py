@@ -193,7 +193,7 @@ class AccountWiseSummary:
                     .else_(0)
                 ).as_("ineligible_itc")
             )
-            .where(je_doc.voucher_type == "Reversal of ITC")
+            .where(je_doc.voucher_type == "Reversal Of ITC")
         )
 
         query = self.get_query_with_common_filters(query, je_doc, filters)
