@@ -167,6 +167,7 @@ class GSTR3BQuery:
                 IfNull(self.PI.place_of_supply, "").as_("place_of_supply"),
                 IfNull(self.PI.gst_category, "").as_("gst_category"),
                 self.PI.company_gstin,
+                self.PI.is_reverse_charge,
                 IfNull(self.PI.supplier_gstin, "").as_("supplier_gstin"),
                 self.PI_ITEM.item_code,
                 IfNull(self.PI_ITEM.gst_treatment, "").as_("gst_treatment"),
