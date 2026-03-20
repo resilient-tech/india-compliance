@@ -49,7 +49,7 @@ BOE_CATEGORY_CONDITIONS = {
 JE_CATEGORY_CONDITIONS = {
     "ITC Reversed": {
         "category": "is_itc_reversed_for_je",
-        "sub_category": "set_for_itc_reversed",
+        "sub_category": "set_for_itc_reversed_je",
     },
     "ITC Reclaimed": {
         "category": "is_itc_reclaimed",
@@ -129,6 +129,23 @@ class GSTR3BSubcategory(GSTR3BCategoryConditions):
 
     def set_for_itc_available_boe(self, invoice):
         invoice.invoice_sub_category = "Import Of Goods"
+
+    def set_for_itc_reversed_je(self, invoice):
+        """
+        Restore the pre-rewrite default for Journal Entry reversals:
+        - "As per rules 42 & 43 of CGST Rules" → RUL (index 0)
+        - blank or any other value               → OTH (index 1)
+
+        The shared set_for_itc_reversed inverts this default (anything that is
+        not "Others" becomes RUL), so a JE with a blank ineligibility_reason
+        would silently move from the OTH row to the RUL row, potentially
+        causing a discrepancy with previously filed returns.
+        """
+        invoice.invoice_sub_category = (
+            "As per rules 42 & 43 of CGST Rules and section 17(5)"
+            if invoice.ineligibility_reason == "As per rules 42 & 43 of CGST Rules"
+            else "Others"
+        )
 
     def set_for_itc_reclaimed(self, invoice):
         invoice.invoice_sub_category = "Reclaim of ITC Reversal"

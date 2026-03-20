@@ -220,6 +220,7 @@ class GSTR3BReport(Document):
           gst_treatment == "Taxable" (non-RC)         → osup_det       (txval + all taxes)
           gst_treatment == "Taxable" (RC)             → osup_det       (txval only, no taxes)
           gst_treatment == "Taxable" (RC + eco GSTIN) → eco_reg_sup   (txval only, deducted from osup_det)
+                                                         NOT reported in section 3.2 (no longer in 3.1(a))
         """
         gstr1 = GSTR1Invoices(gstr1_filters)
         invoices = gstr1.get_invoices_for_item_wise_summary()
@@ -249,10 +250,10 @@ class GSTR3BReport(Document):
 
                 if invoice.is_reverse_charge and invoice.ecommerce_gstin:
                     eco_taxable_value += taxable_value
-
-                self._update_inter_state_supply(
-                    invoice, taxable_value, inter_state_supply
-                )
+                else:
+                    self._update_inter_state_supply(
+                        invoice, taxable_value, inter_state_supply
+                    )
 
             elif gst_treatment == "Zero-Rated":
                 section["iamt"] += invoice.igst_amount or 0
@@ -268,6 +269,10 @@ class GSTR3BReport(Document):
         """
         Collect inter-state supply data for section 3.2.
         Only Unregistered, Registered Composition and UIN Holder categories qualify.
+
+        Note: eco-operator RC invoices (is_reverse_charge + ecommerce_gstin) are
+        excluded by the caller — they are no longer part of 3.1(a) after being
+        deducted into eco_reg_sup and must not contribute to section 3.2.
         """
         gst_category = invoice.gst_category
         if gst_category not in INTER_STATE_GST_CATEGORIES:
