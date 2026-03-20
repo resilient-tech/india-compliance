@@ -1174,7 +1174,10 @@ class TestSpecificTransactions(IntegrationTestCase):
 
         # create user
         test_user = frappe.get_doc("User", {"email": "test@example.com"})
-        test_user.add_roles("Accounts User")
+        # Accounts Manager has submit rights on Sales Invoice; Accounts User does not.
+        # We need the user to pass frappe's permission check so that india_compliance's
+        # on_submit hook (validate_backdated_transaction) is what raises the error.
+        test_user.add_roles("Accounts Manager")
 
         with self.set_user(test_user.name):
             # submit invoice

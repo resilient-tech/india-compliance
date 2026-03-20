@@ -73,6 +73,21 @@ AMOUNT_FIELDS = (
     "total_amount",
 )
 
+# Maps GSTR-3B sub-category labels to the 'ty' key in the JSON template (ITC Available)
+ITC_AVAILABLE_SUB_CATEGORY_MAP = {
+    "Import Of Goods": "IMPG",
+    "Import Of Service": "IMPS",
+    "ITC on Reverse Charge": "ISRC",
+    "Input Service Distributor": "ISD",
+    "All Other ITC": "OTH",
+}
+
+# Maps GSTR-3B sub-category labels to the index in itc_rev list (ITC Reversed)
+ITC_REVERSED_INDEX_MAP = {
+    "As per rules 42 & 43 of CGST Rules and section 17(5)": 0,  # ty = "RUL"
+    "Others": 1,
+}
+
 
 class GSTR3BCategoryConditions:
     def is_composition_nil_rated_or_exempted(self, invoice):
