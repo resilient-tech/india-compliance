@@ -1,13 +1,11 @@
+import random
+import string
+
 import frappe
-from erpnext.accounts.doctype.account.test_account import create_account
 from erpnext.accounts.doctype.tax_withholding_category.tax_withholding_category import (
     get_tax_id_for_party,
 )
 from erpnext.accounts.utils import get_fiscal_year
-from erpnext.controllers.tests.test_accounts_controller import (
-    make_customer,
-    make_supplier,
-)
 from frappe.tests import IntegrationTestCase
 from frappe.utils import today
 
@@ -26,19 +24,19 @@ class TestTaxWithholdingCategory(IntegrationTestCase):
         create_tds_setup()
 
     def test_returns_pan_for_supplier(self):
-        pan = "ABCDE1234F"
+        pan = generate_random_pan()
         supplier = create_supplier("_Test TDS Supplier With PAN", pan=pan)
         result = get_tax_id_for_party("Supplier", supplier)
         self.assertEqual(result, pan)
 
     def test_returns_pan_for_customer(self):
-        pan = "XYZAB5678C"
+        pan = generate_random_pan()
         customer = create_customer("_Test TDS Customer With PAN", pan=pan)
         result = get_tax_id_for_party("Customer", customer)
         self.assertEqual(result, pan)
 
     def test_tds_deducted_and_tax_id_set_as_pan(self):
-        pan = "ABCDE1235F"
+        pan = generate_random_pan()
         supplier = create_supplier("_Test TDS PAN Supplier", pan=pan)
         frappe.db.set_value("Supplier", supplier, "tax_withholding_category", CATEGORY)
 
@@ -64,7 +62,7 @@ class TestTaxWithholdingCategory(IntegrationTestCase):
             self.assertEqual(row.tax_id, pan)
 
     def test_threshold_considers_entries_for_parties_with_same_pan(self):
-        pan = "ABCDE4321F"
+        pan = generate_random_pan()
         suffix = frappe.generate_hash(length=6)
 
         supplier_1 = create_supplier(
@@ -120,7 +118,7 @@ class TestTaxWithholdingCategory(IntegrationTestCase):
         self.assertEqual(tds_3, 2000)
 
     def test_ldc_applies_for_party_with_same_pan(self):
-        pan = "ABCDE9876F"
+        pan = generate_random_pan()
         suffix = frappe.generate_hash(length=6)
 
         supplier_1 = create_supplier(
@@ -165,16 +163,36 @@ class TestTaxWithholdingCategory(IntegrationTestCase):
         self.assertEqual(twe_rows[0].lower_deduction_certificate, ldc_doc.name)
 
 
+def create_party(party_type, name, pan=None):
+    party = party_type.lower()
+    if not frappe.db.exists(party_type, name):
+        doc = frappe.new_doc(party_type)
+        doc.update(
+            {
+                f"{party}_name": name,
+                f"{party}_type": "Individual",
+            }
+        )
+        doc.save()
+
+    frappe.db.set_value(party_type, name, "pan", pan)
+    return name
+
+
 def create_supplier(name, pan=None):
-    supplier = make_supplier(name)
-    frappe.db.set_value("Supplier", supplier, "pan", pan)
-    return supplier
+    return create_party("Supplier", name, pan=pan)
+
+
+def generate_random_pan():
+    return (
+        "".join(random.choices(string.ascii_uppercase, k=5))
+        + "".join(random.choices(string.digits, k=4))
+        + random.choice(string.ascii_uppercase)
+    )
 
 
 def create_customer(name, pan=None):
-    customer = make_customer(name)
-    frappe.db.set_value("Customer", customer, "pan", pan)
-    return customer
+    return create_party("Customer", name, pan=pan)
 
 
 def create_lower_deduction_certificate(
@@ -230,6 +248,26 @@ def create_tax_withholding_category(category_name, account_name, **kwargs):
     doc.save()
 
     return doc
+
+
+def create_account(account_name, parent_account, company):
+    company_abbr = frappe.get_cached_value("Company", company, "abbr")
+    account = frappe.db.get_value("Account", f"{account_name} - {company_abbr}")
+    if account:
+        return account
+
+    return (
+        frappe.get_doc(
+            {
+                "doctype": "Account",
+                "account_name": account_name,
+                "parent_account": parent_account,
+                "company": company,
+            }
+        )
+        .insert()
+        .name
+    )
 
 
 def create_tds_setup():
