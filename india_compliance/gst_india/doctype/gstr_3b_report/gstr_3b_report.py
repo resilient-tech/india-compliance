@@ -27,7 +27,11 @@ from india_compliance.gst_india.utils import (
     get_period,
 )
 from india_compliance.gst_india.utils.exporter import ExcelExporter
-from india_compliance.gst_india.utils.gstr3b.gstr3b_data import GSTR3BInvoices
+from india_compliance.gst_india.utils.gstr3b.gstr3b_data import (
+    ITC_AVAILABLE_SUB_CATEGORY_MAP,
+    ITC_REVERSED_INDEX_MAP,
+    GSTR3BInvoices,
+)
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import (
     GSTR1Invoices,
     GSTR11A11BData,
@@ -51,21 +55,6 @@ GST_TREATMENT_SECTION_MAP = {
 INTER_STATE_GST_CATEGORIES = frozenset(
     {"Unregistered", "Registered Composition", "UIN Holders"}
 )
-
-# Maps GSTR-3B sub-category labels to the 'ty' key in the JSON template (ITC Available)
-ITC_AVAILABLE_SUB_CATEGORY_MAP = {
-    "Import Of Goods": "IMPG",
-    "Import Of Service": "IMPS",
-    "ITC on Reverse Charge": "ISRC",
-    "Input Service Distributor": "ISD",
-    "All Other ITC": "OTH",
-}
-
-# Maps GSTR-3B sub-category labels to the index in itc_rev list (ITC Reversed)
-ITC_REVERSED_INDEX_MAP = {
-    "As per rules 42 & 43 of CGST Rules and section 17(5)": 0,  # ty = "RUL"
-    "Others": 1,
-}
 
 # Maps invoice amount fields to JSON key names used in the ITC section
 _ITC_FIELD_MAP = {
@@ -421,7 +410,14 @@ class GSTR3BReport(Document):
 
             if category == "ITC Available":
                 ty = ITC_AVAILABLE_SUB_CATEGORY_MAP.get(sub_category)
-                if ty and ty in avl_by_ty:
+                if not ty:
+                    frappe.logger().warning(
+                        f"GSTR-3B: unknown ITC Available sub-category "
+                        f"{sub_category!r} on {invoice.get('voucher_no')} "
+                        f"— skipped from table 4A"
+                    )
+                    continue
+                if ty in avl_by_ty:
                     for key in VALUES_TO_UPDATE:
                         amount = invoice.get(_ITC_FIELD_MAP[key]) or 0
                         avl_by_ty[ty][key] += amount
@@ -429,12 +425,18 @@ class GSTR3BReport(Document):
 
             elif category == "ITC Reversed":
                 idx = ITC_REVERSED_INDEX_MAP.get(sub_category)
-                if idx is not None:
-                    ty = itc_rev[idx]["ty"]
-                    for key in VALUES_TO_UPDATE:
-                        amount = invoice.get(_ITC_FIELD_MAP[key]) or 0
-                        rev_by_ty[ty][key] += amount
-                        net_itc[key] -= amount
+                if idx is None:
+                    frappe.logger().warning(
+                        f"GSTR-3B: unknown ITC Reversed sub-category "
+                        f"{sub_category!r} on {invoice.get('voucher_no')} "
+                        f"— skipped from table 4B"
+                    )
+                    continue
+                ty = itc_rev[idx]["ty"]
+                for key in VALUES_TO_UPDATE:
+                    amount = invoice.get(_ITC_FIELD_MAP[key]) or 0
+                    rev_by_ty[ty][key] += amount
+                    net_itc[key] -= amount
 
             elif category == "Ineligible ITC":
                 for key in VALUES_TO_UPDATE:
@@ -616,7 +618,6 @@ class GSTR3BExcelExporter:
         "txval": 3,
         "iamt": 4,
         "camt": 5,
-        "samt": 6,
         "csamt": 7,
     }
 
@@ -624,7 +625,6 @@ class GSTR3BExcelExporter:
     ITC_COLUMNS: ClassVar[dict] = {
         "iamt": 3,
         "camt": 4,
-        "samt": 5,
         "csamt": 6,
     }
 
@@ -654,8 +654,8 @@ class GSTR3BExcelExporter:
     }
 
     COLUMN_SETS = {
-        "tax": ["txval", "iamt", "camt", "samt", "csamt"],
-        "itc": ["iamt", "camt", "samt", "csamt"],
+        "tax": ["txval", "iamt", "camt", "csamt"],
+        "itc": ["iamt", "camt", "csamt"],
         "import_itc": ["iamt", "csamt"],
         "inward": ["inter", "intra"],
         "zero_rated": ["txval", "iamt", "csamt"],
