@@ -224,6 +224,38 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
             if data._inward_supply.bill_no == "BILL-24-00001":
                 self.assertEqual(data._purchase_invoice.name, self.pinv.name)
 
+    def test_get_invoice_details_with_none_purchase_name(self):
+        """
+        Regression test: IMS detail view sends purchase_name=None for
+        rows that are missing in purchase invoices.
+        """
+        gst_is = create_gst_inward_supply(
+            bill_no="IMS-GID-001",
+            bill_date="2024-12-12",
+            return_period_2b="122024",
+            gen_date_2b="2024-12-12",
+            previous_ims_action="No Action",
+            ims_action="No Action",
+        )
+
+        gst_ims = frappe.get_doc(
+            {
+                "doctype": "GST Invoice Management System",
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+                "return_period": "122024",
+            }
+        )
+
+        result = gst_ims.get_invoice_details(
+            purchase_name=None,
+            inward_supply_name=gst_is.name,
+        )
+
+        self.assertEqual(result.inward_supply_name, gst_is.name)
+        self.assertEqual(result.match_status, "Missing in PI")
+        self.assertIsNone(result.purchase_invoice_name)
+
     def get_periods(self):
         periods = []
         date = add_to_date(None, months=-1)
