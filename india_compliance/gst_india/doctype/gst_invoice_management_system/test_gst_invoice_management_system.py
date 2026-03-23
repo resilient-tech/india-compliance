@@ -256,6 +256,128 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         self.assertEqual(result.match_status, "Missing in PI")
         self.assertIsNone(result.purchase_invoice_name)
 
+    def test_get_invoice_details_with_none_inward_supply_name(self):
+        """
+        Regression test: detail view can send inward_supply_name=None for
+        rows where a purchase invoice exists but no matching inward supply.
+        """
+        pinv = create_purchase_invoice(
+            bill_no="IMS-GID-002",
+            bill_date="2024-12-12",
+            posting_date="2024-12-12",
+            supplier="_Test Registered Supplier",
+            supplier_gstin="24AABCR6898M1ZN",
+            company="_Test Indian Registered Company",
+            company_gstin="24AAQCA8719H1ZC",
+            items=[
+                {
+                    "item_code": "_Test Trading Goods 1",
+                    "qty": 1,
+                }
+            ],
+        )
+
+        gst_ims = frappe.get_doc(
+            {
+                "doctype": "GST Invoice Management System",
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+                "return_period": "122024",
+            }
+        )
+
+        result = gst_ims.get_invoice_details(
+            purchase_name=pinv.name,
+            inward_supply_name=None,
+        )
+
+        self.assertEqual(result.purchase_invoice_name, pinv.name)
+        self.assertEqual(result.match_status, "Missing in 2A/2B")
+        self.assertIsNone(result.inward_supply_name)
+
+    def test_link_documents_with_none_purchase_invoice_name(self):
+        """
+        Regression test: link_documents should be a no-op when
+        purchase_invoice_name is None.
+        """
+        gst_is = create_gst_inward_supply(
+            bill_no="IMS-GID-003",
+            bill_date="2024-12-12",
+            return_period_2b="122024",
+            gen_date_2b="2024-12-12",
+            previous_ims_action="No Action",
+            ims_action="No Action",
+        )
+
+        gst_ims = frappe.get_doc(
+            {
+                "doctype": "GST Invoice Management System",
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+                "return_period": "122024",
+            }
+        )
+
+        result = gst_ims.link_documents(
+            purchase_invoice_name=None,
+            inward_supply_name=gst_is.name,
+            link_doctype="Purchase Invoice",
+        )
+
+        self.assertIsNone(
+            frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name")
+        )
+        self.assertTrue(any(row.inward_supply_name == gst_is.name for row in result))
+
+    def test_link_documents_with_none_link_doctype(self):
+        """
+        Regression test: link_documents should be a no-op when
+        link_doctype is None.
+        """
+        pinv = create_purchase_invoice(
+            bill_no="IMS-GID-004",
+            bill_date="2024-12-12",
+            posting_date="2024-12-12",
+            supplier="_Test Registered Supplier",
+            supplier_gstin="24AABCR6898M1ZN",
+            company="_Test Indian Registered Company",
+            company_gstin="24AAQCA8719H1ZC",
+            items=[
+                {
+                    "item_code": "_Test Trading Goods 1",
+                    "qty": 1,
+                }
+            ],
+        )
+        gst_is = create_gst_inward_supply(
+            bill_no="IMS-GID-004",
+            bill_date="2024-12-12",
+            return_period_2b="122024",
+            gen_date_2b="2024-12-12",
+            previous_ims_action="No Action",
+            ims_action="No Action",
+        )
+
+        gst_ims = frappe.get_doc(
+            {
+                "doctype": "GST Invoice Management System",
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+                "return_period": "122024",
+            }
+        )
+
+        result = gst_ims.link_documents(
+            purchase_invoice_name=pinv.name,
+            inward_supply_name=gst_is.name,
+            link_doctype=None,
+        )
+
+        self.assertIsNone(
+            frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name")
+        )
+        self.assertTrue(any(row.inward_supply_name == gst_is.name for row in result))
+
     def get_periods(self):
         periods = []
         date = add_to_date(None, months=-1)
