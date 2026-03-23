@@ -33,6 +33,7 @@ class TestGSTR3BReport(IntegrationTestCase):
         for doctype in (
             "Sales Invoice",
             "Purchase Invoice",
+            "Bill of Entry",
             "GSTR 3B Report",
             "Journal Entry",
             "Bill of Entry",
@@ -211,6 +212,54 @@ class TestGSTR3BReport(IntegrationTestCase):
 
         gst_settings.round_off_gst_values = 1
         gst_settings.save()
+
+    @change_settings(
+        "GST Settings",
+        {"enable_overseas_transactions": 1, "round_off_gst_values": 0},
+    )
+    def test_bill_of_entry_impg_itc_in_gstr3b(self):
+        """
+        A submitted Bill of Entry should contribute IGST to IMPG (Import Of Goods)
+        in GSTR-3B table 4A (ITC Available) and table 4C (Net ITC).
+
+        Setup:
+          PI from _Test Foreign Supplier, rate=100, qty=1 (item value = 100)
+          BOE from above PI with customs_duty=100
+          Assessable value = 100 (item) + 100 (customs) = 200
+          IGST @18% = 36
+        """
+        pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
+
+        boe = make_bill_of_entry(pi.name)
+        boe.items[0].customs_duty = 100
+        boe.bill_of_entry_no = frappe.generate_hash(length=5)
+        boe.bill_of_entry_date = getdate()
+        boe.save()
+        boe.submit()
+
+        today = getdate()
+        report = frappe.get_doc(
+            {
+                "doctype": "GSTR 3B Report",
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+                "year": today.year,
+                "month_or_quarter": get_month(today),
+            }
+        ).insert()
+
+        output = json.loads(report.json_output)
+
+        # Table 4A — ITC Available: IMPG should carry IGST from the BOE
+        impg = next(d for d in output["itc_elg"]["itc_avl"] if d["ty"] == "IMPG")
+        self.assertEqual(impg["iamt"], 36.0)  # 18% of (100 taxable + 100 customs)
+        self.assertEqual(impg["camt"], 0.0)
+        self.assertEqual(impg["samt"], 0.0)
+        self.assertEqual(impg["csamt"], 0.0)
+
+        # Table 4C — Net ITC must include the IMPG IGST
+        net_itc = output["itc_elg"]["itc_net"]
+        self.assertEqual(net_itc["iamt"], 36.0)
 
     def test_itc_reversal_journal_entry_is_included_in_gstr_3b(self):
         journal_entry = create_itc_reversal_journal_entry()
