@@ -24,19 +24,19 @@ class TestTaxWithholdingCategory(IntegrationTestCase):
         create_tds_setup()
 
     def test_returns_pan_for_supplier(self):
-        pan = generate_random_pan()
+        pan = generate_unique_pan()
         supplier = create_supplier("_Test TDS Supplier With PAN", pan=pan)
         result = get_tax_id_for_party("Supplier", supplier)
         self.assertEqual(result, pan)
 
     def test_returns_pan_for_customer(self):
-        pan = generate_random_pan()
+        pan = generate_unique_pan()
         customer = create_customer("_Test TDS Customer With PAN", pan=pan)
         result = get_tax_id_for_party("Customer", customer)
         self.assertEqual(result, pan)
 
     def test_tds_deducted_and_tax_id_set_as_pan(self):
-        pan = generate_random_pan()
+        pan = generate_unique_pan()
         supplier = create_supplier("_Test TDS PAN Supplier", pan=pan)
         frappe.db.set_value("Supplier", supplier, "tax_withholding_category", CATEGORY)
 
@@ -62,7 +62,7 @@ class TestTaxWithholdingCategory(IntegrationTestCase):
             self.assertEqual(row.tax_id, pan)
 
     def test_threshold_considers_entries_for_parties_with_same_pan(self):
-        pan = generate_random_pan()
+        pan = generate_unique_pan()
         suffix = frappe.generate_hash(length=6)
 
         supplier_1 = create_supplier(
@@ -118,7 +118,7 @@ class TestTaxWithholdingCategory(IntegrationTestCase):
         self.assertEqual(tds_3, 2000)
 
     def test_ldc_applies_for_party_with_same_pan(self):
-        pan = generate_random_pan()
+        pan = generate_unique_pan()
         suffix = frappe.generate_hash(length=6)
 
         supplier_1 = create_supplier(
@@ -183,12 +183,27 @@ def create_supplier(name, pan=None):
     return create_party("Supplier", name, pan=pan)
 
 
-def generate_random_pan():
-    return (
-        "".join(random.choices(string.ascii_uppercase, k=5))
-        + "".join(random.choices(string.digits, k=4))
-        + random.choice(string.ascii_uppercase)
+def generate_unique_pan():
+    existing_pans = frappe.get_all(
+        "Supplier", pluck="pan", filters={"pan": ("is", "set")}
     )
+    existing_pans += frappe.get_all(
+        "Customer", pluck="pan", filters={"pan": ("is", "set")}
+    )
+    existing_pans = set(existing_pans)
+
+    for _ in range(100):
+        letters = "".join(random.choices(string.ascii_uppercase, k=5))
+        digits = "".join(random.choices(string.digits, k=4))
+        suffix = random.choice(string.ascii_uppercase)
+        pan = f"{letters}{digits}{suffix}"
+
+        if pan not in existing_pans:
+            return pan
+
+        existing_pans.add(pan)
+
+    raise RuntimeError("Unable to generate unique PAN")
 
 
 def create_customer(name, pan=None):
