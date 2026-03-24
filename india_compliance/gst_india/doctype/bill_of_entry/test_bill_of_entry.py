@@ -3,11 +3,11 @@
 
 import json
 import re
+import unittest.mock as mock
 
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import today
-from erpnext.projects.doctype.project.test_project import make_project
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     get_pi_items,
@@ -19,6 +19,11 @@ from india_compliance.gst_india.overrides.test_transaction import create_cess_ac
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 from india_compliance.gst_india.utils.itc_claim import format_period
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
+
+with mock.patch("frappe.db"), mock.patch("frappe.new_doc"), mock.patch(
+    "frappe.get_doc"
+):
+    from erpnext.projects.doctype.project.test_project import make_project
 
 IGNORE_TEST_RECORD_DEPENDENCIES = [
     "Bill of Entry",
@@ -311,7 +316,6 @@ class TestBillofEntry(IntegrationTestCase):
 
     def test_project_in_gl_entries(self):
         """Test that project from Purchase Invoice is auto-copied to Bill of Entry and passed to GL Entry"""
-
         project = make_project(
             {
                 "project_name": "_Test BOE Project",
