@@ -315,6 +315,7 @@ class GSTR3BReport(Document):
                     IfNull(purchase_invoice.ineligibility_reason, "")
                     != "ITC restricted due to PoS rules"
                 )  # Ignore as it is Ineligible for ITC
+                & (purchase_invoice.is_boe_applicable == 0)
             )
             .groupby(purchase_invoice.itc_classification)
         )

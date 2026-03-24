@@ -10,6 +10,7 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import today
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
+    fetch_pending_boe_invoices,
     get_pi_items,
     make_bill_of_entry,
     make_journal_entry_for_payment,
@@ -446,3 +447,29 @@ class TestBillofEntry(IntegrationTestCase):
         boe.cancel()
         pi.reload()
         self.assertEqual(pi.items[0].pending_boe_qty, 2)
+
+    def test_unchecked_boe_applicable_excludes_invoice_from_boe(self):
+        pi = create_purchase_invoice(
+            supplier="_Test Foreign Supplier",
+            update_stock=1,
+            do_not_save=True,
+            do_not_submit=True,
+        )
+        pi.is_boe_applicable = 0
+        pi.insert()
+        pi.submit()
+
+        pi.reload()
+        self.assertEqual(pi.items[0].pending_boe_qty, 0)
+        self.assertEqual(get_pi_items([pi.name]), [])
+
+        pending_invoices = fetch_pending_boe_invoices(
+            doctype="Purchase Invoice",
+            txt="",
+            searchfield="name",
+            start=0,
+            page_len=20,
+            filters={},
+        )
+
+        self.assertNotIn(pi.name, [invoice.name for invoice in pending_invoices])

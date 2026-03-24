@@ -42,6 +42,7 @@ from india_compliance.gst_india.constants import (
     SERVICE_HSN_PREFIX,
     STATE_NUMBERS,
     STATE_PINCODE_MAPPING,
+    TAX_TYPES,
     TCS,
     TIMEZONE,
     UOM_MAP,
@@ -1294,3 +1295,7 @@ def set_ewaybill_status(
         return
 
     doc.db_set("e_waybill_status", status, commit=commit, notify=notify)
+
+
+def has_gst_taxes(doc):
+    return any(row.gst_tax_type in TAX_TYPES for row in doc.taxes)

@@ -176,6 +176,7 @@ doc_events = {
             "india_compliance.gst_india.overrides.purchase_invoice.onload",
             "india_compliance.gst_india.overrides.transaction.onload",
         ],
+        "before_insert": "india_compliance.gst_india.overrides.purchase_invoice.before_insert",
         "before_print": "india_compliance.gst_india.overrides.transaction.before_print",
         "before_validate": [
             "india_compliance.gst_india.overrides.transaction.before_validate_transaction",

@@ -241,7 +241,6 @@ class TestGSTPurchaseRegister(IntegrationTestCase):
 def _create_journal_entry(
     posting_date, voucher_type, tax_amount, ineligibility_reason=""
 ):
-
     if voucher_type == "Reclaim of ITC Reversal":
         accounts = [
             {

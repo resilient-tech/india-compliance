@@ -1032,6 +1032,16 @@ CUSTOM_FIELDS = {
             "description": "GSTR-3B period for claiming ITC (MMYYYY) or 'Deferred' to postpone.",
             "allow_on_submit": 1,
         },
+        {
+            "fieldname": "is_boe_applicable",
+            "label": "Is BOE Applicable",
+            "fieldtype": "Check",
+            "insert_after": "is_reverse_charge",
+            "print_hide": 1,
+            "default": 0,
+            "allow_on_submit": 1,
+            "depends_on": 'eval:doc.gst_category == "Overseas" || doc.gst_category == "SEZ"',
+        },
     ],
     "Purchase Invoice Item": [
         {

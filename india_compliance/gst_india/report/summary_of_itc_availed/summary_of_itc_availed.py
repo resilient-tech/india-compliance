@@ -140,7 +140,7 @@ class ITCAvailedData:
             .where(
                 (doc.company_gstin != IfNull(doc.supplier_gstin, ""))
                 & (doc.is_opening == "No")
-                & (IfNull(doc.itc_classification, "") != "Import Of Goods")
+                & (doc.is_boe_applicable == 0)
             )
         )
 

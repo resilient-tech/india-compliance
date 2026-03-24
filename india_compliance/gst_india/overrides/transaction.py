@@ -12,6 +12,7 @@ from india_compliance.gst_india.constants import (
     GST_RCM_TAX_TYPES,
     GST_REFUND_TAX_TYPES,
     GST_TAX_TYPES,
+    IMPORT_GST_CATEGORIES,
     SALES_DOCTYPES,
     STATE_NUMBERS,
     SUBCONTRACTING_DOCTYPES,
@@ -31,6 +32,7 @@ from india_compliance.gst_india.utils import (
     get_hsn_settings,
     get_place_of_supply,
     get_place_of_supply_options,
+    has_gst_taxes,
     is_overseas_doc,
     join_list_with_custom_separators,
     validate_gst_category,
@@ -909,6 +911,11 @@ def get_gst_details(
             party_details.update(is_reverse_charge)
             gst_details.update(is_reverse_charge)
 
+    if doctype == "Purchase Invoice":
+        gst_details.is_boe_applicable = cint(
+            party_details.get("gst_category") in IMPORT_GST_CATEGORIES
+        )
+
     if doctype == "Payment Entry":
         return gst_details
 
@@ -1438,8 +1445,6 @@ class ItemGSTTreatment:
             self.set_for_overseas()
             return
 
-        has_gst_accounts = any(row.gst_tax_type in TAX_TYPES for row in self.doc.taxes)
-
         if self.doc.get("itc_classification") in (
             "Import Of Goods",
             "Import Of Service",
@@ -1447,7 +1452,7 @@ class ItemGSTTreatment:
             self.set_for_import_transactions()
             return
 
-        if not has_gst_accounts:
+        if not has_gst_taxes(self.doc):
             self.set_for_no_taxes()
             return
 

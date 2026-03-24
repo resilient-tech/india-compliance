@@ -20,6 +20,119 @@ with mock.patch("frappe.db"), mock.patch("frappe.new_doc"), mock.patch(
 
 class TestPurchaseInvoice(IntegrationTestCase):
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_boe_applicable_disallows_gst_taxes(self):
+        pinv = create_purchase_invoice(
+            supplier="_Test Foreign Supplier",
+            do_not_save=1,
+            do_not_submit=1,
+        )
+
+        pinv.taxes = []
+        pinv.append(
+            "taxes",
+            {
+                "charge_type": "On Net Total",
+                "account_head": "Input Tax IGST - _TIRC",
+                "rate": 18,
+                "description": "Input Tax IGST",
+                "cost_center": "Main - _TIRC",
+                "tax_amount": 18,
+                "base_tax_amount": 18,
+                "base_tax_amount_after_discount_amount": 18,
+                "gst_tax_type": "igst",
+            },
+        )
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            "GST taxes cannot be applied when.*BOE Applicable.*is enabled",
+            pinv.save,
+        )
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_import_of_goods_with_gst_taxes_and_boe_unchecked_is_allowed(self):
+        pinv = create_purchase_invoice(
+            supplier="_Test Foreign Supplier",
+            do_not_save=1,
+            do_not_submit=1,
+        )
+
+        pinv.is_boe_applicable = 0
+        pinv.taxes = []
+        pinv.append(
+            "taxes",
+            {
+                "charge_type": "On Net Total",
+                "account_head": "Input Tax IGST - _TIRC",
+                "rate": 18,
+                "description": "Input Tax IGST",
+                "cost_center": "Main - _TIRC",
+                "tax_amount": 18,
+                "base_tax_amount": 18,
+                "base_tax_amount_after_discount_amount": 18,
+                "gst_tax_type": "igst",
+            },
+        )
+
+        pinv.save()
+
+        self.assertEqual(pinv.itc_classification, "Import Of Goods")
+        self.assertEqual(pinv.is_boe_applicable, 0)
+        self.assertEqual(pinv.items[0].pending_boe_qty, 0)
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_boe_applicability_default_and_override(self):
+        pinv = create_purchase_invoice(
+            supplier="_Test Foreign Supplier",
+            do_not_submit=1,
+        )
+        self.assertEqual(pinv.itc_classification, "Import Of Goods")
+        self.assertEqual(pinv.is_boe_applicable, 1)
+        self.assertEqual(pinv.items[0].pending_boe_qty, pinv.items[0].qty)
+
+        # User overrides after insert
+        pinv.is_boe_applicable = 0
+        pinv.save()
+
+        self.assertEqual(pinv.itc_classification, "Import Of Goods")
+        self.assertEqual(pinv.is_boe_applicable, 0)
+        self.assertEqual(pinv.items[0].pending_boe_qty, 0)
+
+        # User override should not be auto-reset on subsequent saves.
+        pinv.save()
+        self.assertEqual(pinv.is_boe_applicable, 0)
+        self.assertEqual(pinv.items[0].pending_boe_qty, 0)
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_boe_applicability_user_override_before_insert(self):
+        """User unchecks is_boe_applicable before first save — flag prevents before_insert override."""
+        pinv = create_purchase_invoice(
+            supplier="_Test Foreign Supplier",
+            do_not_save=1,
+            do_not_submit=1,
+        )
+        pinv.is_boe_applicable = 0
+        pinv._user_set_boe_applicable = 1
+        pinv.insert()
+
+        self.assertEqual(pinv.itc_classification, "Import Of Goods")
+        self.assertEqual(pinv.is_boe_applicable, 0)
+        self.assertEqual(pinv.items[0].pending_boe_qty, 0)
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_boe_applicability_auto_uncheck_when_not_import_of_goods(self):
+        """is_boe_applicable should auto-uncheck when itc_classification is not Import Of Goods."""
+        pinv = create_purchase_invoice(
+            supplier="_Test Foreign Supplier",
+            item_code="_Test Service Item",
+            do_not_submit=1,
+        )
+        # before_insert sets is_boe_applicable=1 for import category,
+        # but validate auto-unchecks it because itc_classification is Import Of Service
+        self.assertEqual(pinv.itc_classification, "Import Of Service")
+        self.assertEqual(pinv.is_boe_applicable, 0)
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_itc_classification(self):
         pinv = create_purchase_invoice(
             supplier="_Test Foreign Supplier",

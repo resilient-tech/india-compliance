@@ -155,6 +155,10 @@ async function update_gst_details(frm, event) {
             frm.doc.purpose === "Material Transfer" && frm.doc.is_return;
     } else {
         fieldnames_to_set.push("supplier_address", "supplier_gstin");
+
+        if (frm.doc.doctype === "Purchase Invoice") {
+            fieldnames_to_set.push("is_boe_applicable");
+        }
     }
 
     for (const fieldname of fieldnames_to_set) {
