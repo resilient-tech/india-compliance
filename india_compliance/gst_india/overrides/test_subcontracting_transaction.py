@@ -1,4 +1,5 @@
 import re
+import unittest.mock as mock
 
 import frappe
 from frappe.tests import IntegrationTestCase
@@ -6,14 +7,20 @@ from erpnext.controllers.subcontracting_controller import (
     get_materials_from_supplier,
     make_rm_stock_entry,
 )
-from erpnext.controllers.tests.test_subcontracting_controller import get_rm_items
-from erpnext.manufacturing.doctype.production_plan.test_production_plan import make_bom
 from erpnext.subcontracting.doctype.subcontracting_order.subcontracting_order import (
     make_subcontracting_receipt,
 )
-from erpnext.subcontracting.doctype.subcontracting_order.test_subcontracting_order import (
-    create_subcontracting_order,
-)
+
+with mock.patch("frappe.db"), mock.patch("frappe.new_doc"), mock.patch(
+    "frappe.get_doc"
+):
+    from erpnext.controllers.tests.test_subcontracting_controller import get_rm_items
+    from erpnext.manufacturing.doctype.production_plan.test_production_plan import (
+        make_bom,
+    )
+    from erpnext.subcontracting.doctype.subcontracting_order.test_subcontracting_order import (
+        create_subcontracting_order,
+    )
 
 from india_compliance.gst_india.utils.tests import create_transaction
 
