@@ -33,29 +33,15 @@ class TestPurchaseInvoice(IntegrationTestCase):
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_boe_applicability_auto_set_with_gst_taxes(self):
-        """Import Of Goods with GST taxes → is_boe_applicable auto-set to 0."""
+        """Import Of Goods (SEZ) with GST taxes → is_boe_applicable auto-set to 0."""
+        # Use SEZ registered supplier: has GSTIN + itc_classification = Import Of Goods
         pinv = create_purchase_invoice(
-            supplier="_Test Foreign Supplier",
+            supplier="_Test Registered Supplier",
             do_not_save=1,
             do_not_submit=1,
+            is_out_state=True,
         )
-
-        pinv.taxes = []
-        pinv.append(
-            "taxes",
-            {
-                "charge_type": "On Net Total",
-                "account_head": "Input Tax IGST - _TIRC",
-                "rate": 18,
-                "description": "Input Tax IGST",
-                "cost_center": "Main - _TIRC",
-                "tax_amount": 18,
-                "base_tax_amount": 18,
-                "base_tax_amount_after_discount_amount": 18,
-                "gst_tax_type": "igst",
-            },
-        )
-
+        pinv.gst_category = "SEZ"
         pinv.save()
 
         self.assertEqual(pinv.itc_classification, "Import Of Goods")

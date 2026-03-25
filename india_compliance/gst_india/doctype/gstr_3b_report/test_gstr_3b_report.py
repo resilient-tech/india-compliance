@@ -368,15 +368,16 @@ class TestGSTR3BReport(IntegrationTestCase):
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_itc_from_pi_when_boe_not_applicable(self):
         """When is_boe_applicable=0, ITC should be reported from Purchase Invoice directly"""
+        # Use SEZ registered supplier: has GSTIN + itc_classification = Import Of Goods
+        # GST taxes on PI → is_boe_applicable auto-set to 0 (no BOE needed)
         pi = create_purchase_invoice(
-            supplier="_Test Foreign Supplier",
+            supplier="_Test Registered Supplier",
             update_stock=1,
             is_out_state=True,
             do_not_save=1,
             do_not_submit=1,
         )
-        # Manually set is_boe_applicable=0 to skip BOE path
-        pi.is_boe_applicable = 0
+        pi.gst_category = "SEZ"
         pi.insert()
         pi.submit()
 
