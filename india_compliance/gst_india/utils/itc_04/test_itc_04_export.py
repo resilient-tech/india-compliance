@@ -1,14 +1,20 @@
+import unittest.mock as mock
+
 from frappe.tests import IntegrationTestCase
-from erpnext.accounts.doctype.payment_reconciliation.test_payment_reconciliation import (
-    create_fiscal_year,
-)
-from erpnext.controllers.tests.test_subcontracting_controller import get_rm_items
 from erpnext.subcontracting.doctype.subcontracting_order.subcontracting_order import (
     make_subcontracting_receipt,
 )
-from erpnext.subcontracting.doctype.subcontracting_order.test_subcontracting_order import (
-    create_subcontracting_order,
-)
+
+with mock.patch("frappe.db"), mock.patch("frappe.new_doc"), mock.patch(
+    "frappe.get_doc"
+):
+    from erpnext.accounts.doctype.payment_reconciliation.test_payment_reconciliation import (
+        create_fiscal_year,
+    )
+    from erpnext.controllers.tests.test_subcontracting_controller import get_rm_items
+    from erpnext.subcontracting.doctype.subcontracting_order.test_subcontracting_order import (
+        create_subcontracting_order,
+    )
 
 from india_compliance.gst_india.overrides.test_subcontracting_transaction import (
     create_purchase_order,
