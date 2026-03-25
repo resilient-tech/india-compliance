@@ -37,9 +37,7 @@ PURCHASE_CATEGORY_CONDITIONS = {
 
 _pc_keys = list(PURCHASE_CATEGORY_CONDITIONS)
 if _pc_keys.index("ITC Reversed") <= _pc_keys.index("ITC Available"):
-    raise ValueError(
-        "PURCHASE_CATEGORY_CONDITIONS: 'ITC Reversed' must come after 'ITC Available'"
-    )
+    raise ValueError("PURCHASE_CATEGORY_CONDITIONS: 'ITC Reversed' must come after 'ITC Available'")
 del _pc_keys
 
 BOE_CATEGORY_CONDITIONS = {
@@ -114,9 +112,21 @@ class GSTR3BCategoryConditions:
         # let it fall silently into ITC Available (table 4A).  The caller in
         # get_processed_invoices will instead track it as an unmatched voucher
         # so it surfaces in the missing-field invoice list.
+        #
+        # Overseas nil-rated / exempted / non-GST items carry no ITC and are
+        # excluded from table 5 too (Overseas explicitly filtered there), so
+        # they must not appear anywhere in the 3B report.  Without this guard
+        # they would leak into ITC Available via the bool(gst_treatment) check,
+        # whereas the old get_itc_details query excluded them because their
+        # itc_classification was blank.
+        if invoice.gst_category == "Overseas" and invoice.gst_treatment in (
+            "Nil-Rated",
+            "Exempted",
+            "Non-GST",
+        ):
+            return False
         return (
-            bool(invoice.gst_treatment)
-            and invoice.ineligibility_reason != "ITC restricted due to PoS rules"
+            bool(invoice.gst_treatment) and invoice.ineligibility_reason != "ITC restricted due to PoS rules"
         )
 
     def is_itc_reversed(self, invoice):
@@ -172,9 +182,7 @@ class GSTR3BSubcategory(GSTR3BCategoryConditions):
         present on BOE rows — the shared method only happened to produce the
         correct result because None != "Others".
         """
-        invoice.invoice_sub_category = (
-            "As per rules 42 & 43 of CGST Rules and section 17(5)"
-        )
+        invoice.invoice_sub_category = "As per rules 42 & 43 of CGST Rules and section 17(5)"
 
     def set_for_itc_reversed_je(self, invoice):
         """
@@ -438,7 +446,26 @@ class GSTR3BInvoices(GSTR3BQuery, GSTR3BSubcategory):
     def update_tax_values(self, invoice):
         inter = intra = 0
 
-        if is_inter_state_supply(invoice):
+        # Construct an explicit doc so is_inter_state_supply() uses the correct
+        # purchase-side source-state logic (supplier_gstin / supplier_address
+        # lookup) rather than silently falling through with an unset doctype.
+        # Without doctype, get_source_state_code() can only reach its final
+        # fallback branch, which happens to be correct for most PI rows, but
+        # breaks for Unregistered suppliers whose state must be resolved from
+        # the supplier_address record, and could break if the function ever
+        # adds a None-doctype branch.
+        doc = frappe._dict(
+            {
+                "doctype": "Purchase Invoice",
+                "gst_category": invoice.get("gst_category", ""),
+                "place_of_supply": invoice.get("place_of_supply", ""),
+                "company_gstin": invoice.get("company_gstin", ""),
+                "supplier_gstin": invoice.get("supplier_gstin", ""),
+                "supplier_address": invoice.get("supplier_address", ""),
+            }
+        )
+
+        if is_inter_state_supply(doc):
             inter = invoice.taxable_value
         else:
             intra = invoice.taxable_value
@@ -496,9 +523,9 @@ class GSTR3BInvoices(GSTR3BQuery, GSTR3BSubcategory):
                 for field in AMOUNT_FIELDS:
                     # Use .get() on both sides: Journal Entry rows do not
                     # carry taxable_value, so a plain [] access raises KeyError.
-                    invoice_wise_data[key][field] = invoice_wise_data[key].get(
+                    invoice_wise_data[key][field] = invoice_wise_data[key].get(field, 0) + invoice.get(
                         field, 0
-                    ) + invoice.get(field, 0)
+                    )
 
         return list(invoice_wise_data.values())
 
