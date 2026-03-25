@@ -129,7 +129,7 @@ def set_boe_applicability(doc):
     doc.is_boe_applicable = boe_applicability
     frappe.msgprint(
         _("{0} has been {1}.").format(
-            get_label(doc, "is_boe_applicable"),
+            frappe.bold(_(doc.meta.get_label("is_boe_applicable"))),
             _("enabled") if boe_applicability else _("disabled"),
         ),
         alert=True,
@@ -276,10 +276,6 @@ def get_tax_amount(taxes, gst_tax_type):
         for tax in taxes
         if tax.gst_tax_type == gst_tax_type
     )
-
-
-def get_label(doc, fieldname):
-    return frappe.bold(_(doc.meta.get_label(fieldname)))
 
 
 def set_ineligibility_reason(doc, show_alert=True):
