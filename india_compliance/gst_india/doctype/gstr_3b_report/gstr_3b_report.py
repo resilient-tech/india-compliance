@@ -118,6 +118,11 @@ class GSTR3BReport(Document):
             gstr3b_filters = self._get_gstr3b_filters()
             gstr3b = GSTR3BInvoices(gstr3b_filters)
             pi_items = gstr3b.get_data("Purchase Invoice", group_by_invoice=False)
+            # Preserve any PI vouchers that had no matching category (e.g. items
+            # with a blank gst_treatment) so they appear in missing_field_invoices.
+            self._unmatched_purchase_vouchers = getattr(
+                gstr3b, "_unmatched_vouchers", set()
+            )
 
             # Tables 3.1 (outward), 3.1.1 (eco), 3.2 (inter-state)
             # Source: GSTR1Invoices (Sales Invoice data)
@@ -239,10 +244,14 @@ class GSTR3BReport(Document):
 
                 if invoice.is_reverse_charge and invoice.ecommerce_gstin:
                     eco_taxable_value += taxable_value
-                else:
-                    self._update_inter_state_supply(
-                        invoice, taxable_value, inter_state_supply
-                    )
+                    continue  # eco-RC supplies deducted from 3.1(a); excluded from 3.2
+
+                # Section 3.2 is "of the supplies shown in 3.1(a)" — only taxable
+                # outward supplies (osup_det) are in scope.  Nil-Rated, Exempted,
+                # Zero-Rated and Non-GST supplies must NOT appear in 3.2.
+                self._update_inter_state_supply(
+                    invoice, taxable_value, inter_state_supply
+                )
 
             elif gst_treatment == "Zero-Rated":
                 section["iamt"] += invoice.igst_amount or 0
@@ -273,6 +282,7 @@ class GSTR3BReport(Document):
 
         doc = frappe._dict(
             {
+                "doctype": "Sales Invoice",
                 "gst_category": gst_category,
                 "place_of_supply": place_of_supply,
                 "company_gstin": invoice.company_gstin,
@@ -292,7 +302,8 @@ class GSTR3BReport(Document):
             },
         )
         inter_state_supply[key]["txval"] += taxable_value
-        inter_state_supply[key]["iamt"] += invoice.igst_amount or 0
+        if not invoice.is_reverse_charge:
+            inter_state_supply[key]["iamt"] += invoice.igst_amount or 0
 
     def set_inter_state_supply(self, inter_state_supply):
         inter_state_supply_map = {
@@ -328,6 +339,14 @@ class GSTR3BReport(Document):
             if not item.get("is_reverse_charge"):
                 continue
             if item.get("invoice_category") == "ITC Reversed":
+                continue
+            # Nil/exempt/composition and non-GST items on an RC PI belong to
+            # table 5 only (process_inward_nil_exempt).  Including them here
+            # would double-count the same supply in both 3.1(d) and table 5.
+            if item.get("invoice_category") in (
+                "Composition Scheme, Exempted, Nil Rated",
+                "Non-GST",
+            ):
                 continue
             section["txval"] += item.taxable_value or 0
             section["iamt"] += item.igst_amount or 0
@@ -459,10 +478,16 @@ class GSTR3BReport(Document):
         invoices = pi_items
 
         isup_details = self.report_dict["inward_sup"]["isup_details"]
-        gst_entry = next((d for d in isup_details if d["ty"] == "GST"), isup_details[0])
-        non_gst_entry = next(
-            (d for d in isup_details if d["ty"] == "NONGST"), isup_details[1]
-        )
+        gst_entry = next((d for d in isup_details if d["ty"] == "GST"), None)
+        non_gst_entry = next((d for d in isup_details if d["ty"] == "NONGST"), None)
+        if gst_entry is None or non_gst_entry is None:
+            frappe.throw(
+                _(
+                    "GSTR-3B report template is missing required inward supply "
+                    "entries (expected ty='GST' and ty='NONGST'). "
+                    "Please regenerate the report or contact support."
+                )
+            )
 
         for invoice in invoices:
             category = invoice.get("invoice_category")
@@ -504,6 +529,14 @@ class GSTR3BReport(Document):
         missing_field_invoices.extend(
             inv
             for inv in getattr(self, "_not_defined_invoices", set())
+            if inv not in missing_set
+        )
+        # Refresh the dedup-set before adding the next source so that an invoice
+        # already added via _not_defined_invoices is not emitted again.
+        missing_set = set(missing_field_invoices)
+        missing_field_invoices.extend(
+            inv
+            for inv in getattr(self, "_unmatched_purchase_vouchers", set())
             if inv not in missing_set
         )
 
@@ -602,6 +635,8 @@ class GSTR3BExcelExporter:
         "itc_others": 35,
         "itc_reversed_rules": 37,
         "itc_reversed_others": 38,
+        "itc_reclaimed": 41,
+        "itc_ineligible": 42,
         # Section 5 - Inward supplies
         "inward_gst": 48,
         "inward_non_gst": 49,
@@ -618,6 +653,7 @@ class GSTR3BExcelExporter:
         "txval": 3,
         "iamt": 4,
         "camt": 5,
+        "samt": 6,
         "csamt": 7,
     }
 
@@ -625,6 +661,7 @@ class GSTR3BExcelExporter:
     ITC_COLUMNS: ClassVar[dict] = {
         "iamt": 3,
         "camt": 4,
+        "samt": 5,
         "csamt": 6,
     }
 
@@ -653,9 +690,14 @@ class GSTR3BExcelExporter:
         "NONGST": "inward_non_gst",
     }
 
+    ITC_INELIGIBLE_TYPES = {
+        "RUL": "itc_reclaimed",
+        "OTH": "itc_ineligible",
+    }
+
     COLUMN_SETS = {
-        "tax": ["txval", "iamt", "camt", "csamt"],
-        "itc": ["iamt", "camt", "csamt"],
+        "tax": ["txval", "iamt", "camt", "samt", "csamt"],
+        "itc": ["iamt", "camt", "samt", "csamt"],
         "import_itc": ["iamt", "csamt"],
         "inward": ["inter", "intra"],
         "zero_rated": ["txval", "iamt", "csamt"],
@@ -699,8 +741,11 @@ class GSTR3BExcelExporter:
         if not period or len(period) < 6:
             return
 
-        month_num = int(period[:2])
-        calendar_year = int(period[2:6])
+        try:
+            month_num = int(period[:2])
+            calendar_year = int(period[2:6])
+        except ValueError:
+            return
 
         self.month = calendar.month_name[month_num]
         self.fiscal_year = self._get_fiscal_year(month_num, calendar_year)
@@ -745,7 +790,10 @@ class GSTR3BExcelExporter:
         if not pos_data:
             return
 
+        max_rows = len(self._STATE_CODE_TO_NAME)
         for i, (pos, data) in enumerate(sorted(pos_data.items())):
+            if i >= max_rows:
+                break
             row = self.ROWS["inter_state_start"] + i
             self._set_inter_state_row(row, pos, data)
 
@@ -792,6 +840,9 @@ class GSTR3BExcelExporter:
         itc_elg = self.data.get("itc_elg", {})
         self._populate_itc_sections(itc_elg.get("itc_avl", []), self.ITC_AVAILABLE_TYPES)
         self._populate_itc_sections(itc_elg.get("itc_rev", []), self.ITC_REVERSED_TYPES)
+        self._populate_itc_sections(
+            itc_elg.get("itc_inelg", []), self.ITC_INELIGIBLE_TYPES
+        )
 
     def _populate_itc_sections(self, itc_entries, type_mapping):
         for itc_entry in itc_entries:
@@ -825,8 +876,13 @@ class GSTR3BExcelExporter:
 
     def _set_cell(self, row, column, value):
         cell = self.worksheet.cell(row, column)
-        if not isinstance(cell, MergedCell):
-            cell.value = value
+        if isinstance(cell, MergedCell):
+            return
+        # Preserve template formulas (e.g. SGST = CGST mirror cells);
+        # only write to plain-value cells.
+        if isinstance(cell.value, str) and cell.value.startswith("="):
+            return
+        cell.value = value
 
     @classmethod
     def _format_place_of_supply(cls, state_code):

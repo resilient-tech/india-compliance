@@ -35,6 +35,13 @@ PURCHASE_CATEGORY_CONDITIONS = {
     },
 }
 
+_pc_keys = list(PURCHASE_CATEGORY_CONDITIONS)
+if _pc_keys.index("ITC Reversed") <= _pc_keys.index("ITC Available"):
+    raise ValueError(
+        "PURCHASE_CATEGORY_CONDITIONS: 'ITC Reversed' must come after 'ITC Available'"
+    )
+del _pc_keys
+
 BOE_CATEGORY_CONDITIONS = {
     "ITC Available": {
         "category": "is_itc_available_for_boe",
@@ -42,7 +49,9 @@ BOE_CATEGORY_CONDITIONS = {
     },
     "ITC Reversed": {
         "category": "is_itc_reversed_for_boe",
-        "sub_category": "set_for_itc_reversed",
+        # Explicit BOE method — does NOT read ineligibility_reason (absent on BOE
+        # rows) and avoids relying on None != "Others" as an implicit sentinel.
+        "sub_category": "set_for_itc_reversed_boe",
     },
 }
 
@@ -101,7 +110,14 @@ class GSTR3BCategoryConditions:
         return invoice.gst_treatment == "Non-GST"
 
     def is_itc_available(self, invoice):
-        return invoice.ineligibility_reason != "ITC restricted due to PoS rules"
+        # A blank gst_treatment means the item was never configured; do NOT
+        # let it fall silently into ITC Available (table 4A).  The caller in
+        # get_processed_invoices will instead track it as an unmatched voucher
+        # so it surfaces in the missing-field invoice list.
+        return (
+            bool(invoice.gst_treatment)
+            and invoice.ineligibility_reason != "ITC restricted due to PoS rules"
+        )
 
     def is_itc_reversed(self, invoice):
         return invoice.ineligibility_reason == "Ineligible As Per Section 17(5)"
@@ -130,7 +146,10 @@ class GSTR3BSubcategory(GSTR3BCategoryConditions):
         invoice.invoice_sub_category = "Non-GST"
 
     def set_for_itc_available(self, invoice):
-        invoice.invoice_sub_category = invoice.itc_classification
+        # itc_classification can be None on older / migrated documents;
+        # fall back to 'All Other ITC' so the amount is never silently
+        # dropped from table 4A.
+        invoice.invoice_sub_category = invoice.itc_classification or "All Other ITC"
 
     def set_for_itc_reversed(self, invoice):
         invoice.invoice_sub_category = (
@@ -144,6 +163,18 @@ class GSTR3BSubcategory(GSTR3BCategoryConditions):
 
     def set_for_itc_available_boe(self, invoice):
         invoice.invoice_sub_category = "Import Of Goods"
+
+    def set_for_itc_reversed_boe(self, invoice):
+        """
+        All BOE item reversals are reported under "As per rules 42 & 43" (RUL).
+        Using a dedicated method (rather than the shared set_for_itc_reversed)
+        avoids an implicit dependency on ineligibility_reason, which is not
+        present on BOE rows — the shared method only happened to produce the
+        correct result because None != "Others".
+        """
+        invoice.invoice_sub_category = (
+            "As per rules 42 & 43 of CGST Rules and section 17(5)"
+        )
 
     def set_for_itc_reversed_je(self, invoice):
         """
@@ -201,6 +232,7 @@ class GSTR3BQuery:
                 self.PI.company_gstin,
                 self.PI.is_reverse_charge,
                 IfNull(self.PI.supplier_gstin, "").as_("supplier_gstin"),
+                IfNull(self.PI.supplier_address, "").as_("supplier_address"),
                 self.PI_ITEM.item_code,
                 IfNull(self.PI_ITEM.gst_treatment, "").as_("gst_treatment"),
                 self.PI_ITEM.gst_hsn_code,
@@ -361,9 +393,19 @@ class GSTR3BInvoices(GSTR3BQuery, GSTR3BSubcategory):
         processed_invoices = []
         identified_uom = {}
 
+        if not hasattr(self, "_unmatched_vouchers"):
+            self._unmatched_vouchers = set()
+
         for invoice in data:
             if not invoice.invoice_sub_category:
                 self.set_invoice_category(invoice, conditions)
+                if not invoice.invoice_category:
+                    # No condition matched — the item carries invalid or missing
+                    # data (e.g. blank gst_treatment on a PI item).  Track the
+                    # voucher so the report surfaces it in the missing-field list
+                    # and do NOT include it in the report data.
+                    self._unmatched_vouchers.add(invoice.voucher_no)
+                    continue
                 self.set_invoice_sub_category(invoice, conditions)
 
             invoice.hsn_sub_category = GSTR1_SubCategory.HSN.value
@@ -380,7 +422,8 @@ class GSTR3BInvoices(GSTR3BQuery, GSTR3BSubcategory):
             if invoice.invoice_category != "ITC Available":
                 continue
 
-            if getattr(self, conditions["ITC Reversed"]["category"], None)(invoice):
+            itc_rev_cond = conditions.get("ITC Reversed", {}).get("category")
+            if itc_rev_cond and getattr(self, itc_rev_cond)(invoice):
                 reversed_invoice = frappe._dict(
                     {
                         **invoice,
@@ -423,14 +466,20 @@ class GSTR3BInvoices(GSTR3BQuery, GSTR3BSubcategory):
 
     def set_invoice_category(self, invoice, conditions):
         for category, functions in conditions.items():
-            if getattr(self, functions["category"], None)(invoice):
+            if getattr(self, functions["category"])(invoice):
                 invoice.invoice_category = category
                 return
 
     def set_invoice_sub_category(self, invoice, conditions):
         category = invoice.invoice_category
+        if not category or category not in conditions:
+            # No condition matched in set_invoice_category (e.g. blank
+            # gst_treatment on a PI item).  The caller in get_processed_invoices
+            # will skip this invoice; guard here as defence-in-depth to prevent
+            # a KeyError from conditions[None].
+            return
         function = conditions[category]["sub_category"]
-        getattr(self, function, None)(invoice)
+        getattr(self, function)(invoice)
 
     def get_invoice_wise_data(self, invoices):
         invoice_wise_data = {}
@@ -438,10 +487,18 @@ class GSTR3BInvoices(GSTR3BQuery, GSTR3BSubcategory):
             key = f"{invoice.voucher_no}-{invoice.invoice_category}-{invoice.invoice_sub_category}"
 
             if key not in invoice_wise_data:
-                invoice_wise_data[key] = invoice
+                # Store a shallow copy so that accumulation below never
+                # mutates the original objects in the caller's list (e.g.
+                # pi_items is reused by process_inward_nil_exempt after this
+                # method runs).
+                invoice_wise_data[key] = frappe._dict(invoice)
             else:
                 for field in AMOUNT_FIELDS:
-                    invoice_wise_data[key][field] += invoice[field]
+                    # Use .get() on both sides: Journal Entry rows do not
+                    # carry taxable_value, so a plain [] access raises KeyError.
+                    invoice_wise_data[key][field] = invoice_wise_data[key].get(
+                        field, 0
+                    ) + invoice.get(field, 0)
 
         return list(invoice_wise_data.values())
 
