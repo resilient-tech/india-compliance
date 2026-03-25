@@ -11,7 +11,8 @@ frappe.ui.form.on("GSTR 3B Report", {
 
         if (frm.doc.company && frm.is_new()) {
             india_compliance.set_gstin_options(frm, false, true).then(options => {
-                frm.set_value("company_gstin", options[0]);
+                if (options && options.length)
+                    frm.set_value("company_gstin", options[0]);
             });
         }
 
