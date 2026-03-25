@@ -25,4 +25,5 @@ def execute():
         .set(purchase_invoice.is_boe_applicable, 1)
         .where(IfNull(purchase_invoice.itc_classification, "") == "Import Of Goods")
         .where(purchase_invoice.name.notin(invoices_with_gst_rate))
+        .where(purchase_invoice.docstatus == 1)
     ).run()
