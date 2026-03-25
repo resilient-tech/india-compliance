@@ -365,6 +365,80 @@ class TestGSTR3BReport(IntegrationTestCase):
         self.assertEqual(itc_available["IMPG"].get("iamt"), 36.0)
         self.assertEqual(itc_available["IMPG"].get("csamt"), 20.0)
 
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_itc_from_pi_when_boe_not_applicable(self):
+        """When is_boe_applicable=0, ITC should be reported from Purchase Invoice directly"""
+        pi = create_purchase_invoice(
+            supplier="_Test Foreign Supplier",
+            update_stock=1,
+            is_out_state=True,
+            do_not_save=1,
+            do_not_submit=1,
+        )
+        # Manually set is_boe_applicable=0 to skip BOE path
+        pi.is_boe_applicable = 0
+        pi.insert()
+        pi.submit()
+
+        expected_iamt = sum((item.igst_amount or 0) for item in pi.items)
+        self.assertGreater(expected_iamt, 0)
+
+        today = getdate()
+
+        report = frappe.get_doc(
+            {
+                "doctype": "GSTR 3B Report",
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+                "year": today.year,
+                "month_or_quarter": get_month(today),
+            }
+        ).insert()
+
+        output = json.loads(report.json_output)
+        itc_available = {
+            row["ty"]: row for row in output.get("itc_elg", {}).get("itc_avl", [])
+        }
+
+        # ITC should be reported from Purchase Invoice
+        self.assertEqual(itc_available["IMPG"].get("iamt"), expected_iamt)
+        self.assertEqual(itc_available["IMPG"].get("csamt"), 0.0)
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_itc_from_boe_when_boe_applicable(self):
+        """When is_boe_applicable=1, ITC should come from BOE, not from Purchase Invoice"""
+        pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
+        # PI auto-defaults is_boe_applicable=1 (no GST charged)
+        self.assertEqual(pi.is_boe_applicable, 1)
+
+        boe = make_bill_of_entry(pi.name)
+        boe.items[0].customs_duty = 100
+        boe.bill_of_entry_no = "BOE-004"
+        boe.bill_of_entry_date = getdate()
+        boe.save()
+        boe.submit()
+
+        today = getdate()
+
+        report = frappe.get_doc(
+            {
+                "doctype": "GSTR 3B Report",
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+                "year": today.year,
+                "month_or_quarter": get_month(today),
+            }
+        ).insert()
+
+        output = json.loads(report.json_output)
+        itc_available = {
+            row["ty"]: row for row in output.get("itc_elg", {}).get("itc_avl", [])
+        }
+
+        # ITC should come from BOE (customs duty 100 * 36% = 36)
+        self.assertEqual(itc_available["IMPG"].get("iamt"), 36.0)
+        self.assertEqual(itc_available["IMPG"].get("csamt"), 0.0)
+
 
 def create_sales_invoices():
     create_sales_invoice(is_in_state=True)

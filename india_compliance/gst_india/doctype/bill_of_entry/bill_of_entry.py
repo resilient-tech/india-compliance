@@ -808,6 +808,7 @@ def get_pi_items(purchase_invoices):
             pi_item.name.as_("pi_detail"),
         )
         .where(pi_item.parent.isin(purchase_invoices))
+        .where(pi.is_boe_applicable == 1)
         .where(pi_item.pending_boe_qty > 0)
         .run(as_dict=True)
     )
@@ -840,6 +841,7 @@ def fetch_pending_boe_invoices(
             **filters,
             "docstatus": 1,
             "gst_category": ["in", list(IMPORT_GST_CATEGORIES)],
+            "is_boe_applicable": 1,
             "pending_boe_qty": [">", 0],
         },
         fields=["name", "company", "company_gstin"],

@@ -17,6 +17,7 @@ from india_compliance.gst_india.overrides.transaction import (
     validate_transaction,
 )
 from india_compliance.gst_india.utils import (
+    has_gst_taxes,
     is_api_enabled,
     is_import_of_goods,
     is_import_of_services,
@@ -71,6 +72,7 @@ def validate(doc, method=None):
 
     set_ineligibility_reason(doc)
     set_itc_classification(doc)
+    set_boe_applicability(doc)
     validate_reverse_charge(doc)
     validate_supplier_invoice_number(doc)
     validate_with_inward_supply(doc)
@@ -109,10 +111,27 @@ def set_reconciliation_status(doc):
 
 
 def set_pending_boe_qty(doc):
-    boe_applicable = is_import_of_goods(doc)
-
     for item in doc.items:
-        item.pending_boe_qty = item.qty if boe_applicable else 0
+        item.pending_boe_qty = item.qty if doc.is_boe_applicable else 0
+
+
+def set_boe_applicability(doc):
+    if doc.itc_classification != "Import Of Goods":
+        boe_applicability = 0
+    else:
+        boe_applicability = 0 if has_gst_taxes(doc) else 1
+
+    if doc.is_boe_applicable == boe_applicability:
+        return
+
+    doc.is_boe_applicable = boe_applicability
+    frappe.msgprint(
+        _("Bill of Entry is now {0} for this invoice.").format(
+            _("required") if boe_applicability else _("not required")
+        ),
+        alert=True,
+        indicator="blue",
+    )
 
 
 def is_b2b_invoice(doc):
@@ -126,7 +145,6 @@ def is_b2b_invoice(doc):
 
 def set_itc_classification(doc):
     # If the document contains single goods item then it will be categorized as Import of Goods,
-
     if is_import_of_goods(doc):
         doc.itc_classification = "Import Of Goods"
     elif is_import_of_services(doc):

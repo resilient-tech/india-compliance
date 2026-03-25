@@ -203,7 +203,7 @@ class GSTR3BQuery:
             )
             .where((self.PI.is_opening == "No"))
             .where(self.PI.company_gstin != IfNull(self.PI.supplier_gstin, ""))
-            .where(IfNull(self.PI.itc_classification, "") != "Import Of Goods")
+            .where(self.PI.is_boe_applicable == 0)
         )
 
         return self.get_query_with_common_filters(query, self.PI)
