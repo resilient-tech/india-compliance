@@ -24,13 +24,11 @@ frappe.ui.form.on(DOCTYPE, {
 
     onload(frm) {
         toggle_reverse_charge(frm);
-        toggle_boe_applicability(frm);
     },
 
     gst_category(frm) {
         validate_gst_hsn_code(frm);
         toggle_reverse_charge(frm);
-        toggle_boe_applicability(frm);
     },
 
     async after_save(frm) {
@@ -75,10 +73,6 @@ frappe.ui.form.on(DOCTYPE, {
         }
     },
 
-    is_boe_applicable(frm) {
-        frm.doc._user_set_boe_applicable = 1;
-    },
-
     before_save(frm) {
         // hack: values set in frm.doc are not available after save
         if (frm._inward_supply) frm.doc._inward_supply = frm._inward_supply;
@@ -107,17 +101,14 @@ frappe.ui.form.on("Purchase Invoice Item", {
     item_code(frm) {
         validate_gst_hsn_code(frm);
         toggle_reverse_charge(frm);
-        toggle_boe_applicability(frm);
     },
 
     items_remove(frm) {
         toggle_reverse_charge(frm);
-        toggle_boe_applicability(frm);
     },
 
     gst_hsn_code(frm) {
         validate_gst_hsn_code(frm);
-        toggle_boe_applicability(frm);
     },
 });
 
@@ -129,13 +120,6 @@ function toggle_reverse_charge(frm) {
         is_read_only = 1;
 
     frm.set_df_property("is_reverse_charge", "read_only", is_read_only);
-}
-
-function toggle_boe_applicability(frm) {
-    const hidden =
-        is_import_gst_category(frm.doc.gst_category) && !has_goods_items(frm) ? 1 : 0;
-
-    frm.set_df_property("is_boe_applicable", "hidden", hidden);
 }
 
 function validate_gst_hsn_code(frm) {

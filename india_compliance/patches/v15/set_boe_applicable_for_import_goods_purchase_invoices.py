@@ -22,13 +22,6 @@ def execute():
 
     (
         frappe.qb.update(purchase_invoice)
-        .set(purchase_invoice.is_boe_applicable, 0)
-        .where(IfNull(purchase_invoice.itc_classification, "") == "Import Of Goods")
-        .where(purchase_invoice.name.isin(invoices_with_gst_rate))
-    ).run()
-
-    (
-        frappe.qb.update(purchase_invoice)
         .set(purchase_invoice.is_boe_applicable, 1)
         .where(IfNull(purchase_invoice.itc_classification, "") == "Import Of Goods")
         .where(purchase_invoice.name.notin(invoices_with_gst_rate))

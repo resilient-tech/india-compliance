@@ -72,18 +72,13 @@ def validate(doc, method=None):
 
     set_ineligibility_reason(doc)
     set_itc_classification(doc)
-    validate_boe_applicability(doc)
-    validate_import_of_goods(doc)
+    set_boe_applicability(doc)
     validate_reverse_charge(doc)
     validate_supplier_invoice_number(doc)
     validate_with_inward_supply(doc)
     set_or_validate_itc_claim_period(doc)
     set_reconciliation_status(doc)
     set_pending_boe_qty(doc)
-
-
-def before_insert(doc, method=None):
-    set_boe_applicability(doc)
 
 
 def before_update_after_submit(doc, method=None):
@@ -123,14 +118,23 @@ def set_pending_boe_qty(doc):
 
 
 def set_boe_applicability(doc):
-    if doc.gst_category not in IMPORT_GST_CATEGORIES:
-        doc.is_boe_applicable = 0
+    if doc.itc_classification != "Import Of Goods":
+        boe_applicability = 0
+    else:
+        boe_applicability = 0 if has_gst_taxes(doc) else 1
+
+    if doc.is_boe_applicable == boe_applicability:
         return
 
-    if doc.get("_user_set_boe_applicable"):
-        return
-
-    doc.is_boe_applicable = 1
+    doc.is_boe_applicable = boe_applicability
+    frappe.msgprint(
+        _("{0} has been {1}.").format(
+            get_label(doc, "is_boe_applicable"),
+            _("enabled") if boe_applicability else _("disabled"),
+        ),
+        alert=True,
+        indicator="blue",
+    )
 
 
 def is_boe_applicable(doc):
@@ -305,43 +309,6 @@ def validate_reverse_charge(doc):
         return
 
     frappe.throw(_("Reverse Charge is not applicable on Import of Goods"))
-
-
-def validate_import_of_goods(doc):
-    if doc.itc_classification != "Import Of Goods":
-        return
-
-    gst_taxes = has_gst_taxes(doc)
-    if gst_taxes and doc.is_boe_applicable:
-        frappe.throw(
-            _(
-                "GST taxes cannot be applied when {0} is enabled."
-                " Either remove the GST taxes or uncheck {0}."
-            ).format(get_label(doc, "is_boe_applicable"))
-        )
-
-    if not gst_taxes and not doc.is_boe_applicable:
-        frappe.msgprint(
-            _(
-                "No GST taxes applied on this {0} invoice."
-                "If taxes are applicable, either apply GST taxes or enable {1}."
-            ).format(
-                frappe.bold(_("Import Of Goods")),
-                get_label(doc, "is_boe_applicable"),
-            ),
-            alert=True,
-            indicator="orange",
-        )
-
-
-def validate_boe_applicability(doc):
-    if not doc.is_boe_applicable:
-        return
-
-    if doc.itc_classification == "Import Of Goods":
-        return
-
-    doc.is_boe_applicable = 0
 
 
 def validate_hsn_codes(doc):
