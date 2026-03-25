@@ -242,9 +242,7 @@ class TestGSTR3BReport(IntegrationTestCase):
         boe.submit()
 
         # Second BOE — item marked ineligible: appears in both itc_avl and itc_rev
-        pi2 = create_purchase_invoice(
-            supplier="_Test Foreign Supplier", update_stock=1, rate=100
-        )
+        pi2 = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1, rate=100)
         boe2 = make_bill_of_entry(pi2.name)
         boe2.items[0].is_ineligible_for_itc = 1
         boe2.bill_of_entry_no = frappe.generate_hash(length=5)
