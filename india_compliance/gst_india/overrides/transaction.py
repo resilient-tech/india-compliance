@@ -621,9 +621,13 @@ def is_inter_state_supply(doc):
     else:
         party_gst_category = doc.gst_category
 
-    return party_gst_category == "SEZ" or (
-        doc.place_of_supply[:2] != get_source_state_code(doc)
-    )
+    if party_gst_category == "SEZ":
+        return True
+
+    if not doc.place_of_supply:
+        return False
+
+    return doc.place_of_supply[:2] != get_source_state_code(doc)
 
 
 def get_source_state_code(doc):

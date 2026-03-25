@@ -41,8 +41,8 @@ frappe.ui.form.on(DOCTYPE, {
             frm.doc.customer_address ||
             frm.doc.is_return ||
             frm.doc.is_debit_note ||
-            !(await has_e_waybill_threshold_met(frm)) ||
-            !is_e_waybill_applicable(frm)
+            !is_e_waybill_applicable(frm) ||
+            !(await has_e_waybill_threshold_met(frm))
         )
             return;
 
