@@ -119,6 +119,9 @@ def _get_fields_mapping(doc, source_doc):
         and doc.purpose == "Material Transfer"
         and not doc.is_return
     ):
+        from_fields = ("bill_from_address", "bill_from_gstin")
+        to_fields = ("bill_to_address", "bill_to_gstin")
+
         return from_fields, to_fields
 
     return None
