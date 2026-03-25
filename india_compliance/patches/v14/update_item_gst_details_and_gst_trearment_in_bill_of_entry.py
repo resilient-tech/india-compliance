@@ -86,7 +86,7 @@ def update_gst_details(company, doctype, docs):
                 continue
 
             build_query_and_update_gst_details(gst_details, doctype)
-            frappe.db.commit()
+            frappe.db.commit()  # nosemgrep
 
 
 def get_taxes_for_docs(docs, doctype):

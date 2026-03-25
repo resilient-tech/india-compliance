@@ -7,6 +7,9 @@ from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.overrides.transaction import is_inter_state_supply
 from india_compliance.gst_india.utils import get_full_gst_uom
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategory
+from india_compliance.gst_india.utils.itc_claim import (
+    apply_period_filter as _apply_itc_period_filter,
+)
 
 PURCHASE_CATEGORY_CONDITIONS = {
     "Composition Scheme, Exempted, Nil Rated": {
@@ -61,6 +64,7 @@ DOCTYPE_CONDITION_MAP = {
 }
 
 AMOUNT_FIELDS = (
+    "taxable_value",
     "igst_amount",
     "cgst_amount",
     "sgst_amount",
@@ -115,7 +119,9 @@ class GSTR3BSubcategory(GSTR3BCategoryConditions):
 
     def set_for_itc_reversed(self, invoice):
         invoice.invoice_sub_category = (
-            "As per rules 42 & 43 of CGST Rules and section 17(5)"
+            "Others"
+            if invoice.ineligibility_reason == "Others"
+            else ("As per rules 42 & 43 of CGST Rules and section 17(5)")
         )
 
     def set_for_ineligible_itc(self, invoice):
@@ -137,6 +143,15 @@ class GSTR3BQuery:
         self.JE = frappe.qb.DocType("Journal Entry")
         self.JE_ACCOUNT = frappe.qb.DocType("Journal Entry Account")
         self.filters = frappe._dict(filters or {})
+
+    def apply_itc_period_filter(self, query, doc):
+        return _apply_itc_period_filter(
+            query,
+            doc,
+            self.filters.get("from_date"),
+            self.filters.get("to_date"),
+            filter_by=self.filters.get("filter_by"),
+        )
 
     def get_base_purchase_query(self):
         query = (
@@ -258,6 +273,7 @@ class GSTR3BQuery:
                 self.JE.voucher_type.as_("ineligibility_type"),
                 self.JE.name.as_("voucher_no"),
                 self.JE.posting_date,
+                IfNull(self.JE.ineligibility_reason, "").as_("ineligibility_reason"),
                 *[
                     Sum(
                         Case()
@@ -265,7 +281,7 @@ class GSTR3BQuery:
                             self.JE_ACCOUNT.gst_tax_type.isin(fields),
                             Case()
                             .when(
-                                self.JE.voucher_type == "Reversal of ITC",
+                                self.JE.voucher_type == "Reversal Of ITC",
                                 self.JE_ACCOUNT.credit_in_account_currency
                                 - self.JE_ACCOUNT.debit_in_account_currency,
                             )
@@ -282,7 +298,7 @@ class GSTR3BQuery:
             .where(self.JE.is_opening == "No")
             .where(
                 self.JE.voucher_type.isin(
-                    ["Reclaim of ITC Reversal", "Reversal of ITC"]
+                    ["Reclaim of ITC Reversal", "Reversal Of ITC"]
                 )
             )
             .groupby(self.JE.name)
@@ -291,11 +307,14 @@ class GSTR3BQuery:
         return self.get_query_with_common_filters(query, self.JE)
 
     def get_query_with_common_filters(self, query, doc):
+        """
+        Apply common filters to the query.
+        """
         query = query.where(
-            (doc.docstatus == 1)
-            & (doc.posting_date[self.filters.from_date : self.filters.to_date])
-            & (doc.company == self.filters.company)
+            (doc.docstatus == 1) & (doc.company == self.filters.company)
         )
+
+        query = self.apply_itc_period_filter(query, doc)
 
         if self.filters.company_gstin:
             query = query.where(doc.company_gstin == self.filters.company_gstin)

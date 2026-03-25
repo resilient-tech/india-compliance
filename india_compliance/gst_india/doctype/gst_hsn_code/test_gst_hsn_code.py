@@ -31,6 +31,18 @@ class TestGSTHSNCode(IntegrationTestCase):
             doc.save,
         )
 
+    @change_settings("GST Settings", {"validate_hsn_code": 1, "min_hsn_digits": 8})
+    def test_validate_hsn_with_8_digit_setting(self):
+        doc = frappe.get_doc({"doctype": "GST HSN Code", "hsn_code": "100000"})
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            re.compile(r"^(HSN/SAC Code should be .*)"),
+            doc.save,
+        )
+
+        doc = frappe.get_doc({"doctype": "GST HSN Code", "hsn_code": "10000000"})
+        doc.save()
+
     def test_update_taxes_in_item_master(self):
         taxes = [{"item_tax_template": "GST 12% - _TIUC", "tax_category": "In-State"}]
         doc = frappe.get_doc(

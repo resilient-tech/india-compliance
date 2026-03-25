@@ -1,8 +1,6 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
 
-import json
-
 import frappe
 from frappe import _
 from frappe.model.document import Document
@@ -37,7 +35,7 @@ class GSTR1(Document):
         return self.generate_gstr1(recompute_books=True)
 
     @frappe.whitelist()
-    def sync_with_gstn(self, sync_for):
+    def sync_with_gstn(self, sync_for: str):
         """
         Permission check not required as user has access to doc.
         """
@@ -72,10 +70,10 @@ class GSTR1(Document):
     @otp_handler
     def generate_gstr1(
         self,
-        sync_for=None,
+        sync_for: str | None = None,
         recompute_books: bool = False,
-        only_books_data=None,
-        message=None,
+        only_books_data: bool = False,
+        message: str | None = None,
     ):
         period = get_period(self.month_or_quarter, self.year)
         log_name = f"GSTR1-{period}-{self.company_gstin}"
@@ -84,20 +82,20 @@ class GSTR1(Document):
             log_name, company=self.company, filing_preference=self.filing_preference
         )
 
-        message = None
+        busy_message = None
         if gstr1_log.status == "In Progress":
-            message = (
+            busy_message = (
                 "GSTR-1 is being prepared. Please wait for the process to complete."
             )
 
         elif gstr1_log.status == "Queued":
-            message = (
+            busy_message = (
                 "GSTR-1 download is queued and could take some time. Please wait"
                 " for the process to complete."
             )
 
-        if message:
-            frappe.msgprint(_(message), title=_("GSTR-1 Generation In Progress"))
+        if busy_message:
+            frappe.msgprint(_(busy_message), title=_("GSTR-1 Generation In Progress"))
             return
 
         settings = frappe.get_cached_doc("GST Settings")
@@ -195,7 +193,13 @@ class GSTR1(Document):
 
 @frappe.whitelist()
 @otp_handler
-def perform_gstr1_action(action, month_or_quarter, year, company_gstin, **kwargs):
+def perform_gstr1_action(
+    action: str,
+    month_or_quarter: str,
+    year: str,
+    company_gstin: str,
+    **kwargs: str | dict,
+):
     frappe.has_permission("GST Return Log", "write", throw=True)
 
     gstr_1_log = frappe.get_doc(
@@ -222,7 +226,9 @@ def perform_gstr1_action(action, month_or_quarter, year, company_gstin, **kwargs
 
 @frappe.whitelist()
 @otp_handler
-def check_action_status(month_or_quarter, year, company_gstin, action):
+def check_action_status(
+    month_or_quarter: str, year: str, company_gstin: str, action: str
+):
     frappe.has_permission("GST Return Log", "write", throw=True)
 
     gstr_1_log = frappe.get_doc(
@@ -247,10 +253,10 @@ def check_action_status(month_or_quarter, year, company_gstin, action):
 
 
 @frappe.whitelist()
-def mark_as_unfiled(filters, force: bool):
+def mark_as_unfiled(filters: str | dict | frappe._dict, force: bool):
     frappe.has_permission("GST Return Log", "write", throw=True)
 
-    filters = frappe._dict(json.loads(filters))
+    filters = frappe._dict(frappe.parse_json(filters))
     log_name = f"GSTR1-{get_period(filters.month_or_quarter, filters.year)}-{filters.company_gstin}"
 
     force = bool(force)
@@ -262,7 +268,9 @@ def mark_as_unfiled(filters, force: bool):
 
 
 @frappe.whitelist()
-def get_journal_entries(month_or_quarter, year, company, filing_preference):
+def get_journal_entries(
+    month_or_quarter: str, year: str, company: str, filing_preference: str
+):
     if not frappe.has_permission("Journal Entry", "create"):
         return
 
@@ -317,7 +325,9 @@ def get_journal_entries(month_or_quarter, year, company, filing_preference):
 
 
 @frappe.whitelist()
-def get_gst_and_round_off_accounts(month_or_quarter, year, company, filing_preference):
+def get_gst_and_round_off_accounts(
+    month_or_quarter: str, year: str, company: str, filing_preference: str
+):
     """
     Get GST output accounts and round off account for journal entry creation.
 
@@ -371,7 +381,12 @@ def get_gst_and_round_off_accounts(month_or_quarter, year, company, filing_prefe
 
 @frappe.whitelist()
 def make_journal_entry(
-    company, company_gstin, month_or_quarter, year, accounts, values
+    company: str,
+    company_gstin: str,
+    month_or_quarter: str,
+    year: str,
+    accounts: str | list,
+    values: str | dict | frappe._dict,
 ):
     if not frappe.has_permission("Journal Entry", "create"):
         return
@@ -405,7 +420,11 @@ def make_journal_entry(
 
 @frappe.whitelist()
 def get_net_gst_liability(
-    company, company_gstin, month_or_quarter, year, filing_preference=None
+    company: str,
+    company_gstin: str,
+    month_or_quarter: str,
+    year: str,
+    filing_preference: str | None = None,
 ):
     """
     Returns the net output balance for the given return period as per ledger entries
@@ -473,7 +492,9 @@ def get_gstr_1_from_and_to_date(
 
 
 @frappe.whitelist()
-def get_filing_preference_from_log(month_or_quarter: str, year: str, company_gstin):
+def get_filing_preference_from_log(
+    month_or_quarter: str, year: str, company_gstin: str
+):
     frappe.has_permission("GSTR-1", throw=True)
 
     period = get_period(month_or_quarter, year)

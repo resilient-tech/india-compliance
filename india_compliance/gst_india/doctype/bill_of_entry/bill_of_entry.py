@@ -23,6 +23,11 @@ from india_compliance.gst_india.overrides.transaction import (
     set_gst_tax_type,
 )
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
+from india_compliance.gst_india.utils.itc_claim import (
+    _is_gstr3b_filed,
+    set_or_validate_itc_claim_period,
+    validate_itc_claim_period,
+)
 from india_compliance.gst_india.utils.taxes_controller import (
     CustomTaxController,
     update_gst_details,
@@ -40,6 +45,12 @@ class BillofEntry(Document):
     def onload(self):
         if self.docstatus != 1:
             return
+
+        if self.itc_claim_period:
+            self.set_onload(
+                "is_itc_period_filed",
+                _is_gstr3b_filed(self.company_gstin, self.itc_claim_period),
+            )
 
         self.set_onload(
             "journal_entry_exists",
@@ -66,12 +77,16 @@ class BillofEntry(Document):
         self.reconciliation_status = "Unreconciled"
         update_gst_details(self)
         update_valuation_rate(self)
+        set_or_validate_itc_claim_period(self)
 
     def on_submit(self):
         gl_entries = self.get_gl_entries()
         update_regional_gl_entries(gl_entries, self)
         make_gl_entries(gl_entries)
         self.update_pending_boe_qty()
+
+    def before_update_after_submit(self):
+        validate_itc_claim_period(self)
 
     def on_cancel(self):
         self.ignore_linked_doctypes = ("GL Entry",)
@@ -318,8 +333,10 @@ class BillofEntry(Document):
                         "debit": item.customs_duty,
                         "credit": 0,
                         "cost_center": item.cost_center,
+                        "project": item.project,
                         "remarks": remarks,
                     },
+                    item=item,
                 )
             )
 
@@ -388,7 +405,7 @@ class BillofEntry(Document):
         return asset_items
 
     @frappe.whitelist()
-    def get_items_from_purchase_invoice(self, purchase_invoices):
+    def get_items_from_purchase_invoice(self, purchase_invoices: list[str]):
         if not purchase_invoices:
             frappe.msgprint(_("No Purchase Invoices selected"))
             return
@@ -509,13 +526,15 @@ def set_missing_values(source, target=None):
 
 
 @frappe.whitelist()
-def make_bill_of_entry(source_name, target_doc=None):
+def make_bill_of_entry(source_name: str, target_doc: str | None = None):
     """
     Permission checked in get_mapped_doc
     """
 
     def update_item_qty(source, target, source_parent):
         target.qty = source.get("pending_boe_qty")
+        if not target.project:
+            target.project = source_parent.project
 
     doc = get_mapped_doc(
         "Purchase Invoice",
@@ -547,7 +566,7 @@ def make_bill_of_entry(source_name, target_doc=None):
 
 
 @frappe.whitelist()
-def make_journal_entry_for_payment(source_name, target_doc=None):
+def make_journal_entry_for_payment(source_name: str, target_doc: str | None = None):
     """
     Permission checked in get_mapped_doc
     """
@@ -597,7 +616,7 @@ def make_journal_entry_for_payment(source_name, target_doc=None):
 
 
 @frappe.whitelist()
-def make_landed_cost_voucher(source_name, target_doc=None):
+def make_landed_cost_voucher(source_name: str, target_doc: str | None = None):
     """
     Permission checked in get_mapped_doc
     """
@@ -767,9 +786,12 @@ def get_purchase_invoice_details(boe):
 
 def get_pi_items(purchase_invoices):
     pi_item = frappe.qb.DocType("Purchase Invoice Item")
+    pi = frappe.qb.DocType("Purchase Invoice")
 
     return (
         frappe.qb.from_(pi_item)
+        .join(pi)
+        .on(pi_item.parent == pi.name)
         .select(
             pi_item.item_code,
             pi_item.item_name,
@@ -781,7 +803,7 @@ def get_pi_items(purchase_invoices):
             pi_item.gst_treatment,
             pi_item.taxable_value.as_("assessable_value"),
             pi_item.taxable_value,
-            pi_item.project,
+            IfNull(pi_item.project, pi.project).as_("project"),
             pi_item.name.as_("pi_detail"),
         )
         .where(pi_item.parent.isin(purchase_invoices))
@@ -791,7 +813,14 @@ def get_pi_items(purchase_invoices):
 
 
 @frappe.whitelist()
-def fetch_pending_boe_invoices(doctype, txt, searchfield, start, page_len, filters):
+def fetch_pending_boe_invoices(
+    doctype: str,
+    txt: str,
+    searchfield: str,
+    start: int,
+    page_len: int,
+    filters: str | dict | frappe._dict,
+):
     """
     Permission check not required as using get_list
     """

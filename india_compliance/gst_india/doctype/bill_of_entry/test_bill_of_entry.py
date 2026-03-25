@@ -3,19 +3,27 @@
 
 import json
 import re
+import unittest.mock as mock
 
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import today
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
+    get_pi_items,
     make_bill_of_entry,
     make_journal_entry_for_payment,
     make_landed_cost_voucher,
 )
 from india_compliance.gst_india.overrides.test_transaction import create_cess_accounts
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
+from india_compliance.gst_india.utils.itc_claim import format_period
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
+
+with mock.patch("frappe.db"), mock.patch("frappe.new_doc"), mock.patch(
+    "frappe.get_doc"
+):
+    from erpnext.projects.doctype.project.test_project import make_project
 
 IGNORE_TEST_RECORD_DEPENDENCIES = [
     "Bill of Entry",
@@ -305,3 +313,68 @@ class TestBillofEntry(IntegrationTestCase):
             },
             pi.items[0],
         )
+
+    def test_project_in_gl_entries(self):
+        """Test that project from Purchase Invoice is auto-copied to Bill of Entry and passed to GL Entry"""
+        project = make_project(
+            {
+                "project_name": "_Test BOE Project",
+                "company": "_Test Indian Registered Company",
+            }
+        ).name
+
+        # Test 1: Project set on PI item
+        pi = create_purchase_invoice(
+            supplier="_Test Foreign Supplier", update_stock=1, do_not_submit=True
+        )
+        pi.items[0].project = project
+        pi.submit()
+
+        boe = make_bill_of_entry(pi.name)
+        self.assertEqual(boe.items[0].project, project)
+
+        boe.items[0].customs_duty = 100
+        boe.bill_of_entry_no = "456"
+        boe.bill_of_entry_date = today()
+        boe.save()
+        boe.submit()
+
+        gl_entry = frappe.get_value(
+            "GL Entry",
+            {
+                "voucher_type": "Bill of Entry",
+                "voucher_no": boe.name,
+                "account": boe.customs_expense_account,
+            },
+            "project",
+        )
+        self.assertEqual(gl_entry, project)
+
+        # Test 2: Project set on PI header only (not on item) - should fallback
+        pi2 = create_purchase_invoice(
+            supplier="_Test Foreign Supplier", update_stock=1, do_not_submit=True
+        )
+        pi2.project = project
+        pi2.items[0].project = None
+        pi2.submit()
+
+        boe2 = make_bill_of_entry(pi2.name)
+        self.assertEqual(boe2.items[0].project, project)
+
+        # Test get_pi_items function
+
+        pi_items = get_pi_items([pi2.name])
+        self.assertEqual(pi_items[0].project, project)
+
+    def test_itc_claim_period_auto_set(self):
+        """Test that ITC claim period is auto-set on Bill of Entry creation."""
+        pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
+
+        boe = make_bill_of_entry(pi.name)
+        boe.bill_of_entry_no = "123"
+        boe.bill_of_entry_date = today()
+        boe.save()
+
+        # ITC claim period should be set to posting period by default
+        expected_period = format_period(boe.posting_date)
+        self.assertEqual(boe.itc_claim_period, expected_period)

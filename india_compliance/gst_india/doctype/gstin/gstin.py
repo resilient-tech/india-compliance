@@ -1,6 +1,5 @@
 # Copyright (c) 2023, Resilient Tech and contributors
 # For license information, please see license.txt
-
 import frappe
 from frappe import _
 from frappe.model.document import Document
@@ -137,7 +136,9 @@ def get_and_validate_gstin_status(gstin, doc):
 
 
 @frappe.whitelist()
-def get_gstin_status(gstin, doc=None, force_update: bool = False):
+def get_gstin_status(
+    gstin: str, doc: str | dict | frappe._dict | None = None, force_update: bool = False
+):
     """
     Get GSTIN status. Responds immediately, and best suited for Frontend use.
     Permission check not required as GSTIN details are public where GSTIN is known.
@@ -245,7 +246,9 @@ def is_status_refresh_required(gstin, transaction_date, docstatus=0):
 
 
 @frappe.whitelist()
-def validate_gst_transporter_id(transporter_id, doc=None):
+def validate_gst_transporter_id(
+    transporter_id: str, doc: str | dict | frappe._dict | None = None
+):
     """
     Validates GST Transporter ID and warns user if transporter_id is not Active.
     Just suggestive and not enforced.

@@ -60,7 +60,7 @@ def get_auth_session():
 
 
 @frappe.whitelist()
-def set_auth_session(session: str = None):
+def set_auth_session(session: str | None = None):
     has_permission_of_page(page_name, throw=True)
 
     if not session:

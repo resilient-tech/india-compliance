@@ -5,7 +5,7 @@ from frappe import _, bold
 from frappe.contacts.doctype.address.address import get_address_display
 from frappe.utils import flt
 from erpnext.accounts.party import get_address_tax_category
-from erpnext.stock.get_item_details import get_item_tax_template
+from erpnext.stock.get_item_details import ItemDetailsCtx, get_item_tax_template
 
 from india_compliance.gst_india.overrides.sales_invoice import (
     update_dashboard_with_gst_logs,
@@ -66,10 +66,10 @@ def after_mapping_subcontracting_order(doc, method, source_doc):
             source_doc.supplier_address,
         )
 
-    args = {"company": doc.company, "tax_category": tax_category}
+    args = ItemDetailsCtx({"company": doc.company, "tax_category": tax_category})
 
     for item in doc.items:
-        out = {}
+        out = frappe._dict()
         item_doc = frappe.get_cached_doc("Item", item.item_code)
         get_item_tax_template(args, item_doc, out)
         item.item_tax_template = out.get("item_tax_template")
@@ -400,7 +400,7 @@ def set_address_display(doc):
 
 
 @frappe.whitelist()
-def get_relevant_references(filters=None):
+def get_relevant_references(filters: str | dict | frappe._dict | None = None):
     """Permission check not required as get_list in called functions checks permissions."""
     if isinstance(filters, str):
         filters = frappe.parse_json(filters)
@@ -426,7 +426,12 @@ def get_relevant_references(filters=None):
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
 def get_subcontracting_receipt_references(
-    doctype=None, txt=None, searchfield=None, start=None, page_len=None, filters=None
+    doctype: str | None = None,
+    txt: str | None = None,
+    searchfield: str | None = None,
+    start: int | None = None,
+    page_len: int | None = None,
+    filters: str | dict | frappe._dict | None = None,
 ):
     """Permission check not required as get_list checks permissions."""
     filters = frappe._dict(filters)
@@ -458,13 +463,13 @@ def get_subcontracting_receipt_references(
 
 @frappe.whitelist()
 def get_stock_entry_references(
-    doctype=None,
-    txt=None,
-    searchfield=None,
-    start=None,
-    page_len=None,
-    filters=None,
-    only_linked_references=False,
+    doctype: str | None = None,
+    txt: str | None = None,
+    searchfield: str | None = None,
+    start: int | None = None,
+    page_len: int | None = None,
+    filters: str | dict | frappe._dict | None = None,
+    only_linked_references: bool = False,
 ):
     """Permission check not required as get_list checks permissions."""
     filters = frappe._dict(filters)

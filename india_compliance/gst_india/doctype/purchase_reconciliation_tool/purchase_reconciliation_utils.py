@@ -4,13 +4,14 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     BaseUtil,
     ReconciledData,
 )
+from india_compliance.gst_india.utils.itc_claim import set_itc_claim_period_on_match
 
 
 def link_documents(purchase_invoice_name, inward_supply_name, link_doctype):
     purchases = []
     inward_supplies = []
 
-    if not purchase_invoice_name or not inward_supply_name:
+    if not purchase_invoice_name or not inward_supply_name or not link_doctype:
         return purchases, inward_supplies
 
     # silently handle existing links
@@ -37,6 +38,12 @@ def link_documents(purchase_invoice_name, inward_supply_name, link_doctype):
     frappe.db.set_value("GST Inward Supply", inward_supply_name, link_doc)
     set_reconciliation_status(link_doctype, (purchase_invoice_name,), "Match Found")
 
+    set_itc_claim_period_on_match(
+        [purchase_invoice_name],
+        {inward_supply_name: purchase_invoice_name},
+        doctype=link_doctype,
+    )
+
     purchases.append(purchase_invoice_name)
     inward_supplies.append(inward_supply_name)
 
@@ -62,6 +69,9 @@ def unlink_documents(data):
     set_reconciliation_status("Purchase Invoice", purchases, "Unreconciled")
     set_reconciliation_status("Bill of Entry", boe, "Unreconciled")
     _unlink_documents(inward_supplies)
+
+    # Note: We do NOT clear itc_claim_period on unlink
+    # User can manually change it if needed
 
     return purchases.union(boe), inward_supplies
 

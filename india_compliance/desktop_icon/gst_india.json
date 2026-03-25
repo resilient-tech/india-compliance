@@ -1,0 +1,22 @@
+{
+ "app": "india_compliance",
+ "bg_color": "gray",
+ "creation": "2026-03-09 13:04:42.192586",
+ "docstatus": 0,
+ "doctype": "Desktop Icon",
+ "hidden": 0,
+ "icon": "expenses",
+ "icon_type": "Link",
+ "idx": 0,
+ "label": "GST India",
+ "link_to": "GST India",
+ "link_type": "Workspace Sidebar",
+ "logo_url": "/assets/india_compliance/images/india-compliance.svg",
+ "modified": "2026-03-09 13:08:09.871114",
+ "modified_by": "Administrator",
+ "name": "GST India",
+ "owner": "Administrator",
+ "restrict_removal": 0,
+ "roles": [],
+ "standard": 1
+}

@@ -1,5 +1,4 @@
 frappe.require("assets/india_compliance/js/quick_entry.js");
-update_erpnext_slides_settings();
 
 frappe.setup.on("before_load", function () {
     // if setup wizard is already completed for ERPNext, skip the setup wizard
@@ -24,6 +23,10 @@ frappe.setup.on("before_load", function () {
             });
         }
     };
+});
+
+frappe.setup.on("after_load", function () {
+    update_erpnext_slides_settings();
 });
 
 function complete_setup_wizard() {
@@ -97,10 +100,10 @@ function update_erpnext_slides_settings() {
         label: __("Enable Audit Trail"),
         description: __(
             `In accordance with <a
-              href='https://www.mca.gov.in/Ministry/pdf/AccountsAmendmentRules_24032021.pdf'
+              href='https://egazette.gov.in/WriteReadData/2021/226081.pdf'
               target='_blank'
             > MCA Notification dated 24-03-2021</a>.<br>
-            Once enabled, Audit Trail cannot be disabled.`
+            Once enabled, Audit Trail cannot be disabled.`,
         ),
     });
 

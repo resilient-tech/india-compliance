@@ -579,11 +579,13 @@ INVOICES = [
                 "item_code": "_Test Nil Rated Item",
                 "rate": 500,
                 "qty": -60,
+                "allow_zero_valuation_rate": 1,
             },
             {
                 "item_code": "_Test Service Item",
                 "rate": 1500,
                 "qty": -150,
+                "allow_zero_valuation_rate": 1,
             },
         ],
     },
@@ -632,11 +634,13 @@ INVOICES = [
                 "item_code": "_Test Nil Rated Item",
                 "rate": 100,
                 "qty": -50,
+                "allow_zero_valuation_rate": 1,
             },
             {
                 "item_code": "_Test Service Item",
                 "rate": 2000,
                 "qty": -150,
+                "allow_zero_valuation_rate": 1,
             },
         ],
     },
@@ -651,7 +655,9 @@ class TestSalesRegister(IntegrationTestCase):
         cls.create_test_records()
 
     @classmethod
-    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    @change_settings(
+        "GST Settings", {"enable_overseas_transactions": 1, "enable_e_waybill": 0}
+    )
     def create_test_records(cls):
         for invoice in INVOICES:
             create_sales_invoice(**invoice)
