@@ -1443,7 +1443,12 @@ class ItemGSTTreatment:
             "Import Of Goods",
             "Import Of Service",
         ):
-            # NOTE: possible treatment can be nil rated or taxable depending on the taxes applied
+            # NOTE: Import transactions are treated as "Taxable" since the supply is taxable
+            # under GST even when no GST is charged directly (e.g. Import Of Goods settled
+            # via BOE) But there is one more possibliity of classifying import transactions
+            # as "Nil-Rated" when GST is not charged in invoice (unclear case, needs more clarity).
+            # For now, we are treating all import transactions as "Taxable" to avoid any missing GST issues in returns.
+            # This can be revisited if needed.
             self.set_for_import_transactions()
             return
 

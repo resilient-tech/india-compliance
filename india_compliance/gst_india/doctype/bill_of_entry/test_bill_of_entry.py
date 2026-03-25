@@ -448,15 +448,17 @@ class TestBillofEntry(IntegrationTestCase):
         pi.reload()
         self.assertEqual(pi.items[0].pending_boe_qty, 2)
 
-    def test_unchecked_boe_applicable_excludes_invoice_from_boe(self):
+    def test_boe_not_applicable_excludes_invoice_from_boe(self):
+        """
+        An Import Of Service invoice (is_boe_applicable auto-set to 0) must not
+        appear in get_pi_items or fetch_pending_boe_invoices.
+        """
         pi = create_purchase_invoice(
             supplier="_Test Foreign Supplier",
-            update_stock=1,
-            do_not_save=True,
+            item_code="_Test Service Item",
             do_not_submit=True,
         )
-        pi.is_boe_applicable = 0
-        pi.insert()
+        self.assertEqual(pi.is_boe_applicable, 0)
         pi.submit()
 
         pi.reload()

@@ -111,10 +111,8 @@ def set_reconciliation_status(doc):
 
 
 def set_pending_boe_qty(doc):
-    boe_applicable = is_boe_applicable(doc)
-
     for item in doc.items:
-        item.pending_boe_qty = item.qty if boe_applicable else 0
+        item.pending_boe_qty = item.qty if doc.is_boe_applicable else 0
 
 
 def set_boe_applicability(doc):
@@ -128,17 +126,12 @@ def set_boe_applicability(doc):
 
     doc.is_boe_applicable = boe_applicability
     frappe.msgprint(
-        _("{0} has been {1}.").format(
-            frappe.bold(_(doc.meta.get_label("is_boe_applicable"))),
-            _("enabled") if boe_applicability else _("disabled"),
+        _("Bill of Entry is now {0} for this invoice.").format(
+            _("required") if boe_applicability else _("not required")
         ),
         alert=True,
         indicator="blue",
     )
-
-
-def is_boe_applicable(doc):
-    return doc.itc_classification == "Import Of Goods" and doc.is_boe_applicable
 
 
 def is_b2b_invoice(doc):
@@ -152,7 +145,6 @@ def is_b2b_invoice(doc):
 
 def set_itc_classification(doc):
     # If the document contains single goods item then it will be categorized as Import of Goods,
-
     if is_import_of_goods(doc):
         doc.itc_classification = "Import Of Goods"
     elif is_import_of_services(doc):

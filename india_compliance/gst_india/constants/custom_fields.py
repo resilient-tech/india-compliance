@@ -1039,6 +1039,7 @@ CUSTOM_FIELDS = {
             "insert_after": "is_reverse_charge",
             "print_hide": 1,
             "default": 0,
+            "read_only": 1,
             "depends_on": 'eval:doc.itc_classification === "Import Of Goods"',
         },
     ],
