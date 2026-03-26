@@ -1326,7 +1326,7 @@ async function update_gst_tranporter_id(dialog) {
             transporter,
             "gst_transporter_id",
         );
-        transporter_id = response?.gst_transporter_id;
+        transporter_id = response?.gst_transporter_id || "";
     }
 
     dialog.set_value("gst_transporter_id", transporter_id);
