@@ -160,7 +160,7 @@ class TestTransaction(IntegrationTestCase):
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             re.compile(
-                r"^(Transaction cannot be reverse charge for SEZ supply without payment of GST)$"
+                r"^(Transaction cannot be reverse charge for export/SEZ supply without payment of GST)$"
             ),
             create_transaction,
             **self.transaction_details,
