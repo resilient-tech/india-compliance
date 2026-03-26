@@ -35,11 +35,14 @@ from india_compliance.gst_india.constants import (
     GST_INVOICE_NUMBER_FORMAT,
     GST_PARTY_TYPES,
     GSTIN_FORMATS,
+    IMPORT_GST_CATEGORIES,
     PAN_NUMBER,
     PINCODE_FORMAT,
     SALES_DOCTYPES,
+    SERVICE_HSN_PREFIX,
     STATE_NUMBERS,
     STATE_PINCODE_MAPPING,
+    TAX_TYPES,
     TCS,
     TIMEZONE,
     UOM_MAP,
@@ -381,6 +384,22 @@ def is_foreign_doc(doc):
 
 def is_foreign_transaction(gst_category, place_of_supply):
     return gst_category == "Overseas" and place_of_supply == "96-Other Countries"
+
+
+def is_import_of_goods(doc):
+    return doc.gst_category in IMPORT_GST_CATEGORIES and are_goods_supplied(doc)
+
+
+def is_import_of_services(doc):
+    """
+    Note: https://hnallp.com/assets/articles/6c0b7-gst-applicability-on-sez-transactions_final.pdf
+    Only services with GST Category as Overseas are considered as import of services.
+    Section 7(5) of IGST supply of goods or service to or by SEZ will be considered as inter-
+    State supply.Therefore, the sez service purchase transaction shall be treated as a domestic supply of services and GST
+    would be collected and discharged by the SEZ Unit / SEZ Developer i.e., under Forward
+    Charge Mechanism.
+    """
+    return doc.gst_category == "Overseas" and not are_goods_supplied(doc)
 
 
 def get_hsn_settings():
@@ -797,7 +816,7 @@ def are_goods_supplied(doc):
         item
         for item in doc.items
         if item.gst_hsn_code
-        and not item.gst_hsn_code.startswith("99")
+        and not item.gst_hsn_code.startswith(SERVICE_HSN_PREFIX)
         and item.qty != 0
     )
 
@@ -1276,3 +1295,7 @@ def set_ewaybill_status(
         return
 
     doc.db_set("e_waybill_status", status, commit=commit, notify=notify)
+
+
+def has_gst_taxes(doc):
+    return any(row.gst_tax_type in TAX_TYPES for row in doc.taxes)
