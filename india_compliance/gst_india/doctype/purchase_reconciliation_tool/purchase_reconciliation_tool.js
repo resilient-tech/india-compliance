@@ -1006,7 +1006,7 @@ class ImportDialog {
     }
 
     async fetch_import_history() {
-        if (!this.company_gstin) return;
+        if (!this.company_gstin || !this.return_type || !this.date_range) return;
 
         // fetch history
         const { message } = await this.frm._call("get_import_history", {
