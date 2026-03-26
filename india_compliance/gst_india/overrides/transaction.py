@@ -692,6 +692,14 @@ def validate_sales_reverse_charge(doc):
             )
         )
 
+    if doc.get("is_reverse_charge") and is_export_without_payment_of_gst(doc):
+        frappe.throw(
+            _(
+                "Transaction cannot be reverse charge for SEZ supply without payment"
+                " of GST"
+            )
+        )
+
 
 def _validate_hsn_codes(doc, valid_hsn_length, throw=False, message=None):
     rows_with_missing_hsn = []

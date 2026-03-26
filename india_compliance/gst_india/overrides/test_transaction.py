@@ -152,6 +152,22 @@ class TestTransaction(IntegrationTestCase):
 
         self.assertEqual(return_doc.is_reverse_charge, 1)
 
+    def test_sez_without_payment_with_reverse_charge(self):
+        if not self.is_sales_doctype:
+            return
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(
+                r"^(Transaction cannot be reverse charge for SEZ supply without payment of GST)$"
+            ),
+            create_transaction,
+            **self.transaction_details,
+            gst_category="SEZ",
+            is_export_with_gst=0,
+            is_reverse_charge=1,
+        )
+
     def test_non_taxable_items_with_tax(self):
         doc = create_transaction(
             **self.transaction_details,
