@@ -9,7 +9,10 @@ from frappe.query_builder import Case
 from frappe.query_builder.functions import Date, IfNull, Sum
 from frappe.utils import getdate
 
-from india_compliance.gst_india.constants import GST_REFUND_TAX_TYPES
+from india_compliance.gst_india.constants import (
+    GST_REFUND_TAX_TYPES,
+    SERVICE_HSN_PREFIX,
+)
 from india_compliance.gst_india.utils import get_full_gst_uom
 from india_compliance.gst_india.utils.gstr_1 import (
     CATEGORY_SUB_CATEGORY_MAPPING,
@@ -450,7 +453,9 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
             self.assign_categories(invoice)
             self.set_hsn_sub_category(invoice, bifurcate_hsn)
 
-            if invoice.gst_hsn_code and invoice.gst_hsn_code.startswith("99"):
+            if invoice.gst_hsn_code and invoice.gst_hsn_code.startswith(
+                SERVICE_HSN_PREFIX
+            ):
                 invoice["uom"] = "OTH-OTHERS"
                 invoice["qty"] = 0
                 continue
