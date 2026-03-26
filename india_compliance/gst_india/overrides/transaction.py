@@ -1735,6 +1735,10 @@ def validate_item_tax_template(doc):
     if not doc.items or not doc.taxes:
         return
 
+    is_import_transaction = doc.get("itc_classification") in (
+        "Import Of Goods",
+        "Import Of Service",
+    )
     non_taxable_items_with_tax = []
     taxable_items_with_no_tax = []
 
@@ -1751,6 +1755,8 @@ def validate_item_tax_template(doc):
             non_taxable_items_with_tax.append(item.idx)
 
         if not is_gst_applied and item.gst_treatment in TAXABLE_GST_TREATMENTS:
+            if is_import_transaction:
+                continue
             taxable_items_with_no_tax.append(item.idx)
 
     # Case: Zero Tax template with taxes or missing GST Accounts

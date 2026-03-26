@@ -49,6 +49,26 @@ class TestPurchaseInvoice(IntegrationTestCase):
         self.assertEqual(pinv.items[0].pending_boe_qty, 0)
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_sez_goods_import_with_zero_gst_rates(self):
+        """SEZ goods import should save even when GST tax rows exist with zero rates."""
+        pinv = create_purchase_invoice(
+            supplier="_Test Registered Supplier",
+            do_not_save=1,
+            do_not_submit=1,
+            is_out_state=True,
+        )
+        pinv.gst_category = "SEZ"
+
+        for tax in pinv.taxes:
+            tax.rate = 0
+
+        pinv.save()
+
+        self.assertEqual(pinv.itc_classification, "Import Of Goods")
+        self.assertEqual(pinv.items[0].gst_treatment, "Taxable")
+        self.assertEqual(pinv.items[0].igst_rate, 0)
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_boe_applicability_auto_uncheck_when_not_import_of_goods(self):
         """is_boe_applicable should be 0 when itc_classification is not Import Of Goods."""
         pinv = create_purchase_invoice(
