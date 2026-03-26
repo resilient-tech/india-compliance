@@ -1,5 +1,5 @@
 import frappe
-from frappe.tests import IntegrationTestCase, change_settings
+from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import getdate
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
@@ -25,7 +25,7 @@ def _filters(posting_date):
     )
 
 
-class TestGSTAccountWiseSummary(IntegrationTestCase):
+class TestGSTAccountWiseSummary(FrappeTestCase):
     def setUp(self):
         filters = {"company": COMPANY}
         for doctype in ("Purchase Invoice", "Bill of Entry"):

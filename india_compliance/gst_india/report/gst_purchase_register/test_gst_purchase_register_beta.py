@@ -2,20 +2,13 @@
 # See license.txt
 
 import frappe
-<<<<<<< HEAD:india_compliance/gst_india/report/gst_purchase_register/test_gst_purchase_register_beta.py
-from frappe.tests.utils import FrappeTestCase
-from frappe.utils import getdate
-
-from india_compliance.gst_india.report.gst_purchase_register_beta.gst_purchase_register_beta import (
-=======
-from frappe.tests import IntegrationTestCase, change_settings
+from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import getdate
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
 )
-from india_compliance.gst_india.report.gst_purchase_register.gst_purchase_register import (
->>>>>>> 3832ce2d (feat: allow BOE for Import of Goods from SEZ (#4103)):india_compliance/gst_india/report/gst_purchase_register/test_gst_purchase_register.py
+from india_compliance.gst_india.report.gst_purchase_register_beta.gst_purchase_register_beta import (
     execute,
 )
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
@@ -38,11 +31,7 @@ def _filters(posting_date, **kwargs):
     )
 
 
-<<<<<<< HEAD:india_compliance/gst_india/report/gst_purchase_register/test_gst_purchase_register_beta.py
 class TestGSTPurchaseRegisterITCJournalEntries(FrappeTestCase):
-=======
-class TestGSTPurchaseRegister(IntegrationTestCase):
->>>>>>> 3832ce2d (feat: allow BOE for Import of Goods from SEZ (#4103)):india_compliance/gst_india/report/gst_purchase_register/test_gst_purchase_register.py
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

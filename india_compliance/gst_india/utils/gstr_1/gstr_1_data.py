@@ -9,20 +9,11 @@ from frappe.query_builder import Case
 from frappe.query_builder.functions import Date, IfNull, Sum
 from frappe.utils import getdate
 
-<<<<<<< HEAD
-from india_compliance.gst_india.constants import GST_REFUND_TAX_TYPES
-from india_compliance.gst_india.utils import get_full_gst_uom
-=======
 from india_compliance.gst_india.constants import (
     GST_REFUND_TAX_TYPES,
     SERVICE_HSN_PREFIX,
 )
-from india_compliance.gst_india.utils import (
-    get_escaped_name,
-    get_full_gst_uom,
-    validate_invoice_number,
-)
->>>>>>> 3832ce2d (feat: allow BOE for Import of Goods from SEZ (#4103))
+from india_compliance.gst_india.utils import get_full_gst_uom
 from india_compliance.gst_india.utils.gstr_1 import (
     CATEGORY_SUB_CATEGORY_MAPPING,
     HSN_BIFURCATION_FROM,

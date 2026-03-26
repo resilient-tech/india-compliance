@@ -5,15 +5,11 @@ from itertools import chain
 import frappe
 from frappe.utils import cint, flt
 
-<<<<<<< HEAD
-from india_compliance.gst_india.constants import UOM_MAP
+from india_compliance.gst_india.constants import SERVICE_HSN_PREFIX, UOM_MAP
 from india_compliance.gst_india.report.gstr_1.gstr_1 import (
     GSTR1DocumentIssuedSummary,
     GSTR11A11BData,
 )
-=======
-from india_compliance.gst_india.constants import SERVICE_HSN_PREFIX, UOM_MAP
->>>>>>> 3832ce2d (feat: allow BOE for Import of Goods from SEZ (#4103))
 from india_compliance.gst_india.utils import (
     MONTHS,
     get_gst_accounts_by_type,
