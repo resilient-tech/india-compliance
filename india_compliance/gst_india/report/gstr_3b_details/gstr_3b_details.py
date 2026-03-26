@@ -8,6 +8,7 @@ from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import IfNull, LiteralValue, Sum
 from frappe.utils import cint, get_first_day, get_last_day
 
+from india_compliance.gst_india.constants import TAXABLE_GST_TREATMENTS
 from india_compliance.gst_india.utils import get_period
 from india_compliance.gst_india.utils.itc_claim import apply_period_filter
 
@@ -184,6 +185,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                     IfNull(purchase_invoice.ineligibility_reason, "")
                     != "ITC restricted due to PoS rules"
                 )  # Ignore as it is Ineligible for ITC
+                & (purchase_invoice.is_boe_applicable == 0)
             )
             .groupby(purchase_invoice_item.parent)
         )
@@ -427,6 +429,7 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
                 ConstantColumn("Purchase Invoice").as_("voucher_type"),
                 purchase_invoice.name.as_("voucher_no"),
                 purchase_invoice.posting_date,
+                purchase_invoice.gst_category,
                 purchase_invoice.place_of_supply,
                 purchase_invoice.supplier_address,
                 Sum(purchase_invoice_item.taxable_value).as_("taxable_value"),
@@ -439,7 +442,7 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
                 & (purchase_invoice.is_opening == "No")
                 & (purchase_invoice.name == purchase_invoice_item.parent)
                 & (
-                    (purchase_invoice_item.gst_treatment != "Taxable")
+                    (purchase_invoice_item.gst_treatment.notin(TAXABLE_GST_TREATMENTS))
                     | (purchase_invoice.gst_category == "Registered Composition")
                 )
                 & (purchase_invoice.company == self.company)
@@ -448,7 +451,6 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
                     purchase_invoice.company_gstin
                     != IfNull(purchase_invoice.supplier_gstin, "")
                 )
-                & (purchase_invoice.gst_category != "Overseas")
             )
             .groupby(purchase_invoice.name)
         )

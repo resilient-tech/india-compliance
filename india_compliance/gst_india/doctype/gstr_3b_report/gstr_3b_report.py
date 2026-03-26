@@ -12,10 +12,15 @@ from openpyxl.cell.cell import MergedCell
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.query_builder import Case
 from frappe.query_builder.functions import IfNull, Sum
 from frappe.utils import cint, cstr, flt, get_first_day, get_last_day
 
-from india_compliance.gst_india.constants import INVOICE_DOCTYPES, STATE_NUMBERS
+from india_compliance.gst_india.constants import (
+    INVOICE_DOCTYPES,
+    STATE_NUMBERS,
+    TAXABLE_GST_TREATMENTS,
+)
 from india_compliance.gst_india.overrides.transaction import is_inter_state_supply
 from india_compliance.gst_india.report.gstr_3b_details.gstr_3b_details import (
     IneligibleITC,
@@ -310,6 +315,7 @@ class GSTR3BReport(Document):
                     IfNull(purchase_invoice.ineligibility_reason, "")
                     != "ITC restricted due to PoS rules"
                 )  # Ignore as it is Ineligible for ITC
+                & (purchase_invoice.is_boe_applicable == 0)
             )
             .groupby(purchase_invoice.itc_classification)
         )
@@ -339,31 +345,37 @@ class GSTR3BReport(Document):
         boe = frappe.qb.DocType("Bill of Entry")
         boe_taxes = frappe.qb.DocType("India Compliance Taxes and Charges")
 
-        def _get_tax_amount(account_type):
-            query = (
-                frappe.qb.from_(boe)
-                .select(Sum(boe_taxes.tax_amount))
-                .join(boe_taxes)
-                .on(boe_taxes.parent == boe.name)
-                .where(
-                    boe.company_gstin.eq(self.gst_details.get("gstin"))
-                    & boe.docstatus.eq(1)
-                    & boe_taxes.gst_tax_type.eq(account_type)
-                )
-                .where(boe_taxes.parenttype == "Bill of Entry")
+        query = (
+            frappe.qb.from_(boe)
+            .join(boe_taxes)
+            .on(boe_taxes.parent == boe.name)
+            .select(
+                Sum(
+                    Case()
+                    .when(boe_taxes.gst_tax_type == "igst", boe_taxes.tax_amount)
+                    .else_(0)
+                ).as_("iamt"),
+                Sum(
+                    Case()
+                    .when(
+                        boe_taxes.gst_tax_type.isin(["cess", "cess_non_advol"]),
+                        boe_taxes.tax_amount,
+                    )
+                    .else_(0)
+                ).as_("csamt"),
             )
+            .where(boe.company_gstin.eq(self.gst_details.get("gstin")))
+            .where(boe.docstatus.eq(1))
+            .where(boe.company.eq(self.company))
+            .where(boe_taxes.parenttype == "Bill of Entry")
+        )
 
-            query = self.apply_itc_period_filter(
-                query,
-                boe,
-            )
+        query = self.apply_itc_period_filter(query, boe)
 
-            return query.run()[0][0] or 0
-
-        igst, cess = _get_tax_amount("igst"), _get_tax_amount("cess")
-        itc_details.setdefault("Import Of Goods", {"iamt": 0, "csamt": 0})
-        itc_details["Import Of Goods"]["iamt"] += igst
-        itc_details["Import Of Goods"]["csamt"] += cess
+        for row in query.run(as_dict=True):
+            itc_details.setdefault("Import Of Goods", {"iamt": 0, "csamt": 0})
+            itc_details["Import Of Goods"]["iamt"] += row.iamt or 0
+            itc_details["Import Of Goods"]["csamt"] += row.csamt or 0
 
     def set_reclaim_of_itc_reversal(self):
         journal_entry = frappe.qb.DocType("Journal Entry")
@@ -407,12 +419,11 @@ class GSTR3BReport(Document):
             .where(pi.is_opening == "No")
             .where(pi.company_gstin != IfNull(pi.supplier_gstin, ""))
             .where(
-                (pi_item.gst_treatment != "Taxable")
+                (pi_item.gst_treatment.notin(TAXABLE_GST_TREATMENTS))
                 | (pi.gst_category == "Registered Composition")
             )
             .where(pi.company == self.company)
             .where(pi.company_gstin == self.gst_details.get("gstin"))
-            .where(pi.gst_category != "Overseas")
         )
 
         query = self.apply_itc_period_filter(query, pi)

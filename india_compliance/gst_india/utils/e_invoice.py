@@ -32,6 +32,7 @@ from india_compliance.gst_india.constants import (
     GST_CATEGORIES,
     GSTIN_FORMAT,
     PORT_CODES,
+    SERVICE_HSN_PREFIX,
     TAXABLE_GST_TREATMENTS,
 )
 from india_compliance.gst_india.constants.e_invoice import (
@@ -738,7 +739,9 @@ class EInvoiceData(GSTTransactionData):
             {
                 "discount_amount": 0,
                 "serial_no": "",
-                "is_service_item": "Y" if item.gst_hsn_code.startswith("99") else "N",
+                "is_service_item": (
+                    "Y" if item.gst_hsn_code.startswith(SERVICE_HSN_PREFIX) else "N"
+                ),
                 "unit_rate": (
                     abs(self.rounded(item.taxable_value / item.qty, 3))
                     if item.qty

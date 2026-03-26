@@ -29,6 +29,7 @@ from india_compliance.gst_india.constants import (
     GST_TAX_TYPES,
     GSTIN_FORMAT,
     SALES_DOCTYPES,
+    SERVICE_HSN_PREFIX,
     STATE_NUMBERS,
     TAXABLE_GST_TREATMENTS,
 )
@@ -1436,7 +1437,8 @@ class EWaybillData(GSTTransactionData):
 
         # Atleast one item with HSN code of goods is required
         has_atleast_one_goods_item = any(
-            not item.gst_hsn_code.startswith("99") for item in self.doc.items
+            not item.gst_hsn_code.startswith(SERVICE_HSN_PREFIX)
+            for item in self.doc.items
         )
 
         if not has_atleast_one_goods_item:
@@ -1624,7 +1626,7 @@ class EWaybillData(GSTTransactionData):
         main_hsn_code = next(
             row.gst_hsn_code
             for row in doc.items
-            if not row.gst_hsn_code.startswith("99")
+            if not row.gst_hsn_code.startswith(SERVICE_HSN_PREFIX)
         )
 
         self.transaction_details.update(
