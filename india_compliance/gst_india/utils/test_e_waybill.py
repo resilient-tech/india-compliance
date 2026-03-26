@@ -16,6 +16,7 @@ from frappe.www.printview import get_html_and_style
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
+from india_compliance.gst_india.constants import SERVICE_HSN_PREFIX
 from india_compliance.gst_india.overrides.sales_invoice import (
     is_e_waybill_applicable,
 )
@@ -1637,7 +1638,11 @@ def _bulk_insert_hsn_wise_items(hsn_codes):
                 frappe.session.user,
                 code["hsn_code"],
                 code["description"],
-                "Services" if code["hsn_code"][:2] == "99" else "Products",
+                (
+                    "Services"
+                    if code["hsn_code"][:2] == SERVICE_HSN_PREFIX
+                    else "Products"
+                ),
                 "Nos",
             ]
             for idx, code in enumerate(hsn_codes, 13000)
