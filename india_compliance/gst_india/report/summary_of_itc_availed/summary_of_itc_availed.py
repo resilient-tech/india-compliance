@@ -72,6 +72,7 @@ class ITCAvailedCategory:
         itc_classification = row.get("itc_classification")
         is_reverse_charge = row.get("is_reverse_charge")
 
+        # sequence of check is important because bill of entry dosen't have gst_category.
         if itc_classification == "Import Of Goods":
             return Category.IMPORT_GOODS
 

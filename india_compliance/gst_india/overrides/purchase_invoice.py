@@ -116,18 +116,18 @@ def set_pending_boe_qty(doc):
 
 
 def set_boe_applicability(doc):
-    if doc.itc_classification != "Import Of Goods":
-        boe_applicability = 0
-    else:
-        boe_applicability = 0 if has_gst_taxes(doc) else 1
+    boe_applicability = 0
+
+    if doc.itc_classification == "Import Of Goods" and not has_gst_taxes(doc):
+        boe_applicability = 1
 
     if doc.is_boe_applicable == boe_applicability:
         return
 
     doc.is_boe_applicable = boe_applicability
     frappe.msgprint(
-        _("Bill of Entry is now {0} for this invoice.").format(
-            _("required") if boe_applicability else _("not required")
+        _("Bill of Entry can {0} for this invoice.").format(
+            _("be generated") if boe_applicability else _("not be generated")
         ),
         alert=True,
         indicator="blue",
