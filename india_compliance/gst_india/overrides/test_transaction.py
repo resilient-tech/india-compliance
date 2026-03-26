@@ -152,6 +152,7 @@ class TestTransaction(IntegrationTestCase):
 
         self.assertEqual(return_doc.is_reverse_charge, 1)
 
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_sez_without_payment_with_reverse_charge(self):
         if not self.is_sales_doctype:
             return
