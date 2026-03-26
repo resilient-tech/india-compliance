@@ -806,6 +806,33 @@ class TestTransaction(IntegrationTestCase):
         )
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_import_service_purchase_invoice_is_taxable(self):
+        if self.doctype != "Purchase Invoice":
+            return
+
+        doc = create_transaction(
+            **self.transaction_details,
+            supplier="_Test Foreign Supplier",
+            item_code="_Test Service Item",
+            do_not_submit=True,
+        )
+
+        self.assertEqual(doc.itc_classification, "Import Of Service")
+        self.assertEqual(doc.items[0].gst_treatment, "Taxable")
+
+    def test_regular_purchase_without_gst_taxes_is_nil_rated(self):
+        if self.is_sales_doctype:
+            return
+
+        doc = create_transaction(
+            **self.transaction_details,
+            supplier="_Test Registered Supplier",
+            do_not_submit=True,
+        )
+
+        self.assertEqual(doc.items[0].gst_treatment, "Nil-Rated")
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_gst_treatment_for_exports(self):
         if not self.is_sales_doctype:
             return
