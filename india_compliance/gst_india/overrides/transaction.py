@@ -695,7 +695,7 @@ def validate_sales_reverse_charge(doc):
     if doc.get("is_reverse_charge") and is_export_without_payment_of_gst(doc):
         frappe.throw(
             _(
-                "Transaction cannot be reverse charge for SEZ supply without payment"
+                "Transaction cannot be reverse charge for export/SEZ supply without payment"
                 " of GST"
             )
         )
