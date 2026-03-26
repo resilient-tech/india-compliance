@@ -1119,6 +1119,14 @@ class ImportDialog {
                 default: this.frm.doc.inward_supply_period,
                 onchange: async () => {
                     const period = this.dialog.get_value("period");
+                    if (!period) return;
+
+                    if (period === "Custom") {
+                        this.date_range = this.dialog.get_value("date_range");
+                        this.fetch_import_history();
+                        return;
+                    }
+
                     const { message } = await this.frm._call("get_date_range", {
                         period,
                     });
