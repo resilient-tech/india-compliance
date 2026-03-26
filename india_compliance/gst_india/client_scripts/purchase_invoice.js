@@ -57,7 +57,7 @@ frappe.ui.form.on(DOCTYPE, {
 
         if (
             frm.doc.docstatus === 1 &&
-            frm.doc.itc_classification === "Import Of Goods" &&
+            frm.doc.is_boe_applicable &&
             frm.doc.__onload?.has_pending_boe_qty
         ) {
             frm.add_custom_button(

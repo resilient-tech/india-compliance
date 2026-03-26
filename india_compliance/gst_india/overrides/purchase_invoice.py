@@ -32,7 +32,7 @@ from india_compliance.gst_india.utils.itc_claim import (
 
 
 def onload(doc, method=None):
-    if doc.docstatus == 1 and doc.itc_classification == "Import Of Goods":
+    if doc.docstatus == 1 and doc.is_boe_applicable:
         doc.set_onload(
             "has_pending_boe_qty",
             any(item.pending_boe_qty > 0 for item in doc.items),
