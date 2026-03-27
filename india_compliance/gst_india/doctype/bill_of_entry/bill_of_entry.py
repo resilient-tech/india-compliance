@@ -154,7 +154,14 @@ class BillofEntry(Document):
         purchase_invoices = frappe.get_all(
             "Purchase Invoice",
             filters={"name": ["in", pi_names]},
-            fields=["docstatus", "gst_category", "name", "company", "company_gstin"],
+            fields=[
+                "docstatus",
+                "gst_category",
+                "name",
+                "company",
+                "company_gstin",
+                "is_boe_applicable",
+            ],
         )
 
         for invoice in purchase_invoices:
@@ -182,6 +189,13 @@ class BillofEntry(Document):
                     _(
                         "GST Category must be set to Overseas / SEZ in Purchase Invoice"
                         " {0} to create a Bill of Entry"
+                    ).format(invoice.name)
+                )
+
+            if not invoice.is_boe_applicable:
+                frappe.throw(
+                    _(
+                        "Bill of Entry is not applicable for Purchase Invoice {0}"
                     ).format(invoice.name)
                 )
 
