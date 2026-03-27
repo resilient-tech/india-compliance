@@ -1693,7 +1693,12 @@ class EWaybillData(GSTTransactionData):
         self.bill_from.legal_name = from_party or self.bill_from.address_title
 
         if self.doc.gst_category == "SEZ":
-            self.bill_to.state_number = 96
+            # for SEZ e-Waybill API expects place of supply as 96 - Other Countries
+            # ERROR CODE: 641, 642
+            if self.doc.get("is_return"):
+                self.bill_from.state_number = 96
+            else:
+                self.bill_to.state_number = 96
 
     def get_address_details(self, *args, **kwargs):
         address_details = super().get_address_details(*args, **kwargs)
@@ -1771,7 +1776,8 @@ class EWaybillData(GSTTransactionData):
             self.bill_from.gstin = _get_sandbox_gstin(self.bill_from, 0)
             self.bill_to.gstin = _get_sandbox_gstin(self.bill_to, 1)
 
-        if self.doc.get("is_return"):
+        # For regular outward supplies, use Place of Supply.
+        if self.doc.get("is_return") or self.doc.gst_category == "SEZ":
             to_state_code = self.bill_to.state_number
         else:
             to_state_code = int(self.transaction_details.pos_state_code)
