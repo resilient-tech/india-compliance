@@ -1291,6 +1291,48 @@ class TestEWaybill(IntegrationTestCase):
         self.assertEqual(e_waybill_data.get("supplyType"), "I")
         self.assertEqual(e_waybill_data.get("subSupplyType"), 7)
 
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_e_waybill_for_sez_outward_invoice(self):
+        """Test e-waybill for outward supply to SEZ unit.
+        For outward supply to SEZ, toStateCode should be 96 (Other Countries)
+        and fromStateCode should be company's state.
+        """
+        si = create_sales_invoice(
+            vehicle_no="GJ07DL9009",
+            company_address="_Test Indian Registered Company-Billing",
+            customer_address="_Test Registered Customer-Billing-1",
+            is_out_state=1,
+            is_export_with_gst=1,
+        )
+
+        e_waybill_data = EWaybillData(si).get_data()
+
+        self.assertEqual(e_waybill_data.get("toStateCode"), 96)
+        self.assertEqual(e_waybill_data.get("fromStateCode"), 24)
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_e_waybill_for_sez_sales_return_invoice(self):
+        """Test e-waybill for sales return from SEZ unit.
+        For return from SEZ, addresses are swapped so fromStateCode should be 96 (Other Countries)
+        and toStateCode should be company's state.
+        """
+        si = create_sales_invoice(
+            vehicle_no="GJ07DL9009",
+            company_address="_Test Indian Registered Company-Billing",
+            customer_address="_Test Registered Customer-Billing-1",
+            is_out_state=1,
+            is_export_with_gst=1,
+        )
+
+        credit_note = make_return_doc("Sales Invoice", si.name)
+        credit_note.vehicle_no = "GJ07DL9009"
+        credit_note.submit()
+
+        e_waybill_data = EWaybillData(credit_note).get_data()
+
+        self.assertEqual(e_waybill_data.get("fromStateCode"), 96)
+        self.assertEqual(e_waybill_data.get("toStateCode"), 24)
+
     # helper functions
     def _generate_e_waybill(self, docname=None, doctype="Sales Invoice", test_data=None, force=False):
         """
