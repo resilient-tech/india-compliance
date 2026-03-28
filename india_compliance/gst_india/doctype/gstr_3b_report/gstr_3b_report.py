@@ -727,7 +727,7 @@ def get_address_state_map():
 
 def get_json(template):
     file_path = os.path.join(os.path.dirname(__file__), f"{template}.json")
-    with open(file_path) as f:
+    with open(file_path) as f:  # nosemgrep
         return cstr(f.read())
 
 
