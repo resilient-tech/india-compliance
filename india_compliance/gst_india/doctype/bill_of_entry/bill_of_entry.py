@@ -13,6 +13,7 @@ from frappe.model.mapper import get_mapped_doc
 from frappe.query_builder.functions import IfNull, Sum
 from frappe.utils import today
 
+from india_compliance.gst_india.constants import IMPORT_GST_CATEGORIES
 from india_compliance.gst_india.overrides.ineligible_itc import (
     update_landed_cost_voucher_for_gst_expense,
     update_regional_gl_entries,
@@ -176,11 +177,11 @@ class BillofEntry(Document):
                     )
                 )
 
-            if invoice.gst_category != "Overseas":
+            if invoice.gst_category not in IMPORT_GST_CATEGORIES:
                 frappe.throw(
                     _(
-                        "GST Category must be set to Overseas in Purchase Invoice {0} to create"
-                        " a Bill of Entry"
+                        "GST Category must be set to Overseas / SEZ in Purchase Invoice"
+                        " {0} to create a Bill of Entry"
                     ).format(invoice.name)
                 )
 
@@ -517,7 +518,7 @@ def make_bill_of_entry(source_name: str, target_doc: str | None = None):
                 "field_no_map": ["posting_date"],
                 "validation": {
                     "docstatus": ["=", 1],
-                    "gst_category": ["=", "Overseas"],
+                    "gst_category": ["in", list(IMPORT_GST_CATEGORIES)],
                 },
             },
             "Purchase Invoice Item": {
@@ -770,6 +771,7 @@ def get_pi_items(purchase_invoices):
             pi_item.name.as_("pi_detail"),
         )
         .where(pi_item.parent.isin(purchase_invoices))
+        .where(pi.is_boe_applicable == 1)
         .where(pi_item.pending_boe_qty > 0)
         .run(as_dict=True)
     )
@@ -801,7 +803,8 @@ def fetch_pending_boe_invoices(
         filters={
             **filters,
             "docstatus": 1,
-            "gst_category": "Overseas",
+            "gst_category": ["in", list(IMPORT_GST_CATEGORIES)],
+            "is_boe_applicable": 1,
             "pending_boe_qty": [">", 0],
         },
         fields=["name", "company", "company_gstin"],

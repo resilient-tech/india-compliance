@@ -3,10 +3,11 @@ import functools
 import io
 import tarfile
 
-import frappe
 from dateutil import parser
-from erpnext.accounts.party import get_default_contact
-from erpnext.accounts.utils import get_fiscal_year
+from pytz import timezone
+from titlecase import titlecase as _titlecase
+
+import frappe
 from frappe import _
 from frappe.contacts.doctype.contact.contact import get_contact_details
 from frappe.desk.form.load import get_docinfo, run_onload
@@ -23,8 +24,8 @@ from frappe.utils import (
 )
 from frappe.utils.data import get_timespan_date_range as _get_timespan_date_range
 from frappe.utils.file_manager import get_file_path
-from pytz import timezone
-from titlecase import titlecase as _titlecase
+from erpnext.accounts.party import get_default_contact
+from erpnext.accounts.utils import get_fiscal_year
 
 from india_compliance.exceptions import GatewayTimeoutError, GSPServerError
 from india_compliance.gst_india.constants import (
@@ -34,11 +35,14 @@ from india_compliance.gst_india.constants import (
     GST_INVOICE_NUMBER_FORMAT,
     GST_PARTY_TYPES,
     GSTIN_FORMATS,
+    IMPORT_GST_CATEGORIES,
     PAN_NUMBER,
     PINCODE_FORMAT,
     SALES_DOCTYPES,
+    SERVICE_HSN_PREFIX,
     STATE_NUMBERS,
     STATE_PINCODE_MAPPING,
+    TAX_TYPES,
     TCS,
     TIMEZONE,
     UOM_MAP,
@@ -130,7 +134,9 @@ def get_party_for_gstin(gstin: str, party_type: str = "Supplier"):
     if not gstin:
         return
 
-    if party := frappe.db.get_value(party_type, filters={"gstin": gstin}, fieldname="name"):
+    if party := frappe.db.get_value(
+        party_type, filters={"gstin": gstin}, fieldname="name"
+    ):
         return party
 
     address = frappe.qb.DocType("Address")
@@ -203,10 +209,14 @@ def validate_gst_category(gst_category, gstin):
     """
 
     if not gstin:
-        if gst_category not in (categories_without_gstin := {"Unregistered", "Overseas"}):
+        if gst_category not in (
+            categories_without_gstin := {"Unregistered", "Overseas"}
+        ):
             frappe.throw(
                 _("GST Category should be one of {0}").format(
-                    " or ".join(frappe.bold(category) for category in categories_without_gstin)
+                    " or ".join(
+                        frappe.bold(category) for category in categories_without_gstin
+                    )
                 ),
                 title=_("Invalid GST Category"),
             )
@@ -248,9 +258,10 @@ def validate_pincode(address):
 
     if not PINCODE_FORMAT.match(address.pincode):
         frappe.throw(
-            _("Postal Code for Address {0} must be a 6-digit number and cannot start" " with 0").format(
-                get_link_to_form("Address", address.name)
-            ),
+            _(
+                "Postal Code for Address {0} must be a 6-digit number and cannot start"
+                " with 0"
+            ).format(get_link_to_form("Address", address.name)),
             title=_("Invalid Postal Code"),
         )
 
@@ -275,7 +286,11 @@ def validate_pincode(address):
             " Codes</a>."
         ).format(
             postal_code=frappe.bold(address.pincode),
-            name=(get_link_to_form("Address", address.name) if not address.get("__unsaved") else ""),
+            name=(
+                get_link_to_form("Address", address.name)
+                if not address.get("__unsaved")
+                else ""
+            ),
             state=frappe.bold(address.state),
             url=E_INVOICE_MASTER_CODES_URL,
         ),
@@ -283,7 +298,9 @@ def validate_pincode(address):
     )
 
 
-def guess_gst_category(gstin: str | None, country: str | None, gst_category: str | None = None) -> str:
+def guess_gst_category(
+    gstin: str | None, country: str | None, gst_category: str | None = None
+) -> str:
     if not gstin:
         if country and country != "India":
             return "Overseas"
@@ -369,6 +386,22 @@ def is_foreign_transaction(gst_category, place_of_supply):
     return gst_category == "Overseas" and place_of_supply == "96-Other Countries"
 
 
+def is_import_of_goods(doc):
+    return doc.gst_category in IMPORT_GST_CATEGORIES and are_goods_supplied(doc)
+
+
+def is_import_of_services(doc):
+    """
+    Note: https://hnallp.com/assets/articles/6c0b7-gst-applicability-on-sez-transactions_final.pdf
+    Only services with GST Category as Overseas are considered as import of services.
+    Section 7(5) of IGST supply of goods or service to or by SEZ will be considered as inter-
+    State supply.Therefore, the sez service purchase transaction shall be treated as a domestic supply of services and GST
+    would be collected and discharged by the SEZ Unit / SEZ Developer i.e., under Forward
+    Charge Mechanism.
+    """
+    return doc.gst_category == "Overseas" and not are_goods_supplied(doc)
+
+
 def get_hsn_settings():
     validate_hsn_code, min_hsn_digits = frappe.get_cached_value(
         "GST Settings",
@@ -378,7 +411,9 @@ def get_hsn_settings():
 
     min_hsn_digits = cint(min_hsn_digits)
 
-    valid_hsn_length = tuple(length for length in VALID_HSN_LENGTHS if length >= min_hsn_digits)
+    valid_hsn_length = tuple(
+        length for length in VALID_HSN_LENGTHS if length >= min_hsn_digits
+    )
 
     return validate_hsn_code, valid_hsn_length
 
@@ -459,7 +494,10 @@ def get_overseas_place_of_supply(party_details):
         as_dict=True,
     )
 
-    if shipping_address_details.country == "India" and shipping_address_details.gst_state_number:
+    if (
+        shipping_address_details.country == "India"
+        and shipping_address_details.gst_state_number
+    ):
         place_of_supply = f"{shipping_address_details.gst_state_number}-{shipping_address_details.gst_state}"
 
     return place_of_supply
@@ -506,16 +544,20 @@ def get_gst_accounts_by_type(company, account_type, throw=True):
         if row.account_type == account_type and row.company == company:
             return frappe._dict((key, row.get(key)) for key in GST_ACCOUNT_FIELDS)
 
-    if account_type == "Sales Reverse Charge" and not settings.enable_reverse_charge_in_sales:
+    if (
+        account_type == "Sales Reverse Charge"
+        and not settings.enable_reverse_charge_in_sales
+    ):
         return frappe._dict()
 
     if not throw:
         return frappe._dict()
 
     frappe.throw(
-        _("Could not retrieve GST Accounts of type {0} from GST Settings for" " Company {1}").format(
-            frappe.bold(account_type), frappe.bold(company)
-        ),
+        _(
+            "Could not retrieve GST Accounts of type {0} from GST Settings for"
+            " Company {1}"
+        ).format(frappe.bold(account_type), frappe.bold(company)),
         frappe.DoesNotExistError,
     )
 
@@ -555,9 +597,10 @@ def get_gst_accounts_by_tax_type(company, tax_type, throw=True):
         return accounts_list
 
     frappe.throw(
-        _("Could not retrieve GST Accounts of type {0} from GST Settings for" " Company {1}").format(
-            frappe.bold(tax_type), frappe.bold(company)
-        ),
+        _(
+            "Could not retrieve GST Accounts of type {0} from GST Settings for"
+            " Company {1}"
+        ).format(frappe.bold(tax_type), frappe.bold(company)),
     )
 
 
@@ -642,7 +685,12 @@ def parse_datetime(value, day_first=False, throw=True):
         return parsed.replace(tzinfo=None)
 
     # localize to india, convert to system, remove tzinfo
-    return timezone(TIMEZONE).localize(parsed).astimezone(timezone(system_tz)).replace(tzinfo=None)
+    return (
+        timezone(TIMEZONE)
+        .localize(parsed)
+        .astimezone(timezone(system_tz))
+        .replace(tzinfo=None)
+    )
 
 
 def as_ist(value=None):
@@ -655,7 +703,12 @@ def as_ist(value=None):
         return parsed
 
     # localize to system, convert to IST, remove tzinfo
-    return timezone(system_tz).localize(parsed).astimezone(timezone(TIMEZONE)).replace(tzinfo=None)
+    return (
+        timezone(system_tz)
+        .localize(parsed)
+        .astimezone(timezone(TIMEZONE))
+        .replace(tzinfo=None)
+    )
 
 
 def get_json_from_file(path):
@@ -663,7 +716,7 @@ def get_json_from_file(path):
 
 
 def join_list_with_custom_separators(input, separator=", ", last_separator=" or "):
-    if not isinstance(input, list | tuple):
+    if not isinstance(input, (list, tuple)):
         return
 
     if not input:
@@ -672,7 +725,11 @@ def join_list_with_custom_separators(input, separator=", ", last_separator=" or 
     if len(input) == 1:
         return cstr(input[0])
 
-    return separator.join(cstr(item) for item in input[:-1]) + last_separator + cstr(input[-1])
+    return (
+        separator.join(cstr(item) for item in input[:-1])
+        + last_separator
+        + cstr(input[-1])
+    )
 
 
 def titlecase(value):
@@ -758,7 +815,9 @@ def are_goods_supplied(doc):
     return any(
         item
         for item in doc.items
-        if item.gst_hsn_code and not item.gst_hsn_code.startswith("99") and item.qty != 0
+        if item.gst_hsn_code
+        and not item.gst_hsn_code.startswith(SERVICE_HSN_PREFIX)
+        and item.qty != 0
     )
 
 
@@ -926,7 +985,9 @@ def validate_invoice_number(doc, throw=True):
     title = _("Invalid GST Transaction Name")
 
     if not is_valid_length:
-        message = _("Transaction Name must be 16 characters or fewer to meet GST requirements")
+        message = _(
+            "Transaction Name must be 16 characters or fewer to meet GST requirements"
+        )
     else:
         message = _(
             "Transaction Name should start with an alphanumeric character and can"
@@ -950,14 +1011,22 @@ def handle_server_errors(settings, doc, document_type, error):
         GSPServerError: _("GSP/GST Server Down"),
     }
 
-    document_status_field = "einvoice_status" if document_type == "e-Invoice" else "e_waybill_status"
+    document_status_field = (
+        "einvoice_status" if document_type == "e-Invoice" else "e_waybill_status"
+    )
 
     document_status = "Failed"
 
-    if settings.enable_retry_einv_ewb_generation and (not settings.sandbox_mode or frappe.flags.in_test):
+    if settings.enable_retry_einv_ewb_generation and (
+        not settings.sandbox_mode or frappe.flags.in_test
+    ):
         document_status = "Auto-Retry"
-        settings.db_set("is_retry_einv_ewb_generation_pending", 1, update_modified=False)
-        error_message += f" Your {document_type} generation will be automatically retried every 5 minutes."
+        settings.db_set(
+            "is_retry_einv_ewb_generation_pending", 1, update_modified=False
+        )
+        error_message += (
+            " Your {0} generation will be automatically retried every 5 minutes."
+        ).format(document_type)
     else:
         error_message += " Please try again after some time."
 
@@ -1015,9 +1084,15 @@ def is_outward_stock_entry(doc):
         return True
 
 
-def create_notification(message_content, document_type, document_name=None, request_id=None):
+def create_notification(
+    message_content, document_type, document_name=None, request_id=None
+):
     # request_id shows failure response
-    if request_id and (doc_name := frappe.db.get_value("Integration Request", {"request_id": request_id})):
+    if request_id and (
+        doc_name := frappe.db.get_value(
+            "Integration Request", {"request_id": request_id}
+        )
+    ):
         document_type = "Integration Request"
         document_name = doc_name
 
@@ -1080,13 +1155,17 @@ def has_permission_of_page(page_name, throw=False):
         if not throw:
             return False
 
-        raise frappe.PermissionError(_("You do not have permission to access page: {0}").format(page_name))
+        raise frappe.PermissionError(
+            _("You do not have permission to access page: {0}").format(page_name)
+        )
 
     return True
 
 
 @frappe.whitelist()
-def check_duplicate_party(field: str, value: str, party_type: str, party: str | None = None):
+def check_duplicate_party(
+    field: str, value: str, party_type: str, party: str | None = None
+):
     """
     Check duplicates based on PAN/GSTIN for the given party type.
     """
@@ -1216,3 +1295,7 @@ def set_ewaybill_status(
         return
 
     doc.db_set("e_waybill_status", status, commit=commit, notify=notify)
+
+
+def has_gst_taxes(doc):
+    return any(row.gst_tax_type in TAX_TYPES for row in doc.taxes)

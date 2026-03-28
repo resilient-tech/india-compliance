@@ -12,7 +12,7 @@ $(document).on("app_ready", async function () {
 
             In accordance with
             <a
-              href='https://www.mca.gov.in/Ministry/pdf/AccountsAmendmentRules_24032021.pdf'
+              href='https://egazette.gov.in/WriteReadData/2021/226081.pdf'
               target='_blank'
             >MCA Notification dated 24-03-2021</a>,
             all companies registered in India are required to maintain an Audit Trail

@@ -3,9 +3,13 @@
 
 frappe.ui.form.on("GST Settings", {
     setup(frm) {
-        ["cgst_account", "sgst_account", "igst_account", "cess_account", "cess_non_advol_account"].forEach(
-            (field) => filter_accounts(frm, field)
-        );
+        [
+            "cgst_account",
+            "sgst_account",
+            "igst_account",
+            "cess_account",
+            "cess_non_advol_account",
+        ].forEach(field => filter_accounts(frm, field));
 
         const company_query = {
             filters: {
@@ -21,7 +25,10 @@ frappe.ui.form.on("GST Settings", {
         });
     },
     onload: show_ic_api_promo,
-    refresh: show_update_gst_category_button,
+    refresh(frm) {
+        show_update_gst_category_button(frm);
+        set_state_options_for_e_waybill_threshold(frm);
+    },
     attach_e_waybill_print(frm) {
         if (!frm.doc.attach_e_waybill_print || frm.doc.fetch_e_waybill_data) return;
         frm.set_value("fetch_e_waybill_data", 1);
@@ -55,16 +62,20 @@ function show_ic_api_promo(frm) {
     if (!frm.doc.__onload?.can_show_promo) return;
     const alert_message = `
     Looking for API Features?
-    <a href="${frappe.utils.generate_route({
-        type: "Page",
-        name: "india-compliance-account",
-    })}" class="alert-link">
+    <a href="${frappe.utils.generate_route({ type: "Page", name: "india-compliance-account" })}" class="alert-link">
         Get started with the India Compliance API!
     </a>`;
 
-    india_compliance.show_dismissable_alert(frm.layout.wrapper, alert_message, "primary", () => {
-        frappe.xcall("india_compliance.gst_india.doctype.gst_settings.gst_settings.disable_api_promo");
-    });
+    india_compliance.show_dismissable_alert(
+        frm.layout.wrapper,
+        alert_message,
+        "primary",
+        () => {
+            frappe.xcall(
+                "india_compliance.gst_india.doctype.gst_settings.gst_settings.disable_api_promo",
+            );
+        },
+    );
 }
 
 function show_update_gst_category_button(frm) {
@@ -80,7 +91,7 @@ function show_update_gst_category_button(frm) {
         frappe.msgprint({
             title: __("Update GST Category"),
             message: __(
-                "Confirm to update GST Category for all Addresses where it is missing using API. It is missing for these <a><span class='custom-link' data-fieldtype='Link' data-doctype='Address'>Addresses</span><a>."
+                "Confirm to update GST Category for all Addresses where it is missing using API. It is missing for these <a><span class='custom-link' data-fieldtype='Link' data-doctype='Address'>Addresses</span><a>.",
             ),
             primary_action: {
                 label: __("Update"),
@@ -107,7 +118,7 @@ function set_auto_generate_e_waybill(frm) {
 
     frm.set_value(
         "auto_generate_e_waybill",
-        frm.doc.auto_generate_e_invoice && frm.doc.generate_e_waybill_with_e_invoice
+        frm.doc.auto_generate_e_invoice && frm.doc.generate_e_waybill_with_e_invoice,
     );
 
     frm.set_value("auto_cancel_e_waybill", frm.doc.auto_cancel_e_invoice);
@@ -118,5 +129,13 @@ function auto_cancel_e_invoice(frm) {
 }
 
 function reason_for_e_invoice_cancellation(frm) {
-    frm.set_value("reason_for_e_waybill_cancellation", frm.doc.reason_for_e_invoice_cancellation);
+    frm.set_value(
+        "reason_for_e_waybill_cancellation",
+        frm.doc.reason_for_e_invoice_cancellation,
+    );
+}
+
+function set_state_options_for_e_waybill_threshold(frm) {
+    frm.fields_dict.e_waybill_threshold_for_intrastate.grid.fields_map.state.options =
+        frappe.boot.india_state_options;
 }

@@ -9,10 +9,12 @@ frappe.ui.form.on("GSTR 3B Report", {
     onload: function (frm) {
         set_options_for_year_month(frm);
 
-        if (frm.doc.company)
-            india_compliance.set_gstin_options(frm, false, true).then((options) => {
-                frm.set_value("company_gstin", options[0]);
+        if (frm.doc.company && frm.is_new()) {
+            india_compliance.set_gstin_options(frm, false, true).then(options => {
+                if (options && options.length)
+                    frm.set_value("company_gstin", options[0]);
             });
+        }
 
         frappe.realtime.on("gstr3b_report_generation", function () {
             frm.reload_doc();
@@ -23,7 +25,10 @@ frappe.ui.form.on("GSTR 3B Report", {
         if (frm.is_new()) return;
 
         const is_filed = frm.doc.filing_status === "Filed";
-        frm.page.set_indicator(is_filed ? __("Filed") : __("Not Filed"), is_filed ? "green" : "orange");
+        frm.page.set_indicator(
+            is_filed ? __("Filed") : __("Not Filed"),
+            is_filed ? "green" : "orange",
+        );
 
         frm.set_intro(__("Please save the report again to rebuild or update"));
         frm.doc.__unsaved = 1;
@@ -34,8 +39,8 @@ frappe.ui.form.on("GSTR 3B Report", {
                 frappe.urllib.get_full_url(
                     "/api/method/india_compliance.gst_india.doctype.gstr_3b_report.gstr_3b_report.make_json?" +
                         "name=" +
-                        encodeURIComponent(frm.doc.name)
-                )
+                        encodeURIComponent(frm.doc.name),
+                ),
             );
 
             if (!w) {
@@ -50,8 +55,8 @@ frappe.ui.form.on("GSTR 3B Report", {
                 frappe.urllib.get_full_url(
                     "/api/method/india_compliance.gst_india.doctype.gstr_3b_report.gstr_3b_report.download_gstr3b_as_excel?" +
                         "name=" +
-                        encodeURIComponent(frm.doc.name)
-                )
+                        encodeURIComponent(frm.doc.name),
+                ),
             );
 
             if (!w) {
@@ -70,7 +75,7 @@ frappe.ui.form.on("GSTR 3B Report", {
                 callback: function (r) {
                     let data = r.message;
 
-                    frappe.ui.get_print_settings(false, (print_settings) => {
+                    frappe.ui.get_print_settings(false, print_settings => {
                         frappe.render_grid({
                             template: "gstr_3b_report",
                             title: __(this.doctype),
@@ -91,7 +96,10 @@ frappe.ui.form.on("GSTR 3B Report", {
 
             gstr_2b.regenerate({
                 gstin: frm.doc.company_gstin,
-                return_period: india_compliance.get_period(frm.doc.month_or_quarter, frm.doc.year),
+                return_period: india_compliance.get_period(
+                    frm.doc.month_or_quarter,
+                    frm.doc.year,
+                ),
                 doctype: frm.doc.doctype,
                 callback: function (regeneration_status) {
                     if (regeneration_status.status === "ER") {
@@ -130,10 +138,10 @@ frappe.ui.form.on("GSTR 3B Report", {
                                 },
                                 callback: () => frm.reload_doc(),
                             });
-                        }
+                        },
                     );
                 },
-                __("Filing Status")
+                __("Filing Status"),
             );
         }
     },
@@ -156,7 +164,7 @@ function append_form(frm) {
     $(
         frappe.render_template("gstr_3b_report", {
             data: JSON.parse(frm.doc.json_output),
-        })
+        }),
     ).appendTo(frm.fields_dict.gstr3b_form.wrapper);
 }
 

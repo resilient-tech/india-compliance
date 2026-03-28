@@ -180,7 +180,7 @@ class AccountWiseSummary:
                     .else_(0)
                 ).as_("ineligible_itc")
             )
-            .where(je_doc.voucher_type == "Reversal of ITC")
+            .where(je_doc.voucher_type == "Reversal Of ITC")
         )
 
         query = self.get_query_with_common_filters(query, je_doc, filters)
@@ -284,7 +284,7 @@ class AccountWiseSummary:
                 .when(doc.ineligibility_reason == "ITC restricted due to PoS rules", 1)
                 .else_(0)
                 # From BOE
-            ).where(IfNull(doc.itc_classification, "") != "Import of Goods")
+            ).where(doc.is_boe_applicable == 0)
 
         query = self.get_query_with_common_filters(query, doc, self.filters)
 

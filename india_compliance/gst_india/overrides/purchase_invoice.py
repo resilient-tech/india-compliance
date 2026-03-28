@@ -3,7 +3,11 @@ from frappe import _
 from frappe.model.meta import get_field_precision
 from frappe.utils import flt
 
-from india_compliance.gst_india.constants import GST_TAX_TYPES, VALID_HSN_LENGTHS
+from india_compliance.gst_india.constants import (
+    GST_TAX_TYPES,
+    IMPORT_GST_CATEGORIES,
+    VALID_HSN_LENGTHS,
+)
 from india_compliance.gst_india.overrides.sales_invoice import (
     update_dashboard_with_gst_logs,
 )
@@ -12,7 +16,13 @@ from india_compliance.gst_india.overrides.transaction import (
     ignore_gst_validations,
     validate_transaction,
 )
-from india_compliance.gst_india.utils import is_api_enabled, validate_invoice_number
+from india_compliance.gst_india.utils import (
+    has_gst_taxes,
+    is_api_enabled,
+    is_import_of_goods,
+    is_import_of_services,
+    validate_invoice_number,
+)
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 from india_compliance.gst_india.utils.itc_claim import (
     _is_gstr3b_filed,
@@ -22,10 +32,10 @@ from india_compliance.gst_india.utils.itc_claim import (
 
 
 def onload(doc, method=None):
-    if doc.docstatus == 1 and doc.gst_category == "Overseas":
+    if doc.docstatus == 1 and doc.is_boe_applicable:
         doc.set_onload(
-            "bill_of_entry_exists",
-            not any(item.pending_boe_qty > 0 for item in doc.items),
+            "has_pending_boe_qty",
+            any(item.pending_boe_qty > 0 for item in doc.items),
         )
 
     if doc.docstatus == 1 and doc.get("itc_claim_period"):
@@ -60,6 +70,7 @@ def validate(doc, method=None):
 
     set_ineligibility_reason(doc)
     set_itc_classification(doc)
+    set_boe_applicability(doc)
     validate_reverse_charge(doc)
     validate_supplier_invoice_number(doc)
     validate_with_inward_supply(doc)
@@ -99,7 +110,26 @@ def set_reconciliation_status(doc):
 
 def set_pending_boe_qty(doc):
     for item in doc.items:
-        item.pending_boe_qty = item.qty
+        item.pending_boe_qty = item.qty if doc.is_boe_applicable else 0
+
+
+def set_boe_applicability(doc):
+    boe_applicability = 0
+
+    if doc.itc_classification == "Import Of Goods" and not has_gst_taxes(doc):
+        boe_applicability = 1
+
+    if doc.is_boe_applicable == boe_applicability:
+        return
+
+    doc.is_boe_applicable = boe_applicability
+    frappe.msgprint(
+        _("Bill of Entry can {0} for this invoice.").format(
+            _("be generated") if boe_applicability else _("not be generated")
+        ),
+        alert=True,
+        indicator="blue",
+    )
 
 
 def is_b2b_invoice(doc):
@@ -112,20 +142,15 @@ def is_b2b_invoice(doc):
 
 
 def set_itc_classification(doc):
-    if doc.gst_category == "Overseas":
-        for item in doc.items:
-            if not item.gst_hsn_code.startswith("99"):
-                doc.itc_classification = "Import Of Goods"
-                break
-        else:
-            doc.itc_classification = "Import Of Service"
-
+    # If the document contains single goods item then it will be categorized as Import of Goods,
+    if is_import_of_goods(doc):
+        doc.itc_classification = "Import Of Goods"
+    elif is_import_of_services(doc):
+        doc.itc_classification = "Import Of Service"
     elif doc.is_reverse_charge:
         doc.itc_classification = "ITC on Reverse Charge"
-
     elif doc.gst_category == "Input Service Distributor" and doc.is_internal_transfer():
         doc.itc_classification = "Input Service Distributor"
-
     else:
         doc.itc_classification = "All Other ITC"
 
@@ -262,12 +287,14 @@ def validate_reverse_charge(doc):
 
 def validate_hsn_codes(doc):
     # To determine whether BOE is applicable or not.
-    if doc.gst_category != "Overseas":
+    if doc.gst_category not in IMPORT_GST_CATEGORIES:
         return
 
     _validate_hsn_codes(
         doc,
         valid_hsn_length=VALID_HSN_LENGTHS,
         throw=True,
-        message=_("GST HSN Code is mandatory for Overseas Purchase Invoice.<br>"),
+        message=_("GST HSN Code is mandatory for {0} Purchase Invoice.<br>").format(
+            doc.gst_category
+        ),
     )

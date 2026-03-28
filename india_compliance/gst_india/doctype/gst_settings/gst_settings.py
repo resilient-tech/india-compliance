@@ -58,6 +58,7 @@ class GSTSettings(Document):
         self.clear_api_auth_session()
         self.update_retry_e_invoice_e_waybill_scheduled_job()
         self.update_e_invoice_status()
+        self.validate_unique_states()
 
     def update_e_invoice_status(self):
         previous_doc = self.get_doc_before_save()
@@ -78,6 +79,19 @@ class GSTSettings(Document):
             return
 
         frappe.enqueue(update_e_invoice_status, queue="long", timeout=6000)
+
+    def validate_unique_states(self):
+        seen_states = set()
+        for row in self.e_waybill_threshold_for_intrastate:
+            state = row.get("state")
+            if state in seen_states:
+                frappe.throw(
+                    _(
+                        "Row #{0}: State {1} appears multiple times in E-Waybill Threshold for Intrastate table"
+                    ).format(row.idx, frappe.bold(state))
+                )
+
+            seen_states.add(state)
 
     def clear_api_auth_session(self):
         if self.has_value_changed("api_secret") and self.api_secret:
@@ -517,7 +531,8 @@ def restrict_gstr_1_transaction_for(doc, gst_settings=None, action="submit"):
     restrict = True
 
     if not gst_settings.restrict_changes_after_gstr_1:
-        restrict = False
+        update_is_not_latest_gstr1_data(posting_date, doc.company_gstin)
+        return
 
     gstr_1_filed_upto = get_gstr_1_filed_upto(doc.company_gstin)
 

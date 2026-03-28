@@ -51,7 +51,7 @@ function setup_e_waybill_actions(doctype) {
                 frm.add_custom_button(
                     __("Applicability Status"),
                     () => show_e_waybill_generatable_status(frm, is_ewb_generatable),
-                    "e-Waybill"
+                    "e-Waybill",
                 );
                 return;
             }
@@ -61,7 +61,7 @@ function setup_e_waybill_actions(doctype) {
                     frm.dashboard.add_comment(
                         __("e-Waybill is applicable for this invoice, but not yet generated or updated."),
                         "yellow",
-                        true
+                        true,
                     );
                 }
 
@@ -69,13 +69,13 @@ function setup_e_waybill_actions(doctype) {
                     frm.add_custom_button(
                         __("Generate"),
                         () => show_generate_e_waybill_dialog(frm),
-                        "e-Waybill"
+                        "e-Waybill",
                     );
 
                     frm.add_custom_button(
                         __("Mark as Generated"),
                         () => show_mark_e_waybill_as_generated_dialog(frm),
-                        "e-Waybill"
+                        "e-Waybill",
                     );
 
                     if (!india_compliance.is_api_enabled()) return;
@@ -83,7 +83,7 @@ function setup_e_waybill_actions(doctype) {
                     frm.add_custom_button(
                         __("Fetch if Generated"),
                         () => show_fetch_if_generated_dialog(frm),
-                        "e-Waybill"
+                        "e-Waybill",
                     );
                 }
 
@@ -95,7 +95,7 @@ function setup_e_waybill_actions(doctype) {
                     frm.add_custom_button(
                         __("Mark as Cancelled"),
                         () => show_mark_e_waybill_as_cancelled_dialog(frm),
-                        "e-Waybill"
+                        "e-Waybill",
                     );
                 }
                 return;
@@ -105,13 +105,13 @@ function setup_e_waybill_actions(doctype) {
                 frm.add_custom_button(
                     __("Update Vehicle Info"),
                     () => show_update_vehicle_info_dialog(frm),
-                    "e-Waybill"
+                    "e-Waybill",
                 );
 
                 frm.add_custom_button(
                     __("Update Transporter"),
                     () => show_update_transporter_dialog(frm),
-                    "e-Waybill"
+                    "e-Waybill",
                 );
             }
 
@@ -123,7 +123,7 @@ function setup_e_waybill_actions(doctype) {
                 let btn = frm.add_custom_button(
                     __("Extend Validity"),
                     can_extend ? () => show_extend_validity_dialog(frm) : null,
-                    "e-Waybill"
+                    "e-Waybill",
                 );
                 if (!can_extend) {
                     btn.addClass("disabled");
@@ -136,7 +136,7 @@ function setup_e_waybill_actions(doctype) {
                     () => {
                         frappe.set_route("print", "e-Waybill Log", frm.doc.ewaybill);
                     },
-                    "e-Waybill"
+                    "e-Waybill",
                 );
             }
 
@@ -144,7 +144,7 @@ function setup_e_waybill_actions(doctype) {
                 frm.add_custom_button(
                     __("Attach"),
                     () => fetch_e_waybill_data(frm, { attach: 1 }, () => frm.refresh()),
-                    "e-Waybill"
+                    "e-Waybill",
                 );
 
                 frm.add_custom_button(
@@ -153,7 +153,7 @@ function setup_e_waybill_actions(doctype) {
                         fetch_e_waybill_data(frm, { force: true }, () => {
                             frappe.show_alert(__("Latest e-Waybill data fetched successfully"));
                         }),
-                    "e-Waybill"
+                    "e-Waybill",
                 );
             }
 
@@ -169,14 +169,14 @@ function setup_e_waybill_actions(doctype) {
                 frm.add_custom_button(
                     __("Mark as Cancelled"),
                     () => show_mark_e_waybill_as_cancelled_dialog(frm),
-                    "e-Waybill"
+                    "e-Waybill",
                 );
 
                 india_compliance.make_text_red("e-Waybill", "Mark as Cancelled");
             }
         },
         async on_submit(frm) {
-            if (!auto_generate_e_waybill(frm)) return;
+            if (!(await auto_generate_e_waybill(frm))) return;
 
             frappe.show_alert(__("Attempting to generate e-Waybill"));
 
@@ -204,10 +204,10 @@ function setup_e_waybill_actions(doctype) {
                             `The e-Waybill created against this invoice cannot be
                             cancelled.<br><br>
 
-                            Do you want to continue anyway?`
+                            Do you want to continue anyway?`,
                         ),
                         continueCancellation,
-                        __("Yes")
+                        __("Yes"),
                     );
 
                     d.set_secondary_action_label(__("No"));
@@ -258,7 +258,7 @@ function show_generate_e_waybill_dialog(frm) {
                 doctype: frm.doctype,
                 docnames: frm.doc.name,
                 values,
-            }
+            },
         );
 
         frm.refresh();
@@ -287,7 +287,7 @@ function show_generate_e_waybill_dialog(frm) {
                   }
                 : null,
         },
-        frm
+        frm,
     );
 
     d.show();
@@ -542,6 +542,7 @@ function get_sub_suppy_type_options(frm, is_foreign_transaction) {
                     "Others",
                 ];
             } else {
+            } else {
                 supply_type = "Outward";
                 sub_supply_type = ["Job Work", "SKD/CKD", "Others"];
             }
@@ -613,7 +614,7 @@ function show_fetch_if_generated_dialog(frm) {
                 fieldtype: "Date",
                 default: frappe.datetime.get_today(),
                 description: __(
-                    "Retrieve the e-Waybill that was already generated for this invoice on the specified date."
+                    "Retrieve the e-Waybill that was already generated for this invoice on the specified date.",
                 ),
             },
         ],
@@ -1175,9 +1176,28 @@ function is_e_waybill_valid(frm) {
     );
 }
 
-function has_e_waybill_threshold_met(frm) {
-    if (Math.abs(frm.doc.base_grand_total) >= gst_settings.e_waybill_threshold) return true;
+async function has_e_waybill_threshold_met(frm) {
+    const threshold = await get_e_waybill_threshold(frm);
+    if (threshold != null && Math.abs(frm.doc.base_grand_total) >= threshold) {
+        return true;
+    }
+
+    return false;
 }
+
+async function get_e_waybill_threshold(frm) {
+    const { message } = await frappe.call(
+        "india_compliance.gst_india.utils.e_waybill.get_e_waybill_threshold",
+        { doctype: frm.doctype, docname: frm.doc.name },
+    );
+
+    if (message === undefined) {
+        return Infinity;
+    }
+
+    return message;
+}
+
 function is_e_waybill_applicable(frm, show_message) {
     /**
      * Defines supported conditions where e-Waybill is applicable
@@ -1197,8 +1217,8 @@ function is_e_waybill_generatable(frm, show_message) {
     return new E_WAYBILL_CLASS[frm.doctype](frm).is_e_waybill_generatable(show_message);
 }
 
-function auto_generate_e_waybill(frm) {
-    return new E_WAYBILL_CLASS[frm.doctype](frm).auto_generate_e_waybill();
+async function auto_generate_e_waybill(frm) {
+    return await new E_WAYBILL_CLASS[frm.doctype](frm).auto_generate_e_waybill();
 }
 
 function can_extend_e_waybill(frm) {
@@ -1238,10 +1258,18 @@ function is_e_waybill_cancellable(frm) {
 }
 
 async function update_gst_tranporter_id(dialog) {
+    let transporter_id = "";
     const transporter = dialog.get_value("transporter");
-    const { message: response } = await frappe.db.get_value("Supplier", transporter, "gst_transporter_id");
+    if (transporter) {
+        const { message: response } = await frappe.db.get_value(
+            "Supplier",
+            transporter,
+            "gst_transporter_id",
+        );
+        transporter_id = response?.gst_transporter_id || "";
+    }
 
-    dialog.set_value("gst_transporter_id", response.gst_transporter_id);
+    dialog.set_value("gst_transporter_id", transporter_id);
 }
 
 function validate_gst_transporter_id(dialog, doc) {
