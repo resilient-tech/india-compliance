@@ -29,6 +29,7 @@ from india_compliance.gst_india.constants import (
     GST_TAX_TYPES,
     GSTIN_FORMAT,
     SALES_DOCTYPES,
+    SERVICE_HSN_PREFIX,
     STATE_NUMBERS,
     TAXABLE_GST_TREATMENTS,
 )
@@ -42,6 +43,10 @@ from india_compliance.gst_india.constants.e_waybill import (
     SUB_SUPPLY_TYPES,
     TRANSIT_TYPES,
     UPDATE_VEHICLE_REASON_CODES,
+)
+from india_compliance.gst_india.overrides.transaction import (
+    get_source_state_code,
+    is_inter_state_supply,
 )
 from india_compliance.gst_india.utils import (
     handle_server_errors,
@@ -1432,7 +1437,8 @@ class EWaybillData(GSTTransactionData):
 
         # Atleast one item with HSN code of goods is required
         has_atleast_one_goods_item = any(
-            not item.gst_hsn_code.startswith("99") for item in self.doc.items
+            not item.gst_hsn_code.startswith(SERVICE_HSN_PREFIX)
+            for item in self.doc.items
         )
 
         if not has_atleast_one_goods_item:
@@ -1620,7 +1626,7 @@ class EWaybillData(GSTTransactionData):
         main_hsn_code = next(
             row.gst_hsn_code
             for row in doc.items
-            if not row.gst_hsn_code.startswith("99")
+            if not row.gst_hsn_code.startswith(SERVICE_HSN_PREFIX)
         )
 
         self.transaction_details.update(
@@ -1989,3 +1995,61 @@ def auto_cancel_e_waybill(doc, gst_settings=None, e_waybill_info=None):
     _cancel_e_waybill(doc, values)
 
     return True
+
+
+#######################################################################################
+### e-Waybill Threshold Utils #########################################################
+#######################################################################################
+
+
+@frappe.whitelist()
+def get_e_waybill_threshold(doctype: str, docname: str):
+    frappe.has_permission(doctype, doc=docname, ptype="read", throw=True)
+
+    doc = frappe.get_doc(doctype, docname)
+    return _get_e_waybill_threshold(doc)
+
+
+def _get_e_waybill_threshold(doc, gst_settings=None):
+    if not gst_settings:
+        gst_settings = frappe.get_cached_doc("GST Settings")
+
+    if is_inter_state_supply(doc):
+        return gst_settings.e_waybill_threshold
+
+    return get_intrastate_threshold(doc, gst_settings)
+
+
+def get_intrastate_threshold(doc, gst_settings=None):
+    if not gst_settings:
+        gst_settings = frappe.get_cached_doc("GST Settings")
+
+    state = get_source_state_code(doc)
+
+    state_config = get_state_code_wise_config(gst_settings)
+
+    if state in state_config:
+        config = state_config[state]
+        if not config.get("intrastate_applicable"):
+            return None
+
+        return config.get("intrastate_threshold")
+
+    return gst_settings.e_waybill_threshold
+
+
+def get_state_code_wise_config(gst_settings=None):
+    if not gst_settings:
+        gst_settings = frappe.get_cached_doc("GST Settings")
+
+    state_config = {}
+    for row in gst_settings.get("e_waybill_threshold_for_intrastate") or []:
+        if not (state_code := STATE_NUMBERS.get(row.state)):
+            continue
+
+        state_config[state_code] = {
+            "intrastate_applicable": row.intrastate_applicable,
+            "intrastate_threshold": row.intrastate_threshold,
+        }
+
+    return state_config

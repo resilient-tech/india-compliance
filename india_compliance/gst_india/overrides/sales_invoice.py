@@ -29,6 +29,7 @@ from india_compliance.gst_india.utils.e_invoice import (
     validate_if_e_invoice_can_be_cancelled,
 )
 from india_compliance.gst_india.utils.e_waybill import (
+    _get_e_waybill_threshold,
     auto_cancel_e_waybill,
     get_e_waybill_info,
 )
@@ -264,13 +265,20 @@ def is_e_waybill_applicable(doc, gst_settings=None):
     if not gst_settings:
         gst_settings = frappe.get_cached_doc("GST Settings")
 
-    return bool(
-        gst_settings.enable_e_waybill
-        and doc.company_gstin != doc.billing_address_gstin
-        and not doc.ewaybill
-        and abs(doc.base_grand_total) >= gst_settings.e_waybill_threshold
-        and are_goods_supplied(doc)
-    )
+    if (
+        not gst_settings.enable_e_waybill
+        or doc.company_gstin == doc.billing_address_gstin
+        or doc.ewaybill
+        or not are_goods_supplied(doc)
+    ):
+        return False
+
+    threshold = _get_e_waybill_threshold(doc, gst_settings)
+
+    if threshold is None:
+        return False
+
+    return abs(doc.base_grand_total) >= threshold
 
 
 def on_update_after_submit(doc, method=None):

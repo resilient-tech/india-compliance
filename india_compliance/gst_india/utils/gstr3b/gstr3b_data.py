@@ -3,7 +3,7 @@ from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import IfNull, Sum
 
-from india_compliance.gst_india.constants import GST_TAX_TYPES
+from india_compliance.gst_india.constants import GST_TAX_TYPES, SERVICE_HSN_PREFIX
 from india_compliance.gst_india.overrides.transaction import is_inter_state_supply
 from india_compliance.gst_india.utils import get_full_gst_uom
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategory
@@ -76,14 +76,14 @@ AMOUNT_FIELDS = (
 
 class GSTR3BCategoryConditions:
     def is_composition_nil_rated_or_exempted(self, invoice):
-        return invoice.gst_category != "Overseas" and (
+        return (
             invoice.gst_treatment == "Nil-Rated"
             or invoice.gst_treatment == "Exempted"
             or invoice.gst_category == "Registered Composition"
         )
 
     def is_non_gst(self, invoice):
-        return invoice.gst_category != "Overseas" and invoice.gst_treatment == "Non-GST"
+        return invoice.gst_treatment == "Non-GST"
 
     def is_itc_available(self, invoice):
         return invoice.ineligibility_reason != "ITC restricted due to PoS rules"
@@ -119,7 +119,9 @@ class GSTR3BSubcategory(GSTR3BCategoryConditions):
 
     def set_for_itc_reversed(self, invoice):
         invoice.invoice_sub_category = (
-            "As per rules 42 & 43 of CGST Rules and section 17(5)"
+            "Others"
+            if invoice.ineligibility_reason == "Others"
+            else ("As per rules 42 & 43 of CGST Rules and section 17(5)")
         )
 
     def set_for_ineligible_itc(self, invoice):
@@ -201,7 +203,7 @@ class GSTR3BQuery:
             )
             .where((self.PI.is_opening == "No"))
             .where(self.PI.company_gstin != IfNull(self.PI.supplier_gstin, ""))
-            .where(IfNull(self.PI.itc_classification, "") != "Import Of Goods")
+            .where(self.PI.is_boe_applicable == 0)
         )
 
         return self.get_query_with_common_filters(query, self.PI)
@@ -215,6 +217,7 @@ class GSTR3BQuery:
                 ConstantColumn("Bill of Entry").as_("voucher_type"),
                 self.BOE.name.as_("voucher_no"),
                 self.BOE.posting_date,
+                ConstantColumn("Import Of Goods").as_("itc_classification"),
                 self.BOE_ITEM.is_ineligible_for_itc,
                 self.BOE_ITEM.item_code,
                 self.BOE_ITEM.gst_hsn_code,
@@ -271,6 +274,7 @@ class GSTR3BQuery:
                 self.JE.voucher_type.as_("ineligibility_type"),
                 self.JE.name.as_("voucher_no"),
                 self.JE.posting_date,
+                IfNull(self.JE.ineligibility_reason, "").as_("ineligibility_reason"),
                 *[
                     Sum(
                         Case()
@@ -278,7 +282,7 @@ class GSTR3BQuery:
                             self.JE_ACCOUNT.gst_tax_type.isin(fields),
                             Case()
                             .when(
-                                self.JE.voucher_type == "Reversal of ITC",
+                                self.JE.voucher_type == "Reversal Of ITC",
                                 self.JE_ACCOUNT.credit_in_account_currency
                                 - self.JE_ACCOUNT.debit_in_account_currency,
                             )
@@ -295,7 +299,7 @@ class GSTR3BQuery:
             .where(self.JE.is_opening == "No")
             .where(
                 self.JE.voucher_type.isin(
-                    ["Reclaim of ITC Reversal", "Reversal of ITC"]
+                    ["Reclaim of ITC Reversal", "Reversal Of ITC"]
                 )
             )
             .groupby(self.JE.name)
@@ -390,7 +394,7 @@ class GSTR3BInvoices(GSTR3BQuery, GSTR3BSubcategory):
         )
 
     def process_uom(self, invoice, identified_uom):
-        if invoice.gst_hsn_code and invoice.gst_hsn_code.startswith("99"):
+        if invoice.gst_hsn_code and invoice.gst_hsn_code.startswith(SERVICE_HSN_PREFIX):
             invoice["uom"] = "OTH-OTHERS"
             return
 

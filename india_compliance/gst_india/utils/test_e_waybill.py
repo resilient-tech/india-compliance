@@ -16,6 +16,10 @@ from frappe.www.printview import get_html_and_style
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
+from india_compliance.gst_india.constants import SERVICE_HSN_PREFIX
+from india_compliance.gst_india.overrides.sales_invoice import (
+    is_e_waybill_applicable,
+)
 from india_compliance.gst_india.utils import load_doc, parse_datetime
 from india_compliance.gst_india.utils.e_invoice import (
     retry_e_invoice_e_waybill_generation,
@@ -23,6 +27,7 @@ from india_compliance.gst_india.utils.e_invoice import (
 from india_compliance.gst_india.utils.e_waybill import (
     EWaybillData,
     _generate_e_waybill,
+    _get_e_waybill_threshold,
     cancel_e_waybill,
     fetch_e_waybill_data,
     generate_e_waybill,
@@ -1633,7 +1638,11 @@ def _bulk_insert_hsn_wise_items(hsn_codes):
                 frappe.session.user,
                 code["hsn_code"],
                 code["description"],
-                "Services" if code["hsn_code"][:2] == "99" else "Products",
+                (
+                    "Services"
+                    if code["hsn_code"][:2] == SERVICE_HSN_PREFIX
+                    else "Products"
+                ),
                 "Nos",
             ]
             for idx, code in enumerate(hsn_codes, 13000)
@@ -1641,3 +1650,206 @@ def _bulk_insert_hsn_wise_items(hsn_codes):
         ignore_duplicates=True,
         chunk_size=251,
     )
+
+
+def with_intrastate_config(config_rows):
+    """Decorator to set intrastate e-Waybill threshold config on the cached GST Settings.
+
+    Modifies the cached doc in-place before the test and restores it after.
+
+    Usage::
+
+        @with_intrastate_config([
+            {"state": "Gujarat", "intrastate_applicable": 1, "intrastate_threshold": 100000},
+        ])
+        def test_something(self):
+            ...
+    """
+    from functools import wraps
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            gst_settings = frappe.get_cached_doc("GST Settings")
+            original_rows = list(
+                gst_settings.get("e_waybill_threshold_for_intrastate") or []
+            )
+
+            gst_settings.set("e_waybill_threshold_for_intrastate", [])
+            for row in config_rows:
+                gst_settings.append("e_waybill_threshold_for_intrastate", row)
+
+            try:
+                return func(*args, **kwargs)
+            finally:
+                gst_settings.set("e_waybill_threshold_for_intrastate", original_rows)
+
+        return wrapper
+
+    return decorator
+
+
+class TestEWaybillThreshold(IntegrationTestCase):
+    """Tests for state-wise e-Waybill threshold configuration (PR #3968)"""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+        frappe.db.set_single_value(
+            "GST Settings",
+            {
+                "enable_e_waybill": 1,
+                "e_waybill_threshold": 50000,
+            },
+        )
+
+    @with_intrastate_config(
+        [
+            {
+                "state": "Gujarat",
+                "intrastate_applicable": 1,
+                "intrastate_threshold": 100000,
+            }
+        ]
+    )
+    def test_inter_state_supply_returns_default_threshold(self):
+        """Inter-state supply should always return the default e_waybill_threshold."""
+        si = create_sales_invoice(
+            is_out_state=True,
+            rate=100,
+            customer="_Test Registered Customer",
+            customer_address="_Test Registered Customer-Billing-3",
+            company_address="_Test Indian Registered Company-Billing",
+            do_not_submit=True,
+        )
+
+        gst_settings = frappe.get_cached_doc("GST Settings")
+        threshold = _get_e_waybill_threshold(si, gst_settings)
+        self.assertEqual(threshold, gst_settings.e_waybill_threshold)
+
+    @with_intrastate_config([])
+    def test_intra_state_no_state_config_returns_default_threshold(self):
+        """Intra-state supply with no state config should fall back to default threshold."""
+        si = create_sales_invoice(
+            is_in_state=True,
+            rate=100,
+            company_address="_Test Indian Registered Company-Billing",
+            do_not_submit=True,
+        )
+
+        gst_settings = frappe.get_cached_doc("GST Settings")
+        threshold = _get_e_waybill_threshold(si, gst_settings)
+        self.assertEqual(threshold, gst_settings.e_waybill_threshold)
+
+    @with_intrastate_config(
+        [
+            {
+                "state": "Gujarat",
+                "intrastate_applicable": 1,
+                "intrastate_threshold": 100000,
+            }
+        ]
+    )
+    def test_intra_state_with_custom_threshold(self):
+        """Intra-state supply with state config should return configured threshold."""
+        si = create_sales_invoice(
+            is_in_state=True,
+            rate=100,
+            company_address="_Test Indian Registered Company-Billing",
+            do_not_submit=True,
+        )
+
+        threshold = _get_e_waybill_threshold(si)
+        self.assertEqual(threshold, 100000)
+
+    @with_intrastate_config(
+        [
+            {
+                "state": "Gujarat",
+                "intrastate_applicable": 0,
+                "intrastate_threshold": 50000,
+            }
+        ]
+    )
+    def test_intra_state_not_applicable_returns_none(self):
+        """Intra-state supply where intrastate_applicable is False should return None."""
+        si = create_sales_invoice(
+            is_in_state=True,
+            rate=100,
+            company_address="_Test Indian Registered Company-Billing",
+            do_not_submit=True,
+        )
+
+        threshold = _get_e_waybill_threshold(si)
+        self.assertIsNone(threshold)
+
+    @with_intrastate_config(
+        [
+            {
+                "state": "Gujarat",
+                "intrastate_applicable": 1,
+                "intrastate_threshold": 50000,
+            }
+        ]
+    )
+    def test_is_e_waybill_applicable_intra_state_threshold_met(self):
+        """Intra-state with threshold met and state config present should be applicable."""
+        si = create_sales_invoice(
+            is_in_state=True,
+            rate=100000,
+            company_address="_Test Indian Registered Company-Billing",
+        )
+
+        self.assertTrue(is_e_waybill_applicable(si))
+
+    @with_intrastate_config(
+        [
+            {
+                "state": "Gujarat",
+                "intrastate_applicable": 1,
+                "intrastate_threshold": 50000,
+            }
+        ]
+    )
+    def test_is_e_waybill_applicable_intra_state_threshold_not_met(self):
+        """Intra-state with threshold NOT met should not be applicable."""
+        si = create_sales_invoice(
+            is_in_state=True,
+            rate=100,
+            company_address="_Test Indian Registered Company-Billing",
+        )
+
+        self.assertFalse(is_e_waybill_applicable(si))
+
+    @with_intrastate_config(
+        [
+            {
+                "state": "Gujarat",
+                "intrastate_applicable": 0,
+                "intrastate_threshold": 50000,
+            }
+        ]
+    )
+    def test_is_e_waybill_not_applicable_intra_state_disabled(self):
+        """Intra-state with intrastate_applicable=False should not be applicable."""
+        si = create_sales_invoice(
+            is_in_state=True,
+            rate=100000,
+            company_address="_Test Indian Registered Company-Billing",
+        )
+
+        self.assertFalse(is_e_waybill_applicable(si))
+
+    @with_intrastate_config([])
+    def test_is_e_waybill_applicable_inter_state_threshold_met(self):
+        """Inter-state with threshold met should use default threshold and be applicable."""
+        si = create_sales_invoice(
+            is_out_state=True,
+            rate=100000,
+            customer="_Test Registered Customer",
+            customer_address="_Test Registered Customer-Billing-3",
+            company_address="_Test Indian Registered Company-Billing",
+        )
+
+        self.assertTrue(is_e_waybill_applicable(si))
