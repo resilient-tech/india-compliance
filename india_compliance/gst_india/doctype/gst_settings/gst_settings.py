@@ -582,7 +582,8 @@ def restrict_gstr_1_transaction_for(doc, gst_settings=None, action="submit"):
     restrict = True
 
     if not gst_settings.restrict_changes_after_gstr_1:
-        restrict = False
+        update_is_not_latest_gstr1_data(posting_date, doc.company_gstin)
+        return
 
     gstr_1_filed_upto = get_gstr_1_filed_upto(doc.company_gstin)
 
