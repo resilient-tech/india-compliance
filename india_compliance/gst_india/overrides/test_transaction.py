@@ -1236,6 +1236,7 @@ class TestSpecificTransactions(IntegrationTestCase):
                 si.submit,
             )
 
+    @change_settings("GST Settings", {"restrict_changes_after_gstr_1": 1})
     def test_backdated_transaction_with_comment(self):
         si = create_transaction(doctype="Sales Invoice", do_not_submit=True)
 
