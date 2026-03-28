@@ -910,7 +910,7 @@ class FileGSTR1:
         response = api.proceed_to_file("GSTR1", self.return_period, is_nil_return)
 
         # Return Form already ready to be filed
-        if response.error and response.error.error_cd == "RET00003" or is_nil_return:
+        if (response.error and response.error.error_cd == "RET00003") or is_nil_return:
             set_gstr_actions(
                 self,
                 "proceed_to_file",

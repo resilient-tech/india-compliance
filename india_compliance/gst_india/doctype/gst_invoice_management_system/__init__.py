@@ -144,7 +144,7 @@ class InwardSupply:
         return fields
 
     def get_tax_fields(self):
-        fields = GST_TAX_TYPES[:-1] + ("taxable_value",)
+        fields = (*GST_TAX_TYPES[:-1], "taxable_value")
         return [self.IMS[field] for field in fields]
 
 

@@ -184,7 +184,7 @@ class TestAdvancePaymentEntry(IntegrationTestCase):
         )
 
     def test_preview_gl_entries(self):
-        invoice_doc, payment_doc = self._create_invoice_then_payment()
+        _, payment_doc = self._create_invoice_then_payment()
 
         # Preview payment GL Entry
         preview_data = show_accounting_ledger_preview(
