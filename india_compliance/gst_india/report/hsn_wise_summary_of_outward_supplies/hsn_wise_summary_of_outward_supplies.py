@@ -174,10 +174,8 @@ def get_json(filters: str, report_name: str, data: str):
     if not filters.get("from_date") or not filters.get("to_date"):
         frappe.throw(_("Please enter From Date and To Date to generate JSON"))
 
-    fp = "%02d%s" % (
-        getdate(filters["to_date"]).month,
-        getdate(filters["to_date"]).year,
-    )
+    date = getdate(filters["to_date"])
+    fp = f"{date.month:02d}{date.year}"
 
     gst_json = {"version": "GST3.1.2", "hash": "hash", "gstin": gstin, "fp": fp}
 
