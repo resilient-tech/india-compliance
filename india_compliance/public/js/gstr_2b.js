@@ -26,7 +26,7 @@ Object.assign(gstr_2b, {
                     regeneration_status = await gstr_2b.check_regenerate_status(
                         args.gstin,
                         reference_id,
-                        args.doctype
+                        args.doctype,
                     );
                 }
 
@@ -62,8 +62,8 @@ Object.assign(gstr_2b, {
                                 reference_id,
                                 doctype,
                                 resolve,
-                                retries + 1
-                            )
+                                retries + 1,
+                            ),
                         );
                         return;
                     }

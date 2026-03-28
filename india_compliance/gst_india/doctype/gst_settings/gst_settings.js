@@ -3,13 +3,9 @@
 
 frappe.ui.form.on("GST Settings", {
     setup(frm) {
-        [
-            "cgst_account",
-            "sgst_account",
-            "igst_account",
-            "cess_account",
-            "cess_non_advol_account",
-        ].forEach(field => filter_accounts(frm, field));
+        ["cgst_account", "sgst_account", "igst_account", "cess_account", "cess_non_advol_account"].forEach(
+            (field) => filter_accounts(frm, field),
+        );
 
         const company_query = {
             filters: {
@@ -62,20 +58,16 @@ function show_ic_api_promo(frm) {
     if (!frm.doc.__onload?.can_show_promo) return;
     const alert_message = `
     Looking for API Features?
-    <a href="${frappe.utils.generate_route({ type: "Page", name: "india-compliance-account" })}" class="alert-link">
+    <a href="${frappe.utils.generate_route({
+        type: "Page",
+        name: "india-compliance-account",
+    })}" class="alert-link">
         Get started with the India Compliance API!
     </a>`;
 
-    india_compliance.show_dismissable_alert(
-        frm.layout.wrapper,
-        alert_message,
-        "primary",
-        () => {
-            frappe.xcall(
-                "india_compliance.gst_india.doctype.gst_settings.gst_settings.disable_api_promo",
-            );
-        },
-    );
+    india_compliance.show_dismissable_alert(frm.layout.wrapper, alert_message, "primary", () => {
+        frappe.xcall("india_compliance.gst_india.doctype.gst_settings.gst_settings.disable_api_promo");
+    });
 }
 
 function show_update_gst_category_button(frm) {
@@ -129,10 +121,7 @@ function auto_cancel_e_invoice(frm) {
 }
 
 function reason_for_e_invoice_cancellation(frm) {
-    frm.set_value(
-        "reason_for_e_waybill_cancellation",
-        frm.doc.reason_for_e_invoice_cancellation,
-    );
+    frm.set_value("reason_for_e_waybill_cancellation", frm.doc.reason_for_e_invoice_cancellation);
 }
 
 function set_state_options_for_e_waybill_threshold(frm) {

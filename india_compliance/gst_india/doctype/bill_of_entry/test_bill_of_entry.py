@@ -22,9 +22,7 @@ from india_compliance.gst_india.utils import get_gst_accounts_by_type
 from india_compliance.gst_india.utils.itc_claim import format_period
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
 
-with mock.patch("frappe.db"), mock.patch("frappe.new_doc"), mock.patch(
-    "frappe.get_doc"
-):
+with mock.patch("frappe.db"), mock.patch("frappe.new_doc"), mock.patch("frappe.get_doc"):
     from erpnext.projects.doctype.project.test_project import make_project
 
 IGNORE_TEST_RECORD_DEPENDENCIES = [

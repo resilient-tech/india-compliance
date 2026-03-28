@@ -13,7 +13,7 @@ india_compliance.ViewGroup = class ViewGroup {
             <div class= "view-group">
                 <div class="view-switch"></div>
             </div>
-            `
+            `,
         );
 
         this.view_group_container = $(`
@@ -51,7 +51,7 @@ india_compliance.ViewGroup = class ViewGroup {
             ${frappe.unscrub(view)}
                     </a>
                 </li>
-            `
+            `,
             ).appendTo(this.view_group_container);
         });
     }

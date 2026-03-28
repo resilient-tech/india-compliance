@@ -1528,11 +1528,7 @@ def _bulk_insert_hsn_wise_items(hsn_codes):
                 frappe.session.user,
                 code["hsn_code"],
                 code["description"],
-                (
-                    "Services"
-                    if code["hsn_code"][:2] == SERVICE_HSN_PREFIX
-                    else "Products"
-                ),
+                ("Services" if code["hsn_code"][:2] == SERVICE_HSN_PREFIX else "Products"),
                 "Nos",
             ]
             for idx, code in enumerate(hsn_codes, 13000)
@@ -1549,11 +1545,12 @@ def with_intrastate_config(config_rows):
 
     Usage::
 
-        @with_intrastate_config([
-            {"state": "Gujarat", "intrastate_applicable": 1, "intrastate_threshold": 100000},
-        ])
-        def test_something(self):
-            ...
+        @with_intrastate_config(
+            [
+                {"state": "Gujarat", "intrastate_applicable": 1, "intrastate_threshold": 100000},
+            ]
+        )
+        def test_something(self): ...
     """
     from functools import wraps
 
@@ -1561,9 +1558,7 @@ def with_intrastate_config(config_rows):
         @wraps(func)
         def wrapper(*args, **kwargs):
             gst_settings = frappe.get_cached_doc("GST Settings")
-            original_rows = list(
-                gst_settings.get("e_waybill_threshold_for_intrastate") or []
-            )
+            original_rows = list(gst_settings.get("e_waybill_threshold_for_intrastate") or [])
 
             gst_settings.set("e_waybill_threshold_for_intrastate", [])
             for row in config_rows:

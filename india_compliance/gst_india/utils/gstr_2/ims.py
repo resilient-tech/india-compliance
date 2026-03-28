@@ -91,9 +91,9 @@ class IMS:
             **self.get_invoice_details(invoice),
         )
 
-        transaction[
-            "unique_key"
-        ] = f"{transaction.get('supplier_gstin', '')}-{transaction.get('bill_no', '')}"
+        transaction["unique_key"] = (
+            f"{transaction.get('supplier_gstin', '')}-{transaction.get('bill_no', '')}"
+        )
 
         return transaction
 

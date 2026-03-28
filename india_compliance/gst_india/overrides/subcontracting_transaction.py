@@ -360,7 +360,7 @@ class SubcontractingGSTAccounts(GSTAccounts):
             return
 
         self._throw(
-            _("Cannot charge GST in Row #{0} since Bill From GSTIN and Bill To GSTIN are" " same").format(
+            _("Cannot charge GST in Row #{0} since Bill From GSTIN and Bill To GSTIN are same").format(
                 self.first_gst_idx
             )
         )

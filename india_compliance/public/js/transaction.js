@@ -49,7 +49,7 @@ function fetch_gst_details(doctype) {
     }
 
     const events = Object.fromEntries(
-        event_fields.map((field) => [field, (frm) => update_gst_details(frm, field)])
+        event_fields.map((field) => [field, (frm) => update_gst_details(frm, field)]),
     );
 
     frappe.ui.form.on(doctype, events);
@@ -126,7 +126,7 @@ async function update_gst_details(frm, event) {
             "customer_address",
             "shipping_address_name",
             "billing_address_gstin",
-            "is_export_with_gst"
+            "is_export_with_gst",
         );
     } else if (frm.doc.doctype === "Stock Entry") {
         fieldnames_to_set.push("bill_from_gstin", "bill_to_gstin", "bill_from_address", "bill_to_address");
@@ -243,7 +243,7 @@ async function _set_gstin_status(frm, gstin_field_name) {
         frm._gstin_doc[gstin] = gstin_doc;
     } else {
         gstin_field.set_description(
-            india_compliance.get_gstin_status_desc(gstin_doc?.status, gstin_doc?.last_updated_on)
+            india_compliance.get_gstin_status_desc(gstin_doc?.status, gstin_doc?.last_updated_on),
         );
     }
 
@@ -297,7 +297,7 @@ function show_gst_invoice_no_banner(frm) {
 
     frm.dashboard.set_headline_alert(
         `Naming Series should <strong>not</strong> exceed 16 characters for GST. <a href="https://docs.indiacompliance.app/docs/miscellaneous/transaction_validations#document-name" target="_blank">Know more</a>`,
-        "blue"
+        "blue",
     );
 }
 
@@ -314,7 +314,7 @@ function set_e_commerce_ecommerce_supply_type(doctype) {
     const event_fields = ["ecommerce_gstin", "is_reverse_charge"];
 
     const events = Object.fromEntries(
-        event_fields.map((field) => [field, (frm) => _set_e_commerce_ecommerce_supply_type(frm)])
+        event_fields.map((field) => [field, (frm) => _set_e_commerce_ecommerce_supply_type(frm)]),
     );
 
     frappe.ui.form.on(doctype, events);
@@ -372,7 +372,7 @@ function fetch_party_details(doctype) {
                     args,
                     () => {
                         toggle_link_validation(frm, ["supplier_address"], true);
-                    }
+                    },
                 );
             }, 0);
         },

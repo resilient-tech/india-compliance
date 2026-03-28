@@ -111,7 +111,7 @@ class GSTR2bB2B(GSTR2b):
             "reason_itc_unavailability": get_mapped_value(
                 invoice.rsn,
                 {
-                    "P": ("POS and supplier state are same but recipient state is" " different"),
+                    "P": ("POS and supplier state are same but recipient state is different"),
                     "C": "Return filed post annual cut-off",
                 },
             ),

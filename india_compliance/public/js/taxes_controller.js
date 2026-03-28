@@ -62,7 +62,7 @@ india_compliance.taxes_controller = class TaxesController {
                     master_doctype: frappe.meta.get_docfield(
                         this.frm.doc.doctype,
                         "taxes_and_charges",
-                        this.frm.doc.name
+                        this.frm.doc.name,
                     ).options,
                     master_name: this.frm.doc.taxes_and_charges,
                 },

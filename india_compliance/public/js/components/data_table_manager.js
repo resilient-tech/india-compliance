@@ -20,7 +20,7 @@ india_compliance.DataTableManager = class DataTableManager {
             this.columns_dict[fieldname] = column;
             this.columns_dict[fieldname].$filter_input = $(
                 `.dt-row-filter .dt-cell--col-${column.colIndex} .dt-filter`,
-                this.$datatable
+                this.$datatable,
             )[0];
         }
     }

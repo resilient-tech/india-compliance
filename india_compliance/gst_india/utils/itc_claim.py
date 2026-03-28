@@ -366,7 +366,7 @@ def _validate_itc_claim_period_as_per_filing(doc) -> None:
             return
 
         frappe.throw(
-            _("Cannot change ITC Claim Period from {0} to {1}. GSTR-3B already filed" " for {2}.").format(
+            _("Cannot change ITC Claim Period from {0} to {1}. GSTR-3B already filed for {2}.").format(
                 previous.itc_claim_period, doc.itc_claim_period, filed_period
             )
         )

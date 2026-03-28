@@ -35,7 +35,7 @@ $(document).on("app_ready", async function () {
             </ul>
 
 
-            Would you like to enable the same?`
+            Would you like to enable the same?`,
         ),
     });
 

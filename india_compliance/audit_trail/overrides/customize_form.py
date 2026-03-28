@@ -36,6 +36,6 @@ class CustomizeForm(_CustomizeForm):
 
         frappe.throw(
             _(
-                "Cannot disable Track Changes for {0}, since it has been enabled to" " maintain Audit Trail"
+                "Cannot disable Track Changes for {0}, since it has been enabled to maintain Audit Trail"
             ).format(_(self.doc_type))
         )

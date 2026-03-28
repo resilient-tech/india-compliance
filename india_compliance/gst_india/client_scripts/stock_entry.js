@@ -70,7 +70,7 @@ frappe.ui.form.on(DOCTYPE, {
                     message: __("Supplier Address is required to create e-Waybill"),
                     indicator: "yellow",
                 },
-                10
+                10,
             );
     },
 
@@ -84,7 +84,7 @@ frappe.ui.form.on(DOCTYPE, {
             "source_warehouse_address",
             "ship_from_address",
             __("Ship From (same as Source Warehouse Address)"),
-            __("Ship From")
+            __("Ship From"),
         );
     },
 
@@ -94,7 +94,7 @@ frappe.ui.form.on(DOCTYPE, {
             "target_warehouse_address",
             "ship_to_address",
             __("Ship To (same as Target Warehouse Address)"),
-            __("Ship To")
+            __("Ship To"),
         );
     },
 
@@ -145,7 +145,7 @@ function set_address_display_events() {
             (frm) => {
                 erpnext.utils.get_address_display(frm, field, field + "_display", false);
             },
-        ])
+        ]),
     );
 
     frappe.ui.form.on(DOCTYPE, events);

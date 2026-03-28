@@ -33,7 +33,7 @@ $(document).on("app_ready", async function () {
             <strong>Note:</strong>
             If the above assumptions are not valid for your organization, please update item tax templates
             accordingly for your items.
-            `
+            `,
         ),
     });
 

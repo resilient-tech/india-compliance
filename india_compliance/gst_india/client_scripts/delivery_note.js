@@ -21,7 +21,7 @@ frappe.ui.form.on(DOCTYPE, {
                     message: __("Billing Address is required to create e-Waybill"),
                     indicator: "yellow",
                 },
-                10
+                10,
             );
     },
 });

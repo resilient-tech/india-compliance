@@ -10,7 +10,7 @@ frappe.ui.form.on("Item Tax Template", {
                 if (tax_rate == null) return;
 
                 row.tax_rate = tax_rate;
-            })
+            }),
         );
 
         frm.refresh_field("taxes");
@@ -27,7 +27,7 @@ async function show_missing_accounts_banner(frm) {
     frm.dashboard.add_comment(
         __(`<strong>Missing GST Accounts:</strong> {0}`, [missing_accounts.join(", ")]),
         "orange",
-        true
+        true,
     );
 }
 
@@ -43,7 +43,7 @@ async function fetch_and_update_missing_gst_accounts(frm) {
         missing_accounts.map(async (account) => {
             const tax_rate = await get_tax_rate_for_account(frm, account);
             frm.add_child("taxes", { tax_type: account, tax_rate: tax_rate });
-        })
+        }),
     );
 
     frm.refresh_field("taxes");

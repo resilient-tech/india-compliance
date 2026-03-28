@@ -294,7 +294,5 @@ def validate_hsn_codes(doc):
         doc,
         valid_hsn_length=VALID_HSN_LENGTHS,
         throw=True,
-        message=_("GST HSN Code is mandatory for {0} Purchase Invoice.<br>").format(
-            doc.gst_category
-        ),
+        message=_("GST HSN Code is mandatory for {0} Purchase Invoice.<br>").format(doc.gst_category),
     )

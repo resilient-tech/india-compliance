@@ -98,7 +98,7 @@ function update_erpnext_slides_settings() {
               href='https://egazette.gov.in/WriteReadData/2021/226081.pdf'
               target='_blank'
             > MCA Notification dated 24-03-2021</a>.<br>
-            Once enabled, Audit Trail cannot be disabled.`
+            Once enabled, Audit Trail cannot be disabled.`,
         ),
     });
 

@@ -41,7 +41,7 @@ const FILTER_GROUP_BUTTON = $(
             </div>
         </div>
     </div>
-    `
+    `,
 );
 
 class _Filter extends frappe.ui.Filter {
@@ -55,7 +55,7 @@ class _Filter extends frappe.ui.Filter {
         }
 
         this.conditions = this.conditions.filter(
-            (condition) => india_compliance.FILTER_OPERATORS[condition && condition[0]]
+            (condition) => india_compliance.FILTER_OPERATORS[condition && condition[0]],
         );
     }
 }

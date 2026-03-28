@@ -114,7 +114,7 @@ function add_custom_button_to_update_gstin(report) {
 
             report._gst_accounts = company_accounts;
             report.page.add_inner_button(__("Update GSTIN"), () =>
-                update_gstin_message(report, voucher_types)
+                update_gstin_message(report, voucher_types),
             );
         });
 }
@@ -144,7 +144,7 @@ function get_update_gstin_message(report, voucher_types) {
         It could not be set automatically as you have Multi-GSTIN setup.
         Please update the GSTIN for the following transactions <strong>before</strong>
         executing the patch:<br>
-        `
+        `,
     );
 
     voucher_types.forEach((voucher_type) => {

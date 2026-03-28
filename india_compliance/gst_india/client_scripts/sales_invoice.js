@@ -51,7 +51,7 @@ frappe.ui.form.on(DOCTYPE, {
                 message: __("Billing Address is required to create e-Waybill"),
                 indicator: "yellow",
             },
-            10
+            10,
         );
     },
 });
@@ -65,7 +65,7 @@ async function gst_invoice_warning(frm) {
                 frappe.utils.get_form_link("GST Settings", "GST Settings", true),
             ]),
             "red",
-            true
+            true,
         );
     }
 }

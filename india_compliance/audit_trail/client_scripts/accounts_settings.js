@@ -22,7 +22,15 @@ frappe.ui.form.on("Accounts Settings", {
                 Additionally, the following setting will be disabled
                 to ensure Audit Trail integrity:<br>
                 <strong>{0}</strong>`,
-                [__(frappe.meta.get_label("Accounts Settings", "delete_linked_ledger_entries", frm.doc.name))]
+                [
+                    __(
+                        frappe.meta.get_label(
+                            "Accounts Settings",
+                            "delete_linked_ledger_entries",
+                            frm.doc.name,
+                        ),
+                    ),
+                ],
             );
             frm.set_value("delete_linked_ledger_entries", 0);
         }
@@ -40,6 +48,6 @@ function toggle_linked_ledger_entry_deletion(frm) {
     frm.set_df_property(
         "delete_linked_ledger_entries",
         "description",
-        frm.doc.enable_audit_trail ? "This setting has been disabled to ensure Audit Trail integrity." : ""
+        frm.doc.enable_audit_trail ? "This setting has been disabled to ensure Audit Trail integrity." : "",
     );
 }

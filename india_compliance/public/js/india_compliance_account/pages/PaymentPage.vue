@@ -192,7 +192,7 @@ export default {
                             dialog.set_df_property(
                                 "state",
                                 "options",
-                                this.value.toLowerCase() === "india" ? states : []
+                                this.value.toLowerCase() === "india" ? states : [],
                             );
                         },
                     },
@@ -251,7 +251,7 @@ export default {
                         }
                         this.redirectToHome(
                             `Thanks for purchasing API credits! We have successfully added <strong>${this.orderDetails.credits}</strong> credits to your account.`,
-                            "green"
+                            "green",
                         );
                     }
                 },
@@ -263,7 +263,7 @@ export default {
 
                     frappe.throw(
                         data.transaction?.txMsg || "Something went wrong, please try again later",
-                        "Payment Failed"
+                        "Payment Failed",
                     );
                 },
                 style: {

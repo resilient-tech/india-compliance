@@ -15,13 +15,13 @@ frappe.listview_settings[DOCTYPE].onload = function (list_view) {
             list_view,
             __("Bulk Update Transporter Detail"),
             show_bulk_update_transporter_dialog,
-            [0, 1]
+            [0, 1],
         );
 
         add_bulk_action_for_invoices(
             list_view,
             __("Enqueue Bulk e-Waybill Generation"),
-            enqueue_bulk_e_waybill_generation
+            enqueue_bulk_e_waybill_generation,
         );
     }
 
@@ -33,7 +33,7 @@ frappe.listview_settings[DOCTYPE].onload = function (list_view) {
         add_bulk_action_for_invoices(
             list_view,
             __("Enqueue Bulk e-Invoice Generation"),
-            enqueue_bulk_e_invoice_generation
+            enqueue_bulk_e_invoice_generation,
         );
 };
 
@@ -49,7 +49,7 @@ function add_bulk_action_for_invoices(list_view, label, callback, allowed_status
 async function generate_e_waybill_json(docnames) {
     const ewb_data = await frappe.xcall(
         "india_compliance.gst_india.utils.e_waybill.generate_e_waybill_json",
-        { doctype: DOCTYPE, docnames }
+        { doctype: DOCTYPE, docnames },
     );
 
     india_compliance.trigger_file_download(ewb_data, get_e_waybill_file_name());
@@ -90,7 +90,7 @@ async function bulk_e_waybill_print(docnames) {
                     frappe.msgprint(
                         __("Cannot print e-Waybill for following documents:<br><br>{0}", [
                             invalid_docs.join("<br>"),
-                        ])
+                        ]),
                     );
                 }
 
@@ -100,7 +100,7 @@ async function bulk_e_waybill_print(docnames) {
                         doctype: "e-Waybill Log",
                         name: JSON.stringify(r.message.valid_log),
                     },
-                    true
+                    true,
                 );
             }
         },
@@ -147,8 +147,8 @@ async function enqueue_bulk_generation(method, args) {
             <a href='{0}'>Background Job</a>,
             <a href='{1}'>API Request(s)</a>,
             and <a href='{2}'>Error Log(s)</a>.`,
-            [frappe.utils.get_form_link("RQ Job", job_id), api_requests_link, error_logs_link]
-        )
+            [frappe.utils.get_form_link("RQ Job", job_id), api_requests_link, error_logs_link],
+        ),
     );
 }
 
@@ -181,9 +181,9 @@ async function validate_doc_status(selected_docs, allowed_status) {
         frappe.confirm(
             __(
                 "This action can only be performed on {0} documents. Do you want to continue without the following documents?<br><br><strong>{1}</strong>",
-                [allowed_status_str, invalid_docs.join("<br>")]
+                [allowed_status_str, invalid_docs.join("<br>")],
             ),
-            () => resolve(true)
+            () => resolve(true),
         );
     });
 

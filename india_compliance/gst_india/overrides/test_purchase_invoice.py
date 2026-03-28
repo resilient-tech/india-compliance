@@ -13,9 +13,7 @@ from india_compliance.gst_india.utils.itc_claim import (
 )
 from india_compliance.gst_india.utils.tests import append_item, create_purchase_invoice
 
-with mock.patch("frappe.db"), mock.patch("frappe.new_doc"), mock.patch(
-    "frappe.get_doc"
-):
+with mock.patch("frappe.db"), mock.patch("frappe.new_doc"), mock.patch("frappe.get_doc"):
     from erpnext.accounts.doctype.account.test_account import create_account
 
 

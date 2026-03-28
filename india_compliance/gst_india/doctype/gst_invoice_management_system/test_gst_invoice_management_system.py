@@ -307,9 +307,7 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
             link_doctype="Purchase Invoice",
         )
 
-        self.assertIsNone(
-            frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name")
-        )
+        self.assertIsNone(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"))
         self.assertTrue(any(row.inward_supply_name == gst_is.name for row in result))
 
     def test_link_documents_with_none_link_doctype(self):
@@ -356,9 +354,7 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
             link_doctype=None,
         )
 
-        self.assertIsNone(
-            frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name")
-        )
+        self.assertIsNone(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"))
         self.assertTrue(any(row.inward_supply_name == gst_is.name for row in result))
 
     def get_periods(self):

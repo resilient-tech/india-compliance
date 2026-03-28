@@ -231,7 +231,7 @@ class GSTSettings(Document):
                 continue
 
             frappe.throw(
-                _("Row #{0}: Password is required when setting a GST Credential" " for {1}").format(
+                _("Row #{0}: Password is required when setting a GST Credential for {1}").format(
                     credential.idx, credential.service
                 ),
                 frappe.MandatoryError,
@@ -265,16 +265,16 @@ class GSTSettings(Document):
 
     def validate_enable_api(self):
         if self.enable_api and self.has_value_changed("enable_api") and not can_enable_api(self):
-            frappe.throw(_("Please counfigure your India Compliance Account to " "enable API features"))
+            frappe.throw(_("Please counfigure your India Compliance Account to enable API features"))
 
         if self.sandbox_mode and self.autofill_party_info and self.has_value_changed("sandbox_mode"):
             frappe.msgprint(
-                _("Autofill Party Information based on GSTIN is not supported in" " sandbox mode"),
+                _("Autofill Party Information based on GSTIN is not supported in sandbox mode"),
             )
 
     def validate_e_invoice_applicable_companies(self):
         if not self.e_invoice_applicable_companies:
-            frappe.throw(_("You must select at least one company to which e-Invoice is" " Applicable"))
+            frappe.throw(_("You must select at least one company to which e-Invoice is Applicable"))
 
         company_list = []
         for row in self.e_invoice_applicable_companies:
@@ -362,7 +362,7 @@ class GSTSettings(Document):
                     "show_missing_gst_credentials_message",
                     dict(
                         message=_(
-                            "Credentials are missing for GSTIN {0} for service" " Returns in GST Settings"
+                            "Credentials are missing for GSTIN {0} for service Returns in GST Settings"
                         ).format(gstin),
                         title=_("Missing Credentials"),
                     ),

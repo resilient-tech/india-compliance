@@ -122,7 +122,7 @@ class GovExcel(DataProcessor):
     PERCENT_FORMAT = "0.00"
 
     FIELD_TRANSFORMATIONS: ClassVar[dict] = {
-        inv_f.DIFF_PERCENTAGE: lambda value: (value * 100 if value != 0 else None),
+        inv_f.DIFF_PERCENTAGE: lambda value: value * 100 if value != 0 else None,
         inv_f.DOC_DATE: lambda value: datetime.strptime(value, "%Y-%m-%d"),
         inv_f.SHIPPING_BILL_DATE: lambda value: datetime.strptime(value, "%Y-%m-%d"),
     }

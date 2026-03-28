@@ -107,9 +107,9 @@ class GSTR:
         if transaction.get("items"):
             self.update_totals(transaction)
 
-        transaction[
-            "unique_key"
-        ] = f"{transaction.get('supplier_gstin', '')}-{transaction.get('bill_no', '')}"
+        transaction["unique_key"] = (
+            f"{transaction.get('supplier_gstin', '')}-{transaction.get('bill_no', '')}"
+        )
 
         return transaction
 

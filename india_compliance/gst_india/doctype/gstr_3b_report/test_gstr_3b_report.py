@@ -313,9 +313,7 @@ class TestGSTR3BReport(IntegrationTestCase):
         ).insert()
 
         output = json.loads(report.json_output)
-        itc_available = {
-            row["ty"]: row for row in output.get("itc_elg", {}).get("itc_avl", [])
-        }
+        itc_available = {row["ty"]: row for row in output.get("itc_elg", {}).get("itc_avl", [])}
 
         self.assertEqual(itc_available["IMPG"].get("iamt"), 36.0)
         self.assertEqual(itc_available["IMPG"].get("csamt"), 0.0)
@@ -358,9 +356,7 @@ class TestGSTR3BReport(IntegrationTestCase):
         ).insert()
 
         output = json.loads(report.json_output)
-        itc_available = {
-            row["ty"]: row for row in output.get("itc_elg", {}).get("itc_avl", [])
-        }
+        itc_available = {row["ty"]: row for row in output.get("itc_elg", {}).get("itc_avl", [])}
 
         self.assertEqual(itc_available["IMPG"].get("iamt"), 36.0)
         self.assertEqual(itc_available["IMPG"].get("csamt"), 20.0)
@@ -397,9 +393,7 @@ class TestGSTR3BReport(IntegrationTestCase):
         ).insert()
 
         output = json.loads(report.json_output)
-        itc_available = {
-            row["ty"]: row for row in output.get("itc_elg", {}).get("itc_avl", [])
-        }
+        itc_available = {row["ty"]: row for row in output.get("itc_elg", {}).get("itc_avl", [])}
 
         # ITC should be reported from Purchase Invoice
         self.assertEqual(itc_available["IMPG"].get("iamt"), expected_iamt)
@@ -432,9 +426,7 @@ class TestGSTR3BReport(IntegrationTestCase):
         ).insert()
 
         output = json.loads(report.json_output)
-        itc_available = {
-            row["ty"]: row for row in output.get("itc_elg", {}).get("itc_avl", [])
-        }
+        itc_available = {row["ty"]: row for row in output.get("itc_elg", {}).get("itc_avl", [])}
 
         # ITC should come from BOE (customs duty 100 * 36% = 36)
         self.assertEqual(itc_available["IMPG"].get("iamt"), 36.0)

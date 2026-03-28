@@ -72,7 +72,7 @@ frappe.ui.form.on(DOCTYPE, {
                     message: __("Supplier Address is required to create e-Waybill"),
                     indicator: "yellow",
                 },
-                10
+                10,
             );
     },
 

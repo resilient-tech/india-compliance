@@ -102,7 +102,7 @@ export default {
                 async () => {
                     await this.$store.dispatch("setApiSecret", null);
                     this.$router.replace({ name: "auth" });
-                }
+                },
             );
         },
         openInvoiceDialog() {
@@ -186,7 +186,7 @@ export default {
             let { last_usage_synced_on } = this.subscriptionDetails;
 
             const datetime = (last_usage_synced_on ? moment.unix(last_usage_synced_on) : moment()).format(
-                frappe.defaultDatetimeFormat
+                frappe.defaultDatetimeFormat,
             );
 
             return frappe.datetime.str_to_user(datetime);

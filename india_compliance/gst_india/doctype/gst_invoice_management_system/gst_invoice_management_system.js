@@ -26,7 +26,7 @@ frappe.ui.form.on(DOCTYPE, {
         frm.reconciliation_tabs = new IMS(
             frm,
             ["invoice", "match_summary", "action_summary"],
-            "invoice_html"
+            "invoice_html",
         );
 
         frm.doc.company = frappe.defaults.get_user_default("Company");
@@ -184,7 +184,7 @@ class IMS extends reconciliation.reconciliation_tabs {
                 label: "Is Supplier Return Filed",
                 fieldname: "is_supplier_return_filed",
                 fieldtype: "Check",
-            }
+            },
         );
 
         fields.forEach((field) => (field.parent = DOCTYPE));
@@ -629,7 +629,7 @@ class IMSAction {
             this.frm.add_custom_button(
                 __("Unlink"),
                 () => reconciliation.unlink_documents(this.frm),
-                __("Actions")
+                __("Actions"),
             );
             this.frm.add_custom_button(__("dropdown-divider"), () => {}, __("Actions"));
         }
@@ -639,8 +639,8 @@ class IMSAction {
             this.frm.add_custom_button(
                 __(action),
                 () => apply_bulk_action(this.frm, ACTION_MAP[action]),
-                __("Actions")
-            )
+                __("Actions"),
+            ),
         );
 
         // Add Dropdown Divider to differentiate between IMS and Reconciliation Actions
@@ -754,7 +754,7 @@ class IMSAction {
                     // Not IP
                     resolve(message);
                 },
-                now ? 0 : this.RETRY_INTERVALS[retries]
+                now ? 0 : this.RETRY_INTERVALS[retries],
             );
         });
     }
@@ -845,14 +845,14 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
                 this.data.purchase_invoice_name,
                 this.data.inward_supply_name,
                 this.dialog.get_value("doctype"),
-                true
+                true,
             );
         } else if (action == "Create") {
             reconciliation.create_new_purchase_invoice(
                 this.data,
                 this.frm.doc.company,
                 this.frm.doc.company_gstin,
-                DOCTYPE
+                DOCTYPE,
             );
         } else {
             apply_action(this.frm, ACTION_MAP[action], [this.row.inward_supply_name]);
@@ -935,7 +935,7 @@ async function apply_action(frm, action, invoice_names) {
     });
 
     invoice_names = invoice_names.filter(
-        (name) => !(pending_not_allowed.includes(name) || accept_not_allowed.includes(name))
+        (name) => !(pending_not_allowed.includes(name) || accept_not_allowed.includes(name)),
     );
 
     if (pending_not_allowed.length) {
@@ -946,7 +946,7 @@ async function apply_action(frm, action, invoice_names) {
     } else if (accept_not_allowed.length) {
         frappe.msgprint({
             message: __(
-                "Some invoices cannot be <strong>Accepted</strong>. Please ensure they are linked to a purchase."
+                "Some invoices cannot be <strong>Accepted</strong>. Please ensure they are linked to a purchase.",
             ),
             indicator: "red",
         });
@@ -959,11 +959,11 @@ async function apply_action(frm, action, invoice_names) {
         frappe.show_alert(
             {
                 message: __(
-                    "Some invoices are <strong>Accepted</strong> where the Supplier has not filed the return"
+                    "Some invoices are <strong>Accepted</strong> where the Supplier has not filed the return",
                 ),
                 indicator: "orange",
             },
-            10
+            10,
         );
     }
 
@@ -997,12 +997,12 @@ function get_affected_rows(tab, selection, data) {
 
     if (tab == "match_summary_tab")
         invoices = data.filter(
-            (inv) => selection.filter((row) => row.match_status == inv.match_status).length
+            (inv) => selection.filter((row) => row.match_status == inv.match_status).length,
         );
 
     if (tab == "action_summary_tab")
         invoices = data.filter(
-            (inv) => selection.filter((row) => category_map[row.category] == inv.doc_type).length
+            (inv) => selection.filter((row) => category_map[row.category] == inv.doc_type).length,
         );
 
     return invoices.map((row) => row.inward_supply_name);

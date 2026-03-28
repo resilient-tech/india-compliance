@@ -30,7 +30,7 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                           `When you enter a GSTIN, the permanent address linked to it is
                         autofilled.<br>
                         Change the {0} to autofill other addresses.`,
-                          [frappe.meta.get_label("Address", "pincode")]
+                          [frappe.meta.get_label("Address", "pincode")],
                       )
                     : "",
                 collapsible: 0,
@@ -101,7 +101,7 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                     if (["Customer", "Supplier"].includes(this.doctype)) {
                         d.set_value(
                             `${this.doctype.toLowerCase()}_type`,
-                            this.gstin_to_party_type_map[d.doc._gstin[5]] || "Individual"
+                            this.gstin_to_party_type_map[d.doc._gstin[5]] || "Individual",
                         );
                     }
 
@@ -109,7 +109,7 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
 
                     d.set_value(
                         "gst_category",
-                        india_compliance.guess_gst_category(d.doc._gstin, d.doc.country)
+                        india_compliance.guess_gst_category(d.doc._gstin, d.doc.country),
                     );
                 },
             },
@@ -292,7 +292,7 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
 
                     const { message: gstin_list } = await frappe.call(
                         "india_compliance.gst_india.utils.get_gstin_list",
-                        { party_type: link_doctype, party: link_name }
+                        { party_type: link_doctype, party: link_name },
                     );
                     if (!gstin_list || !gstin_list.length) return;
 
@@ -371,7 +371,7 @@ class ItemQuickEntryForm extends frappe.ui.form.QuickEntryForm {
             const { message } = await frappe.db.get_value(
                 "Item Group",
                 item_group_field.value,
-                "gst_hsn_code"
+                "gst_hsn_code",
             );
             this.dialog.set_value("gst_hsn_code", message.gst_hsn_code);
         };
@@ -421,7 +421,7 @@ function setup_pincode_field(dialog, gstin_info) {
         all_addresses.map((address, index) => ({
             label: `${address.pincode}<br>${address.address_line1}, ${address.address_line2}, ${address.city}, ${address.state}`,
             value: `${index}:${address.pincode}`,
-        }))
+        })),
     );
 
     pincode_field.format_for_input = (value) => {
@@ -491,7 +491,7 @@ function autofill_address(doc, { all_addresses }) {
 
     update_address_info(
         doc,
-        all_addresses.find((address) => address.pincode == pincode)
+        all_addresses.find((address) => address.pincode == pincode),
     );
 }
 

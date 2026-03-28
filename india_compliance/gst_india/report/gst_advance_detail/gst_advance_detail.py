@@ -123,7 +123,7 @@ class GSTAdvanceDetail:
         data = paid_entries + allocated_entries
 
         # sort by payment_entry
-        data = sorted(data, key=lambda k: (k["payment_entry"]), reverse=True)
+        data = sorted(data, key=lambda k: k["payment_entry"], reverse=True)
 
         if not self.filters.get("show_summary"):
             return data

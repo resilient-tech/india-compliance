@@ -22,7 +22,7 @@ frappe.ui.form.on("GST HSN Code", {
                                 }
                             },
                         });
-                    }
+                    },
                 );
             });
         }

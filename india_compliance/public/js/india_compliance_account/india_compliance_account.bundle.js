@@ -22,7 +22,7 @@ class IndiaComplianceAccountPage {
             frappe.utils.generate_route({
                 type: "Page",
                 name: "india-compliance-account",
-            })
+            }),
         );
 
         history.listen((to) => {

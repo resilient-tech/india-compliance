@@ -72,7 +72,7 @@ function update_address_fields(frm) {
             DOCTYPE,
             null,
             (dialog) => dialog.set_value("_gstin", frm.doc.gstin),
-            doc
+            doc,
         );
         frappe.ui.form.AddressQuickEntryForm = original_quick_entry_form;
     });

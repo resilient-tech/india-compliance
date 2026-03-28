@@ -5,9 +5,7 @@ from erpnext.subcontracting.doctype.subcontracting_order.subcontracting_order im
 )
 from frappe.tests import IntegrationTestCase
 
-with mock.patch("frappe.db"), mock.patch("frappe.new_doc"), mock.patch(
-    "frappe.get_doc"
-):
+with mock.patch("frappe.db"), mock.patch("frappe.new_doc"), mock.patch("frappe.get_doc"):
     from erpnext.accounts.doctype.payment_reconciliation.test_payment_reconciliation import (
         create_fiscal_year,
     )
@@ -84,9 +82,7 @@ class TestITC04Export(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        create_fiscal_year(
-            "_Test Indian Registered Company", "2024-04-01", "2025-03-31"
-        )
+        create_fiscal_year("_Test Indian Registered Company", "2024-04-01", "2025-03-31")
         create_subcontracting_data()
 
         po = create_purchase_order(
@@ -102,9 +98,7 @@ class TestITC04Export(IntegrationTestCase):
         sco = create_subcontracting_order(po_name=po.name)
 
         rm_items = get_rm_items(sco.supplied_items)
-        cls.se = make_stock_transfer_entry(
-            sco_no=sco.name, rm_items=rm_items, do_not_submit=1
-        )
+        cls.se = make_stock_transfer_entry(sco_no=sco.name, rm_items=rm_items, do_not_submit=1)
         cls.se.posting_date = "2025-01-10"
         cls.se.set_posting_time = 1
         cls.se.save()

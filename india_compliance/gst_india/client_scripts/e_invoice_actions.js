@@ -11,7 +11,7 @@ frappe.ui.form.on("Sales Invoice", {
             frm.add_custom_button(
                 __("Mark as Cancelled"),
                 () => show_mark_e_invoice_as_cancelled_dialog(frm),
-                "e-Invoice"
+                "e-Invoice",
             );
         }
 
@@ -25,7 +25,7 @@ frappe.ui.form.on("Sales Invoice", {
             frm.add_custom_button(
                 __("Applicability Status"),
                 () => show_e_invoice_applicability_status(frm, is_einv_generatable),
-                "e-Invoice"
+                "e-Invoice",
             );
 
             return;
@@ -49,13 +49,13 @@ frappe.ui.form.on("Sales Invoice", {
                         },
                     });
                 },
-                "e-Invoice"
+                "e-Invoice",
             );
 
             frm.add_custom_button(
                 __("Mark as Generated"),
                 () => show_mark_e_invoice_as_generated_dialog(frm),
-                "e-Invoice"
+                "e-Invoice",
             );
         }
         if (
@@ -95,24 +95,24 @@ frappe.ui.form.on("Sales Invoice", {
                 if (frm.doc.is_return)
                     message = __(
                         `You should ideally create a standalone <strong>Debit Note</strong>
-                        against this credit note instead of cancelling it.`
+                        against this credit note instead of cancelling it.`,
                     );
                 else if (frm.doc.is_debit_note)
                     message = __(
                         `You should ideally create a standalone <strong>Credit Note</strong>
-                        against this debit note instead of cancelling it.`
+                        against this debit note instead of cancelling it.`,
                     );
                 else
                     message = __(
                         `You should ideally create a <strong>Credit Note</strong>
-                    against this invoice instead of cancelling it.`
+                    against this invoice instead of cancelling it.`,
                     );
 
                 message += __(
                     `<br><br>If you choose to proceed, you'll be required to manually exclude this
                     IRN when filing GST Returns.<br><br>
 
-                    Are you sure you want to continue?`
+                    Are you sure you want to continue?`,
                 );
                 const d = frappe.warn(__("Cannot Cancel IRN"), message, continueCancellation, __("Yes"));
 
@@ -166,7 +166,7 @@ function show_cancel_e_invoice_dialog(frm, callback) {
     d.show_message(
         __("Sales invoice will be cancelled along with the IRN."),
         "yellow",
-        1 // permanent
+        1, // permanent
     );
 }
 
@@ -335,7 +335,7 @@ function is_e_invoice_applicable(frm, show_message = false) {
     if (!frm.doc.items.some((item) => ["Taxable", "Zero-Rated"].includes(item.gst_treatment))) {
         is_einv_applicable = false;
         message_list.push(
-            "All items are either Nil-Rated/Exempted/Non-GST. At least one item must be taxable or the transaction should be categorised as export."
+            "All items are either Nil-Rated/Exempted/Non-GST. At least one item must be taxable or the transaction should be categorised as export.",
         );
     }
 
@@ -362,7 +362,7 @@ function is_valid_e_invoice_applicability_date(frm) {
 
     if (gst_settings.apply_e_invoice_only_for_selected_companies)
         e_invoice_applicable_from = gst_settings.e_invoice_applicable_companies.find(
-            (row) => row.company == frm.doc.company
+            (row) => row.company == frm.doc.company,
         )?.applicable_from;
 
     if (!e_invoice_applicable_from) return false;

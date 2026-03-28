@@ -197,7 +197,7 @@ class BillofEntry(Document):
 
             if item.pi_detail not in pi_item_names:
                 frappe.throw(
-                    _("Row #{0}: Purchase Invoice Item {1} not found in Purchase" " Invoice {2}").format(
+                    _("Row #{0}: Purchase Invoice Item {1} not found in Purchase Invoice {2}").format(
                         item.idx,
                         frappe.bold(item.pi_detail),
                         frappe.bold(item.purchase_invoice),
@@ -217,7 +217,7 @@ class BillofEntry(Document):
                 input_accounts.cess_non_advol_account,
             ):
                 frappe.throw(
-                    _("Row #{0}: Only Input IGST and CESS accounts are allowed in" " Bill of Entry").format(
+                    _("Row #{0}: Only Input IGST and CESS accounts are allowed in Bill of Entry").format(
                         tax.idx
                     )
                 )
@@ -634,7 +634,7 @@ def make_landed_cost_voucher(source_name: str, target_doc: str | None = None):
         )
 
         if total_customs_duty != source.total_customs_duty:
-            frappe.msgprint(_("Could not find purchase receipts for all items. Please check" " manually."))
+            frappe.msgprint(_("Could not find purchase receipts for all items. Please check manually."))
 
         update_landed_cost_voucher_for_gst_expense(source, target)
 

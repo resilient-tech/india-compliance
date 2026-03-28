@@ -538,7 +538,7 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
         )
 
     if doc.company_gstin == doc.billing_address_gstin:
-        return _throw(_("e-Invoice is not applicable for invoices with same company and billing" " GSTIN"))
+        return _throw(_("e-Invoice is not applicable for invoices with same company and billing GSTIN"))
 
     if not validate_taxable_item(doc, throw=throw):
         # e-Invoice not required for invoice wih all nill-rated/exempted items.
@@ -560,7 +560,7 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
 
     if getdate(applicability_date) > getdate(doc.posting_date):
         return _throw(
-            _("e-Invoice is not applicable for invoices before {0} as per your" " GST Settings").format(
+            _("e-Invoice is not applicable for invoices before {0} as per your GST Settings").format(
                 frappe.bold(format_date(applicability_date))
             )
         )
@@ -692,9 +692,7 @@ class EInvoiceData(GSTTransactionData):
             {
                 "discount_amount": 0,
                 "serial_no": "",
-                "is_service_item": (
-                    "Y" if item.gst_hsn_code.startswith(SERVICE_HSN_PREFIX) else "N"
-                ),
+                "is_service_item": ("Y" if item.gst_hsn_code.startswith(SERVICE_HSN_PREFIX) else "N"),
                 "unit_rate": (
                     abs(self.rounded(item.taxable_value / item.qty, 3))
                     if item.qty

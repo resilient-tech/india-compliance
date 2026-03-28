@@ -433,9 +433,7 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
             self.assign_categories(invoice)
             self.set_hsn_sub_category(invoice, bifurcate_hsn)
 
-            if invoice.gst_hsn_code and invoice.gst_hsn_code.startswith(
-                SERVICE_HSN_PREFIX
-            ):
+            if invoice.gst_hsn_code and invoice.gst_hsn_code.startswith(SERVICE_HSN_PREFIX):
                 invoice["uom"] = "OTH-OTHERS"
                 invoice["qty"] = 0
                 continue
@@ -931,10 +929,8 @@ class GSTR1DocumentIssuedSummary:
 
         for doc in data:
             if (
-                doc.amended_from
-                and len(doc.amended_from) != len(doc.name)
-                or doc.amended_from in amended_dict
-            ):
+                doc.amended_from and len(doc.amended_from) != len(doc.name)
+            ) or doc.amended_from in amended_dict:
                 amended_dict[doc.name] = doc
                 data_dict.pop(doc.name)
 

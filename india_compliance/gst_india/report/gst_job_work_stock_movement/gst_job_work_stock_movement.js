@@ -63,7 +63,7 @@ frappe.query_reports["GST Job Work Stock Movement"] = {
                 data.invoice_type,
                 data.original_invoice_no,
                 true,
-                data.invoice_no
+                data.invoice_no,
             );
         }
 
@@ -83,9 +83,9 @@ frappe.query_reports["GST Job Work Stock Movement"] = {
                     if (r.message && r.message.has_invalid_data) {
                         frappe.confirm(
                             __(
-                                "Some entries are skipped in Table 5A because <strong>Original Challan No</strong> is missing.<br><br>Do you want to continue with the download?"
+                                "Some entries are skipped in Table 5A because <strong>Original Challan No</strong> is missing.<br><br>Do you want to continue with the download?",
                             ),
-                            () => handle_download(r.message)
+                            () => handle_download(r.message),
                         );
                     } else {
                         handle_download(r.message);

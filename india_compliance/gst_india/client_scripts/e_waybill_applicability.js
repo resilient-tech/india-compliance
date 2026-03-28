@@ -17,7 +17,7 @@ class EwaybillApplicability {
         if (this.frm.doc.is_opening === "Yes") {
             is_ewb_applicable = false;
             message_list.push(
-                "e-Waybill cannot be generated for transaction with 'Is Opening Entry' set to Yes."
+                "e-Waybill cannot be generated for transaction with 'Is Opening Entry' set to Yes.",
             );
         }
 
@@ -237,7 +237,7 @@ class StockEntryEwaybill extends EwaybillApplicability {
         if (this.frm.doc.is_opening === "Yes") {
             is_ewb_applicable = false;
             message_list.push(
-                "e-Waybill cannot be generated for transaction with 'Is Opening Entry' set to Yes."
+                "e-Waybill cannot be generated for transaction with 'Is Opening Entry' set to Yes.",
             );
         }
 
