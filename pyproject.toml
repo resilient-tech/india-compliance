@@ -62,7 +62,7 @@ typing-modules = ["frappe.types.DF"]
 
 [tool.ruff.format]
 quote-style = "double"
-indent-style = "space" # frappe uses tabs
+indent-style = "space" # override: use spaces instead of frappe's tabs
 docstring-code-format = true
 
 
