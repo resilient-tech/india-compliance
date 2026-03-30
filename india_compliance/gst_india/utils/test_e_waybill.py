@@ -1293,10 +1293,6 @@ class TestEWaybill(IntegrationTestCase):
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_e_waybill_for_sez_outward_invoice(self):
-        """Test e-waybill for outward supply to SEZ unit.
-        For outward supply to SEZ, toStateCode should be 96 (Other Countries)
-        and fromStateCode should be company's state.
-        """
         si = create_sales_invoice(
             vehicle_no="GJ07DL9009",
             company_address="_Test Indian Registered Company-Billing",
@@ -1311,11 +1307,7 @@ class TestEWaybill(IntegrationTestCase):
         self.assertEqual(e_waybill_data.get("fromStateCode"), 24)
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
-    def test_e_waybill_for_sez_sales_return_invoice(self):
-        """Test e-waybill for sales return from SEZ unit.
-        For return from SEZ, addresses are swapped so fromStateCode should be 96 (Other Countries)
-        and toStateCode should be company's state.
-        """
+    def test_e_waybill_for_sez_sales_return(self):
         si = create_sales_invoice(
             vehicle_no="GJ07DL9009",
             company_address="_Test Indian Registered Company-Billing",
@@ -1326,12 +1318,89 @@ class TestEWaybill(IntegrationTestCase):
 
         credit_note = make_return_doc("Sales Invoice", si.name)
         credit_note.vehicle_no = "GJ07DL9009"
+        credit_note.save()
         credit_note.submit()
 
         e_waybill_data = EWaybillData(credit_note).get_data()
 
         self.assertEqual(e_waybill_data.get("fromStateCode"), 96)
         self.assertEqual(e_waybill_data.get("toStateCode"), 24)
+
+    @change_settings("GST Settings", {"enable_e_waybill_for_sc": 1})
+    def test_e_waybill_for_sez_stock_entry(self):
+        se = create_transaction(
+            doctype="Stock Entry",
+            stock_entry_type="Send to Subcontractor",
+            purpose="Send to Subcontractor",
+            bill_from_address="_Test Indian Registered Company-Billing",
+            bill_to_address="_Test Registered Customer-Billing-1",
+            vehicle_no="GJ07DL9009",
+            items=[
+                {
+                    "item_code": "_Test Trading Goods 1",
+                    "qty": 1,
+                    "gst_hsn_code": "61149090",
+                    "s_warehouse": "Finished Goods - _TIRC",
+                    "t_warehouse": "Goods In Transit - _TIRC",
+                    "amount": 100,
+                    "taxable_value": 100,
+                }
+            ],
+            company="_Test Indian Registered Company",
+            base_grand_total=100,
+        )
+
+        # reload to trigger onload which sets company_gstin, supplier_gstin
+        se = load_doc("Stock Entry", se.name, "submit")
+
+        e_waybill_data = EWaybillData(se).get_data()
+
+        self.assertEqual(e_waybill_data.get("toStateCode"), 96)
+        self.assertEqual(e_waybill_data.get("fromStateCode"), 24)
+        self.assertEqual(e_waybill_data.get("actToStateCode"), 24)
+
+    @change_settings(
+        "GST Settings",
+        {"enable_e_waybill_from_pi": 1, "enable_overseas_transactions": 1},
+    )
+    def test_e_waybill_for_sez_purchase_invoice(self):
+        pi = create_purchase_invoice(
+            vehicle_no="GJ07DL9009",
+            supplier_address="_Test Registered Supplier-Billing-2",
+            billing_address="_Test Indian Registered Company-Billing",
+            is_out_state=1,
+        )
+
+        e_waybill_data = EWaybillData(pi).get_data()
+
+        # bill_from = supplier (SEZ), bill_to = company
+        self.assertEqual(e_waybill_data.get("fromStateCode"), 96)
+        self.assertEqual(e_waybill_data.get("toStateCode"), 24)
+        self.assertEqual(e_waybill_data.get("actFromStateCode"), 24)
+
+    @change_settings(
+        "GST Settings",
+        {"enable_e_waybill_from_pi": 1, "enable_overseas_transactions": 1},
+    )
+    def test_e_waybill_for_sez_purchase_return(self):
+        pi = create_purchase_invoice(
+            vehicle_no="GJ07DL9009",
+            supplier_address="_Test Registered Supplier-Billing-2",
+            billing_address="_Test Indian Registered Company-Billing",
+            is_out_state=1,
+        )
+
+        debit_note = make_return_doc("Purchase Invoice", pi.name)
+        debit_note.vehicle_no = "GJ07DL9009"
+        debit_note.save()
+        debit_note.submit()
+
+        e_waybill_data = EWaybillData(debit_note).get_data()
+
+        # return swaps from/to: bill_from = company, bill_to = supplier (SEZ)
+        self.assertEqual(e_waybill_data.get("fromStateCode"), 24)
+        self.assertEqual(e_waybill_data.get("toStateCode"), 96)
+        self.assertEqual(e_waybill_data.get("actToStateCode"), 24)
 
     # helper functions
     def _generate_e_waybill(self, docname=None, doctype="Sales Invoice", test_data=None, force=False):
