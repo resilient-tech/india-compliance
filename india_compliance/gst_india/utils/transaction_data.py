@@ -390,6 +390,7 @@ class GSTTransactionData:
                 "country",
                 "gstin",
                 "gst_state_number",
+                "gst_category",
             ),
             as_dict=True,
         )
@@ -437,6 +438,7 @@ class GSTTransactionData:
                 ),
                 "pincode": int(address.pincode),
                 "country_code": get_validated_country_code(address.country),
+                "gst_category": address.gst_category,
             }
         )
 
