@@ -35,6 +35,7 @@ from india_compliance.gst_india.constants import (
 )
 from india_compliance.gst_india.constants.e_waybill import (
     ADDRESS_FIELDS,
+    BUYING_DOCTYPES,
     CANCEL_REASON_CODES,
     CONSIGNMENT_STATUS,
     EXTEND_VALIDITY_REASON_CODES,
@@ -1657,9 +1658,15 @@ class EWaybillData(GSTTransactionData):
         self.bill_from = self.get_address_details(address.bill_from)
 
         # Defaults
-        # billing state is changed for SEZ, hence copy()
         self.ship_to = self.bill_to.copy()
         self.ship_from = self.bill_from.copy()
+
+        # for SEZ, e-Waybill API expects billing state as 96 - Other Countries
+        # only billing state (fromStateCode/toStateCode), not shipping (actFromStateCode/actToStateCode)
+        # ERROR CODE: 641, 642
+        for side in (self.bill_from, self.bill_to):
+            if side.gst_category == "SEZ":
+                side.state_number = 96
 
         if has_different_to_address and has_different_from_address:
             transaction_type = 4
@@ -1679,11 +1686,7 @@ class EWaybillData(GSTTransactionData):
         to_party = self.transaction_details.party_name
         from_party = self.transaction_details.company_name
 
-        if self.doc.doctype in (
-            "Purchase Invoice",
-            "Purchase Receipt",
-            "Subcontracting Receipt",
-        ):
+        if self.doc.doctype in BUYING_DOCTYPES:
             to_party, from_party = from_party, to_party
 
         if self.doc.get("is_return"):
@@ -1691,14 +1694,6 @@ class EWaybillData(GSTTransactionData):
 
         self.bill_to.legal_name = to_party or self.bill_to.address_title
         self.bill_from.legal_name = from_party or self.bill_from.address_title
-
-        if self.doc.gst_category == "SEZ":
-            # for SEZ e-Waybill API expects place of supply as 96 - Other Countries
-            # ERROR CODE: 641, 642
-            if self.doc.get("is_return"):
-                self.bill_from.state_number = 96
-            else:
-                self.bill_to.state_number = 96
 
     def get_address_details(self, *args, **kwargs):
         address_details = super().get_address_details(*args, **kwargs)
@@ -1733,6 +1728,7 @@ class EWaybillData(GSTTransactionData):
         if self.sandbox_mode:
             REGISTERED_GSTIN = "05AAACG2115R1ZN"
             OTHER_GSTIN = "05AAACG2140A1ZL"
+            SEZ_GSTIN = "27AAJCS5738D1Z6"
 
             self.transaction_details.update(
                 {
@@ -1771,13 +1767,18 @@ class EWaybillData(GSTTransactionData):
                 if address.gstin == "URP":
                     return address.gstin
 
-                return sandbox_gstin.get((self.doc.doctype, self.doc.get("is_return") or 0))[key]
+                gstin = sandbox_gstin.get((self.doc.doctype, self.doc.get("is_return") or 0))[key]
+
+                # SEZ party (non-company side) needs a different GSTIN
+                if address.gst_category == "SEZ" and gstin == OTHER_GSTIN:
+                    return SEZ_GSTIN
+
+                return gstin
 
             self.bill_from.gstin = _get_sandbox_gstin(self.bill_from, 0)
             self.bill_to.gstin = _get_sandbox_gstin(self.bill_to, 1)
 
-        # For regular outward supplies, use Place of Supply.
-        if self.doc.get("is_return") or self.doc.gst_category == "SEZ":
+        if self.doc.get("is_return") or self.bill_to.gst_category == "SEZ":
             to_state_code = self.bill_to.state_number
         else:
             to_state_code = int(self.transaction_details.pos_state_code)
