@@ -1,6 +1,6 @@
 [
   {
-    "name": "TDS - Premature EPF Withdrawal - Individual",
+    "name": "Premature EPF Withdrawal - Individual",
     "category_name": "Premature EPF Withdrawal",
     "round_off_tax_amount": 0,
     "tds_section": "1004",
@@ -18,7 +18,7 @@
     ]
   },
   {
-    "name": "TDS - Premature EPF Withdrawal - No PAN / Invalid PAN",
+    "name": "Premature EPF Withdrawal - No PAN / Invalid PAN",
     "category_name": "Premature EPF Withdrawal",
     "round_off_tax_amount": 0,
     "tds_section": "1004",
@@ -36,7 +36,7 @@
     ]
   },
   {
-    "name": "TDS - Insurance Commission - Individual",
+    "name": "Insurance Commission - Individual",
     "category_name": "Insurance Commission",
     "round_off_tax_amount": 0,
     "tds_section": "1005",
@@ -54,7 +54,7 @@
     ]
   },
   {
-    "name": "TDS - Insurance Commission - Company",
+    "name": "Insurance Commission - Company",
     "category_name": "Insurance Commission",
     "round_off_tax_amount": 0,
     "tds_section": "1005",
@@ -72,7 +72,7 @@
     ]
   },
   {
-    "name": "TDS - Insurance Commission - Company Assessee",
+    "name": "Insurance Commission - Company Assessee",
     "category_name": "Insurance Commission",
     "round_off_tax_amount": 0,
     "tds_section": "1005",
@@ -90,7 +90,7 @@
     ]
   },
   {
-    "name": "TDS - Insurance Commission - No PAN / Invalid PAN",
+    "name": "Insurance Commission - No PAN / Invalid PAN",
     "category_name": "Insurance Commission",
     "round_off_tax_amount": 0,
     "tds_section": "1005",
@@ -108,7 +108,7 @@
     ]
   },
   {
-    "name": "TDS - Commission / Brokerage - Individual",
+    "name": "Commission / Brokerage - Individual",
     "category_name": "Commission / Brokerage",
     "round_off_tax_amount": 0,
     "tds_section": "1006",
@@ -126,7 +126,7 @@
     ]
   },
   {
-    "name": "TDS - Commission / Brokerage - Company",
+    "name": "Commission / Brokerage - Company",
     "category_name": "Commission / Brokerage",
     "round_off_tax_amount": 0,
     "tds_section": "1006",
@@ -144,7 +144,7 @@
     ]
   },
   {
-    "name": "TDS - Commission / Brokerage - No PAN / Invalid PAN",
+    "name": "Commission / Brokerage - No PAN / Invalid PAN",
     "category_name": "Commission / Brokerage",
     "round_off_tax_amount": 0,
     "tds_section": "1006",
@@ -162,7 +162,7 @@
     ]
   },
   {
-    "name": "TDS - Rent on Plant / Machinery - Individual",
+    "name": "Rent on Plant / Machinery - Individual",
     "category_name": "Rent on Plant / Machinery",
     "round_off_tax_amount": 0,
     "tds_section": "1008",
@@ -180,7 +180,7 @@
     ]
   },
   {
-    "name": "TDS - Rent on Plant / Machinery - Company",
+    "name": "Rent on Plant / Machinery - Company",
     "category_name": "Rent on Plant / Machinery",
     "round_off_tax_amount": 0,
     "tds_section": "1008",
@@ -198,7 +198,7 @@
     ]
   },
   {
-    "name": "TDS - Rent on Plant / Machinery - No PAN / Invalid PAN",
+    "name": "Rent on Plant / Machinery - No PAN / Invalid PAN",
     "category_name": "Rent on Plant / Machinery",
     "round_off_tax_amount": 0,
     "tds_section": "1008",
@@ -216,7 +216,7 @@
     ]
   },
   {
-    "name": "TDS - Rent on Land / Building / Furniture / Fitting - Individual",
+    "name": "Rent on Land / Building / Furniture / Fitting - Individual",
     "category_name": "Rent on Land / Building / Furniture / Fitting",
     "round_off_tax_amount": 0,
     "tds_section": "1009",
@@ -234,7 +234,7 @@
     ]
   },
   {
-    "name": "TDS - Rent on Land / Building / Furniture / Fitting - Company",
+    "name": "Rent on Land / Building / Furniture / Fitting - Company",
     "category_name": "Rent on Land / Building / Furniture / Fitting",
     "round_off_tax_amount": 0,
     "tds_section": "1009",
@@ -252,7 +252,7 @@
     ]
   },
   {
-    "name": "TDS - Rent on Land / Building / Furniture / Fitting - No PAN / Invalid PAN",
+    "name": "Rent on Land / Building / Furniture / Fitting - No PAN / Invalid PAN",
     "category_name": "Rent on Land / Building / Furniture / Fitting",
     "round_off_tax_amount": 0,
     "tds_section": "1009",
@@ -270,7 +270,7 @@
     ]
   },
   {
-    "name": "TDS - Payments Under Specified Agreement - Individual",
+    "name": "Payments Under Specified Agreement - Individual",
     "category_name": "Payments Under Specified Agreement",
     "round_off_tax_amount": 0,
     "tds_section": "1011",
@@ -288,7 +288,7 @@
     ]
   },
   {
-    "name": "TDS - Payments Under Specified Agreement - Company",
+    "name": "Payments Under Specified Agreement - Company",
     "category_name": "Payments Under Specified Agreement",
     "round_off_tax_amount": 0,
     "tds_section": "1011",
@@ -306,7 +306,7 @@
     ]
   },
   {
-    "name": "TDS - Payments Under Specified Agreement - No PAN / Invalid PAN",
+    "name": "Payments Under Specified Agreement - No PAN / Invalid PAN",
     "category_name": "Payments Under Specified Agreement",
     "round_off_tax_amount": 0,
     "tds_section": "1011",
@@ -324,7 +324,7 @@
     ]
   },
   {
-    "name": "TDS - Compensation on Acquiring Immovable Property - Individual",
+    "name": "Compensation on Acquiring Immovable Property - Individual",
     "category_name": "Compensation on Acquiring Immovable Property",
     "round_off_tax_amount": 0,
     "tds_section": "1012",
@@ -342,7 +342,7 @@
     ]
   },
   {
-    "name": "TDS - Compensation on Acquiring Immovable Property - Company",
+    "name": "Compensation on Acquiring Immovable Property - Company",
     "category_name": "Compensation on Acquiring Immovable Property",
     "round_off_tax_amount": 0,
     "tds_section": "1012",
@@ -360,7 +360,7 @@
     ]
   },
   {
-    "name": "TDS - Compensation on Acquiring Immovable Property - No PAN / Invalid PAN",
+    "name": "Compensation on Acquiring Immovable Property - No PAN / Invalid PAN",
     "category_name": "Compensation on Acquiring Immovable Property",
     "round_off_tax_amount": 0,
     "tds_section": "1012",
@@ -378,7 +378,7 @@
     ]
   },
   {
-    "name": "TDS - Income from Mutual Fund Units - Individual",
+    "name": "Income from Mutual Fund Units - Individual",
     "category_name": "Income from Mutual Fund Units",
     "round_off_tax_amount": 0,
     "tds_section": "1013",
@@ -396,7 +396,7 @@
     ]
   },
   {
-    "name": "TDS - Income from Mutual Fund Units - Company",
+    "name": "Income from Mutual Fund Units - Company",
     "category_name": "Income from Mutual Fund Units",
     "round_off_tax_amount": 0,
     "tds_section": "1013",
@@ -414,7 +414,7 @@
     ]
   },
   {
-    "name": "TDS - Income from Mutual Fund Units - No PAN / Invalid PAN",
+    "name": "Income from Mutual Fund Units - No PAN / Invalid PAN",
     "category_name": "Income from Mutual Fund Units",
     "round_off_tax_amount": 0,
     "tds_section": "1013",
@@ -432,7 +432,7 @@
     ]
   },
   {
-    "name": "TDS - Business Trust - Interest - Individual",
+    "name": "Business Trust - Interest - Individual",
     "category_name": "Business Trust - Interest",
     "round_off_tax_amount": 0,
     "tds_section": "1014",
@@ -450,7 +450,7 @@
     ]
   },
   {
-    "name": "TDS - Business Trust - Interest - Company",
+    "name": "Business Trust - Interest - Company",
     "category_name": "Business Trust - Interest",
     "round_off_tax_amount": 0,
     "tds_section": "1014",
@@ -468,7 +468,7 @@
     ]
   },
   {
-    "name": "TDS - Business Trust - Interest - No PAN / Invalid PAN",
+    "name": "Business Trust - Interest - No PAN / Invalid PAN",
     "category_name": "Business Trust - Interest",
     "round_off_tax_amount": 0,
     "tds_section": "1014",
@@ -486,7 +486,7 @@
     ]
   },
   {
-    "name": "TDS - Business Trust - Dividend - Individual",
+    "name": "Business Trust - Dividend - Individual",
     "category_name": "Business Trust - Dividend",
     "round_off_tax_amount": 0,
     "tds_section": "1015",
@@ -504,7 +504,7 @@
     ]
   },
   {
-    "name": "TDS - Business Trust - Dividend - Company",
+    "name": "Business Trust - Dividend - Company",
     "category_name": "Business Trust - Dividend",
     "round_off_tax_amount": 0,
     "tds_section": "1015",
@@ -522,7 +522,7 @@
     ]
   },
   {
-    "name": "TDS - Business Trust - Dividend - No PAN / Invalid PAN",
+    "name": "Business Trust - Dividend - No PAN / Invalid PAN",
     "category_name": "Business Trust - Dividend",
     "round_off_tax_amount": 0,
     "tds_section": "1015",
@@ -540,7 +540,7 @@
     ]
   },
   {
-    "name": "TDS - Business Trust - Rental Income - Individual",
+    "name": "Business Trust - Rental Income - Individual",
     "category_name": "Business Trust - Rental Income",
     "round_off_tax_amount": 0,
     "tds_section": "1016",
@@ -558,7 +558,7 @@
     ]
   },
   {
-    "name": "TDS - Business Trust - Rental Income - Company",
+    "name": "Business Trust - Rental Income - Company",
     "category_name": "Business Trust - Rental Income",
     "round_off_tax_amount": 0,
     "tds_section": "1016",
@@ -576,7 +576,7 @@
     ]
   },
   {
-    "name": "TDS - Business Trust - Rental Income - No PAN / Invalid PAN",
+    "name": "Business Trust - Rental Income - No PAN / Invalid PAN",
     "category_name": "Business Trust - Rental Income",
     "round_off_tax_amount": 0,
     "tds_section": "1016",
@@ -594,7 +594,7 @@
     ]
   },
   {
-    "name": "TDS - Income from Units of Investment Fund - Individual",
+    "name": "Income from Units of Investment Fund - Individual",
     "category_name": "Income from Units of Investment Fund",
     "round_off_tax_amount": 0,
     "tds_section": "1017",
@@ -612,7 +612,7 @@
     ]
   },
   {
-    "name": "TDS - Income from Units of Investment Fund - Company",
+    "name": "Income from Units of Investment Fund - Company",
     "category_name": "Income from Units of Investment Fund",
     "round_off_tax_amount": 0,
     "tds_section": "1017",
@@ -630,7 +630,7 @@
     ]
   },
   {
-    "name": "TDS - Income from Units of Investment Fund - No PAN / Invalid PAN",
+    "name": "Income from Units of Investment Fund - No PAN / Invalid PAN",
     "category_name": "Income from Units of Investment Fund",
     "round_off_tax_amount": 0,
     "tds_section": "1017",
@@ -648,7 +648,7 @@
     ]
   },
   {
-    "name": "TDS - Income from Securitisation Trust - Individual",
+    "name": "Income from Securitisation Trust - Individual",
     "category_name": "Income from Securitisation Trust",
     "round_off_tax_amount": 0,
     "tds_section": "1018",
@@ -666,7 +666,7 @@
     ]
   },
   {
-    "name": "TDS - Income from Securitisation Trust - Company",
+    "name": "Income from Securitisation Trust - Company",
     "category_name": "Income from Securitisation Trust",
     "round_off_tax_amount": 0,
     "tds_section": "1018",
@@ -684,7 +684,7 @@
     ]
   },
   {
-    "name": "TDS - Income from Securitisation Trust - No PAN / Invalid PAN",
+    "name": "Income from Securitisation Trust - No PAN / Invalid PAN",
     "category_name": "Income from Securitisation Trust",
     "round_off_tax_amount": 0,
     "tds_section": "1018",
@@ -702,7 +702,7 @@
     ]
   },
   {
-    "name": "TDS - Interest on Securities - Individual",
+    "name": "Interest on Securities - Individual",
     "category_name": "Interest on Securities",
     "round_off_tax_amount": 0,
     "tds_section": "1019",
@@ -720,7 +720,7 @@
     ]
   },
   {
-    "name": "TDS - Interest on Securities - Company",
+    "name": "Interest on Securities - Company",
     "category_name": "Interest on Securities",
     "round_off_tax_amount": 0,
     "tds_section": "1019",
@@ -738,7 +738,7 @@
     ]
   },
   {
-    "name": "TDS - Interest on Securities - No PAN / Invalid PAN",
+    "name": "Interest on Securities - No PAN / Invalid PAN",
     "category_name": "Interest on Securities",
     "round_off_tax_amount": 0,
     "tds_section": "1019",
@@ -756,7 +756,7 @@
     ]
   },
   {
-    "name": "TDS - Interest - Senior Citizen - Individual",
+    "name": "Interest - Senior Citizen - Individual",
     "category_name": "Interest - Senior Citizen",
     "round_off_tax_amount": 0,
     "tds_section": "1020",
@@ -774,7 +774,7 @@
     ]
   },
   {
-    "name": "TDS - Interest - Senior Citizen - Company",
+    "name": "Interest - Senior Citizen - Company",
     "category_name": "Interest - Senior Citizen",
     "round_off_tax_amount": 0,
     "tds_section": "1020",
@@ -792,7 +792,7 @@
     ]
   },
   {
-    "name": "TDS - Interest - Senior Citizen - No PAN / Invalid PAN",
+    "name": "Interest - Senior Citizen - No PAN / Invalid PAN",
     "category_name": "Interest - Senior Citizen",
     "round_off_tax_amount": 0,
     "tds_section": "1020",
@@ -810,7 +810,7 @@
     ]
   },
   {
-    "name": "TDS - Interest - Bank / Post Office - Individual",
+    "name": "Interest - Bank / Post Office - Individual",
     "category_name": "Interest - Bank / Post Office",
     "round_off_tax_amount": 0,
     "tds_section": "1021",
@@ -828,7 +828,7 @@
     ]
   },
   {
-    "name": "TDS - Interest - Bank / Post Office - Company",
+    "name": "Interest - Bank / Post Office - Company",
     "category_name": "Interest - Bank / Post Office",
     "round_off_tax_amount": 0,
     "tds_section": "1021",
@@ -846,7 +846,7 @@
     ]
   },
   {
-    "name": "TDS - Interest - Bank / Post Office - No PAN / Invalid PAN",
+    "name": "Interest - Bank / Post Office - No PAN / Invalid PAN",
     "category_name": "Interest - Bank / Post Office",
     "round_off_tax_amount": 0,
     "tds_section": "1021",
@@ -864,7 +864,7 @@
     ]
   },
   {
-    "name": "TDS - Interest Other than Securities - Individual",
+    "name": "Interest Other than Securities - Individual",
     "category_name": "Interest Other than Securities",
     "round_off_tax_amount": 0,
     "tds_section": "1022",
@@ -882,7 +882,7 @@
     ]
   },
   {
-    "name": "TDS - Interest Other than Securities - Company",
+    "name": "Interest Other than Securities - Company",
     "category_name": "Interest Other than Securities",
     "round_off_tax_amount": 0,
     "tds_section": "1022",
@@ -900,7 +900,7 @@
     ]
   },
   {
-    "name": "TDS - Interest Other than Securities - No PAN / Invalid PAN",
+    "name": "Interest Other than Securities - No PAN / Invalid PAN",
     "category_name": "Interest Other than Securities",
     "round_off_tax_amount": 0,
     "tds_section": "1022",
@@ -918,7 +918,7 @@
     ]
   },
   {
-    "name": "TDS - Payment to Contractors (Individual / HUF) - Individual",
+    "name": "Payment to Contractors (Individual / HUF) - Individual",
     "category_name": "Payment to Contractors (Individual / HUF)",
     "round_off_tax_amount": 0,
     "tds_section": "1023",
@@ -936,7 +936,7 @@
     ]
   },
   {
-    "name": "TDS - Payment to Contractors (Individual / HUF) - No PAN / Invalid PAN",
+    "name": "Payment to Contractors (Individual / HUF) - No PAN / Invalid PAN",
     "category_name": "Payment to Contractors (Individual / HUF)",
     "round_off_tax_amount": 0,
     "tds_section": "1023",
@@ -954,7 +954,7 @@
     ]
   },
   {
-    "name": "TDS - Payment to Contractors (Others) - Company",
+    "name": "Payment to Contractors (Others) - Company",
     "category_name": "Payment to Contractors (Others)",
     "round_off_tax_amount": 0,
     "tds_section": "1024",
@@ -972,7 +972,7 @@
     ]
   },
   {
-    "name": "TDS - Payment to Contractors (Others) - No PAN / Invalid PAN",
+    "name": "Payment to Contractors (Others) - No PAN / Invalid PAN",
     "category_name": "Payment to Contractors (Others)",
     "round_off_tax_amount": 0,
     "tds_section": "1024",
@@ -990,7 +990,7 @@
     ]
   },
   {
-    "name": "TDS - Technical Fees - Individual",
+    "name": "Technical Fees - Individual",
     "category_name": "Technical Fees",
     "round_off_tax_amount": 0,
     "tds_section": "1026",
@@ -1008,7 +1008,7 @@
     ]
   },
   {
-    "name": "TDS - Technical Fees - Company",
+    "name": "Technical Fees - Company",
     "category_name": "Technical Fees",
     "round_off_tax_amount": 0,
     "tds_section": "1026",
@@ -1026,7 +1026,7 @@
     ]
   },
   {
-    "name": "TDS - Technical Fees - No PAN / Invalid PAN",
+    "name": "Technical Fees - No PAN / Invalid PAN",
     "category_name": "Technical Fees",
     "round_off_tax_amount": 0,
     "tds_section": "1026",
@@ -1044,7 +1044,7 @@
     ]
   },
   {
-    "name": "TDS - Professional Fees - Individual",
+    "name": "Professional Fees - Individual",
     "category_name": "Professional Fees",
     "round_off_tax_amount": 0,
     "tds_section": "1027",
@@ -1062,7 +1062,7 @@
     ]
   },
   {
-    "name": "TDS - Professional Fees - Company",
+    "name": "Professional Fees - Company",
     "category_name": "Professional Fees",
     "round_off_tax_amount": 0,
     "tds_section": "1027",
@@ -1080,7 +1080,7 @@
     ]
   },
   {
-    "name": "TDS - Professional Fees - No PAN / Invalid PAN",
+    "name": "Professional Fees - No PAN / Invalid PAN",
     "category_name": "Professional Fees",
     "round_off_tax_amount": 0,
     "tds_section": "1027",
@@ -1098,7 +1098,7 @@
     ]
   },
   {
-    "name": "TDS - Director Remuneration - Individual",
+    "name": "Director Remuneration - Individual",
     "category_name": "Director Remuneration",
     "round_off_tax_amount": 0,
     "tds_section": "1028",
@@ -1116,7 +1116,7 @@
     ]
   },
   {
-    "name": "TDS - Director Remuneration - Company",
+    "name": "Director Remuneration - Company",
     "category_name": "Director Remuneration",
     "round_off_tax_amount": 0,
     "tds_section": "1028",
@@ -1134,7 +1134,7 @@
     ]
   },
   {
-    "name": "TDS - Director Remuneration - No PAN / Invalid PAN",
+    "name": "Director Remuneration - No PAN / Invalid PAN",
     "category_name": "Director Remuneration",
     "round_off_tax_amount": 0,
     "tds_section": "1028",
@@ -1152,7 +1152,7 @@
     ]
   },
   {
-    "name": "TDS - Dividends - Individual",
+    "name": "Dividends - Individual",
     "category_name": "Dividends",
     "round_off_tax_amount": 0,
     "tds_section": "1029",
@@ -1170,7 +1170,7 @@
     ]
   },
   {
-    "name": "TDS - Dividends - Company",
+    "name": "Dividends - Company",
     "category_name": "Dividends",
     "round_off_tax_amount": 0,
     "tds_section": "1029",
@@ -1188,7 +1188,7 @@
     ]
   },
   {
-    "name": "TDS - Dividends - No PAN / Invalid PAN",
+    "name": "Dividends - No PAN / Invalid PAN",
     "category_name": "Dividends",
     "round_off_tax_amount": 0,
     "tds_section": "1029",
@@ -1206,7 +1206,7 @@
     ]
   },
   {
-    "name": "TDS - Life Insurance Policy Payout - Individual",
+    "name": "Life Insurance Policy Payout - Individual",
     "category_name": "Life Insurance Policy Payout",
     "round_off_tax_amount": 0,
     "tds_section": "1030",
@@ -1224,7 +1224,7 @@
     ]
   },
   {
-    "name": "TDS - Life Insurance Policy Payout - Company",
+    "name": "Life Insurance Policy Payout - Company",
     "category_name": "Life Insurance Policy Payout",
     "round_off_tax_amount": 0,
     "tds_section": "1030",
@@ -1242,7 +1242,7 @@
     ]
   },
   {
-    "name": "TDS - Life Insurance Policy Payout - No PAN / Invalid PAN",
+    "name": "Life Insurance Policy Payout - No PAN / Invalid PAN",
     "category_name": "Life Insurance Policy Payout",
     "round_off_tax_amount": 0,
     "tds_section": "1030",
@@ -1260,7 +1260,7 @@
     ]
   },
   {
-    "name": "TDS - TDS on Purchase of Goods - Individual",
+    "name": "TDS on Purchase of Goods - Individual",
     "category_name": "TDS on Purchase of Goods",
     "round_off_tax_amount": 0,
     "tds_section": "1031",
@@ -1278,7 +1278,7 @@
     ]
   },
   {
-    "name": "TDS - TDS on Purchase of Goods - Company",
+    "name": "TDS on Purchase of Goods - Company",
     "category_name": "TDS on Purchase of Goods",
     "round_off_tax_amount": 0,
     "tds_section": "1031",
@@ -1296,7 +1296,7 @@
     ]
   },
   {
-    "name": "TDS - TDS on Purchase of Goods - No PAN / Invalid PAN",
+    "name": "TDS on Purchase of Goods - No PAN / Invalid PAN",
     "category_name": "TDS on Purchase of Goods",
     "round_off_tax_amount": 0,
     "tds_section": "1031",
@@ -1314,7 +1314,7 @@
     ]
   },
   {
-    "name": "TDS - Benefit or Perquisite - Individual",
+    "name": "Benefit or Perquisite - Individual",
     "category_name": "Benefit or Perquisite",
     "round_off_tax_amount": 0,
     "tds_section": "1033",
@@ -1332,7 +1332,7 @@
     ]
   },
   {
-    "name": "TDS - Benefit or Perquisite - Company",
+    "name": "Benefit or Perquisite - Company",
     "category_name": "Benefit or Perquisite",
     "round_off_tax_amount": 0,
     "tds_section": "1033",
@@ -1350,7 +1350,7 @@
     ]
   },
   {
-    "name": "TDS - Benefit or Perquisite - No PAN / Invalid PAN",
+    "name": "Benefit or Perquisite - No PAN / Invalid PAN",
     "category_name": "Benefit or Perquisite",
     "round_off_tax_amount": 0,
     "tds_section": "1033",
@@ -1368,7 +1368,7 @@
     ]
   },
   {
-    "name": "TDS - Benefit or Perquisite (Not Wholly in Cash) - Individual",
+    "name": "Benefit or Perquisite (Not Wholly in Cash) - Individual",
     "category_name": "Benefit or Perquisite (Not Wholly in Cash)",
     "round_off_tax_amount": 0,
     "tds_section": "1034",
@@ -1386,7 +1386,7 @@
     ]
   },
   {
-    "name": "TDS - Benefit or Perquisite (Not Wholly in Cash) - Company",
+    "name": "Benefit or Perquisite (Not Wholly in Cash) - Company",
     "category_name": "Benefit or Perquisite (Not Wholly in Cash)",
     "round_off_tax_amount": 0,
     "tds_section": "1034",
@@ -1404,7 +1404,7 @@
     ]
   },
   {
-    "name": "TDS - Benefit or Perquisite (Not Wholly in Cash) - No PAN / Invalid PAN",
+    "name": "Benefit or Perquisite (Not Wholly in Cash) - No PAN / Invalid PAN",
     "category_name": "Benefit or Perquisite (Not Wholly in Cash)",
     "round_off_tax_amount": 0,
     "tds_section": "1034",
@@ -1422,7 +1422,7 @@
     ]
   },
   {
-    "name": "TDS - E-Commerce Participant - Individual",
+    "name": "E-Commerce Participant - Individual",
     "category_name": "E-Commerce Participant",
     "round_off_tax_amount": 0,
     "tds_section": "1035",
@@ -1440,7 +1440,7 @@
     ]
   },
   {
-    "name": "TDS - E-Commerce Participant - Company",
+    "name": "E-Commerce Participant - Company",
     "category_name": "E-Commerce Participant",
     "round_off_tax_amount": 0,
     "tds_section": "1035",
@@ -1458,7 +1458,7 @@
     ]
   },
   {
-    "name": "TDS - E-Commerce Participant - No PAN / Invalid PAN",
+    "name": "E-Commerce Participant - No PAN / Invalid PAN",
     "category_name": "E-Commerce Participant",
     "round_off_tax_amount": 0,
     "tds_section": "1035",
@@ -1476,7 +1476,7 @@
     ]
   },
   {
-    "name": "TDS - Virtual Digital Asset Transfer - Individual",
+    "name": "Virtual Digital Asset Transfer - Individual",
     "category_name": "Virtual Digital Asset Transfer",
     "round_off_tax_amount": 0,
     "tds_section": "1037",
@@ -1494,7 +1494,7 @@
     ]
   },
   {
-    "name": "TDS - Virtual Digital Asset Transfer - Company",
+    "name": "Virtual Digital Asset Transfer - Company",
     "category_name": "Virtual Digital Asset Transfer",
     "round_off_tax_amount": 0,
     "tds_section": "1037",
@@ -1512,7 +1512,7 @@
     ]
   },
   {
-    "name": "TDS - Virtual Digital Asset Transfer - No PAN / Invalid PAN",
+    "name": "Virtual Digital Asset Transfer - No PAN / Invalid PAN",
     "category_name": "Virtual Digital Asset Transfer",
     "round_off_tax_amount": 0,
     "tds_section": "1037",
@@ -1530,7 +1530,7 @@
     ]
   },
   {
-    "name": "TDS - Virtual Digital Asset Transfer (Not Wholly in Cash) - Individual",
+    "name": "Virtual Digital Asset Transfer (Not Wholly in Cash) - Individual",
     "category_name": "Virtual Digital Asset Transfer (Not Wholly in Cash)",
     "round_off_tax_amount": 0,
     "tds_section": "1038",
@@ -1548,7 +1548,7 @@
     ]
   },
   {
-    "name": "TDS - Virtual Digital Asset Transfer (Not Wholly in Cash) - Company",
+    "name": "Virtual Digital Asset Transfer (Not Wholly in Cash) - Company",
     "category_name": "Virtual Digital Asset Transfer (Not Wholly in Cash)",
     "round_off_tax_amount": 0,
     "tds_section": "1038",
@@ -1566,7 +1566,7 @@
     ]
   },
   {
-    "name": "TDS - Virtual Digital Asset Transfer (Not Wholly in Cash) - No PAN / Invalid PAN",
+    "name": "Virtual Digital Asset Transfer (Not Wholly in Cash) - No PAN / Invalid PAN",
     "category_name": "Virtual Digital Asset Transfer (Not Wholly in Cash)",
     "round_off_tax_amount": 0,
     "tds_section": "1038",
@@ -1584,7 +1584,7 @@
     ]
   },
   {
-    "name": "TDS - Lottery / Gambling Winnings - Individual",
+    "name": "Lottery / Gambling Winnings - Individual",
     "category_name": "Lottery / Gambling Winnings",
     "round_off_tax_amount": 0,
     "tds_section": "1058",
@@ -1602,7 +1602,7 @@
     ]
   },
   {
-    "name": "TDS - Lottery / Gambling Winnings - Company",
+    "name": "Lottery / Gambling Winnings - Company",
     "category_name": "Lottery / Gambling Winnings",
     "round_off_tax_amount": 0,
     "tds_section": "1058",
@@ -1620,7 +1620,7 @@
     ]
   },
   {
-    "name": "TDS - Lottery / Gambling Winnings (Not Wholly in Cash) - Individual",
+    "name": "Lottery / Gambling Winnings (Not Wholly in Cash) - Individual",
     "category_name": "Lottery / Gambling Winnings (Not Wholly in Cash)",
     "round_off_tax_amount": 0,
     "tds_section": "1059",
@@ -1638,7 +1638,7 @@
     ]
   },
   {
-    "name": "TDS - Lottery / Gambling Winnings (Not Wholly in Cash) - Company",
+    "name": "Lottery / Gambling Winnings (Not Wholly in Cash) - Company",
     "category_name": "Lottery / Gambling Winnings (Not Wholly in Cash)",
     "round_off_tax_amount": 0,
     "tds_section": "1059",
@@ -1656,7 +1656,7 @@
     ]
   },
   {
-    "name": "TDS - Online Game Winnings - Individual",
+    "name": "Online Game Winnings - Individual",
     "category_name": "Online Game Winnings",
     "round_off_tax_amount": 0,
     "tds_section": "1060",
@@ -1674,7 +1674,7 @@
     ]
   },
   {
-    "name": "TDS - Online Game Winnings - Company",
+    "name": "Online Game Winnings - Company",
     "category_name": "Online Game Winnings",
     "round_off_tax_amount": 0,
     "tds_section": "1060",
@@ -1692,7 +1692,7 @@
     ]
   },
   {
-    "name": "TDS - Online Game Winnings (Not Wholly in Cash) - Individual",
+    "name": "Online Game Winnings (Not Wholly in Cash) - Individual",
     "category_name": "Online Game Winnings (Not Wholly in Cash)",
     "round_off_tax_amount": 0,
     "tds_section": "1061",
@@ -1710,7 +1710,7 @@
     ]
   },
   {
-    "name": "TDS - Online Game Winnings (Not Wholly in Cash) - Company",
+    "name": "Online Game Winnings (Not Wholly in Cash) - Company",
     "category_name": "Online Game Winnings (Not Wholly in Cash)",
     "round_off_tax_amount": 0,
     "tds_section": "1061",
@@ -1728,7 +1728,7 @@
     ]
   },
   {
-    "name": "TDS - Horse Race Winnings - Individual",
+    "name": "Horse Race Winnings - Individual",
     "category_name": "Horse Race Winnings",
     "round_off_tax_amount": 0,
     "tds_section": "1062",
@@ -1746,7 +1746,7 @@
     ]
   },
   {
-    "name": "TDS - Horse Race Winnings - Company",
+    "name": "Horse Race Winnings - Company",
     "category_name": "Horse Race Winnings",
     "round_off_tax_amount": 0,
     "tds_section": "1062",
@@ -1764,7 +1764,7 @@
     ]
   },
   {
-    "name": "TDS - Lottery Commission - Individual",
+    "name": "Lottery Commission - Individual",
     "category_name": "Lottery Commission",
     "round_off_tax_amount": 0,
     "tds_section": "1063",
@@ -1782,7 +1782,7 @@
     ]
   },
   {
-    "name": "TDS - Lottery Commission - Company",
+    "name": "Lottery Commission - Company",
     "category_name": "Lottery Commission",
     "round_off_tax_amount": 0,
     "tds_section": "1063",
@@ -1800,7 +1800,7 @@
     ]
   },
   {
-    "name": "TDS - Lottery Commission - No PAN / Invalid PAN",
+    "name": "Lottery Commission - No PAN / Invalid PAN",
     "category_name": "Lottery Commission",
     "round_off_tax_amount": 0,
     "tds_section": "1063",
@@ -1818,7 +1818,7 @@
     ]
   },
   {
-    "name": "TDS - Cash Withdrawal - Co-operative Society - Individual",
+    "name": "Cash Withdrawal - Co-operative Society - Individual",
     "category_name": "Cash Withdrawal - Co-operative Society",
     "round_off_tax_amount": 0,
     "tds_section": "1064",
@@ -1836,7 +1836,7 @@
     ]
   },
   {
-    "name": "TDS - Cash Withdrawal - Co-operative Society - Company",
+    "name": "Cash Withdrawal - Co-operative Society - Company",
     "category_name": "Cash Withdrawal - Co-operative Society",
     "round_off_tax_amount": 0,
     "tds_section": "1064",
@@ -1854,7 +1854,7 @@
     ]
   },
   {
-    "name": "TDS - Cash Withdrawal - Co-operative Society - No PAN / Invalid PAN",
+    "name": "Cash Withdrawal - Co-operative Society - No PAN / Invalid PAN",
     "category_name": "Cash Withdrawal - Co-operative Society",
     "round_off_tax_amount": 0,
     "tds_section": "1064",
@@ -1872,7 +1872,7 @@
     ]
   },
   {
-    "name": "TDS - Cash Withdrawal - Individual",
+    "name": "Cash Withdrawal - Individual",
     "category_name": "Cash Withdrawal",
     "round_off_tax_amount": 0,
     "tds_section": "1065",
@@ -1890,7 +1890,7 @@
     ]
   },
   {
-    "name": "TDS - Cash Withdrawal - Company",
+    "name": "Cash Withdrawal - Company",
     "category_name": "Cash Withdrawal",
     "round_off_tax_amount": 0,
     "tds_section": "1065",
@@ -1908,7 +1908,7 @@
     ]
   },
   {
-    "name": "TDS - Cash Withdrawal - No PAN / Invalid PAN",
+    "name": "Cash Withdrawal - No PAN / Invalid PAN",
     "category_name": "Cash Withdrawal",
     "round_off_tax_amount": 0,
     "tds_section": "1065",
@@ -1926,7 +1926,7 @@
     ]
   },
   {
-    "name": "TDS - NSS Payments - Individual",
+    "name": "NSS Payments - Individual",
     "category_name": "NSS Payments",
     "round_off_tax_amount": 0,
     "tds_section": "1066",
@@ -1944,7 +1944,7 @@
     ]
   },
   {
-    "name": "TDS - NSS Payments - Company",
+    "name": "NSS Payments - Company",
     "category_name": "NSS Payments",
     "round_off_tax_amount": 0,
     "tds_section": "1066",
@@ -1962,7 +1962,7 @@
     ]
   },
   {
-    "name": "TDS - NSS Payments - No PAN / Invalid PAN",
+    "name": "NSS Payments - No PAN / Invalid PAN",
     "category_name": "NSS Payments",
     "round_off_tax_amount": 0,
     "tds_section": "1066",
@@ -1980,7 +1980,7 @@
     ]
   },
   {
-    "name": "TDS - Partner Remuneration - Individual",
+    "name": "Partner Remuneration - Individual",
     "category_name": "Partner Remuneration",
     "round_off_tax_amount": 0,
     "tds_section": "1067",
@@ -1998,7 +1998,7 @@
     ]
   },
   {
-    "name": "TDS - Partner Remuneration - Company",
+    "name": "Partner Remuneration - Company",
     "category_name": "Partner Remuneration",
     "round_off_tax_amount": 0,
     "tds_section": "1067",
@@ -2016,7 +2016,7 @@
     ]
   },
   {
-    "name": "TDS - Partner Remuneration - No PAN / Invalid PAN",
+    "name": "Partner Remuneration - No PAN / Invalid PAN",
     "category_name": "Partner Remuneration",
     "round_off_tax_amount": 0,
     "tds_section": "1067",
@@ -2034,7 +2034,7 @@
     ]
   },
   {
-    "name": "TDS - Rent by Individual / HUF - Individual",
+    "name": "Rent by Individual / HUF - Individual",
     "category_name": "Rent by Individual / HUF",
     "round_off_tax_amount": 0,
     "tds_section": "393(1) Sl.2(i)",
@@ -2052,7 +2052,7 @@
     ]
   },
   {
-    "name": "TDS - Rent by Individual / HUF - Company",
+    "name": "Rent by Individual / HUF - Company",
     "category_name": "Rent by Individual / HUF",
     "round_off_tax_amount": 0,
     "tds_section": "393(1) Sl.2(i)",
@@ -2070,7 +2070,7 @@
     ]
   },
   {
-    "name": "TDS - Rent by Individual / HUF - No PAN / Invalid PAN",
+    "name": "Rent by Individual / HUF - No PAN / Invalid PAN",
     "category_name": "Rent by Individual / HUF",
     "round_off_tax_amount": 0,
     "tds_section": "393(1) Sl.2(i)",
@@ -2088,7 +2088,7 @@
     ]
   },
   {
-    "name": "TDS - Payment for Transfer of Immovable Property - Individual",
+    "name": "Payment for Transfer of Immovable Property - Individual",
     "category_name": "Payment for Transfer of Immovable Property",
     "round_off_tax_amount": 0,
     "tds_section": "393(1) Sl.3(i)",
@@ -2106,7 +2106,7 @@
     ]
   },
   {
-    "name": "TDS - Payment for Transfer of Immovable Property - Company",
+    "name": "Payment for Transfer of Immovable Property - Company",
     "category_name": "Payment for Transfer of Immovable Property",
     "round_off_tax_amount": 0,
     "tds_section": "393(1) Sl.3(i)",
@@ -2124,7 +2124,7 @@
     ]
   },
   {
-    "name": "TDS - Payment for Transfer of Immovable Property - No PAN / Invalid PAN",
+    "name": "Payment for Transfer of Immovable Property - No PAN / Invalid PAN",
     "category_name": "Payment for Transfer of Immovable Property",
     "round_off_tax_amount": 0,
     "tds_section": "393(1) Sl.3(i)",
@@ -2142,7 +2142,7 @@
     ]
   },
   {
-    "name": "TDS - Payment to Contractors and Professionals by Individual / HUF - Individual",
+    "name": "Payment to Contractors and Professionals by Individual / HUF - Individual",
     "category_name": "Payment to Contractors and Professionals by Individual / HUF",
     "round_off_tax_amount": 0,
     "tds_section": "393(1) Sl.6(ii)",
@@ -2160,7 +2160,7 @@
     ]
   },
   {
-    "name": "TDS - Payment to Contractors and Professionals by Individual / HUF - Company",
+    "name": "Payment to Contractors and Professionals by Individual / HUF - Company",
     "category_name": "Payment to Contractors and Professionals by Individual / HUF",
     "round_off_tax_amount": 0,
     "tds_section": "393(1) Sl.6(ii)",
@@ -2178,7 +2178,7 @@
     ]
   },
   {
-    "name": "TDS - Payment to Contractors and Professionals by Individual / HUF - No PAN / Invalid PAN",
+    "name": "Payment to Contractors and Professionals by Individual / HUF - No PAN / Invalid PAN",
     "category_name": "Payment to Contractors and Professionals by Individual / HUF",
     "round_off_tax_amount": 0,
     "tds_section": "393(1) Sl.6(ii)",
@@ -2196,7 +2196,7 @@
     ]
   },
   {
-    "name": "TDS - Lottery / Gambling Winnings - No PAN / Invalid PAN",
+    "name": "Lottery / Gambling Winnings - No PAN / Invalid PAN",
     "category_name": "Lottery / Gambling Winnings",
     "round_off_tax_amount": 0,
     "tds_section": "1058",
@@ -2214,7 +2214,7 @@
     ]
   },
   {
-    "name": "TDS - Lottery / Gambling Winnings (Not Wholly in Cash) - No PAN / Invalid PAN",
+    "name": "Lottery / Gambling Winnings (Not Wholly in Cash) - No PAN / Invalid PAN",
     "category_name": "Lottery / Gambling Winnings (Not Wholly in Cash)",
     "round_off_tax_amount": 0,
     "tds_section": "1059",
@@ -2232,7 +2232,7 @@
     ]
   },
   {
-    "name": "TDS - Online Game Winnings - No PAN / Invalid PAN",
+    "name": "Online Game Winnings - No PAN / Invalid PAN",
     "category_name": "Online Game Winnings",
     "round_off_tax_amount": 0,
     "tds_section": "1060",
@@ -2250,7 +2250,7 @@
     ]
   },
   {
-    "name": "TDS - Online Game Winnings (Not Wholly in Cash) - No PAN / Invalid PAN",
+    "name": "Online Game Winnings (Not Wholly in Cash) - No PAN / Invalid PAN",
     "category_name": "Online Game Winnings (Not Wholly in Cash)",
     "round_off_tax_amount": 0,
     "tds_section": "1061",
@@ -2268,7 +2268,7 @@
     ]
   },
   {
-    "name": "TDS - Horse Race Winnings - No PAN / Invalid PAN",
+    "name": "Horse Race Winnings - No PAN / Invalid PAN",
     "category_name": "Horse Race Winnings",
     "round_off_tax_amount": 0,
     "tds_section": "1062",
