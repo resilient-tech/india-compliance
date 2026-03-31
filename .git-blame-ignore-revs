@@ -49,3 +49,6 @@ d4986b31db0e89c290990d1bb8d33cbc66075a6b
 # resolve conflicts because of linters
 4a14fdd4be6d906257c6ca599a649c63119bc61b
 01766e2eb8b27f8b7987614b8a9b6e57182d41ea
+
+# fix linting errors with manual backporting
+10574a0221f7d4a7a280e162a35898aa6a9e0052
