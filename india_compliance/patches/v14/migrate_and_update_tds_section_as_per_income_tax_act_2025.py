@@ -2,6 +2,7 @@ import frappe
 from frappe.query_builder import Case
 from frappe.query_builder.functions import IfNull
 
+from india_compliance.income_tax_india.constants import OLD_TDS_SECTIONS
 from india_compliance.income_tax_india.overrides.company import (
     create_or_update_tax_withholding_category,
 )
@@ -116,15 +117,16 @@ OLD_TO_NEW = {
 def execute():
     twc = frappe.qb.DocType("Tax Withholding Category")
 
-    old_sections = set(old for old, _ in OLD_TO_NEW)
-
     (
         frappe.qb.update(twc)
         .set(twc.old_income_tax_section, twc.tds_section)
-        .where(twc.tds_section.isin(old_sections))
+        .where(twc.tds_section.isin(OLD_TDS_SECTIONS))
         .where(IfNull(twc.old_income_tax_section, "") == "")
         .run()
     )
+
+    # Step 2: Update tds_section to new codes (only sections with mappings)
+    mapped_sections = set(old for old, _ in OLD_TO_NEW)
 
     section_case = Case()
     for (old_section, entity_type), new_code in OLD_TO_NEW.items():
@@ -134,7 +136,12 @@ def execute():
         )
     section_case = section_case.else_(twc.tds_section)
 
-    (frappe.qb.update(twc).set(twc.tds_section, section_case).where(twc.tds_section.isin(old_sections)).run())
+    (
+        frappe.qb.update(twc)
+        .set(twc.tds_section, section_case)
+        .where(twc.tds_section.isin(mapped_sections))
+        .run()
+    )
 
     company_list = frappe.get_all("Company", filters={"country": "India"}, pluck="name", order_by="lft asc")
     for company in company_list:
