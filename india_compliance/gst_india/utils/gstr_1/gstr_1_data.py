@@ -1,6 +1,7 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
 from itertools import combinations
+from typing import ClassVar
 
 import frappe
 from frappe.query_builder import Case
@@ -407,7 +408,7 @@ class GSTR1Subcategory(GSTR1CategoryConditions):
 
 
 class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
-    AMOUNT_FIELDS = {
+    AMOUNT_FIELDS: ClassVar[dict] = {
         "taxable_value": 0,
         "igst_amount": 0,
         "cgst_amount": 0,

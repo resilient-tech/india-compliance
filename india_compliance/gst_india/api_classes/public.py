@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 import frappe
 from frappe import _
 
@@ -7,7 +9,7 @@ from india_compliance.gst_india.api_classes.base import BaseAPI
 class PublicAPI(BaseAPI):
     API_NAME = "GST Public"
     BASE_PATH = "commonapi"
-    IGNORED_ERROR_CODES = {
+    IGNORED_ERROR_CODES: ClassVar[dict] = {
         "RET13510": "no_docs_found",
         "FO8000": "no_docs_found",
     }

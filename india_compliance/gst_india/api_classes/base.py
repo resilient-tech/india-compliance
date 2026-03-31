@@ -1,4 +1,5 @@
 from base64 import b64decode
+from typing import ClassVar
 from urllib.parse import urljoin
 
 import frappe
@@ -227,7 +228,7 @@ class BaseAPI:
                 title=_("API Request Failed"),
             )
 
-    ERROR_MESSAGES = {
+    ERROR_MESSAGES: ClassVar[dict] = {
         GSPServerError: (
             "GSPGSTDOWN",
             "GSPERR300",

@@ -1,6 +1,7 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
 import itertools
+from typing import ClassVar
 
 import frappe
 from frappe import _, unscrub
@@ -37,7 +38,7 @@ from india_compliance.gst_india.utils.gstr_utils import (
 
 
 class SummarizeGSTR1:
-    AMOUNT_FIELDS = {
+    AMOUNT_FIELDS: ClassVar[dict] = {
         "total_taxable_value": 0,
         "total_igst_amount": 0,
         "total_cgst_amount": 0,
@@ -247,8 +248,8 @@ class SummarizeGSTR1:
 
 
 class ReconcileGSTR1:
-    IGNORED_FIELDS = {inv_f.TAX_RATE, inv_f.DOC_VALUE}
-    UNREQUIRED_KEYS = {
+    IGNORED_FIELDS: ClassVar[set] = {inv_f.TAX_RATE, inv_f.DOC_VALUE}
+    UNREQUIRED_KEYS: ClassVar[set] = {
         inv_f.TRANSACTION_TYPE,
         inv_f.DOC_NUMBER,
         inv_f.DOC_DATE,
@@ -466,7 +467,7 @@ class ReconcileGSTR1:
 
 
 class AggregateInvoices:
-    IGNORED_FIELDS = {inv_f.TAX_RATE, inv_f.DOC_VALUE}
+    IGNORED_FIELDS: ClassVar[set] = {inv_f.TAX_RATE, inv_f.DOC_VALUE}
 
     @staticmethod
     def get_aggregate_data(data: dict):

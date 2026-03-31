@@ -43,6 +43,7 @@ GST_TAX_TYPE_MAP = {
     "cess": "csamt",
     "cess_non_advol": "csamt",
 }
+from typing import ClassVar
 
 
 class GSTR3BReport(Document):
@@ -790,10 +791,10 @@ class GSTR3BExcelExporter:
     TEMPLATE_FILE = get_data_file_path("gstr3b_excel_utility_v5.7.xlsx")
     WORKSHEET_NAME = "GSTR-3B"
 
-    _STATE_CODE_TO_NAME = {code: state for state, code in STATE_NUMBERS.items()}
+    _STATE_CODE_TO_NAME: ClassVar[dict] = {code: state for state, code in STATE_NUMBERS.items()}
 
     # Row mappings for each section (consistent with JSON keys)
-    ROWS = {
+    ROWS: ClassVar[dict] = {
         # Header info
         "gstin": 5,
         "year": 5,
@@ -820,14 +821,14 @@ class GSTR3BExcelExporter:
         "inward_non_gst": 49,
     }
 
-    HEADER_COLUMNS = {
+    HEADER_COLUMNS: ClassVar[dict] = {
         "gstin": 3,
         "year": 7,
         "month": 7,
     }
 
     # Section 3.1 - Tax columns
-    TAX_COLUMNS = {
+    TAX_COLUMNS: ClassVar[dict] = {
         "txval": 3,
         "iamt": 4,
         "camt": 5,
@@ -835,20 +836,20 @@ class GSTR3BExcelExporter:
     }
 
     # Section 4 - ITC columns
-    ITC_COLUMNS = {
+    ITC_COLUMNS: ClassVar[dict] = {
         "iamt": 3,
         "camt": 4,
         "csamt": 6,
     }
 
     # Section 5 - Inward supplies columns
-    INWARD_COLUMNS = {
+    INWARD_COLUMNS: ClassVar[dict] = {
         "inter": 4,
         "intra": 5,
     }
 
     # ITC type mappings based on 'ty' field in JSON
-    ITC_AVAILABLE_TYPES = {
+    ITC_AVAILABLE_TYPES: ClassVar[dict] = {
         "IMPG": "itc_import_goods",
         "IMPS": "itc_import_services",
         "ISRC": "itc_reverse_charge",
@@ -856,17 +857,17 @@ class GSTR3BExcelExporter:
         "OTH": "itc_others",
     }
 
-    ITC_REVERSED_TYPES = {
+    ITC_REVERSED_TYPES: ClassVar[dict] = {
         "RUL": "itc_reversed_rules",
         "OTH": "itc_reversed_others",
     }
 
-    INWARD_SUPPLY_TYPES = {
+    INWARD_SUPPLY_TYPES: ClassVar[dict] = {
         "GST": "inward_gst",
         "NONGST": "inward_non_gst",
     }
 
-    COLUMN_SETS = {
+    COLUMN_SETS: ClassVar[dict] = {
         "tax": ["txval", "iamt", "camt", "csamt"],
         "itc": ["iamt", "camt", "csamt"],
         "import_itc": ["iamt", "csamt"],

@@ -1,6 +1,7 @@
 import json
 from base64 import b64decode, b64encode
 from functools import wraps
+from typing import ClassVar
 
 import frappe
 import frappe.utils
@@ -107,7 +108,7 @@ class FilesAPI(BaseAPI):
 class TaxpayerAuthenticate(BaseAPI):
     API_NAME = "GST Returns"
 
-    SENSITIVE_INFO = BaseAPI.SENSITIVE_INFO + (
+    SENSITIVE_INFO: ClassVar[tuple] = BaseAPI.SENSITIVE_INFO + (
         "auth-token",
         "auth_token",
         "app_key",
@@ -115,7 +116,7 @@ class TaxpayerAuthenticate(BaseAPI):
         "rek",
     )
 
-    IGNORED_ERROR_CODES = {
+    IGNORED_ERROR_CODES: ClassVar[dict] = {
         "RETOTPREQUEST": "otp_requested",
         "EVCREQUEST": "otp_requested",
         "AUTH158": "authorization_failed",  # GSTR1
@@ -322,7 +323,7 @@ class TaxpayerAuthenticate(BaseAPI):
 class TaxpayerBaseAPI(TaxpayerAuthenticate):
     BASE_PATH = "standard/gstn_"
 
-    IGNORED_ERROR_CODES = {
+    IGNORED_ERROR_CODES: ClassVar[dict] = {
         **TaxpayerAuthenticate.IGNORED_ERROR_CODES,
         "RT-R1R3BAV-1007": "authorization_failed",  # Either auth-token or username is invalid. Raised in get_filing_preference
         # "RT-R1R3BAV-1013": "authorization_failed",  # "Invalid ip-usr." Change in request IP

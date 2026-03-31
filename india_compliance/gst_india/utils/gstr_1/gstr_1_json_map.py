@@ -1,6 +1,7 @@
 from collections import defaultdict
 from datetime import datetime
 from itertools import chain
+from typing import ClassVar
 
 import frappe
 from frappe.utils import cint, flt
@@ -44,7 +45,7 @@ class GSTR1DataMapper(GovDataMapper):
     """
 
     # default item amounts
-    DEFAULT_ITEM_AMOUNTS = {
+    DEFAULT_ITEM_AMOUNTS: ClassVar[dict] = {
         item_f.TAXABLE_VALUE: 0,
         item_f.IGST: 0,
         item_f.CGST: 0,
@@ -52,7 +53,7 @@ class GSTR1DataMapper(GovDataMapper):
         item_f.CESS: 0,
     }
 
-    FLOAT_FIELDS = {
+    FLOAT_FIELDS: ClassVar[set] = {
         gov_f.DOC_VALUE,
         gov_f.TAXABLE_VALUE,
         gov_f.DIFF_PERCENTAGE,
@@ -68,7 +69,7 @@ class GSTR1DataMapper(GovDataMapper):
         gov_f.ADVANCE_AMOUNT,
     }
 
-    DISCARD_IF_ZERO_FIELDS = {
+    DISCARD_IF_ZERO_FIELDS: ClassVar[set] = {
         gov_f.DIFF_PERCENTAGE,
     }
 
@@ -167,7 +168,7 @@ class B2B(GSTR1DataMapper):
 
     """
 
-    KEY_MAPPING = {
+    KEY_MAPPING: ClassVar[dict] = {
         # GovDataFields.CUST_GSTIN.value: DataFields.CUST_GSTIN.value,
         # GovDataFields.INVOICES.value: "invoices",
         gov_f.FLAG: "flag",
@@ -191,14 +192,14 @@ class B2B(GSTR1DataMapper):
     }
 
     # value formatting constants
-    DOCUMENT_CATEGORIES = {
+    DOCUMENT_CATEGORIES: ClassVar[dict] = {
         "R": GSTR1_B2B_InvoiceType.R.value,
         "SEWP": GSTR1_B2B_InvoiceType.SEWP.value,
         "SEWOP": GSTR1_B2B_InvoiceType.SEWOP.value,
         "DE": GSTR1_B2B_InvoiceType.DE.value,
     }
 
-    SUBCATEGORIES = {
+    SUBCATEGORIES: ClassVar[dict] = {
         # "B2B": GSTR1_SubCategories.B2B_REGULAR.value,
         # "B2B": GSTR1_SubCategories.B2B_REVERSE_CHARGE.value,
         "SEWP": GSTR1_SubCategory.SEZWP.value,
@@ -339,12 +340,12 @@ class B2CL(GSTR1DataMapper):
 
     DOCUMENT_CATEGORY = "B2C (Large)"
     SUBCATEGORY = GSTR1_SubCategory.B2CL.value
-    DEFAULT_ITEM_AMOUNTS = {
+    DEFAULT_ITEM_AMOUNTS: ClassVar[dict] = {
         item_f.TAXABLE_VALUE: 0,
         item_f.IGST: 0,
         item_f.CESS: 0,
     }
-    KEY_MAPPING = {
+    KEY_MAPPING: ClassVar[dict] = {
         # GovDataFields.POS.value: DataFields.POS.value,
         # GovDataFields.INVOICES.value: "invoices",
         gov_f.FLAG: "flag",
@@ -460,12 +461,12 @@ class Exports(GSTR1DataMapper):
         }
     """
 
-    DEFAULT_ITEM_AMOUNTS = {
+    DEFAULT_ITEM_AMOUNTS: ClassVar[dict] = {
         item_f.TAXABLE_VALUE: 0,
         item_f.IGST: 0,
         item_f.CESS: 0,
     }
-    KEY_MAPPING = {
+    KEY_MAPPING: ClassVar[dict] = {
         # GovDataFields.POS.value: DataFields.POS.value,
         # GovDataFields.INVOICES.value: "invoices",
         gov_f.FLAG: "flag",
@@ -483,7 +484,7 @@ class Exports(GSTR1DataMapper):
         gov_f.CESS: item_f.CESS,
     }
 
-    SUBCATEGORIES = {
+    SUBCATEGORIES: ClassVar[dict] = {
         "WPAY": GSTR1_SubCategory.EXPWP.value,
         "WOPAY": GSTR1_SubCategory.EXPWOP.value,
     }
@@ -588,7 +589,7 @@ class B2CS(GSTR1DataMapper):
     """
 
     SUBCATEGORY = GSTR1_SubCategory.B2CS.value
-    KEY_MAPPING = {
+    KEY_MAPPING: ClassVar[dict] = {
         gov_f.FLAG: "flag",
         # GovDataFields.SUPPLY_TYPE.value: "supply_type",
         gov_f.TAXABLE_VALUE: inv_f.TAXABLE_VALUE,
@@ -682,14 +683,14 @@ class NilRated(GSTR1DataMapper):
     """
 
     SUBCATEGORY = GSTR1_SubCategory.NIL_EXEMPT.value
-    KEY_MAPPING = {
+    KEY_MAPPING: ClassVar[dict] = {
         gov_f.SUPPLY_TYPE: inv_f.DOC_TYPE,
         gov_f.EXEMPTED_AMOUNT: inv_f.EXEMPTED_AMOUNT,
         gov_f.NIL_RATED_AMOUNT: inv_f.NIL_RATED_AMOUNT,
         gov_f.NON_GST_AMOUNT: inv_f.NON_GST_AMOUNT,
     }
 
-    DOCUMENT_CATEGORIES = {
+    DOCUMENT_CATEGORIES: ClassVar[dict] = {
         "INTRB2B": "Inter-State supplies to registered persons",
         "INTRB2C": "Inter-State supplies to unregistered persons",
         "INTRAB2B": "Intra-State supplies to registered persons",
@@ -798,7 +799,7 @@ class CDNR(GSTR1DataMapper):
     """
 
     SUBCATEGORY = GSTR1_SubCategory.CDNR.value
-    KEY_MAPPING = {
+    KEY_MAPPING: ClassVar[dict] = {
         # GovDataFields.CUST_GSTIN.value: DataFields.CUST_GSTIN.value,
         gov_f.FLAG: "flag",
         # GovDataFields.NOTE_DETAILS.value: "credit_debit_note_details",
@@ -821,14 +822,14 @@ class CDNR(GSTR1DataMapper):
         gov_f.CESS: item_f.CESS,
     }
 
-    DOCUMENT_CATEGORIES = {
+    DOCUMENT_CATEGORIES: ClassVar[dict] = {
         "R": "Regular B2B",
         "SEWP": "SEZ supplies with payment",
         "SEWOP": "SEZ supplies without payment",
         "DE": "Deemed Exports",
     }
 
-    DOCUMENT_TYPES = {
+    DOCUMENT_TYPES: ClassVar[dict] = {
         "C": "Credit Note",
         "D": "Debit Note",
     }
@@ -974,12 +975,12 @@ class CDNUR(GSTR1DataMapper):
     """
 
     SUBCATEGORY = GSTR1_SubCategory.CDNUR.value
-    DEFAULT_ITEM_AMOUNTS = {
+    DEFAULT_ITEM_AMOUNTS: ClassVar[dict] = {
         item_f.TAXABLE_VALUE: 0,
         item_f.IGST: 0,
         item_f.CESS: 0,
     }
-    KEY_MAPPING = {
+    KEY_MAPPING: ClassVar[dict] = {
         gov_f.FLAG: "flag",
         gov_f.TYPE: inv_f.DOC_TYPE,
         gov_f.NOTE_TYPE: inv_f.TRANSACTION_TYPE,
@@ -996,7 +997,7 @@ class CDNUR(GSTR1DataMapper):
         gov_f.ERROR_CD: inv_f.ERROR_CD,
         gov_f.ERROR_MSG: inv_f.ERROR_MSG,
     }
-    DOCUMENT_TYPES = {
+    DOCUMENT_TYPES: ClassVar[dict] = {
         "C": "Credit Note",
         "D": "Debit Note",
     }
@@ -1124,12 +1125,12 @@ class HSNSUM(GSTR1DataMapper):
         }
     """
 
-    DOCUMENT_CATEGORIES = {
+    DOCUMENT_CATEGORIES: ClassVar[dict] = {
         gov_f.HSN_B2B: GSTR1_SubCategory.HSN_B2B.value,
         gov_f.HSN_B2C: GSTR1_SubCategory.HSN_B2C.value,
         gov_f.HSN_DATA: GSTR1_SubCategory.HSN.value,  # Backwards Compatibility
     }
-    KEY_MAPPING = {
+    KEY_MAPPING: ClassVar[dict] = {
         # GovDataFields.INDEX.value: ItemFields.INDEX.value,
         gov_f.HSN_CODE: inv_f.HSN_CODE,
         gov_f.DESCRIPTION: inv_f.DESCRIPTION,
@@ -1297,7 +1298,7 @@ class AT(GSTR1DataMapper):
     """
 
     SUBCATEGORY = GSTR1_SubCategory.AT.value
-    KEY_MAPPING = {
+    KEY_MAPPING: ClassVar[dict] = {
         gov_f.FLAG: "flag",
         gov_f.POS: inv_f.POS,
         gov_f.DIFF_PERCENTAGE: inv_f.DIFF_PERCENTAGE,
@@ -1311,7 +1312,7 @@ class AT(GSTR1DataMapper):
         gov_f.ERROR_CD: inv_f.ERROR_CD,
         gov_f.ERROR_MSG: inv_f.ERROR_MSG,
     }
-    DEFAULT_ITEM_AMOUNTS = {
+    DEFAULT_ITEM_AMOUNTS: ClassVar[dict] = {
         inv_f.IGST: 0,
         inv_f.CESS: 0,
         inv_f.CGST: 0,
@@ -1471,7 +1472,7 @@ class DOC_ISSUE(GSTR1DataMapper):
         }
     """
 
-    KEY_MAPPING = {
+    KEY_MAPPING: ClassVar[dict] = {
         # GovDataFields.INDEX.value: ItemFields.INDEX.value,
         gov_f.FROM_SR: inv_f.FROM_SR,
         gov_f.TO_SR: inv_f.TO_SR,
@@ -1479,7 +1480,7 @@ class DOC_ISSUE(GSTR1DataMapper):
         gov_f.CANCELLED_COUNT: inv_f.CANCELLED_COUNT,
         gov_f.NET_ISSUE: inv_f.NET_ISSUE,
     }
-    DOCUMENT_NATURE = {
+    DOCUMENT_NATURE: ClassVar[dict] = {
         1: "Invoices for outward supply",
         2: "Invoices for inward supply from unregistered person",
         3: "Revised Invoice",
@@ -1594,7 +1595,7 @@ class SUPECOM(GSTR1DataMapper):
         }
     """
 
-    KEY_MAPPING = {
+    KEY_MAPPING: ClassVar[dict] = {
         gov_f.ECOMMERCE_GSTIN: inv_f.ECOMMERCE_GSTIN,
         gov_f.NET_TAXABLE_VALUE: inv_f.TAXABLE_VALUE,
         "igst": item_f.IGST,
@@ -1603,7 +1604,7 @@ class SUPECOM(GSTR1DataMapper):
         "cess": item_f.CESS,
         gov_f.FLAG: "flag",
     }
-    DOCUMENT_CATEGORIES = {
+    DOCUMENT_CATEGORIES: ClassVar[dict] = {
         gov_f.SUPECOM_52: GSTR1_SubCategory.SUPECOM_52.value,
         gov_f.SUPECOM_9_5: GSTR1_SubCategory.SUPECOM_9_5.value,
     }
@@ -1647,7 +1648,7 @@ class RETSUM(GSTR1DataMapper):
         - Only supports latest summary format v4.0 and above
     """
 
-    KEY_MAPPING = {
+    KEY_MAPPING: ClassVar[dict] = {
         "sec_nm": inv_f.DESCRIPTION,
         "typ": inv_f.DESCRIPTION,
         "ttl_rec": "no_of_records",
@@ -1670,7 +1671,7 @@ class RETSUM(GSTR1DataMapper):
         "ttl_doc_cancelled": inv_f.CANCELLED_COUNT,
     }
 
-    SECTION_NAMES = {
+    SECTION_NAMES: ClassVar[dict] = {
         "AT": GSTR1_Category.AT.value,
         "B2B_4A": GSTR1_SubCategory.B2B_REGULAR.value,
         "B2B_4B": GSTR1_SubCategory.B2B_REVERSE_CHARGE.value,
@@ -1719,7 +1720,7 @@ class RETSUM(GSTR1DataMapper):
         "TTL_LIAB": "Total Liability",
     }
 
-    SECTIONS_WITH_SUBSECTIONS = {
+    SECTIONS_WITH_SUBSECTIONS: ClassVar[dict] = {
         "SUPECOM": {
             "SUPECOM_14A": GSTR1_SubCategory.SUPECOM_52.value,
             "SUPECOM_14B": GSTR1_SubCategory.SUPECOM_9_5.value,
@@ -1989,7 +1990,7 @@ class BooksDataMapper:
             if invoice_sub_category in sub_category:
                 return category
 
-    DATA_TO_ITEM_FIELD_MAPPING = {
+    DATA_TO_ITEM_FIELD_MAPPING: ClassVar[dict] = {
         inv_f.TAXABLE_VALUE: item_f.TAXABLE_VALUE,
         inv_f.IGST: item_f.IGST,
         inv_f.CGST: item_f.CGST,
@@ -1997,7 +1998,7 @@ class BooksDataMapper:
         inv_f.CESS: item_f.CESS,
     }
 
-    ITEM_TO_INVOICE_FIELD_MAPPING = {
+    ITEM_TO_INVOICE_FIELD_MAPPING: ClassVar[dict] = {
         item_f.TAXABLE_VALUE: "taxable_value",
         item_f.IGST: "igst_amount",
         item_f.CGST: "cgst_amount",
@@ -2005,7 +2006,7 @@ class BooksDataMapper:
         item_f.CESS: "total_cess_amount",
     }
 
-    DATA_TO_INVOICE_FIELD_MAPPING = {
+    DATA_TO_INVOICE_FIELD_MAPPING: ClassVar[dict] = {
         inv_f.TAXABLE_VALUE: "taxable_value",
         inv_f.IGST: "igst_amount",
         inv_f.CGST: "cgst_amount",
