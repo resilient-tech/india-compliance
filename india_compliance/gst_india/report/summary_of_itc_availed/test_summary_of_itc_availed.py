@@ -54,8 +54,7 @@ class TestSummaryOfITCAvailed(IntegrationTestCase):
                 row
                 for row in data
                 if row.get("indent") == 0
-                and "Import Of Goods (including supplies from SEZ)"
-                in row.get("details", "")
+                and "Import Of Goods (including supplies from SEZ)" in row.get("details", "")
             ),
             None,
         )
@@ -64,8 +63,7 @@ class TestSummaryOfITCAvailed(IntegrationTestCase):
                 row
                 for row in data
                 if row.get("indent") == 0
-                and "Import Of Services (excluding inward supplies from SEZ)"
-                in row.get("details", "")
+                and "Import Of Services (excluding inward supplies from SEZ)" in row.get("details", "")
             ),
             None,
         )

@@ -117,15 +117,15 @@ class TestITCClaim(IntegrationTestCase):
         # April onwards → same year
         self.assertEqual(_get_gst_fy_start("2024-04-01"), getdate("2024-04-01"))
         self.assertEqual(_get_gst_fy_start("2024-12-31"), getdate("2024-04-01"))
-        # Jan–March → previous year
+        # Jan-March → previous year
         self.assertEqual(_get_gst_fy_start("2025-01-01"), getdate("2024-04-01"))
         self.assertEqual(_get_gst_fy_start("2025-03-31"), getdate("2024-04-01"))
 
     def test_get_section_16_4_deadline(self):
-        # Apr–Dec 2024 → November 2025
+        # Apr-Dec 2024 → November 2025
         self.assertEqual(_get_section_16_4_deadline("2024-04-01"), "112025")
         self.assertEqual(_get_section_16_4_deadline("2024-12-31"), "112025")
-        # Jan–Mar 2025 → November 2025
+        # Jan-Mar 2025 → November 2025
         self.assertEqual(_get_section_16_4_deadline("2025-01-15"), "112025")
         self.assertEqual(_get_section_16_4_deadline("2025-03-31"), "112025")
         # March 2024 → November 2024
@@ -136,9 +136,7 @@ class TestITCClaim(IntegrationTestCase):
     # =================================================================
 
     def test_get_next_unfiled_period_first_unfiled(self):
-        result = _get_next_unfiled_period(
-            "24AAQCA8719H1ZC", "042024", "2024-04-01", filed=set()
-        )
+        result = _get_next_unfiled_period("24AAQCA8719H1ZC", "042024", "2024-04-01", filed=set())
         self.assertEqual(result, "042024")
 
     def test_get_next_unfiled_period_skips_filed(self):
@@ -154,21 +152,15 @@ class TestITCClaim(IntegrationTestCase):
             filed.add(current)
             current = _next_period(current)
 
-        result = _get_next_unfiled_period(
-            "24AAQCA8719H1ZC", "042024", "2024-04-01", filed
-        )
+        result = _get_next_unfiled_period("24AAQCA8719H1ZC", "042024", "2024-04-01", filed)
         self.assertIsNone(result)
 
     def test_get_next_unfiled_period_past_deadline(self):
-        result = _get_next_unfiled_period(
-            "24AAQCA8719H1ZC", "122025", "2024-04-01", filed=set()
-        )
+        result = _get_next_unfiled_period("24AAQCA8719H1ZC", "122025", "2024-04-01", filed=set())
         self.assertIsNone(result)
 
     def test_get_next_unfiled_period_at_deadline(self):
-        result = _get_next_unfiled_period(
-            "24AAQCA8719H1ZC", "112025", "2024-04-01", filed=set()
-        )
+        result = _get_next_unfiled_period("24AAQCA8719H1ZC", "112025", "2024-04-01", filed=set())
         self.assertEqual(result, "112025")
 
     # =================================================================
@@ -334,9 +326,7 @@ class TestITCClaim(IntegrationTestCase):
     def test_calc_ims_accepted(self):
         """IMS Accepted → ims_period."""
         doc = self._make_doc(itc_claim_period="012024")
-        result = _calculate_itc_claim_period(
-            doc, ims_action="Accepted", ims_period="122024"
-        )
+        result = _calculate_itc_claim_period(doc, ims_action="Accepted", ims_period="122024")
         self.assertEqual(result, "122024")
 
     def test_calc_inward_supply_rejected(self):
@@ -392,8 +382,6 @@ class TestITCClaim(IntegrationTestCase):
     def test_calc_ims_rejected_does_not_override_filed(self):
         """Filed check takes priority — even IMS Rejected cannot change a filed period."""
         doc = self._make_doc(itc_claim_period="012024")
-        result = _calculate_itc_claim_period(
-            doc, filed={"012024"}, ims_action="Rejected"
-        )
+        result = _calculate_itc_claim_period(doc, filed={"012024"}, ims_action="Rejected")
         # filed period is locked — returns None (no update)
         self.assertIsNone(result)

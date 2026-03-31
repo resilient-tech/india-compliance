@@ -127,7 +127,7 @@ Object.assign(india_compliance, {
     },
 
     get_party_type(doctype) {
-        return in_list(frappe.boot.sales_doctypes, doctype) ? "Customer" : "Supplier";
+        return frappe.boot.sales_doctypes.includes(doctype) ? "Customer" : "Supplier";
     },
 
     async set_gstin_status(field, doc, force_update = false) {
@@ -144,10 +144,7 @@ Object.assign(india_compliance, {
         if (!message) message = { status: "Not Available" };
 
         field.set_description(
-            india_compliance.get_gstin_status_desc(
-                message?.status,
-                message?.last_updated_on
-            )
+            india_compliance.get_gstin_status_desc(message?.status, message?.last_updated_on),
         );
 
         this.set_gstin_refresh_btn(field, doc);
@@ -186,14 +183,14 @@ Object.assign(india_compliance, {
             pan_status,
             get_indicator(pan_status),
             datetime,
-            "pan-last-synced"
+            "pan-last-synced",
         );
 
         field.set_description(pan_desc);
 
         const refresh_btn = this.get_status_refresh_button(
             "refresh-pan",
-            field.$wrapper.find(".pan-last-synced")
+            field.$wrapper.find(".pan-last-synced"),
         );
 
         refresh_btn.on("click", async function () {
@@ -230,12 +227,7 @@ Object.assign(india_compliance, {
             }
         }
 
-        return this.get_status_description(
-            status,
-            get_indicator(status),
-            datetime,
-            "gstin-last-synced"
-        );
+        return this.get_status_description(status, get_indicator(status), datetime, "gstin-last-synced");
     },
 
     set_gstin_refresh_btn(field, doc) {
@@ -249,7 +241,7 @@ Object.assign(india_compliance, {
 
         const refresh_btn = this.get_status_refresh_button(
             "refresh-gstin",
-            field.$wrapper.find(".gstin-last-synced")
+            field.$wrapper.find(".gstin-last-synced"),
         );
 
         refresh_btn.on("click", async function () {
@@ -265,9 +257,7 @@ Object.assign(india_compliance, {
                     <strong>${status}</strong>
                     <span class="d-flex justify-content-between align-items-center ${classes}"
                         title="${user_date}" style="margin-left: auto;gap: 2px">
-                       <span style="text-align: end;"> ${
-                           datetime ? "Synced " + pretty_date : ""
-                       }</span>
+                       <span style="text-align: end;"> ${datetime ? "Synced " + pretty_date : ""}</span>
                     </span>
                 </div>`;
     },
@@ -395,10 +385,8 @@ Object.assign(india_compliance, {
             "itc_claim_period",
             "description",
             is_filed
-                ? __("GSTR-3B for {0} is filed", [ frm.doc.itc_claim_period ])
-                : __(
-                      "GSTR-3B period for claiming ITC (MMYYYY) or 'Deferred' to postpone."
-                  )
+                ? __("GSTR-3B for {0} is filed", [frm.doc.itc_claim_period])
+                : __("GSTR-3B period for claiming ITC (MMYYYY) or 'Deferred' to postpone."),
         );
     },
 
@@ -417,7 +405,7 @@ Object.assign(india_compliance, {
         frm.get_field(field).set_description(
             `<div class="d-flex indicator ${color}">
                 2A/2B Status:&nbsp;<strong>${frm.doc.reconciliation_status}</strong>
-            </div>`
+            </div>`,
         );
     },
 
@@ -425,14 +413,12 @@ Object.assign(india_compliance, {
         // returns a list of error messages if invoice number is invalid
         let message_list = [];
         if (invoice_number.length > 16) {
-            message_list.push(
-                "Transaction Name must be 16 characters or fewer to meet GST requirements"
-            );
+            message_list.push("Transaction Name must be 16 characters or fewer to meet GST requirements");
         }
 
         if (!GST_INVOICE_NUMBER_FORMAT.test(invoice_number)) {
             message_list.push(
-                "Transaction Name should start with an alphanumeric character and can only contain alphanumeric characters, dash (-) and slash (/) to meet GST requirements."
+                "Transaction Name should start with an alphanumeric character and can only contain alphanumeric characters, dash (-) and slash (/) to meet GST requirements.",
             );
         }
 
@@ -466,7 +452,7 @@ Object.assign(india_compliance, {
     },
 
     set_last_month_as_default_period(report) {
-        report.filters.forEach(filter => {
+        report.filters.forEach((filter) => {
             if (filter.fieldname === "from_date") {
                 filter.default = this.last_month_start();
             }
@@ -496,17 +482,11 @@ Object.assign(india_compliance, {
         const current_year = today.getFullYear();
 
         if (current_month <= 3) {
-            return position === "start"
-                ? `${current_year - 1}-03-01`
-                : `${current_year - 1}-09-30`;
+            return position === "start" ? `${current_year - 1}-03-01` : `${current_year - 1}-09-30`;
         } else if (current_month <= 9) {
-            return position === "start"
-                ? `${current_year - 1}-10-01`
-                : `${current_year}-03-31`;
+            return position === "start" ? `${current_year - 1}-10-01` : `${current_year}-03-31`;
         } else {
-            return position === "start"
-                ? `${current_year}-04-01`
-                : `${current_year}-09-30`;
+            return position === "start" ? `${current_year}-04-01` : `${current_year}-09-30`;
         }
     },
 
@@ -517,7 +497,7 @@ Object.assign(india_compliance, {
         const start_year = 2017;
         const year_range = current_year - start_year + 1;
         const options = Array.from({ length: year_range }, (_, index) =>
-            (start_year + year_range - index - 1).toString()
+            (start_year + year_range - index - 1).toString(),
         );
 
         if (
@@ -531,10 +511,7 @@ Object.assign(india_compliance, {
     },
 
     primary_to_danger_btn(parent) {
-        parent.$wrapper
-            .find(".btn-primary")
-            .removeClass("btn-primary")
-            .addClass("btn-danger");
+        parent.$wrapper.find(".btn-primary").removeClass("btn-primary").addClass("btn-danger");
     },
 
     add_divider_to_btn_group(btn_group_name) {
@@ -592,11 +569,7 @@ Object.assign(india_compliance, {
 
         if (doc.doctype != "Stock Entry") return true;
 
-        if (
-            !["Material Transfer", "Material Issue", "Send to Subcontractor"].includes(
-                doc.purpose
-            )
-        ) {
+        if (!["Material Transfer", "Material Issue", "Send to Subcontractor"].includes(doc.purpose)) {
             return false;
         }
 

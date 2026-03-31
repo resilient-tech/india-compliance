@@ -17,9 +17,7 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
         cls.return_period = "032020"
         cls.doctype = "GST Inward Supply"
         cls.log_doctype = "GSTR Import Log"
-        cls.test_data = parse_json(
-            read_file(get_data_file_path("test_gstr_2b_v4_0.json"))
-        )
+        cls.test_data = parse_json(read_file(get_data_file_path("test_gstr_2b_v4_0.json")))
 
         save_gstr_2b(
             cls.gstin,
@@ -51,9 +49,7 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
                 ),
                 "diffprcnt": "1",
                 "irn_source": "e-Invoice",
-                "irn_number": (
-                    "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR"
-                ),
+                "irn_number": ("897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR"),
                 "irn_gen_date": date(2019, 12, 24),
                 "doc_type": "Invoice",
                 "taxable_value": 12200,
@@ -123,9 +119,7 @@ class TestGSTR2b(TestGSTRMixin, IntegrationTestCase):
                 "reason_itc_unavailability": "Return filed post annual cut-off",
                 "diffprcnt": "1",
                 "irn_source": "e-Invoice",
-                "irn_number": (
-                    "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR"
-                ),
+                "irn_number": ("897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR"),
                 "irn_gen_date": date(2019, 12, 24),
                 "doc_type": "Credit Note",
                 "taxable_value": 12200,

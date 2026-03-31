@@ -33,7 +33,7 @@ frappe.query_reports["GST Sales Register"] = {
             fieldtype: "Link",
             options: "Company",
             default: frappe.defaults.get_user_default("Company"),
-            on_change: report => {
+            on_change: (report) => {
                 report.set_filter_value({
                     company_gstin: "",
                 });
@@ -61,10 +61,7 @@ frappe.query_reports["GST Sales Register"] = {
             fieldname: "date_range",
             label: __("Date Range"),
             fieldtype: "DateRange",
-            default: [
-                india_compliance.last_month_start(),
-                india_compliance.last_month_end(),
-            ],
+            default: [india_compliance.last_month_start(), india_compliance.last_month_end()],
             width: "80",
         },
         {
@@ -79,19 +76,17 @@ frappe.query_reports["GST Sales Register"] = {
             fieldname: "invoice_category",
             label: __("Invoice Category"),
             options: Object.keys(INVOICE_TYPE),
-            on_change: report => {
+            on_change: (report) => {
                 report.set_filter_value("invoice_sub_category", "");
                 set_sub_category_options(report);
             },
-            depends_on:
-                'eval:doc.summary_by=="Summary by HSN" || doc.summary_by=="Summary by Item"',
+            depends_on: 'eval:doc.summary_by=="Summary by HSN" || doc.summary_by=="Summary by Item"',
         },
         {
             fieldtype: "Autocomplete",
             fieldname: "invoice_sub_category",
             label: __("Invoice Sub Category"),
-            depends_on:
-                'eval:doc.summary_by=="Summary by HSN" || doc.summary_by=="Summary by Item"',
+            depends_on: 'eval:doc.summary_by=="Summary by HSN" || doc.summary_by=="Summary by Item"',
         },
     ],
 
@@ -117,34 +112,25 @@ frappe.query_reports["GST Sales Register"] = {
 
 function set_sub_category_options(report) {
     const invoice_category = frappe.query_report.get_filter_value("invoice_category");
-    report
-        .get_filter("invoice_sub_category")
-        .set_data(INVOICE_TYPE[invoice_category] || []);
+    report.get_filter("invoice_sub_category").set_data(INVOICE_TYPE[invoice_category] || []);
 
     if (invoice_category && INVOICE_TYPE[invoice_category].length === 1) {
-        report.set_filter_value(
-            "invoice_sub_category",
-            INVOICE_TYPE[invoice_category][0]
-        );
+        report.set_filter_value("invoice_sub_category", INVOICE_TYPE[invoice_category][0]);
     } else report.refresh();
 }
 
-custom_report_column_total = function (...args) {
+function custom_report_column_total(...args) {
     const summary_by = frappe.query_report.get_filter_value("summary_by");
-    if (summary_by !== "Overview")
-        return frappe.utils.report_column_total.apply(this, args);
+    if (summary_by !== "Overview") return frappe.utils.report_column_total.apply(this, args);
 
     const column_field = args[1].column.fieldname;
     if (column_field === "description") return;
 
     const total = this.datamanager.data.reduce((acc, row) => {
-        if (
-            row.indent !== 1 &&
-            row.description !== "Supplies made through E-commerce Operators"
-        )
+        if (row.indent !== 1 && row.description !== "Supplies made through E-commerce Operators")
             acc += row[column_field] || 0;
         return acc;
     }, 0);
 
     return total;
-};
+}

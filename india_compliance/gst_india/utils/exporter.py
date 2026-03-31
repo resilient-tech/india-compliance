@@ -1,12 +1,11 @@
 from io import BytesIO
 
+import frappe
 import openpyxl
+from frappe.desk.utils import provide_binary_file
 from openpyxl.formatting.rule import FormulaRule
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
-
-import frappe
-from frappe.desk.utils import provide_binary_file
 
 
 class ExcelExporter:

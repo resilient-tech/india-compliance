@@ -15,11 +15,7 @@ def execute():
         .where(PI.docstatus == 1)
         .where(
             (IfNull(PI.supplier_gstin, "") == "")
-            | (
-                IfNull(PI.gst_category, "").isin(
-                    ["Registered Composition", "Unregistered", "Overseas"]
-                )
-            )
+            | (IfNull(PI.gst_category, "").isin(["Registered Composition", "Unregistered", "Overseas"]))
             | (IfNull(PI.supplier_gstin, "") == PI.company_gstin)
             | (IfNull(PI.is_opening, "") == "Yes")
             | (PI_ITEM.gst_treatment == "Non-GST")
@@ -35,9 +31,4 @@ def execute():
         .run()
     )
 
-    (
-        frappe.qb.update(BOE)
-        .set(BOE.reconciliation_status, "Unreconciled")
-        .where(BOE.docstatus == 1)
-        .run()
-    )
+    (frappe.qb.update(BOE).set(BOE.reconciliation_status, "Unreconciled").where(BOE.docstatus == 1).run())

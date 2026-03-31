@@ -89,9 +89,7 @@ class TestFGReceived(IntegrationTestCase):
 
     def test_convert_to_gov_data_format(self):
         normalized_data = normalize_data(copy.deepcopy(self.mapped_data))
-        output = FGReceived().convert_to_gov_data_format(
-            normalized_data.get(ITC04JsonKey.FG_RECEIVED.value)
-        )
+        output = FGReceived().convert_to_gov_data_format(normalized_data.get(ITC04JsonKey.FG_RECEIVED.value))
         self.assertListEqual(self.json_data, output)
 
 
@@ -153,7 +151,5 @@ class TestRMSent(IntegrationTestCase):
 
     def test_convert_to_gov_data_format(self):
         normalized_data = normalize_data(copy.deepcopy(self.mapped_data))
-        output = RMSent().convert_to_gov_data_format(
-            normalized_data.get(ITC04JsonKey.RM_SENT.value)
-        )
+        output = RMSent().convert_to_gov_data_format(normalized_data.get(ITC04JsonKey.RM_SENT.value))
         self.assertListEqual(self.json_data, output)

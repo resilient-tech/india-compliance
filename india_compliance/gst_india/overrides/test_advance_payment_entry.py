@@ -1,9 +1,9 @@
 import json
 import re
 from contextlib import contextmanager
+from typing import ClassVar
 
 import frappe
-from frappe.tests import IntegrationTestCase
 from erpnext.accounts.doctype.payment_entry.payment_entry import (
     get_outstanding_reference_documents,
 )
@@ -17,6 +17,7 @@ from erpnext.controllers.accounts_controller import (
     get_advance_payment_entries_for_regional,
 )
 from erpnext.controllers.stock_controller import show_accounting_ledger_preview
+from frappe.tests import IntegrationTestCase
 
 from india_compliance.gst_india.utils.tests import create_transaction
 
@@ -48,7 +49,7 @@ def toggle_seperate_advance_accounting():
 
 
 class TestAdvancePaymentEntry(IntegrationTestCase):
-    EXPECTED_GL = [
+    EXPECTED_GL: ClassVar[list[dict]] = [
         {"account": "Cash - _TIRC", "debit": 45.0, "credit": 0.0},
         {"account": "Cash - _TIRC", "debit": 45.0, "credit": 0.0},
         {"account": "Cash - _TIRC", "debit": 500.0, "credit": 0.0},
@@ -65,9 +66,7 @@ class TestAdvancePaymentEntry(IntegrationTestCase):
         invoice_doc = self._create_sales_invoice(payment_doc)
 
         # Verify outstanding amount
-        outstanding_amount = frappe.db.get_value(
-            "Sales Invoice", invoice_doc.name, "outstanding_amount"
-        )
+        outstanding_amount = frappe.db.get_value("Sales Invoice", invoice_doc.name, "outstanding_amount")
         self.assertEqual(outstanding_amount, 0)
 
         self.assertGLEntries(payment_doc, self.EXPECTED_GL)
@@ -121,9 +120,7 @@ class TestAdvancePaymentEntry(IntegrationTestCase):
         payment_doc.submit()
 
         # Verify outstanding amount
-        outstanding_amount = frappe.db.get_value(
-            "Sales Invoice", invoice_doc.name, "outstanding_amount"
-        )
+        outstanding_amount = frappe.db.get_value("Sales Invoice", invoice_doc.name, "outstanding_amount")
         self.assertEqual(outstanding_amount, 0)
 
         self.assertGLEntries(
@@ -187,17 +184,14 @@ class TestAdvancePaymentEntry(IntegrationTestCase):
         )
 
     def test_preview_gl_entries(self):
-        invoice_doc, payment_doc = self._create_invoice_then_payment()
+        _, payment_doc = self._create_invoice_then_payment()
 
         # Preview payment GL Entry
         preview_data = show_accounting_ledger_preview(
             payment_doc.company, payment_doc.doctype, payment_doc.name
         )["gl_data"]
 
-        preview_data = [
-            {"account": row[1], "debit": row[2], "credit": row[3]}
-            for row in preview_data
-        ]
+        preview_data = [{"account": row[1], "debit": row[2], "credit": row[3]} for row in preview_data]
 
         out_str = json.dumps(sorted(preview_data, key=json.dumps))
         expected_str = json.dumps(
@@ -234,9 +228,7 @@ class TestAdvancePaymentEntry(IntegrationTestCase):
             "to_posting_date": payment_doc.posting_date,
         }
         references = get_outstanding_reference_documents(args)
-        current_ref = next(
-            ref for ref in references if ref.voucher_no == invoice_doc.name
-        )
+        current_ref = next(ref for ref in references if ref.voucher_no == invoice_doc.name)
 
         payment_doc.extend(
             "references",
@@ -266,9 +258,7 @@ class TestAdvancePaymentEntry(IntegrationTestCase):
         invoice_doc = self._create_sales_invoice(payment_doc)
 
         # Verify outstanding amount
-        outstanding_amount = frappe.db.get_value(
-            "Sales Invoice", invoice_doc.name, "outstanding_amount"
-        )
+        outstanding_amount = frappe.db.get_value("Sales Invoice", invoice_doc.name, "outstanding_amount")
         self.assertEqual(outstanding_amount, 0)
 
         self.assertGLEntries(
@@ -304,9 +294,7 @@ class TestAdvancePaymentEntry(IntegrationTestCase):
         make_payment_reconciliation(payment_doc, invoice_doc, 118)
 
         # Verify outstanding amount
-        outstanding_amount = frappe.db.get_value(
-            "Sales Invoice", invoice_doc.name, "outstanding_amount"
-        )
+        outstanding_amount = frappe.db.get_value("Sales Invoice", invoice_doc.name, "outstanding_amount")
         self.assertEqual(outstanding_amount, 0)
 
         self.assertGLEntries(payment_doc, self.EXPECTED_GL)
@@ -327,9 +315,7 @@ class TestAdvancePaymentEntry(IntegrationTestCase):
         make_payment_reconciliation(payment_doc, invoice_doc, 20)
 
         # Verify outstanding amount
-        outstanding_amount = frappe.db.get_value(
-            "Sales Invoice", invoice_doc.name, "outstanding_amount"
-        )
+        outstanding_amount = frappe.db.get_value("Sales Invoice", invoice_doc.name, "outstanding_amount")
         self.assertEqual(outstanding_amount, 48)
 
         self.assertGLEntries(
@@ -401,9 +387,7 @@ class TestAdvancePaymentEntry(IntegrationTestCase):
         payment_doc.setup_party_account_field()
         payment_doc.set_missing_values()
         payment_doc.set_exchange_rate()
-        payment_doc.received_amount = (
-            payment_doc.paid_amount / payment_doc.target_exchange_rate
-        )
+        payment_doc.received_amount = payment_doc.paid_amount / payment_doc.target_exchange_rate
         payment_doc.save()
 
         if not do_not_submit:
@@ -426,9 +410,7 @@ class TestAdvancePaymentEntry(IntegrationTestCase):
             "to_posting_date": payment_doc.posting_date,
         }
         references = get_outstanding_reference_documents(args)
-        current_ref = next(
-            ref for ref in references if ref.voucher_no == invoice_doc.name
-        )
+        current_ref = next(ref for ref in references if ref.voucher_no == invoice_doc.name)
 
         payment_doc.extend(
             "references",
@@ -517,9 +499,7 @@ class TestRegionalOverrides(TestAdvancePaymentEntry):
         self.assertEqual(payment_doc.total_taxes_and_charges, 0)
         invoice_doc = self._create_sales_invoice(payment_doc)
 
-        conditions = frappe._dict(
-            {"company": invoice_doc.get("company"), "name": payment_doc.name}
-        )
+        conditions = frappe._dict({"company": invoice_doc.get("company"), "name": payment_doc.name})
 
         payment_entry = get_advance_payment_entries_for_regional(
             party_type="Customer",
@@ -547,16 +527,8 @@ class TestRegionalOverrides(TestAdvancePaymentEntry):
         pr.receivable_payable_account = invoice_doc.debit_to
 
         pr.get_unreconciled_entries()
-        invoices = [
-            row.as_dict()
-            for row in pr.invoices
-            if row.invoice_number == invoice_doc.name
-        ]
-        payments = [
-            row.as_dict()
-            for row in pr.payments
-            if row.reference_name == payment_doc.name
-        ]
+        invoices = [row.as_dict() for row in pr.invoices if row.invoice_number == invoice_doc.name]
+        payments = [row.as_dict() for row in pr.payments if row.reference_name == payment_doc.name]
         pr.allocate_entries(frappe._dict({"invoices": invoices, "payments": payments}))
         pr.allocation[0].allocated_amount = 50
 
@@ -572,12 +544,8 @@ def make_payment_reconciliation(payment_doc, invoice_doc, amount):
     pr.receivable_payable_account = invoice_doc.debit_to
 
     pr.get_unreconciled_entries()
-    invoices = [
-        row.as_dict() for row in pr.invoices if row.invoice_number == invoice_doc.name
-    ]
-    payments = [
-        row.as_dict() for row in pr.payments if row.reference_name == payment_doc.name
-    ]
+    invoices = [row.as_dict() for row in pr.invoices if row.invoice_number == invoice_doc.name]
+    payments = [row.as_dict() for row in pr.payments if row.reference_name == payment_doc.name]
 
     pr.allocate_entries(frappe._dict({"invoices": invoices, "payments": payments}))
     pr.allocation[0].allocated_amount = amount

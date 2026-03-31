@@ -96,14 +96,10 @@ class AccountWiseSummary:
                 additional_amount += item.taxable_value - net_amount
                 additional_tax += item.tax_amount - net_tax
 
-            total_proportion = (
-                additional_tax / additional_amount if additional_amount else 0
-            )
+            total_proportion = additional_tax / additional_amount if additional_amount else 0
             eligible_proportion = eligible_amount / total_amount if total_amount else 0
 
-            self.allocate_additional_charges(
-                invoice, additional_tax, total_proportion, eligible_proportion
-            )
+            self.allocate_additional_charges(invoice, additional_tax, total_proportion, eligible_proportion)
 
         account_summary_data = list(self.account_summary.values())
 
@@ -112,10 +108,7 @@ class AccountWiseSummary:
 
         return account_summary_data
 
-    def allocate_additional_charges(
-        self, invoice, additional_tax, total_proportion, eligible_proportion
-    ):
-
+    def allocate_additional_charges(self, invoice, additional_tax, total_proportion, eligible_proportion):
         before_gst = []
         after_gst = []
         is_after_gst = False
@@ -125,10 +118,7 @@ class AccountWiseSummary:
                 is_after_gst = True
                 continue
 
-            elif (
-                tax.account_head in self.tds_accounts
-                or not tax.base_tax_amount_after_discount_amount
-            ):
+            elif tax.account_head in self.tds_accounts or not tax.base_tax_amount_after_discount_amount:
                 continue
 
             if not is_after_gst:
@@ -185,10 +175,7 @@ class AccountWiseSummary:
                     Case()
                     .when(
                         je_account.gst_tax_type.isin(GST_TAX_TYPES),
-                        (
-                            je_account.credit_in_account_currency
-                            - je_account.debit_in_account_currency
-                        ),
+                        (je_account.credit_in_account_currency - je_account.debit_in_account_currency),
                     )
                     .else_(0)
                 ).as_("ineligible_itc")
@@ -245,10 +232,7 @@ class AccountWiseSummary:
         query = (
             frappe.qb.from_(doc)
             .join(taxes_doc)
-            .on(
-                (doc.name == taxes_doc.parent)
-                & (taxes_doc.parenttype == self.filters.doctype)
-            )
+            .on((doc.name == taxes_doc.parent) & (taxes_doc.parenttype == self.filters.doctype))
             .select(
                 taxes_doc.tax_amount,
                 taxes_doc.base_tax_amount_after_discount_amount,
@@ -277,10 +261,7 @@ class AccountWiseSummary:
         query = (
             frappe.qb.from_(doc)
             .join(item_doc)
-            .on(
-                (doc.name == item_doc.parent)
-                & (item_doc.parenttype == self.filters.doctype)
-            )
+            .on((doc.name == item_doc.parent) & (item_doc.parenttype == self.filters.doctype))
             .select(
                 item_doc.name,
                 item_doc.parent,
@@ -290,15 +271,9 @@ class AccountWiseSummary:
                 item_doc.qty,
                 item_doc.taxable_value,
                 item_doc.base_net_amount,
-                (item_doc.cgst_rate + item_doc.sgst_rate + item_doc.igst_rate).as_(
-                    "tax_rate"
-                ),
-                (
-                    item_doc.cgst_amount + item_doc.sgst_amount + item_doc.igst_amount
-                ).as_("tax_amount"),
-                (item_doc.cess_amount + item_doc.cess_non_advol_amount).as_(
-                    "cess_amount"
-                ),
+                (item_doc.cgst_rate + item_doc.sgst_rate + item_doc.igst_rate).as_("tax_rate"),
+                (item_doc.cgst_amount + item_doc.sgst_amount + item_doc.igst_amount).as_("tax_amount"),
+                (item_doc.cess_amount + item_doc.cess_non_advol_amount).as_("cess_amount"),
             )
         )
 
@@ -323,10 +298,7 @@ class AccountWiseSummary:
         query = (
             frappe.qb.from_(doc)
             .join(item_doc)
-            .on(
-                (doc.name == item_doc.parent)
-                & (item_doc.parenttype == self.filters.doctype)
-            )
+            .on((doc.name == item_doc.parent) & (item_doc.parenttype == self.filters.doctype))
             .join(pinv_item)
             .on(item_doc.pi_detail == pinv_item.name)
             .select(
@@ -337,15 +309,9 @@ class AccountWiseSummary:
                 item_doc.item_name,
                 item_doc.qty,
                 item_doc.taxable_value.as_("base_net_amount"),
-                (item_doc.cgst_rate + item_doc.sgst_rate + item_doc.igst_rate).as_(
-                    "tax_rate"
-                ),
-                (
-                    item_doc.cgst_amount + item_doc.sgst_amount + item_doc.igst_amount
-                ).as_("tax_amount"),
-                (item_doc.cess_amount + item_doc.cess_non_advol_amount).as_(
-                    "cess_amount"
-                ),
+                (item_doc.cgst_rate + item_doc.sgst_rate + item_doc.igst_rate).as_("tax_rate"),
+                (item_doc.cgst_amount + item_doc.sgst_amount + item_doc.igst_amount).as_("tax_amount"),
+                (item_doc.cess_amount + item_doc.cess_non_advol_amount).as_("cess_amount"),
             )
         )
 
@@ -362,9 +328,7 @@ class AccountWiseSummary:
         )
 
         if filters.get("doctype") not in ["Journal Entry", "Bill of Entry"]:
-            query = query.where(
-                doc.company_gstin != IfNull(doc[filters.gstin_field], "")
-            )
+            query = query.where(doc.company_gstin != IfNull(doc[filters.gstin_field], ""))
 
         if filters.get("doctype") != "Bill of Entry":
             query = query.where(doc.is_opening == "No")
@@ -381,16 +345,12 @@ def compile_docs(taxes, items, doctype, compiled_docs):
     """
     for tax in taxes:
         if tax.parent not in compiled_docs:
-            compiled_docs[tax.parent] = frappe._dict(
-                taxes=[], items=[], doctype=doctype
-            )
+            compiled_docs[tax.parent] = frappe._dict(taxes=[], items=[], doctype=doctype)
 
         compiled_docs[tax.parent]["taxes"].append(tax)
 
     for item in items:
         if item.parent not in compiled_docs:
-            compiled_docs[item.parent] = frappe._dict(
-                taxes=[], items=[], doctype=doctype
-            )
+            compiled_docs[item.parent] = frappe._dict(taxes=[], items=[], doctype=doctype)
 
         compiled_docs[item.parent]["items"].append(item)

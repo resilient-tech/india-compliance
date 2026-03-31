@@ -12,6 +12,4 @@ class TestSetupWizard(IntegrationTestCase):
             company,
         )
 
-        self.assertEqual(
-            frappe.db.get_single_value("Accounts Settings", "enable_audit_trail"), 0
-        )
+        self.assertEqual(frappe.db.get_single_value("Accounts Settings", "enable_audit_trail"), 0)

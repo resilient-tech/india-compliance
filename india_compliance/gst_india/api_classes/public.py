@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 import frappe
 from frappe import _
 
@@ -7,18 +9,14 @@ from india_compliance.gst_india.api_classes.base import BaseAPI
 class PublicAPI(BaseAPI):
     API_NAME = "GST Public"
     BASE_PATH = "commonapi"
-    IGNORED_ERROR_CODES = {
+    IGNORED_ERROR_CODES: ClassVar[dict] = {
         "RET13510": "no_docs_found",
         "FO8000": "no_docs_found",
     }
 
     def setup(self, doc=None):
         if self.sandbox_mode:
-            frappe.throw(
-                _(
-                    "Autofill Party Information based on GSTIN is not supported in sandbox mode"
-                )
-            )
+            frappe.throw(_("Autofill Party Information based on GSTIN is not supported in sandbox mode"))
 
         if doc:
             self.default_log_values.update(
@@ -42,9 +40,7 @@ class PublicAPI(BaseAPI):
         return response
 
     def get_returns_info(self, gstin, fy):
-        return self.get(
-            "returns", params={"action": "RETTRACK", "gstin": gstin, "fy": fy}
-        )
+        return self.get("returns", params={"action": "RETTRACK", "gstin": gstin, "fy": fy})
 
     def is_ignored_error(self, response_json):
         error_code = response_json.get("errorCode", "").strip()

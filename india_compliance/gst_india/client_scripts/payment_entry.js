@@ -45,10 +45,7 @@ frappe.ui.form.on("Payment Entry", {
     },
 
     party(frm) {
-        update_gst_details(
-            frm,
-            "india_compliance.gst_india.overrides.payment_entry.update_party_details"
-        );
+        update_gst_details(frm, "india_compliance.gst_india.overrides.payment_entry.update_party_details");
     },
 
     customer_address(frm) {
@@ -80,8 +77,8 @@ function override_get_outstanding_documents(frm) {
 
     frm.events.get_outstanding_documents = new_fn;
     const handlers = frappe.ui.form.handlers[frm.doctype];
-    handlers["get_outstanding_documents"] = handlers["get_outstanding_documents"].map(
-        fn => (fn === old_fn ? new_fn : fn)
+    handlers["get_outstanding_documents"] = handlers["get_outstanding_documents"].map((fn) =>
+        fn === old_fn ? new_fn : fn,
     );
 }
 
@@ -92,23 +89,14 @@ frappe.ui.form.on("Payment Entry Reference", {
         if (row.reference_doctype !== "Purchase Invoice") return;
 
         frappe.db
-            .get_value(
-                row.reference_doctype,
-                row.reference_name,
-                "reconciliation_status"
-            )
-            .then(response => {
+            .get_value(row.reference_doctype, row.reference_name, "reconciliation_status")
+            .then((response) => {
                 if (!response.message) return;
 
                 const reconciliation_status_dict = {};
-                reconciliation_status_dict[row.reference_name] =
-                    response.message.reconciliation_status;
+                reconciliation_status_dict[row.reference_name] = response.message.reconciliation_status;
 
-                add_warning_indicator(
-                    frm,
-                    reconciliation_status_dict,
-                    row.reference_name
-                );
+                add_warning_indicator(frm, reconciliation_status_dict, row.reference_name);
             });
     },
 });
@@ -117,11 +105,11 @@ function add_warning_indicator(frm, reconciliation_status_dict, name) {
     if (!reconciliation_status_dict) return;
 
     let rows = frm.fields_dict.references.grid.grid_rows.filter(
-        r => r.doc.reference_doctype === "Purchase Invoice"
+        (r) => r.doc.reference_doctype === "Purchase Invoice",
     );
 
     // Add warning indicator to a particular row only
-    if (name) rows = rows.filter(r => r.doc.reference_name === name);
+    if (name) rows = rows.filter((r) => r.doc.reference_name === name);
 
     for (const row of rows) {
         if (
@@ -131,8 +119,7 @@ function add_warning_indicator(frm, reconciliation_status_dict, name) {
             continue;
 
         const target_div = row.columns.reference_name;
-        const is_warning_icon_already_present =
-            $(target_div).find(".warning-icon").length > 0;
+        const is_warning_icon_already_present = $(target_div).find(".warning-icon").length > 0;
 
         if (is_warning_icon_already_present) continue;
 
@@ -142,12 +129,7 @@ function add_warning_indicator(frm, reconciliation_status_dict, name) {
 }
 
 async function update_gst_details(frm, method) {
-    if (
-        frm.doc.party_type != "Customer" ||
-        !frm.doc.party ||
-        frm.__updating_gst_details
-    )
-        return;
+    if (frm.doc.party_type != "Customer" || !frm.doc.party || frm.__updating_gst_details) return;
 
     // wait for GSTINs to get fetched
     await frappe.after_ajax();

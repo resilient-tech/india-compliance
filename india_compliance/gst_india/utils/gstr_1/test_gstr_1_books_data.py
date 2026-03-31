@@ -1,7 +1,7 @@
 import frappe
+from erpnext.accounts.doctype.sales_invoice.sales_invoice import make_sales_return
 from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import flt, getdate
-from erpnext.accounts.doctype.sales_invoice.sales_invoice import make_sales_return
 
 from india_compliance.gst_india.overrides.company import create_default_company_account
 from india_compliance.gst_india.utils import get_full_gst_uom
@@ -103,9 +103,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
 
     def test_b2b_regular_transaction_with_gst_inclusive_price(self):
         setup_cess_account()
-        si = create_sales_invoice(
-            customer="_Test Registered Customer", do_not_submit=True
-        )
+        si = create_sales_invoice(customer="_Test Registered Customer", do_not_submit=True)
         _append_taxes(si, ["CGST", "SGST"], included_in_print_rate=True)
         _append_taxes(si, "CESS", rate=2, included_in_print_rate=True)
         si.save()
@@ -151,9 +149,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
             for i in range(1, 7):
                 append_item(
                     si,
-                    data=frappe._dict(
-                        gst_hsn_code=random_hsn_codes[i % 4], qty=1.0, rate=1.003
-                    ),
+                    data=frappe._dict(gst_hsn_code=random_hsn_codes[i % 4], qty=1.0, rate=1.003),
                 )
 
             si.save()
@@ -202,9 +198,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
             for i in range(1, 7):
                 append_item(
                     si,
-                    data=frappe._dict(
-                        gst_hsn_code=random_hsn_codes[i % 4], qty=1.0, rate=1.003
-                    ),
+                    data=frappe._dict(gst_hsn_code=random_hsn_codes[i % 4], qty=1.0, rate=1.003),
                 )
 
             si.save()
@@ -665,9 +659,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                 "exempted_amount": 0.0,
                 "non_gst_amount": 0.0,
             },
-            data[GSTR1_SubCategory.NIL_EXEMPT.value][
-                "Intra-State supplies to registered persons"
-            ][0],
+            data[GSTR1_SubCategory.NIL_EXEMPT.value]["Intra-State supplies to registered persons"][0],
         )
 
         self.assertDictEq(
@@ -682,9 +674,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                 "exempted_amount": 0.0,
                 "non_gst_amount": 0.0,
             },
-            data[GSTR1_SubCategory.NIL_EXEMPT.value][
-                "Intra-State supplies to unregistered persons"
-            ][0],
+            data[GSTR1_SubCategory.NIL_EXEMPT.value]["Intra-State supplies to unregistered persons"][0],
         )
 
     def test_b2cs_transaction(self):
@@ -727,21 +717,9 @@ class TestGSTR1BooksData(IntegrationTestCase):
         data = GSTR1BooksData(filters=FILTERS).prepare_mapped_data()
 
         for si in si_s:
-            igst_rate = (
-                place_of_supplies[si.place_of_supply].get("igst_rate", 0.0)
-                / 100
-                * si.total
-            )
-            cgst_rate = (
-                place_of_supplies[si.place_of_supply].get("cgst_rate", 0.0)
-                / 100
-                * si.total
-            )
-            sgst_rate = (
-                place_of_supplies[si.place_of_supply].get("sgst_rate", 0.0)
-                / 100
-                * si.total
-            )
+            igst_rate = place_of_supplies[si.place_of_supply].get("igst_rate", 0.0) / 100 * si.total
+            cgst_rate = place_of_supplies[si.place_of_supply].get("cgst_rate", 0.0) / 100 * si.total
+            sgst_rate = place_of_supplies[si.place_of_supply].get("sgst_rate", 0.0) / 100 * si.total
             self.assertDictEq(
                 {
                     "document_value": 118.0,
@@ -830,9 +808,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                 "exempted_amount": 0.0,
                 "non_gst_amount": 0.0,
             },
-            data[GSTR1_SubCategory.NIL_EXEMPT.value][
-                "Intra-State supplies to registered persons"
-            ][0],
+            data[GSTR1_SubCategory.NIL_EXEMPT.value]["Intra-State supplies to registered persons"][0],
         )
 
     def test_hsn_summary_with_bifurcation(self):
