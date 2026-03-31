@@ -195,7 +195,7 @@ class GSTR3BQuery:
                     + self.PI_ITEM.cess_non_advol_amount
                 ).as_("total_amount"),
             )
-            .where((self.PI.is_opening == "No"))
+            .where(self.PI.is_opening == "No")
             .where(self.PI.company_gstin != IfNull(self.PI.supplier_gstin, ""))
             .where(self.PI.is_boe_applicable == 0)
         )

@@ -790,9 +790,9 @@ def validate_overseas_gst_category(doc):
 # DEPRECATED IN v16
 def get_itemised_tax_breakup_header(item_doctype, tax_accounts):
     if is_hsn_wise_breakup_needed(item_doctype):
-        return [_("HSN/SAC"), _("Taxable Amount")] + tax_accounts
+        return [_("HSN/SAC"), _("Taxable Amount"), *tax_accounts]
     else:
-        return [_("Item"), _("Taxable Amount")] + tax_accounts
+        return [_("Item"), _("Taxable Amount"), *tax_accounts]
 
 
 def get_itemised_tax_breakup_data(doc):

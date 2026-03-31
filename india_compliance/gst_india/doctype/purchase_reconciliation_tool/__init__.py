@@ -286,7 +286,7 @@ class InwardSupply:
         periods = BaseUtil._get_periods(self.from_date, self.to_date)
 
         if self.gst_return == "GSTR 2B":
-            query = query.where((self.GSTR2.return_period_2b.isin(periods)))
+            query = query.where(self.GSTR2.return_period_2b.isin(periods))
         else:
             query = query.where(
                 (self.GSTR2.return_period_2b.isin(periods))
@@ -342,7 +342,7 @@ class InwardSupply:
         return fields
 
     def get_tax_fields(self):
-        fields = GST_TAX_TYPES[:-1] + ("taxable_value",)
+        fields = (*GST_TAX_TYPES[:-1], "taxable_value")
         return [self.GSTR2[field] for field in fields]
 
 
@@ -936,13 +936,13 @@ class ReconciledData(BaseReconciliation):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.gstin_party_map = frappe._dict()
-        self.dimension_fields = get_accounting_dimensions() + ["cost_center", "project"]
+        self.dimension_fields = [*get_accounting_dimensions(), "cost_center", "project"]
 
     def get_consolidated_data(
         self,
-        purchase_names: list = None,
-        inward_supply_names: list = None,
-        prefix: str = None,
+        purchase_names: list | None = None,
+        inward_supply_names: list | None = None,
+        prefix: str | None = None,
     ):
         data = self.get(purchase_names, inward_supply_names)
         for doc in data:
@@ -981,7 +981,7 @@ class ReconciledData(BaseReconciliation):
         self.process_data(reconciliation_data, retain_doc=True)
         return reconciliation_data[0]
 
-    def get(self, purchase_names: list = None, inward_supply_names: list = None):
+    def get(self, purchase_names: list | None = None, inward_supply_names: list | None = None):
         """
         Get Reconciliation data based on standard filters
         Returns
@@ -1040,7 +1040,8 @@ class ReconciledData(BaseReconciliation):
             "is_return",
             "gst_category",
             "reconciliation_status",
-        ] + self.dimension_fields
+            *self.dimension_fields,
+        ]
 
         boe_names = purchase_names
 

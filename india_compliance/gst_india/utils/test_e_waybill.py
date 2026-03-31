@@ -637,7 +637,7 @@ class TestEWaybill(FrappeTestCase):
                 si,
                 frappe._dict(
                     item_code=item_code,
-                    item_name="Test Item {}".format(i),
+                    item_name=f"Test Item {i}",
                     rate=100,
                     gst_hsn_code=hsn_code,
                 ),

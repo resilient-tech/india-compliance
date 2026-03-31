@@ -24,7 +24,7 @@ class GovDataMapper:
         # value formatting constants
         self.STATE_NUMBERS = self.reverse_dict(STATE_NUMBERS)
 
-    def format_data(self, data: dict, default_data: dict = None, for_gov: bool = False) -> dict:
+    def format_data(self, data: dict, default_data: dict | None = None, for_gov: bool = False) -> dict:
         """
         Objective: Convert Object from one format to another.
             eg: Govt JSON to Internal Data Structure

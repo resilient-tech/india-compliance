@@ -508,7 +508,7 @@ class AggregateInvoices:
         return aggregate_invoices
 
     @staticmethod
-    def get_aggregate_invoices(invoices: list, value_keys: list = None) -> dict:
+    def get_aggregate_invoices(invoices: list, value_keys: list | None = None) -> dict:
         """
         There can be multiple rows in books data for a single row in gov data
         Aggregate all the rows to a single row
@@ -910,7 +910,7 @@ class FileGSTR1:
         response = api.proceed_to_file("GSTR1", self.return_period, is_nil_return)
 
         # Return Form already ready to be filed
-        if response.error and response.error.error_cd == "RET00003" or is_nil_return:
+        if (response.error and response.error.error_cd == "RET00003") or is_nil_return:
             set_gstr_actions(
                 self,
                 "proceed_to_file",

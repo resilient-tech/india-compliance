@@ -117,15 +117,15 @@ class TestITCClaim(FrappeTestCase):
         # April onwards → same year
         self.assertEqual(_get_gst_fy_start("2024-04-01"), getdate("2024-04-01"))
         self.assertEqual(_get_gst_fy_start("2024-12-31"), getdate("2024-04-01"))
-        # Jan–March → previous year
+        # Jan-March → previous year
         self.assertEqual(_get_gst_fy_start("2025-01-01"), getdate("2024-04-01"))
         self.assertEqual(_get_gst_fy_start("2025-03-31"), getdate("2024-04-01"))
 
     def test_get_section_16_4_deadline(self):
-        # Apr–Dec 2024 → November 2025
+        # Apr-Dec 2024 → November 2025
         self.assertEqual(_get_section_16_4_deadline("2024-04-01"), "112025")
         self.assertEqual(_get_section_16_4_deadline("2024-12-31"), "112025")
-        # Jan–Mar 2025 → November 2025
+        # Jan-Mar 2025 → November 2025
         self.assertEqual(_get_section_16_4_deadline("2025-01-15"), "112025")
         self.assertEqual(_get_section_16_4_deadline("2025-03-31"), "112025")
         # March 2024 → November 2024

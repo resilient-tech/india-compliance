@@ -26,20 +26,15 @@ class CForm(Document):
                 elif inv and inv[0][1] and inv[0][1] != self.name:
                     frappe.throw(
                         _(
-                            """Invoice {0} is tagged in another C-form: {1}.
-						If you want to change C-form no for this invoice,
-						please remove invoice no from the previous c-form and then try again""".format(
-                                d.invoice_no, inv[0][1]
-                            )
-                        )
+                            "Invoice {0} is tagged in another C-form: {1} .<br> If you want to change C-form no for this invoice,<br> please remove invoice no from the previous c-form and then try again"
+                        ).format(d.invoice_no, inv[0][1])
                     )
 
                 elif not inv:
                     frappe.throw(
                         _(
-                            "Row {0}: Invoice {1} is invalid, it might be cancelled /"
-                            " does not exist. Please enter a valid Invoice.".format(d.idx, d.invoice_no)
-                        )
+                            "Row {0}: Invoice {1} is invalid, it might be cancelled or does not exist. Please enter a valid Invoice."
+                        ).format(d.idx, d.invoice_no)
                     )
 
     def on_update(self):
