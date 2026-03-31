@@ -6,6 +6,7 @@ OLD_TDS_SECTIONS = [
     "194",
     "194A",
     "194B",
+    "194BA",
     "194BB",
     "194C",
     "194D",
@@ -18,13 +19,22 @@ OLD_TDS_SECTIONS = [
     "194I(a)",
     "194I(b)",
     "194IA",
+    "194IB",
+    "194IC",
     "194JA",
     "194JB",
+    "194K",
     "194LA",
     "194LBA",
     "194LBB",
+    "194LBC",
+    "194M",
     "194N",
+    "194O",
+    "194P",
     "194Q",
+    "194R",
+    "194S",
     "194T",
     "195",
     "206C(1H)",
@@ -99,6 +109,10 @@ NEW_TDS_SECTIONS = [
     "1065",  # Cash withdrawal - others - Sl.5.D(b)
     "1066",  # NSS payments - Sl.6
     "1067",  # Partner remuneration - Sl.7
+    # Form 141 sections (challan-cum-statement, no numeric return code)
+    "393(1) Sl.2(i)",  # Rent by Individual/HUF (was 194IB)
+    "393(1) Sl.3(i)",  # Immovable property transfer (was 194IA)
+    "393(1) Sl.6(ii)",  # Contractor/professional by Ind/HUF >50L (was 194M)
 ]
 
 TDS_SECTIONS = OLD_TDS_SECTIONS + NEW_TDS_SECTIONS
