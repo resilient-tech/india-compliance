@@ -498,7 +498,7 @@ class GSTTransactionData:
             }
 
         if isinstance(d, list):
-            return [v for v in map(GSTTransactionData.sanitize_data, d) if _is_truthy(v)]
+            return [v for v in (GSTTransactionData.sanitize_data(item) for item in d) if _is_truthy(v)]
 
         return d
 

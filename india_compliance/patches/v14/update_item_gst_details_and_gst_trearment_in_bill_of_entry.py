@@ -23,13 +23,11 @@ def get_indian_companies():
 
 def update_gst_details_for_transactions(companies):
     for company in companies:
-        gst_accounts = []
-        gst_accounts.extend(
-            filter(
-                None,
-                get_gst_accounts_by_type(company, account_type="Input", throw=False).values(),
-            )
-        )
+        gst_accounts = [
+            account
+            for account in get_gst_accounts_by_type(company, account_type="Input", throw=False).values()
+            if account
+        ]
 
         if not gst_accounts:
             continue
