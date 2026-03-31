@@ -2,7 +2,7 @@ name: Documentation Required
 
 on:
   pull_request:
-    types: [ opened, synchronize, reopened, edited ]
+    types: [opened, synchronize, reopened, edited]
 
 jobs:
   build:
@@ -10,11 +10,11 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: 'Setup Environment'
-        uses: actions/setup-python@v5
+      - name: "Setup Environment"
+        uses: actions/setup-python@v6
         with:
-          python-version: '3.11'
-      - uses: actions/checkout@v4
+          python-version: "3.11"
+      - uses: actions/checkout@v6
 
       - name: Validate Docs
         env:
