@@ -35,6 +35,7 @@ execute:import frappe; frappe.db.set_single_value("GST Settings", "gstin_status_
 execute:from india_compliance.gst_india.setup import create_email_template; create_email_template()
 india_compliance.patches.post_install.update_payment_entry_fields
 india_compliance.patches.post_install.update_company_fixtures #3
+india_compliance.patches.v14.migrate_and_update_tds_section_as_per_income_tax_act_2025
 india_compliance.patches.post_install.update_itc_classification_field
 india_compliance.patches.v14.update_purchase_reco_email_template
 india_compliance.patches.v14.delete_purchase_receipt_standard_custom_fields
@@ -71,5 +72,8 @@ execute:from india_compliance.audit_trail.setup import create_custom_fields; cre
 india_compliance.patches.v15.update_itc_classification_for_sez_import_invoices
 india_compliance.patches.v15.set_boe_applicable_for_import_goods_purchase_invoices
 india_compliance.patches.post_install.update_gst_treatment_for_import_transactions
+<<<<<<< HEAD
 india_compliance.patches.v14.migrate_and_update_tds_section_as_per_income_tax_act_2025
 >>>>>>> 6cf1decb (fix: update TDS for FY2026-27)
+=======
+>>>>>>> 8323c0a0 (fix: reorder patch)
