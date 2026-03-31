@@ -6,7 +6,6 @@ import re
 import unittest.mock as mock
 
 import frappe
-from erpnext.projects.doctype.project.test_project import make_project
 from frappe.tests import IntegrationTestCase
 from frappe.utils import today
 
