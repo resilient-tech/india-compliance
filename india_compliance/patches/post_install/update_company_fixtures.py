@@ -7,7 +7,7 @@ from india_compliance.gst_india.overrides.company import (
     make_default_gst_expense_accounts,
     make_default_tax_templates,
 )
-from india_compliance.income_tax_india.constants import TDS_ENTITY_TYPE, TDS_SECTIONS
+from india_compliance.income_tax_india.constants import OLD_TDS_SECTIONS, TDS_ENTITY_TYPE
 from india_compliance.income_tax_india.overrides.company import (
     create_company_fixtures as create_income_tax_fixtures,
 )
@@ -88,7 +88,7 @@ def set_section_and_entity_type_in_tax_withholding_category():
         if len(splitted_name) < 3:
             continue
 
-        if splitted_name[1] in TDS_SECTIONS and splitted_name[-1] in TDS_ENTITY_TYPE:
+        if splitted_name[1] in OLD_TDS_SECTIONS and splitted_name[-1] in TDS_ENTITY_TYPE:
             (
                 frappe.qb.update(doctype)
                 .set("tds_section", splitted_name[1])
