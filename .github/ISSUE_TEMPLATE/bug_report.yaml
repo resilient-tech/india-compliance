@@ -23,7 +23,7 @@ body:
     attributes:
       label: Information about bug
       description: Also tell us, what did you expect to happen?
-                   If applicable, add screenshots to help explain your problem.
+        If applicable, add screenshots to help explain your problem.
       placeholder: Please provide as much information as possible.
     validations:
       required: true
