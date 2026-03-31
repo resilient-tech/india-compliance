@@ -18,13 +18,6 @@ OLD_TDS_SECTIONS = [
     "194I",
     "194I(a)",
     "194I(b)",
-<<<<<<< HEAD
-    "194LBA",
-    "194DA",
-    "192A",
-    "194LBB",
-=======
->>>>>>> 6cf1decb (fix: update TDS for FY2026-27)
     "194IA",
     "194IB",
     "194IC",

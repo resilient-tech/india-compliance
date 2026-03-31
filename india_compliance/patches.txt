@@ -34,12 +34,6 @@ india_compliance.patches.post_install.add_einvoice_status_field
 execute:import frappe; frappe.db.set_single_value("GST Settings", "gstin_status_refresh_interval", 30)
 execute:from india_compliance.gst_india.setup import create_email_template; create_email_template()
 india_compliance.patches.post_install.update_payment_entry_fields
-<<<<<<< HEAD
-india_compliance.patches.post_install.update_company_fixtures #3
-=======
-india_compliance.patches.v15.remove_ignore_reconciliation_field
-india_compliance.patches.v15.migrate_print_options_to_new_field
->>>>>>> 29703045 (fix: restore update_company_fixtures call and backfill tds_section and entity_type in tax withholding categories)
 india_compliance.patches.v14.migrate_and_update_tds_section_as_per_income_tax_act_2025
 india_compliance.patches.post_install.update_company_fixtures #3
 india_compliance.patches.post_install.update_itc_classification_field
@@ -68,21 +62,7 @@ india_compliance.patches.v14.update_gstin_status_refresh_interval
 india_compliance.patches.v14.update_default_e_invoice_time_limit
 india_compliance.patches.v15.migrate_gstr1_log_to_returns_log
 india_compliance.patches.v15.update_action_for_gst_inward_supply
-<<<<<<< HEAD
-india_compliance.patches.v14.update_tax_withholding_categories
-<<<<<<< HEAD
-=======
-=======
-india_compliance.patches.v15.set_default_for_new_gst_category_notification
-india_compliance.patches.v15.make_e_invoice_log_extensible
-india_compliance.patches.v15.migrate_boe_taxes_to_ic_taxes
-india_compliance.patches.v15.set_download_document_for_2a_2b
-india_compliance.patches.v15.multiple_pi_in_boe
-india_compliance.patches.v15.update_supplier_filing_status
-india_compliance.patches.v14.set_pending_boe_qty #1
-india_compliance.patches.v15.remove_itc_amount_custom_fields
 india_compliance.patches.v14.update_tax_withholding_categories #1
->>>>>>> 29703045 (fix: restore update_company_fixtures call and backfill tds_section and entity_type in tax withholding categories)
 india_compliance.patches.v15.unset_auth_token
 india_compliance.patches.v15.migrate_logo_for_printing
 india_compliance.patches.v15.update_itc_claim_period
@@ -90,8 +70,3 @@ execute:from india_compliance.audit_trail.setup import create_custom_fields; cre
 india_compliance.patches.v15.update_itc_classification_for_sez_import_invoices
 india_compliance.patches.v15.set_boe_applicable_for_import_goods_purchase_invoices
 india_compliance.patches.post_install.update_gst_treatment_for_import_transactions
-<<<<<<< HEAD
-india_compliance.patches.v14.migrate_and_update_tds_section_as_per_income_tax_act_2025
->>>>>>> 6cf1decb (fix: update TDS for FY2026-27)
-=======
->>>>>>> 8323c0a0 (fix: reorder patch)
