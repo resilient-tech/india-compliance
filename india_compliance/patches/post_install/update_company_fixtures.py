@@ -1,8 +1,4 @@
 import frappe
-<<<<<<< HEAD
-from frappe.query_builder.functions import IfNull
-=======
->>>>>>> 29703045 (fix: restore update_company_fixtures call and backfill tds_section and entity_type in tax withholding categories)
 from erpnext.setup.setup_wizard.operations.taxes_setup import get_or_create_tax_group
 
 from india_compliance.gst_india.overrides.company import (
@@ -16,14 +12,9 @@ from india_compliance.income_tax_india.overrides.company import (
 
 
 def execute():
-<<<<<<< HEAD
     company_list = frappe.get_all(
         "Company", filters={"country": "India"}, pluck="name", order_by="lft asc"
     )
-    set_section_and_entity_type_in_tax_withholding_category()  # execute before creating fixtures
-=======
-    company_list = frappe.get_all("Company", filters={"country": "India"}, pluck="name", order_by="lft asc")
->>>>>>> 29703045 (fix: restore update_company_fixtures call and backfill tds_section and entity_type in tax withholding categories)
 
     for company in company_list:
         # Income Tax fixtures
