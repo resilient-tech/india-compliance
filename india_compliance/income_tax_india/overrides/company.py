@@ -125,7 +125,7 @@ def get_tds_category_details(accounts):
                     "consider_party_ledger_amount"
                 ),
                 "tax_on_excess_amount": rule.get("tax_on_excess_amount"),
-                "tax_deduction_basis": rule.get("tax_deduction_basis", "Net Total"),
+                "consider_party_ledger_amount": rule.get("consider_party_ledger_amount", 0),
                 "rates": rates,
             }
         )
