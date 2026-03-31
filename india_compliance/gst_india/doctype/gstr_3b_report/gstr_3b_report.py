@@ -6,7 +6,6 @@ import calendar
 import json
 import os
 from collections import defaultdict
-from turtle import st
 from typing import ClassVar
 
 import frappe

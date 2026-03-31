@@ -1,7 +1,6 @@
 from collections import defaultdict
 from datetime import datetime
 from itertools import chain
-from turtle import st
 from typing import ClassVar
 
 import frappe
