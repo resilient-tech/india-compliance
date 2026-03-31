@@ -126,19 +126,11 @@ jobs:
         if: ${{ always() }}
         run: cat ~/frappe-bench/bench_start.log || true
 
-<<<<<<< HEAD
-            - name: Upload coverage data
-              uses: actions/upload-artifact@v7
-              with:
-                name: coverage
-                path: /home/runner/frappe-bench/sites/coverage.xml
-=======
       - name: Upload coverage data
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: coverage
           path: /home/runner/frappe-bench/sites/coverage.xml
->>>>>>> a57edf10 (chore: format YAML files and update pre-commit configuration)
 
   coverage:
     name: Coverage Wrap Up
@@ -149,13 +141,8 @@ jobs:
       - name: Clone
         uses: actions/checkout@v6
 
-<<<<<<< HEAD
-        - name: Download artifacts
-          uses: actions/download-artifact@v8
-=======
       - name: Download artifacts
-        uses: actions/download-artifact@v7
->>>>>>> a57edf10 (chore: format YAML files and update pre-commit configuration)
+        uses: actions/download-artifact@v8
 
       - name: Upload coverage data
         uses: codecov/codecov-action@v5
