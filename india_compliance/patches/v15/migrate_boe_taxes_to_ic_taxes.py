@@ -10,9 +10,7 @@ def execute():
     boe_taxes = frappe.qb.DocType("Bill of Entry Taxes")
     boe_taxes_docs = frappe.qb.from_(boe_taxes).select("*").run(as_dict=True)
 
-    ic_taxes_names = set(
-        frappe.get_all("India Compliance Taxes and Charges", pluck="name")
-    )
+    ic_taxes_names = set(frappe.get_all("India Compliance Taxes and Charges", pluck="name"))
     ic_taxes = []
 
     for doc in boe_taxes_docs:

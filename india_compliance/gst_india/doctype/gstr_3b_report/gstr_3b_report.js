@@ -10,9 +10,8 @@ frappe.ui.form.on("GSTR 3B Report", {
         set_options_for_year_month(frm);
 
         if (frm.doc.company && frm.is_new()) {
-            india_compliance.set_gstin_options(frm, false, true).then(options => {
-                if (options && options.length)
-                    frm.set_value("company_gstin", options[0]);
+            india_compliance.set_gstin_options(frm, false, true).then((options) => {
+                if (options && options.length) frm.set_value("company_gstin", options[0]);
             });
         }
 
@@ -25,10 +24,7 @@ frappe.ui.form.on("GSTR 3B Report", {
         if (frm.is_new()) return;
 
         const is_filed = frm.doc.filing_status === "Filed";
-        frm.page.set_indicator(
-            is_filed ? __("Filed") : __("Not Filed"),
-            is_filed ? "green" : "orange",
-        );
+        frm.page.set_indicator(is_filed ? __("Filed") : __("Not Filed"), is_filed ? "green" : "orange");
 
         frm.set_intro(__("Please save the report again to rebuild or update"));
         frm.doc.__unsaved = 1;
@@ -75,7 +71,7 @@ frappe.ui.form.on("GSTR 3B Report", {
                 callback: function (r) {
                     let data = r.message;
 
-                    frappe.ui.get_print_settings(false, print_settings => {
+                    frappe.ui.get_print_settings(false, (print_settings) => {
                         frappe.render_grid({
                             template: "gstr_3b_report",
                             title: __(this.doctype),
@@ -96,10 +92,7 @@ frappe.ui.form.on("GSTR 3B Report", {
 
             gstr_2b.regenerate({
                 gstin: frm.doc.company_gstin,
-                return_period: india_compliance.get_period(
-                    frm.doc.month_or_quarter,
-                    frm.doc.year,
-                ),
+                return_period: india_compliance.get_period(frm.doc.month_or_quarter, frm.doc.year),
                 doctype: frm.doc.doctype,
                 callback: function (regeneration_status) {
                     if (regeneration_status.status === "ER") {

@@ -58,13 +58,13 @@ frappe.query_reports["GSTR-1"] = {
             reqd: 1,
             default: india_compliance.last_month_start(),
             width: "80",
-            on_change: report => {
+            on_change: (report) => {
                 let { from_date } = report.get_values();
                 from_date = frappe.datetime.str_to_obj(from_date);
 
                 report.set_filter_value(
                     "bifurcate_hsn",
-                    india_compliance.HSN_BIFURCATION_FROM <= from_date ? 1 : 0
+                    india_compliance.HSN_BIFURCATION_FROM <= from_date ? 1 : 0,
                 );
 
                 report.refresh();
@@ -87,15 +87,9 @@ frappe.query_reports["GSTR-1"] = {
                 label,
             })),
             default: "B2B",
-            on_change: report => {
-                report.page
-                    .get_inner_group_button("Download as JSON")
-                    .find(".dropdown-item")
-                    .remove();
-                report.page
-                    .get_inner_group_button("Download as Excel")
-                    .find(".dropdown-item")
-                    .remove();
+            on_change: (report) => {
+                report.page.get_inner_group_button("Download as JSON").find(".dropdown-item").remove();
+                report.page.get_inner_group_button("Download as Excel").find(".dropdown-item").remove();
                 create_download_buttons(report);
                 report.refresh();
             },
@@ -117,25 +111,25 @@ function create_download_buttons(report) {
     report.page.add_inner_button(
         TYPES_OF_BUSINESS[report.get_values().type_of_business],
         () => download_current_report_json(report),
-        __("Download as JSON")
+        __("Download as JSON"),
     );
 
     report.page.add_inner_button(
         __("Full Report"),
         () => download_full_report_json(report),
-        __("Download as JSON")
+        __("Download as JSON"),
     );
 
     report.page.add_inner_button(
         TYPES_OF_BUSINESS[report.get_values().type_of_business],
         () => download_current_report_excel(report),
-        __("Download as Excel")
+        __("Download as Excel"),
     );
 
     report.page.add_inner_button(
         __("Full Report"),
         () => download_full_report_excel(report),
-        __("Download as Excel")
+        __("Download as Excel"),
     );
 }
 
@@ -148,10 +142,7 @@ function download_current_report_json(report) {
         },
         callback: function (r) {
             if (r.message) {
-                india_compliance.trigger_file_download(
-                    JSON.stringify(r.message.data),
-                    r.message.file_name
-                );
+                india_compliance.trigger_file_download(JSON.stringify(r.message.data), r.message.file_name);
             }
         },
     });
@@ -165,10 +156,7 @@ function download_full_report_json(report) {
         },
         callback: function (r) {
             if (r.message) {
-                india_compliance.trigger_file_download(
-                    JSON.stringify(r.message.data),
-                    r.message.file_name
-                );
+                india_compliance.trigger_file_download(JSON.stringify(r.message.data), r.message.file_name);
             }
         },
     });
@@ -198,8 +186,5 @@ function show_gstr_1_beta_alert(report) {
         ${__("is released with improved features and user experience. Try it out now!")}
         `;
 
-    india_compliance.show_dismissable_alert(
-        report.page.wrapper.find(".container.page-body"),
-        alert_message
-    );
+    india_compliance.show_dismissable_alert(report.page.wrapper.find(".container.page-body"), alert_message);
 }

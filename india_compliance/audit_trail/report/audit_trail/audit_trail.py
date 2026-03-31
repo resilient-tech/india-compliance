@@ -238,9 +238,7 @@ class DetailedReport(BaseAuditTrail):
         ]
 
         if doctype == "Payment Entry":
-            fields.extend(
-                ["party_type", "party_name", "total_allocated_amount as amount"]
-            )
+            fields.extend(["party_type", "party_name", "total_allocated_amount as amount"])
 
         # Amount
         if doctype == "Subcontracting Receipt":
@@ -275,9 +273,7 @@ class DetailedReport(BaseAuditTrail):
         for row in records:
             row["date_time"] = format_datetime(row["date_time"])
             row["doctype"] = doctype
-            row["creation_date"] = getdate(
-                format_date(row["date_time"], get_user_date_format())
-            )
+            row["creation_date"] = getdate(format_date(row["date_time"], get_user_date_format()))
 
             if doctype == "Bill of Entry":
                 row["party_name"] = ""

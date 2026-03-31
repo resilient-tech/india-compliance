@@ -10,11 +10,9 @@ india_compliance.NumberCardManager = class NumberCardManager {
     make_cards() {
         this.$wrapper.empty();
         this.$cards = [];
-        this.$summary = $(`<div class="report-summary"></div>`)
-            .hide()
-            .appendTo(this.$wrapper);
+        this.$summary = $(`<div class="report-summary"></div>`).hide().appendTo(this.$wrapper);
 
-        this.cards.forEach(summary => {
+        this.cards.forEach((summary) => {
             let number_card = frappe.utils.build_summary_item(summary);
             this.$cards.push(number_card);
 

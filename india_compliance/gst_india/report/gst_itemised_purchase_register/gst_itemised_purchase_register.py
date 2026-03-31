@@ -2,10 +2,10 @@
 # For license information, please see license.txt
 
 
-from frappe import _
 from erpnext.accounts.report.item_wise_purchase_register.item_wise_purchase_register import (
     _execute,
 )
+from frappe import _
 
 from india_compliance.gst_india.report.gst_purchase_register.gst_purchase_register import (
     get_additional_table_columns as get_pi_columns,

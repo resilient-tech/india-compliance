@@ -27,10 +27,10 @@ frappe.ui.form.on("Accounts Settings", {
                         frappe.meta.get_label(
                             "Accounts Settings",
                             "delete_linked_ledger_entries",
-                            frm.doc.name
-                        )
+                            frm.doc.name,
+                        ),
                     ),
-                ]
+                ],
             );
             frm.set_value("delete_linked_ledger_entries", 0);
         }
@@ -44,16 +44,10 @@ frappe.ui.form.on("Accounts Settings", {
 });
 
 function toggle_linked_ledger_entry_deletion(frm) {
-    frm.set_df_property(
-        "delete_linked_ledger_entries",
-        "read_only",
-        frm.doc.enable_audit_trail
-    );
+    frm.set_df_property("delete_linked_ledger_entries", "read_only", frm.doc.enable_audit_trail);
     frm.set_df_property(
         "delete_linked_ledger_entries",
         "description",
-        frm.doc.enable_audit_trail
-            ? "This setting has been disabled to ensure Audit Trail integrity."
-            : ""
+        frm.doc.enable_audit_trail ? "This setting has been disabled to ensure Audit Trail integrity." : "",
     );
 }
