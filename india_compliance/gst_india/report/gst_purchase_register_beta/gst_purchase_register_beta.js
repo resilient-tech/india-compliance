@@ -18,7 +18,7 @@ const SUB_SECTION_MAPPING = {
     },
 };
 
-AMOUNT_FIELDS = [
+const AMOUNT_FIELDS = [
     "taxable_value",
     "total_amount",
     "total_tax",
@@ -130,7 +130,7 @@ function get_subcategory_options() {
     return Object.values(SUB_SECTION_MAPPING[sub_section]).flat();
 }
 
-custom_report_column_total = function (...args) {
+function custom_report_column_total(...args) {
     const summary_by = frappe.query_report.get_filter_value("summary_by");
     if (summary_by === "Overview") return 0;
 
@@ -145,4 +145,4 @@ custom_report_column_total = function (...args) {
             return acc + value;
         }
     }, 0);
-};
+}

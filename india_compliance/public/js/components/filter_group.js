@@ -20,7 +20,7 @@ india_compliance.FILTER_OPERATORS = {
     },
 };
 
-FILTER_GROUP_BUTTON = $(
+const FILTER_GROUP_BUTTON = $(
     `
     <div class="custom-button-group">
         <div class="filter-selector">

@@ -1,4 +1,4 @@
-DOCTYPE = "Subcontracting Receipt";
+const DOCTYPE = "Subcontracting Receipt";
 setup_e_waybill_actions(DOCTYPE);
 
 frappe.ui.form.on(DOCTYPE, {

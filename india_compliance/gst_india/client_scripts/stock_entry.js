@@ -1,5 +1,5 @@
 frappe.provide("india_compliance");
-DOCTYPE = "Stock Entry";
+const DOCTYPE = "Stock Entry";
 
 setup_e_waybill_actions(DOCTYPE);
 
@@ -120,7 +120,7 @@ frappe.ui.form.on(DOCTYPE, {
     async fetch_original_doc_ref(frm) {
         let existing_references = frm.doc.doc_references.map((row) => row.link_name);
 
-        data = await frappe.db.get_list(DOCTYPE, {
+        const data = await frappe.db.get_list(DOCTYPE, {
             filters: get_filters_for_relevant_stock_entries(frm.doc),
             group_by: "name",
         });

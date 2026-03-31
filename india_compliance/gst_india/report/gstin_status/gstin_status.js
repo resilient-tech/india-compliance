@@ -86,7 +86,7 @@ frappe.query_reports["GSTIN Status"] = {
     async handle_click_listner(e) {
         const gstin = e.target.attributes["data-gstin"].value;
 
-        this.toggle_gstin_update_btn(gstin, (disabled = true));
+        this.toggle_gstin_update_btn(gstin, true);
         this.set_btn_text(gstin, __("Updating"));
 
         try {
@@ -113,7 +113,7 @@ frappe.query_reports["GSTIN Status"] = {
                 message: __("Error while updating GSTIN status. Please try again later."),
                 indicator: "red",
             });
-            this.toggle_gstin_update_btn(gstin, (disabled = false));
+            this.toggle_gstin_update_btn(gstin, false);
             this.set_btn_text(gstin, __("Update"));
         }
     },
