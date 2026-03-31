@@ -20,14 +20,11 @@ requires = ["flit_core >=3.4,<4"]
 build-backend = "flit_core.buildapi"
 
 [tool.bench.frappe-dependencies]
-frappe = ">=17.0.0-dev,<18.0.0"
+frappe = ">=15.0.0-dev,<16.0.0"
 
 [tool.bench.dev-dependencies]
 parameterized = "~=0.8.1"
-<<<<<<< HEAD
 time-machine = "~=2.10.0"
-=======
-time-machine = "~=3.2.0"
 
 [tool.ruff]
 line-length = 110
@@ -73,4 +70,3 @@ docstring-code-format = true
 Homepage = "https://indiacompliance.app/"
 Repository = "https://github.com/resilient-tech/india-compliance"
 "Bug Reports" = "https://github.com/resilient-tech/india-compliance/issues/new?template=bug_report.yaml"
->>>>>>> ea25e232 (chore: add editorconfig and update pre-commit configuration for ruff integration)
