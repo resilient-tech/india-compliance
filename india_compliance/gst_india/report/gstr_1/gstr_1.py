@@ -221,7 +221,7 @@ class Gstr1Report:
                 b2c_row["cess_amount"] += flt(row["cess_amount"])
                 b2c_row["type"] = "E" if ecommerce_gstin else "OE"
 
-        for key, value in b2c_output.items():
+        for value in b2c_output.values():
             self.data.append(value)
 
     def is_b2cl_cdn(self, invoice):
@@ -1393,7 +1393,9 @@ class GSTR1DocumentIssuedSummary:
                 continue
             slice_indices.append(i)
 
-        document_series_list = [data[i:j] for i, j in zip([0] + slice_indices, slice_indices + [None])]
+        document_series_list = [
+            data[i:j] for i, j in zip([0, *slice_indices], [*slice_indices, None], strict=False)
+        ]
 
         for series in document_series_list:
             draft_count = sum(1 for doc in series if doc.docstatus == 0)
@@ -1635,10 +1637,8 @@ def set_gst_defaults(filters):
         filters.get("company"), filters.get("company_address")
     )
 
-    fp = "%02d%s" % (
-        getdate(filters["to_date"]).month,
-        getdate(filters["to_date"]).year,
-    )
+    date = getdate(filters["to_date"])
+    fp = f"{date.month:02d}{date.year}"
 
     gst_json = {"version": "GST3.0.4", "hash": "hash", "gstin": gstin, "fp": fp}
     return gst_json
@@ -1654,7 +1654,7 @@ def format_data_to_dict(data):
         return data_rows
 
     columns = [column["fieldname"] for column in data[0]]
-    report_data = [dict(zip(columns, row)) for row in data_rows]
+    report_data = [dict(zip(columns, row, strict=False)) for row in data_rows]
     return report_data
 
 
@@ -1665,7 +1665,7 @@ def get_b2b_json(res, gstin):
         if not gst_in:
             continue
 
-        for number, invoice in res[gst_in].items():
+        for invoice in res[gst_in].values():
             if not invoice[0]["place_of_supply"]:
                 frappe.throw(
                     _(
@@ -1678,7 +1678,7 @@ def get_b2b_json(res, gstin):
                 )
 
             inv_item = get_basic_invoice_detail(invoice[0])
-            inv_item["pos"] = "%02d" % int(invoice[0]["place_of_supply"].split("-")[0])
+            inv_item["pos"] = f"{int(invoice[0]['place_of_supply'].split('-')[0]):02d}"
             inv_item["rchrg"] = invoice[0]["is_reverse_charge"]
             inv_item["inv_typ"] = get_invoice_type(invoice[0])
 
@@ -1787,7 +1787,7 @@ def get_b2cl_json(res, gstin):
                 ).format(frappe.bold("Place Of Supply"))
             )
 
-        b2cl_item, inv = {"pos": "%02d" % int(pos.split("-")[0]), "inv": []}, []
+        b2cl_item, inv = {"pos": f"{int(pos.split('-')[0]):02d}", "inv": []}, []
 
         for row in res[pos]:
             inv_item = get_basic_invoice_detail(row)
@@ -1844,7 +1844,7 @@ def get_cdnr_reg_json(res, gstin):
         if not gst_in:
             continue
 
-        for number, invoice in res[gst_in].items():
+        for invoice in res[gst_in].values():
             if not invoice[0]["place_of_supply"]:
                 frappe.throw(
                     _(
@@ -1861,7 +1861,7 @@ def get_cdnr_reg_json(res, gstin):
                 "nt_dt": getdate(invoice[0]["posting_date"]).strftime("%d-%m-%Y"),
                 "val": abs(flt(invoice[0]["invoice_value"], 2)),
                 "ntty": invoice[0]["document_type"],
-                "pos": "%02d" % int(invoice[0]["place_of_supply"].split("-")[0]),
+                "pos": f"{int(invoice[0]['place_of_supply'].split('-')[0]):02d}",
                 "rchrg": invoice[0]["is_reverse_charge"],
                 "inv_typ": get_invoice_type(invoice[0]),
             }
@@ -1883,7 +1883,7 @@ def get_cdnr_reg_json(res, gstin):
 def get_cdnr_unreg_json(res, gstin):
     out = []
 
-    for invoice, items in res.items():
+    for items in res.values():
         inv_type = get_invoice_type(items[0])
 
         inv_item = {
@@ -1897,7 +1897,7 @@ def get_cdnr_unreg_json(res, gstin):
         if inv_type not in ("EXPWP", "EXPWOP"):
             inv_item.update(
                 {
-                    "pos": "%02d" % int(items[0]["place_of_supply"].split("-")[0]),
+                    "pos": f"{int(items[0]['place_of_supply'].split('-')[0]):02d}",
                 }
             )
 
@@ -1920,16 +1920,15 @@ def get_exempted_json(data):
         ]
     }
 
-    for i, v in enumerate(data):
-        if data[i].get("nil_rated"):
-            out["inv"][i]["nil_amt"] = flt(data[i]["nil_rated"], 2)
+    for i, row in enumerate(data):
+        if row.get("nil_rated"):
+            out["inv"][i]["nil_amt"] = flt(row["nil_rated"], 2)
 
-        if data[i].get("exempted"):
-            out["inv"][i]["expt_amt"] = flt(data[i]["exempted"], 2)
+        if row.get("exempted"):
+            out["inv"][i]["expt_amt"] = flt(row["exempted"], 2)
 
-        if data[i].get("non_gst"):
-            out["inv"][i]["ngsup_amt"] = flt(data[i]["non_gst"], 2)
-
+        if row.get("non_gst"):
+            out["inv"][i]["ngsup_amt"] = flt(row["non_gst"], 2)
     return out
 
 
@@ -2055,7 +2054,7 @@ def get_rate_and_tax_details(row, gstin):
     }
 
     # calculate rate
-    num = 1 if not row["rate"] else "%d%02d" % (row["rate"], 1)
+    num = 1 if not row["rate"] else f"{row['rate']:d}{1:02d}"
     rate = row.get("rate") or 0
 
     # calculate tax amount added

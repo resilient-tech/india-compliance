@@ -4,7 +4,8 @@
 import datetime
 import re
 from collections import defaultdict
-from typing import Literal, Sequence
+from collections.abc import Sequence
+from typing import Literal
 
 import frappe
 from frappe import _

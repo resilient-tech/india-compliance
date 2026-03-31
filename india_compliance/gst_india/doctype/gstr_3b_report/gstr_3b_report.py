@@ -659,7 +659,7 @@ class GSTR3BReport(Document):
 
     def set_supplies_liable_to_reverse_charge(self):
         section = self.report_dict["sup_details"]["isup_rev"]
-        for inv, invoice_details in self.invoice_map.items():
+        for inv in self.invoice_map:
             gst_treatment_section = self.invoice_item_wise_tax_details.get(inv, {})
             for item in gst_treatment_section.values():
                 section["txval"] += item.get("taxable_value")
