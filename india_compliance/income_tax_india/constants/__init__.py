@@ -115,6 +115,4 @@ NEW_TDS_SECTIONS = [
     "393(1) Sl.6(ii)",  # Contractor/professional by Ind/HUF >50L (was 194M)
 ]
 
-TDS_SECTIONS = OLD_TDS_SECTIONS + NEW_TDS_SECTIONS
-
 TDS_ENTITY_TYPE = ["Individual", "Company", "Company Assessee", "No PAN / Invalid PAN"]
