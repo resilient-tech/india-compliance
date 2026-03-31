@@ -7,14 +7,13 @@ import json
 import os
 from collections import defaultdict
 
-from openpyxl.cell.cell import MergedCell
-
 import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder import Case
 from frappe.query_builder.functions import IfNull, Sum
 from frappe.utils import cint, cstr, flt, get_first_day, get_last_day
+from openpyxl.cell.cell import MergedCell
 
 from india_compliance.gst_india.constants import (
     INVOICE_DOCTYPES,
@@ -81,17 +80,11 @@ class GSTR3BReport(Document):
 
             self.gst_details = self.get_company_gst_details()
             self.report_dict["gstin"] = self.gst_details.get("gstin")
-            self.report_dict["ret_period"] = get_period(
-                self.month_or_quarter, self.year
-            )
+            self.report_dict["ret_period"] = get_period(self.month_or_quarter, self.year)
             self.month_or_quarter_no = get_period(self.month_or_quarter)
-            self.from_date = get_first_day(
-                f"{cint(self.year)}-{self.month_or_quarter_no[0]}-01"
-            )
+            self.from_date = get_first_day(f"{cint(self.year)}-{self.month_or_quarter_no[0]}-01")
 
-            self.to_date = get_last_day(
-                f"{cint(self.year)}-{self.month_or_quarter_no[1]}-01"
-            )
+            self.to_date = get_last_day(f"{cint(self.year)}-{self.month_or_quarter_no[1]}-01")
 
             self.get_outward_supply_details("Sales Invoice")
             self.set_outward_taxable_supplies()
@@ -104,9 +97,7 @@ class GSTR3BReport(Document):
             itc_details = self.get_itc_details()
             self.set_itc_details(itc_details)
             self.get_itc_reversal_entries()
-            inward_nil_exempt = self.get_inward_nil_exempt(
-                self.gst_details.get("gst_state")
-            )
+            inward_nil_exempt = self.get_inward_nil_exempt(self.gst_details.get("gst_state"))
             self.set_reclaim_of_itc_reversal()
             self.set_inward_nil_exempt(inward_nil_exempt)
 
@@ -133,9 +124,7 @@ class GSTR3BReport(Document):
             raise e
 
         finally:
-            frappe.publish_realtime(
-                "gstr3b_report_generation", doctype=self.doctype, docname=self.name
-            )
+            frappe.publish_realtime("gstr3b_report_generation", doctype=self.doctype, docname=self.name)
 
     def apply_itc_period_filter(self, query, doc):
         return _apply_itc_period_filter(
@@ -193,9 +182,7 @@ class GSTR3BReport(Document):
             self.filter_by,
             self.from_date,
             self.to_date,
-        ).get_for_purchase(
-            "ITC restricted due to PoS rules", group_by="ineligibility_reason"
-        )
+        ).get_for_purchase("ITC restricted due to PoS rules", group_by="ineligibility_reason")
 
         self.process_ineligible_credit(ineligible_credit)
 
@@ -206,9 +193,7 @@ class GSTR3BReport(Document):
             self.filter_by,
             self.from_date,
             self.to_date,
-        ).get_for_purchase(
-            "Ineligible As Per Section 17(5)", group_by="ineligibility_reason"
-        )
+        ).get_for_purchase("Ineligible As Per Section 17(5)", group_by="ineligibility_reason")
 
         self.process_ineligible_credit(ineligible_credit)
 
@@ -260,9 +245,7 @@ class GSTR3BReport(Document):
             )
             .where(journal_entry.voucher_type == "Reversal Of ITC")
             .where(IfNull(journal_entry_account.gst_tax_type, "") != "")
-            .groupby(
-                journal_entry_account.gst_tax_type, journal_entry.ineligibility_reason
-            )
+            .groupby(journal_entry_account.gst_tax_type, journal_entry.ineligibility_reason)
         )
         reversal_entries = self.get_query_with_conditions(
             journal_entry, reversal_entries, party_gstin=""
@@ -277,9 +260,7 @@ class GSTR3BReport(Document):
                 index = 1
 
             tax_amount_key = GST_TAX_TYPE_MAP.get(entry.gst_tax_type)
-            self.report_dict["itc_elg"]["itc_rev"][index][
-                tax_amount_key
-            ] += entry.amount
+            self.report_dict["itc_elg"]["itc_rev"][index][tax_amount_key] += entry.amount
 
             net_itc[tax_amount_key] -= entry.amount
 
@@ -306,14 +287,10 @@ class GSTR3BReport(Document):
                 & (purchase_invoice.is_opening == "No")
                 & (purchase_invoice.company == self.company)
                 & (purchase_invoice.company_gstin == self.company_gstin)
-                & (
-                    purchase_invoice.company_gstin
-                    != IfNull(purchase_invoice.supplier_gstin, "")
-                )
+                & (purchase_invoice.company_gstin != IfNull(purchase_invoice.supplier_gstin, ""))
                 & (IfNull(purchase_invoice.itc_classification, "") != "")
                 & (
-                    IfNull(purchase_invoice.ineligibility_reason, "")
-                    != "ITC restricted due to PoS rules"
+                    IfNull(purchase_invoice.ineligibility_reason, "") != "ITC restricted due to PoS rules"
                 )  # Ignore as it is Ineligible for ITC
                 & (purchase_invoice.is_boe_applicable == 0)
             )
@@ -350,11 +327,7 @@ class GSTR3BReport(Document):
             .join(boe_taxes)
             .on(boe_taxes.parent == boe.name)
             .select(
-                Sum(
-                    Case()
-                    .when(boe_taxes.gst_tax_type == "igst", boe_taxes.tax_amount)
-                    .else_(0)
-                ).as_("iamt"),
+                Sum(Case().when(boe_taxes.gst_tax_type == "igst", boe_taxes.tax_amount).else_(0)).as_("iamt"),
                 Sum(
                     Case()
                     .when(
@@ -441,9 +414,7 @@ class GSTR3BReport(Document):
                 d.place_of_supply = "00-" + cstr(state)
 
             supplier_state = address_state_map.get(d.supplier_address) or state
-            is_intra_state = cstr(supplier_state) == cstr(
-                d.place_of_supply.split("-")[1]
-            )
+            is_intra_state = cstr(supplier_state) == cstr(d.place_of_supply.split("-")[1])
             amount = flt(d.taxable_value, 2)
 
             if d.gst_treatment != "Non-GST":
@@ -502,20 +473,13 @@ class GSTR3BReport(Document):
                 item_code_gst_treatment_map[item_code] = gst_treatment
 
                 invoice_items.setdefault(gst_treatment, defaultdict(int))
-                invoice_items[gst_treatment]["taxable_value"] += item.get(
-                    "taxable_value", 0
-                )
+                invoice_items[gst_treatment]["taxable_value"] += item.get("taxable_value", 0)
 
-                if (
-                    details.doctype == "Sales Invoice"
-                    and doc in self.reverse_charge_invoices
-                ):
+                if details.doctype == "Sales Invoice" and doc in self.reverse_charge_invoices:
                     continue
 
                 for tax, tax_type in GST_TAX_TYPE_MAP.items():
-                    invoice_items[gst_treatment][tax_type] += item.get(
-                        f"{tax}_amount", 0
-                    )
+                    invoice_items[gst_treatment][tax_type] += item.get(f"{tax}_amount", 0)
 
             self.invoice_item_wise_tax_details[doc] = invoice_items
 
@@ -554,9 +518,7 @@ class GSTR3BReport(Document):
 
         invoice_details = query.orderby(invoice.name).run(as_dict=True)
         self.invoice_map = {d.name: d for d in invoice_details}
-        self.reverse_charge_invoices = {
-            d.name for d in invoice_details if d.is_reverse_charge
-        }
+        self.reverse_charge_invoices = {d.name for d in invoice_details if d.is_reverse_charge}
 
     def set_advances_received_or_adjusted(self):
         """
@@ -643,9 +605,7 @@ class GSTR3BReport(Document):
         for inv, invoice_details in self.invoice_map.items():
             gst_treatment_details = self.invoice_item_wise_tax_details.get(inv, {})
             gst_category = invoice_details.get("gst_category")
-            place_of_supply = (
-                invoice_details.get("place_of_supply") or "00-Other Territory"
-            )
+            place_of_supply = invoice_details.get("place_of_supply") or "00-Other Territory"
 
             doc = frappe._dict(
                 {
@@ -691,12 +651,8 @@ class GSTR3BReport(Document):
                         },
                     )
 
-                    inter_state_supply_details[(gst_category, place_of_supply)][
-                        "txval"
-                    ] += taxable_value
-                    inter_state_supply_details[(gst_category, place_of_supply)][
-                        "iamt"
-                    ] += details.get("iamt")
+                    inter_state_supply_details[(gst_category, place_of_supply)]["txval"] += taxable_value
+                    inter_state_supply_details[(gst_category, place_of_supply)]["iamt"] += details.get("iamt")
 
         self.set_inter_state_supply(inter_state_supply_details)
 
@@ -730,11 +686,7 @@ class GSTR3BReport(Document):
         return {
             "gstin": self.company_gstin,
             "gst_state": next(
-                (
-                    key
-                    for key, value in STATE_NUMBERS.items()
-                    if value == self.company_gstin[:2]
-                ),
+                (key for key, value in STATE_NUMBERS.items() if value == self.company_gstin[:2]),
                 None,
             ),
         }
@@ -745,9 +697,7 @@ class GSTR3BReport(Document):
         for doctype in INVOICE_DOCTYPES:
             invoice = frappe.qb.DocType(doctype)
             party_gstin = (
-                invoice.billing_address_gstin
-                if doctype == "Sales Invoice"
-                else invoice.supplier_gstin
+                invoice.billing_address_gstin if doctype == "Sales Invoice" else invoice.supplier_gstin
             )
 
             query = (
@@ -770,15 +720,11 @@ class GSTR3BReport(Document):
 
 
 def get_address_state_map():
-    return frappe._dict(
-        frappe.get_all("Address", fields=["name", "gst_state"], as_list=1)
-    )
+    return frappe._dict(frappe.get_all("Address", fields=["name", "gst_state"], as_list=1))
 
 
 def get_json(template):
-    file_path = os.path.join(
-        os.path.dirname(__file__), "{template}.json".format(template=template)
-    )
+    file_path = os.path.join(os.path.dirname(__file__), "{template}.json".format(template=template))
     with open(file_path, "r") as f:
         return cstr(f.read())
 
@@ -1003,9 +949,7 @@ class GSTR3BExcelExporter:
 
     def _set_ecommerce_supplies(self):
         eco_dtls = self.data.get("eco_dtls", {})
-        self._set_section_data(
-            "eco_reg_sup", eco_dtls.get("eco_reg_sup", {}), "taxable_only"
-        )
+        self._set_section_data("eco_reg_sup", eco_dtls.get("eco_reg_sup", {}), "taxable_only")
 
     def _set_inter_state_supplies(self):
         inter_sup = self.data.get("inter_sup", {})
@@ -1038,12 +982,8 @@ class GSTR3BExcelExporter:
                         "uin": {"txval": 0, "iamt": 0},
                     }
 
-                pos_data[state_name][category_name]["txval"] += flt(
-                    item.get("txval", 0), 2
-                )
-                pos_data[state_name][category_name]["iamt"] += flt(
-                    item.get("iamt", 0), 2
-                )
+                pos_data[state_name][category_name]["txval"] += flt(item.get("txval", 0), 2)
+                pos_data[state_name][category_name]["iamt"] += flt(item.get("iamt", 0), 2)
 
         return pos_data
 
@@ -1063,9 +1003,7 @@ class GSTR3BExcelExporter:
 
     def _set_itc_details(self):
         itc_elg = self.data.get("itc_elg", {})
-        self._populate_itc_sections(
-            itc_elg.get("itc_avl", []), self.ITC_AVAILABLE_TYPES
-        )
+        self._populate_itc_sections(itc_elg.get("itc_avl", []), self.ITC_AVAILABLE_TYPES)
         self._populate_itc_sections(itc_elg.get("itc_rev", []), self.ITC_REVERSED_TYPES)
 
     def _populate_itc_sections(self, itc_entries, type_mapping):
@@ -1086,9 +1024,7 @@ class GSTR3BExcelExporter:
             supply_type = supply_data.get("ty")
             if supply_type in self.INWARD_SUPPLY_TYPES:
                 row_key = self.INWARD_SUPPLY_TYPES[supply_type]
-                self._set_section_data(
-                    row_key, supply_data, "inward", self.INWARD_COLUMNS
-                )
+                self._set_section_data(row_key, supply_data, "inward", self.INWARD_COLUMNS)
 
     def _set_section_data(self, row_key, data, column_set, columns_dict=None):
         row = self.ROWS[row_key]

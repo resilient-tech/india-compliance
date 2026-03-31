@@ -19,13 +19,7 @@ def update_taxable_items():
             .set(doctype.gst_treatment, "Taxable")
             .where(doctype.gst_treatment.notin(("Zero-Rated", "Taxable")))
             .where(
-                (
-                    doctype.cgst_amount
-                    + doctype.igst_amount
-                    + doctype.sgst_amount
-                    + doctype.cess_amount
-                )
-                != 0
+                (doctype.cgst_amount + doctype.igst_amount + doctype.sgst_amount + doctype.cess_amount) != 0
             )
             .run()
         )

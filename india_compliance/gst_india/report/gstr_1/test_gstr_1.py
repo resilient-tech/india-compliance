@@ -75,9 +75,7 @@ class TestGSTR1DocumentIssuedSummary(FrappeTestCase):
         }
         report_data = format_data_to_dict(execute(filters))
 
-        report_json = get_json(
-            "Document Issued Summary", "24AAQCA8719H1ZC", report_data, filters
-        )
+        report_json = get_json("Document Issued Summary", "24AAQCA8719H1ZC", report_data, filters)
 
         self.assertDictEqual(report_json, JSON_OUTPUT)
 
@@ -93,9 +91,7 @@ def create_test_items():
     # Sales Invoices
     sales_invoices = create_sales_invoices(3)
     create_sales_invoices(1)[0].cancel()
-    sales_invoice = create_sales_invoices(1, do_not_save=True, do_not_submit=True)[
-        0
-    ].save()
+    sales_invoice = create_sales_invoices(1, do_not_save=True, do_not_submit=True)[0].save()
 
     invoices_for_outward_supply.append(
         {
@@ -111,9 +107,9 @@ def create_test_items():
     # Credit Notes
     sales_invoices = create_sales_invoices(3, is_return=1, qty=-1)
     create_sales_invoices(1, is_return=1, qty=-1)[0].cancel()
-    sales_invoice = create_sales_invoices(
-        1, is_return=1, qty=-1, do_not_save=True, do_not_submit=True
-    )[0].save()
+    sales_invoice = create_sales_invoices(1, is_return=1, qty=-1, do_not_save=True, do_not_submit=True)[
+        0
+    ].save()
 
     credit_notes.append(
         {
@@ -197,9 +193,7 @@ def create_sales_invoices(count, **kwargs):
 
 def create_purchase_invoices(count, **kwargs):
     """Create a list of purchase invoices."""
-    return [
-        create_purchase_invoice(**kwargs, is_reverse_charge=True) for _ in range(count)
-    ]
+    return [create_purchase_invoice(**kwargs, is_reverse_charge=True) for _ in range(count)]
 
 
 def create_opening_entry():

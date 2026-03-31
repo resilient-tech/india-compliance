@@ -16,9 +16,7 @@ class TestVersion(FrappeTestCase):
         doc.save(ignore_version=False)
         doc.submit()
 
-        version = frappe.get_doc(
-            "Version", {"ref_doctype": doc.doctype, "docname": doc.name}
-        )
+        version = frappe.get_doc("Version", {"ref_doctype": doc.doctype, "docname": doc.name})
 
         version.ref_doctype = "Address"
 
@@ -43,9 +41,7 @@ class TestVersion(FrappeTestCase):
         doc.save(ignore_version=False)
         doc.submit()
 
-        version = frappe.get_doc(
-            "Version", {"ref_doctype": doc.doctype, "docname": doc.name}
-        )
+        version = frappe.get_doc("Version", {"ref_doctype": doc.doctype, "docname": doc.name})
 
         version.ref_doctype = "Address"
 

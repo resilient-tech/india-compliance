@@ -1,14 +1,11 @@
 export async function get_api_secret() {
-    return call_server_method(
-        "india_compliance.gst_india.page.india_compliance_account.get_api_secret"
-    );
+    return call_server_method("india_compliance.gst_india.page.india_compliance_account.get_api_secret");
 }
 
 export async function set_api_secret(api_secret) {
-    return call_server_method(
-        "india_compliance.gst_india.page.india_compliance_account.set_api_secret",
-        { api_secret }
-    );
+    return call_server_method("india_compliance.gst_india.page.india_compliance_account.set_api_secret", {
+        api_secret,
+    });
 }
 
 export function login(email) {

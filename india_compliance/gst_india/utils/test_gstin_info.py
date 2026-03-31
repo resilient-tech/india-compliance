@@ -1,11 +1,10 @@
 import unittest
 from unittest.mock import Mock, patch
 
-import responses
-from responses import matchers
-
 import frappe
+import responses
 from frappe.tests.utils import FrappeTestCase, change_settings
+from responses import matchers
 
 from india_compliance.gst_india.utils.gstin_info import get_gstin_info
 
@@ -78,9 +77,7 @@ class TestGstinInfo(unittest.TestCase):
         super().setUpClass()
 
         cls.gstin = "24AAUPV7468F1ZW"
-        cls.mock_public_api_patcher = patch(
-            "india_compliance.gst_india.utils.gstin_info.PublicAPI"
-        )
+        cls.mock_public_api_patcher = patch("india_compliance.gst_india.utils.gstin_info.PublicAPI")
         cls.mock_public_api = cls.mock_public_api_patcher.start()
 
     @classmethod
@@ -89,9 +86,7 @@ class TestGstinInfo(unittest.TestCase):
 
     def test_get_gstin_info(self):
         self.mock_public_api.return_value = Mock()
-        self.mock_public_api.return_value.get_gstin_info.return_value = (
-            self.MOCK_GSTIN_INFO
-        )
+        self.mock_public_api.return_value.get_gstin_info.return_value = self.MOCK_GSTIN_INFO
         gstin_info = get_gstin_info(self.gstin)
         self.assertDictEqual(
             gstin_info,

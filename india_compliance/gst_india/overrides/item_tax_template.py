@@ -26,9 +26,7 @@ def validate_zero_tax_options(doc):
 
 def validate_tax_rates(doc):
     if doc.gst_rate < 0 or doc.gst_rate > 100:
-        frappe.throw(
-            _("GST Rate should be between 0 and 100"), title=_("Invalid GST Rate")
-        )
+        frappe.throw(_("GST Rate should be between 0 and 100"), title=_("Invalid GST Rate"))
 
     if not doc.taxes:
         return
@@ -90,9 +88,7 @@ def get_accounts_with_negative_rate(company):
     )  # add refund accounts
 
     purchase_rcm_accounts = list(
-        get_gst_accounts_by_type(
-            company, "Purchase Reverse Charge", throw=False
-        ).values()
+        get_gst_accounts_by_type(company, "Purchase Reverse Charge", throw=False).values()
     )
 
     if not purchase_rcm_accounts:

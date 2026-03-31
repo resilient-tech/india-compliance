@@ -1,4 +1,9 @@
 import frappe
+from erpnext.accounts.utils import get_fiscal_year
+from erpnext.assets.doctype.asset_depreciation_schedule.asset_depreciation_schedule import (
+    get_asset_depr_schedule_doc,
+    get_default_wdv_or_dd_depr_amount,
+)
 from frappe import _
 from frappe.utils import (
     add_days,
@@ -10,11 +15,6 @@ from frappe.utils import (
     getdate,
     is_last_day_of_the_month,
     month_diff,
-)
-from erpnext.accounts.utils import get_fiscal_year
-from erpnext.assets.doctype.asset_depreciation_schedule.asset_depreciation_schedule import (
-    get_asset_depr_schedule_doc,
-    get_default_wdv_or_dd_depr_amount,
 )
 
 
@@ -50,9 +50,7 @@ def get_wdv_or_dd_depr_amount(
 
     rate_of_depreciation = fb_row.rate_of_depreciation
 
-    start_date_of_next_fiscal_year = add_days(
-        get_fiscal_year(asset.available_for_use_date)[2], 1
-    )
+    start_date_of_next_fiscal_year = add_days(get_fiscal_year(asset.available_for_use_date)[2], 1)
 
     num_days_asset_used_in_fiscal_year = date_diff(
         start_date_of_next_fiscal_year, asset.available_for_use_date
@@ -74,21 +72,15 @@ def get_wdv_or_dd_depr_amount(
     if schedule_idx == 0:
         previous_schedule_date = add_days(asset.available_for_use_date, -1)
     else:
-        previous_schedule_date = add_months(
-            schedule_date, -1 * cint(fb_row.frequency_of_depreciation)
-        )
+        previous_schedule_date = add_months(schedule_date, -1 * cint(fb_row.frequency_of_depreciation))
         if is_last_day:
             previous_schedule_date = get_last_day(previous_schedule_date)
 
     if fb_row.frequency_of_depreciation == 12:
         if schedule_date < start_date_of_next_fiscal_year:
-            depreciation_amount = flt(depreciable_value) * (
-                flt(rate_of_depreciation) / 100
-            )
+            depreciation_amount = flt(depreciable_value) * (flt(rate_of_depreciation) / 100)
         else:
-            depreciation_amount = flt(yearly_opening_wdv) * (
-                flt(fb_row.rate_of_depreciation) / 100
-            )
+            depreciation_amount = flt(yearly_opening_wdv) * (flt(fb_row.rate_of_depreciation) / 100)
             # if leap year, then consider 366 days
             if is_leap_year(cint(schedule_date.year)) and fb_row.daily_prorata_based:
                 depreciation_amount = depreciation_amount * 366 / 365
@@ -96,10 +88,7 @@ def get_wdv_or_dd_depr_amount(
         if fb_row.daily_prorata_based:
             if schedule_date >= start_date_of_next_fiscal_year:
                 num_days_asset_used_in_fiscal_year = 365
-            fraction = (
-                date_diff(schedule_date, previous_schedule_date)
-                / num_days_asset_used_in_fiscal_year
-            )
+            fraction = date_diff(schedule_date, previous_schedule_date) / num_days_asset_used_in_fiscal_year
         else:
             if schedule_date >= start_date_of_next_fiscal_year:
                 fraction = 1 / 12
@@ -111,14 +100,10 @@ def get_wdv_or_dd_depr_amount(
                 fraction = 1 / no_of_months
 
         if schedule_date < start_date_of_next_fiscal_year:
-            depreciation_amount = (
-                flt(depreciable_value) * (flt(rate_of_depreciation) / 100) * fraction
-            )
+            depreciation_amount = flt(depreciable_value) * (flt(rate_of_depreciation) / 100) * fraction
         else:
             depreciation_amount = (
-                flt(yearly_opening_wdv)
-                * (flt(fb_row.rate_of_depreciation) / 100)
-                * fraction
+                flt(yearly_opening_wdv) * (flt(fb_row.rate_of_depreciation) / 100) * fraction
             )
     else:
         frappe.throw(_("Only monthly and yearly depreciations allowed yet."))
@@ -135,9 +120,7 @@ def cancel_depreciation_entries(asset_doc, date):
 
     start_date_of_fiscal_year = get_fiscal_year(date)[1]
 
-    fb_for_income_tax_map = dict(
-        frappe.db.get_all("Finance Book", ["name", "for_income_tax"], as_list=True)
-    )
+    fb_for_income_tax_map = dict(frappe.db.get_all("Finance Book", ["name", "for_income_tax"], as_list=True))
 
     for row in asset_doc.get("finance_books"):
         if not row.finance_book:
@@ -146,9 +129,7 @@ def cancel_depreciation_entries(asset_doc, date):
         if not fb_for_income_tax_map[row.finance_book]:
             continue
 
-        asset_depr_schedule_doc = get_asset_depr_schedule_doc(
-            asset_doc.name, "Active", row.finance_book
-        )
+        asset_depr_schedule_doc = get_asset_depr_schedule_doc(asset_doc.name, "Active", row.finance_book)
 
         for d in asset_depr_schedule_doc.get("depreciation_schedule"):
             if getdate(d.schedule_date) < getdate(start_date_of_fiscal_year):

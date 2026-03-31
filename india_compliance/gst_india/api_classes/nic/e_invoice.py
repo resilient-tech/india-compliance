@@ -17,9 +17,7 @@ class EInvoiceAPI(BaseAPI):
         # Generate IRN errors
         "2150": "Duplicate IRN",
         # Get e-Invoice by IRN errors
-        "2283": (
-            "IRN details cannot be provided as it is generated more than 2 days ago"
-        ),
+        "2283": ("IRN details cannot be provided as it is generated more than 2 days ago"),
         # Cancel IRN errors
         "9999": "Invoice is not active",
         "4002": "EwayBill is already generated for this IRN",
@@ -167,9 +165,7 @@ class EnrichedEInvoiceAPI(EInvoiceAPI):
 
     def handle_duplicate_irn_response(self, result):
         if isinstance(result, list):
-            dup_info = next(
-                (info for info in result if info.get("InfCd") == "DUPIRN"), None
-            )
+            dup_info = next((info for info in result if info.get("InfCd") == "DUPIRN"), None)
             result = dup_info or result[0]
 
         return result
@@ -230,9 +226,7 @@ class StandardEInvoiceAPI(EInvoiceAPI):
 
         # throw
         formatted_error_message = (
-            ("<br>").join(error_messages)
-            if error_messages
-            else frappe.as_json(response_json, indent=4)
+            ("<br>").join(error_messages) if error_messages else frappe.as_json(response_json, indent=4)
         )
 
         frappe.throw(
@@ -262,9 +256,7 @@ class StandardEInvoiceAPI(EInvoiceAPI):
     def handle_duplicate_irn_response(self, result):
         info_details = result.get("InfoDtls")
         if not result.Irn and isinstance(info_details, list):
-            dup_info = next(
-                (info for info in info_details if info.get("InfCd") == "DUPIRN"), None
-            )
+            dup_info = next((info for info in info_details if info.get("InfCd") == "DUPIRN"), None)
             result = dup_info or info_details[0]
 
         return result

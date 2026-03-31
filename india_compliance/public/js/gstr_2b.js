@@ -26,7 +26,7 @@ Object.assign(gstr_2b, {
                     regeneration_status = await gstr_2b.check_regenerate_status(
                         args.gstin,
                         reference_id,
-                        args.doctype
+                        args.doctype,
                     );
                 }
 
@@ -36,18 +36,12 @@ Object.assign(gstr_2b, {
     },
 
     check_regenerate_status: function (gstin, reference_id, doctype) {
-        return new Promise(resolve => {
+        return new Promise((resolve) => {
             gstr_2b._check_regenerate_status(gstin, reference_id, doctype, resolve);
         });
     },
 
-    _check_regenerate_status: function (
-        gstin,
-        reference_id,
-        doctype,
-        resolve,
-        retries = 0
-    ) {
+    _check_regenerate_status: function (gstin, reference_id, doctype, resolve, retries = 0) {
         if (retries >= RETRY_INTERVALS.length) {
             resolve({ status: "ER", error: "Failed to regenerate GSTR-2B" });
             return;
@@ -68,8 +62,8 @@ Object.assign(gstr_2b, {
                                 reference_id,
                                 doctype,
                                 resolve,
-                                retries + 1
-                            )
+                                retries + 1,
+                            ),
                         );
                         return;
                     }

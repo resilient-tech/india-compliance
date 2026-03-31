@@ -3,11 +3,10 @@ import json
 from datetime import datetime
 from io import BytesIO
 
+import frappe
 import pyqrcode
 from barcode import Code128
 from barcode.writer import ImageWriter
-
-import frappe
 from frappe import scrub
 from frappe.utils import flt
 
@@ -142,9 +141,7 @@ def get_fields_to_display(data, field_map, mandatory_fields=None):
     if mandatory_fields:
         fields_to_display.update(mandatory_fields)
 
-    return {
-        field: label for field, label in field_map.items() if field in fields_to_display
-    }
+    return {field: label for field, label in field_map.items() if field in fields_to_display}
 
 
 def get_e_invoice_item_fields(data):
@@ -217,9 +214,7 @@ class GSTBreakup:
                     },
                 )
 
-                tax_details["tax_amount"] += flt(
-                    item.get(f"{_tax_type}_amount", 0), self.precision
-                )
+                tax_details["tax_amount"] += flt(item.get(f"{_tax_type}_amount", 0), self.precision)
 
         return list(self.gst_breakup_data.values())
 
@@ -228,10 +223,7 @@ class GSTBreakup:
             return False
 
         return any(
-            any(
-                getattr(item, f"{scrub(tax_type)}_amount", 0) != 0
-                for tax_type in self.CESS_HEADERS
-            )
+            any(getattr(item, f"{scrub(tax_type)}_amount", 0) != 0 for tax_type in self.CESS_HEADERS)
             for item in self.doc.items
         )
 
@@ -247,9 +239,7 @@ class GSTBreakup:
 
         else:
             item_code = item.item_code or item.item_name
-            return self.gst_breakup_data.setdefault(
-                item_code, {"Item": item_code, "Taxable Amount": 0}
-            )
+            return self.gst_breakup_data.setdefault(item_code, {"Item": item_code, "Taxable Amount": 0})
 
     def is_hsn_wise_breakup_needed(self):
         if not frappe.get_meta(self.doc.doctype + " Item").has_field("gst_hsn_code"):

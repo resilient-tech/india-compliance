@@ -15,11 +15,11 @@ frappe.help.help_links["india-compliance-account"] = [
 frappe.help.help_links["Form/GST Settings"] = [
     {
         label: "Setting Up GST accounts",
-        url: docsUrl + "configuration/gst_setup#gst-accounts"
+        url: docsUrl + "configuration/gst_setup#gst-accounts",
     },
     {
         label: "Setting Up API",
-        url: docsUrl + "ewaybill-and-einvoice/gst_settings"
+        url: docsUrl + "ewaybill-and-einvoice/gst_settings",
     },
 ];
 
@@ -28,9 +28,8 @@ frappe.help.help_links["Form/Company"] = [
     {
         label: "Print Settings",
         url: docsUrl + "configuration/gst_setup#print-format",
-    }
+    },
 ];
-
 
 //Doctypes
 //Sales Invoice
@@ -53,7 +52,7 @@ frappe.help.help_links["Form/Sales Invoice"].push(
 frappe.help.help_links["Form/Stock Entry"].push({
     label: "Subcontracting Workflow",
     url: blogUrl + "posts/post5",
-})
+});
 
 //Subcontracting Receipt
 frappe.help.help_links["Form/Subcontracting Receipt"] = [
@@ -65,15 +64,15 @@ frappe.help.help_links["Form/Subcontracting Receipt"] = [
         label: "GST Job Work Stock Movement report",
         url: docsUrl + "gst-reports/miscellaneous_reports#gst-job-work-stock-movement-report",
     },
-]
+];
 
 //Journal Entry
 frappe.help.help_links["Form/Journal Entry"] = [
     {
         label: "Reversal of Input Tax Credit",
         url: docsUrl + "configuration/other_transaction#reversal-of-input-tax-credit",
-    }
-]
+    },
+];
 
 // GST Reports
 frappe.help.help_links["Form/GSTR-1 Beta"] = [
@@ -96,7 +95,6 @@ frappe.help.help_links["List/GSTR 3B Report"] = [
         url: docsUrl + "gst-reports/gstr3b",
     },
 ];
-
 
 //Query Reports
 frappe.help.help_links["query-report/GST Job Work Stock Movement"] = [
