@@ -2,10 +2,7 @@ import frappe
 from frappe.query_builder import Case
 from frappe.query_builder.functions import IfNull
 
-from india_compliance.income_tax_india.constants import OLD_TDS_SECTIONS
-from india_compliance.income_tax_india.overrides.company import (
-    create_or_update_tax_withholding_category,
-)
+from india_compliance.income_tax_india.constants import OLD_TDS_SECTIONS, TDS_ENTITY_TYPE
 
 # (old_section, entity_type) -> new_code
 OLD_TO_NEW = {
@@ -117,6 +114,11 @@ OLD_TO_NEW = {
 def execute():
     twc = frappe.qb.DocType("Tax Withholding Category")
 
+    # Step 0: Backfill tds_section and entity_type from old-style names [TDS - SECTION - ENTITY]
+    # for records that predate these fields
+    set_section_and_entity_type_in_tax_withholding_category()
+
+    # Step 1: Preserve old section code before overwriting
     (
         frappe.qb.update(twc)
         .set(twc.old_income_tax_section, twc.tds_section)
@@ -143,6 +145,28 @@ def execute():
         .run()
     )
 
-    company_list = frappe.get_all("Company", filters={"country": "India"}, pluck="name", order_by="lft asc")
-    for company in company_list:
-        create_or_update_tax_withholding_category(company)
+
+def set_section_and_entity_type_in_tax_withholding_category():
+    doctype = frappe.qb.DocType("Tax Withholding Category")
+    categories = (
+        frappe.qb.from_(doctype)
+        .select(doctype.name)
+        .where(IfNull(doctype.tds_section, "") == "")
+        .where(IfNull(doctype.entity_type, "") == "")
+        .run(pluck=True)
+    )
+
+    for category_name in categories:
+        splitted_name = category_name.split(" - ")
+        # old naming [TDS - SECTION - ENTITY]
+        if len(splitted_name) < 3:
+            continue
+
+        if splitted_name[1] in OLD_TDS_SECTIONS and splitted_name[-1] in TDS_ENTITY_TYPE:
+            (
+                frappe.qb.update(doctype)
+                .set("tds_section", splitted_name[1])
+                .set("entity_type", splitted_name[-1])
+                .where(doctype.name == category_name)
+                .run()
+            )
