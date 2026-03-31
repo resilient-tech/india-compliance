@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 from india_compliance.gst_india.constants import UOM_MAP
 from india_compliance.gst_india.utils.gstr_mapper_utils import GovDataMapper
 from india_compliance.gst_india.utils.itc_04 import (
@@ -21,7 +23,7 @@ class ITC04DataMapper(GovDataMapper):
     ITC-04 JSON format - https://developer.gst.gov.in/pages/apiportal/data/Returns/ITC04%20-%20Save/v1.2/ITC04%20-%20Save%20attributes.xlsx
     """
 
-    DEFAULT_ITEM_AMOUNTS = {
+    DEFAULT_ITEM_AMOUNTS: ClassVar[dict] = {
         ITC04_ItemField.TAXABLE_VALUE.value: 0,
         ITC04_ItemField.IGST.value: 0,
         ITC04_ItemField.CGST.value: 0,
@@ -29,7 +31,7 @@ class ITC04DataMapper(GovDataMapper):
         ITC04_ItemField.CESS_AMOUNT.value: 0,
     }
 
-    FLOAT_FIELDS = {
+    FLOAT_FIELDS: ClassVar[set] = {
         GovDataField.TAXABLE_VALUE.value,
         GovDataField.IGST.value,
         GovDataField.CGST.value,
@@ -65,9 +67,9 @@ class ITC04DataMapper(GovDataMapper):
 
 
 class FGReceived(ITC04DataMapper):
-    CATEGORY = ITC04JsonKey.FG_RECEIVED.value
+    CATEGORY: ClassVar[str] = ITC04JsonKey.FG_RECEIVED.value
 
-    KEY_MAPPING = {
+    KEY_MAPPING: ClassVar[dict] = {
         GovDataField.JOB_WORKER_GSTIN.value: ITC04_DataField.JOB_WORKER_GSTIN.value,
         GovDataField.JOB_WORKER_STATE_CODE.value: ITC04_DataField.JOB_WORKER_STATE_CODE.value,
         GovDataField.ITEMS.value: ITC04_DataField.ITEMS.value,
@@ -109,14 +111,12 @@ class FGReceived(ITC04DataMapper):
             job_work_challan_number = invoice.get(GovDataField.ITEMS.value)[0].get(
                 GovDataField.JOB_WORK_CHALLAN_NUMBER.value
             )
-            output[f"{original_challan_number} - {job_work_challan_number}"] = (
-                self.format_data(
-                    invoice,
-                    {
-                        ITC04_DataField.ORIGINAL_CHALLAN_NUMBER.value: original_challan_number,
-                        ITC04_DataField.JOB_WORK_CHALLAN_NUMBER.value: job_work_challan_number,
-                    },
-                )
+            output[f"{original_challan_number} - {job_work_challan_number}"] = self.format_data(
+                invoice,
+                {
+                    ITC04_DataField.ORIGINAL_CHALLAN_NUMBER.value: original_challan_number,
+                    ITC04_DataField.JOB_WORK_CHALLAN_NUMBER.value: job_work_challan_number,
+                },
             )
 
         return {self.CATEGORY: output}
@@ -125,12 +125,8 @@ class FGReceived(ITC04DataMapper):
         output = []
 
         for invoice in input_data:
-            self.original_challan_number = invoice.get(
-                ITC04_DataField.ORIGINAL_CHALLAN_NUMBER.value
-            )
-            self.job_work_challan_number = invoice.get(
-                ITC04_DataField.JOB_WORK_CHALLAN_NUMBER.value
-            )
+            self.original_challan_number = invoice.get(ITC04_DataField.ORIGINAL_CHALLAN_NUMBER.value)
+            self.job_work_challan_number = invoice.get(ITC04_DataField.JOB_WORK_CHALLAN_NUMBER.value)
             output.append(self.format_data(invoice, for_gov=True))
 
         return output
@@ -158,9 +154,9 @@ class FGReceived(ITC04DataMapper):
 
 
 class RMSent(ITC04DataMapper):
-    CATEGORY = ITC04JsonKey.RM_SENT.value
+    CATEGORY: ClassVar[str] = ITC04JsonKey.RM_SENT.value
 
-    KEY_MAPPING = {
+    KEY_MAPPING: ClassVar[dict] = {
         GovDataField.JOB_WORKER_GSTIN.value: ITC04_DataField.JOB_WORKER_GSTIN.value,
         GovDataField.JOB_WORKER_STATE_CODE.value: ITC04_DataField.JOB_WORKER_STATE_CODE.value,
         GovDataField_SE.ITEMS.value: ITC04_DataField.ITEMS.value,
@@ -197,9 +193,7 @@ class RMSent(ITC04DataMapper):
         output = {}
 
         for invoice in input_data:
-            original_challan_number = invoice.get(
-                GovDataField_SE.ORIGINAL_CHALLAN_NUMBER.value
-            )
+            original_challan_number = invoice.get(GovDataField_SE.ORIGINAL_CHALLAN_NUMBER.value)
 
             invoice_level_data = self.format_data(invoice)
 
@@ -242,9 +236,7 @@ def convert_to_internal_data_format(gov_data):
         if not gov_data.get(category):
             continue
 
-        output.update(
-            mapper_class().convert_to_internal_data_format(gov_data.get(category))
-        )
+        output.update(mapper_class().convert_to_internal_data_format(gov_data.get(category)))
 
     return output
 

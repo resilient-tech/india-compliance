@@ -4,8 +4,7 @@ frappe.provide("india_compliance");
 taxpayer_api.call = async function (...args) {
     const response = await frappe.call(...args);
     const { message } = response;
-    if (!["otp_requested", "invalid_otp"].includes(message?.error_type))
-        return response;
+    if (!["otp_requested", "invalid_otp"].includes(message?.error_type)) return response;
 
     await india_compliance.authenticate_otp(message.gstin, message.error_type);
     return taxpayer_api.call(...args);
@@ -17,7 +16,7 @@ Object.assign(india_compliance, {
         if (error_type === "invalid_otp")
             description = `Invalid OTP was provided for GSTIN ${company_gstin}. Please try again.`;
 
-        return new Promise(resolve => {
+        return new Promise((resolve) => {
             const prompt = new frappe.ui.Dialog({
                 title: __("Enter OTP"),
                 fields: [
@@ -68,10 +67,7 @@ Object.assign(india_compliance, {
                 args: { company_gstin: gstin, otp: otp },
             });
 
-            if (
-                message &&
-                ["otp_requested", "invalid_otp"].includes(message.error_type)
-            ) {
+            if (message && ["otp_requested", "invalid_otp"].includes(message.error_type)) {
                 error_type = message.error_type;
                 continue;
             }
@@ -104,7 +100,7 @@ class IndiaComplianceForm extends frappe.ui.form.Form {
         };
 
         opts.original_callback = opts.callback;
-        opts.callback = r => {
+        opts.callback = (r) => {
             if (!r.exc) this.refresh_fields();
             opts.original_callback && opts.original_callback(r);
         };
@@ -124,7 +120,7 @@ class IndiaComplianceForm extends frappe.ui.form.Form {
         };
 
         opts.original_callback = opts.callback;
-        opts.callback = r => {
+        opts.callback = (r) => {
             if (!r.exc) this.doc.data_state = data_state;
             opts.original_callback && opts.original_callback(r);
         };

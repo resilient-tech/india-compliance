@@ -54,9 +54,7 @@ def onload(doc, method=None):
 
     if (
         gst_settings.enable_e_waybill
-        and (
-            gst_settings.enable_e_waybill_from_pi or gst_settings.auto_cancel_e_waybill
-        )
+        and (gst_settings.enable_e_waybill_from_pi or gst_settings.auto_cancel_e_waybill)
         and (e_waybill_info := get_e_waybill_info(doc))
     ):
         doc.set_onload("e_waybill_info", e_waybill_info)
@@ -161,9 +159,7 @@ def validate_supplier_invoice_number(doc):
     if (
         doc.bill_no
         or doc.gst_category == "Unregistered"
-        or not frappe.get_cached_value(
-            "GST Settings", "GST Settings", "require_supplier_invoice_no"
-        )
+        or not frappe.get_cached_value("GST Settings", "GST Settings", "require_supplier_invoice_no")
     ):
         return
 
@@ -175,9 +171,7 @@ def validate_supplier_invoice_number(doc):
 
 def get_dashboard_data(data):
     transactions = data.setdefault("transactions", [])
-    reference_section = next(
-        (row for row in transactions if row.get("label") == "Reference"), None
-    )
+    reference_section = next((row for row in transactions if row.get("label") == "Reference"), None)
 
     if reference_section is None:
         reference_section = {"label": "Reference", "items": []}
@@ -206,9 +200,7 @@ def validate_with_inward_supply(doc):
     taxable_value_precision = get_field_precision(
         frappe.get_meta("GST Inward Supply").get_field("taxable_value")
     )
-    tax_precision = get_field_precision(
-        frappe.get_meta("GST Inward Supply").get_field("igst")
-    )
+    tax_precision = get_field_precision(frappe.get_meta("GST Inward Supply").get_field("igst"))
 
     for field in (
         "company",
@@ -223,9 +215,7 @@ def validate_with_inward_supply(doc):
             mismatch_fields[field] = doc._inward_supply.get(field)
 
     # mismatch for taxable_value
-    taxable_value = flt(
-        sum(item.taxable_value for item in doc.items), taxable_value_precision
-    )
+    taxable_value = flt(sum(item.taxable_value for item in doc.items), taxable_value_precision)
     if taxable_value != doc._inward_supply.get("taxable_value"):
         mismatch_fields["Taxable Value"] = doc._inward_supply.get("taxable_value")
 
@@ -263,11 +253,7 @@ def get_tax_amount(taxes, gst_tax_type):
     if not (taxes or gst_tax_type):
         return 0
 
-    return sum(
-        tax.base_tax_amount_after_discount_amount
-        for tax in taxes
-        if tax.gst_tax_type == gst_tax_type
-    )
+    return sum(tax.base_tax_amount_after_discount_amount for tax in taxes if tax.gst_tax_type == gst_tax_type)
 
 
 def set_ineligibility_reason(doc, show_alert=True):
@@ -308,7 +294,5 @@ def validate_hsn_codes(doc):
         doc,
         valid_hsn_length=VALID_HSN_LENGTHS,
         throw=True,
-        message=_("GST HSN Code is mandatory for {0} Purchase Invoice.<br>").format(
-            doc.gst_category
-        ),
+        message=_("GST HSN Code is mandatory for {0} Purchase Invoice.<br>").format(doc.gst_category),
     )

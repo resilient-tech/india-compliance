@@ -14,9 +14,7 @@ frappe.listview_settings["e-Invoice Log"] = {
         },
 
         get_description: function (doc) {
-            return __("Open {0}", [
-                `${__(doc.reference_doctype)}: ${doc.reference_name}`,
-            ]);
+            return __("Open {0}", [`${__(doc.reference_doctype)}: ${doc.reference_name}`]);
         },
 
         action: function (doc) {

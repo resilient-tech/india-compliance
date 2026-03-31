@@ -1,6 +1,6 @@
 import frappe
-from frappe.query_builder.functions import IfNull
 from erpnext.setup.setup_wizard.operations.taxes_setup import get_or_create_tax_group
+from frappe.query_builder.functions import IfNull
 
 from india_compliance.gst_india.overrides.company import (
     make_default_customs_accounts,
@@ -14,9 +14,7 @@ from india_compliance.income_tax_india.overrides.company import (
 
 
 def execute():
-    company_list = frappe.get_all(
-        "Company", filters={"country": "India"}, pluck="name", order_by="lft asc"
-    )
+    company_list = frappe.get_all("Company", filters={"country": "India"}, pluck="name", order_by="lft asc")
     set_section_and_entity_type_in_tax_withholding_category()  # execute before creating fixtures
 
     for company in company_list:

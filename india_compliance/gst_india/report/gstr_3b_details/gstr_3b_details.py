@@ -31,9 +31,7 @@ def execute(filters=None):
 class BaseGSTR3BDetails:
     def __init__(self, filters=None):
         self.filters = frappe._dict(filters or {})
-        self.company_currency = frappe.get_cached_value(
-            "Company", filters.get("company"), "default_currency"
-        )
+        self.company_currency = frappe.get_cached_value("Company", filters.get("company"), "default_currency")
 
         self.columns = [
             {
@@ -57,12 +55,8 @@ class BaseGSTR3BDetails:
         ]
         self.data = []
         self.month_or_quarter_no = get_period(self.filters.month_or_quarter)
-        self.from_date = get_first_day(
-            f"{cint(self.filters.year)}-{self.month_or_quarter_no[0]}-01"
-        )
-        self.to_date = get_last_day(
-            f"{cint(self.filters.year)}-{self.month_or_quarter_no[1]}-01"
-        )
+        self.from_date = get_first_day(f"{cint(self.filters.year)}-{self.month_or_quarter_no[0]}-01")
+        self.to_date = get_last_day(f"{cint(self.filters.year)}-{self.month_or_quarter_no[1]}-01")
         self.company = self.filters.company
         self.company_gstin = self.filters.company_gstin
         self.filter_by = self.filters.filter_by or "ITC Claim Period"
@@ -137,13 +131,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
         pi_ineligible_itc = self.get_ineligible_itc_from_purchase()
         boe_ineligible_itc = self.get_ineligible_itc_from_boe()
 
-        data = (
-            purchase_data
-            + boe_data
-            + journal_entry_data
-            + pi_ineligible_itc
-            + boe_ineligible_itc
-        )
+        data = purchase_data + boe_data + journal_entry_data + pi_ineligible_itc + boe_ineligible_itc
 
         self.data = sorted(
             data,
@@ -176,14 +164,10 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                 & (purchase_invoice.is_opening == "No")
                 & (purchase_invoice.company == self.company)
                 & (purchase_invoice.company_gstin == self.company_gstin)
-                & (
-                    purchase_invoice.company_gstin
-                    != IfNull(purchase_invoice.supplier_gstin, "")
-                )
+                & (purchase_invoice.company_gstin != IfNull(purchase_invoice.supplier_gstin, ""))
                 & (IfNull(purchase_invoice.itc_classification, "") != "")
                 & (
-                    IfNull(purchase_invoice.ineligibility_reason, "")
-                    != "ITC restricted due to PoS rules"
+                    IfNull(purchase_invoice.ineligibility_reason, "") != "ITC restricted due to PoS rules"
                 )  # Ignore as it is Ineligible for ITC
                 & (purchase_invoice.is_boe_applicable == 0)
             )
@@ -278,9 +262,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                 Sum(
                     Case()
                     .when(
-                        journal_entry_account.gst_tax_type.isin(
-                            ["cess", "cess_non_advol"]
-                        ),
+                        journal_entry_account.gst_tax_type.isin(["cess", "cess_non_advol"]),
                         (-1 * journal_entry_account.credit_in_account_currency),
                     )
                     .else_(0)
@@ -378,9 +360,7 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
             if invoice.gst_category == "Registered Composition":
                 supplier_state = cint(invoice.supplier_gstin[0:2])
             else:
-                supplier_state = (
-                    cint(address_state_map.get(invoice.supplier_address)) or state
-                )
+                supplier_state = cint(address_state_map.get(invoice.supplier_address)) or state
 
             intra, inter = 0, 0
             taxable_value = invoice.taxable_value
@@ -408,14 +388,10 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
                 }
             )
 
-        self.data = sorted(
-            formatted_data, key=lambda k: (k["nature_of_supply"], k["posting_date"])
-        )
+        self.data = sorted(formatted_data, key=lambda k: (k["nature_of_supply"], k["posting_date"]))
 
     def get_address_state_map(self):
-        return frappe._dict(
-            frappe.get_all("Address", fields=["name", "gst_state_number"], as_list=1)
-        )
+        return frappe._dict(frappe.get_all("Address", fields=["name", "gst_state_number"], as_list=1))
 
     def get_inward_nil_exempt(self):
         purchase_invoice = frappe.qb.DocType("Purchase Invoice")
@@ -447,10 +423,7 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
                 )
                 & (purchase_invoice.company == self.company)
                 & (purchase_invoice.company_gstin == self.company_gstin)
-                & (
-                    purchase_invoice.company_gstin
-                    != IfNull(purchase_invoice.supplier_gstin, "")
-                )
+                & (purchase_invoice.company_gstin != IfNull(purchase_invoice.supplier_gstin, ""))
             )
             .groupby(purchase_invoice.name)
         )
@@ -483,7 +456,7 @@ class IneligibleITC:
         query = (
             self.get_common_query(doctype, dt, dt_item)
             .select((dt.ineligibility_reason).as_("itc_classification"))
-            .where((dt.is_opening == "No"))
+            .where(dt.is_opening == "No")
             .where(IfNull(dt.ineligibility_reason, "") == ineligibility_reason)
         )
 
@@ -498,11 +471,7 @@ class IneligibleITC:
         dt_item = frappe.qb.DocType(f"{doctype} Item")
         query = (
             self.get_common_query(doctype, dt, dt_item)
-            .select(
-                ConstantColumn("Ineligible As Per Section 17(5)").as_(
-                    "itc_classification"
-                )
-            )
+            .select(ConstantColumn("Ineligible As Per Section 17(5)").as_("itc_classification"))
             .where(dt_item.is_ineligible_for_itc == 1)
         )
 

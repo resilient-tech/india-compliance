@@ -198,11 +198,7 @@ class JobWorkMovement:
                 "label": _("Item Type (Input/Capital Goods)"),
                 "fieldtype": "Data",
                 "width": 180,
-                "hidden": (
-                    False
-                    if self.filters.category == "Sent for Job Work (Table 4)"
-                    else True
-                ),
+                "hidden": (False if self.filters.category == "Sent for Job Work (Table 4)" else True),
             },
             {
                 "fieldname": "item_code",

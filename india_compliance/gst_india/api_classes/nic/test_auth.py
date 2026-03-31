@@ -2,12 +2,11 @@ import base64
 import json
 from unittest.mock import Mock, patch
 
-import responses
-from responses import matchers
-
 import frappe
+import responses
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_to_date, now_datetime
+from responses import matchers
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.api_classes.nic.auth import (
@@ -87,9 +86,7 @@ class TestStandardAuth(TestNICAuth):
         """Test public key encryption"""
         test_data = "Hello, World!"
         test_data = base64.b64encode(test_data.encode())
-        encrypted = encrypt_using_public_key(
-            test_data, self.test_data.public_key.encode()
-        )
+        encrypted = encrypt_using_public_key(test_data, self.test_data.public_key.encode())
 
         # Should return base64 encoded string
         self.assertIsInstance(encrypted, str)
@@ -113,9 +110,7 @@ class TestStandardAuth(TestNICAuth):
         )
 
         # Mock the public key method
-        with patch.object(
-            auth, "_get_public_key", return_value=self.test_data.public_key.encode()
-        ):
+        with patch.object(auth, "_get_public_key", return_value=self.test_data.public_key.encode()):
             auth._encrypt_request(request_args)
 
         # Check that JSON was encrypted
@@ -138,9 +133,7 @@ class TestStandardAuth(TestNICAuth):
         )
 
         # Mock AES encryption
-        with patch(
-            "india_compliance.gst_india.api_classes.nic.auth.aes_encrypt_data"
-        ) as mock_encrypt:
+        with patch("india_compliance.gst_india.api_classes.nic.auth.aes_encrypt_data") as mock_encrypt:
             mock_encrypt.return_value = "encrypted_data"
             auth._encrypt_request(request_args)
 
@@ -157,14 +150,10 @@ class TestStandardAuth(TestNICAuth):
         """Test decryption of authentication response"""
         auth = StandardAuth(self.mock_client)
 
-        response = frappe._dict(
-            {"AuthToken": "new_auth_token", "Sek": self.test_data.encrypted_sek}
-        )
+        response = frappe._dict({"AuthToken": "new_auth_token", "Sek": self.test_data.encrypted_sek})
 
         # Mock AES decryption
-        with patch(
-            "india_compliance.gst_india.api_classes.nic.auth.aes_decrypt_data"
-        ) as mock_decrypt:
+        with patch("india_compliance.gst_india.api_classes.nic.auth.aes_decrypt_data") as mock_decrypt:
             mock_decrypt.return_value = self.test_data.session_key
 
             # Mock database update
@@ -190,9 +179,7 @@ class TestStandardAuth(TestNICAuth):
         decrypted_data = json.dumps({"result": "success"}).encode()
 
         # Mock AES decryption
-        with patch(
-            "india_compliance.gst_india.api_classes.nic.auth.aes_decrypt_data"
-        ) as mock_decrypt:
+        with patch("india_compliance.gst_india.api_classes.nic.auth.aes_decrypt_data") as mock_decrypt:
             mock_decrypt.return_value = decrypted_data
 
             auth._decrypt_response_data(response)
@@ -210,29 +197,21 @@ class TestStandardAuth(TestNICAuth):
         decrypted_rek = b"decrypted_rek_key"
         hmac_value = "expected_hmac"
 
-        response = frappe._dict(
-            {"Data": encrypted_data, "Rek": rek_data, "Hmac": hmac_value}
-        )
+        response = frappe._dict({"Data": encrypted_data, "Rek": rek_data, "Hmac": hmac_value})
 
         decrypted_data = json.dumps({"result": "success"}).encode()
 
         # Mock AES decryption and HMAC computation
-        with patch(
-            "india_compliance.gst_india.api_classes.nic.auth.aes_decrypt_data"
-        ) as mock_decrypt:
+        with patch("india_compliance.gst_india.api_classes.nic.auth.aes_decrypt_data") as mock_decrypt:
             mock_decrypt.side_effect = [decrypted_rek, decrypted_data]
 
-            with patch(
-                "india_compliance.gst_india.api_classes.nic.auth.hmac_sha256"
-            ) as mock_hmac:
+            with patch("india_compliance.gst_india.api_classes.nic.auth.hmac_sha256") as mock_hmac:
                 mock_hmac.return_value = hmac_value
 
                 auth._decrypt_response_data(response)
 
         # Check HMAC was computed correctly
-        mock_hmac.assert_called_once_with(
-            base64.b64encode(decrypted_data), decrypted_rek
-        )
+        mock_hmac.assert_called_once_with(base64.b64encode(decrypted_data), decrypted_rek)
 
         # Check that data was decrypted successfully
         self.assertEqual(response.result, {"result": "success"})
@@ -241,21 +220,15 @@ class TestStandardAuth(TestNICAuth):
         """Test HMAC mismatch throws error"""
         auth = StandardAuth(self.mock_client)
 
-        response = frappe._dict(
-            {"Data": "encrypted_data", "Rek": "encrypted_rek", "Hmac": "expected_hmac"}
-        )
+        response = frappe._dict({"Data": "encrypted_data", "Rek": "encrypted_rek", "Hmac": "expected_hmac"})
 
         decrypted_data = json.dumps({"result": "success"}).encode()
 
         # Mock AES decryption and HMAC computation
-        with patch(
-            "india_compliance.gst_india.api_classes.nic.auth.aes_decrypt_data"
-        ) as mock_decrypt:
+        with patch("india_compliance.gst_india.api_classes.nic.auth.aes_decrypt_data") as mock_decrypt:
             mock_decrypt.side_effect = [b"decrypted_rek", decrypted_data]
 
-            with patch(
-                "india_compliance.gst_india.api_classes.nic.auth.hmac_sha256"
-            ) as mock_hmac:
+            with patch("india_compliance.gst_india.api_classes.nic.auth.hmac_sha256") as mock_hmac:
                 mock_hmac.return_value = "different_hmac"
 
                 with self.assertRaises(frappe.exceptions.ValidationError) as context:
@@ -433,9 +406,7 @@ class TestStandardAuth(TestNICAuth):
             # Test auth reset with minimal mocking
             with patch("frappe.db.set_value") as mock_db_set:
                 with patch.object(api, "get_public_ip", return_value="203.0.113.1"):
-                    with patch.object(
-                        api, "request_otp", side_effect=OTPRequestedError()
-                    ):
+                    with patch.object(api, "request_otp", side_effect=OTPRequestedError()):
                         try:
                             api.autheticate_with_otp(otp=None)
                         except OTPRequestedError:
