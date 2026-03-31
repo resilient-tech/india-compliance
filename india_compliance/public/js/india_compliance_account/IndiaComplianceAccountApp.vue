@@ -38,7 +38,7 @@ export default {
 
     async created() {
         const guessRoute = (to) => {
-            const routeToCompare = in_list(AUTH_ROUTES, to.name) ? to.name : "home";
+            const routeToCompare = AUTH_ROUTES.includes(to.name) ? to.name : "home";
             const guessedRoute = this.$store.getters.guessRouteName;
 
             if (routeToCompare !== guessedRoute) {

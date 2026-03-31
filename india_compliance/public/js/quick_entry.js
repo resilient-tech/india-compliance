@@ -288,7 +288,7 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
                 onchange: async () => {
                     const { link_doctype, link_name } = this.dialog.doc;
 
-                    if (!link_name || !in_list(frappe.boot.gst_party_types, link_doctype)) return;
+                    if (!link_name || !frappe.boot.gst_party_types.includes(link_doctype)) return;
 
                     const { message: gstin_list } = await frappe.call(
                         "india_compliance.gst_india.utils.get_gstin_list",
@@ -471,7 +471,7 @@ function update_party_info(doc, gstin_info) {
     doc.gstin = doc._gstin;
     doc.gst_category = gstin_info.gst_category;
 
-    if (!in_list(frappe.boot.gst_party_types, doc.doctype)) return;
+    if (!frappe.boot.gst_party_types.includes(doc.doctype)) return;
 
     const party_name_field = `${doc.doctype.toLowerCase()}_name`;
     doc[party_name_field] = gstin_info.business_name;
