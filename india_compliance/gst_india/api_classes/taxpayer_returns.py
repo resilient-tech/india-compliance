@@ -390,3 +390,30 @@ class IMSAPI(ReturnsAPI):
             endpoint=self.END_POINT,
             params={"gstin": self.company_gstin, "int_tran_id": transaction_id},
         )
+
+
+class GSTR9API(ReturnsAPI):
+    API_NAME = "GSTR-9"
+    END_POINT = "returns/gstr9"
+
+    def setup(self, company_gstin, return_period):
+        self.return_period = return_period
+        super().setup(company_gstin=company_gstin)
+
+    def get_data(self, otp=None):
+        url = self.get_url(self.END_POINT)
+        params = {"action": "CALRCDS", "gstin": self.company_gstin, "ret_period": self.return_period}
+
+        print(f"GSTR-9 API Request: URL={url} | Params={params}")
+
+        response = self.get(
+            action="CALRCDS",
+            return_period=self.return_period,
+            params={"gstin": self.company_gstin, "ret_period": self.return_period},
+            endpoint=self.END_POINT,
+            otp=otp,
+        )
+
+        print(f"GSTR-9 API Response: {response}")
+
+        return response
