@@ -9,39 +9,31 @@ frappe.listview_settings[DOCTYPE].onload = function (list_view) {
     if (!frappe.perm.has_perm(DOCTYPE, 0, "submit")) return;
 
     if (gst_settings.enable_e_waybill) {
-        add_bulk_action_for_invoices(
-            list_view,
-            __("Generate e-Waybill JSON"),
-            generate_e_waybill_json
-        );
+        add_bulk_action_for_invoices(list_view, __("Generate e-Waybill JSON"), generate_e_waybill_json);
 
         add_bulk_action_for_invoices(
             list_view,
             __("Bulk Update Transporter Detail"),
             show_bulk_update_transporter_dialog,
-            [0, 1]
+            [0, 1],
         );
 
         add_bulk_action_for_invoices(
             list_view,
             __("Enqueue Bulk e-Waybill Generation"),
-            enqueue_bulk_e_waybill_generation
+            enqueue_bulk_e_waybill_generation,
         );
     }
 
     if (frappe.model.can_print("e-Waybill Log")) {
-        add_bulk_action_for_invoices(
-            list_view,
-            __("Print e-Waybill"),
-            bulk_e_waybill_print
-        );
+        add_bulk_action_for_invoices(list_view, __("Print e-Waybill"), bulk_e_waybill_print);
     }
 
     if (india_compliance.is_e_invoice_enabled())
         add_bulk_action_for_invoices(
             list_view,
             __("Enqueue Bulk e-Invoice Generation"),
-            enqueue_bulk_e_invoice_generation
+            enqueue_bulk_e_invoice_generation,
         );
 };
 
@@ -57,7 +49,7 @@ function add_bulk_action_for_invoices(list_view, label, callback, allowed_status
 async function generate_e_waybill_json(docnames) {
     const ewb_data = await frappe.xcall(
         "india_compliance.gst_india.utils.e_waybill.generate_e_waybill_json",
-        { doctype: DOCTYPE, docnames }
+        { doctype: DOCTYPE, docnames },
     );
 
     india_compliance.trigger_file_download(ewb_data, get_e_waybill_file_name());
@@ -94,14 +86,11 @@ async function bulk_e_waybill_print(docnames) {
         callback: function (r) {
             if (r.message) {
                 if (r.message.invalid_log.length > 1) {
-                    const invalid_docs = r.message.invalid_log.map(
-                        doc => `${doc.link} - ${doc.reason}`
-                    );
+                    const invalid_docs = r.message.invalid_log.map((doc) => `${doc.link} - ${doc.reason}`);
                     frappe.msgprint(
-                        __(
-                            "Cannot print e-Waybill for following documents:<br><br>{0}",
-                            [invalid_docs.join("<br>")]
-                        )
+                        __("Cannot print e-Waybill for following documents:<br><br>{0}", [
+                            invalid_docs.join("<br>"),
+                        ]),
                     );
                 }
 
@@ -111,7 +100,7 @@ async function bulk_e_waybill_print(docnames) {
                         doctype: "e-Waybill Log",
                         name: JSON.stringify(r.message.valid_log),
                     },
-                    true
+                    true,
                 );
             }
         },
@@ -119,17 +108,16 @@ async function bulk_e_waybill_print(docnames) {
 }
 
 async function enqueue_bulk_e_waybill_generation(docnames) {
-    enqueue_bulk_generation(
-        "india_compliance.gst_india.utils.e_waybill.enqueue_bulk_e_waybill_generation",
-        { doctype: DOCTYPE, docnames }
-    );
+    enqueue_bulk_generation("india_compliance.gst_india.utils.e_waybill.enqueue_bulk_e_waybill_generation", {
+        doctype: DOCTYPE,
+        docnames,
+    });
 }
 
 async function enqueue_bulk_e_invoice_generation(docnames) {
-    enqueue_bulk_generation(
-        "india_compliance.gst_india.utils.e_invoice.enqueue_bulk_e_invoice_generation",
-        { docnames }
-    );
+    enqueue_bulk_generation("india_compliance.gst_india.utils.e_invoice.enqueue_bulk_e_invoice_generation", {
+        docnames,
+    });
 }
 
 async function enqueue_bulk_generation(method, args) {
@@ -159,12 +147,8 @@ async function enqueue_bulk_generation(method, args) {
             <a href='{0}'>Background Job</a>,
             <a href='{1}'>API Request(s)</a>,
             and <a href='{2}'>Error Log(s)</a>.`,
-            [
-                frappe.utils.get_form_link("RQ Job", job_id),
-                api_requests_link,
-                error_logs_link,
-            ]
-        )
+            [frappe.utils.get_form_link("RQ Job", job_id), api_requests_link, error_logs_link],
+        ),
     );
 }
 
@@ -187,25 +171,19 @@ async function validate_doc_status(selected_docs, allowed_status) {
 
     if (!invalid_docs.length) return valid_docs;
 
-    const allowed_status_str = allowed_status
-        .map(status => status_map[status])
-        .join(" or ");
+    const allowed_status_str = allowed_status.map((status) => status_map[status]).join(" or ");
 
     if (!valid_docs.length) {
-        frappe.throw(
-            __("This action can only be performed on {0} documents", [
-                allowed_status_str,
-            ])
-        );
+        frappe.throw(__("This action can only be performed on {0} documents", [allowed_status_str]));
     }
 
-    const confirmed = await new Promise(resolve => {
+    const confirmed = await new Promise((resolve) => {
         frappe.confirm(
             __(
                 "This action can only be performed on {0} documents. Do you want to continue without the following documents?<br><br><strong>{1}</strong>",
-                [allowed_status_str, invalid_docs.join("<br>")]
+                [allowed_status_str, invalid_docs.join("<br>")],
             ),
-            () => resolve(true)
+            () => resolve(true),
         );
     });
 

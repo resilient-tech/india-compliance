@@ -6,6 +6,4 @@ def execute():
         if not frappe.db.has_column(doctype, "gst_category"):
             continue
 
-        frappe.db.set_value(
-            doctype, {"gst_category": "Consumer"}, "gst_category", "Unregistered"
-        )
+        frappe.db.set_value(doctype, {"gst_category": "Consumer"}, "gst_category", "Unregistered")

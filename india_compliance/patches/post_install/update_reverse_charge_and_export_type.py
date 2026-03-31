@@ -21,8 +21,6 @@ def update_field_to_check(old_fieldname, new_fieldname, truthy_value):
             continue
 
         frappe.db.set_value(doctype, {old_fieldname: truthy_value}, new_fieldname, 1)
-        frappe.db.sql_ddl(
-            "alter table `tab{0}` drop column {1}".format(doctype, old_fieldname)
-        )
+        frappe.db.sql_ddl(f"alter table `tab{doctype}` drop column {old_fieldname}")
 
     delete_old_fields(old_fieldname, DOCTYPES)

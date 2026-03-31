@@ -59,9 +59,7 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
             self.db_set(file_field, None)
             return
 
-    def update_json_for(
-        self, file_field, json_data, overwrite=True, reset_reconcile=False
-    ):
+    def update_json_for(self, file_field, json_data, overwrite=True, reset_reconcile=False):
         if "summary" not in file_field:
             json_data["creation"] = get_datetime_str(get_datetime())
             self.remove_json_for(f"{file_field}_summary")
@@ -73,7 +71,7 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
         # new file
         if not getattr(self, file_field):
             content = get_compressed_data(json_data)
-            file_name = frappe.scrub("{0}-{1}.json.gz".format(self.name, file_field))
+            file_name = frappe.scrub(f"{self.name}-{file_field}.json.gz")
             file = frappe.get_doc(
                 {
                     "doctype": "File",
@@ -161,13 +159,9 @@ class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
 
         if settings.is_gstr1_api_enabled(self.gstin):
             if self.filing_status == "Filed":
-                fields.extend(
-                    ["reconcile", "reconcile_summary", "filed", "filed_summary"]
-                )
+                fields.extend(["reconcile", "reconcile_summary", "filed", "filed_summary"])
             elif settings.compare_unfiled_data:
-                fields.extend(
-                    ["reconcile", "reconcile_summary", "unfiled", "unfiled_summary"]
-                )
+                fields.extend(["reconcile", "reconcile_summary", "unfiled", "unfiled_summary"])
 
         return fields
 
@@ -220,9 +214,7 @@ def process_gstr_1_returns_info(company, gstin, e_filed_list):
         gstin_doc = frappe.new_doc("GSTIN", gstin=gstin, status="Active")
 
     def _update_gstr_1_filed_upto(filing_date):
-        if not gstin_doc.gstr_1_filed_upto or filing_date > getdate(
-            gstin_doc.gstr_1_filed_upto
-        ):
+        if not gstin_doc.gstr_1_filed_upto or filing_date > getdate(gstin_doc.gstr_1_filed_upto):
             gstin_doc.gstr_1_filed_upto = filing_date
             gstin_doc.save(ignore_permissions=True)
 
@@ -235,9 +227,7 @@ def process_gstr_1_returns_info(company, gstin, e_filed_list):
             "filing_date": datetime.strptime(info["dof"], "%d-%m-%Y").date(),
         }
 
-        filed_upto = get_last_day(
-            getdate(f"{info['ret_prd'][2:]}-{info['ret_prd'][0:2]}-01")
-        )
+        filed_upto = get_last_day(getdate(f"{info['ret_prd'][2:]}-{info['ret_prd'][0:2]}-01"))
 
         if key in gstr1_logs:
             if gstr1_logs[key] != info["arn"]:
@@ -299,9 +289,7 @@ def add_comment_to_gst_return_log(doc, action):
 def update_is_not_latest_gstr1_data(posting_date, company_gstin):
     period = posting_date.strftime("%m%Y")
 
-    frappe.db.set_value(
-        "GST Return Log", f"GSTR1-{period}-{company_gstin}", "is_latest_data", 0
-    )
+    frappe.db.set_value("GST Return Log", f"GSTR1-{period}-{company_gstin}", "is_latest_data", 0)
 
     frappe.publish_realtime(
         "is_not_latest_gstr1_data",

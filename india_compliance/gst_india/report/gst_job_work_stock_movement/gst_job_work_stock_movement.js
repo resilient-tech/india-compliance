@@ -9,7 +9,7 @@ frappe.query_reports["GST Job Work Stock Movement"] = {
             fieldtype: "Link",
             options: "Company",
             default: frappe.defaults.get_user_default("Company"),
-            on_change: report => {
+            on_change: (report) => {
                 report.set_filter_value({
                     company_gstin: "",
                 });
@@ -50,10 +50,7 @@ frappe.query_reports["GST Job Work Stock Movement"] = {
             fieldname: "category",
             label: __("Invoice Category"),
             fieldtype: "Select",
-            options: [
-                "Sent for Job Work (Table 4)",
-                "Received back from Job Worker (Table 5A)",
-            ],
+            options: ["Sent for Job Work (Table 4)", "Received back from Job Worker (Table 5A)"],
             reqd: 1,
         },
     ],
@@ -66,7 +63,7 @@ frappe.query_reports["GST Job Work Stock Movement"] = {
                 data.invoice_type,
                 data.original_invoice_no,
                 true,
-                data.invoice_no
+                data.invoice_no,
             );
         }
 
@@ -75,20 +72,19 @@ frappe.query_reports["GST Job Work Stock Movement"] = {
 
     onload: function (query_report) {
         const handle_download = (response) => {
-            india_compliance.trigger_file_download(
-                JSON.stringify(response.data),
-                response.filename
-            );
+            india_compliance.trigger_file_download(JSON.stringify(response.data), response.filename);
         };
 
         query_report.page.add_inner_button(__("Export JSON"), function () {
             frappe.call({
                 method: "india_compliance.gst_india.utils.itc_04.itc_04_export.download_itc_04_json",
                 args: { filters: query_report.get_values() },
-                callback: r => {
+                callback: (r) => {
                     if (r.message && r.message.has_invalid_data) {
                         frappe.confirm(
-                            __("Some entries are skipped in Table 5A because <strong>Original Challan No</strong> is missing.<br><br>Do you want to continue with the download?"),
+                            __(
+                                "Some entries are skipped in Table 5A because <strong>Original Challan No</strong> is missing.<br><br>Do you want to continue with the download?",
+                            ),
                             () => handle_download(r.message),
                         );
                     } else {

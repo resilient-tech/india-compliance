@@ -10,7 +10,7 @@ frappe.query_reports["GST Balance"] = {
             fieldtype: "Link",
             options: "Company",
             default: frappe.defaults.get_user_default("Company"),
-            on_change: report => {
+            on_change: (report) => {
                 set_gstin_options(report);
                 report.set_filter_value({
                     company_gstin: "",
@@ -38,38 +38,38 @@ frappe.query_reports["GST Balance"] = {
             default: india_compliance.last_month_end(),
         },
         {
-			fieldname: "finance_book",
-			label: __("Finance Book"),
-			fieldtype: "Link",
-			options: "Finance Book",
-		},
-        	{
-			fieldname: "cost_center",
-			label: __("Cost Center"),
-			fieldtype: "MultiSelectList",
-			options: "Cost Center",
-			get_data: function (txt) {
-				return frappe.db.get_link_options("Cost Center", txt, {
-					company: frappe.query_report.get_filter_value("company"),
-				});
-			},
-		},
-		{
-			fieldname: "project",
-			label: __("Project"),
-			fieldtype: "MultiSelectList",
-			options: "Project",
-			get_data: function (txt) {
-				return frappe.db.get_link_options("Project", txt, {
-					company: frappe.query_report.get_filter_value("company"),
-				});
-			},
-		},
+            fieldname: "finance_book",
+            label: __("Finance Book"),
+            fieldtype: "Link",
+            options: "Finance Book",
+        },
+        {
+            fieldname: "cost_center",
+            label: __("Cost Center"),
+            fieldtype: "MultiSelectList",
+            options: "Cost Center",
+            get_data: function (txt) {
+                return frappe.db.get_link_options("Cost Center", txt, {
+                    company: frappe.query_report.get_filter_value("company"),
+                });
+            },
+        },
+        {
+            fieldname: "project",
+            label: __("Project"),
+            fieldtype: "MultiSelectList",
+            options: "Project",
+            get_data: function (txt) {
+                return frappe.db.get_link_options("Project", txt, {
+                    company: frappe.query_report.get_filter_value("company"),
+                });
+            },
+        },
         {
             fieldname: "show_summary",
             label: __("Show Summary"),
             fieldtype: "Check",
-            on_change: report => {
+            on_change: (report) => {
                 toggle_filters(report);
                 report.refresh();
             },
@@ -85,11 +85,8 @@ frappe.query_reports["GST Balance"] = {
 
 erpnext.utils.add_dimensions("GST Balance", 4);
 
-
 async function set_gstin_options(report) {
-    const options = await india_compliance.get_gstin_options(
-        report.get_filter_value("company")
-    );
+    const options = await india_compliance.get_gstin_options(report.get_filter_value("company"));
     const gstin_field = report.get_filter("company_gstin");
     gstin_field.set_data(options);
 
@@ -110,14 +107,14 @@ function add_custom_button_to_update_gstin(report) {
                 company: report.get_filter_value("company"),
             },
         })
-        .then(r => {
+        .then((r) => {
             if (!r.message) return;
             const [voucher_types, company_accounts] = r.message;
             if (!voucher_types.length) return;
 
             report._gst_accounts = company_accounts;
             report.page.add_inner_button(__("Update GSTIN"), () =>
-                update_gstin_message(report, voucher_types)
+                update_gstin_message(report, voucher_types),
             );
         });
 }
@@ -129,8 +126,7 @@ async function update_gstin_message(report, voucher_types) {
         message: message,
         primary_action: {
             label: __("Execute Patch"),
-            server_action:
-                "india_compliance.gst_india.report.gst_balance.gst_balance.update_company_gstin",
+            server_action: "india_compliance.gst_india.report.gst_balance.gst_balance.update_company_gstin",
             hide_on_success: true,
         },
     });
@@ -148,10 +144,10 @@ function get_update_gstin_message(report, voucher_types) {
         It could not be set automatically as you have Multi-GSTIN setup.
         Please update the GSTIN for the following transactions <strong>before</strong>
         executing the patch:<br>
-        `
+        `,
     );
 
-    voucher_types.forEach(voucher_type => {
+    voucher_types.forEach((voucher_type) => {
         let account_field = "account_head";
         if (voucher_type === "Journal Entry") account_field = "account";
 

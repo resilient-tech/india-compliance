@@ -21,9 +21,7 @@ class GSTInwardSupply(Document):
         if self.previous_ims_action and not self.get("ims_action"):
             self.ims_action = self.previous_ims_action
 
-        if self.match_status != "Amended" and (
-            self.other_return_period or self.is_amended
-        ):
+        if self.match_status != "Amended" and (self.other_return_period or self.is_amended):
             update_docs_for_amendment(self)
 
     def on_trash(self):
@@ -49,9 +47,7 @@ def create_inward_supply(transaction):
     else:
         gst_inward_supply = frappe.new_doc("GST Inward Supply")
 
-    update_reco_action(
-        gst_inward_supply.link_name, gst_inward_supply.action, transaction
-    )
+    update_reco_action(gst_inward_supply.link_name, gst_inward_supply.action, transaction)
 
     gst_inward_supply.update(transaction)
     return gst_inward_supply.save(ignore_permissions=True)
@@ -136,14 +132,10 @@ def update_docs_for_amendment(doc):
             and original.link_name != doc.name
             and doc.is_new()
         ):
-            frappe.db.set_value(
-                "GST Inward Supply", original.name, "link_name", doc.name
-            )
+            frappe.db.set_value("GST Inward Supply", original.name, "link_name", doc.name)
 
             # new original
-            original = frappe.db.get_value(
-                "GST Inward Supply", original.link_name, fields
-            )
+            original = frappe.db.get_value("GST Inward Supply", original.link_name, fields)
 
         if original.match_status == "Amended":
             return

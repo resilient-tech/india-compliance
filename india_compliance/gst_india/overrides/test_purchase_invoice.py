@@ -12,9 +12,7 @@ from india_compliance.gst_india.utils.itc_claim import (
 )
 from india_compliance.gst_india.utils.tests import append_item, create_purchase_invoice
 
-with mock.patch("frappe.db"), mock.patch("frappe.new_doc"), mock.patch(
-    "frappe.get_doc"
-):
+with mock.patch("frappe.db"), mock.patch("frappe.new_doc"), mock.patch("frappe.get_doc"):
     from erpnext.accounts.doctype.account.test_account import create_account
 
 
@@ -135,9 +133,7 @@ class TestPurchaseInvoice(IntegrationTestCase):
             company=company,
         )
 
-        frappe.db.set_value(
-            "Company", company, "unrealized_profit_loss_account", account
-        )
+        frappe.db.set_value("Company", company, "unrealized_profit_loss_account", account)
         pinv = create_purchase_invoice(
             supplier="Test Internal with ISD Supplier",
             qty=-1,
@@ -187,7 +183,7 @@ class TestPurchaseInvoice(IntegrationTestCase):
             is_reverse_charge=True,
             do_not_save=True,
         )
-        setattr(pinv, "__newname", "INV/2022/00001/asdfsadf")  # NOQA
+        setattr(pinv, "__newname", "INV/2022/00001/asdfsadf")
         pinv.meta.autoname = "prompt"
         pinv.save()
 
@@ -197,7 +193,7 @@ class TestPurchaseInvoice(IntegrationTestCase):
             is_reverse_charge=True,
             do_not_save=True,
         )
-        setattr(pinv, "__newname", "INV/2022/00001/asdfsadg")  # NOQA
+        setattr(pinv, "__newname", "INV/2022/00001/asdfsadg")
         pinv.save()
 
         self.assertEqual(
@@ -333,9 +329,7 @@ class TestPurchaseInvoice(IntegrationTestCase):
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(
-                r"Cannot change ITC Claim Period from .* to .*\. GSTR-3B already filed for .*\."
-            ),
+            re.compile(r"Cannot change ITC Claim Period from .* to .*\. GSTR-3B already filed for .*\."),
             pinv.save,
         )
 
@@ -345,9 +339,7 @@ class TestPurchaseInvoice(IntegrationTestCase):
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(
-                r"Cannot change ITC Claim Period from .* to .*\. GSTR-3B already filed for .*\."
-            ),
+            re.compile(r"Cannot change ITC Claim Period from .* to .*\. GSTR-3B already filed for .*\."),
             pinv.save,
         )
 

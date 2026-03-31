@@ -26,7 +26,7 @@ frappe.ui.form.on(DOCTYPE, {
         frm.reconciliation_tabs = new IMS(
             frm,
             ["invoice", "match_summary", "action_summary"],
-            "invoice_html"
+            "invoice_html",
         );
 
         frm.doc.company = frappe.defaults.get_user_default("Company");
@@ -34,18 +34,18 @@ frappe.ui.form.on(DOCTYPE, {
         // Setup Listeners
 
         // Download Queued
-        frappe.realtime.on("ims_download_queued", message => {
+        frappe.realtime.on("ims_download_queued", (message) => {
             frappe.msgprint(message["message"]);
         });
 
         // Downloaded and Reconciled Invoices
-        frappe.realtime.on("ims_download_completed", message => {
+        frappe.realtime.on("ims_download_completed", (message) => {
             frm.ims_actions.get_ims_data();
             frappe.show_alert({ message: message["message"], indicator: "green" });
         });
 
         // Upload and Check Status
-        frappe.realtime.on("upload_data_and_check_status", async message => {
+        frappe.realtime.on("upload_data_and_check_status", async (message) => {
             await frm.ims_actions.get_ims_data();
             frm.ims_actions.upload_ims_data();
         });
@@ -184,10 +184,10 @@ class IMS extends reconciliation.reconciliation_tabs {
                 label: "Is Supplier Return Filed",
                 fieldname: "is_supplier_return_filed",
                 fieldtype: "Check",
-            }
+            },
         );
 
-        fields.forEach(field => (field.parent = DOCTYPE));
+        fields.forEach((field) => (field.parent = DOCTYPE));
         return fields;
     }
 
@@ -196,62 +196,34 @@ class IMS extends reconciliation.reconciliation_tabs {
 
         // TODO: Refactor like purchase_reconciliation.js
 
-        this.tabs.invoice_tab.datatable.$datatable.on(
-            "click",
-            ".supplier-gstin",
-            function (e) {
-                me.update_filter(e, "supplier_gstin", $(this).text().trim(), me);
-            }
-        );
+        this.tabs.invoice_tab.datatable.$datatable.on("click", ".supplier-gstin", function (e) {
+            me.update_filter(e, "supplier_gstin", $(this).text().trim(), me);
+        });
 
-        this.tabs.invoice_tab.datatable.$datatable.on(
-            "click",
-            ".match-status",
-            function (e) {
-                me.update_filter(e, "match_status", $(this).text(), me);
-            }
-        );
+        this.tabs.invoice_tab.datatable.$datatable.on("click", ".match-status", function (e) {
+            me.update_filter(e, "match_status", $(this).text(), me);
+        });
 
-        this.tabs.match_summary_tab.datatable.$datatable.on(
-            "click",
-            ".match-status",
-            function (e) {
-                me.update_filter(e, "match_status", $(this).text(), me);
-            }
-        );
+        this.tabs.match_summary_tab.datatable.$datatable.on("click", ".match-status", function (e) {
+            me.update_filter(e, "match_status", $(this).text(), me);
+        });
 
-        this.tabs.invoice_tab.datatable.$datatable.on(
-            "click",
-            ".ims-action",
-            function (e) {
-                me.update_filter(e, "ims_action", $(this).text(), me);
-            }
-        );
+        this.tabs.invoice_tab.datatable.$datatable.on("click", ".ims-action", function (e) {
+            me.update_filter(e, "ims_action", $(this).text(), me);
+        });
 
-        this.tabs.action_summary_tab.datatable.$datatable.on(
-            "click",
-            ".invoice-category",
-            function (e) {
-                me.update_filter(e, "doc_type", category_map[$(this).text()], me);
-            }
-        );
+        this.tabs.action_summary_tab.datatable.$datatable.on("click", ".invoice-category", function (e) {
+            me.update_filter(e, "doc_type", category_map[$(this).text()], me);
+        });
 
-        this.tabs.invoice_tab.datatable.$datatable.on(
-            "click",
-            ".classification",
-            function (e) {
-                me.update_filter(e, "classification", $(this).text(), me);
-            }
-        );
+        this.tabs.invoice_tab.datatable.$datatable.on("click", ".classification", function (e) {
+            me.update_filter(e, "classification", $(this).text(), me);
+        });
 
-        this.tabs.invoice_tab.datatable.$datatable.on(
-            "click",
-            ".btn.eye",
-            function (e) {
-                const row = me.mapped_invoice_data[$(this).attr("data-name")];
-                me.dm = new DetailViewDialog(me.frm, row);
-            }
-        );
+        this.tabs.invoice_tab.datatable.$datatable.on("click", ".btn.eye", function (e) {
+            const row = me.mapped_invoice_data[$(this).attr("data-name")];
+            me.dm = new DetailViewDialog(me.frm, row);
+        });
     }
 
     async update_filter(e, field, field_value, me) {
@@ -301,12 +273,7 @@ class IMS extends reconciliation.reconciliation_tabs {
                 width: 120,
                 align: "center",
                 _value: (...args) => {
-                    return (
-                        roundNumber(
-                            (args[2].action_taken_count / args[2].total_docs) * 100,
-                            2
-                        ) + " %"
-                    );
+                    return roundNumber((args[2].action_taken_count / args[2].total_docs) * 100, 2) + " %";
                 },
             },
         ];
@@ -316,7 +283,7 @@ class IMS extends reconciliation.reconciliation_tabs {
         if (!this.data.length) return [];
 
         const data = {};
-        this.filtered_data.forEach(row => {
+        this.filtered_data.forEach((row) => {
             let new_row = data[row.match_status];
             if (!new_row) {
                 new_row = data[row.match_status] = {
@@ -417,8 +384,7 @@ class IMS extends reconciliation.reconciliation_tabs {
                 fieldname: "classification",
                 align: "center",
                 width: 100,
-                _value: (...args) =>
-                    `<a href="#" class='classification'>${args[0]}</a>`,
+                _value: (...args) => `<a href="#" class='classification'>${args[0]}</a>`,
             },
         ];
     }
@@ -429,7 +395,7 @@ class IMS extends reconciliation.reconciliation_tabs {
         const data = [];
         this.mapped_invoice_data = {};
 
-        this.filtered_data.forEach(row => {
+        this.filtered_data.forEach((row) => {
             this.mapped_invoice_data[row.inward_supply_name] = row;
 
             data.push({
@@ -458,8 +424,7 @@ class IMS extends reconciliation.reconciliation_tabs {
                 label: "Category",
                 fieldname: "category",
                 width: 200,
-                _value: (...args) =>
-                    `<a href="#" class='invoice-category'>${args[0]}</a>`,
+                _value: (...args) => `<a href="#" class='invoice-category'>${args[0]}</a>`,
             },
             {
                 label: "No Action",
@@ -493,7 +458,7 @@ class IMS extends reconciliation.reconciliation_tabs {
         let summary_data = {};
         if (!data) data = this.filtered_data;
 
-        data.forEach(row => {
+        data.forEach((row) => {
             const action = frappe.scrub(row.ims_action);
             const category = category_map[row.doc_type];
             if (!summary_data[category]) {
@@ -529,7 +494,7 @@ class IMS extends reconciliation.reconciliation_tabs {
             rejected: { count: 0, color: "#e03636" },
         };
 
-        actions_data.forEach(row => {
+        actions_data.forEach((row) => {
             actions_summary.accepted.count += row.accepted;
             actions_summary.pending.count += row.pending;
             actions_summary.rejected.count += row.rejected;
@@ -642,13 +607,9 @@ class IMSAction {
         // Primary Action
         this.frm.disable_save();
         if (!this.frm.doc.data_state) {
-            this.frm.page.set_primary_action(__("Show Invoices"), () =>
-                this.get_ims_data()
-            );
+            this.frm.page.set_primary_action(__("Show Invoices"), () => this.get_ims_data());
         } else {
-            this.frm.page.set_primary_action(__("Upload Invoices"), () =>
-                this.upload_ims_data()
-            );
+            this.frm.page.set_primary_action(__("Upload Invoices"), () => this.upload_ims_data());
         }
 
         // Download Button
@@ -668,29 +629,25 @@ class IMSAction {
             this.frm.add_custom_button(
                 __("Unlink"),
                 () => reconciliation.unlink_documents(this.frm),
-                __("Actions")
+                __("Actions"),
             );
             this.frm.add_custom_button(__("dropdown-divider"), () => {}, __("Actions"));
         }
 
         // Setup Bulk Actions
-        ["No Action", "Accept", "Pending", "Reject"].forEach(action =>
+        ["No Action", "Accept", "Pending", "Reject"].forEach((action) =>
             this.frm.add_custom_button(
                 __(action),
                 () => apply_bulk_action(this.frm, ACTION_MAP[action]),
-                __("Actions")
-            )
+                __("Actions"),
+            ),
         );
 
         // Add Dropdown Divider to differentiate between IMS and Reconciliation Actions
-        this.frm.$wrapper
-            .find("[data-label='dropdown-divider']")
-            .addClass("dropdown-divider");
+        this.frm.$wrapper.find("[data-label='dropdown-divider']").addClass("dropdown-divider");
 
         // move actions button next to filters
-        for (let button of this.frm.$wrapper.find(
-            ".custom-actions .inner-group-button"
-        )) {
+        for (let button of this.frm.$wrapper.find(".custom-actions .inner-group-button")) {
             if (button.innerText?.trim() != __("Actions")) continue;
             this.frm.$wrapper.find(".custom-button-group .inner-group-button").remove();
             $(button).appendTo(this.frm.$wrapper.find(".custom-button-group"));
@@ -724,9 +681,7 @@ class IMSAction {
         this.frm.__invoice_data = message.invoice_data;
 
         this.frm.reconciliation_tabs.render_data(this.frm.__invoice_data);
-        this.frm.doc.data_state = this.frm.__invoice_data.length
-            ? "available"
-            : "unavailable";
+        this.frm.doc.data_state = this.frm.__invoice_data.length ? "available" : "unavailable";
 
         if (message.pending_actions.length) {
             this.handle_upload_status();
@@ -768,21 +723,17 @@ class IMSAction {
     async handle_upload_status(save_status, reset_status) {
         if (!save_status) save_status = await this.get_upload_status_with_retry("save");
 
-        if (!reset_status)
-            reset_status = await this.get_upload_status_with_retry("reset");
+        if (!reset_status) reset_status = await this.get_upload_status_with_retry("reset");
 
         const error_statuses = ["ER", "PE"];
-        if (
-            error_statuses.includes(save_status.status_cd) ||
-            error_statuses.includes(reset_status.status_cd)
-        )
+        if (error_statuses.includes(save_status.status_cd) || error_statuses.includes(reset_status.status_cd))
             return this.on_failed_upload();
 
         return this.on_successful_upload();
     }
 
     get_upload_status_with_retry(action, retries = 0, now = false) {
-        return new Promise(resolve => {
+        return new Promise((resolve) => {
             setTimeout(
                 async () => {
                     const { message } = await taxpayer_api.call({
@@ -795,26 +746,21 @@ class IMSAction {
                         return;
                     }
 
-                    if (
-                        message.status_cd === "IP" &&
-                        retries < this.RETRY_INTERVALS.length
-                    ) {
-                        resolve(
-                            await this.get_upload_status_with_retry(action, retries + 1)
-                        );
+                    if (message.status_cd === "IP" && retries < this.RETRY_INTERVALS.length) {
+                        resolve(await this.get_upload_status_with_retry(action, retries + 1));
                         return;
                     }
 
                     // Not IP
                     resolve(message);
                 },
-                now ? 0 : this.RETRY_INTERVALS[retries]
+                now ? 0 : this.RETRY_INTERVALS[retries],
             );
         });
     }
 
     filter_invoices_to_upload() {
-        return this.frm.reconciliation_tabs.data.filter(row => row.pending_upload);
+        return this.frm.reconciliation_tabs.data.filter((row) => row.pending_upload);
     }
 
     on_failed_upload() {
@@ -841,7 +787,7 @@ class IMSAction {
     on_successful_upload() {
         // refresh existing data
         const data = this.frm.reconciliation_tabs.data;
-        data.forEach(row => {
+        data.forEach((row) => {
             if (!row.pending_upload) return;
 
             row.pending_upload = false;
@@ -877,18 +823,12 @@ class IMSAction {
 class DetailViewDialog extends reconciliation.detail_view_dialog {
     _get_custom_actions() {
         // setup actions
-        let actions = ["No Action", "Reject"].filter(
-            action => ACTION_MAP[action] != this.row.ims_action
-        );
+        let actions = ["No Action", "Reject"].filter((action) => ACTION_MAP[action] != this.row.ims_action);
 
-        if (
-            this.row.match_status !== "Missing in PI" &&
-            this.row.ims_action != "Accepted"
-        )
+        if (this.row.match_status !== "Missing in PI" && this.row.ims_action != "Accepted")
             actions.push("Accept");
 
-        if (this.row.is_pending_action_allowed && this.row.ims_action != "Pending")
-            actions.push("Pending");
+        if (this.row.is_pending_action_allowed && this.row.ims_action != "Pending") actions.push("Pending");
 
         if (this.row.match_status == "Missing in PI") actions.push("Create", "Link");
         else actions.push("Unlink");
@@ -905,14 +845,14 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
                 this.data.purchase_invoice_name,
                 this.data.inward_supply_name,
                 this.dialog.get_value("doctype"),
-                true
+                true,
             );
         } else if (action == "Create") {
             reconciliation.create_new_purchase_invoice(
                 this.data,
                 this.frm.doc.company,
                 this.frm.doc.company_gstin,
-                DOCTYPE
+                DOCTYPE,
             );
         } else {
             apply_action(this.frm, ACTION_MAP[action], [this.row.inward_supply_name]);
@@ -929,8 +869,7 @@ class DetailViewDialog extends reconciliation.detail_view_dialog {
     }
 
     _set_missing_doctype() {
-        if (this.row.match_status == "Missing in PI")
-            this.missing_doctype = "Purchase Invoice";
+        if (this.row.match_status == "Missing in PI") this.missing_doctype = "Purchase Invoice";
         else return;
 
         this.doctype_options = ["Purchase Invoice"];
@@ -960,11 +899,7 @@ function apply_bulk_action(frm, action) {
     }
 
     // summary => invoice
-    const affected_rows = get_affected_rows(
-        active_tab,
-        selected_rows,
-        frm.reconciliation_tabs.filtered_data
-    );
+    const affected_rows = get_affected_rows(active_tab, selected_rows, frm.reconciliation_tabs.filtered_data);
 
     apply_action(frm, action, affected_rows);
 
@@ -978,7 +913,7 @@ async function apply_action(frm, action, invoice_names) {
     let supplier_return_not_filed = [];
     let new_data = [];
 
-    frm.reconciliation_tabs.data.forEach(row => {
+    frm.reconciliation_tabs.data.forEach((row) => {
         if (invoice_names.includes(row.inward_supply_name)) {
             if (action === "Accepted" && !row.is_supplier_return_filed) {
                 supplier_return_not_filed.push(row.inward_supply_name);
@@ -991,8 +926,7 @@ async function apply_action(frm, action, invoice_names) {
                 row.ims_action = action;
 
                 // Update pending upload status
-                if (row.ims_action !== row.previous_ims_action)
-                    row.pending_upload = true;
+                if (row.ims_action !== row.previous_ims_action) row.pending_upload = true;
                 else row.pending_upload = false;
             }
         }
@@ -1001,21 +935,18 @@ async function apply_action(frm, action, invoice_names) {
     });
 
     invoice_names = invoice_names.filter(
-        name =>
-            !(pending_not_allowed.includes(name) || accept_not_allowed.includes(name))
+        (name) => !(pending_not_allowed.includes(name) || accept_not_allowed.includes(name)),
     );
 
     if (pending_not_allowed.length) {
         frappe.msgprint({
-            message: __(
-                "Some invoices are not allowed to be marked as <strong>Pending</strong>."
-            ),
+            message: __("Some invoices are not allowed to be marked as <strong>Pending</strong>."),
             indicator: "red",
         });
     } else if (accept_not_allowed.length) {
         frappe.msgprint({
             message: __(
-                "Some invoices cannot be <strong>Accepted</strong>. Please ensure they are linked to a purchase."
+                "Some invoices cannot be <strong>Accepted</strong>. Please ensure they are linked to a purchase.",
             ),
             indicator: "red",
         });
@@ -1028,11 +959,11 @@ async function apply_action(frm, action, invoice_names) {
         frappe.show_alert(
             {
                 message: __(
-                    "Some invoices are <strong>Accepted</strong> where the Supplier has not filed the return"
+                    "Some invoices are <strong>Accepted</strong> where the Supplier has not filed the return",
                 ),
                 indicator: "orange",
             },
-            10
+            10,
         );
     }
 
@@ -1066,25 +997,21 @@ function get_affected_rows(tab, selection, data) {
 
     if (tab == "match_summary_tab")
         invoices = data.filter(
-            inv => selection.filter(row => row.match_status == inv.match_status).length
+            (inv) => selection.filter((row) => row.match_status == inv.match_status).length,
         );
 
     if (tab == "action_summary_tab")
         invoices = data.filter(
-            inv =>
-                selection.filter(row => category_map[row.category] == inv.doc_type)
-                    .length
+            (inv) => selection.filter((row) => category_map[row.category] == inv.doc_type).length,
         );
 
-    return invoices.map(row => row.inward_supply_name);
+    return invoices.map((row) => row.inward_supply_name);
 }
 
 function show_download_invoices_message(frm) {
     if (!api_enabled) return;
 
-    const msg_tag = frm
-        .get_field("no_invoice_data")
-        .$wrapper.find("#download-invoices-alert");
+    const msg_tag = frm.get_field("no_invoice_data").$wrapper.find("#download-invoices-alert");
 
     // show alert
     msg_tag.removeClass("hidden");

@@ -7,10 +7,7 @@ def execute():
     # Sales Invoice should have field signed_einvoice
     # and E Invoice Settings should be enabled
 
-    if (
-        not frappe.db.has_column("Sales Invoice", "signed_einvoice")
-        or not is_einvoice_enabled()
-    ):
+    if not frappe.db.has_column("Sales Invoice", "signed_einvoice") or not is_einvoice_enabled():
         set_not_applicable_status()
         return
 

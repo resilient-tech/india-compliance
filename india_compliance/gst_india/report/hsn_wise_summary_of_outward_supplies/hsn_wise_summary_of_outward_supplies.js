@@ -1,7 +1,7 @@
 // Copyright (c) 2016, Frappe Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
-/* eslint-disable */
 
+/* eslint-disable */
 {% include "india_compliance/gst_india/report/utils.js" %}
 
 frappe.query_reports["HSN-wise-summary of outward supplies"] = {

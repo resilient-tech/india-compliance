@@ -46,25 +46,18 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         }
 
         create_gst_inward_supply(
-            **default_args,
-            bill_no="BILL-24-00001",
-            previous_ims_action="No Action",
-            action="Pending"
+            **default_args, bill_no="BILL-24-00001", previous_ims_action="No Action", action="Pending"
         )
-        cls.invoice_name_1 = frappe.get_value(
-            "GST Inward Supply", {"bill_no": "BILL-24-00001"}
-        )
+        cls.invoice_name_1 = frappe.get_value("GST Inward Supply", {"bill_no": "BILL-24-00001"})
 
         create_gst_inward_supply(
             **default_args,
             bill_no="BILL-24-00002",
             previous_ims_action="Rejected",
             action="No Action",
-            previous_action="Pending"
+            previous_action="Pending",
         )
-        cls.invoice_name_2 = frappe.get_value(
-            "GST Inward Supply", {"bill_no": "BILL-24-00002"}
-        )
+        cls.invoice_name_2 = frappe.get_value("GST Inward Supply", {"bill_no": "BILL-24-00002"})
 
         cls.pinv = create_purchase_invoice(
             **{
@@ -179,17 +172,13 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
 
         # Previous IMS Action updated
         self.assertEqual(
-            frappe.get_value(
-                "GST Inward Supply", self.invoice_name_1, "previous_ims_action"
-            ),
+            frappe.get_value("GST Inward Supply", self.invoice_name_1, "previous_ims_action"),
             "Accepted",
         )
 
         # Previous IMS Action not updated
         self.assertEqual(
-            frappe.get_value(
-                "GST Inward Supply", self.invoice_name_2, "previous_ims_action"
-            ),
+            frappe.get_value("GST Inward Supply", self.invoice_name_2, "previous_ims_action"),
             "Rejected",
         )
 
@@ -198,23 +187,17 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         periods = self.get_periods()
 
         # When there are no GSTR 3B return logs
-        period_options = get_period_options(
-            "_Test Indian Registered Company", "24AAQCA8719H1ZC"
-        )
+        period_options = get_period_options("_Test Indian Registered Company", "24AAQCA8719H1ZC")
         self.assertListEqual(period_options, periods[:6])
 
         # When GSTR 3B filed period is more than 6 months
         self.create_gstr_3b_return_log(periods[-1])
-        period_options = get_period_options(
-            "_Test Indian Registered Company", "24AAQCA8719H1ZC"
-        )
+        period_options = get_period_options("_Test Indian Registered Company", "24AAQCA8719H1ZC")
         self.assertListEqual(period_options, periods[:-1])
 
         # When GSTR 3B filed period is less than 6 months
         self.create_gstr_3b_return_log(periods[2])
-        period_options = get_period_options(
-            "_Test Indian Registered Company", "24AAQCA8719H1ZC"
-        )
+        period_options = get_period_options("_Test Indian Registered Company", "24AAQCA8719H1ZC")
         self.assertListEqual(period_options, periods[:2])
 
     def test_auto_reconciliation(self):
@@ -324,9 +307,7 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
             link_doctype="Purchase Invoice",
         )
 
-        self.assertIsNone(
-            frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name")
-        )
+        self.assertIsNone(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"))
         self.assertTrue(any(row.inward_supply_name == gst_is.name for row in result))
 
     def test_link_documents_with_none_link_doctype(self):
@@ -373,9 +354,7 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
             link_doctype=None,
         )
 
-        self.assertIsNone(
-            frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name")
-        )
+        self.assertIsNone(frappe.db.get_value("GST Inward Supply", gst_is.name, "link_name"))
         self.assertTrue(any(row.inward_supply_name == gst_is.name for row in result))
 
     def get_periods(self):
@@ -418,23 +397,17 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
         # Test Rejected action → Deferred
         self.gst_ims.period = ims_period
         self.gst_ims.update_action((self.invoice_name_1,), "Rejected")
-        itc_claim_period = frappe.db.get_value(
-            "Purchase Invoice", self.pinv.name, "itc_claim_period"
-        )
+        itc_claim_period = frappe.db.get_value("Purchase Invoice", self.pinv.name, "itc_claim_period")
         self.assertEqual(itc_claim_period, ITC_CLAIM_PERIOD_DEFERRED)
 
         # Test Accepted action → ims_period
         self.gst_ims.update_action((self.invoice_name_1,), "Accepted")
-        itc_claim_period = frappe.db.get_value(
-            "Purchase Invoice", self.pinv.name, "itc_claim_period"
-        )
+        itc_claim_period = frappe.db.get_value("Purchase Invoice", self.pinv.name, "itc_claim_period")
         self.assertEqual(itc_claim_period, ims_period)
 
         # Test Pending action → Deferred
         self.gst_ims.update_action((self.invoice_name_1,), "Pending")
-        itc_claim_period = frappe.db.get_value(
-            "Purchase Invoice", self.pinv.name, "itc_claim_period"
-        )
+        itc_claim_period = frappe.db.get_value("Purchase Invoice", self.pinv.name, "itc_claim_period")
         self.assertEqual(itc_claim_period, ITC_CLAIM_PERIOD_DEFERRED)
 
     def test_itc_claim_period_no_change_when_filed(self):
@@ -455,9 +428,7 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
 
         self.gst_ims.period = ims_period
         self.gst_ims.update_action((self.invoice_name_1,), "Accepted")
-        itc_claim_period = frappe.db.get_value(
-            "Purchase Invoice", self.pinv.name, "itc_claim_period"
-        )
+        itc_claim_period = frappe.db.get_value("Purchase Invoice", self.pinv.name, "itc_claim_period")
         self.assertEqual(itc_claim_period, ims_period)
 
         update_gstr3b_filing_status(
@@ -469,9 +440,7 @@ class TestGSTInvoiceManagementSystem(IntegrationTestCase):
 
         # IMS Rejected → should NOT change (period is filed)
         self.gst_ims.update_action((self.invoice_name_1,), "Rejected")
-        itc_claim_period = frappe.db.get_value(
-            "Purchase Invoice", self.pinv.name, "itc_claim_period"
-        )
+        itc_claim_period = frappe.db.get_value("Purchase Invoice", self.pinv.name, "itc_claim_period")
         self.assertEqual(itc_claim_period, ims_period)
 
         update_gstr3b_filing_status(

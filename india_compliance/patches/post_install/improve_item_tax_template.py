@@ -1,5 +1,4 @@
 import click
-
 import frappe
 import frappe.defaults
 from frappe.query_builder import Case
@@ -133,8 +132,7 @@ def create_or_update_item_tax_templates(companies):
     show_notification = False
     for company in companies_with_templates:
         gst_accounts = [
-            {"tax_type": account, "tax_rate": 0}
-            for account in company_wise_gst_accounts[company]
+            {"tax_type": account, "tax_rate": 0} for account in company_wise_gst_accounts[company]
         ]
 
         for new_template in NEW_TEMPLATES.values():
@@ -170,9 +168,7 @@ def create_or_update_item_tax_templates(companies):
         )
 
         for user in get_users_with_role("Accounts Manager"):
-            frappe.defaults.set_user_default(
-                "needs_item_tax_template_notification", 1, user=user
-            )
+            frappe.defaults.set_user_default("needs_item_tax_template_notification", 1, user=user)
 
     return templates
 
@@ -312,10 +308,7 @@ def update_gst_treatment_for_zero_rated(table, query, doctype):
         .set(table.gst_treatment, "Zero-Rated")
         .where(
             (doc.gst_category == "SEZ")
-            | (
-                (doc.gst_category == "Overseas")
-                & (doc.place_of_supply == "96-Other Countries")
-            )
+            | ((doc.gst_category == "Overseas") & (doc.place_of_supply == "96-Other Countries"))
         )
         .run()
     )
@@ -325,9 +318,7 @@ def update_gst_details_for_transactions(companies):
     for company in companies:
         gst_accounts = []
         for account_type in ["Input", "Output"]:
-            gst_accounts.extend(
-                get_gst_accounts_by_type(company, account_type, throw=False).values()
-            )
+            gst_accounts.extend(get_gst_accounts_by_type(company, account_type, throw=False).values())
 
         if not gst_accounts:
             continue
@@ -384,9 +375,7 @@ def get_docs_with_gst_accounts(doctype, gst_accounts):
 
 
 def get_taxes_for_docs(docs, doctype, is_sales_doctype):
-    taxes_doctype = (
-        "Sales Taxes and Charges" if is_sales_doctype else "Purchase Taxes and Charges"
-    )
+    taxes_doctype = "Sales Taxes and Charges" if is_sales_doctype else "Purchase Taxes and Charges"
     taxes = frappe.qb.DocType(taxes_doctype)
     return (
         frappe.qb.from_(taxes)
@@ -446,9 +435,7 @@ def compile_docs(taxes, items, item_taxes, doctype):
 
     for tax in taxes:
         if tax.parent not in response:
-            response[tax.parent] = frappe._dict(
-                taxes=[], items=[], item_wise_tax_details=[], doctype=doctype
-            )
+            response[tax.parent] = frappe._dict(taxes=[], items=[], item_wise_tax_details=[], doctype=doctype)
 
         response[tax.parent]["taxes"].append(tax)
 
@@ -491,9 +478,7 @@ def build_query_and_update_gst_details(gst_details, doctype):
             if not row.get(field):
                 continue
 
-            conditions[field] = conditions[field].when(
-                transaction_item.name == item_name, row[field]
-            )
+            conditions[field] = conditions[field].when(transaction_item.name == item_name, row[field])
             conditions_available_for.add(field)
 
     # Update queries
@@ -508,6 +493,4 @@ def build_query_and_update_gst_details(gst_details, doctype):
         execute_query = True
 
     if execute_query:
-        update_query = update_query.where(
-            transaction_item.name.isin(list(gst_details.keys()))
-        ).run()
+        update_query = update_query.where(transaction_item.name.isin(list(gst_details.keys()))).run()

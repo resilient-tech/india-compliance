@@ -57,10 +57,7 @@ export default {
         async createOrder({ commit }, orderDetails) {
             this.dispatch("resetOrder");
 
-            const response = await create_order(
-                orderDetails.credits,
-                orderDetails.grandTotal
-            );
+            const response = await create_order(orderDetails.credits, orderDetails.grandTotal);
 
             if (response.invalid_token) {
                 this.dispatch("setApiSecret", null);
@@ -79,9 +76,8 @@ export default {
         },
 
         setMessage({ commit }, { message, color }) {
-            commit("SET_MESSAGE",{ message, color});
-        }
-
+            commit("SET_MESSAGE", { message, color });
+        },
     },
 
     getters: {},

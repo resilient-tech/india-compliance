@@ -20,7 +20,7 @@ india_compliance.FILTER_OPERATORS = {
     },
 };
 
-FILTER_GROUP_BUTTON = $(
+const FILTER_GROUP_BUTTON = $(
     `
     <div class="custom-button-group">
         <div class="filter-selector">
@@ -33,9 +33,7 @@ FILTER_GROUP_BUTTON = $(
                         ${__("Filter")}
                     <span>
                 </button>
-                <button class="btn btn-default btn-sm filter-x-button" title="${__(
-                    "Clear all filters"
-                )}">
+                <button class="btn btn-default btn-sm filter-x-button" title="${__("Clear all filters")}">
                     <span class="filter-icon">
                         ${frappe.utils.icon("filter-x")}
                     </span>
@@ -43,7 +41,7 @@ FILTER_GROUP_BUTTON = $(
             </div>
         </div>
     </div>
-    `
+    `,
 );
 
 class _Filter extends frappe.ui.Filter {
@@ -51,22 +49,20 @@ class _Filter extends frappe.ui.Filter {
         let filter_options = this.filter_list.filter_options;
         if (filter_options) {
             filter_options = { ...filter_options };
-            if (this.fieldname && this.fieldname !== "name")
-                delete filter_options.fieldname;
+            if (this.fieldname && this.fieldname !== "name") delete filter_options.fieldname;
 
             Object.assign(this, filter_options);
         }
 
         this.conditions = this.conditions.filter(
-            condition => india_compliance.FILTER_OPERATORS[condition && condition[0]]
+            (condition) => india_compliance.FILTER_OPERATORS[condition && condition[0]],
         );
     }
 }
 
 india_compliance.FilterGroup = class FilterGroup extends frappe.ui.FilterGroup {
     constructor(opts) {
-        if (!opts.parent)
-            frappe.throw(__("india_compliance.FilterGroup: Parent element not found"));
+        if (!opts.parent) frappe.throw(__("india_compliance.FilterGroup: Parent element not found"));
 
         FILTER_GROUP_BUTTON.appendTo(opts.parent);
 
@@ -100,15 +96,12 @@ india_compliance.FilterGroup = class FilterGroup extends frappe.ui.FilterGroup {
 
     remove_filter(filter_value) {
         // filter_value of form: [doctype, fieldname, condition, value]
-        this.filters = this.filters.filter(f => {
+        this.filters = this.filters.filter((f) => {
             let f_value = f.get_value();
 
             if (filter_value.length === 2) f_value = f_value.slice(0, 2);
 
-            const remove = frappe.utils.arrays_equal(
-                f_value.slice(0, 4),
-                filter_value.slice(0, 4)
-            );
+            const remove = frappe.utils.arrays_equal(f_value.slice(0, 4), filter_value.slice(0, 4));
             if (remove) f.remove();
 
             return !remove;
@@ -131,8 +124,7 @@ function _like(expected_value, value) {
 
     if (!expected_value.endsWith("%")) return value.endsWith(expected_value.slice(1));
 
-    if (!expected_value.startsWith("%"))
-        return value.startsWith(expected_value.slice(0, -1));
+    if (!expected_value.startsWith("%")) return value.startsWith(expected_value.slice(0, -1));
 
     return value.includes(expected_value.slice(1, -1));
 }

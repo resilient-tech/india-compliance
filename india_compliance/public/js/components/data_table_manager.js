@@ -20,7 +20,7 @@ india_compliance.DataTableManager = class DataTableManager {
             this.columns_dict[fieldname] = column;
             this.columns_dict[fieldname].$filter_input = $(
                 `.dt-row-filter .dt-cell--col-${column.colIndex} .dt-filter`,
-                this.$datatable
+                this.$datatable,
             )[0];
         }
     }
@@ -43,8 +43,7 @@ india_compliance.DataTableManager = class DataTableManager {
 
     make_no_data() {
         this.$no_data =
-            this.$no_data ||
-            $('<div class="text-muted text-center">No Matching Data Found!</div>');
+            this.$no_data || $('<div class="text-muted text-center">No Matching Data Found!</div>');
 
         this.$wrapper.parent().append(this.$no_data);
 
@@ -116,14 +115,12 @@ india_compliance.DataTableManager = class DataTableManager {
 
     get_checked_items() {
         const indices = this.datatable.rowmanager.getCheckedRows();
-        return indices.map(index => this.data[index]);
+        return indices.map((index) => this.data[index]);
     }
 
     clear_checked_items() {
         const { rowmanager } = this.datatable;
-        rowmanager
-            .getCheckedRows()
-            .map(rowIndex => rowmanager.checkRow(rowIndex, false));
+        rowmanager.getCheckedRows().map((rowIndex) => rowmanager.checkRow(rowIndex, false));
     }
 
     render_datatable() {
@@ -210,17 +207,14 @@ india_compliance.DataTableManager = class DataTableManager {
 
         const row_template = this.get_row_template(row);
 
-        const total_row_data = row_template.map(cell => {
+        const total_row_data = row_template.map((cell) => {
             if (cell.content === "") return cell;
 
             const fieldname = cell.column.id;
 
             if (row.label_column === fieldname) {
                 cell.content = row.label;
-            } else if (
-                cell.column._fieldtype === "Float" ||
-                cell.column.fieldtype === "Float"
-            ) {
+            } else if (cell.column._fieldtype === "Float" || cell.column.fieldtype === "Float") {
                 cell.content = data[fieldname] || 0.0;
             } else if (Object.prototype.hasOwnProperty.call(data, fieldname)) {
                 cell.content = data[fieldname];
@@ -244,7 +238,7 @@ india_compliance.DataTableManager = class DataTableManager {
         const datatable = this.datatable;
         const columns = datatable.getColumns();
 
-        const row_template = columns.map(col => {
+        const row_template = columns.map((col) => {
             let content = null;
 
             if (row?.exclude_columns.includes(col.id)) {

@@ -11,7 +11,7 @@ frappe.ui.form.on(DOCTYPE, {
             },
         });
 
-        frm.set_query("driver", doc => {
+        frm.set_query("driver", (doc) => {
             return {
                 filters: {
                     transporter: doc.transporter,
@@ -55,11 +55,7 @@ frappe.ui.form.on(DOCTYPE, {
         if (gst_settings.enable_e_waybill && gst_settings.enable_e_waybill_from_pi)
             show_sandbox_mode_indicator();
 
-        if (
-            frm.doc.docstatus === 1 &&
-            frm.doc.is_boe_applicable &&
-            frm.doc.__onload?.has_pending_boe_qty
-        ) {
+        if (frm.doc.docstatus === 1 && frm.doc.is_boe_applicable && frm.doc.__onload?.has_pending_boe_qty) {
             frm.add_custom_button(
                 __("Bill of Entry"),
                 () => {
@@ -82,7 +78,7 @@ frappe.ui.form.on(DOCTYPE, {
         if (!frm._inward_supply) return;
         // go back to previous page and match the invoice with the inward supply
         setTimeout(() => {
-            frappe.route_hooks.after_load = source_frm => {
+            frappe.route_hooks.after_load = (source_frm) => {
                 if (!source_frm.reconciliation_tabs) return;
                 reconciliation.link_documents(
                     source_frm,
@@ -116,8 +112,7 @@ function toggle_reverse_charge(frm) {
     let is_read_only = 0;
     if (!is_import_gst_category(frm.doc.gst_category)) is_read_only = 0;
     // has_goods_item
-    else if (has_goods_items(frm))
-        is_read_only = 1;
+    else if (has_goods_items(frm)) is_read_only = 1;
 
     frm.set_df_property("is_reverse_charge", "read_only", is_read_only);
 }
@@ -129,21 +124,15 @@ function validate_gst_hsn_code(frm) {
     )
         return;
 
-    if (frm.doc.items.some(item => item.item_name && !item.gst_hsn_code)) {
-        frappe.throw(
-            __("GST HSN Code is mandatory for {0} Purchase Invoice.", [
-                frm.doc.gst_category,
-            ]),
-        );
+    if (frm.doc.items.some((item) => item.item_name && !item.gst_hsn_code)) {
+        frappe.throw(__("GST HSN Code is mandatory for {0} Purchase Invoice.", [frm.doc.gst_category]));
     }
 }
 
 function has_goods_items(frm) {
     return (
         frm.doc.items.length > 0 &&
-        frm.doc.items.some(
-            item => item.gst_hsn_code && !item.gst_hsn_code.startsWith("99"),
-        )
+        frm.doc.items.some((item) => item.gst_hsn_code && !item.gst_hsn_code.startsWith("99"))
     );
 }
 

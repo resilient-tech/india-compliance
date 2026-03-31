@@ -1,5 +1,4 @@
 import click
-
 import frappe
 
 from india_compliance.audit_trail.setup import setup_fixtures as setup_audit_trail
@@ -100,9 +99,7 @@ def disable_ic_account_page():
     Disable the India Compliance Account Page if API secret is set in frappe.conf
     """
 
-    if not frappe.conf.ic_api_secret or frappe.db.exists(
-        "Custom Role", {"page": "india-compliance-account"}
-    ):
+    if not frappe.conf.ic_api_secret or frappe.db.exists("Custom Role", {"page": "india-compliance-account"}):
         return
 
     frappe.get_doc(doctype="Custom Role", page="india-compliance-account").insert()

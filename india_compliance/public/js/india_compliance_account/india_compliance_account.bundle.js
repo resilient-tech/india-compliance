@@ -18,9 +18,14 @@ class IndiaComplianceAccountPage {
     }
 
     createRouter() {
-        const history = createWebHistory(frappe.utils.generate_route({type: 'Page', name: 'india-compliance-account'}));
+        const history = createWebHistory(
+            frappe.utils.generate_route({
+                type: "Page",
+                name: "india-compliance-account",
+            }),
+        );
 
-        history.listen(to => {
+        history.listen((to) => {
             if (frappe.get_route_str().startsWith(this.pageName)) return;
 
             frappe.route_flags.replace_route = true;
@@ -107,9 +112,7 @@ function extract_error_message(responseBody) {
     if (!exception) {
         if (_server_messages) {
             const server_messages = JSON.parse(_server_messages);
-            return server_messages
-                .map(message => JSON.parse(message).message || "")
-                .join("\n");
+            return server_messages.map((message) => JSON.parse(message).message || "").join("\n");
         }
         return "Something went wrong, Please try again later!";
     }

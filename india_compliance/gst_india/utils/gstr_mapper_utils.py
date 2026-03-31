@@ -1,14 +1,16 @@
+from typing import ClassVar
+
 from frappe.utils import flt
 
 from india_compliance.gst_india.constants import STATE_NUMBERS
 
 
 class GovDataMapper:
-    KEY_MAPPING = {}
-    FLOAT_FIELDS = {}
-    DISCARD_IF_ZERO_FIELDS = {}
-    TOTAL_DEFAULTS = {}
-    DEFAULT_ITEM_AMOUNTS = {}
+    KEY_MAPPING: ClassVar[dict] = {}
+    FLOAT_FIELDS: ClassVar[dict] = {}
+    DISCARD_IF_ZERO_FIELDS: ClassVar[dict] = {}
+    TOTAL_DEFAULTS: ClassVar[dict] = {}
+    DEFAULT_ITEM_AMOUNTS: ClassVar[dict] = {}
 
     def __init__(self):
         self.set_total_defaults()
@@ -22,9 +24,7 @@ class GovDataMapper:
         # value formatting constants
         self.STATE_NUMBERS = self.reverse_dict(STATE_NUMBERS)
 
-    def format_data(
-        self, data: dict, default_data: dict = None, for_gov: bool = False
-    ) -> dict:
+    def format_data(self, data: dict, default_data: dict | None = None, for_gov: bool = False) -> dict:
         """
         Objective: Convert Object from one format to another.
             eg: Govt JSON to Internal Data Structure
@@ -54,15 +54,9 @@ class GovDataMapper:
         if for_gov:
             key_mapping = self.reverse_dict(key_mapping)
 
-        value_formatters = (
-            self.value_formatters_for_gov
-            if for_gov
-            else self.value_formatters_for_internal
-        )
+        value_formatters = self.value_formatters_for_gov if for_gov else self.value_formatters_for_internal
 
-        ignore_key = (
-            self.ignore_key_for_gov if for_gov else self.ignore_key_for_internal
-        )
+        ignore_key = self.ignore_key_for_gov if for_gov else self.ignore_key_for_internal
 
         for old_key, new_key in key_mapping.items():
             invoice_data_value = data.get(old_key, "")
@@ -114,9 +108,7 @@ class GovDataMapper:
                 invoice[total_field] = invoice.setdefault(total_field, 0) + value
 
     def set_total_defaults(self):
-        self.TOTAL_DEFAULTS = {
-            f"total_{key}": 0 for key in self.DEFAULT_ITEM_AMOUNTS.keys()
-        }
+        self.TOTAL_DEFAULTS = {f"total_{key}": 0 for key in self.DEFAULT_ITEM_AMOUNTS.keys()}
 
     def reverse_dict(self, data):
         return {v: k for k, v in data.items()}

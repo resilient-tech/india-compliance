@@ -25,3 +25,27 @@ d8c2469651974cc82a2bb50c93e22f723cbb5b42
 
 # format yaml/yml files with prettier
 a57edf10a0e4399e4ad6b3d6cdbd340646ee027d
+
+### ruff implementation ###
+
+# eslint globals
+5bad5049e9b3f55c1c3240029f6f8602a51bd9a7
+
+# run pre-commit with ruff and fixes some errors
+d4986b31db0e89c290990d1bb8d33cbc66075a6b
+
+# add .eslintignore and .prettierignore
+8e072ca65b4e33e3a9f2fb0d9ee6304d29f91ca0
+
+# skip security review semgrep rule
+66c2ca01f834e0302ed205f71a297287850c650c
+
+# run prettier on javascript files
+02cd1ae9e657599f0230743018cedf2978b6cf34
+
+# fix linters for wrong import
+9bc34dcd78b1d16c04e94000104dc6589a957635
+
+# resolve conflicts because of linters
+4a14fdd4be6d906257c6ca599a649c63119bc61b
+01766e2eb8b27f8b7987614b8a9b6e57182d41ea

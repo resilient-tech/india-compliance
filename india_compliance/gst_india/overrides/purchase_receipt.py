@@ -29,9 +29,7 @@ def onload(doc, method=None):
         return
 
     if (
-        validate_mandatory_fields(
-            doc, ("company_gstin", "place_of_supply", "gst_category"), throw=False
-        )
+        validate_mandatory_fields(doc, ("company_gstin", "place_of_supply", "gst_category"), throw=False)
         is False
     ):
         return
@@ -47,9 +45,7 @@ def onload(doc, method=None):
     if (
         is_api_enabled(gst_settings)
         and gst_settings.enable_e_waybill
-        and (
-            gst_settings.enable_e_waybill_from_pr or gst_settings.auto_cancel_e_waybill
-        )
+        and (gst_settings.enable_e_waybill_from_pr or gst_settings.auto_cancel_e_waybill)
         and (e_waybill_info := get_e_waybill_info(doc))
     ):
         doc.set_onload("e_waybill_info", e_waybill_info)

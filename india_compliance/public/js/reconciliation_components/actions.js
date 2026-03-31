@@ -3,7 +3,7 @@ frappe.provide("reconciliation");
 Object.assign(reconciliation, {
     get_unlinked_docs(selected_rows) {
         const unlinked_docs = new Set();
-        selected_rows.forEach(row => {
+        selected_rows.forEach((row) => {
             unlinked_docs.add(row.purchase_invoice_name);
             unlinked_docs.add(row.inward_supply_name);
         });
@@ -24,12 +24,12 @@ Object.assign(reconciliation, {
             });
 
         // validate selected rows
-        selected_rows.forEach(row => {
+        selected_rows.forEach((row) => {
             if (row.match_status.includes("Missing"))
                 frappe.throw(
                     __(
-                        "You have selected rows where no match is available. Please remove them before unlinking."
-                    )
+                        "You have selected rows where no match is available. Please remove them before unlinking.",
+                    ),
                 );
         });
 
@@ -41,11 +41,8 @@ Object.assign(reconciliation, {
         const unlinked_docs = reconciliation.get_unlinked_docs(selected_rows);
 
         const new_data = _class.data.filter(
-            row =>
-                !(
-                    unlinked_docs.has(row.purchase_invoice_name) ||
-                    unlinked_docs.has(row.inward_supply_name)
-                )
+            (row) =>
+                !(unlinked_docs.has(row.purchase_invoice_name) || unlinked_docs.has(row.inward_supply_name)),
         );
 
         new_data.push(...r);
@@ -53,13 +50,7 @@ Object.assign(reconciliation, {
         reconciliation.after_successful_action(invoice_tab);
     },
 
-    async link_documents(
-        frm,
-        purchase_invoice_name,
-        inward_supply_name,
-        link_doctype,
-        alert = true
-    ) {
+    async link_documents(frm, purchase_invoice_name, inward_supply_name, link_doctype, alert = true) {
         if (frm.get_active_tab()?.df.fieldname != "invoice_tab") return;
 
         // link documents & update data.
@@ -71,11 +62,11 @@ Object.assign(reconciliation, {
 
         const _class = frm.reconciliation_tabs;
         const new_data = _class.data.filter(
-            row =>
+            (row) =>
                 !(
                     row.purchase_invoice_name == purchase_invoice_name ||
                     row.inward_supply_name == inward_supply_name
-                )
+                ),
         );
 
         new_data.push(...r);
@@ -100,10 +91,10 @@ Object.assign(reconciliation, {
             "Address",
             { gstin: company_gstin, is_your_company_address: 1 },
             "name",
-            r => (company_address = r.name)
+            (r) => (company_address = r.name),
         );
 
-        frappe.route_hooks.after_load = frm => {
+        frappe.route_hooks.after_load = (frm) => {
             function _set_value(values) {
                 for (const key in values) {
                     if (values[key] == frm.doc[key]) continue;

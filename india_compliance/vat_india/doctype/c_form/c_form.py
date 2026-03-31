@@ -4,6 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.query_builder.functions import IfNull
 from frappe.utils import flt
 
 
@@ -21,31 +22,20 @@ class CForm(Document):
                 )
 
                 if inv and inv[0][0] != "Yes":
-                    frappe.throw(
-                        _("C-form is not applicable for Invoice: {0}").format(
-                            d.invoice_no
-                        )
-                    )
+                    frappe.throw(_("C-form is not applicable for Invoice: {0}").format(d.invoice_no))
 
                 elif inv and inv[0][1] and inv[0][1] != self.name:
                     frappe.throw(
                         _(
-                            """Invoice {0} is tagged in another C-form: {1}.
-						If you want to change C-form no for this invoice,
-						please remove invoice no from the previous c-form and then try again""".format(
-                                d.invoice_no, inv[0][1]
-                            )
-                        )
+                            "Invoice {0} is tagged in another C-form: {1} .<br> If you want to change C-form no for this invoice,<br> please remove invoice no from the previous c-form and then try again"
+                        ).format(d.invoice_no, inv[0][1])
                     )
 
                 elif not inv:
                     frappe.throw(
                         _(
-                            "Row {0}: Invoice {1} is invalid, it might be cancelled /"
-                            " does not exist. Please enter a valid Invoice.".format(
-                                d.idx, d.invoice_no
-                            )
-                        )
+                            "Row {0}: Invoice {1} is invalid, it might be cancelled or does not exist. Please enter a valid Invoice."
+                        ).format(d.idx, d.invoice_no)
                     )
 
     def on_update(self):
@@ -57,28 +47,38 @@ class CForm(Document):
 
     def before_cancel(self):
         # remove cform reference
-        frappe.db.sql(
-            """update `tabSales Invoice` set c_form_no=null where c_form_no=%s""",
-            self.name,
+        sales_invoice = frappe.qb.DocType("Sales Invoice")
+
+        (
+            frappe.qb.update(sales_invoice)
+            .set(sales_invoice.c_form_no, None)
+            .where(sales_invoice.c_form_no == self.name)
+            .run()
         )
 
     def set_cform_in_sales_invoices(self):
         inv = [d.invoice_no for d in self.get("invoices")]
         if inv:
-            frappe.db.sql(
-                """update `tabSales Invoice` set c_form_no=%s, modified=%s where name in (%s)"""
-                % ("%s", "%s", ", ".join(["%s"] * len(inv))),
-                tuple([self.name, self.modified] + inv),
+            sales_invoice = frappe.qb.DocType("Sales Invoice")
+
+            (
+                frappe.qb.update(sales_invoice)
+                .set(sales_invoice.c_form_no, self.name)
+                .set(sales_invoice.modified, self.modified)
+                .where(sales_invoice.name.isin(inv))
+                .run()
             )
 
-            frappe.db.sql(
-                """update `tabSales Invoice` set c_form_no = null, modified = %s
-				where name not in (%s) and ifnull(c_form_no, '') = %s"""
-                % ("%s", ", ".join(["%s"] * len(inv)), "%s"),
-                tuple([self.modified] + inv + [self.name]),
+            (
+                frappe.qb.update(sales_invoice)
+                .set(sales_invoice.c_form_no, None)
+                .set(sales_invoice.modified, self.modified)
+                .where(sales_invoice.name.notin(inv))
+                .where(IfNull(sales_invoice.c_form_no, "") == self.name)
+                .run()
             )
         else:
-            frappe.throw(_("Please enter atleast 1 invoice in the table"))
+            frappe.throw(_("Please enter at least 1 invoice in the table"))
 
     def set_total_invoiced_amount(self):
         total = sum(flt(d.grand_total) for d in self.get("invoices"))
