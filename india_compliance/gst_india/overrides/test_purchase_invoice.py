@@ -2,7 +2,6 @@ import re
 import unittest.mock as mock
 
 import frappe
-from erpnext.accounts.doctype.account.test_account import create_account
 from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import add_months, getdate
 
