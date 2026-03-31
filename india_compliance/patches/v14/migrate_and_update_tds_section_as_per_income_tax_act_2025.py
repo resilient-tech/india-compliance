@@ -1,5 +1,6 @@
 import frappe
 from frappe.query_builder import Case
+from frappe.query_builder.functions import IfNull
 
 from india_compliance.income_tax_india.overrides.company import (
     create_or_update_tax_withholding_category,
@@ -67,17 +68,61 @@ OLD_TO_NEW = {
     ("194Q", "Individual"): "1031",
     ("194Q", "Company"): "1031",
     ("194Q", "No PAN / Invalid PAN"): "1031",
+    ("194BA", "Individual"): "1060",
+    ("194BA", "Company"): "1060",
+    ("194BA", "No PAN / Invalid PAN"): "1060",
+    ("194IB", "Individual"): "393(1) Sl.2(i)",
+    ("194IB", "Company"): "393(1) Sl.2(i)",
+    ("194IB", "No PAN / Invalid PAN"): "393(1) Sl.2(i)",
+    ("194IC", "Individual"): "1011",
+    ("194IC", "Company"): "1011",
+    ("194IC", "No PAN / Invalid PAN"): "1011",
+    ("194K", "Individual"): "1013",
+    ("194K", "Company"): "1013",
+    ("194K", "No PAN / Invalid PAN"): "1013",
+    ("194LBA", "Individual"): "1014",
+    ("194LBA", "Company"): "1014",
+    ("194LBA", "No PAN / Invalid PAN"): "1014",
+    ("194LBC", "Individual"): "1018",
+    ("194LBC", "Company"): "1018",
+    ("194LBC", "No PAN / Invalid PAN"): "1018",
+    ("194M", "Individual"): "393(1) Sl.6(ii)",
+    ("194M", "Company"): "393(1) Sl.6(ii)",
+    ("194M", "No PAN / Invalid PAN"): "393(1) Sl.6(ii)",
+    ("194N", "Individual"): "1065",
+    ("194N", "Company"): "1065",
+    ("194N", "No PAN / Invalid PAN"): "1065",
+    ("194O", "Individual"): "1035",
+    ("194O", "Company"): "1035",
+    ("194O", "No PAN / Invalid PAN"): "1035",
+    ("194P", "Individual"): "1032",
+    ("194P", "Company"): "1032",
+    ("194P", "No PAN / Invalid PAN"): "1032",
+    ("194R", "Individual"): "1033",
+    ("194R", "Company"): "1033",
+    ("194R", "No PAN / Invalid PAN"): "1033",
+    ("194S", "Individual"): "1037",
+    ("194S", "Company"): "1037",
+    ("194S", "No PAN / Invalid PAN"): "1037",
+    ("194T", "Individual"): "1067",
+    ("194T", "Company"): "1067",
+    ("194T", "No PAN / Invalid PAN"): "1067",
+    ("195", "Individual"): "1057",
+    ("195", "Company"): "1057",
+    ("195", "No PAN / Invalid PAN"): "1057",
 }
 
 
 def execute():
     twc = frappe.qb.DocType("Tax Withholding Category")
 
+    old_sections = set(old for old, _ in OLD_TO_NEW)
+
     (
         frappe.qb.update(twc)
         .set(twc.old_income_tax_section, twc.tds_section)
-        .where(twc.tds_section.isnotnull())
-        .where(twc.tds_section != "")
+        .where(twc.tds_section.isin(old_sections))
+        .where(IfNull(twc.old_income_tax_section, "") == "")
         .run()
     )
 
@@ -89,13 +134,7 @@ def execute():
         )
     section_case = section_case.else_(twc.tds_section)
 
-    (
-        frappe.qb.update(twc)
-        .set(twc.tds_section, section_case)
-        .where(twc.tds_section.isnotnull())
-        .where(twc.tds_section != "")
-        .run()
-    )
+    (frappe.qb.update(twc).set(twc.tds_section, section_case).where(twc.tds_section.isin(old_sections)).run())
 
     company_list = frappe.get_all("Company", filters={"country": "India"}, pluck="name", order_by="lft asc")
     for company in company_list:
