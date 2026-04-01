@@ -436,6 +436,66 @@ class TestBillofEntry(IntegrationTestCase):
         pi.reload()
         self.assertEqual(pi.items[0].pending_boe_qty, 2)
 
+    def test_sez_goods_with_gst_taxes_cannot_be_linked_to_boe(self):
+        """
+        A SEZ goods invoice with GST taxes has is_boe_applicable = 0 and
+        must fail BOE validation even if linked manually.
+        """
+        # SEZ Invoice with GST taxes - not BOE eligible
+        pi2 = create_purchase_invoice(
+            supplier="_Test Registered Supplier",
+            update_stock=1,
+            is_out_state=True,
+            do_not_save=True,
+            do_not_submit=True,
+        )
+        pi2.gst_category = "SEZ"
+        pi2.save()
+        pi2.submit()
+        self.assertEqual(pi2.is_boe_applicable, 0)
+
+        company = frappe.get_cached_doc("Company", pi2.company)
+        gst_accounts = get_gst_accounts_by_type(pi2.company, "Input")
+
+        boe = frappe.get_doc(
+            {
+                "doctype": "Bill of Entry",
+                "company": pi2.company,
+                "company_gstin": pi2.company_gstin,
+                "bill_of_entry_no": "SEZ-BOE-003",
+                "bill_of_entry_date": today(),
+                "posting_date": today(),
+                "customs_expense_account": company.default_customs_expense_account,
+                "customs_payable_account": company.default_customs_payable_account,
+                "items": [
+                    {
+                        "item_code": pi2.items[0].item_code,
+                        "purchase_invoice": pi2.name,
+                        "pi_detail": pi2.items[0].name,
+                        "qty": pi2.items[0].qty,
+                        "uom": pi2.items[0].uom,
+                        "assessable_value": pi2.items[0].taxable_value,
+                        "customs_duty": 0,
+                        "cost_center": pi2.items[0].cost_center,
+                    }
+                ],
+                "taxes": [
+                    {
+                        "charge_type": "On Net Total",
+                        "account_head": gst_accounts.igst_account,
+                        "rate": 0,
+                        "cost_center": pi2.items[0].cost_center,
+                    }
+                ],
+            }
+        )
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^Bill of Entry is not applicable for Purchase Invoice"),
+            boe.save,
+        )
+
     def test_boe_not_applicable_excludes_invoice_from_boe(self):
         """
         An Import Of Service invoice (is_boe_applicable auto-set to 0) must not
