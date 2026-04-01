@@ -19,6 +19,4 @@ def execute():
         .run(as_dict=True)
     )
 
-    frappe.db.bulk_update(
-        "GST Inward Supply", {d.pop("name"): d for d in inward_supply_values}
-    )
+    frappe.db.bulk_update("GST Inward Supply", {d.pop("name"): d for d in inward_supply_values})

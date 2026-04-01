@@ -7,7 +7,6 @@ from frappe.utils import getdate
 
 
 class TestUtils(FrappeTestCase):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -31,9 +30,7 @@ class TestUtils(FrappeTestCase):
             }
         ).insert(ignore_if_duplicate=True)
 
-    @patch(
-        "india_compliance.gst_india.utils.getdate", return_value=getdate("2023-06-20")
-    )
+    @patch("india_compliance.gst_india.utils.getdate", return_value=getdate("2023-06-20"))
     def test_timespan_date_range(self, getdate_mock):
         from india_compliance.gst_india.utils import get_timespan_date_range
 

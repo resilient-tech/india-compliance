@@ -1,13 +1,12 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
 
-from pypika import Order
-from pypika.terms import ValueWrapper
-
 import frappe
 from frappe.query_builder import Case
 from frappe.query_builder.functions import Date, IfNull
 from frappe.utils import getdate
+from pypika import Order
+from pypika.terms import ValueWrapper
 
 
 class ITC04Query:
@@ -45,9 +44,7 @@ class ITC04Query:
                 doc.base_grand_total.as_("invoice_total"),
                 IfNull(doc_item.description, "").as_("description"),
                 IfNull(doc_item.gst_treatment, "Not Defined").as_("gst_treatment"),
-                (doc_item.cgst_rate + doc_item.sgst_rate + doc_item.igst_rate).as_(
-                    "gst_rate"
-                ),
+                (doc_item.cgst_rate + doc_item.sgst_rate + doc_item.igst_rate).as_("gst_rate"),
                 doc_item.cgst_rate,
                 doc_item.sgst_rate,
                 doc_item.igst_rate,
@@ -57,9 +54,7 @@ class ITC04Query:
                 doc_item.igst_amount,
                 doc_item.cess_amount,
                 doc_item.cess_non_advol_amount,
-                (doc_item.cess_amount + doc_item.cess_non_advol_amount).as_(
-                    "total_cess_amount"
-                ),
+                (doc_item.cess_amount + doc_item.cess_non_advol_amount).as_("total_cess_amount"),
                 (
                     doc_item.cgst_amount
                     + doc_item.sgst_amount
@@ -75,10 +70,7 @@ class ITC04Query:
                     + doc_item.cess_amount
                     + doc_item.cess_non_advol_amount
                 ).as_("total_amount"),
-                Case()
-                .when(item.is_fixed_asset == 1, "Capital Goods")
-                .else_("Inputs")
-                .as_("item_type"),
+                Case().when(item.is_fixed_asset == 1, "Capital Goods").else_("Inputs").as_("item_type"),
             )
             .where(doc.docstatus == 1)
             .orderby(doc.name, order=Order.desc)
@@ -221,9 +213,7 @@ class ITC04Query:
             query = query.where(doc.company == self.filters.company)
 
         if self.filters.from_date:
-            query = query.where(
-                Date(doc.posting_date) >= getdate(self.filters.from_date)
-            )
+            query = query.where(Date(doc.posting_date) >= getdate(self.filters.from_date))
 
         if self.filters.to_date:
             query = query.where(Date(doc.posting_date) <= getdate(self.filters.to_date))
@@ -237,6 +227,5 @@ class ITC04Query:
         return frappe.qb.from_(se_doc).select(se_doc.posting_date).where(
             (se_doc.name == ref_doc.link_name) & (ref_doc.link_doctype == "Stock Entry")
         ) + frappe.qb.from_(sr_doc).select(sr_doc.posting_date).where(
-            (sr_doc.name == ref_doc.link_name)
-            & (ref_doc.link_doctype == "Subcontracting Receipt")
+            (sr_doc.name == ref_doc.link_name) & (ref_doc.link_doctype == "Subcontracting Receipt")
         )

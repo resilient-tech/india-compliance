@@ -22,3 +22,21 @@ dec2438be2d63eff24da45d6c936ec846d8ab0df
 
 # updated black in pre-commit
 d8c2469651974cc82a2bb50c93e22f723cbb5b42
+
+# format yaml/yml files with prettier
+a57edf10a0e4399e4ad6b3d6cdbd340646ee027d
+
+# ---- MANUAL V-15 BACKPORT for LINTERS ---- #
+
+# 1. run pre-commit on all files
+3f7aae00e2df1c2f93306716e568eec320fc3f3a
+
+# 2.string formatting and type hint
+7d9c7c07c4468f69d9a1f58e654bf8335f875f62
+
+# 3. ignoring js file with {% include %} syntax
+689cf639dbb15cd4665c8eb6f7631cee66f1e220
+
+# 4. string formatting and list concatenation
+7eee710ef3e86369ac8b57af35013b4b7d57ae53
+

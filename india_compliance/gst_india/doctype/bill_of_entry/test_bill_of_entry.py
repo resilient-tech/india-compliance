@@ -5,9 +5,9 @@ import json
 import re
 
 import frappe
+from erpnext.projects.doctype.project.test_project import make_project
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import today
-from erpnext.projects.doctype.project.test_project import make_project
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     fetch_pending_boe_invoices,
@@ -192,9 +192,7 @@ class TestBillofEntry(FrappeTestCase):
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(
-                r"^(Tax Row #\d+: Charge Type is set to Actual. However, this would*)"
-            ),
+            re.compile(r"^(Tax Row #\d+: Charge Type is set to Actual. However, this would*)"),
             boe.save,
         )
 
@@ -213,9 +211,7 @@ class TestBillofEntry(FrappeTestCase):
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(
-                r"^(Tax Row #\d+: Charge Type is set to Actual. However, Tax Amount*)"
-            ),
+            re.compile(r"^(Tax Row #\d+: Charge Type is set to Actual. However, Tax Amount*)"),
             boe.save,
         )
 
@@ -270,9 +266,7 @@ class TestBillofEntry(FrappeTestCase):
         )
 
         # with partial boe
-        pi = create_purchase_invoice(
-            supplier="_Test Foreign Supplier", update_stock=1, qty=2
-        )
+        pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1, qty=2)
         boe = make_bill_of_entry(pi.name)
         boe.bill_of_entry_no = "123"
         boe.bill_of_entry_date = today()
@@ -308,9 +302,7 @@ class TestBillofEntry(FrappeTestCase):
         ).name
 
         # Test 1: Project set on PI item
-        pi = create_purchase_invoice(
-            supplier="_Test Foreign Supplier", update_stock=1, do_not_submit=True
-        )
+        pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1, do_not_submit=True)
         pi.items[0].project = project
         pi.submit()
 
@@ -335,9 +327,7 @@ class TestBillofEntry(FrappeTestCase):
         self.assertEqual(gl_entry, project)
 
         # Test 2: Project set on PI header only (not on item) - should fallback
-        pi2 = create_purchase_invoice(
-            supplier="_Test Foreign Supplier", update_stock=1, do_not_submit=True
-        )
+        pi2 = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1, do_not_submit=True)
         pi2.project = project
         pi2.items[0].project = None
         pi2.submit()

@@ -107,10 +107,7 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         for row in reconciled_data:
             self.assertDictEqual(
                 row,
-                self.reconciled_data.get(
-                    (row.purchase_invoice_name, row.inward_supply_name)
-                )
-                or {},
+                self.reconciled_data.get((row.purchase_invoice_name, row.inward_supply_name)) or {},
             )
 
     @classmethod
@@ -138,9 +135,7 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
                 _reconciled_data["purchase_invoice_name"] = pi.get("name")
                 _reconciled_data["inward_supply_name"] = gst_is.get("name")
 
-                cls.reconciled_data[(pi.get("name"), gst_is.get("name"))] = (
-                    _reconciled_data
-                )
+                cls.reconciled_data[(pi.get("name"), gst_is.get("name"))] = _reconciled_data
 
         frappe.db.set_single_value("GST Settings", "enable_overseas_transactions", 0)
 
@@ -176,9 +171,7 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         )
         prt.reconcile_and_generate_data()
 
-        itc_claim_period = frappe.db.get_value(
-            "Purchase Invoice", pinv.name, "itc_claim_period"
-        )
+        itc_claim_period = frappe.db.get_value("Purchase Invoice", pinv.name, "itc_claim_period")
         self.assertEqual(itc_claim_period, gst_is.return_period_2b)
 
     def test_itc_claim_period_deferred_on_rejected_ims(self):
@@ -214,9 +207,7 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         )
         prt.reconcile_and_generate_data()
 
-        itc_claim_period = frappe.db.get_value(
-            "Purchase Invoice", pinv.name, "itc_claim_period"
-        )
+        itc_claim_period = frappe.db.get_value("Purchase Invoice", pinv.name, "itc_claim_period")
         self.assertEqual(itc_claim_period, ITC_CLAIM_PERIOD_DEFERRED)
 
     def test_itc_claim_period_posting_period_when_2b_earlier(self):
@@ -251,9 +242,7 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         )
         prt.reconcile_and_generate_data()
 
-        itc_claim_period = frappe.db.get_value(
-            "Purchase Invoice", pinv.name, "itc_claim_period"
-        )
+        itc_claim_period = frappe.db.get_value("Purchase Invoice", pinv.name, "itc_claim_period")
         # posting period (012024) > 2B period (102023), so posting
         self.assertEqual(itc_claim_period, format_period(pinv.posting_date))
 
@@ -290,9 +279,7 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         )
         prt.reconcile_and_generate_data()
 
-        itc_claim_period = frappe.db.get_value(
-            "Purchase Invoice", pinv.name, "itc_claim_period"
-        )
+        itc_claim_period = frappe.db.get_value("Purchase Invoice", pinv.name, "itc_claim_period")
         self.assertEqual(itc_claim_period, ITC_CLAIM_PERIOD_DEFERRED)
 
     def test_itc_claim_period_no_change_when_filed(self):
@@ -306,9 +293,7 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
             posting_date="2023-08-15",
         )
 
-        current_period = frappe.db.get_value(
-            "Purchase Invoice", pinv.name, "itc_claim_period"
-        )
+        current_period = frappe.db.get_value("Purchase Invoice", pinv.name, "itc_claim_period")
         self.assertEqual(current_period, "082023")
 
         # File 082023
@@ -341,9 +326,7 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         prt.reconcile_and_generate_data()
 
         # Period should remain unchanged (filed)
-        itc_claim_period = frappe.db.get_value(
-            "Purchase Invoice", pinv.name, "itc_claim_period"
-        )
+        itc_claim_period = frappe.db.get_value("Purchase Invoice", pinv.name, "itc_claim_period")
         self.assertEqual(itc_claim_period, "082023")
 
         # cleanup
@@ -538,13 +521,7 @@ def create_gst_inward_supply(**kwargs):
     for field in ["taxable_value", "igst", "cgst", "sgst", "cess"]:
         gst_inward_supply.set(
             field,
-            sum(
-                [
-                    row.get(field)
-                    for row in gst_inward_supply.get("items")
-                    if row.get(field)
-                ]
-            ),
+            sum([row.get(field) for row in gst_inward_supply.get("items") if row.get(field)]),
         )
 
     return gst_inward_supply.insert()

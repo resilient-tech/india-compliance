@@ -1,8 +1,8 @@
 import frappe
-from frappe.utils import flt
 from erpnext.setup.setup_wizard.operations.taxes_setup import (
     from_detailed_data,
 )
+from frappe.utils import flt
 
 from india_compliance.gst_india.utils import get_data_file_path
 
@@ -90,11 +90,7 @@ def modify_tax_defaults(default_taxes, gst_rate):
         template = default_taxes["chart_of_accounts"]["*"][template_type]
         for tax in template:
             for row in tax.get("taxes"):
-                rate = (
-                    gst_rate
-                    if abs(row["account_head"]["tax_rate"]) == 18
-                    else flt(gst_rate / 2, 3)
-                )
+                rate = gst_rate if abs(row["account_head"]["tax_rate"]) == 18 else flt(gst_rate / 2, 3)
 
                 row["account_head"]["tax_rate"] = rate
 
@@ -129,10 +125,7 @@ def update_gst_settings(company):
                 "company": company,
                 "account_name": (
                     "in",
-                    input_account_names
-                    + output_account_names
-                    + purchase_rcm_accounts
-                    + sales_rcm_accounts,
+                    input_account_names + output_account_names + purchase_rcm_accounts + sales_rcm_accounts,
                 ),
             },
             ["account_name", "name"],
@@ -243,12 +236,8 @@ def create_default_company_account(
     account.flags.ignore_root_company_validation = True
     account.insert(ignore_if_duplicate=True, ignore_mandatory=True)
 
-    if default_fieldname and not frappe.db.get_value(
-        "Company", company, default_fieldname
-    ):
-        frappe.db.set_value(
-            "Company", company, default_fieldname, account.name, update_modified=False
-        )
+    if default_fieldname and not frappe.db.get_value("Company", company, default_fieldname):
+        frappe.db.set_value("Company", company, default_fieldname, account.name, update_modified=False)
 
 
 @frappe.whitelist()

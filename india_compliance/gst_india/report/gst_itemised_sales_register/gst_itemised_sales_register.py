@@ -1,10 +1,10 @@
 # Copyright (c) 2013, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-from frappe import _
 from erpnext.accounts.report.item_wise_sales_register.item_wise_sales_register import (
     _execute,
 )
+from frappe import _
 
 from india_compliance.gst_india.report.gst_sales_register.gst_sales_register import (
     get_additional_table_columns as get_si_columns,

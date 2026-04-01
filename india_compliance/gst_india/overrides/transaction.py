@@ -1,16 +1,17 @@
 import json
 from collections import defaultdict
+from typing import ClassVar
 
 import frappe
-from frappe import _, bold
-from frappe.contacts.doctype.address.address import get_default_address
-from frappe.model.utils import get_fetch_values
-from frappe.utils import cint, flt, format_date
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 from erpnext.controllers.taxes_and_totals import (
     get_itemised_tax,
     get_itemised_taxable_amount,
 )
+from frappe import _, bold
+from frappe.contacts.doctype.address.address import get_default_address
+from frappe.model.utils import get_fetch_values
+from frappe.utils import cint, flt, format_date
 
 from india_compliance.gst_india.constants import (
     GST_RCM_TAX_TYPES,
@@ -60,9 +61,7 @@ ALLOWED_TAX_DIFFERENCE = 1  # Allowable difference in tax amount due to rounding
 
 
 def set_gst_breakup(doc):
-    gst_breakup_html = frappe.render_template(
-        "templates/gst_breakup.html", dict(doc=doc)
-    )
+    gst_breakup_html = frappe.render_template("templates/gst_breakup.html", dict(doc=doc))  # nosemgrep
     if not gst_breakup_html:
         return
 
@@ -79,9 +78,7 @@ def update_taxable_values(doc):
     has_no_qty_value = False
 
     if doc.taxes:
-        if any(
-            row for row in doc.taxes if row.tax_amount and row.gst_tax_type in TAX_TYPES
-        ):
+        if any(row for row in doc.taxes if row.tax_amount and row.gst_tax_type in TAX_TYPES):
             reference_row_index = next(
                 (
                     cint(row.row_id) - 1
@@ -100,9 +97,7 @@ def update_taxable_values(doc):
 
         if reference_row_index is not None:
             total_charges = (
-                doc.taxes[reference_row_index].base_total
-                - doc.base_net_total
-                - tax_witholding_amount
+                doc.taxes[reference_row_index].base_total - doc.base_net_total - tax_witholding_amount
             )
 
     # base net total may be zero if invoice has zero rated items + shipping
@@ -172,9 +167,7 @@ def validate_item_wise_tax_detail(doc):
             # Sales Invoice is created with manual tax amount. So, when a sales return is created,
             # the tax amount is not recalculated, causing the issue.
 
-            is_cess_non_advol = (
-                row.gst_tax_type and "cess_non_advol" in row.gst_tax_type
-            )
+            is_cess_non_advol = row.gst_tax_type and "cess_non_advol" in row.gst_tax_type
             multiplier = (
                 item_qty_map.get(item_name, 0)
                 if is_cess_non_advol
@@ -183,9 +176,7 @@ def validate_item_wise_tax_detail(doc):
             tax_difference = abs(multiplier * tax_rate - tax_amount)
 
             if tax_difference > ALLOWED_TAX_DIFFERENCE:
-                correct_charge_type = (
-                    "On Item Quantity" if is_cess_non_advol else "On Net Total"
-                )
+                correct_charge_type = "On Item Quantity" if is_cess_non_advol else "On Net Total"
 
                 frappe.throw(
                     _(
@@ -213,9 +204,7 @@ def get_tds_amount(doc):
 
 def is_indian_registered_company(doc):
     if not doc.get("company_gstin"):
-        country, gst_category = frappe.get_cached_value(
-            "Company", doc.company, ("country", "gst_category")
-        )
+        country, gst_category = frappe.get_cached_value("Company", doc.company, ("country", "gst_category"))
 
         if country != "India" or gst_category == "Unregistered":
             return False
@@ -247,9 +236,7 @@ def validate_mandatory_fields(doc, fields, error_message=None, throw=True):
         )
 
 
-def get_applicable_gst_accounts(
-    company, *, for_sales, is_inter_state, is_reverse_charge=False
-):
+def get_applicable_gst_accounts(company, *, for_sales, is_inter_state, is_reverse_charge=False):
     all_gst_accounts = set()
     applicable_gst_accounts = set()
 
@@ -316,9 +303,7 @@ def set_gst_tax_type(doc, method=None):
     if not doc.taxes:
         return
 
-    gst_tax_account_map = (
-        {} if ignore_gst_validations(doc) else get_gst_account_gst_tax_type_map()
-    )
+    gst_tax_account_map = {} if ignore_gst_validations(doc) else get_gst_account_gst_tax_type_map()
 
     for tax in doc.taxes:
         # Setting as None if not GST Account
@@ -363,9 +348,7 @@ class GSTAccounts:
         self.used_accounts = set(row.account_head for row in self.gst_tax_rows)
 
     def has_gst_tax_rows(self):
-        self.gst_tax_rows = [
-            row for row in self.doc.taxes if row.tax_amount and row.gst_tax_type
-        ]
+        self.gst_tax_rows = [row for row in self.doc.taxes if row.tax_amount and row.gst_tax_type]
 
         return self.gst_tax_rows
 
@@ -379,26 +362,21 @@ class GSTAccounts:
                 continue
 
             self._throw(
-                _(
-                    "Row #{0}: {1} is not a valid GST account for this transaction"
-                ).format(row.idx, bold(row.account_head))
+                _("Row #{0}: {1} is not a valid GST account for this transaction").format(
+                    row.idx, bold(row.account_head)
+                )
             )
 
     def validate_for_same_party_gstin(self):
-        party_gstin = (
-            self.doc.billing_address_gstin
-            if self.is_sales_transaction
-            else self.doc.supplier_gstin
-        )
+        party_gstin = self.doc.billing_address_gstin if self.is_sales_transaction else self.doc.supplier_gstin
 
         if not party_gstin or self.doc.company_gstin != party_gstin:
             return
 
         self._throw(
-            _(
-                "Cannot charge GST in Row #{0} since Company GSTIN and Party GSTIN are"
-                " same"
-            ).format(self.first_gst_idx)
+            _("Cannot charge GST in Row #{0} since Company GSTIN and Party GSTIN are same").format(
+                self.first_gst_idx
+            )
         )
 
     def validate_reverse_charge_accounts(self):
@@ -422,9 +400,9 @@ class GSTAccounts:
 
         if is_export_without_payment_of_gst(self.doc):
             self._throw(
-                _(
-                    "Cannot charge GST in Row #{0} since export is without payment of GST"
-                ).format(self.first_gst_idx)
+                _("Cannot charge GST in Row #{0} since export is without payment of GST").format(
+                    self.first_gst_idx
+                )
             )
 
     def validate_purchase_transaction(self):
@@ -441,10 +419,9 @@ class GSTAccounts:
 
         if not self.doc.is_reverse_charge and not self.doc.supplier_gstin:
             self._throw(
-                _(
-                    "Cannot charge GST in Row #{0} since purchase is from a Supplier"
-                    " without GSTIN"
-                ).format(self.first_gst_idx)
+                _("Cannot charge GST in Row #{0} since purchase is from a Supplier without GSTIN").format(
+                    self.first_gst_idx
+                )
             )
 
     def validate_for_invalid_account_type(self):
@@ -456,9 +433,7 @@ class GSTAccounts:
         if self.is_sales_transaction:
             company_address_field = "company_address"
         elif self.doc.doctype == "Stock Entry":
-            company_address_field = (
-                "bill_to_address" if self.doc.is_return else "bill_from_address"
-            )
+            company_address_field = "bill_to_address" if self.doc.is_return else "bill_from_address"
         else:
             company_address_field = "billing_address"
 
@@ -475,30 +450,17 @@ class GSTAccounts:
             if is_inter_state:
                 if row.account_head in self.intra_state_accounts:
                     self._throw(
-                        _(
-                            "Row #{0}: Cannot charge CGST/SGST for inter-state supplies"
-                        ).format(row.idx)
+                        _("Row #{0}: Cannot charge CGST/SGST for inter-state supplies").format(row.idx)
                     )
 
             elif row.account_head in self.inter_state_accounts:
-                self._throw(
-                    _("Row #{0}: Cannot charge IGST for intra-state supplies").format(
-                        row.idx
-                    )
-                )
+                self._throw(_("Row #{0}: Cannot charge IGST for intra-state supplies").format(row.idx))
 
         if is_inter_state:
             return
 
-        if self.used_accounts and not set(self.intra_state_accounts[:2]).issubset(
-            self.used_accounts
-        ):
-            self._throw(
-                _(
-                    "Cannot use only one of CGST or SGST account for intra-state"
-                    " supplies"
-                )
-            )
+        if self.used_accounts and not set(self.intra_state_accounts[:2]).issubset(self.used_accounts):
+            self._throw(_("Cannot use only one of CGST or SGST account for intra-state supplies"))
 
     def validate_for_charge_type(self):
         previous_row_references = set()
@@ -532,10 +494,7 @@ class GSTAccounts:
         if not tax_row.gst_tax_type:
             return
 
-        if (
-            tax_row.charge_type == "On Item Quantity"
-            and "cess_non_advol" not in tax_row.gst_tax_type
-        ):
+        if tax_row.charge_type == "On Item Quantity" and "cess_non_advol" not in tax_row.gst_tax_type:
             frappe.throw(
                 _(
                     "Row #{0}: Charge Type cannot be <strong>On Item Quantity</strong>"
@@ -566,17 +525,15 @@ class GSTAccounts:
                     continue
 
                 frappe.msgprint(
-                    _(
-                        "Item Row #{0}: GST Account {1} is missing in Item Tax Template {2}"
-                    ).format(row.idx, bold(account), bold(row.item_tax_template)),
+                    _("Item Row #{0}: GST Account {1} is missing in Item Tax Template {2}").format(
+                        row.idx, bold(account), bold(row.item_tax_template)
+                    ),
                     title=_("Invalid Item Tax Template"),
                     indicator="orange",
                 )
 
     def _get_matched_idx(self, rows_to_search, tax_types):
-        return next(
-            (row.idx for row in rows_to_search if row.gst_tax_type in tax_types), None
-        )
+        return next((row.idx for row in rows_to_search if row.gst_tax_type in tax_types), None)
 
     def _throw(self, message, title=None):
         frappe.throw(message, title=title or _("Invalid GST Account"))
@@ -589,9 +546,7 @@ def validate_tax_accounts_for_non_gst(doc):
     for row in doc.taxes:
         if row.account_head in accounts_list and row.tax_amount:
             frappe.throw(
-                _("Row #{0}: Cannot charge GST for Non GST Items").format(
-                    row.idx, row.account_head
-                ),
+                _("Row #{0}: Cannot charge GST for Non GST Items").format(row.idx, row.account_head),
                 title=_("Invalid Taxes"),
             )
 
@@ -650,10 +605,9 @@ def validate_items(doc, throw):
             return False
         frappe.throw(
             _(
-                "Cannot use different Item Tax Templates in different rows for"
-                " following items:<br> {0}"
+                "Cannot use different Item Tax Templates in different rows for following items:<br> {0}"
             ).format("<br>".join(items_with_duplicate_taxes)),
-            title="Inconsistent Item Tax Templates",
+            title=_("Inconsistent Item Tax Templates"),
         )
 
     return True
@@ -667,8 +621,7 @@ def validate_place_of_supply(doc):
     if doc.place_of_supply not in valid_options:
         frappe.throw(
             _(
-                '"<strong>{0}</strong>" is not a valid Place of Supply. Please choose'
-                " from available options."
+                '"<strong>{0}</strong>" is not a valid Place of Supply. Please choose from available options.'
             ).format(doc.place_of_supply),
             title=_("Invalid Place of Supply"),
         )
@@ -679,8 +632,7 @@ def validate_place_of_supply(doc):
         and doc.place_of_supply != "96-Other Countries"
         and (
             not doc.shipping_address_name
-            or frappe.db.get_value("Address", doc.shipping_address_name, "country")
-            != "India"
+            or frappe.db.get_value("Address", doc.shipping_address_name, "country") != "India"
         )
     ):
         frappe.throw(
@@ -695,9 +647,7 @@ def validate_place_of_supply(doc):
 
 def is_inter_state_supply(doc):
     if doc.doctype == "Stock Entry":
-        party_gst_category = (
-            doc.bill_from_gst_category if doc.is_return else doc.bill_to_gst_category
-        )
+        party_gst_category = doc.bill_from_gst_category if doc.is_return else doc.bill_to_gst_category
 
     else:
         party_gst_category = doc.gst_category
@@ -747,9 +697,9 @@ def get_source_state_code(doc):
 def validate_backdated_transaction(doc, gst_settings=None, action="submit"):
     if gstr_1_filed_upto := restrict_gstr_1_transaction_for(doc, gst_settings, action):
         frappe.throw(
-            _(
-                "You are not allowed to {0} {1} as GSTR-1 has been filed upto {2}"
-            ).format(action, doc.doctype, frappe.bold(format_date(gstr_1_filed_upto))),
+            _("You are not allowed to {0} {1} as GSTR-1 has been filed upto {2}").format(
+                action, doc.doctype, frappe.bold(format_date(gstr_1_filed_upto))
+            ),
             title=_("Restricted Changes"),
         )
 
@@ -765,12 +715,7 @@ def validate_hsn_codes(doc, throw=False, message=None):
 
 def validate_sales_reverse_charge(doc):
     if doc.get("is_reverse_charge") and not doc.billing_address_gstin:
-        frappe.throw(
-            _(
-                "Transaction cannot be reverse charge since sales is to customer"
-                " without GSTIN"
-            )
-        )
+        frappe.throw(_("Transaction cannot be reverse charge since sales is to customer without GSTIN"))
 
 
 def _validate_hsn_codes(doc, valid_hsn_length, throw=False, message=None):
@@ -795,9 +740,7 @@ def _validate_hsn_codes(doc, valid_hsn_length, throw=False, message=None):
 
         frappe.throw(
             _(
-                "{0}"
-                "HSN/SAC must exist and should be {1} digits long"
-                " for the following row numbers: <br>{2}"
+                "{0}HSN/SAC must exist and should be {1} digits long for the following row numbers: <br>{2}"
             ).format(
                 message or "",
                 join_list_with_custom_separators(valid_hsn_length),
@@ -808,20 +751,16 @@ def _validate_hsn_codes(doc, valid_hsn_length, throw=False, message=None):
 
     if rows_with_missing_hsn:
         frappe.msgprint(
-            _(
-                "{0}Please enter HSN/SAC code for the following row numbers: <br>{1}"
-            ).format(message or "", frappe.bold(", ".join(rows_with_missing_hsn))),
+            _("{0}Please enter HSN/SAC code for the following row numbers: <br>{1}").format(
+                message or "", frappe.bold(", ".join(rows_with_missing_hsn))
+            ),
             title=_("Invalid HSN/SAC"),
             raise_exception=throw,
         )
 
     if rows_with_invalid_hsn:
         frappe.msgprint(
-            _(
-                "{0}"
-                "HSN/SAC code should be {1} digits long for the following"
-                " row numbers: <br>{2}"
-            ).format(
+            _("{0}HSN/SAC code should be {1} digits long for the following row numbers: <br>{2}").format(
                 message or "",
                 join_list_with_custom_separators(valid_hsn_length),
                 frappe.bold(", ".join(rows_with_invalid_hsn)),
@@ -835,15 +774,13 @@ def validate_overseas_gst_category(doc):
     if not is_overseas_doc(doc):
         return
 
-    overseas_enabled = frappe.get_cached_value(
-        "GST Settings", "GST Settings", "enable_overseas_transactions"
-    )
+    overseas_enabled = frappe.get_cached_value("GST Settings", "GST Settings", "enable_overseas_transactions")
 
     if not overseas_enabled:
         frappe.throw(
-            _(
-                "GST Category cannot be set to {0} since it is disabled in GST Settings"
-            ).format(frappe.bold(doc.gst_category))
+            _("GST Category cannot be set to {0} since it is disabled in GST Settings").format(
+                frappe.bold(doc.gst_category)
+            )
         )
 
     if doc.doctype == "POS Invoice":
@@ -853,9 +790,9 @@ def validate_overseas_gst_category(doc):
 # DEPRECATED IN v16
 def get_itemised_tax_breakup_header(item_doctype, tax_accounts):
     if is_hsn_wise_breakup_needed(item_doctype):
-        return [_("HSN/SAC"), _("Taxable Amount")] + tax_accounts
+        return [_("HSN/SAC"), _("Taxable Amount"), *tax_accounts]
     else:
-        return [_("Item"), _("Taxable Amount")] + tax_accounts
+        return [_("Item"), _("Taxable Amount"), *tax_accounts]
 
 
 def get_itemised_tax_breakup_data(doc):
@@ -903,9 +840,7 @@ def get_hsn_wise_breakup(doc, itemised_tax, taxable_amounts):
 
         hsn_tax.taxable_amount += taxable_amounts.get(item_code, 0)
         for tax_account, tax_details in tax_row.items():
-            hsn_tax.setdefault(
-                tax_account, frappe._dict({"tax_rate": 0, "tax_amount": 0})
-            )
+            hsn_tax.setdefault(tax_account, frappe._dict({"tax_rate": 0, "tax_amount": 0}))
             hsn_tax[tax_account].tax_rate = tax_details.get("tax_rate")
             hsn_tax[tax_account].tax_amount += tax_details.get("tax_amount")
 
@@ -937,9 +872,7 @@ def get_regional_round_off_accounts(company, account_list):
 
 
 def update_party_details(party_details, doctype, company):
-    party_details.update(
-        get_gst_details(party_details, doctype, company, update_place_of_supply=True)
-    )
+    party_details.update(get_gst_details(party_details, doctype, company, update_place_of_supply=True))
 
 
 @frappe.whitelist()
@@ -951,27 +884,17 @@ def get_party_details_for_subcontracting(
 
     if doctype == "Stock Entry":
         party_address_field = (
-            "bill_from_address"
-            if party_details.get("is_inward_stock_entry")
-            else "bill_to_address"
+            "bill_from_address" if party_details.get("is_inward_stock_entry") else "bill_to_address"
         )
     else:
         party_address_field = "supplier_address"
 
-    party_details[party_address_field] = get_default_address(
-        "Supplier", party_details.supplier
-    )
-    party_details.update(
-        get_fetch_values(
-            doctype, party_address_field, party_details[party_address_field]
-        )
-    )
+    party_details[party_address_field] = get_default_address("Supplier", party_details.supplier)
+    party_details.update(get_fetch_values(doctype, party_address_field, party_details[party_address_field]))
 
     return party_details.update(
         {
-            **get_gst_details(
-                party_details, doctype, company, update_place_of_supply=True
-            ),
+            **get_gst_details(party_details, doctype, company, update_place_of_supply=True),
         }
     )
 
@@ -996,10 +919,7 @@ def get_gst_details(
     """
     party_details = frappe.parse_json(party_details)
 
-    if not (
-        party_details.company_gstin
-        or is_indian_registered_company(frappe._dict(company=company))
-    ):
+    if not (party_details.company_gstin or is_indian_registered_company(frappe._dict(company=company))):
         return {}
 
     is_sales_transaction = doctype in SALES_DOCTYPES or doctype == "Payment Entry"
@@ -1035,9 +955,7 @@ def get_gst_details(
         gst_category_field = "gst_category"
 
     if not party_details.get(party_address_field):
-        party_gst_details = get_party_gst_details(
-            party_details, is_sales_transaction, party_gstin_field
-        )
+        party_gst_details = get_party_gst_details(party_details, is_sales_transaction, party_gstin_field)
 
         # updating party details to get correct place of supply
         if party_gst_details:
@@ -1074,24 +992,18 @@ def get_gst_details(
             not allow_same_gstin
             and (
                 party_details.get(company_gstin_field)
-                and party_details.get(company_gstin_field)
-                == party_details.get(party_gstin_field)
+                and party_details.get(company_gstin_field) == party_details.get(party_gstin_field)
             )  # Internal transfer
         )
         or (
             is_sales_transaction
-            and is_export_without_payment_of_gst(
-                frappe._dict({**party_details, "doctype": doctype})
-            )
+            and is_export_without_payment_of_gst(frappe._dict({**party_details, "doctype": doctype}))
         )
         or (
             not is_sales_transaction
             and (
                 party_details.get(gst_category_field) == "Registered Composition"
-                or (
-                    not party_details.is_reverse_charge
-                    and not party_details.get(party_gstin_field)
-                )
+                or (not party_details.is_reverse_charge and not party_details.get(party_gstin_field))
             )
         )
     ):
@@ -1107,15 +1019,11 @@ def get_gst_details(
     )
 
     # Tax Category in Transaction
-    tax_template_by_category = get_tax_template_based_on_category(
-        master_doctype, company, party_details
-    )
+    tax_template_by_category = get_tax_template_based_on_category(master_doctype, company, party_details)
 
     if tax_template_by_category:
         gst_details.taxes_and_charges = tax_template_by_category
-        gst_details.taxes = get_taxes_and_charges(
-            master_doctype, tax_template_by_category
-        )
+        gst_details.taxes = get_taxes_and_charges(master_doctype, tax_template_by_category)
         return gst_details
 
     if not gst_details.place_of_supply or not party_details.get(company_gstin_field):
@@ -1140,9 +1048,7 @@ def get_party_gst_details(party_details, is_sales_transaction, gstin_fieldname):
 
     party_type = "Customer" if is_sales_transaction else "Supplier"
 
-    if not (party := party_details.get(party_type.lower())) or not isinstance(
-        party, str
-    ):
+    if not (party := party_details.get(party_type.lower())) or not isinstance(party, str):
         return
 
     return frappe.db.get_value(
@@ -1166,9 +1072,7 @@ def get_tax_template_based_on_category(master_doctype, company, party_details):
     return default_tax
 
 
-def get_tax_template(
-    master_doctype, company, is_inter_state, state_code, is_reverse_charge
-):
+def get_tax_template(master_doctype, company, is_inter_state, state_code, is_reverse_charge):
     tax_categories = frappe.get_all(
         "Tax Category",
         fields=["name", "is_inter_state", "gst_state"],
@@ -1292,7 +1196,7 @@ def is_export_without_payment_of_gst(doc):
 
 
 class ItemGSTDetails:
-    FIELDMAP = {}
+    FIELDMAP: ClassVar[dict] = {}
 
     def get(self, docs, doctype, company):
         """
@@ -1545,9 +1449,7 @@ class ItemGSTDetails:
 
         for item in self.doc.get("items"):
             for tax in GST_TAX_TYPES:
-                expected_amt = self.get_item_tax_amount(
-                    item, item.get(f"{tax}_rate"), tax
-                )
+                expected_amt = self.get_item_tax_amount(item, item.get(f"{tax}_rate"), tax)
 
                 diff = abs(item.get(f"{tax}_amount") - expected_amt)
 
@@ -1562,9 +1464,9 @@ class ItemGSTDetails:
                 + "<ul>"
             )
             for idx, fields in invalid_rows.items():
-                msg += _(
-                    "<li><strong>Row #{0}</strong>: {1} amount mismatch</li>"
-                ).format(idx, ", ".join(fields))
+                msg += _("<li><strong>Row #{0}</strong>: {1} amount mismatch</li>").format(
+                    idx, ", ".join(fields)
+                )
 
             msg += "</ul>"
 
@@ -1600,11 +1502,7 @@ class ItemGSTDetails:
         return False
 
     def is_gst_tax_row(self, row):
-        return (
-            row.gst_tax_type
-            and row.gst_tax_type in GST_TAX_TYPES
-            and row.get(self.tax_details_field())
-        )
+        return row.gst_tax_type and row.gst_tax_type in GST_TAX_TYPES and row.get(self.tax_details_field())
 
     def get_item_tax_rate(self, item, tax_row):
         item_tax_rates = frappe.parse_json(item.item_tax_rate)
@@ -1622,9 +1520,7 @@ class ItemGSTDetails:
 
     def get_tax_details(self, tax_row):
         if not getattr(tax_row, "__tax_details", None):
-            tax_row.__tax_details = frappe.parse_json(
-                tax_row.get(self.tax_details_field()) or "{}"
-            )
+            tax_row.__tax_details = frappe.parse_json(tax_row.get(self.tax_details_field()) or "{}")
 
         return tax_row.__tax_details
 
@@ -1760,9 +1656,7 @@ def set_reverse_charge(doc):
     if not default_tax:
         return
 
-    template = (
-        get_taxes_and_charges("Purchase Taxes and Charges Template", default_tax) or []
-    )
+    template = get_taxes_and_charges("Purchase Taxes and Charges Template", default_tax) or []
 
     # compare accounts
     all_gst_accounts, applicable_gst_accounts = get_applicable_gst_accounts(
@@ -1771,9 +1665,7 @@ def set_reverse_charge(doc):
         is_inter_state=is_inter_state,
         is_reverse_charge=True,
     )
-    existing_accounts = set(
-        row.account_head for row in doc.taxes if row.account_head in all_gst_accounts
-    )
+    existing_accounts = set(row.account_head for row in doc.taxes if row.account_head in all_gst_accounts)
     has_invalid_accounts = existing_accounts - applicable_gst_accounts
 
     if has_invalid_accounts:
@@ -1818,9 +1710,9 @@ def validate_company_address_field(doc):
         validate_mandatory_fields(
             doc,
             company_address_field,
-            _(
-                "Please set {0} to ensure Company GSTIN is fetched in the transaction."
-            ).format(bold(doc.meta.get_label(company_address_field))),
+            _("Please set {0} to ensure Company GSTIN is fetched in the transaction.").format(
+                bold(doc.meta.get_label(company_address_field))
+            ),
         )
         is False
     ):
@@ -1900,11 +1792,7 @@ def validate_transaction(doc, method=None):
 
 
 def before_print(doc, method=None, print_settings=None):
-    if (
-        ignore_gst_validations(doc, throw=False)
-        or not doc.place_of_supply
-        or not doc.company_gstin
-    ):
+    if ignore_gst_validations(doc, throw=False) or not doc.place_of_supply or not doc.company_gstin:
         return
 
     set_ecommerce_supply_type(doc)
@@ -1912,11 +1800,7 @@ def before_print(doc, method=None, print_settings=None):
 
 
 def onload(doc, method=None):
-    if (
-        ignore_gst_validations(doc, throw=False)
-        or not doc.place_of_supply
-        or not doc.company_gstin
-    ):
+    if ignore_gst_validations(doc, throw=False) or not doc.place_of_supply or not doc.company_gstin:
         return
 
     set_ecommerce_supply_type(doc)
@@ -1927,9 +1811,7 @@ def validate_ecommerce_gstin(doc):
     if not doc.get("ecommerce_gstin"):
         return
 
-    doc.ecommerce_gstin = validate_gstin(
-        doc.ecommerce_gstin, label="E-commerce GSTIN", is_tcs_gstin=True
-    )
+    doc.ecommerce_gstin = validate_gstin(doc.ecommerce_gstin, label="E-commerce GSTIN", is_tcs_gstin=True)
 
 
 def update_gst_details(doc, method=None):

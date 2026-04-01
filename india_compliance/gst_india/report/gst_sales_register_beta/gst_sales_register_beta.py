@@ -22,11 +22,7 @@ def validate_filters(filters):
     filters["from_date"] = filters.date_range[0]
     filters["to_date"] = filters.date_range[1]
 
-    if (
-        filters.from_date
-        and filters.to_date
-        and getdate(filters.from_date) > getdate(filters.to_date)
-    ):
+    if filters.from_date and filters.to_date and getdate(filters.from_date) > getdate(filters.to_date):
         frappe.throw(_("From Date must be before To Date"), title=_("Invalid Filter"))
 
     return filters
@@ -46,9 +42,7 @@ def get_data(filters):
         return _class.get_overview()
 
     if filters.invoice_category:
-        return _class.get_filtered_invoices(
-            invoices, filters.invoice_category, filters.invoice_sub_category
-        )
+        return _class.get_filtered_invoices(invoices, filters.invoice_category, filters.invoice_sub_category)
 
     _class.process_invoices(invoices)
 
@@ -57,9 +51,7 @@ def get_data(filters):
 
 def get_columns(filters):
     columns = []
-    company_currency = frappe.get_cached_value(
-        "Company", filters.get("company"), "default_currency"
-    )
+    company_currency = frappe.get_cached_value("Company", filters.get("company"), "default_currency")
 
     if filters.summary_by == "Overview":
         columns.extend(
@@ -320,10 +312,7 @@ def get_columns(filters):
         ]
     )
 
-    if (
-        not filters.invoice_category
-        or filters.invoice_category == GSTR1_Category.SUPECOM.value
-    ):
+    if not filters.invoice_category or filters.invoice_category == GSTR1_Category.SUPECOM.value:
         columns.append(
             {
                 "label": _("Invoice Category"),
@@ -333,10 +322,7 @@ def get_columns(filters):
             }
         )
 
-    if (
-        not filters.invoice_sub_category
-        or filters.invoice_category == GSTR1_Category.SUPECOM.value
-    ):
+    if not filters.invoice_sub_category or filters.invoice_category == GSTR1_Category.SUPECOM.value:
         columns.append(
             {
                 "label": _("Invoice Sub Category"),
@@ -346,10 +332,7 @@ def get_columns(filters):
             }
         )
 
-    if (
-        filters.summary_by == "Summary by Item"
-        and gst_settings.enable_sales_through_ecommerce_operators
-    ):
+    if filters.summary_by == "Summary by Item" and gst_settings.enable_sales_through_ecommerce_operators:
         columns.append(
             {
                 "label": _("E-Commerce Supply Type"),
