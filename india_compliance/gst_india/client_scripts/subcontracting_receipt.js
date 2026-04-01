@@ -1,4 +1,4 @@
-DOCTYPE = "Subcontracting Receipt";
+const DOCTYPE = "Subcontracting Receipt";
 setup_e_waybill_actions(DOCTYPE);
 
 frappe.ui.form.on(DOCTYPE, {
@@ -17,7 +17,7 @@ frappe.ui.form.on(DOCTYPE, {
             ],
         });
 
-        ["supplier_address", "shipping_address"].forEach(field => {
+        ["supplier_address", "shipping_address"].forEach((field) => {
             frm.set_query(field, { filters: { country: "India", disabled: 0 } });
         });
 
@@ -60,8 +60,7 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     refresh() {
-        if (!gst_settings.enable_e_waybill || !gst_settings.enable_e_waybill_for_sc)
-            return;
+        if (!gst_settings.enable_e_waybill || !gst_settings.enable_e_waybill_for_sc) return;
 
         show_sandbox_mode_indicator();
     },
@@ -73,7 +72,7 @@ frappe.ui.form.on(DOCTYPE, {
                     message: __("Supplier Address is required to create e-Waybill"),
                     indicator: "yellow",
                 },
-                10
+                10,
             );
     },
 
@@ -94,7 +93,7 @@ frappe.ui.form.on(DOCTYPE, {
                 if (!r.message) return;
 
                 Object.entries(r.message).forEach(([doctype, docnames]) => {
-                    docnames.forEach(docname => {
+                    docnames.forEach((docname) => {
                         if (existing_references[doctype]?.includes(docname)) return;
 
                         let row = frm.add_child("doc_references");
@@ -113,17 +112,13 @@ frappe.ui.form.on(DOCTYPE, {
     },
 });
 
-frappe.ui.form.on(
-    "Subcontracting Receipt Item",
-    india_compliance.taxes_controller_events
-);
+frappe.ui.form.on("Subcontracting Receipt Item", india_compliance.taxes_controller_events);
 
 function get_existing_references(frm) {
     let existing_references = {};
 
-    frm.doc.doc_references.forEach(row => {
-        if (!existing_references[row.link_doctype])
-            existing_references[row.link_doctype] = [];
+    frm.doc.doc_references.forEach((row) => {
+        if (!existing_references[row.link_doctype]) existing_references[row.link_doctype] = [];
         existing_references[row.link_doctype].push(row.link_name);
     });
 
@@ -131,13 +126,13 @@ function get_existing_references(frm) {
 }
 
 function get_supplied_items(doc) {
-    return Array.from(new Set(doc.supplied_items.map(row => row.rm_item_code)));
+    return Array.from(new Set(doc.supplied_items.map((row) => row.rm_item_code)));
 }
 
 function get_received_items(doc) {
-    return Array.from(new Set(doc.items.map(row => row.item_code)));
+    return Array.from(new Set(doc.items.map((row) => row.item_code)));
 }
 
 function get_subcontracting_orders(doc) {
-    return Array.from(new Set(doc.items.map(row => row.subcontracting_order)));
+    return Array.from(new Set(doc.items.map((row) => row.subcontracting_order)));
 }

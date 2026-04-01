@@ -50,10 +50,7 @@ def get_asset_rcm_accounts(accounts):
             "root_type": "Asset",
             "name": (
                 "in",
-                [
-                    accounts["Purchase Reverse Charge"].get(field)
-                    for field in GST_ACCOUNT_FIELDS
-                ],
+                [accounts["Purchase Reverse Charge"].get(field) for field in GST_ACCOUNT_FIELDS],
             ),
         },
         pluck="name",

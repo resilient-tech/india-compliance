@@ -21,9 +21,7 @@ from india_compliance.gst_india.utils import get_gst_accounts_by_type
 from india_compliance.gst_india.utils.itc_claim import format_period
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
 
-with mock.patch("frappe.db"), mock.patch("frappe.new_doc"), mock.patch(
-    "frappe.get_doc"
-):
+with mock.patch("frappe.db"), mock.patch("frappe.new_doc"), mock.patch("frappe.get_doc"):
     from erpnext.projects.doctype.project.test_project import make_project
 
 IGNORE_TEST_RECORD_DEPENDENCIES = [
@@ -210,9 +208,7 @@ class TestBillofEntry(IntegrationTestCase):
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(
-                r"^(Tax Row #\d+: Charge Type is set to Actual. However, this would*)"
-            ),
+            re.compile(r"^(Tax Row #\d+: Charge Type is set to Actual. However, this would*)"),
             boe.save,
         )
 
@@ -231,9 +227,7 @@ class TestBillofEntry(IntegrationTestCase):
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(
-                r"^(Tax Row #\d+: Charge Type is set to Actual. However, Tax Amount*)"
-            ),
+            re.compile(r"^(Tax Row #\d+: Charge Type is set to Actual. However, Tax Amount*)"),
             boe.save,
         )
 
@@ -288,9 +282,7 @@ class TestBillofEntry(IntegrationTestCase):
         )
 
         # with partial boe
-        pi = create_purchase_invoice(
-            supplier="_Test Foreign Supplier", update_stock=1, qty=2
-        )
+        pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1, qty=2)
         boe = make_bill_of_entry(pi.name)
         boe.bill_of_entry_no = "123"
         boe.bill_of_entry_date = today()
@@ -325,9 +317,7 @@ class TestBillofEntry(IntegrationTestCase):
         ).name
 
         # Test 1: Project set on PI item
-        pi = create_purchase_invoice(
-            supplier="_Test Foreign Supplier", update_stock=1, do_not_submit=True
-        )
+        pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1, do_not_submit=True)
         pi.items[0].project = project
         pi.submit()
 
@@ -352,9 +342,7 @@ class TestBillofEntry(IntegrationTestCase):
         self.assertEqual(gl_entry, project)
 
         # Test 2: Project set on PI header only (not on item) - should fallback
-        pi2 = create_purchase_invoice(
-            supplier="_Test Foreign Supplier", update_stock=1, do_not_submit=True
-        )
+        pi2 = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1, do_not_submit=True)
         pi2.project = project
         pi2.items[0].project = None
         pi2.submit()

@@ -48,9 +48,7 @@ class TestGSTSettings(IntegrationTestCase):
                 row.account_type = "Output"
                 self.assertRaisesRegex(
                     frappe.ValidationError,
-                    re.compile(
-                        r"^(Row #\d+: Account Type .* appears multiple times for .*)"
-                    ),
+                    re.compile(r"^(Row #\d+: Account Type .* appears multiple times for .*)"),
                     doc.save,
                 )
                 break
@@ -104,10 +102,7 @@ class TestGSTSettings(IntegrationTestCase):
         )
         self.assertRaisesRegex(
             frappe.MandatoryError,
-            re.compile(
-                r"^(Row #\d+: Password is required when setting a GST Credential"
-                " for.*)"
-            ),
+            re.compile(r"^(Row #\d+: Password is required when setting a GST Credential" " for.*)"),
             doc.save,
         )
 
@@ -142,10 +137,7 @@ class TestGSTSettings(IntegrationTestCase):
         frappe.conf.ic_api_secret = None
         self.assertRaisesRegex(
             frappe.ValidationError,
-            re.compile(
-                r"^(Please counfigure your India Compliance Account to"
-                " enable API features)"
-            ),
+            re.compile(r"^(Please counfigure your India Compliance Account to" " enable API features)"),
             doc.validate_enable_api,
         )
 
@@ -169,9 +161,7 @@ class TestGSTSettings(IntegrationTestCase):
         doc.e_invoice_applicable_companies = []
         self.assertRaisesRegex(
             frappe.ValidationError,
-            re.compile(
-                r"^(You must select at least one company to which e-Invoice is Applicable)"
-            ),
+            re.compile(r"^(You must select at least one company to which e-Invoice is Applicable)"),
             doc.validate_e_invoice_applicable_companies,
         )
 

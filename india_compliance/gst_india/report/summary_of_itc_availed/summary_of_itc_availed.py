@@ -191,9 +191,7 @@ class ITCAvailed(ITCAvailedCategory, ITCAvailedData):
         summary = {}
 
         for category, subcategories in ITC_AVAILED_CATEGORY_MAPPING.items():
-            summary[category] = {
-                subcategory: defaultdict(float) for subcategory in subcategories
-            }
+            summary[category] = {subcategory: defaultdict(float) for subcategory in subcategories}
 
         return summary
 

@@ -1,6 +1,11 @@
-from india_compliance.income_tax_india.constants import TDS_ENTITY_TYPE, TDS_SECTIONS
+from india_compliance.income_tax_india.constants import (
+    NEW_TDS_SECTIONS,
+    OLD_TDS_SECTIONS,
+    TDS_ENTITY_TYPE,
+)
 
-tds_section_options = "\n" + "\n".join(sorted(TDS_SECTIONS))
+tds_section_options = "\n" + "\n".join(sorted(NEW_TDS_SECTIONS))
+old_tds_section_options = "\n" + "\n".join(sorted(OLD_TDS_SECTIONS))
 tds_entity_type_options = "\n" + "\n".join(sorted(TDS_ENTITY_TYPE))
 
 party_fields = [
@@ -39,6 +44,16 @@ CUSTOM_FIELDS = {
             "options": tds_section_options,
             "translatable": 0,
             "mandatory_depends_on": "eval:doc.entity_type",
+        },
+        {
+            "label": "Old Income Tax Section",
+            "fieldname": "old_income_tax_section",
+            "insert_after": "tds_section",
+            "fieldtype": "Autocomplete",
+            "options": old_tds_section_options,
+            "read_only": 1,
+            "translatable": 0,
+            "description": "Section under Income Tax Act-1961 (pre FY 2026-27)",
         },
         {
             "label": "Entity",

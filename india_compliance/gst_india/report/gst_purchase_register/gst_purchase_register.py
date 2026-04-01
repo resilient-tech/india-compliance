@@ -72,8 +72,7 @@ def get_columns(filters):
                 "label": _("Invoice Type"),
                 "fieldtype": "Data",
                 "width": 200,
-                "hidden": filters.summary_by == "Overview"
-                or filters.sub_section != "5",
+                "hidden": filters.summary_by == "Overview" or filters.sub_section != "5",
             },
             {
                 "fieldname": "invoice_sub_category",
@@ -166,9 +165,7 @@ def get_item_wise_columns():
 
 
 def get_summary_columns(filters):
-    company_currency = frappe.get_cached_value(
-        "Company", filters.get("company"), "default_currency"
-    )
+    company_currency = frappe.get_cached_value("Company", filters.get("company"), "default_currency")
 
     if filters.sub_section == "4":
         return [
@@ -311,9 +308,7 @@ def get_data(filters):
 def get_invoice_sub_categories(sub_section):
     section = SECTION_MAPPING.get(sub_section) or {}
 
-    return [
-        category for sub_categories in section.values() for category in sub_categories
-    ]
+    return [category for sub_categories in section.values() for category in sub_categories]
 
 
 def get_summary_view(data, sub_section):

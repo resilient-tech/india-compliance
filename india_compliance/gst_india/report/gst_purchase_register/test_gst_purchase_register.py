@@ -115,9 +115,7 @@ class TestGSTPurchaseRegister(IntegrationTestCase):
     def test_reversal_of_itc_je_is_in_purchase_register(self):
         _, data = execute(_filters(self.today))
 
-        row = next(
-            (r for r in data if r.get("voucher_no") == self.reversal_je.name), None
-        )
+        row = next((r for r in data if r.get("voucher_no") == self.reversal_je.name), None)
         self.assertEqual(row["ineligibility_type"], "Reversal Of ITC")
         self.assertEqual(
             row["invoice_sub_category"],
@@ -130,9 +128,7 @@ class TestGSTPurchaseRegister(IntegrationTestCase):
     def test_reclaim_of_itc_reversal_je_is_in_purchase_register(self):
         _, data = execute(_filters(self.today))
 
-        row = next(
-            (r for r in data if r.get("voucher_no") == self.reclaim_je.name), None
-        )
+        row = next((r for r in data if r.get("voucher_no") == self.reclaim_je.name), None)
         self.assertEqual(row["ineligibility_type"], "Reclaim of ITC Reversal")
         self.assertEqual(row["invoice_sub_category"], "Reclaim of ITC Reversal")
         self.assertEqual(row["cgst_amount"], 9.0)
@@ -155,13 +151,9 @@ class TestGSTPurchaseRegister(IntegrationTestCase):
     def test_overview_shows_reversal_and_reclaim_amounts(self):
         _, data = execute(_filters(self.today, summary_by="Overview"))
 
-        by_description = {
-            row["description"]: row for row in data if row.get("indent") == 1
-        }
+        by_description = {row["description"]: row for row in data if row.get("indent") == 1}
 
-        reversal_row = by_description.get(
-            "As per rules 42 & 43 of CGST Rules and section 17(5)"
-        )
+        reversal_row = by_description.get("As per rules 42 & 43 of CGST Rules and section 17(5)")
         self.assertIsNotNone(reversal_row)
         self.assertEqual(reversal_row["cgst_amount"], 9.0)
         self.assertEqual(reversal_row["sgst_amount"], 9.0)
@@ -196,35 +188,21 @@ class TestGSTPurchaseRegister(IntegrationTestCase):
         self.assertEqual(self.sez_service_pi.items[0].gst_treatment, "Nil-Rated")
         _, data = execute(_filters(self.today, sub_section="5"))
 
-        row = next(
-            (r for r in data if r.get("voucher_no") == self.sez_service_pi.name), None
-        )
+        row = next((r for r in data if r.get("voucher_no") == self.sez_service_pi.name), None)
         self.assertIsNotNone(row, "SEZ service PI should appear in section 5")
-        self.assertEqual(
-            row["invoice_sub_category"], "Composition Scheme, Exempted, Nil Rated"
-        )
+        self.assertEqual(row["invoice_sub_category"], "Composition Scheme, Exempted, Nil Rated")
 
     def test_overseas_import_service_pi_in_section_4(self):
-        self.assertEqual(
-            self.overseas_import_service_pi.itc_classification, "Import Of Service"
-        )
-        self.assertEqual(
-            self.overseas_import_service_pi.items[0].gst_treatment, "Taxable"
-        )
+        self.assertEqual(self.overseas_import_service_pi.itc_classification, "Import Of Service")
+        self.assertEqual(self.overseas_import_service_pi.items[0].gst_treatment, "Taxable")
 
         _, data = execute(_filters(self.today, sub_section="4"))
 
         row = next(
-            (
-                r
-                for r in data
-                if r.get("voucher_no") == self.overseas_import_service_pi.name
-            ),
+            (r for r in data if r.get("voucher_no") == self.overseas_import_service_pi.name),
             None,
         )
-        self.assertIsNotNone(
-            row, "Overseas import service PI should appear in section 4"
-        )
+        self.assertIsNotNone(row, "Overseas import service PI should appear in section 4")
         self.assertEqual(row["invoice_sub_category"], "Import Of Service")
 
     def test_overseas_import_service_pi_excluded_from_section_5(self):
@@ -238,9 +216,7 @@ class TestGSTPurchaseRegister(IntegrationTestCase):
         )
 
 
-def _create_journal_entry(
-    posting_date, voucher_type, tax_amount, ineligibility_reason=""
-):
+def _create_journal_entry(posting_date, voucher_type, tax_amount, ineligibility_reason=""):
     if voucher_type == "Reclaim of ITC Reversal":
         accounts = [
             {

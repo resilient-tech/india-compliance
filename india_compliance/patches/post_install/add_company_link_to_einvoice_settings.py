@@ -18,10 +18,7 @@ def execute():
         .join(address)
         .on(address.gstin == user.gstin)
         .join(dynamic_link)
-        .on(
-            (dynamic_link.parent == address.name)
-            & (dynamic_link.link_doctype == "Company")
-        )
+        .on((dynamic_link.parent == address.name) & (dynamic_link.link_doctype == "Company"))
         .set(user.company, dynamic_link.link_name)
         .where(IfNull(user.company, "") == "")
         .run()

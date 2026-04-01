@@ -173,18 +173,12 @@ class GSTR3BQuery:
                 self.PI_ITEM.gst_hsn_code,
                 self.PI_ITEM.uom,
                 self.PI_ITEM.qty,
-                (
-                    self.PI_ITEM.cgst_rate
-                    + self.PI_ITEM.sgst_rate
-                    + self.PI_ITEM.igst_rate
-                ).as_("gst_rate"),
+                (self.PI_ITEM.cgst_rate + self.PI_ITEM.sgst_rate + self.PI_ITEM.igst_rate).as_("gst_rate"),
                 self.PI_ITEM.taxable_value,
                 self.PI_ITEM.cgst_amount,
                 self.PI_ITEM.sgst_amount,
                 self.PI_ITEM.igst_amount,
-                (self.PI_ITEM.cess_amount + self.PI_ITEM.cess_non_advol_amount).as_(
-                    "cess_amount"
-                ),
+                (self.PI_ITEM.cess_amount + self.PI_ITEM.cess_non_advol_amount).as_("cess_amount"),
                 (
                     self.PI_ITEM.cgst_amount
                     + self.PI_ITEM.sgst_amount
@@ -201,7 +195,7 @@ class GSTR3BQuery:
                     + self.PI_ITEM.cess_non_advol_amount
                 ).as_("total_amount"),
             )
-            .where((self.PI.is_opening == "No"))
+            .where(self.PI.is_opening == "No")
             .where(self.PI.company_gstin != IfNull(self.PI.supplier_gstin, ""))
             .where(self.PI.is_boe_applicable == 0)
         )
@@ -223,18 +217,12 @@ class GSTR3BQuery:
                 self.BOE_ITEM.gst_hsn_code,
                 self.BOE_ITEM.uom,
                 self.BOE_ITEM.qty,
-                (
-                    self.BOE_ITEM.cgst_rate
-                    + self.BOE_ITEM.sgst_rate
-                    + self.BOE_ITEM.igst_rate
-                ).as_("gst_rate"),
+                (self.BOE_ITEM.cgst_rate + self.BOE_ITEM.sgst_rate + self.BOE_ITEM.igst_rate).as_("gst_rate"),
                 self.BOE_ITEM.taxable_value,
                 self.BOE_ITEM.cgst_amount,
                 self.BOE_ITEM.sgst_amount,
                 self.BOE_ITEM.igst_amount,
-                (self.BOE_ITEM.cess_amount + self.BOE_ITEM.cess_non_advol_amount).as_(
-                    "cess_amount"
-                ),
+                (self.BOE_ITEM.cess_amount + self.BOE_ITEM.cess_non_advol_amount).as_("cess_amount"),
                 (
                     self.BOE_ITEM.cgst_amount
                     + self.BOE_ITEM.sgst_amount
@@ -297,11 +285,7 @@ class GSTR3BQuery:
                 ],
             )
             .where(self.JE.is_opening == "No")
-            .where(
-                self.JE.voucher_type.isin(
-                    ["Reclaim of ITC Reversal", "Reversal Of ITC"]
-                )
-            )
+            .where(self.JE.voucher_type.isin(["Reclaim of ITC Reversal", "Reversal Of ITC"]))
             .groupby(self.JE.name)
         )
 
@@ -311,9 +295,7 @@ class GSTR3BQuery:
         """
         Apply common filters to the query.
         """
-        query = query.where(
-            (doc.docstatus == 1) & (doc.company == self.filters.company)
-        )
+        query = query.where((doc.docstatus == 1) & (doc.company == self.filters.company))
 
         query = self.apply_itc_period_filter(query, doc)
 
@@ -434,8 +416,4 @@ class GSTR3BInvoices(GSTR3BQuery, GSTR3BSubcategory):
         if not subcategories:
             return invoices
 
-        return [
-            invoice
-            for invoice in invoices
-            if invoice.invoice_sub_category in subcategories
-        ]
+        return [invoice for invoice in invoices if invoice.invoice_sub_category in subcategories]

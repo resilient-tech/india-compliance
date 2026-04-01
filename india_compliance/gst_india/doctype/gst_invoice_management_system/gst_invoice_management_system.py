@@ -97,9 +97,7 @@ class GSTInvoiceManagementSystem(Document):
                 }
             )
 
-        inward_supplies = InwardSupply().get_all(
-            company_gstin=self.company_gstin, names=inward_supply
-        )
+        inward_supplies = InwardSupply().get_all(company_gstin=self.company_gstin, names=inward_supply)
 
         if not purchase:
             purchase = [doc.link_name for doc in inward_supplies]
@@ -119,9 +117,7 @@ class GSTInvoiceManagementSystem(Document):
                         "is_pending_action_allowed": doc.is_pending_action_allowed,
                         "is_supplier_return_filed": doc.is_supplier_return_filed,
                         "doc_type": doc.doc_type,
-                        "posting_date": format_date(
-                            _purchase_invoice.get("posting_date")
-                        ),
+                        "posting_date": format_date(_purchase_invoice.get("posting_date")),
                         "_inward_supply": doc,
                         "_purchase_invoice": _purchase_invoice,
                     }
@@ -178,23 +174,14 @@ class GSTInvoiceManagementSystem(Document):
             )
 
         # Update ims_action
-        (
-            frappe.qb.update(GSTR2)
-            .set("ims_action", action)
-            .where(GSTR2.name.isin(invoice_names))
-            .run()
-        )
+        (frappe.qb.update(GSTR2).set("ims_action", action).where(GSTR2.name.isin(invoice_names)).run())
 
         # Bulk update ITC claim periods for linked Purchase Invoices
 
-        set_itc_claim_period_on_ims_action(
-            invoice_names, action, ims_period=self.period
-        )
+        set_itc_claim_period_on_ims_action(invoice_names, action, ims_period=self.period)
 
     @frappe.whitelist()
-    def get_invoice_details(
-        self, purchase_name: str | None, inward_supply_name: str | None
-    ):
+    def get_invoice_details(self, purchase_name: str | None, inward_supply_name: str | None):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
         inward_supply_names = [inward_supply_name] if inward_supply_name else None
@@ -205,16 +192,12 @@ class GSTInvoiceManagementSystem(Document):
             if inward_supply_names
             else []
         )
-        purchases = (
-            PurchaseInvoice().get_all(names=purchase_names) if purchase_names else {}
-        )
+        purchases = PurchaseInvoice().get_all(names=purchase_names) if purchase_names else {}
 
         reconciliation_data = [
             frappe._dict(
                 {
-                    "_inward_supply": (
-                        inward_supply[0] if inward_supply else frappe._dict()
-                    ),
+                    "_inward_supply": (inward_supply[0] if inward_supply else frappe._dict()),
                     "_purchase_invoice": purchases.get(purchase_name, frappe._dict()),
                 }
             )
@@ -233,9 +216,7 @@ class GSTInvoiceManagementSystem(Document):
     ):
         frappe.has_permission("GST Invoice Management System", "write", throw=True)
 
-        purchases, inward_supplies = _link_documents(
-            purchase_invoice_name, inward_supply_name, link_doctype
-        )
+        purchases, inward_supplies = _link_documents(purchase_invoice_name, inward_supply_name, link_doctype)
 
         return self.get_invoice_data(inward_supplies, purchases)
 
@@ -277,9 +258,7 @@ def download_invoices(company_gstin: str):
 
     if is_job_enqueued(job_id):
         return {
-            "message": _(
-                "A download job is already in progress for the GSTIN - {0}"
-            ).format(company_gstin),
+            "message": _("A download job is already in progress for the GSTIN - {0}").format(company_gstin),
         }
 
     TaxpayerBaseAPI(company_gstin).validate_auth_token()
@@ -354,9 +333,7 @@ def get_period_options(company: str, company_gstin: str):
 
     # Calculate six months ago as fallback
     six_months_ago = add_to_date(None, months=-7).strftime("%m%Y")
-    latest_3b_filed_period = get_latest_3b_filed_period(company, company_gstin) or (
-        six_months_ago,
-    )
+    latest_3b_filed_period = get_latest_3b_filed_period(company, company_gstin) or (six_months_ago,)
 
     # Fetch latest GSTR3B filing or default to six months ago
     latest_3b_filed_period = format_period(latest_3b_filed_period[0])
@@ -534,9 +511,7 @@ def get_uploaded_invoices(request_id):
 
     if not request_data:
         frappe.throw(
-            _(
-                "Integration Request linked with data upload not found for request id {0}"
-            ).format(request_id)
+            _("Integration Request linked with data upload not found for request id {0}").format(request_id)
         )
 
     if isinstance(request_data, str):

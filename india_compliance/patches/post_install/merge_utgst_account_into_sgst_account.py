@@ -1,5 +1,4 @@
 import click
-
 import frappe
 
 DOCTYPE = "GST Account"
