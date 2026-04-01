@@ -184,12 +184,8 @@ def create_supplier(name, pan=None):
 
 
 def generate_unique_pan():
-    existing_pans = frappe.get_all(
-        "Supplier", pluck="pan", filters={"pan": ("is", "set")}
-    )
-    existing_pans += frappe.get_all(
-        "Customer", pluck="pan", filters={"pan": ("is", "set")}
-    )
+    existing_pans = frappe.get_all("Supplier", pluck="pan", filters={"pan": ("is", "set")})
+    existing_pans += frappe.get_all("Customer", pluck="pan", filters={"pan": ("is", "set")})
     existing_pans = set(existing_pans)
 
     for _ in range(100):
