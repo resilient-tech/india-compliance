@@ -194,9 +194,7 @@ class BillofEntry(Document):
 
             if not invoice.is_boe_applicable:
                 frappe.throw(
-                    _(
-                        "Bill of Entry is not applicable for Purchase Invoice {0}"
-                    ).format(invoice.name)
+                    _("Bill of Entry is not applicable for Purchase Invoice {0}").format(invoice.name)
                 )
 
         pi_item_names = frappe.get_all(
