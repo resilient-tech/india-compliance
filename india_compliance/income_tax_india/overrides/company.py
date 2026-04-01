@@ -122,7 +122,7 @@ def get_tds_category_details(accounts):
                 "entity_type": rule.get("entity_type"),
                 "round_off_tax_amount": rule.get("round_off_tax_amount"),
                 "consider_party_ledger_amount": rule.get(
-                    "consider_party_ledger_amount"
+                    "consider_party_ledger_amount", 0
                 ),
                 "tax_on_excess_amount": rule.get("tax_on_excess_amount"),
                 "rates": rates,
