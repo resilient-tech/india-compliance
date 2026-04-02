@@ -100,17 +100,15 @@ def get_gstin_list(party: str, party_type: str = "Company", exclude_isd: bool = 
     """
     Returns a list the party's GSTINs.
     """
-    # Check if the document is an unsaved, ephemeral client UI construct.
-    # We check the string prefix rather than querying frappe.db.exists() to prevent
-    # information disclosure vulnerabilities prior to permission evaluation.
-    if party and str(party).startswith("new-"):
-        party = None
+    # 1. Doctype-level permission check first (no doc lookup, safe from disclosure)
+    frappe.has_permission(party_type, ptype="read", doc=None, throw=True)
 
-    # Execute the core framework permission check securely.
-    frappe.has_permission(party_type, ptype="read", doc=party, throw=True)
-
-    if not party:
+    # 2. If it looks ephemeral, check DB to confirm it's not a real record named "new-*"
+    if party and str(party).startswith("new-") and not frappe.db.exists(party_type, party):
         return []
+
+    # 3. If it is a real record, run the full document-level permission check
+    frappe.has_permission(party_type, ptype="read", doc=party, throw=True)
 
     filters = {
         "link_doctype": party_type,
