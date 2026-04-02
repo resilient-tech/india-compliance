@@ -103,11 +103,16 @@ def get_gstin_list(party: str, party_type: str = "Company", exclude_isd: bool = 
     # 1. Doctype-level permission check first (no doc lookup, safe from disclosure)
     frappe.has_permission(party_type, ptype="read", doc=None, throw=True)
 
-    # 2. If it looks ephemeral, check DB to confirm it's not a real record named "new-*"
-    if party and str(party).startswith("new-") and not frappe.db.exists(party_type, party):
+    # 2. Gracefully handle unsaved or missing documents.
+    # Returning [] is an intentional architectural choice: the frontend calls this
+    # function in real-time as the user types, including before the document is saved.
+    # An empty list signals "no GSTINs yet" without blocking the UI or leaking existence info.
+    # Case A: ephemeral UI name (new-*) that isn't a real saved record
+    # Case B: record deleted by another user or a stale/invalid name (race condition guard)
+    if not frappe.db.exists(party_type, party):
         return []
 
-    # 3. If it is a real record, run the full document-level permission check
+    # 3. Record confirmed to exist — run full document-level permission check
     frappe.has_permission(party_type, ptype="read", doc=party, throw=True)
 
     filters = {

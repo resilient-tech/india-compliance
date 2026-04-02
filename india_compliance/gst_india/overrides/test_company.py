@@ -1,7 +1,7 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from india_compliance.gst_india.overrides.company import get_tax_defaults
+from india_compliance.gst_india.overrides.company import get_tax_defaults, make_default_tax_templates
 
 
 class TestCompanyFixtures(IntegrationTestCase):
@@ -33,6 +33,20 @@ class TestCompanyFixtures(IntegrationTestCase):
     def test_tax_defaults_setup(self):
         # Check for tax category creations.
         self.assertTrue(frappe.db.exists("Tax Category", "Reverse Charge In-State"))
+
+    def test_make_default_tax_templates_with_ephemeral_company(self):
+        """make_default_tax_templates should throw a user-friendly error for unsaved companies."""
+        original_user = frappe.session.user
+        try:
+            frappe.set_user("Administrator")
+            self.assertRaisesRegex(
+                frappe.ValidationError,
+                "Please save the Company before creating tax templates.",
+                make_default_tax_templates,
+                "new-company-1",
+            )
+        finally:
+            frappe.set_user(original_user)
 
     def test_get_tax_defaults(self):
         gst_rate = 12

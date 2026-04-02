@@ -68,11 +68,13 @@ def make_default_tax_templates(company: str, gst_rate: float | None = None):
     # 1. Doctype-level permission check first (no doc lookup, safe from disclosure)
     frappe.has_permission("Company", ptype="write", doc=None, throw=True)
 
-    # 2. If it looks ephemeral, check DB to confirm it's not a real record named "new-*"
-    if company and str(company).startswith("new-") and not frappe.db.exists("Company", company):
+    # 2. Gracefully handle unsaved or missing documents.
+    # Case A: ephemeral UI name (new-*) that isn't a real saved record
+    # Case B: record deleted by another user or a stale/invalid name (race condition guard)
+    if not frappe.db.exists("Company", company):
         frappe.throw(_("Please save the Company before creating tax templates."))
 
-    # 3. If it is a real record, run the full document-level permission check
+    # 3. Record confirmed to exist — run full document-level permission check
     frappe.has_permission("Company", ptype="write", doc=company, throw=True)
 
     default_taxes = get_tax_defaults(gst_rate)
