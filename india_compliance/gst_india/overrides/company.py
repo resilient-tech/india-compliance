@@ -1,4 +1,5 @@
 import frappe
+from frappe import _
 from frappe.utils import flt
 from erpnext.setup.setup_wizard.operations.taxes_setup import (
     from_detailed_data,
@@ -64,6 +65,9 @@ def make_default_gst_expense_accounts(company):
 
 @frappe.whitelist()
 def make_default_tax_templates(company: str, gst_rate=None):
+    if not frappe.db.exists("Company", company):
+        frappe.throw(_("Please save the Company before creating tax templates."))
+
     frappe.has_permission("Company", ptype="write", doc=company, throw=True)
 
     default_taxes = get_tax_defaults(gst_rate)

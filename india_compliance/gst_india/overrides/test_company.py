@@ -48,3 +48,15 @@ class TestCompanyFixtures(FrappeTestCase):
                         else gst_rate / 2
                     )
                     self.assertEqual(row["account_head"]["tax_rate"], expected_rate)
+
+    def test_make_default_tax_templates_unsaved_company(self):
+        """make_default_tax_templates should throw ValidationError for unsaved company."""
+        from india_compliance.gst_india.overrides.company import (
+            make_default_tax_templates,
+        )
+
+        self.assertRaises(
+            frappe.ValidationError,
+            make_default_tax_templates,
+            "new-company-abc-123",
+        )

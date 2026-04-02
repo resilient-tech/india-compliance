@@ -49,3 +49,11 @@ class TestUtils(FrappeTestCase):
 
             for i, expected_date in enumerate(expected_date_range):
                 self.assertEqual(expected_date, actual_date_range[i])
+
+    def test_get_gstin_list_with_unsaved_document(self):
+        """get_gstin_list should return empty list for unsaved documents."""
+        from india_compliance.gst_india.utils import get_gstin_list
+
+        frappe.set_user("Administrator")
+        result = get_gstin_list("new-supplier-xyz123", "Supplier")
+        self.assertEqual(result, [])

@@ -96,6 +96,10 @@ def get_gstin_list(party, party_type="Company"):
     """
     Returns a list the party's GSTINs.
     """
+    if not frappe.db.exists(party_type, party):
+        frappe.has_permission(party_type, throw=True)
+        return []
+
     frappe.has_permission(party_type, doc=party, throw=True)
 
     gstin_list = frappe.get_all(
