@@ -2,6 +2,7 @@ import frappe
 from erpnext.setup.setup_wizard.operations.taxes_setup import (
     from_detailed_data,
 )
+from frappe import _
 from frappe.utils import flt
 
 from india_compliance.gst_india.utils import get_data_file_path
@@ -64,6 +65,12 @@ def make_default_gst_expense_accounts(company):
 
 @frappe.whitelist()
 def make_default_tax_templates(company: str, gst_rate: float | None = None):
+    # Check if the document is an unsaved, ephemeral client UI construct.
+    # We check the string prefix rather than querying frappe.db.exists() to prevent
+    # information disclosure vulnerabilities prior to permission evaluation.
+    if company and str(company).startswith("new-"):
+        frappe.throw(_("Please save the Company before creating tax templates."))
+
     frappe.has_permission("Company", ptype="write", doc=company, throw=True)
 
     default_taxes = get_tax_defaults(gst_rate)

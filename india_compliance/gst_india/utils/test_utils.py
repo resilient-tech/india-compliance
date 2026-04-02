@@ -46,3 +46,14 @@ class TestUtils(IntegrationTestCase):
 
             for i, expected_date in enumerate(expected_date_range):
                 self.assertEqual(expected_date, actual_date_range[i])
+
+    def test_get_gstin_list_with_ephemeral_document(self):
+        """get_gstin_list should return empty list for unsaved (ephemeral) documents."""
+        from india_compliance.gst_india.utils import get_gstin_list
+
+        frappe.set_user("Administrator")
+        try:
+            result = get_gstin_list("new-supplier-1", "Supplier")
+            self.assertEqual(result, [])
+        except frappe.exceptions.DoesNotExistError:
+            self.fail("DoesNotExistError raised on an ephemeral docname.")
