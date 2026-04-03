@@ -81,7 +81,9 @@ def make_default_tax_templates(company: str, gst_rate: float | None = None):
     try:
         frappe.has_permission("Company", ptype="write", doc=company, throw=True)
     except frappe.DoesNotExistError:
-        frappe.throw(_("Please save the Company before creating tax templates."))
+        frappe.throw(
+            _("Company {0} no longer exists. It may have been deleted.").format(frappe.bold(company))
+        )
 
     default_taxes = get_tax_defaults(gst_rate)
     from_detailed_data(company, default_taxes)

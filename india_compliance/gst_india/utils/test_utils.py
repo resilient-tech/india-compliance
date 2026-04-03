@@ -10,6 +10,7 @@ class TestUtils(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        frappe.db.savepoint("before_test_utils")
 
         # create old fiscal years
         fiscal_year = frappe.new_doc("Fiscal Year")
@@ -29,6 +30,36 @@ class TestUtils(IntegrationTestCase):
                 "year": "2022-2023",
             }
         ).insert(ignore_if_duplicate=True)
+
+        # Restricted user for permission boundary tests
+        cls.restricted_user = "test_no_perms@example.com"
+        if not frappe.db.exists("User", cls.restricted_user):
+            frappe.get_doc(
+                {
+                    "doctype": "User",
+                    "email": cls.restricted_user,
+                    "first_name": "Test",
+                    "send_welcome_email": 0,
+                }
+            ).insert(ignore_permissions=True)
+
+        # User with Purchase Manager role (has Supplier read access)
+        cls.purchase_user = "test_purchase_mgr@example.com"
+        if not frappe.db.exists("User", cls.purchase_user):
+            frappe.get_doc(
+                {
+                    "doctype": "User",
+                    "email": cls.purchase_user,
+                    "first_name": "Purchase",
+                    "send_welcome_email": 0,
+                    "roles": [{"role": "Purchase Manager"}],
+                }
+            ).insert(ignore_permissions=True)
+
+    @classmethod
+    def tearDownClass(cls):
+        frappe.set_user("Administrator")
+        frappe.db.rollback(save_point="before_test_utils")
 
     @patch("india_compliance.gst_india.utils.getdate", return_value=getdate("2023-06-20"))
     def test_timespan_date_range(self, getdate_mock):
@@ -59,20 +90,37 @@ class TestUtils(IntegrationTestCase):
         finally:
             frappe.set_user(original_user)
 
+    def test_get_gstin_list_returns_list_for_saved_document(self):
+        """get_gstin_list should return a list (not raise) for a real saved Supplier."""
+        from india_compliance.gst_india.utils import get_gstin_list
+
+        original_user = frappe.session.user
+        try:
+            frappe.set_user(self.purchase_user)
+            # Uses a Supplier fixture defined in india_compliance/tests/test_records.json
+            result = get_gstin_list("_Test Registered Supplier", "Supplier")
+            self.assertIsInstance(result, list)
+        finally:
+            frappe.set_user(original_user)
+
     def test_get_gstin_list_raises_permission_error_for_restricted_user(self):
         """get_gstin_list should raise PermissionError for users without doctype access."""
         from india_compliance.gst_india.utils import get_gstin_list
 
-        # Provision a restricted user with no role grants
-        test_user = "test_no_perms@example.com"
-        if not frappe.db.exists("User", test_user):
-            frappe.get_doc(
-                {"doctype": "User", "email": test_user, "first_name": "Test", "send_welcome_email": 0}
-            ).insert(ignore_permissions=True)
+        original_user = frappe.session.user
+        try:
+            frappe.set_user(self.restricted_user)
+            self.assertRaises(frappe.PermissionError, get_gstin_list, "new-supplier-1", "Supplier")
+        finally:
+            frappe.set_user(original_user)
+
+    def test_make_default_tax_templates_raises_permission_error_for_restricted_user(self):
+        """make_default_tax_templates should raise PermissionError for users without write access."""
+        from india_compliance.gst_india.overrides.company import make_default_tax_templates
 
         original_user = frappe.session.user
         try:
-            frappe.set_user(test_user)
-            self.assertRaises(frappe.PermissionError, get_gstin_list, "new-supplier-1", "Supplier")
+            frappe.set_user(self.restricted_user)
+            self.assertRaises(frappe.PermissionError, make_default_tax_templates, "new-company-1")
         finally:
             frappe.set_user(original_user)
