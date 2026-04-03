@@ -108,17 +108,11 @@ def _get_fields_mapping(doc, source_doc):
             return to_fields, from_fields
 
     elif (
-        source_doc.doctype == "Purchase Receipt"
-        and doc.purpose == "Material Transfer"
-        and not doc.is_return
+        source_doc.doctype == "Purchase Receipt" and doc.purpose == "Material Transfer" and not doc.is_return
     ):
         return from_fields, to_fields
 
-    elif (
-        source_doc.doctype == "Stock Entry"
-        and doc.purpose == "Material Transfer"
-        and not doc.is_return
-    ):
+    elif source_doc.doctype == "Stock Entry" and doc.purpose == "Material Transfer" and not doc.is_return:
         from_fields = ("bill_from_address", "bill_from_gstin")
         to_fields = ("bill_to_address", "bill_to_gstin")
 
