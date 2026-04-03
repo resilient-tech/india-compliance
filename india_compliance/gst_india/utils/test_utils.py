@@ -58,3 +58,21 @@ class TestUtils(IntegrationTestCase):
             self.assertEqual(result, [])
         finally:
             frappe.set_user(original_user)
+
+    def test_get_gstin_list_raises_permission_error_for_restricted_user(self):
+        """get_gstin_list should raise PermissionError for users without doctype access."""
+        from india_compliance.gst_india.utils import get_gstin_list
+
+        # Provision a restricted user with no role grants
+        test_user = "test_no_perms@example.com"
+        if not frappe.db.exists("User", test_user):
+            frappe.get_doc(
+                {"doctype": "User", "email": test_user, "first_name": "Test", "send_welcome_email": 0}
+            ).insert(ignore_permissions=True)
+
+        original_user = frappe.session.user
+        try:
+            frappe.set_user(test_user)
+            self.assertRaises(frappe.PermissionError, get_gstin_list, "new-supplier-1", "Supplier")
+        finally:
+            frappe.set_user(original_user)
