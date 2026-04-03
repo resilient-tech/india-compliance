@@ -16,6 +16,10 @@ with mock.patch("frappe.db"), mock.patch("frappe.new_doc"), mock.patch("frappe.g
     from erpnext.manufacturing.doctype.production_plan.test_production_plan import (
         make_bom,
     )
+    from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
+        make_stock_entry as make_se_from_pr,
+    )
+    from erpnext.stock.doctype.stock_entry.stock_entry import make_stock_in_entry
     from erpnext.subcontracting.doctype.subcontracting_order.test_subcontracting_order import (
         create_subcontracting_order,
     )
@@ -380,3 +384,113 @@ class TestSubcontractingTransaction(IntegrationTestCase):
         sco.supplier_warehouse = "Finished Goods - _TIUC"
         sco.save()
         sco.submit()
+
+
+class TestAddressMappingAfterMapping(IntegrationTestCase):
+    """
+    Verifies bill_from_address / bill_to_address and their GSTINs are mapped
+    correctly in Stock Entries created via get_mapped_doc from each source doctype.
+
+    Scenarios (mirrors _get_fields_mapping logic):
+      1. Subcontracting Order  → SE "Send to Subcontractor"
+      2. Subcontracting Order  → SE "Material Transfer" (return of inputs)
+      3. Purchase Receipt      → SE "Material Transfer"
+      4. Stock Entry           → SE "Material Transfer"
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        frappe.db.savepoint("before_test_address_mapping")
+        create_subcontracting_data()
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        frappe.db.rollback(save_point="before_test_address_mapping")
+
+    def _make_sco(self):
+        po = create_purchase_order(**SERVICE_ITEM, supplier_warehouse="Finished Goods - _TIRC")
+        return create_subcontracting_order(po_name=po.name)
+
+    def test_sco_to_se_send_to_subcontractor(self):
+        sco = self._make_sco()
+        rm_items = get_rm_items(sco.supplied_items)
+
+        se = make_rm_stock_entry(sco.name, rm_items)
+
+        self.assertEqual(se.purpose, "Send to Subcontractor")
+        self.assertEqual(se.bill_from_address, sco.billing_address)
+        self.assertEqual(se.bill_from_gstin, sco.company_gstin)
+        self.assertEqual(se.bill_to_address, sco.supplier_address)
+        self.assertEqual(se.bill_to_gstin, sco.supplier_gstin)
+
+    def test_sco_to_se_material_transfer_return(self):
+        sco = self._make_sco()
+        rm_items = get_rm_items(sco.supplied_items)
+
+        # Materials must reach the supplier warehouse before they can be returned.
+        make_stock_transfer_entry(
+            sco_no=sco.name,
+            rm_items=rm_items,
+            bill_from_address=sco.billing_address,
+            bill_to_address=sco.supplier_address,
+        )
+
+        return_se = get_materials_from_supplier(sco.name, [d.name for d in sco.supplied_items])
+
+        self.assertEqual(return_se.purpose, "Material Transfer")
+        self.assertTrue(return_se.is_return)
+        # Supplier becomes the sender; company becomes the receiver.
+        self.assertEqual(return_se.bill_from_address, sco.supplier_address)
+        self.assertEqual(return_se.bill_from_gstin, sco.supplier_gstin)
+        self.assertEqual(return_se.bill_to_address, sco.billing_address)
+        self.assertEqual(return_se.bill_to_gstin, sco.company_gstin)
+
+    def test_pr_to_se_material_transfer(self):
+        pr = create_transaction(doctype="Purchase Receipt")
+
+        se = make_se_from_pr(pr.name)
+
+        self.assertEqual(se.purpose, "Material Transfer")
+        self.assertEqual(se.bill_from_address, pr.billing_address)
+        self.assertEqual(se.bill_from_gstin, pr.company_gstin)
+        self.assertEqual(se.bill_to_address, pr.supplier_address)
+        self.assertEqual(se.bill_to_gstin, pr.supplier_gstin)
+
+    def test_se_to_se_material_transfer(self):
+        # Add stock so the Material Transfer SE can be submitted.
+        create_transaction(doctype="Purchase Receipt")
+
+        source_se = frappe.get_doc(
+            {
+                "doctype": "Stock Entry",
+                "purpose": "Material Transfer",
+                "stock_entry_type": "Material Transfer",
+                "company": "_Test Indian Registered Company",
+                "bill_from_address": "_Test Indian Registered Company-Billing",
+                "bill_from_gstin": "24AAQCA8719H1ZC",
+                "bill_to_address": "_Test Registered Supplier-Billing",
+                "bill_to_gstin": "24AABCR6898M1ZN",
+                "bill_to_gst_category": "Registered Regular",
+                "items": [
+                    {
+                        "item_code": "_Test Trading Goods 1",
+                        "qty": 1,
+                        "gst_hsn_code": "61149090",
+                        "s_warehouse": "Stores - _TIRC",
+                        "t_warehouse": "Finished Goods - _TIRC",
+                    }
+                ],
+            }
+        )
+        source_se.save()
+        source_se.submit()
+
+        target_se = make_stock_in_entry(source_se.name)
+
+        self.assertEqual(target_se.purpose, "Material Transfer")
+        self.assertEqual(target_se.bill_from_address, source_se.bill_from_address)
+        self.assertEqual(target_se.bill_from_gstin, source_se.bill_from_gstin)
+        self.assertEqual(target_se.bill_to_address, source_se.bill_to_address)
+        self.assertEqual(target_se.bill_to_gstin, source_se.bill_to_gstin)
