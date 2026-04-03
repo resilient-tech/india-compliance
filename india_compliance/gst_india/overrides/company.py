@@ -74,8 +74,14 @@ def make_default_tax_templates(company: str, gst_rate: float | None = None):
     if not frappe.db.exists("Company", company):
         frappe.throw(_("Please save the Company before creating tax templates."))
 
-    # 3. Record confirmed to exist — run full document-level permission check
-    frappe.has_permission("Company", ptype="write", doc=company, throw=True)
+    # 3. Record confirmed to exist — run full document-level permission check.
+    # The try/except guards against a TOCTOU race condition where the record is
+    # deleted between the existence check above and the get_doc() call inside
+    # has_permission — ensuring DoesNotExistError never surfaces to the client.
+    try:
+        frappe.has_permission("Company", ptype="write", doc=company, throw=True)
+    except frappe.DoesNotExistError:
+        frappe.throw(_("Please save the Company before creating tax templates."))
 
     default_taxes = get_tax_defaults(gst_rate)
     from_detailed_data(company, default_taxes)

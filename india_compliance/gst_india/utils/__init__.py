@@ -112,8 +112,14 @@ def get_gstin_list(party: str, party_type: str = "Company", exclude_isd: bool = 
     if not frappe.db.exists(party_type, party):
         return []
 
-    # 3. Record confirmed to exist — run full document-level permission check
-    frappe.has_permission(party_type, ptype="read", doc=party, throw=True)
+    # 3. Record confirmed to exist — run full document-level permission check.
+    # The try/except guards against a TOCTOU race condition where the record is
+    # deleted between the existence check above and the get_doc() call inside
+    # has_permission — ensuring DoesNotExistError never surfaces to the client.
+    try:
+        frappe.has_permission(party_type, ptype="read", doc=party, throw=True)
+    except frappe.DoesNotExistError:
+        return []
 
     filters = {
         "link_doctype": party_type,
