@@ -1404,11 +1404,15 @@ SALES_REVERSE_CHARGE_FIELDS = {
     "Sales Order": {**reverse_charge_field, "insert_after": "skip_delivery_note"},
     "Delivery Note": {**reverse_charge_field, "insert_after": "set_posting_time"},
     "Sales Invoice": {**reverse_charge_field, "insert_after": "is_debit_note"},
+}
+
+PURCHASE_REVERSE_CHARGE_FIELDS = {
     "Purchase Invoice": {**reverse_charge_field, "insert_after": "is_return"},
     "Purchase Receipt": {**reverse_charge_field, "insert_after": "is_return"},
     "Purchase Order": {**reverse_charge_field, "insert_after": "supplier_warehouse"},
     "Supplier Quotation": {**reverse_charge_field, "insert_after": "has_unit_price_items"},
 }
+
 E_INVOICE_FIELDS = {
     "Sales Invoice": [
         {
