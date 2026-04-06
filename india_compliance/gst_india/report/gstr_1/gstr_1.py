@@ -1827,8 +1827,8 @@ def get_b2b_json(res, gstin):
                 continue
             inv_item["itms"] = []
 
-            for item in invoice:
-                inv_item["itms"].append(get_rate_and_tax_details(item, gstin))
+            for num, item in enumerate(invoice, 1):
+                inv_item["itms"].append(get_rate_and_tax_details(item, gstin, num))
 
             inv.append(inv_item)
 
@@ -1930,12 +1930,12 @@ def get_b2cl_json(res, gstin):
 
         b2cl_item, inv = {"pos": "%02d" % int(pos.split("-")[0]), "inv": []}, []
 
-        for row in res[pos]:
+        for num, row in enumerate(res[pos], 1):
             inv_item = get_basic_invoice_detail(row)
             if row.get("sale_from_bonded_wh"):
                 inv_item["inv_typ"] = "CBW"
 
-            inv_item["itms"] = [get_rate_and_tax_details(row, gstin)]
+            inv_item["itms"] = [get_rate_and_tax_details(row, gstin, num)]
 
             inv.append(inv_item)
 
@@ -2008,8 +2008,8 @@ def get_cdnr_reg_json(res, gstin):
             }
 
             inv_item["itms"] = []
-            for item in invoice:
-                inv_item["itms"].append(get_rate_and_tax_details(item, gstin))
+            for num, item in enumerate(invoice, 1):
+                inv_item["itms"].append(get_rate_and_tax_details(item, gstin, num))
 
             inv.append(inv_item)
 
@@ -2043,8 +2043,8 @@ def get_cdnr_unreg_json(res, gstin):
             )
 
         inv_item["itms"] = []
-        for item in items:
-            inv_item["itms"].append(get_rate_and_tax_details(item, gstin))
+        for num, item in enumerate(items, 1):
+            inv_item["itms"].append(get_rate_and_tax_details(item, gstin, num))
 
         out.append(inv_item)
 
@@ -2192,7 +2192,7 @@ def get_shipping_bill_details(row):
     }
 
 
-def get_rate_and_tax_details(row, gstin):
+def get_rate_and_tax_details(row, gstin, num):
     itm_det = {
         "txval": flt(row["taxable_value"], 2),
         "rt": row["rate"],
@@ -2201,10 +2201,13 @@ def get_rate_and_tax_details(row, gstin):
 
     # calculate rate
 <<<<<<< HEAD
+<<<<<<< HEAD
     num = 1 if not row["rate"] else "%d%02d" % (row["rate"], 1)
 =======
     num = 1 if not row["rate"] else f"{int(row['rate'])}{1:02d}"
 >>>>>>> 68e48e8a (fix: correct rate formatting in get_rate_and_tax_details function)
+=======
+>>>>>>> 3dc0e523 (fix: update get_rate_and_tax_details to include item index for better tracking)
     rate = row.get("rate") or 0
 
     # calculate tax amount added
