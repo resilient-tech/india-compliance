@@ -1,3 +1,5 @@
+import json
+
 import frappe
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import getdate
@@ -6,6 +8,7 @@ from india_compliance.gst_india.report.gstr_1.gstr_1 import (
     GSTR1DocumentIssuedSummary,
     execute,
     format_data_to_dict,
+    get_gstr1_json,
     get_json,
 )
 from india_compliance.gst_india.utils.tests import (
@@ -78,6 +81,70 @@ class TestGSTR1DocumentIssuedSummary(FrappeTestCase):
         report_json = get_json("Document Issued Summary", "24AAQCA8719H1ZC", report_data, filters)
 
         self.assertDictEqual(report_json, JSON_OUTPUT)
+
+
+class TestGSTR1B2B(FrappeTestCase):
+    def test_get_gstr1_json_for_b2b(self):
+
+        inter_state_invoice = create_sales_invoice(
+            customer="_Test Registered Customer",
+            customer_address="_Test Registered Customer-Billing",
+            place_of_supply="29-Karnataka",
+        )
+
+        intra_state_invoice = create_sales_invoice(
+            customer="_Test Registered Customer",
+            customer_address="_Test Registered Customer-Billing",
+            place_of_supply="24-Gujarat",
+        )
+
+        filters = {
+            "company": "_Test Indian Registered Company",
+            "company_gstin": "24AAQCA8719H1ZC",
+            "from_date": getdate(),
+            "to_date": getdate(),
+            "type_of_business": "B2B",
+        }
+
+        result = get_gstr1_json(json.dumps(filters))
+
+        self.assertIn("file_name", result)
+        self.assertIn("data", result)
+        self.assertIn("b2b", result["data"])
+
+        b2b_data = result["data"]["b2b"]
+        self.assertIsInstance(b2b_data, list)
+        self.assertGreater(len(b2b_data), 0)
+
+        customer_gstin = "29AABCT1332L1ZX"
+        customer_data = next((item for item in b2b_data if item["ctin"] == customer_gstin), None)
+        self.assertIsNotNone(customer_data)
+        self.assertIn("inv", customer_data)
+
+        invoices = customer_data["inv"]
+        invoice_numbers = [inv["inum"] for inv in invoices]
+        self.assertIn(inter_state_invoice.name, invoice_numbers)
+
+        inter_state_inv_data = next(
+            (inv for inv in invoices if inv["inum"] == inter_state_invoice.name), None
+        )
+        self.assertIsNotNone(inter_state_inv_data)
+        self.assertEqual(inter_state_inv_data["pos"], "29")
+        self.assertEqual(inter_state_inv_data["rchrg"], "N")
+        self.assertEqual(inter_state_inv_data["inv_typ"], "R")
+        self.assertIn("itms", inter_state_inv_data)
+        self.assertGreater(len(inter_state_inv_data["itms"]), 0)
+
+        first_item = inter_state_inv_data["itms"][0]
+        self.assertEqual(first_item["num"], 1)
+
+        item_det = first_item["itm_det"]
+        self.assertIn("txval", item_det)
+        self.assertIn("rt", item_det)
+        self.assertIn("iamt", item_det)
+
+        inter_state_invoice.cancel()
+        intra_state_invoice.cancel()
 
 
 def create_test_items():
