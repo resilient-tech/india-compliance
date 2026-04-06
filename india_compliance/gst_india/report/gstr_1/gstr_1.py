@@ -1789,12 +1789,16 @@ def get_b2cl_json(res, gstin):
 
         b2cl_item, inv = {"pos": f"{int(pos.split('-')[0]):02d}", "inv": []}, []
 
-        for row in res[pos]:
+        for num, row in enumerate(res[pos], 1):
             inv_item = get_basic_invoice_detail(row)
             if row.get("sale_from_bonded_wh"):
                 inv_item["inv_typ"] = "CBW"
 
+<<<<<<< HEAD
             inv_item["itms"] = [get_rate_and_tax_details(row, gstin, 1)]
+=======
+            inv_item["itms"] = [get_rate_and_tax_details(row, gstin, num)]
+>>>>>>> 3dc0e523 (fix: update get_rate_and_tax_details to include item index for better tracking)
 
             inv.append(inv_item)
 
@@ -2055,9 +2059,12 @@ def get_rate_and_tax_details(row, gstin, num):
 
     # calculate rate
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     num = 1 if not row["rate"] else f"{int(row['rate'])}{1:02d}"
 >>>>>>> 68e48e8a (fix: correct rate formatting in get_rate_and_tax_details function)
+=======
+>>>>>>> 3dc0e523 (fix: update get_rate_and_tax_details to include item index for better tracking)
     rate = row.get("rate") or 0
 
     # calculate tax amount added
