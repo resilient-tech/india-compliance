@@ -8,7 +8,10 @@ from india_compliance.gst_india.report.gstr_1.gstr_1 import (
     GSTR1DocumentIssuedSummary,
     execute,
     format_data_to_dict,
+<<<<<<< HEAD
     get_b2cl_json,
+=======
+>>>>>>> e5e02f15 (test: add unit test for get_gstr1_json function in TestGSTR1B2B class)
     get_gstr1_json,
     get_json,
 )
@@ -86,6 +89,7 @@ class TestGSTR1DocumentIssuedSummary(FrappeTestCase):
 
 class TestGSTR1B2B(FrappeTestCase):
     def test_get_gstr1_json_for_b2b(self):
+<<<<<<< HEAD
         invoice_1 = create_sales_invoice(
             customer="_Test Registered Customer",
             customer_address="_Test Registered Customer-Billing",
@@ -113,6 +117,31 @@ class TestGSTR1B2B(FrappeTestCase):
         result = get_gstr1_json(json.dumps(filters))
 
         # Assert result structure
+=======
+
+        inter_state_invoice = create_sales_invoice(
+            customer="_Test Registered Customer",
+            customer_address="_Test Registered Customer-Billing",
+            place_of_supply="29-Karnataka",
+        )
+
+        intra_state_invoice = create_sales_invoice(
+            customer="_Test Registered Customer",
+            customer_address="_Test Registered Customer-Billing",
+            place_of_supply="24-Gujarat",
+        )
+
+        filters = {
+            "company": "_Test Indian Registered Company",
+            "company_gstin": "24AAQCA8719H1ZC",
+            "from_date": getdate(),
+            "to_date": getdate(),
+            "type_of_business": "B2B",
+        }
+
+        result = get_gstr1_json(json.dumps(filters))
+
+>>>>>>> e5e02f15 (test: add unit test for get_gstr1_json function in TestGSTR1B2B class)
         self.assertIn("file_name", result)
         self.assertIn("data", result)
         self.assertIn("b2b", result["data"])
@@ -121,6 +150,7 @@ class TestGSTR1B2B(FrappeTestCase):
         self.assertIsInstance(b2b_data, list)
         self.assertGreater(len(b2b_data), 0)
 
+<<<<<<< HEAD
         # Get customer data
         customer_gstin = invoice_1.billing_address_gstin
         customer_data = next((item for item in b2b_data if item["ctin"] == customer_gstin), None)
@@ -203,6 +233,37 @@ class TestGSTR1B2CL(FrappeTestCase):
         self.assertEqual(len(result[0]["inv"]), 2)
         self.assertEqual(result[0]["inv"][0]["itms"][0]["num"], 1)
         self.assertEqual(result[0]["inv"][1]["itms"][0]["num"], 1)
+=======
+        customer_gstin = "29AABCT1332L1ZX"
+        customer_data = next((item for item in b2b_data if item["ctin"] == customer_gstin), None)
+        self.assertIsNotNone(customer_data)
+        self.assertIn("inv", customer_data)
+
+        invoices = customer_data["inv"]
+        invoice_numbers = [inv["inum"] for inv in invoices]
+        self.assertIn(inter_state_invoice.name, invoice_numbers)
+
+        inter_state_inv_data = next(
+            (inv for inv in invoices if inv["inum"] == inter_state_invoice.name), None
+        )
+        self.assertIsNotNone(inter_state_inv_data)
+        self.assertEqual(inter_state_inv_data["pos"], "29")
+        self.assertEqual(inter_state_inv_data["rchrg"], "N")
+        self.assertEqual(inter_state_inv_data["inv_typ"], "R")
+        self.assertIn("itms", inter_state_inv_data)
+        self.assertGreater(len(inter_state_inv_data["itms"]), 0)
+
+        first_item = inter_state_inv_data["itms"][0]
+        self.assertEqual(first_item["num"], 1)
+
+        item_det = first_item["itm_det"]
+        self.assertIn("txval", item_det)
+        self.assertIn("rt", item_det)
+        self.assertIn("iamt", item_det)
+
+        inter_state_invoice.cancel()
+        intra_state_invoice.cancel()
+>>>>>>> e5e02f15 (test: add unit test for get_gstr1_json function in TestGSTR1B2B class)
 
 
 def create_test_items():
