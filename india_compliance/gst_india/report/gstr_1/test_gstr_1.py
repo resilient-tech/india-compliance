@@ -101,8 +101,8 @@ class TestGSTR1B2B(FrappeTestCase):
         filters = {
             "company": "_Test Indian Registered Company",
             "company_gstin": "24AAQCA8719H1ZC",
-            "from_date": getdate(),
-            "to_date": getdate(),
+            "from_date": str(getdate()),
+            "to_date": str(getdate()),
             "type_of_business": "B2B",
         }
 
