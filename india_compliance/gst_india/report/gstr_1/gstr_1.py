@@ -2054,7 +2054,7 @@ def get_rate_and_tax_details(row, gstin):
     }
 
     # calculate rate
-    num = 1 if not row["rate"] else f"{row['rate']:d}{1:02d}"
+    num = 1 if not row["rate"] else f"{int(row['rate'])}{1:02d}"
     rate = row.get("rate") or 0
 
     # calculate tax amount added
