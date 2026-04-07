@@ -13,6 +13,7 @@ from india_compliance.gst_india.constants.custom_fields import (
     EDUCATION_CUSTOM_FIELDS,
     HEALTHCARE_CUSTOM_FIELDS,
     HRMS_CUSTOM_FIELDS,
+    PURCHASE_REVERSE_CHARGE_FIELDS,
     SALES_REVERSE_CHARGE_FIELDS,
 )
 from india_compliance.gst_india.setup.property_setters import get_property_setters
@@ -328,6 +329,7 @@ def get_all_custom_fields():
     for custom_fields in (
         CUSTOM_FIELDS,
         SALES_REVERSE_CHARGE_FIELDS,
+        PURCHASE_REVERSE_CHARGE_FIELDS,
         E_INVOICE_FIELDS,
         E_WAYBILL_FIELDS,
     ):
