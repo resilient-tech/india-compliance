@@ -95,13 +95,8 @@ def after_mapping_stock_entry(doc, method, source_doc):
 
 
 def update_address_fields(doc, source_doc):
-    reverse = (
-        source_doc.doctype in ("Subcontracting Order", "Purchase Receipt")
-        and doc.purpose in ("Material Transfer", "Send to Subcontractor")
-        and doc.is_return == 0
-    )
 
-    address_map = get_mapped_address(source_doc, reverse=reverse)
+    address_map = get_mapped_address(doc, source_doc)
 
     if not address_map:
         return
@@ -116,7 +111,7 @@ def update_address_fields(doc, source_doc):
     set_address_display(doc)
 
 
-def get_mapped_address(source_doc, reverse=False):
+def get_mapped_address(doc, source_doc):
     """
     Return bill_from, bill_from_gstin, bill_to, bill_to_gstin, ship_from, ship_to
     resolved from source_doc using ADDRESS_FIELDS (plus SCO mapping).
@@ -132,12 +127,21 @@ def get_mapped_address(source_doc, reverse=False):
 
     fields = address_map.get(source_doc.doctype, {})
 
+    if not fields:
+        return
+
     bill_from = source_doc.get(fields.get("bill_from"))
     bill_to = source_doc.get(fields.get("bill_to"))
     ship_from = source_doc.get(fields.get("ship_from"))
     ship_to = source_doc.get(fields.get("ship_to"))
     bill_from_gstin = source_doc.get(ADDRESS_GSTIN_FIELD_MAP.get(fields.get("bill_from")))
     bill_to_gstin = source_doc.get(ADDRESS_GSTIN_FIELD_MAP.get(fields.get("bill_to")))
+
+    reverse = (
+        source_doc.doctype in ("Subcontracting Order", "Purchase Receipt")
+        and doc.purpose in ("Material Transfer", "Send to Subcontractor")
+        and doc.is_return == 0
+    )
 
     if reverse:
         bill_from, bill_to, bill_from_gstin, bill_to_gstin = (

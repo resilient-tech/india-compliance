@@ -199,10 +199,19 @@ SERVICE_ITEM = {
 
 
 class TestSubcontractingTransaction(IntegrationTestCase):
+    ITEM_WITH_TAX = "Subcontracted SRM Item 1"
+    ITEM_WITHOUT_TAX = "Subcontracted SRM Item 2"
+    TAX_TEMPLATE = "GST 18% - _TIRC"
+
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         create_subcontracting_data()
+
+        item = frappe.get_doc("Item", cls.ITEM_WITH_TAX)
+        if not any(d.item_tax_template == cls.TAX_TEMPLATE for d in item.taxes):
+            item.append("taxes", {"item_tax_template": cls.TAX_TEMPLATE, "tax_category": ""})
+            item.save()
 
         frappe.db.set_single_value(
             "GST Settings",
@@ -219,6 +228,23 @@ class TestSubcontractingTransaction(IntegrationTestCase):
 
         stock_entry = create_transaction(**doc_args)
         return stock_entry
+
+    def _make_sco(self):
+        po = create_purchase_order(**SERVICE_ITEM, supplier_warehouse="Finished Goods - _TIRC")
+        return create_subcontracting_order(po_name=po.name)
+
+    def _rm_items(self, sco):
+        return [
+            {
+                "main_item_code": row.main_item_code,
+                "rm_item_code": row.rm_item_code,
+                "qty": row.required_qty,
+                "rate": row.rate,
+                "stock_uom": row.stock_uom,
+                "warehouse": row.reserve_warehouse,
+            }
+            for row in sco.supplied_items
+        ]
 
     def test_create_and_update_stock_entry(self):
         # Create a subcontracting transaction
@@ -384,6 +410,18 @@ class TestSubcontractingTransaction(IntegrationTestCase):
         sco.supplier_warehouse = "Finished Goods - _TIUC"
         sco.save()
         sco.submit()
+
+    def test_item_tax_template_set_on_se_items_from_sco(self):
+        sco = self._make_sco()
+        se = make_rm_stock_entry(sco.name, self._rm_items(sco))
+
+        items_by_code = {item.get("item_code"): item for item in se.get("items", [])}
+
+        self.assertEqual(
+            items_by_code[self.ITEM_WITH_TAX].get("item_tax_template"),
+            self.TAX_TEMPLATE,
+        )
+        self.assertFalse(items_by_code[self.ITEM_WITHOUT_TAX].get("item_tax_template"))
 
 
 class TestAddressMappingAfterMapping(IntegrationTestCase):
