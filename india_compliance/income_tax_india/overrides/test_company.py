@@ -1,5 +1,5 @@
 import frappe
-from frappe.tests import IntegrationTestCase
+from frappe.tests import FrappeTestCase
 
 from india_compliance.income_tax_india.overrides.company import (
     TDS_ACCOUNT_NAME,
@@ -8,7 +8,7 @@ from india_compliance.income_tax_india.overrides.company import (
 )
 
 
-class TestCompanyOverride(IntegrationTestCase):
+class TestCompanyOverride(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
         frappe.db.savepoint("before_test_income_tax_company")
@@ -33,7 +33,10 @@ class TestCompanyOverride(IntegrationTestCase):
         linked = False
         for category in frappe.get_all("Tax Withholding Category", pluck="name"):
             category_doc = frappe.get_doc("Tax Withholding Category", category)
-            if any(row.company == company and row.account == tds_account for row in category_doc.accounts):
+            if any(
+                row.company == company and row.account == tds_account
+                for row in category_doc.accounts
+            ):
                 linked = True
                 break
 

@@ -22,13 +22,9 @@ def create_company_fixtures(company):
 
 
 def create_tds_account(company):
-<<<<<<< HEAD
     create_default_company_account(
-        company, account_name="TDS Payable", parent="Duties and Taxes"
+        company, account_name=TDS_ACCOUNT_NAME, parent="Duties and Taxes"
     )
-=======
-    create_default_company_account(company, account_name=TDS_ACCOUNT_NAME, parent="Duties and Taxes")
->>>>>>> 2c1f29b5 (fix: refactor TDS account handling and add unit tests for tax withholding category linkage)
 
 
 def create_or_update_tax_withholding_category(company):
