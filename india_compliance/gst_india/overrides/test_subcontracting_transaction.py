@@ -424,7 +424,7 @@ class TestAddressMappingAfterMapping(IntegrationTestCase):
         self.assertEqual(se.bill_from_gstin, sco.company_gstin)
         self.assertEqual(se.bill_to_address, sco.supplier_address)
         self.assertEqual(se.bill_to_gstin, sco.supplier_gstin)
-        # SCO has no dispatch_address; ship_from stays empty, ship_to=supplier_address (reversed from shipping_address)
+        # SCO has no dispatch_address; after reverse: ship_from=shipping_address, ship_to=None
         self.assertEqual(se.ship_from_address, sco.shipping_address)
         self.assertIsNone(se.ship_to_address)
 
