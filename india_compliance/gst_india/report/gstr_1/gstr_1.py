@@ -1789,12 +1789,12 @@ def get_b2cl_json(res, gstin):
 
         b2cl_item, inv = {"pos": f"{int(pos.split('-')[0]):02d}", "inv": []}, []
 
-        for num, row in enumerate(res[pos], 1):
+        for row in res[pos]:
             inv_item = get_basic_invoice_detail(row)
             if row.get("sale_from_bonded_wh"):
                 inv_item["inv_typ"] = "CBW"
 
-            inv_item["itms"] = [get_rate_and_tax_details(row, gstin, num)]
+            inv_item["itms"] = [get_rate_and_tax_details(row, gstin, 1)]
 
             inv.append(inv_item)
 
