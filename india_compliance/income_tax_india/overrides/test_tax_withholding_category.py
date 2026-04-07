@@ -37,11 +37,6 @@ class TestTaxWithholdingCategory(IntegrationTestCase):
 
     def test_returns_none_for_party_other_than_customer_or_supplier(self):
         party_name = "_Test TDS Employee With PAN"
-        if not frappe.db.exists("Employee", party_name):
-            doc = frappe.new_doc("Employee")
-            doc.employee_name = party_name
-            doc.save()
-
         result = get_tax_id_for_party("Employee", party_name)
         self.assertEqual(result, "")
 
