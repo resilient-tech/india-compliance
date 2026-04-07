@@ -1,5 +1,5 @@
 import frappe
-from frappe.tests import IntegrationTestCase
+from frappe.tests.utils import FrappeTestCase
 
 from india_compliance.income_tax_india.overrides.company import (
     TDS_ACCOUNT_NAME,
@@ -8,7 +8,7 @@ from india_compliance.income_tax_india.overrides.company import (
 )
 
 
-class TestCompanyOverride(IntegrationTestCase):
+class TestCompanyOverride(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
         frappe.db.savepoint("before_test_income_tax_company")
