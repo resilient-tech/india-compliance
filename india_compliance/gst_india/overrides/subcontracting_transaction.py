@@ -79,6 +79,9 @@ def update_item_tax_template(doc, source_doc):
         if not item.item_code:
             continue
 
+        if item.item_tax_template:
+            continue
+
         out = frappe._dict()
         item_doc = frappe.get_cached_doc("Item", item.item_code)
         get_item_tax_template(args, item_doc, out)

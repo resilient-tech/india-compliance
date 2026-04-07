@@ -201,6 +201,7 @@ SERVICE_ITEM = {
 class TestSubcontractingTransaction(IntegrationTestCase):
     ITEM_WITH_TAX = "Subcontracted SRM Item 1"
     ITEM_WITHOUT_TAX = "Subcontracted SRM Item 2"
+    SCO_FG_ITEM = "Subcontracted Item SA1"
     TAX_TEMPLATE = "GST 18% - _TIRC"
 
     @classmethod
@@ -208,10 +209,17 @@ class TestSubcontractingTransaction(IntegrationTestCase):
         super().setUpClass()
         create_subcontracting_data()
 
+        # Raw material
         item = frappe.get_doc("Item", cls.ITEM_WITH_TAX)
         if not any(d.item_tax_template == cls.TAX_TEMPLATE for d in item.taxes):
             item.append("taxes", {"item_tax_template": cls.TAX_TEMPLATE, "tax_category": ""})
             item.save()
+
+        # Finished good
+        fg_item = frappe.get_doc("Item", cls.SCO_FG_ITEM)
+        if not any(d.item_tax_template == cls.TAX_TEMPLATE for d in fg_item.taxes):
+            fg_item.append("taxes", {"item_tax_template": cls.TAX_TEMPLATE, "tax_category": ""})
+            fg_item.save()
 
         frappe.db.set_single_value(
             "GST Settings",
@@ -410,6 +418,27 @@ class TestSubcontractingTransaction(IntegrationTestCase):
         sco.supplier_warehouse = "Finished Goods - _TIUC"
         sco.save()
         sco.submit()
+
+    def test_item_tax_template_set_on_sco_items_from_po(self):
+        po = create_purchase_order(**SERVICE_ITEM, supplier_warehouse="Finished Goods - _TIRC")
+        sco = create_subcontracting_order(po_name=po.name)
+
+        item_templates = {item.item_code: item.item_tax_template for item in sco.items}
+        self.assertEqual(item_templates.get(self.SCO_FG_ITEM), self.TAX_TEMPLATE)
+
+    def test_item_tax_template_not_overwritten_on_sco_items(self):
+        po = create_purchase_order(**SERVICE_ITEM, supplier_warehouse="Finished Goods - _TIRC")
+        sco = create_subcontracting_order(po_name=po.name, do_not_save=True)
+
+        other_template = "GST 5% - _TIRC"
+        for item in sco.items:
+            if item.item_code == self.SCO_FG_ITEM:
+                item.item_tax_template = other_template
+
+        sco.save()
+
+        templates = {item.item_code: item.item_tax_template for item in sco.items}
+        self.assertEqual(templates.get(self.SCO_FG_ITEM), other_template)
 
     def test_item_tax_template_set_on_se_items_from_sco(self):
         sco = self._make_sco()
