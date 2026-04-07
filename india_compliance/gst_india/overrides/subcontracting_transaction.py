@@ -75,9 +75,6 @@ def update_item_tax_template(doc, source_doc):
     args = {"company": doc.company, "tax_category": tax_category}
 
     for item in doc.items:
-<<<<<<< HEAD
-        out = {}
-=======
         if not item.item_code:
             continue
 
@@ -85,7 +82,6 @@ def update_item_tax_template(doc, source_doc):
             continue
 
         out = frappe._dict()
->>>>>>> 33675fdd (fix: after mapping of stock entry map correct addresses, gstin and item tax template (#3998))
         item_doc = frappe.get_cached_doc("Item", item.item_code)
         get_item_tax_template(args, item_doc, out)
         item.item_tax_template = out.get("item_tax_template")

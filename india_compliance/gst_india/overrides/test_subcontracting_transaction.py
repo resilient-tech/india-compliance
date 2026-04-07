@@ -6,31 +6,20 @@ from erpnext.controllers.subcontracting_controller import (
     make_rm_stock_entry,
 )
 from erpnext.controllers.tests.test_subcontracting_controller import get_rm_items
-from erpnext.manufacturing.doctype.production_plan.test_production_plan import make_bom
+from erpnext.manufacturing.doctype.production_plan.test_production_plan import (
+    make_bom,
+)
+from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
+    make_stock_entry as make_se_from_pr,
+)
+from erpnext.stock.doctype.stock_entry.stock_entry import make_stock_in_entry
 from erpnext.subcontracting.doctype.subcontracting_order.subcontracting_order import (
     make_subcontracting_receipt,
 )
-<<<<<<< HEAD
 from erpnext.subcontracting.doctype.subcontracting_order.test_subcontracting_order import (
     create_subcontracting_order,
 )
 from frappe.tests.utils import FrappeTestCase
-=======
-from frappe.tests import IntegrationTestCase
-
-with mock.patch("frappe.db"), mock.patch("frappe.new_doc"), mock.patch("frappe.get_doc"):
-    from erpnext.controllers.tests.test_subcontracting_controller import get_rm_items
-    from erpnext.manufacturing.doctype.production_plan.test_production_plan import (
-        make_bom,
-    )
-    from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
-        make_stock_entry as make_se_from_pr,
-    )
-    from erpnext.stock.doctype.stock_entry.stock_entry import make_stock_in_entry
-    from erpnext.subcontracting.doctype.subcontracting_order.test_subcontracting_order import (
-        create_subcontracting_order,
-    )
->>>>>>> 33675fdd (fix: after mapping of stock entry map correct addresses, gstin and item tax template (#3998))
 
 from india_compliance.gst_india.utils.tests import create_transaction
 
@@ -206,16 +195,12 @@ SERVICE_ITEM = {
 }
 
 
-<<<<<<< HEAD
 class TestSubcontractingTransaction(FrappeTestCase):
-=======
-class TestSubcontractingTransaction(IntegrationTestCase):
     ITEM_WITH_TAX = "Subcontracted SRM Item 1"
     ITEM_WITHOUT_TAX = "Subcontracted SRM Item 2"
     SCO_FG_ITEM = "Subcontracted Item SA1"
     TAX_TEMPLATE = "GST 18% - _TIRC"
 
->>>>>>> 33675fdd (fix: after mapping of stock entry map correct addresses, gstin and item tax template (#3998))
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -466,7 +451,7 @@ class TestSubcontractingTransaction(IntegrationTestCase):
         self.assertFalse(items_by_code[self.ITEM_WITHOUT_TAX].get("item_tax_template"))
 
 
-class TestAddressMappingAfterMapping(IntegrationTestCase):
+class TestAddressMappingAfterMapping(FrappeTestCase):
     """
     Verifies bill_from_address / bill_to_address and their GSTINs are mapped
     correctly in Stock Entries created via get_mapped_doc from each source doctype.
