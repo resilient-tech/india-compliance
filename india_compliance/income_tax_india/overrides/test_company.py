@@ -11,13 +11,11 @@ from india_compliance.income_tax_india.overrides.company import (
 class TestCompanyOverride(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
-        super().setUpClass()
         frappe.db.savepoint("before_test_income_tax_company")
 
     @classmethod
     def tearDownClass(cls):
         frappe.db.rollback(save_point="before_test_income_tax_company")
-        super().tearDownClass()
 
     def test_tds_payable_account_is_linked_in_tax_withholding_category(self):
         company = "_Test Indian Registered Company"
