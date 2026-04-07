@@ -8,6 +8,7 @@ from india_compliance.gst_india.report.gstr_1.gstr_1 import (
     GSTR1DocumentIssuedSummary,
     execute,
     format_data_to_dict,
+    get_b2cl_json,
     get_gstr1_json,
     get_json,
 )
@@ -169,6 +170,41 @@ class TestGSTR1B2B(FrappeTestCase):
         # Verify tax amounts are present and positive
         total_tax_2 = item_det_2.get("iamt", 0) + item_det_2.get("camt", 0) + item_det_2.get("samt", 0)
         self.assertGreater(total_tax_2, 0, "Invoice should have tax amount")
+
+
+class TestGSTR1B2CL(FrappeTestCase):
+    def test_b2cl_item_num_resets_per_invoice(self):
+        gstin = "24AAQCA8719H1ZC"
+        posting_date = str(getdate())
+
+        result = get_b2cl_json(
+            {
+                "29-Karnataka": [
+                    {
+                        "invoice_number": "SINV-0001",
+                        "posting_date": posting_date,
+                        "invoice_value": 1000,
+                        "taxable_value": 1000,
+                        "rate": 18,
+                        "cess_amount": 0,
+                    },
+                    {
+                        "invoice_number": "SINV-0002",
+                        "posting_date": posting_date,
+                        "invoice_value": 2000,
+                        "taxable_value": 2000,
+                        "rate": 18,
+                        "cess_amount": 0,
+                    },
+                ]
+            },
+            gstin,
+        )
+
+        self.assertEqual(result[0]["pos"], "29")
+        self.assertEqual(len(result[0]["inv"]), 2)
+        self.assertEqual(result[0]["inv"][0]["itms"][0]["num"], 1)
+        self.assertEqual(result[0]["inv"][1]["itms"][0]["num"], 1)
 
 
 def create_test_items():
