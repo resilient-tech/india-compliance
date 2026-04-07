@@ -9,9 +9,13 @@ from india_compliance.gst_india.report.gstr_1.gstr_1 import (
     execute,
     format_data_to_dict,
 <<<<<<< HEAD
+<<<<<<< HEAD
     get_b2cl_json,
 =======
 >>>>>>> e5e02f15 (test: add unit test for get_gstr1_json function in TestGSTR1B2B class)
+=======
+    get_b2cl_json,
+>>>>>>> 418c1fc2 (fix: nos in b2cl should be as as per invoice not as per pos)
     get_gstr1_json,
     get_json,
 )
@@ -246,6 +250,7 @@ class TestGSTR1B2CL(FrappeTestCase):
         self.assertEqual(len(result[0]["inv"]), 2)
         self.assertEqual(result[0]["inv"][0]["itms"][0]["num"], 1)
         self.assertEqual(result[0]["inv"][1]["itms"][0]["num"], 1)
+<<<<<<< HEAD
 =======
         customer_gstin = "29AABCT1332L1ZX"
 =======
@@ -303,6 +308,8 @@ class TestGSTR1B2CL(FrappeTestCase):
         total_tax_2 = item_det_2.get("iamt", 0) + item_det_2.get("camt", 0) + item_det_2.get("samt", 0)
         self.assertGreater(total_tax_2, 0, "Invoice should have tax amount")
 >>>>>>> efa8a604 (test: enhance B2B test to verify invoice structures and tax amounts)
+=======
+>>>>>>> 418c1fc2 (fix: nos in b2cl should be as as per invoice not as per pos)
 
 
 def create_test_items():
