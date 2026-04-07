@@ -306,7 +306,7 @@ class BillofEntry(Document):
                     _(
                         "Tax Row #{0}: Charge Type is set to Actual. However, Tax Amount {1}"
                         " is incorrect. Try setting the Charge Type to {2}."
-                    ).format(row.idx, tax.tax_amount, column)
+                    ).format(tax.idx, tax.tax_amount, column)
                 )
 
     def get_gl_entries(self):
@@ -364,9 +364,7 @@ class BillofEntry(Document):
             return
 
         frappe.throw(
-            _("Row #{0}: Account {1} must be of INR currency").format(
-                self.idx, frappe.bold(account)
-            )
+            _("Account {0} must be of INR currency").format(frappe.bold(account))
         )
 
     @frappe.whitelist()

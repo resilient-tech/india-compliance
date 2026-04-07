@@ -1827,8 +1827,8 @@ def get_b2b_json(res, gstin):
                 continue
             inv_item["itms"] = []
 
-            for item in invoice:
-                inv_item["itms"].append(get_rate_and_tax_details(item, gstin))
+            for num, item in enumerate(invoice, 1):
+                inv_item["itms"].append(get_rate_and_tax_details(item, gstin, num))
 
             inv.append(inv_item)
 
@@ -1935,7 +1935,7 @@ def get_b2cl_json(res, gstin):
             if row.get("sale_from_bonded_wh"):
                 inv_item["inv_typ"] = "CBW"
 
-            inv_item["itms"] = [get_rate_and_tax_details(row, gstin)]
+            inv_item["itms"] = [get_rate_and_tax_details(row, gstin, 1)]
 
             inv.append(inv_item)
 
@@ -2008,8 +2008,8 @@ def get_cdnr_reg_json(res, gstin):
             }
 
             inv_item["itms"] = []
-            for item in invoice:
-                inv_item["itms"].append(get_rate_and_tax_details(item, gstin))
+            for num, item in enumerate(invoice, 1):
+                inv_item["itms"].append(get_rate_and_tax_details(item, gstin, num))
 
             inv.append(inv_item)
 
@@ -2043,8 +2043,8 @@ def get_cdnr_unreg_json(res, gstin):
             )
 
         inv_item["itms"] = []
-        for item in items:
-            inv_item["itms"].append(get_rate_and_tax_details(item, gstin))
+        for num, item in enumerate(items, 1):
+            inv_item["itms"].append(get_rate_and_tax_details(item, gstin, num))
 
         out.append(inv_item)
 
@@ -2192,15 +2192,13 @@ def get_shipping_bill_details(row):
     }
 
 
-def get_rate_and_tax_details(row, gstin):
+def get_rate_and_tax_details(row, gstin, num):
     itm_det = {
         "txval": flt(row["taxable_value"], 2),
         "rt": row["rate"],
         "csamt": (flt(row.get("cess_amount"), 2) or 0),
     }
 
-    # calculate rate
-    num = 1 if not row["rate"] else "%d%02d" % (row["rate"], 1)
     rate = row.get("rate") or 0
 
     # calculate tax amount added

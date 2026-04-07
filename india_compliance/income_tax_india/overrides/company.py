@@ -3,6 +3,8 @@ from frappe.utils import getdate
 
 from india_compliance.gst_india.overrides.company import create_default_company_account
 
+TDS_ACCOUNT_NAME = "TDS Payable"
+
 
 def make_company_fixtures(doc, method=None):
     if not frappe.flags.country_change or doc.country != "India":
@@ -21,7 +23,7 @@ def create_company_fixtures(company):
 
 def create_tds_account(company):
     create_default_company_account(
-        company, account_name="TDS Payable", parent="Duties and Taxes"
+        company, account_name=TDS_ACCOUNT_NAME, parent="Duties and Taxes"
     )
 
 
@@ -29,7 +31,7 @@ def create_or_update_tax_withholding_category(company):
     accounts = []
     tds_account = frappe.get_value(
         "Account",
-        {"account_name": "TDS Payables", "company": company, "is_group": 0},
+        {"account_name": TDS_ACCOUNT_NAME, "company": company, "is_group": 0},
         "name",
     )
 
@@ -122,7 +124,7 @@ def get_tds_category_details(accounts):
                 "entity_type": rule.get("entity_type"),
                 "round_off_tax_amount": rule.get("round_off_tax_amount"),
                 "consider_party_ledger_amount": rule.get(
-                    "consider_party_ledger_amount"
+                    "consider_party_ledger_amount", 0
                 ),
                 "tax_on_excess_amount": rule.get("tax_on_excess_amount"),
                 "rates": rates,
