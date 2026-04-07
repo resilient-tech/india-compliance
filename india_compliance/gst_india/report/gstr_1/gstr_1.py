@@ -2199,15 +2199,6 @@ def get_rate_and_tax_details(row, gstin, num):
         "csamt": (flt(row.get("cess_amount"), 2) or 0),
     }
 
-    # calculate rate
-<<<<<<< HEAD
-<<<<<<< HEAD
-    num = 1 if not row["rate"] else "%d%02d" % (row["rate"], 1)
-=======
-    num = 1 if not row["rate"] else f"{int(row['rate'])}{1:02d}"
->>>>>>> 68e48e8a (fix: correct rate formatting in get_rate_and_tax_details function)
-=======
->>>>>>> 3dc0e523 (fix: update get_rate_and_tax_details to include item index for better tracking)
     rate = row.get("rate") or 0
 
     # calculate tax amount added
