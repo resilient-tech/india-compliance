@@ -157,6 +157,7 @@
             "name": "_Test Registered Customer",
             "customer_name": "_Test Registered Customer",
             "customer_type": "Company",
+            "customer_group": null,
             "gstin": "24AANFA2641L1ZF",
             "gst_category": "Registered Regular"
         },
@@ -164,6 +165,7 @@
             "name": "_Test Registered Composition Customer",
             "customer_name": "_Test Registered Composition Customer",
             "customer_type": "Individual",
+            "customer_group": null,
             "gstin": "29AABCR1718E1ZL",
             "gst_category": "Registered Composition"
         },
@@ -171,6 +173,7 @@
             "name": "_Test Unregistered Customer",
             "customer_name": "_Test Unregistered Customer",
             "customer_type": "Individual",
+            "customer_group": null,
             "gstin": "",
             "gst_category": "Unregistered"
         },
@@ -178,6 +181,7 @@
             "name": "_Test Foreign Customer",
             "customer_name": "_Test Foreign Customer",
             "customer_type": "Individual",
+            "customer_group": null,
             "gstin": "",
             "gst_category": "Overseas"
         },
@@ -185,6 +189,7 @@
             "name": "_Test Foreign Customer-1",
             "customer_name": "_Test Foreign Customer-1",
             "customer_type": "Individual",
+            "customer_group": null,
             "gstin": "",
             "gst_category": "Overseas"
         }
