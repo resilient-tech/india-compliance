@@ -279,9 +279,7 @@ def process_gstr_3b_returns_info(company, gstin, e_filed_list):
 def add_comment_to_gst_return_log(doc, action):
     period = getdate(doc.posting_date).strftime("%m%Y")
     log_name = f"GSTR1-{period}-{doc.company_gstin}"
-    if not (log := get_gst_return_log(log_name)):
-        return
-
+    log = get_gst_return_log(log_name)
     log.add_comment(
         "Comment",
         f"{doc.doctype} : {get_link_to_form(doc.doctype, doc.name)} has been {action} by {frappe.session.user}",
