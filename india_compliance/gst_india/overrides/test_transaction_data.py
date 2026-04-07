@@ -97,6 +97,7 @@ class TestTransactionData(IntegrationTestCase):
                 "city": "Test City",
                 "pincode": 380015,
                 "country_code": None,
+                "gst_category": "Registered Regular",
             },
         )
 
