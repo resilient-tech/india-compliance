@@ -436,6 +436,18 @@ class TestBillofEntry(IntegrationTestCase):
         pi.reload()
         self.assertEqual(pi.items[0].pending_boe_qty, 2)
 
+    def test_validate_account_currency_error_message(self):
+        pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
+        boe = make_bill_of_entry(pi.name)
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^Account .* must be of INR currency"),
+            boe.validate_account_currency,
+            boe.customs_payable_account,
+            "USD",
+        )
+
     def test_sez_goods_with_gst_taxes_cannot_be_linked_to_boe(self):
         """
         A SEZ goods invoice with GST taxes has is_boe_applicable = 0 and

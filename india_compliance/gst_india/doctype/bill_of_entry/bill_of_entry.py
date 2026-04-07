@@ -259,7 +259,7 @@ class BillofEntry(Document):
                     _(
                         "Tax Row #{0}: Charge Type is set to Actual. However, Tax Amount {1}"
                         " is incorrect. Try setting the Charge Type to {2}."
-                    ).format(row.idx, tax.tax_amount, column)
+                    ).format(tax.idx, tax.tax_amount, column)
                 )
 
     def validate_item_tax_template(self):
@@ -352,9 +352,7 @@ class BillofEntry(Document):
         if account_currency == "INR":
             return
 
-        frappe.throw(
-            _("Row #{0}: Account {1} must be of INR currency").format(self.idx, frappe.bold(account))
-        )
+        frappe.throw(_("Account {0} must be of INR currency").format(frappe.bold(account)))
 
     def get_stock_items(self):
         stock_items = []
