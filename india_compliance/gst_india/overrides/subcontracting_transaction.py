@@ -6,6 +6,11 @@ from frappe.contacts.doctype.address.address import get_address_display
 from frappe.utils import flt
 from pypika import Order
 
+from india_compliance.gst_india.constants.e_waybill import (
+    ADDRESS_FIELDS,
+    ADDRESS_GSTIN_FIELD_MAP,
+    buying_address,
+)
 from india_compliance.gst_india.overrides.sales_invoice import (
     update_dashboard_with_gst_logs,
 )
@@ -71,6 +76,9 @@ def update_item_tax_template(doc, source_doc):
     args = ItemDetailsCtx({"company": doc.company, "tax_category": tax_category})
 
     for item in doc.items:
+        if not item.item_code:
+            continue
+
         out = frappe._dict()
         item_doc = frappe.get_cached_doc("Item", item.item_code)
         get_item_tax_template(args, item_doc, out)
@@ -83,45 +91,71 @@ def after_mapping_stock_entry(doc, method, source_doc):
         doc.taxes = []
 
     set_item_tax_template(doc, source_doc)
+    update_address_fields(doc, source_doc)
 
-    address_map = _get_fields_mapping(doc, source_doc)
+
+def update_address_fields(doc, source_doc):
+    reverse = (
+        source_doc.doctype in ("Subcontracting Order", "Purchase Receipt")
+        and doc.purpose in ("Material Transfer", "Send to Subcontractor")
+        and doc.is_return == 0
+    )
+
+    address_map = get_mapped_address(source_doc, reverse=reverse)
 
     if not address_map:
         return
 
-    (bill_from_address, bill_from_gstin), (bill_to_address, bill_to_gstin) = address_map
-
-    doc.bill_from_address = source_doc.get(bill_from_address)
-    doc.bill_from_gstin = source_doc.get(bill_from_gstin)
-    doc.bill_to_address = source_doc.get(bill_to_address)
-    doc.bill_to_gstin = source_doc.get(bill_to_gstin)
+    doc.bill_from_address = address_map.bill_from
+    doc.bill_from_gstin = address_map.bill_from_gstin
+    doc.bill_to_address = address_map.bill_to
+    doc.bill_to_gstin = address_map.bill_to_gstin
+    doc.ship_from_address = address_map.ship_from
+    doc.ship_to_address = address_map.ship_to
 
     set_address_display(doc)
 
 
-def _get_fields_mapping(doc, source_doc):
-    from_fields = ("billing_address", "company_gstin")
-    to_fields = ("supplier_address", "supplier_gstin")
+def get_mapped_address(source_doc, reverse=False):
+    """
+    Return bill_from, bill_from_gstin, bill_to, bill_to_gstin, ship_from, ship_to
+    resolved from source_doc using ADDRESS_FIELDS (plus SCO mapping).
 
-    if source_doc.doctype == "Subcontracting Order":
-        if doc.purpose == "Send to Subcontractor":
-            return from_fields, to_fields
+    reverse - swap bill_from <> bill_to and ship_from <> ship_to.
+    """
+    address_map = frappe._dict(
+        {
+            "Subcontracting Order": buying_address,
+            **ADDRESS_FIELDS,
+        }
+    )
 
-        elif doc.purpose == "Material Transfer" and doc.is_return:
-            return to_fields, from_fields
+    fields = address_map.get(source_doc.doctype, {})
 
-    elif (
-        source_doc.doctype == "Purchase Receipt" and doc.purpose == "Material Transfer" and not doc.is_return
-    ):
-        return from_fields, to_fields
+    bill_from = source_doc.get(fields.get("bill_from"))
+    bill_to = source_doc.get(fields.get("bill_to"))
+    ship_from = source_doc.get(fields.get("ship_from"))
+    ship_to = source_doc.get(fields.get("ship_to"))
+    bill_from_gstin = source_doc.get(ADDRESS_GSTIN_FIELD_MAP.get(fields.get("bill_from")))
+    bill_to_gstin = source_doc.get(ADDRESS_GSTIN_FIELD_MAP.get(fields.get("bill_to")))
 
-    elif source_doc.doctype == "Stock Entry" and doc.purpose == "Material Transfer" and not doc.is_return:
-        from_fields = ("bill_from_address", "bill_from_gstin")
-        to_fields = ("bill_to_address", "bill_to_gstin")
+    if reverse:
+        bill_from, bill_to, bill_from_gstin, bill_to_gstin = (
+            bill_to,
+            bill_from,
+            bill_to_gstin,
+            bill_from_gstin,
+        )
+        ship_from, ship_to = ship_to, ship_from
 
-        return from_fields, to_fields
-
-    return None
+    return frappe._dict(
+        bill_from=bill_from,
+        bill_from_gstin=bill_from_gstin,
+        bill_to=bill_to,
+        bill_to_gstin=bill_to_gstin,
+        ship_from=ship_from,
+        ship_to=ship_to,
+    )
 
 
 def set_item_tax_template(doc, source_doc):

@@ -424,6 +424,9 @@ class TestAddressMappingAfterMapping(IntegrationTestCase):
         self.assertEqual(se.bill_from_gstin, sco.company_gstin)
         self.assertEqual(se.bill_to_address, sco.supplier_address)
         self.assertEqual(se.bill_to_gstin, sco.supplier_gstin)
+        # SCO has no dispatch_address; ship_from stays empty, ship_to=supplier_address (reversed from shipping_address)
+        self.assertEqual(se.ship_from_address, sco.shipping_address)
+        self.assertIsNone(se.ship_to_address)
 
     def test_sco_to_se_material_transfer_return(self):
         sco = self._make_sco()
@@ -446,6 +449,9 @@ class TestAddressMappingAfterMapping(IntegrationTestCase):
         self.assertEqual(return_se.bill_from_gstin, sco.supplier_gstin)
         self.assertEqual(return_se.bill_to_address, sco.billing_address)
         self.assertEqual(return_se.bill_to_gstin, sco.company_gstin)
+        # SCO has no dispatch_address; ship_from stays empty, ship_to=shipping_address (not reversed)
+        self.assertIsNone(return_se.ship_from_address)
+        self.assertEqual(return_se.ship_to_address, sco.shipping_address)
 
     def test_pr_to_se_material_transfer(self):
         pr = create_transaction(doctype="Purchase Receipt")
@@ -457,6 +463,8 @@ class TestAddressMappingAfterMapping(IntegrationTestCase):
         self.assertEqual(se.bill_from_gstin, pr.company_gstin)
         self.assertEqual(se.bill_to_address, pr.supplier_address)
         self.assertEqual(se.bill_to_gstin, pr.supplier_gstin)
+        self.assertEqual(se.ship_from_address, pr.shipping_address)
+        self.assertEqual(se.ship_to_address, pr.dispatch_address)
 
     def test_se_to_se_material_transfer(self):
         # Add stock so the Material Transfer SE can be submitted.
@@ -494,3 +502,5 @@ class TestAddressMappingAfterMapping(IntegrationTestCase):
         self.assertEqual(target_se.bill_from_gstin, source_se.bill_from_gstin)
         self.assertEqual(target_se.bill_to_address, source_se.bill_to_address)
         self.assertEqual(target_se.bill_to_gstin, source_se.bill_to_gstin)
+        self.assertEqual(target_se.ship_from_address, source_se.ship_from_address)
+        self.assertEqual(target_se.ship_to_address, source_se.ship_to_address)
