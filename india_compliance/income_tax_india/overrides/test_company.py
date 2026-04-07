@@ -1,5 +1,5 @@
 import frappe
-from frappe.tests import FrappeTestCase
+from frappe.tests.utils import FrappeTestCase
 
 from india_compliance.income_tax_india.overrides.company import (
     TDS_ACCOUNT_NAME,
