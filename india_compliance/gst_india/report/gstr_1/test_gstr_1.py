@@ -125,17 +125,29 @@ class TestGSTR1B2B(FrappeTestCase):
 
         # Get customer data
         customer_gstin = invoice_1.billing_address_gstin
-        customer_data = next((item for item in b2b_data if item["ctin"] == customer_gstin), None)
-        self.assertIsNotNone(customer_data, f"Customer with GSTIN {customer_gstin} not found")
+        customer_data = next(
+            (item for item in b2b_data if item["ctin"] == customer_gstin), None
+        )
+        self.assertIsNotNone(
+            customer_data, f"Customer with GSTIN {customer_gstin} not found"
+        )
         self.assertIn("inv", customer_data)
 
         # Get specific invoices from result
         invoices = customer_data["inv"]
-        invoice_1_data = next((inv for inv in invoices if inv["inum"] == invoice_1.name), None)
-        invoice_2_data = next((inv for inv in invoices if inv["inum"] == invoice_2.name), None)
+        invoice_1_data = next(
+            (inv for inv in invoices if inv["inum"] == invoice_1.name), None
+        )
+        invoice_2_data = next(
+            (inv for inv in invoices if inv["inum"] == invoice_2.name), None
+        )
 
-        self.assertIsNotNone(invoice_1_data, f"Invoice {invoice_1.name} not found in B2B data")
-        self.assertIsNotNone(invoice_2_data, f"Invoice {invoice_2.name} not found in B2B data")
+        self.assertIsNotNone(
+            invoice_1_data, f"Invoice {invoice_1.name} not found in B2B data"
+        )
+        self.assertIsNotNone(
+            invoice_2_data, f"Invoice {invoice_2.name} not found in B2B data"
+        )
 
         # Assert invoice 1 structure (Karnataka - POS 29)
         self.assertEqual(invoice_1_data["pos"], "29")
@@ -151,7 +163,11 @@ class TestGSTR1B2B(FrappeTestCase):
         self.assertEqual(item_det_1["rt"], 18.0)
 
         # Verify tax amounts are present and positive
-        total_tax_1 = item_det_1.get("iamt", 0) + item_det_1.get("camt", 0) + item_det_1.get("samt", 0)
+        total_tax_1 = (
+            item_det_1.get("iamt", 0)
+            + item_det_1.get("camt", 0)
+            + item_det_1.get("samt", 0)
+        )
         self.assertGreater(total_tax_1, 0, "Invoice should have tax amount")
 
         # Assert invoice 2 structure (Gujarat - POS 24)
@@ -168,7 +184,11 @@ class TestGSTR1B2B(FrappeTestCase):
         self.assertEqual(item_det_2["rt"], 18.0)
 
         # Verify tax amounts are present and positive
-        total_tax_2 = item_det_2.get("iamt", 0) + item_det_2.get("camt", 0) + item_det_2.get("samt", 0)
+        total_tax_2 = (
+            item_det_2.get("iamt", 0)
+            + item_det_2.get("camt", 0)
+            + item_det_2.get("samt", 0)
+        )
         self.assertGreater(total_tax_2, 0, "Invoice should have tax amount")
 
 
