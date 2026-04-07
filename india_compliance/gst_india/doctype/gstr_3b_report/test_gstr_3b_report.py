@@ -498,36 +498,6 @@ class TestGSTR3BReport(IntegrationTestCase):
         self.assertEqual(itc_available["IMPG"].get("iamt"), 36.0)
         self.assertEqual(itc_available["IMPG"].get("csamt"), 0.0)
 
-    def test_je_reversal_blank_ineligibility_reason_maps_to_oth(self):
-        """
-        A JE reversal with a blank ineligibility_reason must appear in the OTH
-        row (itc_rev[ty="OTH"], index 1) and NOT in the RUL row.
-        """
-        create_itc_reversal_journal_entry(ineligibility_reason="")
-
-        today = getdate()
-        report = frappe.get_doc(
-            {
-                "doctype": "GSTR 3B Report",
-                "company": "_Test Indian Registered Company",
-                "company_gstin": "24AAQCA8719H1ZC",
-                "year": today.year,
-                "month_or_quarter": get_month(today),
-            }
-        ).insert()
-
-        output = json.loads(report.json_output)
-        itc_rev = output["itc_elg"]["itc_rev"]
-        rul = next(d for d in itc_rev if d["ty"] == "RUL")
-        oth = next(d for d in itc_rev if d["ty"] == "OTH")
-
-        # blank reason → OTH
-        self.assertEqual(oth["camt"], 9.0)
-        self.assertEqual(oth["samt"], 9.0)
-        # RUL must remain zero
-        self.assertEqual(rul["camt"], 0.0)
-        self.assertEqual(rul["samt"], 0.0)
-
     def test_eco_rc_to_composition_not_double_reported_in_section_3_2(self):
         """
         An eco-operator RC invoice to a Registered Composition customer (inter-state)
