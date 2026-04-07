@@ -363,15 +363,9 @@ class BillofEntry(Document):
         if account_currency == "INR":
             return
 
-<<<<<<< HEAD
         frappe.throw(
-            _("Row #{0}: Account {1} must be of INR currency").format(
-                self.idx, frappe.bold(account)
-            )
+            _("Account {0} must be of INR currency").format(frappe.bold(account))
         )
-=======
-        frappe.throw(_("Account {0} must be of INR currency").format(frappe.bold(account)))
->>>>>>> 337852ee (fix: improve error message for account currency validation in Bill of Entry)
 
     @frappe.whitelist()
     def set_item_wise_tax_rates(self, item_name=None, tax_name=None):
