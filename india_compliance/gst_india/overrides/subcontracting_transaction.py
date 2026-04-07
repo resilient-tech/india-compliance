@@ -53,7 +53,10 @@ def after_mapping_subcontracting_order(doc, method, source_doc):
         return
 
     set_taxes(doc)
+    update_item_tax_template(doc, source_doc)
 
+
+def update_item_tax_template(doc, source_doc):
     if not doc.items:
         return
 
@@ -125,29 +128,7 @@ def set_item_tax_template(doc, source_doc):
     if source_doc.doctype not in ("Subcontracting Order", "Purchase Order"):
         return
 
-    rm_detail_field = None
-    if source_doc.doctype == "Subcontracting Order":
-        rm_detail_field = "sco_rm_detail"
-
-    elif source_doc.doctype == "Purchase Order":
-        rm_detail_field = "po_detail"
-
-    item_tax_template_map = frappe._dict()
-    for supplied_item in source_doc.supplied_items:
-        item_tax_template = next(
-            (
-                item.item_tax_template
-                for item in source_doc.items
-                if supplied_item.get("reference_name") == item.name
-            ),
-            None,
-        )
-
-        if item_tax_template:
-            item_tax_template_map[supplied_item.name] = item_tax_template
-
-    for item in doc.items:
-        item.item_tax_template = item_tax_template_map.get(item.get(rm_detail_field))
+    update_item_tax_template(doc, source_doc)
 
 
 def before_mapping_subcontracting_receipt(doc, method, source_doc, table_maps):
