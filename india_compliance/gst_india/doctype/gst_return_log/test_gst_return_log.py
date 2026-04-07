@@ -1,22 +1,14 @@
 # Copyright (c) 2024, Resilient Tech and Contributors
 # See license.txt
 
-<<<<<<< HEAD
-# import frappe
-from frappe.tests.utils import FrappeTestCase
-
-
-class TestGSTReturnLog(FrappeTestCase):
-    pass
-=======
 import frappe
-from frappe.tests import IntegrationTestCase
+from frappe.tests.utils import FrappeTestCase
 from frappe.utils import getdate
 
 from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import add_comment_to_gst_return_log
 
 
-class TestGSTReturnLog(IntegrationTestCase):
+class TestGSTReturnLog(FrappeTestCase):
     def test_add_comment_creates_log_when_missing(self):
         gstin = "24AAQCA8719H1ZC"
         posting_date = getdate("2099-04-15")
@@ -50,4 +42,3 @@ class TestGSTReturnLog(IntegrationTestCase):
         )
         self.assertTrue(comment)
         self.assertIn("has been submitted by", comment.content)
->>>>>>> f4d18cfb (fix: streamline log retrieval in add_comment_to_gst_return_log function)
