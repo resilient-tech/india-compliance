@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import gzip
+import json
 from datetime import datetime
 
 import frappe
@@ -13,6 +14,7 @@ from frappe.utils import (
     get_link_to_form,
     getdate,
 )
+from frappe.utils.response import json_handler
 
 from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     FileGSTR1,
@@ -277,9 +279,7 @@ def process_gstr_3b_returns_info(company, gstin, e_filed_list):
 def add_comment_to_gst_return_log(doc, action):
     period = getdate(doc.posting_date).strftime("%m%Y")
     log_name = f"GSTR1-{period}-{doc.company_gstin}"
-    if not (log := get_gst_return_log(log_name)):
-        return
-
+    log = get_gst_return_log(log_name)
     log.add_comment(
         "Comment",
         f"{doc.doctype} : {get_link_to_form(doc.doctype, doc.name)} has been {action} by {frappe.session.user}",
@@ -316,7 +316,9 @@ def get_file_doc(doctype, docname, attached_to_field):
 
 
 def get_compressed_data(json_data):
-    return gzip.compress(frappe.safe_encode(frappe.as_json(json_data)))
+    return gzip.compress(
+        frappe.safe_encode(json.dumps(json_data, default=json_handler, separators=(",", ":")))
+    )
 
 
 def get_decompressed_data(content):

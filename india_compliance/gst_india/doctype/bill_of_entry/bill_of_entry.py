@@ -154,7 +154,7 @@ class BillofEntry(Document):
         purchase_invoices = frappe.get_all(
             "Purchase Invoice",
             filters={"name": ["in", pi_names]},
-            fields=["docstatus", "gst_category", "name", "company", "company_gstin"],
+            fields=["docstatus", "name", "company", "company_gstin", "is_boe_applicable"],
         )
 
         for invoice in purchase_invoices:
@@ -177,12 +177,9 @@ class BillofEntry(Document):
                     )
                 )
 
-            if invoice.gst_category not in IMPORT_GST_CATEGORIES:
+            if not invoice.is_boe_applicable:
                 frappe.throw(
-                    _(
-                        "GST Category must be set to Overseas / SEZ in Purchase Invoice"
-                        " {0} to create a Bill of Entry"
-                    ).format(invoice.name)
+                    _("Bill of Entry is not applicable for Purchase Invoice {0}").format(invoice.name)
                 )
 
         pi_item_names = frappe.get_all(
@@ -262,7 +259,7 @@ class BillofEntry(Document):
                     _(
                         "Tax Row #{0}: Charge Type is set to Actual. However, Tax Amount {1}"
                         " is incorrect. Try setting the Charge Type to {2}."
-                    ).format(row.idx, tax.tax_amount, column)
+                    ).format(tax.idx, tax.tax_amount, column)
                 )
 
     def validate_item_tax_template(self):
@@ -353,9 +350,7 @@ class BillofEntry(Document):
         if account_currency == "INR":
             return
 
-        frappe.throw(
-            _("Row #{0}: Account {1} must be of INR currency").format(self.idx, frappe.bold(account))
-        )
+        frappe.throw(_("Account {0} must be of INR currency").format(frappe.bold(account)))
 
     def get_stock_items(self):
         stock_items = []
