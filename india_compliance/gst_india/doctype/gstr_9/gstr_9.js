@@ -1224,6 +1224,17 @@ class GSTR9 {
             return;
         }
 
+        if (result && result.too_large) {
+            frappe.msgprint({
+                title: __("Large Dataset — Export Required"),
+                message: __(
+                    "The books data file is too large to display inline. Use the Export Books as Excel button to download all invoices.",
+                ),
+                indicator: "orange",
+            });
+            return;
+        }
+
         this._show_detail_dialog(
             row_key,
             description,
@@ -1255,51 +1266,56 @@ class GSTR9 {
         const doc_label = is_purchase ? __("Bill No.") : __("Invoice No.");
         const class_label = is_purchase ? __("Classification") : __("Type");
 
-        const totals = { taxable_value: 0, igst: 0, cgst: 0, sgst: 0, cess: 0 };
+        const totals = {
+            total_taxable_value: 0,
+            total_igst_amount: 0,
+            total_cgst_amount: 0,
+            total_sgst_amount: 0,
+            total_cess_amount: 0,
+        };
+
+        const party_gstin_field = is_purchase ? "supplier_gstin" : "customer_gstin";
+        const party_name_field = is_purchase ? "supplier_name" : "customer_name";
 
         const rows = data.map(row => {
-            let type_label;
-            if (is_purchase) {
-                type_label = row.itc_classification || row.gst_category || "";
-            } else if (row.is_return) {
-                type_label = __("Credit Note");
-            } else if (row.is_debit_note) {
-                type_label = __("Debit Note");
-            } else {
-                type_label = __(row.gst_category || "Invoice");
-            }
-
-            for (const f of ["taxable_value", "igst", "cgst", "sgst", "cess"]) {
-                totals[f] += row[f] || 0;
-            }
+            totals.total_taxable_value += row.total_taxable_value || 0;
+            totals.total_igst_amount += row.total_igst_amount || 0;
+            totals.total_cgst_amount += row.total_cgst_amount || 0;
+            totals.total_sgst_amount += row.total_sgst_amount || 0;
+            totals.total_cess_amount += row.total_cess_amount || 0;
 
             return {
-                posting_date: frappe.datetime.str_to_user(row.posting_date) || "",
+                document_date: frappe.datetime.str_to_user(row.document_date) || "",
                 document_number: row.document_number,
                 doc_route: row.doc_route || route,
-                party_gstin: row.party_gstin || "",
-                party_name: row.party_name || row.party || "",
-                type_label,
-                taxable_value: row.taxable_value || 0,
-                igst: row.igst || 0,
-                cgst: row.cgst || 0,
-                sgst: row.sgst || 0,
-                cess: row.cess || 0,
+                party_gstin: row[party_gstin_field] || "",
+                party_name: row[party_name_field] || "",
+                type_label: row.transaction_type || "",
+                total_taxable_value: row.total_taxable_value || 0,
+                total_igst_amount: row.total_igst_amount || 0,
+                total_cgst_amount: row.total_cgst_amount || 0,
+                total_sgst_amount: row.total_sgst_amount || 0,
+                total_cess_amount: row.total_cess_amount || 0,
             };
         });
 
         const currency_fields = new Set([
-            "taxable_value",
-            "igst",
-            "cgst",
-            "sgst",
-            "cess",
+            "total_taxable_value",
+            "total_igst_amount",
+            "total_cgst_amount",
+            "total_sgst_amount",
+            "total_cess_amount",
         ]);
 
         const fmt_currency = value => format_currency(value || 0);
 
         const columns = [
-            { id: "posting_date", name: __("Date"), field: "posting_date", width: 100 },
+            {
+                id: "document_date",
+                name: __("Date"),
+                field: "document_date",
+                width: 100,
+            },
             {
                 id: "document_number",
                 name: doc_label,
@@ -1322,41 +1338,41 @@ class GSTR9 {
             },
             { id: "type_label", name: class_label, field: "type_label", width: 180 },
             {
-                id: "taxable_value",
+                id: "total_taxable_value",
                 name: __("Taxable Value"),
-                field: "taxable_value",
+                field: "total_taxable_value",
                 width: 130,
                 align: "right",
                 format: fmt_currency,
             },
             {
-                id: "igst",
+                id: "total_igst_amount",
                 name: __("IGST"),
-                field: "igst",
+                field: "total_igst_amount",
                 width: 110,
                 align: "right",
                 format: fmt_currency,
             },
             {
-                id: "cgst",
+                id: "total_cgst_amount",
                 name: __("CGST"),
-                field: "cgst",
+                field: "total_cgst_amount",
                 width: 110,
                 align: "right",
                 format: fmt_currency,
             },
             {
-                id: "sgst",
+                id: "total_sgst_amount",
                 name: __("SGST/UTGST"),
-                field: "sgst",
+                field: "total_sgst_amount",
                 width: 120,
                 align: "right",
                 format: fmt_currency,
             },
             {
-                id: "cess",
+                id: "total_cess_amount",
                 name: __("Cess"),
-                field: "cess",
+                field: "total_cess_amount",
                 width: 95,
                 align: "right",
                 format: fmt_currency,
@@ -1392,7 +1408,7 @@ class GSTR9 {
                 hooks: {
                     columnTotal: (_col, row) => {
                         const id = row.column?.id;
-                        if (id === "posting_date") return __("Total");
+                        if (id === "document_date") return __("{0}", ["Total"]);
                         if (currency_fields.has(id)) return totals[id] || 0;
                         return "";
                     },
@@ -1444,6 +1460,16 @@ class GSTR9 {
                     .finally(() => {
                         this._recomputing = false;
                     });
+            });
+
+            this.frm.add_custom_button(__("Export Books as Excel"), () => {
+                open_url_post(
+                    "/api/method/india_compliance.gst_india.doctype.gstr_9.gstr_9.export_gstr9_books_as_excel",
+                    {
+                        company_gstin: this.frm.doc.company_gstin,
+                        financial_year: this.frm.doc.financial_year,
+                    },
+                );
             });
 
             if (is_gstr9_api_enabled()) {

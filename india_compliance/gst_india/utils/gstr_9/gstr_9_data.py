@@ -11,7 +11,6 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_data import (
     cache_invoice_condition,
 )
 from india_compliance.gst_india.utils.gstr_9 import (
-    AMOUNT_FIELDS,
     GSTR9_Row,
     _empty_row,
 )
@@ -26,9 +25,9 @@ class GSTR9BooksData(GSTR1Query):
     Uses frappe.db.unbuffered_cursor() (SSCursor) so rows are streamed from the server one at a time — classification happens in a Python loop without loading the full result set into memory.
 
     Returns classified invoice-level data (books format):
-      {row_key: [invoice_dicts]}   — for drillable rows
-      {row_key: {amount_fields}}   — for manual/aggregated-only rows
-      {row_key: special_structure}  — for Tables 14, 15, 17, 18
+      {row_key: {doc_number: invoice_dict}}  — for drillable rows (GSTR-1 style)
+      {row_key: {amount_fields}}             — for manual/aggregated-only rows
+      {row_key: special_structure}           — for Tables 14, 15, 17, 18
     """
 
     def __init__(self, filters):
@@ -41,10 +40,11 @@ class GSTR9BooksData(GSTR1Query):
 
     def get_data(self):
         """
-        Returns books data: {row_key → [invoices] | {amounts} | structure}.
+        Returns books data: {row_key → {doc_number: invoice_dict} | {amounts} | structure}.
 
-        Invoice lists are stored for drillable rows so the detail view can
-        read from the cached snapshot without re-querying.
+        Invoice dicts are stored for drillable rows (GSTR-1 nested-dict
+        format) so the detail view can read from the cached snapshot
+        without re-querying.
         """
         data = {}
 
@@ -57,7 +57,7 @@ class GSTR9BooksData(GSTR1Query):
         # BOE records → split into 6E Inputs / 6E Capital Goods
         for row_key, records in self._get_boe_books().items():
             if records:
-                data.setdefault(row_key, []).extend(records)
+                data.setdefault(row_key, {}).update(records)
 
         # Advances (4F) — reuses GSTR-1 advance query logic
         data[GSTR9_Row.TABLE_4F] = self._get_advances_data()
@@ -285,9 +285,10 @@ class GSTR9BooksData(GSTR1Query):
                     row_key,
                     item.name,
                     item,
-                    party_field="customer",
                     party_name_field="customer_name",
                     party_gstin_field="billing_address_gstin",
+                    party_gstin_key="customer_gstin",
+                    is_purchase=False,
                 )
 
         return _build_result(accumulator)
@@ -314,10 +315,16 @@ class GSTR9BooksData(GSTR1Query):
                 self.si.customer_name,
                 self.si.billing_address_gstin,
                 self.si.gst_category,
+                self.si.place_of_supply,
                 self.si.is_return,
                 self.si.is_debit_note,
                 self.si.is_reverse_charge,
                 self.si.is_export_with_gst,
+                self.si.base_rounded_total,
+                self.si.base_grand_total,
+                IfNull(self.si.shipping_bill_number, "").as_("shipping_bill_number"),
+                self.si.shipping_bill_date,
+                IfNull(self.si.port_code, "").as_("port_code"),
                 IfNull(self.si.ecommerce_gstin, "").as_("ecommerce_gstin"),
                 IfNull(self.si_item.gst_treatment, "").as_("gst_treatment"),
                 self.si_item.taxable_value,
@@ -325,6 +332,11 @@ class GSTR9BooksData(GSTR1Query):
                 self.si_item.cgst_amount.as_("cgst"),
                 self.si_item.sgst_amount.as_("sgst"),
                 self.si_item.cess_amount.as_("cess"),
+                (
+                    self.si_item.igst_rate
+                    + self.si_item.cgst_rate
+                    + self.si_item.sgst_rate
+                ).as_("tax_rate"),
             )
             .where(self.si.docstatus == 1)
             .where(self.si.is_opening != "Yes")
@@ -362,9 +374,10 @@ class GSTR9BooksData(GSTR1Query):
                         rcm_key,
                         item.name,
                         item,
-                        party_field="supplier",
                         party_name_field="supplier_name",
                         party_gstin_field="supplier_gstin",
+                        party_gstin_key="supplier_gstin",
+                        is_purchase=True,
                     )
 
                 if itc_key:
@@ -373,9 +386,10 @@ class GSTR9BooksData(GSTR1Query):
                         itc_key,
                         item.name,
                         item,
-                        party_field="supplier",
                         party_name_field="supplier_name",
                         party_gstin_field="supplier_gstin",
+                        party_gstin_key="supplier_gstin",
+                        is_purchase=True,
                         extra_fields={"itc_classification": item.itc_classification},
                     )
 
@@ -414,7 +428,11 @@ class GSTR9BooksData(GSTR1Query):
                 pi.supplier_name,
                 pi.supplier_gstin,
                 pi.gst_category,
+                pi.place_of_supply,
+                pi.is_return,
                 pi.is_reverse_charge,
+                pi.base_rounded_total,
+                pi.base_grand_total,
                 IfNull(pi.itc_classification, "").as_("itc_classification"),
                 IfNull(pi.ineligibility_reason, "").as_("ineligibility_reason"),
                 pi_item.is_fixed_asset,
@@ -424,6 +442,9 @@ class GSTR9BooksData(GSTR1Query):
                 pi_item.cgst_amount.as_("cgst"),
                 pi_item.sgst_amount.as_("sgst"),
                 pi_item.cess_amount.as_("cess"),
+                (pi_item.igst_rate + pi_item.cgst_rate + pi_item.sgst_rate).as_(
+                    "tax_rate"
+                ),
             )
             .where(
                 (pi.docstatus == 1)
@@ -500,21 +521,42 @@ class GSTR9BooksData(GSTR1Query):
             .groupby(boe.name, boe.posting_date, boe.total_taxable_value)
         ).run(as_dict=True)
 
-        inputs, capital_goods = [], []
+        inputs, capital_goods = {}, {}
         for row in rows:
             is_cg = bool(flt(row.is_fixed_asset))
-            row.update(
-                {
-                    "taxable_value": flt(row.taxable_value),
-                    "igst": flt(row.igst),
-                    "cgst": 0.0,
-                    "sgst": 0.0,
-                    "cess": flt(row.cess),
-                    "itc_classification": "Import Of Goods",
-                    "doc_route": "bill-of-entry",
-                }
-            )
-            (capital_goods if is_cg else inputs).append(row)
+            taxable_value = flt(row.taxable_value)
+            igst = flt(row.igst)
+            cess = flt(row.cess)
+            invoice_dict = {
+                "document_number": row.document_number,
+                "document_date": str(row.posting_date),
+                "supplier_gstin": row.party_gstin or "",
+                "supplier_name": row.party_name or "",
+                "gst_category": "Overseas",
+                "place_of_supply": "",
+                "reverse_charge": "N",
+                "transaction_type": "Bill of Entry",
+                "document_value": taxable_value + igst + cess,
+                "itc_classification": "Import Of Goods",
+                "doc_route": "bill-of-entry",
+                "items": [
+                    {
+                        "taxable_value": taxable_value,
+                        "igst_amount": igst,
+                        "cgst_amount": 0.0,
+                        "sgst_amount": 0.0,
+                        "cess_amount": cess,
+                        "tax_rate": 0.0,
+                    }
+                ],
+                "total_taxable_value": taxable_value,
+                "total_igst_amount": igst,
+                "total_cgst_amount": 0.0,
+                "total_sgst_amount": 0.0,
+                "total_cess_amount": cess,
+            }
+            target = capital_goods if is_cg else inputs
+            target[row.document_number] = invoice_dict
 
         return {
             GSTR9_Row.TABLE_6E_INPUTS: inputs,
@@ -783,50 +825,111 @@ class GSTR9PurchaseClassifier:
 # ────────────────────────────────────────────────────────────
 
 
+def _get_transaction_type(item, is_purchase):
+    """Determine transaction type string from invoice flags."""
+    if getattr(item, "is_return", False):
+        return "Return" if is_purchase else "Credit Note"
+    if getattr(item, "is_debit_note", False):
+        return "Debit Note"
+    return "Bill" if is_purchase else "Invoice"
+
+
 def _accumulate_item(
     accumulator,
     row_key,
     document_number,
     item,
-    party_field,
     party_name_field,
     party_gstin_field,
+    party_gstin_key,
+    is_purchase=False,
     extra_fields=None,
 ):
     """
     Accumulate item-level amounts into per-(row_key, invoice) dicts.
 
+    Produces GSTR-1-style invoice dicts with an `items` list for per-item
+    tax breakdown and `total_*_amount` fields for invoice-level aggregates.
     Multiple items from the same invoice going to the same row_key are
-    summed together, producing one output dict per unique combination.
+    appended to the `items` list and summed into the totals.
     """
     acc_key = (row_key, document_number)
 
     if acc_key not in accumulator:
-        accumulator[acc_key] = {
+        document_value = (
+            flt(item.base_rounded_total)
+            if flt(item.base_rounded_total)
+            else flt(item.base_grand_total)
+        )
+        entry = {
             "document_number": document_number,
-            "posting_date": item.posting_date,
-            "party": getattr(item, party_field, ""),
-            "party_name": getattr(item, party_name_field, ""),
-            "party_gstin": getattr(item, party_gstin_field, "") or "",
+            "document_date": str(item.posting_date),
+            party_gstin_key: getattr(item, party_gstin_field, "") or "",
+            party_name_field: getattr(item, party_name_field, ""),
             "gst_category": item.gst_category,
-            **{field: 0 for field in AMOUNT_FIELDS},
+            "place_of_supply": getattr(item, "place_of_supply", "") or "",
+            "reverse_charge": "Y" if item.is_reverse_charge else "N",
+            "transaction_type": _get_transaction_type(item, is_purchase),
+            "document_value": document_value,
+            "shipping_bill_number": getattr(item, "shipping_bill_number", "") or "",
+            "shipping_bill_date": str(getattr(item, "shipping_bill_date", "") or ""),
+            "port_code": getattr(item, "port_code", "") or "",
+            "items": [],
+            "total_taxable_value": 0.0,
+            "total_igst_amount": 0.0,
+            "total_cgst_amount": 0.0,
+            "total_sgst_amount": 0.0,
+            "total_cess_amount": 0.0,
         }
-
         if extra_fields:
-            accumulator[acc_key].update(extra_fields)
+            entry.update(extra_fields)
+        accumulator[acc_key] = entry
 
     entry = accumulator[acc_key]
-    for field in AMOUNT_FIELDS:
-        entry[field] += flt(getattr(item, field, 0))
+
+    tax_rate = flt(getattr(item, "tax_rate", 0))
+    taxable_value = flt(item.taxable_value)
+    igst_amount = flt(item.igst)
+    cgst_amount = flt(item.cgst)
+    sgst_amount = flt(item.sgst)
+    cess_amount = flt(item.cess)
+
+    # Group items by tax_rate — same rate merges into one item entry (GSTR-1 pattern)
+    existing = next((i for i in entry["items"] if i["tax_rate"] == tax_rate), None)
+    if existing:
+        existing["taxable_value"] += taxable_value
+        existing["igst_amount"] += igst_amount
+        existing["cgst_amount"] += cgst_amount
+        existing["sgst_amount"] += sgst_amount
+        existing["cess_amount"] += cess_amount
+    else:
+        item_dict = {
+            "taxable_value": taxable_value,
+            "igst_amount": igst_amount,
+            "cgst_amount": cgst_amount,
+            "sgst_amount": sgst_amount,
+            "cess_amount": cess_amount,
+            "tax_rate": tax_rate,
+        }
+        if extra_fields and "itc_classification" in extra_fields:
+            item_dict["itc_classification"] = extra_fields["itc_classification"]
+        entry["items"].append(item_dict)
+
+    entry["total_taxable_value"] += taxable_value
+    entry["total_igst_amount"] += igst_amount
+    entry["total_cgst_amount"] += cgst_amount
+    entry["total_sgst_amount"] += sgst_amount
+    entry["total_cess_amount"] += cess_amount
 
 
 def _build_result(accumulator):
     """
     Convert the flat accumulator dict keyed by (row_key, invoice_name)
-    into {row_key: [invoice_dicts]}.
+    into {row_key: {invoice_name: invoice_dict}} — the same nested-dict
+    format used by GSTR-1 books data.
     """
     result = {}
-    for (row_key, _), inv_data in accumulator.items():
-        result.setdefault(row_key, []).append(inv_data)
+    for (row_key, doc_num), inv_data in accumulator.items():
+        result.setdefault(row_key, {})[doc_num] = inv_data
 
     return result

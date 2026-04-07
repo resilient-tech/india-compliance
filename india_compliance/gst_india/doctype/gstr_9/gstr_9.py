@@ -175,13 +175,28 @@ def get_gstr9_invoice_detail(company_gstin: str, financial_year: str, row_key: s
     """
     Return individual invoice / bill records for the given GSTR-9 row.
     Reads from stored books data to ensure consistency with the generated snapshot.
+
+    Returns {"too_large": True} when the compressed books file exceeds
+    BOOKS_EXPORT_THRESHOLD — the caller should prompt for Excel export instead.
     """
     frappe.has_permission("GSTR-9", throw=True)
 
+    from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
+        get_file_doc,
+    )
     from india_compliance.gst_india.utils.gstr_9 import PURCHASE_ROW_KEYS
+
+    BOOKS_EXPORT_THRESHOLD = 200 * 1024  # 200 KB compressed
 
     period = get_fy_period(financial_year)
     log_name = f"GSTR9-{period}-{company_gstin}"
+
+    books_file = get_file_doc("GST Return Log", log_name, "books")
+    if not books_file:
+        frappe.throw(_("Please generate GSTR-9 data first."))
+
+    if (books_file.file_size or 0) > BOOKS_EXPORT_THRESHOLD:
+        return {"too_large": True}
 
     gstr9_log = get_gst_return_log(log_name)
     books = gstr9_log.get_json_for("books")
@@ -189,7 +204,7 @@ def get_gstr9_invoice_detail(company_gstin: str, financial_year: str, row_key: s
     if not books:
         frappe.throw(_("Please generate GSTR-9 data first."))
 
-    # Parent rows (6B, 6C, 6D, 6E) combine sub-row invoice lists
+    # Parent rows (6B, 6C, 6D, 6E) combine sub-row invoice dicts
     _PARENT_SUB_ROWS = {
         "6B": ["6B_ip", "6B_cg", "6B_is"],
         "6C": ["6C_ip", "6C_cg", "6C_is"],
@@ -200,13 +215,217 @@ def get_gstr9_invoice_detail(company_gstin: str, financial_year: str, row_key: s
     if row_key in _PARENT_SUB_ROWS:
         invoices = []
         for sub_key in _PARENT_SUB_ROWS[row_key]:
-            sub_value = books.get(sub_key, [])
-            if isinstance(sub_value, list):
-                invoices.extend(sub_value)
+            sub_value = books.get(sub_key) or {}
+            if isinstance(sub_value, dict):
+                invoices.extend(sub_value.values())
         return {"is_purchase": row_key in PURCHASE_ROW_KEYS, "data": invoices}
 
     value = books.get(row_key)
-    if isinstance(value, list):
-        return {"is_purchase": row_key in PURCHASE_ROW_KEYS, "data": value}
+    if isinstance(value, dict) and value:
+        return {
+            "is_purchase": row_key in PURCHASE_ROW_KEYS,
+            "data": list(value.values()),
+        }
 
     return {"is_purchase": False, "data": []}
+
+
+@frappe.whitelist()
+def export_gstr9_books_as_excel(company_gstin: str, financial_year: str):
+    """
+    Export all invoice-level books data as a single Excel workbook.
+    Each drillable GSTR-9 row becomes one sheet.
+    """
+    frappe.has_permission("GSTR-9", throw=True)
+
+    from india_compliance.gst_india.utils.exporter import ExcelExporter
+    from india_compliance.gst_india.utils.gstr_9 import (
+        GSTR9_ROW_DESCRIPTION,
+        PURCHASE_ROW_KEYS,
+    )
+
+    period = get_fy_period(financial_year)
+    log_name = f"GSTR9-{period}-{company_gstin}"
+
+    gstr9_log = get_gst_return_log(log_name)
+    books = gstr9_log.get_json_for("books")
+
+    if not books:
+        frappe.throw(_("Please generate GSTR-9 data first."))
+
+    excel = ExcelExporter()
+    if excel.has_sheet("Sheet"):
+        excel.remove_sheet("Sheet")
+
+    sheets_written = 0
+    for row_key, value in books.items():
+        # Only drillable rows: {doc_num: invoice_dict}
+        if not isinstance(value, dict):
+            continue
+        first_val = next(iter(value.values()), None)
+        if not (isinstance(first_val, dict) and "total_taxable_value" in first_val):
+            continue
+        invoices = list(value.values())
+
+        if not invoices:
+            continue
+
+        # Flatten to one row per item (per tax-rate group) — GSTR-1 pattern
+        rows = []
+        for inv in invoices:
+            for it in inv.get("items", []):
+                row = {**inv}
+                row.update(it)
+                rows.append(row)
+
+        if not rows:
+            continue
+
+        is_purchase = row_key in PURCHASE_ROW_KEYS
+        description = GSTR9_ROW_DESCRIPTION.get(row_key, row_key)
+        # Excel sheet name: max 31 chars; use description truncated
+        sheet_name = description[:28] or row_key
+        # Avoid duplicate sheet names by appending row_key suffix
+        sheet_name = f"{sheet_name} ({row_key})"[:31]
+
+        excel.create_sheet(
+            sheet_name=sheet_name,
+            headers=_get_invoice_excel_headers(is_purchase),
+            data=rows,
+            add_totals=False,
+            default_data_format={"height": 15},
+        )
+        sheets_written += 1
+
+    if not sheets_written:
+        frappe.throw(
+            _("No invoice-level data found. Please regenerate GSTR-9 books data.")
+        )
+
+    excel.export(f"GSTR-9 Books - {financial_year}")
+
+
+def _get_invoice_excel_headers(is_purchase):
+    party_gstin_fieldname = "supplier_gstin" if is_purchase else "customer_gstin"
+    party_name_fieldname = "supplier_name" if is_purchase else "customer_name"
+    party_gstin_label = "Supplier GSTIN" if is_purchase else "Customer GSTIN"
+    party_name_label = "Supplier Name" if is_purchase else "Customer Name"
+    doc_label = "Bill No." if is_purchase else "Invoice No."
+
+    headers = [
+        {
+            "label": _("Transaction Type"),
+            "fieldname": "transaction_type",
+            "header_format": {"width": 18},
+        },
+        {
+            "label": _("Date"),
+            "fieldname": "document_date",
+            "header_format": {"width": 14},
+        },
+        {
+            "label": _(doc_label),
+            "fieldname": "document_number",
+            "header_format": {"width": 25},
+        },
+        {
+            "label": _(party_gstin_label),
+            "fieldname": party_gstin_fieldname,
+            "header_format": {"width": 22},
+        },
+        {
+            "label": _(party_name_label),
+            "fieldname": party_name_fieldname,
+            "header_format": {"width": 30},
+        },
+        {
+            "label": _("Document Type"),
+            "fieldname": "gst_category",
+            "header_format": {"width": 22},
+        },
+    ]
+
+    if not is_purchase:
+        headers += [
+            {
+                "label": _("Shipping Bill Number"),
+                "fieldname": "shipping_bill_number",
+                "header_format": {"width": 22},
+            },
+            {
+                "label": _("Shipping Bill Date"),
+                "fieldname": "shipping_bill_date",
+                "header_format": {"width": 16},
+            },
+            {
+                "label": _("Port Code"),
+                "fieldname": "port_code",
+                "header_format": {"width": 14},
+            },
+        ]
+
+    headers += [
+        {
+            "label": _("Reverse Charge"),
+            "fieldname": "reverse_charge",
+            "header_format": {"width": 14},
+        },
+        {
+            "label": _("Place of Supply"),
+            "fieldname": "place_of_supply",
+            "header_format": {"width": 18},
+        },
+        {
+            "label": _("Tax Rate (%)"),
+            "fieldname": "tax_rate",
+            "header_format": {"width": 12},
+            "data_format": {"number_format": "#,##0.00"},
+        },
+        {
+            "label": _("Taxable Value"),
+            "fieldname": "taxable_value",
+            "header_format": {"width": 18},
+            "data_format": {"number_format": "#,##0.00"},
+        },
+        {
+            "label": _("IGST"),
+            "fieldname": "igst_amount",
+            "header_format": {"width": 14},
+            "data_format": {"number_format": "#,##0.00"},
+        },
+        {
+            "label": _("CGST"),
+            "fieldname": "cgst_amount",
+            "header_format": {"width": 14},
+            "data_format": {"number_format": "#,##0.00"},
+        },
+        {
+            "label": _("SGST"),
+            "fieldname": "sgst_amount",
+            "header_format": {"width": 14},
+            "data_format": {"number_format": "#,##0.00"},
+        },
+        {
+            "label": _("Cess"),
+            "fieldname": "cess_amount",
+            "header_format": {"width": 14},
+            "data_format": {"number_format": "#,##0.00"},
+        },
+        {
+            "label": _("Document Value"),
+            "fieldname": "document_value",
+            "header_format": {"width": 18},
+            "data_format": {"number_format": "#,##0.00"},
+        },
+    ]
+
+    if is_purchase:
+        headers.append(
+            {
+                "label": _("ITC Classification"),
+                "fieldname": "itc_classification",
+                "header_format": {"width": 22},
+            }
+        )
+
+    return headers

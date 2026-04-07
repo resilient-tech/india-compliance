@@ -448,27 +448,43 @@ def aggregate_books(books):
     """
     Aggregate invoice-level books data into row-level amount dicts.
 
-    - list of invoice dicts → sum AMOUNT_FIELDS across invoices
-    - empty list            → _empty_row()
-    - dict with amount keys → pass through (already aggregated)
-    - other (Table 14/15/17/18 structures) → pass through
+    Books format:
+      {row_key: {doc_number: invoice_dict}}  — drillable invoice rows
+      {row_key: {amount_fields}}             — already-aggregated rows
+      {row_key: list}                        — Table 14/15/17/18 structures
 
-    Credit note rows (4I, 5H) have their sign flipped after summation so the stored value is a positive absolute amount (portal convention).
+    For drillable rows the invoice dicts are summed across AMOUNT_FIELDS.
+    Credit note rows (4I, 5H) have their sign flipped after summation so
+    the stored value is a positive absolute amount (portal convention).
     """
     from frappe.utils import flt
 
     result = {}
     for row_key, value in books.items():
-        if isinstance(value, list):
-            if not value:
+        if isinstance(value, dict):
+            first_val = next(iter(value.values()), None)
+            if first_val is None:
+                # empty invoice dict → empty row
                 result[row_key] = _empty_row()
-            elif isinstance(value[0], dict) and "taxable_value" in value[0]:
+            elif isinstance(first_val, dict) and "total_taxable_value" in first_val:
+                # Drillable row: {doc_num: inv_dict} with total_* amount fields
                 row = _empty_row()
-                for inv in value:
-                    for field in AMOUNT_FIELDS:
-                        row[field] += flt(inv.get(field, 0))
+                for inv in value.values():
+                    row["taxable_value"] += flt(inv.get("total_taxable_value", 0))
+                    row["igst"] += flt(inv.get("total_igst_amount", 0))
+                    row["cgst"] += flt(inv.get("total_cgst_amount", 0))
+                    row["sgst"] += flt(inv.get("total_sgst_amount", 0))
+                    row["cess"] += flt(inv.get("total_cess_amount", 0))
                 result[row_key] = row
             else:
+                # Already aggregated ({field: value}) or
+                # Table 17/18 ({"goods": [...], "services": [...]}) — pass through
+                result[row_key] = value
+        elif isinstance(value, list):
+            if not value:
+                result[row_key] = _empty_row()
+            else:
+                # Table 14/15 structured lists — pass through
                 result[row_key] = value
         else:
             result[row_key] = value
