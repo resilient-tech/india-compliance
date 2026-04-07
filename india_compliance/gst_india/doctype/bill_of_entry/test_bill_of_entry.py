@@ -266,3 +266,15 @@ class TestBillofEntry(FrappeTestCase):
             "project",
         )
         self.assertEqual(gl_entry, project.name)
+
+    def test_validate_account_currency_error_message(self):
+        pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
+        boe = make_bill_of_entry(pi.name)
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^Account .* must be of INR currency"),
+            boe.validate_account_currency,
+            boe.customs_payable_account,
+            "USD",
+        )
