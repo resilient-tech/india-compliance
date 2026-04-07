@@ -30,6 +30,7 @@ class ReturnsAPI(TaxpayerBaseAPI):
         # "IMS2B007": "not_applicable", # Either the entered ITC period is incorrect or it has 3B filed
         "IMS2005": "not_needed",  # 2B cannot be generated as there are no changes
         # "IMSSAV0015": # Previous Save or Reset request is already under progress. Please try after some time.
+        "RT-9AG-1013": "authorization_failed",  # Unauthorized User for GSTR-9
     }
 
     def download_files(self, return_period, token):
@@ -401,19 +402,11 @@ class GSTR9API(ReturnsAPI):
         super().setup(company_gstin=company_gstin)
 
     def get_data(self, otp=None):
-        url = self.get_url(self.END_POINT)
-        params = {"action": "CALRCDS", "gstin": self.company_gstin, "ret_period": self.return_period}
-
-        print(f"GSTR-9 API Request: URL={url} | Params={params}")
-
-        response = self.get(
+        return self.get(
             action="CALRCDS",
+            return_type="GSTR9",
             return_period=self.return_period,
             params={"gstin": self.company_gstin, "ret_period": self.return_period},
             endpoint=self.END_POINT,
             otp=otp,
         )
-
-        print(f"GSTR-9 API Response: {response}")
-
-        return response

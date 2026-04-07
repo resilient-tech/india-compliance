@@ -373,6 +373,32 @@ class GSTSettings(Document):
 
         return True
 
+    # GSTR 9 UTILITY
+    def is_gstr9_api_enabled(self, gstin, warn_for_missing_credentials=False):
+        if not is_production_api_enabled(self):
+            return False
+
+        if not self.enable_gstr_9_api:
+            return False
+
+        if not self.has_valid_credentials(gstin, "Returns"):
+            if warn_for_missing_credentials:
+                frappe.publish_realtime(
+                    "show_missing_gst_credentials_message",
+                    dict(
+                        message=_(
+                            "Credentials are missing for GSTIN {0} for service"
+                            " Returns in GST Settings"
+                        ).format(gstin),
+                        title=_("Missing Credentials"),
+                    ),
+                    user=frappe.session.user,
+                )
+
+            return False
+
+        return True
+
 
 @frappe.whitelist()
 def disable_api_promo():

@@ -1,4 +1,4 @@
-# Copyright (c) 2025, Resilient Tech and contributors
+# Copyright (c) 2026, Resilient Tech and contributors
 # For license information, please see license.txt
 
 import frappe
@@ -10,6 +10,7 @@ from india_compliance.gst_india.doctype.gst_return_log.gst_return_log import (
     get_gst_return_log,
 )
 from india_compliance.gst_india.utils.gstr_9 import (
+    PORTAL_SOURCED_ROWS,
     aggregate_books,
     compute_auto_rows,
     get_fy_dates,
@@ -73,9 +74,7 @@ class GSTR9(Document):
         """
         settings = frappe.get_cached_doc("GST Settings")
         if not settings.is_gstr9_api_enabled(self.company_gstin):
-            frappe.throw(
-                _("GSTR-9 API features are not enabled in GST Settings.")
-            )
+            frappe.throw(_("GSTR-9 API features are not enabled in GST Settings."))
         period = get_fy_period(self.financial_year)
         log_name = f"GSTR9-{period}-{self.company_gstin}"
 
@@ -84,7 +83,9 @@ class GSTR9(Document):
         books_data = gstr9_log.get_json_for("books")
         if not books_data:
             frappe.throw(
-                _("Please generate GSTR-9 books data first before downloading portal data.")
+                _(
+                    "Please generate GSTR-9 books data first before downloading portal data."
+                )
             )
 
         from_date, to_date = get_fy_dates(self.financial_year)
@@ -96,8 +97,7 @@ class GSTR9(Document):
             to_date=to_date,
         )
 
-        # Remove cached portal data to force fresh download
-        gstr9_log.remove_json_for("portal")
+        gstr9_log.remove_json_for("unfiled")
 
         portal_data = gstr9_log._get_gstr9_portal_data(filters)
         if not portal_data:
@@ -109,7 +109,14 @@ class GSTR9(Document):
             )
 
         row_data = aggregate_books(books_data)
+
+        # Merge portal-sourced rows into books before computing auto rows
+        for row_key in PORTAL_SOURCED_ROWS:
+            if row_key in portal_data:
+                row_data[row_key] = portal_data[row_key]
+
         compute_auto_rows(row_data)
+        compute_auto_rows(portal_data)
 
         gstr9_log._compare_books_and_portal(row_data, portal_data)
         gstr9_log._summarize_gstr9_data({"row_data": row_data, "portal": portal_data})
@@ -164,7 +171,7 @@ class GSTR9(Document):
 
 
 @frappe.whitelist()
-def get_gstr9_invoice_detail(company: str, company_gstin: str, financial_year: str, row_key: str):
+def get_gstr9_invoice_detail(company_gstin: str, financial_year: str, row_key: str):
     """
     Return individual invoice / bill records for the given GSTR-9 row.
     Reads from stored books data to ensure consistency with the generated snapshot.

@@ -1,0 +1,139 @@
+/* GSTR-9 Form Styles */
+
+div[data-page-route="GSTR-9"] [data-fieldname="tabs_html"] .section-body {
+    margin-top: 0;
+}
+
+div[data-page-route="GSTR-9"] .section-body {
+    max-width: 100% !important;
+}
+
+div[data-page-route="GSTR-9"] [data-fieldname="tabs_html"] .form-tabs-list {
+    margin-top: var(--margin-sm);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-right: var(--padding-lg);
+    position: inherit;
+}
+
+div[data-page-route="GSTR-9"] [data-fieldname="tabs_empty_state"],
+div[data-page-route="GSTR-9"] [data-fieldname="tabs_no_data"] {
+    min-height: 320px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+
+div[data-page-route="GSTR-9"] [data-fieldname="tabs_empty_state"] > img,
+div[data-page-route="GSTR-9"] [data-fieldname="tabs_no_data"] > img {
+    margin-bottom: var(--margin-md);
+    max-height: 100px;
+}
+
+div[data-page-route="GSTR-9"] .frappe-control [data-fieldtype="HTML"] {
+    margin-left: -11px;
+    margin-right: -15px;
+}
+
+/* Section headers */
+.gstr9-section {
+    margin-bottom: var(--margin-lg);
+}
+
+.gstr9-section-title {
+    font-size: var(--text-base);
+    font-weight: 600;
+    padding: var(--padding-sm) var(--padding-md);
+    margin-bottom: 0;
+    background-color: var(--bg-light-gray);
+    border: 1px solid var(--border-color);
+    border-bottom: none;
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+}
+
+/* HSN Part A / Part B sub-heading */
+.gstr9-hsn-subtitle {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    padding: var(--padding-xs) var(--padding-md);
+    margin: var(--margin-sm) 0 0 0;
+    color: var(--text-muted);
+    border-left: 3px solid var(--primary);
+}
+
+/* Table styling */
+.gstr9-table {
+    font-size: var(--text-sm);
+    margin-bottom: 0;
+}
+
+.gstr9-table thead th {
+    background-color: var(--subtle-fg);
+    white-space: nowrap;
+    font-weight: 600;
+    vertical-align: middle;
+}
+
+.gstr9-table td,
+.gstr9-table th {
+    padding: 6px 10px;
+    vertical-align: middle;
+}
+
+.gstr9-col-sno {
+    width: 60px;
+    min-width: 60px;
+    font-weight: 600;
+}
+
+.gstr9-col-desc {
+    min-width: 300px;
+}
+
+.gstr9-col-source {
+    width: 80px;
+    min-width: 80px;
+    text-align: center;
+}
+
+/* Auto-computed rows (sub-totals, totals) */
+.gstr9-row-auto {
+    background-color: var(--subtle-accent);
+    font-weight: 600;
+}
+
+.gstr9-row-auto td {
+    font-weight: 600;
+}
+
+/* Portal-sourced rows */
+.gstr9-row-portal {
+    background-color: var(--bg-light-gray);
+}
+
+/* Comparison tab styling */
+.gstr9-comparison-books td {
+    background-color: var(--subtle-accent);
+}
+
+.gstr9-comparison-portal td {
+    background-color: var(--subtle-accent);
+}
+
+.gstr9-comparison-diff td {
+    background-color: var(--bg-light-gray);
+}
+
+/* Badge styling */
+.gstr9-table .badge {
+    font-size: 0.7em;
+    vertical-align: middle;
+    margin-left: 4px;
+}
+
+/* Disabled/N-A cells — white background, no content */
+.gstr9-table td.gstr9-cell-disabled {
+    background-color: var(--bg-light-gray);
+}

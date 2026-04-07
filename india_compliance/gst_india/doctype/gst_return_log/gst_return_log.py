@@ -20,12 +20,15 @@ from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import (
     FileGSTR1,
     GenerateGSTR1,
 )
+from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_9 import (
+    GenerateGSTR9,
+)
 from india_compliance.gst_india.utils import get_party_for_gstin
 
 DOCTYPE = "GST Return Log"
 
 
-class GSTReturnLog(GenerateGSTR1, FileGSTR1, Document):
+class GSTReturnLog(GenerateGSTR9, GenerateGSTR1, FileGSTR1, Document):
     @property
     def status(self):
         return self.generation_status
