@@ -32,6 +32,8 @@ ADDRESS_FIELDS = {
 }
 PERMITTED_DOCTYPES = list(ADDRESS_FIELDS.keys())
 
+BUYING_DOCTYPES = {doctype for doctype, address in ADDRESS_FIELDS.items() if address is buying_address}
+
 CANCEL_REASON_CODES = {
     "Duplicate": "1",
     "Order Cancelled": "2",
