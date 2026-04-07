@@ -13,6 +13,7 @@ from india_compliance.gst_india.constants import (
     VALID_HSN_LENGTHS,
 )
 from india_compliance.gst_india.constants.e_waybill import (
+    ADDRESS_GSTIN_FIELD_MAP,
     TRANSPORT_MODES,
     VEHICLE_TYPES,
 )
@@ -469,17 +470,8 @@ class GSTTransactionData:
         pass
 
     def set_address_gstin_map(self):
-        address_gstin_field_map = {
-            "customer_address": "billing_address_gstin",
-            "company_address": "company_gstin",
-            "supplier_address": "supplier_gstin",
-            "billing_address": "company_gstin",
-            "bill_from_address": "bill_from_gstin",
-            "bill_to_address": "bill_to_gstin",
-        }
-
         self.address_gstin_map = {
-            self.doc.get(address): self.doc.get(gstin) for address, gstin in address_gstin_field_map.items()
+            self.doc.get(address): self.doc.get(gstin) for address, gstin in ADDRESS_GSTIN_FIELD_MAP.items()
         }
 
     @staticmethod
