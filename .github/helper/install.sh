@@ -30,7 +30,7 @@ pip install frappe-bench
 FRAPPE_REMOTE=${FRAPPE_REMOTE:-https://github.com/frappe/frappe.git}
 FRAPPE_BRANCH=${FRAPPE_BRANCH:-$BRANCH_TO_CLONE}
 
-git clone "$FRAPPE_REMOTE" --branch "$FRAPPE_BRANCH" --depth 1
+git clone "$FRAPPE_REMOTE" --branch "$FRAPPE_BRANCH" --depth 1 ~/frappe
 bench init --skip-assets --frappe-path ~/frappe --python "$(which python)" frappe-bench
 
 mkdir ~/frappe-bench/sites/test_site
