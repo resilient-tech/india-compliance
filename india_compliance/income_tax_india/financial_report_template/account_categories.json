@@ -1,0 +1,34 @@
+[
+    {
+        "account_category_name": "Capital Work in Progress",
+        "description": "Assets under construction or installation not yet ready for use. Examples: Buildings under construction, plant and machinery being installed, capital advances for fixed assets."
+    },
+    {
+        "account_category_name": "Deferred Tax Assets",
+        "description": "Amounts recoverable in future periods due to deductible temporary differences, tax losses or credits carried forward. Shown net of deferred tax liabilities where legally enforceable right of offset exists. Examples: Timing differences from depreciation, provision for doubtful debts."
+    },
+    {
+        "account_category_name": "Deferred Tax Expense",
+        "description": "Change in deferred tax assets and liabilities recognised in profit or loss for the period. Examples: Deferred tax charge/credit arising from timing differences between book and tax profit."
+    },
+    {
+        "account_category_name": "Deferred Tax Liabilities",
+        "description": "Amounts payable in future periods due to taxable temporary differences. Shown net of deferred tax assets where legally enforceable right of offset exists. Examples: Timing differences from accelerated depreciation for tax purposes."
+    },
+    {
+        "account_category_name": "Intangible Assets Under Development",
+        "description": "Internally generated intangible assets in the development phase not yet ready for use. Examples: Software under development, internally developed patents, product development costs qualifying for capitalisation."
+    },
+    {
+        "account_category_name": "Long-term Loans and Advances",
+        "description": "Non-current receivables in the nature of loans and advances expected to be recovered after twelve months. Examples: Capital advances, security deposits, loans to related parties, advances to subsidiaries."
+    },
+    {
+        "account_category_name": "Money Received Against Share Warrants",
+        "description": "Consideration received on issue of share warrants pending exercise or conversion. Classified separately in Shareholders' Funds as per Schedule III, Part I of the Companies Act 2013."
+    },
+    {
+        "account_category_name": "Share Application Money Pending Allotment",
+        "description": "Application money received for shares not yet allotted, where the company has a right to allot within a period prescribed by Securities Law or the Companies Act 2013. Shown separately below Shareholders' Funds."
+    }
+]
