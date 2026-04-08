@@ -240,7 +240,6 @@ def export_gstr9_books_as_excel(company_gstin: str, financial_year: str):
 
     from india_compliance.gst_india.utils.exporter import ExcelExporter
     from india_compliance.gst_india.utils.gstr_9 import (
-        GSTR9_ROW_DESCRIPTION,
         PURCHASE_ROW_KEYS,
     )
 
@@ -282,14 +281,9 @@ def export_gstr9_books_as_excel(company_gstin: str, financial_year: str):
             continue
 
         is_purchase = row_key in PURCHASE_ROW_KEYS
-        description = GSTR9_ROW_DESCRIPTION.get(row_key, row_key)
-        # Excel sheet name: max 31 chars; use description truncated
-        sheet_name = description[:28] or row_key
-        # Avoid duplicate sheet names by appending row_key suffix
-        sheet_name = f"{sheet_name} ({row_key})"[:31]
 
         excel.create_sheet(
-            sheet_name=sheet_name,
+            sheet_name=row_key,
             headers=_get_invoice_excel_headers(is_purchase),
             data=rows,
             add_totals=False,
@@ -302,7 +296,7 @@ def export_gstr9_books_as_excel(company_gstin: str, financial_year: str):
             _("No invoice-level data found. Please regenerate GSTR-9 books data.")
         )
 
-    excel.export(f"GSTR-9 Books - {financial_year}")
+    excel.export(f"GSTR-9-Books-{company_gstin}-{financial_year}")
 
 
 def _get_invoice_excel_headers(is_purchase):

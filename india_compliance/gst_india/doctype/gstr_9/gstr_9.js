@@ -1463,13 +1463,13 @@ class GSTR9 {
             });
 
             this.frm.add_custom_button(__("Export Books as Excel"), () => {
-                open_url_post(
-                    "/api/method/india_compliance.gst_india.doctype.gstr_9.gstr_9.export_gstr9_books_as_excel",
-                    {
-                        company_gstin: this.frm.doc.company_gstin,
-                        financial_year: this.frm.doc.financial_year,
-                    },
-                );
+                const url =
+                    "india_compliance.gst_india.doctype.gstr_9.gstr_9.export_gstr9_books_as_excel";
+
+                open_url_post(`/api/method/${url}`, {
+                    company_gstin: this.frm.doc.company_gstin,
+                    financial_year: this.frm.doc.financial_year,
+                });
             });
 
             if (is_gstr9_api_enabled()) {

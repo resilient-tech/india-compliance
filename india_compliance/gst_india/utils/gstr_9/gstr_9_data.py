@@ -40,7 +40,7 @@ class GSTR9BooksData(GSTR1Query):
 
     def get_data(self):
         """
-        Returns books data: {row_key → {doc_number: invoice_dict} | {amounts} | structure}.
+        Returns books data.
 
         Invoice dicts are stored for drillable rows (GSTR-1 nested-dict
         format) so the detail view can read from the cached snapshot
@@ -603,11 +603,6 @@ class GSTR9BooksData(GSTR1Query):
         return result
 
 
-# ────────────────────────────────────────────────────────────
-# Classifiers
-# ────────────────────────────────────────────────────────────
-
-
 class GSTR9OutwardClassifier:
     """
     Classifies outward supply (Sales Invoice) items into GSTR-9 row keys.
@@ -659,7 +654,11 @@ class GSTR9OutwardClassifier:
         cat = item.gst_category
         has_gstin = self.has_gstin(item)
 
-        if cat == "Registered Regular" and has_gstin and not item.is_reverse_charge:
+        if (
+            cat in ("Registered Regular", "UIN Holders")
+            and has_gstin
+            and not item.is_reverse_charge
+        ):
             return GSTR9_Row.TABLE_4B
 
         if cat == "Overseas":
@@ -726,18 +725,14 @@ class GSTR9OutwardClassifier:
 
     @cache_invoice_condition
     def is_b2c(self, item):
-        return (
-            item.gst_category in ("Unregistered", "UIN Holders")
-            and not self.has_gstin(item)
-            and not self.is_ecom_sec95(item)
-        )
+        return item.gst_category == "Unregistered" and not self.is_ecom_sec95(item)
 
     @cache_invoice_condition
     def is_taxable_category(self, item):
         """Invoice-level check: is the supply category one where tax is payable."""
         return (
             (
-                item.gst_category == "Registered Regular"
+                item.gst_category in ("Registered Regular", "UIN Holders")
                 and self.has_gstin(item)
                 and not item.is_reverse_charge
             )
@@ -818,11 +813,6 @@ class GSTR9PurchaseClassifier:
             return GSTR9_Row.TABLE_6B_INPUTS
 
         return None
-
-
-# ────────────────────────────────────────────────────────────
-# Accumulation Helpers
-# ────────────────────────────────────────────────────────────
 
 
 def _get_transaction_type(item, is_purchase):
