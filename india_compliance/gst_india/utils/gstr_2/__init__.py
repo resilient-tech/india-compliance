@@ -175,9 +175,7 @@ def download_gstr_2b(gstin, return_periods):
             break
 
         if response.error_type == "no_docs_found":
-            create_import_log(
-                gstin, ReturnType.GSTR2B.value, return_period, data_not_found=True
-            )
+            create_import_log(gstin, ReturnType.GSTR2B.value, return_period, data_not_found=True)
             continue
 
         if response.error_type == "not_applicable":
@@ -282,11 +280,7 @@ def download_ims_invoices(gstin, for_upload=False):
 
 def save_gstr_2a(gstin, return_period, json_data):
     return_type = ReturnType.GSTR2A
-    if (
-        not json_data
-        or json_data.get("gstin") != gstin
-        or json_data.get("fp") != return_period
-    ):
+    if not json_data or json_data.get("gstin") != gstin or json_data.get("fp") != return_period:
         frappe.throw(
             _(
                 "Data received seems to be invalid from the GST Portal. Please try"
@@ -299,9 +293,7 @@ def save_gstr_2a(gstin, return_period, json_data):
         if action.lower() not in json_data:
             continue
 
-        create_import_log(
-            gstin, return_type.value, return_period, classification=category.value
-        )
+        create_import_log(gstin, return_type.value, return_period, classification=category.value)
 
         # making consistent with GSTR2b
         json_data[category.value.lower()] = json_data.pop(action.lower())
@@ -391,8 +383,7 @@ def update_import_history(return_periods):
         .where(log.data_not_found == 1)
         .where(
             Criterion.any(
-                (log.return_period == doc.return_period)
-                & (log.classification == doc.classification)
+                (log.return_period == doc.return_period) & (log.classification == doc.classification)
                 for doc in inward_supplies
             )
         )
@@ -468,9 +459,7 @@ def regenerate_gstr_2b(gstin: str, return_period: str, doctype: str):
 
     except frappe.ValidationError as e:
         frappe.clear_last_message()
-        frappe.throw(
-            str(e), title=_("GSTR 2B Regeneration Failed for {0}").format(return_period)
-        )
+        frappe.throw(str(e), title=_("GSTR 2B Regeneration Failed for {0}").format(return_period))
 
 
 @frappe.whitelist()

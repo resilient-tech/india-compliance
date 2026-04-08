@@ -32,7 +32,7 @@ reconciliation.reconciliation_tabs = class ReconciliationTabs {
         // data unchanged!
         if (this.rendered_data == this.filtered_data) return;
 
-        this._tabs.forEach(tab => {
+        this._tabs.forEach((tab) => {
             this.tabs[`${tab}_tab`].datatable?.refresh(this[`get_${tab}_data`]());
         });
 
@@ -51,9 +51,7 @@ reconciliation.reconciliation_tabs = class ReconciliationTabs {
         this.tab_group.make();
 
         // make tabs_dict for easy access
-        this.tabs = Object.fromEntries(
-            this.tab_group.tabs.map(tab => [tab.df.fieldname, tab])
-        );
+        this.tabs = Object.fromEntries(this.tab_group.tabs.map((tab) => [tab.df.fieldname, tab]));
     }
 
     get_tab_group_fields() {
@@ -78,7 +76,7 @@ reconciliation.reconciliation_tabs = class ReconciliationTabs {
         const fields = [];
         const dimension_fields = this.get_accounting_dimensions();
 
-        dimension_fields.forEach(dimension => {
+        dimension_fields.forEach((dimension) => {
             const label = frappe.unscrub(dimension);
             fields.push({
                 label,
@@ -104,12 +102,9 @@ reconciliation.reconciliation_tabs = class ReconciliationTabs {
         if (!force && this.filters === filters) return;
 
         this.filters = filters;
-        this.filtered_data = this.data.filter(row => {
-            return filters.every(filter =>
-                india_compliance.FILTER_OPERATORS[filter[2]](
-                    filter[3] || "",
-                    row[filter[1]] || ""
-                )
+        this.filtered_data = this.data.filter((row) => {
+            return filters.every((filter) =>
+                india_compliance.FILTER_OPERATORS[filter[2]](filter[3] || "", row[filter[1]] || ""),
             );
         });
     }
@@ -120,14 +115,14 @@ reconciliation.reconciliation_tabs = class ReconciliationTabs {
 
     get_autocomplete_options(field) {
         const options = [];
-        this.data.forEach(row => {
+        this.data.forEach((row) => {
             if (row[field] && !options.includes(row[field])) options.push(row[field]);
         });
         return options;
     }
 
     render_data_tables() {
-        this._tabs.forEach(tab => {
+        this._tabs.forEach((tab) => {
             this.tabs[`${tab}_tab`].datatable = new india_compliance.DataTableManager({
                 $wrapper: this.tab_group.get_field(`${tab}_data`).$wrapper,
                 columns: this[`get_${tab}_columns`](),
@@ -161,23 +156,18 @@ reconciliation.reconciliation_tabs = class ReconciliationTabs {
             title = "Supplier Return: Not Filed";
         }
 
-        value = $(value)
-            .addClass(`indicator ${color}`)
-            .attr("title", title)
-            .prop("outerHTML");
+        value = $(value).addClass(`indicator ${color}`).attr("title", title).prop("outerHTML");
 
         return value;
     }
 
     get_accounting_dimensions() {
         let options = ["cost_center", "project"];
-        frappe.db
-            .get_list("Accounting Dimension", { fields: ["fieldname"] })
-            .then(res => {
-                res.forEach(dimension => {
-                    options.push(dimension.document_type);
-                });
+        frappe.db.get_list("Accounting Dimension", { fields: ["fieldname"] }).then((res) => {
+            res.forEach((dimension) => {
+                options.push(dimension.document_type);
             });
+        });
         return options;
     }
 };
@@ -225,7 +215,7 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
             const doc = this.data[key];
             if (!doc) continue;
 
-            this.table_fields.forEach(field => {
+            this.table_fields.forEach((field) => {
                 if (field == "is_reverse_charge" && doc[field] != undefined)
                     doc[field] = doc[field] ? "Yes" : "No";
             });
@@ -345,20 +335,18 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
     setup_actions() {
         const actions = this._get_custom_actions();
 
-        actions.forEach(action => {
+        actions.forEach((action) => {
             this.dialog.add_custom_action(
                 action,
                 () => {
                     this._apply_custom_action(action);
                     this.dialog.hide();
                 },
-                `mr-2 ${this._get_button_css(action)}`
+                `mr-2 ${this._get_button_css(action)}`,
             );
         });
 
-        this.dialog.$wrapper
-            .find(".btn.btn-secondary.not-grey")
-            .removeClass("btn-secondary");
+        this.dialog.$wrapper.find(".btn.btn-secondary.not-grey").removeClass("btn-secondary");
         this.dialog.$wrapper.find(".modal-footer").css("flex-direction", "inherit");
     }
 
@@ -383,8 +371,7 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
         const field = this.dialog.get_field("link_with");
         if (field.value) this.toggle_link_btn(false);
 
-        if (this.missing_doctype == "GST Inward Supply")
-            this.row.inward_supply_name = field.value;
+        if (this.missing_doctype == "GST Inward Supply") this.row.inward_supply_name = field.value;
         else this.row.purchase_invoice_name = field.value;
 
         await this.get_invoice_details();
@@ -406,18 +393,14 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
                 label: "Tax Difference",
                 datatype: "Currency",
                 currency: frappe.boot.sysdefaults.currency,
-                indicator:
-                    this.row.tax_difference === 0 ? "text-success" : "text-danger",
+                indicator: this.row.tax_difference === 0 ? "text-success" : "text-danger",
             },
             {
                 value: this.row.taxable_value_difference,
                 label: "Taxable Amount Difference",
                 datatype: "Currency",
                 currency: frappe.boot.sysdefaults.currency,
-                indicator:
-                    this.row.taxable_value_difference === 0
-                        ? "text-success"
-                        : "text-danger",
+                indicator: this.row.taxable_value_difference === 0 ? "text-success" : "text-danger",
             },
         ];
 
@@ -436,7 +419,7 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
             frappe.render_template("invoice_detail_comparison", {
                 purchase: this.data._purchase_invoice,
                 inward_supply: this.data._inward_supply,
-            })
+            }),
         );
         detail_table.$wrapper.removeClass("not-matched");
         this._set_value_color(detail_table.$wrapper);
@@ -445,13 +428,10 @@ reconciliation.detail_view_dialog = class DetailViewDialog {
     _set_value_color(wrapper) {
         if (!this.row.purchase_invoice_name || !this.row.inward_supply_name) return;
 
-        ["place_of_supply", "is_reverse_charge"].forEach(field => {
-            if (this.data._purchase_invoice[field] == this.data._inward_supply[field])
-                return;
+        ["place_of_supply", "is_reverse_charge"].forEach((field) => {
+            if (this.data._purchase_invoice[field] == this.data._inward_supply[field]) return;
 
-            wrapper
-                .find(`[data-label='${field}'], [data-label='${field}']`)
-                .addClass("not-matched");
+            wrapper.find(`[data-label='${field}'], [data-label='${field}']`).addClass("not-matched");
         });
     }
 };

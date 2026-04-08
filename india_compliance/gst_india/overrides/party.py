@@ -65,9 +65,7 @@ def validate_pan(doc):
     """
 
     if doc.gstin:
-        doc.pan = (
-            pan_from_gstin if is_valid_pan(pan_from_gstin := doc.gstin[2:12]) else ""
-        )
+        doc.pan = pan_from_gstin if is_valid_pan(pan_from_gstin := doc.gstin[2:12]) else ""
         return
 
     if not doc.pan:
@@ -86,9 +84,7 @@ def set_docs_with_previous_gstin(doc, method=None):
     if not previous_gstin or previous_gstin == doc.gstin:
         return
 
-    docs_with_previous_gstin = get_docs_with_previous_gstin(
-        previous_gstin, doc.doctype, doc.name
-    )
+    docs_with_previous_gstin = get_docs_with_previous_gstin(previous_gstin, doc.doctype, doc.name)
     if not docs_with_previous_gstin:
         return
 
@@ -109,9 +105,7 @@ def get_docs_with_previous_gstin(gstin, doctype, docname):
 
 
 @frappe.whitelist()
-def update_docs_with_previous_gstin(
-    gstin: str, gst_category: str, docs_with_previous_gstin: str
-):
+def update_docs_with_previous_gstin(gstin: str, gst_category: str, docs_with_previous_gstin: str):
     """
     Permission check not required as doc.save check permissions.
     """
@@ -127,9 +121,7 @@ def update_docs_with_previous_gstin(
                 doc.save()
             except Exception as e:
                 frappe.clear_last_message()
-                frappe.throw(
-                    "Error updating {0} {1}:<br/> {2}".format(doctype, docname, str(e))
-                )
+                frappe.throw(_("Error updating {0} {1}:<br/> {2}").format(doctype, docname, str(e)))
 
     frappe.msgprint(_("GSTIN Updated"), indicator="green", alert=True)
 

@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 import frappe
 from frappe import _
 
@@ -7,7 +9,7 @@ from india_compliance.gst_india.api_classes.taxpayer_base import TaxpayerBaseAPI
 class EInvoiceAPI(TaxpayerBaseAPI):
     endpoint = "einvoice"
 
-    IGNORED_ERROR_CODES = {
+    IGNORED_ERROR_CODES: ClassVar[dict] = {
         **TaxpayerBaseAPI.IGNORED_ERROR_CODES,
         "EINV30107": "no_docs_found",
         "EINV30108": "no_docs_found",
@@ -63,6 +65,4 @@ class EInvoiceAPI(TaxpayerBaseAPI):
         )
 
     def download_files(self, return_period, token, otp=None):
-        return super().get_files(
-            return_period, token, action="FILEDETL", endpoint=self.endpoint, otp=otp
-        )
+        return super().get_files(return_period, token, action="FILEDETL", endpoint=self.endpoint, otp=otp)

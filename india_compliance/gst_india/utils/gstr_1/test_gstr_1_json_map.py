@@ -9,12 +9,10 @@ from india_compliance.gst_india.utils import get_party_for_gstin as _get_party_f
 from india_compliance.gst_india.utils.gstr_1 import GovDataField as gov_f
 from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_B2B_InvoiceType,
+    GSTR1_SubCategory,
 )
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_DataField as inv_f
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_ItemField as item_f
-from india_compliance.gst_india.utils.gstr_1 import (
-    GSTR1_SubCategory,
-)
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     AT,
     B2B,
@@ -41,7 +39,7 @@ def normalize_data(data):
 
 
 def process_mapped_data(data):
-    return list(get_category_wise_data(normalize_data(copy.deepcopy(data))).values())[0]
+    return next(iter(get_category_wise_data(normalize_data(copy.deepcopy(data))).values()))
 
 
 class TestB2B(IntegrationTestCase):
@@ -491,9 +489,7 @@ class TestB2CL(IntegrationTestCase):
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = B2CL().convert_to_gov_data_format(
-            process_mapped_data(self.mapped_data)
-        )
+        output = B2CL().convert_to_gov_data_format(process_mapped_data(self.mapped_data))
         self.assertListEqual(self.json_data, output)
 
 
@@ -597,9 +593,7 @@ class TestExports(IntegrationTestCase):
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = Exports().convert_to_gov_data_format(
-            process_mapped_data(self.mapped_data)
-        )
+        output = Exports().convert_to_gov_data_format(process_mapped_data(self.mapped_data))
         self.assertListEqual(self.json_data, output)
 
 
@@ -669,9 +663,7 @@ class TestB2CS(IntegrationTestCase):
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = B2CS().convert_to_gov_data_format(
-            process_mapped_data(self.mapped_data)
-        )
+        output = B2CS().convert_to_gov_data_format(process_mapped_data(self.mapped_data))
         self.assertListEqual(self.json_data, output)
 
 
@@ -724,9 +716,7 @@ class TestNilRated(IntegrationTestCase):
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = NilRated().convert_to_gov_data_format(
-            process_mapped_data(self.mapped_data)
-        )
+        output = NilRated().convert_to_gov_data_format(process_mapped_data(self.mapped_data))
         self.assertDictEqual(self.json_data, output)
 
 
@@ -820,9 +810,7 @@ class TestCDNR(IntegrationTestCase):
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = CDNR().convert_to_gov_data_format(
-            process_mapped_data(copy.deepcopy(self.mapped_data))
-        )
+        output = CDNR().convert_to_gov_data_format(process_mapped_data(copy.deepcopy(self.mapped_data)))
         self.assertListEqual(self.json_data, output)
 
 
@@ -884,9 +872,7 @@ class TestCDNUR(IntegrationTestCase):
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = CDNUR().convert_to_gov_data_format(
-            process_mapped_data(copy.deepcopy(self.mapped_data))
-        )
+        output = CDNUR().convert_to_gov_data_format(process_mapped_data(copy.deepcopy(self.mapped_data)))
         self.assertListEqual(self.json_data, output)
 
 
@@ -956,9 +942,7 @@ class TestHSNSUM(IntegrationTestCase):
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = HSNSUM().convert_to_gov_data_format(
-            process_mapped_data(self.mapped_data)
-        )
+        output = HSNSUM().convert_to_gov_data_format(process_mapped_data(self.mapped_data))
         self.assertDictEqual(self.json_data, output)
 
 
@@ -1032,9 +1016,7 @@ class TestHSNSUM_With_Bifurcation(IntegrationTestCase):
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = HSNSUM().convert_to_gov_data_format(
-            process_mapped_data(self.mapped_data)
-        )
+        output = HSNSUM().convert_to_gov_data_format(process_mapped_data(self.mapped_data))
         self.assertDictEqual(self.json_data, output)
 
 
@@ -1266,9 +1248,7 @@ class TestTXPD(IntegrationTestCase):
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = TXPD().convert_to_gov_data_format(
-            process_mapped_data(self.mapped_data)
-        )
+        output = TXPD().convert_to_gov_data_format(process_mapped_data(self.mapped_data))
         self.assertListEqual(self.json_data, output)
 
 
@@ -1364,9 +1344,7 @@ class TestDOC_ISSUE(IntegrationTestCase):
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = DOC_ISSUE().convert_to_gov_data_format(
-            process_mapped_data(self.mapped_data)
-        )
+        output = DOC_ISSUE().convert_to_gov_data_format(process_mapped_data(self.mapped_data))
         self.assertDictEqual(self.json_data, output)
 
 
@@ -1427,9 +1405,7 @@ class TestSUPECOM(IntegrationTestCase):
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = SUPECOM().convert_to_gov_data_format(
-            process_mapped_data(self.mapped_data)
-        )
+        output = SUPECOM().convert_to_gov_data_format(process_mapped_data(self.mapped_data))
         self.assertDictEqual(self.json_data, output)
 
 

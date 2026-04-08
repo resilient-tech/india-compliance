@@ -1,0 +1,6 @@
+# Ignore files with {% include ... %}
+india_compliance/gst_india/report/hsn_wise_summary_of_outward_supplies/hsn_wise_summary_of_outward_supplies.js
+
+# Other
+node_modules
+dist/

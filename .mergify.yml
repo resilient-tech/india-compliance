@@ -14,8 +14,8 @@ pull_request_rules:
     actions:
       close:
       comment:
-          message: |
-            @{{author}}, thanks for the contribution, but we do not accept pull requests on a stable branch. Please raise PR on the `develop` branch.
+        message: |
+          @{{author}}, thanks for the contribution, but we do not accept pull requests on a stable branch. Please raise PR on the `develop` branch.
 
   - name: Automatic merge on CI success and review
     conditions:
@@ -35,8 +35,8 @@ pull_request_rules:
       merge:
         method: squash
         commit_message_template: |
-            {{ title }} (#{{ number }})
-            {{ body }}
+          {{ title }} (#{{ number }})
+          {{ body }}
 
   - name: backport to develop
     conditions:
@@ -87,3 +87,5 @@ pull_request_rules:
     actions:
       merge:
         method: merge
+merge_protections_settings:
+  reporting_method: check-runs

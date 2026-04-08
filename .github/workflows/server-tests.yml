@@ -1,145 +1,153 @@
 name: Server Tests
 
 on:
-    workflow_call:
-      inputs:
-        base_ref:
-          type : string
+  workflow_call:
+    inputs:
+      base_ref:
+        type: string
 
-        app_name:
-          type : string
+      app_name:
+        type: string
 
-      secrets:
-        codecov_token:
+    secrets:
+      codecov_token:
 
+  pull_request:
+    paths-ignore:
+      - "**.css"
+      - "**.js"
+      - "**.md"
+      - "**.html"
+      - "**.csv"
 
-    pull_request:
-        paths-ignore:
-            - "**.css"
-            - "**.js"
-            - "**.md"
-            - "**.html"
-            - "**.csv"
-
-    push:
-        branches: [develop, version-14-hotfix, version-14, version-15-hotfix, version-15, version-16-hotfix, version-16]
-        paths-ignore:
-            - "**.css"
-            - "**.js"
-            - "**.md"
-            - "**.html"
-            - "**.csv"
+  push:
+    branches:
+      [
+        develop,
+        version-14-hotfix,
+        version-14,
+        version-15-hotfix,
+        version-15,
+        version-16-hotfix,
+        version-16,
+      ]
+    paths-ignore:
+      - "**.css"
+      - "**.js"
+      - "**.md"
+      - "**.html"
+      - "**.csv"
 env:
-    BRANCH: ${{ inputs.base_ref || github.base_ref || github.ref_name }}
-    APP_NAME: ${{ inputs.app_name || 'india_compliance' }}
+  BRANCH: ${{ inputs.base_ref || github.base_ref || github.ref_name }}
+  APP_NAME: ${{ inputs.app_name || 'india_compliance' }}
 
 jobs:
-    tests:
-        runs-on: ubuntu-latest
-        timeout-minutes: 20
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
 
-        strategy:
-            fail-fast: false
+    strategy:
+      fail-fast: false
 
-        name: Python Unit Tests
+    name: Python Unit Tests
 
-        services:
-            mariadb:
-                image: mariadb:11.8
-                env:
-                    MARIADB_ROOT_PASSWORD: 'travis'
-                ports:
-                    - 3306:3306
-                options: --health-cmd="mariadb-admin ping" --health-interval=5s --health-timeout=2s --health-retries=3
+    services:
+      mariadb:
+        image: mariadb:11.8
+        env:
+          MARIADB_ROOT_PASSWORD: "travis"
+        ports:
+          - 3306:3306
+        options: --health-cmd="mariadb-admin ping" --health-interval=5s --health-timeout=2s --health-retries=3
 
-        steps:
-            - name: Clone
-              uses: actions/checkout@v6
+    steps:
+      - name: Clone
+        uses: actions/checkout@v6
 
-            - name: Setup Python
-              uses: actions/setup-python@v6
-              with:
-                  python-version: "3.14"
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
 
-            - name: Setup Node
-              uses: actions/setup-node@v6
-              with:
-                  node-version: 24
-                  check-latest: true
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          check-latest: true
 
-            - name: Add to Hosts
-              run: echo "127.0.0.1 test_site" | sudo tee -a /etc/hosts
+      - name: Add to Hosts
+        run: echo "127.0.0.1 test_site" | sudo tee -a /etc/hosts
 
-            - name: Cache pip
-              uses: actions/cache@v5
-              with:
-                  path: ~/.cache/pip
-                  key: ${{ runner.os }}-pip-${{ hashFiles('**/*requirements.txt') }}
-                  restore-keys: |
-                      ${{ runner.os }}-pip-
-                      ${{ runner.os }}-
+      - name: Cache pip
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/*requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+            ${{ runner.os }}-
 
-            - name: Cache node modules
-              uses: actions/cache@v5
-              env:
-                  cache-name: cache-node-modules
-              with:
-                  path: ~/.npm
-                  key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
-                  restore-keys: |
-                      ${{ runner.os }}-build-${{ env.cache-name }}-
-                      ${{ runner.os }}-build-
-                      ${{ runner.os }}-
+      - name: Cache node modules
+        uses: actions/cache@v5
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
 
-            - name: Get yarn cache directory path
-              id: yarn-cache-dir-path
-              run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
 
-            - uses: actions/cache@v5
-              id: yarn-cache
-              with:
-                  path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
-                  key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-                  restore-keys: |
-                      ${{ runner.os }}-yarn-
+      - uses: actions/cache@v5
+        id: yarn-cache
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
 
-            - name: Install
-              run: |
-                  bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
-              env:
-                  BRANCH_TO_CLONE: ${{ env.BRANCH }}
+      - name: Install
+        run: |
+          bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
+        env:
+          BRANCH_TO_CLONE: ${{ env.BRANCH }}
 
-            - name: Run Tests
-              run: cd ~/frappe-bench/ && bench --site test_site run-parallel-tests --app ${{ env.APP_NAME }} --with-coverage
-              env:
-                  TYPE: server
+      - name: Run Tests
+        run: cd ~/frappe-bench/ && bench --site test_site run-parallel-tests --app ${{ env.APP_NAME }} --with-coverage
+        env:
+          TYPE: server
 
-            - name: Show bench output
-              if: ${{ always() }}
-              run: cat ~/frappe-bench/bench_start.log || true
+      - name: Show bench output
+        if: ${{ always() }}
+        run: cat ~/frappe-bench/bench_start.log || true
 
-            - name: Upload coverage data
-              uses: actions/upload-artifact@v7
-              with:
-                name: coverage
-                path: /home/runner/frappe-bench/sites/coverage.xml
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: /home/runner/frappe-bench/sites/coverage.xml
 
-    coverage:
-        name: Coverage Wrap Up
-        if: github.event_name == 'push'
-        needs: tests
-        runs-on: ubuntu-latest
-        steps:
-        - name: Clone
-          uses: actions/checkout@v6
+  coverage:
+    name: Coverage Wrap Up
+    if: github.event_name == 'push'
+    needs: tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone
+        uses: actions/checkout@v6
 
-        - name: Download artifacts
-          uses: actions/download-artifact@v8
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
 
-        - name: Upload coverage data
-          uses: codecov/codecov-action@v5
-          with:
-            name: MariaDB
-            fail_ci_if_error: true
-            verbose: true
-            token: ${{ secrets.codecov_token || secrets.CODECOV_TOKEN }}
+      - name: Upload coverage data
+        uses: codecov/codecov-action@v6
+        with:
+          name: MariaDB
+          fail_ci_if_error: true
+          verbose: true
+          token: ${{ secrets.codecov_token || secrets.CODECOV_TOKEN }}

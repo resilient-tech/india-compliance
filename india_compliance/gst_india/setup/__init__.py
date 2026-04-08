@@ -1,10 +1,9 @@
 import click
-
 import frappe
-from frappe.utils import now_datetime, nowdate
 from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
     make_dimension_in_accounting_doctypes,
 )
+from frappe.utils import now_datetime, nowdate
 
 from india_compliance.gst_india.constants import GST_UOMS
 from india_compliance.gst_india.constants.custom_fields import (
@@ -14,6 +13,7 @@ from india_compliance.gst_india.constants.custom_fields import (
     EDUCATION_CUSTOM_FIELDS,
     HEALTHCARE_CUSTOM_FIELDS,
     HRMS_CUSTOM_FIELDS,
+    PURCHASE_REVERSE_CHARGE_FIELDS,
     SALES_REVERSE_CHARGE_FIELDS,
 )
 from india_compliance.gst_india.setup.property_setters import get_property_setters
@@ -94,9 +94,7 @@ def create_address_template():
     if frappe.db.exists("Address Template", "India"):
         return
 
-    address_html = frappe.read_file(
-        get_data_file_path("address_template.html"), raise_not_found=True
-    )
+    address_html = frappe.read_file(get_data_file_path("address_template.html"), raise_not_found=True)
 
     frappe.get_doc(
         {
@@ -195,9 +193,7 @@ def _create_hsn_codes():
 
 def add_fields_to_item_variant_settings():
     settings = frappe.get_doc("Item Variant Settings")
-    fields_to_add = ITEM_VARIANT_FIELDNAMES - {
-        row.field_name for row in settings.fields
-    }
+    fields_to_add = ITEM_VARIANT_FIELDNAMES - {row.field_name for row in settings.fields}
 
     for fieldname in fields_to_add:
         settings.append("fields", {"field_name": fieldname})
@@ -267,9 +263,7 @@ def set_default_accounts_settings():
 
     show_accounts_settings_override_warning()
 
-    frappe.db.set_single_value(
-        "Accounts Settings", "add_taxes_from_item_tax_template", 0
-    )
+    frappe.db.set_single_value("Accounts Settings", "add_taxes_from_item_tax_template", 0)
 
     frappe.db.set_default("add_taxes_from_item_tax_template", 0)
 
@@ -335,6 +329,7 @@ def get_all_custom_fields():
     for custom_fields in (
         CUSTOM_FIELDS,
         SALES_REVERSE_CHARGE_FIELDS,
+        PURCHASE_REVERSE_CHARGE_FIELDS,
         E_INVOICE_FIELDS,
         E_WAYBILL_FIELDS,
     ):

@@ -26,7 +26,7 @@ def on_trash(doc, method=None):
 def validate_protected_version(doc):
     if doc.ref_doctype in get_audit_trail_doctypes():
         frappe.throw(
-            _(
-                "Cannot alter Versions of {0}, since they are required for Audit Trail"
-            ).format(_(doc.ref_doctype))
+            _("Cannot alter Versions of {0}, since they are required for Audit Trail").format(
+                _(doc.ref_doctype)
+            )
         )

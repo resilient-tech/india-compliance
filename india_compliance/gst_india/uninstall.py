@@ -61,7 +61,5 @@ def delete_accounting_dimension_fields():
 
 def remove_fields_from_item_variant_settings():
     settings = frappe.get_doc("Item Variant Settings")
-    settings.fields = [
-        row for row in settings.fields if row.field_name not in ITEM_VARIANT_FIELDNAMES
-    ]
+    settings.fields = [row for row in settings.fields if row.field_name not in ITEM_VARIANT_FIELDNAMES]
     settings.save()

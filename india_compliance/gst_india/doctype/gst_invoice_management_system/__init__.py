@@ -1,10 +1,10 @@
 import frappe
-from frappe.query_builder import Case
-from frappe.query_builder.custom import ConstantColumn
-from frappe.query_builder.functions import Abs, IfNull, Sum
 from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
     get_accounting_dimensions,
 )
+from frappe.query_builder import Case
+from frappe.query_builder.custom import ConstantColumn
+from frappe.query_builder.functions import Abs, IfNull, Sum
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
@@ -144,7 +144,7 @@ class InwardSupply:
         return fields
 
     def get_tax_fields(self):
-        fields = GST_TAX_TYPES[:-1] + ("taxable_value",)
+        fields = (*GST_TAX_TYPES[:-1], "taxable_value")
         return [self.IMS[field] for field in fields]
 
 
@@ -154,8 +154,8 @@ class PurchaseInvoice:
         self.PI_ITEM = frappe.qb.DocType("Purchase Invoice Item")
 
     def get_all(self, names=None, filters=None):
-        dimension_fields = get_accounting_dimensions() + ["cost_center", "project"]
-        additional_fields = dimension_fields + ["posting_date"]
+        dimension_fields = [*get_accounting_dimensions(), "cost_center", "project"]
+        additional_fields = [*dimension_fields, "posting_date"]
 
         query = self.get_query(filters=filters, additional_fields=additional_fields)
 
@@ -260,10 +260,7 @@ class PurchaseInvoice:
         return fields
 
     def get_tax_fields(self):
-        return [
-            self.query_tax_amount(f"{tax_type}_amount").as_(tax_type)
-            for tax_type in GST_TAX_TYPES
-        ]
+        return [self.query_tax_amount(f"{tax_type}_amount").as_(tax_type) for tax_type in GST_TAX_TYPES]
 
     def query_tax_amount(self, field):
         return Abs(Sum(getattr(self.PI_ITEM, field)))

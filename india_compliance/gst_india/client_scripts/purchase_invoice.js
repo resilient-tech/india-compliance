@@ -1,4 +1,6 @@
 const DOCTYPE = "Purchase Invoice";
+const IMPORT_GST_CATEGORIES = ["Overseas", "SEZ"];
+
 setup_e_waybill_actions(DOCTYPE);
 
 frappe.ui.form.on(DOCTYPE, {
@@ -9,7 +11,7 @@ frappe.ui.form.on(DOCTYPE, {
             },
         });
 
-        frm.set_query("driver", doc => {
+        frm.set_query("driver", (doc) => {
             return {
                 filters: {
                     transporter: doc.transporter,
@@ -20,7 +22,9 @@ frappe.ui.form.on(DOCTYPE, {
         india_compliance.setup_itc_claim_period_query(frm);
     },
 
-    onload: toggle_reverse_charge,
+    onload(frm) {
+        toggle_reverse_charge(frm);
+    },
 
     gst_category(frm) {
         validate_gst_hsn_code(frm);
@@ -51,26 +55,21 @@ frappe.ui.form.on(DOCTYPE, {
         if (gst_settings.enable_e_waybill && gst_settings.enable_e_waybill_from_pi)
             show_sandbox_mode_indicator();
 
-        if (
-            frm.doc.docstatus !== 1 ||
-            frm.doc.gst_category !== "Overseas" ||
-            frm.doc.__onload?.bill_of_entry_exists
-        )
-            return;
-
-        frm.add_custom_button(
-            __("Bill of Entry"),
-            () => {
-                frappe.model.open_mapped_doc({
-                    method: "india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry.make_bill_of_entry",
-                    frm: frm,
-                });
-            },
-            __("Create"),
-        );
+        if (frm.doc.docstatus === 1 && frm.doc.is_boe_applicable && frm.doc.__onload?.has_pending_boe_qty) {
+            frm.add_custom_button(
+                __("Bill of Entry"),
+                () => {
+                    frappe.model.open_mapped_doc({
+                        method: "india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry.make_bill_of_entry",
+                        frm: frm,
+                    });
+                },
+                __("Create"),
+            );
+        }
     },
 
-    before_save: function (frm) {
+    before_save(frm) {
         // hack: values set in frm.doc are not available after save
         if (frm._inward_supply) frm.doc._inward_supply = frm._inward_supply;
     },
@@ -79,7 +78,7 @@ frappe.ui.form.on(DOCTYPE, {
         if (!frm._inward_supply) return;
         // go back to previous page and match the invoice with the inward supply
         setTimeout(() => {
-            frappe.route_hooks.after_load = source_frm => {
+            frappe.route_hooks.after_load = (source_frm) => {
                 if (!source_frm.reconciliation_tabs) return;
                 reconciliation.link_documents(
                     source_frm,
@@ -100,34 +99,43 @@ frappe.ui.form.on("Purchase Invoice Item", {
         toggle_reverse_charge(frm);
     },
 
-    items_remove: toggle_reverse_charge,
+    items_remove(frm) {
+        toggle_reverse_charge(frm);
+    },
 
-    gst_hsn_code: validate_gst_hsn_code,
+    gst_hsn_code(frm) {
+        validate_gst_hsn_code(frm);
+    },
 });
 
 function toggle_reverse_charge(frm) {
     let is_read_only = 0;
-    if (frm.doc.gst_category !== "Overseas") is_read_only = 0;
+    if (!is_import_gst_category(frm.doc.gst_category)) is_read_only = 0;
     // has_goods_item
-    else if (
-        frm.doc.items.length > 0 &&
-        frm.doc.items.some(
-            item => item.gst_hsn_code && !item.gst_hsn_code.startsWith("99"),
-        )
-    )
-        is_read_only = 1;
+    else if (has_goods_items(frm)) is_read_only = 1;
 
     frm.set_df_property("is_reverse_charge", "read_only", is_read_only);
 }
 
 function validate_gst_hsn_code(frm) {
     if (
-        frm.doc.gst_category !== "Overseas" ||
+        !is_import_gst_category(frm.doc.gst_category) ||
         !india_compliance.is_indian_registered_company(frm.doc.company)
     )
         return;
 
-    if (frm.doc.items.some(item => item.item_name && !item.gst_hsn_code)) {
-        frappe.throw(__("GST HSN Code is mandatory for Overseas Purchase Invoice."));
+    if (frm.doc.items.some((item) => item.item_name && !item.gst_hsn_code)) {
+        frappe.throw(__("GST HSN Code is mandatory for {0} Purchase Invoice.", [frm.doc.gst_category]));
     }
+}
+
+function has_goods_items(frm) {
+    return (
+        frm.doc.items.length > 0 &&
+        frm.doc.items.some((item) => item.gst_hsn_code && !item.gst_hsn_code.startsWith("99"))
+    );
+}
+
+function is_import_gst_category(gst_category) {
+    return IMPORT_GST_CATEGORIES.includes(gst_category);
 }

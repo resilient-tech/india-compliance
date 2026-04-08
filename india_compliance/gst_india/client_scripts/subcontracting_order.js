@@ -20,7 +20,4 @@ frappe.ui.form.on("Subcontracting Order", {
     },
 });
 
-frappe.ui.form.on(
-    "Subcontracting Order Item",
-    india_compliance.taxes_controller_events
-);
+frappe.ui.form.on("Subcontracting Order Item", india_compliance.taxes_controller_events);

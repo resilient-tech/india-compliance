@@ -23,8 +23,7 @@ frappe.ui.form.on(DOCTYPE, {
         frm.add_custom_button(__("Update Address"), () => update_address_fields(frm));
 
         // set default values for GST fields
-        if (!frm.is_new() || !frm.doc.links || !frm.doc.links.length || frm.doc.gstin)
-            return;
+        if (!frm.is_new() || !frm.doc.links || !frm.doc.links.length || frm.doc.gstin) return;
 
         const row = frm.doc.links[0];
         if (!frappe.boot.gst_party_types.includes(row.link_doctype)) return;
@@ -34,11 +33,10 @@ frappe.ui.form.on(DOCTYPE, {
 
         // Fallback to DB
         if (!doc || doc.__unsaved || doc.__islocal) {
-            const { message } = await frappe.db.get_value(
-                row.link_doctype,
-                row.link_name,
-                ["gstin", "gst_category"]
-            );
+            const { message } = await frappe.db.get_value(row.link_doctype, row.link_name, [
+                "gstin",
+                "gst_category",
+            ]);
 
             if (message) {
                 doc = message;
@@ -55,9 +53,7 @@ frappe.ui.form.on(DOCTYPE, {
 function update_address_fields(frm) {
     const original_quick_entry_form = frappe.ui.form.AddressQuickEntryForm;
 
-    frappe.ui.form.AddressQuickEntryForm = class extends (
-        frappe.ui.form.AddressQuickEntryForm
-    ) {
+    frappe.ui.form.AddressQuickEntryForm = class extends frappe.ui.form.AddressQuickEntryForm {
         title = "Update Address";
 
         get_dynamic_link_fields() {
@@ -71,12 +67,12 @@ function update_address_fields(frm) {
         }
     };
 
-    frappe.db.get_doc(DOCTYPE, frm.doc.name).then(doc => {
+    frappe.db.get_doc(DOCTYPE, frm.doc.name).then((doc) => {
         frappe.ui.form.make_quick_entry(
             DOCTYPE,
             null,
-            dialog => dialog.set_value("_gstin", frm.doc.gstin),
-            doc
+            (dialog) => dialog.set_value("_gstin", frm.doc.gstin),
+            doc,
         );
         frappe.ui.form.AddressQuickEntryForm = original_quick_entry_form;
     });

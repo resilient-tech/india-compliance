@@ -73,9 +73,7 @@ frappe.query_reports["GSTR-3B Details"] = {
                 { value: "4", label: __("4. Eligible ITC") },
                 {
                     value: "5",
-                    label: __(
-                        "5. Values of exempt, nil rated and non-GST inward supplies"
-                    ),
+                    label: __("5. Values of exempt, nil rated and non-GST inward supplies"),
                 },
             ],
         },

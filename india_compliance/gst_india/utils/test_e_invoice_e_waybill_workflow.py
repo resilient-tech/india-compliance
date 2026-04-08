@@ -23,9 +23,7 @@ from india_compliance.gst_india.utils.tests import (
 
 E_INVOICE_API = "india_compliance.gst_india.utils.e_invoice.generate_e_invoice"
 E_INVOICE_DATA = "india_compliance.gst_india.utils.e_invoice.EInvoiceData"
-E_INVOICE_IRN_GENERATION_API = (
-    "india_compliance.gst_india.api_classes.nic.e_invoice.EInvoiceAPI.generate_irn"
-)
+E_INVOICE_IRN_GENERATION_API = "india_compliance.gst_india.api_classes.nic.e_invoice.EInvoiceAPI.generate_irn"
 
 
 E_WAYBILL_API = "india_compliance.gst_india.utils.e_waybill.generate_e_waybill"
@@ -61,9 +59,7 @@ def _parse_server_messages(response):
 
 def _response_message_contains(response, substr):
     """Check if any _server_messages in the response contains the given substring."""
-    return any(
-        substr in str(m.get("message", "")) for m in _parse_server_messages(response)
-    )
+    return any(substr in str(m.get("message", "")) for m in _parse_server_messages(response))
 
 
 def check_error_logged_for_doc(doctype=None, error_substr=None, no_logs=False):
@@ -205,9 +201,7 @@ class TestEInvoiceWorkflow(WorkflowTestBase):
         self.assertEqual(response.status_code, 200)
         self.si.reload()
         self.assertEqual(self.si.einvoice_status, "Auto-Retry")
-        frappe.db.set_single_value(
-            "GST Settings", "is_retry_einv_ewb_generation_pending", 0
-        )
+        frappe.db.set_single_value("GST Settings", "is_retry_einv_ewb_generation_pending", 0)
         frappe.db.commit()  # nosemgrep
 
     def test_ui_manual_unhandled_exception_raises(self):
@@ -276,9 +270,7 @@ class TestEInvoiceWorkflow(WorkflowTestBase):
         self.assertEqual(response.status_code, 200)
         self.si.reload()
         self.assertIn(self.si.einvoice_status, ("Auto-Retry", "Failed"))
-        frappe.db.set_single_value(
-            "GST Settings", "is_retry_einv_ewb_generation_pending", 0
-        )
+        frappe.db.set_single_value("GST Settings", "is_retry_einv_ewb_generation_pending", 0)
         frappe.db.commit()  # nosemgrep
 
     def test_auto_gen_ui_unhandled_exception_still_raises(self):
@@ -324,9 +316,7 @@ class TestEInvoiceWorkflow(WorkflowTestBase):
         self.assertIsNone(result)
         self.si.reload()
         self.assertIn(self.si.einvoice_status, ("Auto-Retry", "Failed"))
-        frappe.db.set_single_value(
-            "GST Settings", "is_retry_einv_ewb_generation_pending", 0
-        )
+        frappe.db.set_single_value("GST Settings", "is_retry_einv_ewb_generation_pending", 0)
         frappe.db.commit()  # nosemgrep
 
     def test_auto_gen_server_unhandled_exception_raises(self):
@@ -373,9 +363,7 @@ class TestEWaybillWorkflow(WorkflowTestBase):
     def test_ui_manual_already_generated_raises(self):
         self.si.db_set("ewaybill", "123456789012")
 
-        response = self._post_e_waybill(
-            "Sales Invoice", self.si.name, values={"distance": 10}
-        )
+        response = self._post_e_waybill("Sales Invoice", self.si.name, values={"distance": 10})
 
         self.assertEqual(response.status_code, 417)
         self.assertEqual(response.json["exc_type"], "AlreadyGeneratedError")
@@ -383,9 +371,7 @@ class TestEWaybillWorkflow(WorkflowTestBase):
     def test_ui_manual_not_applicable_raises(self):
         with patch(E_WAYBILL_DATA) as mock_data:
             mock_data.side_effect = NotApplicableError("Not applicable")
-            response = self._post_e_waybill(
-                "Sales Invoice", self.si.name, values={"distance": 10}
-            )
+            response = self._post_e_waybill("Sales Invoice", self.si.name, values={"distance": 10})
 
         self.assertEqual(response.status_code, 417)
         self.assertEqual(response.json["exc_type"], "NotApplicableError")
@@ -393,9 +379,7 @@ class TestEWaybillWorkflow(WorkflowTestBase):
     def test_ui_manual_validation_error_raises(self):
         with patch(E_WAYBILL_DATA) as mock_data:
             mock_data.side_effect = frappe.ValidationError("Invalid HSN")
-            response = self._post_e_waybill(
-                "Sales Invoice", self.si.name, values={"distance": 10}
-            )
+            response = self._post_e_waybill("Sales Invoice", self.si.name, values={"distance": 10})
 
         self.assertEqual(response.status_code, 417)
         self.assertEqual(response.json["exc_type"], "ValidationError")
@@ -403,9 +387,7 @@ class TestEWaybillWorkflow(WorkflowTestBase):
     def test_ui_manual_mandatory_error_raises(self):
         with patch(E_WAYBILL_DATA) as mock_data:
             mock_data.side_effect = frappe.MandatoryError("Transport details missing")
-            response = self._post_e_waybill(
-                "Sales Invoice", self.si.name, values={"distance": 10}
-            )
+            response = self._post_e_waybill("Sales Invoice", self.si.name, values={"distance": 10})
 
         self.assertEqual(response.status_code, 417)
         self.assertEqual(response.json["exc_type"], "MandatoryError")
@@ -413,24 +395,18 @@ class TestEWaybillWorkflow(WorkflowTestBase):
     def test_ui_manual_gsp_server_error_never_raises(self):
         with patch(E_WAYBILL_DATA) as mock_data:
             mock_data.side_effect = GSPServerError
-            response = self._post_e_waybill(
-                "Sales Invoice", self.si.name, values={"distance": 10}
-            )
+            response = self._post_e_waybill("Sales Invoice", self.si.name, values={"distance": 10})
 
         self.assertEqual(response.status_code, 200)
         self.si.reload()
         self.assertEqual(self.si.e_waybill_status, "Auto-Retry")
-        frappe.db.set_single_value(
-            "GST Settings", "is_retry_einv_ewb_generation_pending", 0
-        )
+        frappe.db.set_single_value("GST Settings", "is_retry_einv_ewb_generation_pending", 0)
         frappe.db.commit()  # nosemgrep
 
     def test_ui_manual_unhandled_exception_raises(self):
         with patch(E_WAYBILL_DATA) as mock_data:
             mock_data.side_effect = RuntimeError("Unexpected")
-            response = self._post_e_waybill(
-                "Sales Invoice", self.si.name, values={"distance": 10}
-            )
+            response = self._post_e_waybill("Sales Invoice", self.si.name, values={"distance": 10})
 
         self.assertEqual(response.status_code, 500)
 
@@ -479,9 +455,7 @@ class TestEWaybillWorkflow(WorkflowTestBase):
 
         self.si.reload()
         self.assertIn(self.si.e_waybill_status, ("Auto-Retry", "Failed"))
-        frappe.db.set_single_value(
-            "GST Settings", "is_retry_einv_ewb_generation_pending", 0
-        )
+        frappe.db.set_single_value("GST Settings", "is_retry_einv_ewb_generation_pending", 0)
         frappe.db.commit()  # nosemgrep
 
     def test_auto_gen_unhandled_exception_always_raises(self):
@@ -566,9 +540,7 @@ class TestBulkGeneration(WorkflowTestBase):
             generate_e_invoices([self.si1.name, self.si2.name])
 
         self.assertEqual(mock_gen.call_count, 1)
-        frappe.db.set_single_value(
-            "GST Settings", "is_retry_einv_ewb_generation_pending", 0
-        )
+        frappe.db.set_single_value("GST Settings", "is_retry_einv_ewb_generation_pending", 0)
         frappe.db.commit()  # nosemgrep
 
     @check_error_logged_for_doc("Sales Invoice", "Unexpected")

@@ -1,12 +1,16 @@
-from pypika import Order
-
 import frappe
+from erpnext.accounts.party import get_address_tax_category
+from erpnext.stock.get_item_details import ItemDetailsCtx, get_item_tax_template
 from frappe import _, bold
 from frappe.contacts.doctype.address.address import get_address_display
 from frappe.utils import flt
-from erpnext.accounts.party import get_address_tax_category
-from erpnext.stock.get_item_details import ItemDetailsCtx, get_item_tax_template
+from pypika import Order
 
+from india_compliance.gst_india.constants.e_waybill import (
+    ADDRESS_FIELDS,
+    ADDRESS_GSTIN_FIELD_MAP,
+    buying_address,
+)
 from india_compliance.gst_india.overrides.sales_invoice import (
     update_dashboard_with_gst_logs,
 )
@@ -54,7 +58,10 @@ def after_mapping_subcontracting_order(doc, method, source_doc):
         return
 
     set_taxes(doc)
+    update_item_tax_template(doc, source_doc)
 
+
+def update_item_tax_template(doc, source_doc):
     if not doc.items:
         return
 
@@ -69,6 +76,12 @@ def after_mapping_subcontracting_order(doc, method, source_doc):
     args = ItemDetailsCtx({"company": doc.company, "tax_category": tax_category})
 
     for item in doc.items:
+        if not item.item_code:
+            continue
+
+        if item.item_tax_template:
+            continue
+
         out = frappe._dict()
         item_doc = frappe.get_cached_doc("Item", item.item_code)
         get_item_tax_template(args, item_doc, out)
@@ -80,14 +93,83 @@ def after_mapping_stock_entry(doc, method, source_doc):
         doc.taxes_and_charges = ""
         doc.taxes = []
 
-    if doc.purpose != "Material Transfer" or not doc.is_return:
+    set_item_tax_template(doc, source_doc)
+    update_address_fields(doc, source_doc)
+
+
+def update_address_fields(doc, source_doc):
+
+    address_map = get_mapped_address(doc, source_doc)
+
+    if not address_map:
         return
 
-    doc.bill_to_address = source_doc.billing_address
-    doc.bill_from_address = source_doc.supplier_address
-    doc.bill_to_gstin = source_doc.company_gstin
-    doc.bill_from_gstin = source_doc.supplier_gstin
+    doc.bill_from_address = address_map.bill_from
+    doc.bill_from_gstin = address_map.bill_from_gstin
+    doc.bill_to_address = address_map.bill_to
+    doc.bill_to_gstin = address_map.bill_to_gstin
+    doc.ship_from_address = address_map.ship_from
+    doc.ship_to_address = address_map.ship_to
+
     set_address_display(doc)
+
+
+def get_mapped_address(doc, source_doc):
+    """
+    Return bill_from, bill_from_gstin, bill_to, bill_to_gstin, ship_from, ship_to
+    resolved from source_doc using ADDRESS_FIELDS (plus SCO mapping).
+
+    reverse - swap bill_from <> bill_to and ship_from <> ship_to.
+    """
+    address_map = frappe._dict(
+        {
+            "Subcontracting Order": buying_address,
+            **ADDRESS_FIELDS,
+        }
+    )
+
+    fields = address_map.get(source_doc.doctype, {})
+
+    if not fields:
+        return
+
+    bill_from = source_doc.get(fields.get("bill_from"))
+    bill_to = source_doc.get(fields.get("bill_to"))
+    ship_from = source_doc.get(fields.get("ship_from"))
+    ship_to = source_doc.get(fields.get("ship_to"))
+    bill_from_gstin = source_doc.get(ADDRESS_GSTIN_FIELD_MAP.get(fields.get("bill_from")))
+    bill_to_gstin = source_doc.get(ADDRESS_GSTIN_FIELD_MAP.get(fields.get("bill_to")))
+
+    reverse = (
+        source_doc.doctype in ("Subcontracting Order", "Purchase Receipt")
+        and doc.purpose in ("Material Transfer", "Send to Subcontractor")
+        and doc.is_return == 0
+    )
+
+    if reverse:
+        bill_from, bill_to, bill_from_gstin, bill_to_gstin = (
+            bill_to,
+            bill_from,
+            bill_to_gstin,
+            bill_from_gstin,
+        )
+        ship_from, ship_to = ship_to, ship_from
+
+    return frappe._dict(
+        bill_from=bill_from,
+        bill_from_gstin=bill_from_gstin,
+        bill_to=bill_to,
+        bill_to_gstin=bill_to_gstin,
+        ship_from=ship_from,
+        ship_to=ship_to,
+    )
+
+
+def set_item_tax_template(doc, source_doc):
+    if source_doc.doctype not in ("Subcontracting Order", "Purchase Order"):
+        return
+
+    update_item_tax_template(doc, source_doc)
 
 
 def before_mapping_subcontracting_receipt(doc, method, source_doc, table_maps):
@@ -141,11 +223,7 @@ def set_taxes(doc):
 
 # Common Functions for Suncontracting Transactions
 def get_dashboard_data(data):
-    doctype = (
-        "Subcontracting Receipt"
-        if data.fieldname == "subcontracting_receipt"
-        else "Stock Entry"
-    )
+    doctype = "Subcontracting Receipt" if data.fieldname == "subcontracting_receipt" else "Stock Entry"
     return update_dashboard_with_gst_logs(
         doctype,
         data,
@@ -179,9 +257,7 @@ def onload(doc, method=None):
 
 def validate(doc, method=None):
     field_map = (
-        STOCK_ENTRY_FIELD_MAP
-        if doc.doctype == "Stock Entry"
-        else SUBCONTRACTING_ORDER_RECEIPT_FIELD_MAP
+        STOCK_ENTRY_FIELD_MAP if doc.doctype == "Stock Entry" else SUBCONTRACTING_ORDER_RECEIPT_FIELD_MAP
     )
     CustomTaxController(doc, field_map).set_taxes_and_totals()
 
@@ -223,14 +299,10 @@ def validate_doc_references(doc, method=None):
         return
 
     is_return_material_transfer = (
-        doc.doctype == "Stock Entry"
-        and doc.purpose == "Material Transfer"
-        and doc.is_return
+        doc.doctype == "Stock Entry" and doc.purpose == "Material Transfer" and doc.is_return
     )
 
-    is_subcontracting_receipt = (
-        doc.doctype == "Subcontracting Receipt" and not doc.is_return
-    )
+    is_subcontracting_receipt = doc.doctype == "Subcontracting Receipt" and not doc.is_return
 
     if not (is_return_material_transfer or is_subcontracting_receipt):
         return
@@ -298,10 +370,7 @@ def validate_transaction(doc, method=None):
     if validate_company_address_field(doc, company_address_field) is False:
         return False
 
-    if (
-        validate_mandatory_fields(doc, (company_gstin_field, "place_of_supply"))
-        is False
-    ):
+    if validate_mandatory_fields(doc, (company_gstin_field, "place_of_supply")) is False:
         return False
 
     if getattr(doc, company_address_field) and (
@@ -334,9 +403,9 @@ def validate_company_address_field(doc, company_address_field):
         validate_mandatory_fields(
             doc,
             company_address_field,
-            _(
-                "Please set {0} to ensure Company GSTIN is fetched in the transaction."
-            ).format(bold(doc.meta.get_label(company_address_field))),
+            _("Please set {0} to ensure Company GSTIN is fetched in the transaction.").format(
+                bold(doc.meta.get_label(company_address_field))
+            ),
         )
         is False
     ):
@@ -374,10 +443,9 @@ class SubcontractingGSTAccounts(GSTAccounts):
             return
 
         self._throw(
-            _(
-                "Cannot charge GST in Row #{0} since Bill From GSTIN and Bill To GSTIN are"
-                " same"
-            ).format(self.first_gst_idx)
+            _("Cannot charge GST in Row #{0} since Bill From GSTIN and Bill To GSTIN are same").format(
+                self.first_gst_idx
+            )
         )
 
     def validate_for_charge_type(self):
@@ -413,9 +481,7 @@ def get_relevant_references(filters: str | dict | frappe._dict | None = None):
         start=None,
         page_len=None,
     )
-    stock_entries = get_stock_entry_references(
-        filters=filters, only_linked_references=True
-    )
+    stock_entries = get_stock_entry_references(filters=filters, only_linked_references=True)
 
     return {
         "Subcontracting Receipt": [row[0] for row in receipt_returns],
@@ -526,9 +592,7 @@ def is_e_waybill_applicable(doc):
     gst_settings = frappe.get_cached_doc("GST Settings")
 
     if not (
-        gst_settings.enable_api
-        and gst_settings.enable_e_waybill
-        and gst_settings.enable_e_waybill_for_sc
+        gst_settings.enable_api and gst_settings.enable_e_waybill and gst_settings.enable_e_waybill_for_sc
     ):
         return False
 

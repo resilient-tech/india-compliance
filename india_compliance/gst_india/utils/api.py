@@ -41,9 +41,7 @@ def create_integration_request(
 
 
 def link_integration_request(request_id, doc_name):
-    frappe.db.set_value(
-        "GSTR Action", {"request_id": request_id}, {"integration_request": doc_name}
-    )
+    frappe.db.set_value("GSTR Action", {"request_id": request_id}, {"integration_request": doc_name})
 
 
 def pretty_json(obj):

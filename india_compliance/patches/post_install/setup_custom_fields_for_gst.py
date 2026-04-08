@@ -24,6 +24,4 @@ def set_correct_state_number():
 
 
 def remove_shipping_fields_from_purchase_invoice():
-    delete_old_fields(
-        ("port_code", "shipping_bill_number", "shipping_bill_date"), "Purchase Invoice"
-    )
+    delete_old_fields(("port_code", "shipping_bill_number", "shipping_bill_date"), "Purchase Invoice")

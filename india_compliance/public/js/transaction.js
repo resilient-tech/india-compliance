@@ -13,11 +13,7 @@ const TRANSACTION_DOCTYPES = [
     "Purchase Invoice",
 ];
 
-const SUBCONTRACTING_DOCTYPES = [
-    "Stock Entry",
-    "Subcontracting Order",
-    "Subcontracting Receipt",
-];
+const SUBCONTRACTING_DOCTYPES = ["Stock Entry", "Subcontracting Order", "Subcontracting Receipt"];
 
 for (const doctype of TRANSACTION_DOCTYPES) {
     fetch_gst_details(doctype);
@@ -39,20 +35,11 @@ for (const doctype of ["Sales Invoice", "Sales Order", "Delivery Note"]) {
 }
 
 function fetch_gst_details(doctype) {
-    const event_fields = [
-        "tax_category",
-        "company_gstin",
-        "place_of_supply",
-        "is_reverse_charge",
-    ];
+    const event_fields = ["tax_category", "company_gstin", "place_of_supply", "is_reverse_charge"];
 
     // we are using address below to prevent multiple event triggers
-    if (in_list(frappe.boot.sales_doctypes, doctype)) {
-        event_fields.push(
-            "customer_address",
-            "shipping_address_name",
-            "is_export_with_gst"
-        );
+    if (frappe.boot.sales_doctypes.includes(doctype)) {
+        event_fields.push("customer_address", "shipping_address_name", "is_export_with_gst");
     } else if (doctype === "Stock Entry") {
         event_fields.push("bill_from_address", "bill_to_address");
     } else if (["Subcontracting Order", "Subcontracting Receipt"].includes(doctype)) {
@@ -62,7 +49,7 @@ function fetch_gst_details(doctype) {
     }
 
     const events = Object.fromEntries(
-        event_fields.map(field => [field, frm => update_gst_details(frm, field)])
+        event_fields.map((field) => [field, (frm) => update_gst_details(frm, field)]),
     );
 
     frappe.ui.form.on(doctype, events);
@@ -72,8 +59,7 @@ async function update_gst_details(frm, event) {
     if (
         frm.updating_party_details ||
         !frm.doc.company ||
-        (["place_of_supply", "bill_to_address"].includes(event) &&
-            frm.__updating_gst_details)
+        (["place_of_supply", "bill_to_address"].includes(event) && frm.__updating_gst_details)
     )
         return;
 
@@ -135,24 +121,18 @@ async function update_gst_details(frm, event) {
         "is_reverse_charge",
     ];
 
-    if (in_list(frappe.boot.sales_doctypes, frm.doc.doctype)) {
+    if (frappe.boot.sales_doctypes.includes(frm.doc.doctype)) {
         fieldnames_to_set.push(
             "customer_address",
             "shipping_address_name",
             "billing_address_gstin",
-            "is_export_with_gst"
+            "is_export_with_gst",
         );
     } else if (frm.doc.doctype === "Stock Entry") {
-        fieldnames_to_set.push(
-            "bill_from_gstin",
-            "bill_to_gstin",
-            "bill_from_address",
-            "bill_to_address"
-        );
+        fieldnames_to_set.push("bill_from_gstin", "bill_to_gstin", "bill_from_address", "bill_to_address");
 
         party_details["is_outward_stock_entry"] = same_gstin_stock_entry;
-        party_details["is_inward_stock_entry"] =
-            frm.doc.purpose === "Material Transfer" && frm.doc.is_return;
+        party_details["is_inward_stock_entry"] = frm.doc.purpose === "Material Transfer" && frm.doc.is_return;
     } else {
         fieldnames_to_set.push("supplier_address", "supplier_gstin");
     }
@@ -168,9 +148,7 @@ async function update_gst_details(frm, event) {
 
 india_compliance.fetch_and_update_gst_details = function (frm, args, method) {
     frappe.call({
-        method:
-            method ||
-            "india_compliance.gst_india.overrides.transaction.get_gst_details",
+        method: method || "india_compliance.gst_india.overrides.transaction.get_gst_details",
         args,
         async callback(r) {
             if (!r.message) return;
@@ -193,9 +171,7 @@ function validate_overseas_gst_category(doctype) {
             )
                 return;
 
-            frappe.throw(
-                __("Please enable SEZ / Overseas transactions in GST Settings first")
-            );
+            frappe.throw(__("Please enable SEZ / Overseas transactions in GST Settings first"));
         },
     });
 }
@@ -217,10 +193,7 @@ function ignore_port_code_validation(doctype) {
 }
 
 function is_foreign_transaction(frm) {
-    return (
-        frm.doc.gst_category === "Overseas" &&
-        frm.doc.place_of_supply === "96-Other Countries"
-    );
+    return frm.doc.gst_category === "Overseas" && frm.doc.place_of_supply === "96-Other Countries";
 }
 
 function set_and_validate_gstin_status(doctype) {
@@ -238,20 +211,15 @@ function set_and_validate_gstin_status(doctype) {
         },
 
         gst_transporter_id(frm) {
-            india_compliance.validate_gst_transporter_id(
-                frm.doc.gst_transporter_id,
-                frm.doc
-            );
+            india_compliance.validate_gst_transporter_id(frm.doc.gst_transporter_id, frm.doc);
         },
 
         posting_date(frm) {
-            if (frm.get_field("posting_date"))
-                _set_and_validate_gstin_status(frm, gstin_field_name);
+            if (frm.get_field("posting_date")) _set_and_validate_gstin_status(frm, gstin_field_name);
         },
 
         transaction_date(frm) {
-            if (frm.get_field("transaction_date"))
-                _set_and_validate_gstin_status(frm, gstin_field_name);
+            if (frm.get_field("transaction_date")) _set_and_validate_gstin_status(frm, gstin_field_name);
         },
     });
 }
@@ -275,10 +243,7 @@ async function _set_gstin_status(frm, gstin_field_name) {
         frm._gstin_doc[gstin] = gstin_doc;
     } else {
         gstin_field.set_description(
-            india_compliance.get_gstin_status_desc(
-                gstin_doc?.status,
-                gstin_doc?.last_updated_on
-            )
+            india_compliance.get_gstin_status_desc(gstin_doc?.status, gstin_doc?.last_updated_on),
         );
     }
 
@@ -292,8 +257,7 @@ function validate_gstin_status(gstin_doc, frm, gstin_field_name) {
     )
         return;
 
-    const date_field =
-        frm.get_field("posting_date") || frm.get_field("transaction_date");
+    const date_field = frm.get_field("posting_date") || frm.get_field("transaction_date");
 
     const gstin_field = frm.get_field(gstin_field_name);
     const transaction_date = frappe.datetime.str_to_obj(date_field.value);
@@ -302,64 +266,47 @@ function validate_gstin_status(gstin_doc, frm, gstin_field_name) {
 
     if (!registration_date || transaction_date < registration_date)
         frappe.throw({
-            message: __(
-                "{0} is Registered on {1}. Please make sure that the {2} is on or after {1}",
-                [
-                    gstin_field.df.label,
-                    frappe.datetime.str_to_user(gstin_doc.registration_date),
-                    date_field.df.label,
-                ]
-            ),
+            message: __("{0} is Registered on {1}. Please make sure that the {2} is on or after {1}", [
+                gstin_field.df.label,
+                frappe.datetime.str_to_user(gstin_doc.registration_date),
+                date_field.df.label,
+            ]),
             title: __("Invalid Party GSTIN"),
         });
 
     if (gstin_doc.status === "Cancelled" && transaction_date >= cancelled_date)
         frappe.throw({
-            message: __(
-                "{0} is Cancelled from {1}. Please make sure that the {2} is before {1}",
-                [
-                    gstin_field.df.label,
-                    frappe.datetime.str_to_user(gstin_doc.cancelled_date),
-                    date_field.df.label,
-                ]
-            ),
+            message: __("{0} is Cancelled from {1}. Please make sure that the {2} is before {1}", [
+                gstin_field.df.label,
+                frappe.datetime.str_to_user(gstin_doc.cancelled_date),
+                date_field.df.label,
+            ]),
             title: __("Invalid Party GSTIN"),
         });
 
     if (!["Active", "Cancelled"].includes(gstin_doc.status))
         frappe.throw({
-            message: __("Status of {0} is {1}", [
-                gstin_field.df.label,
-                gstin_doc.status,
-            ]),
+            message: __("Status of {0} is {1}", [gstin_field.df.label, gstin_doc.status]),
             title: __("Invalid GSTIN Status"),
         });
 }
 
 function show_gst_invoice_no_banner(frm) {
     frm.dashboard.clear_headline();
-    if (
-        !is_invoice_no_validation_required(
-            frm.doc.transaction_type || frm.doc.document_type
-        )
-    )
-        return;
+    if (!is_invoice_no_validation_required(frm.doc.transaction_type || frm.doc.document_type)) return;
 
     frm.dashboard.set_headline_alert(
         `Naming Series should <strong>not</strong> exceed 16 characters for GST. <a href="https://docs.indiacompliance.app/docs/miscellaneous/transaction_validations#document-name" target="_blank">Know more</a>`,
-        "blue"
+        "blue",
     );
 }
 
 function is_invoice_no_validation_required(transaction_type) {
     return (
         transaction_type === "Sales Invoice" ||
-        (transaction_type === "Purchase Invoice" &&
-            gst_settings.enable_e_waybill_from_pi) ||
-        (transaction_type === "Delivery Note" &&
-            gst_settings.enable_e_waybill_from_dn) ||
-        (transaction_type === "Purchase Receipt" &&
-            gst_settings.enable_e_waybill_from_pr)
+        (transaction_type === "Purchase Invoice" && gst_settings.enable_e_waybill_from_pi) ||
+        (transaction_type === "Delivery Note" && gst_settings.enable_e_waybill_from_dn) ||
+        (transaction_type === "Purchase Receipt" && gst_settings.enable_e_waybill_from_pr)
     );
 }
 
@@ -367,10 +314,7 @@ function set_e_commerce_ecommerce_supply_type(doctype) {
     const event_fields = ["ecommerce_gstin", "is_reverse_charge"];
 
     const events = Object.fromEntries(
-        event_fields.map(field => [
-            field,
-            frm => _set_e_commerce_ecommerce_supply_type(frm),
-        ])
+        event_fields.map((field) => [field, (frm) => _set_e_commerce_ecommerce_supply_type(frm)]),
     );
 
     frappe.ui.form.on(doctype, events);
@@ -428,7 +372,7 @@ function fetch_party_details(doctype) {
                     args,
                     () => {
                         toggle_link_validation(frm, ["supplier_address"], true);
-                    }
+                    },
                 );
             }, 0);
         },
@@ -436,7 +380,7 @@ function fetch_party_details(doctype) {
 }
 
 function toggle_link_validation(frm, fields, validate = true) {
-    fields.forEach(field => {
+    fields.forEach((field) => {
         const df = frm.get_field(field).df;
         if (df) df.ignore_link_validation = !validate;
     });

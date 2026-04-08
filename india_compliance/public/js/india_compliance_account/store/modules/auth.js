@@ -71,6 +71,6 @@ export default {
             if (state.api_secret) return "home";
             if (state.session) return "mailSent";
             return "auth";
-        }
+        },
     },
 };

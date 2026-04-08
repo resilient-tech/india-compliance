@@ -21,6 +21,4 @@ def execute():
         docs_to_update.setdefault(doc.link_doctype, []).append(doc.link_name)
 
     for doctype, doc_names in docs_to_update.items():
-        frappe.db.set_value(
-            doctype, {"name": ("in", doc_names)}, "reconciliation_status", "Match Found"
-        )
+        frappe.db.set_value(doctype, {"name": ("in", doc_names)}, "reconciliation_status", "Match Found")

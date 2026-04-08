@@ -1,5 +1,4 @@
 import click
-
 import frappe
 from frappe.query_builder.functions import IfNull
 
@@ -24,15 +23,11 @@ def get_indian_companies():
 
 def update_gst_details_for_transactions(companies):
     for company in companies:
-        gst_accounts = []
-        gst_accounts.extend(
-            filter(
-                None,
-                get_gst_accounts_by_type(
-                    company, account_type="Input", throw=False
-                ).values(),
-            )
-        )
+        gst_accounts = [
+            account
+            for account in get_gst_accounts_by_type(company, account_type="Input", throw=False).values()
+            if account
+        ]
 
         if not gst_accounts:
             continue
@@ -78,9 +73,7 @@ def update_gst_details(company, doctype, docs):
             if not complied_docs:
                 continue
 
-            gst_details = CustomItemGSTDetails().get(
-                complied_docs.values(), doctype, company
-            )
+            gst_details = CustomItemGSTDetails().get(complied_docs.values(), doctype, company)
 
             if not gst_details:
                 continue
@@ -93,10 +86,9 @@ def get_taxes_for_docs(docs, doctype):
     boe_taxes = frappe.qb.DocType("Bill of Entry Taxes")
     ic_taxes = frappe.qb.DocType("India Compliance Taxes and Charges")
 
-    return (
-        get_taxes_query(docs, doctype, boe_taxes)
-        + get_taxes_query(docs, doctype, ic_taxes)
-    ).run(as_dict=True)
+    return (get_taxes_query(docs, doctype, boe_taxes) + get_taxes_query(docs, doctype, ic_taxes)).run(
+        as_dict=True
+    )
 
 
 def get_taxes_query(docs, doctype, taxes):
@@ -137,7 +129,7 @@ def set_gst_treatment():
         .set(boe_item.gst_treatment, "Nil-Rated")
         .where(boe_item.docstatus == 1)
         .where(boe.total_taxes == 0)
-        .where((boe_item.gst_treatment.notin(("Nil-Rated", "Exempted", "Non-GST"))))
+        .where(boe_item.gst_treatment.notin(("Nil-Rated", "Exempted", "Non-GST")))
         .run()
     )
 
