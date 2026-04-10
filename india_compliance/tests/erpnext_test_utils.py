@@ -224,9 +224,9 @@ def create_subcontracting_order(**args):
             warehouses = []
             for item in po.items:
                 warehouses.append(item.warehouse)
-            else:
-                for idx, val in enumerate(sco.items):
-                    val.warehouse = warehouses[idx]
+
+            for idx, val in enumerate(sco.items):
+                val.warehouse = warehouses[idx]
 
     warehouses = set()
     for item in sco.items:
