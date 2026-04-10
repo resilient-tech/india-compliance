@@ -1,18 +1,11 @@
 import unittest.mock as mock
 
+import frappe
+from erpnext.buying.doctype.purchase_order.purchase_order import get_mapped_subcontracting_order
 from erpnext.subcontracting.doctype.subcontracting_order.subcontracting_order import (
     make_subcontracting_receipt,
 )
 from frappe.tests import IntegrationTestCase
-
-with mock.patch("frappe.db"), mock.patch("frappe.new_doc"), mock.patch("frappe.get_doc"):
-    from erpnext.accounts.doctype.payment_reconciliation.test_payment_reconciliation import (
-        create_fiscal_year,
-    )
-    from erpnext.controllers.tests.test_subcontracting_controller import get_rm_items
-    from erpnext.subcontracting.doctype.subcontracting_order.test_subcontracting_order import (
-        create_subcontracting_order,
-    )
 
 from india_compliance.gst_india.overrides.test_subcontracting_transaction import (
     create_purchase_order,
@@ -20,6 +13,11 @@ from india_compliance.gst_india.overrides.test_subcontracting_transaction import
     make_stock_transfer_entry,
 )
 from india_compliance.gst_india.utils.itc_04.itc_04_export import download_itc_04_json
+from india_compliance.tests.erpnext_test_utils import (
+    create_fiscal_year,
+    create_subcontracting_order,
+    get_rm_items,
+)
 
 SERVICE_ITEM = {
     "item_code": "Subcontracted Service Item 1",
