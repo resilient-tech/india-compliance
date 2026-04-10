@@ -1,5 +1,4 @@
 import re
-import unittest.mock as mock
 
 import frappe
 from frappe.tests import IntegrationTestCase, change_settings

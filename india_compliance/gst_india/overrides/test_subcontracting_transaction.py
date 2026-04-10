@@ -1,5 +1,4 @@
 import re
-import unittest.mock as mock
 
 import frappe
 from erpnext.controllers.subcontracting_controller import (
