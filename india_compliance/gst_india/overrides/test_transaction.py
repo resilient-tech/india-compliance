@@ -1029,6 +1029,25 @@ class TestTransaction(IntegrationTestCase):
             doc.save,
         )
 
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_validate_gst_refund_accounts_for_credit_note(self):
+        doc = create_refund_transaction()
+        doc.submit()
+
+        # Credit note should save successfully: signs are flipped, refund row is positive
+        return_doc = make_return_doc("Sales Invoice", doc.name)
+        return_doc.save()
+        self.assertGreater(return_doc.taxes[1].tax_amount, 0)
+
+        # Force refund row to become negative on the credit note and expect a
+        # validation error saying it should be positive
+        return_doc.taxes[1].rate = 18
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(.*Tax amount should be positive for GST Account.*)$"),
+            return_doc.save,
+        )
+
     def test_item_gst_details_for_non_gst_transactions(self):
         """
         Test Non-GST Transactions can be processed without errors.
