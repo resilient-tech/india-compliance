@@ -9,7 +9,7 @@ from india_compliance.gst_india.doctype.gst_hsn_code.gst_hsn_code import (
     update_taxes_in_item_master,
 )
 
-IGNORE_TEST_RECORD_DEPENDENCIES = ["Item Tax Template"]
+IGNORE_TEST_RECORD_DEPENDENCIES = ["Item Tax Template", "Tax Category"]
 
 
 class TestGSTHSNCode(IntegrationTestCase):

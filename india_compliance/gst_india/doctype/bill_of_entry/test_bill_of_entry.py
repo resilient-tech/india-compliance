@@ -3,7 +3,6 @@
 
 import json
 import re
-import unittest.mock as mock
 
 import frappe
 from frappe.tests import IntegrationTestCase
@@ -20,15 +19,13 @@ from india_compliance.gst_india.overrides.test_transaction import create_cess_ac
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 from india_compliance.gst_india.utils.itc_claim import format_period
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
-
-with mock.patch("frappe.db"), mock.patch("frappe.new_doc"), mock.patch("frappe.get_doc"):
-    from erpnext.projects.doctype.project.test_project import make_project
+from india_compliance.tests.erpnext_test_utils import make_project
 
 IGNORE_TEST_RECORD_DEPENDENCIES = [
     "Bill of Entry",
     "Purchase Invoice",
     "Cost Center",
-    # "Tax Category",
+    "Tax Category",
     "Item",
     # "UOM",
     "Item Tax Template",

@@ -1,5 +1,4 @@
 import re
-import unittest.mock as mock
 
 import frappe
 from frappe.tests import IntegrationTestCase, change_settings
@@ -11,9 +10,7 @@ from india_compliance.gst_india.utils.itc_claim import (
     update_gstr3b_filing_status,
 )
 from india_compliance.gst_india.utils.tests import append_item, create_purchase_invoice
-
-with mock.patch("frappe.db"), mock.patch("frappe.new_doc"), mock.patch("frappe.get_doc"):
-    from erpnext.accounts.doctype.account.test_account import create_account
+from india_compliance.tests.erpnext_test_utils import create_account
 
 
 class TestPurchaseInvoice(IntegrationTestCase):
