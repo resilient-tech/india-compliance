@@ -25,7 +25,7 @@ IGNORE_TEST_RECORD_DEPENDENCIES = [
     "Bill of Entry",
     "Purchase Invoice",
     "Cost Center",
-    # "Tax Category",
+    "Tax Category",
     "Item",
     # "UOM",
     "Item Tax Template",
