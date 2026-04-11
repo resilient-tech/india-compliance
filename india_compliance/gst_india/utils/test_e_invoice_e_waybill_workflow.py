@@ -2,7 +2,7 @@ import json
 from unittest.mock import patch
 
 import frappe
-from frappe.tests.test_api import FrappeAPITestCase
+from frappe.tests.test_api import FrappeAPITestCase, suppress_stdout
 
 from india_compliance.exceptions import (
     AlreadyGeneratedError,
@@ -139,10 +139,11 @@ class TestEInvoiceWorkflow(WorkflowTestBase):
         """
         sid = self.sid
         frappe.db.commit()  # nosemgrep
-        response = self.post(
-            self.method(E_INVOICE_API),
-            {"docname": docname, "throw": throw, "force": force, "sid": sid},
-        )
+        with suppress_stdout():
+            response = self.post(
+                self.method(E_INVOICE_API),
+                {"docname": docname, "throw": throw, "force": force, "sid": sid},
+            )
         frappe.db.rollback()  # Fresh transaction to see WSGI-committed changes
         return response
 
@@ -351,7 +352,8 @@ class TestEWaybillWorkflow(WorkflowTestBase):
         data = {"doctype": doctype, "docname": docname, "force": force, "sid": sid}
         if values is not None:
             data["values"] = frappe.as_json(values)
-        response = self.post(self.method(E_WAYBILL_API), data)
+        with suppress_stdout():
+            response = self.post(self.method(E_WAYBILL_API), data)
         frappe.db.rollback()
         return response
 
