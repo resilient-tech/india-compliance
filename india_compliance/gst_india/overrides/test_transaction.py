@@ -1093,17 +1093,22 @@ class TestTransaction(IntegrationTestCase):
 def create_refund_transaction():
     gst_settings = frappe.get_cached_doc("GST Settings")
 
-    gst_settings.append(
-        "gst_accounts",
-        {
-            "company": "_Test Indian Registered Company",
-            "cgst_account": "Output Tax CGST Refund - _TIRC",
-            "sgst_account": "Output Tax SGST Refund - _TIRC",
-            "igst_account": "Output Tax IGST Refund - _TIRC",
-            "account_type": "Output Refund",
-        },
+    refund_row_exists = any(
+        row.account_type == "Output Refund" and row.company == "_Test Indian Registered Company"
+        for row in gst_settings.gst_accounts
     )
-    gst_settings.save()
+    if not refund_row_exists:
+        gst_settings.append(
+            "gst_accounts",
+            {
+                "company": "_Test Indian Registered Company",
+                "cgst_account": "Output Tax CGST Refund - _TIRC",
+                "sgst_account": "Output Tax SGST Refund - _TIRC",
+                "igst_account": "Output Tax IGST Refund - _TIRC",
+                "account_type": "Output Refund",
+            },
+        )
+        gst_settings.save()
 
     transaction_details = {
         "doctype": "Sales Invoice",
