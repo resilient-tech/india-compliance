@@ -134,9 +134,7 @@ def get_rm_items(supplied_items):
     return rm_items
 
 
-# from erpnext.manufacturing.doctype.production_plan.test_production_plan import (
-#     make_bom,
-# )
+# from erpnext.manufacturing.doctype.production_plan.test_production_plan import make_bom
 def make_bom(**args):
     args = frappe._dict(args)
 
@@ -201,9 +199,7 @@ def make_bom(**args):
     return bom
 
 
-# from erpnext.subcontracting.doctype.subcontracting_order.test_subcontracting_order import (
-#     create_subcontracting_order,
-# )
+# from erpnext.subcontracting.doctype.subcontracting_order.test_subcontracting_order import create_subcontracting_order
 def create_subcontracting_order(**args):
     args = frappe._dict(args)
     sco = get_mapped_subcontracting_order(source_name=args.po_name)
@@ -243,7 +239,7 @@ def create_subcontracting_order(**args):
     return sco
 
 
-# from erpnext.accounts.doctype.payment_reconciliation.test_payment_reconciliation import (create_fiscal_year)
+# from erpnext.accounts.doctype.payment_reconciliation.test_payment_reconciliation import create_fiscal_year
 def create_fiscal_year(company, year_start_date, year_end_date):
     fy_docname = frappe.db.exists(
         "Fiscal Year", {"year_start_date": year_start_date, "year_end_date": year_end_date}
