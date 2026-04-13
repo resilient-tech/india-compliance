@@ -31,6 +31,7 @@
                     "AssAmt": 100000.0,
                     "CesAmt": 0,
                     "CesNonAdvlAmt": 0,
+                    "OthChrg": 0,
                     "CesRt": 0,
                     "CgstAmt": 9000.0,
                     "Discount": 0,
@@ -132,6 +133,7 @@
                     "AssAmt": 100.0,
                     "CesAmt": 0,
                     "CesNonAdvlAmt": 0,
+                    "OthChrg": 0,
                     "CesRt": 0,
                     "CgstAmt": 9.0,
                     "Discount": 0,
@@ -252,6 +254,7 @@
                     "CesRt": 0,
                     "CesAmt": 0,
                     "CesNonAdvlAmt": 0,
+                    "OthChrg": 0,
                     "TotItemVal": 11.2
                 }
             ],
@@ -358,6 +361,7 @@
                     "CesRt": 0,
                     "CesAmt": 0,
                     "CesNonAdvlAmt": 0,
+                    "OthChrg": 0,
                     "TotItemVal": 8.52
                 },
                 {
@@ -378,6 +382,7 @@
                     "CesRt": 0,
                     "CesAmt": 0,
                     "CesNonAdvlAmt": 0,
+                    "OthChrg": 0,
                     "TotItemVal": 8.5
                 }
             ],
@@ -478,6 +483,7 @@
                     "AssAmt": 100.0,
                     "CesAmt": 0,
                     "CesNonAdvlAmt": 0,
+                    "OthChrg": 0,
                     "CesRt": 0,
                     "CgstAmt": 9.0,
                     "Discount": 0,
@@ -639,6 +645,7 @@
                     "AssAmt": 100000,
                     "CesAmt": 0,
                     "CesNonAdvlAmt": 0,
+                    "OthChrg": 0,
                     "CesRt": 0,
                     "CgstAmt": 0,
                     "Discount": 0,
@@ -729,6 +736,7 @@
                     "AssAmt": 1400.0,
                     "CesAmt": 0,
                     "CesNonAdvlAmt": 0,
+                    "OthChrg": 0,
                     "CesRt": 0,
                     "CgstAmt": 126.0,
                     "Discount": 0,
@@ -838,6 +846,7 @@
                     "AssAmt": 1000.0,
                     "CesAmt": 0,
                     "CesNonAdvlAmt": 0,
+                    "OthChrg": 0,
                     "CesRt": 0,
                     "CgstAmt": 90.0,
                     "Discount": 0,
@@ -926,6 +935,7 @@
                     "AssAmt": 100000.0,
                     "CesAmt": 0,
                     "CesNonAdvlAmt": 0,
+                    "OthChrg": 0,
                     "CesRt": 0,
                     "CgstAmt": 9000.0,
                     "Discount": 0,
