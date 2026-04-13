@@ -387,8 +387,7 @@ class GSTSettings(Document):
                     "show_missing_gst_credentials_message",
                     dict(
                         message=_(
-                            "Credentials are missing for GSTIN {0} for service"
-                            " Returns in GST Settings"
+                            "Credentials are missing for GSTIN {0} for service Returns in GST Settings"
                         ).format(gstin),
                         title=_("Missing Credentials"),
                     ),

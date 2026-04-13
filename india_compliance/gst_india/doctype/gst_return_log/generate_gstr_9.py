@@ -74,8 +74,10 @@ class SummarizeGSTR9:
 
 class GenerateGSTR9(SummarizeGSTR9):
     """
-    Mixin for GSTReturnLog that handles GSTR-9 data generation,
-    auto-computation, optional portal download, and comparison.
+    Mixin for GSTReturnLog: GSTR-9 data generation and portal comparison.
+
+    Handles data generation, auto-computation, optional portal download,
+    and books-vs-portal reconciliation.
     """
 
     def get_gstr9_data(self):
@@ -130,9 +132,7 @@ class GenerateGSTR9(SummarizeGSTR9):
                     compute_auto_rows(row_data)
                     compute_auto_rows(portal_data)
                     data["portal"] = portal_data
-                    data["comparison"] = self._compare_books_and_portal(
-                        row_data, portal_data
-                    )
+                    data["comparison"] = self._compare_books_and_portal(row_data, portal_data)
             except Exception:
                 frappe.log_error(
                     title="GSTR-9 Portal Data Download Failed",
@@ -202,9 +202,7 @@ class GenerateGSTR9(SummarizeGSTR9):
             has_diff = False
 
             for field in AMOUNT_FIELDS:
-                diff[field] = flt(books_row.get(field, 0), 2) - flt(
-                    portal_row.get(field, 0), 2
-                )
+                diff[field] = flt(books_row.get(field, 0), 2) - flt(portal_row.get(field, 0), 2)
                 if diff[field] != 0:
                     has_diff = True
 

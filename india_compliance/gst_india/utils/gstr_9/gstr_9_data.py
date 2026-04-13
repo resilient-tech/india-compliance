@@ -15,8 +15,7 @@ from india_compliance.gst_india.utils.gstr_9 import (
 
 
 class GSTR9BooksData(GSTR1Query, GSTR3BQuery):
-    """
-    Computes GSTR-9 books data from ERP (Sales/Purchase Invoices, Journal Entries) for a given company, GSTIN, and financial year.
+    """Computes GSTR-9 books data from ERP transactions for a given company, GSTIN, and financial year.
 
     Returns classified invoice-level data (books format):
       {row_key: {doc_number: invoice_dict}}  — for drillable rows (GSTR-1 style)
@@ -25,6 +24,7 @@ class GSTR9BooksData(GSTR1Query, GSTR3BQuery):
     """
 
     def __init__(self, filters):
+        """Initialize DocType refs and common filter attributes."""
         self.filters = frappe._dict(filters or {})
         self.si = frappe.qb.DocType("Sales Invoice")
         self.si_item = frappe.qb.DocType("Sales Invoice Item")
@@ -48,9 +48,7 @@ class GSTR9BooksData(GSTR1Query, GSTR3BQuery):
         return GSTR3BQuery.get_query_with_common_filters(self, query, doc)
 
     def get_data(self):
-        """
-        Returns books data.
-        """
+        """Return books data."""
         data = {}
 
         data.update(self._get_classified_outward_supplies())
@@ -209,7 +207,8 @@ class GSTR9BooksData(GSTR1Query, GSTR3BQuery):
         return {GSTR9_Row.TABLE_18: self._get_hsn_data("inward")}
 
     def _get_hsn_data(self, direction):
-        """Reuse the standalone HSN report functions for exact data parity.
+        """
+        Reuse the standalone HSN report functions for exact data parity.
 
         Converts report field names to the GSTR-9 display format and splits
         into goods (HSN not starting with '99') and services.
@@ -255,8 +254,7 @@ class GSTR9BooksData(GSTR1Query, GSTR3BQuery):
 
     def _get_classified_outward_supplies(self):
         """
-        Fetch all Sales Invoice items in a single query, classify each item
-        into a GSTR-9 row in Python, and accumulate per (row_key, invoice).
+        Fetch all Sales Invoice items in a single query and classify into GSTR-9 rows.
 
         Returns {row_key: [invoice_dicts]}.
         """
@@ -292,8 +290,7 @@ class GSTR9BooksData(GSTR1Query, GSTR3BQuery):
 
     def _get_classified_purchase_invoices(self):
         """
-        Fetch all relevant Purchase Invoice items in a single query, classify
-        each item for Table 4G (RCM) and/or Table 6 (ITC), and accumulate.
+        Fetch all relevant Purchase Invoice items, classify for Table 4G and Table 6.
 
         Returns {row_key: [invoice_dicts]}.
         """
@@ -558,9 +555,7 @@ class GSTR9BooksData(GSTR1Query, GSTR3BQuery):
 
 
 class GSTR9OutwardClassifier:
-    """
-    Classifies outward supply (Sales Invoice) items into GSTR-9 row keys.
-    """
+    """Classifies outward supply (Sales Invoice) items into GSTR-9 row keys."""
 
     def classify(self, item):
         """Returns the GSTR-9 row key for an outward sales invoice item."""
@@ -687,6 +682,7 @@ class GSTR9PurchaseClassifier:
     """
 
     def __init__(self, company_gstin):
+        """Initialize the classifier with the company GSTIN."""
         self.company_gstin = company_gstin
 
     def classify(self, item):

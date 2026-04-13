@@ -22,8 +22,9 @@ class GSTR9(Document):
     @frappe.whitelist()
     def generate_gstr9(self):
         """
-        Permission check not required as user has access to doc.
-        Validates inputs and enqueues GSTR-9 data generation.
+        Validate inputs and enqueue GSTR-9 data generation.
+
+        Permission check not required as user already has access to the doc.
         """
         period = get_fy_period(self.financial_year)
         log_name = f"GSTR9-{period}-{self.company_gstin}"
@@ -54,8 +55,9 @@ class GSTR9(Document):
     @frappe.whitelist()
     def recompute_books(self):
         """
-        Permission check not required as user has access to doc.
-        Forces recomputation of books data.
+        Force recomputation of books data.
+
+        Permission check not required as user has access to the doc.
         """
         period = get_fy_period(self.financial_year)
         log_name = f"GSTR9-{period}-{self.company_gstin}"
@@ -69,8 +71,10 @@ class GSTR9(Document):
     @otp_handler
     def download_portal_data(self):
         """
-        Download auto-drafted GSTR-9 data from GST portal, update comparison,
-        and return the merged data for frontend display.
+        Download auto-drafted GSTR-9 data and refresh comparison.
+
+        Fetches portal data for the given company GSTIN, merges portal-sourced
+        rows, recomputes auto rows, and returns merged data for frontend display.
         """
         settings = frappe.get_cached_doc("GST Settings")
         if not settings.is_gstr9_api_enabled(self.company_gstin):
@@ -82,11 +86,7 @@ class GSTR9(Document):
 
         books_data = gstr9_log.get_json_for("books")
         if not books_data:
-            frappe.throw(
-                _(
-                    "Please generate GSTR-9 books data first before downloading portal data."
-                )
-            )
+            frappe.throw(_("Please generate GSTR-9 books data first before downloading portal data."))
 
         from_date, to_date = get_fy_dates(self.financial_year)
         filters = frappe._dict(
@@ -186,7 +186,7 @@ def get_gstr9_invoice_detail(company_gstin: str, financial_year: str, row_key: s
     )
     from india_compliance.gst_india.utils.gstr_9 import PURCHASE_ROW_KEYS
 
-    BOOKS_EXPORT_THRESHOLD = 200 * 1024  # 200 KB compressed
+    BOOKS_EXPORT_THRESHOLD = 200 * 1024  #    b compressed
 
     period = get_fy_period(financial_year)
     log_name = f"GSTR9-{period}-{company_gstin}"
@@ -292,9 +292,7 @@ def export_gstr9_books_as_excel(company_gstin: str, financial_year: str):
         sheets_written += 1
 
     if not sheets_written:
-        frappe.throw(
-            _("No invoice-level data found. Please regenerate GSTR-9 books data.")
-        )
+        frappe.throw(_("No invoice-level data found. Please regenerate GSTR-9 books data."))
 
     excel.export(f"GSTR-9-Books-{company_gstin}-{financial_year}")
 

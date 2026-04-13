@@ -196,7 +196,11 @@ GSTR9_ROW_DESCRIPTION = {
     GSTR9_Row.TABLE_7J: "Net ITC Available for Utilization (6O - 7I)",
     GSTR9_Row.TABLE_8A: "ITC as per GSTR-2B",
     GSTR9_Row.TABLE_8B: "ITC as per sum total of 6B above",
-    GSTR9_Row.TABLE_8C: "ITC on inward supplies (other than imports and inward supplies liable to reverse charge but includes services received from SEZs) received during the financial year but availed in the next financial year upto specified period",
+    GSTR9_Row.TABLE_8C: (
+        "ITC on inward supplies (other than imports and inward supplies liable to reverse"
+        " charge but includes services received from SEZs) received during the financial"
+        " year but availed in the next financial year upto specified period"
+    ),
     GSTR9_Row.TABLE_8D: "Difference [8A - (8B + 8C)]",
     GSTR9_Row.TABLE_8E: "ITC available but not availed",
     GSTR9_Row.TABLE_8F: "ITC available but ineligible",
@@ -222,9 +226,7 @@ GSTR9_ROW_DESCRIPTION = {
 }
 
 # Rows sourced from portal (non-editable, require download)
-PORTAL_SOURCED_ROWS = frozenset(
-    {GSTR9_Row.TABLE_6A, GSTR9_Row.TABLE_8A, GSTR9_Row.TABLE_9}
-)
+PORTAL_SOURCED_ROWS = frozenset({GSTR9_Row.TABLE_6A, GSTR9_Row.TABLE_8A, GSTR9_Row.TABLE_9})
 
 # Rows whose invoice detail comes from Purchase Invoices / BOE (not Sales Invoices)
 PURCHASE_ROW_KEYS = frozenset(
@@ -277,9 +279,7 @@ AUTO_COMPUTE_FORMULAS = {
         ],
         subtract=[GSTR9_Row.TABLE_4I, GSTR9_Row.TABLE_4L],
     ),
-    GSTR9_Row.TABLE_4N: lambda d: _sum_rows(
-        d, [GSTR9_Row.TABLE_4H, GSTR9_Row.TABLE_4M]
-    ),
+    GSTR9_Row.TABLE_4N: lambda d: _sum_rows(d, [GSTR9_Row.TABLE_4H, GSTR9_Row.TABLE_4M]),
     GSTR9_Row.TABLE_5G: lambda d: _sum_rows(
         d,
         [
@@ -301,9 +301,7 @@ AUTO_COMPUTE_FORMULAS = {
         ],
         subtract=[GSTR9_Row.TABLE_5H, GSTR9_Row.TABLE_5K],
     ),
-    GSTR9_Row.TABLE_5M: lambda d: _sum_rows(
-        d, [GSTR9_Row.TABLE_5G, GSTR9_Row.TABLE_5L]
-    ),
+    GSTR9_Row.TABLE_5M: lambda d: _sum_rows(d, [GSTR9_Row.TABLE_5G, GSTR9_Row.TABLE_5L]),
     GSTR9_Row.TABLE_5N: lambda d: _sum_rows(
         d,
         [
@@ -320,9 +318,7 @@ AUTO_COMPUTE_FORMULAS = {
         ],
         subtract=[GSTR9_Row.TABLE_11],
     ),
-    GSTR9_Row.TABLE_6A2: lambda d: _sum_rows(
-        d, [GSTR9_Row.TABLE_6A], subtract=[GSTR9_Row.TABLE_6A1]
-    ),
+    GSTR9_Row.TABLE_6A2: lambda d: _sum_rows(d, [GSTR9_Row.TABLE_6A], subtract=[GSTR9_Row.TABLE_6A1]),
     GSTR9_Row.TABLE_6B: lambda d: _sum_rows(
         d,
         [
@@ -366,15 +362,9 @@ AUTO_COMPUTE_FORMULAS = {
             GSTR9_Row.TABLE_6H,
         ],
     ),
-    GSTR9_Row.TABLE_6J: lambda d: _sum_rows(
-        d, [GSTR9_Row.TABLE_6I], subtract=[GSTR9_Row.TABLE_6A2]
-    ),
-    GSTR9_Row.TABLE_6N: lambda d: _sum_rows(
-        d, [GSTR9_Row.TABLE_6K, GSTR9_Row.TABLE_6L, GSTR9_Row.TABLE_6M]
-    ),
-    GSTR9_Row.TABLE_6O: lambda d: _sum_rows(
-        d, [GSTR9_Row.TABLE_6I, GSTR9_Row.TABLE_6N]
-    ),
+    GSTR9_Row.TABLE_6J: lambda d: _sum_rows(d, [GSTR9_Row.TABLE_6I], subtract=[GSTR9_Row.TABLE_6A2]),
+    GSTR9_Row.TABLE_6N: lambda d: _sum_rows(d, [GSTR9_Row.TABLE_6K, GSTR9_Row.TABLE_6L, GSTR9_Row.TABLE_6M]),
+    GSTR9_Row.TABLE_6O: lambda d: _sum_rows(d, [GSTR9_Row.TABLE_6I, GSTR9_Row.TABLE_6N]),
     GSTR9_Row.TABLE_7I: lambda d: _sum_rows(
         d,
         [
@@ -390,9 +380,7 @@ AUTO_COMPUTE_FORMULAS = {
             GSTR9_Row.TABLE_7H1,
         ],
     ),
-    GSTR9_Row.TABLE_7J: lambda d: _sum_rows(
-        d, [GSTR9_Row.TABLE_6O], subtract=[GSTR9_Row.TABLE_7I]
-    ),
+    GSTR9_Row.TABLE_7J: lambda d: _sum_rows(d, [GSTR9_Row.TABLE_6O], subtract=[GSTR9_Row.TABLE_7I]),
     GSTR9_Row.TABLE_8B: lambda d: d.get(GSTR9_Row.TABLE_6B, _empty_row()),
     GSTR9_Row.TABLE_8D: lambda d: _sum_rows(
         d, [GSTR9_Row.TABLE_8A], subtract=[GSTR9_Row.TABLE_8B, GSTR9_Row.TABLE_8C]
@@ -402,9 +390,7 @@ AUTO_COMPUTE_FORMULAS = {
         d, [GSTR9_Row.TABLE_8G], subtract=[GSTR9_Row.TABLE_8H, GSTR9_Row.TABLE_8H1]
     ),
     GSTR9_Row.TABLE_8J: lambda d: d.get(GSTR9_Row.TABLE_8I, _empty_row()),
-    GSTR9_Row.TABLE_8K: lambda d: _sum_rows(
-        d, [GSTR9_Row.TABLE_8E, GSTR9_Row.TABLE_8F, GSTR9_Row.TABLE_8J]
-    ),
+    GSTR9_Row.TABLE_8K: lambda d: _sum_rows(d, [GSTR9_Row.TABLE_8E, GSTR9_Row.TABLE_8F, GSTR9_Row.TABLE_8J]),
 }
 
 
@@ -430,6 +416,7 @@ def _sum_rows(data, add_rows, subtract=None):
 def compute_auto_rows(data):
     """
     Compute all auto-computed rows in dependency order.
+
     data is a dict of {row_key: {field: value, ...}}
     """
     # Compute in defined order (formulas dict is insertion-ordered in Python 3.7+)
@@ -440,7 +427,9 @@ def compute_auto_rows(data):
 
 
 # Rows whose amounts are derived from credit note documents (negative in ERP).
-# After aggregation these are negated so they display and compare as positive values, matching the portal convention where credit notes are shown as positive and subtracted in the sub-total formula.
+# After aggregation these are negated so they display and compare as positive values,
+# matching the portal convention where credit notes are shown as positive and subtracted
+# in the sub-total formula.
 CREDIT_NOTE_ROWS = frozenset({GSTR9_Row.TABLE_4I, GSTR9_Row.TABLE_5H})
 
 
