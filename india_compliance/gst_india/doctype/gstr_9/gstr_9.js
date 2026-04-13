@@ -174,6 +174,7 @@ const DETAIL_VIEW_ROWS = new Set([
     "4C",
     "4D",
     "4E",
+    "4F",
     "4G",
     "4I",
     "4J",
@@ -242,43 +243,11 @@ const DISABLED_CELLS = {
 const TABLE_SECTIONS = [
     {
         title: "Part II — Table 4: Outward Supplies (Tax Payable)",
-        rows: [
-            "4A",
-            "4B",
-            "4C",
-            "4D",
-            "4E",
-            "4F",
-            "4G",
-            "4G1",
-            "4H",
-            "4I",
-            "4J",
-            "4K",
-            "4L",
-            "4M",
-            "4N",
-        ],
+        rows: ["4A", "4B", "4C", "4D", "4E", "4F", "4G", "4G1", "4H", "4I", "4J", "4K", "4L", "4M", "4N"],
     },
     {
         title: "Part II — Table 5: Outward Supplies (Tax Not Payable)",
-        rows: [
-            "5A",
-            "5B",
-            "5C",
-            "5C1",
-            "5D",
-            "5E",
-            "5F",
-            "5G",
-            "5H",
-            "5I",
-            "5J",
-            "5K",
-            "5L",
-            "5M",
-            "5N",
-        ],
+        rows: ["5A", "5B", "5C", "5C1", "5D", "5E", "5F", "5G", "5H", "5I", "5J", "5K", "5L", "5M", "5N"],
     },
     {
         title: "Part III — Table 6: ITC Availed",
@@ -314,20 +283,7 @@ const TABLE_SECTIONS = [
         title: "Part III — Table 7: ITC Reversed",
         hide_taxable_value: true,
         hidden: true,
-        rows: [
-            "7A",
-            "7A1",
-            "7A2",
-            "7B",
-            "7C",
-            "7D",
-            "7E",
-            "7F",
-            "7G",
-            "7H1",
-            "7I",
-            "7J",
-        ],
+        rows: ["7A", "7A1", "7A2", "7B", "7C", "7D", "7E", "7F", "7G", "7H1", "7I", "7J"],
     },
     {
         title: "Part III — Table 8: Other ITC Related Information",
@@ -393,7 +349,7 @@ frappe.ui.form.on(DOCTYPE, {
         frm.trigger("company");
 
         // Setup realtime listeners
-        frappe.realtime.on("gstr9_data_prepared", message => {
+        frappe.realtime.on("gstr9_data_prepared", (message) => {
             const { filters } = message;
 
             if (
@@ -402,14 +358,14 @@ frappe.ui.form.on(DOCTYPE, {
             )
                 return;
 
-            frm.taxpayer_api_call("generate_gstr9").then(r => {
+            frm.taxpayer_api_call("generate_gstr9").then((r) => {
                 if (!r.message) return;
                 frm.doc.__gst_data = r.message;
                 frm.trigger("load_gstr9_data");
             });
         });
 
-        frappe.realtime.on("gstr9_generation_failed", message => {
+        frappe.realtime.on("gstr9_generation_failed", (message) => {
             const { error, filters } = message;
             frappe.msgprint({
                 title: __("GSTR-9 Generation Failed"),
@@ -422,7 +378,7 @@ frappe.ui.form.on(DOCTYPE, {
             });
         });
 
-        frappe.realtime.on("show_missing_gst_credentials_message", message => {
+        frappe.realtime.on("show_missing_gst_credentials_message", (message) => {
             frappe.msgprint(message);
         });
 
@@ -497,7 +453,7 @@ class GSTR9 {
     refresh_data(data) {
         if (data) this.data = data;
 
-        this.TABS.forEach(_tab => {
+        this.TABS.forEach((_tab) => {
             const tab_name = _tab.name;
             const tab = this.tabs[`${tab_name}_tab`];
             const tab_data = this._get_tab_data(tab_name);
@@ -558,9 +514,7 @@ class GSTR9 {
         });
         this.tab_group.make();
 
-        this.tabs = Object.fromEntries(
-            this.tab_group.tabs.map(tab => [tab.df.fieldname, tab]),
-        );
+        this.tabs = Object.fromEntries(this.tab_group.tabs.map((tab) => [tab.df.fieldname, tab]));
 
         // Remove padding around content
         this.$wrapper.closest(".form-column").css("padding", "0px");
@@ -619,16 +573,13 @@ class GSTR9 {
                 const hsn_key = section.rows[0];
                 const hsn_row = row_map[hsn_key];
                 if (!hsn_row) continue;
-                const has_data =
-                    (hsn_row.goods?.length || 0) + (hsn_row.services?.length || 0) > 0;
+                const has_data = (hsn_row.goods?.length || 0) + (hsn_row.services?.length || 0) > 0;
                 if (!has_data) continue;
                 $wrapper.append(this._build_hsn_section_html(section.title, hsn_row));
                 continue;
             }
 
-            const section_rows = section.rows
-                .filter(key => row_map[key])
-                .map(key => row_map[key]);
+            const section_rows = section.rows.filter((key) => row_map[key]).map((key) => row_map[key]);
 
             if (!section_rows.length) continue;
 
@@ -641,7 +592,7 @@ class GSTR9 {
             const section_cols =
                 section.custom_columns ||
                 (section.hide_taxable_value
-                    ? AMOUNT_COLUMNS.filter(c => c.fieldname !== "taxable_value")
+                    ? AMOUNT_COLUMNS.filter((c) => c.fieldname !== "taxable_value")
                     : AMOUNT_COLUMNS);
 
             if (section.bifurcated_rows) {
@@ -656,12 +607,7 @@ class GSTR9 {
                 );
             } else {
                 $wrapper.append(
-                    this._build_section_html(
-                        section.title,
-                        section_rows,
-                        tab_name === "books",
-                        section_cols,
-                    ),
+                    this._build_section_html(section.title, section_rows, tab_name === "books", section_cols),
                 );
             }
         }
@@ -686,7 +632,7 @@ class GSTR9 {
             // For bifurcated sections, check sub-rows for differences
             let keys_to_check;
             if (section.bifurcated_rows) {
-                keys_to_check = section.rows.flatMap(key => {
+                keys_to_check = section.rows.flatMap((key) => {
                     const subs = section.bifurcated_rows[key];
                     return subs ? subs : [key];
                 });
@@ -694,13 +640,13 @@ class GSTR9 {
                 keys_to_check = section.rows;
             }
 
-            const section_diffs = keys_to_check.filter(key => comparison[key]);
+            const section_diffs = keys_to_check.filter((key) => comparison[key]);
             if (!section_diffs.length) continue;
 
             const cmp_cols =
                 section.custom_columns ||
                 (section.hide_taxable_value
-                    ? AMOUNT_COLUMNS.filter(c => c.fieldname !== "taxable_value")
+                    ? AMOUNT_COLUMNS.filter((c) => c.fieldname !== "taxable_value")
                     : AMOUNT_COLUMNS);
 
             html += `<div class="gstr9-section">
@@ -729,15 +675,21 @@ class GSTR9 {
                     <td rowspan="3" class="gstr9-col-desc">${__(desc)}</td>
                     <td class="gstr9-col-source"><span class="badge badge-info">${__("Books")}</span></td>`;
                 for (const col of cmp_cols) {
-                    html += `<td class="text-right">${format_currency(diff.books?.[col.fieldname] || 0)}</td>`;
+                    html += `<td class="text-right">${format_currency(
+                        diff.books?.[col.fieldname] || 0,
+                    )}</td>`;
                 }
                 html += `</tr>`;
 
                 // Portal row
                 html += `<tr class="gstr9-comparison-portal">
-                    <td class="gstr9-col-source"><span class="badge badge-warning">${__("Portal")}</span></td>`;
+                    <td class="gstr9-col-source"><span class="badge badge-warning">${__(
+                        "Portal",
+                    )}</span></td>`;
                 for (const col of cmp_cols) {
-                    html += `<td class="text-right">${format_currency(diff.portal?.[col.fieldname] || 0)}</td>`;
+                    html += `<td class="text-right">${format_currency(
+                        diff.portal?.[col.fieldname] || 0,
+                    )}</td>`;
                 }
                 html += `</tr>`;
 
@@ -759,13 +711,7 @@ class GSTR9 {
         $wrapper.html(html);
     }
 
-    _build_section_with_type_column_html(
-        section,
-        rows,
-        row_map,
-        is_books = false,
-        columns = AMOUNT_COLUMNS,
-    ) {
+    _build_section_with_type_column_html(section, rows, row_map, is_books = false, columns = AMOUNT_COLUMNS) {
         const bifurcated_rows = section.bifurcated_rows || {};
 
         let html = `<div class="gstr9-section">
@@ -826,13 +772,15 @@ class GSTR9 {
                     if (i > 0) html += `<tr>`;
 
                     // Use static ROW_DESCRIPTIONS as primary label (always available)
-                    const type_label =
-                        ROW_DESCRIPTIONS[sub_key] || sub_row.description || "";
+                    const type_label = ROW_DESCRIPTIONS[sub_key] || sub_row.description || "";
 
                     if (is_books && DETAIL_VIEW_ROWS.has(sub_key)) {
                         html += `<td><a href="#" class="gstr9-detail-link"
                             data-row-key="${sub_key}"
-                            data-description="${(row.description || "").replace(/"/g, "&quot;")} - ${type_label.replace(/"/g, "&quot;")}"
+                            data-description="${(row.description || "").replace(
+                                /"/g,
+                                "&quot;",
+                            )} - ${type_label.replace(/"/g, "&quot;")}"
                             >${__(type_label)}</a></td>`;
                     } else {
                         html += `<td>${__(type_label)}</td>`;
@@ -842,7 +790,9 @@ class GSTR9 {
                         if (sub_disabled?.has(col.fieldname)) {
                             html += `<td class="gstr9-cell-disabled"></td>`;
                         } else {
-                            html += `<td class="text-right">${format_currency(sub_row[col.fieldname] || 0)}</td>`;
+                            html += `<td class="text-right">${format_currency(
+                                sub_row[col.fieldname] || 0,
+                            )}</td>`;
                         }
                     }
 
@@ -912,8 +862,7 @@ class GSTR9 {
             const is_manual_entry = MANUAL_ENTRY_ROWS.has(row.row_key);
             let row_class = "";
             if (is_auto) row_class = "gstr9-row-auto";
-            else if (is_portal || is_not_supported || is_manual_entry)
-                row_class = "gstr9-row-portal";
+            else if (is_portal || is_not_supported || is_manual_entry) row_class = "gstr9-row-portal";
 
             html += `<tr class="${row_class}">
                 <td class="gstr9-col-sno">${row.row_key}</td>
@@ -995,7 +944,7 @@ class GSTR9 {
                     </thead>
                     <tbody>`;
 
-            rows.forEach(row => {
+            rows.forEach((row) => {
                 html += `<tr class="gstr9-row-portal">
                     <td>${row.row_label || ""}</td>
                     <td>${__(row.tax_head || "")}</td>
@@ -1111,11 +1060,7 @@ class GSTR9 {
             html += this._build_hsn_sub_table_html(__("Part A - Goods"), goods, false);
         }
         if (services.length) {
-            html += this._build_hsn_sub_table_html(
-                __("Part B - Services"),
-                services,
-                true,
-            );
+            html += this._build_hsn_sub_table_html(__("Part B - Services"), services, true);
         }
 
         html += `</div>`;
@@ -1196,7 +1141,7 @@ class GSTR9 {
     // ───── Detail view ─────
 
     _setup_detail_view_listeners() {
-        this.$wrapper.on("click", ".gstr9-detail-link", async e => {
+        this.$wrapper.on("click", ".gstr9-detail-link", async (e) => {
             e.preventDefault();
             const $link = $(e.currentTarget);
             const row_key = $link.data("row-key");
@@ -1235,11 +1180,7 @@ class GSTR9 {
             return;
         }
 
-        this._show_detail_dialog(
-            row_key,
-            description,
-            result || { is_purchase: false, data: [] },
-        );
+        this._show_detail_dialog(row_key, description, result || { is_purchase: false, data: [] });
     }
 
     _show_detail_dialog(row_key, description, result) {
@@ -1248,21 +1189,14 @@ class GSTR9 {
         if (!data || !data.length) {
             frappe.msgprint({
                 title: __("No Records"),
-                message: __("No records found for {0} — {1}", [
-                    row_key,
-                    __(description),
-                ]),
+                message: __("No records found for {0} — {1}", [row_key, __(description)]),
             });
             return;
         }
 
         const route = is_purchase ? "purchase-invoice" : "sales-invoice";
-        const party_gstin_label = is_purchase
-            ? __("Supplier GSTIN")
-            : __("Customer GSTIN");
-        const party_name_label = is_purchase
-            ? __("Supplier Name")
-            : __("Customer Name");
+        const party_gstin_label = is_purchase ? __("Supplier GSTIN") : __("Customer GSTIN");
+        const party_name_label = is_purchase ? __("Supplier Name") : __("Customer Name");
         const doc_label = is_purchase ? __("Bill No.") : __("Invoice No.");
         const class_label = is_purchase ? __("Classification") : __("Type");
 
@@ -1277,7 +1211,7 @@ class GSTR9 {
         const party_gstin_field = is_purchase ? "supplier_gstin" : "customer_gstin";
         const party_name_field = is_purchase ? "supplier_name" : "customer_name";
 
-        const rows = data.map(row => {
+        const rows = data.map((row) => {
             totals.total_taxable_value += row.total_taxable_value || 0;
             totals.total_igst_amount += row.total_igst_amount || 0;
             totals.total_cgst_amount += row.total_cgst_amount || 0;
@@ -1307,7 +1241,7 @@ class GSTR9 {
             "total_cess_amount",
         ]);
 
-        const fmt_currency = value => format_currency(value || 0);
+        const fmt_currency = (value) => format_currency(value || 0);
 
         const columns = [
             {
@@ -1322,7 +1256,9 @@ class GSTR9 {
                 field: "document_number",
                 width: 190,
                 format: (value, _row, _col, data) =>
-                    `<a href="/app/${data?.doc_route || route}/${encodeURIComponent(value || "")}" target="_blank">${frappe.utils.escape_html(value || "")}</a>`,
+                    `<a href="/app/${data?.doc_route || route}/${encodeURIComponent(
+                        value || "",
+                    )}" target="_blank">${frappe.utils.escape_html(value || "")}</a>`,
             },
             {
                 id: "party_gstin",
@@ -1438,7 +1374,7 @@ class GSTR9 {
 
         // Primary: Generate
         this.frm.page.set_primary_action(__("Generate"), () => {
-            this.frm.taxpayer_api_call("generate_gstr9").then(r => {
+            this.frm.taxpayer_api_call("generate_gstr9").then((r) => {
                 if (!r.message) return;
                 this.frm.doc.__gst_data = r.message;
                 this.frm.trigger("load_gstr9_data");
@@ -1452,7 +1388,7 @@ class GSTR9 {
                 this._recomputing = true;
                 this.frm
                     .taxpayer_api_call("recompute_books")
-                    .then(r => {
+                    .then((r) => {
                         if (!r.message) return;
                         this.frm.doc.__gst_data = r.message;
                         this.frm.trigger("load_gstr9_data");
@@ -1463,8 +1399,7 @@ class GSTR9 {
             });
 
             this.frm.add_custom_button(__("Export Books as Excel"), () => {
-                const url =
-                    "india_compliance.gst_india.doctype.gstr_9.gstr_9.export_gstr9_books_as_excel";
+                const url = "india_compliance.gst_india.doctype.gstr_9.gstr_9.export_gstr9_books_as_excel";
 
                 open_url_post(`/api/method/${url}`, {
                     company_gstin: this.frm.doc.company_gstin,
@@ -1475,7 +1410,7 @@ class GSTR9 {
             if (is_gstr9_api_enabled()) {
                 this.frm.add_custom_button(__("Download Portal Data"), () => {
                     frappe.show_alert(__("Downloading portal data from GSTN..."));
-                    this.frm.taxpayer_api_call("download_portal_data").then(r => {
+                    this.frm.taxpayer_api_call("download_portal_data").then((r) => {
                         if (!r.message) return;
                         this.frm.doc.__gst_data = r.message;
                         this.frm.trigger("load_gstr9_data");
@@ -1491,9 +1426,5 @@ class GSTR9 {
 }
 
 function is_gstr9_api_enabled() {
-    return (
-        india_compliance.is_api_enabled() &&
-        !gst_settings.sandbox_mode &&
-        gst_settings.enable_gstr_9_api
-    );
+    return india_compliance.is_api_enabled() && !gst_settings.sandbox_mode && gst_settings.enable_gstr_9_api;
 }
