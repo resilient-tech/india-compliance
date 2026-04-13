@@ -382,7 +382,7 @@ class TestEInvoice(IntegrationTestCase):
         self.assertFalse(frappe.db.get_value("e-Waybill Log", {"reference_name": si.name}, "name"))
 
     @responses.activate
-    @change_settings("GST Settings", {"include_nil_exempted_in_e_invoice": 0})
+    @change_settings("GST Settings", {"report_nil_exempted_with_taxable_values": 0})
     def test_generate_e_invoice_with_nil_exempted_item(self):
         """Generate test e-Invoice for nil/exempted items Item"""
 
@@ -437,9 +437,9 @@ class TestEInvoice(IntegrationTestCase):
 
         self.assertFalse(frappe.db.get_value("e-Waybill Log", {"reference_name": si.name}, "name"))
 
-    @change_settings("GST Settings", {"include_nil_exempted_in_e_invoice": 1})
-    def test_request_data_with_nil_exempted_item_as_line_item(self):
-        """Nil/Exempted item should be reported as a separate line item with item-level OthChrg."""
+    @change_settings("GST Settings", {"report_nil_exempted_with_taxable_values": 0})
+    def test_request_data_with_nil_exempted_item_without_taxable_values(self):
+        """Nil/Exempted item should not be reported in taxable fields when setting is disabled."""
 
         test_data = self.e_invoice_test_data.get("nil_exempted_item")
         si = create_sales_invoice(**test_data.get("kwargs"), do_not_submit=True, is_in_state=True)
@@ -466,11 +466,52 @@ class TestEInvoice(IntegrationTestCase):
         self.assertEqual(0, nil_item["AssAmt"])
         self.assertEqual(0, nil_item["TotAmt"])
         self.assertEqual(0, nil_item["UnitPrice"])
+        self.assertEqual(100, nil_item["OthChrg"])
+        self.assertEqual(100, nil_item["TotItemVal"])
+
+        self.assertEqual(10, taxable_item["AssAmt"])
+        self.assertEqual(10, taxable_item["TotAmt"])
+        self.assertEqual(10, taxable_item["UnitPrice"])
+        self.assertEqual(11.2, taxable_item["TotItemVal"])
+
+        self.assertEqual(10, request_data["ValDtls"]["AssVal"])
+        self.assertEqual(0, request_data["ValDtls"]["OthChrg"])
+        self.assertEqual(111, request_data["ValDtls"]["TotInvVal"])
+
+    @change_settings("GST Settings", {"report_nil_exempted_with_taxable_values": 1})
+    def test_request_data_with_nil_exempted_item_as_line_item(self):
+        """Nil/Exempted item should be reported with taxable values when setting is enabled."""
+
+        test_data = self.e_invoice_test_data.get("nil_exempted_item")
+        si = create_sales_invoice(**test_data.get("kwargs"), do_not_submit=True, is_in_state=True)
+
+        append_item(
+            si,
+            frappe._dict(
+                rate=10,
+                item_tax_template="GST 12% - _TIRC",
+                uom="Nos",
+                gst_hsn_code="61149090",
+                gst_treatment="Taxable",
+            ),
+        )
+        si.save()
+
+        request_data = EInvoiceData(si).get_data()
+
+        self.assertEqual(2, len(request_data["ItemList"]))
+
+        nil_item = next(item for item in request_data["ItemList"] if item["GstRt"] == 0)
+        taxable_item = next(item for item in request_data["ItemList"] if item["GstRt"] == 12.0)
+
+        self.assertEqual(100, nil_item["AssAmt"])
+        self.assertEqual(100, nil_item["TotAmt"])
+        self.assertEqual(100, nil_item["UnitPrice"])
         self.assertEqual(0, nil_item["GstRt"])
         self.assertEqual(0, nil_item["IgstAmt"])
         self.assertEqual(0, nil_item["CgstAmt"])
         self.assertEqual(0, nil_item["SgstAmt"])
-        self.assertEqual(100, nil_item["OthChrg"])
+        self.assertEqual(0, nil_item["OthChrg"])
         self.assertEqual(100, nil_item["TotItemVal"])
 
         self.assertEqual(10, taxable_item["AssAmt"])
@@ -481,7 +522,7 @@ class TestEInvoice(IntegrationTestCase):
         self.assertEqual(0.6, taxable_item["SgstAmt"])
         self.assertEqual(11.2, taxable_item["TotItemVal"])
 
-        self.assertEqual(10, request_data["ValDtls"]["AssVal"])
+        self.assertEqual(110, request_data["ValDtls"]["AssVal"])
         self.assertEqual(0, request_data["ValDtls"]["OthChrg"])
         self.assertEqual(111, request_data["ValDtls"]["TotInvVal"])
 
@@ -786,12 +827,7 @@ class TestEInvoice(IntegrationTestCase):
                 gst_treatment="Nil-Rated",
             ),
         )
-        self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
-            re.compile(r"^(e-Invoice is not applicable for invoice with only Nil-Rated/Exempted items*)$"),
-            validate_e_invoice_applicability,
-            si,
-        )
+        self.assertTrue(validate_e_invoice_applicability(si))
 
         append_item(
             si,
