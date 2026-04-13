@@ -658,18 +658,23 @@ class EInvoiceData(GSTTransactionData):
         self.item_list = []
 
         for item_details in self.get_all_item_details():
-            if item_details.get("gst_treatment") not in TAXABLE_GST_TREATMENTS:
+            if (
+                item_details.get("gst_treatment") not in TAXABLE_GST_TREATMENTS
+                and not self.settings.include_nil_exempted_in_e_invoice
+            ):
                 continue
 
             self.item_list.append(self.get_item_data(item_details))
 
     def update_other_charges(self):
         """
-        Non Taxable Value should be added to other charges.
+        If nil-rated/exempted items are not included as line items, their total
+        value must be added to ValDtls.OthChrg so it is reflected in TotInvVal.
         """
-        self.transaction_details.other_charges = self.rounded(
-            self.transaction_details.other_charges + self.transaction_details.total_non_taxable_value
-        )
+        if not self.settings.include_nil_exempted_in_e_invoice:
+            self.transaction_details.other_charges = self.rounded(
+                self.transaction_details.other_charges + self.transaction_details.total_non_taxable_value
+            )
 
     def validate_transaction(self):
         super().validate_transaction()
@@ -701,6 +706,20 @@ class EInvoiceData(GSTTransactionData):
                 "barcode": self.sanitize_value(item.barcode, max_length=30, truncate=False),
             }
         )
+
+        if (
+            item_details.gst_treatment not in TAXABLE_GST_TREATMENTS
+            and self.settings.include_nil_exempted_in_e_invoice
+        ):
+            # Include as a line item: zero AssAmt/UnitPrice, report taxable value as other charges.
+            # item-level OthChrg so TotItemVal = OthChrg (NIC schema approach).
+            item_details.update(
+                {
+                    "other_charges": item_details.taxable_value,
+                    "taxable_value": 0,
+                    "unit_rate": 0,
+                }
+            )
 
         if self.doc.is_reverse_charge:
             item_details["total_value"] = abs(self.rounded(item.taxable_value, 2))
@@ -988,6 +1007,7 @@ class EInvoiceData(GSTTransactionData):
             "CesRt": item_details.cess_rate,
             "CesAmt": item_details.cess_amount,
             "CesNonAdvlAmt": item_details.cess_non_advol_amount,
+            "OthChrg": item_details.get("other_charges", 0),
             "TotItemVal": item_details.total_value,
             "BchDtls": {
                 "Nm": item_details.batch_no,

@@ -146,6 +146,7 @@ class TestEInvoice(IntegrationTestCase):
                     "CesRt": 0,
                     "CesAmt": 0,
                     "CesNonAdvlAmt": 0,
+                    "OthChrg": 0,
                     "TotItemVal": 8.52,
                     "BchDtls": {"Nm": None, "ExpDt": None},
                 },
@@ -169,6 +170,7 @@ class TestEInvoice(IntegrationTestCase):
                     "CesRt": 0,
                     "CesAmt": 0,
                     "CesNonAdvlAmt": 0,
+                    "OthChrg": 0,
                     "TotItemVal": 8.5,
                     "BchDtls": {"Nm": None, "ExpDt": None},
                 },
@@ -380,6 +382,7 @@ class TestEInvoice(IntegrationTestCase):
         self.assertFalse(frappe.db.get_value("e-Waybill Log", {"reference_name": si.name}, "name"))
 
     @responses.activate
+    @change_settings("GST Settings", {"include_nil_exempted_in_e_invoice": 0})
     def test_generate_e_invoice_with_nil_exempted_item(self):
         """Generate test e-Invoice for nil/exempted items Item"""
 
@@ -433,6 +436,54 @@ class TestEInvoice(IntegrationTestCase):
         )
 
         self.assertFalse(frappe.db.get_value("e-Waybill Log", {"reference_name": si.name}, "name"))
+
+    @change_settings("GST Settings", {"include_nil_exempted_in_e_invoice": 1})
+    def test_request_data_with_nil_exempted_item_as_line_item(self):
+        """Nil/Exempted item should be reported as a separate line item with item-level OthChrg."""
+
+        test_data = self.e_invoice_test_data.get("nil_exempted_item")
+        si = create_sales_invoice(**test_data.get("kwargs"), do_not_submit=True, is_in_state=True)
+
+        append_item(
+            si,
+            frappe._dict(
+                rate=10,
+                item_tax_template="GST 12% - _TIRC",
+                uom="Nos",
+                gst_hsn_code="61149090",
+                gst_treatment="Taxable",
+            ),
+        )
+        si.save()
+
+        request_data = EInvoiceData(si).get_data()
+
+        self.assertEqual(2, len(request_data["ItemList"]))
+
+        nil_item = next(item for item in request_data["ItemList"] if item["GstRt"] == 0)
+        taxable_item = next(item for item in request_data["ItemList"] if item["GstRt"] == 12.0)
+
+        self.assertEqual(0, nil_item["AssAmt"])
+        self.assertEqual(0, nil_item["TotAmt"])
+        self.assertEqual(0, nil_item["UnitPrice"])
+        self.assertEqual(0, nil_item["GstRt"])
+        self.assertEqual(0, nil_item["IgstAmt"])
+        self.assertEqual(0, nil_item["CgstAmt"])
+        self.assertEqual(0, nil_item["SgstAmt"])
+        self.assertEqual(100, nil_item["OthChrg"])
+        self.assertEqual(100, nil_item["TotItemVal"])
+
+        self.assertEqual(10, taxable_item["AssAmt"])
+        self.assertEqual(10, taxable_item["TotAmt"])
+        self.assertEqual(10, taxable_item["UnitPrice"])
+        self.assertEqual(12.0, taxable_item["GstRt"])
+        self.assertEqual(0.6, taxable_item["CgstAmt"])
+        self.assertEqual(0.6, taxable_item["SgstAmt"])
+        self.assertEqual(11.2, taxable_item["TotItemVal"])
+
+        self.assertEqual(10, request_data["ValDtls"]["AssVal"])
+        self.assertEqual(0, request_data["ValDtls"]["OthChrg"])
+        self.assertEqual(111, request_data["ValDtls"]["TotInvVal"])
 
     @responses.activate
     def test_credit_note_e_invoice_with_goods_item(self):
