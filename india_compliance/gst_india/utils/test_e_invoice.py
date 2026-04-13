@@ -385,7 +385,6 @@ class TestEInvoice(IntegrationTestCase):
     @change_settings("GST Settings", {"report_nil_exempted_with_taxable_values": 0})
     def test_generate_e_invoice_with_nil_exempted_item(self):
         """Generate e-Invoice for invoice containing Nil/Exempted items."""
-
         test_data = self.e_invoice_test_data.get("nil_exempted_item")
         si = create_sales_invoice(**test_data.get("kwargs"), do_not_submit=True, is_in_state=True)
 
@@ -520,7 +519,6 @@ class TestEInvoice(IntegrationTestCase):
     @change_settings("GST Settings", {"report_nil_exempted_with_taxable_values": 1})
     def test_request_data_with_nil_exempted_item_as_line_item(self):
         """Nil/Exempted item should be reported with taxable values when setting is enabled."""
-
         test_data = self.e_invoice_test_data.get("nil_exempted_item")
         si = create_sales_invoice(**test_data.get("kwargs"), do_not_submit=True, is_in_state=True)
 
