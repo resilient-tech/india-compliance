@@ -10,7 +10,6 @@ from frappe.utils import add_to_date, getdate
 from india_compliance.gst_india.constants import (
     GST_ACCOUNT_FIELDS,
     GST_PARTY_TYPES,
-    TAXABLE_GST_TREATMENTS,
 )
 from india_compliance.gst_india.constants.custom_fields import (
     E_INVOICE_FIELDS,
@@ -475,12 +474,9 @@ def update_pending_status(e_invoice_applicability_date, company=None):
         return
 
     sales_invoice = frappe.qb.DocType("Sales Invoice")
-    sales_invoice_item = frappe.qb.DocType("Sales Invoice Item")
 
     query = (
         frappe.qb.update(sales_invoice)
-        .join(sales_invoice_item)
-        .on(sales_invoice_item.parent == sales_invoice.name)
         .set(sales_invoice.einvoice_status, "Pending")
         .where(IfNull(sales_invoice.billing_address_gstin, "") != IfNull(sales_invoice.company_gstin, ""))
         .where(IfNull(sales_invoice.irn, "") == "")

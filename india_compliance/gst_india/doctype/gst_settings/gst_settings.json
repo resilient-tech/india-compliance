@@ -725,7 +725,7 @@
    "description": "If enabled, Nil Rated / Exempted / Non-GST items are reported with taxable values. If disabled, taxable value is reported as Other Charges.",
    "fieldname": "report_nil_exempted_with_taxable_values",
    "fieldtype": "Check",
-   "label": "Report Taxable Values for Exempted Items in e-Invoice"
+   "label": "Report Nil / Exempted Items with Taxable Values"
   }
  ],
  "grid_page_length": 50,
