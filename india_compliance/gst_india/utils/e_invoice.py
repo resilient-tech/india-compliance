@@ -540,9 +540,7 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
     if doc.company_gstin == doc.billing_address_gstin:
         return _throw(_("e-Invoice is not applicable for invoices with same company and billing GSTIN"))
 
-    if not validate_taxable_item(doc, throw=throw):
-        # e-Invoice not required for invoice wih all nill-rated/exempted items.
-        return
+    # Nil-Rated/Exempted/Non-GST only invoices are allowed for e-Invoice.
 
     if not (doc.place_of_supply == "96-Other Countries" or doc.billing_address_gstin):
         return _throw(_("e-Invoice is not applicable for B2C invoices"))
@@ -658,23 +656,11 @@ class EInvoiceData(GSTTransactionData):
         self.item_list = []
 
         for item_details in self.get_all_item_details():
-            if (
-                item_details.get("gst_treatment") not in TAXABLE_GST_TREATMENTS
-                and not self.settings.include_nil_exempted_in_e_invoice
-            ):
-                continue
-
             self.item_list.append(self.get_item_data(item_details))
 
     def update_other_charges(self):
-        """
-        If nil-rated/exempted items are not included as line items, their total
-        value must be added to ValDtls.OthChrg so it is reflected in TotInvVal.
-        """
-        if not self.settings.include_nil_exempted_in_e_invoice:
-            self.transaction_details.other_charges = self.rounded(
-                self.transaction_details.other_charges + self.transaction_details.total_non_taxable_value
-            )
+        # Nil/exempted values are now represented at item-level.
+        return
 
     def validate_transaction(self):
         super().validate_transaction()
@@ -709,10 +695,10 @@ class EInvoiceData(GSTTransactionData):
 
         if (
             item_details.gst_treatment not in TAXABLE_GST_TREATMENTS
-            and self.settings.include_nil_exempted_in_e_invoice
+            and not self.settings.report_nil_exempted_with_taxable_values
         ):
-            # Include as a line item: zero AssAmt/UnitPrice, report taxable value as other charges.
-            # item-level OthChrg so TotItemVal = OthChrg (NIC schema approach).
+            # Do not report taxable value for nil/exempted items.
+            # Report it as item-level other charges so item value is still preserved.
             item_details.update(
                 {
                     "other_charges": item_details.taxable_value,
@@ -762,6 +748,9 @@ class EInvoiceData(GSTTransactionData):
                 "ecommerce_gstin": self.doc.ecommerce_gstin,
             }
         )
+
+        if self.settings.report_nil_exempted_with_taxable_values:
+            self.transaction_details.total_taxable_value = self.transaction_details.total
 
         self.update_payment_details()
 

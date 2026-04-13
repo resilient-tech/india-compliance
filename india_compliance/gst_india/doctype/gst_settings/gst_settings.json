@@ -49,7 +49,7 @@
   "e_invoice_reporting_time_limit_days",
   "column_break_17",
   "fetch_e_invoice_details_from_gst_portal",
-  "include_nil_exempted_in_e_invoice",
+  "report_nil_exempted_with_taxable_values",
   "apply_e_invoice_only_for_selected_companies",
   "e_invoice_applicable_from",
   "e_invoice_applicable_companies",
@@ -693,14 +693,6 @@
    "label": "Restrict Cancellation if e-Invoice not Cancellable"
   },
   {
-   "default": "0",
-   "depends_on": "eval: doc.enable_e_invoice",
-   "description": "If enabled, Nil Rated / Exempted / Non-GST items will be included as separate line items in the e-Invoice with their value reported as item-level Other Charges. If disabled, these items are excluded from the item list and their total value is reported as invoice-level Other Charges.",
-   "fieldname": "include_nil_exempted_in_e_invoice",
-   "fieldtype": "Check",
-   "label": "Include Nil Rated / Exempted Items as Line Items in e-Invoice"
-  },
-  {
    "default": "30",
    "depends_on": "eval: doc.enable_e_invoice",
    "description": "Maximum number of days allowed for e-invoice generation after posting date",
@@ -726,13 +718,21 @@
    "fieldtype": "Table",
    "label": "e-Waybill Threshold for Intrastate",
    "options": "State-wise e-Waybill Threshold"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval: doc.enable_e_invoice",
+   "description": "If enabled, Nil Rated / Exempted / Non-GST items are reported with taxable values. If disabled, taxable value is reported as Other Charges.",
+   "fieldname": "report_nil_exempted_with_taxable_values",
+   "fieldtype": "Check",
+   "label": "Report Taxable Values for Exempted Items in e-Invoice"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-04-13 14:12:37.837904",
+ "modified": "2026-04-13 16:37:45.357792",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
