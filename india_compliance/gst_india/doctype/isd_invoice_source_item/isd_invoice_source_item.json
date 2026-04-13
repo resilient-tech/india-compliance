@@ -1,0 +1,169 @@
+{
+ "actions": [],
+ "creation": "2024-01-01 00:00:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "purchase_invoice",
+  "column_break_gcgg",
+  "is_ineligible_for_itc",
+  "section_break_ewty",
+  "column_break_wbew",
+  "column_break_xkov",
+  "distribution_ratio",
+  "section_break_gylx",
+  "column_break_wnmd",
+  "total_igst",
+  "total_cgst",
+  "total_sgst",
+  "total_cess",
+  "total_cess_non_advol",
+  "column_break_xtvz",
+  "distributed_igst",
+  "distributed_sgst",
+  "distributed_cgst",
+  "distributed_cess",
+  "distributed_cess_non_advol"
+ ],
+ "fields": [
+  {
+   "fieldname": "purchase_invoice",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "label": "Purchase Invoice",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_gcgg",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_gylx",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_xtvz",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fetch_from": "item.is_ineligible_for_itc",
+   "fetch_if_empty": 1,
+   "fieldname": "is_ineligible_for_itc",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Is Ineligible for ITC",
+   "print_hide": 1
+  },
+  {
+   "fieldname": "column_break_wnmd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "distribution_ratio",
+   "fieldtype": "Float",
+   "label": "Distribution Ratio"
+  },
+  {
+   "default": "0",
+   "fieldname": "total_igst",
+   "fieldtype": "Float",
+   "label": "Total IGST",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "total_cgst",
+   "fieldtype": "Float",
+   "label": "Total CGST",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "total_sgst",
+   "fieldtype": "Float",
+   "label": "Total SGST",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "total_cess",
+   "fieldtype": "Float",
+   "label": "Total CESS",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "total_cess_non_advol",
+   "fieldtype": "Float",
+   "label": "Total CESS Non Advol",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "distributed_igst",
+   "fieldtype": "Currency",
+   "label": "Distributed IGST",
+   "no_copy": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "distributed_cgst",
+   "fieldtype": "Currency",
+   "label": "Distributed CGST",
+   "no_copy": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "distributed_sgst",
+   "fieldtype": "Currency",
+   "label": "Distributed SGST",
+   "no_copy": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "distributed_cess",
+   "fieldtype": "Currency",
+   "label": "Distributed CESS",
+   "no_copy": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "distributed_cess_non_advol",
+   "fieldtype": "Currency",
+   "label": "Distributed CESS Non Advol",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "section_break_ewty",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_wbew",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_xkov",
+   "fieldtype": "Column Break"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-04-23 12:21:37.276762",
+ "modified_by": "Administrator",
+ "module": "GST India",
+ "name": "ISD Invoice Source Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

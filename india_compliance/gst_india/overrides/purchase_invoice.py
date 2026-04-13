@@ -77,6 +77,7 @@ def validate(doc, method=None):
     set_or_validate_itc_claim_period(doc)
     set_reconciliation_status(doc)
     set_pending_boe_qty(doc)
+    set_marked_for_isd_distribution(doc)
 
 
 def before_update_after_submit(doc, method=None):
@@ -111,6 +112,15 @@ def set_reconciliation_status(doc):
 def set_pending_boe_qty(doc):
     for item in doc.items:
         item.pending_boe_qty = item.qty if doc.is_boe_applicable else 0
+
+
+def set_marked_for_isd_distribution(doc):
+    if not doc.billing_address:
+        doc.marked_for_isd_distribution = 0
+        return
+
+    gst_category = frappe.db.get_value("Address", doc.billing_address, "gst_category")
+    doc.marked_for_isd_distribution = 1 if gst_category == "Input Service Distributor" else 0
 
 
 def set_boe_applicability(doc):
