@@ -711,6 +711,19 @@ class GSTR9 {
         $wrapper.html(html);
     }
 
+    _render_value_cells(row, row_key, columns) {
+        const disabled = DISABLED_CELLS[row_key];
+        let html = "";
+        for (const col of columns) {
+            if (disabled?.has(col.fieldname)) {
+                html += `<td class="gstr9-cell-disabled"></td>`;
+            } else {
+                html += `<td class="text-right">${format_currency(row[col.fieldname] || 0)}</td>`;
+            }
+        }
+        return html;
+    }
+
     _build_section_with_type_column_html(section, rows, row_map, is_books = false, columns = AMOUNT_COLUMNS) {
         const bifurcated_rows = section.bifurcated_rows || {};
 
@@ -786,15 +799,7 @@ class GSTR9 {
                         html += `<td>${__(type_label)}</td>`;
                     }
 
-                    for (const col of columns) {
-                        if (sub_disabled?.has(col.fieldname)) {
-                            html += `<td class="gstr9-cell-disabled"></td>`;
-                        } else {
-                            html += `<td class="text-right">${format_currency(
-                                sub_row[col.fieldname] || 0,
-                            )}</td>`;
-                        }
-                    }
+                    html += this._render_value_cells(sub_row, sub_key, columns);
 
                     html += `</tr>`;
                 }
@@ -822,14 +827,7 @@ class GSTR9 {
 
                 html += `</td><td></td>`; // empty Type cell
 
-                const disabled = DISABLED_CELLS[row_key];
-                for (const col of columns) {
-                    if (disabled?.has(col.fieldname)) {
-                        html += `<td class="gstr9-cell-disabled"></td>`;
-                    } else {
-                        html += `<td class="text-right">${format_currency(row[col.fieldname] || 0)}</td>`;
-                    }
-                }
+                html += this._render_value_cells(row, row_key, columns);
 
                 html += `</tr>`;
             }
@@ -889,14 +887,7 @@ class GSTR9 {
 
             html += `</td>`;
 
-            const disabled = DISABLED_CELLS[row.row_key];
-            for (const col of columns) {
-                if (disabled?.has(col.fieldname)) {
-                    html += `<td class="gstr9-cell-disabled"></td>`;
-                } else {
-                    html += `<td class="text-right">${format_currency(row[col.fieldname] || 0)}</td>`;
-                }
-            }
+            html += this._render_value_cells(row, row.row_key, columns);
 
             html += `</tr>`;
         }
@@ -1369,16 +1360,19 @@ class GSTR9 {
 
     // ───── Form Actions ─────
 
+    _on_gst_data(r, onSuccess) {
+        if (!r.message) return;
+        this.frm.doc.__gst_data = r.message;
+        this.frm.trigger("load_gstr9_data");
+        onSuccess?.();
+    }
+
     render_form_actions() {
         this.frm.page.clear_actions();
 
         // Primary: Generate
         this.frm.page.set_primary_action(__("Generate"), () => {
-            this.frm.taxpayer_api_call("generate_gstr9").then((r) => {
-                if (!r.message) return;
-                this.frm.doc.__gst_data = r.message;
-                this.frm.trigger("load_gstr9_data");
-            });
+            this.frm.taxpayer_api_call("generate_gstr9").then((r) => this._on_gst_data(r));
         });
 
         // Custom buttons (only if data exists)
@@ -1388,11 +1382,7 @@ class GSTR9 {
                 this._recomputing = true;
                 this.frm
                     .taxpayer_api_call("recompute_books")
-                    .then((r) => {
-                        if (!r.message) return;
-                        this.frm.doc.__gst_data = r.message;
-                        this.frm.trigger("load_gstr9_data");
-                    })
+                    .then((r) => this._on_gst_data(r))
                     .finally(() => {
                         this._recomputing = false;
                     });
@@ -1410,15 +1400,14 @@ class GSTR9 {
             if (is_gstr9_api_enabled()) {
                 this.frm.add_custom_button(__("Download Portal Data"), () => {
                     frappe.show_alert(__("Downloading portal data from GSTN..."));
-                    this.frm.taxpayer_api_call("download_portal_data").then((r) => {
-                        if (!r.message) return;
-                        this.frm.doc.__gst_data = r.message;
-                        this.frm.trigger("load_gstr9_data");
-                        frappe.show_alert({
-                            message: __("Portal data downloaded successfully"),
-                            indicator: "green",
-                        });
-                    });
+                    this.frm.taxpayer_api_call("download_portal_data").then((r) =>
+                        this._on_gst_data(r, () =>
+                            frappe.show_alert({
+                                message: __("Portal data downloaded successfully"),
+                                indicator: "green",
+                            }),
+                        ),
+                    );
                 });
             }
         }
