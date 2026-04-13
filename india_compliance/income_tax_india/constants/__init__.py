@@ -109,6 +109,32 @@ NEW_TDS_SECTIONS = [
     "1065",  # Cash withdrawal - others - Sl.5.D(b)
     "1066",  # NSS payments - Sl.6
     "1067",  # Partner remuneration - Sl.7
+    # Collection codes - Section 394(1)
+    "1068",  # Sale of alcoholic liquor for human consumption - Table Sl.1
+    "1069",  # Sale of tendu leaves - Table Sl.2
+    "1070",  # Sale of timber obtained under a forest lease - Table Sl.3
+    "1071",  # Sale of timber obtained other than under a forest lease - Table Sl.3
+    "1072",  # Sale of other forest produce under a forest lease - Table Sl.3
+    "1073",  # Sale of scrap - Table Sl.4
+    "1074",  # Sale of minerals being coal, lignite or iron ore - Table Sl.5
+    "1075",  # Sale of motor vehicle above threshold - Table Sl.6.D(a)
+    "1076",  # Sale of wrist watch above threshold - Table Sl.6.D(b)
+    "1077",  # Sale of art piece above threshold - Table Sl.6.D(b)
+    "1078",  # Sale of collectibles above threshold - Table Sl.6.D(b)
+    "1079",  # Sale of yacht, row boat, canoe or helicopter above threshold - Table Sl.6.D(b)
+    "1080",  # Sale of sunglasses above threshold - Table Sl.6.D(b)
+    "1081",  # Sale of handbag or purse above threshold - Table Sl.6.D(b)
+    "1082",  # Sale of shoes above threshold - Table Sl.6.D(b)
+    "1083",  # Sale of sportswear and equipment above threshold - Table Sl.6.D(b)
+    "1084",  # Sale of home theatre system above threshold - Table Sl.6.D(b)
+    "1085",  # Sale of horse for racing or polo above threshold - Table Sl.6.D(b)
+    "1086",  # LRS remittance for education or medical treatment above threshold - Table Sl.7.D(a)
+    "1087",  # LRS remittance for other purposes above threshold - Table Sl.7.D(b)
+    "1088",  # Overseas tour programme package up to threshold - Table Sl.8.D(a)
+    "1089",  # Overseas tour programme package above threshold - Table Sl.8.D(b)
+    "1090",  # Use of parking lot for business - Table Sl.9
+    "1091",  # Use of toll plaza for business - Table Sl.9
+    "1092",  # Use of mine or quarry for business - Table Sl.9
     # Form 141 sections (challan-cum-statement, no numeric return code)
     "393(1) Sl.2(i)",  # Rent by Individual/HUF (was 194IB)
     "393(1) Sl.3(i)",  # Immovable property transfer (was 194IA)
