@@ -540,8 +540,6 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
     if doc.company_gstin == doc.billing_address_gstin:
         return _throw(_("e-Invoice is not applicable for invoices with same company and billing GSTIN"))
 
-    # Nil-Rated/Exempted/Non-GST only invoices are allowed for e-Invoice.
-
     if not (doc.place_of_supply == "96-Other Countries" or doc.billing_address_gstin):
         return _throw(_("e-Invoice is not applicable for B2C invoices"))
 
