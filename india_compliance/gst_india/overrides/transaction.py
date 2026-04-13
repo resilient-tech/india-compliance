@@ -1024,6 +1024,7 @@ def validate_gst_refund_accounts(doc):
     if doc.doctype not in SALES_DOCTYPES:
         return
 
+    is_return = doc.get("is_return", False)
     has_refund = False
     net_amount = 0
 
@@ -1032,11 +1033,15 @@ def validate_gst_refund_accounts(doc):
             net_amount += tax.base_tax_amount_after_discount_amount
             continue
 
-        # Validate if tax amount is negative
-        if tax.tax_amount > 0:
+        # Refund should be
+        # -ve for normal invoices and
+        # +ve for credit notes (is_return)
+        is_invalid = tax.tax_amount < 0 if is_return else tax.tax_amount > 0
+        if is_invalid:
+            expected = "positive" if is_return else "negative"
             frappe.throw(
-                _("Row #{0}: Tax amount should be negative for GST Account {1}").format(
-                    tax.idx, tax.account_head
+                _("Row #{0}: Tax amount should be {1} for GST Account {2}").format(
+                    tax.idx, expected, tax.account_head
                 )
             )
 

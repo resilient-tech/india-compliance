@@ -1029,6 +1029,25 @@ class TestTransaction(IntegrationTestCase):
             doc.save,
         )
 
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_validate_gst_refund_accounts_for_credit_note(self):
+        doc = create_refund_transaction()
+        doc.submit()
+
+        # Credit note should save successfully: signs are flipped, refund row is positive
+        return_doc = make_return_doc("Sales Invoice", doc.name)
+        return_doc.save()
+        self.assertGreater(return_doc.taxes[1].tax_amount, 0)
+
+        # Force refund row to become negative on the credit note and expect a
+        # validation error saying it should be positive
+        return_doc.taxes[1].rate = 18
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(.*Tax amount should be positive for GST Account.*)$"),
+            return_doc.save,
+        )
+
     def test_item_gst_details_for_non_gst_transactions(self):
         """
         Test Non-GST Transactions can be processed without errors.
@@ -1074,17 +1093,22 @@ class TestTransaction(IntegrationTestCase):
 def create_refund_transaction():
     gst_settings = frappe.get_cached_doc("GST Settings")
 
-    gst_settings.append(
-        "gst_accounts",
-        {
-            "company": "_Test Indian Registered Company",
-            "cgst_account": "Output Tax CGST Refund - _TIRC",
-            "sgst_account": "Output Tax SGST Refund - _TIRC",
-            "igst_account": "Output Tax IGST Refund - _TIRC",
-            "account_type": "Output Refund",
-        },
+    refund_row_exists = any(
+        row.account_type == "Output Refund" and row.company == "_Test Indian Registered Company"
+        for row in gst_settings.gst_accounts
     )
-    gst_settings.save()
+    if not refund_row_exists:
+        gst_settings.append(
+            "gst_accounts",
+            {
+                "company": "_Test Indian Registered Company",
+                "cgst_account": "Output Tax CGST Refund - _TIRC",
+                "sgst_account": "Output Tax SGST Refund - _TIRC",
+                "igst_account": "Output Tax IGST Refund - _TIRC",
+                "account_type": "Output Refund",
+            },
+        )
+        gst_settings.save()
 
     transaction_details = {
         "doctype": "Sales Invoice",
