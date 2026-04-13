@@ -332,13 +332,6 @@ function is_e_invoice_applicable(frm, show_message = false) {
         message_list.push("Billing Address GSTIN is required for B2B categorization");
     }
 
-    if (!frm.doc.items.some((item) => ["Taxable", "Zero-Rated"].includes(item.gst_treatment))) {
-        is_einv_applicable = false;
-        message_list.push(
-            "All items are either Nil-Rated/Exempted/Non-GST. At least one item must be taxable or the transaction should be categorised as export.",
-        );
-    }
-
     frm._einv_message = "";
     if (show_message) frm._einv_message = message_list.map((message) => `<li>${__(message)}</li>`).join("");
 

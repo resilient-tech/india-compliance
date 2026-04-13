@@ -102,7 +102,6 @@ class GSTTransactionData:
                 "date": format_date(self.doc.posting_date, self.DATE_FORMAT),
                 "total": abs(self.rounded(total)),
                 "total_taxable_value": abs(self.rounded(total_taxable_value)),
-                "total_non_taxable_value": abs(self.rounded(total - total_taxable_value)),
                 "rounding_adjustment": rounding_adjustment,
                 "grand_total": abs(self.rounded(self.doc.get(grand_total_fieldname))),
                 "grand_total_in_foreign_currency": (
