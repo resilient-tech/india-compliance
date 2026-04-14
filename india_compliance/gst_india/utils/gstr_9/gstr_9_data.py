@@ -15,7 +15,8 @@ from india_compliance.gst_india.utils.gstr_9 import (
 
 
 class GSTR9BooksData(GSTR1Query, GSTR3BQuery):
-    """Computes GSTR-9 books data from ERP transactions for a given company, GSTIN, and financial year.
+    """
+    Computes GSTR-9 books data from ERP transactions for a given company, GSTIN, and financial year.
 
     Returns classified invoice-level data (books format):
       {row_key: {doc_number: invoice_dict}}  — for drillable rows (GSTR-1 style)
@@ -207,8 +208,7 @@ class GSTR9BooksData(GSTR1Query, GSTR3BQuery):
         return {GSTR9_Row.TABLE_18: self._get_hsn_data("inward")}
 
     def _get_hsn_data(self, direction):
-        """
-        Reuse the standalone HSN report functions for exact data parity.
+        """Reuse the standalone HSN report functions for exact data parity.
 
         Converts report field names to the GSTR-9 display format and splits
         into goods (HSN not starting with '99') and services.
@@ -647,8 +647,9 @@ class GSTR9BooksData(GSTR1Query, GSTR3BQuery):
 
     def _build_result(self, accumulator):
         """
-        Convert the flat accumulator dict keyed by (row_key, invoice_name)
-        into {row_key: {invoice_name: invoice_dict}} — the same nested-dict
+        Convert the flat accumulator dict keyed by (row_key, invoice_name).
+
+        Returns {row_key: {invoice_name: invoice_dict}} — the same nested-dict
         format used by GSTR-1 books data.
         """
         result = {}

@@ -73,8 +73,7 @@ class SummarizeGSTR9:
 
 
 class GenerateGSTR9(SummarizeGSTR9):
-    """
-    Mixin for GSTReturnLog: GSTR-9 data generation and portal comparison.
+    """Mixin for GSTReturnLog: GSTR-9 data generation and portal comparison.
 
     Handles data generation, auto-computation, optional portal download,
     and books-vs-portal reconciliation.

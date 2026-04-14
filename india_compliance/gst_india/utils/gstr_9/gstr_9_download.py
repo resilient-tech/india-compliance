@@ -85,8 +85,7 @@ def _parse_amount_row(row_data):
 
 
 def _parse_table_9(table9_data):
-    """
-    Parse Table 9 (tax paid details).
+    """Parse Table 9 (tax paid details).
 
     Portal head keys: iamt, camt, samt, csamt, intr, fee, pnlty, others
     Each head object: txpyble, txpaid_cash,

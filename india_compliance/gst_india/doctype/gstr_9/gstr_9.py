@@ -21,8 +21,7 @@ from india_compliance.gst_india.utils.gstr_9 import (
 class GSTR9(Document):
     @frappe.whitelist()
     def generate_gstr9(self):
-        """
-        Validate inputs and enqueue GSTR-9 data generation.
+        """Validate inputs and enqueue GSTR-9 data generation.
 
         Permission check not required as user already has access to the doc.
         """
@@ -174,6 +173,7 @@ class GSTR9(Document):
 def get_gstr9_invoice_detail(company_gstin: str, financial_year: str, row_key: str):
     """
     Return individual invoice / bill records for the given GSTR-9 row.
+
     Reads from stored books data to ensure consistency with the generated snapshot.
 
     Returns {"too_large": True} when the compressed books file exceeds
@@ -240,6 +240,7 @@ def export_gstr9_books_as_excel(company_gstin: str, financial_year: str):
 
     from india_compliance.gst_india.utils.exporter import ExcelExporter
     from india_compliance.gst_india.utils.gstr_9 import (
+        GSTR9_ROW_DESCRIPTION,
         PURCHASE_ROW_KEYS,
     )
 
@@ -257,7 +258,10 @@ def export_gstr9_books_as_excel(company_gstin: str, financial_year: str):
         excel.remove_sheet("Sheet")
 
     sheets_written = 0
-    for row_key, value in books.items():
+    for row_key in GSTR9_ROW_DESCRIPTION:
+        value = books.get(row_key)
+        if value is None:
+            continue
         # Only drillable rows: {doc_num: invoice_dict}
         if not isinstance(value, dict):
             continue

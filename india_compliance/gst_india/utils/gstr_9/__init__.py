@@ -1,5 +1,6 @@
 # Copyright (c) 2026, Resilient Tech and contributors
 # For license information, please see license.txt
+"""Constants, row definitions, and helper utilities for GSTR-9 computation."""
 
 
 class GSTR9_Row:
@@ -414,8 +415,7 @@ def _sum_rows(data, add_rows, subtract=None):
 
 
 def compute_auto_rows(data):
-    """
-    Compute all auto-computed rows in dependency order.
+    """Compute all auto-computed rows in dependency order.
 
     data is a dict of {row_key: {field: value, ...}}
     """
@@ -487,8 +487,8 @@ def aggregate_books(books):
 
 
 def get_fy_dates(financial_year):
-    """
-    Get from_date and to_date for a financial year string.
+    """Get from_date and to_date for a financial year string.
+
     e.g. "2024-25" → (date(2024, 4, 1), date(2025, 3, 31))
     """
     from frappe.utils import getdate
