@@ -10,7 +10,10 @@ async function set_gstin_options(frm, set_value) {
     const options = await india_compliance.get_gstin_options(company);
     frm.get_field("company_gstin").set_data(options);
 
-    if (set_value) frm.set_value("company_gstin", options.length === 1 ? options[0] : "");
+    if (set_value) {
+        if (options.includes(frm.doc.company_gstin)) return;
+        frm.set_value("company_gstin", options.length === 1 ? options[0] : "");
+    }
 }
 
 frappe.ui.form.on("Journal Entry Account", {
