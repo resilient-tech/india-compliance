@@ -1459,7 +1459,7 @@ class TestPlaceOfSupply(FrappeTestCase):
 
     def test_correct_place_of_supply_on_address_update_by_erpnext(self):
         """
-        With change in address of party by erpnexr, place of supply should be corrected
+        With change in address of party by erpnext, place of supply should be corrected
         and taxes should be applied accordingly on new document creation.
         """
         doc = create_transaction(
@@ -1475,4 +1475,4 @@ class TestPlaceOfSupply(FrappeTestCase):
 
         # check gst_tax_type of tax table
         for tax in doc.taxes:
-            self.assertIn(tax.gst_tax_type, ["igst"])
+            self.assertEqual(tax.gst_tax_type, "igst")
