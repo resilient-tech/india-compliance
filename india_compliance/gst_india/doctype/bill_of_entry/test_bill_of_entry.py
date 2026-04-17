@@ -27,7 +27,7 @@ IGNORE_TEST_RECORD_DEPENDENCIES = [
     "Cost Center",
     "Tax Category",
     "Item",
-    # "UOM",
+    "UOM",
     "Item Tax Template",
     "Project",
     "Company",
