@@ -524,6 +524,12 @@ class TestTransaction(IntegrationTestCase):
 
     def test_validate_place_of_supply(self):
         doc = create_transaction(**self.transaction_details, do_not_save=True)
+        # Address is required to avoid auto update of place of supply and taxes
+
+        if self.is_sales_doctype:
+            doc.customer_address = "_Test Registered Customer-Billing"
+        else:
+            doc.supplier_address = "_Test Registered Supplier-Billing"
         doc.place_of_supply = "96-Others"
 
         self.assertRaisesRegex(
@@ -745,6 +751,11 @@ class TestTransaction(IntegrationTestCase):
 
     def test_invalid_item_gst_details(self):
         doc = create_transaction(**self.transaction_details, rate=200, is_out_state=True, do_not_save=True)
+        # Address is required to avoid auto update of place of supply and taxes
+        if self.is_sales_doctype:
+            doc.customer_address = "_Test Registered Customer-Billing"
+        else:
+            doc.supplier_address = "_Test Registered Supplier-Billing"
         row = frappe.copy_doc(doc.taxes[0])
         doc.append("taxes", row)
         doc.place_of_supply = "27-Maharashtra"
@@ -854,6 +865,7 @@ class TestTransaction(IntegrationTestCase):
             is_out_state=True,
             do_not_save=True,
         )
+        doc.supplier_address = "_Test Registered Supplier-Billing"
 
         doc.place_of_supply = "27-Maharashtra"
         doc.save()
@@ -1483,3 +1495,23 @@ class TestPlaceOfSupply(IntegrationTestCase):
 
         doc = create_transaction(**doc_args)
         self.assertEqual(doc.place_of_supply, "24-Gujarat")  # Company GSTIN
+
+    def test_correct_place_of_supply_on_address_update_by_erpnext(self):
+        """
+        With change in address of party by erpnexr, place of supply should be corrected
+        and taxes should be applied accordingly on new document creation.
+        """
+        doc = create_transaction(
+            doctype="Sales Invoice",
+            customer="_Test Registered Composition Customer",
+            do_not_save=True,
+        )
+        doc.place_of_supply = "24-Gujarat"
+        doc.insert()
+
+        # place_of_supply must be corrected to customer's state (Karnataka)
+        self.assertEqual(doc.place_of_supply, "29-Karnataka")
+
+        # check gst_tax_type of tax table
+        for tax in doc.taxes:
+            self.assertIn(tax.gst_tax_type, ["igst"])
