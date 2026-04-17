@@ -1459,6 +1459,8 @@ class TestPlaceOfSupply(FrappeTestCase):
 
     def test_correct_place_of_supply_on_address_update_by_erpnext(self):
         """
+        Correct place of supply when ERPNext updates the party address.
+
         With change in address of party by erpnext, place of supply should be corrected
         and taxes should be applied accordingly on new document creation.
         """
