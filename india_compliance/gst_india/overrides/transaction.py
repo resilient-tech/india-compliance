@@ -900,7 +900,7 @@ def _get_address_fields(doctype, party_details=None):
         )
 
     elif doctype == "Stock Entry":
-        if party_details.get("is_inward_stock_entry"):
+        if party_details and party_details.get("is_inward_stock_entry"):
             address_fields.update(
                 company_gstin_field="bill_to_gstin",
                 party_gstin_field="bill_from_gstin",
@@ -1644,12 +1644,10 @@ def validate_transaction(doc, method=None):
     is_sales_transaction = _is_sales_transaction(doc.doctype)
 
     if is_sales_transaction:
+        gstin = doc.billing_address_gstin
         if doc.doctype != "Payment Entry":
             validate_hsn_codes(doc)
             validate_sales_reverse_charge(doc)
-            gstin = doc.billing_address_gstin
-        else:
-            gstin = doc.billing_address_gstin
     else:
         gstin = doc.supplier_gstin
 
