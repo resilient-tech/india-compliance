@@ -170,11 +170,11 @@ class TestIneligibleITC(IntegrationTestCase):
             "Repost Allowed Types",
             {
                 "document_type": "Purchase Invoice",
-                "parent": "Repost Accounting Ledger Settings",
+                "parent": "Accounts Settings",
             },
         ):
-            settings = frappe.get_single("Repost Accounting Ledger Settings")
-            settings.append("allowed_types", {"document_type": "Purchase Invoice", "allowed": 1})
+            settings = frappe.get_single("Accounts Settings")
+            settings.append("allowed_types", {"document_type": "Purchase Invoice"})
             settings.save()
 
         doc.items[4].expense_account = "Office Rent - _TIRC"
