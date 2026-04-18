@@ -6,7 +6,7 @@ import frappe
 from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils.data import getdate
 
-IGNORE_TEST_RECORD_DEPENDENCIES = ["Company", "Account"]
+IGNORE_TEST_RECORD_DEPENDENCIES = ["Company", "Account", "UOM"]
 
 
 class TestGSTSettings(IntegrationTestCase):
