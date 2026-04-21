@@ -53,11 +53,35 @@ class GSTSettings(Document):
             self.validate_e_invoice_applicability_date()
             self.validate_credentials()
             self.validate_gstin_status_refresh_interval()
+            self.warn_for_nil_exempted_taxable_values_reporting()
 
         self.clear_api_auth_session()
         self.update_retry_e_invoice_e_waybill_scheduled_job()
         self.update_e_invoice_status()
         self.validate_unique_states()
+
+    def warn_for_nil_exempted_taxable_values_reporting(self):
+        if not self.enable_e_invoice:
+            return
+
+        if not self.report_nil_exempted_with_taxable_values:
+            return
+
+        # Show warning when enabling the setting or when e-Invoice is enabled while the setting is on.
+        if not (self.has_value_changed("report_nil_exempted_with_taxable_values")):
+            return
+
+        field_label = frappe.bold(self.meta.get_label("report_nil_exempted_with_taxable_values"))
+
+        frappe.msgprint(
+            _(
+                "When {0} is enabled, Nil-Rated / Exempted / Non-GST item values are reported "
+                "with taxable value in e-Invoice. During GSTR-1 preparation, these invoices may be treated "
+                "as Zero-Rated B2B and can cause reconciliation mismatches. Enable it only if required and "
+                "review GSTR-1 carefully."
+            ).format(field_label),
+            indicator="orange",
+        )
 
     def update_e_invoice_status(self):
         previous_doc = self.get_doc_before_save()
