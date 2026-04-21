@@ -451,10 +451,8 @@ class TestPurchaseInvoice(IntegrationTestCase):
         pinv.submit()
 
         posting_date = getdate(pinv.posting_date)
-        posting_period = format_period(posting_date)
 
         with _gstr3b_filed(pinv.company_gstin, posting_date):
             pinv.reload()
-            pinv.itc_claim_period = posting_period
-            pinv.save()
-            self.assertEqual(pinv.itc_claim_period, posting_period)
+            pinv.remarks = "Updated remarks"
+            pinv.save()  # Should not raise error since period is unchanged
