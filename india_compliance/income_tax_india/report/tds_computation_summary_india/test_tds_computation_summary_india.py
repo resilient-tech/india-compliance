@@ -35,6 +35,7 @@ class TestTdsComputationSummaryIndia(IntegrationTestCase):
             TDS_ACCOUNT,
             tds_section="194J",
             old_income_tax_section="194J-OLD",
+            entity_type="Individual",
             tax_withholding_rate=10,
         )
         cls.supplier = create_supplier("_Test TCS 194J Supplier", pan=generate_unique_pan())
@@ -82,3 +83,4 @@ class TestTdsComputationSummaryIndia(IntegrationTestCase):
         self.assertIsNotNone(supplier_category_row)
         self.assertEqual(supplier_category_row.get("tds_section"), "194J")
         self.assertEqual(supplier_category_row.get("old_income_tax_section"), "194J-OLD")
+        self.assertEqual(supplier_category_row.get("entity_type"), "Individual")
