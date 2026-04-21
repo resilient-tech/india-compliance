@@ -35,6 +35,7 @@ class TestTaxWithholdingDetailsIndia(IntegrationTestCase):
             TDS_ACCOUNT,
             tds_section="194C",
             old_income_tax_section="194C-OLD",
+            entity_type="Individual",
             tax_withholding_rate=2,
         )
         cls.supplier = create_supplier("_Test TWD 194C Supplier", pan=generate_unique_pan())
@@ -67,3 +68,4 @@ class TestTaxWithholdingDetailsIndia(IntegrationTestCase):
         self.assertTrue(invoice_row)
         self.assertEqual(invoice_row.get("tds_section"), "194C")
         self.assertEqual(invoice_row.get("old_income_tax_section"), "194C-OLD")
+        self.assertEqual(invoice_row.get("entity_type"), "Individual")
