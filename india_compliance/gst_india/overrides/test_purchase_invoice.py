@@ -454,5 +454,20 @@ class TestPurchaseInvoice(IntegrationTestCase):
 
         with _gstr3b_filed(pinv.company_gstin, posting_date):
             pinv.reload()
-            pinv.remarks = "Updated remarks"
-            pinv.save()  # Should not raise error since period is unchanged
+            pinv.title = "Update-after-submit allowed field"
+            pinv.save()
+
+    def test_submit_blocked_if_draft_period_gets_filed_before_submit(self):
+        """Submitting a draft must fail if its unchanged claim period gets filed meanwhile."""
+        pinv = create_purchase_invoice(do_not_submit=True)
+        posting_date = getdate(pinv.posting_date)
+        posting_period = format_period(posting_date)
+
+        self.assertEqual(pinv.itc_claim_period, posting_period)
+
+        with _gstr3b_filed(pinv.company_gstin, posting_date):
+            self.assertRaisesRegex(
+                frappe.exceptions.ValidationError,
+                re.compile(r"Cannot set ITC Claim Period to .+\. GSTR-3B is already filed"),
+                pinv.submit,
+            )
