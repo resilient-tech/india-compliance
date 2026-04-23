@@ -11,6 +11,14 @@ frappe.ui.form.on("Bill of Entry", {
         frm.bill_of_entry_controller = new BillOfEntryController(frm);
     },
 
+    async posting_date(frm) {
+        await india_compliance.update_itc_claim_period(frm);
+    },
+
+    async company_gstin(frm) {
+        await india_compliance.update_itc_claim_period(frm);
+    },
+
     refresh(frm) {
         india_compliance.set_reconciliation_status(frm, "bill_of_entry_no");
         india_compliance.set_itc_claim_period_status(frm);
@@ -65,19 +73,20 @@ frappe.ui.form.on("Bill of Entry", {
 
     async company(frm) {
         if (!frm.doc.company) {
-            frm.set_value("company_gstin", "");
+            await frm.set_value("company_gstin", "");
             return;
         }
 
         const options = await india_compliance.set_gstin_options(frm, false, true);
-        frm.set_value("company_gstin", options[0]);
+        await frm.set_value("company_gstin", options[0]);
 
         const { message } = await frappe.db.get_value("Company", frm.doc.company, [
             "default_customs_payable_account as customs_payable_account",
             "default_customs_expense_account as customs_expense_account",
         ]);
 
-        frm.set_value(message);
+        await frm.set_value(message);
+        await india_compliance.update_itc_claim_period(frm);
     },
 
     get_items_from_purchase_invoice(frm) {

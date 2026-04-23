@@ -424,6 +424,40 @@ Object.assign(india_compliance, {
         }));
     },
 
+    async update_itc_claim_period(frm) {
+        if (frm.doc.docstatus !== 0 || !frm.doc.company_gstin || !frm.doc.posting_date) return;
+
+        if (frm.__updating_itc_claim_period) return;
+        frm.__updating_itc_claim_period = true;
+
+        await frappe.after_ajax();
+
+        frm.__updating_itc_claim_period = false;
+
+        const { message: valid_periods } = await frappe.call({
+            method: "india_compliance.gst_india.utils.itc_claim.get_itc_period_options",
+            args: {
+                company_gstin: frm.doc.company_gstin,
+                posting_date: frm.doc.posting_date,
+            },
+        });
+
+        const current_period = frm.doc.itc_claim_period;
+        if (current_period && valid_periods?.includes(current_period)) return;
+
+        const period = valid_periods?.[1];
+        if (!period || period === current_period) return;
+
+        await frm.set_value("itc_claim_period", period);
+        frappe.show_alert(
+            {
+                message: __("ITC Claim Period updated to {0}.", [period]),
+                indicator: "blue",
+            },
+            7,
+        );
+    },
+
     set_itc_claim_period_status(frm) {
         frm.set_df_property("itc_claim_period", "ignore_validation", 1);
 
