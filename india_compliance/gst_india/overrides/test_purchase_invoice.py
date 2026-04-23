@@ -14,9 +14,6 @@ from india_compliance.gst_india.utils.itc_claim import (
 from india_compliance.gst_india.utils.tests import append_item, create_purchase_invoice
 
 
-<<<<<<< HEAD
-class TestPurchaseInvoice(FrappeTestCase):
-=======
 @contextmanager
 def _gstr3b_filed(company_gstin, posting_date):
     """Context manager that files a GSTR-3B period and always unfiles it on exit."""
@@ -40,8 +37,7 @@ def _gstr3b_filed(company_gstin, posting_date):
         )
 
 
-class TestPurchaseInvoice(IntegrationTestCase):
->>>>>>> 62df6a70 (test: add context manager for GSTR-3B filing status in purchase invoice tests)
+class TestPurchaseInvoice(FrappeTestCase):
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_boe_applicability_auto_set_without_gst_taxes(self):
         """Import Of Goods without GST taxes → is_boe_applicable auto-set to 1."""
