@@ -119,15 +119,11 @@ function setup_e_waybill_actions(doctype) {
                 frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name) &&
                 !has_extend_validity_expired(frm)
             ) {
-                const can_extend = can_extend_e_waybill(frm);
-                let btn = frm.add_custom_button(
+                frm.add_custom_button(
                     __("Extend Validity"),
-                    can_extend ? () => show_extend_validity_dialog(frm) : null,
+                    () => show_extend_validity_dialog(frm),
                     "e-Waybill",
                 );
-                if (!can_extend) {
-                    btn.addClass("disabled");
-                }
             }
 
             if (frappe.model.can_print("e-Waybill Log")) {
