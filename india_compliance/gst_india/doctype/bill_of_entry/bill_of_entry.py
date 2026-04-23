@@ -27,7 +27,7 @@ from india_compliance.gst_india.utils import get_gst_accounts_by_type
 from india_compliance.gst_india.utils.itc_claim import (
     _is_gstr3b_filed,
     set_or_validate_itc_claim_period,
-    validate_itc_claim_period,
+    validate_itc_claim_period_on_update_after_submit,
 )
 from india_compliance.gst_india.utils.taxes_controller import (
     CustomTaxController,
@@ -85,7 +85,7 @@ class BillofEntry(Document):
         self.update_pending_boe_qty()
 
     def before_update_after_submit(self):
-        validate_itc_claim_period(self)
+        validate_itc_claim_period_on_update_after_submit(self)
 
     def on_cancel(self):
         self.ignore_linked_doctypes = ("GL Entry",)
