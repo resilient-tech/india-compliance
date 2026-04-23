@@ -798,7 +798,10 @@ class ImportDialog {
 
     async _resolve_date_range() {
         const period = this.dialog.get_value("period");
-        if (!period) return;
+        if (!period) {
+            this.date_range = null;
+            return;
+        }
 
         if (period === "Custom") {
             this.date_range = this.dialog.get_value("date_range");
