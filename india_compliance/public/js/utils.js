@@ -432,8 +432,6 @@ Object.assign(india_compliance, {
 
         await frappe.after_ajax();
 
-        frm.__updating_itc_claim_period = false;
-
         const { message: valid_periods } = await frappe.call({
             method: "india_compliance.gst_india.utils.itc_claim.get_itc_period_options",
             args: {
@@ -441,6 +439,8 @@ Object.assign(india_compliance, {
                 posting_date: frm.doc.posting_date,
             },
         });
+
+        frm.__updating_itc_claim_period = false;
 
         const current_period = frm.doc.itc_claim_period;
         if (current_period && valid_periods?.includes(current_period)) return;
