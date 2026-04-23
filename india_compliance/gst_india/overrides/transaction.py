@@ -1593,9 +1593,7 @@ def _update_place_of_supply_and_taxes(doc):
     if gst_details.get("place_of_supply") == doc.place_of_supply:
         return
 
-    for field in ("place_of_supply", "taxes_and_charges", "taxes"):
-        if field in gst_details:
-            doc.set(field, gst_details[field])
+    doc.update(gst_details)
 
     frappe.msgprint(_("Place of Supply and Taxes have been updated due to change in Party Address."))
 
