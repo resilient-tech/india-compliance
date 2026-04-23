@@ -792,9 +792,21 @@ class ImportDialog {
         else this._init_upload_dialog();
 
         this.return_type = this.dialog.get_value("return_type");
-        this.date_range = this.dialog.get_value("date_range");
         this.setup_dialog_actions();
-        this.fetch_import_history();
+        this._resolve_date_range().then(() => this.fetch_import_history());
+    }
+
+    async _resolve_date_range() {
+        const period = this.dialog.get_value("period");
+        if (!period) return;
+
+        if (period === "Custom") {
+            this.date_range = this.dialog.get_value("date_range");
+            return;
+        }
+
+        const { message } = await this.frm._call("get_date_range", { period });
+        this.date_range = message || this.dialog.get_value("date_range");
     }
 
     _init_download_dialog() {
@@ -1023,17 +1035,7 @@ class ImportDialog {
                 options: this.frm.get_field("inward_supply_period").df.options,
                 default: this.frm.doc.inward_supply_period,
                 onchange: async () => {
-                    const period = this.dialog.get_value("period");
-                    if (!period) return;
-
-                    this.date_range = this.dialog.get_value("date_range");
-                    if (period !== "Custom") {
-                        const { message } = await this.frm._call("get_date_range", {
-                            period,
-                        });
-
-                        if (message) this.date_range = message;
-                    }
+                    await this._resolve_date_range();
                     this.fetch_import_history();
                 },
             },
