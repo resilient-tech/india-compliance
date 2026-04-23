@@ -462,6 +462,40 @@ Object.assign(india_compliance, {
         frm.get_field("itc_claim_period").format_for_input = (value) => value;
     },
 
+    async update_itc_claim_period(frm) {
+        if (frm.doc.docstatus !== 0 || !frm.doc.company_gstin || !frm.doc.posting_date) return;
+
+        if (frm.__updating_itc_claim_period) return;
+        frm.__updating_itc_claim_period = true;
+
+        await frappe.after_ajax();
+
+        frm.__updating_itc_claim_period = false;
+
+        const { message: valid_periods } = await frappe.call({
+            method: "india_compliance.gst_india.utils.itc_claim.get_itc_period_options",
+            args: {
+                company_gstin: frm.doc.company_gstin,
+                posting_date: frm.doc.posting_date,
+            },
+        });
+
+        const current_period = frm.doc.itc_claim_period;
+        if (current_period && valid_periods?.includes(current_period)) return;
+
+        const period = valid_periods?.[1];
+        if (!period || period === current_period) return;
+
+        await frm.set_value("itc_claim_period", period);
+        frappe.show_alert(
+            {
+                message: __("ITC Claim Period updated to {0}.", [period]),
+                indicator: "blue",
+            },
+            7,
+        );
+    },
+
     // client_action target for msgprint primary actions, args: { doctype, fieldname }
     scroll_to_field({ doctype, fieldname }) {
         frappe.hide_msgprint(true);
