@@ -245,6 +245,7 @@ class TestIneligibleITC(IntegrationTestCase):
             "items": SAMPLE_ITEM_LIST,
             "place_of_supply": "27-Maharashtra",
             "is_out_state": 1,
+            "supplier_address": "_Test Registered Supplier-Billing",
         }
 
         doc = create_transaction(**transaction_details)
@@ -410,6 +411,7 @@ class TestIneligibleITC(IntegrationTestCase):
             "items": SAMPLE_ITEM_LIST,
             "place_of_supply": "27-Maharashtra",
             "is_out_state": 1,
+            "supplier_address": "_Test Registered Supplier-Billing",
         }
 
         doc = create_transaction(**transaction_details)
