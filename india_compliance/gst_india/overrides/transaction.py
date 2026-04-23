@@ -779,7 +779,7 @@ def get_gst_details(
     if not (party_details.company_gstin or is_indian_registered_company(frappe._dict(company=company))):
         return {}
 
-    is_sales_transaction = _is_sales_transaction(doctype)
+    is_sales_transaction = doctype in SALES_DOCTYPES or doctype == "Payment Entry"
     gst_details = frappe._dict()
 
     allow_same_gstin = False
@@ -882,7 +882,7 @@ def get_gst_details(
 
 
 def _get_address_fields(doctype, party_details=None):
-    is_sales_transaction = _is_sales_transaction(doctype)
+    is_sales_transaction = doctype in SALES_DOCTYPES or doctype == "Payment Entry"
     address_fields = frappe._dict(
         {
             "company_gstin_field": "",
@@ -1374,7 +1374,7 @@ class ItemGSTDetails:
 class ItemGSTTreatment:
     def set(self, doc):
         self.doc = doc
-        is_sales_transaction = _is_sales_transaction(doc.doctype)
+        is_sales_transaction = doc.doctype in SALES_DOCTYPES
 
         if is_sales_transaction and is_overseas_doc(doc):
             self.set_for_overseas()
@@ -1639,13 +1639,13 @@ def validate_transaction(doc, method=None):
 
     validate_overseas_gst_category(doc)
 
-    is_sales_transaction = _is_sales_transaction(doc.doctype)
-
-    if is_sales_transaction:
+    if is_sales_transaction := doc.doctype in SALES_DOCTYPES:
+        validate_hsn_codes(doc)
+        validate_sales_reverse_charge(doc)
         gstin = doc.billing_address_gstin
-        if doc.doctype != "Payment Entry":
-            validate_hsn_codes(doc)
-            validate_sales_reverse_charge(doc)
+    elif doc.doctype == "Payment Entry":
+        is_sales_transaction = True
+        gstin = doc.billing_address_gstin
     else:
         gstin = doc.supplier_gstin
 
@@ -1662,10 +1662,6 @@ def validate_transaction(doc, method=None):
         validate_gst_refund_accounts(doc)
     update_taxable_values(doc)
     validate_item_wise_tax_detail(doc)
-
-
-def _is_sales_transaction(doctype):
-    return doctype in SALES_DOCTYPES or doctype == "Payment Entry"
 
 
 def before_print(doc, method=None, print_settings=None):
