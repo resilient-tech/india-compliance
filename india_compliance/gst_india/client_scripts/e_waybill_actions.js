@@ -1216,12 +1216,6 @@ async function auto_generate_e_waybill(frm) {
     return await new E_WAYBILL_CLASS[frm.doctype](frm).auto_generate_e_waybill();
 }
 
-function can_extend_e_waybill(frm) {
-    if (frm.doc.gst_transporter_id && frm.doc.gst_transporter_id != frm.doc.company_gstin) return false;
-
-    return true;
-}
-
 function get_hours(date, hours, date_time_format = frappe.defaultDatetimeFormat) {
     return moment(date).add(hours, "hours").format(date_time_format);
 }
