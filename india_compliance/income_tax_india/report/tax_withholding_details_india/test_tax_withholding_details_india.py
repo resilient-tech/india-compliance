@@ -6,10 +6,11 @@ import string
 
 import frappe
 from erpnext.accounts.utils import get_fiscal_year
-from frappe.tests import IntegrationTestCase
+from frappe.tests.utils import FrappeTestCase
 from frappe.utils import today
 
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
+from india_compliance.income_tax_india.overrides.company import create_tds_account
 from india_compliance.income_tax_india.report.tax_withholding_details_india.tax_withholding_details_india import (
     execute,
 )
@@ -35,11 +36,21 @@ def generate_unique_pan():
 
 
 def create_supplier(name, pan=None):
+    company_currency = frappe.get_cached_value("Company", COMPANY, "default_currency")
     if not frappe.db.exists("Supplier", name):
         doc = frappe.new_doc("Supplier")
-        doc.update({"supplier_name": name, "supplier_type": "Individual"})
+        doc.update(
+            {
+                "supplier_name": name,
+                "supplier_type": "Individual",
+                "country": "India",
+                "default_currency": company_currency,
+            }
+        )
         doc.save()
-    frappe.db.set_value("Supplier", name, "pan", pan)
+    frappe.db.set_value(
+        "Supplier", name, {"pan": pan, "country": "India", "default_currency": company_currency}
+    )
     return name
 
 
@@ -87,29 +98,31 @@ def create_tax_withholding_category(category_name, account_name, **kwargs):
     return doc
 
 
-class TestTaxWithholdingDetailsIndia(IntegrationTestCase):
+class TestTaxWithholdingDetailsIndia(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        create_account(
-            account_name="TDS Payable",
-            parent_account=f"Duties and Taxes - {ABBR}",
-            company=COMPANY,
-        )
+        create_tds_account(COMPANY)
         cls.category = create_tax_withholding_category(
             "Test 194C TWD Report Category",
             TDS_ACCOUNT,
             tds_section="194C",
             old_income_tax_section="194C-OLD",
             entity_type="Individual",
+            single_threshold=1000,
+            cumulative_threshold=1000,
             tax_withholding_rate=2,
         )
         cls.supplier = create_supplier("_Test TWD 194C Supplier", pan=generate_unique_pan())
         frappe.db.set_value("Supplier", cls.supplier, "tax_withholding_category", cls.category.name)
 
+        company_currency = frappe.get_cached_value("Company", COMPANY, "default_currency")
         cls.pi = create_purchase_invoice(
             supplier=cls.supplier,
             company=COMPANY,
+            currency=company_currency,
+            gst_category="Unregistered",
+            tax_withholding_category=cls.category.name,
             apply_tds=1,
             rate=50000,
             do_not_submit=1,
