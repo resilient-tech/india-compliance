@@ -5,9 +5,9 @@ import random
 import string
 
 import frappe
-from erpnext.accounts.utils import get_fiscal_year
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import today
+from erpnext.accounts.utils import get_fiscal_year
 
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
 from india_compliance.income_tax_india.overrides.company import create_tds_account
@@ -49,7 +49,9 @@ def create_supplier(name, pan=None):
         )
         doc.save()
     frappe.db.set_value(
-        "Supplier", name, {"pan": pan, "country": "India", "default_currency": company_currency}
+        "Supplier",
+        name,
+        {"pan": pan, "country": "India", "default_currency": company_currency},
     )
     return name
 
@@ -114,9 +116,13 @@ class TestTaxWithholdingDetailsIndia(FrappeTestCase):
             tax_withholding_rate=2,
         )
         cls.supplier = create_supplier("_Test TDS Supplier", pan=generate_unique_pan())
-        frappe.db.set_value("Supplier", cls.supplier, "tax_withholding_category", cls.category.name)
+        frappe.db.set_value(
+            "Supplier", cls.supplier, "tax_withholding_category", cls.category.name
+        )
 
-        company_currency = frappe.get_cached_value("Company", COMPANY, "default_currency")
+        company_currency = frappe.get_cached_value(
+            "Company", COMPANY, "default_currency"
+        )
         cls.pi = create_purchase_invoice(
             supplier=cls.supplier,
             company=COMPANY,
@@ -144,7 +150,9 @@ class TestTaxWithholdingDetailsIndia(FrappeTestCase):
         self.assertIn("old_income_tax_section", fieldnames)
         self.assertIn("entity_type", fieldnames)
 
-        invoice_row = next((row for row in data if row.get("ref_no") == self.pi.name), None)
+        invoice_row = next(
+            (row for row in data if row.get("ref_no") == self.pi.name), None
+        )
         self.assertTrue(invoice_row)
         self.assertEqual(invoice_row.get("tds_section"), "194C")
         self.assertEqual(invoice_row.get("old_income_tax_section"), "194C-OLD")

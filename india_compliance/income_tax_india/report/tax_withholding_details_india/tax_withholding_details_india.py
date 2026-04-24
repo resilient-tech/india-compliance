@@ -2,10 +2,10 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe import _
 from erpnext.accounts.report.tax_withholding_details.tax_withholding_details import (
     execute as _execute,
 )
-from frappe import _
 
 
 def execute(filters=None):
@@ -54,7 +54,11 @@ def get_india_columns():
 
 
 def _get_twc_info(data):
-    categories = {row.get("tax_withholding_category") for row in data if row.get("tax_withholding_category")}
+    categories = {
+        row.get("tax_withholding_category")
+        for row in data
+        if row.get("tax_withholding_category")
+    }
     if not categories:
         return {}
 
