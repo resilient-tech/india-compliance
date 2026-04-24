@@ -1,7 +1,7 @@
 import frappe
 from frappe.utils.user import is_website_user
 
-__version__ = "16.3.2"
+__version__ = "16.4.0"
 
 
 def check_app_permission():
