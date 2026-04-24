@@ -1,0 +1,67 @@
+{
+ "app": "india_compliance",
+ "creation": "2026-04-24 14:01:49.493217",
+ "docstatus": 0,
+ "doctype": "Workspace Sidebar",
+ "header_icon": "indian-rupee",
+ "idx": 1,
+ "items": [
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "home",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Income Tax India",
+   "link_to": "Income Tax India",
+   "link_type": "Workspace",
+   "open_in_new_tab": 1,
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "sheet",
+   "indent": 1,
+   "keep_closed": 0,
+   "label": "Reports",
+   "link_type": "DocType",
+   "open_in_new_tab": 1,
+   "show_arrow": 0,
+   "type": "Section Break"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Tax Withholding Details-India",
+   "link_to": "Tax Withholding Details-India",
+   "link_type": "Report",
+   "open_in_new_tab": 1,
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "TDS Computation Summary-India",
+   "link_to": "TDS Computation Summary-India",
+   "link_type": "Report",
+   "open_in_new_tab": 1,
+   "show_arrow": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-04-24 14:22:41.838482",
+ "modified_by": "Administrator",
+ "module": "Income Tax India",
+ "name": "Income Tax India",
+ "owner": "Administrator",
+ "standard": 1,
+ "title": "Income Tax India"
+}
