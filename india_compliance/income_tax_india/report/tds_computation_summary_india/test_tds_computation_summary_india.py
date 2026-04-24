@@ -25,7 +25,7 @@ class TestTdsComputationSummaryIndia(FrappeTestCase):
         super().setUpClass()
         create_tds_account(COMPANY)
         cls.category = create_tax_withholding_category(
-            "Test 194J TCS Report Category",
+            "Test TDS Report Category",
             TDS_ACCOUNT,
             tds_section="194J",
             old_income_tax_section="194J-OLD",
@@ -34,7 +34,7 @@ class TestTdsComputationSummaryIndia(FrappeTestCase):
             cumulative_threshold=1000,
             tax_withholding_rate=10,
         )
-        cls.supplier = create_supplier("_Test TCS 194J Supplier", pan=generate_unique_pan())
+        cls.supplier = create_supplier("_Test TDS Supplier", pan=generate_unique_pan())
         frappe.db.set_value("Supplier", cls.supplier, "tax_withholding_category", cls.category.name)
 
         company_currency = frappe.get_cached_value("Company", COMPANY, "default_currency")
