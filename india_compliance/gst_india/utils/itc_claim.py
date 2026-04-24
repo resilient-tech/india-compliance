@@ -347,7 +347,7 @@ def validate_itc_claim_period(doc) -> None:
     validate_mandatory_fields(doc, "itc_claim_period")
     _validate_period_format(doc.itc_claim_period)
     _validate_itc_claim_period_for_rcm_invoice(doc)
-    _validate_itc_claim_period_as_per_filling(doc)
+    _validate_itc_claim_period_as_per_filing(doc)
 
 
 def validate_itc_claim_period_on_update_after_submit(doc) -> None:
@@ -379,7 +379,7 @@ def validate_itc_claim_period_on_update_after_submit(doc) -> None:
     )
 
 
-def _validate_itc_claim_period_as_per_filling(doc) -> None:
+def _validate_itc_claim_period_as_per_filing(doc) -> None:
     if _is_gstr3b_filed(doc.company_gstin, doc.itc_claim_period):
         frappe.throw(
             _("Cannot set ITC Claim Period to {0}. GSTR-3B is already filed.").format(doc.itc_claim_period)
