@@ -15,7 +15,7 @@
    "label": "Income Tax India",
    "link_to": "Income Tax India",
    "link_type": "Workspace",
-   "open_in_new_tab": 1,
+   "open_in_new_tab": 0,
    "show_arrow": 0,
    "type": "Link"
   },
@@ -39,7 +39,7 @@
    "label": "Tax Withholding Details-India",
    "link_to": "Tax Withholding Details-India",
    "link_type": "Report",
-   "open_in_new_tab": 1,
+   "open_in_new_tab": 0,
    "show_arrow": 0,
    "type": "Link"
   },
@@ -52,12 +52,12 @@
    "label": "TDS Computation Summary-India",
    "link_to": "TDS Computation Summary-India",
    "link_type": "Report",
-   "open_in_new_tab": 1,
+   "open_in_new_tab": 0,
    "show_arrow": 0,
    "type": "Link"
   }
  ],
- "modified": "2026-04-24 14:22:41.838482",
+ "modified": "2026-04-24 15:12:55.679203",
  "modified_by": "Administrator",
  "module": "Income Tax India",
  "name": "Income Tax India",
