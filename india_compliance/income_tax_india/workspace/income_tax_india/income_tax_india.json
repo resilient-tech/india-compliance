@@ -1,0 +1,67 @@
+{
+ "app": "india_compliance",
+ "charts": [],
+ "content": "[{\"id\":\"5lsCmLRfWb\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Masters</b></span>\",\"col\":12}},{\"id\":\"fina67k1Ip\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Tax Withholding Category\",\"col\":5}},{\"id\":\"LaQ64p519z\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Tax Withholding Group\",\"col\":4}},{\"id\":\"RqYCD6zDGw\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports</b></span>\",\"col\":12}},{\"id\":\"C0EMdJBGAa\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Tax Withholding Details-India\",\"col\":5}},{\"id\":\"fOEqexSscJ\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"TDS Computation Summary-India\",\"col\":5}}]",
+ "creation": "2026-04-24 14:01:49.481971",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "hide_custom": 0,
+ "icon": "indian-rupee",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Income Tax India",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2026-04-24 15:10:44.327696",
+ "modified_by": "Administrator",
+ "module": "Income Tax India",
+ "name": "Income Tax India",
+ "number_cards": [],
+ "owner": "Administrator",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Accounts Manager"
+  }
+ ],
+ "sequence_id": 15.0,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Tax Withholding Category",
+   "link_to": "Tax Withholding Category",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Tax Withholding Details-India",
+   "link_to": "Tax Withholding Details-India",
+   "report_ref_doctype": "Purchase Invoice",
+   "type": "Report"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Tax Withholding Group",
+   "link_to": "Tax Withholding Group",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "TDS Computation Summary-India",
+   "link_to": "TDS Computation Summary-India",
+   "report_ref_doctype": "Purchase Invoice",
+   "type": "Report"
+  }
+ ],
+ "title": "Income Tax India",
+ "type": "Workspace"
+}
