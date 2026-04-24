@@ -7,20 +7,17 @@ from erpnext.accounts.report.tax_withholding_details.tax_withholding_details imp
 )
 from frappe import _
 
-TWC_INDIA_FIELDS = ("tds_section", "old_income_tax_section", "entity_type")
-
 
 class TaxWithholdingDetailsIndiaReport(TaxWithholdingDetailsReport):
     def get_entries_query(self):
         twc = frappe.qb.DocType("Tax Withholding Category")
+        twe = frappe.qb.DocType("Tax Withholding Entry")
         query = super().get_entries_query()
-        return (
-            query.left_join(twc)
-            .on(twc.name == frappe.qb.DocType("Tax Withholding Entry").tax_withholding_category)
-            .select(twc.tds_section, twc.old_income_tax_section, twc.entity_type)
-        )
+        fields = [twc[c["fieldname"]] for c in self.get_india_columns()]
+        return query.left_join(twc).on(twc.name == twe.tax_withholding_category).select(*fields)
 
-    def get_india_columns(self):
+    @staticmethod
+    def get_india_columns():
         return [
             {
                 "label": _("New Income Tax Section"),
@@ -41,6 +38,10 @@ class TaxWithholdingDetailsIndiaReport(TaxWithholdingDetailsReport):
                 "width": 120,
             },
         ]
+
+    @staticmethod
+    def get_india_fieldnames():
+        return tuple(c["fieldname"] for c in TaxWithholdingDetailsIndiaReport.get_india_columns())
 
     def get_columns(self):
         columns = super().get_columns()

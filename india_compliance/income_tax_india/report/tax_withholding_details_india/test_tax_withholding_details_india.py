@@ -6,10 +6,10 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import today
 
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
+from india_compliance.income_tax_india.overrides.company import TDS_ACCOUNT_NAME, create_tds_account
 from india_compliance.income_tax_india.overrides.test_tax_withholding_category import (
     ABBR,
     COMPANY,
-    create_account,
     create_supplier,
     create_tax_withholding_category,
     generate_unique_pan,
@@ -18,18 +18,14 @@ from india_compliance.income_tax_india.report.tax_withholding_details_india.tax_
     execute,
 )
 
-TDS_ACCOUNT = f"TDS Payable - {ABBR}"
+TDS_ACCOUNT = f"{TDS_ACCOUNT_NAME} - {ABBR}"
 
 
 class TestTaxWithholdingDetailsIndia(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        create_account(
-            account_name="TDS Payable",
-            parent_account=f"Duties and Taxes - {ABBR}",
-            company=COMPANY,
-        )
+        create_tds_account(COMPANY)
         cls.category = create_tax_withholding_category(
             "Test 194C TWD Report Category",
             TDS_ACCOUNT,
