@@ -4,6 +4,8 @@ india_compliance/gst_india/report/gst_purchase_register/gst_purchase_register.js
 india_compliance/gst_india/report/gst_itemised_purchase_register/gst_itemised_purchase_register.js
 india_compliance/gst_india/report/gst_itemised_sales_register/gst_itemised_sales_register.js
 india_compliance/gst_india/report/gst_sales_register/gst_sales_register.js
+india_compliance/income_tax_india/report/tax_withholding_details_india/tax_withholding_details_india.js
+india_compliance/income_tax_india/report/tds_computation_summary_india/tds_computation_summary_india.js
 
 # Other
 node_modules
