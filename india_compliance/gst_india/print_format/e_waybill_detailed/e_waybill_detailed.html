@@ -49,9 +49,9 @@
                     </tr>
                     <tr>
                         <td>
-                            {% set lastVehicleDetails = data.VehiclListDetails | last %}
+                            {% set lastVehicleDetails = data.VehiclListDetails | last if data.VehiclListDetails else None %}
                             <span class="attribute">Mode: </span>
-                            <span class="attribute-value">{{ get_transport_mode(lastVehicleDetails.transMode)  }}</span>
+                            <span class="attribute-value">{{ get_transport_mode(lastVehicleDetails.transMode) if lastVehicleDetails else "" }}</span>
                         </td>
                         <td>
                             <span class="attribute">Approx Distance: </span>
@@ -293,7 +293,7 @@
                             Multi Veh. Info (If any)
                         </td>
                     </tr>
-                    <tr>
+                    {% if data.VehiclListDetails %}
                         {% for detail in data.VehiclListDetails %}
                             <tr>
                                 <td>
@@ -323,10 +323,19 @@
                                 <td>
                                     {{ detail.multiVehInfo | default('-') }}
                                 </td>
-
                             </tr>
                         {% endfor %}
-                    </tr>
+                    {% else %}
+                        <tr>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                        </tr>
+                    {% endif %}
                 </tbody>
             </table>
 
