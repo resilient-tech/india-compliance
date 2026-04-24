@@ -3,7 +3,7 @@
 
 import frappe
 from frappe import _
-from erpnext.accounts.report.tax_withholding_details.tax_withholding_details import (
+from erpnext.accounts.report.tds_payable_monthly.tds_payable_monthly import (
     execute as _execute,
 )
 
