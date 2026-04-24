@@ -10,6 +10,7 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import today
 
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
+from india_compliance.income_tax_india.overrides.company import TDS_ACCOUNT_NAME, create_tds_account
 
 COMPANY = "_Test Indian Registered Company"
 ABBR = "_TIRC"
@@ -287,12 +288,8 @@ def create_account(account_name, parent_account, company):
 
 
 def create_tds_setup():
-    account_name = f"TDS Payable - {ABBR}"
-    create_account(
-        account_name="TDS Payable",
-        parent_account=f"Duties and Taxes - {ABBR}",
-        company=COMPANY,
-    )
+    account_name = f"{TDS_ACCOUNT_NAME} - {ABBR}"
+    create_tds_account(COMPANY)
 
     create_tax_withholding_category(CATEGORY, account_name)
     create_tax_withholding_category(
