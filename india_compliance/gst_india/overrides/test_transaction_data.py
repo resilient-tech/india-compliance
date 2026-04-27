@@ -134,6 +134,7 @@ class TestTransactionData(IntegrationTestCase):
         )
 
         gst_transaction_data = GSTTransactionData(doc)
+        gst_transaction_data.item_details_list = self.get_all_item_details()
         gst_transaction_data.set_transaction_details()
 
         self.assertDictEqual(
@@ -177,6 +178,7 @@ class TestTransactionData(IntegrationTestCase):
         doc.save()
 
         gst_transaction_data = GSTTransactionData(doc)
+        gst_transaction_data.item_details_list = self.get_all_item_details()
         gst_transaction_data.set_transaction_details()
 
         self.assertDictEqual(
