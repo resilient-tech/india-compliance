@@ -121,7 +121,7 @@ class TestEInvoice(IntegrationTestCase):
         si.submit()
 
         e_invoice_data = EInvoiceData(si)
-        e_invoice_data.set_item_list()
+        e_invoice_data.get_data()
 
         self.assertListEqual(
             e_invoice_data.item_list,
@@ -455,6 +455,7 @@ class TestEInvoice(IntegrationTestCase):
 
         self.assertEqual(0, request_data["ValDtls"]["AssVal"])
         self.assertEqual(0, request_data["ValDtls"]["OthChrg"])
+        self.assertEqual(100, request_data["ValDtls"]["TotInvVal"])
 
     @change_settings("GST Settings", {"report_nil_exempted_with_taxable_values": 1})
     def test_request_data_for_nil_only_invoice_with_taxable_values(self):
@@ -475,6 +476,7 @@ class TestEInvoice(IntegrationTestCase):
 
         self.assertEqual(100, request_data["ValDtls"]["AssVal"])
         self.assertEqual(0, request_data["ValDtls"]["OthChrg"])
+        self.assertEqual(100, request_data["ValDtls"]["TotInvVal"])
 
     @change_settings("GST Settings", {"report_nil_exempted_with_taxable_values": 0})
     def test_request_data_with_nil_exempted_item_without_taxable_values(self):
