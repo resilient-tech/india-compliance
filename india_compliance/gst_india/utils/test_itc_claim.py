@@ -364,11 +364,9 @@ class TestITCClaim(IntegrationTestCase):
             is_reverse_charge=1,
             posting_date=getdate("2024-01-15"),
         )
-        # posting period unfiled → returns posting period
         result = _calculate_itc_claim_period(doc, filed=set())
         self.assertEqual(result, "012024")
 
-        # posting period filed → skips to next unfiled (same as regular invoices)
         result = _calculate_itc_claim_period(doc, filed={"012024"})
         self.assertEqual(result, "022024")
 

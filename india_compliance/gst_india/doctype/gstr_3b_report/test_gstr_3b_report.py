@@ -786,14 +786,14 @@ class TestGSTR3BReport(IntegrationTestCase):
                 "filter_by": "ITC Claim Period",
             }
         ).insert()
-        out_this = json.loads(report_this.json_output)
+        output = json.loads(report_this.json_output)
 
         # Outward RCM liability always by posting date → invoice IS included
-        self.assertGreater(out_this["sup_details"]["isup_rev"]["txval"], 0)
+        self.assertEqual(output["sup_details"]["isup_rev"]["txval"], 100.0)
         # ITC by claim period → invoice is NOT included (deferred to next month)
-        itc_this = {r["ty"]: r for r in out_this["itc_elg"]["itc_avl"]}
-        self.assertEqual(itc_this.get("ISRC", {}).get("camt", 0.0), 0.0)
-        self.assertEqual(itc_this.get("ISRC", {}).get("samt", 0.0), 0.0)
+        itc_section = {r["ty"]: r for r in output["itc_elg"]["itc_avl"]}
+        self.assertEqual(itc_section.get("ISRC", {}).get("camt", 0.0), 0.0)
+        self.assertEqual(itc_section.get("ISRC", {}).get("samt", 0.0), 0.0)
 
         # -- Report for NEXT month (filter_by ITC Claim Period) --
         report_next = frappe.get_doc(
@@ -806,14 +806,14 @@ class TestGSTR3BReport(IntegrationTestCase):
                 "filter_by": "ITC Claim Period",
             }
         ).insert()
-        out_next = json.loads(report_next.json_output)
+        output = json.loads(report_next.json_output)
 
         # Outward RCM by posting date → invoice is NOT in next month's liability
-        self.assertEqual(out_next["sup_details"]["isup_rev"]["txval"], 0.0)
+        self.assertEqual(output["sup_details"]["isup_rev"]["txval"], 0.0)
         # ITC by claim period → invoice IS in next month's ITC
-        itc_next = {r["ty"]: r for r in out_next["itc_elg"]["itc_avl"]}
-        self.assertGreater(itc_next.get("ISRC", {}).get("camt", 0.0), 0.0)
-        self.assertGreater(itc_next.get("ISRC", {}).get("samt", 0.0), 0.0)
+        itc_section = {r["ty"]: r for r in output["itc_elg"]["itc_avl"]}
+        self.assertEqual(itc_section.get("ISRC", {}).get("camt", 0.0), 9.0)
+        self.assertEqual(itc_section.get("ISRC", {}).get("samt", 0.0), 9.0)
 
 
 def create_sales_invoices():

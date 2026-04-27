@@ -281,12 +281,10 @@ class TestPurchaseInvoice(IntegrationTestCase):
             do_not_submit=True,
         )
 
-        # Setting to "Deferred" must be allowed
         pinv.itc_claim_period = ITC_CLAIM_PERIOD_DEFERRED
         pinv.save()
         self.assertEqual(pinv.itc_claim_period, ITC_CLAIM_PERIOD_DEFERRED)
 
-        # Setting to any future valid period must also be allowed
         pinv.itc_claim_period = "012099"
         pinv.save()
         self.assertEqual(pinv.itc_claim_period, "012099")
