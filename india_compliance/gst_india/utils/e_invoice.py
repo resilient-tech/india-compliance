@@ -622,17 +622,12 @@ def get_e_invoice_info(doc):
 class EInvoiceData(GSTTransactionData):
     def get_data(self):
         self.validate_transaction()
+        self.item_details_list = self.get_all_item_details()
         self.set_transaction_details()
         self.set_item_list()
         self.set_transporter_details()
         self.set_party_address_details()
         return self.sanitize_data(self.get_invoice_data())
-
-    def set_item_list(self):
-        self.item_list = []
-
-        for item_details in self.get_all_item_details():
-            self.item_list.append(self.get_item_data(item_details))
 
     def validate_transaction(self):
         super().validate_transaction()
@@ -679,9 +674,6 @@ class EInvoiceData(GSTTransactionData):
                 }
             )
 
-        if self.doc.is_reverse_charge:
-            item_details["total_value"] = abs(self.rounded(item.taxable_value, 2))
-
         if batch_no := self.sanitize_value(item.batch_no, max_length=20, truncate=False):
             batch_expiry_date = frappe.db.get_value("Batch", item.batch_no, "expiry_date")
             item_details.update(
@@ -690,6 +682,13 @@ class EInvoiceData(GSTTransactionData):
                     "batch_expiry_date": format_date(batch_expiry_date, self.DATE_FORMAT),
                 }
             )
+
+    def update_item_total_value(self, item_details, item):
+        if self.doc.is_reverse_charge:
+            item_details["total_value"] = abs(self.rounded(item.taxable_value, 2))
+            return
+
+        super().update_item_total_value(item_details, item)
 
     def update_transaction_details(self):
         invoice_type = "INV"
@@ -720,9 +719,6 @@ class EInvoiceData(GSTTransactionData):
                 "ecommerce_gstin": self.doc.ecommerce_gstin,
             }
         )
-
-        if self.settings.report_nil_exempted_with_taxable_values:
-            self.transaction_details.total_taxable_value = self.transaction_details.total
 
         self.update_payment_details()
 

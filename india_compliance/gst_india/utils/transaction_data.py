@@ -74,11 +74,9 @@ class GSTTransactionData:
         # Initialize all tax totals to 0
         self.transaction_details.update({key: 0 for key in tax_total_keys})
 
-        for row in self.doc.items:
-            total += row.taxable_value
-
-            if row.gst_treatment in TAXABLE_GST_TREATMENTS:
-                total_taxable_value += row.taxable_value
+        for row in self.item_details_list or []:
+            total += row.taxable_value + row.get("other_charges", 0)
+            total_taxable_value += row.taxable_value
 
             if self.is_purchase_rcm:
                 continue
@@ -288,6 +286,7 @@ class GSTTransactionData:
             )
             self.update_item_tax_details(item_details, row)
             self.update_item_details(item_details, row)
+            self.update_item_total_value(item_details, row)
             all_item_details.append(item_details)
 
         return all_item_details
@@ -326,12 +325,21 @@ class GSTTransactionData:
     def set_item_list(self):
         self.item_list = []
 
-        for item_details in self.get_all_item_details():
+        for item_details in self.item_details_list:
             self.item_list.append(self.get_item_data(item_details))
 
     def update_item_details(self, item_details, item):
         # to be overridden
         pass
+
+    def update_item_total_value(self, item_details, item):
+        item_details["total_value"] = abs(
+            self.rounded(
+                item_details.taxable_value
+                + sum(self.rounded(item_details.get(f"{tax}_amount", 0)) for tax in GST_TAX_TYPES)
+                + self.rounded(item_details.get("other_charges", 0))
+            )
+        )
 
     def update_item_tax_details(self, item_details, item):
         for tax in GST_TAX_TYPES:
@@ -348,17 +356,7 @@ class GSTTransactionData:
 
         validate_gst_tax_rate(tax_rate, item)
 
-        item_details.update(
-            {
-                "tax_rate": tax_rate,
-                "total_value": abs(
-                    self.rounded(
-                        item_details.taxable_value
-                        + sum(self.rounded(item_details.get(f"{tax}_amount", 0)) for tax in GST_TAX_TYPES)
-                    ),
-                ),
-            }
-        )
+        item_details["tax_rate"] = tax_rate
 
     def get_progressive_item_tax_amount(self, amount, tax_type):
         """

@@ -1244,6 +1244,7 @@ class EWaybillData(GSTTransactionData):
         if with_irn:
             return self.get_data_with_irn()
 
+        self.item_details_list = self.get_all_item_details()
         self.set_transaction_details()
         self.set_item_list()
         self.set_transporter_details()
