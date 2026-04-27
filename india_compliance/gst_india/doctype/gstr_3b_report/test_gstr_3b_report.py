@@ -754,13 +754,7 @@ class TestGSTR3BReport(IntegrationTestCase):
         self.assertEqual(output["sup_details"]["osup_det"]["samt"], 0.0)
 
     def test_rcm_outward_liability(self):
-        """
-        RCM outward liability uses posting date while ITC uses claim period.
-
-        Scenario: RCM invoice posted this month but ITC deferred to next month.
-        - This month's report: outward liability shows invoice, ITC does not.
-        - Next month's report: outward liability does not show invoice, ITC does.
-        """
+        """RCM outward liability uses posting date while ITC uses claim period."""
         today = getdate()
         next_month = add_months(today, 1)
         next_period = format_period(next_month)
