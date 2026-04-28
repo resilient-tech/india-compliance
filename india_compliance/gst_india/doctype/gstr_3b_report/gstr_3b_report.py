@@ -35,10 +35,14 @@ from india_compliance.gst_india.utils import (
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 from india_compliance.gst_india.utils.gstr3b.gstr3b_data import GSTR3BInvoices
 =======
 from india_compliance.gst_india.utils.gstr3b.gstr3b_data import (
+=======
+from india_compliance.gst_india.utils.gstr3b.gstr3b_inward_data import (
+>>>>>>> 7a468667 (refactor: rename gstr3b data files)
     GSTR3BInvoices,
 )
 <<<<<<< HEAD
