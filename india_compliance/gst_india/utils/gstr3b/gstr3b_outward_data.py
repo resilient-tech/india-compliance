@@ -4,7 +4,7 @@
 import frappe
 
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
-from india_compliance.gst_india.utils.gstr3b.gstr3b_data import GSTR3BQuery
+from india_compliance.gst_india.utils.gstr3b.gstr3b_inward_data import GSTR3BQuery
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Query, GSTR11A11BData
 
 # GST categories that need to be reported in section 3.2 (inter-state supplies)
