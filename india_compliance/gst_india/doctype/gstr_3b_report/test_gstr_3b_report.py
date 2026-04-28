@@ -21,6 +21,7 @@ from india_compliance.gst_india.utils import get_gst_accounts_by_type
 from india_compliance.gst_india.utils.tests import (
     create_purchase_invoice,
     create_sales_invoice,
+    create_transaction,
 )
 
 
@@ -33,6 +34,7 @@ class TestGSTR3BReport(IntegrationTestCase):
         for doctype in (
             "Sales Invoice",
             "Purchase Invoice",
+            "Payment Entry",
             "Bill of Entry",
             "GSTR 3B Report",
             "Journal Entry",
@@ -43,6 +45,30 @@ class TestGSTR3BReport(IntegrationTestCase):
     @classmethod
     def tearDownClass(cls):
         frappe.db.rollback()
+
+    def get_report_output(self):
+        today = getdate()
+        frappe.db.delete(
+            "GSTR 3B Report",
+            filters={
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+                "year": today.year,
+                "month_or_quarter": get_month(today),
+            },
+        )
+
+        report = frappe.get_doc(
+            {
+                "doctype": "GSTR 3B Report",
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+                "year": today.year,
+                "month_or_quarter": get_month(today),
+            }
+        ).insert()
+
+        return json.loads(report.json_output)
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_gstr_3b_report(self):
@@ -530,6 +556,158 @@ class TestGSTR3BReport(IntegrationTestCase):
         # Must NOT be double-reported in section 3.2 comp_details
         self.assertEqual(output["inter_sup"]["comp_details"], [])
 
+    def test_reverse_charge_sales_invoice(self):
+        create_sales_invoice(
+            customer="_Test Registered Customer",
+            is_reverse_charge=True,
+            item_code="_Test Trading Goods 1",
+            rate=121,
+            is_in_state_rcm=True,
+        )
+
+        output = self.get_report_output()
+
+        self.assertEqual(output["sup_details"]["osup_det"]["txval"], 121.0)
+        self.assertEqual(output["sup_details"]["osup_det"]["iamt"], 0.0)
+        self.assertEqual(output["sup_details"]["osup_det"]["camt"], 0.0)
+        self.assertEqual(output["sup_details"]["osup_det"]["samt"], 0.0)
+        self.assertEqual(output["sup_details"]["osup_det"]["csamt"], 0.0)
+
+    def test_inward_reverse_charge_purchase_invoice_updates_isup_rev(self):
+        create_purchase_invoice(
+            is_in_state_rcm=True,
+            supplier="_Test Unregistered Supplier",
+            is_reverse_charge=True,
+            rate=100,
+        )
+
+        output = self.get_report_output()
+
+        self.assertEqual(output["sup_details"]["isup_rev"]["txval"], 100.0)
+        self.assertEqual(output["sup_details"]["isup_rev"]["iamt"], 0.0)
+        self.assertEqual(output["sup_details"]["isup_rev"]["camt"], 9.0)
+        self.assertEqual(output["sup_details"]["isup_rev"]["samt"], 9.0)
+        self.assertEqual(output["sup_details"]["isup_rev"]["csamt"], 0.0)
+
+    def test_taxable_sales_invoice(self):
+        create_sales_invoice(customer="_Test Registered Customer", is_in_state=True)
+
+        output = self.get_report_output()
+
+        self.assertEqual(output["sup_details"]["osup_det"]["txval"], 100.0)
+        self.assertEqual(output["sup_details"]["osup_det"]["camt"], 9.0)
+        self.assertEqual(output["sup_details"]["osup_det"]["samt"], 9.0)
+        self.assertEqual(output["sup_details"]["osup_det"]["iamt"], 0.0)
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_zero_rated_sales_invoice(self):
+        create_sales_invoice(
+            customer_address="_Test Registered Customer-Billing-1",
+            is_export_with_gst=True,
+            is_out_state=True,
+            rate=555,
+        )
+
+        output = self.get_report_output()
+
+        self.assertEqual(output["sup_details"]["osup_zero"]["txval"], 555.0)
+        self.assertEqual(output["sup_details"]["osup_zero"]["iamt"], 99.9)
+        self.assertEqual(output["sup_details"]["osup_zero"]["csamt"], 0.0)
+
+    def test_nil_rated_sales_invoice(self):
+        create_sales_invoice(item_tax_template="Nil-Rated - _TIRC")
+
+        output = self.get_report_output()
+
+        self.assertEqual(output["sup_details"]["osup_nil_exmp"]["txval"], 100.0)
+
+    def test_exempted_sales_invoice(self):
+        create_sales_invoice(gst_treatment="Exempted", rate=150)
+
+        output = self.get_report_output()
+
+        self.assertEqual(output["sup_details"]["osup_nil_exmp"]["txval"], 150.0)
+
+        create_sales_invoice(item_code="_Test Non GST Item", rate=222)
+
+        output = self.get_report_output()
+
+        self.assertEqual(output["sup_details"]["osup_nongst"]["txval"], 222.0)
+
+    def test_sales_ecommerce_9_5(self):
+        create_sales_invoice(
+            customer="_Test Registered Customer",
+            is_reverse_charge=True,
+            item_code="_Test Trading Goods 1",
+            rate=100,
+            ecommerce_gstin="29AABCF8078M1C8",
+            is_in_state_rcm=True,
+        )
+
+        output = self.get_report_output()
+
+        self.assertEqual(output["eco_dtls"]["eco_reg_sup"]["txval"], 100.0)
+
+    def test_payment_entry_advance(self):
+        create_advance_payment_entry()
+
+        today = getdate()
+        report = frappe.get_doc(
+            {
+                "doctype": "GSTR 3B Report",
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+                "year": today.year,
+                "month_or_quarter": get_month(today),
+            }
+        ).insert()
+
+        output = json.loads(report.json_output)
+
+        self.assertEqual(output["sup_details"]["osup_det"]["txval"], 500.0)
+        self.assertEqual(output["sup_details"]["osup_det"]["iamt"], 0.0)
+        self.assertEqual(output["sup_details"]["osup_det"]["camt"], 45.0)
+        self.assertEqual(output["sup_details"]["osup_det"]["samt"], 45.0)
+        self.assertEqual(output["sup_details"]["osup_det"]["csamt"], 0.0)
+
+    def test_payment_entry_adjustment(self):
+        payment_doc = create_advance_payment_entry()
+        create_sales_invoice_against_advance(payment_doc)
+
+        today = getdate()
+        report = frappe.get_doc(
+            {
+                "doctype": "GSTR 3B Report",
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+                "year": today.year,
+                "month_or_quarter": get_month(today),
+            }
+        ).insert()
+
+        output = json.loads(report.json_output)
+
+        self.assertEqual(output["sup_details"]["osup_det"]["txval"], 500.0)
+        self.assertEqual(output["sup_details"]["osup_det"]["iamt"], 0.0)
+        self.assertEqual(output["sup_details"]["osup_det"]["camt"], 45.0)
+        self.assertEqual(output["sup_details"]["osup_det"]["samt"], 45.0)
+        self.assertEqual(output["sup_details"]["osup_det"]["csamt"], 0.0)
+
+    def test_inter_state_advance_payment_entry(self):
+        create_advance_payment_entry(
+            customer_address="_Test Registered Customer-Billing-1",
+            place_of_supply="29-Karnataka",
+            is_in_state=0,
+            is_out_state=1,
+        )
+
+        output = self.get_report_output()
+
+        self.assertEqual(output["sup_details"]["osup_det"]["txval"], 500.0)
+        self.assertEqual(output["sup_details"]["osup_det"]["iamt"], 90.0)
+        self.assertEqual(output["sup_details"]["osup_det"]["camt"], 0.0)
+        self.assertEqual(output["sup_details"]["osup_det"]["samt"], 0.0)
+
 
 def create_sales_invoices():
     create_sales_invoice(is_in_state=True)
@@ -625,6 +803,52 @@ def create_purchase_invoices():
         supplier="_Test Registered InterState Supplier",
         is_out_state=True,
     )
+
+
+def create_advance_payment_entry(do_not_submit=False, **kwargs):
+    payment_doc = create_transaction(
+        **{
+            "doctype": "Payment Entry",
+            "payment_type": "Receive",
+            "mode_of_payment": "Cash",
+            "company_address": "_Test Indian Registered Company-Billing",
+            "party_type": "Customer",
+            "party": "_Test Registered Customer",
+            "customer_address": "_Test Registered Customer-Billing",
+            "paid_to": "Cash - _TIRC",
+            "paid_amount": 500,
+            "is_in_state": 1,
+            "do_not_save": True,
+            **kwargs,
+        }
+    )
+
+    payment_doc.setup_party_account_field()
+    payment_doc.set_missing_values()
+    payment_doc.set_exchange_rate()
+    payment_doc.received_amount = payment_doc.paid_amount / payment_doc.target_exchange_rate
+    payment_doc.save()
+
+    if not do_not_submit:
+        payment_doc.submit()
+
+    return payment_doc
+
+
+def create_sales_invoice_against_advance(payment_doc):
+    invoice_doc = create_transaction(
+        doctype="Sales Invoice",
+        customer="_Test Registered Customer",
+        is_in_state=1,
+        do_not_submit=True,
+    )
+
+    invoice_doc.set_advances()
+    for row in invoice_doc.advances:
+        row.allocated_amount = invoice_doc.net_total if row.reference_name == payment_doc.name else 0
+
+    invoice_doc.submit()
+    return invoice_doc
 
 
 def create_itc_reversal_journal_entry(
