@@ -26,7 +26,7 @@ from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr3b.gstr3b_data import (
     GSTR3BInvoices,
 )
-from india_compliance.gst_india.utils.gstr3b.gstr3b_outward import (
+from india_compliance.gst_india.utils.gstr3b.gstr3b_outward_data import (
     GSTR1_FIELD_MAP,
     INTER_STATE_SECTION_MAP,
     OUTWARD_INTER_STATE_FIELD,
