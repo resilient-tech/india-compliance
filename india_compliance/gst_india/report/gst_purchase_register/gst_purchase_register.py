@@ -3,7 +3,7 @@
 import frappe
 from frappe import _
 
-from india_compliance.gst_india.utils.gstr3b.gstr3b_data import GSTR3BInvoices
+from india_compliance.gst_india.utils.gstr3b.gstr3b_inward_data import GSTR3BInvoices
 
 SECTION_MAPPING = {
     "4": {

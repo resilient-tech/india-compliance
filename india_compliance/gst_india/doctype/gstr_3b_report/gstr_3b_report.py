@@ -23,7 +23,7 @@ from india_compliance.gst_india.utils import (
     get_period,
 )
 from india_compliance.gst_india.utils.exporter import ExcelExporter
-from india_compliance.gst_india.utils.gstr3b.gstr3b_data import (
+from india_compliance.gst_india.utils.gstr3b.gstr3b_inward_data import (
     GSTR3BInvoices,
 )
 from india_compliance.gst_india.utils.gstr3b.gstr3b_outward_data import (
