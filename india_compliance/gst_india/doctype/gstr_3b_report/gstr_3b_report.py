@@ -43,6 +43,7 @@ from india_compliance.gst_india.utils.gstr3b.gstr3b_data import (
 )
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> cb4e341c (chore: nitpick comments)
 =======
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategory
@@ -52,6 +53,9 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_data import (
     GSTR11A11BData,
 =======
 from india_compliance.gst_india.utils.gstr3b.gstr3b_outward import (
+=======
+from india_compliance.gst_india.utils.gstr3b.gstr3b_outward_data import (
+>>>>>>> 24233645 (refactor: rename outward data processing module and update imports)
     GSTR1_FIELD_MAP,
     INTER_STATE_SECTION_MAP,
     OUTWARD_INTER_STATE_FIELD,
