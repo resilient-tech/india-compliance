@@ -3,7 +3,7 @@
 import frappe
 from frappe import _
 
-from india_compliance.gst_india.utils.gstr3b.gstr3b_inward_data import GSTR3BInvoices
+from india_compliance.gst_india.utils.gstr3b.gstr3b_inward_data import GSTR3BInwardInvoices
 
 SECTION_MAPPING = {
     "4": {
@@ -279,7 +279,7 @@ def get_tax_columns():
 
 def get_data(filters):
     data = []
-    gstr3b_invoices = GSTR3BInvoices(filters)
+    gstr3b_invoices = GSTR3BInwardInvoices(filters)
     is_grouped_by_invoice = filters.summary_by != "Summary by Item"
     sub_section = filters.sub_section
 
