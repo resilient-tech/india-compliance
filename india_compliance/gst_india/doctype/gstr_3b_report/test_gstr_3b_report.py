@@ -762,12 +762,11 @@ def create_sales_invoices():
     # Exempted item (same section as Nil-Rated: osup_nil_exmp)
     create_sales_invoice(gst_treatment="Exempted", rate=150)
     # UIN Holders inter-state → osup_det (txval+200, iamt+36) and uin_details (pos=29)
-    si = create_sales_invoice(do_not_save=True, is_out_state=True, rate=200)
-    si.billing_address_gstin = "0088ABC12345UN1"
-    si.gst_category = "UIN Holders"
-    si.place_of_supply = "29-Karnataka"
-    si.save()
-    si.submit()
+    create_sales_invoice(
+        customer_address="_Test Registered Customer-Billing-4",
+        is_out_state=True,
+        rate=200,
+    )
 
 
 def create_purchase_invoices():
