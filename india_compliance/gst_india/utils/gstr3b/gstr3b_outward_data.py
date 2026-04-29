@@ -32,87 +32,57 @@ INTER_STATE_SECTION_MAP = {
     "UIN Holders": "uin_details",
 }
 
-OUTWARD_CATEGORY_LABELS = {
-    "outward_taxable": "Outward taxable supplies (other than zero rated, nil rated and exempted)",
-    "outward_zero_rated": "Outward taxable supplies (zero rated)",
-    "other_outward": "Other outward supplies (Nil rated, exempted)",
-    "outward_non_gst": "Non-GST outward supplies",
-    "inward_reverse_charge": "Inward supplies (liable to reverse charge)",
-    "eco_9_5": (
-        "Supplies made through e-commerce operators on which e-commerce operator is liable "
-        "to pay tax u/s 9(5)"
-    ),
-}
-
-OUTWARD_SUB_CATEGORY_LABELS = {
-    "nil_exempt": "Nil-Rated, Exempted",
-    "non_gst": "Non-GST",
-    "ecom_9_5": "E-Commerce 9(5)",
-    "zero_rated": "Zero-Rated",
-    "taxable": "Taxable",
-    "regular": "Regular",
-    "inward_reverse_charge": "Inward Reverse Charge",
-}
-
 OUTWARD_INTER_STATE_FIELD = "is_part_of_inter_state_supplies"
 
-OUTWARD_SECTION_LABELS = {
-    "sup_details": "Details of Outward Supplies and inward supplies liable to reverse charge",
-    "eco_dtls": "Supplies notified under section 9(5) of the CGST Act, 2017",
+OUTWARD_CATEGORY_MAP = {
+    "Details of Outward Supplies and inward supplies liable to reverse charge": "sup_details",
+    "Supplies notified under section 9(5) of the CGST Act, 2017": "eco_dtls",
 }
 
-OUTWARD_SECTION_MAP = {
-    "sup_details": {
-        "osup_det": OUTWARD_CATEGORY_LABELS["outward_taxable"],
-        "osup_zero": OUTWARD_CATEGORY_LABELS["outward_zero_rated"],
-        "osup_nil_exmp": OUTWARD_CATEGORY_LABELS["other_outward"],
-        "isup_rev": OUTWARD_CATEGORY_LABELS["inward_reverse_charge"],
-        "osup_nongst": OUTWARD_CATEGORY_LABELS["outward_non_gst"],
-    },
-    "eco_dtls": {
-        "eco_reg_sup": OUTWARD_CATEGORY_LABELS["eco_9_5"],
-    },
+OUTWARD_SUB_CATEGORY_MAP = {
+    "Nil-Rated, Exempted": "osup_nil_exmp",
+    "Non-GST": "osup_nongst",
+    "E-Commerce 9(5)": "eco_reg_sup",
+    "Zero-Rated": "osup_zero",
+    "Taxable": "osup_det",
+    "Inward Reverse Charge": "isup_rev",
 }
+
+OUTWARD_AMOUNT_FIELDS = (
+    "taxable_value",
+    "igst_amount",
+    "cgst_amount",
+    "sgst_amount",
+    "total_cess_amount",
+)
 
 OUTWARD_SALES_CATEGORY_CONDITIONS = {
-    "nil_exempt": {
-        "section": "sup_details",
-        "row": "osup_nil_exmp",
-        "category": "is_nil_rated_exempted",
-        "sub_category": "set_for_nil_rated_exempted",
+    "Nil-Rated, Exempted": {
+        "condition": "is_nil_rated_exempted",
+        "invoice_category": "Details of Outward Supplies and inward supplies liable to reverse charge",
     },
-    "non_gst": {
-        "section": "sup_details",
-        "row": "osup_nongst",
-        "category": "is_non_gst",
-        "sub_category": "set_for_non_gst",
+    "Non-GST": {
+        "condition": "is_non_gst",
+        "invoice_category": "Details of Outward Supplies and inward supplies liable to reverse charge",
     },
-    "ecom_9_5": {
-        "section": "eco_dtls",
-        "row": "eco_reg_sup",
-        "category": "is_ecom_9_5",
-        "sub_category": "set_for_ecom_9_5",
+    "E-Commerce 9(5)": {
+        "condition": "is_ecom_9_5",
+        "invoice_category": "Supplies notified under section 9(5) of the CGST Act, 2017",
     },
-    "zero_rated": {
-        "section": "sup_details",
-        "row": "osup_zero",
-        "category": "is_zero_rated",
-        "sub_category": "set_for_zero_rated",
+    "Zero-Rated": {
+        "condition": "is_zero_rated",
+        "invoice_category": "Details of Outward Supplies and inward supplies liable to reverse charge",
     },
-    "taxable": {
-        "section": "sup_details",
-        "row": "osup_det",
-        "category": "is_taxable",
-        "sub_category": "set_for_taxable",
+    "Taxable": {
+        "condition": "is_taxable",
+        "invoice_category": "Details of Outward Supplies and inward supplies liable to reverse charge",
     },
 }
 
 OUTWARD_PURCHASE_CATEGORY_CONDITIONS = {
-    "inward_rc": {
-        "section": "sup_details",
-        "row": "isup_rev",
-        "category": "is_inward_reverse_charge",
-        "sub_category": "set_for_inward_reverse_charge",
+    "Inward Reverse Charge": {
+        "condition": "is_inward_reverse_charge",
+        "invoice_category": "Details of Outward Supplies and inward supplies liable to reverse charge",
     }
 }
 
@@ -122,7 +92,7 @@ OUTWARD_DOCTYPE_CONDITION_MAP = {
 }
 
 
-class GSTR3BOutwardConditions:
+class GSTR3BCategoryConditions:
     def is_nil_rated_exempted(self, invoice):
         return invoice.gst_treatment in ("Nil-Rated", "Exempted")
 
@@ -148,36 +118,21 @@ class GSTR3BOutwardConditions:
         return bool(invoice.is_reverse_charge)
 
 
-class GSTR3BOutwardSubcategory(GSTR3BOutwardConditions):
-    def set_for_nil_rated_exempted(self, invoice):
-        invoice.invoice_sub_category = OUTWARD_SUB_CATEGORY_LABELS["nil_exempt"]
-
-    def set_for_non_gst(self, invoice):
-        invoice.invoice_sub_category = OUTWARD_SUB_CATEGORY_LABELS["non_gst"]
-
-    def set_for_ecom_9_5(self, invoice):
-        invoice.invoice_sub_category = OUTWARD_SUB_CATEGORY_LABELS["ecom_9_5"]
-
-    def set_for_zero_rated(self, invoice):
-        invoice.invoice_sub_category = OUTWARD_SUB_CATEGORY_LABELS["zero_rated"]
-
-    def set_for_taxable(self, invoice):
-        invoice.invoice_sub_category = OUTWARD_SUB_CATEGORY_LABELS["taxable"]
-
-    def set_for_inward_reverse_charge(self, invoice):
-        invoice.invoice_sub_category = OUTWARD_SUB_CATEGORY_LABELS["inward_reverse_charge"]
-
-
-class GSTR3BOutwardInvoices(GSTR3BOutwardSubcategory):
+class GSTR3BOutwardInvoices(GSTR3BCategoryConditions):
     def __init__(self, filters):
         self.filters = filters
         self.inward_query = GSTR3BInwardQuery(filters)
         self.gstr1_query = GSTR1Query(filters)
 
-    def get_data(self):
-        return (
+    def get_data(self, group_by_invoice=False):
+        data = (
             self.get_outward_invoices() + self.get_inward_invoices() + self.get_advance_adjustment_invoices()
         )
+
+        if not group_by_invoice:
+            return data
+
+        return self.get_invoice_wise_data(data)
 
     def get_outward_invoices(self):
         data = self.gstr1_query.get_base_query().run(as_dict=True)
@@ -186,6 +141,11 @@ class GSTR3BOutwardInvoices(GSTR3BOutwardSubcategory):
     def get_inward_invoices(self):
         purchase_data = (
             self.inward_query.get_base_purchase_query()
+            .select(
+                (self.inward_query.PI_ITEM.cess_amount + self.inward_query.PI_ITEM.cess_non_advol_amount).as_(
+                    "total_cess_amount"
+                )
+            )
             .where(self.inward_query.PI.is_reverse_charge == 1)
             .run(as_dict=True)
         )
@@ -237,16 +197,13 @@ class GSTR3BOutwardInvoices(GSTR3BOutwardSubcategory):
 
             invoice = frappe._dict(
                 {
-                    "invoice_category": OUTWARD_SECTION_MAP["sup_details"]["osup_det"],
-                    "invoice_category_label": OUTWARD_SECTION_LABELS["sup_details"],
-                    "outward_section": "osup_det",
-                    "outward_section_key": "sup_details",
+                    "invoice_category": "Details of Outward Supplies and inward supplies liable to reverse charge",
+                    "invoice_sub_category": "Taxable",
                     "voucher_no": row.invoice_no,
                     "customer_name": row.customer_name,
                     "voucher_type": "Payment Entry",
                     "posting_date": row.posting_date,
                     "company_gstin": row.company_gstin,
-                    "invoice_sub_category": OUTWARD_SUB_CATEGORY_LABELS["regular"],
                     "taxable_value": row.taxable_value * multiplier,
                     "gst_rate": tax_rate,
                     "igst_amount": 0 if is_intra_state else tax_amount,
@@ -272,14 +229,10 @@ class GSTR3BOutwardInvoices(GSTR3BOutwardSubcategory):
         for invoice in data:
             invoice[OUTWARD_INTER_STATE_FIELD] = 0
 
-            if doctype != "Sales Invoice":
-                invoice.total_cess_amount = invoice.get("cess_amount") or 0
-
             self.set_invoice_category(invoice, conditions)
-            if not invoice.get("invoice_category"):
+            if not invoice.get("invoice_sub_category"):
                 continue
 
-            self.set_invoice_sub_category(invoice, conditions)
             self.set_tax_amounts(invoice, doctype)
             self.set_inter_state_supply_flag(invoice, doctype)
             processed.append(invoice)
@@ -302,22 +255,38 @@ class GSTR3BOutwardInvoices(GSTR3BOutwardSubcategory):
     def is_part_of_inter_state_supplies(self, invoice, doctype):
         return (
             doctype == "Sales Invoice"
-            and invoice.get("outward_section") == "osup_det"
-            and invoice.get("gst_category") in INTER_STATE_GST_CATEGORIES
-            and (invoice.get("igst_amount") or 0) > 0
-            and (invoice.get("gst_rate") or 0) > 0
+            and invoice.invoice_sub_category == "Taxable"
+            and invoice.gst_category in INTER_STATE_GST_CATEGORIES
+            and (invoice.igst_amount or 0) > 0
+            and (invoice.gst_rate or 0) > 0
         )
 
     def set_invoice_category(self, invoice, conditions):
-        for condition_key, functions in conditions.items():
-            if getattr(self, functions["category"])(invoice):
-                invoice.invoice_category = OUTWARD_SECTION_MAP[functions["section"]][functions["row"]]
-                invoice.invoice_category_label = OUTWARD_SECTION_LABELS[functions["section"]]
-                invoice.outward_section = functions["row"]
-                invoice.outward_section_key = functions["section"]
-                invoice.outward_condition_key = condition_key
+        for sub_category, functions in conditions.items():
+            if getattr(self, functions["condition"])(invoice):
+                invoice.invoice_category = functions["invoice_category"]
+                invoice.invoice_sub_category = sub_category
                 return
 
-    def set_invoice_sub_category(self, invoice, conditions):
-        function = conditions[invoice.outward_condition_key]["sub_category"]
-        getattr(self, function)(invoice)
+    def update_invoice_amounts(self, target_invoice, source_invoice):
+        for field in OUTWARD_AMOUNT_FIELDS:
+            target_invoice[field] += source_invoice[field]
+
+    def get_invoice_wise_data(self, invoices):
+        invoice_wise_data = {}
+        for invoice in invoices:
+            key = (
+                invoice.voucher_type,
+                invoice.voucher_no,
+                invoice.invoice_category,
+                invoice.invoice_sub_category,
+            )
+
+            aggregated_invoice = invoice_wise_data.get(key)
+            if not aggregated_invoice:
+                invoice_wise_data[key] = invoice
+                continue
+
+            self.update_invoice_amounts(aggregated_invoice, invoice)
+
+        return list(invoice_wise_data.values())
