@@ -786,30 +786,11 @@ def get_gst_details(
     if party_details.get("is_outward_stock_entry"):
         allow_same_gstin = True
 
-    # Party/Address Defaults
-    if is_sales_transaction:
-        company_gstin_field = "company_gstin"
-        party_gstin_field = "billing_address_gstin"
-        party_address_field = "customer_address"
-        gst_category_field = "gst_category"
-
-    elif doctype == "Stock Entry":
-        if party_details.get("is_inward_stock_entry"):
-            company_gstin_field = "bill_to_gstin"
-            party_gstin_field = "bill_from_gstin"
-            party_address_field = "bill_from_address"
-            gst_category_field = "bill_from_gst_category"
-        else:
-            company_gstin_field = "bill_from_gstin"
-            party_gstin_field = "bill_to_gstin"
-            party_address_field = "bill_to_address"
-            gst_category_field = "bill_to_gst_category"
-
-    else:
-        company_gstin_field = "company_gstin"
-        party_gstin_field = "supplier_gstin"
-        party_address_field = "supplier_address"
-        gst_category_field = "gst_category"
+    address_fields = _get_address_fields(doctype, party_details)
+    company_gstin_field = address_fields.get("company_gstin_field")
+    party_gstin_field = address_fields.get("party_gstin_field")
+    party_address_field = address_fields.get("party_address_field")
+    gst_category_field = address_fields.get("gst_category_field")
 
     if not party_details.get(party_address_field):
         party_gst_details = get_party_gst_details(party_details, is_sales_transaction, party_gstin_field)
@@ -898,6 +879,51 @@ def get_gst_details(
         gst_details.taxes = get_taxes_and_charges(master_doctype, default_tax)
 
     return gst_details
+
+
+def _get_address_fields(doctype, party_details=None):
+    is_sales_transaction = doctype in SALES_DOCTYPES or doctype == "Payment Entry"
+    address_fields = frappe._dict(
+        {
+            "company_gstin_field": "",
+            "party_gstin_field": "",
+            "party_address_field": "",
+            "gst_category_field": "",
+        }
+    )
+    if is_sales_transaction:
+        address_fields.update(
+            company_gstin_field="company_gstin",
+            party_gstin_field="billing_address_gstin",
+            party_address_field="customer_address",
+            gst_category_field="gst_category",
+        )
+
+    elif doctype == "Stock Entry":
+        if party_details and party_details.get("is_inward_stock_entry"):
+            address_fields.update(
+                company_gstin_field="bill_to_gstin",
+                party_gstin_field="bill_from_gstin",
+                party_address_field="bill_from_address",
+                gst_category_field="bill_from_gst_category",
+            )
+        else:
+            address_fields.update(
+                company_gstin_field="bill_from_gstin",
+                party_gstin_field="bill_to_gstin",
+                party_address_field="bill_to_address",
+                gst_category_field="bill_to_gst_category",
+            )
+
+    else:
+        address_fields.update(
+            company_gstin_field="company_gstin",
+            party_gstin_field="supplier_gstin",
+            party_address_field="supplier_address",
+            gst_category_field="gst_category",
+        )
+
+    return address_fields
 
 
 def get_party_gst_details(party_details, is_sales_transaction, gstin_fieldname):
@@ -1024,6 +1050,7 @@ def validate_gst_refund_accounts(doc):
     if doc.doctype not in SALES_DOCTYPES:
         return
 
+    is_return = doc.get("is_return", False)
     has_refund = False
     net_amount = 0
 
@@ -1032,11 +1059,15 @@ def validate_gst_refund_accounts(doc):
             net_amount += tax.base_tax_amount_after_discount_amount
             continue
 
-        # Validate if tax amount is negative
-        if tax.tax_amount > 0:
+        # Refund should be
+        # -ve for normal invoices and
+        # +ve for credit notes (is_return)
+        is_invalid = tax.tax_amount < 0 if is_return else tax.tax_amount > 0
+        if is_invalid:
+            expected = "positive" if is_return else "negative"
             frappe.throw(
-                _("Row #{0}: Tax amount should be negative for GST Account {1}").format(
-                    tax.idx, tax.account_head
+                _("Row #{0}: Tax amount should be {1} for GST Account {2}").format(
+                    tax.idx, expected, tax.account_head
                 )
             )
 
@@ -1535,10 +1566,44 @@ def before_validate_transaction(doc, method=None):
 
     set_reverse_charge_as_per_gst_settings(doc)
 
+    if not doc.is_new():
+        return
+    field = _get_address_fields(doc.doctype).get("party_address_field")
+    if doc.get(field):
+        return
+
+    doc._party_address_not_set = True
+
+
+def _update_place_of_supply_and_taxes(doc):
+    """
+    On new docs, erpnext updates address if missing but
+    place of supply and taxes are not updated based on the new address.
+    """
+
+    if not doc.get("_party_address_not_set"):
+        return
+
+    address_field = _get_address_fields(doc.doctype).get("party_address_field")
+    if not doc.get(address_field):
+        return
+
+    gst_details = get_gst_details(doc.as_dict(), doc.doctype, doc.company, update_place_of_supply=True)
+
+    if gst_details.get("place_of_supply") == doc.place_of_supply:
+        return
+
+    doc.update(gst_details)
+
+    frappe.msgprint(_("Place of Supply and Taxes have been updated due to change in Party Address."))
+
 
 def validate_transaction(doc, method=None):
     if ignore_gst_validations(doc):
         return False
+
+    if doc.is_new():
+        _update_place_of_supply_and_taxes(doc)
 
     set_gst_tax_type(doc)
     validate_items(doc)
