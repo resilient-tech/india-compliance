@@ -28,8 +28,10 @@ from india_compliance.gst_india.utils.gstr3b.gstr3b_inward_data import (
 from india_compliance.gst_india.utils.gstr3b.gstr3b_outward_data import (
     GSTR1_FIELD_MAP,
     INTER_STATE_SECTION_MAP,
+    OUTWARD_CATEGORY_MAP,
     OUTWARD_INTER_STATE_FIELD,
     OUTWARD_SECTION_TAX_FIELDS,
+    OUTWARD_SUB_CATEGORY_MAP,
     GSTR3BOutwardInvoices,
 )
 
@@ -114,26 +116,28 @@ class GSTR3BReport(Document):
         (advances) — derived from Sales Invoice, reverse-charge Purchase Invoice, and
         Payment Entry advance adjustments.
         """
-        outward_data = GSTR3BOutwardInvoices(self._get_filters()).get_data()
+        outward_data = GSTR3BOutwardInvoices(self._get_filters()).get_data(group_by_invoice=True)
         self.update_outward_json(outward_data)
 
     def update_outward_json(self, data):
         inter_state_supply = {}
 
         for invoice in data:
-            section_key = invoice.get("outward_section_key")
-            section = invoice.get("outward_section")
+            invoice_category = invoice.get("invoice_category")
+            invoice_sub_category = invoice.get("invoice_sub_category")
 
-            if not section_key or not section:
+            if not invoice_category or not invoice_sub_category:
                 continue
 
-            target = self.report_dict[section_key][section]
+            section_key = OUTWARD_CATEGORY_MAP[invoice_category]
+            row_key = OUTWARD_SUB_CATEGORY_MAP[invoice_sub_category]
+            target = self.report_dict[section_key][row_key]
             target["txval"] += invoice.taxable_value or 0
 
-            for key in OUTWARD_SECTION_TAX_FIELDS.get(section, ()):
+            for key in OUTWARD_SECTION_TAX_FIELDS.get(row_key, ()):
                 target[key] += invoice.get(GSTR1_FIELD_MAP[key]) or 0
 
-            if section == "osup_det":
+            if row_key == "osup_det":
                 self._accumulate_inter_state_supply(invoice, inter_state_supply)
 
         for (gst_category, _pos), supply_data in inter_state_supply.items():
