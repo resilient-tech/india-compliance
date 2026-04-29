@@ -37,7 +37,7 @@ class TestScheduleIIITemplates(ERPNextTestSuite):
         self.clear_gl_entries()
 
     def clear_gl_entries(self):
-        frappe.db.sql(f"delete from `tabGL Entry` where company = '{self.company}'")
+        frappe.db.delete("GL Entry", {"company": self.company})
 
     def create_account(
         self, account_name, parent_account_name, root_type, account_category=None, account_type=None
@@ -67,8 +67,8 @@ class TestScheduleIIITemplates(ERPNextTestSuite):
         return name
 
     def test_profit_and_loss_schedule_iii(self):
-        """
-        Tests P&L (Schedule III) aggregation including:
+        """Tests P&L (Schedule III) aggregation.
+
         - Category based filtering (Revenue, Finance Costs)
         - Pattern based filtering (Employee Benefits, Other Expenses)
         - Account Type filtering (Depreciation)
@@ -153,8 +153,8 @@ class TestScheduleIIITemplates(ERPNextTestSuite):
         self.assertEqual(results.get("PROFIT_FOR_PERIOD"), 6200)
 
     def test_balance_sheet_schedule_iii(self):
-        """
-        Tests Balance Sheet (Schedule III) aggregation for new India-specific categories:
+        """Tests Balance Sheet (Schedule III) aggregation for new India-specific categories.
+
         - CWIP, DTA, DTL, Share App Money, etc.
         """
         company = self.company
