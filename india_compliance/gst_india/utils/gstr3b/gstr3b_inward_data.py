@@ -385,8 +385,7 @@ class GSTR3BInwardInvoices(GSTR3BInwardQuery, GSTR3BSubcategory):
 
             invoice.hsn_sub_category = GSTR1_SubCategory.HSN.value
 
-            if invoice.invoice_category in INWARD_NIL_EXEMPT_SECTION_MAP:
-                self.update_tax_values(invoice)
+            self.update_tax_values(invoice)
 
             self.process_uom(invoice, identified_uom)
             processed_invoices.append(invoice)
