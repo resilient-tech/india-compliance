@@ -378,6 +378,23 @@
             ]
         },
         {
+            "name": "_Test Registered Customer-Billing-4",
+            "address_type": "Billing",
+            "address_line1": "Test Address - 7",
+            "city": "Test City",
+            "state": "Karnataka",
+            "pincode": "560001",
+            "country": "India",
+            "gstin": "2900ABC12345UNF",
+            "gst_category": "UIN Holders",
+            "links": [
+                {
+                    "link_doctype": "Customer",
+                    "link_name": "_Test Registered Customer"
+                }
+            ]
+        },
+        {
             "name": "_Test Registered Composition Customer-Billing",
             "address_type": "Billing",
             "address_line1": "Test Address - 6",
