@@ -4,7 +4,7 @@
 import frappe
 
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
-from india_compliance.gst_india.utils.gstr3b.gstr3b_inward_data import GSTR3BQuery
+from india_compliance.gst_india.utils.gstr3b.gstr3b_inward_data import GSTR3BInwardQuery
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Query, GSTR11A11BData
 
 # GST categories that need to be reported in section 3.2 (inter-state supplies)
@@ -116,7 +116,7 @@ OUTWARD_PURCHASE_CATEGORY_CONDITIONS = {
     }
 }
 
-DOCTYPE_CONDITION_MAP = {
+OUTWARD_DOCTYPE_CONDITION_MAP = {
     "Sales Invoice": OUTWARD_SALES_CATEGORY_CONDITIONS,
     "Purchase Invoice": OUTWARD_PURCHASE_CATEGORY_CONDITIONS,
 }
@@ -171,7 +171,7 @@ class GSTR3BOutwardSubcategory(GSTR3BOutwardConditions):
 class GSTR3BOutwardInvoices(GSTR3BOutwardSubcategory):
     def __init__(self, filters):
         self.filters = filters
-        self.gstr3b_query = GSTR3BQuery(filters)
+        self.inward_query = GSTR3BInwardQuery(filters)
         self.gstr1_query = GSTR1Query(filters)
 
     def get_data(self):
@@ -185,8 +185,8 @@ class GSTR3BOutwardInvoices(GSTR3BOutwardSubcategory):
 
     def get_inward_invoices(self):
         purchase_data = (
-            self.gstr3b_query.get_base_purchase_query()
-            .where(self.gstr3b_query.PI.is_reverse_charge == 1)
+            self.inward_query.get_base_purchase_query()
+            .where(self.inward_query.PI.is_reverse_charge == 1)
             .run(as_dict=True)
         )
 
@@ -229,17 +229,19 @@ class GSTR3BOutwardInvoices(GSTR3BOutwardSubcategory):
     def get_advance_adjustment_rows(self, data, multiplier):
         rows = []
         for row in data:
-            is_intra_state = row["place_of_supply"][:2] == row["company_gstin"][:2]
+            is_intra_state = (row.get("place_of_supply") or "")[:2] == (row.get("company_gstin") or "")[:2]
             tax_amount = row["tax_amount"] * multiplier
-            tax_rate = round((row["tax_amount"] / row["taxable_value"]) * 100) if row["taxable_value"] else 0
+            tax_rate = (
+                round((row["tax_amount"] / row["taxable_value"]) * 100, 2) if row["taxable_value"] else 0
+            )
 
             invoice = frappe._dict(
                 {
-                    "invoice_category": "sup_details",
+                    "invoice_category": OUTWARD_SECTION_MAP["sup_details"]["osup_det"],
                     "invoice_category_label": OUTWARD_SECTION_LABELS["sup_details"],
                     "outward_section": "osup_det",
-                    "outward_section_label": OUTWARD_SECTION_MAP["sup_details"]["osup_det"],
-                    "invoice_no": row.invoice_no,
+                    "outward_section_key": "sup_details",
+                    "voucher_no": row.invoice_no,
                     "customer_name": row.customer_name,
                     "voucher_type": "Payment Entry",
                     "posting_date": row.posting_date,
@@ -248,13 +250,12 @@ class GSTR3BOutwardInvoices(GSTR3BOutwardSubcategory):
                     "taxable_value": row.taxable_value * multiplier,
                     "gst_rate": tax_rate,
                     "igst_amount": 0 if is_intra_state else tax_amount,
-                    "cgst_amount": (tax_amount / 2) if is_intra_state else 0,
-                    "sgst_amount": (tax_amount / 2) if is_intra_state else 0,
+                    "cgst_amount": round(tax_amount / 2, 2) if is_intra_state else 0,
+                    "sgst_amount": round(tax_amount / 2, 2) if is_intra_state else 0,
                     "total_cess_amount": row.cess_amount * multiplier,
                     "gst_category": "",
                     "place_of_supply": row.place_of_supply,
                     OUTWARD_INTER_STATE_FIELD: 0,
-                    "doctype": "Payment Entry",
                 }
             )
 
@@ -266,7 +267,7 @@ class GSTR3BOutwardInvoices(GSTR3BOutwardSubcategory):
         return rows
 
     def get_processed_invoices(self, doctype, data):
-        conditions = DOCTYPE_CONDITION_MAP[doctype]
+        conditions = OUTWARD_DOCTYPE_CONDITION_MAP[doctype]
         processed = []
         for invoice in data:
             invoice[OUTWARD_INTER_STATE_FIELD] = 0
@@ -280,12 +281,12 @@ class GSTR3BOutwardInvoices(GSTR3BOutwardSubcategory):
 
             self.set_invoice_sub_category(invoice, conditions)
             self.set_tax_amounts(invoice, doctype)
-            self.set_3_1_a(invoice, doctype)
+            self.set_inter_state_supply_flag(invoice, doctype)
             processed.append(invoice)
 
         return processed
 
-    def set_3_1_a(self, invoice, doctype):
+    def set_inter_state_supply_flag(self, invoice, doctype):
         invoice[OUTWARD_INTER_STATE_FIELD] = int(self.is_part_of_inter_state_supplies(invoice, doctype))
 
     def set_tax_amounts(self, invoice, doctype):
@@ -310,10 +311,10 @@ class GSTR3BOutwardInvoices(GSTR3BOutwardSubcategory):
     def set_invoice_category(self, invoice, conditions):
         for condition_key, functions in conditions.items():
             if getattr(self, functions["category"])(invoice):
-                invoice.invoice_category = functions["section"]
+                invoice.invoice_category = OUTWARD_SECTION_MAP[functions["section"]][functions["row"]]
                 invoice.invoice_category_label = OUTWARD_SECTION_LABELS[functions["section"]]
                 invoice.outward_section = functions["row"]
-                invoice.outward_section_label = OUTWARD_SECTION_MAP[functions["section"]][functions["row"]]
+                invoice.outward_section_key = functions["section"]
                 invoice.outward_condition_key = condition_key
                 return
 
