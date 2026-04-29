@@ -142,6 +142,7 @@ class GSTR3BOutwardInvoices(GSTR3BCategoryConditions):
         purchase_data = (
             self.inward_query.get_base_purchase_query()
             .select(
+                self.inward_query.PI.name.as_("invoice_no"),
                 (self.inward_query.PI_ITEM.cess_amount + self.inward_query.PI_ITEM.cess_non_advol_amount).as_(
                     "total_cess_amount"
                 )
@@ -199,7 +200,7 @@ class GSTR3BOutwardInvoices(GSTR3BCategoryConditions):
                 {
                     "invoice_category": "Details of Outward Supplies and inward supplies liable to reverse charge",
                     "invoice_sub_category": "Taxable",
-                    "voucher_no": row.invoice_no,
+                    "invoice_no": row.invoice_no,
                     "customer_name": row.customer_name,
                     "voucher_type": "Payment Entry",
                     "posting_date": row.posting_date,
@@ -277,7 +278,7 @@ class GSTR3BOutwardInvoices(GSTR3BCategoryConditions):
         for invoice in invoices:
             key = (
                 invoice.voucher_type,
-                invoice.voucher_no,
+                invoice.invoice_no,
                 invoice.invoice_category,
                 invoice.invoice_sub_category,
             )
