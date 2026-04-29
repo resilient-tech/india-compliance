@@ -67,7 +67,8 @@ class TestScheduleIIITemplates(ERPNextTestSuite):
         return name
 
     def test_profit_and_loss_schedule_iii(self):
-        """Tests P&L (Schedule III) aggregation.
+        """
+        Tests P&L (Schedule III) aggregation.
 
         - Category based filtering (Revenue, Finance Costs)
         - Pattern based filtering (Employee Benefits, Other Expenses)
