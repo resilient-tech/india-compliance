@@ -54,6 +54,11 @@ PURCHASE_CATEGORY_CONDITIONS = {
         "category": "is_ineligible_itc",
         "sub_category": "set_for_ineligible_itc",
     },
+    # keep always after ITC available
+    "ITC Reversed": {
+        "category": "is_itc_reversed",
+        "sub_category": "set_for_itc_reversed",
+    },
 }
 
 BOE_CATEGORY_CONDITIONS = {
@@ -386,10 +391,10 @@ class GSTR3BInwardInvoices(GSTR3BInwardQuery, GSTR3BSubcategory):
             self.process_uom(invoice, identified_uom)
             processed_invoices.append(invoice)
 
-            if doctype != "Purchase Invoice" or invoice.invoice_category != "ITC Available":
+            if invoice.invoice_category != "ITC Available":
                 continue
 
-            if self.is_itc_reversed(invoice):
+            if getattr(self, conditions["ITC Reversed"]["category"], None)(invoice):
                 reversed_invoice = frappe._dict({**invoice, "invoice_category": "ITC Reversed"})
                 self.set_for_itc_reversed(reversed_invoice)
                 processed_invoices.append(reversed_invoice)
@@ -450,9 +455,7 @@ class GSTR3BInwardInvoices(GSTR3BInwardQuery, GSTR3BSubcategory):
                 invoice_wise_data[key] = invoice
             else:
                 for field in AMOUNT_FIELDS:
-                    invoice_wise_data[key][field] = (invoice_wise_data[key].get(field) or 0) + (
-                        invoice.get(field) or 0
-                    )
+                    invoice_wise_data[key][field] += invoice[field]
 
         return list(invoice_wise_data.values())
 
