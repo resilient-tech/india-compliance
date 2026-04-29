@@ -67,7 +67,8 @@ class TestScheduleIIITemplates(ERPNextTestSuite):
         return name
 
     def test_profit_and_loss_schedule_iii(self):
-        """Tests P&L (Schedule III) aggregation.
+        """
+        Tests P&L (Schedule III) aggregation.
 
         - Category based filtering (Revenue, Finance Costs)
         - Pattern based filtering (Employee Benefits, Other Expenses)
@@ -153,7 +154,8 @@ class TestScheduleIIITemplates(ERPNextTestSuite):
         self.assertEqual(results.get("PROFIT_FOR_PERIOD"), 6200)
 
     def test_balance_sheet_schedule_iii(self):
-        """Tests Balance Sheet (Schedule III) aggregation for new India-specific categories.
+        """
+        Tests Balance Sheet (Schedule III) aggregation for new India-specific categories.
 
         - CWIP, DTA, DTL, Share App Money, etc.
         """
