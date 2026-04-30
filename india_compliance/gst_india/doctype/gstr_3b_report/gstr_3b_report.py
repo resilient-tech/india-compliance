@@ -5,11 +5,7 @@
 import calendar
 import json
 import os
-<<<<<<< HEAD
-from collections import defaultdict
-=======
 from typing import ClassVar
->>>>>>> bff54b15 (refactor: changes as per review)
 
 import frappe
 from frappe import _
@@ -18,62 +14,18 @@ from frappe.utils import cint, cstr, flt, get_first_day, get_last_day
 from openpyxl.cell.cell import MergedCell
 
 from india_compliance.gst_india.constants import STATE_NUMBERS
-<<<<<<< HEAD
-<<<<<<< HEAD
-from india_compliance.gst_india.overrides.transaction import is_inter_state_supply
-<<<<<<< HEAD
-from india_compliance.gst_india.report.gstr_1.gstr_1 import GSTR11A11BData
-from india_compliance.gst_india.report.gstr_3b_details.gstr_3b_details import (
-    IneligibleITC,
-)
-=======
->>>>>>> 26dbbe72 (refactor: gstr_3b_report)
-=======
-from india_compliance.gst_india.report.gst_purchase_register.gst_purchase_register import (
-    AMOUNT_FIELDS_MAP,
-)
->>>>>>> 804d8f20 (fix: use data from gst sales and purchase register)
-=======
->>>>>>> bff54b15 (refactor: changes as per review)
 from india_compliance.gst_india.utils import (
     get_data_file_path,
     get_period,
 )
 from india_compliance.gst_india.utils.exporter import ExcelExporter
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-from india_compliance.gst_india.utils.gstr3b.gstr3b_data import GSTR3BInvoices
-=======
-from india_compliance.gst_india.utils.gstr3b.gstr3b_data import (
-=======
 from india_compliance.gst_india.utils.gstr3b.gstr3b_inward_data import (
-<<<<<<< HEAD
->>>>>>> 7a468667 (refactor: rename gstr3b data files)
-    GSTR3BInvoices,
-=======
     INWARD_ITC_SECTION_MAP,
     INWARD_NIL_EXEMPT_SECTION_MAP,
     ITC_AMOUNT_KEYS,
     GSTR3BInwardInvoices,
->>>>>>> bff54b15 (refactor: changes as per review)
 )
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> cb4e341c (chore: nitpick comments)
-=======
-from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategory
->>>>>>> 804d8f20 (fix: use data from gst sales and purchase register)
-from india_compliance.gst_india.utils.gstr_1.gstr_1_data import (
-    GSTR1Invoices,
-    GSTR11A11BData,
-=======
-from india_compliance.gst_india.utils.gstr3b.gstr3b_outward import (
-=======
 from india_compliance.gst_india.utils.gstr3b.gstr3b_outward_data import (
->>>>>>> 24233645 (refactor: rename outward data processing module and update imports)
     GSTR1_FIELD_MAP,
     INTER_STATE_SECTION_MAP,
     OUTWARD_CATEGORY_MAP,
@@ -81,117 +33,8 @@ from india_compliance.gst_india.utils.gstr3b.gstr3b_outward_data import (
     OUTWARD_SECTION_TAX_FIELDS,
     OUTWARD_SUB_CATEGORY_MAP,
     GSTR3BOutwardInvoices,
->>>>>>> 3e649c98 (refactor: move outward data processing into seperate file)
-)
-<<<<<<< HEAD
->>>>>>> 26dbbe72 (refactor: gstr_3b_report)
-from india_compliance.gst_india.utils.itc_claim import (
-    apply_period_filter as _apply_itc_period_filter,
-)
-=======
->>>>>>> 963ad306 (chore: review changes)
-
-<<<<<<< HEAD
-# GST categories that need to be reported in section 3.2 (inter-state supplies)
-INTER_STATE_GST_CATEGORIES = frozenset({"Unregistered", "Registered Composition", "UIN Holders"})
-
-<<<<<<< HEAD
-# Maps invoice amount fields to JSON key names used in the ITC section
-_ITC_FIELD_MAP = {
-    "iamt": "igst_amount",
-    "camt": "cgst_amount",
-    "samt": "sgst_amount",
-    "csamt": "cess_amount",
-}
-from typing import ClassVar
-
-=======
->>>>>>> 804d8f20 (fix: use data from gst sales and purchase register)
-# Maps JSON tax keys to GSTR-1 invoice amount field names (cess = total_cess_amount)
-_GSTR1_FIELD_MAP = {
-    "iamt": "igst_amount",
-    "camt": "cgst_amount",
-    "samt": "sgst_amount",
-    "csamt": "total_cess_amount",
-}
-
-_CDN_SUB_CATEGORIES = frozenset(
-    {
-        GSTR1_SubCategory.CDNR.value,
-        GSTR1_SubCategory.CDNUR.value,
-    }
 )
 
-<<<<<<< HEAD
-_OUTWARD_SUPPLY_MAP = {
-    # 3.1(a) — outward taxable supplies
-    # GSTR-1 tables: 4A (B2B), 4B (B2B-RC), 5 (B2CL), 6C (DE), 7A/7B (B2CS)
-    GSTR1_SubCategory.B2B_REGULAR.value: "osup_det",
-    GSTR1_SubCategory.B2B_REVERSE_CHARGE.value: "osup_det",
-    GSTR1_SubCategory.DE.value: "osup_det",
-    GSTR1_SubCategory.B2CL.value: "osup_det",
-    GSTR1_SubCategory.B2CS.value: "osup_det",
-    GSTR1_SubCategory.SUPECOM_52.value: "osup_det",
-    # 3.1(b) — zero-rated outward supplies (exports + SEZ)
-    # GSTR-1 tables: 6A (Exports), 6B (SEZ)
-    GSTR1_SubCategory.EXPWP.value: "osup_zero",
-    GSTR1_SubCategory.EXPWOP.value: "osup_zero",
-    GSTR1_SubCategory.SEZWP.value: "osup_zero",
-    GSTR1_SubCategory.SEZWOP.value: "osup_zero",
-}
-
-# Nil-rated, exempted, and non-GST outward supplies are reported in the same section (3.1(c) / 3.1(e)) in GSTR-3B.
-OUTWARD_NIL_EXEMPT_SECTION_MAPPING = {
-    "Nil-Rated": "osup_nil_exmp",
-    "Exempted": "osup_nil_exmp",
-    "Non-GST": "osup_nongst",
-}
-
-SECTION_WISE_TAX_FIELDS_MAP = {
-    "osup_zero": ("iamt", "csamt"),
-    "osup_det": ("iamt", "camt", "samt", "csamt"),
-}
-
-=======
->>>>>>> 3e649c98 (refactor: move outward data processing into seperate file)
-PURCHASE_INVOICE_DOCTYPES = frozenset(["Purchase Invoice", "Bill of Entry", "Journal Entry"])
-
-# Maps each ITC JSON section to its ty → (sub_category, net_sign) entries.
-# net_sign: 1 = add to net ITC, -1 = subtract, 0 = no effect.
-ITC_SECTION_MAP = {
-    "itc_avl": {
-        "IMPG": ("Import Of Goods", 1),
-        "IMPS": ("Import Of Service", 1),
-        "ISRC": ("ITC on Reverse Charge", 1),
-        "ISD": ("Input Service Distributor", 1),
-        "OTH": ("All Other ITC", 1),
-    },
-    "itc_rev": {
-        "RUL": ("As per rules 42 & 43 of CGST Rules and section 17(5)", -1),
-        "OTH": ("Others", -1),
-    },
-    "itc_inelg": {
-        "RUL": ("Reclaim of ITC Reversal", 0),
-        "OTH": ("ITC restricted due to PoS rules", 0),
-    },
-}
-
-# Maps ty value → sub_category for inward nil/exempt (isup_details).
-INWARD_NIL_EXEMPT_MAP = {
-    "GST": "Composition Scheme, Exempted, Nil Rated",
-    "NONGST": "Non-GST",
-}
-
-# Maps GSTR-3B JSON amount keys to the invoice field names used in the summary
-ITC_AMOUNT_KEYS = {
-    "iamt": "igst_amount",
-    "camt": "cgst_amount",
-    "samt": "sgst_amount",
-    "csamt": "cess_amount",
-}
-
-=======
->>>>>>> bff54b15 (refactor: changes as per review)
 
 class GSTR3BReport(Document):
     @property
