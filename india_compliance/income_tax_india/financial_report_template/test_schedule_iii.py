@@ -33,6 +33,10 @@ class TestScheduleIIITemplates(IntegrationTestCase):
 
         create_and_submit_transaction_deletion_doc(cls.company)
 
+    @classmethod
+    def tearDownClass(cls):
+        frappe.db.rollback(save_point="before_test_schedule_iii")
+
     def execute_report(self, template_name):
         fiscal_year = get_fiscal_year(today(), as_dict=True)
         filters = frappe._dict(
