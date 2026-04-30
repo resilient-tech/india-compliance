@@ -19,6 +19,7 @@ from india_compliance.gst_india.report.gstr_3b_details.gstr_3b_details import (
 )
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 from india_compliance.gst_india.utils.tests import (
+    append_item,
     create_purchase_invoice,
     create_sales_invoice,
     create_transaction,
@@ -38,7 +39,6 @@ class TestGSTR3BReport(IntegrationTestCase):
             "Bill of Entry",
             "GSTR 3B Report",
             "Journal Entry",
-            "Bill of Entry",
         ):
             frappe.db.delete(doctype, filters=filters)
 
@@ -512,6 +512,30 @@ class TestGSTR3BReport(IntegrationTestCase):
         # ITC should be reported from Purchase Invoice
         self.assertEqual(itc_available["IMPG"].get("iamt"), expected_iamt)
         self.assertEqual(itc_available["IMPG"].get("csamt"), 0.0)
+
+    def test_multi_item_itc_purchase_invoice_does_not_crash_gstr_3b(self):
+        pi = create_purchase_invoice(is_in_state=True, do_not_save=1, do_not_submit=1)
+        append_item(
+            pi,
+            frappe._dict(
+                {
+                    "doctype": "Purchase Invoice",
+                    "item_code": "_Test Trading Goods 1",
+                    "qty": 1,
+                    "rate": 100,
+                }
+            ),
+        )
+        pi.insert()
+        pi.submit()
+
+        output = self.get_report_output()
+        itc_available = {row["ty"]: row for row in output.get("itc_elg", {}).get("itc_avl", [])}
+
+        self.assertEqual(itc_available["OTH"].get("camt"), 18.0)
+        self.assertEqual(itc_available["OTH"].get("samt"), 18.0)
+        self.assertEqual(itc_available["OTH"].get("iamt"), 0.0)
+        self.assertEqual(itc_available["OTH"].get("csamt"), 0.0)
 
     def test_itc_from_boe_when_boe_applicable(self):
         """When is_boe_applicable=1, ITC should come from BOE, not from Purchase Invoice"""
