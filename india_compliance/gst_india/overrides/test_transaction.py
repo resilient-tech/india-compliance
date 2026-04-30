@@ -524,6 +524,12 @@ class TestTransaction(IntegrationTestCase):
 
     def test_validate_place_of_supply(self):
         doc = create_transaction(**self.transaction_details, do_not_save=True)
+        # Address is required to avoid auto update of place of supply and taxes
+
+        if self.is_sales_doctype:
+            doc.customer_address = "_Test Registered Customer-Billing"
+        else:
+            doc.supplier_address = "_Test Registered Supplier-Billing"
         doc.place_of_supply = "96-Others"
 
         self.assertRaisesRegex(
@@ -745,6 +751,11 @@ class TestTransaction(IntegrationTestCase):
 
     def test_invalid_item_gst_details(self):
         doc = create_transaction(**self.transaction_details, rate=200, is_out_state=True, do_not_save=True)
+        # Address is required to avoid auto update of place of supply and taxes
+        if self.is_sales_doctype:
+            doc.customer_address = "_Test Registered Customer-Billing"
+        else:
+            doc.supplier_address = "_Test Registered Supplier-Billing"
         row = frappe.copy_doc(doc.taxes[0])
         doc.append("taxes", row)
         doc.place_of_supply = "27-Maharashtra"
@@ -854,6 +865,7 @@ class TestTransaction(IntegrationTestCase):
             is_out_state=True,
             do_not_save=True,
         )
+        doc.supplier_address = "_Test Registered Supplier-Billing"
 
         doc.place_of_supply = "27-Maharashtra"
         doc.save()
@@ -1029,6 +1041,25 @@ class TestTransaction(IntegrationTestCase):
             doc.save,
         )
 
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_validate_gst_refund_accounts_for_credit_note(self):
+        doc = create_refund_transaction()
+        doc.submit()
+
+        # Credit note should save successfully: signs are flipped, refund row is positive
+        return_doc = make_return_doc("Sales Invoice", doc.name)
+        return_doc.save()
+        self.assertGreater(return_doc.taxes[1].tax_amount, 0)
+
+        # Force refund row to become negative on the credit note and expect a
+        # validation error saying it should be positive
+        return_doc.taxes[1].rate = 18
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(.*Tax amount should be positive for GST Account.*)$"),
+            return_doc.save,
+        )
+
     def test_item_gst_details_for_non_gst_transactions(self):
         """
         Test Non-GST Transactions can be processed without errors.
@@ -1074,17 +1105,22 @@ class TestTransaction(IntegrationTestCase):
 def create_refund_transaction():
     gst_settings = frappe.get_cached_doc("GST Settings")
 
-    gst_settings.append(
-        "gst_accounts",
-        {
-            "company": "_Test Indian Registered Company",
-            "cgst_account": "Output Tax CGST Refund - _TIRC",
-            "sgst_account": "Output Tax SGST Refund - _TIRC",
-            "igst_account": "Output Tax IGST Refund - _TIRC",
-            "account_type": "Output Refund",
-        },
+    refund_row_exists = any(
+        row.account_type == "Output Refund" and row.company == "_Test Indian Registered Company"
+        for row in gst_settings.gst_accounts
     )
-    gst_settings.save()
+    if not refund_row_exists:
+        gst_settings.append(
+            "gst_accounts",
+            {
+                "company": "_Test Indian Registered Company",
+                "cgst_account": "Output Tax CGST Refund - _TIRC",
+                "sgst_account": "Output Tax SGST Refund - _TIRC",
+                "igst_account": "Output Tax IGST Refund - _TIRC",
+                "account_type": "Output Refund",
+            },
+        )
+        gst_settings.save()
 
     transaction_details = {
         "doctype": "Sales Invoice",
@@ -1459,3 +1495,25 @@ class TestPlaceOfSupply(IntegrationTestCase):
 
         doc = create_transaction(**doc_args)
         self.assertEqual(doc.place_of_supply, "24-Gujarat")  # Company GSTIN
+
+    def test_correct_place_of_supply_on_address_update_by_erpnext(self):
+        """
+        Correct place of supply when ERPNext updates the party address.
+
+        With change in address of party by erpnext, place of supply should be corrected
+        and taxes should be applied accordingly on new document creation.
+        """
+        doc = create_transaction(
+            doctype="Sales Invoice",
+            customer="_Test Registered Composition Customer",
+            do_not_save=True,
+        )
+        doc.place_of_supply = "24-Gujarat"
+        doc.insert()
+
+        # place_of_supply must be corrected to customer's state (Karnataka)
+        self.assertEqual(doc.place_of_supply, "29-Karnataka")
+
+        # check gst_tax_type of tax table
+        for tax in doc.taxes:
+            self.assertEqual(tax.gst_tax_type, "igst")
