@@ -21,6 +21,7 @@ class TestScheduleIIITemplates(IntegrationTestCase):
     def setUpClass(cls):
         frappe.db.savepoint("before_test_schedule_iii")
         cls.company = "_Test Indian Registered Company"
+        cls.test_date = today()
         cls.cost_center = frappe.get_value("Company", cls.company, "cost_center")
 
         cls.cash_account = frappe.get_value(
@@ -38,14 +39,14 @@ class TestScheduleIIITemplates(IntegrationTestCase):
         frappe.db.rollback(save_point="before_test_schedule_iii")
 
     def execute_report(self, template_name):
-        fiscal_year = get_fiscal_year(today(), as_dict=True)
+        fiscal_year = get_fiscal_year(self.test_date, as_dict=True)
         filters = frappe._dict(
             {
                 "company": self.company,
                 "report_template": template_name,
                 "filter_based_on": "Date Range",
-                "period_start_date": today(),
-                "period_end_date": today(),
+                "period_start_date": self.test_date,
+                "period_end_date": self.test_date,
                 "from_fiscal_year": fiscal_year.name,
                 "to_fiscal_year": fiscal_year.name,
                 "periodicity": "Yearly",
@@ -126,7 +127,7 @@ class TestScheduleIIITemplates(IntegrationTestCase):
         args = {
             "company": self.company,
             "cost_center": self.cost_center,
-            "posting_date": today(),
+            "posting_date": self.test_date,
             "submit": True,
         }
 
@@ -196,7 +197,7 @@ class TestScheduleIIITemplates(IntegrationTestCase):
         args = {
             "company": self.company,
             "cost_center": self.cost_center,
-            "posting_date": today(),
+            "posting_date": self.test_date,
             "submit": True,
         }
 
