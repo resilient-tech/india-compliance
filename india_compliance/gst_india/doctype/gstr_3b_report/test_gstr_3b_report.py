@@ -323,8 +323,34 @@ class TestGSTR3BReport(IntegrationTestCase):
         ).insert()
 
         output = json.loads(report.json_output)
-        self.assertEqual(output["itc_elg"]["itc_rev"][0]["camt"], 9.0)
-        self.assertEqual(output["itc_elg"]["itc_rev"][0]["samt"], 9.0)
+        itc_reversed = {row["ty"]: row for row in output["itc_elg"]["itc_rev"]}
+
+        self.assertEqual(itc_reversed["RUL"]["camt"], 9.0)
+        self.assertEqual(itc_reversed["RUL"]["samt"], 9.0)
+        self.assertEqual(output["itc_elg"]["itc_net"]["camt"], -9.0)
+        self.assertEqual(output["itc_elg"]["itc_net"]["samt"], -9.0)
+
+    def test_itc_reversal_journal_entry_with_others_is_included_in_gstr_3b(self):
+        journal_entry = create_itc_reversal_journal_entry(ineligibility_reason="Others")
+
+        self.assertEqual(journal_entry.accounts[1].gst_tax_type, "cgst")
+        self.assertEqual(journal_entry.accounts[2].gst_tax_type, "sgst")
+
+        report = frappe.get_doc(
+            {
+                "doctype": "GSTR 3B Report",
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+                "year": getdate().year,
+                "month_or_quarter": get_month(getdate()),
+            }
+        ).insert()
+
+        output = json.loads(report.json_output)
+        itc_reversed = {row["ty"]: row for row in output["itc_elg"]["itc_rev"]}
+
+        self.assertEqual(itc_reversed["OTH"]["camt"], 9.0)
+        self.assertEqual(itc_reversed["OTH"]["samt"], 9.0)
         self.assertEqual(output["itc_elg"]["itc_net"]["camt"], -9.0)
         self.assertEqual(output["itc_elg"]["itc_net"]["samt"], -9.0)
 
