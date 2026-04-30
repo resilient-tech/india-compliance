@@ -1,0 +1,34 @@
+[
+  {
+    "account_category_name": "Capital Work in Progress",
+    "description": "Assets under construction or installation not yet ready for use.Examples: Buildings under construction, Plant and machinery being installed."
+  },
+  {
+    "account_category_name": "Deferred Tax Assets",
+    "description": "Amounts recoverable in future periods due to deductible temporary differences, tax losses or credits carried forward.Examples: Provision for doubtful debts."
+  },
+  {
+    "account_category_name": "Deferred Tax Expense",
+    "description": "Change in deferred tax assets and liabilities recognized in profit or loss for the period."
+  },
+  {
+    "account_category_name": "Deferred Tax Liabilities",
+    "description": "Amounts payable in future periods due to taxable temporary differences."
+  },
+  {
+    "account_category_name": "Intangible Assets Under Development",
+    "description": "Internally generated intangible assets in the development. Examples: Software under development, Internally developed patents."
+  },
+  {
+    "account_category_name": "Long-term Loans and Advances",
+    "description": "Non-current receivables in the nature of loans and advances. Examples: Security deposits, loans to related parties."
+  },
+  {
+    "account_category_name": "Money Received Against Share Warrants",
+    "description": "Consideration received on issue of share warrants pending exercise or conversion."
+  },
+  {
+    "account_category_name": "Share Application Money Pending Allotment",
+    "description": "Application money received for shares not yet allotted."
+  }
+]
