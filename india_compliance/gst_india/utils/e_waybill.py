@@ -35,7 +35,6 @@ from india_compliance.gst_india.constants import (
 )
 from india_compliance.gst_india.constants.e_waybill import (
     ADDRESS_FIELDS,
-    ADDRESS_GSTIN_FIELD_MAP,
     BUYING_DOCTYPES,
     CANCEL_REASON_CODES,
     CONSIGNMENT_STATUS,
@@ -1810,7 +1809,7 @@ class EWaybillData(GSTTransactionData):
             "toPincode": self.ship_to.pincode,
             "toStateCode": to_state_code,
             "actToStateCode": self.ship_to.state_number,
-            "totalValue": self.transaction_details.total,
+            "totalValue": self.transaction_details.total_taxable_value,
             "cgstValue": self.transaction_details.total_cgst_amount,
             "sgstValue": self.transaction_details.total_sgst_amount,
             "igstValue": self.transaction_details.total_igst_amount,
