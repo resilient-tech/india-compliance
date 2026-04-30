@@ -117,10 +117,7 @@ class GSTR3BCategoryConditions:
         return invoice.ineligibility_reason != "ITC restricted due to PoS rules"
 
     def is_itc_reversed(self, invoice):
-        return invoice.ineligibility_reason in (
-            "Ineligible As Per Section 17(5)",
-            "Others",
-        )
+        return invoice.ineligibility_reason == "Ineligible As Per Section 17(5)"
 
     def is_ineligible_itc(self, invoice):
         return invoice.ineligibility_reason == "ITC restricted due to PoS rules"
@@ -378,14 +375,17 @@ class GSTR3BInwardInvoices(GSTR3BInwardQuery, GSTR3BSubcategory):
         identified_uom = {}
 
         for invoice in data:
-            self.set_invoice_category(invoice, conditions)
-            if not invoice.get("invoice_category"):
-                continue
-            self.set_invoice_sub_category(invoice, conditions)
+            if not invoice.invoice_sub_category:
+                self.set_invoice_category(invoice, conditions)
+                self.set_invoice_sub_category(invoice, conditions)
 
             invoice.hsn_sub_category = GSTR1_SubCategory.HSN.value
 
-            self.update_tax_values(invoice)
+            if invoice.invoice_category in (
+                "Composition Scheme, Exempted, Nil Rated",
+                "Non-GST",
+            ):
+                self.update_tax_values(invoice)
 
             self.process_uom(invoice, identified_uom)
             processed_invoices.append(invoice)
