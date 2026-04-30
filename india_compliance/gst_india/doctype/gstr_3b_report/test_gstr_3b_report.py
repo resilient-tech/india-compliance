@@ -42,6 +42,8 @@ class TestGSTR3BReport(IntegrationTestCase):
         ):
             frappe.db.delete(doctype, filters=filters)
 
+        frappe.db.set_single_value("GST Settings", "enable_overseas_transactions", 1)
+
     @classmethod
     def tearDownClass(cls):
         frappe.db.rollback()
@@ -70,7 +72,6 @@ class TestGSTR3BReport(IntegrationTestCase):
 
         return json.loads(report.json_output)
 
-    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_gstr_3b_report(self):
         gst_settings = frappe.get_cached_doc("GST Settings")
         gst_settings.round_off_gst_values = 0
@@ -242,7 +243,7 @@ class TestGSTR3BReport(IntegrationTestCase):
 
     @change_settings(
         "GST Settings",
-        {"enable_overseas_transactions": 1, "round_off_gst_values": 0},
+        {"round_off_gst_values": 0},
     )
     def test_bill_of_entry_impg_itc_in_gstr3b(self):
         """
@@ -354,7 +355,6 @@ class TestGSTR3BReport(IntegrationTestCase):
         self.assertEqual(output["itc_elg"]["itc_net"]["camt"], -9.0)
         self.assertEqual(output["itc_elg"]["itc_net"]["samt"], -9.0)
 
-    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_inward_nil_non_gst_report_includes_sez_services(self):
         pi = create_purchase_invoice(
             supplier="_Test Registered Supplier",
@@ -380,7 +380,6 @@ class TestGSTR3BReport(IntegrationTestCase):
         rows = report.get_inward_nil_exempt()
         self.assertIn(pi.name, [row.voucher_no for row in rows])
 
-    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_inward_nil_non_gst_report_excludes_overseas_import_services(self):
         pi = create_purchase_invoice(
             supplier="_Test Foreign Supplier",
@@ -407,7 +406,6 @@ class TestGSTR3BReport(IntegrationTestCase):
         rows = report.get_inward_nil_exempt()
         self.assertNotIn(pi.name, [row.voucher_no for row in rows])
 
-    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_gstr_3b_report_includes_boe_in_import_of_goods(self):
         pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
 
@@ -436,7 +434,6 @@ class TestGSTR3BReport(IntegrationTestCase):
         self.assertEqual(itc_available["IMPG"].get("iamt"), 36.0)
         self.assertEqual(itc_available["IMPG"].get("csamt"), 0.0)
 
-    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_gstr_3b_report_includes_boe_cess_non_advol_in_csamt(self):
         pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
 
@@ -479,7 +476,6 @@ class TestGSTR3BReport(IntegrationTestCase):
         self.assertEqual(itc_available["IMPG"].get("iamt"), 36.0)
         self.assertEqual(itc_available["IMPG"].get("csamt"), 20.0)
 
-    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_itc_from_pi_when_boe_not_applicable(self):
         """When is_boe_applicable=0, ITC should be reported from Purchase Invoice directly"""
         # Use SEZ registered supplier: has GSTIN + itc_classification = Import Of Goods
@@ -517,7 +513,6 @@ class TestGSTR3BReport(IntegrationTestCase):
         self.assertEqual(itc_available["IMPG"].get("iamt"), expected_iamt)
         self.assertEqual(itc_available["IMPG"].get("csamt"), 0.0)
 
-    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_itc_from_boe_when_boe_applicable(self):
         """When is_boe_applicable=1, ITC should come from BOE, not from Purchase Invoice"""
         pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
@@ -625,7 +620,6 @@ class TestGSTR3BReport(IntegrationTestCase):
         self.assertEqual(output["sup_details"]["osup_det"]["samt"], 9.0)
         self.assertEqual(output["sup_details"]["osup_det"]["iamt"], 0.0)
 
-    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_zero_rated_sales_invoice(self):
         create_sales_invoice(
             customer_address="_Test Registered Customer-Billing-1",
