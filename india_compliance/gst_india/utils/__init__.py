@@ -1115,7 +1115,7 @@ def check_duplicate_party(field: str, value: str, party_type: str, party: str | 
     if party_type not in GST_PARTY_TYPES:
         return
 
-    frappe.has_permission(party_type, doc=party, throw=True)
+    frappe.has_permission(party_type, throw=True)
 
     value = value.upper().strip()
 
