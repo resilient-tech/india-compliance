@@ -55,9 +55,10 @@ class GSTR3BReport(Document):
 
     def validate(self):
         self.json_output = ""
-        self.generation_status = "In Process"
         if not self.company_gstin:
             frappe.throw(_("Please enter GSTIN for Company {0}").format(self.company))
+
+        self.generation_status = "In Process"
 
         if self.enqueue_report:
             frappe.msgprint(_("Initiated report generation in background"), alert=True)
@@ -113,8 +114,7 @@ class GSTR3BReport(Document):
     def _process_outward_itc(self):
         """
         Tables 3.1 (outward supplies), 3.1.1 (e-commerce), 3.2 (inter-state), and 3.3
-        (advances) — derived from Sales Invoice, reverse-charge Purchase Invoice, and
-        Payment Entry advance adjustments.
+        (advances)
         """
         outward_data = GSTR3BOutwardInvoices(self._get_filters()).get_data(group_by_invoice=True)
         self.update_outward_json(outward_data)
@@ -169,7 +169,6 @@ class GSTR3BReport(Document):
     def _process_inward_itc(self):
         """
         Tables 4 (ITC) and 5 (nil/exempt inward)
-        — derived from Purchase Invoice, Bill of Entry, and Journal Entry.
         """
         inward_invoices = GSTR3BInwardInvoices(self._get_filters())
         inward_data = inward_invoices.get_all_data(group_by_invoice=True)
