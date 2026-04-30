@@ -76,8 +76,8 @@ class GSTSettings(Document):
         frappe.msgprint(
             _(
                 "When {0} is enabled, Nil-Rated / Exempted / Non-GST item values are reported "
-                "with taxable value in e-Invoice. During GSTR-1 preparation, these invoices may be treated "
-                "as Zero-Rated B2B and can cause reconciliation mismatches. Enable it only if required and "
+                "with taxable value in e-Invoice. During GSTR-1 preparation, these invoices will be treated "
+                "as Zero-Rated B2B and will cause reconciliation mismatches. Enable it only if required and "
                 "review GSTR-1 carefully."
             ).format(field_label),
             indicator="orange",
