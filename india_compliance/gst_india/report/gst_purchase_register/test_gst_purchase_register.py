@@ -11,7 +11,11 @@ from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
 from india_compliance.gst_india.report.gst_purchase_register.gst_purchase_register import (
     execute,
 )
-from india_compliance.gst_india.utils.tests import create_purchase_invoice
+from india_compliance.gst_india.utils.tests import (
+    create_itc_reclaim_journal_entry,
+    create_itc_reversal_journal_entry,
+    create_purchase_invoice,
+)
 
 COMPANY = "_Test Indian Registered Company"
 COMPANY_GSTIN = "24AAQCA8719H1ZC"
@@ -46,27 +50,24 @@ class TestGSTPurchaseRegister(IntegrationTestCase):
 
     @classmethod
     def _create_itc_reversal_42_43(cls):
-        cls.reversal_je = _create_journal_entry(
-            cls.today,
-            voucher_type="Reversal Of ITC",
+        cls.reversal_je = create_itc_reversal_journal_entry(
+            posting_date=cls.today,
             ineligibility_reason="As per rules 42 & 43 of CGST Rules",
             tax_amount=9,
         )
 
     @classmethod
     def _create_itc_reversal_others(cls):
-        cls.reversal_je_others = _create_journal_entry(
-            cls.today,
-            voucher_type="Reversal Of ITC",
+        cls.reversal_je_others = create_itc_reversal_journal_entry(
+            posting_date=cls.today,
             ineligibility_reason="Others",
             tax_amount=6,
         )
 
     @classmethod
     def _create_itc_reclaim(cls):
-        cls.reclaim_je = _create_journal_entry(
-            cls.today,
-            voucher_type="Reclaim of ITC Reversal",
+        cls.reclaim_je = create_itc_reclaim_journal_entry(
+            posting_date=cls.today,
             tax_amount=9,
         )
 
@@ -248,51 +249,3 @@ class TestGSTPurchaseRegister(IntegrationTestCase):
         self.assertIn(p1.name, voucher_nos)
         self.assertIn(p2.name, voucher_nos)
         self.assertNotIn(p3.name, voucher_nos)
-
-
-def _create_journal_entry(posting_date, voucher_type, tax_amount, ineligibility_reason=""):
-    if voucher_type == "Reclaim of ITC Reversal":
-        accounts = [
-            {
-                "account": "GST Expense - _TIRC",
-                "credit_in_account_currency": tax_amount * 2,
-            },
-            {
-                "account": "Input Tax CGST - _TIRC",
-                "debit_in_account_currency": tax_amount,
-            },
-            {
-                "account": "Input Tax SGST - _TIRC",
-                "debit_in_account_currency": tax_amount,
-            },
-        ]
-    else:
-        accounts = [
-            {
-                "account": "GST Expense - _TIRC",
-                "debit_in_account_currency": tax_amount * 2,
-            },
-            {
-                "account": "Input Tax CGST - _TIRC",
-                "credit_in_account_currency": tax_amount,
-            },
-            {
-                "account": "Input Tax SGST - _TIRC",
-                "credit_in_account_currency": tax_amount,
-            },
-        ]
-
-    doc = frappe.get_doc(
-        {
-            "doctype": "Journal Entry",
-            "company": COMPANY,
-            "company_gstin": COMPANY_GSTIN,
-            "posting_date": posting_date,
-            "voucher_type": voucher_type,
-            "ineligibility_reason": ineligibility_reason,
-            "accounts": accounts,
-        }
-    )
-    doc.insert()
-    doc.submit()
-    return doc
