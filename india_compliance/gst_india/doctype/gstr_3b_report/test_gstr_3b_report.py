@@ -89,6 +89,7 @@ class TestGSTR3BReport(FrappeTestCase):
                 "doctype": "GSTR 3B Report",
                 "company": "_Test Indian Registered Company",
                 "company_gstin": "24AAQCA8719H1ZC",
+                "filter_by": "Posting Date",
                 "year": today.year,
                 "month_or_quarter": get_month(today),
             }
