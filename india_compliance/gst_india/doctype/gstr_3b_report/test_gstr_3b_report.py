@@ -21,6 +21,8 @@ from india_compliance.gst_india.utils import get_gst_accounts_by_type
 from india_compliance.gst_india.utils.itc_claim import format_period
 from india_compliance.gst_india.utils.tests import (
     append_item,
+    create_itc_reclaim_journal_entry,
+    create_itc_reversal_journal_entry,
     create_purchase_invoice,
     create_sales_invoice,
     create_transaction,
@@ -80,7 +82,7 @@ class TestGSTR3BReport(IntegrationTestCase):
 
         create_sales_invoices()
         create_purchase_invoices()
-        create_itc_reclaim_journal_entry()
+        create_itc_reclaim_journal_entry(tax_amount=9)
 
         today = getdate()
         ret_period = f"{today.month:02}{today.year}"
@@ -307,7 +309,7 @@ class TestGSTR3BReport(IntegrationTestCase):
         self.assertEqual(net_itc["iamt"], 36.0)
 
     def test_itc_reversal_journal_entry_is_included_in_gstr_3b(self):
-        journal_entry = create_itc_reversal_journal_entry()
+        journal_entry = create_itc_reversal_journal_entry(tax_amount=9)
 
         self.assertEqual(journal_entry.accounts[1].gst_tax_type, "cgst")
         self.assertEqual(journal_entry.accounts[2].gst_tax_type, "sgst")
@@ -333,7 +335,7 @@ class TestGSTR3BReport(IntegrationTestCase):
         self.assertEqual(output["itc_elg"]["itc_net"]["samt"], -9.0)
 
     def test_itc_reversal_journal_entry_with_others_is_included_in_gstr_3b(self):
-        journal_entry = create_itc_reversal_journal_entry(ineligibility_reason="Others")
+        journal_entry = create_itc_reversal_journal_entry(ineligibility_reason="Others", tax_amount=9)
 
         self.assertEqual(journal_entry.accounts[1].gst_tax_type, "cgst")
         self.assertEqual(journal_entry.accounts[2].gst_tax_type, "sgst")
@@ -950,69 +952,3 @@ def create_sales_invoice_against_advance(payment_doc):
 
     invoice_doc.submit()
     return invoice_doc
-
-
-def create_itc_reversal_journal_entry(
-    ineligibility_reason="As per rules 42 & 43 of CGST Rules",
-):
-    journal_entry = frappe.get_doc(
-        {
-            "doctype": "Journal Entry",
-            "company": "_Test Indian Registered Company",
-            "company_gstin": "24AAQCA8719H1ZC",
-            "posting_date": getdate(),
-            "voucher_type": "Reversal Of ITC",
-            "ineligibility_reason": ineligibility_reason,
-            "accounts": [
-                {
-                    "account": "GST Expense - _TIRC",
-                    "debit_in_account_currency": 18,
-                },
-                {
-                    "account": "Input Tax CGST - _TIRC",
-                    "credit_in_account_currency": 9,
-                },
-                {
-                    "account": "Input Tax SGST - _TIRC",
-                    "credit_in_account_currency": 9,
-                },
-            ],
-        }
-    )
-    journal_entry.insert()
-    journal_entry.submit()
-    return journal_entry
-
-
-def create_itc_reclaim_journal_entry():
-    """
-    Create a 'Reclaim of ITC Reversal' Journal Entry.
-    In the JE the amounts are the opposite direction to Reversal Of ITC:
-    GST Expense is credited and Input Tax accounts are debited.
-    """
-    journal_entry = frappe.get_doc(
-        {
-            "doctype": "Journal Entry",
-            "company": "_Test Indian Registered Company",
-            "company_gstin": "24AAQCA8719H1ZC",
-            "posting_date": getdate(),
-            "voucher_type": "Reclaim of ITC Reversal",
-            "accounts": [
-                {
-                    "account": "GST Expense - _TIRC",
-                    "credit_in_account_currency": 18,
-                },
-                {
-                    "account": "Input Tax CGST - _TIRC",
-                    "debit_in_account_currency": 9,
-                },
-                {
-                    "account": "Input Tax SGST - _TIRC",
-                    "debit_in_account_currency": 9,
-                },
-            ],
-        }
-    )
-    journal_entry.insert()
-    journal_entry.submit()
-    return journal_entry
