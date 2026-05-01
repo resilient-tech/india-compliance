@@ -323,6 +323,7 @@ class GSTAccounts:
 
         self.setup_defaults()
 
+        self.validate_tax_accounts_for_non_gst()
         self.validate_invalid_account_for_transaction()  # Sales / Purchase
         self.validate_for_same_party_gstin()
         self.validate_reverse_charge_accounts()
@@ -532,23 +533,22 @@ class GSTAccounts:
                     indicator="orange",
                 )
 
+    def validate_tax_accounts_for_non_gst(self):
+        """GST Tax Accounts should not be charged for Non GST Items"""
+        has_non_gst_items = any(row for row in self.doc.items if row.gst_treatment == "Non-GST")
+        if not has_non_gst_items:
+            return
+
+        self._throw(
+            _("Row #{0}: Cannot charge GST for Non GST Items").format(self.first_gst_idx),
+            title=_("Invalid Taxes"),
+        )
+
     def _get_matched_idx(self, rows_to_search, tax_types):
         return next((row.idx for row in rows_to_search if row.gst_tax_type in tax_types), None)
 
     def _throw(self, message, title=None):
         frappe.throw(message, title=title or _("Invalid GST Account"))
-
-
-def validate_tax_accounts_for_non_gst(doc):
-    """GST Tax Accounts should not be charged for Non GST Items"""
-    accounts_list = get_all_gst_accounts(doc.company)
-
-    for row in doc.taxes:
-        if row.account_head in accounts_list and row.tax_amount:
-            frappe.throw(
-                _("Row #{0}: Cannot charge GST for Non GST Items").format(row.idx, row.account_head),
-                title=_("Invalid Taxes"),
-            )
 
 
 def validate_items(doc, throw):
@@ -579,13 +579,7 @@ def validate_items(doc, throw):
         if row.item_tax_template != item_tax_templates[item_key]:
             items_with_duplicate_taxes.append(bold(item_key))
 
-    if not has_gst_items:
-        update_taxable_values(doc)
-        validate_tax_accounts_for_non_gst(doc)
-
-        return False
-
-    if non_gst_items:
+    if non_gst_items and has_gst_items:
         if not throw:
             return False
         frappe.throw(
@@ -1905,7 +1899,6 @@ def ignore_gst_validations(doc, throw=True):
     if (
         not is_indian_registered_company(doc)
         or doc.get("is_opening") == "Yes"
-        # If there are no GST items, then no need to proceed further
         # Also returning if item with multiple taxes
         or validate_items(doc, throw) is False
     ):
