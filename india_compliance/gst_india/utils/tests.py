@@ -64,8 +64,7 @@ def create_itc_reclaim_journal_entry(**data):
 def get_itc_journal_accounts(data):
     tax_amount = data.tax_amount
     company = data.company or "_Test Indian Registered Company"
-    company_abbr = frappe.get_cached_value("Company", company, "abbr") if company else "_TIRC"
-
+    company_abbr = frappe.get_cached_value("Company", company, "abbr")
     is_reclaim = data.get("voucher_type") == "Reclaim of ITC Reversal"
     gst_accounts = get_gst_accounts_by_type(company, "Input")
 
