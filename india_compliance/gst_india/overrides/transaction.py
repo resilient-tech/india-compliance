@@ -535,7 +535,7 @@ class GSTAccounts:
 
     def validate_tax_accounts_for_non_gst(self):
         """GST Tax Accounts should not be charged for Non GST Items"""
-        has_non_gst_items = any(row for row in self.doc.get("items", []) if row.gst_treatment == "Non-GST")
+        has_non_gst_items = any(row for row in self.doc.get("items") or [] if row.gst_treatment == "Non-GST")
         if not has_non_gst_items:
             return
 
