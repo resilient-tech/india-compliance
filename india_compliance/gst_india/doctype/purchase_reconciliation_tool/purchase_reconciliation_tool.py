@@ -1387,18 +1387,6 @@ class BuildExcel:
                 "header_format": {"width": 25},
             },
             {
-                "label": "2B Return Period",
-                "fieldname": "return_period_2b",
-                "data_format": {"horizontal": "center"},
-                "header_format": {"width": 15},
-            },
-            {
-                "label": "2B Generation Date",
-                "fieldname": "gen_date_2b",
-                "data_format": {"horizontal": "center"},
-                "header_format": {"width": 15},
-            },
-            {
                 "label": "GSTR-1 Filed",
                 "fieldname": "gstr_1_filled",
                 "data_format": {"horizontal": "center"},

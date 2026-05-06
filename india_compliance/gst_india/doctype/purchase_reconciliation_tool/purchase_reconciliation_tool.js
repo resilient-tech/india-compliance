@@ -626,19 +626,6 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 align: "left",
             },
             {
-                label: "2B Return Period",
-                fieldname: "return_period_2b",
-                width: 120,
-                align: "center",
-            },
-            {
-                label: "2B Generation Date",
-                fieldname: "gen_date_2b",
-                width: 130,
-                align: "center",
-                _value: (...args) => (args[0] ? frappe.datetime.str_to_user(args[0]) : ""),
-            },
-            {
                 label: "GSTR-1 Filed",
                 fieldname: "gstr_1_filled",
                 width: 100,
