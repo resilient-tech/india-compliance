@@ -15,9 +15,6 @@ from india_compliance.income_tax_india.overrides.company import TDS_ACCOUNT_NAME
 from india_compliance.income_tax_india.overrides.tax_withholding_category import (
     search_tds_sections,
 )
-from india_compliance.income_tax_india.overrides.tax_withholding_category import (
-    validate as validate_tds_section,
-)
 
 COMPANY = "_Test Indian Registered Company"
 ABBR = "_TIRC"
@@ -176,14 +173,22 @@ class TestTaxWithholdingCategory(IntegrationTestCase):
         self.assertEqual(twe_rows[0].lower_deduction_certificate, ldc_doc.name)
 
     def test_tds_section_accepts_empty_value(self):
-        doc = frappe.new_doc("Tax Withholding Category")
-        doc.tds_section = ""
-        validate_tds_section(doc)  # should not raise
+        doc = create_tax_withholding_category(
+            f"Test Empty TDS Section {frappe.generate_hash(length=6)}",
+            f"{TDS_ACCOUNT_NAME} - {ABBR}",
+            tds_section="",
+        )
+
+        self.assertEqual(doc.tds_section, "")
 
     def test_tds_section_accepts_valid_value(self):
-        doc = frappe.new_doc("Tax Withholding Category")
-        doc.tds_section = get_tds_section_value("1001")
-        validate_tds_section(doc)  # should not raise
+        doc = create_tax_withholding_category(
+            f"Test Valid TDS Section {frappe.generate_hash(length=6)}",
+            f"{TDS_ACCOUNT_NAME} - {ABBR}",
+            tds_section=get_tds_section_value("1001"),
+        )
+
+        self.assertEqual(doc.tds_section, get_tds_section_value("1001"))
 
     def test_search_tds_sections_matches_description_case_insensitively(self):
         results = search_tds_sections("Tax Withholding Category", "salary - GOVT", "name", 0, 20, {})
@@ -199,9 +204,18 @@ class TestTaxWithholdingCategory(IntegrationTestCase):
         )
 
     def test_tds_section_rejects_invalid_value(self):
-        doc = frappe.new_doc("Tax Withholding Category")
-        doc.tds_section = "999-invalid"
-        self.assertRaises(frappe.ValidationError, validate_tds_section, doc)
+        doc = create_tax_withholding_category(
+            f"Test Invalid TDS Section {frappe.generate_hash(length=6)}",
+            f"{TDS_ACCOUNT_NAME} - {ABBR}",
+            tds_section="999-invalid",
+            do_not_save=True,
+        )
+
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            r"Invalid TDS Section '999-invalid'\.",
+            doc.save,
+        )
 
 
 def create_party(party_type, name, pan=None):
@@ -274,6 +288,7 @@ def create_lower_deduction_certificate(
 
 def create_tax_withholding_category(category_name, account_name, **kwargs):
     fiscal_year = get_fiscal_year(today(), company=COMPANY, as_dict=True)
+    do_not_save = kwargs.pop("do_not_save", False)
     tax_withholding_rate = kwargs.pop("tax_withholding_rate", 10)
     single_threshold = kwargs.pop("single_threshold", 0)
     cumulative_threshold = kwargs.pop("cumulative_threshold", 0)
@@ -297,7 +312,9 @@ def create_tax_withholding_category(category_name, account_name, **kwargs):
     doc.update(kwargs)
     doc.set("accounts", [account_row])
     doc.set("rates", [rate_row])
-    doc.save()
+
+    if not do_not_save:
+        doc.save()
 
     return doc
 
