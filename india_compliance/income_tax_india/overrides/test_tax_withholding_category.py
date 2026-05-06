@@ -186,7 +186,7 @@ class TestTaxWithholdingCategory(IntegrationTestCase):
         validate_tds_section(doc)  # should not raise
 
     def test_search_tds_sections_matches_description_case_insensitively(self):
-        results = search_tds_sections("salary - GOVT")
+        results = search_tds_sections("Tax Withholding Category", "salary - GOVT", "name", 0, 20, {})
 
         self.assertTrue(results)
         self.assertIn(
