@@ -87,7 +87,9 @@ NEW_TDS_SECTION = {
     ),
     "1013": (
         "393(1) [Table: Sl. No. 4(i)]",
-        "Income payable to a resident assessee in respect of units of a specified Mutual Fund specified under Schedule VII [Table: Sl. No. 20 or 21] or units from the Administrator of the specified undertaking or units from specified company",
+        "Income payable to a resident assessee in respect of units of a specified Mutual Fund specified under"
+        " Schedule VII [Table: Sl. No. 20 or 21] or units from the Administrator of the specified undertaking"
+        " or units from specified company",
     ),
     "1014": (
         "393(1) [Table: Sl. No. 4(ii)]",
@@ -103,7 +105,8 @@ NEW_TDS_SECTION = {
     ),
     "1017": (
         "393(1) [Table: Sl. No. 4(iii)]",
-        "Any income, other than that proportion of income which is exempt under Schedule V [Table: Sl. No. 2], in respect of units of an investment fund specified in section 224, payable to its unitholder.",
+        "Any income, other than that proportion of income which is exempt under Schedule V [Table: Sl. No. 2],"
+        " in respect of units of an investment fund specified in section 224, payable to its unitholder.",
     ),
     "1018": (
         "393(1) [Table: Sl. No. 4(iv)]",
@@ -124,15 +127,21 @@ NEW_TDS_SECTION = {
     "1022": ("393(1) [Table: Sl. No. 5(iii)]", "Any income being interest other than interest on securities"),
     "1023": (
         "393(1) [Table: Sl. No. 6(i).D(a)]",
-        "Any sum for carrying out any work (including supply of labour for carrying out any work) in pursuance of a contract between the contractor and a designated person - if contractor is individual or Hindu undivided family",
+        "Any sum for carrying out any work (including supply of labour for carrying out any work) in pursuance"
+        " of a contract between the contractor and a designated person - if contractor is individual or Hindu"
+        " undivided family",
     ),
     "1024": (
         "393(1) [Table: Sl. No. 6(i).D(b)]",
-        "Any sum for carrying out any work (including supply of labour for carrying out any work) in pursuance of a contract between the contractor and a designated person - if contractor is a person other than individual or Hindu undivided family",
+        "Any sum for carrying out any work (including supply of labour for carrying out any work) in pursuance"
+        " of a contract between the contractor and a designated person - if contractor is a person other than"
+        " individual or Hindu undivided family",
     ),
     "1026": (
         "393(1) [Table: Sl. No. 6(iii).D(a)]",
-        "Any sum by way of (a) fees for technical services (not being a professional services); or (b) royalty in the nature of consideration for sale, distribution or exhibition of cinematographic films; or (c) payee, engaged only in the business of operation of call centre",
+        "Any sum by way of (a) fees for technical services (not being a professional services); or (b) royalty"
+        " in the nature of consideration for sale, distribution or exhibition of cinematographic films; or"
+        " (c) payee, engaged only in the business of operation of call centre",
     ),
     "1027": (
         "393(1) [Table: Sl. No. 6(iii).D(b)]",
@@ -140,12 +149,14 @@ NEW_TDS_SECTION = {
     ),
     "1028": (
         "393(1) [Table: Sl. No. 6(iii).D(b)]",
-        "Any sum by way of remuneration or fees or commission by whatever name called, other than those on which tax is deductible under section 392, to a director of a company",
+        "Any sum by way of remuneration or fees or commission by whatever name called, other than those on"
+        " which tax is deductible under section 392, to a director of a company",
     ),
     "1029": ("393(1) [Table: Sl. No. 7]", "Any dividends (including on preference shares) declared."),
     "1030": (
         "393(1) [Table: Sl. No. 8(i)]",
-        "Any sum under a life insurance policy, including the sum allocated as bonus on such policy, other than the amount not includible in the total income under Schedule II [Table: Sl. No. 2]",
+        "Any sum under a life insurance policy, including the sum allocated as bonus on such policy, other than"
+        " the amount not includible in the total income under Schedule II [Table: Sl. No. 2]",
     ),
     "1031": ("393(1) [Table: Sl. No. 8(ii)]", "Any sum for purchase of any goods"),
     "1032": ("393(1) [Table: Sl. No. 8(iii)]", "Any sum to a specified senior citizen"),
@@ -155,11 +166,13 @@ NEW_TDS_SECTION = {
     ),
     "1034": (
         "393(1) [Table: Sl. No. 8(iv)] Note 6",
-        "Any benefit or perquisite, whether in cash or in kind or partly in cash and partly in kind, whether convertible into money or not, arising from business or the exercise of a profession of any resident.",
+        "Any benefit or perquisite, whether in cash or in kind or partly in cash and partly in kind, whether"
+        " convertible into money or not, arising from business or the exercise of a profession of any resident.",
     ),
     "1035": (
         "393(1) [Table: Sl. No. 8(v)]",
-        "Sale of goods or provision of services by an e-commerce participant, facilitated by an e-commerce operator through its digital or electronic facility or platform.",
+        "Sale of goods or provision of services by an e-commerce participant, facilitated by an e-commerce"
+        " operator through its digital or electronic facility or platform.",
     ),
     "1037": (
         "393(1) [Table: Sl. No. 8(vi)]",
@@ -176,19 +189,25 @@ NEW_TDS_SECTION = {
     ),
     "1040": (
         "393(2) [Table: Sl. No. 2]",
-        "Any income by way of interest payable in respect of monies borrowed in foreign currency from a source outside India under eligible loan or bond arrangements",
+        "Any income by way of interest payable in respect of monies borrowed in foreign currency from a source"
+        " outside India under eligible loan or bond arrangements",
     ),
     "1041": (
         "393(2) [Table: Sl. No. 3]",
-        "Any income by way of interest payable in respect of monies borrowed from a source outside India by way of issue of rupee denominated bond before the 1st July, 2023",
+        "Any income by way of interest payable in respect of monies borrowed from a source outside India by way"
+        " of issue of rupee denominated bond before the 1st July, 2023",
     ),
     "1042": (
         "393(2) [Table: Sl. No. 4.E(a)]",
-        "Any income by way of interest payable in respect of monies borrowed from a source outside India by way of issue of long-term bond or rupee denominated bond listed only on a recognised stock exchange in an IFSC, issued on or after 1st April, 2020 but before 1st July, 2023",
+        "Any income by way of interest payable in respect of monies borrowed from a source outside India by way"
+        " of issue of long-term bond or rupee denominated bond listed only on a recognised stock exchange in an"
+        " IFSC, issued on or after 1st April, 2020 but before 1st July, 2023",
     ),
     "1043": (
         "393(2) [Table: Sl. No. 4.E(b)]",
-        "Any income by way of interest payable in respect of monies borrowed from a source outside India by way of issue of long-term bond or rupee denominated bond listed only on a recognised stock exchange in an IFSC, issued on or after 1st July, 2023",
+        "Any income by way of interest payable in respect of monies borrowed from a source outside India by way"
+        " of issue of long-term bond or rupee denominated bond listed only on a recognised stock exchange in an"
+        " IFSC, issued on or after 1st July, 2023",
     ),
     "1044": (
         "393(2) [Table: Sl. No. 5]",
@@ -208,7 +227,8 @@ NEW_TDS_SECTION = {
     ),
     "1048": (
         "393(2) [Table: Sl. No. 8]",
-        "Any income, other than that proportion of income which is exempt under Schedule V [Table: Sl. No. 2], in respect of units of an investment fund specified in section 224",
+        "Any income, other than that proportion of income which is exempt under Schedule V [Table: Sl. No. 2],"
+        " in respect of units of an investment fund specified in section 224",
     ),
     "1049": (
         "393(2) [Table: Sl. No. 9]",
@@ -241,26 +261,35 @@ NEW_TDS_SECTION = {
     ),
     "1057": (
         "393(2) [Table: Sl. No. 17]",
-        "Any interest (not being interest referred to against serial numbers 2, 3, 4 and 5) or any other sum chargeable under the provisions of this Act, not being income chargeable under the head Salaries",
+        "Any interest (not being interest referred to against serial numbers 2, 3, 4 and 5) or any other sum"
+        " chargeable under the provisions of this Act, not being income chargeable under the head Salaries",
     ),
     # Any person payments - Section 393(3)
     "1058": (
         "393(3) [Table: Sl. No. 1]",
-        "Any income by way of winnings (other than winnings from Sl. No. 2 of the table at section 393(3)) from (a) any lottery; or (b) crossword puzzle; or (c) card game and other game of any sort; or (d) gambling or betting of any form or nature whatsoever",
+        "Any income by way of winnings (other than winnings from Sl. No. 2 of the table at section 393(3))"
+        " from (a) any lottery; or (b) crossword puzzle; or (c) card game and other game of any sort; or"
+        " (d) gambling or betting of any form or nature whatsoever",
     ),
     "1059": (
         "393(3) [Table: Sl. No. 1] Note 2",
-        "Any income by way of winnings (other than winnings from Sl. No. 2 of the table at section 393(3)) from (a) any lottery; or (b) crossword puzzle; or (c) card game and other game of any sort; or (d) gambling or betting of any form or nature whatsoever where consideration is made in kind or cash is not sufficient to meet the tax liability and tax has been paid before such winnings are released",
+        "Any income by way of winnings (other than winnings from Sl. No. 2 of the table at section 393(3))"
+        " from (a) any lottery; or (b) crossword puzzle; or (c) card game and other game of any sort; or"
+        " (d) gambling or betting of any form or nature whatsoever where consideration is made in kind or cash"
+        " is not sufficient to meet the tax liability and tax has been paid before such winnings are released",
     ),
     "1060": ("393(3) [Table: Sl. No. 2]", "Any income by way of winnings from online game."),
     "1061": (
         "393(3) [Table: Sl. No. 2] Note 2",
-        "Any income by way of winnings from online games, is made in kind or cash is not sufficient to meet the tax liability and tax has been paid before such winnings are released",
+        "Any income by way of winnings from online games, is made in kind or cash is not sufficient to meet"
+        " the tax liability and tax has been paid before such winnings are released",
     ),
     "1062": ("393(3) [Table: Sl. No. 3]", "Any income by way of winnings from any horse race."),
     "1063": (
         "393(3) [Table: Sl. No. 4]",
-        "Any income, credited or paid to a person, who is or has been stocking, distributing, purchasing or selling lottery tickets, by way of commission, remuneration or prize (by whatever name called) on such tickets",
+        "Any income, credited or paid to a person, who is or has been stocking, distributing, purchasing or"
+        " selling lottery tickets, by way of commission, remuneration or prize (by whatever name called) on"
+        " such tickets",
     ),
     "1064": (
         "393(3) [Table: Sl. No. 5.D(a)]",
@@ -276,7 +305,8 @@ NEW_TDS_SECTION = {
     ),
     "1067": (
         "393(3) [Table: Sl. No. 7]",
-        "Any sum in the nature of salary, remuneration, commission, bonus or interest paid to a partner of the firm or credited to his account (including capital account).",
+        "Any sum in the nature of salary, remuneration, commission, bonus or interest paid to a partner of the"
+        " firm or credited to his account (including capital account).",
     ),
     # Collection codes - Section 394(1)
     "1068": (
@@ -353,19 +383,23 @@ NEW_TDS_SECTION = {
     ),
     "1086": (
         "394(1) [Table: Sl. No. 7.D(a)]",
-        "Remittance under the Liberalised Remittance Scheme of an amount or aggregate of the amounts exceeding threshold limit for purposes of education or medical treatment",
+        "Remittance under the Liberalised Remittance Scheme of an amount or aggregate of the amounts exceeding"
+        " threshold limit for purposes of education or medical treatment",
     ),
     "1087": (
         "394(1) [Table: Sl. No. 7.D(b)]",
-        "Remittance under the Liberalised Remittance Scheme of an amount or aggregate of the amounts exceeding threshold limit for purposes other than education or medical treatment",
+        "Remittance under the Liberalised Remittance Scheme of an amount or aggregate of the amounts exceeding"
+        " threshold limit for purposes other than education or medical treatment",
     ),
     "1088": (
         "394(1) [Table: Sl. No. 8.D(a)]",
-        "Sale of overseas tour programme package including expenses for travel or hotel stay or boarding or lodging or any such similar or related expenditure with amount or aggregate of amounts up to threshold",
+        "Sale of overseas tour programme package including expenses for travel or hotel stay or boarding or"
+        " lodging or any such similar or related expenditure with amount or aggregate of amounts up to threshold",
     ),
     "1089": (
         "394(1) [Table: Sl. No. 8.D(b)]",
-        "Sale of overseas tour programme package including expenses for travel or hotel stay or boarding or lodging or any such similar or related expenditure with amount or aggregate of amounts above threshold",
+        "Sale of overseas tour programme package including expenses for travel or hotel stay or boarding or"
+        " lodging or any such similar or related expenditure with amount or aggregate of amounts above threshold",
     ),
     "1090": (
         "394(1) [Table: Sl. No. 9]",
