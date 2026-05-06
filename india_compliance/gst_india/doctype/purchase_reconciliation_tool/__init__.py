@@ -1028,6 +1028,15 @@ class ReconciledData(BaseReconciliation):
             "link_doctype",
             "link_name",
             "is_supplier_return_filed",
+            "gstr_1_filled",
+            "gstr_3b_filled",
+            "itc_availability",
+            "reason_itc_unavailability",
+            "return_period_2b",
+            "gen_date_2b",
+            "irn_source",
+            "irn_number",
+            "irn_gen_date",
         ]
 
         return super().get_all_inward_supply(inward_supply_fields, names, only_names) or []
@@ -1105,6 +1114,15 @@ class ReconciledData(BaseReconciliation):
             "classification": "",
             "is_reverse_charge": "",
             "is_supplier_return_filed": "",
+            "gstr_1_filled": "",
+            "gstr_3b_filled": "",
+            "itc_availability": "",
+            "reason_itc_unavailability": "",
+            "return_period_2b": "",
+            "gen_date_2b": "",
+            "irn_source": "",
+            "irn_number": "",
+            "irn_gen_date": "",
         }
 
         for data in reconciliation_data:
@@ -1148,6 +1166,15 @@ class ReconciledData(BaseReconciliation):
                 "action": inward_supply.get("action"),
                 "classification": inward_supply.get("classification") or self.guess_classification(purchase),
                 "is_supplier_return_filed": inward_supply.is_supplier_return_filed,
+                "gstr_1_filled": inward_supply.get("gstr_1_filled"),
+                "gstr_3b_filled": inward_supply.get("gstr_3b_filled"),
+                "itc_availability": inward_supply.get("itc_availability"),
+                "reason_itc_unavailability": inward_supply.get("reason_itc_unavailability"),
+                "return_period_2b": inward_supply.get("return_period_2b"),
+                "gen_date_2b": inward_supply.get("gen_date_2b"),
+                "irn_source": inward_supply.get("irn_source"),
+                "irn_number": inward_supply.get("irn_number"),
+                "irn_gen_date": inward_supply.get("irn_gen_date"),
             }
         )
 
