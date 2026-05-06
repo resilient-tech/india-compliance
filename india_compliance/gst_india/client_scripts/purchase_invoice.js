@@ -67,6 +67,14 @@ frappe.ui.form.on(DOCTYPE, {
                 __("Create"),
             );
         }
+
+        if (frm.doc.docstatus === 1 && frm.doc.is_isd_applicable) {
+            frm.add_custom_button(
+                __("ISD Invoice"),
+                () => show_isd_invoice_distribution_dialog(frm),
+                __("Create"),
+            );
+        }
     },
 
     before_save(frm) {
@@ -138,4 +146,175 @@ function has_goods_items(frm) {
 
 function is_import_gst_category(gst_category) {
     return IMPORT_GST_CATEGORIES.includes(gst_category);
+}
+
+function show_isd_invoice_distribution_dialog(frm) {
+    let fetch_addresses = () => {};
+
+    const dialog = new frappe.ui.Dialog({
+        title: __("Select Addresses for ISD Distribution"),
+        fields: [
+            {
+                fieldtype: "Section Break",
+                fieldname: "general_section",
+            },
+            {
+                fieldtype: "Data",
+                label: __("Name"),
+                fieldname: "name",
+                onchange() {
+                    fetch_addresses();
+                    dialog.refresh();
+                },
+            },
+            {
+                fieldtype: "Column Break",
+            },
+            {
+                fieldtype: "Check",
+                fieldname: "is_against_party",
+                label: __("Against Party"),
+                default: 0,
+                onchange() {
+                    const show_party_fields = dialog.get_values(true).is_against_party;
+                    dialog.set_df_property("party_type", "hidden", !show_party_fields);
+                    dialog.set_df_property("party", "hidden", !show_party_fields);
+                    fetch_addresses();
+                    dialog.refresh();
+                },
+            },
+            {
+                fieldtype: "Section Break",
+                fieldname: "party_section",
+            },
+            {
+                fieldtype: "Link",
+                options: "DocType",
+                label: __("Party Type"),
+                fieldname: "party_type",
+                default: "Company",
+                filters: { name: ["in", ["Customer", "Supplier", "Company"]] },
+                hidden: 1,
+                onchange() {
+                    fetch_addresses();
+                },
+            },
+            {
+                fieldtype: "Column Break",
+            },
+            {
+                fieldtype: "Dynamic Link",
+                options: "party_type",
+                label: __("Party"),
+                fieldname: "party",
+                default: frm.doc.company,
+                hidden: 1,
+                onchange() {
+                    fetch_addresses();
+                },
+            },
+            {
+                fieldtype: "Section Break",
+                fieldname: "address_section",
+            },
+            {
+                label: __("Addresses"),
+                fieldtype: "Table",
+                fieldname: "address",
+                cannot_add_rows: true,
+                in_place_edit: true,
+                data: [],
+                fields: [
+                    {
+                        fieldtype: "Link",
+                        options: "Address",
+                        fieldname: "address",
+                        label: __("Address"),
+                        read_only: 1,
+                        in_list_view: 1,
+                    },
+                    {
+                        fieldtype: "Data",
+                        fieldname: "gstin",
+                        label: __("GSTIN"),
+                        read_only: 1,
+                        in_list_view: 1,
+                    },
+                    {
+                        fieldtype: "Data",
+                        fieldname: "gst_state",
+                        label: __("GST State"),
+                        read_only: 1,
+                        in_list_view: 1,
+                    },
+                    {
+                        fieldtype: "Float",
+                        fieldname: "distribution_ratio",
+                        label: __("Distribution Ratio (%)"),
+                        in_list_view: 1,
+                        default: 0,
+                    },
+                ],
+            },
+        ],
+        primary_action_label: __("Create ISD Invoices"),
+        primary_action(values) {
+            const selections = dialog.fields_dict.address.grid.get_selected_children();
+
+            if (!selections.length) {
+                frappe.msgprint(__("Please select at least one Address"), __("No Selection"));
+                return;
+            }
+
+            dialog.hide();
+            const dialog_values = dialog.get_values(true);
+
+            const calls = selections.map((selection) =>
+                frappe.call({
+                    method: "india_compliance.gst_india.doctype.isd_invoice.isd_invoice.make_isd_invoice",
+                    args: {
+                        source_name: frm.doc.name,
+                        distribution_ratio: selection.distribution_ratio,
+                        party_address: selection.address,
+                        party_type: dialog_values.is_against_party ? dialog_values.party_type : null,
+                        party: dialog_values.is_against_party ? dialog_values.party : null,
+                    },
+                }),
+            );
+
+            Promise.all(calls).then((results) => {
+                const names = results.map((r) => r.message?.name).filter(Boolean);
+                frappe.set_route("List", "ISD Invoice");
+            });
+        },
+    });
+
+    fetch_addresses = function () {
+        const vals = dialog.get_values(true);
+        frappe.call({
+            method: "india_compliance.gst_india.doctype.isd_invoice.isd_invoice.get_isd_distribution_addresses",
+            args: {
+                page_len: 10,
+                filters: {
+                    party_type: vals.is_against_party ? vals.party_type : "Company",
+                    party: vals.is_against_party ? vals.party : frm.doc.company,
+                    search_text: vals.name || "",
+                },
+            },
+            callback(r) {
+                if (!r.message) return;
+                const data = r.message.map((row) => ({
+                    address: row.name,
+                    gstin: row.gstin,
+                    gst_state: row.gst_state,
+                }));
+                const grid = dialog.fields_dict.address.grid;
+                grid.df.data = data;
+                grid.refresh();
+            },
+        });
+    };
+
+    dialog.show();
+    fetch_addresses();
 }

@@ -1041,15 +1041,15 @@ CUSTOM_FIELDS = {
             "depends_on": 'eval:doc.itc_classification === "Import Of Goods"',
         },
         {
-            "fieldname": "marked_for_isd_distribution",
-            "label": "Marked for ISD Distribution",
+            "fieldname": "is_isd_applicable",
+            "label": "Is ISD Applicable",
             "fieldtype": "Check",
             "insert_after": "is_boe_applicable",
             "print_hide": 1,
             "default": 0,
             "read_only": 1,
             "no_copy": 1,
-            "depends_on": 'eval:doc.marked_for_isd_distribution',
+            "depends_on": 'eval:doc.is_isd_applicable',
         },
     ],
     "Purchase Invoice Item": [

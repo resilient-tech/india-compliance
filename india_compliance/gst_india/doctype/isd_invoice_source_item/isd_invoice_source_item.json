@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_bulk_edit": 1,
  "creation": "2024-01-01 00:00:00",
  "doctype": "DocType",
  "editable_grid": 1,
@@ -64,7 +65,8 @@
    "default": "0",
    "fieldname": "distribution_ratio",
    "fieldtype": "Float",
-   "label": "Distribution Ratio"
+   "label": "Distribution Ratio",
+   "reqd": 1
   },
   {
    "default": "0",
@@ -78,7 +80,6 @@
    "fieldname": "total_cgst",
    "fieldtype": "Float",
    "label": "Total CGST",
-   "no_copy": 1,
    "read_only": 1
   },
   {
@@ -86,7 +87,6 @@
    "fieldname": "total_sgst",
    "fieldtype": "Float",
    "label": "Total SGST",
-   "no_copy": 1,
    "read_only": 1
   },
   {
@@ -94,7 +94,6 @@
    "fieldname": "total_cess",
    "fieldtype": "Float",
    "label": "Total CESS",
-   "no_copy": 1,
    "read_only": 1
   },
   {
@@ -102,43 +101,37 @@
    "fieldname": "total_cess_non_advol",
    "fieldtype": "Float",
    "label": "Total CESS Non Advol",
-   "no_copy": 1,
    "read_only": 1
   },
   {
    "default": "0",
    "fieldname": "distributed_igst",
    "fieldtype": "Currency",
-   "label": "Distributed IGST",
-   "no_copy": 1
+   "label": "Distributed IGST"
   },
   {
    "default": "0",
    "fieldname": "distributed_cgst",
    "fieldtype": "Currency",
-   "label": "Distributed CGST",
-   "no_copy": 1
+   "label": "Distributed CGST"
   },
   {
    "default": "0",
    "fieldname": "distributed_sgst",
    "fieldtype": "Currency",
-   "label": "Distributed SGST",
-   "no_copy": 1
+   "label": "Distributed SGST"
   },
   {
    "default": "0",
    "fieldname": "distributed_cess",
    "fieldtype": "Currency",
-   "label": "Distributed CESS",
-   "no_copy": 1
+   "label": "Distributed CESS"
   },
   {
    "default": "0",
    "fieldname": "distributed_cess_non_advol",
    "fieldtype": "Currency",
-   "label": "Distributed CESS Non Advol",
-   "no_copy": 1
+   "label": "Distributed CESS Non Advol"
   },
   {
    "fieldname": "section_break_ewty",
@@ -156,7 +149,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-04-23 12:21:37.276762",
+ "modified": "2026-05-05 10:16:12.951577",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "ISD Invoice Source Item",

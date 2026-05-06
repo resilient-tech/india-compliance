@@ -15,33 +15,33 @@
   "credit_note_against",
   "amended_from",
   "inter_company_invoice_reference",
-  "section_break_cmss",
-  "is_multi_company_setup",
+  "against_party_section_1",
+  "is_against_party",
   "column_break_glsb",
-  "invoice_direction",
-  "section_break_phtm",
+  "credit_flow",
+  "against_party_section_2",
   "column_break_euze",
-  "column_break_iziu",
   "party_type",
-  "party_name",
+  "column_break_iziu",
+  "party",
   "accounting_dimensions_section",
   "cost_center",
-  "column_break_kehw",
+  "dimension_col_break",
   "project",
   "source_invoices_section",
   "get_purchase_invoices",
   "distribution_ratio",
-  "source_items",
-  "section_break_4",
-  "tax_items",
-  "section_break_5",
+  "source_invoices",
+  "taxes_section",
+  "taxes",
+  "totals_section",
   "total_eligible",
   "column_break_5",
   "total_ineligible",
   "column_break_mfrl",
   "party_account",
   "address_tab",
-  "section_break_tlhj",
+  "address_section",
   "column_break_upnr",
   "company_address",
   "company_gstin",
@@ -52,15 +52,17 @@
   "party_gstin",
   "party_state",
   "party_address_display",
-  "section_break_pims",
-  "correction_reason"
+  "additional_info_section",
+  "remarks",
+  "column_break_tngt"
  ],
  "fields": [
   {
+   "bold": 1,
    "fieldname": "naming_series",
    "fieldtype": "Select",
    "in_list_view": 1,
-   "label": "Naming Series",
+   "label": "Series",
    "no_copy": 1,
    "options": "ISD-.YYYY.-.MM.-",
    "print_hide": 1,
@@ -74,23 +76,9 @@
    "label": "Is Credit Note"
   },
   {
-   "fieldname": "correction_reason",
-   "fieldtype": "Small Text",
-   "label": "Remaks"
-  },
-  {
-   "fieldname": "section_break_4",
-   "fieldtype": "Section Break",
-   "label": "Taxes"
-  },
-  {
-   "fieldname": "tax_items",
+   "fieldname": "taxes",
    "fieldtype": "Table",
    "options": "ISD Invoice Tax Item"
-  },
-  {
-   "fieldname": "section_break_5",
-   "fieldtype": "Section Break"
   },
   {
    "fieldname": "column_break_5",
@@ -100,12 +88,14 @@
    "fieldname": "total_eligible",
    "fieldtype": "Currency",
    "label": "Total Eligible",
+   "no_copy": 1,
    "read_only": 1
   },
   {
    "fieldname": "total_ineligible",
    "fieldtype": "Currency",
    "label": "Total Ineligible",
+   "no_copy": 1,
    "read_only": 1
   },
   {
@@ -119,11 +109,6 @@
    "search_index": 1
   },
   {
-   "fieldname": "section_break_tlhj",
-   "fieldtype": "Section Break",
-   "label": "Address"
-  },
-  {
    "fieldname": "column_break_sram",
    "fieldtype": "Column Break"
   },
@@ -131,17 +116,16 @@
    "fieldname": "company",
    "fieldtype": "Link",
    "label": "Company",
-   "options": "Company"
-  },
-  {
-   "fieldname": "column_break_kehw",
-   "fieldtype": "Column Break"
+   "options": "Company",
+   "reqd": 1
   },
   {
    "default": "Today",
    "fieldname": "posting_date",
    "fieldtype": "Date",
-   "label": "Posting Date"
+   "label": "Posting Date",
+   "no_copy": 1,
+   "reqd": 1
   },
   {
    "fieldname": "cost_center",
@@ -158,10 +142,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "section_break_cmss",
-   "fieldtype": "Section Break"
-  },
-  {
    "fieldname": "get_purchase_invoices",
    "fieldtype": "Button",
    "label": "Get Purchase Invoices"
@@ -169,12 +149,6 @@
   {
    "fieldname": "column_break_mfrl",
    "fieldtype": "Column Break"
-  },
-  {
-   "collapsible": 1,
-   "fieldname": "section_break_pims",
-   "fieldtype": "Section Break",
-   "label": "Additional Info"
   },
   {
    "depends_on": "eval: doc.is_credit_note == 1",
@@ -196,17 +170,18 @@
    "options": "Project"
   },
   {
-   "depends_on": "eval:doc.multi_company_setup == 1",
+   "depends_on": "eval:doc.is_against_party",
    "fieldname": "inter_company_invoice_reference",
    "fieldtype": "Link",
    "label": "Inter Company Invoice Reference",
    "options": "ISD Invoice"
   },
   {
-   "depends_on": "eval:doc.is_multi_company_setup",
+   "depends_on": "eval:doc.is_against_party",
    "fieldname": "party_account",
    "fieldtype": "Link",
    "label": "Party Account",
+   "mandatory_depends_on": "eval:doc.is_against_party",
    "options": "Account"
   },
   {
@@ -214,52 +189,38 @@
    "fieldtype": "Column Break"
   },
   {
-   "depends_on": "eval:doc.is_multi_company_setup",
-   "fieldname": "invoice_direction",
-   "fieldtype": "Select",
-   "label": "Invoice Direction",
-   "options": "Outward\nInward"
-  },
-  {
    "default": "0",
-   "fieldname": "is_multi_company_setup",
+   "fieldname": "is_against_party",
    "fieldtype": "Check",
    "label": "Issued against Supplier/Customer"
   },
   {
    "fieldname": "company_address",
    "fieldtype": "Link",
-   "label": "Company Address",
-   "options": "Address"
+   "label": "Select Company Address",
+   "options": "Address",
+   "reqd": 1
   },
   {
    "fieldname": "party_address",
    "fieldtype": "Link",
-   "label": "Party Address",
-   "options": "Address"
+   "label": "Select Party Address",
+   "options": "Address",
+   "reqd": 1
   },
   {
-   "depends_on": "eval:doc.is_multi_company_setup",
+   "depends_on": "eval:doc.is_against_party",
    "fieldname": "party_type",
    "fieldtype": "Link",
    "label": "Party Type",
+   "mandatory_depends_on": "eval:doc.is_against_party",
    "options": "DocType"
-  },
-  {
-   "depends_on": "eval:doc.is_multi_company_setup",
-   "fieldname": "party_name",
-   "fieldtype": "Dynamic Link",
-   "label": "Party Name",
-   "options": "party_type"
   },
   {
    "fieldname": "party_address_display",
    "fieldtype": "Text Editor",
+   "label": "Party Address",
    "read_only": 1
-  },
-  {
-   "fieldname": "section_break_phtm",
-   "fieldtype": "Section Break"
   },
   {
    "fieldname": "column_break_euze",
@@ -279,14 +240,9 @@
    "label": "Distribution Ratio(%)"
   },
   {
-   "fieldname": "source_items",
-   "fieldtype": "Table",
-   "label": "Source Invoices",
-   "options": "ISD Invoice Source Item"
-  },
-  {
    "fieldname": "company_address_display",
    "fieldtype": "Text Editor",
+   "label": "Company Address",
    "read_only": 1
   },
   {
@@ -328,12 +284,78 @@
    "fieldtype": "Section Break",
    "hide_border": 1,
    "label": "Source Invoices"
+  },
+  {
+   "fieldname": "dimension_col_break",
+   "fieldtype": "Column Break",
+   "is_virtual": 1
+  },
+  {
+   "depends_on": "eval:doc.is_against_party",
+   "fieldname": "party",
+   "fieldtype": "Dynamic Link",
+   "label": "Party",
+   "mandatory_depends_on": "eval:doc.is_against_party",
+   "options": "party_type"
+  },
+  {
+   "fieldname": "source_invoices",
+   "fieldtype": "Table",
+   "options": "ISD Invoice Source Item",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.is_against_party",
+   "fieldname": "credit_flow",
+   "fieldtype": "Select",
+   "label": "Credit Flow",
+   "mandatory_depends_on": "eval:doc.is_against_party",
+   "options": "Outward\nInward"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks",
+   "no_copy": 1,
+   "print_hide": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "additional_info_section",
+   "fieldtype": "Section Break",
+   "label": "Additional Info"
+  },
+  {
+   "fieldname": "address_section",
+   "fieldtype": "Section Break",
+   "label": "Address"
+  },
+  {
+   "fieldname": "against_party_section_1",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "against_party_section_2",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "taxes_section",
+   "fieldtype": "Section Break",
+   "label": "Taxes"
+  },
+  {
+   "fieldname": "totals_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_tngt",
+   "fieldtype": "Column Break"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-04-23 17:20:30.281562",
+ "modified": "2026-04-29 15:57:52.251521",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "ISD Invoice",
