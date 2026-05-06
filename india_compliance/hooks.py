@@ -277,6 +277,7 @@ doc_events = {
     },
     "Tax Category": {"validate": "india_compliance.gst_india.overrides.tax_category.validate"},
     "Tax Withholding Category": {
+        "validate": "india_compliance.income_tax_india.overrides.tax_withholding_category.validate",
         "on_change": "india_compliance.income_tax_india.overrides.tax_withholding_category.on_change",
     },
     "Unreconcile Payment": {
