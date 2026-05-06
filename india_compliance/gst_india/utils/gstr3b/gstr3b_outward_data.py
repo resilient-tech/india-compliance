@@ -124,6 +124,7 @@ class GSTR3BCategoryConditions:
 class GSTR3BOutwardInvoices(GSTR3BCategoryConditions):
     def __init__(self, filters):
         self.filters = filters
+        self.filters.filter_by = "Posting Date"
         self.inward_query = GSTR3BInwardQuery(filters)
         self.gstr1_query = GSTR1Query(filters)
 
