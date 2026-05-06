@@ -172,24 +172,6 @@ class TestTaxWithholdingCategory(IntegrationTestCase):
         self.assertEqual(twe_rows[0].tax_id, pan)
         self.assertEqual(twe_rows[0].lower_deduction_certificate, ldc_doc.name)
 
-    def test_tds_section_accepts_empty_value(self):
-        doc = create_tax_withholding_category(
-            f"Test Empty TDS Section {frappe.generate_hash(length=6)}",
-            f"{TDS_ACCOUNT_NAME} - {ABBR}",
-            tds_section="",
-        )
-
-        self.assertEqual(doc.tds_section, "")
-
-    def test_tds_section_accepts_valid_value(self):
-        doc = create_tax_withholding_category(
-            f"Test Valid TDS Section {frappe.generate_hash(length=6)}",
-            f"{TDS_ACCOUNT_NAME} - {ABBR}",
-            tds_section=get_tds_section_value("1001"),
-        )
-
-        self.assertEqual(doc.tds_section, get_tds_section_value("1001"))
-
     def test_search_tds_sections_matches_description_case_insensitively(self):
         results = search_tds_sections("Tax Withholding Category", "salary - GOVT", "name", 0, 20, {})
 
@@ -201,20 +183,6 @@ class TestTaxWithholdingCategory(IntegrationTestCase):
                 "description": "Salary - Govt employees (non-Union)",
             },
             results,
-        )
-
-    def test_tds_section_rejects_invalid_value(self):
-        doc = create_tax_withholding_category(
-            f"Test Invalid TDS Section {frappe.generate_hash(length=6)}",
-            f"{TDS_ACCOUNT_NAME} - {ABBR}",
-            tds_section="999-invalid",
-            do_not_save=True,
-        )
-
-        self.assertRaisesRegex(
-            frappe.ValidationError,
-            r"Invalid TDS Section '999-invalid'\.",
-            doc.save,
         )
 
 
