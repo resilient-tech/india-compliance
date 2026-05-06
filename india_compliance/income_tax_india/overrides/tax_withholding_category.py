@@ -24,7 +24,15 @@ def get_valid_tds_section_values() -> set[str]:
 
 
 @frappe.whitelist()
-def search_tds_sections(doctype, txt, searchfield, start, page_len, filters, **kwargs):
+def search_tds_sections(
+    doctype: str,
+    txt: str,
+    searchfield: str,
+    start: int,
+    page_len: int,
+    filters: dict,
+    **kwargs,
+):
     txt = (txt or "").strip().casefold()
     all_options = []
     filtered_options = []
