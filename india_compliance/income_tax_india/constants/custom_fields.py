@@ -1,10 +1,12 @@
 from india_compliance.income_tax_india.constants import (
-    NEW_TDS_SECTIONS,
+    NEW_TDS_SECTION,
     OLD_TDS_SECTIONS,
     TDS_ENTITY_TYPE,
 )
 
-tds_section_options = "\n" + "\n".join(sorted(NEW_TDS_SECTIONS))
+tds_section_options = "\n" + "\n".join(
+    sorted(f"{code}-{section}" if section else code for code, (section, _) in NEW_TDS_SECTION.items())
+)
 old_tds_section_options = "\n" + "\n".join(sorted(OLD_TDS_SECTIONS))
 tds_entity_type_options = "\n" + "\n".join(sorted(TDS_ENTITY_TYPE))
 
