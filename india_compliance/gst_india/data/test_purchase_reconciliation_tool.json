@@ -189,7 +189,7 @@
                     "bill_no": "BILL-23-00030",
                     "items": [
                         {
-                            "taxable_value": 10000.5,
+                            "taxable_value": 10000.50,
                             "rate": 18,
                             "sgst": 900.045,
                             "cgst": 900.045

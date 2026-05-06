@@ -1032,7 +1032,7 @@ class BuildExcel:
                 "fieldname": "bill_date",
                 "compare_with": "inward_supply_bill_date",
                 "data_format": {
-                    "horizontal": "left",
+                    "horizontal": "center",
                     "bg_color": self.COLOR_PALLATE.light_green,
                 },
                 "header_format": {
@@ -1071,7 +1071,7 @@ class BuildExcel:
                 "fieldname": "is_reverse_charge",
                 "compare_with": "inward_supply_is_reverse_charge",
                 "data_format": {
-                    "horizontal": "left",
+                    "horizontal": "center",
                     "bg_color": self.COLOR_PALLATE.light_green,
                 },
                 "header_format": {
@@ -1170,7 +1170,7 @@ class BuildExcel:
                 "fieldname": "inward_supply_bill_date",
                 "compare_with": "bill_date",
                 "data_format": {
-                    "horizontal": "left",
+                    "horizontal": "center",
                     "bg_color": self.COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
@@ -1209,7 +1209,7 @@ class BuildExcel:
                 "fieldname": "inward_supply_is_reverse_charge",
                 "compare_with": "is_reverse_charge",
                 "data_format": {
-                    "horizontal": "left",
+                    "horizontal": "center",
                     "bg_color": self.COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
@@ -1293,7 +1293,7 @@ class BuildExcel:
             {
                 "label": "Action Status",
                 "fieldname": "action",
-                "data_format": {"horizontal": "left"},
+                "data_format": {"horizontal": "center"},
             },
             {
                 "label": "Match Status",
@@ -1316,9 +1316,9 @@ class BuildExcel:
             {
                 "label": "Classification",
                 "fieldname": "classification",
-                "data_format": {"horizontal": "left"},
+                "data_format": {"horizontal": "center"},
                 "header_format": {
-                    "width": 11,
+                    "width": 14,
                 },
             },
             *dimension_columns,
@@ -1377,8 +1377,7 @@ class BuildExcel:
             {
                 "label": "ITC Availability",
                 "fieldname": "itc_availability",
-                "data_format": {"horizontal": "center"},
-                "header_format": {"width": 15},
+                "data_format": {"horizontal": "left"},
             },
             {
                 "label": "Reason for ITC Unavailability",

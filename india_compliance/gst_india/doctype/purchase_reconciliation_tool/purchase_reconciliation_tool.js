@@ -617,7 +617,7 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 label: "ITC Availability",
                 fieldname: "itc_availability",
                 width: 120,
-                align: "center",
+                align: "left",
             },
             {
                 label: "Reason for ITC <br>Unavailability",
@@ -630,14 +630,14 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 fieldname: "gstr_1_filled",
                 width: 100,
                 align: "center",
-                _value: (...args) => (args[0] ? "Yes" : "No"),
+                _value: (...args) => (args[0] == null ? "" : args[0] ? "Yes" : "No"),
             },
             {
                 label: "GSTR-3B Filed",
                 fieldname: "gstr_3b_filled",
                 width: 110,
                 align: "center",
-                _value: (...args) => (args[0] ? "Yes" : "No"),
+                _value: (...args) => (args[0] == null ? "" : args[0] ? "Yes" : "No"),
             },
             {
                 label: "IRN Source",
