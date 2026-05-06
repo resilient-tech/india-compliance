@@ -3,7 +3,6 @@ from frappe.query_builder import Case
 from frappe.query_builder.functions import IfNull
 
 from india_compliance.income_tax_india.constants import (
-    NEW_TDS_SECTION,
     OLD_TDS_SECTIONS,
     TDS_ENTITY_TYPE,
     get_tds_section_value,
@@ -132,7 +131,7 @@ def execute():
         .run()
     )
 
-    # Step 2: Update tds_section to new code - section format (only sections with mappings)
+    # Step 2: Update tds_section
     mapped_sections = set(old for old, _ in OLD_TO_NEW)
 
     section_case = Case()
