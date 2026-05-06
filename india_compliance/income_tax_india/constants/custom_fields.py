@@ -1,12 +1,5 @@
-from india_compliance.income_tax_india.constants import (
-    NEW_TDS_SECTION,
-    OLD_TDS_SECTIONS,
-    TDS_ENTITY_TYPE,
-)
+from india_compliance.income_tax_india.constants import OLD_TDS_SECTIONS, TDS_ENTITY_TYPE
 
-tds_section_options = "\n" + "\n".join(
-    sorted(f"{code}-{section}" if section else code for code, (section, _) in NEW_TDS_SECTION.items())
-)
 old_tds_section_options = "\n" + "\n".join(sorted(OLD_TDS_SECTIONS))
 tds_entity_type_options = "\n" + "\n".join(sorted(TDS_ENTITY_TYPE))
 
@@ -43,7 +36,6 @@ CUSTOM_FIELDS = {
             "fieldname": "tds_section",
             "insert_after": "round_off_tax_amount",
             "fieldtype": "Autocomplete",
-            "options": tds_section_options,
             "translatable": 0,
             "mandatory_depends_on": "eval:doc.entity_type",
         },

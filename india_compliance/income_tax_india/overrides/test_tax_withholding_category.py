@@ -10,7 +10,14 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import today
 
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
+from india_compliance.income_tax_india.constants import get_tds_section_value
 from india_compliance.income_tax_india.overrides.company import TDS_ACCOUNT_NAME, create_tds_account
+from india_compliance.income_tax_india.overrides.tax_withholding_category import (
+    search_tds_sections,
+)
+from india_compliance.income_tax_india.overrides.tax_withholding_category import (
+    validate as validate_tds_section,
+)
 
 COMPANY = "_Test Indian Registered Company"
 ABBR = "_TIRC"
@@ -167,6 +174,34 @@ class TestTaxWithholdingCategory(IntegrationTestCase):
         self.assertTrue(twe_rows)
         self.assertEqual(twe_rows[0].tax_id, pan)
         self.assertEqual(twe_rows[0].lower_deduction_certificate, ldc_doc.name)
+
+    def test_tds_section_accepts_empty_value(self):
+        doc = frappe.new_doc("Tax Withholding Category")
+        doc.tds_section = ""
+        validate_tds_section(doc)  # should not raise
+
+    def test_tds_section_accepts_valid_value(self):
+        doc = frappe.new_doc("Tax Withholding Category")
+        doc.tds_section = get_tds_section_value("1001")
+        validate_tds_section(doc)  # should not raise
+
+    def test_search_tds_sections_matches_description_case_insensitively(self):
+        results = search_tds_sections("salary - GOVT")
+
+        self.assertTrue(results)
+        self.assertIn(
+            {
+                "label": get_tds_section_value("1001"),
+                "value": get_tds_section_value("1001"),
+                "description": "Salary - Govt employees (non-Union)",
+            },
+            results,
+        )
+
+    def test_tds_section_rejects_invalid_value(self):
+        doc = frappe.new_doc("Tax Withholding Category")
+        doc.tds_section = "999-invalid"
+        self.assertRaises(frappe.ValidationError, validate_tds_section, doc)
 
 
 def create_party(party_type, name, pan=None):

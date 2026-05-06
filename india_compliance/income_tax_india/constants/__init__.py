@@ -392,3 +392,8 @@ NEW_TDS_SECTION = {
 }
 
 TDS_ENTITY_TYPE = ["Individual", "Company", "Company Assessee", "No PAN / Invalid PAN"]
+
+
+def get_tds_section_value(code: str) -> str:
+    section, _description = NEW_TDS_SECTION.get(code, ("", ""))
+    return f"{section} - {code}" if section else code
