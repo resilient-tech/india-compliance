@@ -1,5 +1,4 @@
 import frappe
-from frappe import _
 
 from india_compliance.income_tax_india.constants import (
     NEW_TDS_SECTION,
