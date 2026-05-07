@@ -1378,6 +1378,7 @@ class BuildExcel:
                 "label": "ITC Availability",
                 "fieldname": "itc_availability",
                 "data_format": {"horizontal": "left"},
+                "header_format": {"width": 12},
             },
             {
                 "label": "Reason for ITC Unavailability",
