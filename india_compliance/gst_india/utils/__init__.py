@@ -2,6 +2,7 @@ import copy
 import datetime
 import functools
 import io
+import json
 import tarfile
 
 import frappe
@@ -1261,3 +1262,18 @@ def set_ewaybill_status(
 
 def has_gst_taxes(doc):
     return any(row.gst_tax_type in TAX_TYPES for row in doc.taxes)
+
+
+@frappe.whitelist()
+def get_party_docs_from_party_party(filters: str | dict | frappe._dict):
+
+    if isinstance(filters, str):
+        filters = json.loads(filters)
+
+    search_text = filters.get("search_text")
+    doctype = filters.get("doctype")
+    print("###### get party whitelisted call", search_text, doctype)
+
+    result =  frappe.db.get_list(doctype, filters={"name": ("like", f"%{search_text}%")}, limit=10, pluck="name")
+    print(f"#### {result}")
+    return result

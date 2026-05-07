@@ -150,25 +150,14 @@ function is_import_gst_category(gst_category) {
 
 function show_isd_invoice_distribution_dialog(frm) {
     let fetch_addresses = () => {};
-
+    // last column will be to narrow, frappe issue #38228
     const dialog = new frappe.ui.Dialog({
         title: __("Select Addresses for ISD Distribution"),
+        size: "extra-large",
         fields: [
             {
                 fieldtype: "Section Break",
                 fieldname: "general_section",
-            },
-            {
-                fieldtype: "Data",
-                label: __("Name"),
-                fieldname: "name",
-                onchange() {
-                    fetch_addresses();
-                    dialog.refresh();
-                },
-            },
-            {
-                fieldtype: "Column Break",
             },
             {
                 fieldtype: "Check",
@@ -176,41 +165,11 @@ function show_isd_invoice_distribution_dialog(frm) {
                 label: __("Against Party"),
                 default: 0,
                 onchange() {
-                    const show_party_fields = dialog.get_values(true).is_against_party;
-                    dialog.set_df_property("party_type", "hidden", !show_party_fields);
-                    dialog.set_df_property("party", "hidden", !show_party_fields);
-                    fetch_addresses();
-                    dialog.refresh();
-                },
-            },
-            {
-                fieldtype: "Section Break",
-                fieldname: "party_section",
-            },
-            {
-                fieldtype: "Link",
-                options: "DocType",
-                label: __("Party Type"),
-                fieldname: "party_type",
-                default: "Company",
-                filters: { name: ["in", ["Customer", "Supplier", "Company"]] },
-                hidden: 1,
-                onchange() {
-                    fetch_addresses();
-                },
-            },
-            {
-                fieldtype: "Column Break",
-            },
-            {
-                fieldtype: "Dynamic Link",
-                options: "party_type",
-                label: __("Party"),
-                fieldname: "party",
-                default: frm.doc.company,
-                hidden: 1,
-                onchange() {
-                    fetch_addresses();
+                    let grid = dialog.fields_dict.address.grid;
+                    grid.update_docfield_property("party_type", "hidden", !this.get_value());
+                    grid.update_docfield_property("party", "hidden", !this.get_value());
+                    grid.reset_grid();
+                    grid.refresh();
                 },
             },
             {
@@ -221,17 +180,72 @@ function show_isd_invoice_distribution_dialog(frm) {
                 label: __("Addresses"),
                 fieldtype: "Table",
                 fieldname: "address",
-                cannot_add_rows: true,
                 in_place_edit: true,
-                data: [],
                 fields: [
+                    {
+                        fieldtype: "Select",
+                        options: ["Company", "Customer", "Supplier"],
+                        fieldname: "party_type",
+                        label: __("Party Type"),
+                        default: "Company",
+                        in_list_view: 1,
+                        columns: 1,
+                        hidden: 1,
+                    },
+                    {
+                        fieldtype: "Autocomplete",
+                        fieldname: "party",
+                        label: __("Party"),
+                        default: frm.doc.company,
+                        in_list_view: 1,
+                        columns: 2,
+                        hidden: 1,
+                        get_query: function (doc) {
+                            console.log("Getting party query called", doc);
+                            let party_type = doc.party_type;
+                            let search_text = doc.party || "";
+
+                            return {
+                                query: "india_compliance.gst_india.utils.get_party_docs_from_party_party",
+                                params: {
+                                    filters: {
+                                        doctype: party_type,
+                                        search_text: search_text,
+                                    },
+                                },
+                            };
+                        },
+                    },
                     {
                         fieldtype: "Link",
                         options: "Address",
                         fieldname: "address",
                         label: __("Address"),
-                        read_only: 1,
                         in_list_view: 1,
+                        columns: 2,
+                        get_query: function (doc) {
+                            return {
+                                query: "frappe.contacts.doctype.address.address.address_query",
+                                filters: {
+                                    link_doctype: doc.party_type,
+                                    link_name: doc.party,
+                                },
+                            };
+                        },
+                        onchange: async function () {
+                            // set values in gstin, gst category and gst state
+                            console.log("address chagned", this)
+                            let address = this.doc.address;
+                            if (!address) return;
+
+                            let result = await frappe.db.get_value("Address", address, ["gstin", "gst_category", "gst_state"]);
+                            if (!result.message) return;
+                            let { gstin, gst_category, gst_state } = result.message;
+                            this.doc.gstin = gstin
+                            this.doc.gst_category = gst_category
+                            this.doc.gst_state = gst_state
+                            dialog.fields_dict.address.grid.refresh();
+                        },
                     },
                     {
                         fieldtype: "Data",
@@ -239,6 +253,14 @@ function show_isd_invoice_distribution_dialog(frm) {
                         label: __("GSTIN"),
                         read_only: 1,
                         in_list_view: 1,
+                        columns: 1,
+                    },
+                    {
+                        fieldtype: "Data",
+                        fieldname: "gst_category",
+                        label: __("GST Category"),
+                        read_only: 1,
+                        in_list_view: 0,
                     },
                     {
                         fieldtype: "Data",
@@ -246,45 +268,84 @@ function show_isd_invoice_distribution_dialog(frm) {
                         label: __("GST State"),
                         read_only: 1,
                         in_list_view: 1,
+                        columns: 1,
+                    },
+                    {
+                        fieldtype: "Currency",
+                        fieldname: "turnover_amount",
+                        label: __("Turnover Amount"),
+                        in_list_view: 1,
+                        default: 0,
+                        columns: 2,
+                        onchange: function () {
+                            let grid = this.grid;
+                            let total_turnover = grid.data.reduce(
+                                (sum, row) => sum + (parseFloat(row.turnover_amount) || 0),
+                                0,
+                            );
+                            grid.data.forEach((row) => {
+                                row.distribution_ratio = total_turnover
+                                    ? ((parseFloat(row.turnover_amount) || 0) / total_turnover) * 100
+                                    : 0;
+                            });
+                            grid.refresh();
+                        },
                     },
                     {
                         fieldtype: "Float",
                         fieldname: "distribution_ratio",
                         label: __("Distribution Ratio (%)"),
                         in_list_view: 1,
+                        read_only: 1,
                         default: 0,
+                        columns: 1,
                     },
                 ],
             },
         ],
         primary_action_label: __("Create ISD Invoices"),
         primary_action(values) {
-            const selections = dialog.fields_dict.address.grid.get_selected_children();
+            const dialog_values = dialog.get_values();
+            const address_table = dialog_values.address || [];
+            const rows_with_turnover = address_table.filter((row) => row.turnover_amount);
 
-            if (!selections.length) {
-                frappe.msgprint(__("Please select at least one Address"), __("No Selection"));
+            if (!rows_with_turnover.length) {
+                frappe.msgprint(__("Please enter Turnover Amount for at least one row."), __("No Turnover"));
                 return;
             }
 
             dialog.hide();
-            const dialog_values = dialog.get_values(true);
 
-            const calls = selections.map((selection) =>
-                frappe.call({
-                    method: "india_compliance.gst_india.doctype.isd_invoice.isd_invoice.make_isd_invoice",
-                    args: {
-                        source_name: frm.doc.name,
-                        distribution_ratio: selection.distribution_ratio,
-                        party_address: selection.address,
-                        party_type: dialog_values.is_against_party ? dialog_values.party_type : null,
-                        party: dialog_values.is_against_party ? dialog_values.party : null,
-                    },
-                }),
-            );
+            const payload = rows_with_turnover.map((row) => {
+                const amount = parseFloat(row.turnover_amount) || 0;
+                return {
+                    fiscal_year: erpnext.utils.get_fiscal_year(frm.doc.posting_date),
+                    gstin: row.gstin || "",
+                    gst_state: row.gst_state || "",
+                    gst_category: row.gst_category || "",
+                    amount,
+                    distribution_ratio: row.distribution_ratio,
+                    party_address: row.address,
+                    party_type: dialog_values.is_against_party ? row.party_type : null,
+                    party: dialog_values.is_against_party ? row.party : null,
+                };
+            });
 
-            Promise.all(calls).then((results) => {
-                const names = results.map((r) => r.message?.name).filter(Boolean);
-                frappe.set_route("List", "ISD Invoice");
+            frappe.call({
+                method: "india_compliance.gst_india.doctype.isd_invoice.isd_invoice.bulk_create_isd_invoices",
+                args: {
+                    rows: payload,
+                    source_name: frm.doc.name,
+                },
+                callback(r) {
+                    const { message } = r;
+                    if (message) {
+                        frappe.msgprint(
+                            __("Draft ISD Invoices Created. Kindly Verify Before Submission."),
+                            __("Success"),
+                        );
+                    }
+                },
             });
         },
     });
@@ -304,8 +365,11 @@ function show_isd_invoice_distribution_dialog(frm) {
             callback(r) {
                 if (!r.message) return;
                 const data = r.message.map((row) => ({
+                    party_type: "Company",
+                    party: frm.doc.company,
                     address: row.name,
                     gstin: row.gstin,
+                    gst_category: row.gst_category,
                     gst_state: row.gst_state,
                 }));
                 const grid = dialog.fields_dict.address.grid;
@@ -315,6 +379,7 @@ function show_isd_invoice_distribution_dialog(frm) {
         });
     };
 
-    dialog.show();
+    dialog.show()
+    
     fetch_addresses();
 }

@@ -3,8 +3,10 @@
 
 import json
 
+from annotated_types import doc
 import frappe
 from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_entries
+from erpnext.accounts.utils import get_fiscal_year
 from erpnext.controllers.accounts_controller import AccountsController
 from frappe import _
 from frappe.contacts.doctype.address.address import get_address_display
@@ -14,6 +16,7 @@ from frappe.query_builder.functions import Sum
 from frappe.utils import flt
 from pypika.terms import Case, Tuple
 
+from india_compliance.gst_india.doctype.turnover_record.turnover_record import upsert_turnover_record
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 
@@ -25,11 +28,13 @@ class ISDInvoice(Document):
 
     def validate(self):
         # TODO: validations remaining to be verified
+        print("VALIDATING")
         self.clear_fields_when_is_against_party_not_set()
         self.validate_pan_consistency()
         self.validate_isd_party()
         self.validate_distribution_limits()
         self.autoset_taxes()
+        # add validation so that transaction happen between parties where transaction is allowed to happen
 
     def autoset_taxes(self):
         """Populate taxes child table and totals from distributed source invoice amounts."""
@@ -92,7 +97,7 @@ class ISDInvoice(Document):
         company_pan = self.company_gstin[2:12]
         party_pan = self.party_gstin[2:12]
 
-        if company_pan != party_pan:
+        if company_pan != party_pan and not doc.flags.ignore_validate:
             frappe.throw(
                 _(
                     "PAN of Company GSTIN {0} and Party GSTIN {1} must be the same."
@@ -366,6 +371,7 @@ def get_isd_distribution_addresses(
 
     address_filters = [
         ["Address", "disabled", "=", 0],
+        ["Address", "gst_category", "!=", "Input Service Distributor"],
     ]
 
     if party_type:
@@ -378,12 +384,11 @@ def get_isd_distribution_addresses(
     return frappe.get_list(
         "Address",
         filters=address_filters,
-        fields=["name", "gstin", "gst_state"],
+        fields=["name", "gstin", "gst_state", "gst_category"],
         limit_page_length=int(page_len),
         distinct=True,
     )
 
-@frappe.whitelist()
 def make_isd_invoice(
     source_name: str,
     target_doc: str | None = None,
@@ -393,7 +398,8 @@ def make_isd_invoice(
     party: str | None = None,
 ):
     """
-    Permission checked in get_mapped_doc
+    Insert a new ISD Invoice based on a Purchase Invoice
+    Permission checked in get_mapped_doc, validation ignored while inserting
     """
 
     def set_missing_values(source, target):
@@ -439,8 +445,45 @@ def make_isd_invoice(
         postprocess=set_missing_values,
     )
 
-    doc.insert()
+    doc.flags.ignore_validate = True
+    doc.insert(ignore_permissions=True)
+
     return doc
+
+
+@frappe.whitelist()
+def bulk_create_isd_invoices(rows: list | str, source_name: str):
+    if isinstance(rows, str):
+        rows = json.loads(rows)
+
+    invoices = []
+    for row in rows:
+        try:
+            amount = row.get("amount") or 0
+            if not amount:
+                continue
+
+            fiscal_year = row.get("fiscal_year")
+            if not fiscal_year:
+                purchase_invoice = frappe.get_doc("Purchase Invoice", source_name)
+                fiscal_year = purchase_invoice.fiscal_year or get_fiscal_year(purchase_invoice.posting_date, company=purchase_invoice.company)[0]
+
+            upsert_turnover_record(row.get("gstin"), row.get("gst_category"), row.get("gst_state"), fiscal_year, amount)
+
+            isd_doc = make_isd_invoice(
+                source_name=source_name,
+                target_doc=None,
+                distribution_ratio=row.get("distribution_ratio", 0),
+                party_address=row.get("party_address"),
+                party_type=row.get("party_type"),
+                party=row.get("party"),
+            )
+            invoices.append(isd_doc.name)
+        except Exception as e:
+            frappe.log_error(frappe.get_traceback(), f"Failed to create ISD Invoice for row: {row}")
+            continue
+
+    return invoices
 
 
 def _calculate_distribution(doc):

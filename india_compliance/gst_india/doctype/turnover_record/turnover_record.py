@@ -1,0 +1,42 @@
+# Copyright (c) 2026, Resilient Tech and contributors
+# For license information, please see license.txt
+
+import frappe
+from frappe import _
+from frappe.model.document import Document
+
+from india_compliance.gst_india.utils import get_state, validate_gst_category, validate_gstin
+
+
+class TurnoverRecord(Document):
+    def autoname(self):
+        self.name = f"{self.fiscal_year}-{self.gst_state}"
+
+    def validate(self):
+        validate_gstin(self.gstin)
+        validate_gst_category(self.gst_category, self.gstin)
+        if self.gstin and get_state(self.gstin[:2]) != self.gst_state:
+            frappe.throw(_("GSTIN does not match selected state"))
+
+
+def upsert_turnover_record(
+    gstin: str | None,
+    gst_category: str,
+    gst_state: str,
+    fiscal_year: str,
+    amount: float,
+):
+
+    filters = {"fiscal_year": fiscal_year}
+    or_filters = {"gst_state": gst_state, "gstin": gstin or ""}
+
+    existing = frappe.db.get_list("Turnover Record", filters=filters, or_filters=or_filters, pluck="name", limit=1)[0]
+
+    try:
+        if existing:
+            frappe.db.set_value("Turnover Record", existing, "amount", amount)
+        else:
+            doc = frappe.new_doc("Turnover Record", {"fiscal_year": fiscal_year, "gstin": gstin, "gst_state": gst_state, "gst_category": gst_category, "amount": amount})
+            doc.insert(ignore_permissions=True)
+    except frappe.ValidationError as e:
+        return
