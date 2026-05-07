@@ -1168,7 +1168,7 @@ class ReconciledData(BaseReconciliation):
                 "reason_itc_unavailability": inward_supply.get("reason_itc_unavailability"),
                 "irn_source": inward_supply.get("irn_source"),
                 "irn_number": inward_supply.get("irn_number"),
-                "irn_gen_date": inward_supply.get("irn_gen_date"),
+                "irn_gen_date": format_date(inward_supply.get("irn_gen_date")),
             }
         )
 
