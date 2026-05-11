@@ -340,23 +340,18 @@ def _calculate_itc_claim_period(
     if inward_supply and inward_supply.get("return_period_2b"):
         default_period = _max_period(posting_period, inward_supply.return_period_2b)
 
-    if doc.get("gst_category") == "Unregistered" and doc.get("is_reverse_charge"):
-        return posting_period
-
     return _get_next_unfiled_period(doc.company_gstin, default_period, doc.posting_date, filed)
 
 
 def validate_itc_claim_period(doc) -> None:
     validate_mandatory_fields(doc, "itc_claim_period")
     _validate_period_format(doc.itc_claim_period)
-    _validate_itc_claim_period_for_rcm_invoice(doc)
     _validate_itc_claim_period_as_per_filing(doc)
 
 
 def validate_itc_claim_period_on_update_after_submit(doc) -> None:
     validate_mandatory_fields(doc, "itc_claim_period")
     _validate_period_format(doc.itc_claim_period)
-    _validate_itc_claim_period_for_rcm_invoice(doc)
 
     # On update-after-submit, period checks are needed only if period changed.
     previous = doc.get_doc_before_save()
@@ -386,22 +381,6 @@ def _validate_itc_claim_period_as_per_filing(doc) -> None:
     if _is_gstr3b_filed(doc.company_gstin, doc.itc_claim_period):
         frappe.throw(
             _("Cannot set ITC Claim Period to {0}. GSTR-3B is already filed.").format(doc.itc_claim_period)
-        )
-
-
-def _validate_itc_claim_period_for_rcm_invoice(doc) -> None:
-    """For Unregistered RCM, ITC must be claimed in the same period as posting."""
-    if (
-        doc.doctype == "Purchase Invoice"
-        and doc.gst_category == "Unregistered"
-        and doc.is_reverse_charge
-        and doc.itc_claim_period != format_period(doc.posting_date)
-    ):
-        frappe.throw(
-            _(
-                "ITC Claim Period must be {0} (same as posting date) for purchases from"
-                " Unregistered suppliers under Reverse Charge."
-            ).format(format_period(doc.posting_date))
         )
 
 
