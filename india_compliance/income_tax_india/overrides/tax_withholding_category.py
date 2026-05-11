@@ -1,7 +1,7 @@
 import frappe
 
 from india_compliance.income_tax_india.constants import (
-    NEW_TDS_SECTION,
+    NEW_TDS_SECTIONS,
     get_tds_section_value,
 )
 
@@ -24,8 +24,9 @@ def search_tds_sections(
     all_options = []
     filtered_options = []
 
-    for code, (_section, description) in NEW_TDS_SECTION.items():
-        value = get_tds_section_value(code)
+    for entry in NEW_TDS_SECTIONS:
+        value = get_tds_section_value(entry)
+        description = entry["description"]
 
         option = {
             "label": value,
