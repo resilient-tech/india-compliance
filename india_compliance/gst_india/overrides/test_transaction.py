@@ -600,6 +600,22 @@ class TestTransaction(FrappeTestCase):
             doc.insert,
         )
 
+    def test_non_gst_transaction_with_gst_accounts(self):
+        doc = create_transaction(
+            **self.transaction_details,
+            item_code="_Test Non GST Item",
+            is_in_state=True,
+            do_not_save=True,
+        )
+        doc.set("taxes", [])
+        _append_taxes(doc, ["CGST", "SGST"], charge_type="Actual", tax_amount=9)
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(Row #\d+: Cannot charge GST for Non GST Items)$"),
+            doc.insert,
+        )
+
     def test_invalid_charge_type_as_actual(self):
         doc = create_transaction(**self.transaction_details, do_not_save=True)
         _append_taxes(doc, ["CGST", "SGST"], charge_type="Actual", tax_amount=9)

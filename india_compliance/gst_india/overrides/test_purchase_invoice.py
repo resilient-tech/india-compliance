@@ -305,6 +305,16 @@ class TestPurchaseInvoice(FrappeTestCase):
             pinv.save,
         )
 
+    def test_itc_claim_period_is_set_for_non_gst_invoice(self):
+        """Non-GST purchase invoices should still get a posting-period ITC claim period."""
+        pinv = create_purchase_invoice(
+            item_code="_Test Non GST Item",
+            do_not_submit=True,
+        )
+
+        self.assertEqual(pinv.items[0].gst_treatment, "Non-GST")
+        self.assertEqual(pinv.itc_claim_period, format_period(pinv.posting_date))
+
     def test_itc_claim_period_deferred(self):
         """
         Test that 'Deferred' is a valid ITC Claim Period for regular invoices
