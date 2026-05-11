@@ -215,6 +215,40 @@ class TestGSTPurchaseRegister(IntegrationTestCase):
             "Overseas import service PI should be excluded from section 5",
         )
 
+    def test_itc_claim_period_filter_uses_periods_within_date_range(self):
+        p1 = create_purchase_invoice(
+            posting_date="2024-01-15",
+            itc_claim_period="052024",
+            itc_classification="All Other ITC",
+            is_in_state=1,
+        )
+        p2 = create_purchase_invoice(
+            posting_date="2024-05-15",
+            itc_claim_period="072024",
+            itc_classification="All Other ITC",
+            is_in_state=1,
+        )
+        p3 = create_purchase_invoice(
+            posting_date="2024-05-15",
+            itc_claim_period="082024",
+            itc_classification="All Other ITC",
+            is_in_state=1,
+        )
+
+        filters = _filters(
+            "2024-04-01",
+            date_range=["2024-04-01", "2024-07-01"],
+            filter_by="ITC Claim Period",
+            sub_section="4",
+            summary_by="Invoice Wise",
+        )
+        _, data = execute(filters)
+        voucher_nos = [row["voucher_no"] for row in data]
+
+        self.assertIn(p1.name, voucher_nos)
+        self.assertIn(p2.name, voucher_nos)
+        self.assertNotIn(p3.name, voucher_nos)
+
 
 def _create_journal_entry(posting_date, voucher_type, tax_amount, ineligibility_reason=""):
     if voucher_type == "Reclaim of ITC Reversal":
