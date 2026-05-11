@@ -1,14 +1,14 @@
 import re
 
 import frappe
-from frappe.tests import IntegrationTestCase
+from frappe.tests.utils import FrappeTestCase
 
 from india_compliance.gst_india.utils.tests import (
     create_itc_reversal_journal_entry,
 )
 
 
-class TestJournalEntry(IntegrationTestCase):
+class TestJournalEntry(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
