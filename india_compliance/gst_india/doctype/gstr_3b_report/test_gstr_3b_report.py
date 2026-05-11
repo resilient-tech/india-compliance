@@ -5,7 +5,7 @@ import json
 
 import frappe
 from frappe.tests import IntegrationTestCase, change_settings
-from frappe.utils import get_month, getdate
+from frappe.utils import add_months, get_month, getdate
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
@@ -18,6 +18,7 @@ from india_compliance.gst_india.report.gstr_3b_details.gstr_3b_details import (
     GSTR3B_Inward_Nil_Exempt,
 )
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
+from india_compliance.gst_india.utils.itc_claim import format_period
 from india_compliance.gst_india.utils.tests import (
     append_item,
     create_purchase_invoice,
@@ -751,6 +752,63 @@ class TestGSTR3BReport(IntegrationTestCase):
         self.assertEqual(output["sup_details"]["osup_det"]["iamt"], 90.0)
         self.assertEqual(output["sup_details"]["osup_det"]["camt"], 0.0)
         self.assertEqual(output["sup_details"]["osup_det"]["samt"], 0.0)
+
+    def test_rcm_outward_liability(self):
+        """RCM outward liability uses posting date while ITC uses claim period."""
+        today = getdate()
+        next_month = add_months(today, 1)
+        next_period = format_period(next_month)
+
+        pi = create_purchase_invoice(
+            supplier="_Test Unregistered Supplier",
+            is_reverse_charge=True,
+            is_in_state_rcm=True,
+            posting_date=today,
+            do_not_submit=True,
+        )
+        pi.itc_claim_period = next_period
+        pi.save()
+        pi.submit()
+
+        # -- Report for THIS month (filter_by ITC Claim Period) --
+        report_this = frappe.get_doc(
+            {
+                "doctype": "GSTR 3B Report",
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+                "year": today.year,
+                "month_or_quarter": get_month(today),
+                "filter_by": "ITC Claim Period",
+            }
+        ).insert()
+        output = json.loads(report_this.json_output)
+
+        # Outward RCM liability always by posting date → invoice IS included
+        self.assertEqual(output["sup_details"]["isup_rev"]["txval"], 100.0)
+        # ITC by claim period → invoice is NOT included (deferred to next month)
+        itc_section = {r["ty"]: r for r in output["itc_elg"]["itc_avl"]}
+        self.assertEqual(itc_section.get("ISRC", {}).get("camt", 0.0), 0.0)
+        self.assertEqual(itc_section.get("ISRC", {}).get("samt", 0.0), 0.0)
+
+        # -- Report for NEXT month (filter_by ITC Claim Period) --
+        report_next = frappe.get_doc(
+            {
+                "doctype": "GSTR 3B Report",
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+                "year": next_month.year,
+                "month_or_quarter": get_month(next_month),
+                "filter_by": "ITC Claim Period",
+            }
+        ).insert()
+        output = json.loads(report_next.json_output)
+
+        # Outward RCM by posting date → invoice is NOT in next month's liability
+        self.assertEqual(output["sup_details"]["isup_rev"]["txval"], 0.0)
+        # ITC by claim period → invoice IS in next month's ITC
+        itc_section = {r["ty"]: r for r in output["itc_elg"]["itc_avl"]}
+        self.assertEqual(itc_section.get("ISRC", {}).get("camt", 0.0), 9.0)
+        self.assertEqual(itc_section.get("ISRC", {}).get("samt", 0.0), 9.0)
 
 
 def create_sales_invoices():

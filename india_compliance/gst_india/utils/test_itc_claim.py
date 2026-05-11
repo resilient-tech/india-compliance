@@ -408,7 +408,7 @@ class TestITCClaim(IntegrationTestCase):
         self.assertEqual(result, "032024")
 
     def test_calc_unregistered_rcm(self):
-        """Unregistered RCM always returns posting period."""
+        """Unregistered RCM follows same logic as regular invoices (next unfiled period)."""
         doc = self._make_doc(
             gst_category="Unregistered",
             is_reverse_charge=1,
@@ -416,6 +416,9 @@ class TestITCClaim(IntegrationTestCase):
         )
         result = _calculate_itc_claim_period(doc, filed=set())
         self.assertEqual(result, "012024")
+
+        result = _calculate_itc_claim_period(doc, filed={"012024"})
+        self.assertEqual(result, "022024")
 
     def test_calc_no_inward_supply(self):
         """No inward supply → uses posting period as start."""
