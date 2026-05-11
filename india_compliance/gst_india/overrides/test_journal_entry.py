@@ -11,8 +11,7 @@ from india_compliance.gst_india.utils.tests import (
 class TestJournalEntry(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
-        frappe.db.savepoint("before_test_journal_entry")
-
+        super().setUpClass()
         # New company with a single GSTIN (no linked addresses).
         # The make_company_fixtures hook auto-creates GST accounts
         # and registers them in GST Settings.
@@ -55,10 +54,6 @@ class TestJournalEntry(IntegrationTestCase):
         address.gst_category = "Registered Regular"
         address.append("links", {"link_doctype": "Company", "link_name": company})
         address.insert()
-
-    @classmethod
-    def tearDownClass(cls):
-        frappe.db.rollback(save_point="before_test_journal_entry")
 
     def test_auto_set_company_gstin_for_single_linked_gstin(self):
         """
