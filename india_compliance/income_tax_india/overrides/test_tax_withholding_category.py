@@ -176,14 +176,11 @@ class TestTaxWithholdingCategory(IntegrationTestCase):
         results = search_tds_sections("Tax Withholding Category", "salary - GOVT", "name", 0, 20, {})
 
         self.assertTrue(results)
+        section_1001 = get_tds_section_value(next(e for e in NEW_TDS_SECTIONS if e["section_code"] == "1001"))
         self.assertIn(
             {
-                "label": get_tds_section_value(
-                    next(e for e in NEW_TDS_SECTIONS if e["section_code"] == "1001")
-                ),
-                "value": get_tds_section_value(
-                    next(e for e in NEW_TDS_SECTIONS if e["section_code"] == "1001")
-                ),
+                "label": section_1001,
+                "value": section_1001,
                 "description": "Salary - Govt employees (non-Union)",
             },
             results,
