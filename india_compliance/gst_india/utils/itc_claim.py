@@ -21,7 +21,7 @@ from frappe.utils import (
 )
 
 from india_compliance.gst_india.overrides.transaction import validate_mandatory_fields
-from india_compliance.gst_india.utils import get_period
+from india_compliance.gst_india.utils import get_period, get_periods_between_dates
 
 SUPPORTED_DOCTYPES = frozenset(("Purchase Invoice", "Bill of Entry"))
 SUPPORTED_TABLE_NAMES = frozenset(get_table_name(dt) for dt in SUPPORTED_DOCTYPES)
@@ -195,12 +195,15 @@ def apply_period_filter(
         to_date: End date for posting date filter
         filter_by: (Optional) "ITC Claim Period" or "Posting Date". Defaults to "Posting Date"
         return_period: (Optional) The return period in MMYYYY format.
-                      Auto-calculated from to_date if not provided
+                  If not provided, all periods between from_date and to_date are used.
     """
     if filter_by == "ITC Claim Period" and doc._table_name in SUPPORTED_TABLE_NAMES:
-        if not return_period:
-            return_period = format_period(to_date)
-        return query.where(IfNull(doc.itc_claim_period, "") == return_period)
+        if return_period:
+            return query.where(IfNull(doc.itc_claim_period, "") == return_period)
+
+        periods = get_periods_between_dates(from_date, to_date)
+
+        return query.where(IfNull(doc.itc_claim_period, "").isin(periods))
 
     return query.where(doc.posting_date[from_date:to_date])
 
