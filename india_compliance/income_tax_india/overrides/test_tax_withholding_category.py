@@ -10,7 +10,7 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import today
 
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
-from india_compliance.income_tax_india.constants import get_tds_section_value
+from india_compliance.income_tax_india.constants import NEW_TDS_SECTIONS, get_tds_section_value
 from india_compliance.income_tax_india.overrides.company import TDS_ACCOUNT_NAME, create_tds_account
 from india_compliance.income_tax_india.overrides.tax_withholding_category import (
     search_tds_sections,
@@ -178,8 +178,12 @@ class TestTaxWithholdingCategory(IntegrationTestCase):
         self.assertTrue(results)
         self.assertIn(
             {
-                "label": get_tds_section_value("1001"),
-                "value": get_tds_section_value("1001"),
+                "label": get_tds_section_value(
+                    next(e for e in NEW_TDS_SECTIONS if e["section_code"] == "1001")
+                ),
+                "value": get_tds_section_value(
+                    next(e for e in NEW_TDS_SECTIONS if e["section_code"] == "1001")
+                ),
                 "description": "Salary - Govt employees (non-Union)",
             },
             results,

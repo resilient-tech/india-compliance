@@ -1,7 +1,7 @@
 import frappe
 from frappe.query_builder import Case
 
-from india_compliance.income_tax_india.constants import NEW_TDS_SECTION, get_tds_section_value
+from india_compliance.income_tax_india.constants import NEW_TDS_SECTIONS, get_tds_section_value
 
 
 def execute():
@@ -12,11 +12,12 @@ def execute():
     section_case = Case()
     codes_to_update = []
 
-    for code, (section, _description) in NEW_TDS_SECTION.items():
-        if not section:
+    for entry in NEW_TDS_SECTIONS:
+        code = entry["section_code"]
+        if not entry["section_name"]:
             continue
 
-        formatted_section = get_tds_section_value(code)
+        formatted_section = get_tds_section_value(entry)
 
         section_case = section_case.when(twc.tds_section == code, formatted_section)
         codes_to_update.append(code)
