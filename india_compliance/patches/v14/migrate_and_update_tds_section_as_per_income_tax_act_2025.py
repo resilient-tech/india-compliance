@@ -140,6 +140,8 @@ def execute():
     section_case = Case()
     for (old_section, entity_type), new_code in OLD_TO_NEW.items():
         entry = section_by_code.get(new_code, {"section_code": new_code, "section_name": ""})
+        if not entry:
+            continue
         formatted_section = get_tds_section_value(entry)
 
         section_case = section_case.when(

@@ -14,7 +14,7 @@ def execute():
 
     for entry in NEW_TDS_SECTIONS:
         code = entry["section_code"]
-        if not entry["section_name"]:
+        if not code:
             continue
 
         formatted_section = get_tds_section_value(entry)
