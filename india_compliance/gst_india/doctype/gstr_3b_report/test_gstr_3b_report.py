@@ -4,13 +4,8 @@
 import json
 
 import frappe
-<<<<<<< HEAD
 from frappe.tests.utils import FrappeTestCase, change_settings
-from frappe.utils import get_month, getdate
-=======
-from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import add_months, get_month, getdate
->>>>>>> 2f734f1c (feat: allow itc claim period for RCM Purchase Invoice)
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
