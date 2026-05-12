@@ -64,6 +64,9 @@ async function update_gst_details(frm, event) {
     )
         return;
 
+    if (frm.doc.docstatus === 1 && event === "customer_address" && frm.doc.doctype === "Sales Invoice")
+        return;
+
     const party_type = india_compliance.get_party_type(frm.doc.doctype).toLowerCase();
     const party_fieldname = frm.doc.doctype === "Quotation" ? "party_name" : party_type;
     const party = frm.doc[party_fieldname];

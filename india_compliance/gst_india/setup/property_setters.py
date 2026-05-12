@@ -75,6 +75,7 @@ def get_property_setters(*, include_defaults=False):
         },
         *PURCHASE_RECEIPT_PROPERTIES,
         *SUBCONTRACTING_RECEIPT_PROPERTIES,
+        *SALES_INVOICE_ALLOW_ON_SUBMIT_PROPERTIES,
     ]
 
     if include_defaults:
@@ -197,6 +198,17 @@ PURCHASE_RECEIPT_PROPERTIES = [
 SUBCONTRACTING_RECEIPT_PROPERTIES = [
     {"doctype": "Subcontracting Receipt", **field}
     for field in TRANSPORTER_NAME_PROPERTIES + LR_NO_PROPERTIES + LR_DATE_PROPERTIES
+]
+
+SALES_INVOICE_ALLOW_ON_SUBMIT_PROPERTIES = [
+    {
+        "doctype": "Sales Invoice",
+        "fieldname": fieldname,
+        "property": "allow_on_submit",
+        "property_type": "Check",
+        "value": "1",
+    }
+    for fieldname in ("customer_address", "address_display")
 ]
 
 
