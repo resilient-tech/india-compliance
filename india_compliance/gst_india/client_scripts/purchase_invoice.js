@@ -355,10 +355,11 @@ function show_isd_invoice_distribution_dialog(frm) {
                     const { message } = r;
                     const success = message[0]
                     const invalid = message[1]
-                    if(invalid) {
+                    if(invalid.length) {
                         frappe.msgprint({
-                            title: "Some ISD Invoices failed validations.",
+                            title: "Some ISD Invoices failed validations",
                             message: invalid,
+                            indicator: "orange",
                             as_list: true
                         });
                     }
@@ -366,6 +367,7 @@ function show_isd_invoice_distribution_dialog(frm) {
                         frappe.msgprint({
                             title: "ISD Invoices Successfully created",
                             message: success,
+                            indicator: "green",
                             as_list: true
                         });
                     }
