@@ -3,7 +3,6 @@
 
 import json
 
-from annotated_types import doc
 import frappe
 from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_entries
 from erpnext.accounts.utils import get_fiscal_year
@@ -12,8 +11,8 @@ from frappe import _
 from frappe.contacts.doctype.address.address import get_address_display
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
-from frappe.query_builder.functions import Sum
-from frappe.utils import flt
+from frappe.query_builder.functions import Coalesce, Sum
+from frappe.utils import flt, today
 from pypika.terms import Case, Tuple
 
 from india_compliance.gst_india.doctype.turnover_record.turnover_record import upsert_turnover_record
@@ -30,8 +29,8 @@ class ISDInvoice(Document):
         # TODO: validations remaining to be verified
         print("VALIDATING")
         self.clear_fields_when_is_against_party_not_set()
-        self.validate_pan_consistency()
         self.validate_isd_party()
+        self.validate_pan_consistency()
         self.validate_distribution_limits()
         self.autoset_taxes()
         # add validation so that transaction happen between parties where transaction is allowed to happen
@@ -97,7 +96,7 @@ class ISDInvoice(Document):
         company_pan = self.company_gstin[2:12]
         party_pan = self.party_gstin[2:12]
 
-        if company_pan != party_pan and not doc.flags.ignore_validate:
+        if company_pan != party_pan:
             frappe.throw(
                 _(
                     "PAN of Company GSTIN {0} and Party GSTIN {1} must be the same."
@@ -357,37 +356,43 @@ def create_inter_company_invoice(source_name: str, target_doc:str|None=None):
 
 
 @frappe.whitelist()
-def get_isd_distribution_addresses(
-    page_len: int,
-    filters: str | dict | frappe._dict,
-):
+def get_distribution_heads(party_type: str, party: str, posting_date: str, address: str | None = None):
+    fiscal_year = get_fiscal_year(posting_date, company=party, raise_on_missing=False) or get_fiscal_year(today(), company=party, raise_on_missing=False)
+    fiscal_year = fiscal_year[0] if fiscal_year else None
 
-    if isinstance(filters, str):
-        filters = json.loads(filters)
+    Address = frappe.qb.DocType("Address")
+    DynamicLink = frappe.qb.DocType("Dynamic Link")
+    TurnoverRecord = frappe.qb.DocType("Turnover Record")
 
-    party_type = filters["party_type"]
-    party = filters["party"]
-    search_text = filters.get("search_text", "")
-
-    address_filters = [
-        ["Address", "disabled", "=", 0],
-        ["Address", "gst_category", "!=", "Input Service Distributor"],
-    ]
-
-    if party_type:
-        address_filters.append(["Dynamic Link", "link_doctype", "=", party_type])
-    if party:
-        address_filters.append(["Dynamic Link", "link_name", "=", party])
-    if search_text:
-        address_filters.append(["name", "like", f"%{search_text}%"])
-
-    return frappe.get_list(
-        "Address",
-        filters=address_filters,
-        fields=["name", "gstin", "gst_state", "gst_category"],
-        limit_page_length=int(page_len),
-        distinct=True,
+    query = (
+        frappe.qb.from_(Address)
+        .join(DynamicLink)
+        .on(DynamicLink.parent == Address.name)
+        .left_join(TurnoverRecord)
+        .on(
+            (TurnoverRecord.gstin == Address.gstin)
+            & (TurnoverRecord.gst_state == Address.gst_state)
+            & (TurnoverRecord.fiscal_year == fiscal_year)
+        )
+        .select(
+            Address.name,
+            Address.gstin,
+            Address.gst_state,
+            Address.gst_category,
+            Coalesce(TurnoverRecord.amount, 0).as_("turnover_amount"),
+        )
+        .where(
+            (DynamicLink.link_doctype == party_type)
+            & (DynamicLink.link_name == party)
+            & (Address.gst_category != "Input Service Distributor")
+        )
     )
+
+    if address:
+        query = query.where(Address.name == address)
+
+    return query.run(as_dict=True)
+
 
 def make_isd_invoice(
     source_name: str,
@@ -448,7 +453,15 @@ def make_isd_invoice(
     doc.flags.ignore_validate = True
     doc.insert(ignore_permissions=True)
 
-    return doc
+    is_invalid_insertion = False
+
+    try:
+        doc.flags.ignore_validate = False
+        doc.save()
+    except frappe.ValidationError:
+        frappe.clear_messages()
+        is_invalid_insertion = True
+    return doc, is_invalid_insertion
 
 
 @frappe.whitelist()
@@ -457,33 +470,32 @@ def bulk_create_isd_invoices(rows: list | str, source_name: str):
         rows = json.loads(rows)
 
     invoices = []
+    invalid_invoices = []
     for row in rows:
-        try:
-            amount = row.get("amount") or 0
-            if not amount:
-                continue
-
-            fiscal_year = row.get("fiscal_year")
-            if not fiscal_year:
-                purchase_invoice = frappe.get_doc("Purchase Invoice", source_name)
-                fiscal_year = purchase_invoice.fiscal_year or get_fiscal_year(purchase_invoice.posting_date, company=purchase_invoice.company)[0]
-
-            upsert_turnover_record(row.get("gstin"), row.get("gst_category"), row.get("gst_state"), fiscal_year, amount)
-
-            isd_doc = make_isd_invoice(
-                source_name=source_name,
-                target_doc=None,
-                distribution_ratio=row.get("distribution_ratio", 0),
-                party_address=row.get("party_address"),
-                party_type=row.get("party_type"),
-                party=row.get("party"),
-            )
-            invoices.append(isd_doc.name)
-        except Exception as e:
-            frappe.log_error(frappe.get_traceback(), f"Failed to create ISD Invoice for row: {row}")
+        amount = row.get("amount") or 0
+        if not amount:
             continue
 
-    return invoices
+        fiscal_year = row.get("fiscal_year")
+        if not fiscal_year:
+            purchase_invoice = frappe.get_doc("Purchase Invoice", source_name)
+            fiscal_year = purchase_invoice.fiscal_year or get_fiscal_year(purchase_invoice.posting_date, company=purchase_invoice.company)[0]
+
+        upsert_turnover_record(row["gstin"], row["gst_category"], row["gst_state"], fiscal_year, amount)
+
+        isd_doc, is_invalid_insertion = make_isd_invoice(
+            source_name=source_name,
+            target_doc=None,
+            distribution_ratio=row.get("distribution_ratio", 0),
+            party_address=row["party_address"],
+            party_type=row["party_type"],
+            party=row["party"],
+        )
+        invoices.append(isd_doc.name)
+        if is_invalid_insertion:
+            invalid_invoices.append(isd_doc.name)
+
+    return invoices, invalid_invoices
 
 
 def _calculate_distribution(doc):
