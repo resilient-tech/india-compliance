@@ -677,7 +677,10 @@ class GSTR9SalesClassifier:
     # ── Per-segment classifiers ──
 
     def _classify_b2c(self, item):
-        # CN/DN: all items to 4A; Forward: only taxable items to 4A
+        if self.is_cn(item) and self.is_non_taxable_item(item):
+            return GSTR9_Row.TABLE_5H
+        if self.is_dn(item) and self.is_non_taxable_item(item):
+            return GSTR9_Row.TABLE_5I
         if not self.is_forward(item) or not self.is_non_taxable_item(item):
             return GSTR9_Row.TABLE_4A
         # B2C forward non-taxable → 5D / 5E / 5F
