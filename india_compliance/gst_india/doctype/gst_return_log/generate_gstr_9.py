@@ -139,11 +139,7 @@ class GenerateGSTR9(SummarizeGSTR9):
                     message=frappe.get_traceback(),
                 )
 
-        # Summarize and strip raw data from response
         self._summarize_gstr9_data(data, fy)
-        data.pop("row_data", None)
-        data.pop("portal", None)
-        data["status"] = self.filing_status or "Not Filed"
 
         return callback and callback(filters)
 

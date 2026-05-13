@@ -1096,10 +1096,10 @@ class GSTR9 {
             html += `<tr>
                 <td class="gstr9-col-sno">${idx + 1}</td>
                 <td>${hsn_link}</td>
-                <td>${row.description || ""}</td>`;
+                <td>${frappe.utils.escape_html(row.description || "")}</td>`;
 
             if (!is_service) {
-                html += `<td>${row.uom || ""}</td>
+                html += `<td>${frappe.utils.escape_html(row.uom || "")}</td>
                 <td class="text-right">${format_number(row.quantity || 0, null, 3)}</td>`;
             }
 

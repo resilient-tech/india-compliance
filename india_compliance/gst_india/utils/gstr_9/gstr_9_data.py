@@ -376,18 +376,19 @@ class GSTR9BooksData(GSTR1Query, GSTR3BQuery):
             )
         ).run(as_dict=True)
 
-        # Aggregate per BOE in Python (base query is per BOE_ITEM)
+        # Aggregate per (BOE, is_fixed_asset) so mixed BOEs split into two buckets
         boe_agg = {}
         for row in rows:
+            is_cg = bool(flt(row.is_fixed_asset))
             entry = boe_agg.setdefault(
-                row.voucher_no,
+                (row.voucher_no, is_cg),
                 frappe._dict(
                     document_number=row.voucher_no,
                     posting_date=row.posting_date,
                     supplier_gstin=row.supplier_gstin or "",
                     supplier_name=row.supplier_name or "",
                     gst_category=row.gst_category or "Overseas",
-                    is_fixed_asset=flt(row.is_fixed_asset),
+                    is_fixed_asset=is_cg,
                     taxable_value=0.0,
                     igst=0.0,
                     cess=0.0,
@@ -471,18 +472,13 @@ class GSTR9BooksData(GSTR1Query, GSTR3BQuery):
         pe = adv_data.pe
 
         # 11A — one row per PE (already grouped by pe.name in get_11A_query)
-        rows_11a = (
-            adv_data.get_11A_query()
-            .select(pe.name, pe.posting_date, pe.party_name)
-            .groupby(pe.posting_date, pe.party_name)
-            .run(as_dict=True)
-        )
+        rows_11a = adv_data.get_11A_query().select(pe.name, pe.posting_date, pe.party_name).run(as_dict=True)
 
         # 11B — one row per pe_ref allocation; collapse into one entry per PE in Python
         rows_11b_raw = (
             adv_data.get_11B_query()
             .select(pe.name, pe.posting_date, pe.party_name)
-            .groupby(pe.name, pe.posting_date, pe.party_name)
+            .groupby(pe.name)
             .run(as_dict=True)
         )
 
