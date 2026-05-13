@@ -6,59 +6,23 @@ from india_compliance.gst_india.utils.gstr_9 import (
     PORTAL_SOURCED_ROWS,
     GSTR9_Row,
     _empty_row,
+    get_fy_schema,
     get_gstr9_return_period,
 )
-
-# Maps internal row_key → (table_key, portal_key) for all portal-provided rows.
-# Table 6 sub-rows (6B/6C/6D/6E/6F/6H) are books-computed — portal does not send them.
-# Table 9 is handled separately in _parse_table_9 due to its different structure.
-PORTAL_ROW_MAP = {
-    # Table 4
-    GSTR9_Row.TABLE_4A: ("table4", "b2c"),
-    GSTR9_Row.TABLE_4B: ("table4", "b2b"),
-    GSTR9_Row.TABLE_4C: ("table4", "exp"),
-    GSTR9_Row.TABLE_4D: ("table4", "sez"),
-    GSTR9_Row.TABLE_4E: ("table4", "deemed"),
-    GSTR9_Row.TABLE_4F: ("table4", "at"),
-    GSTR9_Row.TABLE_4G: ("table4", "rchrg"),
-    GSTR9_Row.TABLE_4G1: ("table4", "ecom"),
-    GSTR9_Row.TABLE_4I: ("table4", "cr_nt"),
-    GSTR9_Row.TABLE_4J: ("table4", "dr_nt"),
-    GSTR9_Row.TABLE_4K: ("table4", "amd_pos"),
-    GSTR9_Row.TABLE_4L: ("table4", "amd_neg"),
-    # Table 5
-    GSTR9_Row.TABLE_5A: ("table5", "zero_rtd"),
-    GSTR9_Row.TABLE_5B: ("table5", "sez"),
-    GSTR9_Row.TABLE_5C: ("table5", "rchrg"),
-    GSTR9_Row.TABLE_5C1: ("table5", "ecom_14"),
-    GSTR9_Row.TABLE_5D: ("table5", "exmt"),
-    GSTR9_Row.TABLE_5E: ("table5", "nil"),
-    GSTR9_Row.TABLE_5F: ("table5", "non_gst"),
-    GSTR9_Row.TABLE_5H: ("table5", "cr_nt"),
-    GSTR9_Row.TABLE_5I: ("table5", "dr_nt"),
-    GSTR9_Row.TABLE_5J: ("table5", "amd_pos"),
-    GSTR9_Row.TABLE_5K: ("table5", "amd_neg"),
-    # Table 6 — only the rows the portal actually sends
-    GSTR9_Row.TABLE_6A: ("table6", "itc_3b"),
-    GSTR9_Row.TABLE_6G: ("table6", "isd"),
-    GSTR9_Row.TABLE_6K: ("table6", "tran1"),
-    GSTR9_Row.TABLE_6L: ("table6", "tran2"),
-    # Table 8
-    GSTR9_Row.TABLE_8A: ("table8", "itc_2b"),
-}
 
 
 def download_gstr9_data(gstr9_log, filters):
     """Download auto-drafted GSTR-9 data from the GST portal."""
     api = GSTR9API(gstr9_log.gstin, get_gstr9_return_period(filters.financial_year))
-    return convert_portal_data(api.get_data())
+    return convert_portal_data(api.get_data(), filters.financial_year)
 
 
-def convert_portal_data(response):
+def convert_portal_data(response, financial_year):
     """Convert GSTN API response to {row_key: amount_dict}."""
     data = {}
+    portal_row_map = get_fy_schema(financial_year).portal_row_map
 
-    for row_key, (table_key, portal_key) in PORTAL_ROW_MAP.items():
+    for row_key, (table_key, portal_key) in portal_row_map.items():
         row_data = response.get(table_key, {}).get(portal_key)
         if row_data:
             data[row_key] = _parse_amount_row(row_data)

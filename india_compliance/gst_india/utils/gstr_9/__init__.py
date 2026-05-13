@@ -13,6 +13,7 @@ class GSTR9_Row:
     TABLE_4F = "4F"
     TABLE_4G = "4G"
     TABLE_4G1 = "4G1"
+    # TABLE_4G2 = "4G2"  # Added FY 2026-27 (sample): second e-commerce operator category
     TABLE_4H = "4H"
     TABLE_4I = "4I"
     TABLE_4J = "4J"
@@ -414,13 +415,14 @@ def _sum_rows(data, add_rows, subtract=None):
     return result
 
 
-def compute_auto_rows(data):
+def compute_auto_rows(data, financial_year):
     """Compute all auto-computed rows in dependency order.
 
     data is a dict of {row_key: {field: value, ...}}
     """
+    formulas = get_fy_schema(financial_year).formulas
     # Compute in defined order (formulas dict is insertion-ordered in Python 3.7+)
-    for row_key, formula in AUTO_COMPUTE_FORMULAS.items():
+    for row_key, formula in formulas.items():
         data[row_key] = formula(data)
 
     return data
@@ -432,8 +434,178 @@ def compute_auto_rows(data):
 # in the sub-total formula.
 CREDIT_NOTE_ROWS = frozenset({GSTR9_Row.TABLE_4I, GSTR9_Row.TABLE_5H})
 
+# Maps internal row_key → (table_key, portal_key) for all portal-provided rows.
+# Table 6 sub-rows (6B/6C/6D/6E/6F/6H) are books-computed — portal does not send them.
+# Table 9 is handled separately in _parse_table_9 due to its different structure.
+_BASE_PORTAL_ROW_MAP = {
+    # Table 4
+    GSTR9_Row.TABLE_4A: ("table4", "b2c"),
+    GSTR9_Row.TABLE_4B: ("table4", "b2b"),
+    GSTR9_Row.TABLE_4C: ("table4", "exp"),
+    GSTR9_Row.TABLE_4D: ("table4", "sez"),
+    GSTR9_Row.TABLE_4E: ("table4", "deemed"),
+    GSTR9_Row.TABLE_4F: ("table4", "at"),
+    GSTR9_Row.TABLE_4G: ("table4", "rchrg"),
+    GSTR9_Row.TABLE_4G1: ("table4", "ecom"),
+    GSTR9_Row.TABLE_4I: ("table4", "cr_nt"),
+    GSTR9_Row.TABLE_4J: ("table4", "dr_nt"),
+    GSTR9_Row.TABLE_4K: ("table4", "amd_pos"),
+    GSTR9_Row.TABLE_4L: ("table4", "amd_neg"),
+    # Table 5
+    GSTR9_Row.TABLE_5A: ("table5", "zero_rtd"),
+    GSTR9_Row.TABLE_5B: ("table5", "sez"),
+    GSTR9_Row.TABLE_5C: ("table5", "rchrg"),
+    GSTR9_Row.TABLE_5C1: ("table5", "ecom_14"),
+    GSTR9_Row.TABLE_5D: ("table5", "exmt"),
+    GSTR9_Row.TABLE_5E: ("table5", "nil"),
+    GSTR9_Row.TABLE_5F: ("table5", "non_gst"),
+    GSTR9_Row.TABLE_5H: ("table5", "cr_nt"),
+    GSTR9_Row.TABLE_5I: ("table5", "dr_nt"),
+    GSTR9_Row.TABLE_5J: ("table5", "amd_pos"),
+    GSTR9_Row.TABLE_5K: ("table5", "amd_neg"),
+    # Table 6 — only the rows the portal actually sends
+    GSTR9_Row.TABLE_6A: ("table6", "itc_3b"),
+    GSTR9_Row.TABLE_6G: ("table6", "isd"),
+    GSTR9_Row.TABLE_6K: ("table6", "tran1"),
+    GSTR9_Row.TABLE_6L: ("table6", "tran2"),
+    # Table 8
+    GSTR9_Row.TABLE_8A: ("table8", "itc_2b"),
+}
 
-def aggregate_books(books):
+# FY-specific schema patches, keyed by financial year string (e.g. "2026-27").
+# Patches are applied cumulatively in sorted FY order up to the requested year.
+#
+# Each patch dict may contain any of:
+#   "remove_rows":             [row_key, ...]
+#   "add_rows":                {row_key: {"description": str, "insert_after": row_key,
+#                                         "formula": callable, "portal_key": (table, key)}}
+#   "update_descriptions":     {row_key: str}
+#   "update_formulas":         {row_key: callable}
+#   "update_portal_keys":      {row_key: (table_key, portal_key)}
+#   "remove_portal_keys":      [row_key, ...]
+#   "add_credit_note_rows":    [row_key, ...]
+#   "remove_credit_note_rows": [row_key, ...]
+# TODO: Replace with actual CBIC-notified changes once the 2026-27 return form is
+#       officially published. The entries below are placeholder samples that exercise
+#       every patch-key type so the machinery can be verified end-to-end.
+FY_ROW_SCHEMAS = {
+    # "2026-27": {
+    #     # Sample: hypothetical new e-commerce sub-category row inserted after 4G1
+    #     "add_rows": {
+    #         GSTR9_Row.TABLE_4G2: {
+    #             "description": (
+    #                 "Supplies on which e-commerce operator is required to pay tax"
+    #                 " u/s 9(5) [Operator to report — other category]"
+    #             ),
+    #             "insert_after": GSTR9_Row.TABLE_4G1,
+    #             # TABLE_4H sub-total and TABLE_5N both need to include this new row
+    #             # — handled via update_formulas below
+    #             "portal_key": ("table4", "ecom1"),
+    #         },
+    #     },
+    #     # Sub-total 4H must now include 4G2; turnover 5N must now subtract it too
+    #     "update_formulas": {
+    #         GSTR9_Row.TABLE_4H: lambda d: _sum_rows(
+    #             d,
+    #             [
+    #                 GSTR9_Row.TABLE_4A,
+    #                 GSTR9_Row.TABLE_4B,
+    #                 GSTR9_Row.TABLE_4C,
+    #                 GSTR9_Row.TABLE_4D,
+    #                 GSTR9_Row.TABLE_4E,
+    #                 GSTR9_Row.TABLE_4F,
+    #                 GSTR9_Row.TABLE_4G,
+    #                 GSTR9_Row.TABLE_4G1,
+    #                 GSTR9_Row.TABLE_4G2,
+    #             ],
+    #         ),
+    #         GSTR9_Row.TABLE_5N: lambda d: _sum_rows(
+    #             d,
+    #             [GSTR9_Row.TABLE_4N, GSTR9_Row.TABLE_5M],
+    #             subtract=[GSTR9_Row.TABLE_4G, GSTR9_Row.TABLE_4G1, GSTR9_Row.TABLE_4G2],
+    #         ),
+    #     },
+    #     # Sample: description wording update for an existing row
+    #     "update_descriptions": {
+    #         GSTR9_Row.TABLE_4G1: (
+    #             "Supplies on which e-commerce operator is required to pay tax"
+    #             " u/s 9(5) [Operator to report — original category]"
+    #         ),
+    #     },
+    # },
+}
+
+
+class _GSTR9FYSchema:
+    """Resolved GSTR-9 row schema for a specific financial year."""
+
+    __slots__ = ("credit_note_rows", "descriptions", "formulas", "portal_row_map")
+
+    def __init__(self, descriptions, formulas, portal_row_map, credit_note_rows):
+        self.descriptions = descriptions
+        self.formulas = formulas
+        self.portal_row_map = portal_row_map
+        self.credit_note_rows = credit_note_rows
+
+
+def get_fy_schema(financial_year):
+    """Resolve GSTR-9 row schema for a given financial year.
+
+    Starts from the base schema and applies cumulative patches from
+    FY_ROW_SCHEMAS in sorted order up to and including the given FY.
+    """
+    descriptions = dict(GSTR9_ROW_DESCRIPTION)
+    formulas = dict(AUTO_COMPUTE_FORMULAS)
+    portal_row_map = dict(_BASE_PORTAL_ROW_MAP)
+    cn_rows = set(CREDIT_NOTE_ROWS)
+
+    for patch_fy in sorted(FY_ROW_SCHEMAS):
+        if patch_fy > financial_year:
+            break
+        patch = FY_ROW_SCHEMAS[patch_fy]
+
+        for row_key in patch.get("remove_rows", []):
+            descriptions.pop(row_key, None)
+            formulas.pop(row_key, None)
+            portal_row_map.pop(row_key, None)
+
+        for row_key, defn in patch.get("add_rows", {}).items():
+            insert_after = defn.get("insert_after")
+            if insert_after and insert_after in descriptions:
+                items = list(descriptions.items())
+                idx = next(i for i, (k, _) in enumerate(items) if k == insert_after)
+                items.insert(idx + 1, (row_key, defn["description"]))
+                descriptions = dict(items)
+            else:
+                descriptions[row_key] = defn["description"]
+            if "formula" in defn:
+                formulas[row_key] = defn["formula"]
+            if "portal_key" in defn:
+                portal_row_map[row_key] = defn["portal_key"]
+
+        for row_key, desc in patch.get("update_descriptions", {}).items():
+            if row_key in descriptions:
+                descriptions[row_key] = desc
+
+        formulas.update(patch.get("update_formulas", {}))
+        portal_row_map.update(patch.get("update_portal_keys", {}))
+
+        for key in patch.get("remove_portal_keys", []):
+            portal_row_map.pop(key, None)
+        for key in patch.get("add_credit_note_rows", []):
+            cn_rows.add(key)
+        for key in patch.get("remove_credit_note_rows", []):
+            cn_rows.discard(key)
+
+    return _GSTR9FYSchema(
+        descriptions=descriptions,
+        formulas=formulas,
+        portal_row_map=portal_row_map,
+        credit_note_rows=frozenset(cn_rows),
+    )
+
+
+def aggregate_books(books, financial_year):
     """
     Aggregate invoice-level books data into row-level amount dicts.
 
@@ -479,7 +651,7 @@ def aggregate_books(books):
             result[row_key] = value
 
     # Credit note rows are stored as negative in ERP; negate to make them positive
-    for row_key in CREDIT_NOTE_ROWS:
+    for row_key in get_fy_schema(financial_year).credit_note_rows:
         if row_key in result and isinstance(result[row_key], dict):
             result[row_key] = {f: -result[row_key][f] for f in AMOUNT_FIELDS}
 

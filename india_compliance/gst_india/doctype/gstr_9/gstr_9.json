@@ -46,7 +46,7 @@
    "fieldname": "financial_year",
    "fieldtype": "Select",
    "label": "Financial Year",
-   "options": "\n2025-26\n2024-25\n2023-24\n2022-23",
+   "options": "\n2026-27\n2025-26\n2024-25\n2023-24\n2022-23",
    "reqd": 1
   },
   {

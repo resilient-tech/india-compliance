@@ -6,22 +6,22 @@ from frappe.utils import flt
 
 from india_compliance.gst_india.utils.gstr_9 import (
     AMOUNT_FIELDS,
-    GSTR9_ROW_DESCRIPTION,
     PORTAL_SOURCED_ROWS,
     GSTR9_Row,
     _empty_row,
     aggregate_books,
     compute_auto_rows,
+    get_fy_schema,
 )
 
 
 class SummarizeGSTR9:
     """Builds a summary list from GSTR-9 row data for frontend display."""
 
-    def get_summarized_data(self, data):
+    def get_summarized_data(self, data, financial_year):
         summary = []
 
-        for row_key, description in GSTR9_ROW_DESCRIPTION.items():
+        for row_key, description in get_fy_schema(financial_year).descriptions.items():
             row_data = data.get(row_key, _empty_row())
 
             if row_key in (GSTR9_Row.TABLE_9, GSTR9_Row.TABLE_14, GSTR9_Row.TABLE_15):
@@ -111,10 +111,11 @@ class GenerateGSTR9(SummarizeGSTR9):
         data = {}
 
         books = self._get_gstr9_books_data(filters)
+        fy = filters.get("financial_year")
 
         # Aggregate invoice lists → row-level amount dicts for auto-compute
-        row_data = aggregate_books(books)
-        compute_auto_rows(row_data)
+        row_data = aggregate_books(books, fy)
+        compute_auto_rows(row_data, fy)
         data["row_data"] = row_data
 
         # Check if portal APIs are enabled
@@ -128,8 +129,8 @@ class GenerateGSTR9(SummarizeGSTR9):
                         if row_key in portal_data:
                             row_data[row_key] = portal_data[row_key]
 
-                    compute_auto_rows(row_data)
-                    compute_auto_rows(portal_data)
+                    compute_auto_rows(row_data, fy)
+                    compute_auto_rows(portal_data, fy)
                     data["portal"] = portal_data
                     data["comparison"] = self._compare_books_and_portal(row_data, portal_data)
             except Exception:
@@ -139,7 +140,7 @@ class GenerateGSTR9(SummarizeGSTR9):
                 )
 
         # Summarize and strip raw data from response
-        self._summarize_gstr9_data(data)
+        self._summarize_gstr9_data(data, fy)
         data.pop("row_data", None)
         data.pop("portal", None)
         data["status"] = self.filing_status or "Not Filed"
@@ -217,14 +218,14 @@ class GenerateGSTR9(SummarizeGSTR9):
 
         return comparison
 
-    def _summarize_gstr9_data(self, data):
+    def _summarize_gstr9_data(self, data, financial_year):
         """Summarize aggregated row data (and optionally portal) for frontend."""
         if row_data := data.get("row_data"):
-            summary = self.get_summarized_data(row_data)
+            summary = self.get_summarized_data(row_data, financial_year)
             self.update_json_for("books_summary", summary)
             data["books_summary"] = summary
 
         if portal := data.get("portal"):
-            summary = self.get_summarized_data(portal)
+            summary = self.get_summarized_data(portal, financial_year)
             self.update_json_for("unfiled_summary", summary)
             data["portal_summary"] = summary

@@ -107,18 +107,18 @@ class GSTR9(Document):
                 )
             )
 
-        row_data = aggregate_books(books_data)
+        row_data = aggregate_books(books_data, self.financial_year)
 
         # Merge portal-sourced rows into books before computing auto rows
         for row_key in PORTAL_SOURCED_ROWS:
             if row_key in portal_data:
                 row_data[row_key] = portal_data[row_key]
 
-        compute_auto_rows(row_data)
-        compute_auto_rows(portal_data)
+        compute_auto_rows(row_data, self.financial_year)
+        compute_auto_rows(portal_data, self.financial_year)
 
         gstr9_log._compare_books_and_portal(row_data, portal_data)
-        gstr9_log._summarize_gstr9_data({"row_data": row_data, "portal": portal_data})
+        gstr9_log._summarize_gstr9_data({"row_data": row_data, "portal": portal_data}, self.financial_year)
 
         return gstr9_log.get_gstr9_data()
 
@@ -240,8 +240,8 @@ def export_gstr9_books_as_excel(company_gstin: str, financial_year: str):
 
     from india_compliance.gst_india.utils.exporter import ExcelExporter
     from india_compliance.gst_india.utils.gstr_9 import (
-        GSTR9_ROW_DESCRIPTION,
         PURCHASE_ROW_KEYS,
+        get_fy_schema,
     )
 
     period = get_fy_period(financial_year)
@@ -258,7 +258,7 @@ def export_gstr9_books_as_excel(company_gstin: str, financial_year: str):
         excel.remove_sheet("Sheet")
 
     sheets_written = 0
-    for row_key in GSTR9_ROW_DESCRIPTION:
+    for row_key in get_fy_schema(financial_year).descriptions:
         value = books.get(row_key)
         if value is None:
             continue
