@@ -261,21 +261,16 @@ class TestTransaction(IntegrationTestCase):
         meta = frappe.get_meta(self.doctype)
         expected_fields = ADDRESS_FIELDS_BY_DOCTYPE[self.doctype]
 
-        found_any = False
         for fieldname in expected_fields:
             field = meta.get_field(fieldname)
-            if not field:
-                continue
-            found_any = True
+            self.assertIsNotNone(
+                field,
+                msg=f"{self.doctype}.{fieldname} listed in ADDRESS_FIELDS_BY_DOCTYPE but missing on doctype",
+            )
             self.assertTrue(
                 field.allow_on_submit,
                 msg=f"{self.doctype}.{fieldname} must have allow_on_submit=1",
             )
-
-        self.assertTrue(
-            found_any,
-            msg=f"No expected address fields found on {self.doctype}",
-        )
 
     def test_validate_mandatory_gst_category(self):
         doc = create_transaction(**self.transaction_details, do_not_submit=True)
