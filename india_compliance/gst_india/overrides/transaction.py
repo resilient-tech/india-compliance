@@ -1780,6 +1780,20 @@ def reset_gst_details_on_cross_mapping(target_doc, source_doc):
     if is_source_sales == is_target_sales:
         return
 
+    # Re-fetch address-based fields (gst_category, party_gstin) from the
+    # target's own party address before evaluating GST details.
+    # Need to be fixed in Frappe where on set of values link fields
+    # should be updated in update if missing.
+    party_address_field = _get_address_fields(target_doc.doctype).get("party_address_field")
+    if party_address_field and target_doc.get(party_address_field):
+        target_doc.update(
+            get_fetch_values(
+                target_doc.doctype,
+                party_address_field,
+                target_doc.get(party_address_field),
+            )
+        )
+
     gst_details = get_gst_details(
         target_doc.as_dict(),
         target_doc.doctype,
