@@ -15,6 +15,8 @@ const TRANSACTION_DOCTYPES = [
 
 const SUBCONTRACTING_DOCTYPES = ["Stock Entry", "Subcontracting Order", "Subcontracting Receipt"];
 
+const ADDRESS_EVENT_FIELDS = new Set(["customer_address", "shipping_address_name", "supplier_address"]);
+
 for (const doctype of TRANSACTION_DOCTYPES) {
     fetch_gst_details(doctype);
     validate_overseas_gst_category(doctype);
@@ -64,8 +66,7 @@ async function update_gst_details(frm, event) {
     )
         return;
 
-    if (frm.doc.docstatus === 1 && event === "customer_address" && frm.doc.doctype === "Sales Invoice")
-        return;
+    if (frm.doc.docstatus === 1 && ADDRESS_EVENT_FIELDS.has(event)) return;
 
     const party_type = india_compliance.get_party_type(frm.doc.doctype).toLowerCase();
     const party_fieldname = frm.doc.doctype === "Quotation" ? "party_name" : party_type;
