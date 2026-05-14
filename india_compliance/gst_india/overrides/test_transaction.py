@@ -19,6 +19,7 @@ from erpnext.stock.doctype.delivery_note.delivery_note import make_sales_invoice
 from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
     update_regional_gl_entries,
 )
+from frappe.model.mapper import get_mapped_doc
 from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import add_days, getdate, today
 from parameterized import parameterized_class
@@ -1542,3 +1543,107 @@ class TestPlaceOfSupply(IntegrationTestCase):
         # Both supplier and company are in Gujarat (24), so the PO is intra-state
         # and place_of_supply must NOT inherit the customer's state from the SO.
         self.assertEqual(po.place_of_supply, "24-Gujarat")
+
+    def test_place_of_supply_when_sales_order_mapped_from_purchase_order(self):
+        """
+        Place_of_supply on a Sales Order mapped from a Purchase Order.
+        (make_inter_company_sales_order)
+        """
+
+        po = create_transaction(
+            doctype="Purchase Order",
+            supplier="_Test Registered InterState Supplier",
+        )
+        # Supplier is in Tamil Nadu (33), company is in Gujarat (24);
+        # for a purchase, place_of_supply tracks the company side.
+        self.assertEqual(po.place_of_supply, "24-Gujarat")
+
+        def set_customer(source, target):
+            target.customer = "_Test Registered Composition Customer"
+            target.delivery_date = po.transaction_date
+
+        so = get_mapped_doc(
+            "Purchase Order",
+            po.name,
+            {
+                "Purchase Order": {
+                    "doctype": "Sales Order",
+                    "field_no_map": ["taxes_and_charges"],
+                },
+                "Purchase Order Item": {
+                    "doctype": "Sales Order Item",
+                    "field_map": {"schedule_date": "delivery_date"},
+                },
+            },
+            postprocess=set_customer,
+        )
+
+        # Customer is in Karnataka (29). place_of_supply on the SO must reflect
+        # that, not the PO's "24-Gujarat".
+        self.assertEqual(so.place_of_supply, "29-Karnataka")
+
+    def test_place_of_supply_when_purchase_receipt_mapped_from_delivery_note(self):
+        """
+        place_of_supply on a Purchase Receipt mapped from a Delivery Note
+        (make_inter_company_purchase_receipt).
+        """
+        dn = create_transaction(
+            doctype="Delivery Note",
+            customer="_Test Registered Composition Customer",
+        )
+        # Customer is in Karnataka (29), so the DN's place_of_supply is 29.
+        self.assertEqual(dn.place_of_supply, "29-Karnataka")
+
+        def set_supplier(source, target):
+            target.supplier = "_Test Registered Supplier"
+
+        pr = get_mapped_doc(
+            "Delivery Note",
+            dn.name,
+            {
+                "Delivery Note": {
+                    "doctype": "Purchase Receipt",
+                    "field_no_map": ["taxes_and_charges"],
+                },
+                "Delivery Note Item": {
+                    "doctype": "Purchase Receipt Item",
+                },
+            },
+            postprocess=set_supplier,
+        )
+
+        # Supplier and company are both in Gujarat (24). place_of_supply on the
+        # PR must reflect the receiving-company side, not the DN's Karnataka.
+        self.assertEqual(pr.place_of_supply, "24-Gujarat")
+
+    def test_place_of_supply_when_delivery_note_mapped_from_purchase_receipt(self):
+        """
+        place_of_supply on a Delivery Note mapped from a Purchase Receipt
+        (make_inter_company_delivery_note)
+        """
+
+        pr = create_transaction(doctype="Purchase Receipt")
+        # Supplier and company are in Gujarat (24), so the PR's POS is 24-Gujarat.
+        self.assertEqual(pr.place_of_supply, "24-Gujarat")
+
+        def set_customer(source, target):
+            target.customer = "_Test Registered Composition Customer"
+
+        dn = get_mapped_doc(
+            "Purchase Receipt",
+            pr.name,
+            {
+                "Purchase Receipt": {
+                    "doctype": "Delivery Note",
+                    "field_no_map": ["taxes_and_charges"],
+                },
+                "Purchase Receipt Item": {
+                    "doctype": "Delivery Note Item",
+                },
+            },
+            postprocess=set_customer,
+        )
+
+        # Customer is in Karnataka (29). place_of_supply on the DN must reflect
+        # that, not the PR's "24-Gujarat".
+        self.assertEqual(dn.place_of_supply, "29-Karnataka")
