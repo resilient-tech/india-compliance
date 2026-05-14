@@ -1544,6 +1544,11 @@ class TestPlaceOfSupply(IntegrationTestCase):
         # and place_of_supply must NOT inherit the customer's state from the SO.
         self.assertEqual(po.place_of_supply, "24-Gujarat")
 
+        # Supplier GST category and taxes must be correctly set
+        self.assertEqual(po.gst_category, "Registered Regular")
+        self.assertTrue(po.taxes_and_charges)
+        self.assertTrue(po.taxes)
+
     def test_place_of_supply_when_sales_order_mapped_from_purchase_order(self):
         """
         Place_of_supply on a Sales Order mapped from a Purchase Order.
