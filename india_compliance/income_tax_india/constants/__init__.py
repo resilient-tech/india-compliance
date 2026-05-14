@@ -217,7 +217,10 @@ NEW_TDS_SECTIONS = (
     {
         "section_code": "1033",
         "section_name": "393(1) [Table: Sl. No. 8(iv)]",
-        "description": "Any benefit or perquisite, whether convertible into money or not, arising from business or the exercise of a profession of any resident.",
+        "description": (
+            "Any benefit or perquisite, whether convertible into money or not,"
+            " arising from business or the exercise of a profession of any resident."
+        ),
     },
     {
         "section_code": "1034",
@@ -243,7 +246,10 @@ NEW_TDS_SECTIONS = (
     {
         "section_code": "1038",
         "section_name": "393(1) [Table: Sl. No. 8(vi)] Note 6",
-        "description": "Any sum by way of consideration, whether in cash or in kind or partly in cash and partly in kind, for transfer of a virtual digital asset.",
+        "description": (
+            "Any sum by way of consideration, whether in cash or in kind or partly in cash"
+            " and partly in kind, for transfer of a virtual digital asset."
+        ),
     },
     # Non-resident payments - Section 393(2)
     {
@@ -341,7 +347,10 @@ NEW_TDS_SECTIONS = (
     {
         "section_code": "1054",
         "section_name": "393(2) [Table: Sl. No. 14]",
-        "description": "Any income by way of long-term capital gains arising from the transfer of bonds or Global Depository Receipts referred to in section 209",
+        "description": (
+            "Any income by way of long-term capital gains arising from the transfer of bonds"
+            " or Global Depository Receipts referred to in section 209"
+        ),
     },
     {
         "section_code": "1055",
@@ -416,7 +425,10 @@ NEW_TDS_SECTIONS = (
     {
         "section_code": "1065",
         "section_name": "393(3) [Table: Sl. No. 5.D(b)]",
-        "description": "Payment of certain amounts in cash by bank/post office/co-operative society to a deductee being a person other than co-operative society",
+        "description": (
+            "Payment of certain amounts in cash by bank/post office/co-operative society"
+            " to a deductee being a person other than co-operative society"
+        ),
     },
     {
         "section_code": "1066",
@@ -567,7 +579,10 @@ NEW_TDS_SECTIONS = (
     {
         "section_code": "1092",
         "section_name": "394(1) [Table: Sl. No. 9]",
-        "description": "Use of mine or quarry for the purpose of business, excluding mining and quarrying of mineral oil (including petroleum and natural gas).",
+        "description": (
+            "Use of mine or quarry for the purpose of business, excluding mining and"
+            " quarrying of mineral oil (including petroleum and natural gas)."
+        ),
     },
     # Form 141 sections (challan-cum-statement, no numeric return code)
     {
