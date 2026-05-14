@@ -14,6 +14,7 @@ from erpnext.controllers.accounts_controller import (
 )
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
 from erpnext.controllers.taxes_and_totals import get_regional_round_off_accounts
+from erpnext.selling.doctype.sales_order.sales_order import make_purchase_order
 from erpnext.stock.doctype.delivery_note.delivery_note import make_sales_invoice
 from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
     update_regional_gl_entries,
@@ -1517,3 +1518,27 @@ class TestPlaceOfSupply(IntegrationTestCase):
         # check gst_tax_type of tax table
         for tax in doc.taxes:
             self.assertEqual(tax.gst_tax_type, "igst")
+
+    def test_place_of_supply_when_purchase_order_created_from_sales_order(self):
+        """
+        Place_of_supply on a Purchase Order created from a Sales Order must
+        reflect the buyer/company context, not the customer's state inherited
+        from the source Sales Order.
+        """
+        so = create_transaction(
+            doctype="Sales Order",
+            customer="_Test Registered Composition Customer",
+            do_not_submit=True,
+        )
+        so.submit()
+        self.assertEqual(so.place_of_supply, "29-Karnataka")
+
+        selected_items = [{"item_code": so.items[0].item_code, "supplier": "_Test Registered Supplier"}]
+
+        purchase_orders = make_purchase_order(so.name, selected_items=selected_items)
+        self.assertTrue(purchase_orders)
+
+        po = purchase_orders[0]
+        # Both supplier and company are in Gujarat (24), so the PO is intra-state
+        # and place_of_supply must NOT inherit the customer's state from the SO.
+        self.assertEqual(po.place_of_supply, "24-Gujarat")
