@@ -1883,11 +1883,13 @@ def update_gst_details(doc, method=None):
 
 
 def after_mapping(target_doc, method=None, source_doc=None):
+    if not source_doc:
+        return
+
+    reset_gst_details_on_cross_mapping(target_doc, source_doc)
+
     # Copy e-Waybill fields only from DN to SI
-    if not source_doc or source_doc.doctype not in (
-        "Delivery Note",
-        "Purchase Receipt",
-    ):
+    if source_doc.doctype not in ("Delivery Note", "Purchase Receipt"):
         return
 
     for field in E_WAYBILL_INV_FIELDS:
@@ -1895,6 +1897,7 @@ def after_mapping(target_doc, method=None, source_doc=None):
         target_doc.set(fieldname, source_doc.get(fieldname))
 
 
+<<<<<<< HEAD
 def ignore_gst_validations(doc, throw=True):
     if (
         not is_indian_registered_company(doc)
@@ -1902,6 +1905,36 @@ def ignore_gst_validations(doc, throw=True):
         # Also returning if item with multiple taxes
         or validate_items(doc, throw) is False
     ):
+=======
+def reset_gst_details_on_cross_mapping(target_doc, source_doc):
+    """
+    When mapping between sales and purchase doctypes (e.g. Purchase Order
+    from Sales Order), reset GST details.
+    """
+    if ignore_gst_validations(target_doc):
+        return
+
+    is_source_sales = source_doc.doctype in SALES_DOCTYPES
+    is_target_sales = target_doc.doctype in SALES_DOCTYPES
+
+    if is_source_sales == is_target_sales:
+        return
+
+    gst_details = get_gst_details(
+        target_doc.as_dict(),
+        target_doc.doctype,
+        target_doc.company,
+        update_place_of_supply=True,
+    )
+    if not gst_details:
+        return
+
+    target_doc.update(gst_details)
+
+
+def ignore_gst_validations(doc):
+    if not is_indian_registered_company(doc) or doc.get("is_opening") == "Yes":
+>>>>>>> 05dc016e (fix: reset gst details on so to po mapping)
         return True
 
 
