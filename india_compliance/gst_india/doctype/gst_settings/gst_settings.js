@@ -5,7 +5,7 @@ const NIL_EXEMPT_E_INVOICE_DESCRIPTIONS = {
     "Do Not Generate": __(
         "e-Invoice is not generated for invoices containing only Nil-Rated / Exempted / Non-GST items. For mixed invoices, these items are excluded from the ItemList.",
     ),
-    "Generate with Other Charges": __(
+    "Generate with Zero Taxable Value": __(
         "Nil-Rated / Exempted / Non-GST item values are reported at item-level Other Charges (AssAmt = 0) in e-Invoice.",
     ),
     "Generate with Taxable Values": __(

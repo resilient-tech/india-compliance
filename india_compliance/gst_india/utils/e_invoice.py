@@ -643,7 +643,7 @@ class EInvoiceData(GSTTransactionData):
         Configure how nil/exempt items appear in the e-Invoice.
 
         - Do Not Generate: nil items are excluded from ItemList.
-        - Generate with Other Charges (default): nil item value reported at
+        - Generate with Zero Taxable Value (default): nil item value reported at
           item-level OthChrg with AssAmt = 0.
         - Generate with Taxable Values: nil items keep their taxable_value.
         """

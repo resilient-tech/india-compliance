@@ -396,7 +396,7 @@ class TestEInvoice(IntegrationTestCase):
         )
 
     @responses.activate
-    @change_settings("GST Settings", {"nil_exempt_e_invoice_treatment": "Generate with Other Charges"})
+    @change_settings("GST Settings", {"nil_exempt_e_invoice_treatment": "Generate with Zero Taxable Value"})
     def test_generate_e_invoice_with_nil_exempted_item(self):
         """Generate e-Invoice for invoice containing Nil/Exempted items."""
         test_data = self.e_invoice_test_data.get("nil_exempted_item")
@@ -450,7 +450,7 @@ class TestEInvoice(IntegrationTestCase):
 
         self.assertFalse(frappe.db.get_value("e-Waybill Log", {"reference_name": si.name}, "name"))
 
-    @change_settings("GST Settings", {"nil_exempt_e_invoice_treatment": "Generate with Other Charges"})
+    @change_settings("GST Settings", {"nil_exempt_e_invoice_treatment": "Generate with Zero Taxable Value"})
     def test_request_data_for_nil_only_invoice_with_other_charges(self):
         """Nil-only invoice: nil items in ItemList with AssAmt=0, item-level OthChrg=value."""
         test_data = self.e_invoice_test_data.get("nil_exempted_item")
@@ -521,9 +521,9 @@ class TestEInvoice(IntegrationTestCase):
 
         self.assertEqual(10, request_data["ValDtls"]["AssVal"])
 
-    @change_settings("GST Settings", {"nil_exempt_e_invoice_treatment": "Generate with Other Charges"})
+    @change_settings("GST Settings", {"nil_exempt_e_invoice_treatment": "Generate with Zero Taxable Value"})
     def test_request_data_with_nil_exempted_item_as_other_charges(self):
-        """Mixed invoice with Generate with Other Charges: nil items in ItemList with item-level OthChrg."""
+        """Mixed invoice with Generate with Zero Taxable Value: nil items in ItemList with item-level OthChrg."""
         test_data = self.e_invoice_test_data.get("nil_exempted_item")
         si = create_sales_invoice(**test_data.get("kwargs"), do_not_submit=True, is_in_state=True)
 
