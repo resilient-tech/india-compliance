@@ -283,7 +283,7 @@ class TestTransaction(IntegrationTestCase):
 
         doc = create_transaction(**self.transaction_details)
         if doc.docstatus != 1:
-            return
+            self.skipTest(f"{self.doctype} does not support submission")
 
         if self.is_sales_doctype:
             address_field = "customer_address"

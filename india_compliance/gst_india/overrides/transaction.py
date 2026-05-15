@@ -1928,8 +1928,8 @@ def sync_address_dependent_fields_on_submit(doc, method=None):
         doc.set(gstin_field, address_values.get("gstin") or "")
 
         gst_category = address_values.get("gst_category")
-        if category_field and gst_category and doc.meta.has_field(category_field):
-            doc.set(category_field, gst_category)
+        if category_field and doc.meta.has_field(category_field):
+            doc.set(category_field, gst_category or "")
 
 
 def set_ecommerce_supply_type(doc):
