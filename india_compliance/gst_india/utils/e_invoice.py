@@ -549,6 +549,14 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
     if not gst_settings.enable_e_invoice:
         return _throw(_("e-Invoice is not enabled in GST Settings"))
 
+    if gst_settings.nil_exempt_e_invoice_treatment == "Do Not Generate" and not any(
+        item.gst_treatment in TAXABLE_GST_TREATMENTS for item in doc.items
+    ):
+        return _throw(
+            _("e-Invoice is not applicable for invoice with only Nil-Rated/Exempted/Non-GST items"),
+            exc=NotApplicableError,
+        )
+
     applicability_date = get_e_invoice_applicability_date(doc.company, gst_settings, throw)
 
     if not applicability_date:
@@ -623,11 +631,43 @@ class EInvoiceData(GSTTransactionData):
     def get_data(self):
         self.validate_transaction()
         self.item_details_list = self.get_all_item_details()
+        self.apply_nil_exempt_treatment()
         self.set_transaction_details()
         self.set_item_list()
         self.set_transporter_details()
         self.set_party_address_details()
         return self.sanitize_data(self.get_invoice_data())
+
+    def apply_nil_exempt_treatment(self):
+        """
+        Configure how nil/exempt items appear in the e-Invoice.
+
+        - Do Not Generate: nil items are excluded from ItemList.
+        - Generate with Other Charges (default): nil item value reported at
+          item-level OthChrg with AssAmt = 0.
+        - Generate with Taxable Values: nil items keep their taxable_value.
+        """
+        treatment = self.settings.nil_exempt_e_invoice_treatment
+
+        if treatment == "Generate with Taxable Values":
+            return
+
+        if treatment == "Do Not Generate":
+            self.item_details_list = [
+                item for item in self.item_details_list if item.gst_treatment in TAXABLE_GST_TREATMENTS
+            ]
+            return
+
+        for item in self.item_details_list:
+            if item.gst_treatment in TAXABLE_GST_TREATMENTS:
+                continue
+            item.update(
+                {
+                    "other_charges": item.taxable_value,
+                    "taxable_value": 0,
+                    "unit_rate": 0,
+                }
+            )
 
     def validate_transaction(self):
         super().validate_transaction()
@@ -659,20 +699,6 @@ class EInvoiceData(GSTTransactionData):
                 "barcode": self.sanitize_value(item.barcode, max_length=30, truncate=False),
             }
         )
-
-        if (
-            item_details.gst_treatment not in TAXABLE_GST_TREATMENTS
-            and not self.settings.report_nil_exempted_with_taxable_values
-        ):
-            # Do not report taxable value for nil/exempted items.
-            # Report it as item-level other charges so item value is still preserved.
-            item_details.update(
-                {
-                    "other_charges": item_details.taxable_value,
-                    "taxable_value": 0,
-                    "unit_rate": 0,
-                }
-            )
 
         if batch_no := self.sanitize_value(item.batch_no, max_length=20, truncate=False):
             batch_expiry_date = frappe.db.get_value("Batch", item.batch_no, "expiry_date")
