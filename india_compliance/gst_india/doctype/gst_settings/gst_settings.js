@@ -1,6 +1,18 @@
 // Copyright (c) 2017, Frappe Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
+const NIL_EXEMPT_E_INVOICE_DESCRIPTIONS = {
+    "Do Not Generate": __(
+        "e-Invoice is not generated for invoices containing only Nil-Rated / Exempted / Non-GST items. For mixed invoices, these items are excluded from the ItemList.",
+    ),
+    "Generate with Other Charges": __(
+        "Nil-Rated / Exempted / Non-GST item values are reported at item-level Other Charges (AssAmt = 0) in e-Invoice.",
+    ),
+    "Generate with Taxable Values": __(
+        "Nil-Rated / Exempted / Non-GST item values are reported as taxable in e-Invoice. During GSTR-1 preparation, these invoices will be treated as Zero-Rated B2B and may cause reconciliation mismatches.",
+    ),
+};
+
 frappe.ui.form.on("GST Settings", {
     setup(frm) {
         ["cgst_account", "sgst_account", "igst_account", "cess_account", "cess_non_advol_account"].forEach(
@@ -24,6 +36,7 @@ frappe.ui.form.on("GST Settings", {
     refresh(frm) {
         show_update_gst_category_button(frm);
         set_state_options_for_e_waybill_threshold(frm);
+        update_nil_exempt_e_invoice_description(frm);
     },
     attach_e_waybill_print(frm) {
         if (!frm.doc.attach_e_waybill_print || frm.doc.fetch_e_waybill_data) return;
@@ -34,12 +47,19 @@ frappe.ui.form.on("GST Settings", {
     generate_e_waybill_with_e_invoice: set_auto_generate_e_waybill,
     auto_cancel_e_invoice: auto_cancel_e_invoice,
     reason_for_e_invoice_cancellation: reason_for_e_invoice_cancellation,
+    nil_exempt_e_invoice_treatment: update_nil_exempt_e_invoice_description,
     after_save(frm) {
         // sets latest values in frappe.boot for current user
         // other users will still need to refresh page
         Object.assign(gst_settings, frm.doc);
     },
 });
+
+function update_nil_exempt_e_invoice_description(frm) {
+    const description = NIL_EXEMPT_E_INVOICE_DESCRIPTIONS[frm.doc.nil_exempt_e_invoice_treatment] || "";
+    frm.set_df_property("nil_exempt_e_invoice_treatment", "description", description);
+    frm.refresh_field("nil_exempt_e_invoice_treatment");
+}
 
 function filter_accounts(frm, account_field) {
     frm.set_query(account_field, "gst_accounts", (_, cdt, cdn) => {

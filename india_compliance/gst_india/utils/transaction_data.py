@@ -9,7 +9,6 @@ from india_compliance.gst_india.constants import (
     GST_REFUND_TAX_TYPES,
     GST_TAX_RATES,
     GST_TAX_TYPES,
-    TAXABLE_GST_TREATMENTS,
     VALID_HSN_LENGTHS,
 )
 from india_compliance.gst_india.constants.e_waybill import (
