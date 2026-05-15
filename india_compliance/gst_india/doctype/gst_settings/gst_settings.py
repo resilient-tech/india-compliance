@@ -10,6 +10,7 @@ from frappe.utils import add_to_date, getdate
 from india_compliance.gst_india.constants import (
     GST_ACCOUNT_FIELDS,
     GST_PARTY_TYPES,
+    TAXABLE_GST_TREATMENTS,
 )
 from india_compliance.gst_india.constants.custom_fields import (
     E_INVOICE_FIELDS,
@@ -53,32 +54,31 @@ class GSTSettings(Document):
             self.validate_e_invoice_applicability_date()
             self.validate_credentials()
             self.validate_gstin_status_refresh_interval()
-            self.warn_for_nil_exempted_taxable_values_reporting()
+            self.warn_for_nil_exempt_e_invoice_treatment()
 
         self.clear_api_auth_session()
         self.update_retry_e_invoice_e_waybill_scheduled_job()
         self.update_e_invoice_status()
         self.validate_unique_states()
 
-    def warn_for_nil_exempted_taxable_values_reporting(self):
+    def warn_for_nil_exempt_e_invoice_treatment(self):
         if not self.enable_e_invoice:
             return
 
-        if not self.report_nil_exempted_with_taxable_values:
+        if self.nil_exempt_e_invoice_treatment != "Generate with Taxable Values":
             return
 
-        # Show warning when enabling the setting or when e-Invoice is enabled while the setting is on.
-        if not (self.has_value_changed("report_nil_exempted_with_taxable_values")):
+        if not self.has_value_changed("nil_exempt_e_invoice_treatment"):
             return
 
-        field_label = frappe.bold(self.meta.get_label("report_nil_exempted_with_taxable_values"))
+        field_label = frappe.bold(self.meta.get_label("nil_exempt_e_invoice_treatment"))
 
         frappe.msgprint(
             _(
-                "When {0} is enabled, Nil-Rated / Exempted / Non-GST item values are reported "
-                "with taxable value in e-Invoice. During GSTR-1 preparation, these invoices will be treated "
-                "as Zero-Rated B2B and will cause reconciliation mismatches. Enable it only if required and "
-                "review GSTR-1 carefully."
+                "When {0} is set to <b>Generate with Taxable Values</b>, Nil-Rated / Exempted / "
+                "Non-GST item values are reported as taxable in e-Invoice. During GSTR-1 preparation, "
+                "these invoices will be treated as Zero-Rated B2B and may cause reconciliation mismatches. "
+                "Choose this option only if required and review GSTR-1 carefully."
             ).format(field_label),
             indicator="orange",
         )
@@ -513,6 +513,15 @@ def update_pending_status(e_invoice_applicability_date, company=None):
         .where(IfNull(sales_invoice.company_gstin, "") != "")
         .where(sales_invoice.is_opening != "Yes")
     )
+
+    gst_settings = frappe.get_cached_doc("GST Settings")
+    if gst_settings.nil_exempt_e_invoice_treatment == "Do Not Generate":
+        sales_invoice_item = frappe.qb.DocType("Sales Invoice Item")
+        query = (
+            query.join(sales_invoice_item)
+            .on(sales_invoice_item.parent == sales_invoice.name)
+            .where(sales_invoice_item.gst_treatment.isin(TAXABLE_GST_TREATMENTS))
+        )
 
     if company:
         query = query.where(sales_invoice.company == company)

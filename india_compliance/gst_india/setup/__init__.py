@@ -219,7 +219,7 @@ def set_default_gst_settings():
         "auto_generate_e_invoice": 1,
         "generate_e_waybill_with_e_invoice": 1,
         "e_invoice_applicable_from": nowdate(),
-        "report_nil_exempted_with_taxable_values": 0,
+        "nil_exempt_e_invoice_treatment": "Do Not Generate",
         "fetch_e_invoice_details_from_gst_portal": 1,
         "e_invoice_reporting_time_limit_days": 30,
         "autofill_party_info": 1,
