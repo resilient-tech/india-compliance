@@ -1837,6 +1837,8 @@ def on_change_item(doc, method=None):
 
 
 def before_update_after_submit(doc, method=None):
+    sync_address_dependent_fields_on_submit(doc)
+
     if not frappe.flags.through_update_item:
         return
 
@@ -1852,6 +1854,82 @@ def before_update_after_submit(doc, method=None):
     update_taxable_values(doc)
     validate_item_wise_tax_detail(doc)
     update_gst_details(doc)
+
+
+# Map of address Link field -> (gstin_field, gst_category_field) on transaction docs.
+# Mirrors fetch_from definitions in custom_fields.py for sales and purchase doctypes.
+ADDRESS_DEPENDENT_FIELDS = {
+    # Sales doctypes
+    "customer_address": ("billing_address_gstin", "gst_category"),
+    "company_address": ("company_gstin", None),
+    # Purchase doctypes
+    "supplier_address": ("supplier_gstin", "gst_category"),
+    "billing_address": ("company_gstin", None),
+}
+
+
+def sync_address_dependent_fields_on_submit(doc, method=None):
+    """
+    On update-after-submit, address Link fields are editable but their dependent
+    GSTIN / GST Category fields are not (no allow_on_submit, to prevent direct
+    edits). Re-fetch those fields from the new Address when the link changes.
+
+    Runs after validate_update_after_submit (which reverts the dependent fields
+    to db values), so setting them again here persists the new values.
+    """
+    if doc.docstatus != 1 or ignore_gst_validations(doc):
+        return
+
+    applicable_fields = [
+        (address_field, gstin_field, category_field)
+        for address_field, (gstin_field, category_field) in ADDRESS_DEPENDENT_FIELDS.items()
+        if doc.meta.has_field(address_field) and doc.meta.has_field(gstin_field)
+    ]
+    if not applicable_fields:
+        return
+
+    db_values = (
+        frappe.db.get_value(
+            doc.doctype,
+            doc.name,
+            [field[0] for field in applicable_fields],
+            as_dict=True,
+        )
+        or {}
+    )
+
+    changed_fields = []
+    new_addresses = set()
+    for address_field, gstin_field, category_field in applicable_fields:
+        new_address = doc.get(address_field) or ""
+        if new_address == (db_values.get(address_field) or ""):
+            continue
+
+        changed_fields.append((gstin_field, category_field, new_address))
+        if new_address:
+            new_addresses.add(new_address)
+
+    if not changed_fields:
+        return
+
+    address_map = {}
+    if new_addresses:
+        address_map = {
+            row.name: row
+            for row in frappe.db.get_all(
+                "Address",
+                filters={"name": ("in", list(new_addresses))},
+                fields=["name", "gstin", "gst_category"],
+            )
+        }
+
+    for gstin_field, category_field, new_address in changed_fields:
+        address_values = address_map.get(new_address) or {}
+        doc.set(gstin_field, address_values.get("gstin") or "")
+
+        gst_category = address_values.get("gst_category")
+        if category_field and gst_category and doc.meta.has_field(category_field):
+            doc.set(category_field, gst_category)
 
 
 def set_ecommerce_supply_type(doc):

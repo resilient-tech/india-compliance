@@ -28,6 +28,7 @@ from india_compliance.gst_india.overrides.transaction import (
     ItemGSTDetails,
     _is_multicurrency_doc,
     validate_gst_refund_accounts,
+    sync_address_dependent_fields_on_submit,
     validate_item_tax_template,
 )
 from india_compliance.gst_india.setup.property_setters import (
@@ -271,6 +272,40 @@ class TestTransaction(IntegrationTestCase):
                 field.allow_on_submit,
                 msg=f"{self.doctype}.{fieldname} must have allow_on_submit=1",
             )
+
+    def test_sync_address_dependent_fields_on_submit(self):
+        """When the address Link changes on a submitted doc, the dependent
+        GSTIN and gst_category fields (which intentionally lack allow_on_submit
+        to block direct edits) must be re-fetched from the new Address so
+        they stay consistent with the address."""
+        if self.doctype not in ADDRESS_FIELDS_BY_DOCTYPE:
+            return
+
+        doc = create_transaction(**self.transaction_details)
+        if doc.docstatus != 1:
+            return
+
+        if self.is_sales_doctype:
+            address_field = "customer_address"
+            gstin_field = "billing_address_gstin"
+            new_address = "_Test Registered Customer-Billing-1"
+            expected_gstin = "24AANCA4892J1Z8"
+            expected_category = "SEZ"
+        else:
+            address_field = "supplier_address"
+            gstin_field = "supplier_gstin"
+            new_address = "_Test Registered Supplier-Billing-2"
+            expected_gstin = "24AABCR6898M1ZN"
+            expected_category = "SEZ"
+
+        doc.reload()
+        self.assertNotEqual(doc.get(address_field), new_address)
+
+        doc.set(address_field, new_address)
+        sync_address_dependent_fields_on_submit(doc)
+
+        self.assertEqual(doc.get(gstin_field), expected_gstin)
+        self.assertEqual(doc.get("gst_category"), expected_category)
 
     def test_validate_mandatory_gst_category(self):
         doc = create_transaction(**self.transaction_details, do_not_submit=True)
