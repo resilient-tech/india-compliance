@@ -120,7 +120,7 @@ def set_is_isd_applicable(doc):
         return
 
     if doc.place_of_supply:
-        if not doc.supplier_gstin or doc.place_of_supply[:2] != doc.supplier_gstin[:2]:
+        if not doc.company_gstin or doc.place_of_supply[:2] != doc.company_gstin[:2]:
             doc.is_isd_applicable = 0
             return
 

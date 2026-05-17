@@ -3,6 +3,7 @@
 
 import frappe
 from frappe import _
+from frappe.core.doctype.user_permission.user_permission import get_permitted_documents
 from frappe.query_builder.functions import Sum
 from frappe.utils import flt
 from pypika.terms import Case
@@ -19,11 +20,9 @@ def validate_filters(filters=None):
         filters = {}
     filters = frappe._dict(filters)
 
-    if not filters.company:
-        frappe.throw(
-            _("{} is mandatory for generating ISD Distribution Summary").format(_("Company")),
-            title=_("Invalid Filter"),
-        )
+    if filters.company:
+        frappe.has_permission("Company", doc=filters.company, throw=True)
+
     if not filters.from_date or not filters.to_date:
         frappe.throw(
             _("From Date & To Date is mandatory for generating ISD Distribution Summary"),
@@ -102,12 +101,18 @@ def get_data(filters):
             ).as_("total_ineligible_tax"),
         )
         .where(pi.docstatus == 1)
-        .where(pi.company == filters.company)
         .where(pi.is_isd_applicable == 1)
         .where(pi.posting_date[filters.from_date : filters.to_date])
         .groupby(pi.name)
         .orderby(pi.posting_date)
     )
+
+    if filters.get("company"):
+        query = query.where(pi.company == filters.company)
+    else:
+        permitted = get_permitted_documents("Company")
+        if permitted:
+            query = query.where(pi.company.isin(permitted))
 
     if filters.get("company_gstin"):
         query = query.where(pi.company_gstin == filters.company_gstin)
@@ -156,7 +161,11 @@ def get_data(filters):
 
 
 def get_columns(filters):
-    company_currency = frappe.get_cached_value("Company", filters.get("company"), "default_currency")
+    company_currency = (
+        frappe.get_cached_value("Company", filters.company, "default_currency")
+        if filters.get("company")
+        else frappe.db.get_default("currency") or "INR"
+    )
 
     return [
         {
