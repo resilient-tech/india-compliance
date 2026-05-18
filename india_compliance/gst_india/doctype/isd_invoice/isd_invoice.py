@@ -4,6 +4,7 @@
 import json
 
 import frappe
+from erpnext.accounts.doctype.sales_invoice.sales_invoice import validate_inter_company_party
 from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_entries
 from erpnext.accounts.utils import get_fiscal_year
 from erpnext.controllers.accounts_controller import AccountsController
@@ -16,7 +17,7 @@ from frappe.utils import flt, today
 from pypika.terms import Case, Tuple
 
 from india_compliance.gst_india.doctype.turnover_record.turnover_record import upsert_turnover_record
-from india_compliance.gst_india.utils import get_gst_accounts_by_type
+from india_compliance.gst_india.utils import get_gst_accounts_by_type, get_place_of_supply
 
 
 class ISDInvoice(Document):
@@ -28,16 +29,16 @@ class ISDInvoice(Document):
     def validate(self):
         # TODO: validations remaining to be verified
         self.clear_fields_when_is_against_party_not_set()
+        self.set_pos_from_gstin()
         self.validate_isd_party()
         self.validate_pan_consistency()
         self.validate_distribution_limits()
-        self.autoset_taxes()
-        # add validation so that transaction happen between parties where transaction is allowed to happen
+        self.validate_inter_company_transaction()
+        self.autoset_taxes() #
 
     def autoset_taxes(self):
         """Populate taxes child table and totals from distributed source invoice amounts."""
         source_invoices = self.source_invoices or []
-        # we don't make changes when taxes are manually added
         if not source_invoices:
             self.taxes = []
             return
@@ -58,9 +59,11 @@ class ISDInvoice(Document):
             ("cess_non_advol", accounts.get("cess_non_advol_account"), total_cess_non_advol),
         ]
 
-        existing_accounts = {row.account_head for row in self.taxes}
+        self.taxes = []
         for gst_tax_type, account_head, tax_amount in tax_type_map:
-            if not account_head or account_head in existing_accounts:
+            if (not account_head):
+                continue
+            if not tax_amount:
                 continue
             self.append("taxes", {
                 "account_head": account_head,
@@ -78,6 +81,20 @@ class ISDInvoice(Document):
             for r in source_invoices
             if r.is_ineligible_for_itc
         )
+
+    def set_pos_from_gstin(self):
+        """Set place of supply fields from company/party GSTIN."""
+        for gstin_field, pos_field in (
+            ("company_gstin", "company_pos"),
+            ("party_gstin", "party_pos"),
+        ):
+            gstin = self.get(gstin_field)
+            self.set(
+                pos_field,
+                get_place_of_supply(frappe._dict(company_gstin=gstin), "Purchase Invoice")
+                if gstin
+                else None,
+            )
 
     def clear_fields_when_is_against_party_not_set(self):
         """Clear fields that depend on is_against_party when it is not set."""
@@ -196,6 +213,33 @@ class ISDInvoice(Document):
                         flt(distributed),
                     )
                 )
+
+    def validate_inter_company_transaction(self):
+        if not self.is_against_party or not self.party:
+            return
+
+        party_type = self.party_type
+        party = self.party
+        company = self.company
+        internal = "is_internal_supplier" if party_type == "Supplier" else "is_internal_customer"
+
+        # 
+        if frappe.db.get_value(party_type, {"name": party, internal: 1}, "name") != party:
+            frappe.throw(_("{0} must be marked as Internal.").format(party))
+
+        # if party is allowed to transact with company
+        companies = frappe.get_all(
+            "Allowed To Transact With",
+            fields=["company"],
+            filters={"parenttype": party_type, "parent": party},
+            pluck="company",
+        )
+        if company not in companies:
+            frappe.throw(
+                _("{0} {1} is not allowed to transact with Company {2}.").format(
+                    party_type, party, company
+                )
+            )
 
     @frappe.whitelist()
     def get_purchase_invoices(self, purchase_invoices: list, distribution_ratio: float = 0.0):
@@ -318,7 +362,14 @@ def create_inter_company_invoice(source_name: str, target_doc:str|None=None):
         target.party = new_party_name
         target.inter_company_invoice_reference = source.name
         target.party_address = source.company_address
+        target.party_gstin = source.company_gstin
+        target.party_pos = source.company_pos
+        target.party_address_display = source.party_address_display
+        # TODO: this does not trigger autosetting the gstin and display fields
+        # trigger js for party_address
         target.company_address = ""
+        # TODO: set the company address by searching based on the gstin of source.company_address
+
 
     return get_mapped_doc(
         "ISD Invoice",

@@ -4,6 +4,7 @@
 import unittest
 
 import frappe
+from frappe.tests.classes import IntegrationTestCase
 from frappe.utils import flt
 
 from india_compliance.gst_india.doctype.isd_invoice.isd_invoice import _calculate_distribution
@@ -186,3 +187,225 @@ class TestISDInvoiceRounding(unittest.TestCase):
                 0.10,
                 f"{field}: rounding error {error} is unexpectedly large.",
             )
+
+
+class TestISDInvoiceInterCompanyValidation(IntegrationTestCase):
+    """Tests for validate_inter_company_transaction method."""
+
+    def setUp(self):
+        """Create test companies and parties for inter-company transaction tests."""
+        super().setUp()
+
+        # Create test companies
+        for i in range(1, 3):
+            company_name = f"_Test Company {i}"
+            if not frappe.db.exists("Company", company_name):
+                frappe.get_doc({
+                    "doctype": "Company",
+                    "company_name": company_name,
+                    "country": "India",
+                    "default_currency": "INR",
+                }).insert(ignore_permissions=True)
+
+        # Create internal suppliers
+        for i in range(1, 3):
+            supplier_name = f"_Test Internal Supplier {i}"
+            if not frappe.db.exists("Supplier", supplier_name):
+                supplier = frappe.get_doc({
+                    "doctype": "Supplier",
+                    "supplier_name": supplier_name,
+                    "is_internal_supplier": 1,
+                    "represents_company": f"_Test Company {i}",
+                }).insert(ignore_permissions=True)
+                supplier.add_child(
+                    "supplier_addresses",
+                    {"address_title": f"Address of {supplier_name}"}
+                )
+                supplier.save(ignore_permissions=True)
+
+        # Create internal customers
+        for i in range(1, 3):
+            customer_name = f"_Test Internal Customer {i}"
+            if not frappe.db.exists("Customer", customer_name):
+                customer = frappe.get_doc({
+                    "doctype": "Customer",
+                    "customer_name": customer_name,
+                    "is_internal_customer": 1,
+                    "represents_company": f"_Test Company {i}",
+                }).insert(ignore_permissions=True)
+                customer.add_child(
+                    "customer_addresses",
+                    {"address_title": f"Address of {customer_name}"}
+                )
+                customer.save(ignore_permissions=True)
+
+        # Create a non-internal supplier (for negative test)
+        if not frappe.db.exists("Supplier", "_Test Non-Internal Supplier"):
+            frappe.get_doc({
+                "doctype": "Supplier",
+                "supplier_name": "_Test Non-Internal Supplier",
+                "is_internal_supplier": 0,
+            }).insert(ignore_permissions=True)
+
+    def test_validation_skipped_when_is_against_party_false(self):
+        """When is_against_party is False, validation should be skipped."""
+        doc = frappe.get_doc({
+            "doctype": "ISD Invoice",
+            "company": "_Test Company 1",
+            "is_against_party": 0,
+            "party_type": "Supplier",
+            "party": "_Test Non-Internal Supplier",
+        })
+        # Should not raise any validation error
+        doc.validate_inter_company_transaction()
+
+    def test_validation_skipped_when_party_is_none(self):
+        """When party is None, validation should be skipped."""
+        doc = frappe.get_doc({
+            "doctype": "ISD Invoice",
+            "company": "_Test Company 1",
+            "is_against_party": 1,
+            "party_type": "Supplier",
+            "party": None,
+        })
+        # Should not raise any validation error
+        doc.validate_inter_company_transaction()
+
+    def test_validation_skipped_when_is_against_party_and_party_both_false(self):
+        """When both is_against_party and party are falsy, validation should be skipped."""
+        doc = frappe.get_doc({
+            "doctype": "ISD Invoice",
+            "company": "_Test Company 1",
+            "is_against_party": 0,
+            "party_type": "Supplier",
+            "party": "",
+        })
+        # Should not raise any validation error
+        doc.validate_inter_company_transaction()
+
+    def test_throws_error_when_supplier_not_internal(self):
+        """Should throw error when supplier is not marked as internal."""
+        doc = frappe.get_doc({
+            "doctype": "ISD Invoice",
+            "company": "_Test Company 1",
+            "is_against_party": 1,
+            "party_type": "Supplier",
+            "party": "_Test Non-Internal Supplier",
+        })
+
+        with self.assertRaises(frappe.ValidationError) as cm:
+            doc.validate_inter_company_transaction()
+
+        self.assertIn("must be marked as Internal", str(cm.exception))
+
+    def test_throws_error_when_customer_not_internal(self):
+        """Should throw error when customer is not marked as internal."""
+        # Create a non-internal customer
+        if not frappe.db.exists("Customer", "_Test Non-Internal Customer"):
+            frappe.get_doc({
+                "doctype": "Customer",
+                "customer_name": "_Test Non-Internal Customer",
+                "is_internal_customer": 0,
+            }).insert(ignore_permissions=True)
+
+        doc = frappe.get_doc({
+            "doctype": "ISD Invoice",
+            "company": "_Test Company 1",
+            "is_against_party": 1,
+            "party_type": "Customer",
+            "party": "_Test Non-Internal Customer",
+        })
+
+        with self.assertRaises(frappe.ValidationError) as cm:
+            doc.validate_inter_company_transaction()
+
+        self.assertIn("must be marked as Internal", str(cm.exception))
+
+    def test_throws_error_when_company_not_in_allowed_list(self):
+        """Should throw error when company is not in Allowed To Transact With list."""
+        supplier_name = "_Test Internal Supplier 1"
+        company = "_Test Company 1"
+
+        doc = frappe.get_doc({
+            "doctype": "ISD Invoice",
+            "company": company,
+            "is_against_party": 1,
+            "party_type": "Supplier",
+            "party": supplier_name,
+        })
+
+        # supplier doesn't have company in Allowed To Transact With
+        with self.assertRaises(frappe.ValidationError) as cm:
+            doc.validate_inter_company_transaction()
+
+        self.assertIn("is not allowed to transact with Company", str(cm.exception))
+        self.assertIn(company, str(cm.exception))
+
+    def test_passes_when_supplier_internal_and_company_allowed(self):
+        """Should pass validation when supplier is internal and company is allowed."""
+        supplier_name = "_Test Internal Supplier 1"
+        company = "_Test Company 2"
+
+        # Add company to Allowed To Transact With
+        supplier = frappe.get_doc("Supplier", supplier_name)
+        supplier.add_child(
+            "allowed_companies",
+            {"company": company}
+        )
+        supplier.save(ignore_permissions=True)
+
+        doc = frappe.get_doc({
+            "doctype": "ISD Invoice",
+            "company": company,
+            "is_against_party": 1,
+            "party_type": "Supplier",
+            "party": supplier_name,
+        })
+
+        # Should not raise any validation error
+        doc.validate_inter_company_transaction()
+
+    def test_passes_when_customer_internal_and_company_allowed(self):
+        """Should pass validation when customer is internal and company is allowed."""
+        customer_name = "_Test Internal Customer 1"
+        company = "_Test Company 2"
+
+        # Add company to Allowed To Transact With
+        customer = frappe.get_doc("Customer", customer_name)
+        customer.add_child(
+            "allowed_companies",
+            {"company": company}
+        )
+        customer.save(ignore_permissions=True)
+
+        doc = frappe.get_doc({
+            "doctype": "ISD Invoice",
+            "company": company,
+            "is_against_party": 1,
+            "party_type": "Customer",
+            "party": customer_name,
+        })
+
+        # Should not raise any validation error
+        doc.validate_inter_company_transaction()
+
+    def test_error_message_contains_party_details(self):
+        """Error message should include party type, name, and company."""
+        supplier_name = "_Test Internal Supplier 1"
+        company = "_Test Company 1"
+
+        doc = frappe.get_doc({
+            "doctype": "ISD Invoice",
+            "company": company,
+            "is_against_party": 1,
+            "party_type": "Supplier",
+            "party": supplier_name,
+        })
+
+        with self.assertRaises(frappe.ValidationError) as cm:
+            doc.validate_inter_company_transaction()
+
+        error_msg = str(cm.exception)
+        self.assertIn("Supplier", error_msg)
+        self.assertIn(supplier_name, error_msg)
+        self.assertIn(company, error_msg)

@@ -149,7 +149,7 @@ def get_isd_invoice_data(filters):
             isd.posting_date,
             distributor_gstin_col,
             recipient_gstin_col,
-            isd.party_state.as_("recipient_state"),
+            isd.party_pos.as_("recipient_pos"),
             isd.is_credit_note,
             Case().when(isd_src_items.is_ineligible_for_itc == 0, "Eligible").else_("Ineligible").as_("eligibility"),
             dist_igst,
@@ -189,7 +189,7 @@ def get_isd_invoice_data(filters):
         )
 
     if filters.get("recipient_state"):
-        query = query.where(isd.party_state == filters.recipient_state)
+        query = query.where(isd.party_pos == filters.recipient_state)
 
     if filters.get("is_credit_note_only"):
         query = query.where(isd.is_credit_note == 1)
@@ -341,8 +341,8 @@ def _get_isd_invoice_columns(company_currency):
             "width": 180,
         },
         {
-            "fieldname": "recipient_state",
-            "label": _("Recipient State"),
+            "fieldname": "recipient_pos",
+            "label": _("Recipient POS"),
             "fieldtype": "Data",
             "width": 130,
         },

@@ -487,9 +487,9 @@ class ISDInvoiceController {
     }
 
     async is_inter_state_distribution() {
-        const { company_state, party_state, company_address, party_address } = this.frm.doc;
+        const { company_pos, party_pos, company_address, party_address } = this.frm.doc;
 
-        if (company_state && party_state && company_state !== party_state) return true;
+        if (company_pos && party_pos && company_pos !== party_pos) return true;
 
         for (const address of [company_address, party_address]) {
             if (!address) continue;

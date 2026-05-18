@@ -38,6 +38,18 @@ frappe.query_reports["ISD Invoice Register"] = {
 			},
 		},
 		{
+			fieldname: "distributor_gstin",
+			label: __("Distributor GSTIN"),
+			fieldtype: "Data",
+			depends_on: 'eval:doc.report_view === "ISD Invoice"',
+		},
+		{
+			fieldname: "recipient_gstin",
+			label: __("Recipient GSTIN"),
+			fieldtype: "Data",
+			depends_on: 'eval:doc.report_view === "ISD Invoice"',
+		},
+		{
 			fieldname: "from_date",
 			label: __("From Date"),
 			fieldtype: "Date",
@@ -52,25 +64,11 @@ frappe.query_reports["ISD Invoice Register"] = {
 			reqd: 1,
 		},
 		{
-			fieldname: "distributor_gstin",
-			label: __("Distributor GSTIN"),
-			fieldtype: "Data",
-			depends_on: 'eval:doc.report_view === "ISD Invoice"',
-		},
-		{
-			fieldname: "recipient_gstin",
-			label: __("Recipient GSTIN"),
-			fieldtype: "Data",
-			depends_on: 'eval:doc.report_view === "ISD Invoice"',
-		},
-		{
 			fieldname: "recipient_state",
 			label: __("Recipient State"),
 			fieldtype: "Autocomplete",
 			depends_on: 'eval:doc.report_view === "ISD Invoice"',
-			get_data: function () {
-				return frappe.boot.india_state_options || [];
-			},
+			options: frappe.boot.india_state_options,
 		},
 		{
 			fieldname: "is_return_only",

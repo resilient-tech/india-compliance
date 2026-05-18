@@ -45,12 +45,12 @@
   "column_break_upnr",
   "company_address",
   "company_gstin",
-  "company_state",
+  "company_pos",
   "company_address_display",
   "column_break_sram",
   "party_address",
   "party_gstin",
-  "party_state",
+  "party_pos",
   "party_address_display",
   "additional_info_section",
   "remarks",
@@ -259,10 +259,9 @@
    "read_only": 1
   },
   {
-   "fetch_from": "company_address.gst_state",
-   "fieldname": "company_state",
+   "fieldname": "company_pos",
    "fieldtype": "Data",
-   "label": "Company State",
+   "label": "Company POS",
    "read_only": 1
   },
   {
@@ -273,10 +272,9 @@
    "read_only": 1
   },
   {
-   "fetch_from": "party_address.gst_state",
-   "fieldname": "party_state",
-   "fieldtype": "Select",
-   "label": "Party State",
+   "fieldname": "party_pos",
+   "fieldtype": "Data",
+   "label": "Party POS",
    "read_only": 1
   },
   {
