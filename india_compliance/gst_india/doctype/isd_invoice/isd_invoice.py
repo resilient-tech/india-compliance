@@ -1,15 +1,10 @@
 # Copyright (c) 2024, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-import json
-
 import frappe
-from erpnext.accounts.doctype.sales_invoice.sales_invoice import validate_inter_company_party
-from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_entries
 from erpnext.accounts.utils import get_fiscal_year
 from erpnext.controllers.accounts_controller import AccountsController
 from frappe import _
-from frappe.contacts.doctype.address.address import get_address_display
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 from frappe.query_builder.functions import Coalesce, Sum
@@ -33,7 +28,7 @@ class ISDInvoice(Document):
         self.validate_isd_party()
         self.validate_pan_consistency()
         self.validate_distribution_limits()
-        self.validate_inter_company_transaction()
+        self.validate_inter_company_transaction() #
         self.autoset_taxes() #
 
     def autoset_taxes(self):
@@ -218,27 +213,22 @@ class ISDInvoice(Document):
         if not self.is_against_party or not self.party:
             return
 
-        party_type = self.party_type
-        party = self.party
-        company = self.company
-        internal = "is_internal_supplier" if party_type == "Supplier" else "is_internal_customer"
+        internal = "is_internal_supplier" if self.party_type == "Supplier" else "is_internal_customer"
 
-        # 
-        if frappe.db.get_value(party_type, {"name": party, internal: 1}, "name") != party:
-            frappe.throw(_("{0} must be marked as Internal.").format(party))
+        if frappe.db.get_value(self.party_type, {"name": self.party, internal: 1}, "name") != self.party:
+            return
 
-        # if party is allowed to transact with company
-        companies = frappe.get_all(
+        allowed_companies = frappe.get_all(
             "Allowed To Transact With",
-            fields=["company"],
-            filters={"parenttype": party_type, "parent": party},
+            filters={"parenttype": self.party_type, "parent": self.party},
             pluck="company",
         )
-        if company not in companies:
+        if self.company not in allowed_companies:
             frappe.throw(
-                _("{0} {1} is not allowed to transact with Company {2}.").format(
-                    party_type, party, company
-                )
+                _(
+                    "{0} {1} is not allowed to transact with Company {2}. Add the company in"
+                    " 'Allowed To Transact With' section of the {0} record."
+                ).format(self.party_type, self.party, self.company)
             )
 
     @frappe.whitelist()
@@ -274,7 +264,7 @@ class ISDInvoice(Document):
 def get_source_invoices_from_purchase_invoices(purchase_invoices: list | str):
 # TODO: ensure only service items 
     if isinstance(purchase_invoices, str):
-        purchase_invoices = json.loads(purchase_invoices)
+        purchase_invoices = frappe.parse_json(purchase_invoices)
 
     pi = frappe.qb.DocType("Purchase Invoice")
     pi_item = frappe.qb.DocType("Purchase Invoice Item")
@@ -517,7 +507,7 @@ def make_isd_invoice(
 @frappe.whitelist()
 def bulk_create_isd_invoices(rows: list | str, source_name: str):
     if isinstance(rows, str):
-        rows = json.loads(rows)
+        rows = frappe.parse_json(rows)
 
     invoices = []
     invalid_invoices = []
