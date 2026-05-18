@@ -25,8 +25,8 @@ class ISDInvoice(Document):
         # TODO: validations remaining to be verified
         self.clear_fields_when_is_against_party_not_set()
         self.set_pos_from_gstin()
-        self.validate_isd_party()
-        self.validate_pan_consistency()
+        self.validate_isd_party() #
+        self.validate_pan_consistency() #
         self.validate_distribution_limits()
         self.validate_inter_company_transaction() #
         self.autoset_taxes() #
@@ -116,9 +116,7 @@ class ISDInvoice(Document):
 
     def validate_isd_party(self):
         """Ensure at least one party is registered as an Input Service Distributor."""
-        addresses = [a for a in (self.company_address, self.party_address) if a]
-        if not addresses:
-            return
+        addresses = [self.company_address, self.party_address]
 
         gst_categories = frappe.db.get_list(
             "Address",
