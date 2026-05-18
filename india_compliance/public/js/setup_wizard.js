@@ -23,9 +23,6 @@ frappe.setup.on("before_load", function () {
             });
         }
     };
-});
-
-frappe.setup.on("after_load", function () {
     update_erpnext_slides_settings();
 });
 
