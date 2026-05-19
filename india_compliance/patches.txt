@@ -86,3 +86,4 @@ india_compliance.patches.post_install.update_gst_treatment_for_import_transactio
 india_compliance.patches.v16.update_tax_id_for_tax_withholding_entries
 india_compliance.patches.v16.sync_financial_report_templates
 india_compliance.patches.v16.update_tds_section_display_name
+execute:import frappe; frappe.db.set_single_value("GST Settings", "nil_exempt_e_invoice_treatment", "Do Not Generate")
