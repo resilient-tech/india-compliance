@@ -10,7 +10,11 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import today
 
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
+from india_compliance.income_tax_india.constants import NEW_TDS_SECTIONS, get_tds_section_value
 from india_compliance.income_tax_india.overrides.company import TDS_ACCOUNT_NAME, create_tds_account
+from india_compliance.income_tax_india.overrides.tax_withholding_category import (
+    search_tds_sections,
+)
 
 COMPANY = "_Test Indian Registered Company"
 ABBR = "_TIRC"
@@ -168,6 +172,20 @@ class TestTaxWithholdingCategory(IntegrationTestCase):
         self.assertEqual(twe_rows[0].tax_id, pan)
         self.assertEqual(twe_rows[0].lower_deduction_certificate, ldc_doc.name)
 
+    def test_search_tds_sections_matches_description_case_insensitively(self):
+        results = search_tds_sections("Tax Withholding Category", "salary - GOVT", "name", 0, 20, {})
+
+        self.assertTrue(results)
+        section_1001 = get_tds_section_value(next(e for e in NEW_TDS_SECTIONS if e["section_code"] == "1001"))
+        self.assertIn(
+            {
+                "label": section_1001,
+                "value": section_1001,
+                "description": "Salary - Govt employees (non-Union)",
+            },
+            results,
+        )
+
 
 def create_party(party_type, name, pan=None):
     party = party_type.lower()
@@ -239,6 +257,7 @@ def create_lower_deduction_certificate(
 
 def create_tax_withholding_category(category_name, account_name, **kwargs):
     fiscal_year = get_fiscal_year(today(), company=COMPANY, as_dict=True)
+    do_not_save = kwargs.pop("do_not_save", False)
     tax_withholding_rate = kwargs.pop("tax_withholding_rate", 10)
     single_threshold = kwargs.pop("single_threshold", 0)
     cumulative_threshold = kwargs.pop("cumulative_threshold", 0)
@@ -262,7 +281,9 @@ def create_tax_withholding_category(category_name, account_name, **kwargs):
     doc.update(kwargs)
     doc.set("accounts", [account_row])
     doc.set("rates", [rate_row])
-    doc.save()
+
+    if not do_not_save:
+        doc.save()
 
     return doc
 
