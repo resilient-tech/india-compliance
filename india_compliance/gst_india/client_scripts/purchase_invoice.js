@@ -331,14 +331,13 @@ function show_isd_invoice_distribution_dialog(frm) {
             dialog.hide();
 
             const payload = rows_with_turnover.map((row) => {
-                const amount = parseFloat(row.turnover_amount) || 0;
+                const turnover_amount = parseFloat(row.turnover_amount) || 0;
                 return {
                     fiscal_year: erpnext.utils.get_fiscal_year(frm.doc.posting_date),
                     gstin: row.gstin || "",
                     gst_state: row.gst_state || "",
                     gst_category: row.gst_category || "",
-                    amount,
-                    distribution_ratio: row.distribution_ratio,
+                    turnover_amount: turnover_amount,
                     party_address: row.address,
                     party_type: dialog_values.is_against_party ? row.party_type : null,
                     party: dialog_values.is_against_party ? row.party : null,

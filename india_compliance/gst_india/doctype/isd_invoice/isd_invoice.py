@@ -202,8 +202,8 @@ class ISDInvoice(Document):
                     ).format(
                         frappe.bold(purchase_invoice),
                         label,
-                        flt(available),
-                        flt(distributed),
+                        available,
+                        distributed,
                     )
                 )
 
@@ -435,10 +435,11 @@ def get_distribution_heads(party_type: str, party: str, posting_date: str, addre
 def make_isd_invoice(
     source_name: str,
     target_doc: str | None = None,
-    distribution_ratio: float = 0.0,
     party_address: str | None = None,
     party_type: str | None = None,
     party: str | None = None,
+    individual_turnover: float | None = None,
+    total_turnover: float | None = None,
 ):
     """
     Insert a new ISD Invoice based on a Purchase Invoice
@@ -448,7 +449,12 @@ def make_isd_invoice(
     is_against_party = 1 if party_type in ["Customer", "Supplier"] and party else 0
 
     def set_missing_values(source, target):
-        target.distribution_ratio = flt(distribution_ratio)
+        distribution_ratio = (
+            individual_turnover / total_turnover * 100
+            if individual_turnover and total_turnover
+            else 0.0
+        )
+        target.distribution_ratio = distribution_ratio
         target.party_address = party_address
 
         if party_type and party:
@@ -465,9 +471,9 @@ def make_isd_invoice(
             )
 
         for row in result:
-            target.append("source_invoices", {**row, "distribution_ratio": flt(distribution_ratio)})
+            target.append("source_invoices", {**row, "distribution_ratio": distribution_ratio})
 
-        _calculate_distribution(target)
+        _calculate_distribution(target, individual_turnover=individual_turnover, total_turnover=total_turnover)
 
     doc = get_mapped_doc(
         "Purchase Invoice",
@@ -510,11 +516,13 @@ def bulk_create_isd_invoices(rows: list | str, source_name: str):
         rows = frappe.parse_json(rows)
     # validate the json format
 
+    total_turnover = sum(flt(row.get("turnover_amount") or 0) for row in rows)
+
     invoices = []
     invalid_invoices = []
     for row in rows:
-        amount = row.get("amount") or 0
-        if not amount:
+        turnover_amount = row.get("turnover_amount") or 0
+        if not turnover_amount:
             continue
 
         fiscal_year = row.get("fiscal_year")
@@ -527,10 +535,11 @@ def bulk_create_isd_invoices(rows: list | str, source_name: str):
         isd_doc, is_invalid_insertion = make_isd_invoice(
             source_name=source_name,
             target_doc=None,
-            distribution_ratio=row.get("distribution_ratio", 0),
             party_address=row["party_address"],
             party_type=row["party_type"],
             party=row["party"],
+            individual_turnover=turnover_amount,
+            total_turnover=total_turnover,
         )
         invoices.append(isd_doc.name)
         if is_invalid_insertion:
@@ -539,7 +548,7 @@ def bulk_create_isd_invoices(rows: list | str, source_name: str):
     return invoices, invalid_invoices
 
 
-def _calculate_distribution(doc):
+def _calculate_distribution(doc, individual_turnover=None, total_turnover=None):
     """Calculate distributed tax amounts for each source invoice row."""
     IMPORT_GST_CATEGORIES = ("Overseas", "SEZ")
 
@@ -561,8 +570,10 @@ def _calculate_distribution(doc):
 
     is_inter_state = (company_state != party_state) or (party_gst_category in IMPORT_GST_CATEGORIES)
 
+    use_direct_ratio = individual_turnover is not None and total_turnover
+
     for row in doc.source_invoices:
-        ratio = flt(row.distribution_ratio) / 100
+        ratio = individual_turnover / total_turnover if use_direct_ratio else flt(row.distribution_ratio) / 100
 
         if is_inter_state:
             row.distributed_igst = (

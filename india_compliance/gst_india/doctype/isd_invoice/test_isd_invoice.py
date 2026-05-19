@@ -235,10 +235,6 @@ class TestISDInvoice(IntegrationTestCase):
         turnover_b = 1000000
         turnover_c = 1000000
 
-        ratio_a = flt(turnover_a / (turnover_a + turnover_b + turnover_c),2)
-        ratio_b = flt(turnover_b / (turnover_a + turnover_b + turnover_c),2)
-        ratio_c = flt(turnover_c / (turnover_a + turnover_b + turnover_c),2)
-
         pi = self.pi
         pi_cgst = sum(row.cgst_amount for row in pi.items)
         pi_sgst = sum(row.sgst_amount for row in pi.items)
@@ -251,34 +247,31 @@ class TestISDInvoice(IntegrationTestCase):
                 "gstin": "",
                 "gst_category": "Unregistered",
                 "gst_state": "Gujarat",
-                "amount": turnover_a,
-                "distribution_ratio": ratio_a * 100,
+                "turnover_amount": turnover_a,
                 "party_address": self.company_unregistered_address.name,
                 "party_type": "Company",
                 "party": self.company,
-                "fiscal-year": get_fiscal_year(pi.posting_date, company=pi.company)[0],
+                "fiscal_year": get_fiscal_year(pi.posting_date, company=pi.company)[0],
             },
             {
                 "gstin": _COMPANY_2_GSTIN,
                 "gst_category": "Registered Regular",
                 "gst_state": "Gujarat",
-                "amount": turnover_b,
-                "distribution_ratio": ratio_b * 100,
+                "turnover_amount": turnover_b,
                 "party_address": self.company_registered_address_gujarat.name,
                 "party_type": "Company",
                 "party": self.company,
-                "fiscal-year": get_fiscal_year(pi.posting_date, company=pi.company)[0],
+                "fiscal_year": get_fiscal_year(pi.posting_date, company=pi.company)[0],
             },
             {
                 "gstin": _COMPANY_3_GSTIN,
                 "gst_category": "Registered Regular",
                 "gst_state": "Karnataka",
-                "amount": turnover_c,
-                "distribution_ratio": ratio_c * 100,
+                "turnover_amount": turnover_c,
                 "party_address": self.company_registered_address_karnataka.name,
                 "party_type": "Company",
                 "party": self.company,
-                "fiscal-year": get_fiscal_year(pi.posting_date, company=pi.company)[0],
+                "fiscal_year": get_fiscal_year(pi.posting_date, company=pi.company)[0],
             },
         ]
         invoice_names, _ = bulk_create_isd_invoices(rows=rows, source_name=pi.name)
@@ -297,9 +290,11 @@ class TestISDInvoice(IntegrationTestCase):
             getattr(row, field) for row in isd_c.source_invoices for field in tax_fields
         )
 
-        print(f"Original PI total tax: {original_total_tax} | Distributed total tax: {distributed_total_tax} | Ratio A: {ratio_a} | Ratio B: {ratio_b}")
+        print(f"Original PI total tax: {original_total_tax} | Distributed total tax: {distributed_total_tax}")
         self.assertAlmostEqual(distributed_total_tax, original_total_tax, places=2)
 
+    # TODO: party being sez 
+    # TODO: party being overseas
 
 def _make_company(company_name, abbr, gstin, gst_category="Registered Regular", parent_company=None):
     if frappe.db.exists("Company", company_name):
