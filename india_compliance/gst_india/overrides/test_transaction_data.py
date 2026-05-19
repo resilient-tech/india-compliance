@@ -134,7 +134,6 @@ class TestTransactionData(IntegrationTestCase):
         )
 
         gst_transaction_data = GSTTransactionData(doc)
-        gst_transaction_data.item_details_list = gst_transaction_data.get_all_item_details()
         gst_transaction_data.set_transaction_details()
 
         self.assertDictEqual(
@@ -145,6 +144,7 @@ class TestTransactionData(IntegrationTestCase):
                 "date": format_date(frappe.utils.today(), "dd/mm/yyyy"),
                 "total": 100.0,
                 "total_taxable_value": 100.0,
+                "total_non_taxable_value": 0.0,
                 "rounding_adjustment": 0.0,
                 "grand_total": 118.0,
                 "grand_total_in_foreign_currency": "",
@@ -178,7 +178,6 @@ class TestTransactionData(IntegrationTestCase):
         doc.save()
 
         gst_transaction_data = GSTTransactionData(doc)
-        gst_transaction_data.item_details_list = gst_transaction_data.get_all_item_details()
         gst_transaction_data.set_transaction_details()
 
         self.assertDictEqual(
@@ -189,6 +188,7 @@ class TestTransactionData(IntegrationTestCase):
                 "date": format_date(frappe.utils.today(), "dd/mm/yyyy"),
                 "total": 100.0,
                 "total_taxable_value": 100.0,
+                "total_non_taxable_value": 0.0,
                 "rounding_adjustment": -0.18,
                 "grand_total": 119.0,
                 "grand_total_in_foreign_currency": "",
@@ -236,7 +236,8 @@ class TestTransactionData(IntegrationTestCase):
                 {
                     "item_no": 1,
                     "qty": 1.0,
-                    "taxable_value": 100.0,
+                    "taxable_amount": 0,
+                    "non_taxable_amount": 100.0,
                     "hsn_code": "61149090",
                     "item_name": "Test Trading Goods 1",
                     "uom": "NOS",
@@ -269,7 +270,8 @@ class TestTransactionData(IntegrationTestCase):
                 {
                     "item_no": 1,
                     "qty": 2.0,
-                    "taxable_value": 200.0,
+                    "taxable_amount": 200.0,
+                    "non_taxable_amount": 0,
                     "hsn_code": "61149090",
                     "item_name": "Test Trading Goods 1",
                     "uom": "NOS",
