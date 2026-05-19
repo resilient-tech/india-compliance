@@ -445,12 +445,14 @@ def make_isd_invoice(
     Permission checked in get_mapped_doc, validation ignored while inserting
     """
 
+    is_against_party = 1 if party_type in ["Customer", "Supplier"] and party else 0
+
     def set_missing_values(source, target):
         target.distribution_ratio = flt(distribution_ratio)
         target.party_address = party_address
 
         if party_type and party:
-            target.is_against_party = 1
+            target.is_against_party = is_against_party
             target.party_type = party_type
             target.party = party
 
@@ -506,6 +508,7 @@ def make_isd_invoice(
 def bulk_create_isd_invoices(rows: list | str, source_name: str):
     if isinstance(rows, str):
         rows = frappe.parse_json(rows)
+    # validate the json format
 
     invoices = []
     invalid_invoices = []
@@ -517,7 +520,7 @@ def bulk_create_isd_invoices(rows: list | str, source_name: str):
         fiscal_year = row.get("fiscal_year")
         if not fiscal_year:
             purchase_invoice = frappe.get_doc("Purchase Invoice", source_name)
-            fiscal_year = purchase_invoice.fiscal_year or get_fiscal_year(purchase_invoice.posting_date, company=purchase_invoice.company)[0]
+            fiscal_year = get_fiscal_year(purchase_invoice.posting_date, company=purchase_invoice.company)[0]
 
         upsert_turnover_record(row["gstin"], row["gst_category"], row["gst_state"], fiscal_year, amount)
 
