@@ -9,6 +9,7 @@ from india_compliance.gst_india.constants import (
     GST_REFUND_TAX_TYPES,
     GST_TAX_RATES,
     GST_TAX_TYPES,
+    TAXABLE_GST_TREATMENTS,
     VALID_HSN_LENGTHS,
 )
 from india_compliance.gst_india.constants.e_waybill import (
@@ -73,9 +74,11 @@ class GSTTransactionData:
         # Initialize all tax totals to 0
         self.transaction_details.update({key: 0 for key in tax_total_keys})
 
-        for row in self.item_details_list or []:
-            total += row.taxable_value + row.get("other_charges", 0)
-            total_taxable_value += row.taxable_value
+        for row in self.doc.items:
+            total += row.taxable_value
+
+            if row.gst_treatment in TAXABLE_GST_TREATMENTS:
+                total_taxable_value += row.taxable_value
 
             if self.is_purchase_rcm:
                 continue
@@ -99,6 +102,7 @@ class GSTTransactionData:
                 "date": format_date(self.doc.posting_date, self.DATE_FORMAT),
                 "total": abs(self.rounded(total)),
                 "total_taxable_value": abs(self.rounded(total_taxable_value)),
+                "total_non_taxable_value": abs(self.rounded(total - total_taxable_value)),
                 "rounding_adjustment": rounding_adjustment,
                 "grand_total": abs(self.rounded(self.doc.get(grand_total_fieldname))),
                 "grand_total_in_foreign_currency": (
@@ -272,11 +276,17 @@ class GSTTransactionData:
             items = self.group_same_items()
 
         for row in items:
+            # Note: `row.taxable_value` is the ERPNext column = full line value
+            # `taxable_amount` (taxable portion) and `non_taxable_amount` (nil/exempt/non-gst portion).
+            line_value = abs(self.rounded(row.taxable_value))
+            is_taxable = row.gst_treatment in TAXABLE_GST_TREATMENTS
+
             item_details = frappe._dict(
                 {
                     "item_no": row.idx,
                     "qty": abs(self.rounded(row.qty, 3)),
-                    "taxable_value": abs(self.rounded(row.taxable_value)),
+                    "taxable_amount": line_value if is_taxable else 0,
+                    "non_taxable_amount": 0 if is_taxable else line_value,
                     "hsn_code": row.gst_hsn_code,
                     "item_name": self.sanitize_value(row.item_name, regex=3, max_length=300),
                     "uom": get_gst_uom(row.get("uom") or row.stock_uom, self.settings),
@@ -285,7 +295,6 @@ class GSTTransactionData:
             )
             self.update_item_tax_details(item_details, row)
             self.update_item_details(item_details, row)
-            self.update_item_total_value(item_details, row)
             all_item_details.append(item_details)
 
         return all_item_details
@@ -322,23 +331,11 @@ class GSTTransactionData:
         return list(grouped_items.values())
 
     def set_item_list(self):
-        self.item_list = []
-
-        for item_details in self.item_details_list:
-            self.item_list.append(self.get_item_data(item_details))
+        self.item_list = [self.get_item_data(d) for d in self.get_all_item_details()]
 
     def update_item_details(self, item_details, item):
         # to be overridden
         pass
-
-    def update_item_total_value(self, item_details, item):
-        item_details["total_value"] = abs(
-            self.rounded(
-                item_details.taxable_value
-                + sum(self.rounded(item_details.get(f"{tax}_amount", 0)) for tax in GST_TAX_TYPES)
-                + self.rounded(item_details.get("other_charges", 0))
-            )
-        )
 
     def update_item_tax_details(self, item_details, item):
         for tax in GST_TAX_TYPES:
@@ -355,7 +352,18 @@ class GSTTransactionData:
 
         validate_gst_tax_rate(tax_rate, item)
 
-        item_details["tax_rate"] = tax_rate
+        item_details.update(
+            {
+                "tax_rate": tax_rate,
+                "total_value": abs(
+                    self.rounded(
+                        item_details.taxable_amount
+                        + item_details.non_taxable_amount
+                        + sum(self.rounded(item_details.get(f"{tax}_amount", 0)) for tax in GST_TAX_TYPES)
+                    )
+                ),
+            }
+        )
 
     def get_progressive_item_tax_amount(self, amount, tax_type):
         """
