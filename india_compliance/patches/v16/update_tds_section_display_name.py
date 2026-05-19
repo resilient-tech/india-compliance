@@ -13,7 +13,7 @@ def execute():
     codes_to_update = []
 
     for entry in NEW_TDS_SECTIONS:
-        code = entry["section_code"]
+        code = entry["section_code"] or entry["section_name"]
         if not code:
             continue
 
