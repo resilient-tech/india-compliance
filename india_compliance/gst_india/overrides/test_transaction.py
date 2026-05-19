@@ -1513,10 +1513,9 @@ class TestPlaceOfSupply(FrappeTestCase):
 
         selected_items = [{"item_code": so.items[0].item_code, "supplier": "_Test Registered Supplier"}]
 
-        purchase_orders = make_purchase_order(so.name, selected_items=selected_items)
-        self.assertTrue(purchase_orders)
+        po = make_purchase_order(so.name, selected_items=selected_items)
+        self.assertTrue(po)
 
-        po = purchase_orders[0]
         # Both supplier and company are in Gujarat (24), so the PO is intra-state
         # and place_of_supply must NOT inherit the customer's state from the SO.
         self.assertEqual(po.place_of_supply, "24-Gujarat")
