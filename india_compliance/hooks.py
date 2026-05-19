@@ -146,6 +146,7 @@ doc_events = {
         "before_submit": "india_compliance.gst_india.overrides.transaction.update_gst_details",
         "before_cancel": "india_compliance.gst_india.utils.e_waybill.before_cancel",
         "validate": "india_compliance.gst_india.overrides.delivery_note.validate",
+        "after_mapping": "india_compliance.gst_india.overrides.transaction.after_mapping",
     },
     "Email Template": {
         "after_rename": "india_compliance.gst_india.overrides.email_template.after_rename",
@@ -195,6 +196,7 @@ doc_events = {
         "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
         "before_submit": "india_compliance.gst_india.overrides.transaction.update_gst_details",
         "before_update_after_submit": "india_compliance.gst_india.overrides.transaction.before_update_after_submit",
+        "after_mapping": "india_compliance.gst_india.overrides.transaction.after_mapping",
     },
     "Purchase Order Item": {
         "on_change": "india_compliance.gst_india.overrides.transaction.on_change_item",
@@ -214,6 +216,7 @@ doc_events = {
             "india_compliance.gst_india.overrides.transaction.update_gst_details",
         ],
         "before_cancel": "india_compliance.gst_india.utils.e_waybill.before_cancel",
+        "after_mapping": "india_compliance.gst_india.overrides.transaction.after_mapping",
     },
     "Sales Invoice": {
         "onload": [
@@ -240,6 +243,7 @@ doc_events = {
         "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
         "before_submit": "india_compliance.gst_india.overrides.transaction.update_gst_details",
         "before_update_after_submit": "india_compliance.gst_india.overrides.transaction.before_update_after_submit",
+        "after_mapping": "india_compliance.gst_india.overrides.transaction.after_mapping",
     },
     "Sales Order Item": {
         "on_change": "india_compliance.gst_india.overrides.transaction.on_change_item",
