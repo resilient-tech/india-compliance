@@ -1897,7 +1897,6 @@ def after_mapping(target_doc, method=None, source_doc=None):
         target_doc.set(fieldname, source_doc.get(fieldname))
 
 
-<<<<<<< HEAD
 def ignore_gst_validations(doc, throw=True):
     if (
         not is_indian_registered_company(doc)
@@ -1905,7 +1904,9 @@ def ignore_gst_validations(doc, throw=True):
         # Also returning if item with multiple taxes
         or validate_items(doc, throw) is False
     ):
-=======
+        return True
+
+
 def reset_gst_details_on_cross_mapping(target_doc, source_doc):
     """
     When mapping between sales and purchase doctypes (e.g. Purchase Order
@@ -1944,12 +1945,6 @@ def reset_gst_details_on_cross_mapping(target_doc, source_doc):
         return
 
     target_doc.update(gst_details)
-
-
-def ignore_gst_validations(doc):
-    if not is_indian_registered_company(doc) or doc.get("is_opening") == "Yes":
->>>>>>> 05dc016e (fix: reset gst details on so to po mapping)
-        return True
 
 
 def on_change_item(doc, method=None):
