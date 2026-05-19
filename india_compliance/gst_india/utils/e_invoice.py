@@ -553,7 +553,10 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
         item.gst_treatment in TAXABLE_GST_TREATMENTS for item in doc.items
     ):
         return _throw(
-            _("e-Invoice is not applicable for invoice with only Nil-Rated/Exempted/Non-GST items"),
+            _(
+                "GST Settings for e-Invoice for non-taxable items set as `Do Not Generate`. "
+                "Hence e-Invoice is not applicable for this invoice as all items are non-taxable."
+            ),
             exc=NotApplicableError,
         )
 

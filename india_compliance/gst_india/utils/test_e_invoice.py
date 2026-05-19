@@ -390,7 +390,7 @@ class TestEInvoice(IntegrationTestCase):
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(r"e-Invoice is not applicable for invoice with only Nil-Rated/Exempted/Non-GST items"),
+            re.compile(r".*e-Invoice is not applicable for this invoice as all items are non-taxable."),
             validate_e_invoice_applicability,
             si,
         )
