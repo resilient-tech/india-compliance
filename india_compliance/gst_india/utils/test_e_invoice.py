@@ -39,6 +39,7 @@ class TestEInvoice(IntegrationTestCase):
                 "auto_generate_e_invoice": 0,
                 "enable_e_waybill": 1,
                 "fetch_e_waybill_data": 0,
+                "attach_e_waybill_print": 0,
                 "apply_e_invoice_only_for_selected_companies": 0,
                 "enable_retry_einv_ewb_generation": 1,
                 "auto_cancel_e_invoice": 0,
