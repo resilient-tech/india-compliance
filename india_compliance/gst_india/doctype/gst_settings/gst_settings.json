@@ -724,7 +724,7 @@
    "depends_on": "eval: doc.enable_e_invoice",
    "fieldname": "nil_exempt_e_invoice_treatment",
    "fieldtype": "Select",
-   "label": "Nil / Exempted Items in e-Invoice",
+   "label": "Nil / Exempted / Non-GST Items in e-Invoice",
    "options": "Do Not Generate\nGenerate with Other Charges\nGenerate with Taxable Values"
   }
  ],

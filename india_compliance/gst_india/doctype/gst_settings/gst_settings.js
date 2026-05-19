@@ -3,13 +3,13 @@
 
 const NIL_EXEMPT_E_INVOICE_DESCRIPTIONS = {
     "Do Not Generate": __(
-        "e-Invoice is not generated for invoices containing only Nil-Rated / Exempted / Non-GST items. For mixed invoices, these items are excluded from the ItemList.",
+        "Skip e-Invoice if all items are non-taxable. In mixed invoices, such items are excluded from the ItemList.",
     ),
     "Generate with Other Charges": __(
-        "Nil-Rated / Exempted / Non-GST item values are reported at item-level Other Charges (AssAmt = 0) in e-Invoice.",
+        "Non-taxable items are reported as Other Charges (Taxable Amount = 0) in the e-Invoice.",
     ),
     "Generate with Taxable Values": __(
-        "Nil-Rated / Exempted / Non-GST item values are reported as taxable in e-Invoice. During GSTR-1 preparation, these invoices will be treated as Zero-Rated B2B and may cause reconciliation mismatches.",
+        "Non-taxable items are reported as taxable in the e-Invoice. Not recommended: Auto populated in GSTR-1 as Zero-Rated, causing inconsistencies.",
     ),
 };
 

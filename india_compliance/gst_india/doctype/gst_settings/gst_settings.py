@@ -71,15 +71,11 @@ class GSTSettings(Document):
         if not self.has_value_changed("nil_exempt_e_invoice_treatment"):
             return
 
-        field_label = frappe.bold(self.meta.get_label("nil_exempt_e_invoice_treatment"))
-
         frappe.msgprint(
             _(
-                "When {0} is set to <b>Generate with Taxable Values</b>, Nil-Rated / Exempted / "
-                "Non-GST item values are reported as taxable in e-Invoice. During GSTR-1 preparation, "
-                "these invoices will be treated as Zero-Rated B2B and may cause reconciliation mismatches. "
-                "Choose this option only if required and review GSTR-1 carefully."
-            ).format(field_label),
+                "e-Invoice for Nil / Exempted / Non-GST items will be generated with <b>Taxable Values</b>.<br/><br/>"
+                "Not Recommended: Auto populated in GSTR-1 as Zero-Rated, causing inconsistencies. Use only if required."
+            ),
             indicator="orange",
         )
 
