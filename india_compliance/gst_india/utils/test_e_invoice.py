@@ -494,7 +494,7 @@ class TestEInvoice(IntegrationTestCase):
 
     @change_settings("GST Settings", {"nil_exempt_e_invoice_treatment": "Do Not Generate"})
     def test_request_data_for_mixed_invoice_with_do_not_generate(self):
-        """Mixed invoice with Do Not Generate: nil items excluded from ItemList."""
+        """Mixed invoice with Do Not Generate: nil items reported as item-level OthChrg (same as Generate with Other Charges); validation only blocks an all-nil invoice."""
         test_data = self.e_invoice_test_data.get("nil_exempted_item")
         si = create_sales_invoice(**test_data.get("kwargs"), do_not_submit=True, is_in_state=True)
 
@@ -512,11 +512,17 @@ class TestEInvoice(IntegrationTestCase):
 
         request_data = EInvoiceData(si).get_data()
 
-        self.assertEqual(1, len(request_data["ItemList"]))
+        self.assertEqual(2, len(request_data["ItemList"]))
 
-        taxable_item = request_data["ItemList"][0]
-        self.assertEqual(12.0, taxable_item["GstRt"])
+        nil_item = next(item for item in request_data["ItemList"] if item["GstRt"] == 0)
+        taxable_item = next(item for item in request_data["ItemList"] if item["GstRt"] == 12.0)
+
+        self.assertEqual(0, nil_item["AssAmt"])
+        self.assertEqual(100, nil_item["OthChrg"])
+        self.assertEqual(100, nil_item["TotItemVal"])
+
         self.assertEqual(10, taxable_item["AssAmt"])
+        self.assertEqual(0, taxable_item["OthChrg"])
         self.assertEqual(11.2, taxable_item["TotItemVal"])
 
         self.assertEqual(10, request_data["ValDtls"]["AssVal"])

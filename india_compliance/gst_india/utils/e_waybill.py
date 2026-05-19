@@ -1243,7 +1243,6 @@ class EWaybillData(GSTTransactionData):
         if with_irn:
             return self.get_data_with_irn()
 
-        self.item_details_list = self.get_all_item_details()
         self.set_transaction_details()
         self.set_item_list()
         self.set_transporter_details()
@@ -1524,12 +1523,14 @@ class EWaybillData(GSTTransactionData):
                     cess_non_advol_rate=item.cess_non_advol_rate,
                     item_no=item.item_no,
                     qty=0,
-                    taxable_value=0,
+                    taxable_amount=0,
+                    non_taxable_amount=0,
                 ),
             )
 
             hsn_wise_details.qty += item.qty
-            hsn_wise_details.taxable_value += item.taxable_value
+            hsn_wise_details.taxable_amount += item.taxable_amount
+            hsn_wise_details.non_taxable_amount += item.non_taxable_amount
 
         if len(hsn_wise_items) > ITEM_LIMIT:
             frappe.throw(
@@ -1809,7 +1810,7 @@ class EWaybillData(GSTTransactionData):
             "toPincode": self.ship_to.pincode,
             "toStateCode": to_state_code,
             "actToStateCode": self.ship_to.state_number,
-            "totalValue": self.transaction_details.total_taxable_value,
+            "totalValue": self.transaction_details.total,
             "cgstValue": self.transaction_details.total_cgst_amount,
             "sgstValue": self.transaction_details.total_sgst_amount,
             "igstValue": self.transaction_details.total_igst_amount,
@@ -1858,7 +1859,9 @@ class EWaybillData(GSTTransactionData):
             "hsnCode": item_details.hsn_code,
             "qtyUnit": item_details.uom,
             "quantity": item_details.qty,
-            "taxableAmount": item_details.taxable_value,
+            # NIC e-Waybill API has a single line-value slot, so the taxable
+            # and non-taxable portions are reported together.
+            "taxableAmount": item_details.taxable_amount + item_details.non_taxable_amount,
             "sgstRate": item_details.sgst_rate,
             "cgstRate": item_details.cgst_rate,
             "igstRate": item_details.igst_rate,

@@ -633,44 +633,11 @@ def get_e_invoice_info(doc):
 class EInvoiceData(GSTTransactionData):
     def get_data(self):
         self.validate_transaction()
-        self.item_details_list = self.get_all_item_details()
-        self.apply_nil_exempt_treatment()
         self.set_transaction_details()
         self.set_item_list()
         self.set_transporter_details()
         self.set_party_address_details()
         return self.sanitize_data(self.get_invoice_data())
-
-    def apply_nil_exempt_treatment(self):
-        """
-        Configure how nil/exempt items appear in the e-Invoice.
-
-        - Do Not Generate: nil items are excluded from ItemList.
-        - Generate with Other Charges (default): nil item value reported at
-          item-level OthChrg with AssAmt = 0.
-        - Generate with Taxable Values: nil items keep their taxable_value.
-        """
-        treatment = self.settings.nil_exempt_e_invoice_treatment
-
-        if treatment == "Generate with Taxable Values":
-            return
-
-        if treatment == "Do Not Generate":
-            self.item_details_list = [
-                item for item in self.item_details_list if item.gst_treatment in TAXABLE_GST_TREATMENTS
-            ]
-            return
-
-        for item in self.item_details_list:
-            if item.gst_treatment in TAXABLE_GST_TREATMENTS:
-                continue
-            item.update(
-                {
-                    "other_charges": item.taxable_value,
-                    "taxable_value": 0,
-                    "unit_rate": 0,
-                }
-            )
 
     def validate_transaction(self):
         super().validate_transaction()
@@ -689,15 +656,19 @@ class EInvoiceData(GSTTransactionData):
             )
 
     def update_item_details(self, item_details, item):
+        if self.generate_nil_exempt_as_taxable():
+            item_details.taxable_amount += item_details.non_taxable_amount
+            item_details.non_taxable_amount = 0
+
         item_details.update(
             {
                 "discount_amount": 0,
                 "serial_no": "",
                 "is_service_item": ("Y" if item.gst_hsn_code.startswith(SERVICE_HSN_PREFIX) else "N"),
                 "unit_rate": (
-                    abs(self.rounded(item.taxable_value / item.qty, 3))
+                    abs(self.rounded(item_details.taxable_amount / item.qty, 3))
                     if item.qty
-                    else abs(self.rounded(item.taxable_value, 3))
+                    else abs(self.rounded(item_details.taxable_amount, 3))
                 ),
                 "barcode": self.sanitize_value(item.barcode, max_length=30, truncate=False),
             }
@@ -712,12 +683,8 @@ class EInvoiceData(GSTTransactionData):
                 }
             )
 
-    def update_item_total_value(self, item_details, item):
         if self.doc.is_reverse_charge:
             item_details["total_value"] = abs(self.rounded(item.taxable_value, 2))
-            return
-
-        super().update_item_total_value(item_details, item)
 
     def update_transaction_details(self):
         invoice_type = "INV"
@@ -738,6 +705,10 @@ class EInvoiceData(GSTTransactionData):
                         ),
                     }
                 )
+
+        if self.generate_nil_exempt_as_taxable():
+            self.transaction_details.total_taxable_value += self.transaction_details.total_non_taxable_value
+            self.transaction_details.total_non_taxable_value = 0
 
         self.transaction_details.update(
             {
@@ -982,9 +953,9 @@ class EInvoiceData(GSTTransactionData):
             "Unit": item_details.uom,
             "Qty": item_details.qty,
             "UnitPrice": item_details.unit_rate,
-            "TotAmt": item_details.taxable_value,
+            "TotAmt": item_details.taxable_amount,
             "Discount": item_details.discount_amount,
-            "AssAmt": item_details.taxable_value,
+            "AssAmt": item_details.taxable_amount,
             "PrdSlNo": item_details.serial_no,
             "GstRt": item_details.tax_rate,
             "IgstAmt": item_details.igst_amount,
@@ -993,7 +964,7 @@ class EInvoiceData(GSTTransactionData):
             "CesRt": item_details.cess_rate,
             "CesAmt": item_details.cess_amount,
             "CesNonAdvlAmt": item_details.cess_non_advol_amount,
-            "OthChrg": item_details.get("other_charges", 0),
+            "OthChrg": item_details.non_taxable_amount,
             "TotItemVal": item_details.total_value,
             "BchDtls": {
                 "Nm": item_details.batch_no,
@@ -1018,6 +989,9 @@ class EInvoiceData(GSTTransactionData):
             export_details["Port"] = self.doc.port_code
 
         return export_details
+
+    def generate_nil_exempt_as_taxable(self):
+        return self.settings.nil_exempt_e_invoice_treatment == "Generate with Taxable Values"
 
 
 #######################################################################################
