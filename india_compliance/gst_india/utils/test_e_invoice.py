@@ -854,6 +854,7 @@ class TestEInvoice(IntegrationTestCase):
 
         self.assertTrue(frappe.get_cached_value("e-Invoice Log", si.irn, "is_cancelled"), 1)
 
+    @change_settings("GST Settings", {"nil_exempt_e_invoice_treatment": "Generate with Other Charges"})
     def test_validate_e_invoice_applicability(self):
         """Test if e_invoicing is applicable"""
 
