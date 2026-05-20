@@ -71,12 +71,12 @@ def setup_company_taxes(params):
     if params.country != "India":
         return
 
+    if not (params.company_name and frappe.db.exists("Company", params.company_name)):
+        return
+
     setup_tax_template(params)
 
     if not params.company_gstin:
-        return
-
-    if not (params.company_name and frappe.db.exists("Company", params.company_name)):
         return
 
     try:
