@@ -658,7 +658,8 @@ class TestEWaybill(IntegrationTestCase):
                 {
                     "item_no": 1,
                     "qty": 1.0,
-                    "taxable_value": 100.0,
+                    "taxable_amount": 0,
+                    "non_taxable_amount": 100.0,
                     "hsn_code": "61149090",
                     "item_name": "Test Trading Goods 1",
                     "uom": "NOS",
@@ -700,7 +701,8 @@ class TestEWaybill(IntegrationTestCase):
                     "cess_non_advol_rate": 0,
                     "item_no": 1,
                     "qty": 251.0,
-                    "taxable_value": 25100.0,
+                    "taxable_amount": 25100.0,
+                    "non_taxable_amount": 0,
                 }
             ],
         )
