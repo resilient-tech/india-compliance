@@ -3,7 +3,7 @@
 
 const NIL_EXEMPT_E_INVOICE_DESCRIPTIONS = {
     "Do Not Generate": __(
-        "Skip e-Invoice if all items are non-taxable. In mixed invoices, such items are excluded from the ItemList.",
+        "Skip e-Invoice if all items are non-taxable. In mixed invoices, such items are reported as Other Charges (Taxable Amount = 0).",
     ),
     "Generate with Other Charges": __(
         "Non-taxable items are reported as Other Charges (Taxable Amount = 0) in the e-Invoice.",
