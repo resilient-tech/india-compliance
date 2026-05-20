@@ -633,13 +633,6 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 _value: (...args) => get_filed_indicator(args[0]),
             },
             {
-                label: "GSTR-3B Filed",
-                fieldname: "gstr_3b_filled",
-                width: 110,
-                align: "center",
-                _value: (...args) => get_filed_indicator(args[0]),
-            },
-            {
                 label: "IRN",
                 fieldname: "irn_number",
                 width: 80,
@@ -1290,13 +1283,13 @@ function get_icon(value, column, data, icon) {
 function get_filed_indicator(value) {
     if (value == null) return "";
     const color = value ? "green" : "red";
-    return `<span class="indicator-pill ${color}">${value ? "Yes" : "No"}</span>`;
+    return `<span class="indicator ${color}">${value ? "Yes" : "No"}</span>`;
 }
 
 function get_irn_indicator(value, row) {
     if (!row.inward_supply_name) return "";
     const color = value ? "green" : "red";
-    return `<span class="indicator-pill ${color}">${value ? "Yes" : "No"}</span>`;
+    return `<span class="indicator ${color}">${value ? "Yes" : "No"}</span>`;
 }
 
 function get_hash(data) {
