@@ -137,7 +137,12 @@ function custom_report_column_total(...args) {
     const column_field = args[1].column.fieldname;
     if (!AMOUNT_FIELDS.includes(column_field)) return;
 
-    return this.datamanager.data.reduce((acc, row) => {
+    const filtered_rows = this.datamanager._filteredRows;
+    const rows = filtered_rows
+        ? filtered_rows.map((index) => this.datamanager.data[index])
+        : this.datamanager.data;
+
+    return rows.reduce((acc, row) => {
         const value = row[column_field] || 0;
         if (row.invoice_category === "ITC Reversed") {
             return acc - value;
