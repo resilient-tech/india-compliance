@@ -1,7 +1,10 @@
 import frappe
 from frappe.query_builder import Case
 
-from india_compliance.income_tax_india.constants import NEW_TDS_SECTIONS, get_tds_section_value
+from india_compliance.income_tax_india.constants import (
+    NEW_TDS_SECTIONS,
+    get_tds_section_value,
+)
 
 
 def execute():

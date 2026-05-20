@@ -32,7 +32,11 @@ def search_tds_sections(
     txt = (txt or "").strip().casefold()
 
     if txt:
-        matched = [row for row in ALL_TDS_OPTIONS if txt in f"{row['value']} {row['description']}".casefold()]
+        matched = [
+            row
+            for row in ALL_TDS_OPTIONS
+            if txt in f"{row['value']} {row['description']}".casefold()
+        ]
     else:
         matched = ALL_TDS_OPTIONS
 
