@@ -6,7 +6,7 @@ from erpnext.accounts.doctype.tax_withholding_category.tax_withholding_category 
     get_tax_id_for_party,
 )
 from erpnext.accounts.utils import get_fiscal_year
-from frappe.tests import IntegrationTestCase
+from frappe.tests.utils import FrappeTestCase
 from frappe.utils import today
 
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
@@ -22,7 +22,7 @@ CATEGORY = "Test PAN TDS Category"
 THRESHOLD_CATEGORY = "Test PAN Threshold TDS Category"
 
 
-class TestTaxWithholdingCategory(IntegrationTestCase):
+class TestTaxWithholdingCategory(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
