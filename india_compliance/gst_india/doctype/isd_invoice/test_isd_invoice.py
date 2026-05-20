@@ -133,7 +133,6 @@ class TestISDInvoice(IntegrationTestCase):
             is_in_state=True,
         )
         # cgst = 90,000 and sgst = 90,000 for this PI
-        print(f"Created PI {cls.pi.name} with CGST {sum(row.cgst_amount for row in cls.pi.items)} and SGST {sum(row.sgst_amount for row in cls.pi.items)}")
 
         cls.duplicate_isd_company = "_Test Duplicate ISD Company"
         _make_company(cls.duplicate_isd_company, "_TISDC", _COMPANY_1_GSTIN)
@@ -290,11 +289,132 @@ class TestISDInvoice(IntegrationTestCase):
             getattr(row, field) for row in isd_c.source_invoices for field in tax_fields
         )
 
-        print(f"Original PI total tax: {original_total_tax} | Distributed total tax: {distributed_total_tax}")
-        self.assertAlmostEqual(distributed_total_tax, original_total_tax, places=2)
+        print(f"Original total tax: {original_total_tax}"
+              f"\n Distributed tax table: {[{field: getattr(row, field) for field in tax_fields} for row in isd_a.source_invoices + isd_b.source_invoices + isd_c.source_invoices]}")
 
-    # TODO: party being sez 
+        self.assertEqual(distributed_total_tax, original_total_tax)
+
+
+# TODO: ask lakshit bhai about the following test cases
+# >>> 16666666.666666666 * 6
+# 99999999.99999996  # mathematically wrong
+
+# >>> 16666666.666666666 + 16666666.666666666 + 16666666.666666666 + \
+#     16666666.666666666 + 16666666.666666666 + 16666666.666666666
+# 100000000.0  # float rounding "accidentally" gives the right answer
+# is okay that python solves this problem by keeping the floating point
+    def test_bulk_creation_captures_undistributed_amount_in_last_invoice(self):
+        """Last ISD invoice absorbs rounding remainder so total distributed == PI total.
+
+        CGST = SGST ≈ 100000. With 3 equal turnovers (ratio=1/3),
+        100000 * (1/3) = 33333.33...
+        Total distributed should be equal to original tax, so one invoice should get 33333.34 and the other two 33333.33
+        """
+        pi = create_purchase_invoice(
+            company=self.company,
+            billing_address=self.company_isd_address.name,
+            supplier="_Test Registered Supplier",
+            items=[{"item_code": "_Test Service Item", "qty": 1, "rate": (100/18)*200000000, "gst_hsn_code": "999800"}],
+            is_in_state=True,
+        )
+        pi_total = sum(
+            row.cgst_amount + row.sgst_amount + row.igst_amount + row.cess_amount + row.cess_non_advol_amount
+            for row in pi.items
+        )
+
+        rows = [
+            {
+                "gstin": "",
+                "gst_category": "Unregistered",
+                "gst_state": "Gujarat",
+                "turnover_amount": 1000000,
+                "party_address": self.company_registered_address_gujarat.name,
+                "party_type": "Company",
+                "party": self.company,
+                "fiscal_year": get_fiscal_year(pi.posting_date, company=pi.company)[0],
+            },
+            {
+                "gstin": _COMPANY_2_GSTIN,
+                "gst_category": "Registered Regular",
+                "gst_state": "Gujarat",
+                "turnover_amount": 1000000,
+                "party_address": self.company_registered_address_gujarat.name,
+                "party_type": "Company",
+                "party": self.company,
+                "fiscal_year": get_fiscal_year(pi.posting_date, company=pi.company)[0],
+            },
+            {
+                "gstin": _COMPANY_3_GSTIN,
+                "gst_category": "Registered Regular",
+                "gst_state": "Karnataka",
+                "turnover_amount": 1000000,
+                "party_address": self.company_registered_address_gujarat.name,
+                "party_type": "Company",
+                "party": self.company,
+                "fiscal_year": get_fiscal_year(pi.posting_date, company=pi.company)[0],
+            },
+        ]
+        invoice_names, _ = bulk_create_isd_invoices(rows=rows, source_name=pi.name)
+
+        tax_fields = [
+            "distributed_cgst", "distributed_sgst", "distributed_igst",
+            "distributed_cess", "distributed_cess_non_advol",
+        ]
+        distributed_total = sum(
+            getattr(row, f)
+            for name in invoice_names
+            for row in frappe.get_doc("ISD Invoice", name).source_invoices
+            for f in tax_fields
+        )
+        print(f"Original total tax: {pi_total}")
+        print(f"Distributed tax table: {[{field: getattr(row, field) for field in tax_fields} for name in invoice_names for row in frappe.get_doc('ISD Invoice', name).source_invoices]}")
+        print("Distributed total tax", distributed_total)
+
+        self.assertEqual(distributed_total, pi_total)
+
     # TODO: party being overseas
+    # TODO: party being sez 
+    def test_distribution_with_sez_recipient(self):
+        """When recipient is SEZ, amount is distributed as IGST only, even for intra-state supply."""
+        turnover_a = 1000000
+        pi = self.pi
+        # place of supply in gujarat, intra state supply
+
+        # SEZ address
+        sez_address = _make_address(
+            name=f"{self.company}-SEZ",
+            gstin="24AAACI1681G2ZU",
+            gst_category="SEZ",
+            state="Gujarat",
+            links=[{"link_doctype": "Company", "link_name": self.company}],
+        )
+
+        rows = [
+            {
+                "gstin": "24AAACI1681G2ZU",
+                "gst_category": "SEZ",
+                "gst_state": "Gujarat",
+                "turnover_amount": turnover_a,
+                "party_address": sez_address.name,
+                "party_type": "Company",
+                "party": self.company,
+                "fiscal_year": get_fiscal_year(pi.posting_date, company=pi.company)[0]
+            }
+        ]
+
+        isd_invoices, _ = bulk_create_isd_invoices(rows=rows, source_name=pi.name)
+
+        # make sure they have IGST only, no CGST/SGST
+        for invoice_name in isd_invoices:
+            invoice = frappe.get_doc("ISD Invoice", invoice_name)
+            for row in invoice.source_invoices:
+                self.assertEqual(row.distributed_cgst, 0)
+                self.assertEqual(row.distributed_sgst, 0)
+                self.assertGreater(row.distributed_igst, 0)
+
+
+    # TODO: party being overseas
+    # TODO: items being non services (check using hsn code)
 
 def _make_company(company_name, abbr, gstin, gst_category="Registered Regular", parent_company=None):
     if frappe.db.exists("Company", company_name):
