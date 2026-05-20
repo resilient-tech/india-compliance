@@ -2,23 +2,12 @@ import frappe
 from frappe.query_builder import Case
 from frappe.query_builder.functions import IfNull
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-from india_compliance.income_tax_india.constants import (
-    OLD_TDS_SECTIONS,
-    TDS_ENTITY_TYPE,
-)
-=======
-from india_compliance.income_tax_india.constants import NEW_TDS_SECTION, OLD_TDS_SECTIONS, TDS_ENTITY_TYPE
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
 from india_compliance.income_tax_india.constants import (
     NEW_TDS_SECTIONS,
     OLD_TDS_SECTIONS,
     TDS_ENTITY_TYPE,
     get_tds_section_value,
 )
->>>>>>> 8ad23855 (fix: add description to section field)
 
 # (old_section, entity_type) -> new_code
 OLD_TO_NEW = {
@@ -146,11 +135,15 @@ def execute():
     # Step 2: Update tds_section
     mapped_sections = set(old for old, _ in OLD_TO_NEW)
 
-    section_by_code = {(e["section_code"] or e["section_name"]): e for e in NEW_TDS_SECTIONS}
+    section_by_code = {
+        (e["section_code"] or e["section_name"]): e for e in NEW_TDS_SECTIONS
+    }
 
     section_case = Case()
     for (old_section, entity_type), new_code in OLD_TO_NEW.items():
-        entry = section_by_code.get(new_code, {"section_code": new_code, "section_name": ""})
+        entry = section_by_code.get(
+            new_code, {"section_code": new_code, "section_name": ""}
+        )
         if not entry:
             continue
         formatted_section = get_tds_section_value(entry)

@@ -57,30 +57,8 @@ doctype_js = {
         "gst_india/client_scripts/e_waybill_actions.js",
         "gst_india/client_scripts/sales_invoice.js",
     ],
-<<<<<<< HEAD
     "Supplier": "gst_india/client_scripts/supplier.js",
-=======
-    "Stock Entry": [
-        "gst_india/client_scripts/stock_entry.js",
-        "gst_india/client_scripts/e_waybill_applicability.js",
-        "gst_india/client_scripts/e_waybill_actions.js",
-    ],
-    "Subcontracting Order": [
-        "gst_india/client_scripts/subcontracting_order.js",
-        "gst_india/client_scripts/e_waybill_applicability.js",
-        "gst_india/client_scripts/e_waybill_actions.js",
-    ],
-    "Subcontracting Receipt": [
-        "gst_india/client_scripts/subcontracting_receipt.js",
-        "gst_india/client_scripts/e_waybill_applicability.js",
-        "gst_india/client_scripts/e_waybill_actions.js",
-    ],
-    "Supplier": [
-        "gst_india/client_scripts/party.js",
-        "gst_india/client_scripts/supplier.js",
-    ],
     "Tax Withholding Category": "income_tax_india/client_scripts/tax_withholding_category.js",
->>>>>>> 8ad23855 (fix: add description to section field)
     "Accounts Settings": "audit_trail/client_scripts/accounts_settings.js",
     "Customize Form": "audit_trail/client_scripts/customize_form.js",
     "Document Naming Settings": "gst_india/client_scripts/document_naming_settings.js",

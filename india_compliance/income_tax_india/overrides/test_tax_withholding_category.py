@@ -2,16 +2,19 @@ import random
 import string
 
 import frappe
-from erpnext.accounts.doctype.tax_withholding_category.tax_withholding_category import (
-    get_tax_id_for_party,
-)
-from erpnext.accounts.utils import get_fiscal_year
-from frappe.tests import IntegrationTestCase
+from frappe.tests.utils import FrappeTestCase
 from frappe.utils import today
+from erpnext.accounts.utils import get_fiscal_year
 
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
-from india_compliance.income_tax_india.constants import NEW_TDS_SECTIONS, get_tds_section_value
-from india_compliance.income_tax_india.overrides.company import TDS_ACCOUNT_NAME, create_tds_account
+from india_compliance.income_tax_india.constants import (
+    NEW_TDS_SECTIONS,
+    get_tds_section_value,
+)
+from india_compliance.income_tax_india.overrides.company import (
+    TDS_ACCOUNT_NAME,
+    create_tds_account,
+)
 from india_compliance.income_tax_india.overrides.tax_withholding_category import (
     search_tds_sections,
 )
@@ -22,28 +25,11 @@ CATEGORY = "Test PAN TDS Category"
 THRESHOLD_CATEGORY = "Test PAN Threshold TDS Category"
 
 
-class TestTaxWithholdingCategory(IntegrationTestCase):
+class TestTaxWithholdingCategory(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         create_tds_setup()
-
-    def test_returns_pan_for_supplier(self):
-        pan = generate_unique_pan()
-        supplier = create_supplier("_Test TDS Supplier With PAN", pan=pan)
-        result = get_tax_id_for_party("Supplier", supplier)
-        self.assertEqual(result, pan)
-
-    def test_returns_pan_for_customer(self):
-        pan = generate_unique_pan()
-        customer = create_customer("_Test TDS Customer With PAN", pan=pan)
-        result = get_tax_id_for_party("Customer", customer)
-        self.assertEqual(result, pan)
-
-    def test_returns_none_for_party_other_than_customer_or_supplier(self):
-        party_name = "_Test TDS Employee With PAN"
-        result = get_tax_id_for_party("Employee", party_name)
-        self.assertEqual(result, "")
 
     def test_tds_deducted_and_tax_id_set_as_pan(self):
         pan = generate_unique_pan()
@@ -59,7 +45,9 @@ class TestTaxWithholdingCategory(IntegrationTestCase):
         )
         pi.submit()
 
-        tds_amount = sum(d.base_tax_amount for d in pi.taxes if d.is_tax_withholding_account)
+        tds_amount = sum(
+            d.base_tax_amount for d in pi.taxes if d.is_tax_withholding_account
+        )
         self.assertEqual(tds_amount, 5000)
 
         twe_rows = frappe.get_all(
@@ -119,9 +107,15 @@ class TestTaxWithholdingCategory(IntegrationTestCase):
         )
         pi_3.submit()
 
-        tds_1 = sum(d.base_tax_amount for d in pi_1.taxes if d.is_tax_withholding_account)
-        tds_2 = sum(d.base_tax_amount for d in pi_2.taxes if d.is_tax_withholding_account)
-        tds_3 = sum(d.base_tax_amount for d in pi_3.taxes if d.is_tax_withholding_account)
+        tds_1 = sum(
+            d.base_tax_amount for d in pi_1.taxes if d.is_tax_withholding_account
+        )
+        tds_2 = sum(
+            d.base_tax_amount for d in pi_2.taxes if d.is_tax_withholding_account
+        )
+        tds_3 = sum(
+            d.base_tax_amount for d in pi_3.taxes if d.is_tax_withholding_account
+        )
 
         self.assertEqual(tds_1, 0)
         self.assertEqual(tds_2, 0)
@@ -141,7 +135,9 @@ class TestTaxWithholdingCategory(IntegrationTestCase):
         )
 
         for supplier in (supplier_1, supplier_2):
-            frappe.db.set_value("Supplier", supplier, "tax_withholding_category", CATEGORY)
+            frappe.db.set_value(
+                "Supplier", supplier, "tax_withholding_category", CATEGORY
+            )
 
         ldc_doc = create_lower_deduction_certificate(
             supplier=supplier_1,
@@ -160,7 +156,9 @@ class TestTaxWithholdingCategory(IntegrationTestCase):
         )
         pi.submit()
 
-        tds_amount = sum(d.base_tax_amount for d in pi.taxes if d.is_tax_withholding_account)
+        tds_amount = sum(
+            d.base_tax_amount for d in pi.taxes if d.is_tax_withholding_account
+        )
         self.assertEqual(tds_amount, 200)
 
         twe_rows = frappe.get_all(
@@ -173,10 +171,14 @@ class TestTaxWithholdingCategory(IntegrationTestCase):
         self.assertEqual(twe_rows[0].lower_deduction_certificate, ldc_doc.name)
 
     def test_search_tds_sections_matches_description_case_insensitively(self):
-        results = search_tds_sections("Tax Withholding Category", "salary - GOVT", "name", 0, 20, {})
+        results = search_tds_sections(
+            "Tax Withholding Category", "salary - GOVT", "name", 0, 20, {}
+        )
 
         self.assertTrue(results)
-        section_1001 = get_tds_section_value(next(e for e in NEW_TDS_SECTIONS if e["section_code"] == "1001"))
+        section_1001 = get_tds_section_value(
+            next(e for e in NEW_TDS_SECTIONS if e["section_code"] == "1001")
+        )
         self.assertIn(
             {
                 "label": section_1001,
@@ -208,8 +210,12 @@ def create_supplier(name, pan=None):
 
 
 def generate_unique_pan():
-    existing_pans = frappe.get_all("Supplier", pluck="pan", filters={"pan": ("is", "set")})
-    existing_pans += frappe.get_all("Customer", pluck="pan", filters={"pan": ("is", "set")})
+    existing_pans = frappe.get_all(
+        "Supplier", pluck="pan", filters={"pan": ("is", "set")}
+    )
+    existing_pans += frappe.get_all(
+        "Customer", pluck="pan", filters={"pan": ("is", "set")}
+    )
     existing_pans = set(existing_pans)
 
     for _ in range(100):

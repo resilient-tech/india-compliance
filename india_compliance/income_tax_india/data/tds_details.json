@@ -3,16 +3,8 @@
     "name": "Premature EPF Withdrawal - Individual",
     "category_name": "Premature EPF Withdrawal",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1004",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1004-392(7)",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "392(7) - 1004",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -29,16 +21,8 @@
     "name": "Premature EPF Withdrawal - No PAN / Invalid PAN",
     "category_name": "Premature EPF Withdrawal",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1004",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1004-392(7)",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "392(7) - 1004",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -55,16 +39,8 @@
     "name": "Insurance Commission - Individual",
     "category_name": "Insurance Commission",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1005",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1005-393(1) [Table: Sl. No. 1(i)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 1(i)] - 1005",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -81,16 +57,8 @@
     "name": "Insurance Commission - Company",
     "category_name": "Insurance Commission",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1005",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1005-393(1) [Table: Sl. No. 1(i)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 1(i)] - 1005",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -107,16 +75,8 @@
     "name": "Insurance Commission - Company Assessee",
     "category_name": "Insurance Commission",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1005",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1005-393(1) [Table: Sl. No. 1(i)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 1(i)] - 1005",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company Assessee",
     "rates": [
@@ -133,16 +93,8 @@
     "name": "Insurance Commission - No PAN / Invalid PAN",
     "category_name": "Insurance Commission",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1005",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1005-393(1) [Table: Sl. No. 1(i)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 1(i)] - 1005",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -159,16 +111,8 @@
     "name": "Commission / Brokerage - Individual",
     "category_name": "Commission / Brokerage",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1006",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1006-393(1) [Table: Sl. No. 1(ii)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 1(ii)] - 1006",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -185,16 +129,8 @@
     "name": "Commission / Brokerage - Company",
     "category_name": "Commission / Brokerage",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1006",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1006-393(1) [Table: Sl. No. 1(ii)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 1(ii)] - 1006",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -211,16 +147,8 @@
     "name": "Commission / Brokerage - No PAN / Invalid PAN",
     "category_name": "Commission / Brokerage",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1006",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1006-393(1) [Table: Sl. No. 1(ii)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 1(ii)] - 1006",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -237,16 +165,8 @@
     "name": "Rent on Plant / Machinery - Individual",
     "category_name": "Rent on Plant / Machinery",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1008",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1008-393(1) [Table: Sl. No. 2(ii).D(a)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 2(ii).D(a)] - 1008",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -263,16 +183,8 @@
     "name": "Rent on Plant / Machinery - Company",
     "category_name": "Rent on Plant / Machinery",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1008",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1008-393(1) [Table: Sl. No. 2(ii).D(a)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 2(ii).D(a)] - 1008",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -289,16 +201,8 @@
     "name": "Rent on Plant / Machinery - No PAN / Invalid PAN",
     "category_name": "Rent on Plant / Machinery",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1008",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1008-393(1) [Table: Sl. No. 2(ii).D(a)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 2(ii).D(a)] - 1008",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -315,16 +219,8 @@
     "name": "Rent on Land / Building / Furniture / Fitting - Individual",
     "category_name": "Rent on Land / Building / Furniture / Fitting",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1009",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1009-393(1) [Table: Sl. No. 2(ii).D(b)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 2(ii).D(b)] - 1009",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -341,16 +237,8 @@
     "name": "Rent on Land / Building / Furniture / Fitting - Company",
     "category_name": "Rent on Land / Building / Furniture / Fitting",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1009",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1009-393(1) [Table: Sl. No. 2(ii).D(b)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 2(ii).D(b)] - 1009",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -367,16 +255,8 @@
     "name": "Rent on Land / Building / Furniture / Fitting - No PAN / Invalid PAN",
     "category_name": "Rent on Land / Building / Furniture / Fitting",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1009",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1009-393(1) [Table: Sl. No. 2(ii).D(b)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 2(ii).D(b)] - 1009",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -393,16 +273,8 @@
     "name": "Payments Under Specified Agreement - Individual",
     "category_name": "Payments Under Specified Agreement",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1011",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1011-393(1) [Table: Sl. No. 3(ii)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 3(ii)] - 1011",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -419,16 +291,8 @@
     "name": "Payments Under Specified Agreement - Company",
     "category_name": "Payments Under Specified Agreement",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1011",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1011-393(1) [Table: Sl. No. 3(ii)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 3(ii)] - 1011",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -445,16 +309,8 @@
     "name": "Payments Under Specified Agreement - No PAN / Invalid PAN",
     "category_name": "Payments Under Specified Agreement",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1011",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1011-393(1) [Table: Sl. No. 3(ii)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 3(ii)] - 1011",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -471,16 +327,8 @@
     "name": "Compensation on Acquiring Immovable Property - Individual",
     "category_name": "Compensation on Acquiring Immovable Property",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1012",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1012-393(1) [Table: Sl. No. 3(iii)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 3(iii)] - 1012",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -497,16 +345,8 @@
     "name": "Compensation on Acquiring Immovable Property - Company",
     "category_name": "Compensation on Acquiring Immovable Property",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1012",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1012-393(1) [Table: Sl. No. 3(iii)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 3(iii)] - 1012",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -523,16 +363,8 @@
     "name": "Compensation on Acquiring Immovable Property - No PAN / Invalid PAN",
     "category_name": "Compensation on Acquiring Immovable Property",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1012",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1012-393(1) [Table: Sl. No. 3(iii)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 3(iii)] - 1012",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -549,16 +381,8 @@
     "name": "Income from Mutual Fund Units - Individual",
     "category_name": "Income from Mutual Fund Units",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1013",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1013-393(1) [Table: Sl. No. 4(i)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 4(i)] - 1013",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -575,16 +399,8 @@
     "name": "Income from Mutual Fund Units - Company",
     "category_name": "Income from Mutual Fund Units",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1013",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1013-393(1) [Table: Sl. No. 4(i)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 4(i)] - 1013",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -601,16 +417,8 @@
     "name": "Income from Mutual Fund Units - No PAN / Invalid PAN",
     "category_name": "Income from Mutual Fund Units",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1013",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1013-393(1) [Table: Sl. No. 4(i)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 4(i)] - 1013",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -627,16 +435,8 @@
     "name": "Business Trust - Interest - Individual",
     "category_name": "Business Trust - Interest",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1014",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1014-393(1) [Table: Sl. No. 4(ii)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 4(ii)] - 1014",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -653,16 +453,8 @@
     "name": "Business Trust - Interest - Company",
     "category_name": "Business Trust - Interest",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1014",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1014-393(1) [Table: Sl. No. 4(ii)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 4(ii)] - 1014",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -679,16 +471,8 @@
     "name": "Business Trust - Interest - No PAN / Invalid PAN",
     "category_name": "Business Trust - Interest",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1014",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1014-393(1) [Table: Sl. No. 4(ii)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 4(ii)] - 1014",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -705,16 +489,8 @@
     "name": "Business Trust - Dividend - Individual",
     "category_name": "Business Trust - Dividend",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1015",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1015-393(1) [Table: Sl. No. 4(ii)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 4(ii)] - 1015",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -731,16 +507,8 @@
     "name": "Business Trust - Dividend - Company",
     "category_name": "Business Trust - Dividend",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1015",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1015-393(1) [Table: Sl. No. 4(ii)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 4(ii)] - 1015",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -757,16 +525,8 @@
     "name": "Business Trust - Dividend - No PAN / Invalid PAN",
     "category_name": "Business Trust - Dividend",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1015",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1015-393(1) [Table: Sl. No. 4(ii)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 4(ii)] - 1015",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -783,16 +543,8 @@
     "name": "Business Trust - Rental Income - Individual",
     "category_name": "Business Trust - Rental Income",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1016",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1016-393(1) [Table: Sl. No. 4(ii)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 4(ii)] - 1016",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -809,16 +561,8 @@
     "name": "Business Trust - Rental Income - Company",
     "category_name": "Business Trust - Rental Income",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1016",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1016-393(1) [Table: Sl. No. 4(ii)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 4(ii)] - 1016",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -835,16 +579,8 @@
     "name": "Business Trust - Rental Income - No PAN / Invalid PAN",
     "category_name": "Business Trust - Rental Income",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1016",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1016-393(1) [Table: Sl. No. 4(ii)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 4(ii)] - 1016",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -861,16 +597,8 @@
     "name": "Income from Units of Investment Fund - Individual",
     "category_name": "Income from Units of Investment Fund",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1017",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1017-393(1) [Table: Sl. No. 4(iii)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 4(iii)] - 1017",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -887,16 +615,8 @@
     "name": "Income from Units of Investment Fund - Company",
     "category_name": "Income from Units of Investment Fund",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1017",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1017-393(1) [Table: Sl. No. 4(iii)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 4(iii)] - 1017",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -913,16 +633,8 @@
     "name": "Income from Units of Investment Fund - No PAN / Invalid PAN",
     "category_name": "Income from Units of Investment Fund",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1017",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1017-393(1) [Table: Sl. No. 4(iii)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 4(iii)] - 1017",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -939,16 +651,8 @@
     "name": "Income from Securitisation Trust - Individual",
     "category_name": "Income from Securitisation Trust",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1018",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1018-393(1) [Table: Sl. No. 4(iv)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 4(iv)] - 1018",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -965,16 +669,8 @@
     "name": "Income from Securitisation Trust - Company",
     "category_name": "Income from Securitisation Trust",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1018",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1018-393(1) [Table: Sl. No. 4(iv)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 4(iv)] - 1018",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -991,16 +687,8 @@
     "name": "Income from Securitisation Trust - No PAN / Invalid PAN",
     "category_name": "Income from Securitisation Trust",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1018",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1018-393(1) [Table: Sl. No. 4(iv)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 4(iv)] - 1018",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -1017,16 +705,8 @@
     "name": "Interest on Securities - Individual",
     "category_name": "Interest on Securities",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1019",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1019-393(1) [Table: Sl. No. 5(i)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 5(i)] - 1019",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -1043,16 +723,8 @@
     "name": "Interest on Securities - Company",
     "category_name": "Interest on Securities",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1019",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1019-393(1) [Table: Sl. No. 5(i)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 5(i)] - 1019",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -1069,16 +741,8 @@
     "name": "Interest on Securities - No PAN / Invalid PAN",
     "category_name": "Interest on Securities",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1019",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1019-393(1) [Table: Sl. No. 5(i)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 5(i)] - 1019",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -1095,16 +759,8 @@
     "name": "Interest - Senior Citizen - Individual",
     "category_name": "Interest - Senior Citizen",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1020",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1020-393(1) [Table: Sl. No. 5(ii).D(a)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 5(ii).D(a)] - 1020",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -1121,16 +777,8 @@
     "name": "Interest - Senior Citizen - Company",
     "category_name": "Interest - Senior Citizen",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1020",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1020-393(1) [Table: Sl. No. 5(ii).D(a)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 5(ii).D(a)] - 1020",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -1147,16 +795,8 @@
     "name": "Interest - Senior Citizen - No PAN / Invalid PAN",
     "category_name": "Interest - Senior Citizen",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1020",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1020-393(1) [Table: Sl. No. 5(ii).D(a)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 5(ii).D(a)] - 1020",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -1173,16 +813,8 @@
     "name": "Interest - Bank / Post Office - Individual",
     "category_name": "Interest - Bank / Post Office",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1021",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1021-393(1) [Table: Sl. No. 5(ii).D(b)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 5(ii).D(b)] - 1021",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -1199,16 +831,8 @@
     "name": "Interest - Bank / Post Office - Company",
     "category_name": "Interest - Bank / Post Office",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1021",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1021-393(1) [Table: Sl. No. 5(ii).D(b)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 5(ii).D(b)] - 1021",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -1225,16 +849,8 @@
     "name": "Interest - Bank / Post Office - No PAN / Invalid PAN",
     "category_name": "Interest - Bank / Post Office",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1021",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1021-393(1) [Table: Sl. No. 5(ii).D(b)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 5(ii).D(b)] - 1021",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -1251,16 +867,8 @@
     "name": "Interest Other than Securities - Individual",
     "category_name": "Interest Other than Securities",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1022",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1022-393(1) [Table: Sl. No. 5(iii)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 5(iii)] - 1022",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -1277,16 +885,8 @@
     "name": "Interest Other than Securities - Company",
     "category_name": "Interest Other than Securities",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1022",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1022-393(1) [Table: Sl. No. 5(iii)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 5(iii)] - 1022",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -1303,16 +903,8 @@
     "name": "Interest Other than Securities - No PAN / Invalid PAN",
     "category_name": "Interest Other than Securities",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1022",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1022-393(1) [Table: Sl. No. 5(iii)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 5(iii)] - 1022",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -1329,16 +921,8 @@
     "name": "Payment to Contractors (Individual / HUF) - Individual",
     "category_name": "Payment to Contractors (Individual / HUF)",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1023",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1023-393(1) [Table: Sl. No. 6(i).D(a)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 6(i).D(a)] - 1023",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -1355,16 +939,8 @@
     "name": "Payment to Contractors (Individual / HUF) - No PAN / Invalid PAN",
     "category_name": "Payment to Contractors (Individual / HUF)",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1023",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1023-393(1) [Table: Sl. No. 6(i).D(a)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 6(i).D(a)] - 1023",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -1381,16 +957,8 @@
     "name": "Payment to Contractors (Others) - Company",
     "category_name": "Payment to Contractors (Others)",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1024",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1024-393(1) [Table: Sl. No. 6(i).D(b)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 6(i).D(b)] - 1024",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -1407,16 +975,8 @@
     "name": "Payment to Contractors (Others) - No PAN / Invalid PAN",
     "category_name": "Payment to Contractors (Others)",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1024",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1024-393(1) [Table: Sl. No. 6(i).D(b)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 6(i).D(b)] - 1024",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -1433,16 +993,8 @@
     "name": "Technical Fees - Individual",
     "category_name": "Technical Fees",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1026",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1026-393(1) [Table: Sl. No. 6(iii).D(a)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 6(iii).D(a)] - 1026",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -1459,16 +1011,8 @@
     "name": "Technical Fees - Company",
     "category_name": "Technical Fees",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1026",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1026-393(1) [Table: Sl. No. 6(iii).D(a)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 6(iii).D(a)] - 1026",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -1485,16 +1029,8 @@
     "name": "Technical Fees - No PAN / Invalid PAN",
     "category_name": "Technical Fees",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1026",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1026-393(1) [Table: Sl. No. 6(iii).D(a)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 6(iii).D(a)] - 1026",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -1511,16 +1047,8 @@
     "name": "Professional Fees - Individual",
     "category_name": "Professional Fees",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1027",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1027-393(1) [Table: Sl. No. 6(iii).D(b)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 6(iii).D(b)] - 1027",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -1537,16 +1065,8 @@
     "name": "Professional Fees - Company",
     "category_name": "Professional Fees",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1027",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1027-393(1) [Table: Sl. No. 6(iii).D(b)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 6(iii).D(b)] - 1027",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -1563,16 +1083,8 @@
     "name": "Professional Fees - No PAN / Invalid PAN",
     "category_name": "Professional Fees",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1027",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1027-393(1) [Table: Sl. No. 6(iii).D(b)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 6(iii).D(b)] - 1027",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -1589,16 +1101,8 @@
     "name": "Director Remuneration - Individual",
     "category_name": "Director Remuneration",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1028",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1028-393(1) [Table: Sl. No. 6(iii).D(b)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 6(iii).D(b)] - 1028",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -1615,16 +1119,8 @@
     "name": "Director Remuneration - Company",
     "category_name": "Director Remuneration",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1028",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1028-393(1) [Table: Sl. No. 6(iii).D(b)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 6(iii).D(b)] - 1028",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -1641,16 +1137,8 @@
     "name": "Director Remuneration - No PAN / Invalid PAN",
     "category_name": "Director Remuneration",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1028",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1028-393(1) [Table: Sl. No. 6(iii).D(b)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 6(iii).D(b)] - 1028",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -1667,16 +1155,8 @@
     "name": "Dividends - Individual",
     "category_name": "Dividends",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1029",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1029-393(1) [Table: Sl. No. 7]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 7] - 1029",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -1693,16 +1173,8 @@
     "name": "Dividends - Company",
     "category_name": "Dividends",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1029",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1029-393(1) [Table: Sl. No. 7]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 7] - 1029",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -1719,16 +1191,8 @@
     "name": "Dividends - No PAN / Invalid PAN",
     "category_name": "Dividends",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1029",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1029-393(1) [Table: Sl. No. 7]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 7] - 1029",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -1745,16 +1209,8 @@
     "name": "Life Insurance Policy Payout - Individual",
     "category_name": "Life Insurance Policy Payout",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1030",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1030-393(1) [Table: Sl. No. 8(i)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 8(i)] - 1030",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -1771,16 +1227,8 @@
     "name": "Life Insurance Policy Payout - Company",
     "category_name": "Life Insurance Policy Payout",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1030",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1030-393(1) [Table: Sl. No. 8(i)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 8(i)] - 1030",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -1797,16 +1245,8 @@
     "name": "Life Insurance Policy Payout - No PAN / Invalid PAN",
     "category_name": "Life Insurance Policy Payout",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1030",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1030-393(1) [Table: Sl. No. 8(i)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 8(i)] - 1030",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -1823,16 +1263,8 @@
     "name": "TDS on Purchase of Goods - Individual",
     "category_name": "TDS on Purchase of Goods",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1031",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1031-393(1) [Table: Sl. No. 8(ii)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 8(ii)] - 1031",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 1,
     "entity_type": "Individual",
     "rates": [
@@ -1849,16 +1281,8 @@
     "name": "TDS on Purchase of Goods - Company",
     "category_name": "TDS on Purchase of Goods",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1031",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1031-393(1) [Table: Sl. No. 8(ii)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 8(ii)] - 1031",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 1,
     "entity_type": "Company",
     "rates": [
@@ -1875,16 +1299,8 @@
     "name": "TDS on Purchase of Goods - No PAN / Invalid PAN",
     "category_name": "TDS on Purchase of Goods",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1031",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1031-393(1) [Table: Sl. No. 8(ii)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 8(ii)] - 1031",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 1,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -1901,16 +1317,8 @@
     "name": "Benefit or Perquisite - Individual",
     "category_name": "Benefit or Perquisite",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1033",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1033-393(1) [Table: Sl. No. 8(iv)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 8(iv)] - 1033",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -1927,16 +1335,8 @@
     "name": "Benefit or Perquisite - Company",
     "category_name": "Benefit or Perquisite",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1033",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1033-393(1) [Table: Sl. No. 8(iv)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 8(iv)] - 1033",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -1953,16 +1353,8 @@
     "name": "Benefit or Perquisite - No PAN / Invalid PAN",
     "category_name": "Benefit or Perquisite",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1033",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1033-393(1) [Table: Sl. No. 8(iv)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 8(iv)] - 1033",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -1979,16 +1371,8 @@
     "name": "Benefit or Perquisite (Not Wholly in Cash) - Individual",
     "category_name": "Benefit or Perquisite (Not Wholly in Cash)",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1034",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1034-393(1) [Table: Sl. No. 8(iv)] Note 6",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 8(iv)] Note 6 - 1034",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -2005,16 +1389,8 @@
     "name": "Benefit or Perquisite (Not Wholly in Cash) - Company",
     "category_name": "Benefit or Perquisite (Not Wholly in Cash)",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1034",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1034-393(1) [Table: Sl. No. 8(iv)] Note 6",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 8(iv)] Note 6 - 1034",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -2031,16 +1407,8 @@
     "name": "Benefit or Perquisite (Not Wholly in Cash) - No PAN / Invalid PAN",
     "category_name": "Benefit or Perquisite (Not Wholly in Cash)",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1034",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1034-393(1) [Table: Sl. No. 8(iv)] Note 6",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 8(iv)] Note 6 - 1034",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -2057,16 +1425,8 @@
     "name": "E-Commerce Participant - Individual",
     "category_name": "E-Commerce Participant",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1035",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1035-393(1) [Table: Sl. No. 8(v)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 8(v)] - 1035",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -2083,16 +1443,8 @@
     "name": "E-Commerce Participant - Company",
     "category_name": "E-Commerce Participant",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1035",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1035-393(1) [Table: Sl. No. 8(v)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 8(v)] - 1035",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -2109,16 +1461,8 @@
     "name": "E-Commerce Participant - No PAN / Invalid PAN",
     "category_name": "E-Commerce Participant",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1035",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1035-393(1) [Table: Sl. No. 8(v)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 8(v)] - 1035",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -2135,16 +1479,8 @@
     "name": "Virtual Digital Asset Transfer - Individual",
     "category_name": "Virtual Digital Asset Transfer",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1037",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1037-393(1) [Table: Sl. No. 8(vi)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 8(vi)] - 1037",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -2161,16 +1497,8 @@
     "name": "Virtual Digital Asset Transfer - Company",
     "category_name": "Virtual Digital Asset Transfer",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1037",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1037-393(1) [Table: Sl. No. 8(vi)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 8(vi)] - 1037",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -2187,16 +1515,8 @@
     "name": "Virtual Digital Asset Transfer - No PAN / Invalid PAN",
     "category_name": "Virtual Digital Asset Transfer",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1037",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1037-393(1) [Table: Sl. No. 8(vi)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 8(vi)] - 1037",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -2213,16 +1533,8 @@
     "name": "Virtual Digital Asset Transfer (Not Wholly in Cash) - Individual",
     "category_name": "Virtual Digital Asset Transfer (Not Wholly in Cash)",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1038",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1038-393(1) [Table: Sl. No. 8(vi)] Note 6",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 8(vi)] Note 6 - 1038",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -2239,16 +1551,8 @@
     "name": "Virtual Digital Asset Transfer (Not Wholly in Cash) - Company",
     "category_name": "Virtual Digital Asset Transfer (Not Wholly in Cash)",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1038",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1038-393(1) [Table: Sl. No. 8(vi)] Note 6",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 8(vi)] Note 6 - 1038",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -2265,16 +1569,8 @@
     "name": "Virtual Digital Asset Transfer (Not Wholly in Cash) - No PAN / Invalid PAN",
     "category_name": "Virtual Digital Asset Transfer (Not Wholly in Cash)",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1038",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1038-393(1) [Table: Sl. No. 8(vi)] Note 6",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(1) [Table: Sl. No. 8(vi)] Note 6 - 1038",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -2291,16 +1587,8 @@
     "name": "Lottery / Gambling Winnings - Individual",
     "category_name": "Lottery / Gambling Winnings",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1058",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1058-393(3) [Table: Sl. No. 1]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(3) [Table: Sl. No. 1] - 1058",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -2317,16 +1605,8 @@
     "name": "Lottery / Gambling Winnings - Company",
     "category_name": "Lottery / Gambling Winnings",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1058",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1058-393(3) [Table: Sl. No. 1]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(3) [Table: Sl. No. 1] - 1058",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -2343,16 +1623,8 @@
     "name": "Lottery / Gambling Winnings (Not Wholly in Cash) - Individual",
     "category_name": "Lottery / Gambling Winnings (Not Wholly in Cash)",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1059",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1059-393(3) [Table: Sl. No. 1] Note 2",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(3) [Table: Sl. No. 1] Note 2 - 1059",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -2369,16 +1641,8 @@
     "name": "Lottery / Gambling Winnings (Not Wholly in Cash) - Company",
     "category_name": "Lottery / Gambling Winnings (Not Wholly in Cash)",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1059",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1059-393(3) [Table: Sl. No. 1] Note 2",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(3) [Table: Sl. No. 1] Note 2 - 1059",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -2395,16 +1659,8 @@
     "name": "Online Game Winnings - Individual",
     "category_name": "Online Game Winnings",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1060",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1060-393(3) [Table: Sl. No. 2]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(3) [Table: Sl. No. 2] - 1060",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -2421,16 +1677,8 @@
     "name": "Online Game Winnings - Company",
     "category_name": "Online Game Winnings",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1060",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1060-393(3) [Table: Sl. No. 2]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(3) [Table: Sl. No. 2] - 1060",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -2447,16 +1695,8 @@
     "name": "Online Game Winnings (Not Wholly in Cash) - Individual",
     "category_name": "Online Game Winnings (Not Wholly in Cash)",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1061",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1061-393(3) [Table: Sl. No. 2] Note 2",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(3) [Table: Sl. No. 2] Note 2 - 1061",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -2473,16 +1713,8 @@
     "name": "Online Game Winnings (Not Wholly in Cash) - Company",
     "category_name": "Online Game Winnings (Not Wholly in Cash)",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1061",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1061-393(3) [Table: Sl. No. 2] Note 2",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(3) [Table: Sl. No. 2] Note 2 - 1061",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -2499,16 +1731,8 @@
     "name": "Horse Race Winnings - Individual",
     "category_name": "Horse Race Winnings",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1062",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1062-393(3) [Table: Sl. No. 3]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(3) [Table: Sl. No. 3] - 1062",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -2525,16 +1749,8 @@
     "name": "Horse Race Winnings - Company",
     "category_name": "Horse Race Winnings",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1062",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1062-393(3) [Table: Sl. No. 3]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(3) [Table: Sl. No. 3] - 1062",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -2551,16 +1767,8 @@
     "name": "Lottery Commission - Individual",
     "category_name": "Lottery Commission",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1063",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1063-393(3) [Table: Sl. No. 4]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(3) [Table: Sl. No. 4] - 1063",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -2577,16 +1785,8 @@
     "name": "Lottery Commission - Company",
     "category_name": "Lottery Commission",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1063",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1063-393(3) [Table: Sl. No. 4]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(3) [Table: Sl. No. 4] - 1063",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -2603,16 +1803,8 @@
     "name": "Lottery Commission - No PAN / Invalid PAN",
     "category_name": "Lottery Commission",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1063",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1063-393(3) [Table: Sl. No. 4]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(3) [Table: Sl. No. 4] - 1063",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -2629,16 +1821,8 @@
     "name": "Cash Withdrawal - Co-operative Society - Individual",
     "category_name": "Cash Withdrawal - Co-operative Society",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1064",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1064-393(3) [Table: Sl. No. 5.D(a)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(3) [Table: Sl. No. 5.D(a)] - 1064",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -2655,16 +1839,8 @@
     "name": "Cash Withdrawal - Co-operative Society - Company",
     "category_name": "Cash Withdrawal - Co-operative Society",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1064",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1064-393(3) [Table: Sl. No. 5.D(a)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(3) [Table: Sl. No. 5.D(a)] - 1064",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -2681,16 +1857,8 @@
     "name": "Cash Withdrawal - Co-operative Society - No PAN / Invalid PAN",
     "category_name": "Cash Withdrawal - Co-operative Society",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1064",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1064-393(3) [Table: Sl. No. 5.D(a)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(3) [Table: Sl. No. 5.D(a)] - 1064",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -2707,16 +1875,8 @@
     "name": "Cash Withdrawal - Individual",
     "category_name": "Cash Withdrawal",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1065",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1065-393(3) [Table: Sl. No. 5.D(b)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(3) [Table: Sl. No. 5.D(b)] - 1065",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -2733,16 +1893,8 @@
     "name": "Cash Withdrawal - Company",
     "category_name": "Cash Withdrawal",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1065",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1065-393(3) [Table: Sl. No. 5.D(b)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(3) [Table: Sl. No. 5.D(b)] - 1065",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -2759,16 +1911,8 @@
     "name": "Cash Withdrawal - No PAN / Invalid PAN",
     "category_name": "Cash Withdrawal",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1065",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1065-393(3) [Table: Sl. No. 5.D(b)]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(3) [Table: Sl. No. 5.D(b)] - 1065",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -2785,16 +1929,8 @@
     "name": "NSS Payments - Individual",
     "category_name": "NSS Payments",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1066",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1066-393(3) [Table: Sl. No. 6]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(3) [Table: Sl. No. 6] - 1066",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -2811,16 +1947,8 @@
     "name": "NSS Payments - Company",
     "category_name": "NSS Payments",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1066",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1066-393(3) [Table: Sl. No. 6]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(3) [Table: Sl. No. 6] - 1066",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -2837,16 +1965,8 @@
     "name": "NSS Payments - No PAN / Invalid PAN",
     "category_name": "NSS Payments",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1066",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1066-393(3) [Table: Sl. No. 6]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(3) [Table: Sl. No. 6] - 1066",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -2863,16 +1983,8 @@
     "name": "Partner Remuneration - Individual",
     "category_name": "Partner Remuneration",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1067",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1067-393(3) [Table: Sl. No. 7]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(3) [Table: Sl. No. 7] - 1067",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Individual",
     "rates": [
@@ -2889,16 +2001,8 @@
     "name": "Partner Remuneration - Company",
     "category_name": "Partner Remuneration",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1067",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1067-393(3) [Table: Sl. No. 7]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(3) [Table: Sl. No. 7] - 1067",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "Company",
     "rates": [
@@ -2915,16 +2019,8 @@
     "name": "Partner Remuneration - No PAN / Invalid PAN",
     "category_name": "Partner Remuneration",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1067",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1067-393(3) [Table: Sl. No. 7]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(3) [Table: Sl. No. 7] - 1067",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -3103,16 +2199,8 @@
     "name": "Lottery / Gambling Winnings - No PAN / Invalid PAN",
     "category_name": "Lottery / Gambling Winnings",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1058",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1058-393(3) [Table: Sl. No. 1]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(3) [Table: Sl. No. 1] - 1058",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -3129,16 +2217,8 @@
     "name": "Lottery / Gambling Winnings (Not Wholly in Cash) - No PAN / Invalid PAN",
     "category_name": "Lottery / Gambling Winnings (Not Wholly in Cash)",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1059",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1059-393(3) [Table: Sl. No. 1] Note 2",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(3) [Table: Sl. No. 1] Note 2 - 1059",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -3155,16 +2235,8 @@
     "name": "Online Game Winnings - No PAN / Invalid PAN",
     "category_name": "Online Game Winnings",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1060",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1060-393(3) [Table: Sl. No. 2]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(3) [Table: Sl. No. 2] - 1060",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -3181,16 +2253,8 @@
     "name": "Online Game Winnings (Not Wholly in Cash) - No PAN / Invalid PAN",
     "category_name": "Online Game Winnings (Not Wholly in Cash)",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1061",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1061-393(3) [Table: Sl. No. 2] Note 2",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(3) [Table: Sl. No. 2] Note 2 - 1061",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
@@ -3207,16 +2271,8 @@
     "name": "Horse Race Winnings - No PAN / Invalid PAN",
     "category_name": "Horse Race Winnings",
     "round_off_tax_amount": 0,
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "tds_section": "1062",
-    "consider_party_ledger_amount": 0,
-=======
-    "tds_section": "1062-393(3) [Table: Sl. No. 3]",
->>>>>>> f37eed86 (fix: add tds section with section codes)
-=======
     "tds_section": "393(3) [Table: Sl. No. 3] - 1062",
->>>>>>> 40fca75d (fix: changes as per review)
+    "consider_party_ledger_amount": 0,
     "tax_on_excess_amount": 0,
     "entity_type": "No PAN / Invalid PAN",
     "rates": [
