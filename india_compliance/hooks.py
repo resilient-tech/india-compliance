@@ -113,7 +113,10 @@ doctype_list_js = {
         "gst_india/client_scripts/e_waybill_applicability.js",
         "gst_india/client_scripts/e_waybill_actions.js",
         "gst_india/client_scripts/sales_invoice_list.js",
-    ]
+    ],
+    "Purchase Invoice": [
+        "gst_india/client_scripts/purchase_invoice_list.js",
+    ],
 }
 
 doc_events = {
