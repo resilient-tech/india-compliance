@@ -395,6 +395,7 @@ def create_inter_company_invoice(source_name: str, target_doc:str|None=None):
 
 @frappe.whitelist()
 def get_distribution_heads(party_type: str, party: str, posting_date: str, address: str | None = None):
+    """get addresses to distribute to based on the Dynamic Link's party and party_type"""
     fiscal_year = get_fiscal_year(posting_date, company=party, raise_on_missing=False) or get_fiscal_year(today(), company=party, raise_on_missing=False)
     fiscal_year = fiscal_year[0] if fiscal_year else None
 
@@ -530,7 +531,7 @@ def bulk_create_isd_invoices(rows: list | str, source_name: str):
             purchase_invoice = frappe.get_doc("Purchase Invoice", source_name)
             fiscal_year = get_fiscal_year(purchase_invoice.posting_date, company=purchase_invoice.company)[0]
 
-        upsert_turnover_record(row["gstin"], row["gst_category"], row["gst_state"], fiscal_year, amount)
+        upsert_turnover_record(row["gstin"], row["gst_category"], row["gst_state"], fiscal_year, turnover_amount)
 
         isd_doc, is_invalid_insertion = make_isd_invoice(
             source_name=source_name,
@@ -576,17 +577,15 @@ def _calculate_distribution(doc, individual_turnover=None, total_turnover=None):
         ratio = individual_turnover / total_turnover if use_direct_ratio else flt(row.distribution_ratio) / 100
 
         if is_inter_state:
-            row.distributed_igst = (
-                flt(row.total_igst) + flt(row.total_cgst) + flt(row.total_sgst)
-            ) * ratio
+            row.distributed_igst = (row.total_igst + row.total_cgst + row.total_sgst) * ratio
             row.distributed_cgst = 0
             row.distributed_sgst = 0
         else:
-            row.distributed_igst = flt(row.total_igst) * ratio
-            row.distributed_cgst = flt(row.total_cgst) * ratio
-            row.distributed_sgst = flt(row.total_sgst) * ratio
+            row.distributed_igst = row.total_igst * ratio
+            row.distributed_cgst = row.total_cgst * ratio
+            row.distributed_sgst = row.total_sgst * ratio
 
-        row.distributed_cess = flt(row.total_cess) * ratio
-        row.distributed_cess_non_advol = flt(row.total_cess_non_advol) * ratio
+        row.distributed_cess = row.total_cess * ratio
+        row.distributed_cess_non_advol = row.total_cess_non_advol * ratio
 
 
