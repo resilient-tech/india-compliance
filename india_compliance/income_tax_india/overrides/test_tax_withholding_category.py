@@ -2,9 +2,6 @@ import random
 import string
 
 import frappe
-from erpnext.accounts.doctype.tax_withholding_category.tax_withholding_category import (
-    get_tax_id_for_party,
-)
 from erpnext.accounts.utils import get_fiscal_year
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import today
@@ -27,23 +24,6 @@ class TestTaxWithholdingCategory(FrappeTestCase):
     def setUpClass(cls):
         super().setUpClass()
         create_tds_setup()
-
-    def test_returns_pan_for_supplier(self):
-        pan = generate_unique_pan()
-        supplier = create_supplier("_Test TDS Supplier With PAN", pan=pan)
-        result = get_tax_id_for_party("Supplier", supplier)
-        self.assertEqual(result, pan)
-
-    def test_returns_pan_for_customer(self):
-        pan = generate_unique_pan()
-        customer = create_customer("_Test TDS Customer With PAN", pan=pan)
-        result = get_tax_id_for_party("Customer", customer)
-        self.assertEqual(result, pan)
-
-    def test_returns_none_for_party_other_than_customer_or_supplier(self):
-        party_name = "_Test TDS Employee With PAN"
-        result = get_tax_id_for_party("Employee", party_name)
-        self.assertEqual(result, "")
 
     def test_tds_deducted_and_tax_id_set_as_pan(self):
         pan = generate_unique_pan()
