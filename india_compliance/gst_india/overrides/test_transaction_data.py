@@ -248,7 +248,8 @@ class TestTransactionData(FrappeTestCase):
                 {
                     "item_no": 1,
                     "qty": 1.0,
-                    "taxable_value": 100.0,
+                    "taxable_amount": 0,
+                    "non_taxable_amount": 100.0,
                     "hsn_code": "61149090",
                     "item_name": "Test Trading Goods 1",
                     "uom": "NOS",
@@ -281,7 +282,8 @@ class TestTransactionData(FrappeTestCase):
                 {
                     "item_no": 1,
                     "qty": 2.0,
-                    "taxable_value": 200.0,
+                    "taxable_amount": 200.0,
+                    "non_taxable_amount": 0,
                     "hsn_code": "61149090",
                     "item_name": "Test Trading Goods 1",
                     "uom": "NOS",
