@@ -630,33 +630,21 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 fieldname: "gstr_1_filled",
                 width: 100,
                 align: "center",
-                _value: (...args) => (args[0] == null ? "" : args[0] ? "Yes" : "No"),
+                _value: (...args) => get_filed_indicator(args[0]),
             },
             {
                 label: "GSTR-3B Filed",
                 fieldname: "gstr_3b_filled",
                 width: 110,
                 align: "center",
-                _value: (...args) => (args[0] == null ? "" : args[0] ? "Yes" : "No"),
+                _value: (...args) => get_filed_indicator(args[0]),
             },
             {
-                label: "IRN Source",
-                fieldname: "irn_source",
-                width: 120,
-                align: "center",
-            },
-            {
-                label: "IRN Number",
+                label: "IRN",
                 fieldname: "irn_number",
-                width: 200,
-                align: "left",
-            },
-            {
-                label: "IRN Generation Date",
-                fieldname: "irn_gen_date",
-                width: 140,
+                width: 80,
                 align: "center",
-                _value: (...args) => (args[0] ? frappe.datetime.str_to_user(args[0]) : ""),
+                _value: (...args) => get_irn_indicator(args[0], args[2]),
             },
             {
                 label: "Action",
@@ -1297,6 +1285,18 @@ function get_icon(value, column, data, icon) {
     return `<button class="btn ${icon}" data-name="${hash}">
                 <i class="fa fa-${icon}"></i>
             </button>`;
+}
+
+function get_filed_indicator(value) {
+    if (value == null) return "";
+    const color = value ? "green" : "red";
+    return `<span class="indicator-pill ${color}">${value ? "Yes" : "No"}</span>`;
+}
+
+function get_irn_indicator(value, row) {
+    if (!row.inward_supply_name) return "";
+    const color = value ? "green" : "red";
+    return `<span class="indicator-pill ${color}">${value ? "Yes" : "No"}</span>`;
 }
 
 function get_hash(data) {

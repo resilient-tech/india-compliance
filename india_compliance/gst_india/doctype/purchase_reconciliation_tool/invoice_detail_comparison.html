@@ -86,6 +86,25 @@
 				<td>{{ inward_supply.taxable_value || '-' }}</td>
 				<td>{{ purchase.taxable_value || '-' }}</td>
 			</tr>
+			{% if inward_supply.irn_source || inward_supply.irn_number || inward_supply.irn_gen_date %}
+			<tr>
+				<th>IRN Source</th>
+				<td data-label="irn_source">{{ inward_supply.irn_source || '-' }}</td>
+				<td data-label="irn_source">-</td>
+			</tr>
+			<tr>
+				<th>IRN Number</th>
+				<td data-label="irn_number" style="word-break: break-all;">{{ inward_supply.irn_number || '-' }}</td>
+				<td data-label="irn_number">-</td>
+			</tr>
+			<tr>
+				<th>IRN Generation Date</th>
+				<td data-label="irn_gen_date">
+					{{ frappe.format(inward_supply.irn_gen_date, {'fieldtype': 'Date'}) || '-' }}
+				</td>
+				<td data-label="irn_gen_date">-</td>
+			</tr>
+			{% endif %}
 		</tbody>
 	</table>
 </div>
