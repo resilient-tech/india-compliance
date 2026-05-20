@@ -84,10 +84,4 @@ execute:from india_compliance.audit_trail.setup import create_custom_fields; cre
 india_compliance.patches.v15.update_itc_classification_for_sez_import_invoices
 india_compliance.patches.v15.set_boe_applicable_for_import_goods_purchase_invoices
 india_compliance.patches.post_install.update_gst_treatment_for_import_transactions
-<<<<<<< HEAD
-=======
-india_compliance.patches.v16.update_tax_id_for_tax_withholding_entries
-india_compliance.patches.v16.sync_financial_report_templates
-india_compliance.patches.v16.update_tds_section_display_name
 execute:import frappe; frappe.db.set_single_value("GST Settings", "nil_exempt_e_invoice_treatment", "Do Not Generate")
->>>>>>> fb395339 (fix: patch settings for existing sites)
