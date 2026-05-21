@@ -1,4 +1,5 @@
 import copy
+import datetime
 import functools
 import io
 import tarfile
@@ -11,6 +12,7 @@ from frappe import _
 from frappe.contacts.doctype.contact.contact import get_contact_details
 from frappe.desk.form.load import get_docinfo, run_onload
 from frappe.utils import (
+    add_months,
     add_to_date,
     cint,
     cstr,
@@ -1016,6 +1018,26 @@ def get_period(month_or_quarter, year=None):
     return month_or_quarter_no
 
 
+def get_periods_between_dates(
+    from_date: str | datetime.date | datetime.datetime,
+    to_date: str | datetime.date | datetime.datetime,
+) -> list[str]:
+    """Return inclusive month periods (MMYYYY) between two dates."""
+    from_date = getdate(from_date)
+    to_date = getdate(to_date)
+
+    if from_date > to_date:
+        from_date, to_date = to_date, from_date
+
+    periods = []
+    current = from_date
+    while current <= to_date:
+        periods.append(current.strftime("%m%Y"))
+        current = add_months(current, 1)
+
+    return periods
+
+
 def is_outward_stock_entry(doc):
     if (
         doc.doctype == "Stock Entry"
@@ -1085,7 +1107,7 @@ def check_duplicate_party(field: str, value: str, party_type: str, party: str | 
     if party_type not in GST_PARTY_TYPES:
         return
 
-    frappe.has_permission(party_type, doc=party, throw=True)
+    frappe.has_permission(party_type, throw=True)
 
     value = value.upper().strip()
 

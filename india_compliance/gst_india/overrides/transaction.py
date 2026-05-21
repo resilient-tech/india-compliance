@@ -323,6 +323,7 @@ class GSTAccounts:
 
         self.setup_defaults()
 
+        self.validate_tax_accounts_for_non_gst()
         self.validate_invalid_account_for_transaction()  # Sales / Purchase
         self.validate_for_same_party_gstin()
         self.validate_reverse_charge_accounts()
@@ -532,23 +533,22 @@ class GSTAccounts:
                     indicator="orange",
                 )
 
+    def validate_tax_accounts_for_non_gst(self):
+        """GST Tax Accounts should not be charged for Non GST Items"""
+        has_non_gst_items = any(row for row in self.doc.get("items") or [] if row.gst_treatment == "Non-GST")
+        if not has_non_gst_items:
+            return
+
+        self._throw(
+            _("Row #{0}: Cannot charge GST for Non GST Items").format(self.first_gst_idx),
+            title=_("Invalid Taxes"),
+        )
+
     def _get_matched_idx(self, rows_to_search, tax_types):
         return next((row.idx for row in rows_to_search if row.gst_tax_type in tax_types), None)
 
     def _throw(self, message, title=None):
         frappe.throw(message, title=title or _("Invalid GST Account"))
-
-
-def validate_tax_accounts_for_non_gst(doc):
-    """GST Tax Accounts should not be charged for Non GST Items"""
-    accounts_list = get_all_gst_accounts(doc.company)
-
-    for row in doc.taxes:
-        if row.account_head in accounts_list and row.tax_amount:
-            frappe.throw(
-                _("Row #{0}: Cannot charge GST for Non GST Items").format(row.idx, row.account_head),
-                title=_("Invalid Taxes"),
-            )
 
 
 def validate_items(doc, throw):
@@ -579,13 +579,7 @@ def validate_items(doc, throw):
         if row.item_tax_template != item_tax_templates[item_key]:
             items_with_duplicate_taxes.append(bold(item_key))
 
-    if not has_gst_items:
-        update_taxable_values(doc)
-        validate_tax_accounts_for_non_gst(doc)
-
-        return False
-
-    if non_gst_items:
+    if non_gst_items and has_gst_items:
         if not throw:
             return False
         frappe.throw(
@@ -1889,11 +1883,13 @@ def update_gst_details(doc, method=None):
 
 
 def after_mapping(target_doc, method=None, source_doc=None):
+    if not source_doc:
+        return
+
+    reset_gst_details_on_cross_mapping(target_doc, source_doc)
+
     # Copy e-Waybill fields only from DN to SI
-    if not source_doc or source_doc.doctype not in (
-        "Delivery Note",
-        "Purchase Receipt",
-    ):
+    if source_doc.doctype not in ("Delivery Note", "Purchase Receipt"):
         return
 
     for field in E_WAYBILL_INV_FIELDS:
@@ -1905,11 +1901,50 @@ def ignore_gst_validations(doc, throw=True):
     if (
         not is_indian_registered_company(doc)
         or doc.get("is_opening") == "Yes"
-        # If there are no GST items, then no need to proceed further
         # Also returning if item with multiple taxes
         or validate_items(doc, throw) is False
     ):
         return True
+
+
+def reset_gst_details_on_cross_mapping(target_doc, source_doc):
+    """
+    When mapping between sales and purchase doctypes (e.g. Purchase Order
+    from Sales Order), reset GST details.
+    """
+    if ignore_gst_validations(target_doc):
+        return
+
+    is_source_sales = source_doc.doctype in SALES_DOCTYPES
+    is_target_sales = target_doc.doctype in SALES_DOCTYPES
+
+    if is_source_sales == is_target_sales:
+        return
+
+    # Re-fetch address-based fields (gst_category, party_gstin) from the
+    # target's own party address before evaluating GST details.
+    # Need to be fixed in Frappe where on set of values link fields
+    # should be updated in update if missing.
+    party_address_field = _get_address_fields(target_doc.doctype).get("party_address_field")
+    if party_address_field and target_doc.get(party_address_field):
+        target_doc.update(
+            get_fetch_values(
+                target_doc.doctype,
+                party_address_field,
+                target_doc.get(party_address_field),
+            )
+        )
+
+    gst_details = get_gst_details(
+        target_doc.as_dict(),
+        target_doc.doctype,
+        target_doc.company,
+        update_place_of_supply=True,
+    )
+    if not gst_details:
+        return
+
+    target_doc.update(gst_details)
 
 
 def on_change_item(doc, method=None):
