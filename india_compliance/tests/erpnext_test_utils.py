@@ -114,6 +114,80 @@ def create_account(**kwargs):
         return account.name
 
 
+# from erpnext.accounts.doctype.journal_entry.test_journal_entry import make_journal_entry
+def make_journal_entry(
+    account1,
+    account2,
+    amount,
+    cost_center=None,
+    posting_date=None,
+    exchange_rate=1,
+    save=True,
+    submit=False,
+    project=None,
+    company=None,
+    voucher_type="Journal Entry",
+):
+    if not cost_center:
+        cost_center = "_Test Cost Center - _TC"
+
+    jv = frappe.new_doc("Journal Entry")
+    jv.posting_date = posting_date or nowdate()
+    jv.company = company or "_Test Company"
+    jv.voucher_type = voucher_type
+    jv.remark = "test"
+    jv.multi_currency = 1
+    jv.set(
+        "accounts",
+        [
+            {
+                "account": account1,
+                "cost_center": cost_center,
+                "project": project,
+                "debit_in_account_currency": amount if amount > 0 else 0,
+                "credit_in_account_currency": abs(amount) if amount < 0 else 0,
+                "exchange_rate": exchange_rate,
+            },
+            {
+                "account": account2,
+                "cost_center": cost_center,
+                "project": project,
+                "credit_in_account_currency": amount if amount > 0 else 0,
+                "debit_in_account_currency": abs(amount) if amount < 0 else 0,
+                "exchange_rate": exchange_rate,
+            },
+        ],
+    )
+    if save or submit:
+        jv.insert()
+
+        if submit:
+            jv.submit()
+
+    return jv
+
+
+# from erpnext.setup.doctype.transaction_deletion_record.test_transaction_deletion_record import
+# create_and_submit_transaction_deletion_doc
+def create_and_submit_transaction_deletion_doc(company):
+    tdr = frappe.get_doc(
+        {
+            "doctype": "Transaction Deletion Record",
+            "company": company,
+            "process_in_single_transaction": 1,
+        }
+    )
+    tdr.insert()
+
+    tdr.generate_to_delete_list()
+    tdr.reload()
+
+    tdr.process_in_single_transaction = 1
+    tdr.submit()
+    tdr.reload()
+    return tdr
+
+
 # from erpnext.controllers.tests.test_subcontracting_controller import get_rm_items
 def get_rm_items(supplied_items):
     rm_items = []

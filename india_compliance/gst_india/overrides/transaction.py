@@ -1752,16 +1752,58 @@ def validate_item_tax_template(doc):
 
 
 def after_mapping(target_doc, method=None, source_doc=None):
+    if not source_doc:
+        return
+
+    reset_gst_details_on_cross_mapping(target_doc, source_doc)
+
     # Copy e-Waybill fields only from DN to SI
-    if not source_doc or source_doc.doctype not in (
-        "Delivery Note",
-        "Purchase Receipt",
-    ):
+    if source_doc.doctype not in ("Delivery Note", "Purchase Receipt"):
         return
 
     for field in E_WAYBILL_INV_FIELDS:
         fieldname = field.get("fieldname")
         target_doc.set(fieldname, source_doc.get(fieldname))
+
+
+def reset_gst_details_on_cross_mapping(target_doc, source_doc):
+    """
+    When mapping between sales and purchase doctypes (e.g. Purchase Order
+    from Sales Order), reset GST details.
+    """
+    if ignore_gst_validations(target_doc):
+        return
+
+    is_source_sales = source_doc.doctype in SALES_DOCTYPES
+    is_target_sales = target_doc.doctype in SALES_DOCTYPES
+
+    if is_source_sales == is_target_sales:
+        return
+
+    # Re-fetch address-based fields (gst_category, party_gstin) from the
+    # target's own party address before evaluating GST details.
+    # Need to be fixed in Frappe where on set of values link fields
+    # should be updated in update if missing.
+    party_address_field = _get_address_fields(target_doc.doctype).get("party_address_field")
+    if party_address_field and target_doc.get(party_address_field):
+        target_doc.update(
+            get_fetch_values(
+                target_doc.doctype,
+                party_address_field,
+                target_doc.get(party_address_field),
+            )
+        )
+
+    gst_details = get_gst_details(
+        target_doc.as_dict(),
+        target_doc.doctype,
+        target_doc.company,
+        update_place_of_supply=True,
+    )
+    if not gst_details:
+        return
+
+    target_doc.update(gst_details)
 
 
 def ignore_gst_validations(doc):

@@ -3,7 +3,7 @@ from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_
     process_hsn_data,
     validate_filters,
 )
-from india_compliance.gst_india.utils.gstr3b.gstr3b_data import GSTR3BInvoices
+from india_compliance.gst_india.utils.gstr3b.gstr3b_inward_data import GSTR3BInwardInvoices
 
 
 def execute(filters=None):
@@ -19,7 +19,7 @@ def execute(filters=None):
 
 
 def get_data(filters):
-    _class = GSTR3BInvoices(filters)
+    _class = GSTR3BInwardInvoices(filters)
     invoices = []
 
     for doctype in ("Purchase Invoice", "Bill of Entry"):

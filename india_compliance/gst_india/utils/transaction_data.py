@@ -276,11 +276,17 @@ class GSTTransactionData:
             items = self.group_same_items()
 
         for row in items:
+            # Note: `row.taxable_value` is the ERPNext column = full line value
+            # `taxable_amount` (taxable portion) and `non_taxable_amount` (nil/exempt/non-gst portion).
+            line_value = abs(self.rounded(row.taxable_value))
+            is_taxable = row.gst_treatment in TAXABLE_GST_TREATMENTS
+
             item_details = frappe._dict(
                 {
                     "item_no": row.idx,
                     "qty": abs(self.rounded(row.qty, 3)),
-                    "taxable_value": abs(self.rounded(row.taxable_value)),
+                    "taxable_amount": line_value if is_taxable else 0,
+                    "non_taxable_amount": 0 if is_taxable else line_value,
                     "hsn_code": row.gst_hsn_code,
                     "item_name": self.sanitize_value(row.item_name, regex=3, max_length=300),
                     "uom": get_gst_uom(row.get("uom") or row.stock_uom, self.settings),
@@ -325,10 +331,7 @@ class GSTTransactionData:
         return list(grouped_items.values())
 
     def set_item_list(self):
-        self.item_list = []
-
-        for item_details in self.get_all_item_details():
-            self.item_list.append(self.get_item_data(item_details))
+        self.item_list = [self.get_item_data(d) for d in self.get_all_item_details()]
 
     def update_item_details(self, item_details, item):
         # to be overridden
@@ -354,9 +357,10 @@ class GSTTransactionData:
                 "tax_rate": tax_rate,
                 "total_value": abs(
                     self.rounded(
-                        item_details.taxable_value
+                        item_details.taxable_amount
+                        + item_details.non_taxable_amount
                         + sum(self.rounded(item_details.get(f"{tax}_amount", 0)) for tax in GST_TAX_TYPES)
-                    ),
+                    )
                 ),
             }
         )

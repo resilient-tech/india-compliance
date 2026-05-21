@@ -19,8 +19,7 @@
   "generation_status",
   "section_break_yqh7",
   "gstr3b_form",
-  "json_output",
-  "missing_field_invoices"
+  "json_output"
  ],
  "fields": [
   {
@@ -41,12 +40,6 @@
    "fieldtype": "Code",
    "hidden": 1,
    "label": "JSON Output"
-  },
-  {
-   "fieldname": "missing_field_invoices",
-   "fieldtype": "Small Text",
-   "label": "Invoices with no Place Of Supply",
-   "read_only": 1
   },
   {
    "default": "0",

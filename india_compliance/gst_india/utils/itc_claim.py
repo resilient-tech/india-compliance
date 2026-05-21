@@ -21,7 +21,7 @@ from frappe.utils import (
 )
 
 from india_compliance.gst_india.overrides.transaction import validate_mandatory_fields
-from india_compliance.gst_india.utils import get_period
+from india_compliance.gst_india.utils import get_period, get_periods_between_dates
 
 SUPPORTED_DOCTYPES = frozenset(("Purchase Invoice", "Bill of Entry"))
 SUPPORTED_TABLE_NAMES = frozenset(get_table_name(dt) for dt in SUPPORTED_DOCTYPES)
@@ -195,12 +195,15 @@ def apply_period_filter(
         to_date: End date for posting date filter
         filter_by: (Optional) "ITC Claim Period" or "Posting Date". Defaults to "Posting Date"
         return_period: (Optional) The return period in MMYYYY format.
-                      Auto-calculated from to_date if not provided
+                  If not provided, all periods between from_date and to_date are used.
     """
     if filter_by == "ITC Claim Period" and doc._table_name in SUPPORTED_TABLE_NAMES:
-        if not return_period:
-            return_period = format_period(to_date)
-        return query.where(IfNull(doc.itc_claim_period, "") == return_period)
+        if return_period:
+            return query.where(IfNull(doc.itc_claim_period, "") == return_period)
+
+        periods = get_periods_between_dates(from_date, to_date)
+
+        return query.where(IfNull(doc.itc_claim_period, "").isin(periods))
 
     return query.where(doc.posting_date[from_date:to_date])
 
@@ -337,23 +340,18 @@ def _calculate_itc_claim_period(
     if inward_supply and inward_supply.get("return_period_2b"):
         default_period = _max_period(posting_period, inward_supply.return_period_2b)
 
-    if doc.get("gst_category") == "Unregistered" and doc.get("is_reverse_charge"):
-        return posting_period
-
     return _get_next_unfiled_period(doc.company_gstin, default_period, doc.posting_date, filed)
 
 
 def validate_itc_claim_period(doc) -> None:
     validate_mandatory_fields(doc, "itc_claim_period")
     _validate_period_format(doc.itc_claim_period)
-    _validate_itc_claim_period_for_rcm_invoice(doc)
     _validate_itc_claim_period_as_per_filing(doc)
 
 
 def validate_itc_claim_period_on_update_after_submit(doc) -> None:
     validate_mandatory_fields(doc, "itc_claim_period")
     _validate_period_format(doc.itc_claim_period)
-    _validate_itc_claim_period_for_rcm_invoice(doc)
 
     # On update-after-submit, period checks are needed only if period changed.
     previous = doc.get_doc_before_save()
@@ -383,22 +381,6 @@ def _validate_itc_claim_period_as_per_filing(doc) -> None:
     if _is_gstr3b_filed(doc.company_gstin, doc.itc_claim_period):
         frappe.throw(
             _("Cannot set ITC Claim Period to {0}. GSTR-3B is already filed.").format(doc.itc_claim_period)
-        )
-
-
-def _validate_itc_claim_period_for_rcm_invoice(doc) -> None:
-    """For Unregistered RCM, ITC must be claimed in the same period as posting."""
-    if (
-        doc.doctype == "Purchase Invoice"
-        and doc.gst_category == "Unregistered"
-        and doc.is_reverse_charge
-        and doc.itc_claim_period != format_period(doc.posting_date)
-    ):
-        frappe.throw(
-            _(
-                "ITC Claim Period must be {0} (same as posting date) for purchases from"
-                " Unregistered suppliers under Reverse Charge."
-            ).format(format_period(doc.posting_date))
         )
 
 

@@ -2,6 +2,7 @@ import frappe
 from frappe.utils import getdate
 
 from india_compliance.gst_india.constants import SALES_DOCTYPES
+from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 
 def create_sales_invoice(**data):
@@ -16,6 +17,71 @@ def create_purchase_invoice(**data):
         data["bill_no"] = frappe.generate_hash(length=5)
 
     return create_transaction(**data)
+
+
+def create_journal_entry(**data):
+    data = frappe._dict(data)
+    data["doctype"] = "Journal Entry"
+
+    return create_transaction(**data)
+
+
+def create_itc_reversal_journal_entry(**data):
+    """
+    Create an ITC Reversal Journal Entry.
+    """
+    data = frappe._dict(data)
+    if not data.get("voucher_type"):
+        data["voucher_type"] = "Reversal Of ITC"
+
+    if not data.get("ineligibility_reason"):
+        data["ineligibility_reason"] = "As per rules 42 & 43 of CGST Rules"
+
+    if not data.get("accounts") and data.get("tax_amount"):
+        data["accounts"] = get_itc_journal_accounts(data)
+
+    data.pop("tax_amount", None)
+
+    return create_journal_entry(**data)
+
+
+def create_itc_reclaim_journal_entry(**data):
+    """
+    Create an ITC Reclaim Journal Entry.
+    """
+    data = frappe._dict(data)
+    if not data.get("voucher_type"):
+        data["voucher_type"] = "Reclaim of ITC Reversal"
+
+    if not data.get("accounts") and data.get("tax_amount"):
+        data["accounts"] = get_itc_journal_accounts(data)
+
+    data.pop("tax_amount", None)
+
+    return create_journal_entry(**data)
+
+
+def get_itc_journal_accounts(data):
+    tax_amount = data.tax_amount
+    company = data.company or "_Test Indian Registered Company"
+    company_abbr = frappe.get_cached_value("Company", company, "abbr")
+    is_reclaim = data.get("voucher_type") == "Reclaim of ITC Reversal"
+    gst_accounts = get_gst_accounts_by_type(company, "Input")
+
+    return [
+        {
+            "account": f"GST Expense - {company_abbr}",
+            "credit_in_account_currency" if is_reclaim else "debit_in_account_currency": tax_amount * 2,
+        },
+        {
+            "account": gst_accounts.cgst_account,
+            "debit_in_account_currency" if is_reclaim else "credit_in_account_currency": tax_amount,
+        },
+        {
+            "account": gst_accounts.sgst_account,
+            "debit_in_account_currency" if is_reclaim else "credit_in_account_currency": tax_amount,
+        },
+    ]
 
 
 def create_transaction(**data):

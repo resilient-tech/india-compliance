@@ -7,6 +7,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import getdate
 
+from india_compliance.gst_india.utils import get_periods_between_dates
 from india_compliance.gst_india.utils.itc_claim import (
     ITC_CLAIM_PERIOD_DEFERRED,
     _calculate_itc_claim_period,
@@ -17,6 +18,7 @@ from india_compliance.gst_india.utils.itc_claim import (
     _max_period,
     _next_period,
     _validate_period_format,
+    apply_period_filter,
     compare_periods,
     format_period,
     get_itc_period_options,
@@ -55,6 +57,54 @@ class TestITCClaim(IntegrationTestCase):
         # same month, different days
         self.assertEqual(format_period("2024-03-01"), "032024")
         self.assertEqual(format_period("2024-03-31"), "032024")
+
+    def test_apply_period_filter_uses_full_itc_period_range(self):
+        dt = frappe.qb.DocType("Purchase Invoice")
+        query = frappe.qb.from_(dt).select(dt.name)
+
+        query = apply_period_filter(
+            query,
+            dt,
+            "2024-04-01",
+            "2024-06-30",
+            filter_by="ITC Claim Period",
+        )
+        sql = str(query)
+
+        self.assertIn("itc_claim_period", sql)
+        self.assertIn("042024", sql)
+        self.assertIn("052024", sql)
+        self.assertIn("062024", sql)
+
+    def test_apply_period_filter_uses_explicit_return_period(self):
+        dt = frappe.qb.DocType("Purchase Invoice")
+        query = frappe.qb.from_(dt).select(dt.name)
+
+        query = apply_period_filter(
+            query,
+            dt,
+            "2024-04-01",
+            "2024-06-30",
+            filter_by="ITC Claim Period",
+            return_period="052024",
+        )
+        sql = str(query)
+
+        self.assertIn("052024", sql)
+        self.assertNotIn("042024", sql)
+        self.assertNotIn("062024", sql)
+
+    def test_get_periods_between_date(self):
+        periods = get_periods_between_dates("2024-04-01", "2024-06-30")
+        self.assertEqual(periods, ["042024", "052024", "062024"])
+
+    def test_get_periods_between_date_reversed(self):
+        periods = get_periods_between_dates("2024-06-30", "2024-04-01")
+        self.assertEqual(periods, ["042024", "052024", "062024"])
+
+    def test_get_periods_between_date_same_month(self):
+        periods = get_periods_between_dates("2024-04-05", "2024-04-30")
+        self.assertEqual(periods, ["042024"])
 
     def test_period_to_date(self):
         self.assertEqual(period_to_date("012024"), getdate("2024-01-01"))
@@ -358,7 +408,7 @@ class TestITCClaim(IntegrationTestCase):
         self.assertEqual(result, "032024")
 
     def test_calc_unregistered_rcm(self):
-        """Unregistered RCM always returns posting period."""
+        """Unregistered RCM follows same logic as regular invoices (next unfiled period)."""
         doc = self._make_doc(
             gst_category="Unregistered",
             is_reverse_charge=1,
@@ -366,6 +416,9 @@ class TestITCClaim(IntegrationTestCase):
         )
         result = _calculate_itc_claim_period(doc, filed=set())
         self.assertEqual(result, "012024")
+
+        result = _calculate_itc_claim_period(doc, filed={"012024"})
+        self.assertEqual(result, "022024")
 
     def test_calc_no_inward_supply(self):
         """No inward supply → uses posting period as start."""
