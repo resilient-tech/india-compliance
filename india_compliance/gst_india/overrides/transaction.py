@@ -1876,8 +1876,15 @@ def sync_address_dependent_fields_on_submit(doc, method=None):
 
     Runs after validate_update_after_submit (which reverts the dependent fields
     to db values), so setting them again here persists the new values.
+
+    Only syncs when the GST state of the address is unchanged — a cross-state
+    change would affect place of supply and requires a full re-validation.
     """
     if doc.docstatus != 1 or ignore_gst_validations(doc):
+        return
+
+    doc_before = doc.get_doc_before_save()
+    if not doc_before:
         return
 
     applicable_fields = [
@@ -1888,48 +1895,49 @@ def sync_address_dependent_fields_on_submit(doc, method=None):
     if not applicable_fields:
         return
 
-    db_values = (
-        frappe.db.get_value(
-            doc.doctype,
-            doc.name,
-            [field[0] for field in applicable_fields],
-            as_dict=True,
-        )
-        or {}
-    )
-
     changed_fields = []
-    new_addresses = set()
+    all_addresses = set()
     for address_field, gstin_field, category_field in applicable_fields:
-        new_address = doc.get(address_field) or ""
-        if new_address == (db_values.get(address_field) or ""):
+        if not doc.has_value_changed(address_field):
             continue
 
-        changed_fields.append((gstin_field, category_field, new_address))
+        new_address = doc.get(address_field) or ""
+        old_address = doc_before.get(address_field) or ""
+
+        changed_fields.append((gstin_field, category_field, new_address, old_address))
         if new_address:
-            new_addresses.add(new_address)
+            all_addresses.add(new_address)
+        if old_address:
+            all_addresses.add(old_address)
 
     if not changed_fields:
         return
 
     address_map = {}
-    if new_addresses:
+    if all_addresses:
         address_map = {
             row.name: row
             for row in frappe.db.get_all(
                 "Address",
-                filters={"name": ("in", list(new_addresses))},
-                fields=["name", "gstin", "gst_category"],
+                filters={"name": ("in", list(all_addresses))},
+                fields=["name", "gstin", "gst_category", "gst_state_number"],
             )
         }
 
-    for gstin_field, category_field, new_address in changed_fields:
-        address_values = address_map.get(new_address) or {}
-        doc.set(gstin_field, address_values.get("gstin") or "")
+    for gstin_field, category_field, new_address, old_address in changed_fields:
+        new_addr = address_map.get(new_address) or {}
+        old_addr = address_map.get(old_address) or {}
 
-        gst_category = address_values.get("gst_category")
+        new_state = new_addr.get("gst_state_number") or ""
+        old_state = old_addr.get("gst_state_number") or ""
+
+        # Cross-state change affects place of supply; skip — user must amend.
+        if old_state and new_state and old_state != new_state:
+            continue
+
+        doc.set(gstin_field, new_addr.get("gstin") or "")
         if category_field and doc.meta.has_field(category_field):
-            doc.set(category_field, gst_category or "")
+            doc.set(category_field, new_addr.get("gst_category") or "")
 
 
 def set_ecommerce_supply_type(doc):
