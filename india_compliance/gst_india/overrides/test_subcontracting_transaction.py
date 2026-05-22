@@ -201,6 +201,11 @@ SERVICE_ITEM = {
 }
 
 
+def make_sco(**kwargs):
+    po = create_purchase_order(**SERVICE_ITEM, supplier_warehouse="Finished Goods - _TIRC")
+    return create_subcontracting_order(po_name=po.name, **kwargs)
+
+
 class TestSubcontractingTransaction(IntegrationTestCase):
     ITEM_WITH_TAX = SUBCONTRACTING_TEST_RM_ITEM_1
     ITEM_WITHOUT_TAX = SUBCONTRACTING_TEST_RM_ITEM_2
@@ -232,10 +237,6 @@ class TestSubcontractingTransaction(IntegrationTestCase):
                 "enable_e_waybill_for_sc": 1,
             },
         )
-
-    def _make_sco(self):
-        po = create_purchase_order(**SERVICE_ITEM, supplier_warehouse="Finished Goods - _TIRC")
-        return create_subcontracting_order(po_name=po.name)
 
     def _rm_items(self, sco):
         return [
@@ -291,11 +292,9 @@ class TestSubcontractingTransaction(IntegrationTestCase):
         self.assertEqual(se.total_taxes, 0.0)
 
     def test_subcontracting_validations(self):
-        po = create_purchase_order(**SERVICE_ITEM, supplier_warehouse="Finished Goods - _TIRC")
-        sco = create_subcontracting_order(po_name=po.name)
+        sco = make_sco()
 
-        rm_items = get_rm_items(sco.supplied_items)
-        make_stock_transfer_entry(sco_no=sco.name, rm_items=rm_items)
+        make_stock_transfer_entry(sco_no=sco.name, rm_items=get_rm_items(sco.supplied_items))
 
         scr = make_subcontracting_receipt(sco.name)
         scr.save()
@@ -340,11 +339,8 @@ class TestSubcontractingTransaction(IntegrationTestCase):
             get_stock_entry_references,
         )
 
-        po = create_purchase_order(**SERVICE_ITEM, supplier_warehouse="Finished Goods - _TIRC")
-        sco = create_subcontracting_order(po_name=po.name)
-
-        rm_items = get_rm_items(sco.supplied_items)
-        se = make_stock_transfer_entry(sco_no=sco.name, rm_items=rm_items)
+        sco = make_sco()
+        se = make_stock_transfer_entry(sco_no=sco.name, rm_items=get_rm_items(sco.supplied_items))
 
         return_se = get_materials_from_supplier(sco.name, [d.name for d in sco.supplied_items])
         return_se.save()
@@ -401,15 +397,13 @@ class TestSubcontractingTransaction(IntegrationTestCase):
         sco.submit()
 
     def test_item_tax_template_set_on_sco_items_from_po(self):
-        po = create_purchase_order(**SERVICE_ITEM, supplier_warehouse="Finished Goods - _TIRC")
-        sco = create_subcontracting_order(po_name=po.name)
+        sco = make_sco()
 
         item_templates = {item.item_code: item.item_tax_template for item in sco.items}
         self.assertEqual(item_templates.get(self.SCO_FG_ITEM), self.TAX_TEMPLATE)
 
     def test_item_tax_template_not_overwritten_on_sco_items(self):
-        po = create_purchase_order(**SERVICE_ITEM, supplier_warehouse="Finished Goods - _TIRC")
-        sco = create_subcontracting_order(po_name=po.name, do_not_save=True)
+        sco = make_sco(do_not_save=True)
 
         other_template = "GST 5% - _TIRC"
         for item in sco.items:
@@ -422,7 +416,7 @@ class TestSubcontractingTransaction(IntegrationTestCase):
         self.assertEqual(templates.get(self.SCO_FG_ITEM), other_template)
 
     def test_item_tax_template_set_on_se_items_from_sco(self):
-        sco = self._make_sco()
+        sco = make_sco()
         se = make_rm_stock_entry(sco.name, self._rm_items(sco))
 
         items_by_code = {item.get("item_code"): item for item in se.get("items", [])}
@@ -457,12 +451,8 @@ class TestAddressMappingAfterMapping(IntegrationTestCase):
         super().tearDownClass()
         frappe.db.rollback(save_point="before_test_address_mapping")
 
-    def _make_sco(self):
-        po = create_purchase_order(**SERVICE_ITEM, supplier_warehouse="Finished Goods - _TIRC")
-        return create_subcontracting_order(po_name=po.name)
-
     def test_sco_to_se_send_to_subcontractor(self):
-        sco = self._make_sco()
+        sco = make_sco()
         rm_items = get_rm_items(sco.supplied_items)
 
         se = make_rm_stock_entry(sco.name, rm_items)
@@ -477,7 +467,7 @@ class TestAddressMappingAfterMapping(IntegrationTestCase):
         self.assertIsNone(se.ship_to_address)
 
     def test_sco_to_se_material_transfer_return(self):
-        sco = self._make_sco()
+        sco = make_sco()
         rm_items = get_rm_items(sco.supplied_items)
 
         # Materials must reach the supplier warehouse before they can be returned.
