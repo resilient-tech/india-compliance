@@ -157,15 +157,11 @@ def get_tds_amount(doc):
     tds_accounts = get_tax_withholding_accounts(doc.company)
     tds_amount = 0
     for row in doc.taxes:
-        tax_amount = flt(row.base_tax_amount_after_discount_amount)
         if row.account_head not in tds_accounts:
             continue
 
-        if row.get("add_deduct_tax") and row.add_deduct_tax == "Deduct":
-            tds_amount -= tax_amount
-
-        else:
-            tds_amount += tax_amount
+        multiplier = -1 if row.get("add_deduct_tax") == "Deduct" else 1
+        tds_amount += multiplier * flt(row.base_tax_amount_after_discount_amount)
 
     return tds_amount
 
