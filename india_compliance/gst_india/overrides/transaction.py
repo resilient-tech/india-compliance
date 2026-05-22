@@ -1064,7 +1064,7 @@ def validate_gst_refund_accounts(doc):
         # Refund should be
         # -ve for normal invoices and
         # +ve for credit notes (is_return)
-        is_invalid = tax_amount < 0 if is_return else tax_amount > 0
+        is_invalid = tax.tax_amount < 0 if is_return else tax.tax_amount > 0
         if is_invalid:
             expected = "positive" if is_return else "negative"
             frappe.throw(

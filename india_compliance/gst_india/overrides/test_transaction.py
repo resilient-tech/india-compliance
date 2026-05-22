@@ -28,6 +28,7 @@ from india_compliance.gst_india.constants import GST_TAX_TYPES, SALES_DOCTYPES
 from india_compliance.gst_india.overrides.transaction import (
     DOCTYPES_WITH_GST_DETAIL,
     ItemGSTDetails,
+    validate_gst_refund_accounts,
     validate_item_tax_template,
 )
 from india_compliance.gst_india.utils.tests import (
@@ -1048,10 +1049,6 @@ class TestTransaction(IntegrationTestCase):
         Tax rows loaded from DB with NULL `base_tax_amount_after_discount_amount`
         must not crash refund-accounts validation.
         """
-        from india_compliance.gst_india.overrides.transaction import (
-            validate_gst_refund_accounts,
-        )
-
         doc = create_refund_transaction()
         for tax in doc.taxes:
             tax.base_tax_amount_after_discount_amount = None
