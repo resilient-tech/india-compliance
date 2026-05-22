@@ -190,14 +190,15 @@ def get_tds_amount(doc):
     tds_accounts = get_tax_withholding_accounts(doc.company)
     tds_amount = 0
     for row in doc.taxes:
+        tax_amount = flt(row.base_tax_amount_after_discount_amount)
         if row.account_head not in tds_accounts:
             continue
 
         if row.get("add_deduct_tax") and row.add_deduct_tax == "Deduct":
-            tds_amount -= row.base_tax_amount_after_discount_amount
+            tds_amount -= tax_amount
 
         else:
-            tds_amount += row.base_tax_amount_after_discount_amount
+            tds_amount += tax_amount
 
     return tds_amount
 
@@ -1138,7 +1139,7 @@ def validate_reverse_charge_transaction(doc):
         if not tax.gst_tax_type or not tax.tax_amount:
             continue
 
-        tax_amount = tax.base_tax_amount_after_discount_amount
+        tax_amount = flt(tax.base_tax_amount_after_discount_amount)
         if is_return:
             tax_amount = -tax_amount
 
@@ -1192,14 +1193,15 @@ def validate_gst_refund_accounts(doc):
     net_amount = 0
 
     for tax in doc.taxes:
+        tax_amount = flt(tax.base_tax_amount_after_discount_amount)
         if tax.gst_tax_type not in GST_REFUND_TAX_TYPES:
-            net_amount += tax.base_tax_amount_after_discount_amount
+            net_amount += tax_amount
             continue
 
         # Refund should be
         # -ve for normal invoices and
         # +ve for credit notes (is_return)
-        is_invalid = tax.tax_amount < 0 if is_return else tax.tax_amount > 0
+        is_invalid = tax_amount < 0 if is_return else tax_amount > 0
         if is_invalid:
             expected = "positive" if is_return else "negative"
             frappe.throw(
@@ -1209,7 +1211,7 @@ def validate_gst_refund_accounts(doc):
             )
 
         has_refund = True
-        net_amount += tax.base_tax_amount_after_discount_amount
+        net_amount += tax_amount
 
     # Validate if refund amount is same as total gst amount
     if has_refund and net_amount != 0:
@@ -1297,7 +1299,7 @@ class ItemGSTDetails:
             if not self.is_gst_tax_row(tax_row):
                 continue
             tax_type = tax_row.gst_tax_type
-            tax_differences[tax_type] += tax_row.get(self.tax_amount_field(), 0)
+            tax_differences[tax_type] += flt(tax_row.get(self.tax_amount_field()))
 
         last_item_with_tax = None
         last_item_defaults = None
@@ -1370,6 +1372,20 @@ class ItemGSTDetails:
         """
 
         tax_details = frappe._dict()
+<<<<<<< HEAD
+=======
+        item_map = frappe._dict()
+        tax_map = frappe._dict()
+        tax_differences = defaultdict(float)
+        last_item_with_tax = None
+
+        for row in self.doc.get("taxes"):
+            if not self.is_gst_tax_row(row):
+                continue
+            tax_type = row.gst_tax_type
+            tax_differences[tax_type] += flt(row.get(self.tax_amount_field()))
+            tax_map[row.name] = row
+>>>>>>> e76bf847 (fix: ensure tax amounts are handled as floats across transaction calculations)
 
         for row in self.doc.get("items"):
             key = self.get_item_key(row)
