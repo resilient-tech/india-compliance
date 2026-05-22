@@ -1043,6 +1043,21 @@ class TestTransaction(IntegrationTestCase):
             doc.save,
         )
 
+    def test_validate_gst_refund_accounts_with_none_tax_amount(self):
+        """
+        Tax rows loaded from DB with NULL `base_tax_amount_after_discount_amount`
+        must not crash refund-accounts validation.
+        """
+        from india_compliance.gst_india.overrides.transaction import (
+            validate_gst_refund_accounts,
+        )
+
+        doc = create_refund_transaction()
+        for tax in doc.taxes:
+            tax.base_tax_amount_after_discount_amount = None
+
+        validate_gst_refund_accounts(doc)
+
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_validate_gst_refund_accounts_for_credit_note(self):
         doc = create_refund_transaction()
@@ -1100,6 +1115,26 @@ class TestTransaction(IntegrationTestCase):
         )
         for item in doc.items:
             item.taxable_value = None
+
+        ItemGSTDetails().update(doc)
+
+    def test_none_tax_amount_after_discount_amount(self):
+        """
+        Tax rows loaded from DB with NULL `(base_)tax_amount_after_discount_amount`
+        (e.g. legacy rows or rows inserted via raw SQL / ignore_validate) must not
+        crash before_save / on_submit handlers that aggregate tax amounts.
+        """
+        if self.doctype not in DOCTYPES_WITH_GST_DETAIL:
+            return
+
+        doc = create_transaction(
+            **self.transaction_details,
+            is_in_state=True,
+            do_not_save=True,
+        )
+        for tax in doc.taxes:
+            tax.tax_amount_after_discount_amount = None
+            tax.base_tax_amount_after_discount_amount = None
 
         ItemGSTDetails().update(doc)
 
