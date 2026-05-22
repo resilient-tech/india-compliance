@@ -2,7 +2,7 @@ import re
 
 import frappe
 from frappe import _
-from frappe.utils import format_date, get_link_to_form, getdate, rounded
+from frappe.utils import flt, format_date, get_link_to_form, getdate, rounded
 
 from india_compliance.gst_india.constants import (
     E_INVOICE_MASTER_CODES_URL,
@@ -138,7 +138,7 @@ class GSTTransactionData:
             if row.gst_tax_type not in GST_REFUND_TAX_TYPES:
                 continue
 
-            self.transaction_details.grand_total -= row.base_tax_amount_after_discount_amount
+            self.transaction_details.grand_total -= flt(row.base_tax_amount_after_discount_amount)
 
         # Ensure that grand total is rounded as it may be updated above
         self.transaction_details.grand_total = self.rounded(self.transaction_details.grand_total)
