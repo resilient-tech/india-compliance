@@ -1,8 +1,17 @@
 import frappe
+from erpnext.controllers.subcontracting_controller import make_rm_stock_entry
 from frappe.utils import getdate
 
 from india_compliance.gst_india.constants import SALES_DOCTYPES
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
+from india_compliance.tests.erpnext_test_utils import create_subcontracting_order
+
+SUBCONTRACTING_TEST_RM_ITEM_1 = "Subcontracted SRM Item 1"
+SUBCONTRACTING_TEST_RM_ITEM_2 = "Subcontracted SRM Item 2"
+SUBCONTRACTING_TEST_SERVICE_ITEM = "Subcontracted Service Item 1"
+SUBCONTRACTING_TEST_FINISHED_ITEM = "Subcontracted Item SA1"
+SUBCONTRACTING_TEST_FINISHED_ITEM_2 = "Subcontracted Item SA2"
+SUBCONTRACTING_TEST_FINISHED_ITEM_TG = "Subcontracted Item Trading Goods"
 
 
 def create_sales_invoice(**data):
@@ -151,6 +160,65 @@ def create_transaction(**data):
             transaction.submit()
 
     return transaction
+
+
+def make_subcontracting_stock_entry(**data):
+    """Build a SCO-backed "Send to Subcontractor" Stock Entry.
+
+    Items are derived from the SCO's supplied_items; passing `items` is a
+    no-op (the key is popped silently — the SE shape is determined by the
+    SCO's BOM, not by caller-supplied items). Pass `fg_item` to choose which
+    sub-contracted item's BOM drives the SE — different BOMs yield different
+    item lists and totals on the resulting SE.
+    """
+    data = frappe._dict(data)
+    do_not_save = data.pop("do_not_save", False)
+    do_not_submit = data.pop("do_not_submit", False)
+    data.pop("items", None)  # always derived from SCO supplied_items
+    fg_item = data.pop("fg_item", SUBCONTRACTING_TEST_FINISHED_ITEM)
+
+    purchase_order = create_transaction(
+        doctype="Purchase Order",
+        is_subcontracted=1,
+        item_code=SUBCONTRACTING_TEST_SERVICE_ITEM,
+        qty=1,
+        rate=100,
+        fg_item=fg_item,
+        fg_item_qty=1,
+        supplier_warehouse="Finished Goods - _TIRC",
+    )
+    subcontracting_order = create_subcontracting_order(po_name=purchase_order.name)
+
+    items = [
+        {
+            "item_code": row.main_item_code,
+            "rm_item_code": row.rm_item_code,
+            "qty": row.required_qty,
+            "rate": row.rate,
+            "stock_uom": row.stock_uom,
+            "warehouse": row.reserve_warehouse,
+        }
+        for row in subcontracting_order.supplied_items
+    ]
+
+    stock_entry = frappe.get_doc(make_rm_stock_entry(subcontracting_order.name, items))
+    stock_entry.update(data)
+
+    if "bill_from_address" not in data and not stock_entry.get("bill_from_address"):
+        stock_entry.bill_from_address = "_Test Indian Registered Company-Billing"
+
+    if "bill_to_address" not in data and not stock_entry.get("bill_to_address"):
+        stock_entry.bill_to_address = "_Test Registered Supplier-Billing"
+
+    if do_not_save:
+        return stock_entry
+
+    stock_entry.insert()
+
+    if do_not_submit:
+        return stock_entry
+
+    return stock_entry.submit()
 
 
 def append_item(transaction, data=None, company_abbr="_TIRC"):

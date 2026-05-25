@@ -19,6 +19,9 @@ from india_compliance.gst_india.constants import SERVICE_HSN_PREFIX
 from india_compliance.gst_india.overrides.sales_invoice import (
     is_e_waybill_applicable,
 )
+from india_compliance.gst_india.overrides.test_subcontracting_transaction import (
+    create_subcontracting_data,
+)
 from india_compliance.gst_india.utils import load_doc, parse_datetime
 from india_compliance.gst_india.utils.e_invoice import (
     retry_e_invoice_e_waybill_generation,
@@ -37,11 +40,13 @@ from india_compliance.gst_india.utils.e_waybill import (
     update_vehicle_info,
 )
 from india_compliance.gst_india.utils.tests import (
+    SUBCONTRACTING_TEST_FINISHED_ITEM_TG,
     _append_taxes,
     append_item,
     create_purchase_invoice,
     create_sales_invoice,
     create_transaction,
+    make_subcontracting_stock_entry,
 )
 
 DATETIME_FORMAT = "%d/%m/%Y %I:%M:%S %p"
@@ -52,6 +57,7 @@ class TestEWaybill(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        create_subcontracting_data()
 
         frappe.db.set_single_value(
             "GST Settings",
@@ -1328,27 +1334,15 @@ class TestEWaybill(IntegrationTestCase):
         self.assertEqual(e_waybill_data.get("fromStateCode"), 96)
         self.assertEqual(e_waybill_data.get("toStateCode"), 24)
 
-    @change_settings("GST Settings", {"enable_e_waybill_for_sc": 1})
+    @change_settings(
+        "GST Settings",
+        {"enable_e_waybill_for_sc": 1, "enable_overseas_transactions": 1},
+    )
     def test_e_waybill_for_sez_stock_entry(self):
-        se = create_transaction(
-            doctype="Stock Entry",
-            stock_entry_type="Send to Subcontractor",
-            purpose="Send to Subcontractor",
+        se = make_subcontracting_stock_entry(
             bill_from_address="_Test Indian Registered Company-Billing",
             bill_to_address="_Test Registered Customer-Billing-1",
             vehicle_no="GJ07DL9009",
-            items=[
-                {
-                    "item_code": "_Test Trading Goods 1",
-                    "qty": 1,
-                    "gst_hsn_code": "61149090",
-                    "s_warehouse": "Finished Goods - _TIRC",
-                    "t_warehouse": "Goods In Transit - _TIRC",
-                    "amount": 100,
-                    "taxable_value": 100,
-                }
-            ],
-            company="_Test Indian Registered Company",
             base_grand_total=100,
         )
 
@@ -1506,11 +1500,15 @@ class TestEWaybill(IntegrationTestCase):
 
     def _create_stock_entry(self, test_case):
         """Generate Stock Entry to test e-Waybill functionalities"""
-        doc_args = self.e_waybill_test_data.get(test_case).get("kwargs")
-        doc_args.update({"doctype": "Stock Entry"})
+        doc_args = frappe._dict(self.e_waybill_test_data.get(test_case).get("kwargs"))
+        if doc_args.get("purpose") == "Send to Subcontractor":
+            return make_subcontracting_stock_entry(
+                fg_item=SUBCONTRACTING_TEST_FINISHED_ITEM_TG,
+                **doc_args,
+            )
 
-        stock_entry = create_transaction(**doc_args)
-        return stock_entry
+        doc_args["doctype"] = "Stock Entry"
+        return create_transaction(**doc_args)
 
     def _create_purchase_receipt(self, test_case):
         """Generate Purchase Receipt to test e-Waybill functionalities"""
