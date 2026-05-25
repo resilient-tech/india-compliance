@@ -28,6 +28,7 @@ from india_compliance.gst_india.constants import GST_TAX_TYPES, SALES_DOCTYPES
 from india_compliance.gst_india.overrides.transaction import (
     DOCTYPES_WITH_GST_DETAIL,
     ItemGSTDetails,
+    validate_gst_refund_accounts,
 )
 from india_compliance.gst_india.utils.tests import (
     _append_taxes,
@@ -230,6 +231,7 @@ class TestTransaction(FrappeTestCase):
 
         frappe.db.set_value("Address", address, "gst_category", gst_category)
 
+    @change_settings("GST Settings", {"enable_overseas_transactions": 0})
     def test_validate_overseas_gst_category(self):
         # GST Setting is disabled by default.
 
@@ -1021,6 +1023,18 @@ class TestTransaction(FrappeTestCase):
         )
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_validate_gst_refund_accounts_with_none_tax_amount(self):
+        """
+        Tax rows with None `base_tax_amount_after_discount_amount`
+        must not crash refund-accounts validation.
+        """
+        doc = create_refund_transaction()
+        for tax in doc.taxes:
+            tax.base_tax_amount_after_discount_amount = None
+
+        validate_gst_refund_accounts(doc)
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_validate_gst_refund_accounts_for_credit_note(self):
         doc = create_refund_transaction()
         doc.submit()
@@ -1077,6 +1091,25 @@ class TestTransaction(FrappeTestCase):
         )
         for item in doc.items:
             item.taxable_value = None
+
+        ItemGSTDetails().update(doc)
+
+    def test_none_tax_amount_after_discount_amount(self):
+        """
+        Tax rows with None `base_tax_amount_after_discount_amount`
+        must not raise error.
+        """
+        if self.doctype not in DOCTYPES_WITH_GST_DETAIL:
+            return
+
+        doc = create_transaction(
+            **self.transaction_details,
+            is_in_state=True,
+            do_not_save=True,
+        )
+        for tax in doc.taxes:
+            tax.tax_amount_after_discount_amount = None
+            tax.base_tax_amount_after_discount_amount = None
 
         ItemGSTDetails().update(doc)
 

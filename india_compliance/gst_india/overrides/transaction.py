@@ -193,11 +193,8 @@ def get_tds_amount(doc):
         if row.account_head not in tds_accounts:
             continue
 
-        if row.get("add_deduct_tax") and row.add_deduct_tax == "Deduct":
-            tds_amount -= row.base_tax_amount_after_discount_amount
-
-        else:
-            tds_amount += row.base_tax_amount_after_discount_amount
+        multiplier = -1 if row.get("add_deduct_tax") == "Deduct" else 1
+        tds_amount += multiplier * flt(row.base_tax_amount_after_discount_amount)
 
     return tds_amount
 
@@ -1138,7 +1135,7 @@ def validate_reverse_charge_transaction(doc):
         if not tax.gst_tax_type or not tax.tax_amount:
             continue
 
-        tax_amount = tax.base_tax_amount_after_discount_amount
+        tax_amount = flt(tax.base_tax_amount_after_discount_amount)
         if is_return:
             tax_amount = -tax_amount
 
@@ -1192,8 +1189,9 @@ def validate_gst_refund_accounts(doc):
     net_amount = 0
 
     for tax in doc.taxes:
+        tax_amount = flt(tax.base_tax_amount_after_discount_amount)
         if tax.gst_tax_type not in GST_REFUND_TAX_TYPES:
-            net_amount += tax.base_tax_amount_after_discount_amount
+            net_amount += tax_amount
             continue
 
         # Refund should be
@@ -1209,7 +1207,7 @@ def validate_gst_refund_accounts(doc):
             )
 
         has_refund = True
-        net_amount += tax.base_tax_amount_after_discount_amount
+        net_amount += tax_amount
 
     # Validate if refund amount is same as total gst amount
     if has_refund and net_amount != 0:
@@ -1297,7 +1295,7 @@ class ItemGSTDetails:
             if not self.is_gst_tax_row(tax_row):
                 continue
             tax_type = tax_row.gst_tax_type
-            tax_differences[tax_type] += tax_row.get(self.tax_amount_field(), 0)
+            tax_differences[tax_type] += flt(tax_row.get(self.tax_amount_field()))
 
         last_item_with_tax = None
         last_item_defaults = None
@@ -1389,7 +1387,7 @@ class ItemGSTDetails:
 
             old = json.loads(row.get(self.tax_details_field(), "{}"))
 
-            tax_difference = row.base_tax_amount_after_discount_amount
+            tax_difference = flt(row.base_tax_amount_after_discount_amount)
             last_item_with_tax = None
 
             # update item taxes
