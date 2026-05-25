@@ -126,11 +126,10 @@ function custom_report_column_total(...args) {
     const column_field = args[1].column.fieldname;
     if (column_field === "description") return;
 
-    const total = this.datamanager.data.reduce((acc, row) => {
-        if (row.indent !== 1 && row.description !== "Supplies made through E-commerce Operators")
-            acc += row[column_field] || 0;
-        return acc;
+    const { data } = this.datamanager;
+    return this.datamanager.getFilteredRowIndices().reduce((acc, index) => {
+        const row = data[index];
+        if (row.indent === 1 || row.description === "Supplies made through E-commerce Operators") return acc;
+        return acc + (row[column_field] || 0);
     }, 0);
-
-    return total;
 }
