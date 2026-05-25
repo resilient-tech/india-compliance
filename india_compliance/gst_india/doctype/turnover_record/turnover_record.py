@@ -45,5 +45,10 @@ def upsert_turnover_record(
             doc.gst_category = gst_category
             doc.amount = amount
             doc.insert(ignore_permissions=True)
-    except frappe.ValidationError as e:
-        return
+    except frappe.ValidationError:
+        frappe.log_error(
+            title=_("Turnover Record upsert failed"),
+            message=_(
+                "Failed to upsert Turnover Record for fiscal_year={0}, gst_state={1}, gstin={2}"
+            ).format(fiscal_year, gst_state, gstin),
+        )

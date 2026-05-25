@@ -1264,16 +1264,27 @@ def has_gst_taxes(doc):
     return any(row.gst_tax_type in TAX_TYPES for row in doc.taxes)
 
 
-@frappe.whitelist()
-def get_party_docs_from_party_party(filters: str | dict | frappe._dict):
+ISD_PARTY_DOCTYPES = ("Customer", "Supplier", "Company")
 
+
+@frappe.whitelist()
+def get_party_for_isd(filters: str | dict | frappe._dict):
     if isinstance(filters, str):
         filters = json.loads(filters)
 
-    search_text = filters.get("search_text")
     doctype = filters.get("doctype")
-    print("###### get party whitelisted call", search_text, doctype)
+    if doctype not in ISD_PARTY_DOCTYPES:
+        frappe.throw(
+            frappe._("Invalid doctype {0} for ISD party lookup").format(doctype),
+            frappe.PermissionError,
+        )
 
-    result =  frappe.db.get_list(doctype, filters={"name": ("like", f"%{search_text}%")}, limit=10, pluck="name")
-    print(f"#### {result}")
-    return result
+    frappe.has_permission(doctype, "read", throw=True)
+
+    search_text = filters.get("search_text") or ""
+    return frappe.db.get_list(
+        doctype,
+        filters={"name": ("like", f"%{search_text}%")},
+        limit=10,
+        pluck="name",
+    )

@@ -69,7 +69,7 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                             let party_type = doc.party_type;
                             let search_text = doc.party || "";
                             return {
-                                query: "india_compliance.gst_india.utils.get_party_docs_from_party_party",
+                                query: "india_compliance.gst_india.utils.get_party_for_isd",
                                 params: {
                                     filters: {
                                         doctype: party_type,
@@ -92,7 +92,7 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                                 filters: {
                                     link_doctype: doc.party_type,
                                     link_name: doc.party,
-                                }
+                                },
                             };
                         },
                         change: async function () {
@@ -218,29 +218,37 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                     const { message } = r;
                     const success = message[0];
                     const invalid = message[1];
-                    if (invalid.length) {
-                        frappe.msgprint({
-                            title: "Some ISD Invoices failed validations",
-                            message: invalid,
-                            indicator: "orange",
-                            as_list: true,
-                        });
-                    }
-                    if (success.length) {
-                        console.log("Succes", success);
-                        const filter_string = encodeURIComponent(
-                            JSON.stringify([["ISD Invoice", "ID", "in", success]])
+
+                    if (!invalid.length && !success.length) {
+                        frappe.msgprint(
+                            {
+                                title: __("No ISD Invoices Created"),
+                                indicator: "red",
+                            }
                         );
-                        const list_view_url = `/app/isd-invoice?filters=${filter_string}`;
-                        const message_html = __("ISD Invoices generated successfully. {0}", [
-                            `<a href="${list_view_url}"><strong>${__("View List")}</strong></a>`,
-                        ]);
-                        frappe.msgprint({
-                            title: "ISD Invoices Created",
-                            message: message_html,
-                            indicator: "green",
-                        });
+                        return;
                     }
+
+                    let msgprint_message = "ISD Invoices creation completed\n";
+                    let indicator = "green";
+                    if (invalid.length) {
+                        indicator = "orange";
+                        msgprint_message += "Some ISD Invoices failed validations. Please check " + invalid.join(", ") + " for details.\n";
+                    }
+                    frappe.msgprint({
+                        title: "ISD Invoices Created",
+                        message: msgprint_message,
+                        indicator: indicator,
+                        primary_action_label: __("View ISD Invoices"),
+                        primary_action: {
+                            action(values) {
+                                frappe.route_options = {
+                                    name: ["in", success.concat(invalid)],
+                                }
+                                frappe.set_route("List", "ISD Invoice");
+                            },
+                        },
+                    });
                 },
             });
         },
@@ -279,13 +287,10 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
     const currency = frappe.boot.sysdefaults.currency;
 
     function render_summary(dist_map) {
-        let total_remaining = 0;
         const rows_html = purchase_invoices
             .map((pi) => {
                 const total = (dist_map[pi.name] || {}).total_tax ?? pi.total_tax ?? 0;
                 const distributed = (dist_map[pi.name] || {}).total_distributed || pi.total_distributed || 0;
-                const remaining = Math.max(total - distributed, 0);
-                total_remaining += remaining;
                 const pct = total > 0 ? Math.min((distributed / total) * 100, 100) : 0;
                 const pct_label = pct.toFixed(1) + "%";
                 const text_color = pct > 50 ? "#fff" : "#333";
@@ -294,8 +299,7 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                     <td>${frappe.datetime.str_to_user(pi.posting_date)}</td>
                     <td>${pi.supplier || ""}</td>
                     <td style="text-align:right">${format_currency(total, currency)}</td>
-                    <td style="text-align:right">${format_currency(remaining, currency)}</td>
-                    <td style="min-width:90px; vertical-align:middle;">
+                    <td style="min-width:140px; vertical-align:middle;">
                         <div style="position:relative;">
                             <div class="progress" style="height:20px; margin:0; border-radius:3px; background-color:#dee2e6;">
                                 <div class="progress-bar bg-success" role="progressbar"
@@ -322,14 +326,12 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                     <th>${__("Posting Date")}</th>
                     <th>${__("Supplier")}</th>
                     <th style="text-align:right">${__("Total Tax")}</th>
-                    <th style="text-align:right">${__("Remaining")}</th>
-                    <th>${__("Distributed %")}</th>
+                    <th>${__("Distributed")}</th>
                 </tr></thead>
                 <tbody>${rows_html}</tbody>
                 <tfoot><tr>
                     <td colspan="3"><strong>${__("Total")}</strong></td>
                     <td style="text-align:right"><strong>${format_currency(total_tax, currency)}</strong></td>
-                    <td style="text-align:right"><strong>${format_currency(total_remaining, currency)}</strong></td>
                     <td></td>
                 </tr></tfoot>
             </table>

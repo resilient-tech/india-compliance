@@ -115,17 +115,17 @@ def set_pending_boe_qty(doc):
 
 
 def set_is_isd_applicable(doc):
-    if not doc.billing_address:
-        doc.is_isd_applicable = 0
+    doc.is_isd_applicable = 0
+
+    if not doc.billing_address or not doc.place_of_supply or not doc.company_gstin:
         return
 
-    if doc.place_of_supply:
-        if not doc.company_gstin or doc.place_of_supply[:2] != doc.company_gstin[:2]:
-            doc.is_isd_applicable = 0
-            return
+    if doc.place_of_supply[:2] != doc.company_gstin[:2]:
+        return
 
     gst_category = frappe.db.get_value("Address", doc.billing_address, "gst_category")
-    doc.is_isd_applicable = 1 if gst_category == "Input Service Distributor" else 0
+    if gst_category == "Input Service Distributor":
+        doc.is_isd_applicable = 1
 
 
 def set_boe_applicability(doc):
