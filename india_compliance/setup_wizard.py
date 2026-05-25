@@ -68,10 +68,15 @@ def configure_audit_trail(params):
 
 
 def setup_company_taxes(params):
-    if not params.company_gstin:
+    if params.country != "India":
         return
 
     if not (params.company_name and frappe.db.exists("Company", params.company_name)):
+        return
+
+    setup_tax_template(params)
+
+    if not params.company_gstin:
         return
 
     try:
@@ -85,7 +90,6 @@ def setup_company_taxes(params):
 
     update_company_info(params, gstin_info.gst_category)
     create_address(gstin_info, params)
-    setup_tax_template(params)
 
 
 def update_company_info(params, gst_category=None):
