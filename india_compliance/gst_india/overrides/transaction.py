@@ -1662,7 +1662,6 @@ def validate_transaction(doc, method=None):
         validate_gst_refund_accounts(doc)
     update_taxable_values(doc)
     validate_item_wise_tax_detail(doc)
-    set_gst_breakup(doc)
 
 
 def before_print(doc, method=None, print_settings=None):
