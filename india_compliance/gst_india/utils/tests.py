@@ -11,6 +11,7 @@ SUBCONTRACTING_TEST_RM_ITEM_2 = "Subcontracted SRM Item 2"
 SUBCONTRACTING_TEST_SERVICE_ITEM = "Subcontracted Service Item 1"
 SUBCONTRACTING_TEST_FINISHED_ITEM = "Subcontracted Item SA1"
 SUBCONTRACTING_TEST_FINISHED_ITEM_2 = "Subcontracted Item SA2"
+SUBCONTRACTING_TEST_FINISHED_ITEM_TG = "Subcontracted Item Trading Goods"
 
 
 def create_sales_invoice(**data):
@@ -162,10 +163,19 @@ def create_transaction(**data):
 
 
 def make_subcontracting_stock_entry(**data):
+    """Build a SCO-backed "Send to Subcontractor" Stock Entry.
+
+    Items are derived from the SCO's supplied_items; passing `items` is a
+    no-op (the key is popped silently — the SE shape is determined by the
+    SCO's BOM, not by caller-supplied items). Pass `fg_item` to choose which
+    sub-contracted item's BOM drives the SE — different BOMs yield different
+    item lists and totals on the resulting SE.
+    """
     data = frappe._dict(data)
     do_not_save = data.pop("do_not_save", False)
     do_not_submit = data.pop("do_not_submit", False)
     data.pop("items", None)  # always derived from SCO supplied_items
+    fg_item = data.pop("fg_item", SUBCONTRACTING_TEST_FINISHED_ITEM)
 
     purchase_order = create_transaction(
         doctype="Purchase Order",
@@ -173,7 +183,7 @@ def make_subcontracting_stock_entry(**data):
         item_code=SUBCONTRACTING_TEST_SERVICE_ITEM,
         qty=1,
         rate=100,
-        fg_item=SUBCONTRACTING_TEST_FINISHED_ITEM,
+        fg_item=fg_item,
         fg_item_qty=1,
         supplier_warehouse="Finished Goods - _TIRC",
     )

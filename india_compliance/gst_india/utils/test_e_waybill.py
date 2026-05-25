@@ -40,6 +40,7 @@ from india_compliance.gst_india.utils.e_waybill import (
     update_vehicle_info,
 )
 from india_compliance.gst_india.utils.tests import (
+    SUBCONTRACTING_TEST_FINISHED_ITEM_TG,
     _append_taxes,
     append_item,
     create_purchase_invoice,
@@ -1499,14 +1500,15 @@ class TestEWaybill(IntegrationTestCase):
 
     def _create_stock_entry(self, test_case):
         """Generate Stock Entry to test e-Waybill functionalities"""
-        doc_args = self.e_waybill_test_data.get(test_case).get("kwargs")
+        doc_args = frappe._dict(self.e_waybill_test_data.get(test_case).get("kwargs"))
         if doc_args.get("purpose") == "Send to Subcontractor":
-            return make_subcontracting_stock_entry(**doc_args)
+            return make_subcontracting_stock_entry(
+                fg_item=SUBCONTRACTING_TEST_FINISHED_ITEM_TG,
+                **doc_args,
+            )
 
-        doc_args.update({"doctype": "Stock Entry"})
-
-        stock_entry = create_transaction(**doc_args)
-        return stock_entry
+        doc_args["doctype"] = "Stock Entry"
+        return create_transaction(**doc_args)
 
     def _create_purchase_receipt(self, test_case):
         """Generate Purchase Receipt to test e-Waybill functionalities"""
