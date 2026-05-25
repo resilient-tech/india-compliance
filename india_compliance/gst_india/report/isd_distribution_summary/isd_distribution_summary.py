@@ -89,16 +89,10 @@ def get_data(filters):
             pi.place_of_supply,
             pi.base_grand_total.as_("total_value"),
             Sum(pi_item.net_amount).as_("taxable_value"),
-            Sum(
-                Case()
-                .when(pi_item.is_ineligible_for_itc == 0, item_tax)
-                .else_(0)
-            ).as_("total_eligible_tax"),
-            Sum(
-                Case()
-                .when(pi_item.is_ineligible_for_itc == 1, item_tax)
-                .else_(0)
-            ).as_("total_ineligible_tax"),
+            Sum(Case().when(pi_item.is_ineligible_for_itc == 0, item_tax).else_(0)).as_("total_eligible_tax"),
+            Sum(Case().when(pi_item.is_ineligible_for_itc == 1, item_tax).else_(0)).as_(
+                "total_ineligible_tax"
+            ),
         )
         .where(pi.docstatus == 1)
         .where(pi.is_isd_applicable == 1)
@@ -134,7 +128,6 @@ def get_data(filters):
 
         remaining_eligible = total_eligible - eligible_distributed
         remaining_ineligible = total_ineligible - ineligible_distributed
-
 
         if filters.get("pending_distribution"):
             if not (remaining_eligible == total_eligible and remaining_ineligible == total_ineligible):

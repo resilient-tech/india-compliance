@@ -7,7 +7,7 @@ frappe.ui.form.on("ISD Invoice", {
 
     refresh(frm) {
         frm.set_df_property("to_party_state", "options", [""].concat(frappe.boot.india_state_options));
-        frm.isd_controller.update_address_labels();        // Show button to create inter-company invoice on submit
+        frm.isd_controller.update_address_labels(); // Show button to create inter-company invoice on submit
         if (frm.doc.docstatus === 1 && frm.doc.is_against_party && !frm.doc.inter_company_invoice_reference) {
             frm.add_custom_button(
                 __("Inter Company ISD Invoice"),
@@ -20,7 +20,6 @@ frappe.ui.form.on("ISD Invoice", {
                 __("Create"),
             );
         }
-
     },
 
     company(frm) {
@@ -334,43 +333,42 @@ class ISDInvoiceController {
         const row = locals[cdt][cdn];
         if (!row.purchase_invoice) return;
 
-        frappe
-            .call({
-                method: "india_compliance.gst_india.doctype.isd_invoice.isd_invoice.get_source_invoices_from_purchase_invoices",
-                args: { purchase_invoices: [row.purchase_invoice] },
-                callback: (result) => {
-                    const items = result.message || [];
-                    const match = items.find((item) => item.is_ineligible_for_itc == row.is_ineligible_for_itc);
-                    if (!match) {
-                        const itc_type = row.is_ineligible_for_itc ? __("ineligible") : __("eligible");
-                        frappe.msgprint({
-                            message: __("No {0} ITC taxes found for Purchase Invoice {1}", [
-                                itc_type,
-                                row.purchase_invoice,
-                            ]),
-                            indicator: "orange",
-                            title: __("No Matching Taxes"),
-                        });
-                        frappe.model.set_value(cdt, cdn, {
-                            total_igst: 0,
-                            total_cgst: 0,
-                            total_sgst: 0,
-                            total_cess: 0,
-                            total_cess_non_advol: 0,
-                        });
-                        return;
-                    }
-    
-                    frappe.model.set_value(cdt, cdn, {
-                        total_igst: match.total_igst,
-                        total_cgst: match.total_cgst,
-                        total_sgst: match.total_sgst,
-                        total_cess: match.total_cess,
-                        total_cess_non_advol: match.total_cess_non_advol,
+        frappe.call({
+            method: "india_compliance.gst_india.doctype.isd_invoice.isd_invoice.get_source_invoices_from_purchase_invoices",
+            args: { purchase_invoices: [row.purchase_invoice] },
+            callback: (result) => {
+                const items = result.message || [];
+                const match = items.find((item) => item.is_ineligible_for_itc == row.is_ineligible_for_itc);
+                if (!match) {
+                    const itc_type = row.is_ineligible_for_itc ? __("ineligible") : __("eligible");
+                    frappe.msgprint({
+                        message: __("No {0} ITC taxes found for Purchase Invoice {1}", [
+                            itc_type,
+                            row.purchase_invoice,
+                        ]),
+                        indicator: "orange",
+                        title: __("No Matching Taxes"),
                     });
-                    this.recalculate();
+                    frappe.model.set_value(cdt, cdn, {
+                        total_igst: 0,
+                        total_cgst: 0,
+                        total_sgst: 0,
+                        total_cess: 0,
+                        total_cess_non_advol: 0,
+                    });
+                    return;
                 }
-            })
+
+                frappe.model.set_value(cdt, cdn, {
+                    total_igst: match.total_igst,
+                    total_cgst: match.total_cgst,
+                    total_sgst: match.total_sgst,
+                    total_cess: match.total_cess,
+                    total_cess_non_advol: match.total_cess_non_advol,
+                });
+                this.recalculate();
+            },
+        });
     }
 
     set_address_display(address_field, display_field) {
@@ -443,8 +441,13 @@ class ISDInvoiceController {
         const source_invoices = this.frm.doc.source_invoices || [];
         if (!source_invoices.length) return;
 
-        let total_igst = 0, total_cgst = 0, total_sgst = 0, total_cess = 0, total_cess_non_advol = 0;
-        let total_eligible = 0, total_ineligible = 0;
+        let total_igst = 0,
+            total_cgst = 0,
+            total_sgst = 0,
+            total_cess = 0,
+            total_cess_non_advol = 0;
+        let total_eligible = 0,
+            total_ineligible = 0;
         for (const r of source_invoices) {
             total_igst += r.distributed_igst || 0;
             total_cgst += r.distributed_cgst || 0;

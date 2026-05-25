@@ -40,6 +40,7 @@ def get_data(filters):
     else:
         return get_isd_invoice_data(filters)
 
+
 # ── View A: Purchase Invoice ──────────────────────────────────────────────────
 
 
@@ -89,7 +90,11 @@ def get_purchase_invoice_data(filters):
         .where(pi.posting_date[filters.from_date : filters.to_date])
         .groupby(
             pi.name,
-            pi_item.igst_rate + pi_item.cgst_rate + pi_item.sgst_rate + pi_item.cess_rate + pi_item.cess_non_advol_rate,
+            pi_item.igst_rate
+            + pi_item.cgst_rate
+            + pi_item.sgst_rate
+            + pi_item.cess_rate
+            + pi_item.cess_non_advol_rate,
         )
         .orderby(pi.posting_date, Order.desc)
         .orderby(pi.name, Order.asc)
@@ -111,9 +116,8 @@ def get_purchase_invoice_data(filters):
     return query.run(as_dict=True)
 
 
-
-
 # ── View B: ISD Invoice ───────────────────────────────────────────────────────
+
 
 def get_isd_invoice_data(filters):
     isd = frappe.qb.DocType("ISD Invoice")
@@ -151,7 +155,10 @@ def get_isd_invoice_data(filters):
             recipient_gstin_col,
             isd.party_pos.as_("recipient_pos"),
             isd.is_credit_note,
-            Case().when(isd_src_items.is_ineligible_for_itc == 0, "Eligible").else_("Ineligible").as_("eligibility"),
+            Case()
+            .when(isd_src_items.is_ineligible_for_itc == 0, "Eligible")
+            .else_("Ineligible")
+            .as_("eligibility"),
             dist_igst,
             dist_cgst,
             dist_sgst,
@@ -159,7 +166,7 @@ def get_isd_invoice_data(filters):
             dist_cess_non_advol,
         )
         .where(isd.docstatus == 1)
-        .where(isd.posting_date[filters.from_date: filters.to_date])
+        .where(isd.posting_date[filters.from_date : filters.to_date])
         .groupby(isd.name, isd_src_items.is_ineligible_for_itc)
         .orderby(isd.posting_date, Order.desc)
         .orderby(isd.name, Order.asc)
@@ -174,17 +181,13 @@ def get_isd_invoice_data(filters):
 
     if filters.get("distributor_gstin"):
         query = query.where(
-            Case()
-            .when(isd.credit_flow == "Credit Distribution", isd.company_gstin)
-            .else_(isd.party_gstin)
+            Case().when(isd.credit_flow == "Credit Distribution", isd.company_gstin).else_(isd.party_gstin)
             == filters.distributor_gstin
         )
 
     if filters.get("recipient_gstin"):
         query = query.where(
-            Case()
-            .when(isd.credit_flow == "Credit Distribution", isd.party_gstin)
-            .else_(isd.company_gstin)
+            Case().when(isd.credit_flow == "Credit Distribution", isd.party_gstin).else_(isd.company_gstin)
             == filters.recipient_gstin
         )
 
@@ -249,7 +252,6 @@ def _get_purchase_invoice_columns(company_currency):
             "fieldtype": "Date",
             "width": 120,
         },
-
         {
             "fieldname": "pos",
             "label": _("POS"),

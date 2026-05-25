@@ -30,6 +30,7 @@ _CUSTOMER_1_GSTIN = "24AAACI1681G3ZT"  # Customer of company 1 (ISD address)
 _SUPPLIER_2_GSTIN = "24AAACI1681G1ZV"  # Supplier of company 2 (non-ISD address)
 _CUSTOMER_2_GSTIN = "24AAACI1681G1ZV"  # Customer of company 2 (non-ISD address)
 
+
 # TODO: make this performant by adding to test_records.js
 class TestISDInvoice(IntegrationTestCase):
     @classmethod
@@ -83,7 +84,6 @@ class TestISDInvoice(IntegrationTestCase):
             state="Gujarat",
             links=[{"link_doctype": "Company", "link_name": cls.branch_company}],
         )
-
 
         # --- Internal supplier for Company 1 (ISD address) ---
         cls.supplier_company1 = _make_internal_supplier(
@@ -154,7 +154,6 @@ class TestISDInvoice(IntegrationTestCase):
             gst_category="Registered Regular",
             state="Gujarat",
         )
-
 
     def test_inter_company_validation_skipped_when_not_against_party(self):
         doc = _make_isd_doc(company=self.company, is_against_party=0)
@@ -280,29 +279,34 @@ class TestISDInvoice(IntegrationTestCase):
         isd_c = frappe.get_doc("ISD Invoice", invoice_names[2])
 
         original_total_tax = pi_cgst + pi_sgst + pi_igst + pi_cess + pi_cess_non_advol
-        tax_fields = ["distributed_cgst", "distributed_sgst", "distributed_igst", "distributed_cess", "distributed_cess_non_advol"]
-        distributed_total_tax = sum(
-            getattr(row, field) for row in isd_a.source_invoices for field in tax_fields
-        ) + sum(
-            getattr(row, field) for row in isd_b.source_invoices for field in tax_fields
-        ) + sum(
-            getattr(row, field) for row in isd_c.source_invoices for field in tax_fields
+        tax_fields = [
+            "distributed_cgst",
+            "distributed_sgst",
+            "distributed_igst",
+            "distributed_cess",
+            "distributed_cess_non_advol",
+        ]
+        distributed_total_tax = (
+            sum(getattr(row, field) for row in isd_a.source_invoices for field in tax_fields)
+            + sum(getattr(row, field) for row in isd_b.source_invoices for field in tax_fields)
+            + sum(getattr(row, field) for row in isd_c.source_invoices for field in tax_fields)
         )
 
-        print(f"Original total tax: {original_total_tax}"
-              f"\n Distributed tax table: {[{field: getattr(row, field) for field in tax_fields} for row in isd_a.source_invoices + isd_b.source_invoices + isd_c.source_invoices]}")
+        print(
+            f"Original total tax: {original_total_tax}"
+            f"\n Distributed tax table: {[{field: getattr(row, field) for field in tax_fields} for row in isd_a.source_invoices + isd_b.source_invoices + isd_c.source_invoices]}"
+        )
 
         self.assertEqual(distributed_total_tax, original_total_tax)
 
+    # TODO: ask lakshit bhai about the following test cases
+    # >>> 16666666.666666666 * 6
+    # 99999999.99999996  # mathematically wrong
 
-# TODO: ask lakshit bhai about the following test cases
-# >>> 16666666.666666666 * 6
-# 99999999.99999996  # mathematically wrong
-
-# >>> 16666666.666666666 + 16666666.666666666 + 16666666.666666666 + \
-#     16666666.666666666 + 16666666.666666666 + 16666666.666666666
-# 100000000.0  # float rounding "accidentally" gives the right answer
-# is okay that python solves this problem by keeping the floating point
+    # >>> 16666666.666666666 + 16666666.666666666 + 16666666.666666666 + \
+    #     16666666.666666666 + 16666666.666666666 + 16666666.666666666
+    # 100000000.0  # float rounding "accidentally" gives the right answer
+    # is okay that python solves this problem by keeping the floating point
     def test_bulk_creation_captures_undistributed_amount_in_last_invoice(self):
         """Last ISD invoice absorbs rounding remainder so total distributed == PI total.
 
@@ -314,7 +318,14 @@ class TestISDInvoice(IntegrationTestCase):
             company=self.company,
             billing_address=self.company_isd_address.name,
             supplier="_Test Registered Supplier",
-            items=[{"item_code": "_Test Service Item", "qty": 1, "rate": (100/18)*200000000, "gst_hsn_code": "999800"}],
+            items=[
+                {
+                    "item_code": "_Test Service Item",
+                    "qty": 1,
+                    "rate": (100 / 18) * 200000000,
+                    "gst_hsn_code": "999800",
+                }
+            ],
             is_in_state=True,
         )
         pi_total = sum(
@@ -357,8 +368,11 @@ class TestISDInvoice(IntegrationTestCase):
         invoice_names, _ = bulk_create_isd_invoices(distribution_heads=rows, source_names=[pi.name])
 
         tax_fields = [
-            "distributed_cgst", "distributed_sgst", "distributed_igst",
-            "distributed_cess", "distributed_cess_non_advol",
+            "distributed_cgst",
+            "distributed_sgst",
+            "distributed_igst",
+            "distributed_cess",
+            "distributed_cess_non_advol",
         ]
         distributed_total = sum(
             getattr(row, f)
@@ -367,13 +381,15 @@ class TestISDInvoice(IntegrationTestCase):
             for f in tax_fields
         )
         print(f"Original total tax: {pi_total}")
-        print(f"Distributed tax table: {[{field: getattr(row, field) for field in tax_fields} for name in invoice_names for row in frappe.get_doc('ISD Invoice', name).source_invoices]}")
+        print(
+            f"Distributed tax table: {[{field: getattr(row, field) for field in tax_fields} for name in invoice_names for row in frappe.get_doc('ISD Invoice', name).source_invoices]}"
+        )
         print("Distributed total tax", distributed_total)
 
         self.assertEqual(distributed_total, pi_total)
 
     # TODO: party being overseas
-    # TODO: party being sez 
+    # TODO: party being sez
     def test_distribution_with_sez_recipient(self):
         """When recipient is SEZ, amount is distributed as IGST only, even for intra-state supply."""
         turnover_a = 1000000
@@ -398,7 +414,7 @@ class TestISDInvoice(IntegrationTestCase):
                 "party_address": sez_address.name,
                 "party_type": "Company",
                 "party": self.company,
-                "fiscal_year": get_fiscal_year(pi.posting_date, company=pi.company)[0]
+                "fiscal_year": get_fiscal_year(pi.posting_date, company=pi.company)[0],
             }
         ]
 
@@ -412,9 +428,9 @@ class TestISDInvoice(IntegrationTestCase):
                 self.assertEqual(row.distributed_sgst, 0)
                 self.assertGreater(row.distributed_igst, 0)
 
-
     # TODO: party being overseas
     # TODO: items being non services (check using hsn code)
+
 
 def _make_company(company_name, abbr, gstin, gst_category="Registered Regular", parent_company=None):
     if frappe.db.exists("Company", company_name):
@@ -474,10 +490,7 @@ def _make_isd_doc(**kwargs):
     return doc
 
 
-
-def _make_internal_supplier(
-    supplier_name, represents_company, allowed_companies, gstin, gst_category, state
-):
+def _make_internal_supplier(supplier_name, represents_company, allowed_companies, gstin, gst_category, state):
     if frappe.db.exists("Supplier", supplier_name):
         frappe.delete_doc("Supplier", supplier_name, force=True)
 
@@ -511,9 +524,7 @@ def _make_internal_supplier(
     return supplier
 
 
-def _make_internal_customer(
-    customer_name, represents_company, allowed_companies, gstin, gst_category, state
-):
+def _make_internal_customer(customer_name, represents_company, allowed_companies, gstin, gst_category, state):
     if frappe.db.exists("Customer", customer_name):
         frappe.delete_doc("Customer", customer_name, force=True)
 

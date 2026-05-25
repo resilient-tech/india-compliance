@@ -31,7 +31,9 @@ def upsert_turnover_record(
     filters = {"fiscal_year": fiscal_year}
     or_filters = {"gst_state": gst_state, "gstin": gstin or ""}
 
-    existing = frappe.db.get_list("Turnover Record", filters=filters, or_filters=or_filters, pluck="name", limit=1)
+    existing = frappe.db.get_list(
+        "Turnover Record", filters=filters, or_filters=or_filters, pluck="name", limit=1
+    )
     existing = existing[0] if existing else None
 
     try:

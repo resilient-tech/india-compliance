@@ -30,11 +30,11 @@ class ISDInvoice(Document):
     def validate(self):
         self.clear_fields_when_is_against_party_not_set()
         self.set_pos_from_gstin()
-        self.validate_isd_party() #
-        self.validate_pan_consistency() #
+        self.validate_isd_party()  #
+        self.validate_pan_consistency()  #
         self.validate_distribution_limits()
-        self.validate_inter_company_transaction() #
-        self.autoset_taxes() #
+        self.validate_inter_company_transaction()  #
+        self.autoset_taxes()  #
 
     def autoset_taxes(self):
         """Populate taxes child table and totals from distributed source invoice amounts."""
@@ -65,19 +65,28 @@ class ISDInvoice(Document):
                 continue
             if not tax_amount:
                 continue
-            self.append("taxes", {
-                "account_head": account_head,
-                "gst_tax_type": gst_tax_type,
-                "tax_amount": tax_amount,
-            })
+            self.append(
+                "taxes",
+                {
+                    "account_head": account_head,
+                    "gst_tax_type": gst_tax_type,
+                    "tax_amount": tax_amount,
+                },
+            )
 
         self.total_eligible = sum(
-            flt(r.distributed_igst) + flt(r.distributed_cgst) + flt(r.distributed_sgst) + flt(r.distributed_cess)
+            flt(r.distributed_igst)
+            + flt(r.distributed_cgst)
+            + flt(r.distributed_sgst)
+            + flt(r.distributed_cess)
             for r in source_invoices
             if not r.is_ineligible_for_itc
         )
         self.total_ineligible = sum(
-            flt(r.distributed_igst) + flt(r.distributed_cgst) + flt(r.distributed_sgst) + flt(r.distributed_cess)
+            flt(r.distributed_igst)
+            + flt(r.distributed_cgst)
+            + flt(r.distributed_sgst)
+            + flt(r.distributed_cess)
             for r in source_invoices
             if r.is_ineligible_for_itc
         )
@@ -91,9 +100,7 @@ class ISDInvoice(Document):
             gstin = self.get(gstin_field)
             self.set(
                 pos_field,
-                get_place_of_supply(frappe._dict(company_gstin=gstin), "Purchase Invoice")
-                if gstin
-                else None,
+                get_place_of_supply(frappe._dict(company_gstin=gstin), "Purchase Invoice") if gstin else None,
             )
 
     def clear_fields_when_is_against_party_not_set(self):
@@ -114,9 +121,9 @@ class ISDInvoice(Document):
 
         if company_pan != party_pan:
             frappe.throw(
-                _(
-                    "PAN of Company GSTIN {0} and Party GSTIN {1} must be the same."
-                ).format(frappe.bold(self.company_gstin), frappe.bold(self.party_gstin))
+                _("PAN of Company GSTIN {0} and Party GSTIN {1} must be the same.").format(
+                    frappe.bold(self.company_gstin), frappe.bold(self.party_gstin)
+                )
             )
 
     def validate_isd_party(self):
@@ -173,8 +180,9 @@ class ISDInvoice(Document):
                     Sum(total_distributed(isd_source_item)).as_("total_distributed"),
                 )
                 .where(
-                    Tuple(isd_source_item.purchase_invoice, isd_source_item.is_ineligible_for_itc)
-                    .isin(souce_invoices)
+                    Tuple(isd_source_item.purchase_invoice, isd_source_item.is_ineligible_for_itc).isin(
+                        souce_invoices
+                    )
                 )
                 .where(isd_invoice.docstatus == 1)
                 .where(isd_invoice.name != (self.name or ""))
@@ -318,7 +326,7 @@ class ISDInvoice(Document):
 
 @frappe.whitelist()
 def get_source_invoices_from_purchase_invoices(purchase_invoices: list | str):
-# TODO: ensure only service items
+    # TODO: ensure only service items
     if isinstance(purchase_invoices, str):
         purchase_invoices = frappe.parse_json(purchase_invoices)
 
@@ -394,9 +402,7 @@ def get_purchase_invoices_distribution_summary(purchase_invoices: list | str, po
     def signed(field):
         return Case().when(isd_invoice.is_credit_note == 1, -field).else_(field)
 
-    total_dist_expr = sum(
-        signed(getattr(isd_source_item, f"distributed_{f}")) for f in tax_fields
-    )
+    total_dist_expr = sum(signed(getattr(isd_source_item, f"distributed_{f}")) for f in tax_fields)
 
     dist_rows = (
         frappe.qb.from_(isd_source_item)
@@ -522,9 +528,7 @@ def _get_autofill_addresses(company, is_against_party, credit_flow, party_type, 
         get_first_address(
             "Company", company, [["gst_category", "=" if is_outward else "!=", ISD_GST_CATEGORY]]
         ),
-        get_first_address(
-            party_type, party, [] if is_outward else [["gst_category", "=", ISD_GST_CATEGORY]]
-        ),
+        get_first_address(party_type, party, [] if is_outward else [["gst_category", "=", ISD_GST_CATEGORY]]),
     )
 
 
@@ -553,8 +557,9 @@ def search_purchase_invoice(txt: str, company: str, billing_address: str | None 
         limit=20,
     )
 
+
 @frappe.whitelist()
-def create_inter_company_invoice(source_name: str, target_doc:str|None=None):
+def create_inter_company_invoice(source_name: str, target_doc: str | None = None):
 
     def post_process(source, target):
         new_direction = CREDIT_RECEIPT if source.credit_flow == CREDIT_DISTRIBUTION else CREDIT_DISTRIBUTION
@@ -562,9 +567,7 @@ def create_inter_company_invoice(source_name: str, target_doc:str|None=None):
 
         new_company = frappe.get_value(source.party_type, source.party, "represents_company")
         if not new_company:
-            frappe.throw(
-                _("{0} {1} does not represent a Company.").format(source.party_type, source.party)
-            )
+            frappe.throw(_("{0} {1} does not represent a Company.").format(source.party_type, source.party))
 
         internal_field = "is_internal_customer" if new_party_type == "Customer" else "is_internal_supplier"
         new_party_name = frappe.get_value(
@@ -589,7 +592,6 @@ def create_inter_company_invoice(source_name: str, target_doc:str|None=None):
         # trigger js for party_address
         target.company_address = ""
         # TODO: set the company address by searching based on the gstin of source.company_address
-
 
     return get_mapped_doc(
         "ISD Invoice",
@@ -645,7 +647,9 @@ def address_query(doctype, txt, searchfield, start, page_len, filters):
 @frappe.whitelist()
 def get_distribution_heads(party_type: str, party: str, posting_date: str, address: str | None = None):
     """get addresses to distribute to based on the Dynamic Link's party and party_type"""
-    fiscal_year = get_fiscal_year(posting_date, company=party, raise_on_missing=False) or get_fiscal_year(today(), company=party, raise_on_missing=False)
+    fiscal_year = get_fiscal_year(posting_date, company=party, raise_on_missing=False) or get_fiscal_year(
+        today(), company=party, raise_on_missing=False
+    )
     fiscal_year = fiscal_year[0] if fiscal_year else None
 
     Address = frappe.qb.DocType("Address")
@@ -701,9 +705,7 @@ def make_isd_invoice(
 
     def set_missing_values(source, target):
         distribution_ratio = (
-            individual_turnover / total_turnover * 100
-            if individual_turnover and total_turnover
-            else 0.0
+            individual_turnover / total_turnover * 100 if individual_turnover and total_turnover else 0.0
         )
         target.distribution_ratio = distribution_ratio
         target.party_address = party_address
@@ -724,7 +726,9 @@ def make_isd_invoice(
         for row in result:
             target.append("source_invoices", {**row, "distribution_ratio": distribution_ratio})
 
-        _calculate_distribution(target, individual_turnover=individual_turnover, total_turnover=total_turnover)
+        _calculate_distribution(
+            target, individual_turnover=individual_turnover, total_turnover=total_turnover
+        )
 
     doc = get_mapped_doc(
         "Purchase Invoice",
@@ -800,8 +804,10 @@ def bulk_create_isd_invoices(distribution_heads: list | str, source_names: list 
             if not fiscal_year:
                 # Use first PI's posting_date for fiscal year; ISD invoice will auto-set its own posting_date to today
                 fiscal_year = get_fiscal_year(seed_pi.posting_date, company=seed_pi.company)[0]
-# todo: remove gst category in turnover records
-            upsert_turnover_record(row["gstin"], row["gst_category"], row["gst_state"], fiscal_year, turnover_amount)
+            # todo: remove gst category in turnover records
+            upsert_turnover_record(
+                row["gstin"], row["gst_category"], row["gst_state"], fiscal_year, turnover_amount
+            )
 
             isd_doc, is_invalid_insertion = make_isd_invoice(
                 source_names=group_source_names,
@@ -824,19 +830,13 @@ def _calculate_distribution(doc, individual_turnover=None, total_turnover=None):
     IMPORT_GST_CATEGORIES = ("Overseas", "SEZ")
 
     company_state = (
-        frappe.db.get_value("Address", doc.company_address, "gst_state")
-        if doc.company_address
-        else None
+        frappe.db.get_value("Address", doc.company_address, "gst_state") if doc.company_address else None
     )
     party_state = (
-        frappe.db.get_value("Address", doc.party_address, "gst_state")
-        if doc.party_address
-        else None
+        frappe.db.get_value("Address", doc.party_address, "gst_state") if doc.party_address else None
     )
     party_gst_category = (
-        frappe.db.get_value("Address", doc.party_address, "gst_category")
-        if doc.party_address
-        else None
+        frappe.db.get_value("Address", doc.party_address, "gst_category") if doc.party_address else None
     )
 
     is_inter_state = (company_state != party_state) or (party_gst_category in IMPORT_GST_CATEGORIES)
@@ -844,7 +844,9 @@ def _calculate_distribution(doc, individual_turnover=None, total_turnover=None):
     use_direct_ratio = individual_turnover is not None and total_turnover
 
     for row in doc.source_invoices:
-        ratio = individual_turnover / total_turnover if use_direct_ratio else flt(row.distribution_ratio) / 100
+        ratio = (
+            individual_turnover / total_turnover if use_direct_ratio else flt(row.distribution_ratio) / 100
+        )
 
         if is_inter_state:
             row.distributed_igst = (row.total_igst + row.total_cgst + row.total_sgst) * ratio
@@ -857,5 +859,3 @@ def _calculate_distribution(doc, individual_turnover=None, total_turnover=None):
 
         row.distributed_cess = row.total_cess * ratio
         row.distributed_cess_non_advol = row.total_cess_non_advol * ratio
-
-

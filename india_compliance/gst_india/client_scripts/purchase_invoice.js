@@ -72,13 +72,15 @@ frappe.ui.form.on(DOCTYPE, {
             frm.add_custom_button(
                 __("ISD Invoice"),
                 () => {
-                    const pi_context = [{
-                        name: frm.doc.name,
-                        posting_date: frm.doc.posting_date,
-                        supplier: frm.doc.supplier,
-                        company: frm.doc.company,
-                        total_tax: get_total_isd_tax_from_frm(frm),
-                    }];
+                    const pi_context = [
+                        {
+                            name: frm.doc.name,
+                            posting_date: frm.doc.posting_date,
+                            supplier: frm.doc.supplier,
+                            company: frm.doc.company,
+                            total_tax: get_total_isd_tax_from_frm(frm),
+                        },
+                    ];
                     india_compliance.show_isd_invoice_distribution_dialog(pi_context);
                 },
                 __("Create"),

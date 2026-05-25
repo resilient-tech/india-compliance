@@ -1049,7 +1049,7 @@ CUSTOM_FIELDS = {
             "default": 0,
             "read_only": 1,
             "no_copy": 1,
-            "depends_on": 'eval:doc.is_isd_applicable',
+            "depends_on": "eval:doc.is_isd_applicable",
         },
         {
             "fieldname": "isd_credit_distributed_percent",

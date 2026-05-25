@@ -29,10 +29,9 @@ async function handle_isd_invoice(docnames) {
     const non_applicable = pis.filter((p) => !p.is_isd_applicable).map((p) => p.name);
     if (non_applicable.length) {
         frappe.throw(
-            __(
-                "The following Purchase Invoices are not applicable for ISD: {0}",
-                [non_applicable.join(", ")],
-            ),
+            __("The following Purchase Invoices are not applicable for ISD: {0}", [
+                non_applicable.join(", "),
+            ]),
         );
         return;
     }

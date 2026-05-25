@@ -220,12 +220,10 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                     const invalid = message[1];
 
                     if (!invalid.length && !success.length) {
-                        frappe.msgprint(
-                            {
-                                title: __("No ISD Invoices Created"),
-                                indicator: "red",
-                            }
-                        );
+                        frappe.msgprint({
+                            title: __("No ISD Invoices Created"),
+                            indicator: "red",
+                        });
                         return;
                     }
 
@@ -233,7 +231,10 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                     let indicator = "green";
                     if (invalid.length) {
                         indicator = "orange";
-                        msgprint_message += "Some ISD Invoices failed validations. Please check " + invalid.join(", ") + " for details.\n";
+                        msgprint_message +=
+                            "Some ISD Invoices failed validations. Please check " +
+                            invalid.join(", ") +
+                            " for details.\n";
                     }
                     frappe.msgprint({
                         title: "ISD Invoices Created",
@@ -244,7 +245,7 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                             action(values) {
                                 frappe.route_options = {
                                     name: ["in", success.concat(invalid)],
-                                }
+                                };
                                 frappe.set_route("List", "ISD Invoice");
                             },
                         },
