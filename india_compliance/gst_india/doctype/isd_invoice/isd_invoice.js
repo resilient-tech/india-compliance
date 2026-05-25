@@ -36,7 +36,7 @@ frappe.ui.form.on("ISD Invoice", {
             // frm.set_value("credit_flow", null);
             // frm.set_value("party_account", null);
         } else {
-            frm.set_value("credit_flow", "Outward");
+            frm.set_value("credit_flow", "Credit Distribution");
             frm.trigger("credit_flow"); // above trigger does not work first time
         }
     },
@@ -163,7 +163,7 @@ frappe.ui.form.on("ISD Invoice Source Item", {
         frappe.model.set_value(cdt, cdn, "distribution_ratio", frm.doc.distribution_ratio || 0);
     },
     purchase_invoice(frm, cdt, cdn) {
-        if (!(frm.is_against_party && frm.doc.credit_flow == "Inward")) {
+        if (!(frm.is_against_party && frm.doc.credit_flow == "Credit Receipt")) {
             frm.isd_controller.autofill_source_item(cdt, cdn);
         }
     },
@@ -196,7 +196,7 @@ class ISDInvoiceController {
                 return { filters: {} };
             }
             const is_company_recipient =
-                this.frm.doc.is_against_party && this.frm.doc.credit_flow === "Inward";
+                this.frm.doc.is_against_party && this.frm.doc.credit_flow === "Credit Receipt";
             const filters = {
                 link_doctype: "Company",
                 link_name: this.frm.doc.company,
@@ -244,7 +244,7 @@ class ISDInvoiceController {
                 link_name: this.frm.doc.party,
             };
 
-            if (this.frm.doc.credit_flow === "Inward") {
+            if (this.frm.doc.credit_flow === "Credit Receipt") {
                 filters.gst_category = "Input Service Distributor";
             }
 
@@ -274,7 +274,7 @@ class ISDInvoiceController {
         });
 
         this.frm.set_query("party_account", () => {
-            const account_type = this.frm.doc.credit_flow === "Inward" ? "Receivable" : "Payable";
+            const account_type = this.frm.doc.credit_flow === "Credit Receipt" ? "Receivable" : "Payable";
             return {
                 filters: {
                     company: this.frm.doc.company,
@@ -289,7 +289,7 @@ class ISDInvoiceController {
         if (!this.frm.doc.company || !this.frm.doc.credit_flow || !this.frm.doc.is_against_party) return;
 
         const account_field =
-            this.frm.doc.credit_flow === "Outward" ? "default_payable_account" : "default_receivable_account";
+            this.frm.doc.credit_flow === "Credit Distribution" ? "default_payable_account" : "default_receivable_account";
 
         frappe.db.get_value("Company", this.frm.doc.company, account_field).then((result) => {
             this.frm.set_value("party_account", result.message?.[account_field]);
@@ -309,7 +309,7 @@ class ISDInvoiceController {
             return;
         }
 
-        const party_type = this.frm.doc.credit_flow === "Outward" ? "Customer" : "Supplier";
+        const party_type = this.frm.doc.credit_flow === "Credit Distribution" ? "Customer" : "Supplier";
         this.frm.set_value("party_type", party_type);
         // Event chain handles the rest:
         //   party_type event → autofill_party → party event → autofill_addresses_for_party
@@ -364,7 +364,7 @@ class ISDInvoiceController {
     autofill_addresses_for_party() {
         if (!this.frm.doc.company || !this.frm.doc.party || !this.frm.doc.party_type) return;
 
-        const is_outward = this.frm.doc.credit_flow === "Outward";
+        const is_outward = this.frm.doc.credit_flow === "Credit Distribution";
 
         Promise.all([
             this._get_address("Company", this.frm.doc.company, [
@@ -393,18 +393,18 @@ class ISDInvoiceController {
                 company_address: __("Select Company Address"),
                 party_address: __("Select Party Address"),
             },
-            Outward: {
+            "Credit Distribution": {
                 company_address: __("Select Company Address (Distributor)"),
                 party_address: __("Select Party Address (Recipient)"),
             },
-            Inward: {
+            "Credit Receipt": {
                 company_address: __("Select Company Address (Recipient)"),
                 party_address: __("Select Party Address (Distributor)"),
             },
         };
 
-        const key = !this.frm.doc.is_against_party ? "default" : this.frm.doc.credit_flow || "Inward";
-        const labels = LABELS[key] || LABELS.Inward;
+        const key = !this.frm.doc.is_against_party ? "default" : this.frm.doc.credit_flow || "Credit Receipt";
+        const labels = LABELS[key] || LABELS["Credit Receipt"];
 
         this.frm.set_df_property("company_address", "label", labels.company_address);
         this.frm.set_df_property("party_address", "label", labels.party_address);

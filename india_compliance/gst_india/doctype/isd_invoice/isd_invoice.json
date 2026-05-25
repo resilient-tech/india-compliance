@@ -308,7 +308,7 @@
    "fieldtype": "Select",
    "label": "Credit Flow",
    "mandatory_depends_on": "eval:doc.is_against_party",
-   "options": "Outward\nInward"
+   "options": "Credit Distribution\nCredit Receipt"
   },
   {
    "fieldname": "remarks",

@@ -273,7 +273,7 @@ class TestISDInvoice(IntegrationTestCase):
                 "fiscal_year": get_fiscal_year(pi.posting_date, company=pi.company)[0],
             },
         ]
-        invoice_names, _ = bulk_create_isd_invoices(rows=rows, source_name=pi.name)
+        invoice_names, _ = bulk_create_isd_invoices(distribution_heads=rows, source_names=[pi.name])
 
         isd_a = frappe.get_doc("ISD Invoice", invoice_names[0])
         isd_b = frappe.get_doc("ISD Invoice", invoice_names[1])
@@ -354,7 +354,7 @@ class TestISDInvoice(IntegrationTestCase):
                 "fiscal_year": get_fiscal_year(pi.posting_date, company=pi.company)[0],
             },
         ]
-        invoice_names, _ = bulk_create_isd_invoices(rows=rows, source_name=pi.name)
+        invoice_names, _ = bulk_create_isd_invoices(distribution_heads=rows, source_names=[pi.name])
 
         tax_fields = [
             "distributed_cgst", "distributed_sgst", "distributed_igst",
@@ -402,7 +402,7 @@ class TestISDInvoice(IntegrationTestCase):
             }
         ]
 
-        isd_invoices, _ = bulk_create_isd_invoices(rows=rows, source_name=pi.name)
+        isd_invoices, _ = bulk_create_isd_invoices(distribution_heads=rows, source_names=[pi.name])
 
         # make sure they have IGST only, no CGST/SGST
         for invoice_name in isd_invoices:

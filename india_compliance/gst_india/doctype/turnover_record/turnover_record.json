@@ -28,7 +28,7 @@
    "fieldname": "amount",
    "fieldtype": "Currency",
    "in_list_view": 1,
-   "label": "Amount",
+   "label": "Turnover",
    "reqd": 1
   },
   {
@@ -68,7 +68,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-11 10:31:02.813820",
+ "modified": "2026-05-25 11:18:55.174190",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Turnover Record",

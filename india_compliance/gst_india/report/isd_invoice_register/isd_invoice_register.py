@@ -125,17 +125,17 @@ def get_isd_invoice_data(filters):
     dist_cess = Sum(isd_src_items.distributed_cess).as_("distributed_cess")
     dist_cess_non_advol = Sum(isd_src_items.distributed_cess_non_advol).as_("distributed_cess_non_advol")
 
-    # credit_flow='Outward' → company is distributor, party is recipient
-    # credit_flow='Inward'  → party is distributor, company is recipient
+    # credit_flow='Credit Distribution' → company is distributor, party is recipient
+    # credit_flow='Credit Receipt'  → party is distributor, company is recipient
     distributor_gstin_col = (
         Case()
-        .when(isd.credit_flow == "Outward", isd.company_gstin)
+        .when(isd.credit_flow == "Credit Distribution", isd.company_gstin)
         .else_(isd.party_gstin)
         .as_("distributor_gstin")
     )
     recipient_gstin_col = (
         Case()
-        .when(isd.credit_flow == "Outward", isd.party_gstin)
+        .when(isd.credit_flow == "Credit Distribution", isd.party_gstin)
         .else_(isd.company_gstin)
         .as_("recipient_gstin")
     )
@@ -175,7 +175,7 @@ def get_isd_invoice_data(filters):
     if filters.get("distributor_gstin"):
         query = query.where(
             Case()
-            .when(isd.credit_flow == "Outward", isd.company_gstin)
+            .when(isd.credit_flow == "Credit Distribution", isd.company_gstin)
             .else_(isd.party_gstin)
             == filters.distributor_gstin
         )
@@ -183,7 +183,7 @@ def get_isd_invoice_data(filters):
     if filters.get("recipient_gstin"):
         query = query.where(
             Case()
-            .when(isd.credit_flow == "Outward", isd.party_gstin)
+            .when(isd.credit_flow == "Credit Distribution", isd.party_gstin)
             .else_(isd.company_gstin)
             == filters.recipient_gstin
         )

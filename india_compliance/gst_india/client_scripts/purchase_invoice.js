@@ -71,7 +71,16 @@ frappe.ui.form.on(DOCTYPE, {
         if (frm.doc.docstatus === 1 && frm.doc.is_isd_applicable) {
             frm.add_custom_button(
                 __("ISD Invoice"),
-                () => show_isd_invoice_distribution_dialog(frm),
+                () => {
+                    const pi_context = [{
+                        name: frm.doc.name,
+                        posting_date: frm.doc.posting_date,
+                        supplier: frm.doc.supplier,
+                        company: frm.doc.company,
+                        total_tax: get_total_isd_tax_from_frm(frm),
+                    }];
+                    india_compliance.show_isd_invoice_distribution_dialog(pi_context);
+                },
                 __("Create"),
             );
         }
@@ -148,262 +157,15 @@ function is_import_gst_category(gst_category) {
     return IMPORT_GST_CATEGORIES.includes(gst_category);
 }
 
-function show_isd_invoice_distribution_dialog(frm) {
-    let fetch_addresses = () => {};
-    // last column will be to narrow, frappe issue #38228
-    const dialog = new frappe.ui.Dialog({
-        title: __("Select Addresses for ISD Distribution"),
-        size: "extra-large",
-        fields: [
-            {
-                fieldtype: "Section Break",
-                fieldname: "general_section",
-            },
-            {
-                fieldtype: "Check",
-                fieldname: "is_against_party",
-                label: __("Against Party"),
-                default: 0,
-                change() {
-                    let grid = dialog.fields_dict.distribution_heads.grid;
-                    grid.update_docfield_property("party_type", "hidden", !this.get_value());
-                    grid.update_docfield_property("party", "hidden", !this.get_value());
-                    grid.reset_grid();
-                    grid.refresh();
-                },
-            },
-            {
-                fieldtype: "Section Break",
-                fieldname: "address_section",
-            },
-            {
-                label: __("Distribution Heads"),
-                fieldtype: "Table",
-                fieldname: "distribution_heads",
-                in_place_edit: true,
-                fields: [
-                    {
-                        fieldtype: "Select",
-                        options: ["Company", "Customer", "Supplier"],
-                        fieldname: "party_type",
-                        label: __("Party Type"),
-                        default: "Company",
-                        in_list_view: 1,
-                        columns: 1,
-                        hidden: 1,
-                    },
-                    {
-                        fieldtype: "Autocomplete",
-                        fieldname: "party",
-                        label: __("Party"),
-                        default: frm.doc.company,
-                        in_list_view: 1,
-                        columns: 2,
-                        hidden: 1,
-                        get_query: function (doc) {
-                            console.log("Getting party query called", doc);
-                            let party_type = doc.party_type;
-                            let search_text = doc.party || "";
-
-                            return {
-                                query: "india_compliance.gst_india.utils.get_party_docs_from_party_party",
-                                params: {
-                                    filters: {
-                                        doctype: party_type,
-                                        search_text: search_text,
-                                    },
-                                },
-                            };
-                        },
-                    },
-                    {
-                        fieldtype: "Link",
-                        options: "Address",
-                        fieldname: "address",
-                        label: __("Address"),
-                        in_list_view: 1,
-                        columns: 2,
-                        get_query: function (doc) {
-                            return {
-                                query: "frappe.contacts.doctype.address.address.address_query",
-                                filters: {
-                                    link_doctype: doc.party_type,
-                                    link_name: doc.party,
-                                },
-                            };
-                        },
-                        change: async function () {
-                            const address = this.doc.address;
-                            const party_type = this.doc.party_type;
-                            const party = this.doc.party;
-                            const grid = dialog.fields_dict.distribution_heads.grid;
-                            const row = this.doc;
-                            
-                            if (!address) return;
-                            
-                            frappe.call({
-                                method: "india_compliance.gst_india.doctype.isd_invoice.isd_invoice.get_distribution_heads",
-                                args: {
-                                    party_type: party_type,
-                                    party: party,
-                                    posting_date: frm.doc.posting_date,
-                                    address: address,
-                                },
-                                callback: (r) => {
-                                    if (r.message && r.message.length > 0) {
-                                        row.gstin = r.message[0].gstin;
-                                        row.gst_category = r.message[0].gst_category;
-                                        row.gst_state = r.message[0].gst_state;
-                                        row.turnover_amount = r.message[0].turnover_amount;
-                                        grid.refresh();
-                                    }
-                                },
-                            });
-                        },
-                    },
-                    {
-                        fieldtype: "Data",
-                        fieldname: "gstin",
-                        label: __("GSTIN"),
-                        read_only: 1,
-                        in_list_view: 1,
-                        columns: 1,
-                    },
-                    {
-                        fieldtype: "Data",
-                        fieldname: "gst_category",
-                        label: __("GST Category"),
-                        read_only: 1,
-                        in_list_view: 0,
-                    },
-                    {
-                        fieldtype: "Data",
-                        fieldname: "gst_state",
-                        label: __("GST State"),
-                        read_only: 1,
-                        in_list_view: 1,
-                        columns: 1,
-                    },
-                    {
-                        fieldtype: "Currency",
-                        fieldname: "turnover_amount",
-                        label: __("Turnover Amount"),
-                        in_list_view: 1,
-                        default: 0,
-                        columns: 2,
-                        change: function () {
-                            let grid = this.grid || dialog.fields_dict.distribution_heads.grid;
-                            let total_turnover = grid.data.reduce(
-                                (sum, row) => sum + (parseFloat(row.turnover_amount) || 0),
-                                0,
-                            );
-                            grid.data.forEach((row) => {
-                                row.distribution_ratio = total_turnover
-                                    ? ((parseFloat(row.turnover_amount) || 0) / total_turnover) * 100
-                                    : 0;
-                            });
-                            grid.refresh();
-                        },
-                    },
-                    {
-                        fieldtype: "Float",
-                        fieldname: "distribution_ratio",
-                        label: __("Distribution Ratio (%)"),
-                        in_list_view: 1,
-                        read_only: 1,
-                        default: 0,
-                        columns: 1,
-                    },
-                ],
-            },
-        ],
-        primary_action_label: __("Create ISD Invoices"),
-        primary_action(values) {
-            const dialog_values = dialog.get_values();
-            const distribution_heads = dialog_values.distribution_heads || [];
-            const rows_with_turnover = distribution_heads.filter((row) => row.turnover_amount);
-
-            if (!rows_with_turnover.length) {
-                frappe.msgprint(__("Please enter Turnover Amount for at least one row."), __("No Turnover"));
-                return;
-            }
-
-            dialog.hide();
-
-            const payload = rows_with_turnover.map((row) => {
-                const turnover_amount = parseFloat(row.turnover_amount) || 0;
-                return {
-                    fiscal_year: erpnext.utils.get_fiscal_year(frm.doc.posting_date),
-                    gstin: row.gstin || "",
-                    gst_state: row.gst_state || "",
-                    gst_category: row.gst_category || "",
-                    turnover_amount: turnover_amount,
-                    party_address: row.address,
-                    party_type: dialog_values.is_against_party ? row.party_type : null,
-                    party: dialog_values.is_against_party ? row.party : null,
-                };
-            });
-
-            frappe.call({
-                method: "india_compliance.gst_india.doctype.isd_invoice.isd_invoice.bulk_create_isd_invoices",
-                args: {
-                    rows: payload,
-                    source_name: frm.doc.name,
-                },
-                callback(r) {
-                    const { message } = r;
-                    const success = message[0]
-                    const invalid = message[1]
-                    if(invalid.length) {
-                        frappe.msgprint({
-                            title: "Some ISD Invoices failed validations",
-                            message: invalid,
-                            indicator: "orange",
-                            as_list: true
-                        });
-                    }
-                    else {
-                        frappe.msgprint({
-                            title: "ISD Invoices Successfully created",
-                            message: success,
-                            indicator: "green",
-                            as_list: true
-                        });
-                    }
-                },
-            });
-        },
-    });
-
-    fetch_addresses = function () {
-        const vals = dialog.get_values(true);
-        frappe.call({
-            method: "india_compliance.gst_india.doctype.isd_invoice.isd_invoice.get_distribution_heads",
-            args: {
-                party_type: "Company",
-                party: frm.doc.company,
-                posting_date: frm.doc.posting_date,
-            },
-            callback(r) {
-                if (!r.message) return;
-                const data = r.message.map((row) => ({
-                    party_type: "Company",
-                    party: frm.doc.company,
-                    address: row.name,
-                    gstin: row.gstin,
-                    gst_category: row.gst_category,
-                    gst_state: row.gst_state,
-                    turnover_amount: row.turnover_amount,
-                }));
-                const grid = dialog.fields_dict.distribution_heads.grid;
-                grid.df.data = data;
-                grid.refresh();
-                grid.fields_map.turnover_amount.change();
-            },
-        });
-    };
-
-    dialog.show()
-    
-    fetch_addresses();
+function get_total_isd_tax_from_frm(frm) {
+    return (frm.doc.items || []).reduce((sum, item) => {
+        return (
+            sum +
+            (item.igst_amount || 0) +
+            (item.cgst_amount || 0) +
+            (item.sgst_amount || 0) +
+            (item.cess_amount || 0) +
+            (item.cess_non_advol_amount || 0)
+        );
+    }, 0);
 }
