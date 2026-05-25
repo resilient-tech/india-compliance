@@ -276,6 +276,7 @@ class TestTransaction(IntegrationTestCase):
 
         frappe.db.set_value("Address", address, "gst_category", gst_category)
 
+    @change_settings("GST Settings", {"enable_overseas_transactions": 0})
     def test_validate_overseas_gst_category(self):
         # GST Setting is disabled by default.
 
@@ -1044,9 +1045,10 @@ class TestTransaction(IntegrationTestCase):
             doc.save,
         )
 
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_validate_gst_refund_accounts_with_none_tax_amount(self):
         """
-        Tax rows loaded from DB with NULL `base_tax_amount_after_discount_amount`
+        Tax rows with None `base_tax_amount_after_discount_amount`
         must not crash refund-accounts validation.
         """
         doc = create_refund_transaction()
@@ -1117,9 +1119,8 @@ class TestTransaction(IntegrationTestCase):
 
     def test_none_tax_amount_after_discount_amount(self):
         """
-        Tax rows loaded from DB with NULL `(base_)tax_amount_after_discount_amount`
-        (e.g. legacy rows or rows inserted via raw SQL / ignore_validate) must not
-        crash before_save / on_submit handlers that aggregate tax amounts.
+        Tax rows with None `base_tax_amount_after_discount_amount`
+        must not raise error.
         """
         if self.doctype not in DOCTYPES_WITH_GST_DETAIL:
             return
