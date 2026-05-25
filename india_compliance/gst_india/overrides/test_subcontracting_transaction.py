@@ -27,6 +27,7 @@ from india_compliance.gst_india.utils.tests import create_transaction
 from india_compliance.gst_india.utils.tests import (
     SUBCONTRACTING_TEST_FINISHED_ITEM,
     SUBCONTRACTING_TEST_FINISHED_ITEM_2,
+    SUBCONTRACTING_TEST_FINISHED_ITEM_TG,
     SUBCONTRACTING_TEST_RM_ITEM_1,
     SUBCONTRACTING_TEST_RM_ITEM_2,
     SUBCONTRACTING_TEST_SERVICE_ITEM,
@@ -68,6 +69,7 @@ def make_subcontracted_items():
     sub_contracted_items = {
         SUBCONTRACTING_TEST_FINISHED_ITEM: {},
         SUBCONTRACTING_TEST_FINISHED_ITEM_2: {},
+        SUBCONTRACTING_TEST_FINISHED_ITEM_TG: {},
     }
 
     for item, properties in sub_contracted_items.items():
@@ -85,6 +87,7 @@ def make_boms():
         SUBCONTRACTING_TEST_FINISHED_ITEM_2: [
             SUBCONTRACTING_TEST_RM_ITEM_1,
         ],
+        SUBCONTRACTING_TEST_FINISHED_ITEM_TG: ["_Test Trading Goods 1"],
     }
 
     for item_code, raw_materials in boms.items():
