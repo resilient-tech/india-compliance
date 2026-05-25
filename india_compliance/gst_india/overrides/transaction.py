@@ -1676,6 +1676,7 @@ def onload(doc, method=None):
 
     set_ecommerce_supply_type(doc)
     set_gst_breakup(doc)
+    doc.set_onload("_gst_breakup_table", doc.gst_breakup_table)
 
 
 def validate_ecommerce_gstin(doc):
