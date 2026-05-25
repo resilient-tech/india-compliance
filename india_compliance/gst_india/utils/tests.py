@@ -1,10 +1,12 @@
 import frappe
 from erpnext.controllers.subcontracting_controller import make_rm_stock_entry
+from erpnext.subcontracting.doctype.subcontracting_order.test_subcontracting_order import (
+    create_subcontracting_order,
+)
 from frappe.utils import getdate
 
 from india_compliance.gst_india.constants import SALES_DOCTYPES
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
-from india_compliance.tests.erpnext_test_utils import create_subcontracting_order
 
 SUBCONTRACTING_TEST_RM_ITEM_1 = "Subcontracted SRM Item 1"
 SUBCONTRACTING_TEST_RM_ITEM_2 = "Subcontracted SRM Item 2"

@@ -21,9 +21,6 @@ from erpnext.subcontracting.doctype.subcontracting_order.test_subcontracting_ord
 )
 from frappe.tests.utils import FrappeTestCase
 
-<<<<<<< HEAD
-from india_compliance.gst_india.utils.tests import create_transaction
-=======
 from india_compliance.gst_india.utils.tests import (
     SUBCONTRACTING_TEST_FINISHED_ITEM,
     SUBCONTRACTING_TEST_FINISHED_ITEM_2,
@@ -34,12 +31,6 @@ from india_compliance.gst_india.utils.tests import (
     create_transaction,
     make_subcontracting_stock_entry,
 )
-from india_compliance.tests.erpnext_test_utils import (
-    create_subcontracting_order,
-    get_rm_items,
-    make_bom,
-)
->>>>>>> 5fde1303 (refactor: changes to subcontracting stock entry to create order first)
 
 
 def make_raw_materials():
@@ -215,25 +206,15 @@ SERVICE_ITEM = {
 }
 
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-class TestSubcontractingTransaction(FrappeTestCase):
-    ITEM_WITH_TAX = "Subcontracted SRM Item 1"
-    ITEM_WITHOUT_TAX = "Subcontracted SRM Item 2"
-    SCO_FG_ITEM = "Subcontracted Item SA1"
-=======
-=======
 def make_sco(**kwargs):
     po = create_purchase_order(**SERVICE_ITEM, supplier_warehouse="Finished Goods - _TIRC")
     return create_subcontracting_order(po_name=po.name, **kwargs)
 
 
->>>>>>> 4c64918f (refactor: remove duplication of sco)
-class TestSubcontractingTransaction(IntegrationTestCase):
+class TestSubcontractingTransaction(FrappeTestCase):
     ITEM_WITH_TAX = SUBCONTRACTING_TEST_RM_ITEM_1
     ITEM_WITHOUT_TAX = SUBCONTRACTING_TEST_RM_ITEM_2
     SCO_FG_ITEM = SUBCONTRACTING_TEST_FINISHED_ITEM
->>>>>>> 5fde1303 (refactor: changes to subcontracting stock entry to create order first)
     TAX_TEMPLATE = "GST 18% - _TIRC"
 
     @classmethod
