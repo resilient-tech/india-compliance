@@ -10,11 +10,15 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 from frappe.query_builder.functions import Coalesce, Sum
-from frappe.utils import flt, today
+from frappe.utils import cint, flt, today
 from pypika.terms import Case, Tuple
 
 from india_compliance.gst_india.doctype.turnover_record.turnover_record import upsert_turnover_record
 from india_compliance.gst_india.utils import get_gst_accounts_by_type, get_place_of_supply
+
+CREDIT_DISTRIBUTION = "Credit Distribution"
+CREDIT_RECEIPT = "Credit Receipt"
+ISD_GST_CATEGORY = "Input Service Distributor"
 
 
 class ISDInvoice(Document):
@@ -24,7 +28,6 @@ class ISDInvoice(Document):
     company_currency = AccountsController.company_currency
 
     def validate(self):
-        # TODO: validations remaining to be verified
         self.clear_fields_when_is_against_party_not_set()
         self.set_pos_from_gstin()
         self.validate_isd_party() #
@@ -122,7 +125,7 @@ class ISDInvoice(Document):
 
         gst_categories = frappe.db.get_list(
             "Address",
-            filters={"name": ("in", addresses), "gst_category": "Input Service Distributor"},
+            filters={"name": ("in", addresses), "gst_category": ISD_GST_CATEGORY},
             pluck="gst_category",
         )
 
@@ -231,6 +234,58 @@ class ISDInvoice(Document):
                     " 'Allowed To Transact With' section of the {0} record."
                 ).format(self.party_type, self.party, self.company)
             )
+
+    def on_submit(self):
+        purchase_invoices = list(
+            {row.purchase_invoice for row in self.source_invoices if row.purchase_invoice}
+        )
+        if not purchase_invoices:
+            return
+
+        summary = get_purchase_invoices_distribution_summary(purchase_invoices, "2000-01-01")
+        if not summary:
+            return
+
+        PI = frappe.qb.DocType("Purchase Invoice")
+        case = Case()
+        for row in summary:
+            total_tax = flt(row["total_tax"])
+            total_distributed = flt(row["total_distributed"])
+            percent = min(total_distributed / total_tax * 100, 100) if total_tax else 0
+            case = case.when(PI.name == row["purchase_invoice"], percent)
+
+        (
+            frappe.qb.update(PI)
+            .set(PI.isd_credit_distributed_percent, case.else_(PI.isd_credit_distributed_percent))
+            .where(PI.name.isin(purchase_invoices))
+            .run()
+        )
+
+    def on_cancel(self):
+        purchase_invoices = list(
+            {row.purchase_invoice for row in self.source_invoices if row.purchase_invoice}
+        )
+        if not purchase_invoices:
+            return
+
+        summary = get_purchase_invoices_distribution_summary(purchase_invoices, "2000-01-01")
+        if not summary:
+            return
+
+        PI = frappe.qb.DocType("Purchase Invoice")
+        case = Case()
+        for row in summary:
+            total_tax = flt(row["total_tax"])
+            total_distributed = flt(row["total_distributed"])
+            percent = min(total_distributed / total_tax * 100, 100) if total_tax else 0
+            case = case.when(PI.name == row["purchase_invoice"], percent)
+
+        (
+            frappe.qb.update(PI)
+            .set(PI.isd_credit_distributed_percent, case.else_(PI.isd_credit_distributed_percent))
+            .where(PI.name.isin(purchase_invoices))
+            .run()
+        )
 
     @frappe.whitelist()
     def get_purchase_invoices(self, purchase_invoices: list, distribution_ratio: float = 0.0):
@@ -384,14 +439,13 @@ def get_isd_autofill_values(
         company / is_against_party / credit_flow → party_type → party → addresses + party_account
     Each trigger resolves its own level and all downstream levels.
     """
-    from frappe.utils import cint
 
     is_against_party = cint(is_against_party)
     result = {}
 
     # When is_against_party is first toggled on, default credit_flow
     if changed_field == "is_against_party" and is_against_party and not credit_flow:
-        credit_flow = "Credit Distribution"
+        credit_flow = CREDIT_DISTRIBUTION
         result["credit_flow"] = credit_flow
 
     resolve_party_type = changed_field in ("company", "is_against_party", "credit_flow")
@@ -401,7 +455,7 @@ def get_isd_autofill_values(
 
     if resolve_party_type:
         if is_against_party:
-            party_type = "Customer" if credit_flow == "Credit Distribution" else "Supplier"
+            party_type = "Customer" if credit_flow == CREDIT_DISTRIBUTION else "Supplier"
         else:
             party_type = None
             result["credit_flow"] = None
@@ -427,7 +481,7 @@ def get_isd_autofill_values(
         if is_against_party and company and credit_flow:
             account_field = (
                 "default_payable_account"
-                if credit_flow == "Credit Distribution"
+                if credit_flow == CREDIT_DISTRIBUTION
                 else "default_receivable_account"
             )
             result["party_account"] = frappe.db.get_value("Company", company, account_field)
@@ -456,20 +510,20 @@ def _get_autofill_addresses(company, is_against_party, credit_flow, party_type, 
 
     if not is_against_party:
         return (
-            get_first_address("Company", company, [["gst_category", "=", "Input Service Distributor"]]),
-            get_first_address("Company", company, [["gst_category", "!=", "Input Service Distributor"]]),
+            get_first_address("Company", company, [["gst_category", "=", ISD_GST_CATEGORY]]),
+            get_first_address("Company", company, [["gst_category", "!=", ISD_GST_CATEGORY]]),
         )
 
     if not (party_type and party):
         return None, None
 
-    is_outward = credit_flow == "Credit Distribution"
+    is_outward = credit_flow == CREDIT_DISTRIBUTION
     return (
         get_first_address(
-            "Company", company, [["gst_category", "=" if is_outward else "!=", "Input Service Distributor"]]
+            "Company", company, [["gst_category", "=" if is_outward else "!=", ISD_GST_CATEGORY]]
         ),
         get_first_address(
-            party_type, party, [] if is_outward else [["gst_category", "=", "Input Service Distributor"]]
+            party_type, party, [] if is_outward else [["gst_category", "=", ISD_GST_CATEGORY]]
         ),
     )
 
@@ -503,8 +557,8 @@ def search_purchase_invoice(txt: str, company: str, billing_address: str | None 
 def create_inter_company_invoice(source_name: str, target_doc:str|None=None):
 
     def post_process(source, target):
-        new_direction = "Credit Receipt" if source.credit_flow == "Credit Distribution" else "Credit Distribution"
-        new_party_type = "Customer" if new_direction == "Credit Distribution" else "Supplier"
+        new_direction = CREDIT_RECEIPT if source.credit_flow == CREDIT_DISTRIBUTION else CREDIT_DISTRIBUTION
+        new_party_type = "Customer" if new_direction == CREDIT_DISTRIBUTION else "Supplier"
 
         new_company = frappe.get_value(source.party_type, source.party, "represents_company")
         if not new_company:
@@ -581,7 +635,7 @@ def address_query(doctype, txt, searchfield, start, page_len, filters):
     if link_name := filters.pop("link_name", None):
         _filters.append(["Dynamic Link", "link_name", "=", link_name])
 
-    _filters.append(["Address", "gst_category", "!=", "Input Service Distributor"])
+    _filters.append(["Address", "gst_category", "!=", ISD_GST_CATEGORY])
 
     return search_widget(
         "Address", txt, filters=_filters, searchfield=searchfield, start=start, page_length=page_len

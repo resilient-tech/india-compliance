@@ -1051,6 +1051,17 @@ CUSTOM_FIELDS = {
             "no_copy": 1,
             "depends_on": 'eval:doc.is_isd_applicable',
         },
+        {
+            "fieldname": "isd_credit_distributed_percent",
+            "label": "ISD Credit Distributed (%)",
+            "fieldtype": "Percent",
+            "insert_after": "is_isd_applicable",
+            "print_hide": 1,
+            "read_only": 1,
+            "no_copy": 1,
+            "allow_on_submit": 1,
+            "depends_on": "eval:doc.is_isd_applicable",
+        },
     ],
     "Purchase Invoice Item": [
         {
