@@ -24,35 +24,32 @@ frappe.ui.form.on("ISD Invoice", {
     },
 
     company(frm) {
-        frm.set_value("is_against_party", 0);
+        frm.doc.is_against_party = 0;
+        frm.refresh_field("is_against_party");
         frm.isd_controller.fetch_gst_accounts();
-        frm.isd_controller.autofill_addresses();
+        fetch_isd_autofill(frm, "company");
     },
 
     is_against_party(frm) {
-        if (frm.doc.is_against_party) {
-            frm.set_value("credit_flow", "Credit Distribution");
-            frm.trigger("credit_flow"); // above trigger does not work first time
-        }
+        if (frm.__updating_isd_autofill) return;
+        fetch_isd_autofill(frm, "is_against_party");
     },
 
     credit_flow(frm) {
         frm.isd_controller.update_address_labels();
-        frm.isd_controller.autofill_addresses();
-        frm.isd_controller.autofill_party_account();
+        if (frm.__updating_isd_autofill || !frm.doc.is_against_party) return;
+        fetch_isd_autofill(frm, "credit_flow");
     },
 
     party_type(frm) {
-        if (frm.doc.is_against_party) {
-            frm.isd_controller.update_party_label();
-            frm.isd_controller.autofill_party();
-        }
+        if (frm.doc.is_against_party) frm.isd_controller.update_party_label();
+        if (frm.__updating_isd_autofill || !frm.doc.is_against_party) return;
+        fetch_isd_autofill(frm, "party_type");
     },
 
     party(frm) {
-        if (frm.doc.is_against_party && frm.doc.party) {
-            frm.isd_controller.autofill_addresses_for_party();
-        }
+        if (frm.__updating_isd_autofill || !frm.doc.is_against_party || !frm.doc.party) return;
+        fetch_isd_autofill(frm, "party");
     },
 
     distribution_ratio(frm) {
@@ -171,6 +168,28 @@ frappe.ui.form.on("ISD Invoice Source Item", {
     },
 });
 
+async function fetch_isd_autofill(frm, changed_field) {
+    if (frm.__updating_isd_autofill || !frm.doc.company) return;
+
+    const r = await frappe.call({
+        method: "india_compliance.gst_india.doctype.isd_invoice.isd_invoice.get_isd_autofill_values",
+        args: {
+            changed_field,
+            company: frm.doc.company,
+            is_against_party: frm.doc.is_against_party || 0,
+            credit_flow: frm.doc.credit_flow || null,
+            party_type: frm.doc.party_type || null,
+            party: frm.doc.party || null,
+        },
+    });
+
+    if (!r?.message) return;
+
+    frm.__updating_isd_autofill = true;
+    await frm.set_value(r.message);
+    frm.__updating_isd_autofill = false;
+}
+
 class ISDInvoiceController {
     constructor(frm) {
         this.frm = frm;
@@ -277,102 +296,6 @@ class ISDInvoiceController {
                     is_group: 0,
                 },
             };
-        });
-    }
-
-    autofill_party_account() {
-        if (!this.frm.doc.company || !this.frm.doc.credit_flow || !this.frm.doc.is_against_party) return;
-
-        const account_field =
-            this.frm.doc.credit_flow === "Credit Distribution" ? "default_payable_account" : "default_receivable_account";
-
-        frappe.db.get_value("Company", this.frm.doc.company, account_field).then((result) => {
-            this.frm.set_value("party_account", result.message?.[account_field]);
-        });
-    }
-
-    autofill_addresses() {
-        /**
-         * Shared entry point for is_against_party and credit_flow changes.
-         * Single company: autofills addresses directly.
-         * Multi company: sets party_type → triggers cascade:
-         *   party_type event → autofill_party → party event → autofill_addresses_for_party
-         */
-
-        if (!this.frm.doc.is_against_party) {
-            this.autofill_addresses_single_company();
-            return;
-        }
-
-        const party_type = this.frm.doc.credit_flow === "Credit Distribution" ? "Customer" : "Supplier";
-        this.frm.set_value("party_type", party_type);
-        // Event chain handles the rest:
-        //   party_type event → autofill_party → party event → autofill_addresses_for_party
-    }
-
-    async _get_address(link_doctype, link_name, extra_filters = []) {
-        const results = await frappe.db.get_list("Address", {
-            filters: [
-                ["disabled", "=", 0],
-                ["Dynamic Link", "link_doctype", "=", link_doctype],
-                ["Dynamic Link", "link_name", "=", link_name],
-                ...extra_filters,
-            ],
-            fields: ["name"],
-            limit: 1,
-        });
-        return results[0]?.name || null;
-    }
-
-    autofill_addresses_single_company() {
-        if (!this.frm.doc.company) return;
-
-        Promise.all([
-            this._get_address("Company", this.frm.doc.company, [
-                ["gst_category", "=", "Input Service Distributor"],
-            ]),
-            this._get_address("Company", this.frm.doc.company, [
-                ["gst_category", "!=", "Input Service Distributor"],
-            ]),
-        ]).then(([company_address, party_address]) => {
-            this.frm.set_value("company_address", company_address);
-            this.frm.set_value("party_address", party_address);
-        });
-    }
-
-    autofill_party() {
-        /** Set party to the first internal customer/supplier based on party_type. */
-        if (!this.frm.doc.party_type) return;
-
-        const is_customer = this.frm.doc.party_type === "Customer";
-        frappe.db
-            .get_list(this.frm.doc.party_type, {
-                filters: { [is_customer ? "is_internal_customer" : "is_internal_supplier"]: 1 },
-                fields: ["name"],
-                limit: 1,
-            })
-            .then((results) => {
-                this.frm.set_value("party", results[0]?.name || null);
-            });
-    }
-
-    autofill_addresses_for_party() {
-        if (!this.frm.doc.company || !this.frm.doc.party || !this.frm.doc.party_type) return;
-
-        const is_outward = this.frm.doc.credit_flow === "Credit Distribution";
-
-        Promise.all([
-            this._get_address("Company", this.frm.doc.company, [
-                ["gst_category", is_outward ? "=" : "!=", "Input Service Distributor"],
-            ]),
-            this._get_address(
-                this.frm.doc.party_type,
-                this.frm.doc.party,
-                !is_outward ? [["gst_category", "=", "Input Service Distributor"]] : [],
-            ),
-        ]).then(([company_address, party_address]) => {
-            this.frm.set_value("company_address", company_address, true);
-            this.frm.set_value("party_address", party_address);
         });
     }
 

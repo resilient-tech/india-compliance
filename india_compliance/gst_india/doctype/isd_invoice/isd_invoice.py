@@ -370,6 +370,111 @@ def get_purchase_invoices_distribution_summary(purchase_invoices: list | str, po
 
 
 @frappe.whitelist()
+def get_isd_autofill_values(
+    changed_field: str,
+    company: str,
+    is_against_party: int = 0,
+    credit_flow: str | None = None,
+    party_type: str | None = None,
+    party: str | None = None,
+):
+    """Return a dict of fields to autofill after a field change on ISD Invoice.
+
+    Resolution chain:
+        company / is_against_party / credit_flow → party_type → party → addresses + party_account
+    Each trigger resolves its own level and all downstream levels.
+    """
+    from frappe.utils import cint
+
+    is_against_party = cint(is_against_party)
+    result = {}
+
+    # When is_against_party is first toggled on, default credit_flow
+    if changed_field == "is_against_party" and is_against_party and not credit_flow:
+        credit_flow = "Credit Distribution"
+        result["credit_flow"] = credit_flow
+
+    resolve_party_type = changed_field in ("company", "is_against_party", "credit_flow")
+    resolve_party = resolve_party_type or changed_field == "party_type"
+    resolve_addresses = resolve_party or changed_field == "party"
+    resolve_party_account = changed_field in ("company", "is_against_party", "credit_flow")
+
+    if resolve_party_type:
+        if is_against_party:
+            party_type = "Customer" if credit_flow == "Credit Distribution" else "Supplier"
+        else:
+            party_type = None
+            result["credit_flow"] = None
+        result["party_type"] = party_type
+
+    if resolve_party:
+        if is_against_party and party_type:
+            is_field = "is_internal_customer" if party_type == "Customer" else "is_internal_supplier"
+            parties = frappe.get_list(party_type, filters={is_field: 1}, pluck="name", limit=1)
+            party = parties[0] if parties else None
+        else:
+            party = None
+        result["party"] = party
+
+    if resolve_addresses:
+        company_address, party_address = _get_autofill_addresses(
+            company, is_against_party, credit_flow, party_type, party
+        )
+        result["company_address"] = company_address
+        result["party_address"] = party_address
+
+    if resolve_party_account:
+        if is_against_party and company and credit_flow:
+            account_field = (
+                "default_payable_account"
+                if credit_flow == "Credit Distribution"
+                else "default_receivable_account"
+            )
+            result["party_account"] = frappe.db.get_value("Company", company, account_field)
+        else:
+            result["party_account"] = None
+
+    return result
+
+
+def _get_autofill_addresses(company, is_against_party, credit_flow, party_type, party):
+    """Return (company_address, party_address) for autofill based on current doc state."""
+
+    def get_first_address(link_doctype, link_name, extra_filters=None):
+        filters = [
+            ["disabled", "=", 0],
+            ["Dynamic Link", "link_doctype", "=", link_doctype],
+            ["Dynamic Link", "link_name", "=", link_name],
+        ]
+        if extra_filters:
+            filters.extend(extra_filters)
+        results = frappe.get_list("Address", filters=filters, pluck="name", limit=1)
+        return results[0] if results else None
+
+    if not company:
+        return None, None
+
+    if not is_against_party:
+        return (
+            get_first_address("Company", company, [["gst_category", "=", "Input Service Distributor"]]),
+            get_first_address("Company", company, [["gst_category", "!=", "Input Service Distributor"]]),
+        )
+
+    if not (party_type and party):
+        return None, None
+
+    is_outward = credit_flow == "Credit Distribution"
+    return (
+        get_first_address(
+            "Company", company, [["gst_category", "=" if is_outward else "!=", "Input Service Distributor"]]
+        ),
+        get_first_address(
+            party_type, party, [] if is_outward else [["gst_category", "=", "Input Service Distributor"]]
+        ),
+    )
+
+
+@frappe.whitelist()
 def get_input_gst_accounts(company: str):
     return get_gst_accounts_by_type(company, "Input", throw=False)
 
