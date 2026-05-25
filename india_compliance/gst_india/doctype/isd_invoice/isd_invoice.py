@@ -58,7 +58,7 @@ class ISDInvoice(Document):
 
         self.taxes = []
         for gst_tax_type, account_head, tax_amount in tax_type_map:
-            if (not account_head):
+            if not account_head:
                 continue
             if not tax_amount:
                 continue
@@ -113,7 +113,7 @@ class ISDInvoice(Document):
             frappe.throw(
                 _(
                     "PAN of Company GSTIN {0} and Party GSTIN {1} must be the same."
-                ).format(frappe.bold(self.company_gstin),frappe.bold(self.party_gstin),)
+                ).format(frappe.bold(self.company_gstin), frappe.bold(self.party_gstin))
             )
 
     def validate_isd_party(self):
@@ -137,7 +137,7 @@ class ISDInvoice(Document):
             return
 
         # Key: (purchase_invoice, is_ineligible_for_itc)
-        purchase_invoices = list(
+        souce_invoices = list(
             {(row.purchase_invoice, row.is_ineligible_for_itc) for row in self.source_invoices}
         )
 
@@ -171,11 +171,12 @@ class ISDInvoice(Document):
                 )
                 .where(
                     Tuple(isd_source_item.purchase_invoice, isd_source_item.is_ineligible_for_itc)
-                    .isin(purchase_invoices)
+                    .isin(souce_invoices)
                 )
                 .where(isd_invoice.docstatus == 1)
                 .where(isd_invoice.name != (self.name or ""))
-                .where(isd_invoice.creation <= self.creation)
+                .where(isd_invoice.posting_date <= self.posting_date)
+                .where(isd_invoice.company == self.company)
                 .groupby(isd_source_item.purchase_invoice, isd_source_item.is_ineligible_for_itc)
                 .run(as_dict=True)
             )

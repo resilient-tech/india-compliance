@@ -25,17 +25,12 @@ frappe.ui.form.on("ISD Invoice", {
 
     company(frm) {
         frm.set_value("is_against_party", 0);
-        frm.isd_controller.fetchGSTAccounts();
+        frm.isd_controller.fetch_gst_accounts();
         frm.isd_controller.autofill_addresses();
     },
 
     is_against_party(frm) {
-        if (!frm.doc.is_against_party) {
-            // frm.set_value("party_type", null);
-            // frm.set_value("party", null);
-            // frm.set_value("credit_flow", null);
-            // frm.set_value("party_account", null);
-        } else {
+        if (frm.doc.is_against_party) {
             frm.set_value("credit_flow", "Credit Distribution");
             frm.trigger("credit_flow"); // above trigger does not work first time
         }
@@ -376,7 +371,7 @@ class ISDInvoiceController {
                 !is_outward ? [["gst_category", "=", "Input Service Distributor"]] : [],
             ),
         ]).then(([company_address, party_address]) => {
-            this.frm.set_value("company_address", company_address);
+            this.frm.set_value("company_address", company_address, true);
             this.frm.set_value("party_address", party_address);
         });
     }
@@ -413,7 +408,6 @@ class ISDInvoiceController {
     }
 
     autofill_source_item(cdt, cdn) {
-
         const row = locals[cdt][cdn];
         if (!row.purchase_invoice) return;
 
@@ -472,9 +466,7 @@ class ISDInvoiceController {
         }
     }
 
-    // TODO: optimize this
-
-    fetchGSTAccounts() {
+    fetch_gst_accounts() {
         if (!this.frm.doc.company) return;
         frappe
             .call({
@@ -500,7 +492,7 @@ class ISDInvoiceController {
         return false;
     }
 
-    async calculateDistribution() {
+    async calculate_distribution() {
         const is_inter_state = await this.is_inter_state_distribution();
         for (const row of this.frm.doc.source_invoices || []) {
             const ratio = (row.distribution_ratio || 0) / 100;
@@ -521,21 +513,29 @@ class ISDInvoiceController {
         }
 
         this.frm.refresh_field("source_invoices");
-        this.calculateTaxesAndTotals();
+        this.calculate_taxes_and_totals();
     }
 
-    calculateTaxesAndTotals() {
+    calculate_taxes_and_totals() {
         const source_invoices = this.frm.doc.source_invoices || [];
         if (!source_invoices.length) return;
 
-        const total_igst = source_invoices.reduce((s, r) => s + (r.distributed_igst || 0), 0);
-        const total_cgst = source_invoices.reduce((s, r) => s + (r.distributed_cgst || 0), 0);
-        const total_sgst = source_invoices.reduce((s, r) => s + (r.distributed_sgst || 0), 0);
-        const total_cess = source_invoices.reduce((s, r) => s + (r.distributed_cess || 0), 0);
-        const total_cess_non_advol = source_invoices.reduce(
-            (s, r) => s + (r.distributed_cess_non_advol || 0),
-            0,
-        );
+        let total_igst = 0, total_cgst = 0, total_sgst = 0, total_cess = 0, total_cess_non_advol = 0;
+        let total_eligible = 0, total_ineligible = 0;
+        for (const r of source_invoices) {
+            total_igst += r.distributed_igst || 0;
+            total_cgst += r.distributed_cgst || 0;
+            total_sgst += r.distributed_sgst || 0;
+            total_cess += r.distributed_cess || 0;
+            total_cess_non_advol += r.distributed_cess_non_advol || 0;
+            const row_total =
+                (r.distributed_igst || 0) +
+                (r.distributed_cgst || 0) +
+                (r.distributed_sgst || 0) +
+                (r.distributed_cess || 0);
+            if (r.is_ineligible_for_itc) total_ineligible += row_total;
+            else total_eligible += row_total;
+        }
 
         const accounts = this.gst_accounts || {};
         const tax_type_map = {
@@ -555,35 +555,14 @@ class ISDInvoiceController {
             row.tax_amount = tax_amount;
         }
 
-        this.frm.doc.total_eligible = source_invoices
-            .filter((r) => !r.is_ineligible_for_itc)
-            .reduce(
-                (s, r) =>
-                    s +
-                    (r.distributed_igst || 0) +
-                    (r.distributed_cgst || 0) +
-                    (r.distributed_sgst || 0) +
-                    (r.distributed_cess || 0),
-                0,
-            );
-        this.frm.doc.total_ineligible = source_invoices
-            .filter((r) => r.is_ineligible_for_itc)
-            .reduce(
-                (s, r) =>
-                    s +
-                    (r.distributed_igst || 0) +
-                    (r.distributed_cgst || 0) +
-                    (r.distributed_sgst || 0) +
-                    (r.distributed_cess || 0),
-                0,
-            );
+        this.frm.doc.total_eligible = total_eligible;
+        this.frm.doc.total_ineligible = total_ineligible;
 
         this.frm.refresh_fields(["taxes", "total_eligible", "total_ineligible"]);
     }
 
     recalculate() {
         if (!(this.frm.doc.source_invoices || []).length) return;
-        this.calculateDistribution();
-        // this internally calculates taxes and totals 
+        this.calculate_distribution();
     }
 }
