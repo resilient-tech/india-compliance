@@ -1368,20 +1368,6 @@ class ItemGSTDetails:
         """
 
         tax_details = frappe._dict()
-<<<<<<< HEAD
-=======
-        item_map = frappe._dict()
-        tax_map = frappe._dict()
-        tax_differences = defaultdict(float)
-        last_item_with_tax = None
-
-        for row in self.doc.get("taxes"):
-            if not self.is_gst_tax_row(row):
-                continue
-            tax_type = row.gst_tax_type
-            tax_differences[tax_type] += flt(row.get(self.tax_amount_field()))
-            tax_map[row.name] = row
->>>>>>> e76bf847 (fix: ensure tax amounts are handled as floats across transaction calculations)
 
         for row in self.doc.get("items"):
             key = self.get_item_key(row)
@@ -1401,7 +1387,7 @@ class ItemGSTDetails:
 
             old = json.loads(row.get(self.tax_details_field(), "{}"))
 
-            tax_difference = row.base_tax_amount_after_discount_amount
+            tax_difference = flt(row.base_tax_amount_after_discount_amount)
             last_item_with_tax = None
 
             # update item taxes

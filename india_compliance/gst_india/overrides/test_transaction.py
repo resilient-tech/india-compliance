@@ -28,11 +28,7 @@ from india_compliance.gst_india.constants import GST_TAX_TYPES, SALES_DOCTYPES
 from india_compliance.gst_india.overrides.transaction import (
     DOCTYPES_WITH_GST_DETAIL,
     ItemGSTDetails,
-<<<<<<< HEAD
-=======
     validate_gst_refund_accounts,
-    validate_item_tax_template,
->>>>>>> 72d5a9f4 (fix: changes as per review)
 )
 from india_compliance.gst_india.utils.tests import (
     _append_taxes,
