@@ -35,7 +35,6 @@ from india_compliance.gst_india.utils import (
     has_gst_taxes,
     is_overseas_doc,
     join_list_with_custom_separators,
-    update_onload,
     validate_gst_category,
     validate_gstin,
 )
@@ -1664,7 +1663,6 @@ def validate_transaction(doc, method=None):
     update_taxable_values(doc)
     validate_item_wise_tax_detail(doc)
     set_gst_breakup(doc)
-    update_onload(doc, "_gst_breakup_table", doc.gst_breakup_table)
 
 
 def before_print(doc, method=None, print_settings=None):
