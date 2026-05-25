@@ -253,7 +253,9 @@ def get_tax_amount(taxes, gst_tax_type):
     if not (taxes or gst_tax_type):
         return 0
 
-    return sum(tax.base_tax_amount_after_discount_amount for tax in taxes if tax.gst_tax_type == gst_tax_type)
+    return sum(
+        flt(tax.base_tax_amount_after_discount_amount) for tax in taxes if tax.gst_tax_type == gst_tax_type
+    )
 
 
 def set_ineligibility_reason(doc, show_alert=True):
