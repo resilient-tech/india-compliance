@@ -1181,8 +1181,10 @@ class ItemGSTDetails:
             if tax_amount:
                 last_item_with_tax = item
 
+        self.tax_differences = tax_differences
         # Handle rounding errors
         if tax_differences and last_item_with_tax:
+            last_item_with_tax.has_gst_tax_difference = True
             for tax_type, difference in tax_differences.items():
                 amount = flt(last_item_with_tax.get(f"{tax_type}_amount") + difference, 5)
                 last_item_with_tax.set(f"{tax_type}_amount", amount)
@@ -1281,10 +1283,12 @@ class ItemGSTDetails:
 
     def validate_item_gst_details(self):
         invalid_rows = defaultdict(list)
-
         for item in self.doc.get("items"):
+            adjustments = item.get("has_gst_tax_difference")
             for tax in GST_TAX_TYPES:
                 expected_amt = self.get_item_tax_amount(item, item.get(f"{tax}_rate"), tax)
+                if adjustments:
+                    expected_amt += self.tax_differences.get(tax, 0)
 
                 diff = abs(item.get(f"{tax}_amount") - expected_amt)
 
