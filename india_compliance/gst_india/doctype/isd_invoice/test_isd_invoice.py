@@ -10,6 +10,7 @@ from frappe.tests import IntegrationTestCase
 from india_compliance.gst_india.doctype.isd_invoice.isd_invoice import bulk_create_isd_invoices
 from india_compliance.gst_india.overrides.company import create_company_fixtures
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
+from india_compliance.tests.erpnext_test_utils import create_fiscal_year
 
 IGNORE_TEST_RECORD_DEPENDENCIES = [
     "ISD Invoice",
@@ -36,10 +37,18 @@ class TestISDInvoice(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-
         # --- Company 1: main ISD company ---
         cls.company = "_Test ISD Company"
         _make_company(cls.company, "_TISD", _COMPANY_1_GSTIN)
+
+
+
+        today = frappe.utils.getdate(frappe.utils.today())
+        if today.month >= 4:
+            fy_start, fy_end = f"{today.year}-04-01", f"{today.year + 1}-03-31"
+        else:
+            fy_start, fy_end = f"{today.year - 1}-04-01", f"{today.year}-03-31"
+        create_fiscal_year(cls.company, fy_start, fy_end)
         # Company 1 addresses
         cls.company_isd_address = _make_address(
             name=f"{cls.company}-ISD",
@@ -154,6 +163,9 @@ class TestISDInvoice(IntegrationTestCase):
             gst_category="Registered Regular",
             state="Gujarat",
         )
+
+    def test_something(self):
+        pass
 
     def test_inter_company_validation_skipped_when_not_against_party(self):
         doc = _make_isd_doc(company=self.company, is_against_party=0)
