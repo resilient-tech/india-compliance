@@ -52,6 +52,9 @@ def get_gstin_info(gstin: str | None, *, doc: str | dict | None = None, throw_er
 
 def _get_gstin_info(gstin, *, doc=None, throw_error=True):
     gstin = validate_gstin(gstin)
+    if not gstin:
+        return frappe._dict()
+
     response = get_archived_gstin_info(gstin)
 
     if not response:
