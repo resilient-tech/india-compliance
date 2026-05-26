@@ -628,7 +628,7 @@ def create_inter_company_invoice(source_name: str, target_doc: str | None = None
 
 
 @frappe.whitelist()
-def address_query(doctype, txt, searchfield, start, page_len, filters):
+def address_query(doctype: str, txt: str, searchfield: str, start: int, page_len: int, filters: dict):
     from frappe.desk.search import search_widget
 
     _filters = []

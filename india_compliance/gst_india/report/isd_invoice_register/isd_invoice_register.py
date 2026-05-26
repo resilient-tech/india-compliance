@@ -96,8 +96,8 @@ def get_purchase_invoice_data(filters):
             + pi_item.cess_rate
             + pi_item.cess_non_advol_rate,
         )
-        .orderby(pi.posting_date, Order.desc)
-        .orderby(pi.name, Order.asc)
+        .orderby(pi.posting_date, order=Order.desc)
+        .orderby(pi.name, order=Order.asc)
     )
 
     if filters.get("company"):
@@ -168,8 +168,8 @@ def get_isd_invoice_data(filters):
         .where(isd.docstatus == 1)
         .where(isd.posting_date[filters.from_date : filters.to_date])
         .groupby(isd.name, isd_src_items.is_ineligible_for_itc)
-        .orderby(isd.posting_date, Order.desc)
-        .orderby(isd.name, Order.asc)
+        .orderby(isd.posting_date, order=Order.desc)
+        .orderby(isd.name, order=Order.asc)
     )
 
     if filters.get("company"):

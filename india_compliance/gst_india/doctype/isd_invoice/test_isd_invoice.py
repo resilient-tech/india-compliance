@@ -292,11 +292,6 @@ class TestISDInvoice(IntegrationTestCase):
             + sum(getattr(row, field) for row in isd_c.source_invoices for field in tax_fields)
         )
 
-        print(
-            f"Original total tax: {original_total_tax}"
-            f"\n Distributed tax table: {[{field: getattr(row, field) for field in tax_fields} for row in isd_a.source_invoices + isd_b.source_invoices + isd_c.source_invoices]}"
-        )
-
         self.assertEqual(distributed_total_tax, original_total_tax)
 
     # TODO: ask lakshit bhai about the following test cases
@@ -380,12 +375,6 @@ class TestISDInvoice(IntegrationTestCase):
             for row in frappe.get_doc("ISD Invoice", name).source_invoices
             for f in tax_fields
         )
-        print(f"Original total tax: {pi_total}")
-        print(
-            f"Distributed tax table: {[{field: getattr(row, field) for field in tax_fields} for name in invoice_names for row in frappe.get_doc('ISD Invoice', name).source_invoices]}"
-        )
-        print("Distributed total tax", distributed_total)
-
         self.assertEqual(distributed_total, pi_total)
 
     # TODO: party being overseas
