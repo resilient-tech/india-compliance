@@ -19,6 +19,7 @@ for (const doctype of TRANSACTION_DOCTYPES) {
     fetch_gst_details(doctype);
     validate_overseas_gst_category(doctype);
     set_and_validate_gstin_status(doctype);
+    set_gst_tax_breakup_on_load(doctype);
 }
 
 for (const doctype of SUBCONTRACTING_DOCTYPES) {
@@ -188,6 +189,15 @@ function ignore_port_code_validation(doctype) {
     frappe.ui.form.on(doctype, {
         onload(frm) {
             frm.set_df_property("port_code", "ignore_validation", 1);
+        },
+    });
+}
+
+function set_gst_tax_breakup_on_load(doctype) {
+    frappe.ui.form.on(doctype, {
+        refresh(frm) {
+            frm.doc.gst_breakup_table = frm.doc.__onload?._gst_breakup_table;
+            frm.refresh_field("gst_breakup_table");
         },
     });
 }

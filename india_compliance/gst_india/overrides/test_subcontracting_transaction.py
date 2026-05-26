@@ -14,7 +14,16 @@ from erpnext.subcontracting.doctype.subcontracting_order.subcontracting_order im
 )
 from frappe.tests import IntegrationTestCase
 
-from india_compliance.gst_india.utils.tests import create_transaction
+from india_compliance.gst_india.utils.tests import (
+    SUBCONTRACTING_TEST_FINISHED_ITEM,
+    SUBCONTRACTING_TEST_FINISHED_ITEM_2,
+    SUBCONTRACTING_TEST_FINISHED_ITEM_TG,
+    SUBCONTRACTING_TEST_RM_ITEM_1,
+    SUBCONTRACTING_TEST_RM_ITEM_2,
+    SUBCONTRACTING_TEST_SERVICE_ITEM,
+    create_transaction,
+    make_subcontracting_stock_entry,
+)
 from india_compliance.tests.erpnext_test_utils import (
     create_subcontracting_order,
     get_rm_items,
@@ -24,8 +33,8 @@ from india_compliance.tests.erpnext_test_utils import (
 
 def make_raw_materials():
     raw_materials = {
-        "Subcontracted SRM Item 1": {"valuation_rate": 20},
-        "Subcontracted SRM Item 2": {"valuation_rate": 20},
+        SUBCONTRACTING_TEST_RM_ITEM_1: {"valuation_rate": 20},
+        SUBCONTRACTING_TEST_RM_ITEM_2: {"valuation_rate": 20},
     }
 
     for item, properties in raw_materials.items():
@@ -36,7 +45,7 @@ def make_raw_materials():
 
 def make_service_items():
     service_items = {
-        "Subcontracted Service Item 1": {},
+        SUBCONTRACTING_TEST_SERVICE_ITEM: {},
     }
 
     for item, properties in service_items.items():
@@ -47,8 +56,9 @@ def make_service_items():
 
 def make_subcontracted_items():
     sub_contracted_items = {
-        "Subcontracted Item SA1": {},
-        "Subcontracted Item SA2": {},
+        SUBCONTRACTING_TEST_FINISHED_ITEM: {},
+        SUBCONTRACTING_TEST_FINISHED_ITEM_2: {},
+        SUBCONTRACTING_TEST_FINISHED_ITEM_TG: {},
     }
 
     for item, properties in sub_contracted_items.items():
@@ -59,13 +69,14 @@ def make_subcontracted_items():
 
 def make_boms():
     boms = {
-        "Subcontracted Item SA1": [
-            "Subcontracted SRM Item 1",
-            "Subcontracted SRM Item 2",
+        SUBCONTRACTING_TEST_FINISHED_ITEM: [
+            SUBCONTRACTING_TEST_RM_ITEM_1,
+            SUBCONTRACTING_TEST_RM_ITEM_2,
         ],
-        "Subcontracted Item SA2": [
-            "Subcontracted SRM Item 1",
+        SUBCONTRACTING_TEST_FINISHED_ITEM_2: [
+            SUBCONTRACTING_TEST_RM_ITEM_1,
         ],
+        SUBCONTRACTING_TEST_FINISHED_ITEM_TG: ["_Test Trading Goods 1"],
     }
 
     for item_code, raw_materials in boms.items():
@@ -185,18 +196,23 @@ def create_subcontracting_data():
 
 
 SERVICE_ITEM = {
-    "item_code": "Subcontracted Service Item 1",
+    "item_code": SUBCONTRACTING_TEST_SERVICE_ITEM,
     "qty": 10,
     "rate": 100,
-    "fg_item": "Subcontracted Item SA1",
+    "fg_item": SUBCONTRACTING_TEST_FINISHED_ITEM,
     "fg_item_qty": 10,
 }
 
 
+def make_sco(**kwargs):
+    po = create_purchase_order(**SERVICE_ITEM, supplier_warehouse="Finished Goods - _TIRC")
+    return create_subcontracting_order(po_name=po.name, **kwargs)
+
+
 class TestSubcontractingTransaction(IntegrationTestCase):
-    ITEM_WITH_TAX = "Subcontracted SRM Item 1"
-    ITEM_WITHOUT_TAX = "Subcontracted SRM Item 2"
-    SCO_FG_ITEM = "Subcontracted Item SA1"
+    ITEM_WITH_TAX = SUBCONTRACTING_TEST_RM_ITEM_1
+    ITEM_WITHOUT_TAX = SUBCONTRACTING_TEST_RM_ITEM_2
+    SCO_FG_ITEM = SUBCONTRACTING_TEST_FINISHED_ITEM
     TAX_TEMPLATE = "GST 18% - _TIRC"
 
     @classmethod
@@ -225,17 +241,6 @@ class TestSubcontractingTransaction(IntegrationTestCase):
             },
         )
 
-    def _create_stock_entry(self, doc_args):
-        """Generate Stock Entry to test e-Waybill functionalities"""
-        doc_args.update({"doctype": "Stock Entry"})
-
-        stock_entry = create_transaction(**doc_args)
-        return stock_entry
-
-    def _make_sco(self):
-        po = create_purchase_order(**SERVICE_ITEM, supplier_warehouse="Finished Goods - _TIRC")
-        return create_subcontracting_order(po_name=po.name)
-
     def _rm_items(self, sco):
         return [
             {
@@ -250,25 +255,7 @@ class TestSubcontractingTransaction(IntegrationTestCase):
         ]
 
     def test_create_and_update_stock_entry(self):
-        # Create a subcontracting transaction
-        args = {
-            "stock_entry_type": "Send to Subcontractor",
-            "bill_from_address": "_Test Indian Registered Company-Billing",
-            "bill_to_address": "_Test Registered Supplier-Billing",
-            "items": [
-                {
-                    "item_code": "_Test Trading Goods 1",
-                    "qty": 1,
-                    "gst_hsn_code": "61149090",
-                    "s_warehouse": "Finished Goods - _TIRC",
-                    "t_warehouse": "Goods In Transit - _TIRC",
-                    "amount": 100,
-                }
-            ],
-            "company": "_Test Indian Registered Company",
-        }
-
-        stock_entry = self._create_stock_entry(args)
+        stock_entry = make_subcontracting_stock_entry(do_not_submit=True)
 
         # Update the subcontracting transaction
         stock_entry.run_method("onload")  # update virtual fields
@@ -308,11 +295,9 @@ class TestSubcontractingTransaction(IntegrationTestCase):
         self.assertEqual(se.total_taxes, 0.0)
 
     def test_subcontracting_validations(self):
-        po = create_purchase_order(**SERVICE_ITEM, supplier_warehouse="Finished Goods - _TIRC")
-        sco = create_subcontracting_order(po_name=po.name)
+        sco = make_sco()
 
-        rm_items = get_rm_items(sco.supplied_items)
-        make_stock_transfer_entry(sco_no=sco.name, rm_items=rm_items)
+        make_stock_transfer_entry(sco_no=sco.name, rm_items=get_rm_items(sco.supplied_items))
 
         scr = make_subcontracting_receipt(sco.name)
         scr.save()
@@ -328,8 +313,11 @@ class TestSubcontractingTransaction(IntegrationTestCase):
         self.assertEqual(scr.total_taxes, 252.0)
 
     def test_standalone_stock_entry(self):
-        purpose = "Send to Subcontractor"
-        se = make_stock_entry(purpose=purpose)
+        se = make_subcontracting_stock_entry(
+            bill_from_address=None,
+            bill_to_address=None,
+            do_not_save=True,
+        )
 
         self.assertRaisesRegex(
             frappe.ValidationError,
@@ -354,11 +342,8 @@ class TestSubcontractingTransaction(IntegrationTestCase):
             get_stock_entry_references,
         )
 
-        po = create_purchase_order(**SERVICE_ITEM, supplier_warehouse="Finished Goods - _TIRC")
-        sco = create_subcontracting_order(po_name=po.name)
-
-        rm_items = get_rm_items(sco.supplied_items)
-        se = make_stock_transfer_entry(sco_no=sco.name, rm_items=rm_items)
+        sco = make_sco()
+        se = make_stock_transfer_entry(sco_no=sco.name, rm_items=get_rm_items(sco.supplied_items))
 
         return_se = get_materials_from_supplier(sco.name, [d.name for d in sco.supplied_items])
         return_se.save()
@@ -395,10 +380,10 @@ class TestSubcontractingTransaction(IntegrationTestCase):
         service_item = [
             {
                 "warehouse": "Stores - _TIRC",
-                "item_code": "Subcontracted Service Item 1",
+                "item_code": SUBCONTRACTING_TEST_SERVICE_ITEM,
                 "qty": 10,
                 "rate": 100,
-                "fg_item": "Subcontracted Item SA1",
+                "fg_item": SUBCONTRACTING_TEST_FINISHED_ITEM,
                 "fg_item_qty": 10,
             }
         ]
@@ -415,15 +400,13 @@ class TestSubcontractingTransaction(IntegrationTestCase):
         sco.submit()
 
     def test_item_tax_template_set_on_sco_items_from_po(self):
-        po = create_purchase_order(**SERVICE_ITEM, supplier_warehouse="Finished Goods - _TIRC")
-        sco = create_subcontracting_order(po_name=po.name)
+        sco = make_sco()
 
         item_templates = {item.item_code: item.item_tax_template for item in sco.items}
         self.assertEqual(item_templates.get(self.SCO_FG_ITEM), self.TAX_TEMPLATE)
 
     def test_item_tax_template_not_overwritten_on_sco_items(self):
-        po = create_purchase_order(**SERVICE_ITEM, supplier_warehouse="Finished Goods - _TIRC")
-        sco = create_subcontracting_order(po_name=po.name, do_not_save=True)
+        sco = make_sco(do_not_save=True)
 
         other_template = "GST 5% - _TIRC"
         for item in sco.items:
@@ -436,7 +419,7 @@ class TestSubcontractingTransaction(IntegrationTestCase):
         self.assertEqual(templates.get(self.SCO_FG_ITEM), other_template)
 
     def test_item_tax_template_set_on_se_items_from_sco(self):
-        sco = self._make_sco()
+        sco = make_sco()
         se = make_rm_stock_entry(sco.name, self._rm_items(sco))
 
         items_by_code = {item.get("item_code"): item for item in se.get("items", [])}
@@ -471,12 +454,8 @@ class TestAddressMappingAfterMapping(IntegrationTestCase):
         super().tearDownClass()
         frappe.db.rollback(save_point="before_test_address_mapping")
 
-    def _make_sco(self):
-        po = create_purchase_order(**SERVICE_ITEM, supplier_warehouse="Finished Goods - _TIRC")
-        return create_subcontracting_order(po_name=po.name)
-
     def test_sco_to_se_send_to_subcontractor(self):
-        sco = self._make_sco()
+        sco = make_sco()
         rm_items = get_rm_items(sco.supplied_items)
 
         se = make_rm_stock_entry(sco.name, rm_items)
@@ -491,7 +470,7 @@ class TestAddressMappingAfterMapping(IntegrationTestCase):
         self.assertIsNone(se.ship_to_address)
 
     def test_sco_to_se_material_transfer_return(self):
-        sco = self._make_sco()
+        sco = make_sco()
         rm_items = get_rm_items(sco.supplied_items)
 
         # Materials must reach the supplier warehouse before they can be returned.
