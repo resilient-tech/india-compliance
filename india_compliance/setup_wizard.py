@@ -80,7 +80,7 @@ def setup_company_taxes(params):
         params.company_gstin = None
 
     gstin_info = frappe._dict()
-    if can_fetch_gstin_info():
+    if params.company_gstin and can_fetch_gstin_info():
         gstin_info = get_gstin_info(params.company_gstin, throw_error=False)
 
     update_company_info(params, gstin_info.gst_category)
