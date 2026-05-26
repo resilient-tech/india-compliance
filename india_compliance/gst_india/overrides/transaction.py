@@ -1227,6 +1227,7 @@ class ItemGSTDetails:
             tax_map[row.name] = row
 
         for row in self.doc.get("items"):
+            row.has_gst_tax_difference = False
             key = row.name
             item_map[key] = row
 

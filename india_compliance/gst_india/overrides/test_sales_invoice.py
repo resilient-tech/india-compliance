@@ -1,7 +1,6 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.tests.utils import change_settings
-from frappe.utils import flt
 
 from india_compliance.gst_india.utils import validate_invoice_number
 from india_compliance.gst_india.utils.tests import append_item, create_transaction
