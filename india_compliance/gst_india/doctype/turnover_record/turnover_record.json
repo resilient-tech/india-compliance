@@ -12,8 +12,7 @@
   "section_break_kryb",
   "gstin",
   "gst_state",
-  "column_break_stmn",
-  "gst_category"
+  "column_break_stmn"
  ],
  "fields": [
   {
@@ -40,19 +39,10 @@
    "fieldtype": "Column Break"
   },
   {
-   "default": "Unregistered",
-   "fieldname": "gst_category",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "GST Category",
-   "options": "Registered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nDeemed Export\nUIN Holders\nTax Deductor\nTax Collector\nInput Service Distributor",
-   "reqd": 1
-  },
-  {
    "fieldname": "gst_state",
    "fieldtype": "Select",
    "label": "GST State",
-   "mandatory_depends_on": "eval: doc.gst_category == 'Unregistered'",
+   "mandatory_depends_on": "eval: doc.gstin == ''",
    "options": "\nAndaman and Nicobar Islands\nAndhra Pradesh\nArunachal Pradesh\nAssam\nBihar\nChandigarh\nChhattisgarh\nDadra and Nagar Haveli and Daman and Diu\nDelhi\nGoa\nGujarat\nHaryana\nHimachal Pradesh\nJammu and Kashmir\nJharkhand\nKarnataka\nKerala\nLadakh\nLakshadweep Islands\nMadhya Pradesh\nMaharashtra\nManipur\nMeghalaya\nMizoram\nNagaland\nOdisha\nOther Countries\nOther Territory\nPuducherry\nPunjab\nRajasthan\nSikkim\nTamil Nadu\nTelangana\nTripura\nUttar Pradesh\nUttarakhand\nWest Bengal"
   },
   {

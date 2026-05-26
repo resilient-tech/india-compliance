@@ -7,6 +7,7 @@ from frappe.model.document import Document
 
 from india_compliance.gst_india.utils import get_state, validate_gst_category, validate_gstin
 
+# TODO: remove gst category from turnover records 
 
 class TurnoverRecord(Document):
     def autoname(self):
@@ -14,7 +15,6 @@ class TurnoverRecord(Document):
 
     def validate(self):
         validate_gstin(self.gstin)
-        validate_gst_category(self.gst_category, self.gstin)
         if self.gstin and get_state(self.gstin[:2]) != self.gst_state:
             # for registered company, gstin and gst state are compulsory and validated
             frappe.throw(_("GSTIN does not match selected state"))
@@ -22,7 +22,6 @@ class TurnoverRecord(Document):
 
 def upsert_turnover_record(
     gstin,
-    gst_category,
     gst_state,
     fiscal_year,
     amount,
@@ -44,7 +43,6 @@ def upsert_turnover_record(
             doc.fiscal_year = fiscal_year
             doc.gstin = gstin
             doc.gst_state = gst_state
-            doc.gst_category = gst_category
             doc.amount = amount
             doc.insert(ignore_permissions=True)
     except frappe.ValidationError:

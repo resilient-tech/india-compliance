@@ -806,7 +806,7 @@ def bulk_create_isd_invoices(distribution_heads: list | str, source_names: list 
                 fiscal_year = get_fiscal_year(seed_pi.posting_date, company=seed_pi.company)[0]
             # todo: remove gst category in turnover records
             upsert_turnover_record(
-                row["gstin"], row["gst_category"], row["gst_state"], fiscal_year, turnover_amount
+                row["gstin"], row["gst_state"], fiscal_year, turnover_amount
             )
 
             isd_doc, is_invalid_insertion = make_isd_invoice(
