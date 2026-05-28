@@ -435,6 +435,11 @@ def _make_company(company_name, abbr, gstin, gst_category="Registered Regular", 
     if frappe.db.exists("Company", company_name):
         frappe.delete_doc("Company", company_name, force=True)
 
+    # Also clear any different company that already holds the same abbreviation.
+    existing_with_abbr = frappe.db.get_value("Company", {"abbr": abbr}, "name")
+    if existing_with_abbr:
+        frappe.delete_doc("Company", existing_with_abbr, force=True)
+
     doc = frappe.get_doc(
         {
             "doctype": "Company",
