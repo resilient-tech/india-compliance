@@ -51,8 +51,13 @@ class TestGSTR1Export(IntegrationTestCase):
 
     def test_returns_multiple_matching_sections(self):
         result = _filter_data_by_sections(self.gov_data, ["b2b", "cdnr"])
-        self.assertIn("b2b", result)
-        self.assertIn("cdnr", result)
+        self.assertEqual(
+            result,
+            {
+                "b2b": [{"invoice": "INV-001"}],
+                "cdnr": [{"note": "CN-001"}],
+            },
+        )
 
     def test_returns_empty_for_unknown_section(self):
         result = _filter_data_by_sections(self.gov_data, ["nonexistent"])
