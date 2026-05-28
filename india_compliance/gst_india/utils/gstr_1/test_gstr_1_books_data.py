@@ -825,7 +825,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
         self.assertGreater(supecom_row[inv_f.TAXABLE_VALUE], 0)
 
     def test_supecom_excel_headers_include_operator_name(self):
-        headers = GovExcel().get_supeco_headers()
+        headers = GovExcel().get_category_headers(GovJsonKey.SUPECOM.value)
 
         operator_name_header = next(
             header for header in headers if header.get("label") == "E-Commerce Operator Name"
