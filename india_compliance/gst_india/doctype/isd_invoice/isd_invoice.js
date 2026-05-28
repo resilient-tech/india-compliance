@@ -6,9 +6,8 @@ frappe.ui.form.on("ISD Invoice", {
     },
 
     refresh(frm) {
-        frm.set_df_property("to_party_state", "options", [""].concat(frappe.boot.india_state_options));
         frm.isd_controller.update_address_labels(); // Show button to create inter-company invoice on submit
-        if (frm.doc.docstatus === 1 && frm.doc.is_against_party && !frm.doc.inter_company_invoice_reference) {
+        if (frm.doc.docstatus === 1 && frm.doc.is_against_party) {
             frm.add_custom_button(
                 __("Inter Company ISD Invoice"),
                 () => {
@@ -128,24 +127,16 @@ frappe.ui.form.on("ISD Invoice", {
         });
 
         // Move distribution_ratio section before the results area.
-        // rearrangement runs after the make is complete
+        // rearrangement runs after make is complete; patch handles non-cached case
+        const _make = d.make.bind(d);
         const rearrange = () => {
             const $dist = d.dialog?.fields_dict?.distribution_ratio?.$wrapper?.closest(".form-section");
             const $results = d.dialog?.fields_dict?.results_area?.$wrapper?.closest(".form-section");
-            if ($dist && $results) $dist.insertBefore($results);
+            if ($dist?.length && $results?.length) $dist.insertBefore($results);
         };
 
-        if (d.dialog) {
-            // doctype was already cached — dialog already built
-            rearrange();
-        } else {
-            // monkey patch make() to avoid fields_dict not ready issue
-            const _make = d.make.bind(d);
-            d.make = function () {
-                _make();
-                rearrange();
-            };
-        }
+        d.make = () => { _make(); rearrange(); };
+        if (d.dialog) rearrange();
     },
 });
 
@@ -214,7 +205,7 @@ class ISDInvoiceController {
                 link_doctype: "Company",
                 link_name: this.frm.doc.company,
             };
-            // Only filter by gst_category for equality; skip the != case
+            // gst_category should be ISD if company is distributor
             if (!is_company_recipient) {
                 filters.gst_category = "Input Service Distributor";
             }
@@ -252,12 +243,14 @@ class ISDInvoiceController {
                 return { filters: {} };
             }
 
+            const is_company_recipient =
+            this.frm.doc.is_against_party && this.frm.doc.credit_flow === "Credit Receipt";
             const filters = {
                 link_doctype: this.frm.doc.party_type,
                 link_name: this.frm.doc.party,
             };
 
-            if (this.frm.doc.credit_flow === "Credit Receipt") {
+            if (is_company_recipient) {
                 filters.gst_category = "Input Service Distributor";
             }
 
@@ -306,7 +299,7 @@ class ISDInvoiceController {
 
     update_address_labels() {
         const LABELS = {
-            default: {
+            "default": {
                 company_address: __("Select Company Address"),
                 party_address: __("Select Party Address"),
             },
@@ -320,8 +313,8 @@ class ISDInvoiceController {
             },
         };
 
-        const key = !this.frm.doc.is_against_party ? "default" : this.frm.doc.credit_flow || "Credit Receipt";
-        const labels = LABELS[key] || LABELS["Credit Receipt"];
+        const key = !this.frm.doc.is_against_party ? "default" : this.frm.doc.credit_flow;
+        const labels = LABELS[key] || LABELS["default"];
 
         this.frm.set_df_property("company_address", "label", labels.company_address);
         this.frm.set_df_property("party_address", "label", labels.party_address);
@@ -340,15 +333,6 @@ class ISDInvoiceController {
                 const items = result.message || [];
                 const match = items.find((item) => item.is_ineligible_for_itc == row.is_ineligible_for_itc);
                 if (!match) {
-                    const itc_type = row.is_ineligible_for_itc ? __("ineligible") : __("eligible");
-                    frappe.msgprint({
-                        message: __("No {0} ITC taxes found for Purchase Invoice {1}", [
-                            itc_type,
-                            row.purchase_invoice,
-                        ]),
-                        indicator: "orange",
-                        title: __("No Matching Taxes"),
-                    });
                     frappe.model.set_value(cdt, cdn, {
                         total_igst: 0,
                         total_cgst: 0,
@@ -370,7 +354,7 @@ class ISDInvoiceController {
             },
         });
     }
-
+    // can optimize this using the fetch_isd_autofill
     set_address_display(address_field, display_field) {
         const address = this.frm.doc[address_field];
         if (address) {
@@ -386,7 +370,6 @@ class ISDInvoiceController {
             this.frm.set_value(display_field, "");
         }
     }
-
     fetch_gst_accounts() {
         if (!this.frm.doc.company) return;
         frappe
@@ -449,16 +432,16 @@ class ISDInvoiceController {
         let total_eligible = 0,
             total_ineligible = 0;
         for (const r of source_invoices) {
-            total_igst += r.distributed_igst || 0;
-            total_cgst += r.distributed_cgst || 0;
-            total_sgst += r.distributed_sgst || 0;
-            total_cess += r.distributed_cess || 0;
-            total_cess_non_advol += r.distributed_cess_non_advol || 0;
+            total_igst += r.distributed_igst;
+            total_cgst += r.distributed_cgst;
+            total_sgst += r.distributed_sgst;
+            total_cess += r.distributed_cess;
+            total_cess_non_advol += r.distributed_cess_non_advol;
             const row_total =
-                (r.distributed_igst || 0) +
-                (r.distributed_cgst || 0) +
-                (r.distributed_sgst || 0) +
-                (r.distributed_cess || 0);
+                (r.distributed_igst) +
+                (r.distributed_cgst) +
+                (r.distributed_sgst) +
+                (r.distributed_cess);
             if (r.is_ineligible_for_itc) total_ineligible += row_total;
             else total_eligible += row_total;
         }

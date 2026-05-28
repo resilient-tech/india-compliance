@@ -65,8 +65,7 @@
    "default": "0",
    "fieldname": "distribution_ratio",
    "fieldtype": "Float",
-   "label": "Distribution Ratio",
-   "reqd": 1
+   "label": "Distribution Ratio"
   },
   {
    "default": "0",
