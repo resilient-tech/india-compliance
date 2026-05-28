@@ -2166,24 +2166,16 @@ class ReconcileExcel:
         ]
 
 
-def _filter_data_by_sections(data: dict, section: list[str] | None) -> dict:
-    """Keep only entries whose keys belong to `section`.
+def _filter_data_by_sections(data: dict, sections: list[str] | None) -> dict:
+    """Keep only entries whose keys belong to `sections`.
 
     Accepts list of expanded keys
     (Excel path, e.g. ``["hsn_b2b", "hsn_b2c"]`` for HSN on bifurcated periods).
     """
-    if not section:
+    if not sections:
         return data
 
-    return {k: v for k, v in data.items() if k in section}
-
-
-VALID_SECTIONS = frozenset(key.value for key in GovJsonKey)
-
-
-def _validate_section(section: str | None) -> None:
-    if section and section not in VALID_SECTIONS:
-        frappe.throw(frappe._("Invalid section: {0}").format(section))
+    return {k: v for k, v in data.items() if k in sections}
 
 
 def _get_gov_filename(company_gstin: str, period: str, section: str | None = None) -> str:
@@ -2196,7 +2188,6 @@ def _get_gov_filename(company_gstin: str, period: str, section: str | None = Non
 @frappe.whitelist()
 def download_filed_as_excel(company_gstin: str, month_or_quarter: str, year: str, section: str | None = None):
     frappe.has_permission("GSTR-1", "export", throw=True)
-    _validate_section(section)
     GovExcel().generate(company_gstin, get_period(month_or_quarter, year), section=section)
 
 
@@ -2226,8 +2217,6 @@ def get_gstr_1_json(
     section: str | None = None,
 ):
     frappe.has_permission("GSTR-1", "export", throw=True)
-    _validate_section(section)
-
     settings = frappe.get_cached_doc("GST Settings")
     if not settings.is_gstr1_api_enabled(company_gstin):
         include_uploaded = True
