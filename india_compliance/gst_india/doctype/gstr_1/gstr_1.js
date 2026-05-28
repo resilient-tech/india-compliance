@@ -2063,7 +2063,8 @@ class FiledTab extends GSTR1_TabManager {
     setup_actions() {
         this.add_tab_custom_button("Download Excel", () => this.download_filed_as_excel());
 
-        this.add_tab_custom_button("Download JSON", () => this.download_filed_json());
+        if (this.status !== "Filed")
+            this.add_tab_custom_button("Download JSON", () => this.download_filed_json());
 
         if (!is_gstr1_api_enabled()) return;
 
@@ -2085,19 +2086,33 @@ class FiledTab extends GSTR1_TabManager {
 
     download_filed_as_excel() {
         const url = "india_compliance.gst_india.doctype.gstr_1.gstr_1_export.download_filed_as_excel";
-        open_section_download_dialog({
+        const dialog = new frappe.ui.Dialog({
             title: __("Download Excel"),
-            section_options: GSTR1_SECTION_OPTIONS,
-            on_submit: (section) => {
+            fields: [
+                {
+                    fieldname: "section",
+                    label: __("Section"),
+                    fieldtype: "Select",
+                    options: [{ value: "", label: __("All Sections") }, ...GSTR1_SECTION_OPTIONS],
+                    description: __("Select a section to download, or leave empty for all sections."),
+                },
+            ],
+            primary_action_label: __("Download"),
+            primary_action: () => {
+                const { section } = dialog.get_values();
                 const post_args = {
                     company_gstin: this.instance.frm.doc.company_gstin,
                     month_or_quarter: this.instance.frm.doc.month_or_quarter,
                     year: this.instance.frm.doc.year,
                 };
+
                 if (section) post_args.section = section;
                 open_url_post(`/api/method/${url}`, post_args);
+                dialog.hide();
             },
         });
+
+        dialog.show();
     }
 
     sync_with_gstn(sync_for) {
@@ -2148,6 +2163,7 @@ class FiledTab extends GSTR1_TabManager {
         const dialog = new frappe.ui.Dialog({
             title: __("Download JSON"),
             fields,
+            primary_action_label: __("Download"),
             primary_action: () => {
                 const { section, include_uploaded, delete_missing } = dialog.get_values();
                 const doc = me.instance.frm.doc;
@@ -3060,28 +3076,6 @@ const GSTR1_SECTION_OPTIONS = [
     { value: "doc_issue", label: __("Document Issued Summary (doc_issue)") },
     { value: "supeco", label: __("Supplies through e-Commerce (supeco)") },
 ];
-
-function open_section_download_dialog({ title, section_options, on_submit }) {
-    const dialog = new frappe.ui.Dialog({
-        title,
-        fields: [
-            {
-                fieldname: "section",
-                label: __("Section"),
-                fieldtype: "Select",
-                options: [{ value: "", label: __("All Sections") }, ...section_options],
-                description: __("Select a section to download, or leave empty for all sections."),
-            },
-        ],
-        primary_action_label: __("Download"),
-        primary_action: () => {
-            const { section } = dialog.get_values();
-            on_submit(section || null);
-            dialog.hide();
-        },
-    });
-    dialog.show();
-}
 
 function is_gstr1_api_enabled() {
     return india_compliance.is_api_enabled() && !gst_settings.sandbox_mode && gst_settings.enable_gstr_1_api;
