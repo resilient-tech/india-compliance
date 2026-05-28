@@ -105,7 +105,7 @@ class GSTR1_DataField:
     TRANSACTION_TYPE = "transaction_type"
     CUST_GSTIN = "customer_gstin"
     ECOMMERCE_GSTIN = "ecommerce_gstin"
-    ECOMMERCE_OPERATOR_NAME = "_ecommerce_operator_name"
+    ECOMMERCE_OPERATOR_NAME = "ecommerce_operator_name"
     CUST_NAME = "customer_name"
     DOC_DATE = "document_date"
     DOC_NUMBER = "document_number"
