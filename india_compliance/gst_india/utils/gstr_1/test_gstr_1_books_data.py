@@ -833,35 +833,39 @@ class TestGSTR1BooksData(IntegrationTestCase):
         self.assertEqual(operator_name_header.get("fieldname"), inv_f.ECOMMERCE_OPERATOR_NAME)
 
     def test_supecom_summary_counts_rows(self):
-        data = {
-            GSTR1_SubCategory.SUPECOM_52.value: [
-                {
-                    inv_f.DOC_TYPE: GSTR1_SubCategory.SUPECOM_52.value,
-                    inv_f.ECOMMERCE_GSTIN: "20ALYPD6528PQC5",
-                    inv_f.TAXABLE_VALUE: 100.0,
-                    inv_f.IGST: 18.0,
-                    inv_f.CGST: 0.0,
-                    inv_f.SGST: 0.0,
-                    inv_f.CESS: 0.0,
-                },
-                {
-                    inv_f.DOC_TYPE: GSTR1_SubCategory.SUPECOM_52.value,
-                    inv_f.ECOMMERCE_GSTIN: "29AABCF8078M1C8",
-                    inv_f.TAXABLE_VALUE: 200.0,
-                    inv_f.IGST: 0.0,
-                    inv_f.CGST: 18.0,
-                    inv_f.SGST: 18.0,
-                    inv_f.CESS: 0.0,
-                },
-            ]
-        }
+        for subcategory in (
+            GSTR1_SubCategory.SUPECOM_52.value,
+            GSTR1_SubCategory.SUPECOM_9_5.value,
+        ):
+            data = {
+                subcategory: [
+                    {
+                        inv_f.DOC_TYPE: subcategory,
+                        inv_f.ECOMMERCE_GSTIN: "20ALYPD6528PQC5",
+                        inv_f.TAXABLE_VALUE: 100.0,
+                        inv_f.IGST: 18.0,
+                        inv_f.CGST: 0.0,
+                        inv_f.SGST: 0.0,
+                        inv_f.CESS: 0.0,
+                    },
+                    {
+                        inv_f.DOC_TYPE: subcategory,
+                        inv_f.ECOMMERCE_GSTIN: "29AABCF8078M1C8",
+                        inv_f.TAXABLE_VALUE: 200.0,
+                        inv_f.IGST: 0.0,
+                        inv_f.CGST: 18.0,
+                        inv_f.SGST: 18.0,
+                        inv_f.CESS: 0.0,
+                    },
+                ]
+            }
 
-        summary_row = SummarizeGSTR1().get_subcategory_summary(data)[GSTR1_SubCategory.SUPECOM_52.value]
+            summary_row = SummarizeGSTR1().get_subcategory_summary(data)[subcategory]
 
-        self.assertEqual(summary_row["no_of_records"], 2)
-        self.assertEqual(summary_row[inv_f.TAXABLE_VALUE], 300.0)
-        self.assertFalse(summary_row["consider_in_total_taxable_value"])
-        self.assertFalse(summary_row["consider_in_total_tax"])
+            self.assertEqual(summary_row["no_of_records"], 2)
+            self.assertEqual(summary_row[inv_f.TAXABLE_VALUE], 300.0)
+            self.assertFalse(summary_row["consider_in_total_taxable_value"])
+            self.assertFalse(summary_row["consider_in_total_tax"])
 
     def test_document_issued_summary(self):
         pass
