@@ -41,8 +41,6 @@ class TestISDInvoice(IntegrationTestCase):
         cls.company = "_Test ISD Company"
         _make_company(cls.company, "_TISD", _COMPANY_1_GSTIN)
 
-
-
         today = frappe.utils.getdate(frappe.utils.today())
         if today.month >= 4:
             fy_start, fy_end = f"{today.year}-04-01", f"{today.year + 1}-03-31"
