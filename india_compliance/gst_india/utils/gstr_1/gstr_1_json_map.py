@@ -2305,7 +2305,7 @@ class BooksDataMapper:
                     {
                         inv_f.DOC_TYPE: supply_type,
                         inv_f.ECOMMERCE_GSTIN: eco_gstin,
-                        inv_f.ECOMMERCE_GSTIN_NAME: get_party_name_for_gstin(eco_gstin, party_name_map),
+                        inv_f.ECOMMERCE_OPERATOR_NAME: get_party_name_for_gstin(eco_gstin, party_name_map),
                         **self.get_invoice_values(),
                     },
                 )

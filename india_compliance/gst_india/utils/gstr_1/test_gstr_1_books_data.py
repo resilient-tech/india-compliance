@@ -15,9 +15,6 @@ from india_compliance.gst_india.utils.gstr_1 import (
 from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_DataField as inv_f,
 )
-from india_compliance.gst_india.utils.gstr_1 import (
-    GSTR1_ItemField as item_f,
-)
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import GSTR1BooksData
 from india_compliance.gst_india.utils.tests import (
     _append_taxes,
@@ -785,6 +782,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
         for row, gstin in ((row_1, ecommerce_gstin_1), (row_2, ecommerce_gstin_2)):
             self.assertEqual(row[inv_f.DOC_TYPE], GSTR1_SubCategory.SUPECOM_52.value)
             self.assertEqual(row[inv_f.ECOMMERCE_GSTIN], gstin)
+            self.assertIn(inv_f.ECOMMERCE_OPERATOR_NAME, row)
             self.assertNotIn("no_of_records", row)
             self.assertGreater(row[inv_f.TAXABLE_VALUE], 0)
             # Frontend summary/detail reads invoice-level total tax fields.
@@ -807,6 +805,7 @@ class TestGSTR1BooksData(IntegrationTestCase):
                 {
                     inv_f.DOC_TYPE: GSTR1_SubCategory.SUPECOM_52.value,
                     inv_f.ECOMMERCE_GSTIN: ecommerce_gstin,
+                    inv_f.ECOMMERCE_OPERATOR_NAME: "Test Operator",
                     inv_f.TAXABLE_VALUE: 100.0,
                     inv_f.IGST: 18.0,
                     inv_f.CGST: 0.0,
@@ -822,7 +821,16 @@ class TestGSTR1BooksData(IntegrationTestCase):
 
         supecom_row = processed[GovJsonKey.SUPECOM.value][0]
         self.assertEqual(supecom_row[inv_f.ECOMMERCE_GSTIN], ecommerce_gstin)
+        self.assertEqual(supecom_row[inv_f.ECOMMERCE_OPERATOR_NAME], "Test Operator")
         self.assertGreater(supecom_row[inv_f.TAXABLE_VALUE], 0)
+
+    def test_supecom_excel_headers_include_operator_name(self):
+        headers = GovExcel().get_supeco_headers()
+
+        operator_name_header = next(
+            header for header in headers if header.get("label") == "E-Commerce Operator Name"
+        )
+        self.assertEqual(operator_name_header.get("fieldname"), inv_f.ECOMMERCE_OPERATOR_NAME)
 
     def test_supecom_summary_counts_rows(self):
         data = {

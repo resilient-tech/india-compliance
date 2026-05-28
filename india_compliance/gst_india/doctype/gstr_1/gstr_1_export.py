@@ -425,7 +425,7 @@ class GovExcel(DataProcessor):
             },
             {
                 "label": _("E-Commerce Operator Name"),
-                "fieldname": f"_{inv_f.ECOMMERCE_GSTIN_NAME}",
+                "fieldname": inv_f.ECOMMERCE_OPERATOR_NAME,
                 "header_format": {"width": ExcelWidth.LG.value},
             },
             {
