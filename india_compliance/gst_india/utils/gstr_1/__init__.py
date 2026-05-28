@@ -309,7 +309,8 @@ class GovExcelSheetName(Enum):
     HSN_B2B = "hsn(b2b)"
     HSN_B2C = "hsn(b2c)"
     DOC_ISSUE = "docs"
-    SUPECOM = "eco"
+    ECO = "eco"
+    MASTER = "master"
 
 
 SUB_CATEGORY_GOV_CATEGORY_MAPPING = {
@@ -347,7 +348,7 @@ JSON_CATEGORY_EXCEL_CATEGORY_MAPPING = {
     GovJsonKey.TXP.value: GovExcelSheetName.TXP.value,
     GovJsonKey.HSN.value: GovExcelSheetName.HSN.value,
     GovJsonKey.DOC_ISSUE.value: GovExcelSheetName.DOC_ISSUE.value,
-    GovJsonKey.SUPECOM.value: GovExcelSheetName.SUPECOM.value,
+    GovJsonKey.SUPECOM.value: GovExcelSheetName.ECO.value,
     # only for excel
     HSNKey.HSN_B2B.value: GovExcelSheetName.HSN_B2B.value,
     HSNKey.HSN_B2C.value: GovExcelSheetName.HSN_B2C.value,
