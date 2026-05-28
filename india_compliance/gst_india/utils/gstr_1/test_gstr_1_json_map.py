@@ -1381,10 +1381,10 @@ class TestSUPECOM(IntegrationTestCase):
                     inv_f.DOC_TYPE: GSTR1_SubCategory.SUPECOM_52.value,
                     inv_f.ECOMMERCE_GSTIN: "20ALYPD6528PQC5",
                     inv_f.TAXABLE_VALUE: 10000,
-                    item_f.IGST: 1000,
-                    item_f.CGST: 0,
-                    item_f.SGST: 0,
-                    item_f.CESS: 0,
+                    inv_f.IGST: 1000,
+                    inv_f.CGST: 0,
+                    inv_f.SGST: 0,
+                    inv_f.CESS: 0,
                 }
             },
             GSTR1_SubCategory.SUPECOM_9_5.value: {
@@ -1392,10 +1392,10 @@ class TestSUPECOM(IntegrationTestCase):
                     inv_f.DOC_TYPE: GSTR1_SubCategory.SUPECOM_9_5.value,
                     inv_f.ECOMMERCE_GSTIN: "20ALYPD6528PQC5",
                     inv_f.TAXABLE_VALUE: 10000,
-                    item_f.IGST: 1000,
-                    item_f.CGST: 0,
-                    item_f.SGST: 0,
-                    item_f.CESS: 0,
+                    inv_f.IGST: 1000,
+                    inv_f.CGST: 0,
+                    inv_f.SGST: 0,
+                    inv_f.CESS: 0,
                 }
             },
         }

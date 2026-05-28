@@ -159,8 +159,10 @@ class SummarizeGSTR1:
                     GSTR1_SubCategory.HSN_B2B.value,
                     GSTR1_SubCategory.HSN_B2C.value,
                     GSTR1_SubCategory.HSN.value,  # Backwards compatibility
+                    GSTR1_SubCategory.SUPECOM_52.value,
+                    GSTR1_SubCategory.SUPECOM_9_5.value,
                 ):
-                    self.count_hsn_summary(summary_row)
+                    self.add_unique_count(summary_row)
 
         for subcategory in subcategory_summary.keys():
             summary_row = subcategory_summary[subcategory]
@@ -243,7 +245,7 @@ class SummarizeGSTR1:
         )
 
     @staticmethod
-    def count_hsn_summary(summary_row):
+    def add_unique_count(summary_row):
         summary_row["no_of_records"] += 1
 
 

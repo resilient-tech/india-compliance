@@ -3,11 +3,20 @@ from erpnext.accounts.doctype.sales_invoice.sales_invoice import make_sales_retu
 from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import flt, getdate
 
+from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import SummarizeGSTR1
+from india_compliance.gst_india.doctype.gstr_1.gstr_1_export import GovExcel
 from india_compliance.gst_india.overrides.company import create_default_company_account
 from india_compliance.gst_india.utils import get_full_gst_uom
 from india_compliance.gst_india.utils.gstr_1 import (
+    GovJsonKey,
     GSTR1_B2B_InvoiceType,
     GSTR1_SubCategory,
+)
+from india_compliance.gst_india.utils.gstr_1 import (
+    GSTR1_DataField as inv_f,
+)
+from india_compliance.gst_india.utils.gstr_1 import (
+    GSTR1_ItemField as item_f,
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import GSTR1BooksData
 from india_compliance.gst_india.utils.tests import (
@@ -736,6 +745,115 @@ class TestGSTR1BooksData(IntegrationTestCase):
                 },
                 data[GSTR1_SubCategory.B2CS.value][f"{si.place_of_supply} - 18.0"][0],
             )
+
+    def test_ecommerce_invoices_aggregate_under_supecom(self):
+        ecommerce_gstin_1 = "20ALYPD6528PQC5"
+        ecommerce_gstin_2 = "29AABCF8078M1C8"
+
+        # Two invoices for operator 1 (count is row-based, not invoice-based)
+        create_sales_invoice(
+            customer="_Test Registered Customer",
+            is_in_state=True,
+            ecommerce_gstin=ecommerce_gstin_1,
+        )
+        create_sales_invoice(
+            customer="_Test Unregistered Customer",
+            place_of_supply="27-Maharashtra",
+            is_in_state=False,
+            is_out_state=True,
+            ecommerce_gstin=ecommerce_gstin_1,
+        )
+
+        # One invoice for operator 2
+        create_sales_invoice(
+            customer="_Test Registered Customer",
+            is_in_state=True,
+            ecommerce_gstin=ecommerce_gstin_2,
+        )
+
+        data = GSTR1BooksData(filters=FILTERS).prepare_mapped_data()
+
+        self.assertIn(GSTR1_SubCategory.SUPECOM_52.value, data)
+        supecom_rows = data[GSTR1_SubCategory.SUPECOM_52.value]
+        self.assertIn(ecommerce_gstin_1, supecom_rows)
+        self.assertIn(ecommerce_gstin_2, supecom_rows)
+        self.assertEqual(len(supecom_rows), 2)
+
+        row_1 = supecom_rows[ecommerce_gstin_1]
+        row_2 = supecom_rows[ecommerce_gstin_2]
+
+        for row, gstin in ((row_1, ecommerce_gstin_1), (row_2, ecommerce_gstin_2)):
+            self.assertEqual(row[inv_f.DOC_TYPE], GSTR1_SubCategory.SUPECOM_52.value)
+            self.assertEqual(row[inv_f.ECOMMERCE_GSTIN], gstin)
+            self.assertNotIn("no_of_records", row)
+            self.assertGreater(row[inv_f.TAXABLE_VALUE], 0)
+            # Frontend summary/detail reads invoice-level total tax fields.
+            self.assertIn(inv_f.IGST, row)
+            self.assertIn(inv_f.CGST, row)
+            self.assertIn(inv_f.SGST, row)
+
+        # Operator 1 has in-state + out-state invoices, so it should have both
+        # IGST and CGST/SGST in aggregate.
+        self.assertGreater(row_1[inv_f.IGST], 0)
+        self.assertGreater(row_1[inv_f.CGST], 0)
+        self.assertGreater(row_1[inv_f.SGST], 0)
+
+    def test_gov_excel_process_data_keeps_supecom_rows(self):
+        ecommerce_gstin = "20ALYPD6528PQC5"
+
+        books_data = {
+            "aggregate_data": {},
+            GSTR1_SubCategory.SUPECOM_52.value: [
+                {
+                    inv_f.DOC_TYPE: GSTR1_SubCategory.SUPECOM_52.value,
+                    inv_f.ECOMMERCE_GSTIN: ecommerce_gstin,
+                    inv_f.TAXABLE_VALUE: 100.0,
+                    inv_f.IGST: 18.0,
+                    inv_f.CGST: 0.0,
+                    inv_f.SGST: 0.0,
+                    inv_f.CESS: 0.0,
+                }
+            ],
+        }
+        processed = GovExcel().process_data(books_data)
+
+        self.assertIn(GovJsonKey.SUPECOM.value, processed)
+        self.assertTrue(processed[GovJsonKey.SUPECOM.value])
+
+        supecom_row = processed[GovJsonKey.SUPECOM.value][0]
+        self.assertEqual(supecom_row[inv_f.ECOMMERCE_GSTIN], ecommerce_gstin)
+        self.assertGreater(supecom_row[inv_f.TAXABLE_VALUE], 0)
+
+    def test_supecom_summary_counts_rows(self):
+        data = {
+            GSTR1_SubCategory.SUPECOM_52.value: [
+                {
+                    inv_f.DOC_TYPE: GSTR1_SubCategory.SUPECOM_52.value,
+                    inv_f.ECOMMERCE_GSTIN: "20ALYPD6528PQC5",
+                    inv_f.TAXABLE_VALUE: 100.0,
+                    inv_f.IGST: 18.0,
+                    inv_f.CGST: 0.0,
+                    inv_f.SGST: 0.0,
+                    inv_f.CESS: 0.0,
+                },
+                {
+                    inv_f.DOC_TYPE: GSTR1_SubCategory.SUPECOM_52.value,
+                    inv_f.ECOMMERCE_GSTIN: "29AABCF8078M1C8",
+                    inv_f.TAXABLE_VALUE: 200.0,
+                    inv_f.IGST: 0.0,
+                    inv_f.CGST: 18.0,
+                    inv_f.SGST: 18.0,
+                    inv_f.CESS: 0.0,
+                },
+            ]
+        }
+
+        summary_row = SummarizeGSTR1().get_subcategory_summary(data)[GSTR1_SubCategory.SUPECOM_52.value]
+
+        self.assertEqual(summary_row["no_of_records"], 2)
+        self.assertEqual(summary_row[inv_f.TAXABLE_VALUE], 300.0)
+        self.assertFalse(summary_row["consider_in_total_taxable_value"])
+        self.assertFalse(summary_row["consider_in_total_tax"])
 
     def test_document_issued_summary(self):
         pass
