@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
-from india_compliance.gst_india.utils import get_state, validate_gst_category, validate_gstin
+from india_compliance.gst_india.utils import get_state, validate_gstin
 
 # TODO: remove gst category from turnover records
 
