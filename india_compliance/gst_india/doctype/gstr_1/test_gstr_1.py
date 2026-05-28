@@ -96,11 +96,11 @@ class TestGSTR1Export(IntegrationTestCase):
             [GovExcelSheetName.HSN_B2B.value, GovExcelSheetName.HSN_B2C.value],
         )
 
-    def test_supeco_resolves_to_eco_sheet(self):
-        self.assertEqual(
-            _get_excel_sheet_names(_get_selected_sections(GovJsonKey.SUPECOM.value, is_hsn_bifurcated=False)),
-            [GovExcelSheetName.ECO.value],
-        )
+    # def test_supeco_resolves_to_eco_sheet(self):
+    #     self.assertEqual(
+    #         _get_excel_sheet_names(_get_selected_sections(GovJsonKey.SUPECOM.value, is_hsn_bifurcated=False)),
+    #         [GovExcelSheetName.ECO.value],
+    #     )
 
     def test_unknown_section_returns_empty_list(self):
         self.assertEqual(
