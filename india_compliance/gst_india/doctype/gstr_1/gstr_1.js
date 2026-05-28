@@ -2063,8 +2063,7 @@ class FiledTab extends GSTR1_TabManager {
     setup_actions() {
         this.add_tab_custom_button("Download Excel", () => this.download_filed_as_excel());
 
-        if (this.status !== "Filed")
-            this.add_tab_custom_button("Download JSON", () => this.download_filed_json());
+        this.add_tab_custom_button("Download JSON", () => this.download_filed_json());
 
         if (!is_gstr1_api_enabled()) return;
 
@@ -2086,11 +2085,18 @@ class FiledTab extends GSTR1_TabManager {
 
     download_filed_as_excel() {
         const url = "india_compliance.gst_india.doctype.gstr_1.gstr_1_export.download_filed_as_excel";
-
-        open_url_post(`/api/method/${url}`, {
-            company_gstin: this.instance.frm.doc.company_gstin,
-            month_or_quarter: this.instance.frm.doc.month_or_quarter,
-            year: this.instance.frm.doc.year,
+        open_section_download_dialog({
+            title: __("Download Excel"),
+            section_options: GSTR1_SECTION_OPTIONS,
+            on_submit: (section) => {
+                const post_args = {
+                    company_gstin: this.instance.frm.doc.company_gstin,
+                    month_or_quarter: this.instance.frm.doc.month_or_quarter,
+                    year: this.instance.frm.doc.year,
+                };
+                if (section) post_args.section = section;
+                open_url_post(`/api/method/${url}`, post_args);
+            },
         });
     }
 
@@ -2101,45 +2107,20 @@ class FiledTab extends GSTR1_TabManager {
 
     download_filed_json() {
         const me = this;
-        function get_json_data(dialog) {
-            const { include_uploaded, delete_missing } = dialog
-                ? dialog.get_values()
-                : {
-                      include_uploaded: true,
-                      delete_missing: false,
-                  };
+        const api_enabled = is_gstr1_api_enabled();
 
-            const doc = me.instance.frm.doc;
+        const fields = [
+            {
+                fieldname: "section",
+                label: __("Section"),
+                fieldtype: "Select",
+                options: [{ value: "", label: __("All Sections") }, ...GSTR1_SECTION_OPTIONS],
+                description: __("Select a section to download, or leave empty for all sections."),
+            },
+        ];
 
-            frappe.call({
-                method: "india_compliance.gst_india.doctype.gstr_1.gstr_1_export.get_gstr_1_json",
-                args: {
-                    company_gstin: doc.company_gstin,
-                    year: doc.year,
-                    month_or_quarter: doc.month_or_quarter,
-                    include_uploaded,
-                    delete_missing,
-                },
-                callback: (r) => {
-                    india_compliance.trigger_file_download(
-                        JSON.stringify(r.message.data),
-                        r.message.filename,
-                    );
-                    dialog && dialog.hide();
-                },
-            });
-        }
-
-        // without API
-        if (!is_gstr1_api_enabled()) {
-            get_json_data();
-            return;
-        }
-
-        // with API
-        const dialog = new frappe.ui.Dialog({
-            title: __("Download JSON"),
-            fields: [
+        if (api_enabled) {
+            fields.push(
                 {
                     fieldname: "include_uploaded",
                     label: __("Include Already Uploaded (matching) Invoices"),
@@ -2150,6 +2131,7 @@ class FiledTab extends GSTR1_TabManager {
                          as it will overwrite the e-Invoice data in GST Portal.`,
                     ),
                     fieldtype: "Check",
+                    default: 0,
                 },
                 {
                     fieldname: "delete_missing",
@@ -2160,8 +2142,35 @@ class FiledTab extends GSTR1_TabManager {
                     fieldtype: "Check",
                     default: 1,
                 },
-            ],
-            primary_action: () => get_json_data(dialog),
+            );
+        }
+
+        const dialog = new frappe.ui.Dialog({
+            title: __("Download JSON"),
+            fields,
+            primary_action: () => {
+                const { section, include_uploaded, delete_missing } = dialog.get_values();
+                const doc = me.instance.frm.doc;
+
+                frappe.call({
+                    method: "india_compliance.gst_india.doctype.gstr_1.gstr_1_export.get_gstr_1_json",
+                    args: {
+                        company_gstin: doc.company_gstin,
+                        year: doc.year,
+                        month_or_quarter: doc.month_or_quarter,
+                        include_uploaded: api_enabled ? include_uploaded : true,
+                        delete_missing: api_enabled ? delete_missing : false,
+                        section: section || null,
+                    },
+                    callback: (r) => {
+                        india_compliance.trigger_file_download(
+                            JSON.stringify(r.message.data),
+                            r.message.filename,
+                        );
+                        dialog.hide();
+                    },
+                });
+            },
         });
 
         dialog.show();
@@ -3033,6 +3042,47 @@ class GSTR1Action extends FileGSTR1Dialog {
 }
 
 // UTILITY FUNCTIONS
+
+// Section dropdown options for both JSON and Excel download dialogs.
+// Values MUST match `GovJsonKey` in gst_india/utils/gstr_1/__init__.py — keep in sync,
+// and ensure JSON_CATEGORY_EXCEL_CATEGORY_MAPPING covers every option before adding one.
+const GSTR1_SECTION_OPTIONS = [
+    { value: "b2b", label: __("B2B, SEZ, DE (b2b)") },
+    { value: "b2cl", label: __("B2C Large (b2cl)") },
+    { value: "exp", label: __("Exports (exp)") },
+    { value: "b2cs", label: __("B2C Small (b2cs)") },
+    { value: "nil", label: __("Nil, Exempt, Non-GST (nil)") },
+    { value: "cdnr", label: __("Credit/Debit Notes - Registered (cdnr)") },
+    { value: "cdnur", label: __("Credit/Debit Notes - Unregistered (cdnur)") },
+    { value: "at", label: __("Advance Tax (at)") },
+    { value: "txpd", label: __("Tax on Advances Adjustment (txpd)") },
+    { value: "hsn", label: __("HSN Summary (hsn)") },
+    { value: "doc_issue", label: __("Document Issued Summary (doc_issue)") },
+    { value: "supeco", label: __("Supplies through e-Commerce (supeco)") },
+];
+
+function open_section_download_dialog({ title, section_options, on_submit }) {
+    const dialog = new frappe.ui.Dialog({
+        title,
+        fields: [
+            {
+                fieldname: "section",
+                label: __("Section"),
+                fieldtype: "Select",
+                options: [{ value: "", label: __("All Sections") }, ...section_options],
+                description: __("Select a section to download, or leave empty for all sections."),
+            },
+        ],
+        primary_action_label: __("Download"),
+        primary_action: () => {
+            const { section } = dialog.get_values();
+            on_submit(section || null);
+            dialog.hide();
+        },
+    });
+    dialog.show();
+}
+
 function is_gstr1_api_enabled() {
     return india_compliance.is_api_enabled() && !gst_settings.sandbox_mode && gst_settings.enable_gstr_1_api;
 }
