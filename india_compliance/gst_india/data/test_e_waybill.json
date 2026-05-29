@@ -413,6 +413,26 @@
             "success": true
         }
     },
+    "close_e_waybill": {
+        "request_data": {
+            "ewbNo": "301002999920",
+            "closureDate": "04/10/2022",
+            "remarks": "Goods delivered"
+        },
+        "params": "action=CLSEWB",
+        "values": {
+            "closure_date": "2022-10-04",
+            "remarks": "Goods delivered"
+        },
+        "response_data": {
+            "message": "E-Way Bill is closed successfully",
+            "result": {
+                "ewbClosureDate": "04/10/2022 04:14:00 PM",
+                "ewayBillNo": "301002999920"
+            },
+            "success": true
+        }
+    },
     "get_e_waybill": {
         "kwargs": {
             "company_address": "_Test Indian Registered Company-Billing"

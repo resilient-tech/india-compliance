@@ -31,6 +31,7 @@ from india_compliance.gst_india.utils.e_waybill import (
     _generate_e_waybill,
     _get_e_waybill_threshold,
     cancel_e_waybill,
+    close_e_waybill,
     fetch_e_waybill_data,
     generate_e_waybill,
     get_e_waybills_to_extend,
@@ -319,6 +320,60 @@ class TestEWaybill(IntegrationTestCase):
         self.assertDictEqual(
             e_waybill_cancel_data.get("request_data"),
             EWaybillData(doc).get_data_for_cancellation(frappe._dict(e_waybill_cancel_data.get("values"))),
+        )
+
+    @responses.activate
+    def test_close_e_waybill(self):
+        """Test whitelisted method `close_e_waybill` (NIC v1.03 CLSEWB).
+
+        Closure keeps the e-Waybill number intact (unlike cancellation) and
+        records the closure on the e-Waybill Log + sets status to Closed.
+        """
+        si = self.create_sales_invoice_for("goods_item_with_ewaybill")
+        self._generate_e_waybill(si.name)
+
+        e_waybill_close_data = self.e_waybill_test_data.get("close_e_waybill")
+
+        # Mock response for CLSEWB
+        self._mock_e_waybill_response(
+            data=e_waybill_close_data.get("response_data"),
+            match_list=[
+                matchers.query_string_matcher(e_waybill_close_data.get("params")),
+                matchers.json_params_matcher(e_waybill_close_data.get("request_data")),
+            ],
+        )
+
+        close_e_waybill(
+            doctype=si.doctype,
+            docname=si.name,
+            values=e_waybill_close_data.get("values"),
+        )
+
+        # e-Waybill Log marked closed
+        self.assertTrue(
+            frappe.get_doc(
+                "e-Waybill Log",
+                {"reference_name": si.name, "is_closed": 1},
+            )
+        )
+
+        # closure must NOT clear the e-Waybill number, and status becomes Closed
+        si.reload()
+        self.assertEqual(si.ewaybill, e_waybill_close_data.get("request_data").get("ewbNo"))
+        self.assertEqual(si.e_waybill_status, "Closed")
+
+    @responses.activate
+    def test_get_e_waybill_close_data(self):
+        """Check if e-waybill closure request data is generated correctly"""
+        si = self.create_sales_invoice_for("goods_item_with_ewaybill")
+        self._generate_e_waybill(si.name)
+
+        doc = load_doc("Sales Invoice", si.name, "submit")
+        e_waybill_close_data = self.e_waybill_test_data.get("close_e_waybill")
+
+        self.assertDictEqual(
+            e_waybill_close_data.get("request_data"),
+            EWaybillData(doc).get_data_for_closure(frappe._dict(e_waybill_close_data.get("values"))),
         )
 
     @change_settings(
@@ -1598,6 +1653,8 @@ def update_dates_for_test_data(test_data):
             if k == "vehUpdateDate":
                 response_result.update({k: current_datetime})
             if k == "cancelDate":
+                response_result.update({k: current_datetime})
+            if k == "ewbClosureDate":
                 response_result.update({k: current_datetime})
             if k == "docDate":
                 response_result.update({k: today_date})

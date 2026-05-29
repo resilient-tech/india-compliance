@@ -113,6 +113,12 @@ function setup_e_waybill_actions(doctype) {
                     () => show_update_transporter_dialog(frm),
                     "e-Waybill",
                 );
+
+                frm.add_custom_button(
+                    __("Close e-Waybill"),
+                    () => show_close_e_waybill_dialog(frm),
+                    "e-Waybill",
+                );
             }
 
             if (
@@ -699,6 +705,52 @@ function show_cancel_e_waybill_dialog(frm, callback) {
     d.show();
 }
 
+function show_close_e_waybill_dialog(frm) {
+    const d = new frappe.ui.Dialog({
+        title: __("Close e-Waybill"),
+        fields: [
+            {
+                label: "e-Waybill",
+                fieldname: "ewaybill",
+                fieldtype: "Data",
+                read_only: 1,
+                default: frm.doc.ewaybill,
+            },
+            {
+                label: "Closure Date",
+                fieldname: "closure_date",
+                fieldtype: "Date",
+                reqd: 1,
+                default: frappe.datetime.get_today(),
+            },
+            {
+                label: "Remarks",
+                fieldname: "remarks",
+                fieldtype: "Data",
+                reqd: 1,
+                length: 50,
+            },
+        ],
+        primary_action_label: __("Close"),
+        primary_action(values) {
+            frappe.call({
+                method: "india_compliance.gst_india.utils.e_waybill.close_e_waybill",
+                args: {
+                    doctype: frm.doctype,
+                    docname: frm.doc.name,
+                    values,
+                },
+                callback: () => {
+                    d.hide();
+                    frm.refresh();
+                },
+            });
+        },
+    });
+
+    d.show();
+}
+
 function show_mark_e_waybill_as_cancelled_dialog(frm) {
     const fields = get_cancel_e_waybill_dialog_fields(frm);
     fields.push({
@@ -1166,6 +1218,8 @@ function is_e_waybill_valid(frm) {
     const e_waybill_info = frm.doc.__onload && frm.doc.__onload.e_waybill_info;
     return (
         e_waybill_info &&
+        // a closed e-Waybill can no longer be modified
+        !e_waybill_info.is_closed &&
         (!e_waybill_info.valid_upto ||
             frappe.datetime.convert_to_user_tz(e_waybill_info.valid_upto, false).diff() > 0)
     );

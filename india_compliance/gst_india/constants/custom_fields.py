@@ -1765,7 +1765,7 @@ e_waybill_status_field = {
     "label": "e-Waybill Status",
     "fieldtype": "Select",
     "insert_after": "ewaybill",
-    "options": "\nPending\nGenerated\nManually Generated\nAuto-Retry\nCancelled\nManually Cancelled\nFailed\nNot Applicable",
+    "options": "\nPending\nGenerated\nManually Generated\nAuto-Retry\nCancelled\nManually Cancelled\nClosed\nFailed\nNot Applicable",
     "print_hide": 1,
     "no_copy": 1,
     "translatable": 1,

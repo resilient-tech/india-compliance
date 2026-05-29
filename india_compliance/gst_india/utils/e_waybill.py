@@ -430,6 +430,48 @@ def log_and_process_e_waybill_cancellation(doc, values, result):
 
 # nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
 @frappe.whitelist()
+def close_e_waybill(*, doctype: str, docname: str, values: str | dict | frappe._dict):
+    """Permission check not required as load_doc checks permissions."""
+    doc = load_doc(doctype, docname, "submit")
+    values = frappe.parse_json(values)
+    _close_e_waybill(doc, values)
+
+    return send_updated_doc(doc)
+
+
+def _close_e_waybill(doc, values):
+    closure_data = EWaybillData(doc).get_data_for_closure(values)
+
+    # Closure is an e-Waybill-only operation (no e-Invoice/IRN branch).
+    result = EWaybillAPI.create(doc).close_e_waybill(closure_data)
+
+    log_and_process_e_waybill_closure(doc, values, result)
+
+    frappe.msgprint(
+        _("e-Waybill closed successfully"),
+        indicator="green",
+        alert=True,
+    )
+
+
+def log_and_process_e_waybill_closure(doc, values, result):
+    log_and_process_e_waybill(
+        doc,
+        {
+            "name": doc.ewaybill,
+            "is_closed": 1,
+            "closure_remark": values.remarks,
+            "closed_on": parse_datetime(result.ewbClosureDate, day_first=True),
+        },
+    )
+
+    # Unlike cancellation, closure keeps the e-Waybill number; only status changes.
+    if doc.doctype == "Sales Invoice":
+        doc.db_set("e_waybill_status", result.get("e_waybill_status") or "Closed")
+
+
+# nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
+@frappe.whitelist()
 def update_vehicle_info(*, doctype: str, docname: str, values: str | dict | frappe._dict):
     """Permission check not required as load_doc checks permissions."""
     doc = load_doc(doctype, docname, "submit")
@@ -1158,6 +1200,7 @@ def get_e_waybill_info(doc):
             "valid_upto",
             "is_generated_in_sandbox_mode",
             "extension_scheduled",
+            "is_closed",
         ),
         as_dict=True,
     )
@@ -1278,6 +1321,18 @@ class EWaybillData(GSTTransactionData):
             "ewbNo": self.doc.ewaybill,
             "cancelRsnCode": CANCEL_REASON_CODES[values.reason],
             "cancelRmrk": values.remark if values.remark else values.reason,
+        }
+
+    def get_data_for_closure(self, values):
+        self.validate_if_e_waybill_is_set()
+        # TODO: Add validations
+        # Closure Date cannot be earlier than EwayBill Date
+        # You cannot close the e-Waybill as there is no PART-B/Vehicle entry
+
+        return {
+            "ewbNo": self.doc.ewaybill,
+            "closureDate": format_date(values.closure_date, "dd/mm/yyyy"),
+            "remarks": values.remarks,
         }
 
     def get_update_vehicle_data(self, values):

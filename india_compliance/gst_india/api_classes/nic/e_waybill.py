@@ -119,6 +119,9 @@ class EWaybillAPI(BaseAPI):
     def extend_validity(self, data):
         return self.post("EXTENDVALIDITY", json=data)
 
+    def close_e_waybill(self, data):
+        return self.post("CLSEWB", json=data)
+
     def update_distance(self, result):
         if (
             (alert := result.get("alert"))
