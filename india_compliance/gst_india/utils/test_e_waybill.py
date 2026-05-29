@@ -90,6 +90,12 @@ class TestEWaybill(IntegrationTestCase):
         for key, value in e_waybill_data.items():
             self.assertEqual(test_data.get(key), value, f"Mismatch for key '{key}'")
 
+        # shipToGSTIN / shipToTradeName must be absent for Regular (type 1)
+        # transactions — only sent when the Ship-To party differs from Bill-To
+        self.assertEqual(e_waybill_data.get("transactionType"), 1)
+        self.assertNotIn("shipToGSTIN", e_waybill_data)
+        self.assertNotIn("shipToTradeName", e_waybill_data)
+
     @change_settings("GST Settings", {"fetch_e_waybill_data": 1})
     @responses.activate
     def test_generate_e_waybill(self):
@@ -1264,9 +1270,68 @@ class TestEWaybill(IntegrationTestCase):
             "toStateCode should be set from place of supply (shipping address state)",
         )
 
+        self.assertEqual(e_waybill_data.get("transactionType"), 2)
+        self.assertEqual(e_waybill_data.get("shipToGSTIN"), "05AAACG2140A1ZL")
+        self.assertEqual(e_waybill_data.get("shipToTradeName"), "Test Foreign Customer-1")
+
         expected_request_data = test_data.get("request_data")
         for key, value in e_waybill_data.items():
             self.assertEqual(expected_request_data.get(key), value, f"Mismatch for key '{key}'")
+
+    def test_e_waybill_ship_to_gstin_urp_for_unregistered_consignee(self):
+        """
+        shipToGSTIN must be 'URP' when the Ship-To consignee is unregistered.
+        """
+        shipping_address = self._create_unregistered_shipping_address()
+
+        si = create_sales_invoice(
+            vehicle_no="GJ07DL9009",
+            company_address="_Test Indian Registered Company-Billing",
+            customer="_Test Registered Customer",
+            customer_address="_Test Registered Customer-Billing",
+            shipping_address_name=shipping_address,
+            is_in_state=1,
+            distance=10,
+            transporter="_Test Common Supplier",
+            mode_of_transport="Road",
+            do_not_submit=True,
+        )
+        si.gst_transporter_id = ""
+        si.submit()
+
+        e_waybill_data = EWaybillData(si).get_data()
+
+        self.assertEqual(e_waybill_data.get("transactionType"), 2)
+        self.assertNotEqual(e_waybill_data.get("toGstin"), "URP")
+        self.assertEqual(e_waybill_data.get("shipToGSTIN"), "URP")
+        self.assertTrue(e_waybill_data.get("shipToTradeName"))
+
+    @staticmethod
+    def _create_unregistered_shipping_address():
+        """Create (once) an unregistered, India-based Shipping address for URP tests."""
+        name = "_Test Unregistered Consignee-Shipping"
+        if frappe.db.exists("Address", name):
+            return name
+
+        return (
+            frappe.get_doc(
+                {
+                    "doctype": "Address",
+                    "address_title": "_Test Unregistered Consignee",
+                    "address_type": "Shipping",
+                    "address_line1": "Test Address - Unregistered Consignee",
+                    "city": "Test City",
+                    "state": "Gujarat",
+                    "pincode": "380015",
+                    "country": "India",
+                    "gstin": "",
+                    "gst_category": "Unregistered",
+                    "links": [{"link_doctype": "Customer", "link_name": "_Test Registered Customer"}],
+                }
+            )
+            .insert(ignore_if_duplicate=True)
+            .name
+        )
 
     def test_e_waybill_for_inter_state_sales_return(self):
         """Test e-waybill generation for inter-state sales return.
