@@ -171,12 +171,11 @@ class GSTR3BReport(Document):
         Tables 4 (ITC) and 5 (nil/exempt inward)
         """
         inward_invoices = GSTR3BInwardInvoices(self._get_filters())
-        self.update_inward_json(
-            inward_invoices.get_section_data("4", group_by_invoice=True),
-            inward_invoices.get_section_data("5", group_by_invoice=True),
-        )
+        inward_data = inward_invoices.get_all_data(group_by_invoice=True)
 
-    def update_inward_json(self, eligible_itc_data, nil_exempt_data):
+        self.update_inward_json(inward_data)
+
+    def update_inward_json(self, data):
         itc_elg = self.report_dict["itc_elg"]
         itc_index = {
             section: {row["ty"]: row for row in rows}
@@ -185,11 +184,11 @@ class GSTR3BReport(Document):
         }
         inward_sup_index = {row["ty"]: row for row in self.report_dict["inward_sup"]["isup_details"]}
 
-        for invoice in eligible_itc_data:
-            self._update_eligible_itc_section(invoice, itc_index, itc_elg["itc_net"])
-
-        for invoice in nil_exempt_data:
-            self._update_inward_nil_exempt_section(invoice, inward_sup_index)
+        for invoice in data:
+            if invoice.get("invoice_category") in INWARD_NIL_EXEMPT_SECTION_MAP:
+                self._update_inward_nil_exempt_section(invoice, inward_sup_index)
+            else:
+                self._update_eligible_itc_section(invoice, itc_index, itc_elg["itc_net"])
 
     def _update_eligible_itc_section(self, invoice, itc_index, net_itc):
         section_data = INWARD_ITC_SECTION_MAP.get(invoice.get("invoice_sub_category"))
