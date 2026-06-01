@@ -386,7 +386,10 @@ class GSTR3BInwardInvoices(GSTR3BInwardQuery, GSTR3BSubcategory):
         invoices = []
 
         for doctype in INWARD_SECTION_DOCTYPES.get(str(sub_section), ()):
-            invoices.extend(self.get_data(doctype, group_by_invoice=group_by_invoice))
+            invoices.extend(self.get_data(doctype))
+
+        if group_by_invoice:
+            invoices = self.get_invoice_wise_data(invoices)
 
         return self.get_filtered_invoices(
             invoices,
