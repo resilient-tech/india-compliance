@@ -238,6 +238,10 @@ class GSTSettings(Document):
             self.validate_e_invoice_applicable_companies()
 
     def validate_credentials(self):
+        # Validate credentials only when API/credential-related fields are updated.
+        if not self.should_validate_credentials():
+            return
+
         if not self.enable_api:
             return
 
@@ -258,7 +262,8 @@ class GSTSettings(Document):
             )
 
         if (
-            (self.enable_e_invoice or self.enable_e_waybill)
+            self.enable_api
+            and (self.enable_e_invoice or self.enable_e_waybill)
             and not self.sandbox_mode
             and not frappe.flags.in_setup_wizard
             and all(credential.service != "e-Waybill / e-Invoice" for credential in self.credentials)
@@ -277,6 +282,17 @@ class GSTSettings(Document):
                 ),
                 indicator="yellow",
             )
+
+    def should_validate_credentials(self):
+        return any(
+            (
+                self.has_value_changed("enable_api"),
+                self.has_value_changed("enable_e_invoice"),
+                self.has_value_changed("enable_e_waybill"),
+                self.has_value_changed("sandbox_mode"),
+                not self.is_child_table_same("credentials"),
+            )
+        )
 
     def validate_app_key(self, credential):
         if not credential.app_key or len(credential.app_key) != 32:
