@@ -68,7 +68,7 @@ frappe.ui.form.on(DOCTYPE, {
             );
         }
 
-        if (frm.doc.docstatus === 1 && frm.doc.is_isd_applicable) {
+        if (frm.doc.docstatus === 1 && frm.doc.is_isd_applicable && frappe.model.can_create("ISD Invoice")) {
             frm.add_custom_button(
                 __("ISD Invoice"),
                 () => {

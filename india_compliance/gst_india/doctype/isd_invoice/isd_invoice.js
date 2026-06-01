@@ -6,8 +6,8 @@ frappe.ui.form.on("ISD Invoice", {
     },
 
     refresh(frm) {
-        frm.isd_controller.update_address_labels(); // Show button to create inter-company invoice on submit
-        if (frm.doc.docstatus === 1 && frm.doc.is_against_party) {
+        frm.isd_controller.update_address_labels();
+        if (frm.doc.docstatus === 1 && frm.doc.is_against_party && frappe.model.can_create("ISD Invoice")) {
             frm.add_custom_button(
                 __("Inter Company ISD Invoice"),
                 () => {
@@ -151,6 +151,7 @@ frappe.ui.form.on("ISD Invoice Source Item", {
     },
     is_ineligible_for_itc(frm, cdt, cdn) {
         frm.isd_controller.autofill_source_item(cdt, cdn);
+        frm.isd_controller.recalculate();
     },
 
     distribution_ratio(frm) {
@@ -188,6 +189,7 @@ class ISDInvoiceController {
 
     setup() {
         this.set_queries();
+        this.fetch_gst_accounts();
     }
 
     set_queries() {
@@ -419,7 +421,6 @@ class ISDInvoiceController {
         this.frm.refresh_field("source_invoices");
         this.calculate_taxes_and_totals();
     }
-
     calculate_taxes_and_totals() {
         const source_invoices = this.frm.doc.source_invoices || [];
         if (!source_invoices.length) return;
