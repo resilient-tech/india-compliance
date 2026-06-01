@@ -80,9 +80,9 @@ india_compliance.DataTableManager = class DataTableManager {
         let format = function (value, row, column, data) {
             if (column._value) {
                 value = column._value(value, column, data);
+            } else {
+                value = frappe.format(value, column, { always_show_decimals: true }, data);
             }
-
-            value = frappe.format(value, column, { always_show_decimals: true }, data);
 
             if (column._after_format) {
                 value = column._after_format(value, column, data);
