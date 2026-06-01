@@ -13,23 +13,7 @@ from india_compliance.gst_india.utils.gstr3b.gstr3b_inward_data import (
 
 
 def execute(filters=None):
-
-    validate_filters(filters)
-
-    report = BaseGSTR3BDetails(filters)
-
-    return report.run()
-
-
-def validate_filters(filters):
-    filters = frappe._dict(filters)
-    section = cstr(filters.section)
-
-    if not section:
-        frappe.throw(_("Please select a section to view details"))
-
-    if section not in INWARD_SECTION_SUB_CATEGORY_MAP.keys():
-        frappe.throw(_("Invalid section selected"))
+    return BaseGSTR3BDetails(filters).run()
 
 
 class BaseGSTR3BDetails:
@@ -45,13 +29,19 @@ class BaseGSTR3BDetails:
         self.section = cstr(self.filters.section)
 
     def run(self):
-        if self.section not in INWARD_SECTION_SUB_CATEGORY_MAP.keys():
-            frappe.throw(_("Invalid section selected"))
+        self.validate_filters()
 
         data = self.get_data()
         columns = self.get_columns()
 
         return columns, data
+
+    def validate_filters(self):
+        if not self.section:
+            frappe.throw(_("Please select a section to view details"))
+
+        if self.section not in INWARD_SECTION_SUB_CATEGORY_MAP.keys():
+            frappe.throw(_("Invalid section selected"))
 
     def get_inward_filters(self):
         return frappe._dict(

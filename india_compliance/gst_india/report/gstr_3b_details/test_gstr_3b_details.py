@@ -5,7 +5,9 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import get_month, getdate
 
-from india_compliance.gst_india.report.gstr_3b_details.gstr_3b_details import execute as _execute
+from india_compliance.gst_india.report.gstr_3b_details.gstr_3b_details import (
+    execute as run_gstr3b_details,
+)
 from india_compliance.gst_india.utils.tests import (
     create_itc_reclaim_journal_entry,
     create_purchase_invoice,
@@ -28,7 +30,7 @@ class TestGSTR3BDetails(IntegrationTestCase):
 
     def get_details(self, section: str):
         today = getdate()
-        return _execute(
+        return run_gstr3b_details(
             {
                 "company": "_Test Indian Registered Company",
                 "company_gstin": "24AAQCA8719H1ZC",
