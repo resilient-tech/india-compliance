@@ -2082,21 +2082,22 @@ class FiledTab extends GSTR1_TabManager {
         super.set_default_title();
     }
 
+    get_section_filter_field() {
+        return {
+            fieldname: "section",
+            label: __("Section"),
+            fieldtype: "Select",
+            options: [{ value: "", label: __("All Sections") }, ...GSTR1_SECTION_OPTIONS],
+        };
+    }
+
     // ACTIONS
 
     download_filed_as_excel() {
         const url = "india_compliance.gst_india.doctype.gstr_1.gstr_1_export.download_filed_as_excel";
         const dialog = new frappe.ui.Dialog({
             title: __("Download Excel"),
-            fields: [
-                {
-                    fieldname: "section",
-                    label: __("Section"),
-                    fieldtype: "Select",
-                    options: [{ value: "", label: __("All Sections") }, ...GSTR1_SECTION_OPTIONS],
-                    description: __("Select a section to download, or leave empty for all sections."),
-                },
-            ],
+            fields: [this.get_section_filter_field()],
             primary_action_label: __("Download"),
             primary_action: () => {
                 const { section } = dialog.get_values();
@@ -2124,15 +2125,7 @@ class FiledTab extends GSTR1_TabManager {
         const me = this;
         const api_enabled = is_gstr1_api_enabled();
 
-        const fields = [
-            {
-                fieldname: "section",
-                label: __("Section"),
-                fieldtype: "Select",
-                options: [{ value: "", label: __("All Sections") }, ...GSTR1_SECTION_OPTIONS],
-                description: __("Select a section to download, or leave empty for all sections."),
-            },
-        ];
+        const fields = [this.get_section_filter_field()];
 
         if (api_enabled) {
             fields.push(
