@@ -262,8 +262,7 @@ class GSTSettings(Document):
             )
 
         if (
-            self.enable_api
-            and (self.enable_e_invoice or self.enable_e_waybill)
+            (self.enable_e_invoice or self.enable_e_waybill)
             and not self.sandbox_mode
             and not frappe.flags.in_setup_wizard
             and all(credential.service != "e-Waybill / e-Invoice" for credential in self.credentials)
