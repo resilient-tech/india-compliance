@@ -115,6 +115,19 @@ class TestGSTSettings(FrappeTestCase):
         )
         doc.save()
 
+        doc = frappe.get_doc("GST Settings")
+        doc.append(
+            "credentials",
+            {
+                "company": "_Test Indian Registered Company",
+                "service": "e-Waybill / e-Invoice",
+                "gstin": "24AAQCA8719H1ZC",
+                "username": "testing2",
+                "password": "TestPass@123",
+            },
+        )
+        doc.save()
+
     @change_settings(
         "GST Settings",
         {"enable_api": 1, "enable_e_waybill": 1, "sandbox_mode": 0},
@@ -133,19 +146,6 @@ class TestGSTSettings(FrappeTestCase):
                 else frappe.parse_json(message).get("message")
             )
             self.assertNotIn("Please set credentials for e-Waybill / e-Invoice", message_text)
-
-        doc = frappe.get_doc("GST Settings")
-        doc.append(
-            "credentials",
-            {
-                "company": "_Test Indian Registered Company",
-                "service": "e-Waybill / e-Invoice",
-                "gstin": "24AAQCA8719H1ZC",
-                "username": "testing2",
-                "password": "TestPass@123",
-            },
-        )
-        doc.save()
 
     def test_validate_enable_api(self):
         doc = frappe.get_doc("GST Settings")
