@@ -14,9 +14,7 @@ from india_compliance.gst_india.doctype.gstr_3b_report.gstr_3b_report import (
     GSTR3BExcelExporter,
 )
 from india_compliance.gst_india.overrides.test_transaction import create_cess_accounts
-from india_compliance.gst_india.report.gstr_3b_details.gstr_3b_details import (
-    GSTR3B_Inward_Nil_Exempt,
-)
+from india_compliance.gst_india.report.gstr_3b_details.gstr_3b_details import execute as run_gstr3b_details
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 from india_compliance.gst_india.utils.itc_claim import format_period
 from india_compliance.gst_india.utils.tests import (
@@ -371,17 +369,17 @@ class TestGSTR3BReport(IntegrationTestCase):
 
         today = getdate()
 
-        report = GSTR3B_Inward_Nil_Exempt(
+        _, rows = run_gstr3b_details(
             {
                 "company": "_Test Indian Registered Company",
                 "company_gstin": "24AAQCA8719H1ZC",
                 "year": today.year,
                 "month_or_quarter": get_month(today),
+                "section": "5",
             }
         )
 
-        rows = report.get_inward_nil_exempt()
-        self.assertIn(pi.name, [row.voucher_no for row in rows])
+        self.assertIn(pi.name, [row["voucher_no"] for row in rows])
 
     def test_inward_nil_non_gst_report_excludes_overseas_import_services(self):
         pi = create_purchase_invoice(
@@ -397,17 +395,63 @@ class TestGSTR3BReport(IntegrationTestCase):
 
         today = getdate()
 
-        report = GSTR3B_Inward_Nil_Exempt(
+        _, rows = run_gstr3b_details(
             {
                 "company": "_Test Indian Registered Company",
                 "company_gstin": "24AAQCA8719H1ZC",
                 "year": today.year,
                 "month_or_quarter": get_month(today),
+                "section": "5",
             }
         )
 
-        rows = report.get_inward_nil_exempt()
-        self.assertNotIn(pi.name, [row.voucher_no for row in rows])
+        self.assertNotIn(pi.name, [row["voucher_no"] for row in rows])
+
+    def test_itc_details_report_includes_itc_reclaim_entries(self):
+        journal_entry = create_itc_reclaim_journal_entry(posting_date=getdate(), tax_amount=9)
+        today = getdate()
+
+        _, data = run_gstr3b_details(
+            {
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+                "year": today.year,
+                "month_or_quarter": get_month(today),
+                "section": "4",
+            }
+        )
+        row = next((item for item in data if item["voucher_no"] == journal_entry.name), None)
+
+        self.assertIsNotNone(row)
+        self.assertEqual(row["invoice_sub_category"], "Reclaim of ITC Reversal")
+        self.assertEqual(row["cgst_amount"], 9.0)
+        self.assertEqual(row["sgst_amount"], 9.0)
+
+    def test_itc_details_report_includes_pos_restricted_itc(self):
+        purchase_invoice = create_purchase_invoice(
+            posting_date=getdate(),
+            update_stock=1,
+            place_of_supply="27-Maharashtra",
+            is_out_state=1,
+            supplier_address="_Test Registered Supplier-Billing",
+        )
+        self.assertEqual(purchase_invoice.ineligibility_reason, "ITC restricted due to PoS rules")
+
+        today = getdate()
+        _, data = run_gstr3b_details(
+            {
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+                "year": today.year,
+                "month_or_quarter": get_month(today),
+                "section": "4",
+            }
+        )
+        row = next((item for item in data if item["voucher_no"] == purchase_invoice.name), None)
+
+        self.assertIsNotNone(row)
+        self.assertEqual(row["invoice_sub_category"], "ITC restricted due to PoS rules")
+        self.assertGreater(row["igst_amount"], 0)
 
     def test_gstr_3b_report_includes_boe_in_import_of_goods(self):
         pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
