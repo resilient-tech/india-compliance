@@ -26,7 +26,7 @@ class BaseGSTR3BDetails:
         self.company = self.filters.company
         self.company_gstin = self.filters.company_gstin
         self.filter_by = self.filters.filter_by or "ITC Claim Period"
-        self.section = cstr(self.filters.section)
+        self.sub_section = cstr(self.filters.sub_section)
 
     def run(self):
         self.validate_filters()
@@ -37,11 +37,11 @@ class BaseGSTR3BDetails:
         return columns, data
 
     def validate_filters(self):
-        if not self.section:
-            frappe.throw(_("Please select a section to view details"))
+        if not self.sub_section:
+            frappe.throw(_("Please select a sub section to view details"))
 
-        if self.section not in INWARD_SECTION_SUB_CATEGORY_MAP.keys():
-            frappe.throw(_("Invalid section selected"))
+        if self.sub_section not in INWARD_SECTION_SUB_CATEGORY_MAP.keys():
+            frappe.throw(_("Invalid sub section selected"))
 
     def get_inward_filters(self):
         return frappe._dict(
@@ -56,7 +56,9 @@ class BaseGSTR3BDetails:
 
     def get_filtered_inward_data(self):
         return GSTR3BInwardInvoices(self.get_inward_filters()).get_section_data(
-            self.section, group_by_invoice=True
+            self.sub_section,
+            group_by_invoice=True,
+            invoice_sub_categories=self.filters.invoice_sub_category,
         )
 
     def get_data(self):
@@ -87,9 +89,9 @@ class BaseGSTR3BDetails:
             },
         ]
 
-        if self.section == "4":
+        if self.sub_section == "4":
             columns.extend(self.get_section_4_columns())
-        elif self.section == "5":
+        elif self.sub_section == "5":
             columns.extend(self.get_section_5_columns())
 
         return columns

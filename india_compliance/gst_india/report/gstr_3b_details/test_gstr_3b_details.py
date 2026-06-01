@@ -3,8 +3,11 @@
 
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import get_month, getdate
+from frappe.utils import get_first_day, get_last_day, get_month, getdate
 
+from india_compliance.gst_india.report.gst_purchase_register.gst_purchase_register import (
+    execute as run_purchase_register,
+)
 from india_compliance.gst_india.report.gstr_3b_details.gstr_3b_details import (
     execute as run_gstr3b_details,
 )
@@ -28,7 +31,7 @@ class TestGSTR3BDetails(IntegrationTestCase):
 
         frappe.db.set_single_value("GST Settings", "enable_overseas_transactions", 1)
 
-    def get_details(self, section: str):
+    def get_details(self, sub_section: str, invoice_sub_category=None):
         today = getdate()
         return run_gstr3b_details(
             {
@@ -36,7 +39,8 @@ class TestGSTR3BDetails(IntegrationTestCase):
                 "company_gstin": "24AAQCA8719H1ZC",
                 "year": today.year,
                 "month_or_quarter": get_month(today),
-                "section": section,
+                "sub_section": sub_section,
+                "invoice_sub_category": invoice_sub_category,
             }
         )
 
@@ -98,3 +102,54 @@ class TestGSTR3BDetails(IntegrationTestCase):
         self.assertIsNotNone(row)
         self.assertEqual(row["invoice_sub_category"], "ITC restricted due to PoS rules")
         self.assertGreater(row["igst_amount"], 0)
+
+    def create_section_4_documents(self):
+        # PoS-restricted Purchase Invoice ("ITC restricted due to PoS rules")
+        create_purchase_invoice(
+            posting_date=getdate(),
+            update_stock=1,
+            place_of_supply="27-Maharashtra",
+            is_out_state=1,
+            supplier_address="_Test Registered Supplier-Billing",
+        )
+        # ITC Reclaim Journal Entry ("Reclaim of ITC Reversal")
+        create_itc_reclaim_journal_entry(posting_date=getdate(), tax_amount=9)
+
+    def test_invoice_sub_category_filter_narrows_rows(self):
+        self.create_section_4_documents()
+
+        _, all_rows = self.get_details("4")
+        _, reclaim_rows = self.get_details("4", invoice_sub_category=["Reclaim of ITC Reversal"])
+
+        self.assertTrue(len(reclaim_rows) < len(all_rows))
+        self.assertTrue(all(row["invoice_sub_category"] == "Reclaim of ITC Reversal" for row in reclaim_rows))
+
+    def test_details_totals_match_purchase_register(self):
+        # A mix of inward documents across Section-4 sub-categories.
+        self.create_section_4_documents()
+
+        _, details_rows = self.get_details("4")
+        _, register_rows = self.get_purchase_register("4")
+
+        amount_fields = ("igst_amount", "cgst_amount", "sgst_amount", "cess_amount")
+        for field in amount_fields:
+            self.assertEqual(
+                sum(row.get(field, 0) or 0 for row in details_rows),
+                sum(row.get(field, 0) or 0 for row in register_rows),
+                msg=f"{field} total differs between GSTR-3B Details and GST Purchase Register",
+            )
+
+    def get_purchase_register(self, sub_section: str):
+        today = getdate()
+        return run_purchase_register(
+            frappe._dict(
+                {
+                    "company": "_Test Indian Registered Company",
+                    "company_gstin": "24AAQCA8719H1ZC",
+                    "date_range": [get_first_day(today), get_last_day(today)],
+                    "filter_by": "ITC Claim Period",
+                    "summary_by": "Summary by Invoice",
+                    "sub_section": sub_section,
+                }
+            )
+        )
