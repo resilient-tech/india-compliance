@@ -33,8 +33,6 @@ from india_compliance.gst_india.constants import GST_TAX_TYPES, SALES_DOCTYPES
 from india_compliance.gst_india.overrides.transaction import (
     DOCTYPES_WITH_GST_DETAIL,
     ItemGSTDetails,
-    after_mapping,
-    reset_gst_details_on_cross_mapping,
     validate_gst_refund_accounts,
 )
 from india_compliance.gst_india.utils.tests import (
