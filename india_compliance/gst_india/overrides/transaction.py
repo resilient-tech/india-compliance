@@ -548,7 +548,7 @@ class GSTAccounts:
         frappe.throw(message, title=title or _("Invalid GST Account"))
 
 
-def validate_items(doc, throw):
+def validate_items(doc):
     """Validate Items for a GST Compliant Invoice"""
 
     if not doc.get("items"):
@@ -577,8 +577,6 @@ def validate_items(doc, throw):
             items_with_duplicate_taxes.append(bold(item_key))
 
     if non_gst_items and has_gst_items:
-        if not throw:
-            return False
         frappe.throw(
             _(
                 "Items not covered under GST cannot be clubbed with items for which GST"
@@ -592,16 +590,12 @@ def validate_items(doc, throw):
         return
 
     if items_with_duplicate_taxes:
-        if not throw:
-            return False
         frappe.throw(
             _(
                 "Cannot use different Item Tax Templates in different rows for following items:<br> {0}"
             ).format("<br>".join(items_with_duplicate_taxes)),
             title=_("Inconsistent Item Tax Templates"),
         )
-
-    return True
 
 
 def validate_place_of_supply(doc):
@@ -1743,7 +1737,7 @@ def validate_company_address_field(doc):
 
 
 def before_validate_transaction(doc, method=None):
-    if ignore_gst_validations(doc, throw=False):
+    if ignore_gst_validations(doc):
         return False
 
     if not doc.place_of_supply:
@@ -1791,6 +1785,7 @@ def validate_transaction(doc, method=None):
         _update_place_of_supply_and_taxes(doc)
 
     set_gst_tax_type(doc)
+    validate_items(doc)
 
     if doc.place_of_supply:
         validate_place_of_supply(doc)
@@ -1849,7 +1844,7 @@ def validate_transaction(doc, method=None):
 
 
 def before_print(doc, method=None, print_settings=None):
-    if ignore_gst_validations(doc, throw=False) or not doc.place_of_supply or not doc.company_gstin:
+    if ignore_gst_validations(doc) or not doc.place_of_supply or not doc.company_gstin:
         return
 
     set_ecommerce_supply_type(doc)
@@ -1857,7 +1852,7 @@ def before_print(doc, method=None, print_settings=None):
 
 
 def onload(doc, method=None):
-    if ignore_gst_validations(doc, throw=False) or not doc.place_of_supply or not doc.company_gstin:
+    if ignore_gst_validations(doc) or not doc.place_of_supply or not doc.company_gstin:
         return
 
     set_ecommerce_supply_type(doc)
@@ -1895,14 +1890,8 @@ def after_mapping(target_doc, method=None, source_doc=None):
         target_doc.set(fieldname, source_doc.get(fieldname))
 
 
-def ignore_gst_validations(doc, throw=True):
-    if (
-        not is_indian_registered_company(doc)
-        or doc.get("is_opening") == "Yes"
-        # Also returning if item with multiple taxes
-        or validate_items(doc, throw) is False
-    ):
-        return True
+def ignore_gst_validations(doc):
+    return not is_indian_registered_company(doc) or doc.get("is_opening") == "Yes"
 
 
 def reset_gst_details_on_cross_mapping(target_doc, source_doc):
@@ -1910,13 +1899,14 @@ def reset_gst_details_on_cross_mapping(target_doc, source_doc):
     When mapping between sales and purchase doctypes (e.g. Purchase Order
     from Sales Order), reset GST details.
     """
-    if ignore_gst_validations(target_doc):
-        return
 
     is_source_sales = source_doc.doctype in SALES_DOCTYPES
     is_target_sales = target_doc.doctype in SALES_DOCTYPES
 
     if is_source_sales == is_target_sales:
+        return
+
+    if ignore_gst_validations(target_doc):
         return
 
     # Re-fetch address-based fields (gst_category, party_gstin) from the
@@ -1969,6 +1959,8 @@ def before_update_after_submit(doc, method=None):
 
     if ignore_gst_validations(doc):
         return
+
+    validate_items(doc)
 
     if is_sales_transaction := doc.doctype in SALES_DOCTYPES:
         validate_hsn_codes(doc)

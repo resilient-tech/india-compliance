@@ -25,7 +25,7 @@ def get_dashboard_data(data):
 
 
 def onload(doc, method=None):
-    if ignore_gst_validations(doc, throw=False):
+    if ignore_gst_validations(doc):
         return
 
     if (
