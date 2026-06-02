@@ -340,7 +340,6 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
     }
 
     render_summary({});
-
     frappe.call({
         method: "india_compliance.gst_india.doctype.isd_invoice.isd_invoice.get_purchase_invoices_distribution_summary",
         args: { purchase_invoices: source_names, posting_date: posting_date },

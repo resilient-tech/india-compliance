@@ -135,7 +135,10 @@ frappe.ui.form.on("ISD Invoice", {
             if ($dist?.length && $results?.length) $dist.insertBefore($results);
         };
 
-        d.make = () => { _make(); rearrange(); };
+        d.make = () => {
+            _make();
+            rearrange();
+        };
         if (d.dialog) rearrange();
     },
 });
@@ -246,7 +249,7 @@ class ISDInvoiceController {
             }
 
             const is_company_recipient =
-            this.frm.doc.is_against_party && this.frm.doc.credit_flow === "Credit Receipt";
+                this.frm.doc.is_against_party && this.frm.doc.credit_flow === "Credit Receipt";
             const filters = {
                 link_doctype: this.frm.doc.party_type,
                 link_name: this.frm.doc.party,
@@ -301,7 +304,7 @@ class ISDInvoiceController {
 
     update_address_labels() {
         const LABELS = {
-            "default": {
+            default: {
                 company_address: __("Select Company Address"),
                 party_address: __("Select Party Address"),
             },
@@ -400,8 +403,10 @@ class ISDInvoiceController {
 
     async calculate_distribution() {
         const is_inter_state = await this.is_inter_state_distribution();
+        // credit notes store distributed amounts as negative (reverse of the original)
+        const sign = this.frm.doc.is_credit_note ? -1 : 1;
         for (const row of this.frm.doc.source_invoices || []) {
-            const ratio = (row.distribution_ratio || 0) / 100;
+            const ratio = (sign * (row.distribution_ratio || 0)) / 100;
 
             if (is_inter_state) {
                 row.distributed_igst =
@@ -439,10 +444,7 @@ class ISDInvoiceController {
             total_cess += r.distributed_cess;
             total_cess_non_advol += r.distributed_cess_non_advol;
             const row_total =
-                (r.distributed_igst) +
-                (r.distributed_cgst) +
-                (r.distributed_sgst) +
-                (r.distributed_cess);
+                r.distributed_igst + r.distributed_cgst + r.distributed_sgst + r.distributed_cess;
             if (r.is_ineligible_for_itc) total_ineligible += row_total;
             else total_eligible += row_total;
         }

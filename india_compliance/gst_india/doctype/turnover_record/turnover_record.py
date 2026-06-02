@@ -7,8 +7,6 @@ from frappe.model.document import Document
 
 from india_compliance.gst_india.utils import get_state, validate_gstin
 
-# TODO: remove gst category from turnover records
-
 
 class TurnoverRecord(Document):
     def autoname(self):
