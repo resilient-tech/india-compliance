@@ -155,7 +155,8 @@
    "fieldname": "credit_note_against",
    "fieldtype": "Link",
    "label": "Credit Note Against",
-   "options": "ISD Invoice"
+   "options": "ISD Invoice",
+   "mandatory_depends_on": "eval: doc.is_credit_note == 1"
   },
   {
    "collapsible": 1,

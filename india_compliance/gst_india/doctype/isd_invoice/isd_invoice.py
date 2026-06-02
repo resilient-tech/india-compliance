@@ -200,6 +200,7 @@ class ISDInvoice(Document):
             )
 
     # TODO: needs detailed review
+    # validation for credit not does not use credit_note_against
     def validate_distribution_limits(self):
         """Validate that distributed amounts do not exceed available amounts per purchase invoice."""
 
@@ -710,19 +711,74 @@ def create_inter_company_invoice(source_name: str, target_doc: str | None = None
 
 
 @frappe.whitelist()
-def address_query(doctype: str, txt: str, searchfield: str, start: int, page_len: int, filters: dict):
-    from frappe.desk.search import search_widget
+def make_credit_note(source_name: str, target_doc: str | None = None):
+    """Create a credit note ISD Invoice that reverses the source invoice's distribution.
 
-    _filters = []
-    if link_doctype := filters.pop("link_doctype", None):
-        _filters.append(["Dynamic Link", "link_doctype", "=", link_doctype])
-    if link_name := filters.pop("link_name", None):
-        _filters.append(["Dynamic Link", "link_name", "=", link_name])
+    Distributed amounts are stored as negative (reverse of the original), mirroring the
+    ERPNext return / credit note model.
+    """
+    frappe.has_permission("ISD Invoice", "write", throw=True)
 
-    _filters.append(["Address", "gst_category", "!=", ISD_GST_CATEGORY])
+    distributed_fields = (
+        "distributed_igst",
+        "distributed_cgst",
+        "distributed_sgst",
+        "distributed_cess",
+        "distributed_cess_non_advol",
+    )
 
-    return search_widget(
-        "Address", txt, filters=_filters, searchfield=searchfield, start=start, page_length=page_len
+    def post_process(source, target):
+        target.is_credit_note = 1
+        target.credit_note_against = source.name
+        target.amended_from = None
+        target.inter_company_invoice_reference = None
+        for row in target.source_invoices:
+            for field in distributed_fields:
+                row.set(field, -1 * flt(row.get(field)))
+
+    return get_mapped_doc(
+        "ISD Invoice",
+        source_name,
+        {
+            "ISD Invoice": {
+                "doctype": "ISD Invoice",
+                "validation": {"docstatus": ["=", 1]},
+                "field_map": {
+                    "posting_date": "posting_date",
+                    "company": "company",
+                    "company_address": "company_address",
+                    "party_address": "party_address",
+                    "is_against_party": "is_against_party",
+                    "credit_flow": "credit_flow",
+                    "party_type": "party_type",
+                    "party": "party",
+                    "party_account": "party_account",
+                    "cost_center": "cost_center",
+                    "project": "project",
+                    "distribution_ratio": "distribution_ratio",
+                },
+            },
+            "ISD Invoice Source Item": {
+                "doctype": "ISD Invoice Source Item",
+                "field_map": [
+                    "purchase_invoice",
+                    "is_ineligible_for_itc",
+                    "distribution_ratio",
+                    "total_igst",
+                    "total_cgst",
+                    "total_sgst",
+                    "total_cess",
+                    "total_cess_non_advol",
+                    "distributed_igst",
+                    "distributed_cgst",
+                    "distributed_sgst",
+                    "distributed_cess",
+                    "distributed_cess_non_advol",
+                ],
+            },
+        },
+        target_doc,
+        post_process,
     )
 
 

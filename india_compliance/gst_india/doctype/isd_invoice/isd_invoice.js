@@ -19,6 +19,18 @@ frappe.ui.form.on("ISD Invoice", {
                 __("Create"),
             );
         }
+        if (frm.doc.docstatus === 1 && !frm.doc.is_credit_note && frappe.model.can_create("ISD Invoice")) {
+            frm.add_custom_button(
+                __("Credit Note"),
+                () => {
+                    frappe.model.open_mapped_doc({
+                        method: "india_compliance.gst_india.doctype.isd_invoice.isd_invoice.make_credit_note",
+                        frm: frm,
+                    });
+                },
+                __("Create"),
+            );
+        }
     },
 
     company(frm) {
