@@ -55,6 +55,10 @@ repos:
     rev: v0.15.8
     hooks:
       - id: ruff
+        name: "Remove unused imports"
+        args: ["--select=F401", "--fix"]
+
+      - id: ruff
         name: "Run ruff import sorter"
         args: ["--select=I", "--fix"]
 
