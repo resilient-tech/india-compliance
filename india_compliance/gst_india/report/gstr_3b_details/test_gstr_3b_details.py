@@ -2,7 +2,7 @@
 # See license.txt
 
 import frappe
-from frappe.tests import IntegrationTestCase
+from frappe.tests.utils import FrappeTestCase
 from frappe.utils import get_first_day, get_last_day, get_month, getdate
 
 from india_compliance.gst_india.report.gst_purchase_register.gst_purchase_register import (
@@ -17,7 +17,7 @@ from india_compliance.gst_india.utils.tests import (
 )
 
 
-class TestGSTR3BDetails(IntegrationTestCase):
+class TestGSTR3BDetails(FrappeTestCase):
     def setUp(self):
         frappe.set_user("Administrator")
         filters = {"company": "_Test Indian Registered Company"}
