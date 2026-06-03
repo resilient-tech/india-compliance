@@ -777,8 +777,8 @@ class TestTransaction(IntegrationTestCase):
         self.assertDocumentEqual({"taxable_value": 62.51, "cgst_amount": 5.63}, doc.items[0])
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
-    def test_import_service_purchase_invoice_is_taxable(self):
-        if self.doctype != "Purchase Invoice":
+    def test_import_service_purchase_transaction_are_taxable(self):
+        if self.is_sales_doctype:
             return
 
         doc = create_transaction(
@@ -788,8 +788,9 @@ class TestTransaction(IntegrationTestCase):
             do_not_submit=True,
         )
 
-        self.assertEqual(doc.itc_classification, "Import Of Service")
         self.assertEqual(doc.items[0].gst_treatment, "Taxable")
+        if self.doctype == "Purchase Invoice":
+            self.assertEqual(doc.itc_classification, "Import Of Service")
 
     def test_regular_purchase_without_gst_taxes_is_nil_rated(self):
         if self.is_sales_doctype:
