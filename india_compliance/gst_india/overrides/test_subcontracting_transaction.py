@@ -350,7 +350,10 @@ class TestSubcontractingTransaction(IntegrationTestCase):
             rm_details=[d.name for d in sco.supplied_items],
             order_doctype=sco.doctype,
         )
-        return_se = get_materials_from_supplier(sco.name)
+        try:
+            return_se = get_materials_from_supplier(sco.name)
+        finally:
+            frappe.flags.args = None
         return_se.save()
 
         scr = make_subcontracting_receipt(sco.name)
@@ -491,7 +494,10 @@ class TestAddressMappingAfterMapping(IntegrationTestCase):
             rm_details=[d.name for d in sco.supplied_items],
             order_doctype=sco.doctype,
         )
-        return_se = get_materials_from_supplier(sco.name)
+        try:
+            return_se = get_materials_from_supplier(sco.name)
+        finally:
+            frappe.flags.args = None
 
         self.assertEqual(return_se.purpose, "Material Transfer")
         self.assertTrue(return_se.is_return)
