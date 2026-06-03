@@ -1,7 +1,7 @@
 import re
 
 import frappe
-from frappe.tests import IntegrationTestCase
+from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import add_to_date, getdate
 from frappe.utils.data import format_date
 
@@ -291,6 +291,31 @@ class TestTransactionData(IntegrationTestCase):
                 }
             ],
         )
+
+    @change_settings("System Settings", {"currency_precision": 3})
+    def test_transaction_total_equals_sum_of_rounded_item_values(self):
+        """transaction_details.total must equal Σ rounded(item.taxable_value).
+
+        3 items at rate=3112.5, qty=2, GST 18% included in rate:
+          taxable_value per item = 6225 / 1.18 = 5275.4237...
+          Σ round(5275.4237) = 5275.42 * 3 = 15826.26  ← correct (portal expects this)
+          round(Σ 5275.4237) = round(15826.271) = 15826.27  ← old total
+        """
+        doc = create_sales_invoice(do_not_save=True)
+        doc.items[0].rate = 3112.5
+        doc.items[0].qty = 2
+        for _ in range(2):
+            append_item(doc, frappe._dict(rate=3112.5, qty=2))
+        _append_taxes(doc, ["CGST", "SGST"], included_in_print_rate=1)
+        doc.save()
+
+        gst_data = GSTTransactionData(doc)
+        gst_data.set_transaction_details()
+        items = gst_data.get_all_item_details()
+
+        item_sum = sum(it["taxable_amount"] + it["non_taxable_amount"] for it in items)
+        self.assertEqual(item_sum, gst_data.transaction_details["total"])
+        self.assertEqual(gst_data.transaction_details["total"], 15826.26)
 
     def test_validate_unique_hsn_and_uom(self):
         doc = create_sales_invoice(do_not_submit=True)
