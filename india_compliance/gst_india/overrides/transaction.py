@@ -33,8 +33,7 @@ from india_compliance.gst_india.utils import (
     get_place_of_supply,
     get_place_of_supply_options,
     has_gst_taxes,
-    is_import_of_goods,
-    is_import_of_services,
+    is_import_transaction,
     is_overseas_doc,
     join_list_with_custom_separators,
     validate_gst_category,
@@ -1380,7 +1379,7 @@ class ItemGSTTreatment:
             self.set_for_overseas()
             return
 
-        if not is_sales_transaction and (is_import_of_goods(self.doc) or is_import_of_services(self.doc)):
+        if is_import_transaction(self.doc):
             # NOTE: Import transactions are treated as "Taxable" since the supply is taxable
             # under GST even when no GST is charged directly (e.g. Import Of Goods settled
             # via BOE) But there is one more possibliity of classifying import transactions
@@ -1702,10 +1701,7 @@ def validate_item_tax_template(doc):
     if not doc.items or not doc.taxes:
         return
 
-    is_import_transaction = doc.get("itc_classification") in (
-        "Import Of Goods",
-        "Import Of Service",
-    )
+    is_import = is_import_transaction(doc)
     non_taxable_items_with_tax = []
     taxable_items_with_no_tax = []
 
@@ -1722,7 +1718,7 @@ def validate_item_tax_template(doc):
             non_taxable_items_with_tax.append(item.idx)
 
         if not is_gst_applied and item.gst_treatment in TAXABLE_GST_TREATMENTS:
-            if is_import_transaction:
+            if is_import:
                 continue
             taxable_items_with_no_tax.append(item.idx)
 
