@@ -1,7 +1,6 @@
 // Copyright (c) 2023, Resilient Tech and contributors
 // For license information, please see license.txt
 /* eslint-disable */
-{% include "india_compliance/gst_india/report/utils.js" %}
 
 const AMOUNT_FIELDS = ["igst_amount", "cgst_amount", "sgst_amount", "cess_amount", "intra", "inter"];
 
@@ -100,7 +99,7 @@ frappe.query_reports["GSTR-3B Details"] = {
 
 function get_subcategory_options() {
     const sub_section = frappe.query_report.get_filter_value("sub_section");
-    return get_inward_subcategory_options(sub_section);
+    return india_compliance.get_inward_subcategory_options(sub_section);
 }
 
 function custom_report_column_total(...args) {
