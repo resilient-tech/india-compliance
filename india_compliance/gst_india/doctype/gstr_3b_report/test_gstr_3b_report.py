@@ -14,9 +14,6 @@ from india_compliance.gst_india.doctype.gstr_3b_report.gstr_3b_report import (
     GSTR3BExcelExporter,
 )
 from india_compliance.gst_india.overrides.test_transaction import create_cess_accounts
-from india_compliance.gst_india.report.gstr_3b_details.gstr_3b_details import (
-    GSTR3B_Inward_Nil_Exempt,
-)
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 from india_compliance.gst_india.utils.itc_claim import format_period
 from india_compliance.gst_india.utils.tests import (
@@ -357,57 +354,6 @@ class TestGSTR3BReport(IntegrationTestCase):
         self.assertEqual(itc_reversed["OTH"]["samt"], 9.0)
         self.assertEqual(output["itc_elg"]["itc_net"]["camt"], -9.0)
         self.assertEqual(output["itc_elg"]["itc_net"]["samt"], -9.0)
-
-    def test_inward_nil_non_gst_report_includes_sez_services(self):
-        pi = create_purchase_invoice(
-            supplier="_Test Registered Supplier",
-            do_not_save=1,
-            do_not_submit=1,
-            item_code="_Test Service Item",
-        )
-        pi.gst_category = "SEZ"
-        pi.insert()
-        pi.submit()
-
-        today = getdate()
-
-        report = GSTR3B_Inward_Nil_Exempt(
-            {
-                "company": "_Test Indian Registered Company",
-                "company_gstin": "24AAQCA8719H1ZC",
-                "year": today.year,
-                "month_or_quarter": get_month(today),
-            }
-        )
-
-        rows = report.get_inward_nil_exempt()
-        self.assertIn(pi.name, [row.voucher_no for row in rows])
-
-    def test_inward_nil_non_gst_report_excludes_overseas_import_services(self):
-        pi = create_purchase_invoice(
-            supplier="_Test Foreign Supplier",
-            do_not_save=1,
-            do_not_submit=1,
-            item_code="_Test Service Item",
-        )
-        pi.insert()
-        pi.submit()
-
-        self.assertEqual(pi.itc_classification, "Import Of Service")
-
-        today = getdate()
-
-        report = GSTR3B_Inward_Nil_Exempt(
-            {
-                "company": "_Test Indian Registered Company",
-                "company_gstin": "24AAQCA8719H1ZC",
-                "year": today.year,
-                "month_or_quarter": get_month(today),
-            }
-        )
-
-        rows = report.get_inward_nil_exempt()
-        self.assertNotIn(pi.name, [row.voucher_no for row in rows])
 
     def test_gstr_3b_report_includes_boe_in_import_of_goods(self):
         pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)

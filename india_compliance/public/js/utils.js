@@ -9,6 +9,24 @@ import {
     PAN_REGEX,
 } from "./regex_constants";
 
+const INWARD_SECTION_MAPPING = {
+    4: {
+        "ITC Available": [
+            "Import Of Goods",
+            "Import Of Service",
+            "ITC on Reverse Charge",
+            "Input Service Distributor",
+            "All Other ITC",
+        ],
+        "ITC Reversed": ["As per rules 42 & 43 of CGST Rules and section 17(5)", "Others"],
+        "Ineligible ITC": ["Reclaim of ITC Reversal", "ITC restricted due to PoS rules"],
+    },
+    5: {
+        "Composition Scheme, Exempted, Nil Rated": ["Composition Scheme, Exempted, Nil Rated"],
+        "Non-GST": ["Non-GST"],
+    },
+};
+
 frappe.provide("india_compliance");
 
 window.gst_settings = frappe.boot.gst_settings;
@@ -580,6 +598,10 @@ Object.assign(india_compliance, {
         if (!company) return false;
 
         return frappe.boot.indian_registered_companies?.includes(company);
+    },
+
+    get_inward_subcategory_options(sub_section) {
+        return Object.values(INWARD_SECTION_MAPPING[sub_section] || {}).flat();
     },
 });
 
