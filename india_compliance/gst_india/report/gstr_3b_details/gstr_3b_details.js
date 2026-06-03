@@ -78,6 +78,9 @@ frappe.query_reports["GSTR-3B Details"] = {
                     label: __("5. Values of exempt, nil rated and non-GST inward supplies"),
                 },
             ],
+            on_change: () => {
+                frappe.query_report.set_filter_value("invoice_sub_category", []);
+            },
         },
         {
             fieldtype: "MultiSelectList",
