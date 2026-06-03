@@ -324,7 +324,7 @@ class GSTTransactionData:
                 idx += 1
 
             item.qty += row.qty
-            item.taxable_value += row.taxable_value
+            item.taxable_value += self.rounded(row.taxable_value)
 
             for tax in GST_TAX_TYPES:
                 item[f"{tax}_amount"] += row.get(f"{tax}_amount", 0)
