@@ -317,16 +317,16 @@ class ISDInvoiceController {
     update_address_labels() {
         const LABELS = {
             default: {
-                company_address: __("Select Company Address"),
-                party_address: __("Select Party Address"),
+                company_address: __("Company Address"),
+                party_address: __("Party Address"),
             },
             "Credit Distribution": {
-                company_address: __("Select Company Address (Distributor)"),
-                party_address: __("Select Party Address (Recipient)"),
+                company_address: __("Company Address (Distributor)"),
+                party_address: __("Party Address (Recipient)"),
             },
             "Credit Receipt": {
-                company_address: __("Select Company Address (Recipient)"),
-                party_address: __("Select Party Address (Distributor)"),
+                company_address: __("Company Address (Recipient)"),
+                party_address: __("Party Address (Distributor)"),
             },
         };
 
