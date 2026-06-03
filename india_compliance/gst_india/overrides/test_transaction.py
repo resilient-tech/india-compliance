@@ -971,6 +971,28 @@ class TestTransaction(IntegrationTestCase):
             doc.items[0],
         )
 
+    def test_gst_details_reset_when_transaction_is_opening_is_changed(self):
+        doc = create_transaction(**self.transaction_details, rate=200, is_in_state=True, do_not_submit=True)
+        self.assertDocumentEqual(
+            {"cgst_rate": 9, "sgst_rate": 9, "cgst_amount": 18, "sgst_amount": 18},
+            doc.items[0],
+        )
+
+        doc.is_opening = "Yes"
+        doc.save()
+
+        self.assertDocumentEqual(
+            {
+                "igst_rate": 0,
+                "cgst_rate": 0,
+                "sgst_rate": 0,
+                "igst_amount": 0,
+                "cgst_amount": 0,
+                "sgst_amount": 0,
+            },
+            doc.items[0],
+        )
+
     def test_invalid_item_gst_details(self):
         doc = create_transaction(**self.transaction_details, rate=200, is_out_state=True, do_not_save=True)
         # Address is required to avoid auto update of place of supply and taxes
