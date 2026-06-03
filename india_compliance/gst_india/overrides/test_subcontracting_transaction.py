@@ -345,7 +345,15 @@ class TestSubcontractingTransaction(IntegrationTestCase):
         sco = make_sco()
         se = make_stock_transfer_entry(sco_no=sco.name, rm_items=get_rm_items(sco.supplied_items))
 
-        return_se = get_materials_from_supplier(sco.name, [d.name for d in sco.supplied_items])
+        frappe.flags.args = frappe._dict(
+            subcontract_order=sco.name,
+            rm_details=[d.name for d in sco.supplied_items],
+            order_doctype=sco.doctype,
+        )
+        try:
+            return_se = get_materials_from_supplier(sco.name)
+        finally:
+            frappe.flags.args = None
         return_se.save()
 
         scr = make_subcontracting_receipt(sco.name)
@@ -481,7 +489,15 @@ class TestAddressMappingAfterMapping(IntegrationTestCase):
             bill_to_address=sco.supplier_address,
         )
 
-        return_se = get_materials_from_supplier(sco.name, [d.name for d in sco.supplied_items])
+        frappe.flags.args = frappe._dict(
+            subcontract_order=sco.name,
+            rm_details=[d.name for d in sco.supplied_items],
+            order_doctype=sco.doctype,
+        )
+        try:
+            return_se = get_materials_from_supplier(sco.name)
+        finally:
+            frappe.flags.args = None
 
         self.assertEqual(return_se.purpose, "Material Transfer")
         self.assertTrue(return_se.is_return)
