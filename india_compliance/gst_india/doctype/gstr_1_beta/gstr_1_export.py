@@ -159,7 +159,7 @@ class GovExcel(DataProcessor):
         "V2.1": get_data_file_path("gstr1_excel_template_v2.1.xlsx"),
     }
 
-    def generate(self, gstin, period, section=None):
+    def generate(self, gstin, period, sections=None):
         """
         Build excel file
         """
@@ -179,15 +179,17 @@ class GovExcel(DataProcessor):
         data = self.process_data(data)
 
         sheet_names = None
-        if section:
-            selected_sections = _get_selected_sections(section, is_hsn_bifurcated)
-            data = _filter_data_by_sections(data, selected_sections)
-            sheet_names = _get_excel_sheet_names(selected_sections)
+        if sections:
+            selected = []
+            for section in sections:
+                selected.extend(_get_selected_sections(section, is_hsn_bifurcated))
+            data = _filter_data_by_sections(data, selected)
+            sheet_names = _get_excel_sheet_names(selected)
 
         self.build_excel(
             data,
             file,
-            filename=_get_gov_filename(gstin, period, section),
+            filename=_get_gov_filename(gstin, period, sections),
             sheet_names=sheet_names,
         )
 
@@ -2178,14 +2180,17 @@ def _filter_data_by_sections(data: dict, sections: list[str] | None) -> dict:
     return {k: v for k, v in data.items() if k in sections}
 
 
-def _get_gov_filename(company_gstin: str, period: str, section: str | None = None) -> str:
+def _get_gov_filename(company_gstin: str, period: str, sections: list[str] | None = None) -> str:
     name = f"GSTR-1-Gov-{company_gstin}-{period}"
-    if section:
-        name = f"{name}-{section}"
-    return name
+    if not sections:
+        return name
+    if len(sections) == 1:
+        return f"{name}-{sections[0]}"
+    return f"{name}-multi-section"
 
 
 @frappe.whitelist()
+<<<<<<< HEAD:india_compliance/gst_india/doctype/gstr_1_beta/gstr_1_export.py
 <<<<<<< HEAD:india_compliance/gst_india/doctype/gstr_1_beta/gstr_1_export.py
 def download_filed_as_excel(company_gstin: str, month_or_quarter: str, year: str):
     frappe.has_permission("GSTR-1 Beta", "export", throw=True)
@@ -2195,6 +2200,13 @@ def download_filed_as_excel(company_gstin: str, month_or_quarter: str, year: str
     frappe.has_permission("GSTR-1", "export", throw=True)
     GovExcel().generate(company_gstin, get_period(month_or_quarter, year), section=section)
 >>>>>>> fa24dd61 (feat: add section download for gstr-1 exports):india_compliance/gst_india/doctype/gstr_1/gstr_1_export.py
+=======
+def download_filed_as_excel(company_gstin: str, month_or_quarter: str, year: str, sections=None):
+    frappe.has_permission("GSTR-1", "export", throw=True)
+    if isinstance(sections, str):
+        sections = frappe.parse_json(sections) if sections else None
+    GovExcel().generate(company_gstin, get_period(month_or_quarter, year), sections=sections)
+>>>>>>> b197037c (fix: select multiple sections):india_compliance/gst_india/doctype/gstr_1/gstr_1_export.py
 
 
 @frappe.whitelist()
@@ -2220,12 +2232,15 @@ def get_gstr_1_json(
     month_or_quarter: str,
     include_uploaded: bool = False,
     delete_missing: bool = False,
-    section: str | None = None,
+    sections=None,
 ):
 <<<<<<< HEAD:india_compliance/gst_india/doctype/gstr_1_beta/gstr_1_export.py
     frappe.has_permission("GSTR-1 Beta", "export", throw=True)
 =======
     frappe.has_permission("GSTR-1", "export", throw=True)
+    if isinstance(sections, str):
+        sections = frappe.parse_json(sections) if sections else None
+
     settings = frappe.get_cached_doc("GST Settings")
     if not settings.is_gstr1_api_enabled(company_gstin):
         include_uploaded = True
@@ -2291,8 +2306,8 @@ def get_gstr_1_json(
     gstr1_log.normalize_data(data)
     gov_data = convert_to_gov_data_format(data, company_gstin)
 
-    if section:
-        gov_data = _filter_data_by_sections(gov_data, [section])
+    if sections:
+        gov_data = _filter_data_by_sections(gov_data, sections)
 
     return {
         "data": {
@@ -2300,7 +2315,7 @@ def get_gstr_1_json(
             "fp": period,
             **gov_data,
         },
-        "filename": f"{_get_gov_filename(company_gstin, period, section)}.json",
+        "filename": f"{_get_gov_filename(company_gstin, period, sections)}.json",
     }
 
 
