@@ -107,21 +107,34 @@ class TestGSTR1Export(IntegrationTestCase):
             _get_excel_sheet_names(_get_selected_sections("nonexistent", is_hsn_bifurcated=False)), []
         )
 
-    def test_includes_section_name_when_section_given(self):
-        filename = _get_gov_filename(self.GSTIN, self.PERIOD, "b2b")
-        self.assertEqual(filename, f"GSTR-1-Gov-{self.GSTIN}-{self.PERIOD}-b2b")
+    def test_filename_no_sections(self):
+        self.assertEqual(_get_gov_filename(self.GSTIN, self.PERIOD), f"GSTR-1-Gov-{self.GSTIN}-{self.PERIOD}")
 
-    def test_default_filename_when_no_section(self):
-        filename = _get_gov_filename(self.GSTIN, self.PERIOD, None)
-        self.assertEqual(filename, f"GSTR-1-Gov-{self.GSTIN}-{self.PERIOD}")
+    def test_filename_no_sections_explicit_none(self):
+        self.assertEqual(
+            _get_gov_filename(self.GSTIN, self.PERIOD, None), f"GSTR-1-Gov-{self.GSTIN}-{self.PERIOD}"
+        )
 
-    def test_default_filename_when_section_omitted(self):
-        filename = _get_gov_filename(self.GSTIN, self.PERIOD)
-        self.assertEqual(filename, f"GSTR-1-Gov-{self.GSTIN}-{self.PERIOD}")
+    def test_filename_single_section(self):
+        self.assertEqual(
+            _get_gov_filename(self.GSTIN, self.PERIOD, ["b2b"]), f"GSTR-1-Gov-{self.GSTIN}-{self.PERIOD}-b2b"
+        )
 
-    def _filter_sheets(self, template_version, section):
+    def test_filename_multiple_sections(self):
+        self.assertEqual(
+            _get_gov_filename(self.GSTIN, self.PERIOD, ["b2b", "cdnr"]),
+            f"GSTR-1-Gov-{self.GSTIN}-{self.PERIOD}-multi-section",
+        )
+
+    def _filter_sheets(self, template_version, sections):
+        """Helper: load template, apply section filtering, return remaining sheet names."""
         is_hsn_bifurcated = template_version == "V2.1"
-        sheet_names = _get_excel_sheet_names(_get_selected_sections(section, is_hsn_bifurcated))
+        if isinstance(sections, str):
+            sections = [sections]
+        selected = []
+        for section in sections:
+            selected.extend(_get_selected_sections(section, is_hsn_bifurcated))
+        sheet_names = _get_excel_sheet_names(selected)
         excel = ExcelExporter(GovExcel.TEMPLATE_EXCEL_FILE[template_version])
         GovExcel()._filter_selected_section_sheets(excel, sheet_names)
         return set(excel.wb.sheetnames)
@@ -148,6 +161,25 @@ class TestGSTR1Export(IntegrationTestCase):
     def test_v21_supeco_keeps_eco_sheet(self):
         result = self._filter_sheets("V2.1", "supeco")
         self.assertEqual(result, {GovExcelSheetName.MASTER.value, GovExcelSheetName.SUPECOM.value})
+
+    def test_multi_section_keeps_all_selected_sheets(self):
+        result = self._filter_sheets("V2.1", ["b2b", "cdnr"])
+        self.assertEqual(
+            result,
+            {GovExcelSheetName.MASTER.value, GovExcelSheetName.B2B.value, GovExcelSheetName.CDNR.value},
+        )
+
+    def test_multi_section_with_hsn_bifurcation(self):
+        result = self._filter_sheets("V2.1", ["b2b", "hsn"])
+        self.assertEqual(
+            result,
+            {
+                GovExcelSheetName.MASTER.value,
+                GovExcelSheetName.B2B.value,
+                GovExcelSheetName.HSN_B2B.value,
+                GovExcelSheetName.HSN_B2C.value,
+            },
+        )
 
     def test_every_section_on_both_templates_keeps_master(self):
         for template_version in ("V2.0", "V2.1"):
