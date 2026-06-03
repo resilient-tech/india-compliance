@@ -1,11 +1,7 @@
 import re
 
 import frappe
-<<<<<<< HEAD
-from frappe.tests.utils import FrappeTestCase
-=======
-from frappe.tests import IntegrationTestCase, change_settings
->>>>>>> cbf0d336 (fix: sum rounded total for correct e-waybill total)
+from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import add_to_date, getdate
 from frappe.utils.data import format_date
 
