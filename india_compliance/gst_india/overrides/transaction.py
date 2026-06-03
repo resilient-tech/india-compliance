@@ -1612,12 +1612,17 @@ def _update_place_of_supply_and_taxes(doc):
 
 def validate_transaction(doc, method=None):
     if ignore_gst_validations(doc):
+        set_gst_tax_type(doc)
+        update_item_gst_treatment(doc)
+        update_item_gst_details(doc)
         return False
 
     if doc.is_new():
         _update_place_of_supply_and_taxes(doc)
 
     set_gst_tax_type(doc)
+    update_item_gst_treatment(doc)
+
     validate_items(doc)
 
     if doc.place_of_supply:
@@ -1674,6 +1679,22 @@ def validate_transaction(doc, method=None):
         validate_gst_refund_accounts(doc)
     update_taxable_values(doc)
     validate_item_wise_tax_detail(doc)
+    update_item_gst_details(doc)
+    validate_item_tax_template(doc)
+
+
+def update_item_gst_details(doc, method=None):
+    if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
+        return
+
+    ItemGSTDetails().update(doc)
+
+
+def update_item_gst_treatment(doc, method=None):
+    if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
+        return
+
+    ItemGSTTreatment().set(doc)
 
 
 def before_print(doc, method=None, print_settings=None):
@@ -1700,18 +1721,13 @@ def validate_ecommerce_gstin(doc):
     doc.ecommerce_gstin = validate_gstin(doc.ecommerce_gstin, label="E-commerce GSTIN", is_tcs_gstin=True)
 
 
-def update_gst_details(doc, method=None):
-    ItemGSTTreatment().set(doc)
-    if doc.doctype in DOCTYPES_WITH_GST_DETAIL:
-        ItemGSTDetails().update(doc)
-        validate_item_tax_template(doc)
-
+def update_valuation_rate(doc, method=None):
     if doc.doctype in ("Purchase Receipt", "Purchase Invoice"):
         doc.update_valuation_rate()
 
 
 def validate_item_tax_template(doc):
-    if ignore_gst_validations(doc):
+    if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
         return
 
     if not doc.items or not doc.taxes:
@@ -1856,7 +1872,10 @@ def before_update_after_submit(doc, method=None):
     GSTAccounts().validate(doc, is_sales_transaction)
     update_taxable_values(doc)
     validate_item_wise_tax_detail(doc)
-    update_gst_details(doc)
+    update_item_gst_treatment(doc)
+    update_taxable_values(doc)
+    update_item_gst_details(doc)
+    validate_item_tax_template(doc)
 
 
 ADDRESS_DEPENDENT_FIELDS = {
