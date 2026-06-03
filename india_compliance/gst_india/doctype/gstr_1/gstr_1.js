@@ -774,7 +774,7 @@ class GSTR1 {
     }
 
     async show_rcm_journal_entry() {
-        if (!frappe.perm.has_perm("Journal Entry")) return;
+        if (!frappe.boot.user.can_read.includes("Journal Entry")) return;
 
         const { month_or_quarter, year, company, filing_preference } = this.frm.doc;
         const { message: je_details } = await frappe.call({
@@ -804,7 +804,7 @@ class GSTR1 {
     };
 
     async show_rounding_diff_journal_entry() {
-        if (!frappe.perm.has_perm("Journal Entry")) return;
+        if (!frappe.boot.user.can_read.includes("Journal Entry")) return;
 
         const rounding_difference = this.data.books?.rounding_difference?.[0];
         if (!rounding_difference || Object.values(rounding_difference).every((v) => !v)) return;
