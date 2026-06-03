@@ -79,6 +79,9 @@ frappe.query_reports["GST Purchase Register"] = {
             ],
             default: "4",
             reqd: 1,
+            on_change: () => {
+                frappe.query_report.set_filter_value("invoice_sub_category", []);
+            },
         },
         {
             fieldtype: "MultiSelectList",
