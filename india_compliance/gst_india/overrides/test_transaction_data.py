@@ -317,6 +317,25 @@ class TestTransactionData(IntegrationTestCase):
         self.assertEqual(item_sum, gst_data.transaction_details["total"])
         self.assertEqual(gst_data.transaction_details["total"], 15826.26)
 
+    @change_settings("System Settings", {"currency_precision": 3})
+    def test_grouped_items_total_matches_transaction_total(self):
+        doc = create_sales_invoice(do_not_save=True)
+        doc.items[0].rate = 3112.5
+        doc.items[0].qty = 2
+        append_item(doc, frappe._dict(rate=3112.5, qty=2))
+        _append_taxes(doc, ["CGST", "SGST"], included_in_print_rate=1)
+        doc.group_same_items = True
+        doc.save()
+
+        gst_data = GSTTransactionData(doc)
+        gst_data.set_transaction_details()
+        items = gst_data.get_all_item_details()
+
+        item_sum = sum(it["taxable_amount"] + it["non_taxable_amount"] for it in items)
+        self.assertEqual(len(items), 1)  # grouped into 1 row
+        self.assertEqual(item_sum, gst_data.transaction_details["total"])
+        self.assertEqual(gst_data.transaction_details["total"], 10550.84)
+
     def test_validate_unique_hsn_and_uom(self):
         doc = create_sales_invoice(do_not_submit=True)
 
