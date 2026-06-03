@@ -2082,13 +2082,20 @@ class FiledTab extends GSTR1_TabManager {
         super.set_default_title();
     }
 
-    get_section_filter_field() {
-        return {
-            fieldname: "section",
-            label: __("Section"),
-            fieldtype: "Select",
-            options: [{ value: "", label: __("All Sections") }, ...GSTR1_SECTION_OPTIONS],
-        };
+    get_section_filter_fields() {
+        return GSTR1_SECTION_OPTIONS.map((opt) => ({
+            fieldname: `section_${opt.value}`,
+            label: opt.label,
+            fieldtype: "Check",
+            default: 1,
+        }));
+    }
+
+    get_selected_sections(values) {
+        const all = GSTR1_SECTION_OPTIONS.map((opt) => opt.value);
+        const checked = all.filter((v) => values[`section_${v}`]);
+        // All checked is equivalent to no filter; send null so the backend skips filtering.
+        return checked.length === all.length ? null : checked.length ? checked : null;
     }
 
     // ACTIONS
@@ -2097,17 +2104,20 @@ class FiledTab extends GSTR1_TabManager {
         const url = "india_compliance.gst_india.doctype.gstr_1.gstr_1_export.download_filed_as_excel";
         const dialog = new frappe.ui.Dialog({
             title: __("Download Excel"),
-            fields: [this.get_section_filter_field()],
+            fields: this.get_section_filter_fields(),
             primary_action_label: __("Download"),
             primary_action: () => {
-                const { section } = dialog.get_values();
+                const values = dialog.get_values();
+                const sections = this.get_selected_sections(values);
                 const post_args = {
                     company_gstin: this.instance.frm.doc.company_gstin,
                     month_or_quarter: this.instance.frm.doc.month_or_quarter,
                     year: this.instance.frm.doc.year,
                 };
 
-                if (section) post_args.section = section;
+                // open_url_post is form-encoded; JSON-encode the array so the
+                // backend receives it as a string it can frappe.parse_json().
+                if (sections) post_args.sections = JSON.stringify(sections);
                 open_url_post(`/api/method/${url}`, post_args);
                 dialog.hide();
             },
@@ -2125,7 +2135,7 @@ class FiledTab extends GSTR1_TabManager {
         const me = this;
         const api_enabled = is_gstr1_api_enabled();
 
-        const fields = [this.get_section_filter_field()];
+        const fields = [...this.get_section_filter_fields()];
 
         if (api_enabled) {
             fields.push(
@@ -2158,7 +2168,9 @@ class FiledTab extends GSTR1_TabManager {
             fields,
             primary_action_label: __("Download"),
             primary_action: () => {
-                const { section, include_uploaded, delete_missing } = dialog.get_values();
+                const values = dialog.get_values();
+                const { include_uploaded, delete_missing } = values;
+                const sections = me.get_selected_sections(values);
                 const doc = me.instance.frm.doc;
 
                 frappe.call({
@@ -2169,7 +2181,7 @@ class FiledTab extends GSTR1_TabManager {
                         month_or_quarter: doc.month_or_quarter,
                         include_uploaded: api_enabled ? include_uploaded : true,
                         delete_missing: api_enabled ? delete_missing : false,
-                        section: section || null,
+                        sections: sections,
                     },
                     callback: (r) => {
                         india_compliance.trigger_file_download(
