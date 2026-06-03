@@ -1870,7 +1870,6 @@ def before_update_after_submit(doc, method=None):
         validate_hsn_codes(doc)
 
     GSTAccounts().validate(doc, is_sales_transaction)
-    update_taxable_values(doc)
     validate_item_wise_tax_detail(doc)
     update_item_gst_treatment(doc)
     update_taxable_values(doc)

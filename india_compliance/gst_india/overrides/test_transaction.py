@@ -971,10 +971,16 @@ class TestTransaction(IntegrationTestCase):
             doc.items[0],
         )
 
-    def test_gst_details_reset_when_transaction_is_opening_is_changed(self):
+    def test_gst_details_reset_when_transaction_becomes_ineligible(self):
         doc = create_transaction(**self.transaction_details, rate=200, is_in_state=True, do_not_submit=True)
         self.assertDocumentEqual(
-            {"cgst_rate": 9, "sgst_rate": 9, "cgst_amount": 18, "sgst_amount": 18},
+            {
+                "cgst_rate": 9,
+                "sgst_rate": 9,
+                "cgst_amount": 18,
+                "sgst_amount": 18,
+                "gst_treatment": "Taxable",
+            },
             doc.items[0],
         )
 
@@ -989,6 +995,7 @@ class TestTransaction(IntegrationTestCase):
                 "igst_amount": 0,
                 "cgst_amount": 0,
                 "sgst_amount": 0,
+                "gst_treatment": "Nil-Rated",
             },
             doc.items[0],
         )
