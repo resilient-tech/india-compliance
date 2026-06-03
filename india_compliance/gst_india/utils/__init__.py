@@ -8,6 +8,7 @@ import frappe
 from dateutil import parser
 from erpnext.accounts.party import get_default_contact
 from erpnext.accounts.utils import get_fiscal_year
+from erpnext.stock.get_item_details import purchase_doctypes
 from frappe import _
 from frappe.contacts.doctype.contact.contact import get_contact_details
 from frappe.desk.form.load import get_docinfo, run_onload
@@ -375,7 +376,7 @@ def is_foreign_transaction(gst_category, place_of_supply):
 
 
 def is_import_of_goods(doc):
-    return doc.gst_category in IMPORT_GST_CATEGORIES and are_goods_supplied(doc)
+    return doc.get("gst_category") in IMPORT_GST_CATEGORIES and are_goods_supplied(doc)
 
 
 def is_import_of_services(doc):
@@ -387,7 +388,11 @@ def is_import_of_services(doc):
     would be collected and discharged by the SEZ Unit / SEZ Developer i.e., under Forward
     Charge Mechanism.
     """
-    return doc.gst_category == "Overseas" and not are_goods_supplied(doc)
+    return doc.get("gst_category") == "Overseas" and not are_goods_supplied(doc)
+
+
+def is_import_transaction(doc):
+    return doc.doctype in purchase_doctypes and (is_import_of_goods(doc) or is_import_of_services(doc))
 
 
 def get_hsn_settings():
