@@ -3,34 +3,10 @@
 import frappe
 from frappe import _
 
-from india_compliance.gst_india.utils.gstr3b.gstr3b_inward_data import GSTR3BInwardInvoices
-
-SECTION_MAPPING = {
-    "4": {
-        "ITC Available": [
-            "Import Of Goods",
-            "Import Of Service",
-            "ITC on Reverse Charge",
-            "Input Service Distributor",
-            "All Other ITC",
-        ],
-        "ITC Reversed": [
-            "As per rules 42 & 43 of CGST Rules and section 17(5)",
-            "Others",
-        ],
-        "Ineligible ITC": [
-            "Reclaim of ITC Reversal",
-            "ITC restricted due to PoS rules",
-        ],
-    },
-    "5": {
-        "Composition Scheme, Exempted, Nil Rated": [
-            "Composition Scheme, Exempted, Nil Rated",
-        ],
-        "Non-GST": ["Non-GST"],
-    },
-}
-
+from india_compliance.gst_india.utils.gstr3b.gstr3b_inward_data import (
+    INWARD_SECTION_SUB_CATEGORY_MAP,
+    GSTR3BInwardInvoices,
+)
 
 AMOUNT_FIELDS_MAP = {
     "4": {
@@ -278,7 +254,6 @@ def get_tax_columns():
 
 
 def get_data(filters):
-    data = []
     gstr3b_invoices = GSTR3BInwardInvoices(filters)
     is_grouped_by_invoice = filters.summary_by != "Summary by Item"
     sub_section = filters.sub_section
@@ -287,32 +262,26 @@ def get_data(filters):
     if not filters.invoice_sub_category:
         filters.invoice_sub_category = get_invoice_sub_categories(sub_section)
 
-    doctypes = ["Purchase Invoice"]
-    if sub_section == "4":
-        doctypes.extend(["Bill of Entry", "Journal Entry"])
-
-    for doctype in doctypes:
-        data.extend(gstr3b_invoices.get_data(doctype, is_grouped_by_invoice))
+    data = gstr3b_invoices.get_section_data(
+        sub_section,
+        group_by_invoice=is_grouped_by_invoice,
+        invoice_sub_categories=filters.invoice_sub_category,
+    )
 
     if filters.summary_by == "Overview":
         return get_summary_view(data, sub_section)
 
-    data = sorted(
-        gstr3b_invoices.get_filtered_invoices(data, filters.invoice_sub_category),
-        key=lambda k: (k["invoice_sub_category"], k["posting_date"]),
-    )
+    data = sorted(data, key=lambda k: (k["invoice_sub_category"], k["posting_date"]))
 
     return data
 
 
 def get_invoice_sub_categories(sub_section):
-    section = SECTION_MAPPING.get(sub_section) or {}
-
-    return [category for sub_categories in section.values() for category in sub_categories]
+    return GSTR3BInwardInvoices.get_section_sub_categories(sub_section)
 
 
 def get_summary_view(data, sub_section):
-    mapping = SECTION_MAPPING[sub_section]
+    mapping = INWARD_SECTION_SUB_CATEGORY_MAP[sub_section]
     amount_fields = AMOUNT_FIELDS_MAP[sub_section]
 
     final_summary = []
