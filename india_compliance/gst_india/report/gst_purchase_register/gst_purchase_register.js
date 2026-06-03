@@ -1,7 +1,6 @@
 // Copyright (c) 2024, Resilient Tech and contributors
 // For license information, please see license.txt
 /* eslint-disable */
-{% include "india_compliance/gst_india/report/utils.js" %}
 
 const AMOUNT_FIELDS = [
     "taxable_value",
@@ -112,7 +111,7 @@ frappe.query_reports["GST Purchase Register"] = {
 
 function get_subcategory_options() {
     const sub_section = frappe.query_report.get_filter_value("sub_section");
-    return get_inward_subcategory_options(sub_section);
+    return india_compliance.get_inward_subcategory_options(sub_section);
 }
 
 function custom_report_column_total(...args) {
