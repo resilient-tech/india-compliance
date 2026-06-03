@@ -15,7 +15,10 @@ from india_compliance.gst_india.utils.gstr_1 import (
 from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_DataField as inv_f,
 )
-from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import GSTR1BooksData
+from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
+    BooksDataMapper,
+    GSTR1BooksData,
+)
 from india_compliance.gst_india.utils.tests import (
     _append_taxes,
     append_item,
@@ -795,6 +798,40 @@ class TestGSTR1BooksData(IntegrationTestCase):
         self.assertGreater(row_1[inv_f.IGST], 0)
         self.assertGreater(row_1[inv_f.CGST], 0)
         self.assertGreater(row_1[inv_f.SGST], 0)
+
+    def test_supecom_rounding_at_invoice_level(self):
+        """
+        Rounding must happen at the invoice level before aggregating across
+        invoices for the same operator. Without invoice-level rounding the
+        operator total diverges from the sum of per-invoice rounded amounts.
+        """
+        supply_type = GSTR1_SubCategory.SUPECOM_52.value
+        eco_gstin = "20ALYPD6528PQC5"
+
+        def make_item(invoice_no, igst):
+            return frappe._dict(
+                invoice_no=invoice_no,
+                ecommerce_gstin=eco_gstin,
+                taxable_value=0,
+                igst_amount=igst,
+                cgst_amount=0,
+                sgst_amount=0,
+                total_cess_amount=0,
+            )
+
+        grouped_data = {
+            supply_type: {
+                "INV-ECOM-001": [make_item("INV-ECOM-001", 0.006)],
+                "INV-ECOM-002": [make_item("INV-ECOM-002", 0.006)],
+            }
+        }
+
+        prepared_data = {}
+        BooksDataMapper().process_data_for_supecom(grouped_data, prepared_data)
+
+        row = prepared_data[supply_type][eco_gstin]
+        # Each invoice rounds to 0.01; two invoices → 0.02
+        self.assertEqual(row[inv_f.IGST], flt(0.01 + 0.01, 2))
 
     def test_gov_excel_process_data_keeps_supecom_rows(self):
         ecommerce_gstin = "20ALYPD6528PQC5"

@@ -2274,7 +2274,7 @@ class BooksDataMapper:
         Aggregate e-commerce supplies by operator GSTIN for each supply type.
 
         Input:
-            grouped_data: {ecommerce_supply_type: [invoice_items]}
+            grouped_data: {ecommerce_supply_type: {invoice_no: [invoice_items]}}
             prepared_data: dict to be updated with the processed data
 
         Output structure (before normalize_data):
@@ -2293,27 +2293,33 @@ class BooksDataMapper:
             return party_name_map[eco_gstin]
 
         data_to_invoice_field_map = self.DATA_TO_INVOICE_FIELD_MAPPING
+        empty_invoice_values = self.get_invoice_values()
         party_name_map = {}
 
-        for supply_type, items in grouped_data.items():
+        for supply_type, invoice_wise in grouped_data.items():
             sub_category = prepared_data.setdefault(supply_type, {})
 
-            for item in items:
-                eco_gstin = item.get("ecommerce_gstin", "")
+            for items in invoice_wise.values():
+                eco_gstin = items[0].get("ecommerce_gstin", "")
                 entry = sub_category.setdefault(
                     eco_gstin,
                     {
                         inv_f.DOC_TYPE: supply_type,
                         inv_f.ECOMMERCE_GSTIN: eco_gstin,
                         inv_f.ECOMMERCE_OPERATOR_NAME: get_party_name_for_gstin(eco_gstin, party_name_map),
-                        **self.get_invoice_values(),
+                        **empty_invoice_values.copy(),
                     },
                 )
 
-                for key, field in data_to_invoice_field_map.items():
-                    entry[key] += item.get(field, 0)
+                invoice_totals = empty_invoice_values.copy()
+                for item in items:
+                    for key, field in data_to_invoice_field_map.items():
+                        invoice_totals[key] += item.get(field, 0)
 
-            # Round aggregated values
+                for key in data_to_invoice_field_map:
+                    entry[key] += flt(invoice_totals[key], self.PRECISION)
+
+            # Round at operator level
             for entry in sub_category.values():
                 for key in data_to_invoice_field_map:
                     entry[key] = flt(entry[key], self.PRECISION)
@@ -2489,7 +2495,7 @@ class GSTR1BooksData(BooksDataMapper):
         data_for_invoice_no_key = defaultdict(lambda: defaultdict(list))
         data_for_nil_exempt = defaultdict(lambda: defaultdict(list))
         data_for_b2cs = defaultdict(lambda: defaultdict(list))
-        data_for_supecom = defaultdict(list)
+        data_for_supecom = defaultdict(lambda: defaultdict(list))
         data_for_hsn = defaultdict(lambda: defaultdict(list))
 
         for item in data:
@@ -2523,7 +2529,7 @@ class GSTR1BooksData(BooksDataMapper):
             # their primary category (B2B/B2CS). ecommerce_supply_type is set by
             # assign_categories() for every invoice that has ecommerce_gstin.
             if item.get("ecommerce_gstin") and item.get("ecommerce_supply_type"):
-                data_for_supecom[item.ecommerce_supply_type].append(item)
+                data_for_supecom[item.ecommerce_supply_type][item.invoice_no].append(item)
 
         return data_for_hsn, data_for_invoice_no_key, data_for_nil_exempt, data_for_b2cs, data_for_supecom
 
