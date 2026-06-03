@@ -3,8 +3,11 @@
 <<<<<<< HEAD
 =======
 /* eslint-disable */
+<<<<<<< HEAD
 {% include "india_compliance/gst_india/report/utils.js" %}
 >>>>>>> 63bb16e1 (fix: update GSTR-3B details to use sub-section and invoice sub-category filters)
+=======
+>>>>>>> e13d27ef (refactor: move INWARD_SECTION_MAPPING to namespace)
 
 {% include "erpnext/accounts/report/purchase_register/purchase_register.js" %}
 
@@ -111,7 +114,7 @@ frappe.query_reports["GST Purchase Register"] = {
 
 function get_subcategory_options() {
     const sub_section = frappe.query_report.get_filter_value("sub_section");
-    return get_inward_subcategory_options(sub_section);
+    return india_compliance.get_inward_subcategory_options(sub_section);
 }
 
 function custom_report_column_total(...args) {
