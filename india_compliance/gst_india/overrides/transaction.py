@@ -1770,13 +1770,14 @@ def reset_gst_details_on_cross_mapping(target_doc, source_doc):
     When mapping between sales and purchase doctypes (e.g. Purchase Order
     from Sales Order), reset GST details.
     """
-    if ignore_gst_validations(target_doc):
-        return
 
     is_source_sales = source_doc.doctype in SALES_DOCTYPES
     is_target_sales = target_doc.doctype in SALES_DOCTYPES
 
     if is_source_sales == is_target_sales:
+        return
+
+    if ignore_gst_validations(target_doc):
         return
 
     # Re-fetch address-based fields (gst_category, party_gstin) from the
