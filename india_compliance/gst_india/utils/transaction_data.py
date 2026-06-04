@@ -75,10 +75,11 @@ class GSTTransactionData:
         self.transaction_details.update({key: 0 for key in tax_total_keys})
 
         for row in self.doc.items:
-            total += row.taxable_value
+            taxable_value = self.rounded(row.taxable_value)
+            total += taxable_value
 
             if row.gst_treatment in TAXABLE_GST_TREATMENTS:
-                total_taxable_value += row.taxable_value
+                total_taxable_value += taxable_value
 
             if self.is_purchase_rcm:
                 continue
@@ -323,7 +324,7 @@ class GSTTransactionData:
                 idx += 1
 
             item.qty += row.qty
-            item.taxable_value += row.taxable_value
+            item.taxable_value += self.rounded(row.taxable_value)
 
             for tax in GST_TAX_TYPES:
                 item[f"{tax}_amount"] += row.get(f"{tax}_amount", 0)

@@ -67,6 +67,7 @@ const GSTR1_DataField = {
     TRANSACTION_TYPE: "transaction_type",
     CUST_GSTIN: "customer_gstin",
     ECOMMERCE_GSTIN: "ecommerce_gstin",
+    ECOMMERCE_OPERATOR_NAME: "ecommerce_operator_name",
     CUST_NAME: "customer_name",
     DOC_DATE: "document_date",
     DOC_NUMBER: "document_number",
@@ -673,6 +674,16 @@ class GSTR1 {
                 {
                     label: "UOM",
                     fieldname: GSTR1_DataField.UOM,
+                    fieldtype: "Data",
+                },
+            ];
+        } else if (
+            [GSTR1_SubCategory.SUPECOM_52, GSTR1_SubCategory.SUPECOM_9_5].includes(this.filter_category)
+        ) {
+            fields = [
+                {
+                    label: "E-Commerce GSTIN",
+                    fieldname: GSTR1_DataField.ECOMMERCE_GSTIN,
                     fieldtype: "Data",
                 },
             ];
@@ -1635,6 +1646,60 @@ class GSTR1_TabManager extends TabManager {
         ];
     }
 
+    get_supecom_columns() {
+        return [
+            ...this.get_detail_view_column(),
+            {
+                name: "Description",
+                fieldname: GSTR1_DataField.DOC_TYPE,
+                width: 260,
+                _value: (...args) => this.format_detailed_table_cell(args),
+            },
+            {
+                name: "E-Commerce GSTIN",
+                fieldname: GSTR1_DataField.ECOMMERCE_GSTIN,
+                width: 170,
+                _value: (...args) => this.format_detailed_table_cell(args),
+            },
+            {
+                name: "E-Commerce Operator Name",
+                fieldname: GSTR1_DataField.ECOMMERCE_OPERATOR_NAME,
+                width: 220,
+            },
+            ...this.get_match_columns(),
+            {
+                name: "Taxable Value",
+                fieldname: GSTR1_DataField.TAXABLE_VALUE,
+                fieldtype: "Float",
+                width: 150,
+            },
+            {
+                name: "IGST",
+                fieldname: GSTR1_DataField.IGST,
+                fieldtype: "Float",
+                width: 100,
+            },
+            {
+                name: "CGST",
+                fieldname: GSTR1_DataField.CGST,
+                fieldtype: "Float",
+                width: 100,
+            },
+            {
+                name: "SGST",
+                fieldname: GSTR1_DataField.SGST,
+                fieldtype: "Float",
+                width: 100,
+            },
+            {
+                name: "CESS",
+                fieldname: GSTR1_DataField.CESS,
+                fieldtype: "Float",
+                width: 100,
+            },
+        ];
+    }
+
     get_advances_received_columns() {
         return [...this.get_detail_view_column(), ...this.get_match_columns(), ...this.get_tax_columns(true)];
     }
@@ -1762,6 +1827,8 @@ class BooksTab extends GSTR1_TabManager {
 
         [GSTR1_SubCategory.B2CL]: this.get_invoice_columns,
         [GSTR1_SubCategory.B2CS]: this.get_b2cs_columns,
+        [GSTR1_SubCategory.SUPECOM_52]: this.get_supecom_columns,
+        [GSTR1_SubCategory.SUPECOM_9_5]: this.get_supecom_columns,
 
         [GSTR1_SubCategory.NIL_EXEMPT]: this.get_nil_exempt_columns,
 
@@ -1975,6 +2042,8 @@ class FiledTab extends GSTR1_TabManager {
 
         [GSTR1_SubCategory.B2CL]: this.get_b2cl_columns,
         [GSTR1_SubCategory.B2CS]: this.get_b2cs_columns,
+        [GSTR1_SubCategory.SUPECOM_52]: this.get_supecom_columns,
+        [GSTR1_SubCategory.SUPECOM_9_5]: this.get_supecom_columns,
 
         [GSTR1_SubCategory.NIL_EXEMPT]: this.get_nil_exempt_columns,
 
@@ -2013,16 +2082,66 @@ class FiledTab extends GSTR1_TabManager {
         super.set_default_title();
     }
 
+    get_section_filter_fields() {
+        const saved = _get_saved_sections();
+        return [
+            {
+                fieldname: "sections",
+                fieldtype: "MultiCheck",
+                label: __("Sections"),
+                select_all: true,
+                columns: 2,
+                sort_options: false,
+                options: GSTR1_SECTION_OPTIONS.map((opt) => ({
+                    label: opt.label,
+                    value: opt.value,
+                    checked: saved ? saved.includes(opt.value) : true,
+                })),
+            },
+        ];
+    }
+
+    get_selected_sections(values) {
+        const sections = values.sections || [];
+        const all = GSTR1_SECTION_OPTIONS.map((o) => o.value);
+        // All selected → null (backend skips filtering).
+        // Subset → return that list.
+        // Empty → return [] so callers can block the download.
+        return sections.length === all.length ? null : sections;
+    }
+
     // ACTIONS
 
     download_filed_as_excel() {
         const url = "india_compliance.gst_india.doctype.gstr_1.gstr_1_export.download_filed_as_excel";
+        const dialog = new frappe.ui.Dialog({
+            title: __("Download Excel"),
+            size: "large",
+            fields: this.get_section_filter_fields(),
+            primary_action_label: __("Download"),
+            primary_action: () => {
+                const values = dialog.get_values();
+                const sections = this.get_selected_sections(values);
+                if (sections && !sections.length) {
+                    frappe.msgprint(__("Please select at least one section to download."));
+                    return;
+                }
+                const post_args = {
+                    company_gstin: this.instance.frm.doc.company_gstin,
+                    month_or_quarter: this.instance.frm.doc.month_or_quarter,
+                    year: this.instance.frm.doc.year,
+                };
 
-        open_url_post(`/api/method/${url}`, {
-            company_gstin: this.instance.frm.doc.company_gstin,
-            month_or_quarter: this.instance.frm.doc.month_or_quarter,
-            year: this.instance.frm.doc.year,
+                _save_sections(sections);
+                // open_url_post is form-encoded; JSON-encode the array so the
+                // backend receives it as a string it can frappe.parse_json().
+                if (sections) post_args.sections = JSON.stringify(sections);
+                open_url_post(`/api/method/${url}`, post_args);
+                dialog.hide();
+            },
         });
+
+        dialog.show();
     }
 
     sync_with_gstn(sync_for) {
@@ -2032,55 +2151,22 @@ class FiledTab extends GSTR1_TabManager {
 
     download_filed_json() {
         const me = this;
-        function get_json_data(dialog) {
-            const { include_uploaded, delete_missing } = dialog
-                ? dialog.get_values()
-                : {
-                      include_uploaded: true,
-                      delete_missing: false,
-                  };
+        const api_enabled = is_gstr1_api_enabled();
+        const fields = [];
 
-            const doc = me.instance.frm.doc;
-
-            frappe.call({
-                method: "india_compliance.gst_india.doctype.gstr_1.gstr_1_export.get_gstr_1_json",
-                args: {
-                    company_gstin: doc.company_gstin,
-                    year: doc.year,
-                    month_or_quarter: doc.month_or_quarter,
-                    include_uploaded,
-                    delete_missing,
-                },
-                callback: (r) => {
-                    india_compliance.trigger_file_download(
-                        JSON.stringify(r.message.data),
-                        r.message.filename,
-                    );
-                    dialog && dialog.hide();
-                },
-            });
-        }
-
-        // without API
-        if (!is_gstr1_api_enabled()) {
-            get_json_data();
-            return;
-        }
-
-        // with API
-        const dialog = new frappe.ui.Dialog({
-            title: __("Download JSON"),
-            fields: [
+        if (api_enabled) {
+            fields.push(
                 {
                     fieldname: "include_uploaded",
                     label: __("Include Already Uploaded (matching) Invoices"),
                     description: __(
                         `This will include invoices already uploaded (and matching)
-                         to GSTN (possibly e-Invoices) and overwrite them in GST Portal.
-                         This is <strong>not recommended</strong> if e-Invoice is applicable to you
-                         as it will overwrite the e-Invoice data in GST Portal.`,
+                        to GSTN (possibly e-Invoices) and overwrite them in GST Portal.
+                        This is <strong>not recommended</strong> if e-Invoice is applicable to you
+                        as it will overwrite the e-Invoice data in GST Portal.`,
                     ),
                     fieldtype: "Check",
+                    default: 0,
                 },
                 {
                     fieldname: "delete_missing",
@@ -2091,8 +2177,46 @@ class FiledTab extends GSTR1_TabManager {
                     fieldtype: "Check",
                     default: 1,
                 },
-            ],
-            primary_action: () => get_json_data(dialog),
+            );
+        }
+
+        fields.push(...this.get_section_filter_fields());
+
+        const dialog = new frappe.ui.Dialog({
+            title: __("Download JSON"),
+            size: "large",
+            fields,
+            primary_action_label: __("Download"),
+            primary_action: () => {
+                const values = dialog.get_values();
+                const { include_uploaded, delete_missing } = values;
+                const sections = me.get_selected_sections(values);
+                if (sections && !sections.length) {
+                    frappe.msgprint(__("Please select at least one section to download."));
+                    return;
+                }
+                _save_sections(sections);
+                const doc = me.instance.frm.doc;
+
+                frappe.call({
+                    method: "india_compliance.gst_india.doctype.gstr_1.gstr_1_export.get_gstr_1_json",
+                    args: {
+                        company_gstin: doc.company_gstin,
+                        year: doc.year,
+                        month_or_quarter: doc.month_or_quarter,
+                        include_uploaded: api_enabled ? include_uploaded : true,
+                        delete_missing: api_enabled ? delete_missing : false,
+                        sections: sections,
+                    },
+                    callback: (r) => {
+                        india_compliance.trigger_file_download(
+                            JSON.stringify(r.message.data),
+                            r.message.filename,
+                        );
+                        dialog.hide();
+                    },
+                });
+            },
         });
 
         dialog.show();
@@ -2964,6 +3088,46 @@ class GSTR1Action extends FileGSTR1Dialog {
 }
 
 // UTILITY FUNCTIONS
+
+// Section dropdown options for both JSON and Excel download dialogs.
+// Values MUST match `GovJsonKey` in gst_india/utils/gstr_1/__init__.py — keep in sync,
+// and ensure JSON_CATEGORY_EXCEL_CATEGORY_MAPPING covers every option before adding one.
+const GSTR1_SECTION_OPTIONS = [
+    { value: "b2b", label: __("B2B, SEZ, DE (b2b)") },
+    { value: "b2cl", label: __("B2C Large (b2cl)") },
+    { value: "exp", label: __("Exports (exp)") },
+    { value: "b2cs", label: __("B2C Small (b2cs)") },
+    { value: "nil", label: __("Nil, Exempt, Non-GST (nil)") },
+    { value: "cdnr", label: __("Credit/Debit Notes - Registered (cdnr)") },
+    { value: "cdnur", label: __("Credit/Debit Notes - Unregistered (cdnur)") },
+    { value: "at", label: __("Advance Tax (at)") },
+    { value: "txpd", label: __("Tax on Advances Adjustment (txpd)") },
+    { value: "hsn", label: __("HSN Summary (hsn)") },
+    { value: "doc_issue", label: __("Document Issued Summary (doc_issue)") },
+    { value: "supeco", label: __("Supplies through e-Commerce (supeco)") },
+];
+
+const GSTR1_SECTIONS_KEY = "gstr1_download_sections";
+
+function _get_saved_sections() {
+    const raw = frappe.defaults.get_user_default(GSTR1_SECTIONS_KEY);
+    try {
+        return raw ? JSON.parse(raw) : null;
+    } catch {
+        return null;
+    }
+}
+
+function _save_sections(sections_or_null) {
+    const to_save = sections_or_null || GSTR1_SECTION_OPTIONS.map((o) => o.value);
+    const serialized = JSON.stringify(to_save);
+    frappe.defaults.set_user_default_local(GSTR1_SECTIONS_KEY, serialized);
+    frappe.call({
+        method: "india_compliance.gst_india.doctype.gstr_1.gstr_1_export.set_section_preference",
+        args: { sections: serialized },
+    });
+}
+
 function is_gstr1_api_enabled() {
     return india_compliance.is_api_enabled() && !gst_settings.sandbox_mode && gst_settings.enable_gstr_1_api;
 }

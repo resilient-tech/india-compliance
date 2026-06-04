@@ -2,6 +2,8 @@
 // For license information, please see license.txt
 /* eslint-disable */
 
+const AMOUNT_FIELDS = ["igst_amount", "cgst_amount", "sgst_amount", "cess_amount", "intra", "inter"];
+
 frappe.query_reports["GSTR-3B Details"] = {
     filters: [
         {
@@ -64,8 +66,8 @@ frappe.query_reports["GSTR-3B Details"] = {
             reqd: 1,
         },
         {
-            fieldname: "section",
-            label: __("Section"),
+            fieldname: "sub_section",
+            label: __("Sub Section"),
             fieldtype: "Select",
             reqd: 1,
             default: "4",
@@ -76,9 +78,45 @@ frappe.query_reports["GSTR-3B Details"] = {
                     label: __("5. Values of exempt, nil rated and non-GST inward supplies"),
                 },
             ],
+            on_change: () => {
+                frappe.query_report.set_filter_value("invoice_sub_category", []);
+            },
+        },
+        {
+            fieldtype: "MultiSelectList",
+            fieldname: "invoice_sub_category",
+            label: __("Invoice Sub Category"),
+            get_data: () => get_subcategory_options(),
         },
     ],
+
+    // Override datatable hook for column total calculation
+    get_datatable_options(datatable_options) {
+        datatable_options.hooks = {
+            columnTotal: custom_report_column_total,
+        };
+
+        return datatable_options;
+    },
 };
+
+function get_subcategory_options() {
+    const sub_section = frappe.query_report.get_filter_value("sub_section");
+    return india_compliance.get_inward_subcategory_options(sub_section);
+}
+
+function custom_report_column_total(...args) {
+    const column_field = args[1].column.fieldname;
+    if (!AMOUNT_FIELDS.includes(column_field)) return;
+
+    const { data } = this.datamanager;
+    return this.datamanager.getFilteredRowIndices().reduce((acc, index) => {
+        const row = data[index];
+        const value = row[column_field] || 0;
+        if (row.invoice_category === "ITC Reversed") return acc - value;
+        return acc + value;
+    }, 0);
+}
 
 function get_default_option() {
     return india_compliance.get_options_for_year("Monthly").current_year;

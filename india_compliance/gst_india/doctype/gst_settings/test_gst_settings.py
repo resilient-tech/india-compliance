@@ -131,6 +131,25 @@ class TestGSTSettings(IntegrationTestCase):
         )
         doc.save()
 
+    @change_settings(
+        "GST Settings",
+        {"enable_api": 1, "enable_e_waybill": 1, "sandbox_mode": 0},
+    )
+    def test_no_credentials_warning_on_unrelated_update(self):
+        frappe.clear_messages()
+
+        doc = frappe.get_doc("GST Settings")
+        doc.archive_party_info_days = 10 if doc.archive_party_info_days != 10 else 7
+        doc.save()
+
+        for message in frappe.message_log:
+            message_text = (
+                message.get("message")
+                if isinstance(message, dict)
+                else frappe.parse_json(message).get("message")
+            )
+            self.assertNotIn("Please set credentials for e-Waybill / e-Invoice", message_text)
+
     def test_validate_enable_api(self):
         doc = frappe.get_doc("GST Settings")
         doc.enable_api = 1

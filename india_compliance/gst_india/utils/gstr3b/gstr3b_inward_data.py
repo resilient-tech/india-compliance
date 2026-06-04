@@ -37,6 +37,37 @@ INWARD_NIL_EXEMPT_SECTION_MAP = {
     "Non-GST": "NONGST",
 }
 
+INWARD_SECTION_SUB_CATEGORY_MAP = {
+    "4": {
+        "ITC Available": [
+            "Import Of Goods",
+            "Import Of Service",
+            "ITC on Reverse Charge",
+            "Input Service Distributor",
+            "All Other ITC",
+        ],
+        "ITC Reversed": [
+            "As per rules 42 & 43 of CGST Rules and section 17(5)",
+            "Others",
+        ],
+        "Ineligible ITC": [
+            "Reclaim of ITC Reversal",
+            "ITC restricted due to PoS rules",
+        ],
+    },
+    "5": {
+        "Composition Scheme, Exempted, Nil Rated": [
+            "Composition Scheme, Exempted, Nil Rated",
+        ],
+        "Non-GST": ["Non-GST"],
+    },
+}
+
+INWARD_SECTION_DOCTYPES = {
+    "4": PURCHASE_INVOICE_DOCTYPES,
+    "5": ("Purchase Invoice",),
+}
+
 PURCHASE_CATEGORY_CONDITIONS = {
     "Composition Scheme, Exempted, Nil Rated": {
         "category": "is_composition_nil_rated_or_exempted",
@@ -350,6 +381,26 @@ class GSTR3BInwardInvoices(GSTR3BInwardQuery, GSTR3BSubcategory):
             return invoices
 
         return self.get_invoice_wise_data(invoices)
+
+    def get_section_data(self, sub_section, group_by_invoice=False, invoice_sub_categories=None):
+        invoices = []
+
+        for doctype in INWARD_SECTION_DOCTYPES.get(str(sub_section), ()):
+            invoices.extend(self.get_data(doctype))
+
+        if group_by_invoice:
+            invoices = self.get_invoice_wise_data(invoices)
+
+        return self.get_filtered_invoices(
+            invoices,
+            invoice_sub_categories or self.get_section_sub_categories(sub_section),
+        )
+
+    @classmethod
+    def get_section_sub_categories(cls, sub_section):
+        section = INWARD_SECTION_SUB_CATEGORY_MAP.get(str(sub_section), {})
+
+        return [category for sub_categories in section.values() for category in sub_categories]
 
     def get_data(self, doctype, group_by_invoice=False):
         if doctype == "Purchase Invoice":
