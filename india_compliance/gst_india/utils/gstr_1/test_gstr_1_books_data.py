@@ -1,5 +1,5 @@
 import frappe
-from erpnext.accounts.doctype.sales_invoice.sales_invoice import make_sales_return
+from erpnext.accounts.doctype.sales_invoice.mapper import make_sales_return
 from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import flt, getdate
 

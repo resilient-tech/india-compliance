@@ -5,7 +5,7 @@ from erpnext.controllers.subcontracting_controller import (
     get_materials_from_supplier,
     make_rm_stock_entry,
 )
-from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
+from erpnext.stock.doctype.purchase_receipt.mapper import (
     make_stock_entry as make_se_from_pr,
 )
 from erpnext.stock.doctype.stock_entry.stock_entry import make_stock_in_entry

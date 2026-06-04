@@ -1,5 +1,5 @@
 import frappe
-from erpnext.buying.doctype.purchase_order.purchase_order import get_mapped_subcontracting_order
+from erpnext.buying.doctype.purchase_order.mapper import get_mapped_subcontracting_order
 from frappe.utils import getdate, nowdate
 
 
@@ -250,7 +250,7 @@ def make_bom(**args):
             bom.append(
                 "secondary_items",
                 {
-                    "type": "Scrap",
+                    "secondary_item_type": "Scrap",
                     "item_code": item,
                     "item_name": item,
                     "uom": item_doc.stock_uom,
