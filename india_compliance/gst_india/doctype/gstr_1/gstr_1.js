@@ -3107,19 +3107,25 @@ const GSTR1_SECTION_OPTIONS = [
     { value: "supeco", label: __("Supplies through e-Commerce (supeco)") },
 ];
 
+const GSTR1_SECTIONS_KEY = "gstr1_download_sections";
+
 function _get_saved_sections() {
-    const raw = frappe.defaults.get_user_default("gstr1_download_sections");
-    return raw ? JSON.parse(raw) : null;
+    const raw = frappe.defaults.get_user_default(GSTR1_SECTIONS_KEY);
+    try {
+        return raw ? JSON.parse(raw) : null;
+    } catch {
+        return null;
+    }
 }
 
 function _save_sections(sections_or_null) {
     const to_save = sections_or_null || GSTR1_SECTION_OPTIONS.map((o) => o.value);
     const serialized = JSON.stringify(to_save);
+    frappe.defaults.set_user_default_local(GSTR1_SECTIONS_KEY, serialized);
     frappe.call({
-        method: "frappe.core.doctype.session_default_settings.session_default_settings.set_session_default_values",
-        args: { default_values: { gstr1_download_sections: serialized } },
+        method: "india_compliance.gst_india.doctype.gstr_1.gstr_1_export.set_section_preference",
+        args: { sections: serialized },
     });
-    frappe.defaults.set_user_default_local("gstr1_download_sections", serialized);
 }
 
 function is_gstr1_api_enabled() {

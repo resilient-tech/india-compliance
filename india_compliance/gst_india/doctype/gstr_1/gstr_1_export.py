@@ -30,6 +30,9 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     get_category_wise_data,
 )
 
+# Used for storing user preferences for GSTR-1 download sections.
+GSTR1_SECTIONS_DEFAULT_KEY = "gstr1_download_sections"
+
 
 class ExcelWidth(Enum):
     XS = 10
@@ -49,13 +52,6 @@ CATEGORIES_WITH_ITEMS = {
 }
 
 
-def _get_hsn_sections(is_bifurcated: bool) -> list[str]:
-    if is_bifurcated:
-        return [HSNKey.HSN_B2B.value, HSNKey.HSN_B2C.value]
-
-    return [HSNKey.HSN.value]
-
-
 def _get_selected_sections(section: str, is_hsn_bifurcated: bool) -> list[str]:
     """
     HSN can be split into `hsn_b2b` / `hsn_b2c`. Every other
@@ -64,7 +60,10 @@ def _get_selected_sections(section: str, is_hsn_bifurcated: bool) -> list[str]:
     if section != GovJsonKey.HSN.value:
         return [section]
 
-    return _get_hsn_sections(is_hsn_bifurcated)
+    if is_hsn_bifurcated:
+        return [HSNKey.HSN_B2B.value, HSNKey.HSN_B2C.value]
+
+    return [HSNKey.HSN.value]
 
 
 def _get_excel_sheet_names(selected_sections: list[str]) -> list[str]:
@@ -2185,6 +2184,15 @@ def _get_gov_filename(company_gstin: str, period: str, sections: list[str] | Non
     if len(sections) == 1:
         return f"{name}-{sections[0]}"
     return f"{name}-multi-section"
+
+
+@frappe.whitelist()
+def set_section_preference(sections: str | list[str] | None = None):
+    """Persist the user's GSTR-1 download section selection as a user default."""
+    frappe.has_permission("GSTR-1", "export", throw=True)
+    if isinstance(sections, str):
+        sections = frappe.parse_json(sections)
+    frappe.defaults.set_user_default(GSTR1_SECTIONS_DEFAULT_KEY, frappe.as_json(sections or []))
 
 
 @frappe.whitelist()
