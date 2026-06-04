@@ -310,6 +310,7 @@ class GovExcelSheetName(Enum):
     HSN_B2C = "hsn(b2c)"
     DOC_ISSUE = "docs"
     SUPECOM = "eco"
+    MASTER = "master"
 
 
 SUB_CATEGORY_GOV_CATEGORY_MAPPING = {
