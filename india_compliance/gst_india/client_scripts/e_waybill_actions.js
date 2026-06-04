@@ -114,11 +114,13 @@ function setup_e_waybill_actions(doctype) {
                     "e-Waybill",
                 );
 
-                frm.add_custom_button(
-                    __("Close e-Waybill"),
-                    () => show_close_e_waybill_dialog(frm),
-                    "e-Waybill",
-                );
+                if (is_e_waybill_closure_enabled()) {
+                    frm.add_custom_button(
+                        __("Close e-Waybill"),
+                        () => show_close_e_waybill_dialog(frm),
+                        "e-Waybill",
+                    );
+                }
             }
 
             if (
@@ -733,6 +735,14 @@ function show_close_e_waybill_dialog(frm) {
         ],
         primary_action_label: __("Close"),
         primary_action(values) {
+            // NIC rejects a closure date earlier than the e-Waybill date;
+            // pre-empt that round-trip with a clear message.
+            const ewb_date = (frm.doc.__onload?.e_waybill_info?.created_on || "").split(" ")[0];
+            if (ewb_date && values.closure_date < ewb_date) {
+                frappe.msgprint(__("Closure Date cannot be earlier than the e-Waybill date."));
+                return;
+            }
+
             frappe.call({
                 method: "india_compliance.gst_india.utils.e_waybill.close_e_waybill",
                 args: {
@@ -1223,6 +1233,11 @@ function is_e_waybill_valid(frm) {
         (!e_waybill_info.valid_upto ||
             frappe.datetime.convert_to_user_tz(e_waybill_info.valid_upto, false).diff() > 0)
     );
+}
+
+function is_e_waybill_closure_enabled() {
+    // Closure (CLSEWB) API is live in sandbox now; in production from 2026-06-15.
+    return gst_settings.sandbox_mode || frappe.datetime.get_today() >= "2026-06-15";
 }
 
 async function has_e_waybill_threshold_met(frm) {

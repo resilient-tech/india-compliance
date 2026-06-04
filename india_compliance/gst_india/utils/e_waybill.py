@@ -14,6 +14,7 @@ from frappe.utils import (
     get_datetime_str,
     get_fullname,
     get_link_to_form,
+    getdate,
     random_string,
 )
 from frappe.utils.file_manager import save_file
@@ -38,6 +39,7 @@ from india_compliance.gst_india.constants.e_waybill import (
     BUYING_DOCTYPES,
     CANCEL_REASON_CODES,
     CONSIGNMENT_STATUS,
+    E_WAYBILL_CLOSURE_AVAILABLE_FROM,
     EXTEND_VALIDITY_REASON_CODES,
     ITEM_LIMIT,
     PERMITTED_DOCTYPES,
@@ -428,10 +430,38 @@ def log_and_process_e_waybill_cancellation(doc, values, result):
     doc.db_set(data)
 
 
+def is_e_waybill_closure_enabled(settings=None, throw=False):
+    """e-Waybill Closure (CLSEWB) is live in sandbox now; in production only from
+    E_WAYBILL_CLOSURE_AVAILABLE_FROM (NIC rollout date)."""
+    if not settings:
+        settings = frappe.get_cached_doc("GST Settings")
+
+    available = settings.sandbox_mode or getdate() >= E_WAYBILL_CLOSURE_AVAILABLE_FROM
+
+    if available:
+        return True
+
+    if throw:
+        frappe.throw(
+            _("e-Waybill Closure API will be available from {0}.").format(
+                frappe.bold(format_date(E_WAYBILL_CLOSURE_AVAILABLE_FROM))
+            )
+        )
+
+    return False
+
+
 # nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
 @frappe.whitelist()
 def close_e_waybill(*, doctype: str, docname: str, values: str | dict | frappe._dict):
     """Permission check not required as load_doc checks permissions."""
+    if not is_e_waybill_closure_enabled():
+        frappe.throw(
+            _("e-Waybill Closure API will be available from {0}.").format(
+                frappe.bold(format_date(E_WAYBILL_CLOSURE_AVAILABLE_FROM))
+            )
+        )
+
     doc = load_doc(doctype, docname, "submit")
     values = frappe.parse_json(values)
     _close_e_waybill(doc, values)

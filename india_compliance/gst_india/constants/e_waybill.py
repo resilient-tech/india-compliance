@@ -1,6 +1,10 @@
 # Just for reference
 # DATETIME_FORMAT = "%d/%m/%Y %I:%M:%S %p"
 
+from frappe.utils import getdate
+
+E_WAYBILL_CLOSURE_AVAILABLE_FROM = getdate("2026-06-15")
+
 selling_address = {
     "bill_from": "company_address",
     "bill_to": "customer_address",
