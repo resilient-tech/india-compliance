@@ -67,6 +67,7 @@ const GSTR1_DataField = {
     TRANSACTION_TYPE: "transaction_type",
     CUST_GSTIN: "customer_gstin",
     ECOMMERCE_GSTIN: "ecommerce_gstin",
+    ECOMMERCE_OPERATOR_NAME: "ecommerce_operator_name",
     CUST_NAME: "customer_name",
     DOC_DATE: "document_date",
     DOC_NUMBER: "document_number",
@@ -673,6 +674,16 @@ class GSTR1 {
                 {
                     label: "UOM",
                     fieldname: GSTR1_DataField.UOM,
+                    fieldtype: "Data",
+                },
+            ];
+        } else if (
+            [GSTR1_SubCategory.SUPECOM_52, GSTR1_SubCategory.SUPECOM_9_5].includes(this.filter_category)
+        ) {
+            fields = [
+                {
+                    label: "E-Commerce GSTIN",
+                    fieldname: GSTR1_DataField.ECOMMERCE_GSTIN,
                     fieldtype: "Data",
                 },
             ];
@@ -1635,6 +1646,60 @@ class GSTR1_TabManager extends TabManager {
         ];
     }
 
+    get_supecom_columns() {
+        return [
+            ...this.get_detail_view_column(),
+            {
+                name: "Description",
+                fieldname: GSTR1_DataField.DOC_TYPE,
+                width: 260,
+                _value: (...args) => this.format_detailed_table_cell(args),
+            },
+            {
+                name: "E-Commerce GSTIN",
+                fieldname: GSTR1_DataField.ECOMMERCE_GSTIN,
+                width: 170,
+                _value: (...args) => this.format_detailed_table_cell(args),
+            },
+            {
+                name: "E-Commerce Operator Name",
+                fieldname: GSTR1_DataField.ECOMMERCE_OPERATOR_NAME,
+                width: 220,
+            },
+            ...this.get_match_columns(),
+            {
+                name: "Taxable Value",
+                fieldname: GSTR1_DataField.TAXABLE_VALUE,
+                fieldtype: "Float",
+                width: 150,
+            },
+            {
+                name: "IGST",
+                fieldname: GSTR1_DataField.IGST,
+                fieldtype: "Float",
+                width: 100,
+            },
+            {
+                name: "CGST",
+                fieldname: GSTR1_DataField.CGST,
+                fieldtype: "Float",
+                width: 100,
+            },
+            {
+                name: "SGST",
+                fieldname: GSTR1_DataField.SGST,
+                fieldtype: "Float",
+                width: 100,
+            },
+            {
+                name: "CESS",
+                fieldname: GSTR1_DataField.CESS,
+                fieldtype: "Float",
+                width: 100,
+            },
+        ];
+    }
+
     get_advances_received_columns() {
         return [...this.get_detail_view_column(), ...this.get_match_columns(), ...this.get_tax_columns(true)];
     }
@@ -1762,6 +1827,8 @@ class BooksTab extends GSTR1_TabManager {
 
         [GSTR1_SubCategory.B2CL]: this.get_invoice_columns,
         [GSTR1_SubCategory.B2CS]: this.get_b2cs_columns,
+        [GSTR1_SubCategory.SUPECOM_52]: this.get_supecom_columns,
+        [GSTR1_SubCategory.SUPECOM_9_5]: this.get_supecom_columns,
 
         [GSTR1_SubCategory.NIL_EXEMPT]: this.get_nil_exempt_columns,
 
@@ -1975,6 +2042,8 @@ class FiledTab extends GSTR1_TabManager {
 
         [GSTR1_SubCategory.B2CL]: this.get_b2cl_columns,
         [GSTR1_SubCategory.B2CS]: this.get_b2cs_columns,
+        [GSTR1_SubCategory.SUPECOM_52]: this.get_supecom_columns,
+        [GSTR1_SubCategory.SUPECOM_9_5]: this.get_supecom_columns,
 
         [GSTR1_SubCategory.NIL_EXEMPT]: this.get_nil_exempt_columns,
 

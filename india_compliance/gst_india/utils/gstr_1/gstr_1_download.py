@@ -21,7 +21,7 @@ ACTIONS = [
     "NIL",
     "AT",
     "TXP",
-    # "SUPECO", # 403 Forbidden TODO: Check when this is active
+    "SUPECO",
     "HSNSUM",
     "DOCISS",
 ]

@@ -1601,10 +1601,10 @@ class SUPECOM(GSTR1DataMapper):
     KEY_MAPPING: ClassVar[dict] = {
         gov_f.ECOMMERCE_GSTIN: inv_f.ECOMMERCE_GSTIN,
         gov_f.NET_TAXABLE_VALUE: inv_f.TAXABLE_VALUE,
-        "igst": item_f.IGST,
-        "cgst": item_f.CGST,
-        "sgst": item_f.SGST,
-        "cess": item_f.CESS,
+        "igst": inv_f.IGST,
+        "cgst": inv_f.CGST,
+        "sgst": inv_f.SGST,
+        "cess": inv_f.CESS,
         gov_f.FLAG: "flag",
     }
     DOCUMENT_CATEGORIES: ClassVar[dict] = {
@@ -2269,6 +2269,61 @@ class BooksDataMapper:
             if hasattr(self, "invoice_totals"):
                 self.adjust_hsn_totals(sub_category, sub_category_dict)
 
+    def process_data_for_supecom(self, grouped_data, prepared_data):
+        """
+        Aggregate e-commerce supplies by operator GSTIN for each supply type.
+
+        Input:
+            grouped_data: {ecommerce_supply_type: {invoice_no: [invoice_items]}}
+            prepared_data: dict to be updated with the processed data
+
+        Output structure (before normalize_data):
+            {
+                SUPECOM_52.value: {eco_gstin: {doc_type, eco_gstin, taxable_value, igst, ...}},
+                SUPECOM_9_5.value: {...},
+            }
+        """
+        if not grouped_data:
+            return
+
+        def get_party_name_for_gstin(eco_gstin, party_name_map):
+            if eco_gstin not in party_name_map:
+                party_name_map[eco_gstin] = get_party_for_gstin(eco_gstin, "Supplier") or ""
+
+            return party_name_map[eco_gstin]
+
+        data_to_invoice_field_map = self.DATA_TO_INVOICE_FIELD_MAPPING
+        empty_invoice_values = self.get_invoice_values()
+        party_name_map = {}
+
+        for supply_type, invoice_wise in grouped_data.items():
+            sub_category = prepared_data.setdefault(supply_type, {})
+
+            for items in invoice_wise.values():
+                eco_gstin = items[0].get("ecommerce_gstin", "")
+                entry = sub_category.setdefault(
+                    eco_gstin,
+                    {
+                        inv_f.DOC_TYPE: supply_type,
+                        inv_f.ECOMMERCE_GSTIN: eco_gstin,
+                        inv_f.ECOMMERCE_OPERATOR_NAME: get_party_name_for_gstin(eco_gstin, party_name_map),
+                        **empty_invoice_values.copy(),
+                    },
+                )
+
+                invoice_totals = empty_invoice_values.copy()
+                for item in items:
+                    for key, field in data_to_invoice_field_map.items():
+                        invoice_totals[key] += item.get(field, 0)
+
+                for key in data_to_invoice_field_map:
+                    entry[key] += flt(invoice_totals[key], self.PRECISION)
+
+            # Round at operator level
+            for entry in sub_category.values():
+                for key in data_to_invoice_field_map:
+                    entry[key] = flt(entry[key], self.PRECISION)
+
     def process_data_for_document_issued_summary(self, row, prepared_data):
         key = f"{row['nature_of_document']} - {row['from_serial_no']}"
 
@@ -2391,13 +2446,14 @@ class GSTR1BooksData(BooksDataMapper):
         # initialize rounding difference and hsn error
         self.initialize_totals()
 
-        data_for_hsn, data_for_invoice_no_key, data_for_nil_exempt, data_for_b2cs = self.get_structured_data(
-            data
+        data_for_hsn, data_for_invoice_no_key, data_for_nil_exempt, data_for_b2cs, data_for_supecom = (
+            self.get_structured_data(data)
         )
 
         self.process_data_for_invoice_no_key(data_for_invoice_no_key, prepared_data)
         self.process_data_for_nil_exempt(data_for_nil_exempt, prepared_data)
         self.process_data_for_b2cs(data_for_b2cs, prepared_data)
+        self.process_data_for_supecom(data_for_supecom, prepared_data)
 
         other_categories = {
             GSTR1_Category.AT.value: self.prepare_advances_recevied_data(),
@@ -2431,6 +2487,7 @@ class GSTR1BooksData(BooksDataMapper):
         - data_for_invoice_no_key: B2B, B2CL, CDNR, CDNUR, etc.
         - data_for_nil_exempt: Nil Rated, Exempted, Non-GST
         - data_for_b2cs: B2CS (B2C Others)
+        - data_for_supecom: Supplies through E-commerce Operators (grouped by supply type then operator GSTIN)
 
         Further all invoices are grouped by HSN code, UOM, and GST rate
         - data_for_hsn: HSN Summary
@@ -2438,6 +2495,7 @@ class GSTR1BooksData(BooksDataMapper):
         data_for_invoice_no_key = defaultdict(lambda: defaultdict(list))
         data_for_nil_exempt = defaultdict(lambda: defaultdict(list))
         data_for_b2cs = defaultdict(lambda: defaultdict(list))
+        data_for_supecom = defaultdict(lambda: defaultdict(list))
         data_for_hsn = defaultdict(lambda: defaultdict(list))
 
         for item in data:
@@ -2467,7 +2525,13 @@ class GSTR1BooksData(BooksDataMapper):
             elif invoice_category == GSTR1_Category.B2CS:
                 data_for_b2cs[key][gst_rate].append(item)
 
-        return data_for_hsn, data_for_invoice_no_key, data_for_nil_exempt, data_for_b2cs
+            # E-commerce invoices are also aggregated into SUPECOM regardless of
+            # their primary category (B2B/B2CS). ecommerce_supply_type is set by
+            # assign_categories() for every invoice that has ecommerce_gstin.
+            if item.get("ecommerce_gstin") and item.get("ecommerce_supply_type"):
+                data_for_supecom[item.ecommerce_supply_type][item.invoice_no].append(item)
+
+        return data_for_hsn, data_for_invoice_no_key, data_for_nil_exempt, data_for_b2cs, data_for_supecom
 
     def prepare_document_issued_data(self):
         doc_issued_data = {}

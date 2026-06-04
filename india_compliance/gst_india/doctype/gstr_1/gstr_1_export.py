@@ -152,7 +152,7 @@ class GovExcel(DataProcessor):
         self.build_excel(data, file)
 
     def process_data(self, data):
-        data = data.update(data.pop("aggregate_data", {}))
+        data.update(data.pop("aggregate_data", {}))
         category_wise_data = super().process_data(data)
 
         for category, category_data in category_wise_data.items():
@@ -409,6 +409,49 @@ class GovExcel(DataProcessor):
                 "label": _(gov_xl.ECOMMERCE_GSTIN),
                 # Ignore value, just keep the column
                 "fieldname": f"_{inv_f.ECOMMERCE_GSTIN}",
+            },
+        ]
+
+    def get_supeco_headers(self):
+        return [
+            {
+                "label": _("Nature of Supply"),
+                "fieldname": inv_f.DOC_TYPE,
+            },
+            {
+                "label": _("GSTIN of E-Commerce Operator"),
+                "fieldname": inv_f.ECOMMERCE_GSTIN,
+                "header_format": {"width": ExcelWidth.SM.value},
+            },
+            {
+                "label": _("E-Commerce Operator Name"),
+                "fieldname": inv_f.ECOMMERCE_OPERATOR_NAME,
+                "header_format": {"width": ExcelWidth.LG.value},
+            },
+            {
+                "label": _("Net value of supplies"),
+                "fieldname": inv_f.TAXABLE_VALUE,
+                "data_format": {"number_format": self.AMOUNT_FORMAT},
+            },
+            {
+                "label": _("Integrated tax"),
+                "fieldname": inv_f.IGST,
+                "data_format": {"number_format": self.AMOUNT_FORMAT},
+            },
+            {
+                "label": _("Central tax"),
+                "fieldname": inv_f.CGST,
+                "data_format": {"number_format": self.AMOUNT_FORMAT},
+            },
+            {
+                "label": _("State/UT tax"),
+                "fieldname": inv_f.SGST,
+                "data_format": {"number_format": self.AMOUNT_FORMAT},
+            },
+            {
+                "label": _("Cess"),
+                "fieldname": inv_f.CESS,
+                "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
         ]
 
@@ -2109,7 +2152,7 @@ def get_gstr_1_json(
     gstr1_log = frappe.get_doc("GST Return Log", f"GSTR1-{period}-{company_gstin}")
 
     data = gstr1_log.get_json_for("books")
-    data = data.update(data.pop("aggregate_data", {}))
+    data.update(data.pop("aggregate_data", {}))
 
     for subcategory, subcategory_data in data.items():
         if subcategory in {

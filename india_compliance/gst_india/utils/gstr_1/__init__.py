@@ -105,6 +105,7 @@ class GSTR1_DataField:
     TRANSACTION_TYPE = "transaction_type"
     CUST_GSTIN = "customer_gstin"
     ECOMMERCE_GSTIN = "ecommerce_gstin"
+    ECOMMERCE_OPERATOR_NAME = "ecommerce_operator_name"
     CUST_NAME = "customer_name"
     DOC_DATE = "document_date"
     DOC_NUMBER = "document_number"
@@ -308,6 +309,7 @@ class GovExcelSheetName(Enum):
     HSN_B2B = "hsn(b2b)"
     HSN_B2C = "hsn(b2c)"
     DOC_ISSUE = "docs"
+    SUPECOM = "eco"
 
 
 SUB_CATEGORY_GOV_CATEGORY_MAPPING = {
@@ -345,6 +347,7 @@ JSON_CATEGORY_EXCEL_CATEGORY_MAPPING = {
     GovJsonKey.TXP.value: GovExcelSheetName.TXP.value,
     GovJsonKey.HSN.value: GovExcelSheetName.HSN.value,
     GovJsonKey.DOC_ISSUE.value: GovExcelSheetName.DOC_ISSUE.value,
+    GovJsonKey.SUPECOM.value: GovExcelSheetName.SUPECOM.value,
     # only for excel
     HSNKey.HSN_B2B.value: GovExcelSheetName.HSN_B2B.value,
     HSNKey.HSN_B2C.value: GovExcelSheetName.HSN_B2C.value,
