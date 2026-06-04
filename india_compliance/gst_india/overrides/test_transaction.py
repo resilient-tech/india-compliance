@@ -14,7 +14,12 @@ from erpnext.controllers.accounts_controller import (
 )
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
 from erpnext.controllers.taxes_and_totals import get_regional_round_off_accounts
-from erpnext.selling.doctype.sales_order.sales_order import make_purchase_order
+from erpnext.selling.doctype.sales_order.sales_order import (
+    make_purchase_order,
+)
+from erpnext.selling.doctype.sales_order.sales_order import (
+    make_sales_invoice as make_sales_invoice_from_so,
+)
 from erpnext.stock.doctype.delivery_note.delivery_note import make_sales_invoice
 from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
     update_regional_gl_entries,
@@ -734,8 +739,8 @@ class TestTransaction(FrappeTestCase):
         self.assertDocumentEqual({"taxable_value": 62.51, "cgst_amount": 5.63}, doc.items[0])
 
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
-    def test_import_service_purchase_invoice_is_taxable(self):
-        if self.doctype != "Purchase Invoice":
+    def test_import_service_purchase_transaction_are_taxable(self):
+        if self.is_sales_doctype:
             return
 
         doc = create_transaction(
@@ -745,7 +750,33 @@ class TestTransaction(FrappeTestCase):
             do_not_submit=True,
         )
 
-        self.assertEqual(doc.itc_classification, "Import Of Service")
+        self.assertEqual(doc.items[0].gst_treatment, "Taxable")
+        if self.doctype == "Purchase Invoice":
+            self.assertEqual(doc.itc_classification, "Import Of Service")
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_import_purchase_transaction_with_non_gst_charge_is_taxable(self):
+        if self.is_sales_doctype:
+            return
+
+        doc = create_transaction(
+            **self.transaction_details,
+            supplier="_Test Foreign Supplier",
+            item_code="_Test Trading Goods 1",
+            do_not_save=True,
+        )
+        doc.append(
+            "taxes",
+            {
+                "charge_type": "Actual",
+                "account_head": "Expenses Included In Valuation - _TIRC",
+                "description": "Freight",
+                "tax_amount": 100,
+                "cost_center": "Main - _TIRC",
+            },
+        )
+        doc.save()
+
         self.assertEqual(doc.items[0].gst_treatment, "Taxable")
 
     def test_regular_purchase_without_gst_taxes_is_nil_rated(self):
@@ -1664,3 +1695,45 @@ class TestPlaceOfSupply(FrappeTestCase):
         # Customer is in Karnataka (29). place_of_supply on the DN must reflect
         # that, not the PR's "24-Gujarat".
         self.assertEqual(dn.place_of_supply, "29-Karnataka")
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_make_sales_invoice_from_sales_order_with_non_gst_items(self):
+        """
+        make_sales_invoice_from_so must not raise when a Sales Order for a SEZ
+        customer contains items where some have a Non-GST item_tax_template and
+        one has no template.
+        Issue in mapping because gst_treatment was not set.
+        """
+        no_template_item = "_Test Item No Tax Template"
+        if not frappe.db.exists("Item", no_template_item):
+            frappe.get_doc(
+                {
+                    "doctype": "Item",
+                    "item_code": no_template_item,
+                    "item_name": no_template_item,
+                    "item_group": "Products",
+                    "stock_uom": "Nos",
+                    "is_stock_item": 0,
+                    "gst_hsn_code": "61149090",
+                }
+            ).insert()
+
+        # SEZ billing address forces "Zero-Rated" on all SO items so the order
+        # can be submitted despite having mixed-template items.
+        so = create_transaction(
+            doctype="Sales Order",
+            item_code="_Test Non GST Item",  # has "Non-GST - _TIRC" template
+            do_not_save=True,
+        )
+        so.customer_address = "_Test Registered Customer-Billing-1"  # SEZ, gst_category="SEZ"
+        so.gst_category = "SEZ"
+        append_item(
+            so, frappe._dict(item_code=no_template_item, rate=100, item_tax_template="Non-GST - _TIRC")
+        )  # non-gst tax template to replicate the mix
+        so.insert()
+        so.submit()
+
+        si = make_sales_invoice_from_so(so.name)
+
+        self.assertIsNotNone(si)
+        self.assertEqual(si.doctype, "Sales Invoice")
