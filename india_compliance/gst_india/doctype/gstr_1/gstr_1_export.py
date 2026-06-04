@@ -68,7 +68,7 @@ def _get_selected_sections(section: str, is_hsn_bifurcated: bool) -> list[str]:
 
 
 def _get_excel_sheet_names(selected_sections: list[str]) -> list[str]:
-    """Template sheet names that belong to `section` (excluding the `master` reference sheet)."""
+    """Template sheet names that belong to `selected_sections` (excluding the `master` reference sheet)."""
     return [
         JSON_CATEGORY_EXCEL_CATEGORY_MAPPING[key]
         for key in selected_sections
@@ -2169,10 +2169,8 @@ class ReconcileExcel:
 
 
 def _filter_data_by_sections(data: dict, sections: list[str] | None) -> dict:
-    """Keep only entries whose keys belong to `sections`.
-
-    Accepts list of expanded keys
-    (Excel path, e.g. ``["hsn_b2b", "hsn_b2c"]`` for HSN on bifurcated periods).
+    """
+    Keep only entries whose keys belong to `sections`.
     """
     if not sections:
         return data
@@ -2191,7 +2189,7 @@ def _get_gov_filename(company_gstin: str, period: str, sections: list[str] | Non
 
 @frappe.whitelist()
 def download_filed_as_excel(
-    company_gstin: str, month_or_quarter: str, year: str, sections: str | None = None
+    company_gstin: str, month_or_quarter: str, year: str, sections: str | list[str] | None = None
 ):
     frappe.has_permission("GSTR-1", "export", throw=True)
     if isinstance(sections, str):

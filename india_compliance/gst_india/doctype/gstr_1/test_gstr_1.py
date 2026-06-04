@@ -191,3 +191,13 @@ class TestGSTR1Export(IntegrationTestCase):
                         result,
                     )
                     self.assertGreater(len(result), 1)
+
+    def test_every_offered_section_can_render_headers(self):
+        gov = GovExcel()
+        for section in GOV_EXCEL_SECTIONS:
+            # Expand to the actual data keys build_excel iterates (HSN → b2b/b2c).
+            for is_bifurcated in (False, True):
+                for key in _get_selected_sections(section, is_hsn_bifurcated=is_bifurcated):
+                    with self.subTest(section=section, key=key, bifurcated=is_bifurcated):
+                        headers = gov.get_category_headers(key)
+                        self.assertTrue(headers)
