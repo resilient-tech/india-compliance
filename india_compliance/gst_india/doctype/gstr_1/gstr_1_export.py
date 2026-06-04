@@ -2190,7 +2190,9 @@ def _get_gov_filename(company_gstin: str, period: str, sections: list[str] | Non
 
 
 @frappe.whitelist()
-def download_filed_as_excel(company_gstin: str, month_or_quarter: str, year: str, sections=None):
+def download_filed_as_excel(
+    company_gstin: str, month_or_quarter: str, year: str, sections: str | None = None
+):
     frappe.has_permission("GSTR-1", "export", throw=True)
     if isinstance(sections, str):
         sections = frappe.parse_json(sections) if sections else None
@@ -2220,7 +2222,7 @@ def get_gstr_1_json(
     month_or_quarter: str,
     include_uploaded: bool = False,
     delete_missing: bool = False,
-    sections=None,
+    sections: str | list[str] | None = None,
 ):
     frappe.has_permission("GSTR-1", "export", throw=True)
     if isinstance(sections, str):
