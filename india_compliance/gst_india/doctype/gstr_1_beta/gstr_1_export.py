@@ -2192,6 +2192,7 @@ def _get_gov_filename(company_gstin: str, period: str, sections: list[str] | Non
 @frappe.whitelist()
 <<<<<<< HEAD:india_compliance/gst_india/doctype/gstr_1_beta/gstr_1_export.py
 <<<<<<< HEAD:india_compliance/gst_india/doctype/gstr_1_beta/gstr_1_export.py
+<<<<<<< HEAD:india_compliance/gst_india/doctype/gstr_1_beta/gstr_1_export.py
 def download_filed_as_excel(company_gstin: str, month_or_quarter: str, year: str):
     frappe.has_permission("GSTR-1 Beta", "export", throw=True)
     GovExcel().generate(company_gstin, get_period(month_or_quarter, year))
@@ -2202,6 +2203,11 @@ def download_filed_as_excel(company_gstin: str, month_or_quarter: str, year: str
 >>>>>>> fa24dd61 (feat: add section download for gstr-1 exports):india_compliance/gst_india/doctype/gstr_1/gstr_1_export.py
 =======
 def download_filed_as_excel(company_gstin: str, month_or_quarter: str, year: str, sections=None):
+=======
+def download_filed_as_excel(
+    company_gstin: str, month_or_quarter: str, year: str, sections: str | None = None
+):
+>>>>>>> 8d63a47e (fix: add type hints):india_compliance/gst_india/doctype/gstr_1/gstr_1_export.py
     frappe.has_permission("GSTR-1", "export", throw=True)
     if isinstance(sections, str):
         sections = frappe.parse_json(sections) if sections else None
@@ -2232,7 +2238,7 @@ def get_gstr_1_json(
     month_or_quarter: str,
     include_uploaded: bool = False,
     delete_missing: bool = False,
-    sections=None,
+    sections: str | list[str] | None = None,
 ):
 <<<<<<< HEAD:india_compliance/gst_india/doctype/gstr_1_beta/gstr_1_export.py
     frappe.has_permission("GSTR-1 Beta", "export", throw=True)
