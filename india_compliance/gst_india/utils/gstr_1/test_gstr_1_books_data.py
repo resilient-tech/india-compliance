@@ -4,7 +4,7 @@ from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import flt, getdate
 
 from india_compliance.gst_india.doctype.gst_return_log.generate_gstr_1 import SummarizeGSTR1
-from india_compliance.gst_india.doctype.gstr_1.gstr_1_export import GovExcel
+from india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export import GovExcel
 from india_compliance.gst_india.overrides.company import create_default_company_account
 from india_compliance.gst_india.utils import get_full_gst_uom
 from india_compliance.gst_india.utils.gstr_1 import (
