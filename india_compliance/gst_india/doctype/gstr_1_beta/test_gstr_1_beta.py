@@ -1,14 +1,10 @@
 # Copyright (c) 2024, Resilient Tech and Contributors
 # See license.txt
 
-<<<<<<< HEAD:india_compliance/gst_india/doctype/gstr_1_beta/test_gstr_1_beta.py
 # import frappe
 from frappe.tests.utils import FrappeTestCase
-=======
-from frappe.tests import IntegrationTestCase
->>>>>>> fa24dd61 (feat: add section download for gstr-1 exports):india_compliance/gst_india/doctype/gstr_1/test_gstr_1.py
 
-from india_compliance.gst_india.doctype.gstr_1.gstr_1_export import (
+from india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export import (
     GovExcel,
     _filter_data_by_sections,
     _get_excel_sheet_names,
@@ -29,11 +25,7 @@ GOV_EXCEL_SECTIONS = frozenset(
 )
 
 
-class TestGSTR1Beta(FrappeTestCase):
-    pass
-
-
-class TestGSTR1Export(IntegrationTestCase):
+class TestGSTR1Export(FrappeTestCase):
     GSTIN = "29AABCU9603R1ZM"
     PERIOD = "032024"
 

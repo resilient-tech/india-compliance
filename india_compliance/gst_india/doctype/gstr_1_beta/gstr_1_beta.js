@@ -2113,15 +2113,7 @@ class FiledTab extends GSTR1_TabManager {
     // ACTIONS
 
     download_filed_as_excel() {
-<<<<<<< HEAD:india_compliance/gst_india/doctype/gstr_1_beta/gstr_1_beta.js
         const url = "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export.download_filed_as_excel";
-
-        open_url_post(`/api/method/${url}`, {
-            company_gstin: this.instance.frm.doc.company_gstin,
-            month_or_quarter: this.instance.frm.doc.month_or_quarter,
-            year: this.instance.frm.doc.year,
-=======
-        const url = "india_compliance.gst_india.doctype.gstr_1.gstr_1_export.download_filed_as_excel";
         const dialog = new frappe.ui.Dialog({
             title: __("Download Excel"),
             size: "large",
@@ -2147,7 +2139,6 @@ class FiledTab extends GSTR1_TabManager {
                 open_url_post(`/api/method/${url}`, post_args);
                 dialog.hide();
             },
->>>>>>> fa24dd61 (feat: add section download for gstr-1 exports):india_compliance/gst_india/doctype/gstr_1/gstr_1.js
         });
 
         dialog.show();
@@ -2163,40 +2154,8 @@ class FiledTab extends GSTR1_TabManager {
         const api_enabled = is_gstr1_api_enabled();
         const fields = [];
 
-<<<<<<< HEAD:india_compliance/gst_india/doctype/gstr_1_beta/gstr_1_beta.js
-            frappe.call({
-                method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export.get_gstr_1_json",
-                args: {
-                    company_gstin: doc.company_gstin,
-                    year: doc.year,
-                    month_or_quarter: doc.month_or_quarter,
-                    include_uploaded,
-                    delete_missing,
-                },
-                callback: (r) => {
-                    india_compliance.trigger_file_download(
-                        JSON.stringify(r.message.data),
-                        r.message.filename,
-                    );
-                    dialog && dialog.hide();
-                },
-            });
-        }
-
-        // without API
-        if (!is_gstr1_api_enabled()) {
-            get_json_data();
-            return;
-        }
-
-        // with API
-        const dialog = new frappe.ui.Dialog({
-            title: __("Download JSON"),
-            fields: [
-=======
         if (api_enabled) {
             fields.push(
->>>>>>> fa24dd61 (feat: add section download for gstr-1 exports):india_compliance/gst_india/doctype/gstr_1/gstr_1.js
                 {
                     fieldname: "include_uploaded",
                     label: __("Include Already Uploaded (matching) Invoices"),
@@ -2240,7 +2199,7 @@ class FiledTab extends GSTR1_TabManager {
                 const doc = me.instance.frm.doc;
 
                 frappe.call({
-                    method: "india_compliance.gst_india.doctype.gstr_1.gstr_1_export.get_gstr_1_json",
+                    method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export.get_gstr_1_json",
                     args: {
                         company_gstin: doc.company_gstin,
                         year: doc.year,
@@ -3165,7 +3124,7 @@ function _save_sections(sections_or_null) {
     const serialized = JSON.stringify(to_save);
     frappe.defaults.set_user_default_local(GSTR1_SECTIONS_KEY, serialized);
     frappe.call({
-        method: "india_compliance.gst_india.doctype.gstr_1.gstr_1_export.set_section_preference",
+        method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export.set_section_preference",
         args: { sections: serialized },
     });
 }

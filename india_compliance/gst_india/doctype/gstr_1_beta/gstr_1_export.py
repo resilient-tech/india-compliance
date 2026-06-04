@@ -2187,41 +2187,22 @@ def _get_gov_filename(company_gstin: str, period: str, sections: list[str] | Non
 
 
 @frappe.whitelist()
-<<<<<<< HEAD:india_compliance/gst_india/doctype/gstr_1_beta/gstr_1_export.py
-<<<<<<< HEAD:india_compliance/gst_india/doctype/gstr_1_beta/gstr_1_export.py
-<<<<<<< HEAD:india_compliance/gst_india/doctype/gstr_1_beta/gstr_1_export.py
-<<<<<<< HEAD:india_compliance/gst_india/doctype/gstr_1_beta/gstr_1_export.py
-def download_filed_as_excel(company_gstin: str, month_or_quarter: str, year: str):
-    frappe.has_permission("GSTR-1 Beta", "export", throw=True)
-    GovExcel().generate(company_gstin, get_period(month_or_quarter, year))
-=======
-def download_filed_as_excel(company_gstin: str, month_or_quarter: str, year: str, section: str | None = None):
-    frappe.has_permission("GSTR-1", "export", throw=True)
-    GovExcel().generate(company_gstin, get_period(month_or_quarter, year), section=section)
->>>>>>> fa24dd61 (feat: add section download for gstr-1 exports):india_compliance/gst_india/doctype/gstr_1/gstr_1_export.py
-=======
-def download_filed_as_excel(company_gstin: str, month_or_quarter: str, year: str, sections=None):
-=======
-=======
 def set_section_preference(sections: str | list[str] | None = None):
     """Persist the user's GSTR-1 download section selection as a user default."""
-    frappe.has_permission("GSTR-1", "export", throw=True)
+    frappe.has_permission("GSTR-1 Beta", "export", throw=True)
     if isinstance(sections, str):
         sections = frappe.parse_json(sections)
     frappe.defaults.set_user_default(GSTR1_SECTIONS_DEFAULT_KEY, frappe.as_json(sections or []))
 
 
 @frappe.whitelist()
->>>>>>> d722652a (fix: implement user preference for GSTR-1 download sections using set_user_default and refactor):india_compliance/gst_india/doctype/gstr_1/gstr_1_export.py
 def download_filed_as_excel(
     company_gstin: str, month_or_quarter: str, year: str, sections: str | list[str] | None = None
 ):
->>>>>>> 8d63a47e (fix: add type hints):india_compliance/gst_india/doctype/gstr_1/gstr_1_export.py
-    frappe.has_permission("GSTR-1", "export", throw=True)
+    frappe.has_permission("GSTR-1 Beta", "export", throw=True)
     if isinstance(sections, str):
         sections = frappe.parse_json(sections) if sections else None
     GovExcel().generate(company_gstin, get_period(month_or_quarter, year), sections=sections)
->>>>>>> b197037c (fix: select multiple sections):india_compliance/gst_india/doctype/gstr_1/gstr_1_export.py
 
 
 @frappe.whitelist()
@@ -2249,10 +2230,7 @@ def get_gstr_1_json(
     delete_missing: bool = False,
     sections: str | list[str] | None = None,
 ):
-<<<<<<< HEAD:india_compliance/gst_india/doctype/gstr_1_beta/gstr_1_export.py
     frappe.has_permission("GSTR-1 Beta", "export", throw=True)
-=======
-    frappe.has_permission("GSTR-1", "export", throw=True)
     if isinstance(sections, str):
         sections = frappe.parse_json(sections) if sections else None
 
@@ -2260,7 +2238,6 @@ def get_gstr_1_json(
     if not settings.is_gstr1_api_enabled(company_gstin):
         include_uploaded = True
         delete_missing = False
->>>>>>> fa24dd61 (feat: add section download for gstr-1 exports):india_compliance/gst_india/doctype/gstr_1/gstr_1_export.py
 
     period = get_period(month_or_quarter, year)
     gstr1_log = frappe.get_doc("GST Return Log", f"GSTR1-{period}-{company_gstin}")
