@@ -719,13 +719,6 @@ function show_close_e_waybill_dialog(frm) {
                 default: frm.doc.ewaybill,
             },
             {
-                label: "Closure Date",
-                fieldname: "closure_date",
-                fieldtype: "Date",
-                reqd: 1,
-                default: frappe.datetime.get_today(),
-            },
-            {
                 label: "Remarks",
                 fieldname: "remarks",
                 fieldtype: "Data",
@@ -1299,7 +1292,12 @@ function can_extend_e_waybill_now(valid_upto) {
 }
 
 function has_extend_validity_expired(frm) {
-    const valid_upto = frm.doc.__onload?.e_waybill_info?.valid_upto;
+    const e_waybill_info = frm.doc.__onload?.e_waybill_info;
+
+    // a closed e-Waybill can no longer be extended
+    if (e_waybill_info?.is_closed) return true;
+
+    const valid_upto = e_waybill_info?.valid_upto;
     const extend_before = get_hours(valid_upto, 8);
     const now = frappe.datetime.now_datetime();
 

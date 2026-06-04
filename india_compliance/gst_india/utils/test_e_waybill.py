@@ -16,6 +16,7 @@ from responses import matchers
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.constants import SERVICE_HSN_PREFIX
+from india_compliance.gst_india.constants.e_waybill import E_WAYBILL_CLOSURE_AVAILABLE_FROM
 from india_compliance.gst_india.overrides.sales_invoice import (
     is_e_waybill_applicable,
 )
@@ -36,6 +37,7 @@ from india_compliance.gst_india.utils.e_waybill import (
     generate_e_waybill,
     get_e_waybills_to_extend,
     get_source_destination_address,
+    is_e_waybill_closure_enabled,
     schedule_ewaybill_for_extension,
     update_transporter,
     update_vehicle_info,
@@ -375,6 +377,75 @@ class TestEWaybill(IntegrationTestCase):
             e_waybill_close_data.get("request_data"),
             EWaybillData(doc).get_data_for_closure(frappe._dict(e_waybill_close_data.get("values"))),
         )
+
+    @responses.activate
+    def test_e_waybill_modification_blocked_after_closure(self):
+        """A closed e-Waybill must be rejected by the shared backend validation
+        path — so a direct RPC cannot re-close it or modify it (vehicle /
+        transporter / extend), even though the UI already hides those actions."""
+        si = self.create_sales_invoice_for("goods_item_with_ewaybill")
+        self._generate_e_waybill(si.name)
+
+        e_waybill_close_data = self.e_waybill_test_data.get("close_e_waybill")
+        self._mock_e_waybill_response(
+            data=e_waybill_close_data.get("response_data"),
+            match_list=[
+                matchers.query_string_matcher(e_waybill_close_data.get("params")),
+                matchers.json_params_matcher(e_waybill_close_data.get("request_data")),
+            ],
+        )
+        close_e_waybill(doctype=si.doctype, docname=si.name, values=e_waybill_close_data.get("values"))
+
+        # Reload so onload e_waybill_info reflects is_closed = 1
+        doc = load_doc("Sales Invoice", si.name, "submit")
+        e_waybill_data = EWaybillData(doc)
+
+        # Every modify path builds its payload through the shared closed-state guard
+        for builder in (
+            "get_data_for_closure",
+            "get_update_vehicle_data",
+            "get_update_transporter_data",
+            "get_extend_validity_data",
+        ):
+            self.assertRaisesRegex(
+                frappe.exceptions.ValidationError,
+                re.compile(r"already closed"),
+                getattr(e_waybill_data, builder),
+                frappe._dict(),
+            )
+
+    @change_settings("GST Settings", {"sandbox_mode": 0})
+    def test_e_waybill_closure_availability_gate(self):
+        """Closure (CLSEWB) is gated: sandbox now, production only from the NIC
+        rollout date (E_WAYBILL_CLOSURE_AVAILABLE_FROM)."""
+        settings = frappe.get_cached_doc("GST Settings")
+
+        # Production, before rollout -> disabled; the whitelisted entrypoint
+        # fails fast (before loading the doc or calling the API).
+        before = add_to_date(E_WAYBILL_CLOSURE_AVAILABLE_FROM, days=-1, as_datetime=True)
+        with time_machine.travel(before, tick=False):
+            self.assertFalse(is_e_waybill_closure_enabled(settings))
+            self.assertRaisesRegex(
+                frappe.exceptions.ValidationError,
+                re.compile(r"Closure API will be available from"),
+                close_e_waybill,
+                doctype="Sales Invoice",
+                docname="NON-EXISTENT",
+                values={},
+            )
+
+        # Production, on/after rollout -> enabled
+        after = add_to_date(E_WAYBILL_CLOSURE_AVAILABLE_FROM, days=1, as_datetime=True)
+        with time_machine.travel(after, tick=False):
+            self.assertTrue(is_e_waybill_closure_enabled(settings))
+
+    @change_settings("GST Settings", {"sandbox_mode": 1})
+    def test_e_waybill_closure_enabled_in_sandbox(self):
+        """Sandbox mode enables closure even before the rollout date."""
+        settings = frappe.get_cached_doc("GST Settings")
+        before = add_to_date(E_WAYBILL_CLOSURE_AVAILABLE_FROM, days=-1, as_datetime=True)
+        with time_machine.travel(before, tick=False):
+            self.assertTrue(is_e_waybill_closure_enabled(settings))
 
     @change_settings(
         "GST Settings",

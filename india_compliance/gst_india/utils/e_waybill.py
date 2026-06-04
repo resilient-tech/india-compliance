@@ -455,12 +455,7 @@ def is_e_waybill_closure_enabled(settings=None, throw=False):
 @frappe.whitelist()
 def close_e_waybill(*, doctype: str, docname: str, values: str | dict | frappe._dict):
     """Permission check not required as load_doc checks permissions."""
-    if not is_e_waybill_closure_enabled():
-        frappe.throw(
-            _("e-Waybill Closure API will be available from {0}.").format(
-                frappe.bold(format_date(E_WAYBILL_CLOSURE_AVAILABLE_FROM))
-            )
-        )
+    is_e_waybill_closure_enabled(throw=True)
 
     doc = load_doc(doctype, docname, "submit")
     values = frappe.parse_json(values)
@@ -1355,18 +1350,20 @@ class EWaybillData(GSTTransactionData):
 
     def get_data_for_closure(self, values):
         self.validate_if_e_waybill_is_set()
-        # TODO: Add validations
-        # Closure Date cannot be earlier than EwayBill Date
-        # You cannot close the e-Waybill as there is no PART-B/Vehicle entry
+        self.validate_if_e_waybill_is_not_closed()
+        # The following are validated by NIC (surfaced via ERRORS_MAP), so no
+        # local pre-check: closureDate >= e-Waybill date, and Part-B must exist
+        # Eroor will be raised from API no validation needed.
 
         return {
             "ewbNo": self.doc.ewaybill,
-            "closureDate": format_date(values.closure_date, "dd/mm/yyyy"),
+            "closureDate": format_date(getdate(), "dd/mm/yyyy"),
             "remarks": values.remarks,
         }
 
     def get_update_vehicle_data(self, values):
         self.validate_if_e_waybill_is_set()
+        self.validate_if_e_waybill_is_not_closed()
         self.check_e_waybill_validity()
         self.validate_mode_of_transport()
         self.set_transporter_details()
@@ -1386,6 +1383,7 @@ class EWaybillData(GSTTransactionData):
 
     def get_update_transporter_data(self, values):
         self.validate_if_e_waybill_is_set()
+        self.validate_if_e_waybill_is_not_closed()
         self.check_e_waybill_validity()
 
         return {
@@ -1395,6 +1393,7 @@ class EWaybillData(GSTTransactionData):
 
     def get_extend_validity_data(self, values):
         self.validate_if_e_waybill_is_set()
+        self.validate_if_e_waybill_is_not_closed()
         self.validate_if_e_waybill_can_be_extend()
         self.validate_mode_of_transport()
         self.validate_transit_type(values)
@@ -1525,6 +1524,11 @@ class EWaybillData(GSTTransactionData):
     def validate_if_e_waybill_is_set(self):
         if not self.doc.ewaybill:
             frappe.throw(_("No e-Waybill found for this document"))
+
+    def validate_if_e_waybill_is_not_closed(self):
+        # this works because we do run_onload in load_doc above
+        if self.doc.get_onload().get("e_waybill_info", {}).get("is_closed"):
+            frappe.throw(_("e-Waybill {0} is already closed").format(frappe.bold(self.doc.ewaybill)))
 
     def check_e_waybill_validity(self):
         # this works because we do run_onload in load_doc above
