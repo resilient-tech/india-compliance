@@ -2083,19 +2083,31 @@ class FiledTab extends GSTR1_TabManager {
     }
 
     get_section_filter_fields() {
-        return GSTR1_SECTION_OPTIONS.map((opt) => ({
-            fieldname: `section_${opt.value}`,
-            label: opt.label,
-            fieldtype: "Check",
-            default: 1,
-        }));
+        const saved = _get_saved_sections();
+        return [
+            {
+                fieldname: "sections",
+                fieldtype: "MultiCheck",
+                label: __("Sections"),
+                select_all: true,
+                columns: 2,
+                sort_options: false,
+                options: GSTR1_SECTION_OPTIONS.map((opt) => ({
+                    label: opt.label,
+                    value: opt.value,
+                    checked: saved ? saved.includes(opt.value) : true,
+                })),
+            },
+        ];
     }
 
     get_selected_sections(values) {
-        const all = GSTR1_SECTION_OPTIONS.map((opt) => opt.value);
-        const checked = all.filter((v) => values[`section_${v}`]);
-        // All checked is equivalent to no filter; send null so the backend skips filtering.
-        return checked.length === all.length ? null : checked.length ? checked : null;
+        const sections = values.sections || [];
+        const all = GSTR1_SECTION_OPTIONS.map((o) => o.value);
+        // All selected → null (backend skips filtering).
+        // Subset → return that list.
+        // Empty → return [] so callers can block the download.
+        return sections.length === all.length ? null : sections;
     }
 
     // ACTIONS
@@ -2104,17 +2116,23 @@ class FiledTab extends GSTR1_TabManager {
         const url = "india_compliance.gst_india.doctype.gstr_1.gstr_1_export.download_filed_as_excel";
         const dialog = new frappe.ui.Dialog({
             title: __("Download Excel"),
+            size: "large",
             fields: this.get_section_filter_fields(),
             primary_action_label: __("Download"),
             primary_action: () => {
                 const values = dialog.get_values();
                 const sections = this.get_selected_sections(values);
+                if (sections && !sections.length) {
+                    frappe.msgprint(__("Please select at least one section to download."));
+                    return;
+                }
                 const post_args = {
                     company_gstin: this.instance.frm.doc.company_gstin,
                     month_or_quarter: this.instance.frm.doc.month_or_quarter,
                     year: this.instance.frm.doc.year,
                 };
 
+                _save_sections(sections);
                 // open_url_post is form-encoded; JSON-encode the array so the
                 // backend receives it as a string it can frappe.parse_json().
                 if (sections) post_args.sections = JSON.stringify(sections);
@@ -2134,8 +2152,7 @@ class FiledTab extends GSTR1_TabManager {
     download_filed_json() {
         const me = this;
         const api_enabled = is_gstr1_api_enabled();
-
-        const fields = [...this.get_section_filter_fields()];
+        const fields = [];
 
         if (api_enabled) {
             fields.push(
@@ -2144,9 +2161,9 @@ class FiledTab extends GSTR1_TabManager {
                     label: __("Include Already Uploaded (matching) Invoices"),
                     description: __(
                         `This will include invoices already uploaded (and matching)
-                         to GSTN (possibly e-Invoices) and overwrite them in GST Portal.
-                         This is <strong>not recommended</strong> if e-Invoice is applicable to you
-                         as it will overwrite the e-Invoice data in GST Portal.`,
+                        to GSTN (possibly e-Invoices) and overwrite them in GST Portal.
+                        This is <strong>not recommended</strong> if e-Invoice is applicable to you
+                        as it will overwrite the e-Invoice data in GST Portal.`,
                     ),
                     fieldtype: "Check",
                     default: 0,
@@ -2163,14 +2180,22 @@ class FiledTab extends GSTR1_TabManager {
             );
         }
 
+        fields.push(...this.get_section_filter_fields());
+
         const dialog = new frappe.ui.Dialog({
             title: __("Download JSON"),
+            size: "large",
             fields,
             primary_action_label: __("Download"),
             primary_action: () => {
                 const values = dialog.get_values();
                 const { include_uploaded, delete_missing } = values;
                 const sections = me.get_selected_sections(values);
+                if (sections && !sections.length) {
+                    frappe.msgprint(__("Please select at least one section to download."));
+                    return;
+                }
+                _save_sections(sections);
                 const doc = me.instance.frm.doc;
 
                 frappe.call({
@@ -3081,6 +3106,21 @@ const GSTR1_SECTION_OPTIONS = [
     { value: "doc_issue", label: __("Document Issued Summary (doc_issue)") },
     { value: "supeco", label: __("Supplies through e-Commerce (supeco)") },
 ];
+
+function _get_saved_sections() {
+    const raw = frappe.defaults.get_user_default("gstr1_download_sections");
+    return raw ? JSON.parse(raw) : null;
+}
+
+function _save_sections(sections_or_null) {
+    const to_save = sections_or_null || GSTR1_SECTION_OPTIONS.map((o) => o.value);
+    const serialized = JSON.stringify(to_save);
+    frappe.call({
+        method: "frappe.core.doctype.session_default_settings.session_default_settings.set_session_default_values",
+        args: { default_values: { gstr1_download_sections: serialized } },
+    });
+    frappe.defaults.set_user_default_local("gstr1_download_sections", serialized);
+}
 
 function is_gstr1_api_enabled() {
     return india_compliance.is_api_enabled() && !gst_settings.sandbox_mode && gst_settings.enable_gstr_1_api;
