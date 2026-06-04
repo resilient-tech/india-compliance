@@ -6,7 +6,7 @@ import frappe
 from erpnext.accounts.doctype.purchase_invoice.purchase_invoice import (
     make_regional_gl_entries,
 )
-from erpnext.accounts.doctype.sales_invoice.sales_invoice import make_sales_return
+from erpnext.accounts.doctype.sales_invoice.mapper import make_sales_return
 from erpnext.accounts.party import _get_party_details, get_regional_address_details
 from erpnext.controllers.accounts_controller import (
     update_child_qty_rate,
@@ -14,7 +14,7 @@ from erpnext.controllers.accounts_controller import (
 )
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
 from erpnext.controllers.taxes_and_totals import get_regional_round_off_accounts
-from erpnext.selling.doctype.sales_order.sales_order import make_purchase_order
+from erpnext.selling.doctype.sales_order.mapper import make_purchase_order
 from erpnext.stock.doctype.delivery_note.delivery_note import make_sales_invoice
 from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
     update_regional_gl_entries,
