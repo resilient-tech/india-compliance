@@ -1278,6 +1278,7 @@ class TestEWaybill(IntegrationTestCase):
         for key, value in e_waybill_data.items():
             self.assertEqual(expected_request_data.get(key), value, f"Mismatch for key '{key}'")
 
+    @change_settings("GST Settings", {"sandbox_mode": 1})
     def test_e_waybill_ship_to_gstin_urp_for_unregistered_consignee(self):
         """
         shipToGSTIN must be 'URP' when the Ship-To consignee is unregistered.
@@ -1305,6 +1306,28 @@ class TestEWaybill(IntegrationTestCase):
         self.assertNotEqual(e_waybill_data.get("toGstin"), "URP")
         self.assertEqual(e_waybill_data.get("shipToGSTIN"), "URP")
         self.assertTrue(e_waybill_data.get("shipToTradeName"))
+
+    @change_settings("GST Settings", {"sandbox_mode": 0})
+    def test_ship_to_gstin_gated_by_rollout_date(self):
+        si = self.create_sales_invoice_for("overseas_customer_domestic_shipping")  # type 2
+
+        # 13 Jun 2026 -> before rollout -> omitted from payload and offline JSON
+        with time_machine.travel(get_datetime("2026-06-13"), tick=False):
+            data = EWaybillData(si).get_data()
+            self.assertEqual(data.get("transactionType"), 2)
+            self.assertNotIn("shipToGSTIN", data)
+            self.assertNotIn("shipToTradeName", data)
+
+            json_data = EWaybillData(si, for_json=True).get_data()
+            self.assertNotIn("shipToGSTIN", json_data)
+            self.assertNotIn("shipToTradeName", json_data)
+
+        # 16 Jun 2026 -> on/after rollout -> sent
+        with time_machine.travel(get_datetime("2026-06-16"), tick=False):
+            data = EWaybillData(si).get_data()
+            self.assertEqual(data.get("transactionType"), 2)
+            self.assertTrue(data.get("shipToGSTIN"))
+            self.assertTrue(data.get("shipToTradeName"))
 
     @staticmethod
     def _create_unregistered_shipping_address():
