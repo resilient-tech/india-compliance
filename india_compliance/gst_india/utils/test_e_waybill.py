@@ -1307,6 +1307,32 @@ class TestEWaybill(IntegrationTestCase):
         self.assertEqual(e_waybill_data.get("shipToGSTIN"), "URP")
         self.assertTrue(e_waybill_data.get("shipToTradeName"))
 
+    def test_e_waybill_ship_to_gstin_for_transaction_type_4(self):
+        # ship to GSTIN is mandatory in transaction type 4.
+        shipping_address = self._create_unregistered_shipping_address()
+
+        si = create_sales_invoice(
+            vehicle_no="GJ07DL9009",
+            company_address="_Test Indian Registered Company-Billing",
+            dispatch_address_name="_Test Indian Registered Company-Shipping",  # ship-from differs
+            customer="_Test Registered Customer",
+            customer_address="_Test Registered Customer-Billing",
+            shipping_address_name=shipping_address,  # ship-to differs
+            is_in_state=1,
+            distance=10,
+            transporter="_Test Common Supplier",
+            mode_of_transport="Road",
+            do_not_submit=True,
+        )
+        si.gst_transporter_id = ""
+        si.submit()
+
+        e_waybill_data = EWaybillData(si).get_data()
+
+        self.assertEqual(e_waybill_data.get("transactionType"), 4)
+        self.assertTrue(e_waybill_data.get("shipToGSTIN"))
+        self.assertTrue(e_waybill_data.get("shipToTradeName"))
+
     @change_settings("GST Settings", {"sandbox_mode": 0})
     def test_ship_to_gstin_gated_by_rollout_date(self):
         si = self.create_sales_invoice_for("overseas_customer_domestic_shipping")  # type 2
