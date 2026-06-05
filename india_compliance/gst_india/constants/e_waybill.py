@@ -1,6 +1,10 @@
 # Just for reference
 # DATETIME_FORMAT = "%d/%m/%Y %I:%M:%S %p"
 
+from frappe.utils import getdate
+
+E_WAYBILL_CHANGE_DATE = getdate("2026-06-15")
+
 selling_address = {
     "bill_from": "company_address",
     "bill_to": "customer_address",
@@ -101,6 +105,8 @@ TRANSPORT_TYPES = {
     3: "Bill From - Dispatch From",
     4: "Combination of 2 and 3",
 }
+
+COMBINATION_TRANSPORT_TYPES = (2, 4)
 VEHICLE_TYPES = {"Regular": "R", "Over Dimensional Cargo (ODC)": "O"}
 
 TRANSIT_TYPES = {"Road": "R", "Warehouse": "W", "Others": "O"}
