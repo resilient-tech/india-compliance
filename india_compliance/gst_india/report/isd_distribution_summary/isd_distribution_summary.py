@@ -1,6 +1,9 @@
 # Copyright (c) 2026, Resilient Tech and contributors
 # For license information, please see license.txt
 
+from functools import reduce
+from operator import add
+
 import frappe
 from frappe import _
 from frappe.core.doctype.user_permission.user_permission import get_permitted_documents
@@ -8,74 +11,40 @@ from frappe.query_builder.functions import Sum
 from frappe.utils import flt
 from pypika.terms import Case
 
+from india_compliance.gst_india.constants import GST_TAX_TYPES
+from india_compliance.gst_india.utils.isd import (
+    get_isd_source_item_query,
+    get_report_company_currency,
+    validate_common_report_filters,
+)
+
 
 def execute(filters=None):
-    validate_filters(filters)
+    validate_common_report_filters(filters)
     filters = frappe._dict(filters or {})
     return get_columns(filters), get_data(filters)
 
 
-def validate_filters(filters=None):
-    if not filters:
-        filters = {}
-    filters = frappe._dict(filters)
+def _get_distributed_map(purchase_invoices):
+    """Return {(purchase_invoice, is_ineligible_for_itc): distributed_total} for the given purchase invoices."""
+    if not purchase_invoices:
+        return {}
 
-    if filters.company:
-        frappe.has_permission("Company", doc=filters.company, throw=True)
-
-    if not filters.from_date or not filters.to_date:
-        frappe.throw(
-            _("From Date & To Date is mandatory for generating ISD Distribution Summary"),
-            title=_("Invalid Filter"),
-        )
-    if filters.from_date > filters.to_date:
-        frappe.throw(_("From Date must be before To Date"), title=_("Invalid Filter"))
-
-
-def _dist_tax_sum(table):
-    """Sum of distributed tax fields on ISD Invoice Source Item."""
-    return (
-        table.distributed_igst
-        + table.distributed_cgst
-        + table.distributed_sgst
-        + table.distributed_cess
-        + table.distributed_cess_non_advol
-    )
-
-
-def _get_distributed_map():
-    """Return {(purchase_invoice, is_ineligible_for_itc): distributed_total} for all submitted ISD invoices."""
     isd_source_item = frappe.qb.DocType("ISD Invoice Source Item")
-    isd_invoice = frappe.qb.DocType("ISD Invoice")
-
     rows = (
-        frappe.qb.from_(isd_source_item)
-        .join(isd_invoice)
-        .on(isd_source_item.parent == isd_invoice.name)
-        .select(
-            isd_source_item.purchase_invoice,
-            isd_source_item.is_ineligible_for_itc,
-            Sum(_dist_tax_sum(isd_source_item)).as_("distributed_total"),
-        )
-        .where(isd_invoice.docstatus == 1)
-        .groupby(isd_source_item.purchase_invoice, isd_source_item.is_ineligible_for_itc)
+        get_isd_source_item_query(purchase_invoices=purchase_invoices)
+        .select(isd_source_item.is_ineligible_for_itc)
+        .groupby(isd_source_item.is_ineligible_for_itc)
         .run(as_dict=True)
     )
-
-    return {(r.purchase_invoice, r.is_ineligible_for_itc): flt(r.distributed_total) for r in rows}
+    return {(r.purchase_invoice, r.is_ineligible_for_itc): flt(r.total_distributed) for r in rows}
 
 
 def get_data(filters):
     pi = frappe.qb.DocType("Purchase Invoice")
     pi_item = frappe.qb.DocType("Purchase Invoice Item")
 
-    item_tax = (
-        pi_item.igst_amount
-        + pi_item.cgst_amount
-        + pi_item.sgst_amount
-        + pi_item.cess_amount
-        + pi_item.cess_non_advol_amount
-    )
+    item_tax = reduce(add, (pi_item[f"{t}_amount"] for t in GST_TAX_TYPES))
 
     query = (
         frappe.qb.from_(pi)
@@ -113,7 +82,7 @@ def get_data(filters):
 
     rows = query.run(as_dict=True)
 
-    dist_map = _get_distributed_map()
+    dist_map = _get_distributed_map([row.purchase_invoice for row in rows])
 
     result = []
     for row in rows:
@@ -154,11 +123,7 @@ def get_data(filters):
 
 
 def get_columns(filters):
-    company_currency = (
-        frappe.get_cached_value("Company", filters.company, "default_currency")
-        if filters.get("company")
-        else frappe.db.get_default("currency") or "INR"
-    )
+    company_currency = get_report_company_currency(filters)
 
     return [
         {

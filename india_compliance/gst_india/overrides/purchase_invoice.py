@@ -6,6 +6,7 @@ from frappe.utils import flt
 from india_compliance.gst_india.constants import (
     GST_TAX_TYPES,
     IMPORT_GST_CATEGORIES,
+    ISD_GST_CATEGORY,
     VALID_HSN_LENGTHS,
 )
 from india_compliance.gst_india.overrides.sales_invoice import (
@@ -124,7 +125,7 @@ def set_is_isd_applicable(doc):
         return
 
     gst_category = frappe.db.get_value("Address", doc.billing_address, "gst_category")
-    if gst_category == "Input Service Distributor":
+    if gst_category == ISD_GST_CATEGORY:
         doc.is_isd_applicable = 1
 
 

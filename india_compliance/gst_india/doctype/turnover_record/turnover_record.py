@@ -4,6 +4,8 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.model.meta import get_field_precision
+from frappe.utils import flt
 
 from india_compliance.gst_india.utils import get_state, validate_gstin
 
@@ -25,6 +27,8 @@ def upsert_turnover_record(
     fiscal_year,
     amount,
 ):
+    amount_precision = get_field_precision(frappe.get_meta("Turnover Record").get_field("amount"))
+    amount = flt(amount, amount_precision)
 
     filters = {"fiscal_year": fiscal_year}
     or_filters = {"gst_state": gst_state, "gstin": gstin or ""}

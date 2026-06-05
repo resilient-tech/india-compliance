@@ -2,7 +2,6 @@ import copy
 import datetime
 import functools
 import io
-import json
 import tarfile
 
 import frappe
@@ -1264,16 +1263,13 @@ def has_gst_taxes(doc):
     return any(row.gst_tax_type in TAX_TYPES for row in doc.taxes)
 
 
-ISD_PARTY_DOCTYPES = ("Customer", "Supplier", "Company")
-
-
 @frappe.whitelist()
 def get_party_for_isd(filters: str | dict | frappe._dict):
     if isinstance(filters, str):
-        filters = json.loads(filters)
+        filters = frappe.parse_json(filters)
 
     doctype = filters.get("doctype")
-    if doctype not in ISD_PARTY_DOCTYPES:
+    if doctype not in GST_PARTY_TYPES:
         frappe.throw(
             frappe._("Invalid doctype {0} for ISD party lookup").format(doctype),
             frappe.PermissionError,

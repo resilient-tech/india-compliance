@@ -33,6 +33,10 @@ Object.assign(india_compliance, {
 
     HSN_BIFURCATION_FROM: frappe.datetime.str_to_obj("2025-05-01"),
 
+    GST_TAX_TYPES: ["cgst", "sgst", "igst", "cess", "cess_non_advol"],
+
+    IMPORT_GST_CATEGORIES: ["Overseas", "SEZ"],
+
     get_month_year_from_period(period) {
         /**
          * Returns month or quarter and year from the period

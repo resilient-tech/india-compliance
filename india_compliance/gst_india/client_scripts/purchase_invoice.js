@@ -94,6 +94,16 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     on_submit: function (frm) {
+        if (frm.doc.is_isd_applicable && has_goods_items(frm)) {
+            frappe.show_alert(
+                {
+                    message: __("Non-service items found in ISD applicable invoice"),
+                    indicator: "orange",
+                },
+                10,
+            );
+        }
+
         if (!frm._inward_supply) return;
         // go back to previous page and match the invoice with the inward supply
         setTimeout(() => {

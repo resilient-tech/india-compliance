@@ -10,6 +10,7 @@
   "column_break_xbsm",
   "amount",
   "section_break_kryb",
+    "country",
   "gstin",
   "gst_state",
   "column_break_stmn"
@@ -34,6 +35,14 @@
    "fieldname": "section_break_kryb",
    "fieldtype": "Section Break"
   },
+    {
+     "default": "India",
+     "fieldname": "country",
+     "fieldtype": "Data",
+     "hidden": 1,
+     "label": "Country",
+     "read_only": 1
+    },
   {
    "fieldname": "column_break_stmn",
    "fieldtype": "Column Break"
@@ -42,8 +51,7 @@
    "fieldname": "gst_state",
    "fieldtype": "Select",
    "label": "GST State",
-   "mandatory_depends_on": "eval: doc.gst_category == 'Unregistered'",
-   "options": "\nAndaman and Nicobar Islands\nAndhra Pradesh\nArunachal Pradesh\nAssam\nBihar\nChandigarh\nChhattisgarh\nDadra and Nagar Haveli and Daman and Diu\nDelhi\nGoa\nGujarat\nHaryana\nHimachal Pradesh\nJammu and Kashmir\nJharkhand\nKarnataka\nKerala\nLadakh\nLakshadweep Islands\nMadhya Pradesh\nMaharashtra\nManipur\nMeghalaya\nMizoram\nNagaland\nOdisha\nOther Countries\nOther Territory\nPuducherry\nPunjab\nRajasthan\nSikkim\nTamil Nadu\nTelangana\nTripura\nUttar Pradesh\nUttarakhand\nWest Bengal"
+   "mandatory_depends_on": "eval: doc.gst_category == 'Unregistered'"
   },
   {
    "fieldname": "column_break_xbsm",

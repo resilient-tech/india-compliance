@@ -1,8 +1,12 @@
-const IMPORT_GST_CATEGORIES = ["Overseas", "SEZ"];
-
 frappe.ui.form.on("ISD Invoice", {
     setup(frm) {
         frm.isd_controller = new ISDInvoiceController(frm);
+    },
+
+    onload(frm) {
+        if (frm.is_new() && !frm.doc.company) {
+            frm.set_value("company", frappe.defaults.get_user_default("Company"));
+        }
     },
 
     refresh(frm) {
@@ -34,8 +38,6 @@ frappe.ui.form.on("ISD Invoice", {
     },
 
     company(frm) {
-        frm.doc.is_against_party = 0;
-        frm.refresh_field("is_against_party");
         frm.isd_controller.fetch_gst_accounts();
         fetch_isd_autofill(frm, "company");
     },
@@ -155,12 +157,18 @@ frappe.ui.form.on("ISD Invoice", {
     },
 });
 
+// Keep CREDIT_FLOW local to this file only
+const CREDIT_FLOW = {
+    DISTRIBUTION: "Credit Distribution",
+    RECEIPT: "Credit Receipt",
+};
+
 frappe.ui.form.on("ISD Invoice Source Item", {
     source_invoices_add(frm, cdt, cdn) {
         frappe.model.set_value(cdt, cdn, "distribution_ratio", frm.doc.distribution_ratio || 0);
     },
     purchase_invoice(frm, cdt, cdn) {
-        if (!(frm.is_against_party && frm.doc.credit_flow == "Credit Receipt")) {
+        if (!(frm.is_against_party && frm.doc.credit_flow == CREDIT_FLOW.RECEIPT)) {
             frm.isd_controller.autofill_source_item(cdt, cdn);
         }
     },
@@ -181,11 +189,13 @@ async function fetch_isd_autofill(frm, changed_field) {
         method: "india_compliance.gst_india.doctype.isd_invoice.isd_invoice.get_isd_autofill_values",
         args: {
             changed_field,
-            company: frm.doc.company,
-            is_against_party: frm.doc.is_against_party || 0,
-            credit_flow: frm.doc.credit_flow || null,
-            party_type: frm.doc.party_type || null,
-            party: frm.doc.party || null,
+            doc: {
+                company: frm.doc.company,
+                is_against_party: frm.doc.is_against_party || 0,
+                credit_flow: frm.doc.credit_flow || null,
+                party_type: frm.doc.party_type || null,
+                party: frm.doc.party || null,
+            },
         },
     });
 
@@ -217,12 +227,11 @@ class ISDInvoiceController {
                 return { filters: {} };
             }
             const is_company_recipient =
-                this.frm.doc.is_against_party && this.frm.doc.credit_flow === "Credit Receipt";
+                this.frm.doc.is_against_party && this.frm.doc.credit_flow === CREDIT_FLOW.RECEIPT;
             const filters = {
                 link_doctype: "Company",
                 link_name: this.frm.doc.company,
             };
-            // gst_category should be ISD if company is distributor
             if (!is_company_recipient) {
                 filters.gst_category = "Input Service Distributor";
             }
@@ -261,7 +270,7 @@ class ISDInvoiceController {
             }
 
             const is_company_recipient =
-                this.frm.doc.is_against_party && this.frm.doc.credit_flow === "Credit Receipt";
+                this.frm.doc.is_against_party && this.frm.doc.credit_flow === CREDIT_FLOW.RECEIPT;
             const filters = {
                 link_doctype: this.frm.doc.party_type,
                 link_name: this.frm.doc.party,
@@ -297,7 +306,7 @@ class ISDInvoiceController {
         });
 
         this.frm.set_query("party_account", () => {
-            const account_type = this.frm.doc.credit_flow === "Credit Receipt" ? "Receivable" : "Payable";
+            const account_type = this.frm.doc.party_type === "Customer" ? "Receivable" : "Payable";
             return {
                 filters: {
                     company: this.frm.doc.company,
@@ -320,11 +329,11 @@ class ISDInvoiceController {
                 company_address: __("Company Address"),
                 party_address: __("Party Address"),
             },
-            "Credit Distribution": {
+            [CREDIT_FLOW.DISTRIBUTION]: {
                 company_address: __("Company Address (Distributor)"),
                 party_address: __("Party Address (Recipient)"),
             },
-            "Credit Receipt": {
+            [CREDIT_FLOW.RECEIPT]: {
                 company_address: __("Company Address (Recipient)"),
                 party_address: __("Party Address (Distributor)"),
             },
@@ -350,28 +359,30 @@ class ISDInvoiceController {
                 const items = result.message || [];
                 const match = items.find((item) => item.is_ineligible_for_itc == row.is_ineligible_for_itc);
                 if (!match) {
-                    frappe.model.set_value(cdt, cdn, {
-                        total_igst: 0,
-                        total_cgst: 0,
-                        total_sgst: 0,
-                        total_cess: 0,
-                        total_cess_non_advol: 0,
-                    });
+                    frappe.model.set_value(
+                        cdt,
+                        cdn,
+                        india_compliance.GST_TAX_TYPES.map((t) => `total_${t}`).reduce(
+                            (acc, key) => ({ ...acc, [key]: 0 }),
+                            {},
+                        ),
+                    );
                     return;
                 }
 
-                frappe.model.set_value(cdt, cdn, {
-                    total_igst: match.total_igst,
-                    total_cgst: match.total_cgst,
-                    total_sgst: match.total_sgst,
-                    total_cess: match.total_cess,
-                    total_cess_non_advol: match.total_cess_non_advol,
-                });
+                frappe.model.set_value(
+                    cdt,
+                    cdn,
+                    india_compliance.GST_TAX_TYPES.map((t) => `total_${t}`).reduce(
+                        (acc, key) => ({ ...acc, [key]: match[key] || 0 }),
+                        {},
+                    ),
+                );
                 this.recalculate();
             },
         });
     }
-    // can optimize this using the fetch_isd_autofill
+
     set_address_display(address_field, display_field) {
         const address = this.frm.doc[address_field];
         if (address) {
@@ -407,7 +418,7 @@ class ISDInvoiceController {
         for (const address of [company_address, party_address]) {
             if (!address) continue;
             const result = await frappe.db.get_value("Address", address, "gst_category");
-            if (IMPORT_GST_CATEGORIES.includes(result?.message?.gst_category)) return true;
+            if (india_compliance.IMPORT_GST_CATEGORIES.includes(result?.message?.gst_category)) return true;
         }
 
         return false;
@@ -442,41 +453,31 @@ class ISDInvoiceController {
         const source_invoices = this.frm.doc.source_invoices || [];
         if (!source_invoices.length) return;
 
-        let total_igst = 0,
-            total_cgst = 0,
-            total_sgst = 0,
-            total_cess = 0,
-            total_cess_non_advol = 0;
+        const totals = Object.fromEntries(india_compliance.GST_TAX_TYPES.map((t) => [t, 0]));
         let total_eligible = 0,
             total_ineligible = 0;
+
         for (const r of source_invoices) {
-            total_igst += r.distributed_igst;
-            total_cgst += r.distributed_cgst;
-            total_sgst += r.distributed_sgst;
-            total_cess += r.distributed_cess;
-            total_cess_non_advol += r.distributed_cess_non_advol;
-            const row_total =
-                r.distributed_igst + r.distributed_cgst + r.distributed_sgst + r.distributed_cess;
+            for (const t of india_compliance.GST_TAX_TYPES) {
+                totals[t] += r[`distributed_${t}`] || 0;
+            }
+            const row_total = india_compliance.GST_TAX_TYPES.reduce(
+                (sum, t) => sum + (r[`distributed_${t}`] || 0),
+                0,
+            );
             if (r.is_ineligible_for_itc) total_ineligible += row_total;
             else total_eligible += row_total;
         }
 
         const accounts = this.gst_accounts || {};
-        const tax_type_map = {
-            igst: [accounts.igst_account, total_igst],
-            cgst: [accounts.cgst_account, total_cgst],
-            sgst: [accounts.sgst_account, total_sgst],
-            cess: [accounts.cess_account, total_cess],
-            cess_non_advol: [accounts.cess_non_advol_account, total_cess_non_advol],
-        };
-
         frappe.model.clear_table(this.frm.doc, "taxes");
-        for (const [gst_tax_type, [account_head, tax_amount]] of Object.entries(tax_type_map)) {
+        for (const gst_tax_type of india_compliance.GST_TAX_TYPES) {
+            const account_head = accounts[`${gst_tax_type}_account`];
             if (!account_head) continue;
             const row = frappe.model.add_child(this.frm.doc, "ISD Invoice Tax Item", "taxes");
             row.account_head = account_head;
             row.gst_tax_type = gst_tax_type;
-            row.tax_amount = tax_amount;
+            row.tax_amount = totals[gst_tax_type];
         }
 
         this.frm.doc.total_eligible = total_eligible;

@@ -8,30 +8,19 @@ from frappe.query_builder import Order
 from frappe.query_builder.functions import Sum
 from pypika.terms import Case
 
+from india_compliance.gst_india.constants import CREDIT_FLOW, GST_TAX_TYPES
+from india_compliance.gst_india.utils.isd import (
+    get_report_company_currency,
+    validate_common_report_filters,
+)
+
 
 def execute(filters=None):
-    validate_filters(filters)
+    validate_common_report_filters(filters)
     filters = frappe._dict(filters or {})
     columns = get_columns(filters)
     data = get_data(filters)
     return columns, data
-
-
-def validate_filters(filters=None):
-    if not filters:
-        filters = {}
-    filters = frappe._dict(filters)
-
-    if filters.company:
-        frappe.has_permission("Company", doc=filters.company, throw=True)
-
-    if not filters.from_date or not filters.to_date:
-        frappe.throw(
-            _("From Date & To Date is mandatory for generating ISD Invoice Register"),
-            title=_("Invalid Filter"),
-        )
-    if filters.from_date > filters.to_date:
-        frappe.throw(_("From Date must be before To Date"), title=_("Invalid Filter"))
 
 
 def get_data(filters):
@@ -79,11 +68,7 @@ def get_purchase_invoice_data(filters):
             pi.is_return,
             rate,
             Sum(pi_item.net_amount).as_("taxable_value"),
-            Sum(pi_item.igst_amount).as_("igst_amount"),
-            Sum(pi_item.cgst_amount).as_("cgst_amount"),
-            Sum(pi_item.sgst_amount).as_("sgst_amount"),
-            Sum(pi_item.cess_amount).as_("cess_amount"),
-            Sum(pi_item.cess_non_advol_amount).as_("cess_non_advol_amount"),
+            *[Sum(getattr(pi_item, f"{t}_amount")).as_(f"{t}_amount") for t in GST_TAX_TYPES],
         )
         .where(pi.docstatus == 1)
         .where(pi.is_isd_applicable == 1)
@@ -123,25 +108,13 @@ def get_isd_invoice_data(filters):
     isd = frappe.qb.DocType("ISD Invoice")
     isd_src_items = frappe.qb.DocType("ISD Invoice Source Item")
 
-    dist_igst = Sum(isd_src_items.distributed_igst).as_("distributed_igst")
-    dist_cgst = Sum(isd_src_items.distributed_cgst).as_("distributed_cgst")
-    dist_sgst = Sum(isd_src_items.distributed_sgst).as_("distributed_sgst")
-    dist_cess = Sum(isd_src_items.distributed_cess).as_("distributed_cess")
-    dist_cess_non_advol = Sum(isd_src_items.distributed_cess_non_advol).as_("distributed_cess_non_advol")
-
     # credit_flow='Credit Distribution' → company is distributor, party is recipient
     # credit_flow='Credit Receipt'  → party is distributor, company is recipient
-    distributor_gstin_col = (
-        Case()
-        .when(isd.credit_flow == "Credit Distribution", isd.company_gstin)
-        .else_(isd.party_gstin)
-        .as_("distributor_gstin")
+    distributor_gstin = (
+        Case().when(isd.credit_flow == CREDIT_FLOW.DISTRIBUTION, isd.company_gstin).else_(isd.party_gstin)
     )
-    recipient_gstin_col = (
-        Case()
-        .when(isd.credit_flow == "Credit Distribution", isd.party_gstin)
-        .else_(isd.company_gstin)
-        .as_("recipient_gstin")
+    recipient_gstin = (
+        Case().when(isd.credit_flow == CREDIT_FLOW.DISTRIBUTION, isd.party_gstin).else_(isd.company_gstin)
     )
 
     query = (
@@ -151,19 +124,15 @@ def get_isd_invoice_data(filters):
         .select(
             isd.name.as_("isd_invoice"),
             isd.posting_date,
-            distributor_gstin_col,
-            recipient_gstin_col,
+            distributor_gstin.as_("distributor_gstin"),
+            recipient_gstin.as_("recipient_gstin"),
             isd.party_pos.as_("recipient_pos"),
             isd.is_credit_note,
             Case()
             .when(isd_src_items.is_ineligible_for_itc == 0, "Eligible")
             .else_("Ineligible")
             .as_("eligibility"),
-            dist_igst,
-            dist_cgst,
-            dist_sgst,
-            dist_cess,
-            dist_cess_non_advol,
+            *[Sum(getattr(isd_src_items, f"distributed_{t}")).as_(f"distributed_{t}") for t in GST_TAX_TYPES],
         )
         .where(isd.docstatus == 1)
         .where(isd.posting_date[filters.from_date : filters.to_date])
@@ -180,16 +149,10 @@ def get_isd_invoice_data(filters):
             query = query.where(isd.company.isin(permitted))
 
     if filters.get("distributor_gstin"):
-        query = query.where(
-            Case().when(isd.credit_flow == "Credit Distribution", isd.company_gstin).else_(isd.party_gstin)
-            == filters.distributor_gstin
-        )
+        query = query.where(distributor_gstin == filters.distributor_gstin)
 
     if filters.get("recipient_gstin"):
-        query = query.where(
-            Case().when(isd.credit_flow == "Credit Distribution", isd.party_gstin).else_(isd.company_gstin)
-            == filters.recipient_gstin
-        )
+        query = query.where(recipient_gstin == filters.recipient_gstin)
 
     if filters.get("recipient_state"):
         query = query.where(isd.party_pos == filters.recipient_state)
@@ -205,11 +168,7 @@ def get_isd_invoice_data(filters):
 
 def get_columns(filters):
     report_view = filters.get("report_view", "Purchase Invoice")
-    company_currency = (
-        frappe.get_cached_value("Company", filters.company, "default_currency")
-        if filters.get("company")
-        else frappe.db.get_default("currency") or "INR"
-    )
+    company_currency = get_report_company_currency(filters)
 
     if report_view == "Purchase Invoice":
         return _get_purchase_invoice_columns(company_currency)
