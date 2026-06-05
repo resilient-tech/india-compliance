@@ -16,7 +16,7 @@ from responses import matchers
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.constants import SERVICE_HSN_PREFIX
-from india_compliance.gst_india.constants.e_waybill import E_WAYBILL_CLOSURE_AVAILABLE_FROM
+from india_compliance.gst_india.constants.e_waybill import E_WAYBILL_CHANGES_APPLICABLE_DATE
 from india_compliance.gst_india.overrides.sales_invoice import (
     is_e_waybill_applicable,
 )
@@ -37,10 +37,11 @@ from india_compliance.gst_india.utils.e_waybill import (
     generate_e_waybill,
     get_e_waybills_to_extend,
     get_source_destination_address,
-    is_e_waybill_closure_enabled,
+    is_e_waybill_changes_applicable,
     schedule_ewaybill_for_extension,
     update_transporter,
     update_vehicle_info,
+    validate_data_before_schedule,
 )
 from india_compliance.gst_india.utils.tests import (
     SUBCONTRACTING_TEST_FINISHED_ITEM_TG,
@@ -330,9 +331,10 @@ class TestEWaybill(IntegrationTestCase):
 
         Closure keeps the e-Waybill number intact (unlike cancellation) and
         records the closure on the e-Waybill Log + sets status to Closed.
+
         """
-        si = self.create_sales_invoice_for("goods_item_with_ewaybill")
-        self._generate_e_waybill(si.name)
+        si = self.create_sales_invoice_for("goods_item_for_closure")
+        self._generate_e_waybill(si.name, test_data=self.e_waybill_test_data.goods_item_for_closure)
 
         e_waybill_close_data = self.e_waybill_test_data.get("close_e_waybill")
 
@@ -351,11 +353,12 @@ class TestEWaybill(IntegrationTestCase):
             values=e_waybill_close_data.get("values"),
         )
 
-        # e-Waybill Log marked closed
+        # e-Waybill Log marked closed, and cached data invalidated so a later
+        # fetch refreshes instead of serving the pre-closure copy
         self.assertTrue(
             frappe.get_doc(
                 "e-Waybill Log",
-                {"reference_name": si.name, "is_closed": 1},
+                {"reference_name": si.name, "is_closed": 1, "is_latest_data": 0},
             )
         )
 
@@ -367,10 +370,13 @@ class TestEWaybill(IntegrationTestCase):
     @responses.activate
     def test_get_e_waybill_close_data(self):
         """Check if e-waybill closure request data is generated correctly"""
-        si = self.create_sales_invoice_for("goods_item_with_ewaybill")
-        self._generate_e_waybill(si.name)
+        si = self.create_sales_invoice_for("goods_item_for_closure")
+        self._generate_e_waybill(si.name, test_data=self.e_waybill_test_data.goods_item_for_closure)
 
         doc = load_doc("Sales Invoice", si.name, "submit")
+        # this bill is open; pin the precondition so the test is independent of
+        # whether an earlier test closed the same (shared) e-Waybill number
+        doc.get_onload().get("e_waybill_info", {})["is_closed"] = 0
         e_waybill_close_data = self.e_waybill_test_data.get("close_e_waybill")
 
         self.assertDictEqual(
@@ -386,18 +392,10 @@ class TestEWaybill(IntegrationTestCase):
         si = self.create_sales_invoice_for("goods_item_with_ewaybill")
         self._generate_e_waybill(si.name)
 
-        e_waybill_close_data = self.e_waybill_test_data.get("close_e_waybill")
-        self._mock_e_waybill_response(
-            data=e_waybill_close_data.get("response_data"),
-            match_list=[
-                matchers.query_string_matcher(e_waybill_close_data.get("params")),
-                matchers.json_params_matcher(e_waybill_close_data.get("request_data")),
-            ],
-        )
-        close_e_waybill(doctype=si.doctype, docname=si.name, values=e_waybill_close_data.get("values"))
-
-        # Reload so onload e_waybill_info reflects is_closed = 1
         doc = load_doc("Sales Invoice", si.name, "submit")
+
+        # mark as closed via the onload flag the validation path reads
+        doc.get_onload().get("e_waybill_info", {})["is_closed"] = 1
         e_waybill_data = EWaybillData(doc)
 
         # Every modify path builds its payload through the shared closed-state guard
@@ -414,17 +412,31 @@ class TestEWaybill(IntegrationTestCase):
                 frappe._dict(),
             )
 
-    @change_settings("GST Settings", {"sandbox_mode": 0})
-    def test_e_waybill_closure_availability_gate(self):
-        """Closure (CLSEWB) is gated: sandbox now, production only from the NIC
-        rollout date (E_WAYBILL_CLOSURE_AVAILABLE_FROM)."""
-        settings = frappe.get_cached_doc("GST Settings")
+        # the schedule-extension path validates separately and must also be blocked
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"already closed"),
+            validate_data_before_schedule,
+            doc,
+            frappe._dict(),
+        )
 
-        # Production, before rollout -> disabled; the whitelisted entrypoint
-        # fails fast (before loading the doc or calling the API).
-        before = add_to_date(E_WAYBILL_CLOSURE_AVAILABLE_FROM, days=-1, as_datetime=True)
+    def test_e_waybill_changes_applicable_gate(self):
+        before = add_to_date(E_WAYBILL_CHANGES_APPLICABLE_DATE, days=-1, as_datetime=True)
+        after = add_to_date(E_WAYBILL_CHANGES_APPLICABLE_DATE, days=1, as_datetime=True)
+
         with time_machine.travel(before, tick=False):
-            self.assertFalse(is_e_waybill_closure_enabled(settings))
+            self.assertFalse(is_e_waybill_changes_applicable(frappe._dict(sandbox_mode=0)))
+            self.assertTrue(is_e_waybill_changes_applicable(frappe._dict(sandbox_mode=1)))
+
+        with time_machine.travel(after, tick=False):
+            self.assertTrue(is_e_waybill_changes_applicable(frappe._dict(sandbox_mode=0)))
+
+    @change_settings("GST Settings", {"sandbox_mode": 0})
+    def test_close_e_waybill_blocked_before_rollout_in_production(self):
+        """In production, close_e_waybill fails fast before the NIC rollout date
+        (before the doc is loaded or any API call is made)."""
+        with time_machine.travel(get_datetime("2026-06-13"), tick=False):
             self.assertRaisesRegex(
                 frappe.exceptions.ValidationError,
                 re.compile(r"Closure API will be available from"),
@@ -433,19 +445,6 @@ class TestEWaybill(IntegrationTestCase):
                 docname="NON-EXISTENT",
                 values={},
             )
-
-        # Production, on/after rollout -> enabled
-        after = add_to_date(E_WAYBILL_CLOSURE_AVAILABLE_FROM, days=1, as_datetime=True)
-        with time_machine.travel(after, tick=False):
-            self.assertTrue(is_e_waybill_closure_enabled(settings))
-
-    @change_settings("GST Settings", {"sandbox_mode": 1})
-    def test_e_waybill_closure_enabled_in_sandbox(self):
-        """Sandbox mode enables closure even before the rollout date."""
-        settings = frappe.get_cached_doc("GST Settings")
-        before = add_to_date(E_WAYBILL_CLOSURE_AVAILABLE_FROM, days=-1, as_datetime=True)
-        with time_machine.travel(before, tick=False):
-            self.assertTrue(is_e_waybill_closure_enabled(settings))
 
     @change_settings(
         "GST Settings",
@@ -1734,6 +1733,10 @@ def update_dates_for_test_data(test_data):
 
         if "docDate" in response_request:
             response_request.update({"docDate": today_date})
+
+        # closure date is system-set to today (get_data_for_closure uses getdate())
+        if "closureDate" in response_request:
+            response_request.update({"closureDate": today_date})
 
         if key == "get_e_waybill":
             for v in response_result.get("VehiclListDetails"):

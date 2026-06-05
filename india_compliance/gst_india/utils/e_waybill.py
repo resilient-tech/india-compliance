@@ -39,7 +39,7 @@ from india_compliance.gst_india.constants.e_waybill import (
     BUYING_DOCTYPES,
     CANCEL_REASON_CODES,
     CONSIGNMENT_STATUS,
-    E_WAYBILL_CLOSURE_AVAILABLE_FROM,
+    E_WAYBILL_CHANGES_APPLICABLE_DATE,
     EXTEND_VALIDITY_REASON_CODES,
     ITEM_LIMIT,
     PERMITTED_DOCTYPES,
@@ -430,32 +430,24 @@ def log_and_process_e_waybill_cancellation(doc, values, result):
     doc.db_set(data)
 
 
-def is_e_waybill_closure_enabled(settings=None, throw=False):
-    """e-Waybill Closure (CLSEWB) is live in sandbox now; in production only from
-    E_WAYBILL_CLOSURE_AVAILABLE_FROM (NIC rollout date)."""
+def is_e_waybill_changes_applicable(settings=None):
+    # changes deployed in sandbox mode and will be deployed in production on 15th June 2026.
     if not settings:
         settings = frappe.get_cached_doc("GST Settings")
 
-    available = settings.sandbox_mode or getdate() >= E_WAYBILL_CLOSURE_AVAILABLE_FROM
-
-    if available:
-        return True
-
-    if throw:
-        frappe.throw(
-            _("e-Waybill Closure API will be available from {0}.").format(
-                frappe.bold(format_date(E_WAYBILL_CLOSURE_AVAILABLE_FROM))
-            )
-        )
-
-    return False
+    return settings.sandbox_mode or getdate() >= E_WAYBILL_CHANGES_APPLICABLE_DATE
 
 
 # nosemgrep: frappe-semgrep-rules.rules.security.missing-argument-type-hint
 @frappe.whitelist()
 def close_e_waybill(*, doctype: str, docname: str, values: str | dict | frappe._dict):
     """Permission check not required as load_doc checks permissions."""
-    is_e_waybill_closure_enabled(throw=True)
+    if not is_e_waybill_changes_applicable():
+        frappe.throw(
+            _("e-Waybill Closure API will be available from {0}.").format(
+                frappe.bold(format_date(E_WAYBILL_CHANGES_APPLICABLE_DATE))
+            )
+        )
 
     doc = load_doc(doctype, docname, "submit")
     values = frappe.parse_json(values)
@@ -485,6 +477,10 @@ def log_and_process_e_waybill_closure(doc, values, result):
         {
             "name": doc.ewaybill,
             "is_closed": 1,
+            # closure changes the remote state; invalidate cached data so the
+            # next fetch_e_waybill_data refreshes the data/PDF instead of
+            # serving the pre-closure copy.
+            "is_latest_data": 0,
             "closure_remark": values.remarks,
             "closed_on": parse_datetime(result.ewbClosureDate, day_first=True),
         },
@@ -771,6 +767,7 @@ def validate_data_before_schedule(doc, values):
     e_waybill_data = EWaybillData(doc)
 
     e_waybill_data.validate_if_e_waybill_is_set()
+    e_waybill_data.validate_if_e_waybill_is_not_closed()
     e_waybill_data.validate_mode_of_transport()
     e_waybill_data.validate_transit_type(values)
     e_waybill_data.validate_remaining_distance(values)
@@ -1351,9 +1348,6 @@ class EWaybillData(GSTTransactionData):
     def get_data_for_closure(self, values):
         self.validate_if_e_waybill_is_set()
         self.validate_if_e_waybill_is_not_closed()
-        # The following are validated by NIC (surfaced via ERRORS_MAP), so no
-        # local pre-check: closureDate >= e-Waybill date, and Part-B must exist
-        # Eroor will be raised from API no validation needed.
 
         return {
             "ewbNo": self.doc.ewaybill,
