@@ -845,7 +845,7 @@ def bulk_create_isd_invoices(distribution_heads: list | str, source_names: list 
     invalid_invoices = []
 
     for group_pi_by_billing_address in by_billing.values():
-        for row in distribution_heads[:-1]:
+        for row in distribution_heads:
             turnover_amount = row.get("turnover_amount") or 0
             if not turnover_amount:
                 continue
