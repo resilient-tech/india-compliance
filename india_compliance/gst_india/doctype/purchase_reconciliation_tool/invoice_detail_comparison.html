@@ -86,6 +86,13 @@
 				<td>{{ inward_supply.taxable_value || '-' }}</td>
 				<td>{{ purchase.taxable_value || '-' }}</td>
 			</tr>
+			{% if inward_supply.reason_itc_unavailability %}
+			<tr>
+				<th>Reason for ITC Unavailability</th>
+				<td data-label="reason_itc_unavailability">{{ inward_supply.reason_itc_unavailability || '-' }}</td>
+				<td data-label="reason_itc_unavailability">-</td>
+			</tr>
+			{% endif %}
 			{% if inward_supply.gstr_1_filled != null || inward_supply.gstr_3b_filled != null %}
 			<tr>
 				<th>GSTR-1 Filed</th>

@@ -620,19 +620,6 @@ class PurchaseReconciliationTool extends reconciliation.reconciliation_tabs {
                 align: "left",
             },
             {
-                label: "Reason for ITC <br>Unavailability",
-                fieldname: "reason_itc_unavailability",
-                width: 180,
-                align: "left",
-            },
-            {
-                label: "GSTR-1 Filed",
-                fieldname: "gstr_1_filled",
-                width: 100,
-                align: "center",
-                _value: (...args) => get_filed_indicator(args[0]),
-            },
-            {
                 label: "IRN",
                 fieldname: "irn_number",
                 width: 80,
@@ -1278,12 +1265,6 @@ function get_icon(value, column, data, icon) {
     return `<button class="btn ${icon}" data-name="${hash}">
                 <i class="fa fa-${icon}"></i>
             </button>`;
-}
-
-function get_filed_indicator(value) {
-    if (value == null) return "";
-    const color = value ? "green" : "red";
-    return `<span class="indicator ${color}">${value ? "Yes" : "No"}</span>`;
 }
 
 function get_irn_indicator(value, row) {
