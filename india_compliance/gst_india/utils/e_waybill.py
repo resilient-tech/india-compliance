@@ -13,6 +13,7 @@ from frappe.utils import (
     get_datetime_str,
     get_fullname,
     get_link_to_form,
+    getdate,
     random_string,
     sbool,
 )
@@ -29,7 +30,9 @@ from india_compliance.gst_india.constants import (
 from india_compliance.gst_india.constants.e_waybill import (
     ADDRESS_FIELDS,
     CANCEL_REASON_CODES,
+    COMBINATION_TRANSPORT_TYPES,
     CONSIGNMENT_STATUS,
+    E_WAYBILL_CHANGE_DATE,
     EXTEND_VALIDITY_REASON_CODES,
     ITEM_LIMIT,
     PERMITTED_DOCTYPES,
@@ -1149,6 +1152,14 @@ def get_billing_shipping_address_map(doc):
 #######################################################################################
 
 
+def is_e_waybill_changes_applicable(settings=None):
+    # changes deployed in sandbox mode and will be deployed in production on 15th June 2026.
+    if not settings:
+        settings = frappe.get_cached_doc("GST Settings")
+
+    return settings.sandbox_mode or getdate() >= E_WAYBILL_CHANGE_DATE
+
+
 class EWaybillData(GSTTransactionData):
     def __init__(self, *args, **kwargs):
         self.for_json = kwargs.pop("for_json", False)
@@ -1618,12 +1629,19 @@ class EWaybillData(GSTTransactionData):
 =======
         self.bill_to.legal_name = to_party or self.bill_to.address_title
         self.bill_from.legal_name = from_party or self.bill_from.address_title
-        self.ship_to.legal_name = self.ship_to.address_title
 
+<<<<<<< HEAD
         if transaction_type not in (2, 4):
             self.ship_to.gstin = None
             self.ship_to.legal_name = None
 >>>>>>> 61d0027d (fix: add shipToGSTIN and shipToTradeName for e-waybill data and update tests)
+=======
+        self.ship_to.legal_name = (
+            self.bill_to.legal_name
+            if self.ship_to.gstin == self.bill_to.gstin
+            else self.ship_to.address_title
+        )
+>>>>>>> ddd32f23 (fix: implement change date for early release)
 
     def get_address_details(self, *args, **kwargs):
         address_details = super().get_address_details(*args, **kwargs)
@@ -1723,8 +1741,6 @@ class EWaybillData(GSTTransactionData):
             "actFromStateCode": self.ship_from.state_number,
             "toTrdName": self.bill_to.legal_name,
             "toGstin": self.bill_to.gstin,
-            "shipToGSTIN": self.ship_to.gstin,
-            "shipToTradeName": self.ship_to.legal_name,
             "toAddr1": self.ship_to.address_line1,
             "toAddr2": self.ship_to.address_line2,
             "toPlace": self.ship_to.city,
@@ -1754,6 +1770,17 @@ class EWaybillData(GSTTransactionData):
             "itemList": self.item_list,
             "mainHsnCode": self.transaction_details.main_hsn_code,
         }
+
+        if (
+            is_e_waybill_changes_applicable()
+            and self.transaction_details.transaction_type in COMBINATION_TRANSPORT_TYPES
+        ):
+            data.update(
+                {
+                    "shipToGSTIN": self.ship_to.gstin,
+                    "shipToTradeName": self.ship_to.legal_name,
+                }
+            )
 
         if self.for_json:
             for key, value in (
