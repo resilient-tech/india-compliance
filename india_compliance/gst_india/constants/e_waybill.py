@@ -3,7 +3,7 @@
 
 from frappe.utils import getdate
 
-E_WAYBILL_CHANGE_DATE = getdate("2026-06-15")
+E_WAYBILL_CHANGES_APPLICABLE_DATE = getdate("2026-06-15")
 
 selling_address = {
     "bill_from": "company_address",

@@ -40,7 +40,7 @@ from india_compliance.gst_india.constants.e_waybill import (
     CANCEL_REASON_CODES,
     COMBINATION_TRANSPORT_TYPES,
     CONSIGNMENT_STATUS,
-    E_WAYBILL_CHANGE_DATE,
+    E_WAYBILL_CHANGES_APPLICABLE_DATE,
     EXTEND_VALIDITY_REASON_CODES,
     ITEM_LIMIT,
     PERMITTED_DOCTYPES,
@@ -1235,7 +1235,7 @@ def is_e_waybill_changes_applicable(settings=None):
     if not settings:
         settings = frappe.get_cached_doc("GST Settings")
 
-    return settings.sandbox_mode or getdate() >= E_WAYBILL_CHANGE_DATE
+    return settings.sandbox_mode or getdate() >= E_WAYBILL_CHANGES_APPLICABLE_DATE
 
 
 class EWaybillData(GSTTransactionData):
