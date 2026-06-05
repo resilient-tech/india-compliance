@@ -15,7 +15,7 @@ const TRANSACTION_DOCTYPES = [
 
 const SUBCONTRACTING_DOCTYPES = ["Stock Entry", "Subcontracting Order", "Subcontracting Receipt"];
 
-const ADDRESS_EVENT_FIELDS = new Set(["customer_address", "shipping_address_name", "supplier_address"]);
+const POST_SUBMIT_GST_FIELDS = ["gst_category", "place_of_supply", "billing_address_gstin", "supplier_gstin"];
 
 for (const doctype of TRANSACTION_DOCTYPES) {
     fetch_gst_details(doctype);
@@ -65,8 +65,6 @@ async function update_gst_details(frm, event) {
         (["place_of_supply", "bill_to_address"].includes(event) && frm.__updating_gst_details)
     )
         return;
-
-    if (frm.doc.docstatus === 1 && ADDRESS_EVENT_FIELDS.has(event)) return;
 
     const party_type = india_compliance.get_party_type(frm.doc.doctype).toLowerCase();
     const party_fieldname = frm.doc.doctype === "Quotation" ? "party_name" : party_type;
@@ -158,8 +156,15 @@ india_compliance.fetch_and_update_gst_details = function (frm, args, method) {
         async callback(r) {
             if (!r.message) return;
 
+            let gst_details = r.message;
+            if (frm.doc.docstatus === 1) {
+                gst_details = Object.fromEntries(
+                    Object.entries(gst_details).filter(([field]) => POST_SUBMIT_GST_FIELDS.includes(field)),
+                );
+            }
+
             frm.__updating_gst_details = true;
-            await frm.set_value(r.message);
+            await frm.set_value(gst_details);
             frm.__updating_gst_details = false;
         },
     });

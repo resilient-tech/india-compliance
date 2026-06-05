@@ -205,8 +205,6 @@ SALES_ADDRESS_FIELDS = (
     "address_display",
     "shipping_address_name",
     "shipping_address",
-    "company_address",
-    "company_address_display",
 )
 
 PURCHASE_ADDRESS_FIELDS = (
@@ -214,18 +212,10 @@ PURCHASE_ADDRESS_FIELDS = (
     "address_display",
     "shipping_address",
     "shipping_address_display",
-    "billing_address",
-    "billing_address_display",
 )
 
 ADDRESS_FIELDS_BY_DOCTYPE = {
-    "Quotation": SALES_ADDRESS_FIELDS,
-    "Sales Order": SALES_ADDRESS_FIELDS,
-    "Delivery Note": SALES_ADDRESS_FIELDS,
     "Sales Invoice": SALES_ADDRESS_FIELDS,
-    "Supplier Quotation": PURCHASE_ADDRESS_FIELDS,
-    "Purchase Order": PURCHASE_ADDRESS_FIELDS,
-    "Purchase Receipt": PURCHASE_ADDRESS_FIELDS,
     "Purchase Invoice": PURCHASE_ADDRESS_FIELDS,
 }
 
@@ -238,7 +228,7 @@ ADDRESS_ALLOW_ON_SUBMIT_PROPERTIES = [
         "value": "1",
     }
     for doctype, fieldnames in ADDRESS_FIELDS_BY_DOCTYPE.items()
-    for fieldname in fieldnames
+    for fieldname in (*fieldnames, "place_of_supply")
 ]
 
 

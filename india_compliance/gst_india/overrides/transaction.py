@@ -1856,29 +1856,27 @@ def before_update_after_submit(doc, method=None):
     update_gst_details(doc)
 
 
-# Map of address Link field -> (gstin_field, gst_category_field) on transaction docs.
-# Mirrors fetch_from definitions in custom_fields.py for sales and purchase doctypes.
 ADDRESS_DEPENDENT_FIELDS = {
-    # Sales doctypes
     "customer_address": ("billing_address_gstin", "gst_category"),
-    "company_address": ("company_gstin", None),
-    # Purchase doctypes
     "supplier_address": ("supplier_gstin", "gst_category"),
-    "billing_address": ("company_gstin", None),
 }
+
+ADDRESS_FIELDS_ON_SUBMIT = (
+    "customer_address",
+    "shipping_address_name",
+    "supplier_address",
+    "shipping_address",
+)
 
 
 def sync_address_dependent_fields_on_submit(doc, method=None):
-    """
-    On update-after-submit, address Link fields are editable but their dependent
-    GSTIN / GST Category fields are not (no allow_on_submit, to prevent direct
-    edits). Re-fetch those fields from the new Address when the link changes.
+    """Recompute Place of Supply and block a party-address / place_of_supply edit
+    after submission if it would change the applicable GST taxes (e.g. intra <->
+    inter-state). company_gstin is never touched.
 
-    Runs after validate_update_after_submit (which reverts the dependent fields
-    to db values), so setting them again here persists the new values.
-
-    Only syncs when the GST state of the address is unchanged — a cross-state
-    change would affect place of supply and requires a full re-validation.
+    Runs on before_update_after_submit, before fetch_from re-fetches the address
+    fields, so the dependent GSTIN / GST Category are synced here first to feed
+    the tax comparison with the new address values.
     """
     if doc.docstatus != 1 or ignore_gst_validations(doc):
         return
@@ -1887,57 +1885,66 @@ def sync_address_dependent_fields_on_submit(doc, method=None):
     if not doc_before:
         return
 
-    applicable_fields = [
-        (address_field, gstin_field, category_field)
-        for address_field, (gstin_field, category_field) in ADDRESS_DEPENDENT_FIELDS.items()
-        if doc.meta.has_field(address_field) and doc.meta.has_field(gstin_field)
-    ]
-    if not applicable_fields:
+    address_changed = any(
+        doc.meta.has_field(field) and doc.has_value_changed(field) for field in ADDRESS_FIELDS_ON_SUBMIT
+    )
+    place_of_supply_changed = doc.meta.has_field("place_of_supply") and doc.has_value_changed(
+        "place_of_supply"
+    )
+
+    if not address_changed and not place_of_supply_changed:
         return
 
-    changed_fields = []
-    all_addresses = set()
-    for address_field, gstin_field, category_field in applicable_fields:
-        if not doc.has_value_changed(address_field):
+    # On address change, Place of Supply follows the address; otherwise the edited value stands.
+    old_gst_details = get_gst_details(
+        doc_before.as_dict(), doc.doctype, doc.company, update_place_of_supply=address_changed
+    )
+
+    if address_changed:
+        sync_gst_details_from_address(doc)
+
+    new_gst_details = get_gst_details(
+        doc.as_dict(), doc.doctype, doc.company, update_place_of_supply=address_changed
+    )
+
+    if get_applicable_taxes(old_gst_details) != get_applicable_taxes(new_gst_details):
+        frappe.throw(
+            _(
+                "This change would alter the GST taxes applicable to the document"
+                " (for example by switching between intra-state and inter-state"
+                " supply), which is not allowed after submission."
+                "<br>Please cancel and amend the document instead."
+            ),
+            title=_("Cannot Update After Submit"),
+        )
+
+    if address_changed:
+        doc.place_of_supply = new_gst_details.get("place_of_supply") or doc.place_of_supply
+
+
+def sync_gst_details_from_address(doc):
+    """Set party GSTIN / GST Category from the new Address so the tax comparison
+    uses the new values (Frappe's fetch_from re-fetches them later, in validation)."""
+    for address_field, (gstin_field, category_field) in ADDRESS_DEPENDENT_FIELDS.items():
+        if not (doc.meta.has_field(address_field) and doc.has_value_changed(address_field)):
             continue
 
-        new_address = doc.get(address_field) or ""
-        old_address = doc_before.get(address_field) or ""
+        address = doc.get(address_field)
+        gstin, gst_category = (
+            frappe.db.get_value("Address", address, ("gstin", "gst_category")) if address else (None, None)
+        )
 
-        changed_fields.append((gstin_field, category_field, new_address, old_address))
-        if new_address:
-            all_addresses.add(new_address)
-        if old_address:
-            all_addresses.add(old_address)
+        if doc.meta.has_field(gstin_field):
+            doc.set(gstin_field, gstin or "")
 
-    if not changed_fields:
-        return
-
-    address_map = {}
-    if all_addresses:
-        address_map = {
-            row.name: row
-            for row in frappe.db.get_all(
-                "Address",
-                filters={"name": ("in", list(all_addresses))},
-                fields=["name", "gstin", "gst_category", "gst_state_number"],
-            )
-        }
-
-    for gstin_field, category_field, new_address, old_address in changed_fields:
-        new_addr = address_map.get(new_address) or {}
-        old_addr = address_map.get(old_address) or {}
-
-        new_state = new_addr.get("gst_state_number") or ""
-        old_state = old_addr.get("gst_state_number") or ""
-
-        # Cross-state change affects place of supply; skip — user must amend.
-        if old_state and new_state and old_state != new_state:
-            continue
-
-        doc.set(gstin_field, new_addr.get("gstin") or "")
         if category_field and doc.meta.has_field(category_field):
-            doc.set(category_field, new_addr.get("gst_category") or "")
+            doc.set(category_field, gst_category or "")
+
+
+def get_applicable_taxes(gst_details):
+    """Tax template + rows resolved by get_gst_details, compared before/after an
+    edit to detect whether the taxes would change."""
+    return (gst_details.get("taxes_and_charges") or "", gst_details.get("taxes") or [])
 
 
 def set_ecommerce_supply_type(doc):

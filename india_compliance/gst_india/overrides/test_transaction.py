@@ -258,54 +258,100 @@ class TestTransaction(IntegrationTestCase):
         doc.save()
 
     def test_address_fields_allow_on_submit(self):
-        """Address fields must be editable after submission so GSTIN/address can be corrected."""
+        """Only SI/PI party fields + place_of_supply are editable after submit;
+        company address stays locked so company_gstin can't change."""
         meta = frappe.get_meta(self.doctype)
-        expected_fields = ADDRESS_FIELDS_BY_DOCTYPE[self.doctype]
 
-        for fieldname in expected_fields:
+        if self.doctype not in ADDRESS_FIELDS_BY_DOCTYPE:
+            party_field = "customer_address" if self.is_sales_doctype else "supplier_address"
+            field = meta.get_field(party_field)
+            if field:
+                self.assertFalse(
+                    field.allow_on_submit,
+                    msg=f"{self.doctype}.{party_field} should not be editable after submit by default",
+                )
+            return
+
+        for fieldname in (*ADDRESS_FIELDS_BY_DOCTYPE[self.doctype], "place_of_supply"):
             field = meta.get_field(fieldname)
-            self.assertIsNotNone(
-                field,
-                msg=f"{self.doctype}.{fieldname} listed in ADDRESS_FIELDS_BY_DOCTYPE but missing on doctype",
-            )
+            self.assertIsNotNone(field, msg=f"{self.doctype}.{fieldname} missing on doctype")
             self.assertTrue(
                 field.allow_on_submit,
                 msg=f"{self.doctype}.{fieldname} must have allow_on_submit=1",
             )
 
+        company_address_field = "company_address" if self.is_sales_doctype else "billing_address"
+        field = meta.get_field(company_address_field)
+        if field:
+            self.assertFalse(
+                field.allow_on_submit,
+                msg=f"{self.doctype}.{company_address_field} must stay locked so company_gstin can't change",
+            )
+
     def test_sync_address_dependent_fields_on_submit(self):
-        """When the address Link changes on a submitted doc, the dependent
-        GSTIN and gst_category fields (which intentionally lack allow_on_submit
-        to block direct edits) must be re-fetched from the new Address so
-        they stay consistent with the address."""
+        """A tax-neutral address change after submit is allowed: party GSTIN /
+        GST Category are re-synced, company GSTIN unchanged. Same-state taxable
+        category change (UIN Holders ~ Registered Regular) keeps taxes unchanged."""
         if self.doctype not in ADDRESS_FIELDS_BY_DOCTYPE:
             return
 
         doc = create_transaction(**self.transaction_details)
-        if doc.docstatus != 1:
-            self.skipTest(f"{self.doctype} does not support submission")
 
         if self.is_sales_doctype:
             address_field = "customer_address"
             gstin_field = "billing_address_gstin"
             new_address = "_Test Registered Customer-Billing-1"
             expected_gstin = "24AANCA4892J1Z8"
-            expected_category = "SEZ"
         else:
             address_field = "supplier_address"
             gstin_field = "supplier_gstin"
             new_address = "_Test Registered Supplier-Billing-2"
             expected_gstin = "24AABCR6898M1ZN"
-            expected_category = "SEZ"
 
         doc.reload()
         self.assertNotEqual(doc.get(address_field), new_address)
 
-        doc.set(address_field, new_address)
-        sync_address_dependent_fields_on_submit(doc)
+        # Same state + taxable category => taxes unchanged, so the edit is allowed.
+        saved_address_category = frappe.db.get_value("Address", new_address, "gst_category")
+        frappe.db.set_value("Address", new_address, "gst_category", "UIN Holders")
+
+        try:
+            doc.load_doc_before_save()
+            doc.set(address_field, new_address)
+            sync_address_dependent_fields_on_submit(doc)
+        finally:
+            frappe.db.set_value("Address", new_address, "gst_category", saved_address_category)
 
         self.assertEqual(doc.get(gstin_field), expected_gstin)
-        self.assertEqual(doc.get("gst_category"), expected_category)
+        self.assertEqual(doc.get("gst_category"), "UIN Holders")
+        # company GSTIN must never change after submission
+        self.assertEqual(doc.company_gstin, doc.get_doc_before_save().company_gstin)
+
+    def test_block_tax_changing_address_after_submit(self):
+        """An address change after submit that would change the taxes is blocked."""
+        if self.doctype not in ADDRESS_FIELDS_BY_DOCTYPE:
+            return
+
+        doc = create_transaction(**self.transaction_details)
+
+        if self.is_sales_doctype:
+            # different state (29): intra -> inter-state
+            address_field = "customer_address"
+            new_address = "_Test Registered Customer-Billing-3"
+        else:
+            # Overseas supplier: no GST charged
+            address_field = "supplier_address"
+            new_address = "_Test Registered Supplier-Billing-1"
+
+        doc.reload()
+        doc.load_doc_before_save()
+        doc.set(address_field, new_address)
+
+        self.assertRaises(
+            frappe.exceptions.ValidationError,
+            sync_address_dependent_fields_on_submit,
+            doc,
+        )
 
     def test_validate_mandatory_gst_category(self):
         doc = create_transaction(**self.transaction_details, do_not_submit=True)
