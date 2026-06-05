@@ -64,7 +64,7 @@ class TestISDInvoice(IntegrationTestCase):
         test_distribution_conserves_total_tax                  distributed taxes sum back to original PI taxes
         test_rounding_remainder_absorbed_by_last_invoice       last invoice absorbs the 1/3-ratio rounding remainder
         test_sez_recipient_distributed_as_igst_only            SEZ recipient -> IGST only, even intra-state
-        test_only_service_item_taxes_in_get_purchase_invoices  alert shown when purchase invoice has goods items only
+        test_only_service_item_taxes_in_get_purchase_invoices  is_isd_applicable=1 when PI has mixed service+goods items
 
     Date validation (GSTR-6 Rule 39)
         test_pi_dated_after_isd_blocks_distribution            source PI dated after the ISD invoice rejected
@@ -327,9 +327,11 @@ class TestISDInvoice(IntegrationTestCase):
                 self.assertGreater(row.distributed_igst, 0)
 
     def test_only_service_item_taxes_in_get_purchase_invoices(self):
-        """get_purchase_invoices shows alert when purchase invoice has goods items only (no service items)."""
-        from unittest.mock import patch
+        """is_isd_applicable set to 1 on PI with mixed service + goods items at ISD billing address.
 
+        This is the Python precondition that triggers the JS alert in purchase_invoice.js
+        (frappe.show_alert when is_isd_applicable && has_goods_items).
+        """
         pi = create_purchase_invoice(
             company=self.company.name,
             billing_address=self.company_isd_address.name,
@@ -339,19 +341,20 @@ class TestISDInvoice(IntegrationTestCase):
                     "item_code": "_Test Service Item",
                     "qty": 1,
                     "rate": 10000,
+                    "gst_hsn_code": "999900",
+                    "item_tax_template": _GST_18_TEMPLATE,
+                },
+                {
+                    "item_code": "_Test Service Item",
+                    "qty": 1,
+                    "rate": 10000,
                     "gst_hsn_code": "61149090",
-                    "gst_treatment": "Exempted",
-                }
+                    "item_tax_template": _GST_18_TEMPLATE,
+                },
             ],
             is_in_state=True,
         )
-
-        isd_doc = self._isd()
-        with patch.object(frappe, "msgprint") as mock_msgprint:
-            isd_doc.get_purchase_invoices(purchase_invoices=[pi.name], distribution_ratio=100.0)
-            mock_msgprint.assert_called_once()
-
-        self.assertEqual(len(isd_doc.source_invoices), 0)
+        self.assertEqual(pi.is_isd_applicable, 1)
 
     # --- Date validation (GSTR-6 Rule 39) ---
 

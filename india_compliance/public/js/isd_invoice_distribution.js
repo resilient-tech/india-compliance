@@ -281,25 +281,23 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
     dialog.show();
     render_summary({});
 
-    frappe.db
-        .get_list("Purchase Invoice", {
-            filters: { name: ["in", source_names] },
-            fields: ["name", "total_tax", "isd_credit_distributed_percent"],
-            limit_page_length: source_names.length || 0,
-        })
-        .then((rows) => {
+    frappe.call({
+        method: "india_compliance.gst_india.doctype.isd_invoice.isd_invoice.get_purchase_invoices_distribution_summary",
+        args: { purchase_invoices: source_names },
+        callback({ message: rows = [] }) {
             const p = (v) => parseFloat(v) || 0;
             const dist_map = Object.fromEntries(
                 rows.map((x) => [
-                    x.name,
+                    x.purchase_invoice,
                     {
                         total_tax: p(x.total_tax),
-                        total_distributed: (p(x.total_tax) * p(x.isd_credit_distributed_percent)) / 100,
+                        total_distributed: p(x.total_distributed),
                     },
                 ]),
             );
             render_summary(dist_map);
-        });
+        },
+    });
 
     function fetch_and_prefill_grid() {
         frappe.call({

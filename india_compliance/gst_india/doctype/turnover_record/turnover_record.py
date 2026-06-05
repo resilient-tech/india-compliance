@@ -2,17 +2,18 @@
 # For license information, please see license.txt
 
 import frappe
+from erpnext.accounts.utils import get_fiscal_year
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.meta import get_field_precision
-from frappe.utils import flt
+from frappe.utils import flt, nowdate
 
 from india_compliance.gst_india.utils import get_state, validate_gstin
 
 
 class TurnoverRecord(Document):
     def autoname(self):
-        self.name = f"{self.fiscal_year}-{self.gst_state}"
+        self.name = f"{str(self.from_date)[:-2]}-{str(self.to_date)[:-2]}-{self.gst_state}"
 
     def validate(self):
         validate_gstin(self.gstin)
@@ -24,13 +25,14 @@ class TurnoverRecord(Document):
 def upsert_turnover_record(
     gstin,
     gst_state,
-    fiscal_year,
     amount,
 ):
+    _, from_date, to_date = get_fiscal_year(nowdate())
+
     amount_precision = get_field_precision(frappe.get_meta("Turnover Record").get_field("amount"))
     amount = flt(amount, amount_precision)
 
-    filters = {"fiscal_year": fiscal_year}
+    filters = {"from_date": from_date, "to_date": to_date}
     or_filters = {"gst_state": gst_state, "gstin": gstin or ""}
 
     existing = frappe.db.get_list(
@@ -43,7 +45,8 @@ def upsert_turnover_record(
             frappe.db.set_value("Turnover Record", existing, "amount", amount)
         else:
             doc = frappe.new_doc("Turnover Record")
-            doc.fiscal_year = fiscal_year
+            doc.from_date = from_date
+            doc.to_date = to_date
             doc.gstin = gstin
             doc.gst_state = gst_state
             doc.amount = amount
@@ -52,6 +55,6 @@ def upsert_turnover_record(
         frappe.log_error(
             title=_("Turnover Record upsert failed"),
             message=_(
-                "Failed to upsert Turnover Record for fiscal_year={0}, gst_state={1}, gstin={2}"
-            ).format(fiscal_year, gst_state, gstin),
+                "Failed to upsert Turnover Record for from_date={0}, to_date={1}, gst_state={2}, gstin={3}"
+            ).format(from_date, to_date, gst_state, gstin),
         )

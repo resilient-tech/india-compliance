@@ -2,6 +2,12 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Turnover Record", {
+    setup(frm) {
+        if (frm.is_new()) {
+            _set_default_fiscal_year_dates(frm);
+        }
+    },
+
     refresh(frm) {
         india_compliance.set_state_options(frm);
     },
@@ -15,4 +21,23 @@ frappe.ui.form.on("Turnover Record", {
     country(frm) {
         india_compliance.set_state_options(frm);
     },
+
+    from_date(frm) {
+        if (!frm.doc.from_date) return;
+        const from_year = parseInt(frm.doc.from_date.split("-")[0]);
+        frm.set_value("to_date", `${from_year + 1}-03-31`);
+    },
+
+    to_date(frm) {
+        if (!frm.doc.to_date) return;
+        const to_year = parseInt(frm.doc.to_date.split("-")[0]);
+        frm.set_value("from_date", `${to_year - 1}-04-01`);
+    },
 });
+
+function _set_default_fiscal_year_dates(frm) {
+    const fy = erpnext.utils.get_fiscal_year(frappe.datetime.get_today(), true);
+    if (!fy) return;
+    frm.set_value("from_date", fy[1]);
+    frm.set_value("to_date", fy[2]);
+}

@@ -6,22 +6,26 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "fiscal_year",
+  "from_date",
+  "to_date",
   "column_break_xbsm",
   "amount",
   "section_break_kryb",
-    "country",
   "gstin",
   "gst_state",
   "column_break_stmn"
  ],
  "fields": [
   {
-   "fieldname": "fiscal_year",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Fiscal Year",
-   "options": "Fiscal Year",
+   "fieldname": "from_date",
+   "fieldtype": "Date",
+   "label": "From Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "to_date",
+   "fieldtype": "Date",
+   "label": "To Date",
    "reqd": 1
   },
   {
@@ -35,14 +39,6 @@
    "fieldname": "section_break_kryb",
    "fieldtype": "Section Break"
   },
-    {
-     "default": "India",
-     "fieldname": "country",
-     "fieldtype": "Data",
-     "hidden": 1,
-     "label": "Country",
-     "read_only": 1
-    },
   {
    "fieldname": "column_break_stmn",
    "fieldtype": "Column Break"
@@ -51,7 +47,8 @@
    "fieldname": "gst_state",
    "fieldtype": "Select",
    "label": "GST State",
-   "mandatory_depends_on": "eval: doc.gst_category == 'Unregistered'"
+   "mandatory_depends_on": "eval: doc.gst_category == 'Unregistered'",
+   "options": "\nAndaman and Nicobar Islands\nAndhra Pradesh\nArunachal Pradesh\nAssam\nBihar\nChandigarh\nChhattisgarh\nDadra and Nagar Haveli and Daman and Diu\nDelhi\nGoa\nGujarat\nHaryana\nHimachal Pradesh\nJammu and Kashmir\nJharkhand\nKarnataka\nKerala\nLadakh\nLakshadweep Islands\nMadhya Pradesh\nMaharashtra\nManipur\nMeghalaya\nMizoram\nNagaland\nOdisha\nOther Countries\nOther Territory\nPuducherry\nPunjab\nRajasthan\nSikkim\nTamil Nadu\nTelangana\nTripura\nUttar Pradesh\nUttarakhand\nWest Bengal"
   },
   {
    "fieldname": "column_break_xbsm",
@@ -66,7 +63,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-02 11:52:21.372466",
+ "modified": "2026-06-05 17:06:18.241912",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Turnover Record",
