@@ -9,8 +9,10 @@ import frappe
 from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
     get_accounting_dimensions,
 )
+from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_entries
 from erpnext.accounts.party import get_party_account
 from erpnext.accounts.utils import get_fiscal_year
+from erpnext.controllers.accounts_controller import AccountsController
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
@@ -40,6 +42,12 @@ from india_compliance.gst_india.utils.isd import (
 
 
 class ISDInvoice(Document):
+    get_gl_dict = AccountsController.get_gl_dict
+    get_value_in_transaction_currency = AccountsController.get_value_in_transaction_currency
+    get_voucher_subtype = AccountsController.get_voucher_subtype
+    company_currency = AccountsController.company_currency
+    validate_account_currency = AccountsController.validate_account_currency
+
     def before_validate(self):
         self.set_taxes_and_totals()
         self.set_pos_from_gstin()
@@ -52,6 +60,7 @@ class ISDInvoice(Document):
         self.validate_duplication()
         self.validate_inter_company_transaction()
         self.validate_distribution_limits()
+        # TODO: do not allow two addresses with same pos
         # TODO: validate that purchase invoice is of the given company only. if not mentioned then its mandatory to add acknowlege that
 
     def set_taxes_and_totals(self):
@@ -292,10 +301,85 @@ class ISDInvoice(Document):
 
     def on_submit(self):
         self._sync_purchase_invoice_distribution()
-        # TODO: add gl entry
+        make_gl_entries(self.get_gl_entries())
 
     def on_cancel(self):
         self._sync_purchase_invoice_distribution()
+        self.ignore_linked_doctypes = ("GL Entry",)
+        make_reverse_gl_entries(voucher_type=self.doctype, voucher_no=self.name)
+
+    # TODO: breaking when credit flow is distribution and party account is creditors. should we fix the code or ux
+    def get_gl_entries(self):
+        gl_entries = []
+        _party = self.party_gstin or self.party
+        _company = self.company_gstin or self.company_pos
+
+        if not self.is_against_party:
+            # credit the tax accounts (reduce), debit same accounts (restore at receiving end)
+            for tax in self.taxes:
+                if not flt(tax.tax_amount):
+                    continue
+                amount = abs(flt(tax.tax_amount))
+                gl_entries.append(
+                    self.get_gl_dict(
+                        {
+                            "account": tax.account_head,
+                            "debit": amount,
+                            "credit": 0,
+                            "remarks": f"ITC Distribution by {_company}",
+                        }
+                    )
+                )
+                gl_entries.append(
+                    self.get_gl_dict(
+                        {
+                            "account": tax.account_head,
+                            "debit": 0,
+                            "credit": amount,
+                            "remarks": f"ITC Received by {_party}",
+                        }
+                    )
+                )
+        else:
+            is_distribution = self.credit_flow == CREDIT_FLOW.DISTRIBUTION
+            total_tax = sum(flt(tax.tax_amount) for tax in self.taxes)
+
+            for tax in self.taxes:
+                if not flt(tax.tax_amount):
+                    continue
+                amount = flt(tax.tax_amount)
+                gl_entries.append(
+                    self.get_gl_dict(
+                        {
+                            "account": tax.account_head,
+                            "debit": 0 if is_distribution else amount,
+                            "credit": amount if is_distribution else 0,
+                            # Distribution: tax leaves ISD; Receipt: tax enters company
+                            "remarks": f"ITC Distribution to {_party}"
+                            if is_distribution
+                            else f"ITC Received from {_company}",
+                        }
+                    )
+                )
+
+            if self.party_account and total_tax:
+                gl_entries.append(
+                    self.get_gl_dict(
+                        {
+                            "account": self.party_account,
+                            "party_type": self.party_type,
+                            "party": self.party,
+                            "debit": total_tax if is_distribution else 0,
+                            "credit": 0 if is_distribution else total_tax,
+                            # Distribution: Customer account (receivable); Receipt: Supplier account (payable)
+                            "remarks": f"ITC Receivable from {_party}"
+                            if is_distribution
+                            else f"ITC Payable to {_company}",
+                        }
+                    )
+                )
+
+        return gl_entries
 
     def _sync_purchase_invoice_distribution(self):
         purchase_invoices = list(
@@ -584,35 +668,40 @@ def create_inter_company_invoice(source_name: str, target_doc: str | None = None
     frappe.has_permission("ISD Invoice", "write", throw=True)
 
     def post_process(source, target):
+        # similar logic to autoset
         new_direction = (
             CREDIT_FLOW.RECEIPT
             if source.credit_flow == CREDIT_FLOW.DISTRIBUTION
             else CREDIT_FLOW.DISTRIBUTION
         )
         new_party_type = "Customer" if new_direction == CREDIT_FLOW.DISTRIBUTION else "Supplier"
-
         new_company = frappe.get_value(source.party_type, source.party, "represents_company")
         internal_field = "is_internal_customer" if new_party_type == "Customer" else "is_internal_supplier"
         new_party_name = frappe.get_value(
             new_party_type, {"represents_company": source.company, internal_field: 1}, "name"
         )
 
-        # Counterpart roles flip, so each address is found via the other side's GSTIN:
-        # the source party's GSTIN belongs to the counterpart company, and vice-versa.
-        company_address = (
-            frappe.db.get_value(
-                "Address", {"gstin": source.party_gstin}, "name", order_by="is_primary_address desc"
-            )
-            if source.party_gstin
-            else None
+        # custom logic for address - match address based on gstin
+        company_address = frappe.get_value(
+            "Address",
+            filters=[
+                ["Dynamic Link", "link_name", "=", new_company],
+                ["Dynamic Link", "link_doctype", "=", "Company"],
+                ["Address", "gstin", "=", source.party_gstin],
+            ],
+            order_by="is_primary_address DESC",
+            pluck="name",
         )
 
-        party_address = (
-            frappe.db.get_value(
-                "Address", {"gstin": source.company_gstin}, "name", order_by="is_primary_address desc"
-            )
-            if source.company_gstin
-            else None
+        party_address = frappe.get_value(
+            "Address",
+            filters=[
+                ["Dynamic Link", "link_name", "=", new_party_name],
+                ["Dynamic Link", "link_doctype", "=", new_party_type],
+                ["Address", "gstin", "=", source.company_gstin],
+            ],
+            order_by="is_primary_address DESC",
+            pluck="name",
         )
 
         party_account = None
@@ -624,6 +713,10 @@ def create_inter_company_invoice(source_name: str, target_doc: str | None = None
             credit_note_against = frappe.db.get_value(
                 "ISD Invoice", source.credit_note_against, "inter_company_invoice_reference"
             )
+
+        print(
+            f"{new_party_type} {new_party_name} in Company {new_company} will be assigned Party Account {party_account}"
+        )
 
         target.update(
             {
@@ -644,7 +737,7 @@ def create_inter_company_invoice(source_name: str, target_doc: str | None = None
             v is None for v in [new_company, new_party_name, company_address, party_address, party_account]
         ):
             frappe.msgprint(
-                _("some fields are empty"),
+                _("invoice created with missing fields values"),
                 alert=True,
             )
 
@@ -655,7 +748,7 @@ def create_inter_company_invoice(source_name: str, target_doc: str | None = None
             "naming_series": "naming_series",
             "is_credit_note": "is_credit_note",
             "posting_date": "posting_date",
-            "distribution_ratio": "distribution_ratio",
+            "default_distribution_ratio": "default_distribution_ratio",
         },
         post_process,
     )
@@ -691,7 +784,7 @@ def make_credit_note(source_name: str, target_doc: str | None = None):
             "party_type": "party_type",
             "party": "party",
             "party_account": "party_account",
-            "distribution_ratio": "distribution_ratio",
+            "default_distribution_ratio": "default_distribution_ratio",
         },
         post_process,
     )
@@ -761,7 +854,7 @@ def make_isd_invoice(
         distribution_ratio = (
             individual_turnover / total_turnover * 100 if individual_turnover and total_turnover else 0.0
         )
-        target.distribution_ratio = distribution_ratio
+        target.default_distribution_ratio = distribution_ratio
         target.party_address = party_address
 
         if party_type and party:

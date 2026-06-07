@@ -35,6 +35,23 @@ frappe.ui.form.on("ISD Invoice", {
                 __("Create"),
             );
         }
+        if (frm.doc.docstatus === 1) {
+            frm.add_custom_button(
+                __("Accounting Ledger"),
+                () => {
+                    frappe.route_options = {
+                        voucher_no: frm.doc.name,
+                        from_date: frm.doc.posting_date,
+                        to_date: frm.doc.posting_date,
+                        company: frm.doc.company,
+                        group_by: "Group by Voucher (Consolidated)",
+                        show_cancelled_entries: frm.doc.docstatus === 2,
+                    };
+                    frappe.set_route("query-report", "General Ledger");
+                },
+                __("View"),
+            );
+        }
     },
 
     company(frm) {
@@ -64,8 +81,8 @@ frappe.ui.form.on("ISD Invoice", {
         fetch_isd_autofill(frm, "party");
     },
 
-    distribution_ratio(frm) {
-        if (frm.doc.distribution_ratio < 0 || frm.doc.distribution_ratio > 100) {
+    default_distribution_ratio(frm) {
+        if (frm.doc.default_distribution_ratio < 0 || frm.doc.default_distribution_ratio > 100) {
             frappe.show_alert({
                 message: __("Distribution ratio must be between 0 and 100"),
                 indicator: "red",
@@ -100,7 +117,7 @@ frappe.ui.form.on("ISD Invoice", {
                     fieldtype: "Float",
                     label: __("Distribution Ratio (%)"),
                     fieldname: "distribution_ratio",
-                    default: frm.doc.distribution_ratio || 0.0,
+                    default: frm.doc.default_distribution_ratio || 0.0,
                 },
                 {
                     fieldtype: "Column Break",
@@ -125,17 +142,12 @@ frappe.ui.form.on("ISD Invoice", {
                     return;
                 }
 
-                // set the distribution ratio value silently (without triggering the field event)
-                if (!frm.doc.distribution_ratio) {
-                    frm.doc.distribution_ratio = data.distribution_ratio || 0.0;
-                }
-
                 frm.call("get_purchase_invoices", {
                     purchase_invoices: selections,
                     distribution_ratio: data.distribution_ratio || 0.0,
                 }).then(() => {
                     d.dialog.hide();
-                    frm.isd_controller.recalculate();
+                    frm.set_value("default_distribution_ratio", data.distribution_ratio || 0.0);
                 });
             },
         });
@@ -165,7 +177,7 @@ const CREDIT_FLOW = {
 
 frappe.ui.form.on("ISD Invoice Source Item", {
     source_invoices_add(frm, cdt, cdn) {
-        frappe.model.set_value(cdt, cdn, "distribution_ratio", frm.doc.distribution_ratio || 0);
+        frappe.model.set_value(cdt, cdn, "distribution_ratio", frm.doc.default_distribution_ratio || 0);
     },
     purchase_invoice(frm, cdt, cdn) {
         if (!(frm.is_against_party && frm.doc.credit_flow == CREDIT_FLOW.RECEIPT)) {
@@ -246,6 +258,14 @@ class ISDInvoiceController {
                 return { filters: { name: ["in", ["Company"]] } };
             }
             return { filters: { name: ["in", ["Supplier", "Customer"]] } };
+        });
+
+        this.frm.set_query("party", () => {
+            const party_type = this.frm.doc.party_type;
+            if (!party_type || !["Supplier", "Customer"].includes(party_type)) return;
+            const internal_field =
+                party_type === "Customer" ? "is_internal_customer" : "is_internal_supplier";
+            return { filters: { [internal_field]: 1 } };
         });
 
         this.frm.set_query("party_address", () => {

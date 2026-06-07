@@ -30,7 +30,7 @@
   "project",
   "source_invoices_section",
   "get_purchase_invoices",
-  "distribution_ratio",
+  "default_distribution_ratio",
   "source_invoices",
   "taxes_section",
   "taxes",
@@ -155,8 +155,8 @@
    "fieldname": "credit_note_against",
    "fieldtype": "Link",
    "label": "Credit Note Against",
-   "options": "ISD Invoice",
-   "mandatory_depends_on": "eval: doc.is_credit_note == 1"
+   "mandatory_depends_on": "eval: doc.is_credit_note == 1",
+   "options": "ISD Invoice"
   },
   {
    "collapsible": 1,
@@ -236,9 +236,9 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "distribution_ratio",
+   "fieldname": "default_distribution_ratio",
    "fieldtype": "Float",
-   "label": "Distribution Ratio(%)"
+   "label": "Default Distribution Ratio(%)"
   },
   {
    "fieldname": "company_address_display",
@@ -354,7 +354,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-04-29 15:57:52.251521",
+ "modified": "2026-06-07 18:52:31.569571",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "ISD Invoice",
