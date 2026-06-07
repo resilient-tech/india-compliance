@@ -72,6 +72,7 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
                                     filters: {
                                         doctype: doc.party_type,
                                         search_text: doc.party || "",
+                                        company: company,
                                     },
                                 },
                             };

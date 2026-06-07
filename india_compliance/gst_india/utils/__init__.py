@@ -1275,6 +1275,10 @@ def get_party_for_isd(filters: str | dict | frappe._dict):
             frappe.PermissionError,
         )
 
+    if doctype == "Company":
+        company = filters.get("company")
+        return [company] if company else []
+
     frappe.has_permission(doctype, "read", throw=True)
 
     search_text = filters.get("search_text") or ""
