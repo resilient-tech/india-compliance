@@ -1,6 +1,7 @@
 # Copyright (c) 2022, Resilient Tech and contributors
 # For license information, please see license.txt
 
+import json
 import re
 from collections import defaultdict
 
@@ -71,6 +72,8 @@ STATUS_MAP = {
     "Pending": "Unreconciled",
     "Ignore": "Ignored",
 }
+
+RECO_2A_CATEGORIES_DEFAULT_KEY = "purchase_reco_2a_categories"
 
 
 class PurchaseReconciliationTool(Document):
@@ -564,6 +567,19 @@ def download_excel_report(
 
     build_data = BuildExcel(doc, data, is_supplier_specific)
     build_data.export_data()
+
+
+@frappe.whitelist()
+def set_category_preference(categories: str | list | None = None):
+    """
+    Persist the user's GSTR-2A download category selection as a user default.
+    """
+    frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
+
+    if isinstance(categories, str):
+        categories = frappe.parse_json(categories)
+
+    frappe.defaults.set_user_default(RECO_2A_CATEGORIES_DEFAULT_KEY, json.dumps(categories or []))
 
 
 def parse_params(fun):
