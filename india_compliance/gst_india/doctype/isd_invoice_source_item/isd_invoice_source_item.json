@@ -32,8 +32,7 @@
    "fieldname": "purchase_invoice",
    "fieldtype": "Autocomplete",
    "in_list_view": 1,
-   "label": "Purchase Invoice",
-   "reqd": 1
+   "label": "Purchase Invoice"
   },
   {
    "fieldname": "column_break_gcgg",
@@ -148,7 +147,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-05-05 10:16:12.951577",
+ "modified": "2026-06-08 10:11:28.833843",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "ISD Invoice Source Item",

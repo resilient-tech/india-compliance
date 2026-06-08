@@ -301,7 +301,6 @@ class TestISDInvoice(IntegrationTestCase):
         invoice_names, _ = bulk_create_isd_invoices(distribution_heads=rows, source_names=[pi.name])
         self.assertEqual(_distributed_total(invoice_names), _pi_total(pi))
 
-    # TODO: party being overseas / sez
     def test_sez_recipient_distributed_as_igst_only(self):
         """SEZ recipient is distributed as IGST only, even for intra-state supply."""
         pi = self.pi  # place of supply Gujarat, intra-state

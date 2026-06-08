@@ -24,6 +24,10 @@
   "party_type",
   "column_break_iziu",
   "party",
+  "section_break_ghby",
+  "is_external_invoice",
+  "column_break_bqao",
+  "external_invoice_number",
   "accounting_dimensions_section",
   "cost_center",
   "dimension_col_break",
@@ -349,12 +353,34 @@
   {
    "fieldname": "column_break_tngt",
    "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval: doc.credit_flow == \"Credit Receipt\"",
+   "fieldname": "section_break_ghby",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "0",
+   "description": "write distributed amounts in source invoices\nand leave purchase invoice blank",
+   "fieldname": "is_external_invoice",
+   "fieldtype": "Check",
+   "label": "Is External Invoice"
+  },
+  {
+   "fieldname": "column_break_bqao",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval: doc.is_external_invoice",
+   "fieldname": "external_invoice_number",
+   "fieldtype": "Data",
+   "label": "External Invoice Number"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-06-07 18:52:31.569571",
+ "modified": "2026-06-08 11:23:55.733485",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "ISD Invoice",

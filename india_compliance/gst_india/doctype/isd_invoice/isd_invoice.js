@@ -11,6 +11,8 @@ frappe.ui.form.on("ISD Invoice", {
 
     refresh(frm) {
         frm.isd_controller.update_address_labels();
+        frm.fields_dict.source_invoices.grid.toggle_reqd("purchase_invoice", !frm.doc.is_external_invoice);
+        frm.fields_dict.source_invoices.grid.toggle_enable("purchase_invoice", !frm.doc.is_external_invoice);
         if (frm.doc.docstatus === 1 && frm.doc.is_against_party && frappe.model.can_create("ISD Invoice")) {
             frm.add_custom_button(
                 __("Inter Company ISD Invoice"),
@@ -79,6 +81,17 @@ frappe.ui.form.on("ISD Invoice", {
     party(frm) {
         if (frm.__updating_isd_autofill || !frm.doc.is_against_party || !frm.doc.party) return;
         fetch_isd_autofill(frm, "party");
+    },
+
+    is_external_invoice(frm) {
+        frm.fields_dict.source_invoices.grid.toggle_reqd("purchase_invoice", !frm.doc.is_external_invoice);
+        frm.fields_dict.source_invoices.grid.toggle_enable("purchase_invoice", !frm.doc.is_external_invoice);
+
+        if (frm.doc.is_external_invoice) {
+            (frm.doc.source_invoices || []).forEach((row) => {
+                frappe.model.set_value(row.doctype, row.name, "purchase_invoice", null);
+            });
+        }
     },
 
     default_distribution_ratio(frm) {

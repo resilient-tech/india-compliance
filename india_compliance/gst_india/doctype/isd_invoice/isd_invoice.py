@@ -56,13 +56,13 @@ class ISDInvoice(Document):
     def validate(self):
         self.validate_isd_party()
         self.validate_gstin_and_pos()
-        self.validate_gstin_pan_and_pos()
+        if self.is_external_invoice:
+            return
         self.validate_source_invoice_dates()
         self.validate_duplication()
         self.validate_inter_company_transaction()
         self.validate_distribution_limits()
-        # TODO: do not allow two addresses with same pos
-        # TODO: validate that purchase invoice is of the given company only. if not mentioned then its mandatory to add acknowlege that
+        self.validate_purcahse_invoice_for_company()
 
     def set_taxes_and_totals(self):
         self.set_distributed_taxes()
@@ -260,11 +260,28 @@ class ISDInvoice(Document):
         if invalid_distributions:
             self.throw_invalid_distributions(invalid_distributions)
 
-    def get_already_distributed_amounts(self):
-        """{(purchase_invoice, is_ineligible_for_itc): net distributed} from other submitted ISD invoices.
+    def validate_purcahse_invoice_for_company(self):
+        company = self.company
+        if self.credit_flow == CREDIT_FLOW.RECEIPT:
+            company = frappe.get_value(self.party_type, self.party, "represents_company")
 
-        Credit notes store distributed amounts as negative, so the Sum nets prior reversals.
-        """
+        source_invoice_names = [row.purchase_invoice for row in self.source_invoices]
+        valid_purchase_invoices = frappe.get_all(
+            "Purchase Invoice",
+            filters={"name": ("in", source_invoice_names), "company": company},
+            pluck="name",
+        )
+
+        invalid_invoices = set(source_invoice_names) - set(valid_purchase_invoices)
+        if invalid_invoices:
+            frappe.throw(
+                _("Following Purchase Invoices do not belong to company {0}: {1}").format(
+                    self.company, ", ".join(invalid_invoices)
+                )
+            )
+
+    def get_already_distributed_amounts(self):
+        """{(purchase_invoice, is_ineligible_for_itc): net distributed} from other submitted ISD invoices."""
         isd_source_item = frappe.qb.DocType("ISD Invoice Source Item")
         isd_invoice = frappe.qb.DocType("ISD Invoice")
         rows = (
@@ -669,7 +686,7 @@ def create_inter_company_invoice(source_name: str, target_doc: str | None = None
     frappe.has_permission("ISD Invoice", "write", throw=True)
 
     def post_process(source, target):
-        # similar logic to autoset
+        # similar logic to autofill
         new_direction = (
             CREDIT_FLOW.RECEIPT
             if source.credit_flow == CREDIT_FLOW.DISTRIBUTION
