@@ -223,9 +223,13 @@ class GSTTransactionData:
                     ),
                     "gst_transporter_id": self.doc.gst_transporter_id or "",
                     "transporter_name": (
+<<<<<<< HEAD
                         self.sanitize_value(
                             self.doc.transporter_name, regex=3, max_length=25
                         )
+=======
+                        self.sanitize_value(self.doc.transporter_name, regex=3, max_length=100)
+>>>>>>> 0f7f0926 (fix: update transporter name handling to allow up to 100 characters)
                         if self.doc.transporter_name
                         else ""
                     ),
