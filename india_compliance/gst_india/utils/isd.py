@@ -55,7 +55,6 @@ def calculate_distribution(doc):
     """Set distributed_* fields on each source_invoices row from its distribution_ratio."""
     sign = -1 if doc.is_credit_note else 1
     inter_state = is_inter_state_distribution(doc)
-
     precision = get_field_precision(frappe.get_meta("ISD Invoice Source Item").get_field("distributed_igst"))
 
     for row in doc.source_invoices or []:

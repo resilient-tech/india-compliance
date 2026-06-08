@@ -274,7 +274,10 @@ class TestISDInvoice(IntegrationTestCase):
                 fy,
             ),
         ]
-        invoice_names, _ = bulk_create_isd_invoices(distribution_heads=rows, source_names=[pi.name])
+        invoice_names, _ = bulk_create_isd_invoices(distribution_heads=rows, purchase_invoices=[pi.name])
+        for name in invoice_names:
+            print(f"{name}: distributed total {_distributed_total([name])}")
+
         self.assertEqual(_distributed_total(invoice_names), _pi_total(pi))
 
     # TODO: ask lakshit bhai — float math: 16666666.666666666 * 6 = 99999999.99999996 (wrong),
@@ -298,7 +301,7 @@ class TestISDInvoice(IntegrationTestCase):
                 _COMPANY_3_GSTIN, "Registered Regular", "Karnataka", 1000000, addr, self.company.name, fy
             ),
         ]
-        invoice_names, _ = bulk_create_isd_invoices(distribution_heads=rows, source_names=[pi.name])
+        invoice_names, _ = bulk_create_isd_invoices(distribution_heads=rows, purchase_invoices=[pi.name])
         self.assertEqual(_distributed_total(invoice_names), _pi_total(pi))
 
     def test_sez_recipient_distributed_as_igst_only(self):
@@ -317,7 +320,7 @@ class TestISDInvoice(IntegrationTestCase):
                 "24AAACI1681G2ZU", "SEZ", "Gujarat", 1000000, sez_address.name, self.company.name, fy
             )
         ]
-        isd_invoices, _ = bulk_create_isd_invoices(distribution_heads=rows, source_names=[pi.name])
+        isd_invoices, _ = bulk_create_isd_invoices(distribution_heads=rows, purchase_invoices=[pi.name])
 
         for invoice_name in isd_invoices:
             for row in frappe.get_doc("ISD Invoice", invoice_name).source_invoices:

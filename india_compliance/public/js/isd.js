@@ -1,7 +1,7 @@
 india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoices) {
     // purchase_invoices: [{ name, posting_date, supplier, company, total_tax }]
     const is_single = purchase_invoices.length === 1;
-    const source_names = purchase_invoices.map((p) => p.name);
+    const purchase_invoice = purchase_invoices.map((p) => p.name);
     const company = purchase_invoices[0].company;
     const posting_date = purchase_invoices[0].posting_date;
 
@@ -198,7 +198,7 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
 
             frappe.call({
                 method: "india_compliance.gst_india.doctype.isd_invoice.isd_invoice.bulk_create_isd_invoices",
-                args: { distribution_heads: payload, source_names },
+                args: { distribution_heads: payload, purchase_invoices: purchase_invoice },
                 freeze: true,
                 freeze_message: __("Creating ISD Invoices..."),
                 callback(r) {
@@ -284,7 +284,7 @@ india_compliance.show_isd_invoice_distribution_dialog = function (purchase_invoi
 
     frappe.call({
         method: "india_compliance.gst_india.doctype.isd_invoice.isd_invoice.get_purchase_invoices_distribution_summary",
-        args: { purchase_invoices: source_names },
+        args: { purchase_invoices: purchase_invoice },
         callback({ message: rows = [] }) {
             const p = (v) => parseFloat(v) || 0;
             const dist_map = Object.fromEntries(

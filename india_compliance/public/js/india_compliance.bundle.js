@@ -11,4 +11,4 @@ import "./taxes_controller";
 import "./help_links";
 import "./reconciliation_components/tabs";
 import "./components/set_gstin_options";
-import "./isd_invoice_distribution";
+import "./isd";
