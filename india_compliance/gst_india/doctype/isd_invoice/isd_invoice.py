@@ -55,7 +55,8 @@ class ISDInvoice(Document):
 
     def validate(self):
         self.validate_isd_party()
-        self.validate_gstin_and_pan()
+        self.validate_gstin_and_pos()
+        self.validate_gstin_pan_and_pos()
         self.validate_source_invoice_dates()
         self.validate_duplication()
         self.validate_inter_company_transaction()
@@ -154,7 +155,7 @@ class ISDInvoice(Document):
                 )
             )
 
-    def validate_gstin_and_pan(self):
+    def validate_gstin_and_pos(self):
         for gstin in (self.company_gstin, self.party_gstin):
             if gstin:
                 validate_gstin_status(gstin, self)
@@ -603,10 +604,10 @@ def _get_autofill_addresses(doc):
     if not (doc.party_type and doc.party):
         return None, None
 
-    is_outward = doc.credit_flow == CREDIT_FLOW.DISTRIBUTION
+    is_distribution = doc.credit_flow == CREDIT_FLOW.DISTRIBUTION
     return (
-        fetch_address("Company", doc.company, exclude_isd=not is_outward),
-        fetch_address(doc.party_type, doc.party, exclude_isd=not is_outward),
+        fetch_address("Company", doc.company, exclude_isd=not is_distribution),
+        fetch_address(doc.party_type, doc.party, exclude_isd=is_distribution),
     )
 
 
