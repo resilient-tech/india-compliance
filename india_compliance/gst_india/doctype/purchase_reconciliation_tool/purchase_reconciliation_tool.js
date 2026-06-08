@@ -29,6 +29,11 @@ const ReturnType = {
     GSTR2B: "GSTR2b",
 };
 
+const RECO_2A_CATEGORIES_KEY = "purchase_reco_2a_categories";
+
+const RECO_MODULE =
+    "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool";
+
 function remove_gstr2b_alert(alert) {
     if (alert.length === 0) return;
     $(alert).remove();
@@ -721,8 +726,7 @@ class PurchaseReconciliationToolAction {
         }
         if (selected_row) delete data_to_export.supplier_summary;
 
-        const url =
-            "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.download_excel_report";
+        const url = `${RECO_MODULE}.download_excel_report`;
 
         open_url_post(`/api/method/${url}`, {
             data: JSON.stringify(data_to_export),
@@ -1154,8 +1158,6 @@ async function download_gstr(
     });
 }
 
-const RECO_2A_CATEGORIES_KEY = "purchase_reco_2a_categories";
-
 function get_saved_2a_categories() {
     const raw = frappe.defaults.get_user_default(RECO_2A_CATEGORIES_KEY);
     try {
@@ -1171,7 +1173,7 @@ function save_2a_categories(categories) {
     frappe.defaults.set_user_default_local(RECO_2A_CATEGORIES_KEY, serialized);
 
     frappe.call({
-        method: "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.set_category_preference",
+        method: `${RECO_MODULE}.set_category_preference`,
         args: { categories: serialized },
     });
 }
@@ -1187,7 +1189,7 @@ class EmailDialog {
         const export_data = this.frm.reconciliation_tabs.get_filtered_data(this.data);
 
         frappe.call({
-            method: "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.generate_excel_attachment",
+            method: `${RECO_MODULE}.generate_excel_attachment`,
             args: {
                 data: JSON.stringify(export_data),
                 doc: JSON.stringify(this.frm.doc),
