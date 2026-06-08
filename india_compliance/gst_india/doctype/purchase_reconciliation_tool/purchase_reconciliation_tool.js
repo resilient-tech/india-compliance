@@ -703,6 +703,14 @@ class PurchaseReconciliationToolAction {
 
     export_data(selected_row) {
         const data_to_export = this.frm.reconciliation_tabs.get_filtered_data(selected_row);
+        if (!this.frm.reconciliation_tabs.filtered_data?.length) {
+            frappe.msgprint({
+                title: __("No Data Found"),
+                message: __("There is no data to export"),
+                indicator: "red",
+            });
+            return;
+        }
         if (selected_row) delete data_to_export.supplier_summary;
 
         const url =
