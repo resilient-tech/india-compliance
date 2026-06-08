@@ -1,9 +1,12 @@
+import re
 from datetime import date
 from unittest.mock import patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import getdate
+
+from india_compliance.gst_india.utils import validate_pincode
 
 
 class TestUtils(IntegrationTestCase):
@@ -46,3 +49,24 @@ class TestUtils(IntegrationTestCase):
 
             for i, expected_date in enumerate(expected_date_range):
                 self.assertEqual(expected_date, actual_date_range[i])
+
+    def test_validate_pincode(self):
+        def make_address(state, pincode):
+            return frappe._dict(country="India", state=state, pincode=pincode, __unsaved=True)
+
+        for pincode in ("194101", "190015", "181101", "180007", "184101", "191401"):
+            self.assertIsNone(validate_pincode(make_address("Ladakh", pincode)))
+            self.assertIsNone(validate_pincode(make_address("Jammu and Kashmir", pincode)))
+
+        for pincode in ("518503", "533347"):
+            self.assertIsNone(validate_pincode(make_address("Telangana", pincode)))
+            self.assertIsNone(validate_pincode(make_address("Andhra Pradesh", pincode)))
+
+        self.assertIsNone(validate_pincode(make_address("Telangana", "500001")))
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(Postal Code .* is not associated with .*)$"),
+            validate_pincode,
+            make_address("Karnataka", "500001"),
+        )
