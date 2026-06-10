@@ -1,0 +1,52 @@
+{
+ "actions": [],
+ "creation": "2026-06-10 00:00:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "financial_year",
+  "enterprise_type",
+  "msme_applicable"
+ ],
+ "fields": [
+  {
+   "fieldname": "financial_year",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "label": "Financial Year",
+   "reqd": 1
+  },
+  {
+   "fieldname": "enterprise_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Enterprise Type",
+   "options": "Micro\nSmall\nMedium\nNot MSME",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "description": "Section 43B(h) applies (Micro/Small and not a trader).",
+   "fieldname": "msme_applicable",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "43B(h) Applicable",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-06-10 16:17:24.410719",
+ "modified_by": "Administrator",
+ "module": "Income Tax India",
+ "name": "India MSME Classification",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

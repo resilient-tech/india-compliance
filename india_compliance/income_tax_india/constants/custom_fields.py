@@ -14,10 +14,64 @@ party_fields = [
     },
 ]
 
+
+# MSME
+supplier_msme_fields = [
+    {
+        "fieldname": "msme_section",
+        "label": "MSME Details",
+        "fieldtype": "Section Break",
+        "insert_after": "pan",
+        "collapsible": 1,
+    },
+    {
+        "fieldname": "is_msme_registered",
+        "label": "Is MSME Registered",
+        "fieldtype": "Check",
+        "insert_after": "msme_section",
+        "description": "Supplier is registered as a Micro, Small or Medium Enterprise (UDYAM).",
+    },
+    {
+        "fieldname": "udyam_number",
+        "label": "UDYAM Registration Number",
+        "fieldtype": "Data",
+        "insert_after": "is_msme_registered",
+        "depends_on": "eval:doc.is_msme_registered",
+        "mandatory_depends_on": "eval:doc.is_msme_registered",
+        "translatable": 0,
+        "description": "Format: UDYAM-XX-00-0000000",
+    },
+    {
+        "fieldname": "msme_is_trader",
+        "label": "Is Trader (Wholesale/Retail)",
+        "fieldtype": "Check",
+        "insert_after": "udyam_number",
+        "depends_on": "eval:doc.is_msme_registered",
+        "description": (
+            "Traders are excluded from Section 43B(h) even if UDYAM-registered."
+            " Tick if the supplier's UDYAM activity is wholesale/retail trading."
+        ),
+    },
+    {
+        "fieldname": "msme_classification_column",
+        "fieldtype": "Column Break",
+        "insert_after": "msme_is_trader",
+    },
+    {
+        "fieldname": "india_msme_classification",
+        "label": "MSME Classification",
+        "fieldtype": "Table",
+        "options": "India MSME Classification",
+        "insert_after": "msme_classification_column",
+        "depends_on": "eval:doc.is_msme_registered",
+    },
+]
+
+
 CUSTOM_FIELDS = {
     "Company": party_fields,
     "Customer": party_fields,
-    "Supplier": party_fields,
+    "Supplier": party_fields + supplier_msme_fields,
     "Finance Book": [
         {
             "fieldname": "for_income_tax",
