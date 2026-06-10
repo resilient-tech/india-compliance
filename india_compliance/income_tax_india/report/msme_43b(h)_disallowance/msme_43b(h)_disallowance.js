@@ -1,6 +1,8 @@
 // Copyright (c) 2026, Resilient Tech and contributors
 // For license information, please see license.txt
 
+const fy_bounds = india_compliance.get_indian_fiscal_year_bounds();
+
 frappe.query_reports["MSME 43B(h) Disallowance"] = {
     filters: [
         {
@@ -16,14 +18,14 @@ frappe.query_reports["MSME 43B(h) Disallowance"] = {
             label: __("From Date"),
             fieldtype: "Date",
             reqd: 1,
-            default: india_compliance.get_indian_fiscal_year_bounds().from_date,
+            default: fy_bounds.from_date,
         },
         {
             fieldname: "to_date",
             label: __("To Date"),
             fieldtype: "Date",
             reqd: 1,
-            default: india_compliance.get_indian_fiscal_year_bounds().to_date,
+            default: fy_bounds.to_date,
         },
         {
             fieldname: "as_on_date",

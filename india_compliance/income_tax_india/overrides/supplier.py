@@ -56,7 +56,8 @@ def validate_financial_year(row):
     fy = row.financial_year or ""
 
     # must look like "YYYY-YYYY" with consecutive years, e.g. 2024-2025
-    if FINANCIAL_YEAR_REGEX.match(fy) and int(fy[5:]) == int(fy[:4]) + 1:
+    start_year, _sep, end_year = fy.partition("-")
+    if FINANCIAL_YEAR_REGEX.match(fy) and int(end_year) == int(start_year) + 1:
         return
 
     frappe.throw(

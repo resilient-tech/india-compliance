@@ -17,7 +17,7 @@ def get_indian_fiscal_year(date) -> str:
     return f"{start_year}-{start_year + 1}"
 
 
-def get_msme_due_date(posting_date) -> str:
+def get_msme_due_date(posting_date):
     """MSME payment due date: posting date (treated as date of acceptance) + 45 days."""
     return add_days(getdate(posting_date), MSME_PAYMENT_DAYS)
 
@@ -145,7 +145,9 @@ def get_msme_payables(
     Shared MSME payables dataset for the 43B(h) and Form-1 reports, returned
     as complete report-ready rows (single pass per payable voucher).
 
-    Built directly on the Payment Ledger
+    Built directly on the Payment Ledger, covering every payable voucher type.
+    Unadjusted payments / credit notes are returned as NEGATIVE rows so the net
+    total reconciles with GL / Accounts Payable.
 
     - only_43b_applicable: only Micro/Small non-trader suppliers
     - enterprise_type: narrows further to one type (e.g. Micro vs Small);
@@ -238,8 +240,14 @@ def get_msme_payables(
             "due_date": due_date,
         }
 
+        # 43B(h) amounts only apply to Micro/Small non-traders, even when a
+        # caller fetches the unfiltered dataset
+        msme_applicable = classification["msme_applicable"]
+
         if group.anchor.amount > 0:
-            record.update(get_due_voucher_amounts(group, due_date, as_on_date, settlement_from_date))
+            record.update(
+                get_due_voucher_amounts(group, due_date, as_on_date, msme_applicable, settlement_from_date)
+            )
         else:
             # unadjusted payment / credit note: reduces the net amount payable
             unadjusted = flt(min(group.balance, 0))
@@ -255,7 +263,7 @@ def get_msme_payables(
                     "outstanding": unadjusted,
                     "outstanding_not_due": 0,
                     "outstanding_overdue": 0,
-                    "disallowable_amount": unadjusted,
+                    "disallowable_amount": unadjusted if msme_applicable else 0,
                     "payment_status": (
                         "Unadjusted Advance" if voucher_type == "Payment Entry" else "Unadjusted Credit"
                     ),
@@ -266,10 +274,11 @@ def get_msme_payables(
 
         records.append(record)
 
+    records.sort(key=lambda record: (record["supplier"], record["posting_date"]))
     return records
 
 
-def get_due_voucher_amounts(group, due_date, as_on_date, settlement_from_date=None) -> dict:
+def get_due_voucher_amounts(group, due_date, as_on_date, msme_applicable, settlement_from_date=None) -> dict:
     summary = get_settlement_summary(group.settlements, due_date)
     settled_total = summary["paid_on_time"] + summary["paid_late"]
 
@@ -300,7 +309,7 @@ def get_due_voucher_amounts(group, due_date, as_on_date, settlement_from_date=No
         "outstanding_overdue": outstanding if is_overdue else 0,
         # paid in-year is allowed in that year; only the unpaid overdue
         # portion is added back u/s 43B(h)
-        "disallowable_amount": outstanding if is_overdue else 0,
+        "disallowable_amount": outstanding if (is_overdue and msme_applicable) else 0,
         "payment_status": payment_status,
         "days_overdue": (as_on_date - due_date).days if is_overdue else 0,
         "payment_date": max((s["posting_date"] for s in group.settlements), default=None),

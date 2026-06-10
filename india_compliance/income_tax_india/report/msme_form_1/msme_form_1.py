@@ -39,6 +39,7 @@ def validate_filters(filters):
     if filters.period and filters.period not in PERIODS:
         frappe.throw(_("Please select a valid Period"))
 
+    filters.group_by = filters.group_by or "Invoice Wise"
     filters.period_start, filters.period_end = get_period_dates(filters.period_fy, filters.period)
 
     return filters

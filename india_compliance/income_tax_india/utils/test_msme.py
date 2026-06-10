@@ -29,7 +29,7 @@ def get_msme_classification(supplier: str, financial_year: str) -> dict | None:
             "parent": supplier,
             "financial_year": financial_year,
         },
-        fields=["enterprise_type", "msme_applicable", "remarks"],
+        fields=["enterprise_type", "msme_applicable"],
         limit=1,
     )
     return rows[0] if rows else None
