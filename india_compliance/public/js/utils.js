@@ -74,6 +74,54 @@ Object.assign(india_compliance, {
         return this.SUBCONTRACTING_INWARD_PURPOSES.includes(doc.purpose);
     },
 
+    get_indian_fiscal_year(date = frappe.datetime.now_date(true)) {
+        /**
+         * Indian income-tax financial year (April-March) for a date, e.g. "2024-2025"
+         *
+         * @param {Date} date
+         * @returns {String}
+         */
+        const start = date.getMonth() + 1 >= 4 ? date.getFullYear() : date.getFullYear() - 1;
+        return `${start}-${start + 1}`;
+    },
+
+    get_indian_fiscal_year_options(years_before = 9, years_after = 0) {
+        /**
+         * Indian FY strings around the current one, newest first
+         *
+         * @returns {Array} - e.g. ["2025-2026", "2024-2025", ...]
+         */
+        const current_start = parseInt(this.get_indian_fiscal_year().split("-")[0]);
+
+        const options = [];
+        for (let start = current_start + years_after; start >= current_start - years_before; start--) {
+            options.push(`${start}-${start + 1}`);
+        }
+        return options;
+    },
+
+    get_indian_fiscal_year_bounds() {
+        /**
+         * Start and end dates of the current Indian financial year
+         *
+         * @returns {Object} - {from_date: "YYYY-04-01", to_date: "YYYY-03-31"}
+         */
+        const [start_year, end_year] = this.get_indian_fiscal_year().split("-");
+        return { from_date: `${start_year}-04-01`, to_date: `${end_year}-03-31` };
+    },
+
+    setup_indian_fiscal_year_options(frm, table_field, fieldname = "financial_year") {
+        /**
+         * Set generated Indian FY options (next + recent years) on an
+         * Autocomplete field in a child grid, so the list never expires
+         */
+        frm.fields_dict[table_field]?.grid.update_docfield_property(
+            fieldname,
+            "options",
+            this.get_indian_fiscal_year_options(9, 1),
+        );
+    },
+
     get_month_year_from_period(period) {
         /**
          * Returns month or quarter and year from the period

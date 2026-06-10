@@ -100,6 +100,7 @@ doctype_js = {
     "Supplier": [
         "gst_india/client_scripts/party.js",
         "gst_india/client_scripts/supplier.js",
+        "income_tax_india/client_scripts/supplier.js",
     ],
     "Tax Withholding Category": "income_tax_india/client_scripts/tax_withholding_category.js",
     "Accounts Settings": "audit_trail/client_scripts/accounts_settings.js",
@@ -267,6 +268,7 @@ doc_events = {
         "validate": [
             "india_compliance.gst_india.overrides.supplier.validate",
             "india_compliance.gst_india.overrides.party.validate_party",
+            "india_compliance.income_tax_india.overrides.supplier.validate",
         ],
         "after_insert": ("india_compliance.gst_india.overrides.party.create_primary_address"),
     },
