@@ -7,6 +7,7 @@ import {
     TCS_REGEX,
     GST_INVOICE_NUMBER_FORMAT,
     PAN_REGEX,
+    UDYAM_NUMBER_REGEX,
 } from "./regex_constants";
 
 const INWARD_SECTION_MAPPING = {
@@ -410,6 +411,18 @@ Object.assign(india_compliance, {
         }
 
         return pan;
+    },
+
+    validate_udyam_number(udyam_number) {
+        if (!udyam_number) return;
+
+        udyam_number = udyam_number.trim().toUpperCase();
+
+        if (!UDYAM_NUMBER_REGEX.test(udyam_number)) {
+            frappe.throw(__("Invalid UDYAM Registration Number. Expected format: UDYAM-XX-00-0000000"));
+        }
+
+        return udyam_number;
     },
 
     validate_gstin(gstin, show_msg = true) {
