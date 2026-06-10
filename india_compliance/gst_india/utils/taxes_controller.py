@@ -154,7 +154,7 @@ class CustomTaxController:
     def update_tax_amount(self):
         total_taxes = 0
         total_taxable_value = self.calculate_total_taxable_value()
-        round_off_accounts = fetch_round_off_accounts(self.doc.company, [])
+        round_off_accounts = fetch_round_off_accounts(self.doc.company, [], self.doc)
 
         for tax in self.doc.taxes:
             if tax.charge_type == "Actual":
