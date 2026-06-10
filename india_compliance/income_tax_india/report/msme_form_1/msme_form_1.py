@@ -96,7 +96,6 @@ def group_by_supplier(rows):
                 "supplier": row["supplier"],
                 "supplier_name": row["supplier_name"],
                 "pan": row["pan"],
-                "reason_for_delay": "",
                 **{fieldname: 0 for fieldname, _label in BUCKETS},
                 **{f"{fieldname}_count": 0 for fieldname, _label in BUCKETS},
             },
@@ -154,12 +153,4 @@ def get_columns(filters):
                 },
             ]
 
-    columns.append(
-        {
-            "label": _("Reason for delay in payment / amount outstanding"),
-            "fieldname": "reason_for_delay",
-            "fieldtype": "Data",
-            "width": 200,
-        }
-    )
     return columns

@@ -145,22 +145,13 @@ def get_msme_payables(
     Shared MSME payables dataset for the 43B(h) and Form-1 reports, returned
     as complete report-ready rows (single pass per payable voucher).
 
-    Built directly on the Payment Ledger (like ERPNext's Accounts Payable
-    report), so it covers every payable voucher type - not just Purchase
-    Invoices - and the voucher amount is the amount actually payable to the
-    supplier. Unadjusted payments / credit notes (negative ledger balances)
-    are returned as negative rows so the net actual disallowable amount can
-    be derived.
+    Built directly on the Payment Ledger
 
-    Classification filtering happens here (single place), per voucher FY. A
-    supplier without a classification row for the voucher's FY is treated as
-    not MSME-registered for that year and excluded.
-    - ``only_43b_applicable``: only Micro/Small non-trader suppliers
-    - ``enterprise_type``: narrows further to one type (e.g. Micro vs Small);
-      it never widens past the applicability filter
-    - ``settlement_from_date``: window start for the paid_within_due /
+    - only_43b_applicable: only Micro/Small non-trader suppliers
+    - enterprise_type: narrows further to one type (e.g. Micro vs Small);
+    - settlement_from_date: window start for the paid_within_due /
       paid_after_due split (e.g. Form-1 counts only payments made during the
-      half-year); totals and outstanding always cover all settlements
+      half-year);
     """
     as_on_date = getdate(as_on_date or to_date)
     from_date = getdate(from_date) if from_date else None
