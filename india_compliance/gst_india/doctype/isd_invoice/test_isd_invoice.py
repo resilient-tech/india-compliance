@@ -274,14 +274,14 @@ class TestISDInvoice(IntegrationTestCase):
                 fy,
             ),
         ]
-        invoice_names, _ = bulk_create_isd_invoices(distribution_heads=rows, purchase_invoices=[pi.name])
+        invoice_names, _ = bulk_create_isd_invoices(
+            distribution_table=rows, purchase_invoices={pi.name: _pi_total(pi)}
+        )
         for name in invoice_names:
             print(f"{name}: distributed total {_distributed_total([name])}")
 
         self.assertEqual(_distributed_total(invoice_names), _pi_total(pi))
 
-    # TODO: ask lakshit bhai — float math: 16666666.666666666 * 6 = 99999999.99999996 (wrong),
-    # but the same value added six times = 100000000.0 (float rounding "accidentally" correct).
     def test_rounding_remainder_absorbed_by_last_invoice(self):
         """Last ISD invoice absorbs the rounding remainder so total distributed == PI total.
 
@@ -301,7 +301,9 @@ class TestISDInvoice(IntegrationTestCase):
                 _COMPANY_3_GSTIN, "Registered Regular", "Karnataka", 1000000, addr, self.company.name, fy
             ),
         ]
-        invoice_names, _ = bulk_create_isd_invoices(distribution_heads=rows, purchase_invoices=[pi.name])
+        invoice_names, _ = bulk_create_isd_invoices(
+            distribution_table=rows, purchase_invoices={pi.name: _pi_total(pi)}
+        )
         self.assertEqual(_distributed_total(invoice_names), _pi_total(pi))
 
     def test_sez_recipient_distributed_as_igst_only(self):
@@ -320,7 +322,9 @@ class TestISDInvoice(IntegrationTestCase):
                 "24AAACI1681G2ZU", "SEZ", "Gujarat", 1000000, sez_address.name, self.company.name, fy
             )
         ]
-        isd_invoices, _ = bulk_create_isd_invoices(distribution_heads=rows, purchase_invoices=[pi.name])
+        isd_invoices, _ = bulk_create_isd_invoices(
+            distribution_table=rows, purchase_invoices={pi.name: _pi_total(pi)}
+        )
 
         for invoice_name in isd_invoices:
             for row in frappe.get_doc("ISD Invoice", invoice_name).source_invoices:
@@ -573,7 +577,7 @@ def _std_service_pi(company, billing_address, qty=1, rate=10000, hsn="999800", *
 
 
 def _distribution_row(gstin, gst_category, gst_state, turnover, party_address, party, fiscal_year):
-    """distribution_heads dict for bulk_create_isd_invoices."""
+    """distribution_table dict for bulk_create_isd_invoices."""
     return {
         "gstin": gstin,
         "gst_category": gst_category,

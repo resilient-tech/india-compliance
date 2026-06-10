@@ -68,7 +68,7 @@
    "in_list_view": 1,
    "label": "Series",
    "no_copy": 1,
-   "options": "ISD-.YYYY.-.MM.-",
+   "options": "ISD-.YY.-",
    "print_hide": 1,
    "reqd": 1,
    "set_only_once": 1
@@ -266,7 +266,7 @@
   {
    "fieldname": "company_pos",
    "fieldtype": "Data",
-   "label": "Company POS",
+   "label": "Company Place of Supply",
    "read_only": 1
   },
   {
@@ -279,7 +279,7 @@
   {
    "fieldname": "party_pos",
    "fieldtype": "Data",
-   "label": "Party POS",
+   "label": "Party Place of Supply",
    "read_only": 1
   },
   {
@@ -380,7 +380,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-06-08 11:23:55.733485",
+ "modified": "2026-06-09 15:40:45.798727",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "ISD Invoice",

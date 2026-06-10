@@ -71,35 +71,35 @@
    "fieldname": "total_igst",
    "fieldtype": "Float",
    "label": "Total IGST",
-   "read_only": 1
+   "read_only_depends_on": "eval:!parent.is_external_invoice"
   },
   {
    "default": "0",
    "fieldname": "total_cgst",
    "fieldtype": "Float",
    "label": "Total CGST",
-   "read_only": 1
+   "read_only_depends_on": "eval:!parent.is_external_invoice"
   },
   {
    "default": "0",
    "fieldname": "total_sgst",
    "fieldtype": "Float",
    "label": "Total SGST",
-   "read_only": 1
+   "read_only_depends_on": "eval:!parent.is_external_invoice"
   },
   {
    "default": "0",
    "fieldname": "total_cess",
    "fieldtype": "Float",
    "label": "Total CESS",
-   "read_only": 1
+   "read_only_depends_on": "eval:!parent.is_external_invoice"
   },
   {
    "default": "0",
    "fieldname": "total_cess_non_advol",
    "fieldtype": "Float",
    "label": "Total CESS Non Advol",
-   "read_only": 1
+   "read_only_depends_on": "eval:!parent.is_external_invoice"
   },
   {
    "default": "0",

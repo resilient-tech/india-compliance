@@ -253,17 +253,8 @@ class ISDInvoiceController {
             }
             const is_company_recipient =
                 this.frm.doc.is_against_party && this.frm.doc.credit_flow === CREDIT_FLOW.RECEIPT;
-            const filters = {
-                link_doctype: "Company",
-                link_name: this.frm.doc.company,
-            };
-            if (!is_company_recipient) {
-                filters.gst_category = "Input Service Distributor";
-            }
-            return {
-                query: "frappe.contacts.doctype.address.address.address_query",
-                filters,
-            };
+            const extra = is_company_recipient ? {} : { gst_category: "Input Service Distributor" };
+            return india_compliance.get_address_query("Company", this.frm.doc.company, extra);
         });
 
         this.frm.set_query("party_type", () => {
@@ -284,13 +275,7 @@ class ISDInvoiceController {
         this.frm.set_query("party_address", () => {
             // for single company setup
             if (!this.frm.doc.is_against_party) {
-                return {
-                    query: "frappe.contacts.doctype.address.address.address_query",
-                    filters: {
-                        link_doctype: "Company",
-                        link_name: this.frm.doc.company,
-                    },
-                };
+                return india_compliance.get_address_query("Company", this.frm.doc.company);
             }
 
             // for multi company setup
@@ -304,19 +289,8 @@ class ISDInvoiceController {
 
             const is_company_recipient =
                 this.frm.doc.is_against_party && this.frm.doc.credit_flow === CREDIT_FLOW.RECEIPT;
-            const filters = {
-                link_doctype: this.frm.doc.party_type,
-                link_name: this.frm.doc.party,
-            };
-
-            if (is_company_recipient) {
-                filters.gst_category = "Input Service Distributor";
-            }
-
-            return {
-                query: "frappe.contacts.doctype.address.address.address_query",
-                filters,
-            };
+            const extra = is_company_recipient ? { gst_category: "Input Service Distributor" } : {};
+            return india_compliance.get_address_query(this.frm.doc.party_type, this.frm.doc.party, extra);
         });
 
         this.frm.set_query("account_head", "taxes", () => {

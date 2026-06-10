@@ -11,6 +11,8 @@ from frappe.utils import flt, nowdate
 from india_compliance.gst_india.utils import get_state, validate_gstin
 
 
+# TODO: index gstin and gst_state in turnover record
+#
 class TurnoverRecord(Document):
     def autoname(self):
         self.name = f"{str(self.from_date)[:-2]}-{str(self.to_date)[:-2]}-{self.gst_state}"
@@ -18,8 +20,8 @@ class TurnoverRecord(Document):
     def validate(self):
         validate_gstin(self.gstin)
         if self.gstin and get_state(self.gstin[:2]) != self.gst_state:
-            # for registered company, gstin and gst state are compulsory and validated
-            frappe.throw(_("GSTIN does not match selected state"))
+            # for registered company, gstin and gst gst_state are compulsory and validated
+            frappe.throw(_("GSTIN does not match selected gst_state"))
 
 
 def upsert_turnover_record(
@@ -35,7 +37,7 @@ def upsert_turnover_record(
     filters = {"from_date": from_date, "to_date": to_date}
     or_filters = {"gst_state": gst_state, "gstin": gstin or ""}
 
-    existing = frappe.db.get_list(
+    existing = frappe.db.get_all(
         "Turnover Record", filters=filters, or_filters=or_filters, pluck="name", limit=1
     )
     existing = existing[0] if existing else None

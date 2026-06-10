@@ -8,18 +8,14 @@ frappe.ui.form.on("Turnover Record", {
         }
     },
 
-    refresh(frm) {
-        india_compliance.set_state_options(frm);
+    onload(frm) {
+        frm.get_field("gst_state").set_data(frappe.boot.india_state_options || []);
     },
 
     gstin(frm) {
         if (!frm.doc.gstin) return;
         india_compliance.validate_gstin(frm.doc.gstin);
         frm.doc.gst_category = india_compliance.guess_gst_category(frm.doc.gstin, "India");
-    },
-
-    country(frm) {
-        india_compliance.set_state_options(frm);
     },
 
     from_date(frm) {

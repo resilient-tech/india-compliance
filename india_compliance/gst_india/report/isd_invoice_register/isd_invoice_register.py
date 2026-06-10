@@ -8,8 +8,9 @@ from frappe.query_builder import Order
 from frappe.query_builder.functions import Sum
 from pypika.terms import Case
 
-from india_compliance.gst_india.constants import CREDIT_FLOW, GST_TAX_TYPES
+from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.utils.isd import (
+    CREDIT_FLOW,
     get_report_company_currency,
     validate_common_report_filters,
 )

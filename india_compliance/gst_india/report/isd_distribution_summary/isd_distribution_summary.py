@@ -8,7 +8,7 @@ import frappe
 from frappe import _
 from frappe.core.doctype.user_permission.user_permission import get_permitted_documents
 from frappe.query_builder.functions import Sum
-from frappe.utils import flt
+from frappe.utils import cint, flt
 from pypika.terms import Case
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
@@ -34,10 +34,10 @@ def _get_distributed_map(purchase_invoices):
     rows = (
         get_isd_source_item_query(purchase_invoices=purchase_invoices)
         .select(isd_source_item.is_ineligible_for_itc)
-        .groupby(isd_source_item.is_ineligible_for_itc)
+        .groupby(isd_source_item.purchase_invoice, isd_source_item.is_ineligible_for_itc)
         .run(as_dict=True)
     )
-    return {(r.purchase_invoice, r.is_ineligible_for_itc): flt(r.total_distributed) for r in rows}
+    return {(r.purchase_invoice, cint(r.is_ineligible_for_itc)): flt(r.total_distributed) for r in rows}
 
 
 def get_data(filters):

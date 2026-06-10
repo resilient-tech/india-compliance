@@ -6,7 +6,6 @@ from frappe.utils import flt
 from india_compliance.gst_india.constants import (
     GST_TAX_TYPES,
     IMPORT_GST_CATEGORIES,
-    ISD_GST_CATEGORY,
     VALID_HSN_LENGTHS,
 )
 from india_compliance.gst_india.overrides.sales_invoice import (
@@ -25,6 +24,7 @@ from india_compliance.gst_india.utils import (
     validate_invoice_number,
 )
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
+from india_compliance.gst_india.utils.isd import ISD_GST_CATEGORY
 from india_compliance.gst_india.utils.itc_claim import (
     _is_gstr3b_filed,
     set_or_validate_itc_claim_period,
@@ -118,10 +118,7 @@ def set_pending_boe_qty(doc):
 def set_is_isd_applicable(doc):
     doc.is_isd_applicable = 0
 
-    if not doc.billing_address or not doc.place_of_supply or not doc.company_gstin:
-        return
-
-    if doc.place_of_supply[:2] != doc.company_gstin[:2]:
+    if doc.ineligibility_reason == "ITC restricted due to PoS rules":
         return
 
     gst_category = frappe.db.get_value("Address", doc.billing_address, "gst_category")

@@ -1,5 +1,4 @@
 import re
-from enum import Enum
 
 from erpnext.stock.get_item_details import sales_doctypes
 
@@ -38,14 +37,6 @@ GST_CATEGORIES = {
     "Tax Collector": "B2B",
     "Input Service Distributor": "B2B",
 }
-
-ISD_GST_CATEGORY = "Input Service Distributor"
-
-
-class CREDIT_FLOW(str, Enum):
-    DISTRIBUTION = "Credit Distribution"
-    RECEIPT = "Credit Receipt"
-
 
 GST_CATEGORY_MAP = {
     "R": "Regular",

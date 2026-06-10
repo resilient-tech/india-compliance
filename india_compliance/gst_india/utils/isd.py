@@ -7,6 +7,7 @@ Imports only frappe / pypika / constants so it stays a leaf module that both the
 ISD Invoice controller and the ISD reports can depend on (one-directional).
 """
 
+from enum import Enum
 from functools import reduce
 from operator import add
 
@@ -21,10 +22,33 @@ from india_compliance.gst_india.constants import (
     IMPORT_GST_CATEGORIES,
 )
 
+ISD_GST_CATEGORY = "Input Service Distributor"
+
+
+class CREDIT_FLOW(str, Enum):
+    DISTRIBUTION = "Credit Distribution"
+    RECEIPT = "Credit Receipt"
+
 
 def sum_row_tax_by_type(row, prefix):
     """Python float sum of the five GST tax fields on a document/dict row (e.g. distributed_*, total_*)."""
     return sum(flt(getattr(row, f"{prefix}_{tax_type}")) for tax_type in GST_TAX_TYPES)
+
+
+# TODO: at many places this can be replaced with, see if that breaks at any place
+# isd_invoice = frappe.qb.DocType("ISD Invoice")
+
+# query = (
+#     frappe.qb.from_(isd_source_item)
+#     .select(
+#         isd_source_item.purchase_invoice,
+#         Sum(reduce(add, (isd_source_item[f"distributed_{t}"] for t in GST_TAX_TYPES))).as_(
+#             "total_distributed"
+#         ),
+#     )
+#     .where(isd_invoice.docstatus == 1)
+#     .groupby(isd_source_item.purchase_invoice)
+# )
 
 
 def get_isd_source_item_query(purchase_invoices=None):
@@ -42,13 +66,26 @@ def get_isd_source_item_query(purchase_invoices=None):
             ),
         )
         .where(isd_invoice.docstatus == 1)
-        .groupby(isd_source_item.purchase_invoice)
     )
 
     if purchase_invoices is not None:
         query = query.where(isd_source_item.purchase_invoice.isin(purchase_invoices))
 
     return query
+
+
+def get_pi_total_tax_map(purchase_invoices):
+    pi_item = frappe.qb.from_("Purchase Invoice Item")
+    return (
+        frappe.qb.from_(pi_item)
+        .where(pi_item.docstatus == 1)
+        .where(pi_item.parent.isin(list(purchase_invoices)))
+        .select(
+            pi_item.parent,
+            Sum(reduce(add, (pi_item[f"{t}_amount"] for t in GST_TAX_TYPES))),
+        )
+        .groupby(pi_item.parent)
+    )
 
 
 def calculate_distribution(doc):
