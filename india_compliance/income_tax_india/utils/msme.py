@@ -2,7 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe.utils import add_days, add_years, getdate
+from frappe.utils import add_days, add_years, flt, getdate, today
 
 from india_compliance.income_tax_india.constants import (
     MSME_APPLICABLE_TYPES,
@@ -58,3 +58,315 @@ def get_financial_years_between(from_date, to_date) -> list[str]:
     start_year = int(get_indian_fiscal_year(from_date).split("-")[0])
     end_year = int(get_indian_fiscal_year(to_date).split("-")[0])
     return [f"{year}-{year + 1}" for year in range(start_year, end_year + 1)]
+
+
+def get_settlement_summary(settlements, due_date, from_date=None, to_date=None) -> dict:
+    """Split settlement amounts into paid-on-time vs paid-late vs the due date.
+
+    Pass ``from_date``/``to_date`` to count only settlements posted within a
+    window (e.g. Form-1's half-year reporting period).
+    """
+    paid_on_time = paid_late = 0
+    for settlement in settlements:
+        posting_date = settlement["posting_date"]
+        if from_date and posting_date < from_date:
+            continue
+        if to_date and posting_date > to_date:
+            continue
+
+        if posting_date <= due_date:
+            paid_on_time += settlement["amount"]
+        else:
+            paid_late += settlement["amount"]
+
+    return {"paid_on_time": paid_on_time, "paid_late": paid_late}
+
+
+def get_payable_ledger_groups(company, suppliers, as_on_date) -> dict[tuple, dict]:
+    """All Payable ledger entries for the suppliers as on a date, grouped by
+    the voucher they settle - the same grouping ERPNext's Accounts Payable
+    report uses, so every payable voucher type (Purchase Invoice, Journal
+    Entry, ...) is covered, not just Purchase Invoices.
+
+    Each group carries the voucher's own (anchor) entry, the settlement
+    entries against it, and the signed balance: positive = amount payable,
+    negative = unadjusted payment / credit note. Amounts are company currency.
+    """
+    ple = frappe.qb.DocType("Payment Ledger Entry")
+    entries = (
+        frappe.qb.from_(ple)
+        .select(
+            ple.against_voucher_type,
+            ple.against_voucher_no,
+            ple.party,
+            ple.voucher_type,
+            ple.voucher_no,
+            ple.posting_date,
+            ple.amount,
+        )
+        .where(ple.delinked == 0)
+        .where(ple.account_type == "Payable")
+        .where(ple.party_type == "Supplier")
+        .where(ple.company == company)
+        .where(ple.party.isin(suppliers))
+        .where(ple.posting_date <= getdate(as_on_date))
+    ).run(as_dict=True)
+
+    groups: dict[tuple, dict] = {}
+    for entry in entries:
+        group = groups.setdefault(
+            (entry.against_voucher_type, entry.against_voucher_no),
+            frappe._dict(party=entry.party, anchor=None, settlements=[], balance=0),
+        )
+        group.balance += entry.amount
+
+        is_anchor = (
+            entry.voucher_type == entry.against_voucher_type and entry.voucher_no == entry.against_voucher_no
+        )
+        if is_anchor:
+            group.anchor = entry
+        else:
+            group.settlements.append({"posting_date": getdate(entry.posting_date), "amount": -entry.amount})
+
+    return groups
+
+
+def get_msme_payables(
+    company: str,
+    to_date,
+    from_date=None,
+    supplier: str | None = None,
+    as_on_date=None,
+    enterprise_type: str | None = None,
+    only_43b_applicable=False,
+    settlement_from_date=None,
+) -> list[dict]:
+    """
+    Shared MSME payables dataset for the 43B(h) and Form-1 reports, returned
+    as complete report-ready rows (single pass per payable voucher).
+
+    Built directly on the Payment Ledger (like ERPNext's Accounts Payable
+    report), so it covers every payable voucher type - not just Purchase
+    Invoices - and the voucher amount is the amount actually payable to the
+    supplier. Unadjusted payments / credit notes (negative ledger balances)
+    are returned as negative rows so the net actual disallowable amount can
+    be derived.
+
+    Classification filtering happens here (single place), per voucher FY. A
+    supplier without a classification row for the voucher's FY is treated as
+    not MSME-registered for that year and excluded.
+    - ``only_43b_applicable``: only Micro/Small non-trader suppliers
+    - ``enterprise_type``: narrows further to one type (e.g. Micro vs Small);
+      it never widens past the applicability filter
+    - ``settlement_from_date``: window start for the paid_within_due /
+      paid_after_due split (e.g. Form-1 counts only payments made during the
+      half-year); totals and outstanding always cover all settlements
+    """
+    as_on_date = getdate(as_on_date or to_date)
+    from_date = getdate(from_date) if from_date else None
+    to_date = getdate(to_date)
+
+    supplier_filters = {"is_msme_registered": 1}
+    if supplier:
+        supplier_filters["name"] = supplier
+
+    supplier_details = {
+        d.name: d
+        for d in frappe.get_all(
+            "Supplier",
+            filters=supplier_filters,
+            fields=["name", "supplier_name", "pan", "udyam_number", "msme_is_trader"],
+        )
+    }
+    if not supplier_details:
+        return []
+
+    groups = get_payable_ledger_groups(company, list(supplier_details), as_on_date)
+
+    # anchorless groups have no payable voucher as on date (e.g. allocations
+    # of a future-dated voucher)
+    anchored = {}
+    for key, group in groups.items():
+        if not group.anchor:
+            continue
+
+        posting_date = getdate(group.anchor.posting_date)
+
+        # dues are range-bound (each year disallows its own accruals), but an
+        # unadjusted credit nets the payable regardless of when it was posted -
+        # this keeps the report's net total reconciled with GL / Accounts Payable
+        if group.anchor.amount > 0:
+            if posting_date > to_date or (from_date and posting_date < from_date):
+                continue
+
+        anchored[key] = group
+
+    if not anchored:
+        return []
+
+    financial_years = get_financial_years_between(
+        min(getdate(g.anchor.posting_date) for g in anchored.values()),
+        as_on_date,
+    )
+    classification_map = get_classification_map(
+        suppliers=list({group.party for group in anchored.values()}),
+        financial_years=financial_years,
+    )
+
+    records = []
+    for (voucher_type, voucher_no), group in anchored.items():
+        posting_date = getdate(group.anchor.posting_date)
+        details = supplier_details[group.party]
+        fy = get_indian_fiscal_year(posting_date)
+
+        # Applicability is derived at read time (single source of truth), so
+        # reports stay correct even if a persisted child-row flag is stale.
+        classification = None
+        if row := classification_map.get((group.party, fy)):
+            classification = {
+                "enterprise_type": row.enterprise_type,
+                "msme_applicable": is_section_43_b_msme_applicable(
+                    row.enterprise_type, details.msme_is_trader
+                ),
+            }
+
+        if not is_classification_included(classification, enterprise_type, only_43b_applicable):
+            continue
+
+        due_date = get_msme_due_date(posting_date)
+        record = {
+            "supplier": group.party,
+            "supplier_name": details.supplier_name,
+            "pan": details.pan,
+            "udyam_number": details.udyam_number,
+            "enterprise_type": classification["enterprise_type"],
+            "voucher_type": voucher_type,
+            "voucher_no": voucher_no,
+            "posting_date": posting_date,
+            "financial_year": fy,
+            "due_date": due_date,
+        }
+
+        if group.anchor.amount > 0:
+            record.update(get_due_voucher_amounts(group, due_date, as_on_date, settlement_from_date))
+        else:
+            # unadjusted payment / credit note: reduces the net amount payable
+            unadjusted = flt(min(group.balance, 0))
+            if not unadjusted:
+                continue
+
+            record.update(
+                {
+                    "invoice_amount": flt(group.anchor.amount),
+                    "paid_amount": 0,
+                    "paid_within_due": 0,
+                    "paid_after_due": 0,
+                    "outstanding": unadjusted,
+                    "outstanding_not_due": 0,
+                    "outstanding_overdue": 0,
+                    "disallowable_amount": unadjusted,
+                    "payment_status": (
+                        "Unadjusted Advance" if voucher_type == "Payment Entry" else "Unadjusted Credit"
+                    ),
+                    "days_overdue": 0,
+                    "payment_date": None,
+                }
+            )
+
+        records.append(record)
+
+    return records
+
+
+def get_due_voucher_amounts(group, due_date, as_on_date, settlement_from_date=None) -> dict:
+    summary = get_settlement_summary(group.settlements, due_date)
+    settled_total = summary["paid_on_time"] + summary["paid_late"]
+
+    # the windowed split (e.g. Form-1's half-year) only differs from the
+    # full split when a window start is given
+    if settlement_from_date:
+        window = get_settlement_summary(group.settlements, due_date, from_date=settlement_from_date)
+    else:
+        window = summary
+
+    outstanding = max(flt(group.balance), 0)
+    is_overdue = as_on_date > due_date
+
+    if outstanding <= 0:
+        payment_status = "Paid Late" if summary["paid_late"] > 0 else "Paid On Time"
+    elif is_overdue:
+        payment_status = "Unpaid - Overdue"
+    else:
+        payment_status = "Within Due Date"
+
+    return {
+        "invoice_amount": flt(group.anchor.amount),
+        "paid_amount": flt(settled_total),
+        "paid_within_due": flt(window["paid_on_time"]),
+        "paid_after_due": flt(window["paid_late"]),
+        "outstanding": outstanding,
+        "outstanding_not_due": 0 if is_overdue else outstanding,
+        "outstanding_overdue": outstanding if is_overdue else 0,
+        # paid in-year is allowed in that year; only the unpaid overdue
+        # portion is added back u/s 43B(h)
+        "disallowable_amount": outstanding if is_overdue else 0,
+        "payment_status": payment_status,
+        "days_overdue": (as_on_date - due_date).days if is_overdue else 0,
+        "payment_date": max((s["posting_date"] for s in group.settlements), default=None),
+    }
+
+
+def is_classification_included(classification, enterprise_type, only_43b_applicable) -> bool:
+    # no classification row for the invoice's FY = not MSME-registered that year
+    if classification is None:
+        return False
+
+    if only_43b_applicable and not classification["msme_applicable"]:
+        return False
+
+    # enterprise_type narrows within the above; it never widens past it
+    if enterprise_type and classification["enterprise_type"] != enterprise_type:
+        return False
+
+    return True
+
+
+def update_msme_classification():
+    """
+    Update MSME classifications for the new financial year by copying rows from the previous year.
+    Will be used in new year patch
+    """
+    new_fy = get_indian_fiscal_year(today())
+    prev_start_year = int(new_fy.split("-")[0]) - 1
+    prev_fy = f"{prev_start_year}-{prev_start_year + 1}"
+
+    prev_rows = frappe.get_all(
+        "India MSME Classification",
+        filters={"parenttype": "Supplier", "financial_year": prev_fy},
+        fields=["parent as supplier", "enterprise_type"],
+    )
+    if not prev_rows:
+        return
+
+    existing = set(
+        frappe.get_all(
+            "India MSME Classification",
+            filters={"parenttype": "Supplier", "financial_year": new_fy},
+            pluck="parent",
+        )
+    )
+
+    for row in prev_rows:
+        if row.supplier in existing:
+            continue
+
+        supplier = frappe.get_doc("Supplier", row.supplier)
+        supplier.append(
+            "india_msme_classification",
+            {
+                "financial_year": new_fy,
+                "enterprise_type": row.enterprise_type,
+            },
+        )
+        supplier.save(ignore_permissions=True)
+        existing.add(row.supplier)
