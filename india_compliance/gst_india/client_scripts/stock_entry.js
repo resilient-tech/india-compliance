@@ -99,7 +99,7 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     company(frm) {
-        if (frm.doc.company && is_subcontracting_entry(frm)) {
+        if (frm.doc.company && india_compliance.SUBCONTRACTING_PURPOSES.includes(frm.doc.purpose)) {
             frappe.call({
                 method: "frappe.contacts.doctype.address.address.get_default_address",
                 args: {
@@ -181,16 +181,6 @@ function get_items(doc) {
     return Array.from(new Set(doc.items.map((row) => row.item_code)));
 }
 
-function is_subcontracting_entry(frm) {
-    return ["Send to Subcontractor", "Subcontracting Delivery", "Return Raw Material to Customer"].includes(
-        frm.doc.purpose,
-    );
-}
-
-function is_subcontracting_inward_entry(frm) {
-    return ["Subcontracting Delivery", "Return Raw Material to Customer"].includes(frm.doc.purpose);
-}
-
 function get_field_and_label(frm, field) {
     let field_label_dict = {};
 
@@ -199,7 +189,7 @@ function get_field_and_label(frm, field) {
             party_field: ["bill_from_address", __("Bill From (same as Supplier Address)"), __("Bill From")],
             company_field: ["bill_to_address", __("Bill To")],
         };
-    } else if (is_subcontracting_inward_entry(frm)) {
+    } else if (india_compliance.is_subcontracting_inward_entry(frm.doc)) {
         // For Subcontracting Inward related entries
         // company bills to the customer
         field_label_dict = {

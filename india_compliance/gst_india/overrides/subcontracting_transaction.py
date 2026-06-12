@@ -6,6 +6,9 @@ from frappe.contacts.doctype.address.address import get_address_display
 from frappe.utils import flt
 from pypika import Order
 
+from india_compliance.gst_india.constants import (
+    E_WAYBILL_STOCK_ENTRY_PURPOSES,
+)
 from india_compliance.gst_india.constants.e_waybill import (
     ADDRESS_FIELDS,
     ADDRESS_GSTIN_FIELD_MAP,
@@ -599,13 +602,10 @@ def is_e_waybill_applicable(doc):
     if doc.doctype != "Stock Entry":
         return True
 
-    if doc.purpose not in [
-        "Material Transfer",
-        "Material Issue",
-        "Send to Subcontractor",
-        "Subcontracting Delivery",
-        "Return Raw Material to Customer",
-    ]:
+    # Job-work challans for Subcontracting Inward purposes are reported in
+    # ITC-04 / GSTR-1 by the customer (principal), not by the company (job worker).
+    # Hence, only e-Waybill is applicable for such Stock Entries.
+    if doc.purpose not in E_WAYBILL_STOCK_ENTRY_PURPOSES:
         return False
 
     return True
