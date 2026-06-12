@@ -756,6 +756,7 @@ CUSTOM_FIELDS = {
             "no_copy": 1,
             "print_hide": 1,
             "hidden": 0,
+            # keep in sync with SUBCONTRACTING_INWARD_PURPOSES (constants/__init__.py)
             "depends_on": 'eval:["Subcontracting Delivery", "Return Raw Material to Customer"].includes(parent.purpose)',
             "description": "Value of customer-provided materials for Subcontracting Inward",
         },
