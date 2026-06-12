@@ -3,7 +3,8 @@
 
 from frappe.utils import getdate
 
-E_WAYBILL_CHANGES_APPLICABLE_DATE = getdate("2026-06-15")
+# Date from which NIC e-Waybill API changes apply in production (already live in sandbox)
+E_WAYBILL_CHANGES_APPLICABLE_DATE = getdate("2026-08-01")
 
 selling_address = {
     "bill_from": "company_address",

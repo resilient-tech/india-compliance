@@ -436,7 +436,9 @@ class TestEWaybill(IntegrationTestCase):
     def test_close_e_waybill_blocked_before_rollout_in_production(self):
         """In production, close_e_waybill fails fast before the NIC rollout date
         (before the doc is loaded or any API call is made)."""
-        with time_machine.travel(get_datetime("2026-06-13"), tick=False):
+        before_rollout = add_to_date(E_WAYBILL_CHANGES_APPLICABLE_DATE, days=-1, as_datetime=True)
+
+        with time_machine.travel(before_rollout, tick=False):
             self.assertRaisesRegex(
                 frappe.exceptions.ValidationError,
                 re.compile(r"Closure API will be available from"),

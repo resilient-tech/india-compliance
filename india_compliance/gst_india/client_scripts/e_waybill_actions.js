@@ -1221,8 +1221,8 @@ function is_e_waybill_valid(frm) {
 }
 
 function is_e_waybill_changes_applicable() {
-    // e-Waybill changes are live in sandbox now; in production from 2026-06-15.
-    return gst_settings.sandbox_mode || frappe.datetime.get_today() >= "2026-06-15";
+    // keep in sync with E_WAYBILL_CHANGES_APPLICABLE_DATE (constants/e_waybill.py)
+    return gst_settings.sandbox_mode || frappe.datetime.get_today() >= "2026-08-01";
 }
 
 async function has_e_waybill_threshold_met(frm) {

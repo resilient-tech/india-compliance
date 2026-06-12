@@ -431,7 +431,7 @@ def log_and_process_e_waybill_cancellation(doc, values, result):
 
 
 def is_e_waybill_changes_applicable(settings=None):
-    # changes deployed in sandbox mode and will be deployed in production on 15th June 2026.
+    # changes are live in sandbox and apply in production from E_WAYBILL_CHANGES_APPLICABLE_DATE
     if not settings:
         settings = frappe.get_cached_doc("GST Settings")
 
@@ -718,6 +718,7 @@ def get_e_waybills_to_extend():
         frappe.qb.from_(e_waybill)
         .where(
             e_waybill.is_cancelled.eq(0)
+            & e_waybill.is_closed.eq(0)
             & e_waybill.extension_scheduled.eq(1)
             & e_waybill.valid_upto.between(
                 get_datetime_str(add_days(get_datetime(), -1)),
@@ -1352,7 +1353,7 @@ class EWaybillData(GSTTransactionData):
         return {
             "ewbNo": self.doc.ewaybill,
             "closureDate": format_date(getdate(), "dd/mm/yyyy"),
-            "remarks": values.remarks,
+            "remarks": self.sanitize_value(values.remarks, regex=3),
         }
 
     def get_update_vehicle_data(self, values):

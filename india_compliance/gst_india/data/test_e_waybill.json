@@ -491,7 +491,6 @@
         },
         "params": "action=CLSEWB",
         "values": {
-            "closure_date": "2022-10-04",
             "remarks": "Goods delivered"
         },
         "response_data": {
