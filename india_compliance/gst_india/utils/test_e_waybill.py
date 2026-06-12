@@ -326,6 +326,7 @@ class TestEWaybill(IntegrationTestCase):
         )
 
     @responses.activate
+    @change_settings("GST Settings", {"sandbox_mode": 1})
     def test_close_e_waybill(self):
         """Test whitelisted method `close_e_waybill` (NIC v1.03 CLSEWB).
 
@@ -1754,7 +1755,6 @@ def update_dates_for_test_data(test_data):
         if "docDate" in response_request:
             response_request.update({"docDate": today_date})
 
-        # closure date is system-set to today (get_data_for_closure uses getdate())
         if "closureDate" in response_request:
             response_request.update({"closureDate": today_date})
 

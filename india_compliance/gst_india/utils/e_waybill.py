@@ -477,16 +477,12 @@ def log_and_process_e_waybill_closure(doc, values, result):
         {
             "name": doc.ewaybill,
             "is_closed": 1,
-            # closure changes the remote state; invalidate cached data so the
-            # next fetch_e_waybill_data refreshes the data/PDF instead of
-            # serving the pre-closure copy.
             "is_latest_data": 0,
             "closure_remark": values.remarks,
             "closed_on": parse_datetime(result.ewbClosureDate, day_first=True),
         },
     )
 
-    # Unlike cancellation, closure keeps the e-Waybill number; only status changes.
     if doc.doctype == "Sales Invoice":
         doc.db_set("e_waybill_status", result.get("e_waybill_status") or "Closed")
 
