@@ -1256,6 +1256,7 @@ class TestEWaybill(IntegrationTestCase):
         self.assertIn("GSTIN -29AAACI1195H2ZH is inactive or cancelled", str(cm.exception))
 
     @responses.activate
+    @change_settings("GST Settings", {"sandbox_mode": 1})
     def test_e_waybill_overseas_customer_with_domestic_shipping(self):
         """Test e-waybill for overseas customer with domestic shipping address.
 
@@ -1361,6 +1362,10 @@ class TestEWaybill(IntegrationTestCase):
             self.assertEqual(data.get("transactionType"), 2)
             self.assertTrue(data.get("shipToGSTIN"))
             self.assertTrue(data.get("shipToTradeName"))
+
+            json_data = EWaybillData(si, for_json=True).get_data()
+            self.assertTrue(json_data.get("shipToGSTIN"))
+            self.assertTrue(json_data.get("shipToTradeName"))
 
     @staticmethod
     def _create_unregistered_shipping_address():
