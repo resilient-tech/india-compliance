@@ -343,6 +343,9 @@ def log_and_process_e_waybill_generation(doc, result, *, with_irn=False):
 
     doc.db_set(data)
 
+    # dates are entered by the user in ISO format for manual generation
+    day_first = not with_irn and status != "Manually Generated"
+
     sandbox_mode, fetch = frappe.get_cached_value(
         "GST Settings", "GST Settings", ["sandbox_mode", "fetch_e_waybill_data"]
     )
@@ -352,11 +355,11 @@ def log_and_process_e_waybill_generation(doc, result, *, with_irn=False):
             "e_waybill_number": e_waybill_number,
             "created_on": parse_datetime(
                 result.get("ewayBillDate" if not with_irn else "EwbDt"),
-                day_first=not with_irn,
+                day_first=day_first,
             ),
             "valid_upto": parse_datetime(
                 result.get("validUpto" if not with_irn else "EwbValidTill"),
-                day_first=not with_irn,
+                day_first=day_first,
             ),
             "reference_doctype": doc.doctype,
             "reference_name": doc.name,
@@ -415,7 +418,10 @@ def log_and_process_e_waybill_cancellation(doc, values, result):
             "cancelled_on": (
                 get_datetime()  # Fallback to handle already cancelled e-Waybill
                 if result.error_code == "312"
-                else parse_datetime(result.cancelDate, day_first=True)
+                else parse_datetime(
+                    result.cancelDate,
+                    day_first=result.get("e_waybill_status") != "Manually Cancelled",
+                )
             ),
         },
     )
