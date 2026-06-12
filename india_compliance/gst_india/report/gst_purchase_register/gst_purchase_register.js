@@ -1,32 +1,8 @@
 // Copyright (c) 2024, Resilient Tech and contributors
 // For license information, please see license.txt
-const SUB_SECTION_MAPPING = {
-    4: {
-        "ITC Available": [
-            "Import Of Goods",
-            "Import Of Service",
-            "ITC on Reverse Charge",
-            "Input Service Distributor",
-            "All Other ITC",
-        ],
-        "ITC Reversed": [
-            "As per rules 42 & 43 of CGST Rules and section 17(5)",
-            "Others",
-        ],
-        "Ineligible ITC": [
-            "Reclaim of ITC Reversal",
-            "ITC restricted due to PoS rules",
-        ],
-    },
-    5: {
-        "Composition Scheme, Exempted, Nil Rated": [
-            "Composition Scheme, Exempted, Nil Rated",
-        ],
-        "Non-GST": ["Non-GST"],
-    },
-};
+/* eslint-disable */
 
-AMOUNT_FIELDS = [
+const AMOUNT_FIELDS = [
     "taxable_value",
     "total_amount",
     "total_tax",
@@ -45,7 +21,7 @@ frappe.query_reports["GST Purchase Register"] = {
             options: "Company",
             reqd: 1,
             default: frappe.defaults.get_user_default("Company"),
-            on_change: report => {
+            on_change: (report) => {
                 report.set_filter_value({
                     company_gstin: "",
                 });
@@ -72,10 +48,7 @@ frappe.query_reports["GST Purchase Register"] = {
             fieldname: "date_range",
             label: __("Date Range"),
             fieldtype: "DateRange",
-            default: [
-                india_compliance.last_month_start(),
-                india_compliance.last_month_end(),
-            ],
+            default: [india_compliance.last_month_start(), india_compliance.last_month_end()],
             width: "80",
         },
         {
@@ -101,13 +74,14 @@ frappe.query_reports["GST Purchase Register"] = {
                 { value: "4", label: __("Eligible ITC") },
                 {
                     value: "5",
-                    label: __(
-                        "Values of exempt, nil rated and non-GST inward supplies"
-                    ),
+                    label: __("Values of exempt, nil rated and non-GST inward supplies"),
                 },
             ],
             default: "4",
             reqd: 1,
+            on_change: () => {
+                frappe.query_report.set_filter_value("invoice_sub_category", []);
+            },
         },
         {
             fieldtype: "MultiSelectList",
@@ -140,22 +114,21 @@ frappe.query_reports["GST Purchase Register"] = {
 
 function get_subcategory_options() {
     const sub_section = frappe.query_report.get_filter_value("sub_section");
-    return Object.values(SUB_SECTION_MAPPING[sub_section]).flat();
+    return india_compliance.get_inward_subcategory_options(sub_section);
 }
 
-custom_report_column_total = function (...args) {
+function custom_report_column_total(...args) {
     const summary_by = frappe.query_report.get_filter_value("summary_by");
     if (summary_by === "Overview") return 0;
 
     const column_field = args[1].column.fieldname;
     if (!AMOUNT_FIELDS.includes(column_field)) return;
 
-    return this.datamanager.data.reduce((acc, row) => {
+    const { data } = this.datamanager;
+    return this.datamanager.getFilteredRowIndices().reduce((acc, index) => {
+        const row = data[index];
         const value = row[column_field] || 0;
-        if (row.invoice_category === "ITC Reversed") {
-            return acc - value;
-        } else {
-            return acc + value;
-        }
+        if (row.invoice_category === "ITC Reversed") return acc - value;
+        return acc + value;
     }, 0);
-};
+}

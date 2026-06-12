@@ -4,7 +4,8 @@
 import datetime
 import re
 from collections import defaultdict
-from typing import Literal, Sequence
+from collections.abc import Sequence
+from typing import Literal
 
 import frappe
 from frappe import _
@@ -20,7 +21,7 @@ from frappe.utils import (
 )
 
 from india_compliance.gst_india.overrides.transaction import validate_mandatory_fields
-from india_compliance.gst_india.utils import get_period
+from india_compliance.gst_india.utils import get_period, get_periods_between_dates
 
 SUPPORTED_DOCTYPES = frozenset(("Purchase Invoice", "Bill of Entry"))
 SUPPORTED_TABLE_NAMES = frozenset(get_table_name(dt) for dt in SUPPORTED_DOCTYPES)
@@ -93,9 +94,7 @@ def set_itc_claim_period_on_ims_action(
     for doctype, doc_names in by_doctype.items():
         updates = defaultdict(set)
         only_claim_period_set = bool(action in ("Rejected", "Pending"))
-        doc_data = _fetch_document_data(
-            doctype, doc_names, only_claim_period_set=only_claim_period_set
-        )
+        doc_data = _fetch_document_data(doctype, doc_names, only_claim_period_set=only_claim_period_set)
         gstins = {d.company_gstin for d in doc_data if d.company_gstin}
         filed_map = {gstin: _get_filed_periods(gstin) for gstin in gstins}
 
@@ -115,9 +114,7 @@ def set_itc_claim_period_on_ims_action(
 
 
 @frappe.whitelist()
-def get_itc_period_options(
-    company_gstin: str | None = None, posting_date: str | None = None
-) -> list[str]:
+def get_itc_period_options(company_gstin: str | None = None, posting_date: str | None = None) -> list[str]:
     if not company_gstin or not posting_date:
         return []
 
@@ -151,9 +148,7 @@ def update_gstr3b_filing_status(
     frappe.has_permission("GST Return Log", "write", throw=True)
     if status not in FILING_STATUS:
         frappe.throw(
-            _("Invalid filing status: {0}. Allowed values are: {1}").format(
-                status, ", ".join(FILING_STATUS)
-            )
+            _("Invalid filing status: {0}. Allowed values are: {1}").format(status, ", ".join(FILING_STATUS))
         )
 
     period = get_period(month_or_quarter, year)
@@ -163,14 +158,12 @@ def update_gstr3b_filing_status(
     if log_name:
         frappe.db.set_value("GST Return Log", log_name, "filing_status", status)
     else:
-        frappe.get_doc(
-            {"doctype": "GST Return Log", "filing_status": status, **filters}
-        ).insert(ignore_permissions=True)
+        frappe.get_doc({"doctype": "GST Return Log", "filing_status": status, **filters}).insert(
+            ignore_permissions=True
+        )
 
     frappe.msgprint(
-        _("GSTR-3B for {0} {1} marked as {2}.").format(
-            month_or_quarter, year, FILING_STATUS[status]
-        ),
+        _("GSTR-3B for {0} {1} marked as {2}.").format(month_or_quarter, year, FILING_STATUS[status]),
         indicator="green",
     )
 
@@ -202,19 +195,20 @@ def apply_period_filter(
         to_date: End date for posting date filter
         filter_by: (Optional) "ITC Claim Period" or "Posting Date". Defaults to "Posting Date"
         return_period: (Optional) The return period in MMYYYY format.
-                      Auto-calculated from to_date if not provided
+                  If not provided, all periods between from_date and to_date are used.
     """
     if filter_by == "ITC Claim Period" and doc._table_name in SUPPORTED_TABLE_NAMES:
-        if not return_period:
-            return_period = format_period(to_date)
-        return query.where(IfNull(doc.itc_claim_period, "") == return_period)
+        if return_period:
+            return query.where(IfNull(doc.itc_claim_period, "") == return_period)
+
+        periods = get_periods_between_dates(from_date, to_date)
+
+        return query.where(IfNull(doc.itc_claim_period, "").isin(periods))
 
     return query.where(doc.posting_date[from_date:to_date])
 
 
-def period_to_date(
-    period: str, day: Literal["first", "last"] = "first"
-) -> datetime.date:
+def period_to_date(period: str, day: Literal["first", "last"] = "first") -> datetime.date:
     if not period or len(period) != 6:
         frappe.throw(_("Invalid period format: {0}. Expected MMYYYY.").format(period))
 
@@ -247,9 +241,7 @@ def _validate_period_format(period: str) -> None:
         return
 
     if period and not re.match(r"^(0[1-9]|1[0-2])\d{4}$", period):
-        frappe.throw(
-            _("ITC Claim Period '{0}' must be in MMYYYY format").format(period)
-        )
+        frappe.throw(_("ITC Claim Period '{0}' must be in MMYYYY format").format(period))
 
 
 # =============================================================================
@@ -302,9 +294,7 @@ def _get_next_unfiled_period(
     filed: set[str] | None = None,
 ) -> str | None:
     deadline = _get_section_16_4_deadline(posting_date)
-    is_filed = (
-        (lambda p: p in filed) if filed else (lambda p: _is_gstr3b_filed(gstin, p))
-    )
+    is_filed = (lambda p: p in filed) if filed else (lambda p: _is_gstr3b_filed(gstin, p))
 
     current = start_period
     while compare_periods(current, deadline) <= 0:
@@ -350,57 +340,47 @@ def _calculate_itc_claim_period(
     if inward_supply and inward_supply.get("return_period_2b"):
         default_period = _max_period(posting_period, inward_supply.return_period_2b)
 
-    if doc.get("gst_category") == "Unregistered" and doc.get("is_reverse_charge"):
-        return posting_period
-
-    return _get_next_unfiled_period(
-        doc.company_gstin, default_period, doc.posting_date, filed
-    )
+    return _get_next_unfiled_period(doc.company_gstin, default_period, doc.posting_date, filed)
 
 
 def validate_itc_claim_period(doc) -> None:
     validate_mandatory_fields(doc, "itc_claim_period")
     _validate_period_format(doc.itc_claim_period)
-    _validate_itc_claim_period_for_rcm_invoice(doc)
     _validate_itc_claim_period_as_per_filing(doc)
 
 
-def _validate_itc_claim_period_as_per_filing(doc) -> None:
+def validate_itc_claim_period_on_update_after_submit(doc) -> None:
+    validate_mandatory_fields(doc, "itc_claim_period")
+    _validate_period_format(doc.itc_claim_period)
+
+    # On update-after-submit, period checks are needed only if period changed.
     previous = doc.get_doc_before_save()
     if not previous:
         return
 
-    if previous.itc_claim_period != doc.itc_claim_period:
-        filed_period = None
-        if _is_gstr3b_filed(doc.company_gstin, previous.itc_claim_period):
-            filed_period = previous.itc_claim_period
-        if _is_gstr3b_filed(doc.company_gstin, doc.itc_claim_period):
-            filed_period = doc.itc_claim_period
+    if previous.itc_claim_period == doc.itc_claim_period:
+        return
 
-        if not filed_period:
-            return
+    filed_period = None
+    if _is_gstr3b_filed(doc.company_gstin, previous.itc_claim_period):
+        filed_period = previous.itc_claim_period
+    if _is_gstr3b_filed(doc.company_gstin, doc.itc_claim_period):
+        filed_period = doc.itc_claim_period
 
-        frappe.throw(
-            _(
-                "Cannot change ITC Claim Period from {0} to {1}. GSTR-3B already filed"
-                " for {2}."
-            ).format(previous.itc_claim_period, doc.itc_claim_period, filed_period)
+    if not filed_period:
+        return
+
+    frappe.throw(
+        _("Cannot change ITC Claim Period from {0} to {1}. GSTR-3B already filed for {2}.").format(
+            previous.itc_claim_period, doc.itc_claim_period, filed_period
         )
+    )
 
 
-def _validate_itc_claim_period_for_rcm_invoice(doc) -> None:
-    """For Unregistered RCM, ITC must be claimed in the same period as posting."""
-    if (
-        doc.doctype == "Purchase Invoice"
-        and doc.gst_category == "Unregistered"
-        and doc.is_reverse_charge
-        and doc.itc_claim_period != format_period(doc.posting_date)
-    ):
+def _validate_itc_claim_period_as_per_filing(doc) -> None:
+    if _is_gstr3b_filed(doc.company_gstin, doc.itc_claim_period):
         frappe.throw(
-            _(
-                "ITC Claim Period must be {0} (same as posting date) for purchases from"
-                " Unregistered suppliers under Reverse Charge."
-            ).format(format_period(doc.posting_date))
+            _("Cannot set ITC Claim Period to {0}. GSTR-3B is already filed.").format(doc.itc_claim_period)
         )
 
 
@@ -451,9 +431,7 @@ def _bulk_update(updates: dict[str, set[str]], doctype: str, source: str) -> Non
         bulk_insert("Comment", comments, ignore_duplicates=True)
 
 
-def _fetch_document_data(
-    doctype: str, names: list[str], only_claim_period_set: bool = False
-) -> list[dict]:
+def _fetch_document_data(doctype: str, names: list[str], only_claim_period_set: bool = False) -> list[dict]:
     doc = frappe.qb.DocType(doctype)
     query = (
         frappe.qb.from_(doc)
@@ -477,9 +455,7 @@ def _fetch_document_data(
     return query.run(as_dict=True)
 
 
-def _fetch_inward_supply_data(
-    names: Sequence[str], only_linked: bool = False
-) -> list[dict]:
+def _fetch_inward_supply_data(names: Sequence[str], only_linked: bool = False) -> list[dict]:
     gstr2 = frappe.qb.DocType("GST Inward Supply")
     query = (
         frappe.qb.from_(gstr2)

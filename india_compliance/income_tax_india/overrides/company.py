@@ -3,6 +3,8 @@ from frappe.utils import getdate
 
 from india_compliance.gst_india.overrides.company import create_default_company_account
 
+TDS_ACCOUNT_NAME = "TDS Payable"
+
 
 def make_company_fixtures(doc, method=None):
     if not frappe.flags.country_change or doc.country != "India":
@@ -12,9 +14,7 @@ def make_company_fixtures(doc, method=None):
 
 
 def create_company_fixtures(company):
-    company = company or frappe.db.get_single_value(
-        "Global Defaults", "default_company"
-    )
+    company = company or frappe.db.get_single_value("Global Defaults", "default_company")
     create_tds_account(company)
 
     # create records for Tax Withholding Category
@@ -22,16 +22,14 @@ def create_company_fixtures(company):
 
 
 def create_tds_account(company):
-    create_default_company_account(
-        company, account_name="TDS Payable", parent="Duties and Taxes"
-    )
+    create_default_company_account(company, account_name=TDS_ACCOUNT_NAME, parent="Duties and Taxes")
 
 
 def create_or_update_tax_withholding_category(company):
     accounts = []
     tds_account = frappe.get_value(
         "Account",
-        {"account_name": "TDS Payables", "company": company, "is_group": 0},
+        {"account_name": TDS_ACCOUNT_NAME, "company": company, "is_group": 0},
         "name",
     )
 
@@ -55,9 +53,7 @@ def create_or_update_tax_withholding_category(company):
 
         else:
             for category_name in existing_category_list:
-                update_existing_tax_withholding_category(
-                    category_doc, category_name, company
-                )
+                update_existing_tax_withholding_category(category_doc, category_name, company)
 
 
 def update_existing_tax_withholding_category(category_doc, category_name, company):
@@ -106,9 +102,7 @@ def update_existing_tax_withholding_category(category_doc, category_name, compan
 def get_tds_category_details(accounts):
     tds_details = []
     tds_rules = frappe.get_file_json(
-        frappe.get_app_path(
-            "india_compliance", "income_tax_india", "data", "tds_details.json"
-        )
+        frappe.get_app_path("india_compliance", "income_tax_india", "data", "tds_details.json")
     )
     for rule in tds_rules:
         rates = get_prospective_tds_rates(rule["rates"])
@@ -123,10 +117,8 @@ def get_tds_category_details(accounts):
                 "tds_section": rule.get("tds_section"),
                 "entity_type": rule.get("entity_type"),
                 "round_off_tax_amount": rule.get("round_off_tax_amount"),
-                "consider_party_ledger_amount": rule.get(
-                    "consider_party_ledger_amount"
-                ),
                 "tax_on_excess_amount": rule.get("tax_on_excess_amount"),
+                "tax_deduction_basis": rule.get("tax_deduction_basis", "Net Total"),
                 "rates": rates,
             }
         )

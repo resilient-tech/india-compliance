@@ -115,9 +115,7 @@ class GSTR:
 
     def update_totals(self, transaction):
         for field in ["taxable_value", "igst", "cgst", "sgst", "cess"]:
-            transaction[field] = sum(
-                [row.get(field) for row in transaction.get("items") if row.get(field)]
-            )
+            transaction[field] = sum([row.get(field) for row in transaction.get("items") if row.get(field)])
 
     def get_supplier_details(self, supplier):
         return {}

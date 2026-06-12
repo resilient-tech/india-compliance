@@ -13,8 +13,6 @@ def execute():
             continue
 
         frappe.db.set_value(doctype, {fieldname: 1}, "reconciliation_status", "Ignored")
-        frappe.db.sql_ddl(
-            "alter table `tab{0}` drop column {1}".format(doctype, fieldname)
-        )
+        frappe.db.sql_ddl(f"alter table `tab{doctype}` drop column {fieldname}")
 
     delete_old_fields(fieldname, DOCTYPES)

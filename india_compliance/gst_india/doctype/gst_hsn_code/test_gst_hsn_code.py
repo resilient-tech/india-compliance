@@ -9,7 +9,7 @@ from india_compliance.gst_india.doctype.gst_hsn_code.gst_hsn_code import (
     update_taxes_in_item_master,
 )
 
-IGNORE_TEST_RECORD_DEPENDENCIES = ["Item Tax Template"]
+IGNORE_TEST_RECORD_DEPENDENCIES = ["Item Tax Template", "Tax Category"]
 
 
 class TestGSTHSNCode(IntegrationTestCase):
@@ -45,9 +45,7 @@ class TestGSTHSNCode(IntegrationTestCase):
 
     def test_update_taxes_in_item_master(self):
         taxes = [{"item_tax_template": "GST 12% - _TIUC", "tax_category": "In-State"}]
-        doc = frappe.get_doc(
-            {"doctype": "GST HSN Code", "hsn_code": "100000", "taxes": taxes}
-        )
+        doc = frappe.get_doc({"doctype": "GST HSN Code", "hsn_code": "100000", "taxes": taxes})
         doc.save()
         item = frappe.get_doc(
             {

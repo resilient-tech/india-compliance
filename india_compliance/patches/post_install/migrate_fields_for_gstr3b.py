@@ -8,11 +8,7 @@ def execute():
     # Update month_or_quarter from month field
     gstr3b_report = frappe.qb.DocType("GSTR 3B Report")
 
-    (
-        frappe.qb.update(gstr3b_report)
-        .set(gstr3b_report.month_or_quarter, gstr3b_report.month)
-        .run()
-    )
+    (frappe.qb.update(gstr3b_report).set(gstr3b_report.month_or_quarter, gstr3b_report.month).run())
 
     # Update company_gstin based on company_address
     addresses = frappe.get_all("GSTR 3B Report", pluck="company_address", distinct=True)

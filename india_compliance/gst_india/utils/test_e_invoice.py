@@ -1,14 +1,13 @@
 import json
 import re
 
-import responses
-from responses import matchers
-
 import frappe
+import responses
+from erpnext.controllers.sales_and_purchase_return import make_return_doc
 from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import add_to_date, get_datetime, getdate, now_datetime
 from frappe.utils.data import format_date
-from erpnext.controllers.sales_and_purchase_return import make_return_doc
+from responses import matchers
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.overrides.test_transaction import (
@@ -40,6 +39,7 @@ class TestEInvoice(IntegrationTestCase):
                 "auto_generate_e_invoice": 0,
                 "enable_e_waybill": 1,
                 "fetch_e_waybill_data": 0,
+                "attach_e_waybill_print": 0,
                 "apply_e_invoice_only_for_selected_companies": 0,
                 "enable_retry_einv_ewb_generation": 1,
                 "auto_cancel_e_invoice": 0,
@@ -48,9 +48,7 @@ class TestEInvoice(IntegrationTestCase):
         )
         cls.e_invoice_test_data = frappe._dict(
             frappe.get_file_json(
-                frappe.get_app_path(
-                    "india_compliance", "gst_india", "data", "test_e_invoice.json"
-                )
+                frappe.get_app_path("india_compliance", "gst_india", "data", "test_e_invoice.json")
             )
         )
         update_dates_for_test_data(cls.e_invoice_test_data)
@@ -124,7 +122,7 @@ class TestEInvoice(IntegrationTestCase):
         si.submit()
 
         e_invoice_data = EInvoiceData(si)
-        e_invoice_data.set_item_list()
+        e_invoice_data.get_data()
 
         self.assertListEqual(
             e_invoice_data.item_list,
@@ -149,6 +147,7 @@ class TestEInvoice(IntegrationTestCase):
                     "CesRt": 0,
                     "CesAmt": 0,
                     "CesNonAdvlAmt": 0,
+                    "OthChrg": 0,
                     "TotItemVal": 8.52,
                     "BchDtls": {"Nm": None, "ExpDt": None},
                 },
@@ -172,6 +171,7 @@ class TestEInvoice(IntegrationTestCase):
                     "CesRt": 0,
                     "CesAmt": 0,
                     "CesNonAdvlAmt": 0,
+                    "OthChrg": 0,
                     "TotItemVal": 8.5,
                     "BchDtls": {"Nm": None, "ExpDt": None},
                 },
@@ -206,9 +206,7 @@ class TestEInvoice(IntegrationTestCase):
             )
         si.save()
 
-        frappe.db.set_single_value(
-            "GST Settings", "e_invoice_applicable_from", "2021-01-01"
-        )
+        frappe.db.set_single_value("GST Settings", "e_invoice_applicable_from", "2021-01-01")
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
@@ -250,9 +248,7 @@ class TestEInvoice(IntegrationTestCase):
         with self.assertRaises(frappe.exceptions.ValidationError) as cm:
             generate_e_invoice(si.name)
 
-        self.assertIn(
-            "GSTIN -29AAACI1195H2ZH is inactive or cancelled", str(cm.exception)
-        )
+        self.assertIn("GSTIN -29AAACI1195H2ZH is inactive or cancelled", str(cm.exception))
 
     @responses.activate
     @change_settings("GST Settings", {"use_fallback_for_nic": 0, "sandbox_mode": 0})
@@ -289,16 +285,12 @@ class TestEInvoice(IntegrationTestCase):
             frappe.flags.bypass_auth = True
             generate_e_invoice(si.name)
 
-        self.assertIn(
-            "GSTIN -29AAACI1195H2ZH is inactive or cancelled", str(cm.exception)
-        )
+        self.assertIn("GSTIN -29AAACI1195H2ZH is inactive or cancelled", str(cm.exception))
 
     @responses.activate
     def test_generate_e_invoice_with_goods_item(self):
         """Generate test e-Invoice for goods item"""
-        frappe.db.set_single_value(
-            "GST Settings", {"auto_cancel_e_waybill": 0, "fetch_e_waybill_data": 0}
-        )
+        frappe.db.set_single_value("GST Settings", {"auto_cancel_e_waybill": 0, "fetch_e_waybill_data": 0})
 
         test_data = self.e_invoice_test_data.get("goods_item_with_ewaybill")
 
@@ -388,18 +380,28 @@ class TestEInvoice(IntegrationTestCase):
             frappe.get_doc("e-Invoice Log", {"reference_name": si.name}),
         )
 
-        self.assertFalse(
-            frappe.db.get_value("e-Waybill Log", {"reference_name": si.name}, "name")
+        self.assertFalse(frappe.db.get_value("e-Waybill Log", {"reference_name": si.name}, "name"))
+
+    @change_settings("GST Settings", {"nil_exempt_e_invoice_treatment": "Do Not Generate"})
+    def test_do_not_generate_for_nil_only_invoice(self):
+        """e-Invoice should be blocked for all-nil/exempt invoices when set to Do Not Generate."""
+        test_data = self.e_invoice_test_data.get("nil_exempted_item")
+        si = create_sales_invoice(**test_data.get("kwargs"), do_not_submit=True, is_in_state=True)
+        si.submit()
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r".*e-Invoice is not applicable for this invoice as all items are non-taxable."),
+            validate_e_invoice_applicability,
+            si,
         )
 
     @responses.activate
+    @change_settings("GST Settings", {"nil_exempt_e_invoice_treatment": "Generate with Other Charges"})
     def test_generate_e_invoice_with_nil_exempted_item(self):
-        """Generate test e-Invoice for nil/exempted items Item"""
-
+        """Generate e-Invoice for invoice containing Nil/Exempted items."""
         test_data = self.e_invoice_test_data.get("nil_exempted_item")
-        si = create_sales_invoice(
-            **test_data.get("kwargs"), do_not_submit=True, is_in_state=True
-        )
+        si = create_sales_invoice(**test_data.get("kwargs"), do_not_submit=True, is_in_state=True)
 
         append_item(
             si,
@@ -447,9 +449,172 @@ class TestEInvoice(IntegrationTestCase):
             frappe.get_doc("e-Invoice Log", {"reference_name": si.name}),
         )
 
-        self.assertFalse(
-            frappe.db.get_value("e-Waybill Log", {"reference_name": si.name}, "name")
+        self.assertFalse(frappe.db.get_value("e-Waybill Log", {"reference_name": si.name}, "name"))
+
+    @change_settings("GST Settings", {"nil_exempt_e_invoice_treatment": "Generate with Other Charges"})
+    def test_request_data_for_nil_only_invoice_with_other_charges(self):
+        """Nil-only invoice: nil items in ItemList with AssAmt=0, item-level OthChrg=value."""
+        test_data = self.e_invoice_test_data.get("nil_exempted_item")
+        si = create_sales_invoice(**test_data.get("kwargs"), do_not_submit=True, is_in_state=True)
+
+        request_data = EInvoiceData(si).get_data()
+
+        self.assertEqual(1, len(request_data["ItemList"]))
+
+        nil_item = request_data["ItemList"][0]
+        self.assertEqual(0, nil_item["AssAmt"])
+        self.assertEqual(0, nil_item["TotAmt"])
+        self.assertEqual(0, nil_item["UnitPrice"])
+        self.assertEqual(100, nil_item["OthChrg"])
+        self.assertEqual(100, nil_item["TotItemVal"])
+
+        self.assertEqual(0, request_data["ValDtls"]["AssVal"])
+        self.assertEqual(0, request_data["ValDtls"]["OthChrg"])
+        self.assertEqual(100, request_data["ValDtls"]["TotInvVal"])
+
+    @change_settings("GST Settings", {"nil_exempt_e_invoice_treatment": "Generate with Taxable Values"})
+    def test_request_data_for_nil_only_invoice_with_taxable_values(self):
+        """Nil-only invoice: taxable values reported in item fields when setting is enabled; AssVal = total."""
+        test_data = self.e_invoice_test_data.get("nil_exempted_item")
+        si = create_sales_invoice(**test_data.get("kwargs"), do_not_submit=True, is_in_state=True)
+
+        request_data = EInvoiceData(si).get_data()
+
+        self.assertEqual(1, len(request_data["ItemList"]))
+
+        nil_item = request_data["ItemList"][0]
+        self.assertEqual(100, nil_item["AssAmt"])
+        self.assertEqual(100, nil_item["TotAmt"])
+        self.assertEqual(100, nil_item["UnitPrice"])
+        self.assertEqual(0, nil_item["OthChrg"])
+        self.assertEqual(100, nil_item["TotItemVal"])
+
+        self.assertEqual(100, request_data["ValDtls"]["AssVal"])
+        self.assertEqual(0, request_data["ValDtls"]["OthChrg"])
+        self.assertEqual(100, request_data["ValDtls"]["TotInvVal"])
+
+    @change_settings("GST Settings", {"nil_exempt_e_invoice_treatment": "Do Not Generate"})
+    def test_request_data_for_mixed_invoice_with_do_not_generate(self):
+        """Mixed invoice with Do Not Generate: nil items reported as item-level OthChrg (same as Generate with Other Charges); validation only blocks an all-nil invoice."""
+        test_data = self.e_invoice_test_data.get("nil_exempted_item")
+        si = create_sales_invoice(**test_data.get("kwargs"), do_not_submit=True, is_in_state=True)
+
+        append_item(
+            si,
+            frappe._dict(
+                rate=10,
+                item_tax_template="GST 12% - _TIRC",
+                uom="Nos",
+                gst_hsn_code="61149090",
+                gst_treatment="Taxable",
+            ),
         )
+        si.save()
+
+        request_data = EInvoiceData(si).get_data()
+
+        self.assertEqual(2, len(request_data["ItemList"]))
+
+        nil_item = next(item for item in request_data["ItemList"] if item["GstRt"] == 0)
+        taxable_item = next(item for item in request_data["ItemList"] if item["GstRt"] == 12.0)
+
+        self.assertEqual(0, nil_item["AssAmt"])
+        self.assertEqual(100, nil_item["OthChrg"])
+        self.assertEqual(100, nil_item["TotItemVal"])
+
+        self.assertEqual(10, taxable_item["AssAmt"])
+        self.assertEqual(0, taxable_item["OthChrg"])
+        self.assertEqual(11.2, taxable_item["TotItemVal"])
+
+        self.assertEqual(10, request_data["ValDtls"]["AssVal"])
+
+    @change_settings("GST Settings", {"nil_exempt_e_invoice_treatment": "Generate with Other Charges"})
+    def test_request_data_with_nil_exempted_item_as_other_charges(self):
+        """Mixed invoice with Generate with Other Charges: nil items in ItemList with item-level OthChrg."""
+        test_data = self.e_invoice_test_data.get("nil_exempted_item")
+        si = create_sales_invoice(**test_data.get("kwargs"), do_not_submit=True, is_in_state=True)
+
+        append_item(
+            si,
+            frappe._dict(
+                rate=10,
+                item_tax_template="GST 12% - _TIRC",
+                uom="Nos",
+                gst_hsn_code="61149090",
+                gst_treatment="Taxable",
+            ),
+        )
+        si.save()
+
+        request_data = EInvoiceData(si).get_data()
+
+        self.assertEqual(2, len(request_data["ItemList"]))
+
+        nil_item = next(item for item in request_data["ItemList"] if item["GstRt"] == 0)
+        taxable_item = next(item for item in request_data["ItemList"] if item["GstRt"] == 12.0)
+
+        self.assertEqual(0, nil_item["AssAmt"])
+        self.assertEqual(0, nil_item["TotAmt"])
+        self.assertEqual(0, nil_item["UnitPrice"])
+        self.assertEqual(100, nil_item["OthChrg"])
+        self.assertEqual(100, nil_item["TotItemVal"])
+
+        self.assertEqual(10, taxable_item["AssAmt"])
+        self.assertEqual(10, taxable_item["TotAmt"])
+        self.assertEqual(10, taxable_item["UnitPrice"])
+        self.assertEqual(0, taxable_item["OthChrg"])
+        self.assertEqual(11.2, taxable_item["TotItemVal"])
+
+        self.assertEqual(10, request_data["ValDtls"]["AssVal"])
+        self.assertEqual(0, request_data["ValDtls"]["OthChrg"])
+        self.assertEqual(111, request_data["ValDtls"]["TotInvVal"])
+
+    @change_settings("GST Settings", {"nil_exempt_e_invoice_treatment": "Generate with Taxable Values"})
+    def test_request_data_with_nil_exempted_item_as_line_item(self):
+        """Nil/Exempted item should be reported with taxable values when setting is enabled."""
+        test_data = self.e_invoice_test_data.get("nil_exempted_item")
+        si = create_sales_invoice(**test_data.get("kwargs"), do_not_submit=True, is_in_state=True)
+
+        append_item(
+            si,
+            frappe._dict(
+                rate=10,
+                item_tax_template="GST 12% - _TIRC",
+                uom="Nos",
+                gst_hsn_code="61149090",
+                gst_treatment="Taxable",
+            ),
+        )
+        si.save()
+
+        request_data = EInvoiceData(si).get_data()
+
+        self.assertEqual(2, len(request_data["ItemList"]))
+
+        nil_item = next(item for item in request_data["ItemList"] if item["GstRt"] == 0)
+        taxable_item = next(item for item in request_data["ItemList"] if item["GstRt"] == 12.0)
+
+        self.assertEqual(100, nil_item["AssAmt"])
+        self.assertEqual(100, nil_item["TotAmt"])
+        self.assertEqual(100, nil_item["UnitPrice"])
+        self.assertEqual(0, nil_item["GstRt"])
+        self.assertEqual(0, nil_item["IgstAmt"])
+        self.assertEqual(0, nil_item["CgstAmt"])
+        self.assertEqual(0, nil_item["SgstAmt"])
+        self.assertEqual(0, nil_item["OthChrg"])
+        self.assertEqual(100, nil_item["TotItemVal"])
+
+        self.assertEqual(10, taxable_item["AssAmt"])
+        self.assertEqual(10, taxable_item["TotAmt"])
+        self.assertEqual(10, taxable_item["UnitPrice"])
+        self.assertEqual(12.0, taxable_item["GstRt"])
+        self.assertEqual(0.6, taxable_item["CgstAmt"])
+        self.assertEqual(0.6, taxable_item["SgstAmt"])
+        self.assertEqual(11.2, taxable_item["TotItemVal"])
+
+        self.assertEqual(110, request_data["ValDtls"]["AssVal"])
+        self.assertEqual(0, request_data["ValDtls"]["OthChrg"])
+        self.assertEqual(111, request_data["ValDtls"]["TotInvVal"])
 
     @responses.activate
     def test_credit_note_e_invoice_with_goods_item(self):
@@ -522,11 +687,7 @@ class TestEInvoice(IntegrationTestCase):
             frappe.get_doc("e-Invoice Log", {"reference_name": credit_note.name}),
         )
 
-        self.assertFalse(
-            frappe.db.get_value(
-                "e-Waybill Log", {"reference_name": credit_note.name}, "name"
-            )
-        )
+        self.assertFalse(frappe.db.get_value("e-Waybill Log", {"reference_name": credit_note.name}, "name"))
 
     @responses.activate
     def test_debit_note_e_invoice_with_goods_item(self):
@@ -551,9 +712,7 @@ class TestEInvoice(IntegrationTestCase):
         debit_note.submit()
 
         # Assert if request data given in Json
-        self.assertDictEqual(
-            test_data.get("request_data"), EInvoiceData(debit_note).get_data()
-        )
+        self.assertDictEqual(test_data.get("request_data"), EInvoiceData(debit_note).get_data())
 
         # Mock response for generating irn
         self._mock_e_invoice_response(data=test_data)
@@ -588,11 +747,7 @@ class TestEInvoice(IntegrationTestCase):
             frappe.get_doc("e-Invoice Log", {"reference_name": debit_note.name}),
         )
 
-        self.assertFalse(
-            frappe.db.get_value(
-                "e-Waybill Log", {"reference_name": debit_note.name}, "name"
-            )
-        )
+        self.assertFalse(frappe.db.get_value("e-Waybill Log", {"reference_name": debit_note.name}, "name"))
 
     @responses.activate
     def test_cancel_e_invoice(self):
@@ -611,9 +766,7 @@ class TestEInvoice(IntegrationTestCase):
             si,
         )
 
-        test_data.get("response_data").get("result").update(
-            {"AckDt": str(now_datetime())}
-        )
+        test_data.get("response_data").get("result").update({"AckDt": str(now_datetime())})
 
         # Assert if request data given in Json
         self.assertDictEqual(test_data.get("request_data"), EInvoiceData(si).get_data())
@@ -650,9 +803,7 @@ class TestEInvoice(IntegrationTestCase):
             **test_data.get("kwargs"),
             is_in_state=True,
         )
-        test_data.get("response_data").get("result").update(
-            {"AckDt": str(add_to_date(days=-2))}
-        )
+        test_data.get("response_data").get("result").update({"AckDt": str(add_to_date(days=-2))})
         # Mock response for generating irnFser
         self._mock_e_invoice_response(data=test_data)
 
@@ -675,9 +826,7 @@ class TestEInvoice(IntegrationTestCase):
     @responses.activate
     def test_mark_e_invoice_as_cancelled(self):
         """Test for mark e-Invoice as cancelled"""
-        frappe.db.set_single_value(
-            "GST Settings", {"auto_cancel_e_waybill": 0, "fetch_e_waybill_data": 0}
-        )
+        frappe.db.set_single_value("GST Settings", {"auto_cancel_e_waybill": 0, "fetch_e_waybill_data": 0})
 
         test_data = self.e_invoice_test_data.get("goods_item_with_ewaybill")
 
@@ -694,9 +843,7 @@ class TestEInvoice(IntegrationTestCase):
         si.reload()
         si.cancel()
 
-        values = frappe._dict(
-            {"reason": "Others", "remark": "Manually deleted from GSTR-1"}
-        )
+        values = frappe._dict({"reason": "Others", "remark": "Manually deleted from GSTR-1"})
 
         mark_e_invoice_as_cancelled("Sales Invoice", si.name, values)
         cancelled_doc = frappe.get_doc("Sales Invoice", si.name)
@@ -706,10 +853,9 @@ class TestEInvoice(IntegrationTestCase):
             cancelled_doc,
         )
 
-        self.assertTrue(
-            frappe.get_cached_value("e-Invoice Log", si.irn, "is_cancelled"), 1
-        )
+        self.assertTrue(frappe.get_cached_value("e-Invoice Log", si.irn, "is_cancelled"), 1)
 
+    @change_settings("GST Settings", {"nil_exempt_e_invoice_treatment": "Generate with Other Charges"})
     def test_validate_e_invoice_applicability(self):
         """Test if e_invoicing is applicable"""
 
@@ -772,14 +918,7 @@ class TestEInvoice(IntegrationTestCase):
                 gst_treatment="Nil-Rated",
             ),
         )
-        self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
-            re.compile(
-                r"^(e-Invoice is not applicable for invoice with only Nil-Rated/Exempted items*)$"
-            ),
-            validate_e_invoice_applicability,
-            si,
-        )
+        self.assertTrue(validate_e_invoice_applicability(si))
 
         append_item(
             si,
@@ -855,9 +994,7 @@ class TestEInvoice(IntegrationTestCase):
 
     @responses.activate
     def test_invoice_update_after_submit(self):
-        frappe.db.set_single_value(
-            "GST Settings", {"auto_cancel_e_waybill": 0, "fetch_e_waybill_data": 0}
-        )
+        frappe.db.set_single_value("GST Settings", {"auto_cancel_e_waybill": 0, "fetch_e_waybill_data": 0})
 
         test_data = self.e_invoice_test_data.get("goods_item_with_ewaybill")
 
@@ -930,9 +1067,7 @@ class TestEInvoice(IntegrationTestCase):
         )
 
         # Ensure no e-Invoice Log is created
-        self.assertFalse(
-            frappe.db.get_value("e-Invoice Log", {"reference_name": si.name}, "name")
-        )
+        self.assertFalse(frappe.db.get_value("e-Invoice Log", {"reference_name": si.name}, "name"))
 
         # Ensure Sales Invoice status is not updated
         si.reload()
@@ -974,9 +1109,7 @@ class TestEInvoice(IntegrationTestCase):
         self.assertEqual(processed_result.InfCd, "DUPIRN")
 
         # Test case 2: Result is already a dict (normal case)
-        result_dict = frappe._dict(
-            {"Irn": "normal_irn_789", "AckDt": "2025-08-20 14:00:00"}
-        )
+        result_dict = frappe._dict({"Irn": "normal_irn_789", "AckDt": "2025-08-20 14:00:00"})
 
         processed_result = api.handle_duplicate_irn_response(result_dict)
 
@@ -1047,9 +1180,7 @@ class TestEInvoice(IntegrationTestCase):
         self.assertEqual(processed_result.get("Desc").get("Irn"), "other_irn_789")
 
         # Test case 3: Normal result with IRN (no processing needed)
-        result_normal = frappe._dict(
-            {"Irn": "normal_irn_999", "AckDt": "2025-08-20 16:00:00", "Status": 1}
-        )
+        result_normal = frappe._dict({"Irn": "normal_irn_999", "AckDt": "2025-08-20 16:00:00", "Status": 1})
 
         processed_result = api.handle_duplicate_irn_response(result_normal)
 
@@ -1079,18 +1210,14 @@ class TestEInvoice(IntegrationTestCase):
         Test that a Sales Invoice cannot be cancelled if the associated e-Invoice is not cancellable configurable as per GST settings.
         """
         # Enable Setting
-        frappe.db.set_single_value(
-            "GST Settings", "restrict_cancel_if_e_invoice_final", 1
-        )
+        frappe.db.set_single_value("GST Settings", "restrict_cancel_if_e_invoice_final", 1)
 
         test_data = self.e_invoice_test_data.get("service_item")
         si = create_sales_invoice(
             **test_data.get("kwargs"),
             is_in_state=True,
         )
-        test_data.get("response_data").get("result").update(
-            {"AckDt": str(add_to_date(days=-2))}
-        )
+        test_data.get("response_data").get("result").update({"AckDt": str(add_to_date(days=-2))})
 
         # Mock response for generating irn
         self._mock_e_invoice_response(data=test_data)
@@ -1100,30 +1227,22 @@ class TestEInvoice(IntegrationTestCase):
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(
-                r"^(This document cannot be cancelled because the associated e-Invoice.*)$"
-            ),
+            re.compile(r"^(This document cannot be cancelled because the associated e-Invoice.*)$"),
             si.cancel,
         )
 
         # Disable Setting
-        frappe.db.set_single_value(
-            "GST Settings", "restrict_cancel_if_e_invoice_final", 0
-        )
+        frappe.db.set_single_value("GST Settings", "restrict_cancel_if_e_invoice_final", 0)
         si.reload()
         si.cancel()
 
     def _cancel_e_invoice(self, invoice_no):
-        values = frappe._dict(
-            {"reason": "Data Entry Mistake", "remark": "Data Entry Mistake"}
-        )
+        values = frappe._dict({"reason": "Data Entry Mistake", "remark": "Data Entry Mistake"})
         doc = load_doc("Sales Invoice", invoice_no, "cancel")
 
         # Prepared e_waybill cancel data
         cancel_e_waybill = self.e_invoice_test_data.get("cancel_e_waybill")
-        cancel_e_waybill.get("response_data").get("result").update(
-            {"ewayBillNo": doc.ewaybill}
-        )
+        cancel_e_waybill.get("response_data").get("result").update({"ewayBillNo": doc.ewaybill})
 
         # Assert for Mock request data
         self.assertDictEqual(
@@ -1189,16 +1308,8 @@ def update_dates_for_test_data(test_data):
         if not (value.get("response_data") or value.get("request_data")):
             continue
 
-        response_request = (
-            value.get("request_data")
-            if isinstance(value.get("request_data"), dict)
-            else {}
-        )
-        response_result = (
-            value.get("response_data").get("result")
-            if value.get("response_data")
-            else {}
-        )
+        response_request = value.get("request_data") if isinstance(value.get("request_data"), dict) else {}
+        response_result = value.get("response_data").get("result") if value.get("response_data") else {}
 
         # Handle Duplicate IRN test data
         if isinstance(response_result, list):

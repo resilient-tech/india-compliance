@@ -8,6 +8,7 @@ import frappe
 from frappe import _
 from frappe.utils import flt, getdate
 
+from india_compliance.gst_india.constants import SERVICE_HSN_PREFIX
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategory
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
 
@@ -32,9 +33,7 @@ def validate_filters(filters):
 
 
 def get_columns(filters):
-    company_currency = frappe.get_cached_value(
-        "Company", filters.get("company"), "default_currency"
-    )
+    company_currency = frappe.get_cached_value("Company", filters.get("company"), "default_currency")
 
     columns = [
         {
@@ -175,10 +174,8 @@ def get_json(filters: str, report_name: str, data: str):
     if not filters.get("from_date") or not filters.get("to_date"):
         frappe.throw(_("Please enter From Date and To Date to generate JSON"))
 
-    fp = "%02d%s" % (
-        getdate(filters["to_date"]).month,
-        getdate(filters["to_date"]).year,
-    )
+    date = getdate(filters["to_date"])
+    fp = f"{date.month:02d}{date.year}"
 
     gst_json = {"version": "GST3.1.2", "hash": "hash", "gstin": gstin, "fp": fp}
 
@@ -191,9 +188,7 @@ def get_json(filters: str, report_name: str, data: str):
 def download_json_file():
     """download json content in a file"""
     data = frappe._dict(frappe.local.form_dict)
-    frappe.response["filename"] = (
-        frappe.scrub("{0}".format(data["report_name"])) + ".json"
-    )
+    frappe.response["filename"] = frappe.scrub("{}".format(data["report_name"])) + ".json"
     frappe.response["filecontent"] = data["data"]
     frappe.response["content_type"] = "application/json"
     frappe.response["type"] = "download"
@@ -259,11 +254,7 @@ def map_uom(uom, data=None):
     uom = uom.upper()
 
     if "-" in uom:
-        if (
-            data
-            and (hsn_code := data.get("hsn_code") or "")
-            and hsn_code.startswith("99")
-        ):
+        if data and (hsn_code := data.get("hsn_code") or "") and hsn_code.startswith(SERVICE_HSN_PREFIX):
             return "NA"
 
         return uom.split("-")[0]

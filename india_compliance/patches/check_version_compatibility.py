@@ -1,9 +1,8 @@
 import click
-from packaging import version
-
+import erpnext
 import frappe
 from frappe.utils.change_log import get_app_branch
-import erpnext
+from packaging import version
 
 import india_compliance
 

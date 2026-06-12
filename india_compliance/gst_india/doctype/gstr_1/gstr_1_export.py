@@ -5,6 +5,7 @@ Export GSTR-1 data to excel or json
 from collections import defaultdict
 from datetime import datetime
 from enum import Enum
+from typing import ClassVar
 
 import frappe
 from frappe import _
@@ -16,22 +17,21 @@ from india_compliance.gst_india.utils.gstr_1 import (
     HSN_BIFURCATION_FROM,
     JSON_CATEGORY_EXCEL_CATEGORY_MAPPING,
     QUARTERLY_KEYS,
-)
-from india_compliance.gst_india.utils.gstr_1 import GovExcelField as gov_xl
-from india_compliance.gst_india.utils.gstr_1 import (
     GovExcelSheetName,
     GovJsonKey,
-)
-from india_compliance.gst_india.utils.gstr_1 import GSTR1_DataField as inv_f
-from india_compliance.gst_india.utils.gstr_1 import GSTR1_ItemField as item_f
-from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_SubCategory,
     HSNKey,
 )
+from india_compliance.gst_india.utils.gstr_1 import GovExcelField as gov_xl
+from india_compliance.gst_india.utils.gstr_1 import GSTR1_DataField as inv_f
+from india_compliance.gst_india.utils.gstr_1 import GSTR1_ItemField as item_f
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     convert_to_gov_data_format,
     get_category_wise_data,
 )
+
+# Used for storing user preferences for GSTR-1 download sections.
+GSTR1_SECTIONS_DEFAULT_KEY = "gstr1_download_sections"
 
 
 class ExcelWidth(Enum):
@@ -52,9 +52,32 @@ CATEGORIES_WITH_ITEMS = {
 }
 
 
+def _get_selected_sections(section: str, is_hsn_bifurcated: bool) -> list[str]:
+    """
+    HSN can be split into `hsn_b2b` / `hsn_b2c`. Every other
+    section uses the GovJsonKey value as-is.
+    """
+    if section != GovJsonKey.HSN.value:
+        return [section]
+
+    if is_hsn_bifurcated:
+        return [HSNKey.HSN_B2B.value, HSNKey.HSN_B2C.value]
+
+    return [HSNKey.HSN.value]
+
+
+def _get_excel_sheet_names(selected_sections: list[str]) -> list[str]:
+    """Template sheet names that belong to `selected_sections` (excluding the `master` reference sheet)."""
+    return [
+        JSON_CATEGORY_EXCEL_CATEGORY_MAPPING[key]
+        for key in selected_sections
+        if key in JSON_CATEGORY_EXCEL_CATEGORY_MAPPING
+    ]
+
+
 class DataProcessor:
     # transform input data to required format
-    FIELD_TRANSFORMATIONS = {}
+    FIELD_TRANSFORMATIONS: ClassVar[dict] = {}
 
     def process_data(self, input_data):
         """
@@ -108,11 +131,7 @@ class DataProcessor:
 
         Purpose: Gov Excel format requires each row to have invoice values
         """
-        return [
-            {**invoice, **item}
-            for invoice in invoice_list
-            for item in invoice[inv_f.ITEMS]
-        ]
+        return [{**invoice, **item} for invoice in invoice_list for item in invoice[inv_f.ITEMS]]
 
 
 class GovExcel(DataProcessor):
@@ -128,18 +147,18 @@ class GovExcel(DataProcessor):
     DATE_FORMAT = "dd-mmm-yy"
     PERCENT_FORMAT = "0.00"
 
-    FIELD_TRANSFORMATIONS = {
-        inv_f.DIFF_PERCENTAGE: lambda value: (value * 100 if value != 0 else None),
+    FIELD_TRANSFORMATIONS: ClassVar[dict] = {
+        inv_f.DIFF_PERCENTAGE: lambda value: value * 100 if value != 0 else None,
         inv_f.DOC_DATE: lambda value: datetime.strptime(value, "%Y-%m-%d"),
         inv_f.SHIPPING_BILL_DATE: lambda value: datetime.strptime(value, "%Y-%m-%d"),
     }
 
-    TEMPLATE_EXCEL_FILE = {
+    TEMPLATE_EXCEL_FILE: ClassVar[dict] = {
         "V2.0": get_data_file_path("gstr1_excel_template_v2.0.xlsx"),
         "V2.1": get_data_file_path("gstr1_excel_template_v2.1.xlsx"),
     }
 
-    def generate(self, gstin, period):
+    def generate(self, gstin, period, sections=None):
         """
         Build excel file
         """
@@ -150,24 +169,37 @@ class GovExcel(DataProcessor):
         month, year = gstr_1_log.return_period[:2], gstr_1_log.return_period[2:]
         filing_from = getdate(f"{year}-{month}-01")
 
-        file_version = "V2.1" if filing_from >= HSN_BIFURCATION_FROM else "V2.0"
+        is_hsn_bifurcated = filing_from >= HSN_BIFURCATION_FROM
+        file_version = "V2.1" if is_hsn_bifurcated else "V2.0"
         file = self.TEMPLATE_EXCEL_FILE.get(file_version)
 
         self.file_field = "filed" if gstr_1_log.filed else "books"
         data = gstr_1_log.load_data(self.file_field)[self.file_field]
         data = self.process_data(data)
-        self.build_excel(data, file)
+
+        sheet_names = None
+        if sections:
+            selected = []
+            for section in sections:
+                selected.extend(_get_selected_sections(section, is_hsn_bifurcated))
+            data = _filter_data_by_sections(data, selected)
+            sheet_names = _get_excel_sheet_names(selected)
+
+        self.build_excel(
+            data,
+            file,
+            filename=_get_gov_filename(gstin, period, sections),
+            sheet_names=sheet_names,
+        )
 
     def process_data(self, data):
-        data = data.update(data.pop("aggregate_data", {}))
+        data.update(data.pop("aggregate_data", {}))
         category_wise_data = super().process_data(data)
 
         for category, category_data in category_wise_data.items():
             # filter missing in books
             category_wise_data[category] = [
-                row
-                for row in category_data
-                if row.get("upload_status") != "Missing in Books"
+                row for row in category_data if row.get("upload_status") != "Missing in Books"
             ]
 
             if category == GovJsonKey.DOC_ISSUE.value:
@@ -185,23 +217,20 @@ class GovExcel(DataProcessor):
                 if doc.get(inv_f.DOC_TYPE) == "D":
                     continue
 
-                doc.update(
-                    {
-                        key: abs(value)
-                        for key, value in doc.items()
-                        if isinstance(value, (int, float))
-                    }
-                )
+                doc.update({key: abs(value) for key, value in doc.items() if isinstance(value, int | float)})
 
         self.process_hsn_data(category_wise_data)
 
         return category_wise_data
 
-    def build_excel(self, data, file=None):
+    def build_excel(self, data, file=None, filename=None, sheet_names=None):
         excel = ExcelExporter(file)
 
         if excel.has_sheet("Sheet"):
             excel.remove_sheet("Sheet")
+
+        if sheet_names and excel.is_loaded:
+            self._filter_selected_section_sheets(excel, sheet_names)
 
         for category, cat_data in data.items():
             sheet_name = JSON_CATEGORY_EXCEL_CATEGORY_MAPPING.get(category)
@@ -223,7 +252,14 @@ class GovExcel(DataProcessor):
                     default_data_format={"height": 15},
                 )
 
-        excel.export(get_file_name("Gov", self.gstin, self.period))
+        excel.export(filename or get_file_name("Gov", self.gstin, self.period))
+
+    def _filter_selected_section_sheets(self, excel, sheet_names):
+        """Remove every template sheet not in `sheet_names`. Master is always kept."""
+        kept = {GovExcelSheetName.MASTER.value, *sheet_names}
+        for sheet_name in list(excel.wb.sheetnames):
+            if sheet_name not in kept:
+                excel.remove_sheet(sheet_name)
 
     def process_doc_issue_data(self, data):
         """
@@ -424,6 +460,49 @@ class GovExcel(DataProcessor):
                 "label": _(gov_xl.ECOMMERCE_GSTIN),
                 # Ignore value, just keep the column
                 "fieldname": f"_{inv_f.ECOMMERCE_GSTIN}",
+            },
+        ]
+
+    def get_supeco_headers(self):
+        return [
+            {
+                "label": _("Nature of Supply"),
+                "fieldname": inv_f.DOC_TYPE,
+            },
+            {
+                "label": _("GSTIN of E-Commerce Operator"),
+                "fieldname": inv_f.ECOMMERCE_GSTIN,
+                "header_format": {"width": ExcelWidth.SM.value},
+            },
+            {
+                "label": _("E-Commerce Operator Name"),
+                "fieldname": inv_f.ECOMMERCE_OPERATOR_NAME,
+                "header_format": {"width": ExcelWidth.LG.value},
+            },
+            {
+                "label": _("Net value of supplies"),
+                "fieldname": inv_f.TAXABLE_VALUE,
+                "data_format": {"number_format": self.AMOUNT_FORMAT},
+            },
+            {
+                "label": _("Integrated tax"),
+                "fieldname": inv_f.IGST,
+                "data_format": {"number_format": self.AMOUNT_FORMAT},
+            },
+            {
+                "label": _("Central tax"),
+                "fieldname": inv_f.CGST,
+                "data_format": {"number_format": self.AMOUNT_FORMAT},
+            },
+            {
+                "label": _("State/UT tax"),
+                "fieldname": inv_f.SGST,
+                "data_format": {"number_format": self.AMOUNT_FORMAT},
+            },
+            {
+                "label": _("Cess"),
+                "fieldname": inv_f.CESS,
+                "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
         ]
 
@@ -803,7 +882,7 @@ class BooksExcel(DataProcessor):
     AMOUNT_FORMAT = "#,##0.00"
     DATE_FORMAT = "dd-mmm-yy"
     PERCENT_FORMAT = "0.00"
-    DEFAULT_DATA_FORMAT = {"height": 15}
+    DEFAULT_DATA_FORMAT: ClassVar[dict] = {"height": 15}
 
     def __init__(self, company_gstin, month_or_quarter, year):
         self.company_gstin = company_gstin
@@ -811,9 +890,7 @@ class BooksExcel(DataProcessor):
         self.year = year
 
         self.period = get_period(month_or_quarter, year)
-        gstr1_log = frappe.get_doc(
-            "GST Return Log", f"GSTR1-{self.period}-{company_gstin}"
-        )
+        gstr1_log = frappe.get_doc("GST Return Log", f"GSTR1-{self.period}-{company_gstin}")
 
         self.data = self.process_data(gstr1_log.load_data("books")["books"])
 
@@ -831,9 +908,7 @@ class BooksExcel(DataProcessor):
         for category, category_data in category_wise_data.items():
             # filter missing in books
             category_wise_data[category] = [
-                doc
-                for doc in category_data
-                if doc.get("upload_status") != "Missing in Books"
+                doc for doc in category_data if doc.get("upload_status") != "Missing in Books"
             ]
 
             # copy doc value to item fields
@@ -1222,8 +1297,8 @@ class ReconcileExcel:
         }
     )
 
-    DEFAULT_HEADER_FORMAT = {"bg_color": COLOR_PALLATE.dark_gray}
-    DEFAULT_DATA_FORMAT = {"bg_color": COLOR_PALLATE.light_gray}
+    DEFAULT_HEADER_FORMAT: ClassVar[dict] = {"bg_color": COLOR_PALLATE.dark_gray}
+    DEFAULT_DATA_FORMAT: ClassVar[dict] = {"bg_color": COLOR_PALLATE.light_gray}
 
     def __init__(self, company_gstin, month_or_quarter, year):
         self.company_gstin = company_gstin
@@ -1231,9 +1306,7 @@ class ReconcileExcel:
         self.year = year
 
         self.period = get_period(month_or_quarter, year)
-        gstr1_log = frappe.get_doc(
-            "GST Return Log", f"GSTR1-{self.period}-{company_gstin}"
-        )
+        gstr1_log = frappe.get_doc("GST Return Log", f"GSTR1-{self.period}-{company_gstin}")
 
         self.summary = gstr1_log.load_data("reconcile_summary")["reconcile_summary"]
         data = gstr1_log.load_data("reconcile")["reconcile"]
@@ -1949,9 +2022,9 @@ class ReconcileExcel:
         sgst_key = inv_f.SGST
         cess_key = inv_f.CESS
 
-        row_dict["taxable_value_difference"] = (
-            row_dict.get("books_" + taxable_value_key, 0)
-        ) - (row_dict.get("gstr_1_" + taxable_value_key, 0))
+        row_dict["taxable_value_difference"] = (row_dict.get("books_" + taxable_value_key, 0)) - (
+            row_dict.get("gstr_1_" + taxable_value_key, 0)
+        )
 
         row_dict["tax_difference"] = 0
         for tax_key in [igst_key, cgst_key, sgst_key, cess_key]:
@@ -2094,10 +2167,42 @@ class ReconcileExcel:
         ]
 
 
+def _filter_data_by_sections(data: dict, sections: list[str] | None) -> dict:
+    """
+    Keep only entries whose keys belong to `sections`.
+    """
+    if not sections:
+        return data
+
+    return {k: v for k, v in data.items() if k in sections}
+
+
+def _get_gov_filename(company_gstin: str, period: str, sections: list[str] | None = None) -> str:
+    name = f"GSTR-1-Gov-{company_gstin}-{period}"
+    if not sections:
+        return name
+    if len(sections) == 1:
+        return f"{name}-{sections[0]}"
+    return f"{name}-multi-section"
+
+
 @frappe.whitelist()
-def download_filed_as_excel(company_gstin: str, month_or_quarter: str, year: str):
+def set_section_preference(sections: str | list[str] | None = None):
+    """Persist the user's GSTR-1 download section selection as a user default."""
     frappe.has_permission("GSTR-1", "export", throw=True)
-    GovExcel().generate(company_gstin, get_period(month_or_quarter, year))
+    if isinstance(sections, str):
+        sections = frappe.parse_json(sections)
+    frappe.defaults.set_user_default(GSTR1_SECTIONS_DEFAULT_KEY, frappe.as_json(sections or []))
+
+
+@frappe.whitelist()
+def download_filed_as_excel(
+    company_gstin: str, month_or_quarter: str, year: str, sections: str | list[str] | None = None
+):
+    frappe.has_permission("GSTR-1", "export", throw=True)
+    if isinstance(sections, str):
+        sections = frappe.parse_json(sections) if sections else None
+    GovExcel().generate(company_gstin, get_period(month_or_quarter, year), sections=sections)
 
 
 @frappe.whitelist()
@@ -2123,14 +2228,22 @@ def get_gstr_1_json(
     month_or_quarter: str,
     include_uploaded: bool = False,
     delete_missing: bool = False,
+    sections: str | list[str] | None = None,
 ):
     frappe.has_permission("GSTR-1", "export", throw=True)
+    if isinstance(sections, str):
+        sections = frappe.parse_json(sections) if sections else None
+
+    settings = frappe.get_cached_doc("GST Settings")
+    if not settings.is_gstr1_api_enabled(company_gstin):
+        include_uploaded = True
+        delete_missing = False
 
     period = get_period(month_or_quarter, year)
     gstr1_log = frappe.get_doc("GST Return Log", f"GSTR1-{period}-{company_gstin}")
 
     data = gstr1_log.get_json_for("books")
-    data = data.update(data.pop("aggregate_data", {}))
+    data.update(data.pop("aggregate_data", {}))
 
     for subcategory, subcategory_data in data.items():
         if subcategory in {
@@ -2183,14 +2296,18 @@ def get_gstr_1_json(
             subcategory_data.pop(key)
 
     gstr1_log.normalize_data(data)
+    gov_data = convert_to_gov_data_format(data, company_gstin)
+
+    if sections:
+        gov_data = _filter_data_by_sections(gov_data, sections)
 
     return {
         "data": {
             "gstin": company_gstin,
             "fp": period,
-            **convert_to_gov_data_format(data, company_gstin),
+            **gov_data,
         },
-        "filename": f"GSTR-1-Gov-{company_gstin}-{period}.json",
+        "filename": f"{_get_gov_filename(company_gstin, period, sections)}.json",
     }
 
 

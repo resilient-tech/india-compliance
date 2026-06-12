@@ -480,14 +480,6 @@ CUSTOM_FIELDS = {
             "fetch_from": "",
         },
         {
-            "fieldname": "is_reverse_charge",
-            "label": "Is Reverse Charge",
-            "fieldtype": "Check",
-            "insert_after": "apply_tds",
-            "print_hide": 1,
-            "default": "0",
-        },
-        {
             "fieldname": "section_gst_breakup",
             "label": "GST Breakup",
             "fieldtype": "Section Break",
@@ -848,6 +840,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Float",
             "insert_after": "gst_details_section",
             "read_only": 1,
+            "print_hide": 1,
             "translatable": 0,
             "no_copy": 1,
         },
@@ -857,6 +850,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Float",
             "insert_after": "igst_rate",
             "read_only": 1,
+            "print_hide": 1,
             "translatable": 0,
             "no_copy": 1,
         },
@@ -866,6 +860,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Float",
             "insert_after": "cgst_rate",
             "read_only": 1,
+            "print_hide": 1,
             "translatable": 0,
             "no_copy": 1,
         },
@@ -875,6 +870,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Float",
             "insert_after": "sgst_rate",
             "read_only": 1,
+            "print_hide": 1,
             "translatable": 0,
             "no_copy": 1,
         },
@@ -884,6 +880,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Float",
             "insert_after": "cess_rate",
             "read_only": 1,
+            "print_hide": 1,
             "translatable": 0,
             "no_copy": 1,
         },
@@ -899,6 +896,7 @@ CUSTOM_FIELDS = {
             "options": "Company:company:default_currency",
             "insert_after": "cb_gst_details",
             "read_only": 1,
+            "print_hide": 1,
             "translatable": 0,
             "no_copy": 1,
         },
@@ -909,6 +907,7 @@ CUSTOM_FIELDS = {
             "options": "Company:company:default_currency",
             "insert_after": "igst_amount",
             "read_only": 1,
+            "print_hide": 1,
             "translatable": 0,
             "no_copy": 1,
         },
@@ -919,6 +918,7 @@ CUSTOM_FIELDS = {
             "options": "Company:company:default_currency",
             "insert_after": "cgst_amount",
             "read_only": 1,
+            "print_hide": 1,
             "translatable": 0,
             "no_copy": 1,
         },
@@ -929,6 +929,7 @@ CUSTOM_FIELDS = {
             "options": "Company:company:default_currency",
             "insert_after": "sgst_amount",
             "read_only": 1,
+            "print_hide": 1,
             "translatable": 0,
             "no_copy": 1,
         },
@@ -939,6 +940,7 @@ CUSTOM_FIELDS = {
             "options": "Company:company:default_currency",
             "insert_after": "cess_amount",
             "read_only": 1,
+            "print_hide": 1,
             "translatable": 0,
             "no_copy": 1,
         },
@@ -1017,9 +1019,7 @@ CUSTOM_FIELDS = {
             "label": "Reason for Ineligibility",
             "fieldtype": "Select",
             "insert_after": "itc_classification",
-            "options": (
-                "\nIneligible As Per Section 17(5)\nITC restricted due to PoS rules"
-            ),
+            "options": ("\nIneligible As Per Section 17(5)\nITC restricted due to PoS rules"),
             "read_only": 1,
             "print_hide": 1,
         },
@@ -1029,9 +1029,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Select",
             "insert_after": "ineligibility_reason",
             "print_hide": 1,
-            "options": (
-                "\nNot Applicable\nReconciled\nUnreconciled\nIgnored\nMatch Found"
-            ),
+            "options": ("\nNot Applicable\nReconciled\nUnreconciled\nIgnored\nMatch Found"),
             "no_copy": 1,
             "read_only": 1,
         },
@@ -1046,6 +1044,16 @@ CUSTOM_FIELDS = {
             "description": "GSTR-3B period for claiming ITC (MMYYYY) or 'Deferred' to postpone.",
             "allow_on_submit": 1,
         },
+        {
+            "fieldname": "is_boe_applicable",
+            "label": "Is BOE Applicable",
+            "fieldtype": "Check",
+            "insert_after": "is_reverse_charge",
+            "print_hide": 1,
+            "default": 0,
+            "read_only": 1,
+            "depends_on": 'eval:doc.itc_classification === "Import Of Goods"',
+        },
     ],
     "Purchase Invoice Item": [
         {
@@ -1053,6 +1061,8 @@ CUSTOM_FIELDS = {
             "label": "Pending BOE Qty",
             "fieldtype": "Float",
             "insert_after": "rejected_qty",
+            "print_hide": 1,
+            "read_only": 1,
         },
     ],
     "Purchase Receipt": [
@@ -1348,9 +1358,7 @@ HSN_CODE_FIELD = {
     "description": "You can search code by the description of the category.",
 }
 
-EDUCATION_CUSTOM_FIELDS = {
-    "Fee Category": [{**HSN_CODE_FIELD, "insert_after": "description"}]
-}
+EDUCATION_CUSTOM_FIELDS = {"Fee Category": [{**HSN_CODE_FIELD, "insert_after": "description"}]}
 
 HEALTHCARE_CUSTOM_FIELDS = {
     "Clinical Procedure Template": [
@@ -1412,6 +1420,13 @@ SALES_REVERSE_CHARGE_FIELDS = {
     "Sales Invoice": {**reverse_charge_field, "insert_after": "is_debit_note"},
 }
 
+PURCHASE_REVERSE_CHARGE_FIELDS = {
+    "Purchase Invoice": {**reverse_charge_field, "insert_after": "is_return"},
+    "Purchase Receipt": {**reverse_charge_field, "insert_after": "is_return"},
+    "Purchase Order": {**reverse_charge_field, "insert_after": "supplier_warehouse"},
+    "Supplier Quotation": {**reverse_charge_field, "insert_after": "has_unit_price_items"},
+}
+
 E_INVOICE_FIELDS = {
     "Sales Invoice": [
         {
@@ -1449,9 +1464,7 @@ E_WAYBILL_DN_FIELDS = [
         "insert_after": "vehicle_no",
         "print_hide": 1,
         "no_copy": 1,
-        "description": (
-            "Set as zero to update distance as per the e-Waybill portal (if available)"
-        ),
+        "description": ("Set as zero to update distance as per the e-Waybill portal (if available)"),
     },
     {
         "fieldname": "gst_transporter_id",
@@ -1721,9 +1734,7 @@ E_WAYBILL_SCR_FIELDS = [
         "insert_after": "vehicle_no",
         "print_hide": 1,
         "no_copy": 1,
-        "description": (
-            "Set as zero to update distance as per the e-Waybill portal (if available)"
-        ),
+        "description": ("Set as zero to update distance as per the e-Waybill portal (if available)"),
     },
     {
         "fieldname": "mode_of_transport",
@@ -1783,11 +1794,10 @@ stock_entry_e_waybill_field = {**e_waybill_no_field, "insert_after": "asset_repa
 
 
 E_WAYBILL_FIELDS = {
-    "Sales Invoice": E_WAYBILL_INV_FIELDS
-    + [e_waybill_no_field, e_waybill_status_field],
-    "Delivery Note": E_WAYBILL_DN_FIELDS + [e_waybill_no_field],
-    "Purchase Invoice": E_WAYBILL_INV_FIELDS + [purchase_e_waybill_field],
-    "Purchase Receipt": E_WAYBILL_PURCHASE_RECEIPT_FIELDS + [purchase_e_waybill_field],
-    "Stock Entry": E_WAYBILL_SE_FIELDS + [stock_entry_e_waybill_field],
-    "Subcontracting Receipt": E_WAYBILL_SCR_FIELDS + [purchase_e_waybill_field],
+    "Sales Invoice": [*E_WAYBILL_INV_FIELDS, e_waybill_no_field, e_waybill_status_field],
+    "Delivery Note": [*E_WAYBILL_DN_FIELDS, e_waybill_no_field],
+    "Purchase Invoice": [*E_WAYBILL_INV_FIELDS, purchase_e_waybill_field],
+    "Purchase Receipt": [*E_WAYBILL_PURCHASE_RECEIPT_FIELDS, purchase_e_waybill_field],
+    "Stock Entry": [*E_WAYBILL_SE_FIELDS, stock_entry_e_waybill_field],
+    "Subcontracting Receipt": [*E_WAYBILL_SCR_FIELDS, purchase_e_waybill_field],
 }

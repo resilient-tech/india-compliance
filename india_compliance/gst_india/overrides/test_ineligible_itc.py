@@ -2,15 +2,15 @@ import json
 from contextlib import contextmanager
 
 import frappe
-from frappe.tests import IntegrationTestCase, change_settings
-from frappe.utils import today
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
-from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
+from erpnext.stock.doctype.purchase_receipt.mapper import (
     make_purchase_invoice,
 )
 from erpnext.stock.doctype.repost_item_valuation.repost_item_valuation import (
     repost_entries,
 )
+from frappe.tests import IntegrationTestCase, change_settings
+from frappe.utils import today
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
@@ -158,9 +158,7 @@ class TestIneligibleITC(IntegrationTestCase):
             ],
         )
 
-        self.assertStockValues(
-            doc.name, {"Test Stock Item": 20, "Test Ineligible Stock Item": 22.42}
-        )
+        self.assertStockValues(doc.name, {"Test Stock Item": 20, "Test Ineligible Stock Item": 22.42})
         self.assertAssetValues(
             "Purchase Invoice",
             doc.name,
@@ -172,13 +170,11 @@ class TestIneligibleITC(IntegrationTestCase):
             "Repost Allowed Types",
             {
                 "document_type": "Purchase Invoice",
-                "parent": "Repost Accounting Ledger Settings",
+                "parent": "Accounts Settings",
             },
         ):
-            settings = frappe.get_single("Repost Accounting Ledger Settings")
-            settings.append(
-                "allowed_types", {"document_type": "Purchase Invoice", "allowed": 1}
-            )
+            settings = frappe.get_single("Accounts Settings")
+            settings.append("allowed_types", {"document_type": "Purchase Invoice"})
             settings.save()
 
         doc.items[4].expense_account = "Office Rent - _TIRC"
@@ -249,6 +245,7 @@ class TestIneligibleITC(IntegrationTestCase):
             "items": SAMPLE_ITEM_LIST,
             "place_of_supply": "27-Maharashtra",
             "is_out_state": 1,
+            "supplier_address": "_Test Registered Supplier-Billing",
         }
 
         doc = create_transaction(**transaction_details)
@@ -288,9 +285,7 @@ class TestIneligibleITC(IntegrationTestCase):
             ],
         )
 
-        self.assertStockValues(
-            doc.name, {"Test Stock Item": 23.6, "Test Ineligible Stock Item": 22.42}
-        )
+        self.assertStockValues(doc.name, {"Test Stock Item": 23.6, "Test Ineligible Stock Item": 22.42})
         self.assertAssetValues(
             "Purchase Invoice",
             doc.name,
@@ -341,9 +336,7 @@ class TestIneligibleITC(IntegrationTestCase):
             ],
         )
 
-        self.assertStockValues(
-            doc.name, {"Test Stock Item": 20, "Test Ineligible Stock Item": 22.42}
-        )
+        self.assertStockValues(doc.name, {"Test Stock Item": 20, "Test Ineligible Stock Item": 22.42})
         self.assertAssetValues(
             "Purchase Receipt",
             doc.name,
@@ -418,6 +411,7 @@ class TestIneligibleITC(IntegrationTestCase):
             "items": SAMPLE_ITEM_LIST,
             "place_of_supply": "27-Maharashtra",
             "is_out_state": 1,
+            "supplier_address": "_Test Registered Supplier-Billing",
         }
 
         doc = create_transaction(**transaction_details)
@@ -758,9 +752,7 @@ class TestIneligibleITC(IntegrationTestCase):
             ],
         )
 
-        self.assertStockValues(
-            doc.name, {"Test Stock Item": 20, "Test Ineligible Stock Item": 22.42}
-        )
+        self.assertStockValues(doc.name, {"Test Stock Item": 20, "Test Ineligible Stock Item": 22.42})
 
         self.assertAssetValues(
             "Purchase Receipt",
@@ -951,9 +943,7 @@ def create_test_items():
     )
     asset_category.insert(ignore_if_duplicate=True)
 
-    frappe.get_doc({"doctype": "Location", "location_name": "Test Location"}).insert(
-        ignore_if_duplicate=True
-    )
+    frappe.get_doc({"doctype": "Location", "location_name": "Test Location"}).insert(ignore_if_duplicate=True)
 
     asset_item = {
         "doctype": "Item",
@@ -974,9 +964,7 @@ def create_test_items():
         "item_group": "All Item Groups",
         "gst_hsn_code": "730419",
         "is_stock_item": 0,
-        "item_defaults": [
-            {**item_defaults, "expense_account": "Administrative Expenses - _TIRC"}
-        ],
+        "item_defaults": [{**item_defaults, "expense_account": "Administrative Expenses - _TIRC"}],
     }
 
     # Stock Item

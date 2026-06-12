@@ -1,5 +1,4 @@
 import click
-
 import frappe
 from frappe import _
 from frappe.utils import sbool
@@ -69,9 +68,9 @@ def get_credentials_from_e_invoice_user():
         except Exception as e:
             password = None
             frappe.log_error(
-                title=_(
-                    "Failed to decrypt password for E Invoice User {0} - {1}"
-                ).format(credential.company, credential.gstin),
+                title=_("Failed to decrypt password for E Invoice User {0} - {1}").format(
+                    credential.company, credential.gstin
+                ),
                 message=e,
             )
 

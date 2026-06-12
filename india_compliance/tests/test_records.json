@@ -378,6 +378,23 @@
             ]
         },
         {
+            "name": "_Test Registered Customer-Billing-4",
+            "address_type": "Billing",
+            "address_line1": "Test Address - 7",
+            "city": "Test City",
+            "state": "Karnataka",
+            "pincode": "560001",
+            "country": "India",
+            "gstin": "2900ABC12345UNF",
+            "gst_category": "UIN Holders",
+            "links": [
+                {
+                    "link_doctype": "Customer",
+                    "link_name": "_Test Registered Customer"
+                }
+            ]
+        },
+        {
             "name": "_Test Registered Composition Customer-Billing",
             "address_type": "Billing",
             "address_line1": "Test Address - 6",
@@ -476,6 +493,23 @@
             "country": "United States",
             "gstin": "",
             "gst_category": "Overseas",
+            "links": [
+                {
+                    "link_doctype": "Supplier",
+                    "link_name": "_Test Registered Supplier"
+                }
+            ]
+        },
+        {
+            "name": "_Test Registered Supplier-Billing-2",
+            "address_type": "Billing",
+            "address_line1": "Test Address - 7",
+            "city": "Test City",
+            "state": "Gujarat",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "24AABCR6898M1ZN",
+            "gst_category": "SEZ",
             "links": [
                 {
                     "link_doctype": "Supplier",

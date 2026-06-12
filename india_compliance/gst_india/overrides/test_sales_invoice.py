@@ -16,9 +16,7 @@ class TestSalesInvoice(IntegrationTestCase):
             "PI2021 - 001",
         ]
         for name in invalid_names:
-            doc = frappe._dict(
-                name=name, posting_date=posting_date, doctype="Sales Invoice"
-            )
+            doc = frappe._dict(name=name, posting_date=posting_date, doctype="Sales Invoice")
             self.assertRaises(frappe.ValidationError, validate_invoice_number, doc)
 
         valid_names = [
@@ -33,4 +31,4 @@ class TestSalesInvoice(IntegrationTestCase):
             try:
                 validate_invoice_number(doc)
             except frappe.ValidationError:
-                self.fail("Valid name {} throwing error".format(name))
+                self.fail(f"Valid name {name} throwing error")
