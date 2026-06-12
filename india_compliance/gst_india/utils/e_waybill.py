@@ -38,12 +38,12 @@ from india_compliance.gst_india.constants.e_waybill import (
     ADDRESS_FIELDS,
     BUYING_DOCTYPES,
     CANCEL_REASON_CODES,
-    COMBINATION_TRANSPORT_TYPES,
     CONSIGNMENT_STATUS,
     E_WAYBILL_CHANGES_APPLICABLE_DATE,
     EXTEND_VALIDITY_REASON_CODES,
     ITEM_LIMIT,
     PERMITTED_DOCTYPES,
+    SHIP_TO_TRANSACTION_TYPES,
     SUB_SUPPLY_TYPES,
     TRANSIT_TYPES,
     UPDATE_VEHICLE_REASON_CODES,
@@ -1231,7 +1231,7 @@ def get_billing_shipping_address_map(doc):
 
 
 def is_e_waybill_changes_applicable(settings=None):
-    # changes deployed in sandbox mode and will be deployed in production on 15th June 2026.
+    # changes are live in sandbox and apply in production from E_WAYBILL_CHANGES_APPLICABLE_DATE
     if not settings:
         settings = frappe.get_cached_doc("GST Settings")
 
@@ -1854,8 +1854,8 @@ class EWaybillData(GSTTransactionData):
         }
 
         if (
-            is_e_waybill_changes_applicable()
-            and self.transaction_details.transaction_type in COMBINATION_TRANSPORT_TYPES
+            is_e_waybill_changes_applicable(self.settings)
+            and self.transaction_details.transaction_type in SHIP_TO_TRANSACTION_TYPES
         ):
             data.update(
                 {

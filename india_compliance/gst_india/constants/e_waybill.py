@@ -3,7 +3,9 @@
 
 from frappe.utils import getdate
 
-E_WAYBILL_CHANGES_APPLICABLE_DATE = getdate("2026-06-15")
+# Date from which NIC requires shipToGSTIN/shipToTradeName in production
+# (already live in sandbox)
+E_WAYBILL_CHANGES_APPLICABLE_DATE = getdate("2026-08-01")
 
 selling_address = {
     "bill_from": "company_address",
@@ -106,7 +108,8 @@ TRANSPORT_TYPES = {
     4: "Combination of 2 and 3",
 }
 
-COMBINATION_TRANSPORT_TYPES = (2, 4)
+# transaction types where goods are shipped to an address different from Bill To
+SHIP_TO_TRANSACTION_TYPES = (2, 4)
 VEHICLE_TYPES = {"Regular": "R", "Over Dimensional Cargo (ODC)": "O"}
 
 TRANSIT_TYPES = {"Road": "R", "Warehouse": "W", "Others": "O"}
