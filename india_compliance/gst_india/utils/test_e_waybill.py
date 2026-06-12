@@ -16,7 +16,21 @@ from frappe.www.printview import get_html_and_style
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
+<<<<<<< HEAD
 from india_compliance.gst_india.utils import load_doc
+=======
+from india_compliance.gst_india.constants import SERVICE_HSN_PREFIX
+from india_compliance.gst_india.constants.e_waybill import (
+    E_WAYBILL_CHANGES_APPLICABLE_DATE,
+)
+from india_compliance.gst_india.overrides.sales_invoice import (
+    is_e_waybill_applicable,
+)
+from india_compliance.gst_india.overrides.test_subcontracting_transaction import (
+    create_subcontracting_data,
+)
+from india_compliance.gst_india.utils import load_doc, parse_datetime
+>>>>>>> 485378f1 (fix: update E_WAYBILL_CHANGES_APPLICABLE_DATE to reflect new effective date)
 from india_compliance.gst_india.utils.e_invoice import (
     retry_e_invoice_e_waybill_generation,
 )
@@ -1082,6 +1096,7 @@ class TestEWaybill(FrappeTestCase):
         self.assertEqual(e_waybill_data.get("shipToGSTIN"), "URP")
         self.assertTrue(e_waybill_data.get("shipToTradeName"))
 
+    @change_settings("GST Settings", {"sandbox_mode": 1})
     def test_e_waybill_ship_to_gstin_for_transaction_type_4(self):
         # ship to GSTIN is mandatory in transaction type 4.
         shipping_address = self._create_unregistered_shipping_address()
@@ -1110,10 +1125,13 @@ class TestEWaybill(FrappeTestCase):
 
     @change_settings("GST Settings", {"sandbox_mode": 0})
     def test_ship_to_gstin_gated_by_rollout_date(self):
-        si = self.create_sales_invoice_for("overseas_customer_domestic_shipping")  # type 2
+        day_before_rollout = get_datetime(add_to_date(E_WAYBILL_CHANGES_APPLICABLE_DATE, days=-1))
+        rollout_date = get_datetime(E_WAYBILL_CHANGES_APPLICABLE_DATE)
 
-        # 13 Jun 2026 -> before rollout -> omitted from payload and offline JSON
-        with time_machine.travel(get_datetime("2026-06-13"), tick=False):
+        # before rollout -> omitted from payload and offline JSON
+        with time_machine.travel(day_before_rollout, tick=True):
+            si = self.create_sales_invoice_for("overseas_customer_domestic_shipping")  # type 2
+
             data = EWaybillData(si).get_data()
             self.assertEqual(data.get("transactionType"), 2)
             self.assertNotIn("shipToGSTIN", data)
@@ -1123,8 +1141,8 @@ class TestEWaybill(FrappeTestCase):
             self.assertNotIn("shipToGSTIN", json_data)
             self.assertNotIn("shipToTradeName", json_data)
 
-        # 16 Jun 2026 -> on/after rollout -> sent
-        with time_machine.travel(get_datetime("2026-06-16"), tick=False):
+        # on/after rollout -> sent
+        with time_machine.travel(rollout_date, tick=False):
             data = EWaybillData(si).get_data()
             self.assertEqual(data.get("transactionType"), 2)
             self.assertTrue(data.get("shipToGSTIN"))
