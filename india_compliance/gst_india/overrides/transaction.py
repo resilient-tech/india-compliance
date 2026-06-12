@@ -1942,9 +1942,12 @@ def sync_gst_details_from_address(doc):
 
 
 def get_applicable_taxes(gst_details):
-    """Tax template + rows resolved by get_gst_details, compared before/after an
-    edit to detect whether the taxes would change."""
-    return (gst_details.get("taxes_and_charges") or "", gst_details.get("taxes") or [])
+    """Signature of the GST actually applied — the set of (account, rate, charge
+    type) from the tax rows resolved by get_gst_details."""
+    return frozenset(
+        (row.get("account_head"), flt(row.get("rate")), row.get("charge_type"))
+        for row in (gst_details.get("taxes") or [])
+    )
 
 
 def set_ecommerce_supply_type(doc):

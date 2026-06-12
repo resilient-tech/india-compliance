@@ -27,6 +27,7 @@ from india_compliance.gst_india.overrides.transaction import (
     DOCTYPES_WITH_GST_DETAIL,
     ItemGSTDetails,
     _is_multicurrency_doc,
+    sync_address_dependent_fields_on_submit,
     validate_gst_refund_accounts,
     sync_address_dependent_fields_on_submit,
     validate_item_tax_template,
