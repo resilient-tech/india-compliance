@@ -421,6 +421,24 @@ class TestEWaybill(IntegrationTestCase):
             frappe._dict(),
         )
 
+    @responses.activate
+    def test_close_e_waybill_blocked_after_validity_expiry(self):
+        """An expired e-Waybill cannot be closed."""
+        si = self.create_sales_invoice_for("goods_item_with_ewaybill")
+        self._generate_e_waybill(si.name)
+
+        doc = load_doc("Sales Invoice", si.name, "submit")
+        doc.get_onload().get("e_waybill_info", {})["valid_upto"] = add_to_date(
+            get_datetime(), days=-1, as_datetime=True
+        )
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"validity is over"),
+            EWaybillData(doc).get_data_for_closure,
+            frappe._dict(remarks="Goods delivered"),
+        )
+
     def test_e_waybill_changes_applicable_gate(self):
         before = add_to_date(E_WAYBILL_CHANGES_APPLICABLE_DATE, days=-1, as_datetime=True)
         after = add_to_date(E_WAYBILL_CHANGES_APPLICABLE_DATE, days=1, as_datetime=True)

@@ -1349,6 +1349,7 @@ class EWaybillData(GSTTransactionData):
     def get_data_for_closure(self, values):
         self.validate_if_e_waybill_is_set()
         self.validate_if_e_waybill_is_not_closed()
+        self.check_e_waybill_validity()
 
         return {
             "ewbNo": self.doc.ewaybill,
