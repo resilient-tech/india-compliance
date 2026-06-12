@@ -35,6 +35,8 @@ from india_compliance.gst_india.utils.e_waybill import (
     generate_e_waybill,
     get_e_waybills_to_extend,
     get_source_destination_address,
+    mark_e_waybill_as_cancelled,
+    mark_e_waybill_as_generated,
     schedule_ewaybill_for_extension,
     update_transporter,
     update_vehicle_info,
@@ -285,6 +287,63 @@ class TestEWaybill(IntegrationTestCase):
                 {"reference_name": si.name, "is_cancelled": 1},
             )
         )
+
+    def test_mark_e_waybill_as_generated(self):
+        """Dates entered by the user should be stored as-is (system timezone, no day-first parsing)"""
+        si = self.create_sales_invoice_for("goods_item_with_ewaybill")
+
+        # day and month both <= 12 to catch incorrect day-first parsing
+        e_waybill_date = get_datetime("2026-06-05 13:17:16")
+        valid_upto = get_datetime("2026-06-07 13:17:16")
+
+        mark_e_waybill_as_generated(
+            si.doctype,
+            si.name,
+            values={
+                "ewaybill": "351002721232",
+                "e_waybill_date": str(e_waybill_date),
+                "valid_upto": str(valid_upto),
+            },
+        )
+
+        e_waybill_log = frappe.get_doc("e-Waybill Log", "351002721232")
+        self.assertEqual(e_waybill_log.created_on, e_waybill_date)
+        self.assertEqual(e_waybill_log.valid_upto, valid_upto)
+        self.assertEqual(
+            frappe.db.get_value("Sales Invoice", si.name, "e_waybill_status"),
+            "Manually Generated",
+        )
+
+    def test_mark_e_waybill_as_cancelled(self):
+        """Cancel date entered by the user should be stored as-is"""
+        si = self.create_sales_invoice_for("goods_item_with_ewaybill")
+
+        e_waybill_date = get_datetime("2026-06-05 13:17:16")
+        cancelled_on = get_datetime("2026-06-05 11:00:00")
+
+        mark_e_waybill_as_generated(
+            si.doctype,
+            si.name,
+            values={
+                "ewaybill": "351002721233",
+                "e_waybill_date": str(e_waybill_date),
+                "valid_upto": str(get_datetime("2026-06-07 13:17:16")),
+            },
+        )
+
+        mark_e_waybill_as_cancelled(
+            si.doctype,
+            si.name,
+            values={
+                "reason": "Data Entry Mistake",
+                "remark": "Manually Cancelled",
+                "cancelled_on": str(cancelled_on),
+            },
+        )
+
+        e_waybill_log = frappe.get_doc("e-Waybill Log", "351002721233")
+        self.assertEqual(e_waybill_log.is_cancelled, 1)
+        self.assertEqual(e_waybill_log.cancelled_on, cancelled_on)
 
     @responses.activate
     def test_get_e_waybill_cancel_data(self):
