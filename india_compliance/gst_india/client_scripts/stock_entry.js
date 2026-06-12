@@ -113,6 +113,36 @@ frappe.ui.form.on(DOCTYPE, {
         }
     },
 
+    async subcontracting_inward_order(frm) {
+        if (
+            !frm.doc.subcontracting_inward_order ||
+            frm.doc.bill_to_address ||
+            !india_compliance.is_subcontracting_inward_entry(frm.doc)
+        )
+            return;
+
+        const customer = (
+            await frappe.db.get_value(
+                "Subcontracting Inward Order",
+                frm.doc.subcontracting_inward_order,
+                "customer",
+            )
+        ).message?.customer;
+
+        if (!customer) return;
+
+        frappe.call({
+            method: "frappe.contacts.doctype.address.address.get_default_address",
+            args: {
+                doctype: "Customer",
+                name: customer,
+            },
+            callback(r) {
+                frm.set_value("bill_to_address", r.message);
+            },
+        });
+    },
+
     taxes_and_charges(frm) {
         frm.taxes_controller.update_taxes(frm);
     },

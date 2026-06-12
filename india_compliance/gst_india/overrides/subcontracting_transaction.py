@@ -2,12 +2,13 @@ import frappe
 from erpnext.accounts.party import get_address_tax_category
 from erpnext.stock.get_item_details import ItemDetailsCtx, get_item_tax_template
 from frappe import _, bold
-from frappe.contacts.doctype.address.address import get_address_display
+from frappe.contacts.doctype.address.address import get_address_display, get_default_address
 from frappe.utils import flt
 from pypika import Order
 
 from india_compliance.gst_india.constants import (
     E_WAYBILL_STOCK_ENTRY_PURPOSES,
+    SUBCONTRACTING_INWARD_PURPOSES,
 )
 from india_compliance.gst_india.constants.e_waybill import (
     ADDRESS_FIELDS,
@@ -101,6 +102,8 @@ def after_mapping_stock_entry(doc, method, source_doc):
 
 
 def update_address_fields(doc, source_doc):
+    if source_doc.doctype == "Subcontracting Inward Order":
+        return set_address_for_subcontracting_inward(doc, source_doc)
 
     address_map = get_mapped_address(doc, source_doc)
 
@@ -113,6 +116,29 @@ def update_address_fields(doc, source_doc):
     doc.bill_to_gstin = address_map.bill_to_gstin
     doc.ship_from_address = address_map.ship_from
     doc.ship_to_address = address_map.ship_to
+
+    set_address_display(doc)
+
+
+def set_address_for_subcontracting_inward(doc, source_doc):
+    """Stock Entry created from Subcontracting Inward Order: company bills to the customer."""
+    if doc.purpose not in SUBCONTRACTING_INWARD_PURPOSES:
+        return
+
+    doc.bill_from_address = get_default_address("Company", source_doc.company)
+    doc.bill_to_address = get_default_address("Customer", source_doc.customer)
+
+    for address_field, gstin_field, gst_category_field in (
+        ("bill_from_address", "bill_from_gstin", "bill_from_gst_category"),
+        ("bill_to_address", "bill_to_gstin", "bill_to_gst_category"),
+    ):
+        address = doc.get(address_field)
+        if not address:
+            continue
+
+        gstin, gst_category = frappe.db.get_value("Address", address, ["gstin", "gst_category"])
+        doc.set(gstin_field, gstin)
+        doc.set(gst_category_field, gst_category)
 
     set_address_display(doc)
 
