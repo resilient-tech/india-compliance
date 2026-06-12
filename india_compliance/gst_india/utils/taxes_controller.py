@@ -1,11 +1,11 @@
 import json
-from collections import defaultdict
 
 import frappe
 from erpnext.controllers.taxes_and_totals import (
     get_round_off_applicable_accounts as fetch_round_off_accounts,
 )
 from frappe import _
+from frappe.query_builder.functions import Sum
 from frappe.utils.data import flt
 
 from india_compliance.gst_india.overrides.transaction import (
@@ -152,9 +152,7 @@ class CustomTaxController:
     def update_item_taxable_value(self):
         for item in self.doc.get("items"):
             taxable_value = self.get_value("amount", item)
-            taxable_value += flt(
-                item.get("additional_taxable_value", 0), item.precision("taxable_value")
-            )
+            taxable_value += flt(item.get("additional_taxable_value", 0), item.precision("taxable_value"))
 
             item.taxable_value = taxable_value
 
@@ -274,88 +272,114 @@ def validate_taxes(doc):
 
 def _set_subcontracting_delivery_additional_value(doc):
     """
-    additional_taxable_value = SUM(received_items.rate * received_items.consumed_qty)
+    For Subcontracting Delivery (job worker delivering finished goods to the
+    customer), taxable value must include the value of customer-provided raw
+    materials consumed, apportioned by weighted-average actual consumption
+    (as per CAS-4; process loss is absorbed by good units):
+
+        additional_taxable_value =
+            SUM(received_item.rate * received_item.consumed_qty)
+            / scio_item.produced_qty
+            * item.qty
+
+    consumed_qty and produced_qty are both cumulative, so each delivery is
+    valued at the weighted-average-to-date.
+
+    Rows are left at 0 when:
+    - scio_detail does not reference a Subcontracting Inward Order Item
+      (eg. secondary items reference SCIO Secondary Item)
+    - no customer-provided material has been consumed for the finished good
+    - produced_qty is 0 (warned via msgprint)
     """
-    scio_details = [item.scio_detail for item in doc.items if item.get("scio_detail")]
+    scio_details = {item.scio_detail for item in doc.items if item.get("scio_detail")}
 
     if not scio_details:
         return
 
-    quantity_processed = frappe._dict(
-        frappe.get_all(
-            "Subcontracting Inward Order Item",
-            filters={"name": ["in", scio_details]},
-            fields=["name", "produced_qty"],
-            as_list=True,
+    scio_item = frappe.qb.DocType("Subcontracting Inward Order Item")
+    received_item = frappe.qb.DocType("Subcontracting Inward Order Received Item")
+
+    fg_costs = {
+        row.name: row
+        for row in (
+            frappe.qb.from_(scio_item)
+            .join(received_item)
+            .on(
+                (received_item.reference_name == scio_item.name)
+                & (received_item.is_customer_provided_item == 1)
+            )
+            .select(
+                scio_item.name,
+                scio_item.produced_qty,
+                Sum(received_item.rate * received_item.consumed_qty).as_("material_cost"),
+            )
+            .where(scio_item.name.isin(list(scio_details)))
+            .groupby(scio_item.name)
+            .run(as_dict=True)
         )
-    )
+    }
 
-    received_items = frappe.get_all(
-        "Subcontracting Inward Order Received Item",
-        filters={
-            "reference_name": ["in", scio_details],
-            "is_customer_provided_item": 1,
-        },
-        fields=["reference_name", "rate", "consumed_qty"],
-    )
-
-    if not received_items:
+    if not fg_costs:
         return
 
-    # Calculate total material cost per FG item
-    fg_material_cost = defaultdict(float)
-    for received_item in received_items:
-        key = received_item.reference_name
-        cost = flt(received_item.rate) * flt(received_item.consumed_qty)
-        fg_material_cost[key] += cost
-
     precision = doc.precision("additional_taxable_value", "items")
+    rows_without_produced_qty = []
 
-    # Set additional_taxable_value for each item
     for item in doc.items:
-        if not item.get("scio_detail"):
+        fg_cost = fg_costs.get(item.get("scio_detail"))
+        if not fg_cost or not fg_cost.material_cost:
             continue
+
+        if not fg_cost.produced_qty:
+            rows_without_produced_qty.append(item.idx)
+            continue
+
         item.additional_taxable_value = flt(
-            fg_material_cost.get(item.scio_detail)
-            / quantity_processed.get(item.scio_detail, 1)
-            * item.qty,
-            precision,
+            flt(fg_cost.material_cost) / flt(fg_cost.produced_qty) * flt(item.qty), precision
+        )
+
+    if rows_without_produced_qty:
+        frappe.msgprint(
+            _(
+                "Row #{0}: Value of customer-provided materials could not be added to the"
+                " taxable value as no production has been reported yet"
+            ).format(", ".join(map(str, rows_without_produced_qty))),
+            alert=True,
+            indicator="yellow",
         )
 
 
 def _set_return_raw_material_additional_value(doc):
     """
-    - additional_taxable_value = (SCIO Received Item rate * qty) - Stock Entry amount
+    For raw material returns, taxable value must equal the customer's declared
+    value (SCIO Received Item rate * qty) as required on the Delivery Challan
+    (Rule 55). The adjustment MAY be negative - it corrects the Stock Entry
+    amount (valuation) down/up to the declared value:
+
+        additional_taxable_value = (rate * item.qty) - item.amount
     """
-    scio_details = [item.scio_detail for item in doc.items if item.get("scio_detail")]
+    scio_details = {item.scio_detail for item in doc.items if item.get("scio_detail")}
 
     if not scio_details:
         return
 
-    received_items = frappe._dict(
+    declared_rates = frappe._dict(
         frappe.get_all(
             "Subcontracting Inward Order Received Item",
-            filters={
-                "name": ["in", scio_details],
-            },
+            filters={"name": ("in", list(scio_details)), "is_customer_provided_item": 1},
             fields=["name", "rate"],
             as_list=True,
         )
     )
 
-    if not received_items:
+    if not declared_rates:
         return
 
     precision = doc.precision("additional_taxable_value", "items")
 
     for item in doc.items:
-        scio_detail = item.get("scio_detail")
-        if not scio_detail:
+        if (scio_detail := item.get("scio_detail")) not in declared_rates:
             continue
 
-        scio_rate = received_items.get(scio_detail)
-        if not scio_rate:
-            continue
-
-        scio_value = flt(scio_rate) * flt(item.qty)
-        item.additional_taxable_value = flt(scio_value - flt(item.amount), precision)
+        declared_value = flt(declared_rates[scio_detail]) * flt(item.qty)
+        item.additional_taxable_value = flt(declared_value - flt(item.amount), precision)
