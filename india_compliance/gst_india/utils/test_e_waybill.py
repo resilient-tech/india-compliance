@@ -16,6 +16,9 @@ from frappe.www.printview import get_html_and_style
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
+from india_compliance.gst_india.constants.e_waybill import (
+    E_WAYBILL_CHANGES_APPLICABLE_DATE,
+)
 from india_compliance.gst_india.utils import load_doc
 from india_compliance.gst_india.utils.e_invoice import (
     retry_e_invoice_e_waybill_generation,
@@ -84,6 +87,12 @@ class TestEWaybill(FrappeTestCase):
             e_waybill_data,
             test_data,
         )
+
+        # shipToGSTIN / shipToTradeName must be absent for Regular (type 1)
+        # transactions — only sent when the Ship-To party differs from Bill-To
+        self.assertEqual(e_waybill_data.get("transactionType"), 1)
+        self.assertNotIn("shipToGSTIN", e_waybill_data)
+        self.assertNotIn("shipToTradeName", e_waybill_data)
 
     @change_settings("GST Settings", {"fetch_e_waybill_data": 1})
     @responses.activate
@@ -989,6 +998,185 @@ class TestEWaybill(FrappeTestCase):
 
         self.assertIn(
             "GSTIN -29AAACI1195H2ZH is inactive or cancelled", str(cm.exception)
+        )
+
+        error_response = test_data.get("error_response_standard")
+
+        responses.add(
+            responses.POST,
+            BASE_URL + "/standard/ei/api/ewaybill",
+            json=error_response,
+            status=200,
+        )
+
+        sync_gstin_response = test_data.get("sync_gstin_response_inactive")
+
+        responses.add(
+            responses.GET,
+            BASE_URL + "/standard/ei/api/master/syncgstin",
+            match=[matchers.query_param_matcher({"gstin": "29AAACI1195H2ZH"})],
+            json=sync_gstin_response,
+            status=200,
+        )
+
+        with self.assertRaises(frappe.exceptions.ValidationError) as cm:
+            doc = load_doc("Sales Invoice", si.name, "submit")
+            _generate_e_waybill(doc)
+
+        self.assertIn(
+            "GSTIN -29AAACI1195H2ZH is inactive or cancelled", str(cm.exception)
+        )
+
+    @responses.activate
+    @change_settings("GST Settings", {"sandbox_mode": 1})
+    def test_e_waybill_overseas_customer_with_domestic_shipping(self):
+        """Test e-waybill for overseas customer with domestic shipping address.
+
+        When an overseas customer has goods shipped within India the toStateCode should be set based on
+        the place of supply, not as 96-Other Countries.
+        """
+        test_data = self.e_waybill_test_data.get("overseas_customer_domestic_shipping")
+        si = self.create_sales_invoice_for("overseas_customer_domestic_shipping")
+
+        e_waybill_data = EWaybillData(si).get_data()
+
+        self.assertEqual(
+            e_waybill_data.get("toStateCode"),
+            24,
+            "toStateCode should be set from place of supply (shipping address state)",
+        )
+
+        self.assertEqual(e_waybill_data.get("transactionType"), 2)
+        self.assertEqual(e_waybill_data.get("shipToGSTIN"), "05AAACG2140A1ZL")
+        self.assertEqual(
+            e_waybill_data.get("shipToTradeName"), "Test Foreign Customer-1"
+        )
+
+        expected_request_data = test_data.get("request_data")
+        for key, value in e_waybill_data.items():
+            self.assertEqual(
+                expected_request_data.get(key), value, f"Mismatch for key '{key}'"
+            )
+
+    @change_settings("GST Settings", {"sandbox_mode": 1})
+    def test_e_waybill_ship_to_gstin_urp_for_unregistered_consignee(self):
+        """
+        shipToGSTIN must be 'URP' when the Ship-To consignee is unregistered.
+        """
+        shipping_address = self._create_unregistered_shipping_address()
+
+        si = create_sales_invoice(
+            vehicle_no="GJ07DL9009",
+            company_address="_Test Indian Registered Company-Billing",
+            customer="_Test Registered Customer",
+            customer_address="_Test Registered Customer-Billing",
+            shipping_address_name=shipping_address,
+            is_in_state=1,
+            distance=10,
+            transporter="_Test Common Supplier",
+            mode_of_transport="Road",
+            do_not_submit=True,
+        )
+        si.gst_transporter_id = ""
+        si.submit()
+
+        e_waybill_data = EWaybillData(si).get_data()
+
+        self.assertEqual(e_waybill_data.get("transactionType"), 2)
+        self.assertNotEqual(e_waybill_data.get("toGstin"), "URP")
+        self.assertEqual(e_waybill_data.get("shipToGSTIN"), "URP")
+        self.assertTrue(e_waybill_data.get("shipToTradeName"))
+
+    @change_settings("GST Settings", {"sandbox_mode": 1})
+    def test_e_waybill_ship_to_gstin_for_transaction_type_4(self):
+        # ship to GSTIN is mandatory in transaction type 4.
+        shipping_address = self._create_unregistered_shipping_address()
+
+        si = create_sales_invoice(
+            vehicle_no="GJ07DL9009",
+            company_address="_Test Indian Registered Company-Billing",
+            dispatch_address_name="_Test Indian Registered Company-Shipping",  # ship-from differs
+            customer="_Test Registered Customer",
+            customer_address="_Test Registered Customer-Billing",
+            shipping_address_name=shipping_address,  # ship-to differs
+            is_in_state=1,
+            distance=10,
+            transporter="_Test Common Supplier",
+            mode_of_transport="Road",
+            do_not_submit=True,
+        )
+        si.gst_transporter_id = ""
+        si.submit()
+
+        e_waybill_data = EWaybillData(si).get_data()
+
+        self.assertEqual(e_waybill_data.get("transactionType"), 4)
+        self.assertTrue(e_waybill_data.get("shipToGSTIN"))
+        self.assertTrue(e_waybill_data.get("shipToTradeName"))
+
+    @change_settings("GST Settings", {"sandbox_mode": 0})
+    def test_ship_to_gstin_gated_by_rollout_date(self):
+        day_before_rollout = get_datetime(
+            add_to_date(E_WAYBILL_CHANGES_APPLICABLE_DATE, days=-1)
+        )
+        rollout_date = get_datetime(E_WAYBILL_CHANGES_APPLICABLE_DATE)
+
+        # before rollout -> omitted from payload and offline JSON
+        with time_machine.travel(day_before_rollout, tick=True):
+            si = self.create_sales_invoice_for(
+                "overseas_customer_domestic_shipping"
+            )  # type 2
+
+            data = EWaybillData(si).get_data()
+            self.assertEqual(data.get("transactionType"), 2)
+            self.assertNotIn("shipToGSTIN", data)
+            self.assertNotIn("shipToTradeName", data)
+
+            json_data = EWaybillData(si, for_json=True).get_data()
+            self.assertNotIn("shipToGSTIN", json_data)
+            self.assertNotIn("shipToTradeName", json_data)
+
+        # on/after rollout -> sent
+        with time_machine.travel(rollout_date, tick=False):
+            data = EWaybillData(si).get_data()
+            self.assertEqual(data.get("transactionType"), 2)
+            self.assertTrue(data.get("shipToGSTIN"))
+            self.assertTrue(data.get("shipToTradeName"))
+
+            json_data = EWaybillData(si, for_json=True).get_data()
+            self.assertTrue(json_data.get("shipToGSTIN"))
+            self.assertTrue(json_data.get("shipToTradeName"))
+
+    @staticmethod
+    def _create_unregistered_shipping_address():
+        """Create (once) an unregistered, India-based Shipping address for URP tests."""
+        name = "_Test Unregistered Consignee-Shipping"
+        if frappe.db.exists("Address", name):
+            return name
+
+        return (
+            frappe.get_doc(
+                {
+                    "doctype": "Address",
+                    "address_title": "_Test Unregistered Consignee",
+                    "address_type": "Shipping",
+                    "address_line1": "Test Address - Unregistered Consignee",
+                    "city": "Test City",
+                    "state": "Gujarat",
+                    "pincode": "380015",
+                    "country": "India",
+                    "gstin": "",
+                    "gst_category": "Unregistered",
+                    "links": [
+                        {
+                            "link_doctype": "Customer",
+                            "link_name": "_Test Registered Customer",
+                        }
+                    ],
+                }
+            )
+            .insert(ignore_if_duplicate=True)
+            .name
         )
 
     # helper functions
