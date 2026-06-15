@@ -275,11 +275,8 @@ class TestISDInvoice(IntegrationTestCase):
             ),
         ]
         invoice_names, _ = bulk_create_isd_invoices(
-            distribution_table=rows, purchase_invoices={pi.name: _pi_total(pi)}
+            distribution_table=rows, purchase_invoices=[pi.name], posting_date=pi.posting_date
         )
-        for name in invoice_names:
-            print(f"{name}: distributed total {_distributed_total([name])}")
-
         self.assertEqual(_distributed_total(invoice_names), _pi_total(pi))
 
     def test_rounding_remainder_absorbed_by_last_invoice(self):
@@ -302,7 +299,7 @@ class TestISDInvoice(IntegrationTestCase):
             ),
         ]
         invoice_names, _ = bulk_create_isd_invoices(
-            distribution_table=rows, purchase_invoices={pi.name: _pi_total(pi)}
+            distribution_table=rows, purchase_invoices=[pi.name], posting_date=pi.posting_date
         )
         self.assertEqual(_distributed_total(invoice_names), _pi_total(pi))
 
@@ -323,7 +320,7 @@ class TestISDInvoice(IntegrationTestCase):
             )
         ]
         isd_invoices, _ = bulk_create_isd_invoices(
-            distribution_table=rows, purchase_invoices={pi.name: _pi_total(pi)}
+            distribution_table=rows, purchase_invoices=[pi.name], posting_date=pi.posting_date
         )
 
         for invoice_name in isd_invoices:
