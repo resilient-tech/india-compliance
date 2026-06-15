@@ -35,5 +35,4 @@ function _set_default_fiscal_year_dates(frm) {
     const fy = erpnext.utils.get_fiscal_year(frappe.datetime.get_today(), true);
     if (!fy) return;
     frm.set_value("from_date", fy[1]);
-    frm.set_value("to_date", fy[2]);
 }

@@ -6,6 +6,7 @@ from erpnext.accounts.utils import get_fiscal_year
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.meta import get_field_precision
+from frappe.model.naming import make_autoname
 from frappe.utils import flt, nowdate
 
 from india_compliance.gst_india.utils import get_state, validate_gstin
@@ -15,7 +16,8 @@ from india_compliance.gst_india.utils import get_state, validate_gstin
 #
 class TurnoverRecord(Document):
     def autoname(self):
-        self.name = f"{str(self.from_date)[:-2]}-{str(self.to_date)[:-2]}-{self.gst_state}"
+        fy_prefix = f"{str(self.from_date)[2:4]}-{str(self.to_date)[2:4]}"
+        self.name = make_autoname(f"{fy_prefix} {self.gst_state}.##")
 
     def validate(self):
         validate_gstin(self.gstin)
@@ -34,12 +36,12 @@ def upsert_turnover_record(
     amount_precision = get_field_precision(frappe.get_meta("Turnover Record").get_field("amount"))
     amount = flt(amount, amount_precision)
 
-    filters = {"from_date": from_date, "to_date": to_date}
-    or_filters = {"gst_state": gst_state, "gstin": gstin or ""}
+    if gstin:
+        filters = {"from_date": from_date, "to_date": to_date, "gstin": gstin}
+    else:
+        filters = {"from_date": from_date, "to_date": to_date, "gst_state": gst_state, "gstin": ""}
 
-    existing = frappe.db.get_all(
-        "Turnover Record", filters=filters, or_filters=or_filters, pluck="name", limit=1
-    )
+    existing = frappe.db.get_all("Turnover Record", filters=filters, pluck="name", limit=1)
     existing = existing[0] if existing else None
 
     try:
@@ -53,7 +55,7 @@ def upsert_turnover_record(
             doc.gst_state = gst_state
             doc.amount = amount
             doc.insert(ignore_permissions=True)
-    except frappe.ValidationError:
+    except (frappe.ValidationError, frappe.DuplicateEntryError):
         frappe.log_error(
             title=_("Turnover Record upsert failed"),
             message=_(

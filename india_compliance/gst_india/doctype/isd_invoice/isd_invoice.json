@@ -129,7 +129,8 @@
    "fieldtype": "Date",
    "label": "Posting Date",
    "no_copy": 1,
-   "reqd": 1
+   "reqd": 1,
+   "search_index": 1
   },
   {
    "fieldname": "cost_center",
@@ -380,7 +381,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-06-09 15:40:45.798727",
+ "modified": "2026-06-15 16:57:43.719130",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "ISD Invoice",

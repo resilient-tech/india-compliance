@@ -53,19 +53,16 @@ def sum_row_tax_by_type(row, prefix):
 
 def get_isd_source_item_query(purchase_invoices=None):
     isd_source_item = frappe.qb.DocType("ISD Invoice Source Item")
-    isd_invoice = frappe.qb.DocType("ISD Invoice")
 
     query = (
         frappe.qb.from_(isd_source_item)
-        .join(isd_invoice)
-        .on(isd_source_item.parent == isd_invoice.name)
         .select(
             isd_source_item.purchase_invoice,
             Sum(reduce(add, (isd_source_item[f"distributed_{t}"] for t in GST_TAX_TYPES))).as_(
                 "total_distributed"
             ),
         )
-        .where(isd_invoice.docstatus == 1)
+        .where(isd_source_item.docstatus == 1)
     )
 
     if purchase_invoices is not None:

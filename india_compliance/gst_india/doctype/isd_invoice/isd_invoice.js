@@ -12,7 +12,6 @@ frappe.ui.form.on("ISD Invoice", {
     refresh(frm) {
         frm.isd_controller.update_address_labels();
         frm.fields_dict.source_invoices.grid.toggle_reqd("purchase_invoice", !frm.doc.is_external_invoice);
-        frm.fields_dict.source_invoices.grid.toggle_enable("purchase_invoice", !frm.doc.is_external_invoice);
         if (frm.doc.docstatus === 1 && frm.doc.is_against_party && frappe.model.can_create("ISD Invoice")) {
             frm.add_custom_button(
                 __("Inter Company ISD Invoice"),
@@ -56,36 +55,35 @@ frappe.ui.form.on("ISD Invoice", {
         }
     },
 
-    company(frm) {
+    async company(frm) {
         frm.isd_controller.fetch_gst_accounts();
-        fetch_isd_autofill(frm, "company");
+        await fetch_isd_autofill(frm, "company");
     },
 
-    is_against_party(frm) {
+    async is_against_party(frm) {
         if (frm.__updating_isd_autofill) return;
-        fetch_isd_autofill(frm, "is_against_party");
+        await fetch_isd_autofill(frm, "is_against_party");
     },
 
-    credit_flow(frm) {
+    async credit_flow(frm) {
         frm.isd_controller.update_address_labels();
         if (frm.__updating_isd_autofill || !frm.doc.is_against_party) return;
-        fetch_isd_autofill(frm, "credit_flow");
+        await fetch_isd_autofill(frm, "credit_flow");
     },
 
-    party_type(frm) {
+    async party_type(frm) {
         if (frm.doc.is_against_party) frm.isd_controller.update_party_label();
         if (frm.__updating_isd_autofill || !frm.doc.is_against_party) return;
-        fetch_isd_autofill(frm, "party_type");
+        await fetch_isd_autofill(frm, "party_type");
     },
 
-    party(frm) {
+    async party(frm) {
         if (frm.__updating_isd_autofill || !frm.doc.is_against_party || !frm.doc.party) return;
-        fetch_isd_autofill(frm, "party");
+        await fetch_isd_autofill(frm, "party");
     },
 
     is_external_invoice(frm) {
         frm.fields_dict.source_invoices.grid.toggle_reqd("purchase_invoice", !frm.doc.is_external_invoice);
-        frm.fields_dict.source_invoices.grid.toggle_enable("purchase_invoice", !frm.doc.is_external_invoice);
 
         if (frm.doc.is_external_invoice) {
             (frm.doc.source_invoices || []).forEach((row) => {
@@ -94,7 +92,7 @@ frappe.ui.form.on("ISD Invoice", {
         }
     },
 
-    default_distribution_ratio(frm) {
+    async default_distribution_ratio(frm) {
         if (frm.doc.default_distribution_ratio < 0 || frm.doc.default_distribution_ratio > 100) {
             frappe.show_alert({
                 message: __("Distribution ratio must be between 0 and 100"),
@@ -103,17 +101,17 @@ frappe.ui.form.on("ISD Invoice", {
             return;
         }
 
-        frm.isd_controller.recalculate();
+        await frm.isd_controller.recalculate();
     },
 
-    company_address(frm) {
+    async company_address(frm) {
         frm.isd_controller.set_address_display("company_address", "company_address_display");
-        frm.isd_controller.recalculate();
+        await frm.isd_controller.recalculate();
     },
 
-    party_address(frm) {
+    async party_address(frm) {
         frm.isd_controller.set_address_display("party_address", "party_address_display");
-        frm.isd_controller.recalculate();
+        await frm.isd_controller.recalculate();
     },
 
     get_purchase_invoices(frm) {
@@ -189,21 +187,26 @@ const CREDIT_FLOW = {
 };
 
 frappe.ui.form.on("ISD Invoice Source Item", {
-    source_invoices_add(frm, cdt, cdn) {
+    async source_invoices_add(frm, cdt, cdn) {
         frappe.model.set_value(cdt, cdn, "distribution_ratio", frm.doc.default_distribution_ratio || 0);
+        await frm.isd_controller.recalculate();
+    },
+
+    async source_invoices_remove(frm) {
+        await frm.isd_controller.recalculate();
     },
     purchase_invoice(frm, cdt, cdn) {
         if (!(frm.is_against_party && frm.doc.credit_flow == CREDIT_FLOW.RECEIPT)) {
             frm.isd_controller.autofill_source_item(cdt, cdn);
         }
     },
-    is_ineligible_for_itc(frm, cdt, cdn) {
+    async is_ineligible_for_itc(frm, cdt, cdn) {
         frm.isd_controller.autofill_source_item(cdt, cdn);
-        frm.isd_controller.recalculate();
+        await frm.isd_controller.recalculate();
     },
 
-    distribution_ratio(frm) {
-        frm.isd_controller.recalculate();
+    async distribution_ratio(frm) {
+        await frm.isd_controller.recalculate();
     },
 });
 
@@ -477,24 +480,31 @@ class ISDInvoiceController {
         }
 
         const accounts = this.gst_accounts || {};
-        frappe.model.clear_table(this.frm.doc, "taxes");
+        const existing_taxes = Object.fromEntries(
+            (this.frm.doc.taxes || []).map((tax) => [tax.gst_tax_type, tax]),
+        );
+
         for (const gst_tax_type of india_compliance.GST_TAX_TYPES) {
             const account_head = accounts[`${gst_tax_type}_account`];
             if (!account_head) continue;
-            const row = frappe.model.add_child(this.frm.doc, "ISD Invoice Tax Item", "taxes");
+
+            const row =
+                existing_taxes[gst_tax_type] ||
+                frappe.model.add_child(this.frm.doc, "ISD Invoice Tax Item", "taxes");
             row.account_head = account_head;
             row.gst_tax_type = gst_tax_type;
             row.tax_amount = totals[gst_tax_type];
         }
 
+        this.frm.doc.taxes = (this.frm.doc.taxes || []).filter((tax) => tax.tax_amount);
         this.frm.doc.total_eligible = total_eligible;
         this.frm.doc.total_ineligible = total_ineligible;
 
         this.frm.refresh_fields(["taxes", "total_eligible", "total_ineligible"]);
     }
 
-    recalculate() {
+    async recalculate() {
         if (!(this.frm.doc.source_invoices || []).length) return;
-        this.calculate_distribution();
+        await this.calculate_distribution();
     }
 }

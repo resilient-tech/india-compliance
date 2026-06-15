@@ -20,13 +20,15 @@
    "fieldname": "from_date",
    "fieldtype": "Date",
    "label": "From Date",
-   "reqd": 1
+   "reqd": 1,
+   "search_index": 1
   },
   {
    "fieldname": "to_date",
    "fieldtype": "Date",
    "label": "To Date",
-   "reqd": 1
+   "reqd": 1,
+   "search_index": 1
   },
   {
    "fieldname": "amount",
@@ -62,7 +64,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-10 11:21:47.753636",
+ "modified": "2026-06-15 16:58:05.372624",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Turnover Record",
