@@ -103,7 +103,7 @@ def after_mapping_stock_entry(doc, method, source_doc):
 
 def update_address_fields(doc, source_doc):
     if source_doc.doctype == "Subcontracting Inward Order":
-        return set_address_for_subcontracting_inward(doc, source_doc)
+        return
 
     address_map = get_mapped_address(doc, source_doc)
 
@@ -120,13 +120,18 @@ def update_address_fields(doc, source_doc):
     set_address_display(doc)
 
 
-def set_address_for_subcontracting_inward(doc, source_doc):
-    """Stock Entry created from Subcontracting Inward Order: company bills to the customer."""
-    if doc.purpose not in SUBCONTRACTING_INWARD_PURPOSES:
+def set_address_for_subcontracting_inward(doc):
+    if doc.purpose not in SUBCONTRACTING_INWARD_PURPOSES or not doc.get("subcontracting_inward_order"):
         return
 
-    doc.bill_from_address = get_default_address("Company", source_doc.company)
-    doc.bill_to_address = get_default_address("Customer", source_doc.customer)
+    if not doc.bill_from_address:
+        doc.bill_from_address = get_default_address("Company", doc.company)
+
+    if not doc.bill_to_address:
+        customer = frappe.db.get_value(
+            "Subcontracting Inward Order", doc.subcontracting_inward_order, "customer"
+        )
+        doc.bill_to_address = get_default_address("Customer", customer)
 
     for address_field, gstin_field, gst_category_field in (
         ("bill_from_address", "bill_from_gstin", "bill_from_gst_category"),
@@ -285,6 +290,9 @@ def onload(doc, method=None):
 
 
 def validate(doc, method=None):
+    if doc.doctype == "Stock Entry":
+        set_address_for_subcontracting_inward(doc)
+
     field_map = (
         STOCK_ENTRY_FIELD_MAP if doc.doctype == "Stock Entry" else SUBCONTRACTING_ORDER_RECEIPT_FIELD_MAP
     )

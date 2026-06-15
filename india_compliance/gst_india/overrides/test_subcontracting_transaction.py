@@ -12,7 +12,9 @@ from erpnext.stock.doctype.stock_entry.stock_entry import make_stock_in_entry
 from erpnext.subcontracting.doctype.subcontracting_order.subcontracting_order import (
     make_subcontracting_receipt,
 )
+from frappe.contacts.doctype.address.address import get_default_address
 from frappe.tests import IntegrationTestCase
+from frappe.utils import flt
 
 from india_compliance.gst_india.utils.tests import (
     SUBCONTRACTING_TEST_FINISHED_ITEM,
@@ -21,8 +23,13 @@ from india_compliance.gst_india.utils.tests import (
     SUBCONTRACTING_TEST_RM_ITEM_1,
     SUBCONTRACTING_TEST_RM_ITEM_2,
     SUBCONTRACTING_TEST_SERVICE_ITEM,
+    create_subcontracting_inward_order,
     create_transaction,
+    make_subcontracting_inward_delivery,
+    make_subcontracting_inward_rm_return,
     make_subcontracting_stock_entry,
+    manufacture_for_subcontracting_inward,
+    receive_customer_materials,
 )
 from india_compliance.tests.erpnext_test_utils import (
     create_subcontracting_order,
@@ -561,3 +568,150 @@ class TestAddressMappingAfterMapping(IntegrationTestCase):
         self.assertEqual(target_se.bill_to_gstin, source_se.bill_to_gstin)
         self.assertEqual(target_se.ship_from_address, source_se.ship_from_address)
         self.assertEqual(target_se.ship_to_address, source_se.ship_to_address)
+
+
+class TestSubcontractingInwardTaxableValue(IntegrationTestCase):
+    """
+    Subcontracting Inward (company is the job worker). The taxable value of the
+    outward e-Waybill must include the value of customer-provided materials,
+    which is NOT part of the Stock Entry amount (customer stock is valued at 0).
+    `additional_taxable_value` carries that value; taxable_value = amount + it.
+
+    See india_compliance.gst_india.utils.taxes_controller for the calculation.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        frappe.db.savepoint("before_test_inward_taxable_value")
+        create_subcontracting_data()  # outward items, for the negative-control test
+        frappe.db.set_single_value(
+            "GST Settings",
+            {"enable_api": 1, "enable_e_waybill": 1, "enable_e_waybill_for_sc": 1},
+        )
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        frappe.db.rollback(save_point="before_test_inward_taxable_value")
+
+    @staticmethod
+    def _expected_delivery_value(item):
+        """Weighted-average actual customer-material consumption per FG unit delivered."""
+        produced_qty = frappe.db.get_value(
+            "Subcontracting Inward Order Item", item.scio_detail, "produced_qty"
+        )
+        received_items = frappe.get_all(
+            "Subcontracting Inward Order Received Item",
+            filters={"reference_name": item.scio_detail, "is_customer_provided_item": 1},
+            fields=["rate", "consumed_qty"],
+        )
+        material_cost = sum(flt(row.rate) * flt(row.consumed_qty) for row in received_items)
+        return material_cost / flt(produced_qty) * flt(item.qty)
+
+    def test_subcontracting_delivery_taxable_value(self):
+        delivery = make_subcontracting_inward_delivery(do_not_submit=True)
+
+        self.assertEqual(delivery.purpose, "Subcontracting Delivery")
+
+        priced_rows = 0
+        for item in delivery.items:
+            if not item.get("scio_detail"):
+                continue
+
+            precision = delivery.precision("additional_taxable_value", "items")
+            expected_additional = flt(self._expected_delivery_value(item), precision)
+
+            self.assertEqual(flt(item.additional_taxable_value), expected_additional)
+            # taxable_value rolls the customer-material value into the SE amount
+            self.assertEqual(
+                flt(item.taxable_value),
+                flt(item.amount) + flt(item.additional_taxable_value),
+            )
+            self.assertGreater(item.additional_taxable_value, 0)
+            priced_rows += 1
+
+        self.assertTrue(priced_rows, "No finished-good rows were priced")
+
+    def test_return_raw_material_taxable_value_is_declared_value(self):
+        rm_return = make_subcontracting_inward_rm_return(do_not_submit=True)
+
+        self.assertEqual(rm_return.purpose, "Return Raw Material to Customer")
+
+        priced_rows = 0
+        for item in rm_return.items:
+            if not item.get("scio_detail"):
+                continue
+
+            declared_rate = frappe.db.get_value(
+                "Subcontracting Inward Order Received Item", item.scio_detail, "rate"
+            )
+            expected_taxable = flt(declared_rate) * flt(item.qty)
+
+            # Rule 55: e-Waybill value of returned RM = customer's declared value.
+            self.assertEqual(flt(item.taxable_value), expected_taxable)
+            self.assertEqual(
+                flt(item.additional_taxable_value),
+                flt(item.taxable_value) - flt(item.amount),
+            )
+            priced_rows += 1
+
+        self.assertTrue(priced_rows, "No raw-material rows were priced")
+
+    def test_additional_taxable_value_only_for_inward_purposes(self):
+        # A plain "Send to Subcontractor" SE must not get additional_taxable_value.
+        se = make_subcontracting_stock_entry(do_not_submit=True)
+        for item in se.items:
+            self.assertFalse(item.get("additional_taxable_value"))
+
+
+class TestSubcontractingInwardAddressMapping(IntegrationTestCase):
+    """
+    Stock Entries for Subcontracting Inward bill from the company (job worker)
+    to the customer (principal). Verifies the after_mapping hook populates
+    bill_from / bill_to addresses + GSTINs from the Subcontracting Inward Order.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        frappe.db.savepoint("before_test_inward_address_mapping")
+        frappe.db.set_single_value(
+            "GST Settings",
+            {"enable_api": 1, "enable_e_waybill": 1, "enable_e_waybill_for_sc": 1},
+        )
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        frappe.db.rollback(save_point="before_test_inward_address_mapping")
+
+    def _assert_company_to_customer(self, se, scio):
+        company_address = get_default_address("Company", scio.company)
+        customer_address = get_default_address("Customer", scio.customer)
+
+        self.assertEqual(se.bill_from_address, company_address)
+        self.assertEqual(se.bill_to_address, customer_address)
+        self.assertEqual(
+            se.bill_from_gstin,
+            frappe.db.get_value("Address", company_address, "gstin"),
+        )
+        self.assertEqual(
+            se.bill_to_gstin,
+            frappe.db.get_value("Address", customer_address, "gstin"),
+        )
+
+    def test_subcontracting_delivery_address_mapping(self):
+        scio = create_subcontracting_inward_order()
+        receive_customer_materials(scio)
+        manufacture_for_subcontracting_inward(scio)
+
+        delivery = make_subcontracting_inward_delivery(scio=scio, do_not_submit=True)
+        self._assert_company_to_customer(delivery, scio)
+
+    def test_return_raw_material_address_mapping(self):
+        scio = create_subcontracting_inward_order()
+        receive_customer_materials(scio)
+
+        rm_return = make_subcontracting_inward_rm_return(scio=scio, do_not_submit=True)
+        self._assert_company_to_customer(rm_return, scio)
