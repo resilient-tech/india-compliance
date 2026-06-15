@@ -16,7 +16,11 @@ from frappe.contacts.doctype.address.address import get_default_address
 from frappe.tests import IntegrationTestCase
 from frappe.utils import flt
 
+from india_compliance.gst_india.overrides.subcontracting_transaction import (
+    is_e_waybill_applicable,
+)
 from india_compliance.gst_india.utils.tests import (
+    SUBCONTRACTING_INWARD_TEST_RM_ITEM,
     SUBCONTRACTING_TEST_FINISHED_ITEM,
     SUBCONTRACTING_TEST_FINISHED_ITEM_2,
     SUBCONTRACTING_TEST_FINISHED_ITEM_TG,
@@ -571,13 +575,10 @@ class TestAddressMappingAfterMapping(IntegrationTestCase):
 
 
 class TestSubcontractingInwardTaxableValue(IntegrationTestCase):
-    """
-    Subcontracting Inward (company is the job worker). The taxable value of the
-    outward e-Waybill must include the value of customer-provided materials,
-    which is NOT part of the Stock Entry amount (customer stock is valued at 0).
-    `additional_taxable_value` carries that value; taxable_value = amount + it.
+    """Customer-material value belongs in the outward e-Waybill taxable value.
 
-    See india_compliance.gst_india.utils.taxes_controller for the calculation.
+    The Stock Entry values customer stock at 0, so additional_taxable_value
+    carries it: taxable_value = amount + additional_taxable_value.
     """
 
     @classmethod
@@ -658,18 +659,93 @@ class TestSubcontractingInwardTaxableValue(IntegrationTestCase):
 
         self.assertTrue(priced_rows, "No raw-material rows were priced")
 
+    def test_valuation_uses_weighted_average_of_receipts(self):
+        """Two receipts at different rates value the return at their weighted average."""
+        scio = create_subcontracting_inward_order()
+
+        def receive(qty, rate):
+            scio.reload()
+            receipt = frappe.new_doc("Stock Entry").update(scio.make_rm_stock_entry_inward())
+            receipt.items = [
+                item for item in receipt.items if item.item_code == SUBCONTRACTING_INWARD_TEST_RM_ITEM
+            ]
+            receipt.items[0].qty = qty
+            receipt.items[0].transfer_qty = qty
+            receipt.items[0].basic_rate = rate
+            receipt.submit()
+
+        # Receipt 1: 5 @ 10, Receipt 2: 5 @ 20 -> weighted average 15.
+        receive(5, 10)
+        receive(5, 20)
+
+        rm_return = make_subcontracting_inward_rm_return(scio=scio, do_not_submit=True)
+
+        priced_rows = 0
+        for item in rm_return.items:
+            if not item.get("scio_detail"):
+                continue
+            self.assertEqual(flt(item.taxable_value), 15 * flt(item.transfer_qty))
+            priced_rows += 1
+
+        self.assertTrue(priced_rows, "No raw-material rows were priced")
+
     def test_additional_taxable_value_only_for_inward_purposes(self):
         # A plain "Send to Subcontractor" SE must not get additional_taxable_value.
         se = make_subcontracting_stock_entry(do_not_submit=True)
         for item in se.items:
             self.assertFalse(item.get("additional_taxable_value"))
 
+    def test_e_waybill_applicable_for_inward_purposes(self):
+        """e-Waybill is applicable for the inward purposes, not for Receive from Customer."""
+        for purpose in ("Subcontracting Delivery", "Return Raw Material to Customer"):
+            doc = frappe.new_doc("Stock Entry")
+            doc.purpose = purpose
+            self.assertTrue(is_e_waybill_applicable(doc), purpose)
+
+        doc = frappe.new_doc("Stock Entry")
+        doc.purpose = "Receive from Customer"
+        self.assertFalse(is_e_waybill_applicable(doc))
+
+    def test_subcontracting_delivery_multi_rate_receipts(self):
+        """Delivery uses the weighted-average receipt rate across multiple receipts."""
+        scio = create_subcontracting_inward_order()
+
+        def receive(qty, rate):
+            scio.reload()
+            receipt = frappe.new_doc("Stock Entry").update(scio.make_rm_stock_entry_inward())
+            receipt.items = [
+                item for item in receipt.items if item.item_code == SUBCONTRACTING_INWARD_TEST_RM_ITEM
+            ]
+            receipt.items[0].qty = qty
+            receipt.items[0].transfer_qty = qty
+            receipt.items[0].basic_rate = rate
+            receipt.submit()
+
+        # Receipt 1: 2 @ 10, Receipt 2: 3 @ 20 -> weighted average 16.
+        receive(2, 10)
+        receive(3, 20)
+        manufacture_for_subcontracting_inward(scio)
+
+        delivery = make_subcontracting_inward_delivery(scio=scio, do_not_submit=True)
+        precision = delivery.precision("additional_taxable_value", "items")
+
+        priced_rows = 0
+        for item in delivery.items:
+            if not item.get("scio_detail"):
+                continue
+            # BOM is 1:1 with no process loss, so consumed_qty == produced_qty
+            # and the per-unit material value is the weighted average (16).
+            self.assertEqual(flt(item.additional_taxable_value), flt(16 * item.qty, precision))
+            priced_rows += 1
+
+        self.assertTrue(priced_rows, "No finished-good rows were priced")
+
 
 class TestSubcontractingInwardAddressMapping(IntegrationTestCase):
-    """
-    Stock Entries for Subcontracting Inward bill from the company (job worker)
-    to the customer (principal). Verifies the after_mapping hook populates
-    bill_from / bill_to addresses + GSTINs from the Subcontracting Inward Order.
+    """Inward Stock Entries bill from the company (job worker) to the customer.
+
+    Verifies bill_from / bill_to addresses and GSTINs are populated from the
+    Subcontracting Inward Order.
     """
 
     @classmethod

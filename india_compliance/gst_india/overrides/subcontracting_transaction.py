@@ -102,8 +102,6 @@ def after_mapping_stock_entry(doc, method, source_doc):
 
 
 def update_address_fields(doc, source_doc):
-    if source_doc.doctype == "Subcontracting Inward Order":
-        return
 
     address_map = get_mapped_address(doc, source_doc)
 

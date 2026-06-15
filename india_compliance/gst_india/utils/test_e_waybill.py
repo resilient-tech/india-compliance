@@ -1856,15 +1856,11 @@ class TestEWaybillThreshold(IntegrationTestCase):
 
 
 class TestSubcontractingInwardEWaybill(IntegrationTestCase):
-    """
-    e-Waybill data for Subcontracting Inward Stock Entries (company is the job
-    worker shipping to the customer/principal):
-      - Subcontracting Delivery        -> finished goods returned to customer
-      - Return Raw Material to Customer -> unused customer materials returned
+    """e-Waybill data for Subcontracting Delivery and Return Raw Material to Customer.
 
-    Both are Outward movements on a Delivery Challan with sub supply type
-    "Others" + a description (NIC "Job Work Returns" is inward-only). The
-    taxable value must include the customer-provided material value.
+    Both are outward movements (company to customer) on a Delivery Challan with
+    sub supply type "Others" plus a description, and the taxable value includes
+    the customer-provided material value.
     """
 
     @classmethod

@@ -270,72 +270,90 @@ def validate_taxes(doc):
             frappe.throw(_("Row #{0}: Only GST accounts are allowed in {1}.").format(tax.idx, doc.doctype))
 
 
-def _set_subcontracting_delivery_additional_value(doc):
+def get_customer_provided_material_rates(received_item_names):
+    """Return the weighted-average receipt rate of customer materials per SCIO Received Item.
+
+    Sourced from "Receive from Customer" entries so the value does not depend
+    on the running SCIO rate field.
     """
-    For Subcontracting Delivery (job worker delivering finished goods to the
-    customer), taxable value must include the value of customer-provided raw
-    materials consumed, apportioned by weighted-average actual consumption
-    (as per CAS-4; process loss is absorbed by good units):
+    if not received_item_names:
+        return {}
 
-        additional_taxable_value =
-            SUM(received_item.rate * received_item.consumed_qty)
-            / scio_item.produced_qty
-            * item.qty
+    se = frappe.qb.DocType("Stock Entry")
+    sed = frappe.qb.DocType("Stock Entry Detail")
 
-    consumed_qty and produced_qty are both cumulative, so each delivery is
-    valued at the weighted-average-to-date.
+    rows = (
+        frappe.qb.from_(sed)
+        .join(se)
+        .on(se.name == sed.parent)
+        .select(
+            sed.scio_detail,
+            Sum(sed.customer_provided_item_cost * sed.transfer_qty).as_("total_value"),
+            Sum(sed.transfer_qty).as_("total_qty"),
+        )
+        .where(
+            (se.docstatus == 1)
+            & (se.purpose == "Receive from Customer")
+            & (sed.scio_detail.isin(list(received_item_names)))
+        )
+        .groupby(sed.scio_detail)
+        .run(as_dict=True)
+    )
 
-    Rows are left at 0 when:
-    - scio_detail does not reference a Subcontracting Inward Order Item
-      (eg. secondary items reference SCIO Secondary Item)
-    - no customer-provided material has been consumed for the finished good
-    - produced_qty is 0 (warned via msgprint)
+    return {row.scio_detail: flt(row.total_value) / flt(row.total_qty) for row in rows if row.total_qty}
+
+
+def _set_subcontracting_delivery_additional_value(doc):
+    """Add the value of consumed customer materials to the delivered finished goods.
+
+    additional = SUM(avg_rate * consumed_qty) / produced_qty * delivered_qty.
+    Left at 0 for secondary items, no consumption, or no production yet.
     """
     scio_details = {item.scio_detail for item in doc.items if item.get("scio_detail")}
-
     if not scio_details:
         return
 
-    scio_item = frappe.qb.DocType("Subcontracting Inward Order Item")
-    received_item = frappe.qb.DocType("Subcontracting Inward Order Received Item")
-
-    fg_costs = {
-        row.name: row
-        for row in (
-            frappe.qb.from_(scio_item)
-            .join(received_item)
-            .on(
-                (received_item.reference_name == scio_item.name)
-                & (received_item.is_customer_provided_item == 1)
-            )
-            .select(
-                scio_item.name,
-                scio_item.produced_qty,
-                Sum(received_item.rate * received_item.consumed_qty).as_("material_cost"),
-            )
-            .where(scio_item.name.isin(list(scio_details)))
-            .groupby(scio_item.name)
-            .run(as_dict=True)
-        )
-    }
-
-    if not fg_costs:
+    # Customer-provided received items for the finished goods being delivered.
+    received_items = frappe.get_all(
+        "Subcontracting Inward Order Received Item",
+        filters={"reference_name": ("in", list(scio_details)), "is_customer_provided_item": 1},
+        fields=["name", "reference_name", "consumed_qty"],
+    )
+    if not received_items:
         return
+
+    rates = get_customer_provided_material_rates({row.name for row in received_items})
+
+    produced_qty = frappe._dict(
+        frappe.get_all(
+            "Subcontracting Inward Order Item",
+            filters={"name": ("in", list(scio_details))},
+            fields=["name", "produced_qty"],
+            as_list=True,
+        )
+    )
+
+    # Total consumed customer-material value per finished good.
+    fg_material_cost = {}
+    for row in received_items:
+        cost = flt(rates.get(row.name)) * flt(row.consumed_qty)
+        fg_material_cost[row.reference_name] = fg_material_cost.get(row.reference_name, 0) + cost
 
     precision = doc.precision("additional_taxable_value", "items")
     rows_without_produced_qty = []
 
     for item in doc.items:
-        fg_cost = fg_costs.get(item.get("scio_detail"))
-        if not fg_cost or not fg_cost.material_cost:
+        scio_detail = item.get("scio_detail")
+        material_cost = fg_material_cost.get(scio_detail)
+        if not material_cost:
             continue
 
-        if not fg_cost.produced_qty:
+        if not produced_qty.get(scio_detail):
             rows_without_produced_qty.append(item.idx)
             continue
 
         item.additional_taxable_value = flt(
-            flt(fg_cost.material_cost) / flt(fg_cost.produced_qty) * flt(item.qty), precision
+            material_cost / flt(produced_qty.get(scio_detail)) * flt(item.qty), precision
         )
 
     if rows_without_produced_qty:
@@ -343,27 +361,24 @@ def _set_subcontracting_delivery_additional_value(doc):
             _(
                 "Row #{0}: Value of customer-provided materials could not be added to the"
                 " taxable value as no production has been reported yet"
-            ).format(", ".join(map(str, rows_without_produced_qty))),
+            ).format(", ".join(str(idx) for idx in rows_without_produced_qty)),
             alert=True,
             indicator="yellow",
         )
 
 
 def _set_return_raw_material_additional_value(doc):
-    """
-    For raw material returns, taxable value must equal the customer's declared
-    value (SCIO Received Item rate * qty) as required on the Delivery Challan
-    (Rule 55). The adjustment MAY be negative - it corrects the Stock Entry
-    amount (valuation) down/up to the declared value:
+    """Set the returned RM taxable value to the customer's declared value (Rule 55).
 
-        additional_taxable_value = (rate * item.qty) - item.amount
+    additional = rate * qty - amount, and may be negative to correct the SE
+    amount. A return moves on-hand material, so the SCIO Received Item rate
+    (on-hand weighted average) is used; self-procured items (no rate) are skipped.
     """
     scio_details = {item.scio_detail for item in doc.items if item.get("scio_detail")}
-
     if not scio_details:
         return
 
-    declared_rates = frappe._dict(
+    rates = frappe._dict(
         frappe.get_all(
             "Subcontracting Inward Order Received Item",
             filters={"name": ("in", list(scio_details)), "is_customer_provided_item": 1},
@@ -371,15 +386,15 @@ def _set_return_raw_material_additional_value(doc):
             as_list=True,
         )
     )
-
-    if not declared_rates:
+    if not rates:
         return
 
     precision = doc.precision("additional_taxable_value", "items")
 
     for item in doc.items:
-        if (scio_detail := item.get("scio_detail")) not in declared_rates:
+        scio_detail = item.get("scio_detail")
+        if scio_detail not in rates:
             continue
 
-        declared_value = flt(declared_rates[scio_detail]) * flt(item.qty)
+        declared_value = flt(rates[scio_detail]) * flt(item.transfer_qty)
         item.additional_taxable_value = flt(declared_value - flt(item.amount), precision)
