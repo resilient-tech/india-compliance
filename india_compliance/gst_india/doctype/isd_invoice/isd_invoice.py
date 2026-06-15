@@ -17,7 +17,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 from frappe.model.meta import get_field_precision
-from frappe.query_builder.functions import Coalesce, Date, Sum
+from frappe.query_builder.functions import Coalesce, Date, IfNull, Sum
 from frappe.utils import cint, flt, get_filtered_list_link, get_link_to_form, getdate, today
 
 from india_compliance.gst_india.constants import (
@@ -510,13 +510,10 @@ def get_source_invoices_from_purchase_invoices(purchase_invoices: list | str):
 
     pi = frappe.qb.DocType("Purchase Invoice")
     pi_item = frappe.qb.DocType("Purchase Invoice Item")
-
     return (
         frappe.qb.from_(pi_item)
-        .join(pi)
-        .on(pi_item.parent == pi.name)
-        .where(pi.docstatus == 1)
-        .where(pi.name.isin(purchase_invoices))
+        .where(pi_item.docstatus == 1)
+        .where(pi.parent.isin(purchase_invoices))
         .select(
             pi_item.parent.as_("purchase_invoice"),
             pi_item.is_ineligible_for_itc,
@@ -794,15 +791,8 @@ def make_credit_note(source_name: str, target_doc: str | None = None):
     )
 
 
-# TODO: from here move to isd.py
 @frappe.whitelist()
 def get_distribution_addresses(party_type: str, party: str, posting_date: str, address: str | None = None):
-    fy = get_fiscal_year(posting_date, company=party, raise_on_missing=False) or get_fiscal_year(
-        today(), company=party, raise_on_missing=False
-    )
-    from_date = fy[1] if fy else None
-    to_date = fy[2] if fy else None
-
     addr = frappe.qb.DocType("Address")
     dynamic_link = frappe.qb.DocType("Dynamic Link")
     turnover_record = frappe.qb.DocType("Turnover Record")
@@ -813,8 +803,8 @@ def get_distribution_addresses(party_type: str, party: str, posting_date: str, a
         .on(dynamic_link.parent == addr.name)
         .left_join(turnover_record)
         .on(
-            # TOOD: null v/s empty string handing in gstin and gst state,
-            (turnover_record.gstin == addr.gstin) & (turnover_record.gst_state == addr.gst_state)
+            (IfNull(turnover_record.gstin, "") == IfNull(addr.gstin, ""))
+            & (IfNull(turnover_record.gst_state, "") == IfNull(addr.gst_state, ""))
         )
         .select(
             addr.name,
@@ -828,7 +818,10 @@ def get_distribution_addresses(party_type: str, party: str, posting_date: str, a
             & (dynamic_link.link_name == party)
             & (addr.gst_category != ISD_GST_CATEGORY)
         )
-        .where(Date(turnover_record.posting_date).between(getdate(from_date), getdate(to_date)))
+        .where(
+            (turnover_record.from_date.isnull())
+            | (Date(posting_date).between(turnover_record.from_date, turnover_record.to_date))
+        )
     )
 
     if address:
