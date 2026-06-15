@@ -608,7 +608,7 @@ class TestSubcontractingInwardTaxableValue(IntegrationTestCase):
             fields=["rate", "consumed_qty"],
         )
         material_cost = sum(flt(row.rate) * flt(row.consumed_qty) for row in received_items)
-        return material_cost / flt(produced_qty) * flt(item.qty)
+        return material_cost / flt(produced_qty) * flt(item.transfer_qty)
 
     def test_subcontracting_delivery_taxable_value(self):
         delivery = make_subcontracting_inward_delivery(do_not_submit=True)
@@ -647,7 +647,7 @@ class TestSubcontractingInwardTaxableValue(IntegrationTestCase):
             declared_rate = frappe.db.get_value(
                 "Subcontracting Inward Order Received Item", item.scio_detail, "rate"
             )
-            expected_taxable = flt(declared_rate) * flt(item.qty)
+            expected_taxable = flt(declared_rate) * flt(item.transfer_qty)
 
             # Rule 55: e-Waybill value of returned RM = customer's declared value.
             self.assertEqual(flt(item.taxable_value), expected_taxable)
@@ -735,7 +735,7 @@ class TestSubcontractingInwardTaxableValue(IntegrationTestCase):
                 continue
             # BOM is 1:1 with no process loss, so consumed_qty == produced_qty
             # and the per-unit material value is the weighted average (16).
-            self.assertEqual(flt(item.additional_taxable_value), flt(16 * item.qty, precision))
+            self.assertEqual(flt(item.additional_taxable_value), flt(16 * item.transfer_qty, precision))
             priced_rows += 1
 
         self.assertTrue(priced_rows, "No finished-good rows were priced")
@@ -775,6 +775,15 @@ class TestSubcontractingInwardAddressMapping(IntegrationTestCase):
         self.assertEqual(
             se.bill_to_gstin,
             frappe.db.get_value("Address", customer_address, "gstin"),
+        )
+        # GST categories are required for the e-Waybill; verify they are mapped too.
+        self.assertEqual(
+            se.bill_from_gst_category,
+            frappe.db.get_value("Address", company_address, "gst_category"),
+        )
+        self.assertEqual(
+            se.bill_to_gst_category,
+            frappe.db.get_value("Address", customer_address, "gst_category"),
         )
 
     def test_subcontracting_delivery_address_mapping(self):

@@ -306,8 +306,10 @@ def get_customer_provided_material_rates(received_item_names):
 def _set_subcontracting_delivery_additional_value(doc):
     """Add the value of consumed customer materials to the delivered finished goods.
 
-    additional = SUM(avg_rate * consumed_qty) / produced_qty * delivered_qty.
-    Left at 0 for secondary items, no consumption, or no production yet.
+    additional = SUM(avg_rate * consumed_qty) / produced_qty * delivered transfer_qty.
+    Quantities are all in stock UOM (consumed_qty, produced_qty, transfer_qty), so
+    the value is consistent with the row amount. Left at 0 for secondary items,
+    no consumption, or no production yet.
     """
     scio_details = {item.scio_detail for item in doc.items if item.get("scio_detail")}
     if not scio_details:
@@ -353,7 +355,7 @@ def _set_subcontracting_delivery_additional_value(doc):
             continue
 
         item.additional_taxable_value = flt(
-            material_cost / flt(produced_qty.get(scio_detail)) * flt(item.qty), precision
+            material_cost / flt(produced_qty.get(scio_detail)) * flt(item.transfer_qty), precision
         )
 
     if rows_without_produced_qty:
