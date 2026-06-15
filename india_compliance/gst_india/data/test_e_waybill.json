@@ -1389,6 +1389,8 @@
             "toPincode": 380015,
             "toStateCode": 24,
             "actToStateCode": 24,
+            "shipToGSTIN": "05AAACG2140A1ZL",
+            "shipToTradeName": "Test Foreign Customer-1",
             "totalValue": 100.0,
             "cgstValue": 9.0,
             "sgstValue": 9.0,

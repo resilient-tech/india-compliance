@@ -226,6 +226,16 @@ class TestTransactionData(IntegrationTestCase):
             },
         )
 
+    def test_set_transporter_details_with_long_name(self):
+        """Transporter name exceeding 100 chars should be truncated; invalid chars stripped"""
+        long_name = "A" * 105 + '"\\'  # 107 chars with invalid chars
+        doc = create_sales_invoice(vehicle_no="GJ07DL9009", transporter_name=long_name, do_not_submit=True)
+
+        gst_transaction_data = GSTTransactionData(doc)
+        gst_transaction_data.set_transporter_details()
+
+        self.assertEqual(gst_transaction_data.transaction_details["transporter_name"], "A" * 100)
+
     def test_get_all_item_details(self):
         """Assertion for all Item Details fetched from transaction docs"""
         doc = create_sales_invoice(do_not_submit=True)
