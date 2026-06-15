@@ -19,6 +19,7 @@ from india_compliance.gst_india.utils.e_invoice import (
     cancel_e_invoice,
     generate_e_invoice,
     mark_e_invoice_as_cancelled,
+    mark_e_invoice_as_generated,
     validate_e_invoice_applicability,
     validate_if_e_invoice_can_be_cancelled,
 )
@@ -843,7 +844,14 @@ class TestEInvoice(IntegrationTestCase):
         si.reload()
         si.cancel()
 
-        values = frappe._dict({"reason": "Others", "remark": "Manually deleted from GSTR-1"})
+        cancelled_on = get_datetime("2026-06-05 11:00:00")
+        values = frappe._dict(
+            {
+                "reason": "Others",
+                "remark": "Manually deleted from GSTR-1",
+                "cancelled_on": str(cancelled_on),
+            }
+        )
 
         mark_e_invoice_as_cancelled("Sales Invoice", si.name, values)
         cancelled_doc = frappe.get_doc("Sales Invoice", si.name)
@@ -854,6 +862,42 @@ class TestEInvoice(IntegrationTestCase):
         )
 
         self.assertTrue(frappe.get_cached_value("e-Invoice Log", si.irn, "is_cancelled"), 1)
+        self.assertEqual(
+            frappe.get_cached_value("e-Invoice Log", si.irn, "cancelled_on"),
+            cancelled_on,
+        )
+
+    def test_mark_e_invoice_as_generated(self):
+        """Dates entered by the user should be stored as-is"""
+        test_data = self.e_invoice_test_data.get("goods_item_with_ewaybill")
+
+        si = create_sales_invoice(
+            **test_data.get("kwargs"),
+            qty=1000,
+            is_in_state=True,
+        )
+
+        # day and month both <= 12 to catch incorrect day-first parsing
+        ack_dt = get_datetime("2026-06-05 13:17:16")
+        irn = "manual" + frappe.generate_hash(length=58)
+
+        mark_e_invoice_as_generated(
+            si.doctype,
+            si.name,
+            values={
+                "irn": irn,
+                "ack_no": "172512345678901",
+                "ack_dt": str(ack_dt),
+            },
+        )
+
+        e_invoice_log = frappe.get_doc("e-Invoice Log", irn)
+        self.assertEqual(e_invoice_log.acknowledged_on, ack_dt)
+        self.assertEqual(e_invoice_log.acknowledgement_number, "172512345678901")
+        self.assertEqual(
+            frappe.db.get_value("Sales Invoice", si.name, "einvoice_status"),
+            "Manually Generated",
+        )
 
     @change_settings("GST Settings", {"nil_exempt_e_invoice_treatment": "Generate with Other Charges"})
     def test_validate_e_invoice_applicability(self):
