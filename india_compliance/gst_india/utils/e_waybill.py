@@ -14,6 +14,7 @@ from frappe.utils import (
     get_datetime_str,
     get_fullname,
     get_link_to_form,
+    getdate,
     random_string,
 )
 from frappe.utils.file_manager import save_file
@@ -38,9 +39,11 @@ from india_compliance.gst_india.constants.e_waybill import (
     BUYING_DOCTYPES,
     CANCEL_REASON_CODES,
     CONSIGNMENT_STATUS,
+    E_WAYBILL_CHANGES_APPLICABLE_DATE,
     EXTEND_VALIDITY_REASON_CODES,
     ITEM_LIMIT,
     PERMITTED_DOCTYPES,
+    SHIP_TO_TRANSACTION_TYPES,
     SUB_SUPPLY_TYPES,
     TRANSIT_TYPES,
     UPDATE_VEHICLE_REASON_CODES,
@@ -1233,6 +1236,14 @@ def get_billing_shipping_address_map(doc):
 #######################################################################################
 
 
+def is_e_waybill_changes_applicable(settings=None):
+    # changes are live in sandbox and apply in production from E_WAYBILL_CHANGES_APPLICABLE_DATE
+    if not settings:
+        settings = frappe.get_cached_doc("GST Settings")
+
+    return settings.sandbox_mode or getdate() >= E_WAYBILL_CHANGES_APPLICABLE_DATE
+
+
 class EWaybillData(GSTTransactionData):
     def __init__(self, *args, **kwargs):
         self.for_json = kwargs.pop("for_json", False)
@@ -1703,6 +1714,12 @@ class EWaybillData(GSTTransactionData):
         self.bill_to.legal_name = to_party or self.bill_to.address_title
         self.bill_from.legal_name = from_party or self.bill_from.address_title
 
+        self.ship_to.legal_name = (
+            self.bill_to.legal_name
+            if self.ship_to.gstin == self.bill_to.gstin
+            else self.ship_to.address_title
+        )
+
     def get_address_details(self, *args, **kwargs):
         address_details = super().get_address_details(*args, **kwargs)
         address_details.state_number = int(address_details.state_number)
@@ -1785,6 +1802,8 @@ class EWaybillData(GSTTransactionData):
 
             self.bill_from.gstin = _get_sandbox_gstin(self.bill_from, 0)
             self.bill_to.gstin = _get_sandbox_gstin(self.bill_to, 1)
+            if self.ship_to.gstin:
+                self.ship_to.gstin = _get_sandbox_gstin(self.ship_to, 1)
 
         if self.doc.get("is_return") or self.bill_to.gst_category == "SEZ":
             to_state_code = self.bill_to.state_number
@@ -1839,6 +1858,17 @@ class EWaybillData(GSTTransactionData):
             "itemList": self.item_list,
             "mainHsnCode": self.transaction_details.main_hsn_code,
         }
+
+        if (
+            is_e_waybill_changes_applicable(self.settings)
+            and self.transaction_details.transaction_type in SHIP_TO_TRANSACTION_TYPES
+        ):
+            data.update(
+                {
+                    "shipToGSTIN": self.ship_to.gstin,
+                    "shipToTradeName": self.ship_to.legal_name,
+                }
+            )
 
         if self.for_json:
             for key, value in (
