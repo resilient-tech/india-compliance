@@ -1,9 +1,10 @@
 # Copyright (c) 2024, Resilient Tech and Contributors
 # See license.txt
 
-# import frappe
+import frappe
 from frappe.tests.utils import FrappeTestCase
 
+from india_compliance.gst_india.api_classes.taxpayer_returns import GSTR1API
 from india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export import (
     GovExcel,
     _filter_data_by_sections,
@@ -23,6 +24,43 @@ from india_compliance.gst_india.utils.gstr_1 import (
 GOV_EXCEL_SECTIONS = frozenset(
     key.value for key in GovJsonKey if key.value in JSON_CATEGORY_EXCEL_CATEGORY_MAPPING
 )
+
+
+class TestGSTR1APIErrorHandling(FrappeTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+        cls.api = GSTR1API.__new__(GSTR1API)
+        cls.api.company_gstin = "01AABCE2207R1Z5"
+
+    def test_no_invoices_found_is_ignored(self):
+        # SUPECO section with no data returns RETWEB_04 with status_cd 0
+        response = frappe._dict(
+            {
+                "error": {
+                    "error_cd": "RETWEB_04",
+                    "message": "No invoices found!!",
+                },
+                "status_cd": 0,
+            }
+        )
+
+        self.api.handle_error_response(response)
+        self.assertEqual(response.error_type, "no_docs_found")
+
+    def test_unknown_error_code_raises(self):
+        response = frappe._dict(
+            {
+                "error": {
+                    "error_cd": "RETWEB_99",
+                    "message": "Some other error",
+                },
+                "status_cd": 0,
+            }
+        )
+
+        self.assertRaises(frappe.ValidationError, self.api.handle_error_response, response)
 
 
 class TestGSTR1Export(FrappeTestCase):
