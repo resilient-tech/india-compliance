@@ -25,14 +25,6 @@ on:
         version-16-hotfix,
         version-16,
       ]
-<<<<<<< HEAD
-    paths-ignore:
-      - "**.css"
-      - "**.js"
-      - "**.md"
-      - "**.html"
-      - "**.csv"
-=======
 
   workflow_dispatch:
     inputs:
@@ -57,7 +49,6 @@ on:
         default: "develop"
         type: string
 
->>>>>>> c2f36c50 (fix: always execute workflow action; filter jobs)
 env:
   BRANCH: ${{ inputs.base_ref || github.base_ref || github.ref_name }}
   APP_NAME: ${{ inputs.app_name || 'india_compliance' }}
