@@ -55,11 +55,15 @@ class TestUtils(FrappeTestCase):
 
     def test_validate_pincode(self):
         def make_address(state, pincode):
-            return frappe._dict(country="India", state=state, pincode=pincode, __unsaved=True)
+            return frappe._dict(
+                country="India", state=state, pincode=pincode, __unsaved=True
+            )
 
         for pincode in ("194101", "190015", "181101", "180007", "184101", "191401"):
             self.assertIsNone(validate_pincode(make_address("Ladakh", pincode)))
-            self.assertIsNone(validate_pincode(make_address("Jammu and Kashmir", pincode)))
+            self.assertIsNone(
+                validate_pincode(make_address("Jammu and Kashmir", pincode))
+            )
 
         for pincode in ("518503", "533347"):
             self.assertIsNone(validate_pincode(make_address("Telangana", pincode)))
