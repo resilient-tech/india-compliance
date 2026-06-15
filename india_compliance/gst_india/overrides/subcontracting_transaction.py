@@ -136,10 +136,9 @@ def set_address_for_subcontracting_inward(doc):
         ("bill_to_address", "bill_to_gstin", "bill_to_gst_category"),
     ):
         address = doc.get(address_field)
-        if not address:
-            continue
-
-        gstin, gst_category = frappe.db.get_value("Address", address, ["gstin", "gst_category"])
+        gstin, gst_category = (
+            frappe.db.get_value("Address", address, ["gstin", "gst_category"]) if address else (None, None)
+        )
         doc.set(gstin_field, gstin)
         doc.set(gst_category_field, gst_category)
 

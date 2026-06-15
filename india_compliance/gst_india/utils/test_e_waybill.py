@@ -2051,16 +2051,10 @@ class TestSubcontractingInwardEWaybill(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        frappe.db.savepoint("before_test_inward_ewaybill")
         frappe.db.set_single_value(
             "GST Settings",
             {"enable_api": 1, "enable_e_waybill": 1, "enable_e_waybill_for_sc": 1},
         )
-
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        frappe.db.rollback(save_point="before_test_inward_ewaybill")
 
     @staticmethod
     def _set_transport_details(stock_entry, sub_supply_desc):

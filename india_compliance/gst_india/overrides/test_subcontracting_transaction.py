@@ -584,17 +584,11 @@ class TestSubcontractingInwardTaxableValue(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        frappe.db.savepoint("before_test_inward_taxable_value")
         create_subcontracting_data()  # outward items, for the negative-control test
         frappe.db.set_single_value(
             "GST Settings",
             {"enable_api": 1, "enable_e_waybill": 1, "enable_e_waybill_for_sc": 1},
         )
-
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        frappe.db.rollback(save_point="before_test_inward_taxable_value")
 
     @staticmethod
     def _expected_delivery_value(item):
@@ -751,16 +745,10 @@ class TestSubcontractingInwardAddressMapping(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        frappe.db.savepoint("before_test_inward_address_mapping")
         frappe.db.set_single_value(
             "GST Settings",
             {"enable_api": 1, "enable_e_waybill": 1, "enable_e_waybill_for_sc": 1},
         )
-
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        frappe.db.rollback(save_point="before_test_inward_address_mapping")
 
     def _assert_company_to_customer(self, se, scio):
         company_address = get_default_address("Company", scio.company)
