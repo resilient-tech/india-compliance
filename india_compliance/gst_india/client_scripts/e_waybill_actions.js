@@ -528,8 +528,6 @@ function get_sub_suppy_type_options(frm, is_foreign_transaction) {
             supply_type = "Outward";
             sub_supply_type = ["Job Work"];
         } else if (india_compliance.is_subcontracting_inward_entry(frm.doc)) {
-            // NIC's "Job Work Returns" is an inward-only sub supply type (used by
-            // the principal); the job worker's outward e-Waybill must use "Others"
             supply_type = "Outward";
             sub_supply_type = ["Others"];
             sub_supply_desc = SUBCONTRACTING_INWARD_SUB_SUPPLY_DESC[frm.doc.purpose];
